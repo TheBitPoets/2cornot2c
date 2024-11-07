@@ -987,8 +987,10 @@ int main(void){
 
 ## Variabili globali con External Linkage (Static variables with External Linkage)
 
-Le variabili globali sono DEFINITE all'esterno delle funzioni, di solito all'inizio del file sorgente dopo le direttive al preprocessore (`#include`). Come anticipato queste variabili hanno: file scope (sono visibili a tutte le funzioni del file che contiene la loro definizione) static storage duration (tempo di vita in memoria coincidente con l'esecuzione del programma) ed external linkage (sono potenzialmente visibili anche in tutti i file sorgente del programma). Quindi le variabili globali sono variabili statiche con external linkage. Nella definizione non si usa la _keyword_ `extern`, invece questa può essere usata (opzionale) nella dichiarazione della variabile all'interno delle funzioni che la useranno, l'uso di `extern` è invece obbligatorio quando si vuole usare una variabile globale definita in un altro file del programma, in questo caso è necessario dichiarare (nel file che vuole usare la variabile definita in altro file) esplicitamente la variabile usando la _keyword_ `extern`. In soldoni `extern` non viene usata nella DEFINIZIONE (quando si crea per la prima volta la variabile globale e viene allocata la memoria) bensì è usata nelle DICHIARAZIONI per informare il compilatore che la variabile è definita da qualche altra parte e nel file si vuole solo fare uso della varabile esterna già allocata.
-Infine è importante ricordare che **le variabili esterne possono essere inizializzate solo una volta** e **nella DEFINIZIONE**, inizializzare una variabile esterna nella DICHIARAZIONE è un ERRORE:
+<p align="justify">
+Le variabili globali sono DEFINITE all'esterno delle funzioni, di solito all'inizio del file sorgente dopo le direttive al preprocessore (<code>#include</code>). Come anticipato queste variabili hanno: file scope (sono visibili a tutte le funzioni del file che contiene la loro definizione) static storage duration (tempo di vita in memoria coincidente con l'esecuzione del programma) ed external linkage (sono potenzialmente visibili anche in tutti i file sorgente del programma). Quindi le variabili globali sono variabili statiche con external linkage. Nella definizione non si usa la <i>keyword</i> <code>extern</code>, invece questa può essere usata (opzionale) nella dichiarazione della variabile all'interno delle funzioni che la useranno, l'uso di `extern` è invece obbligatorio quando si vuole usare una variabile globale definita in un altro file del programma, in questo caso è necessario dichiarare (nel file che vuole usare la variabile definita in altro file) esplicitamente la variabile usando la _keyword_ `extern`. In soldoni `extern` non viene usata nella DEFINIZIONE (quando si crea per la prima volta la variabile globale e viene allocata la memoria) bensì è usata nelle DICHIARAZIONI per informare il compilatore che la variabile è definita da qualche altra parte e nel file si vuole solo fare uso della varabile esterna già allocata.
+Infine è importante ricordare che <b>le variabili esterne possono essere inizializzate solo una volta</b> e </b>nella DEFINIZIONE</b>, inizializzare una variabile esterna nella DICHIARAZIONE è un ERRORE:
+</p>
 
 ```c
 // file uno.c
@@ -1001,23 +1003,29 @@ int esterna = 10; /* DEFINIZIONE CON INIZIALIZZAZIONE ESPLICITA, OK */
 extern int esterna = 2; // DICHIARAZIONE ERRORE
 ```
 
-Alla luce di queste nuove conocsenze modifichiamo il programma visto in `3_variabili.c` spostando i prototipi della funzioni e la DEFINIZIONE delle variabili globali in un file `header` (estensione `.h`). Abbiamo già incontrato questi file quando abbiamo introdotto la funzione `printf()` ed avevamo detto che era necessario includere il file header `stdio.h` che conteneva il prototipo della `printf()`. I file header o d'intestazione contengono sia i prototipi delle funzioni sia le strutture dati (quindi anche le variabili globali) che saranno utili nel corrispondente file sorgeten (estensione `.c`).
-I file d'intestazione possono essere sia di sistema (cioè forniti dal linguaggio stesso) e vengono inclusi nella direttiva `#include` usando le parentesi angolari `<` `>`, in questo modo:
+<p align="justify">
+Alla luce di queste nuove conocsenze modifichiamo il programma visto in <code>3_variabili.c</code> spostando i prototipi della funzioni e la DEFINIZIONE delle variabili globali in un file <code>header</code> (estensione <code>.h</code>). Abbiamo già incontrato questi file quando abbiamo introdotto la funzione <code>printf()</code> ed avevamo detto che era necessario includere il file header <code>stdio.h</code> che conteneva il prototipo della <code>printf()</code>. I file header o d'intestazione contengono sia i prototipi delle funzioni sia le strutture dati (quindi anche le variabili globali) che saranno utili nel corrispondente file sorgeten (estensione <code>.c</code>).
+I file d'intestazione possono essere sia di sistema (cioè forniti dal linguaggio stesso) e vengono inclusi nella direttiva <code>#include</code> usando le parentesi angolari <code><</code> <code>></code>, in questo modo:
+</p>
 
 ```c
 #include <stdio.h>
 ```
 
-i file d'instestazione definiti dal programmatore vengono inclusi usando i doppi apici `"` in questo modo:
+<p align="justify">
+i file d'instestazione definiti dal programmatore vengono inclusi usando i doppi apici <code>"</code> in questo modo:
+</p>
 
 ```c
 #include "4_varibili.h"
 ```
 
-Il nostro compito è allora spostare tutti i prototipi e le variabili globali di `3_variabili.c` in un file d'instazione (`4_variabili.h`) ed includere il file header nel corrispondente file sorgente (`4_variabili.c`).
+<p align="justify">
+Il nostro compito è allora spostare tutti i prototipi e le variabili globali di <code>3_variabili.c</code> in un file d'instazione (<code>4_variabili.h</code>) ed includere il file header nel corrispondente file sorgente (<code>4_variabili.c</code>).
 Ovviamente fare qualche piccola modifica e miglioramente al programma precedente, nello specifico:
+</p>
 
-* Nel file `4_variabili.h` oltre che dichiarare i prototipi della funzioni, definiamo una nuova variabile esterna (costante) `NUM_ITERATIONS` che rappresenta il numero di volte che il programma richiederà all'utente di eseguire un'operazione prima di terminare autonomamente.
+* Nel file <code>4_variabili.h</code> oltre che dichiarare i prototipi della funzioni, definiamo una nuova variabile esterna (costante) <code>NUM_ITERATIONS</code> che rappresenta il numero di volte che il programma richiederà all'utente di eseguire un'operazione prima di terminare autonomamente.
   	```c
 	const int NUM_ITERATIONS = 2;
   	```
