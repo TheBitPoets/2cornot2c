@@ -1057,6 +1057,8 @@ Ecco un sempio di un ciclo che stampa i numeri da 0 a 9:
 
 Il codice del fle header `4_variabili.h` e sorgente `4_variabili.c` è mostrato di sotto, la cosa da far notare è la variabile esterna `NUM_ITERATIONS` che è DICHIARATA nel `.h`, questo verrà include nel `.c` dal prepocessore quindi sarà poi effettivamente parte del file `.i` ma per esplicitare che si sta usando una variabile DEFINITA in un altro file, nel `.c` si effettua una DICHIARAZIONE della variabile usando la _keyword_ `extern`.
 
+[/lab/0_intro/4_variabili.h](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/4_variabili.h)
+
 ```c
 const int NUM_ITERATIONS = 2; 
 
@@ -1065,6 +1067,8 @@ int differenza(int, int);
 int moltiplicazione(int, int);
 int divisione(int, int);
 ```
+
+[/lab/0_intro/4_variabili.c](https://github.com/TheBitPoets/2cornot2c/commit/8fcadf5f8a958f9b6194c4dac724d5a21ecef717)
 
 ```c
 #include <stdio.h>
