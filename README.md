@@ -1057,11 +1057,71 @@ Ecco un sempio di un ciclo che stampa i numeri da 0 a 9:
 
 Il codice del fle header `4_variabili.h` e sorgente `4_variabili.c` è mostrato di sotto, la cosa da far notare è la variabile esterna `NUM_ITERATIONS` che è DICHIARATA nel `.h`, questo verrà include nel `.c` dal prepocessore quindi sarà poi effettivamente parte del file `.i` ma per esplicitare che si sta usando una variabile DEFINITA in un altro file, nel `.c` si effettua una DICHIARAZIONE della variabile usando la _keyword_ `extern`.
 
-https://github.com/kinderp/2cornot2c/blob/6109b19f2dd8fd46b2dcd6acb650645ec6bd0e50/lab/0_intro/4_variabili.h#L1-L6
+```c
+const int NUM_ITERATIONS = 2; 
 
-https://github.com/kinderp/2cornot2c/blob/6109b19f2dd8fd46b2dcd6acb650645ec6bd0e50/lab/0_intro/4_variabili.c#L1-L52
+int somma(int, int);
+int differenza(int, int);
+int moltiplicazione(int, int);
+int divisione(int, int);
+```
 
-### Variabili globali con Internal Linkage (Static variables with Internal Linkage)
+```c
+#include <stdio.h>
+#include "4_variabili.h"
+
+extern const int NUM_ITERATIONS;
+
+int main(void){
+	int risultato = 0;
+	int primo, secondo;
+	char operazione;
+	for(int i = 0; i < NUM_ITERATIONS; i++){
+		printf("Inserisci il primo operando\n");
+		scanf("%d", &primo);
+		printf("Inserisci il secondo operando\n");
+		scanf("%d", &secondo);
+		printf("s)Somma d)Differenza m)Moltiplicazione D)Divisione\n");
+		scanf(" %c", &operazione);
+		switch(operazione){
+			case 's':
+				risultato = somma(primo, secondo);
+				break;
+			case 'd':
+				risultato = differenza(primo, secondo);
+				break;
+			case 'm':
+				risultato = moltiplicazione(primo, secondo);
+				break;
+			case 'D':
+				risultato = divisione(primo, secondo);
+				break;
+			default:
+				printf("Operazione non riconosciuta\n");
+		
+		}
+		printf("Il risultato e': %d\n", risultato);
+	}	
+}
+
+int somma(int primo_operando, int secondo_operando){
+	return primo_operando + secondo_operando;
+}
+
+int differenza(int minuendo, int sottraendo){
+	return minuendo - sottraendo;
+}
+
+int moltiplicazione(int primo_fattore, int secondo_fattore){
+	return primo_fattore * secondo_fattore;
+}
+
+int divisione(int dividendo, int divisore){
+	return dividendo / divisore;
+}
+```
+
+## Variabili globali con Internal Linkage (Static variables with Internal Linkage)
 
 Queste variabili sono globali ed hanno file scope, static storage duration ma internal linkage: questo vuol dire che la loro visibilità è limitata al file che le contiene. La loro DEFINIZIONE è: come tutte le variabili globali effettuata fuori da tutte le funzioni di solito all'inizio del file con l'aggiunta della parola chiave **static**.ù
 
@@ -1074,7 +1134,7 @@ int main(void){
 	extern int global_internal;  /* DICHIARAZIONE opzionale di variabile globale interna */
 }
 ```
-### Sintassi dichiarazione variabili
+## Sintassi dichiarazione variabili
 
 Una dichiarazine di variabili ha questa forma:
 
