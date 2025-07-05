@@ -335,7 +335,7 @@ Come spiegato ampiamente in precedenza, facciamo uso anche della funzione <code>
 <p align="justify">
 Abbiamo precedentemente detto che una variabile è semplicemente una locazione di memoria a cui è associato un identificatore ed un tipo.
 L'identificatore è un nome mnemonico che ci permette, all'interno del codice, di accedere al valore contenuto nella locazione di memoria corrispondente. Il tipo definisce lo spazio (in terminit di byte) che la locazione di memoria può contenere.
-<b>Una variabile prima di essere usata deve esssere sempre dichiarata</b>. Come anticipato, l'operazione di dichiarazione consiste nell'allocare spazio di memoria per la variabile ed associargli l'identificatore; lo spazio riservato viene dedotto dal tipo della variabile.
+<b>Una variabile prima di essere usata deve esssere sempre dichiarata</b>. Come anticipato, **l'operazione di dichiarazione consiste nell'allocare spazio di memoria per la variabile ed associargli l'identificatore**; lo spazio riservato viene dedotto dal tipo della variabile.
 I diversi tipi privisti del C hanno un numero di byte prefissati dipendenti dall'architettura; per esempio <code>int</code> di solito occupa 32 o 64 bit, <code>char</code> 8 bit etc.
 Se ti può aiutare puoi pensare ad una variabile come ad una scatola, vedi immagine di sotto.
 </p>
@@ -375,12 +375,12 @@ int question, answer;
 Oltre al tipo ed all'identificatore una variabile è caratterizzata dalla **visibilità** (`scope` in inglese) ed il **tempo di vita** (`lifetime` o `storage duration`)
 
 > [!IMPORTANT]
-> **Visibilità**: porzioni di codice nel programma in cui la variabile (il suo identificatore) è visibile e quindi è possibile fare riferimento alla variabile.
+> **Visibilità**: porzioni di codice nel programma in cui la variabile (il suo identificatore) è visibile e quindi è possibile fare riferimento alla variabile. Se in un dato punto del programma la variabile non è visibile, anche se effettivamente allocata in memoria (ha associata una locazine di memoria), è inutilizzabile o comunque non è possibile accedere al suo contenuto.
 
 > [!IMPORTANT]
 > **Tempo di vita**: porzione di tempo all'interno del ciclo di esecuzione del programma durante il quale alla variabile è associata una locazione di  memoria
 
-Sulla base del tempo di vita e della visibilità possiamo classificare le variabile in due grandi categorie: **variabili globali** e **variabili locali**.
+Sulla base del tempo di vita e della visibilità possiamo classificare le variabili in due grandi categorie: **variabili globali** e **variabili locali**.
 
 
 <p align="justify">
@@ -389,15 +389,15 @@ Sulla base del tempo di vita e della visibilità possiamo classificare le variab
 
 <p align="justify">
 <b>Le variabili globali</b> sono definite fuori dalle funzioni, di solito dopo le direttive <code>#include</code> nelle righe iniziali. 
-Hanno visibilità globale appunto, cioè sono visibili a tutte le funzioni nel file in cui sono dichiarate (e potenzialmente anche alle funzioni in altri file ma questo lo vedremo in seguito); il loro tempo di vita coincide con quello globale di esecuzione del programma.
+Hanno visibilità globale appunto, cioè sono visibili a tutte le funzioni nel file in cui sono dichiarate (e potenzialmente anche alle funzioni in altri file del programma, ma questo lo vedremo in seguito); il loro tempo di vita coincide con quello globale di esecuzione del programma.
 </p>
 
 <p align="justify">
-<b>Le variabili globali</b> se non inizializzate vengono poste a zero automaticamente, al contrario <b>le variabili locali</b> se non inizializzate contengono semplicemente un valore sporco ed assolutamente non prevedibile (il valore che era precedentemente contenuto nella locazione di memoria che è stata associata alla variabile).
+<b>Le variabili globali</b> se non inizializzate vengono poste a zero automaticamente, al contrario <b>le variabili locali</b> se non inizializzate contengono semplicemente un valore sporco ed assolutamente non prevedibile (il valore che era precedentemente contenuto nella locazione di memoria che è stata associata alla variabile, al suo identificatore).
 </p>
 
 <p align="justify">
-Il programma di sotto fa uso di variabili globali e locali; semplicemente sono definite tre funzioni: <code>somma()</code>, <code>differenza()</code> e <code>moltiplicazione()</code>. I due operandi su cui le funzioni devono lavorare (<code>primo</code> e <code>secondo</code>) vengono definite coeme variabili globali; essendo globali queste variabili sono visibili da tutte le funzioni nel file. 
+Il programma di sotto fa uso di variabili globali e locali; semplicemente sono definite tre funzioni: <code>somma()</code>, <code>differenza()</code> e <code>moltiplicazione()</code>. I due operandi su cui le funzioni devono lavorare (<code>primo</code> e <code>secondo</code>) vengono definiti coeme variabili globali; essendo globali queste variabili sono visibili da tutte le funzioni nel file. 
 </p>
 
 ```c
@@ -411,14 +411,14 @@ int risultato; 	 // variabile locale
 char operazione; // variabile locale
 ```
 
-Queste due variabili sono visibili solo all'interno della funzione `main()` dove sono dichiarate e non dalle altre funzioni.
+Queste due variabili sono visibili solo all'interno della funzione `main()` (dove sono effettivamente dichiarate come variabili locali) e non dalle altre funzioni.
 
 <p align="justify">
-Inoltre, siccome facciamo uso della funzione <code>printf()</code> e <code>scanf()</code> dobbiamo includere con la direttiva al preprocessore (<code>#include<stdio.h></code>) i prototipi contenuti nel file header: <code>stdio.h</code>.
+Inoltre, siccome facciamo uso della funzione <code>printf()</code> e <code>scanf()</code> dobbiamo includere attraverso la direttiva al preprocessore (<code>#include<stdio.h></code>) i rispettivi prototipi contenuti nel file header: <code>stdio.h</code>.
 Mentre <code>printf()</code> serve per stampare a schermo il contenuto di una variabile, <code>scanf()</code> viene usata per leggere un valore da tastiera e memorizzarlo in una variabile.
 </p>
 
-Le definizioni della funzioni `somma()`, `differenza()` e `moltiplicazione()` sono fornite dopo la loro effettiva chiamata nel `main()` e quindi per permettere al compilatore di controllare l'uso corretto di queste funzioni è stato necessario, prima del `main()`, fornire i prototipoi.
+Le definizioni della funzioni `somma()`, `differenza()` e `moltiplicazione()` sono fornite dopo la loro effettiva chiamata nel `main()` e quindi per permettere al compilatore di controllare l'uso corretto di queste funzioni da parte del programmatore è stato necessario, prima del `main()`, fornire i prototipoi.
 
 [/lab/0_intro/2_variabili.c](https://github.com/kinderp/2cornot2c/blob/8fcadf5f8a958f9b6194c4dac724d5a21ecef717/lab/0_intro/2_variabili.c)
 
@@ -468,7 +468,7 @@ int moltiplicazione(){
 
 <p align="justify">
 Inoltre nel codice incontriamo il primo costrutto per il controllo del flusso e precisamente <code>if-else</code>.
-Vedremo in dettaglio la loro sintassi più avanti, ora forniamo solo una breve spiegazione.
+Vedremo in dettaglio la sintassi più avanti, ora forniamo solo una breve spiegazione.
 Il costrutto <code>if</code> serve per realizzare l'istruzione di salto condizionale ed assume questa forma:
 </p>
 
@@ -501,7 +501,7 @@ if (operazione == 's'){
 ```
 
 <p align="justify">
-La funzione <code>scanf()</code> legge un carattere da tastiera ed inserisce il valore all'interno della variabile <code>operazione</code>, il costrutto <code>if-else</code> ci serve per eseguire la funzione corrispondente all'operazione richiesta dall'utente attraverso un carattere della tastiera.
+La funzione <code>scanf()</code> legge un carattere da tastiera ed inserisce il valore all'interno della variabile <code>operazione</code>, il costrutto <code>if-else</code> ci serve per eseguire la funzione corrispondente all'operazione richiesta dall'utente attraverso la digitazione di un carattere della tastiera.
 Se <code>operazione</code> contiene il carattere <code>s</code> allora si eseguirà la funzione <code>somma()</code> (solo quella e nessun'altra) altrimenti se il carattere è <code>d</code> si esegue la funzione <code>differenza()</code> e così via. Se il carattere contenuto in <code>operazione</code> non è tra i tre attesi <code>s</code> <code>d</code> <code>m</code> allora (ultimo <code>else</code>) si stampa un messaggio che informa l'utente che l'operazione non è stata riconosciuta.
 </p>
 
