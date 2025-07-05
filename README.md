@@ -327,7 +327,7 @@ int sottrazione(int minuendo, int sottraendo){
 
 <p align="justify">
 A causa del fatto che la definzione della funzione <code>sottrazione</code> è stata fornita successivamente (riga 12-14) al punto in cui questa è richiamata (riga 8) per permettere al compilatore di controllare il corretto uso da parte del programmatore è stato necessario fornire prima della riga 8 il prototipo della funzione (riga 3). Commentando la riga 3 il compilatore darebbe errore o almeno rileverebbe un warning circa una dichiarazione implicita che non è in grado di verificare.
-Come spiegato ampiamente in precedenza, facciamo uso anche della funzione <code>printf()</code> ed in questo caso per fornire il prototipo sfruttiamo la direttiva al preprocessore <code>#inclde <stdio.h></code>
+Come spiegato ampiamente in precedenza, facciamo uso anche della funzione <code>printf()</code> ed in questo caso per fornirne il prototipo sfruttiamo la direttiva al preprocessore <code>#include <stdio.h></code>
 </p>
 
 ## Variabili
