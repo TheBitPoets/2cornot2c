@@ -24,7 +24,7 @@ I link forniti sopra portano alle versioni dei software per architettura `amd64`
 I passi seguenti permettono di duplicare sulla tua macchina locale l'ambiente di sviluppo (codice e vm).
 Nella directory radice del progetto (<code>2cornot2c</code> che otterrai clonando il repository nei passi seguenti) troverai una directory <code>lab</code>con il codice c per tutti laboratori. 
 Questa cartella <code>2cornot2c\lab</code> è montata automaticamente sul file system della macchina virtuale nella cartella <code>/lab</code>. 
-Tutto quello che verrà modificato sulla macchina linux in <code>lab</code>( vm o macchina guest) verrà visto sulla macchina windows (host) in <code>2cornot2c\lab</code>. 
+Tutto quello che verrà modificato sulla macchina linux in <code>/lab</code>( vm o macchina guest) verrà visto sulla macchina windows (host) in <code>2cornot2c\lab</code>. 
 </p>
 
 1) Clona il repository con il codice ed il Vagrantfile
@@ -55,17 +55,17 @@ vagrant ssh
 
 <div align="justify">	
 All'interno della cartella <code>/lab</code> nella macchian Linux troverai il codice su cui lavorare.
-Ogni lab ha un numero ed un nome ad esso associato, ad esempio al primo laboratorio è assegnato il numero <code>0</code> ed il nome <code>intro</code>; questo significa che per questo lab esisterà una cartella <code>lab/0_intro</code> che conterrà tutto il codice del lab. All'interno della cartella del laboratorio troverai dei file sorgente con estensione <code>.c</code> o <code>h</code> anche questi con un numero ed un nome; ad esempio il primo sorgente del lab <code>0_intro</code> è <code>0_hello.c</code>.
+Ogni lab ha un numero ed un nome ad esso associato, ad esempio al primo laboratorio è assegnato il numero <code>0</code> ed il nome <code>intro</code>; questo significa che per questo lab esisterà una cartella <code>lab/0_intro</code> che conterrà tutto il codice del lab. All'interno della cartella del laboratorio troverai dei file sorgente con estensione <code>.c</code> o <code>.h</code> anche questi con un numero ed un nome; ad esempio il primo sorgente del lab <code>0_intro</code> è <code>0_hello.c</code>.
 Ogni lab al suo interno contiene una cartella <code>bin</code> destinata ad ospitare i file eseguibili ottenuti al termine del processo di compilazione.
 </div>
 
 ## Il processo di compilazione
 
 <p align="justify">
-I programmi sono scriti in un qualche linguaggio di programmazione, il programmatore scrive il codice sorgente; nel caso del linguaggio C i file sorgente hanno estensione <code>.c</code> o <code>.h</code>. Il codice sorgente contiene tutte le istruzioni che il programma dovrà eseguire. Le istruzioni all'interno del codice sorgente scritte in un qualsiasi linguaggio di programmazione devono essere tradotte in una sequenza di bit (in altri termini nel linguaggio macchina) perchè la cpu è in grado di comprendere solo il linguaggio macchina, esclusivamente sequenze di bit e nient'altro. In sintesi si dice che il programma sorgente deve essere trasformato in in file eseguibile (file binario) che contiene le istruzioni (sequenze di bit) per la pecifica architettura del nostro processore.
-Questo processo di trasformazione del sorgente in binario è detto processo di compilazione ed è svolto del compilatore. In realtà queto processo è articolato in vari step e non coinvolge solo il compilatore. Vediamo brevemente di studiarne le fasi.
+I programmi sono scriti in un qualche linguaggio di programmazione, il programmatore scrive il codice sorgente; nel caso del linguaggio C i file sorgente hanno estensione <code>.c</code> o <code>.h</code>. Il codice sorgente contiene tutte le istruzioni che il programma dovrà eseguire. Le istruzioni all'interno del codice sorgente scritte in un qualsiasi linguaggio di programmazione devono essere tradotte in una sequenza di bit (in altri termini nel linguaggio macchina) perchè la cpu è in grado di comprendere solo il linguaggio macchina, esclusivamente sequenze di bit e nient'altro. In sintesi si dice che il programma sorgente deve essere trasformato in un file eseguibile (file binario) che contiene le istruzioni (sequenze di bit) per la specifica architettura del nostro processore.
+Questo processo di trasformazione del sorgente in binario è detto processo di compilazione ed è svolto dal compilatore. In realtà queto processo è articolato in vari step e non coinvolge solo il compilatore. Vediamo brevemente di studiarne le fasi.
 Se non lo hai già fatto avvia la macchina virtuale con <code>vagrant up</code> ed al termine del boot avvia una sessione ssh con il comando <code>vagrant ssh</code>.
-Una volta dentro nella tue home directory (utente vagrant) usa vim per creare un nuovo file in questo modo: <code>vim hello.c</code> e copia il codice mostrato sotto:
+Una volta dentro, nella tua home directory (utente vagrant) usa vim per creare un nuovo file in questo modo: <code>vim hello.c</code> e copia il codice mostrato sotto:
 </p>
 
 ```c
@@ -79,7 +79,7 @@ int main(void){
 Salva il contenuto premendo la combinazione: `Esc` + `:wq`.
 
 <p align="justify">
-Compila il sorgente <code>hello.c</code> lanciando il seguente comando: <code>gcc -o hello hello.c</code>; gcc è il compilatore che useremo in questo corso, lo trovi già installato sulla vm. In questo caso l'opzione <code>-o</code> specifica il nome del file oggetto (il file binario eseguibile) che vogliamo creare; ovviamente dobbiamo specificare successivamente il sorgente da cui partire per la generazione dell'eseguibile (<code>hello.c</code>). Se tutto ha funzionato puoi lanciare il programma appena compilato in questo modo: <code>./hello</code>. Come avrai avuto modo di constatare il programma ha stampato a schermo la frase <code>Hello World</code>; per fare ciò il programmatore si è servito di un pezzo di codice già pronto (in sostenza la funzione <code>printf()</code>). Per informare il compilatore circa il corretto uso di questo pezzo di codice (la funzione <code>printf()</code>) è stata inserita nella prima riga del programma la direttiva al preprocessore <code>#include <stdio.h></code>. Vedremo in dettaglio cosa vuol dire usare una funzione esterna e come includere con le direttive il suo prototipo, per adesso ci basta sapere che per stampare è stata usata una funzione già pronta ed è stato necessario informare il compilatore di questo.
+Compila il sorgente <code>hello.c</code> lanciando il seguente comando: <code>gcc -o hello hello.c</code>; gcc è il compilatore che useremo in questo corso, lo trovi già installato sulla vm. In questo caso l'opzione <code>-o</code> specifica il nome del file oggetto (il file binario eseguibile) che vogliamo creare; ovviamente dobbiamo specificare successivamente il sorgente da cui partire per la generazione dell'eseguibile (<code>hello.c</code>). Se tutto ha funzionato puoi lanciare il programma appena compilato in questo modo: <code>./hello</code>. Come avrai avuto modo di constatare, il programma ha stampato a schermo la frase <code>Hello World</code>; per fare ciò il programmatore si è servito di un pezzo di codice già pronto (in sostenza la funzione <code>printf()</code>). Per informare il compilatore circa il corretto uso di questo pezzo di codice (la funzione <code>printf()</code>) è stata inserita nella prima riga del programma la direttiva al preprocessore <code>#include <stdio.h></code>. Vedremo in dettaglio cosa vuol dire usare una funzione esterna e come includere con le direttive il suo prototipo, per adesso ci basta sapere che per stampare è stata usata una funzione già pronta ed è stato necessario informare il compilatore di questo.
 </p>
 
 <p align="center">
@@ -87,12 +87,12 @@ Compila il sorgente <code>hello.c</code> lanciando il seguente comando: <code>gc
 </p>
 
 <p align="justify">
-Nella figura di sopra è mostato l'intero processo di compilazione che è composto da almeno quattro fasi; come puoi vedere i due parametri passati al compilatore con: <code>gcc -o hello hello.c</code> sono ripsettivamente il nome del file di input del processo (<code>hello.c</code>) cioè il sorgente di partenza ed il file di output (<code>hello</code>) cioè l'eseguibile.
+Nella figura di sopra è mostato l'intero processo di compilazione che è composto da almeno quattro fasi; come puoi vedere i due parametri passati al compilatore con: <code>gcc -o hello hello.c</code> sono ripsettivamente il nome del file di input del processo (<code>hello.c</code>) cioè il sorgente di partenza ed il file di output (<code>hello</code>) cioè l'eseguibile che vogliamo generare al termine del processo.
 Volendo è possibile richiedere al compilatore di fermarsi ad uno specifico step senza produrre l'output finale. Le quattro fasi del processo di compilazione sono rispettivamente:
 </p>
 
 1. **Preprocessamento** (_Preprocessing_):
-<p align="justify">il preprocessore (<code>cpp</code>) esegue sostituzioni di testo, disabilita/abilita condizionalmente parti di codice in fase di compilazione. Il risultato della sua elaborazione è un file con estensione <code>.i</code>: nel nostro caso quindi <code>hello.i</code>. Per bloccare il processo di compilazione alla fase di preprocessamento puoi eseguire questo comando: <code>gcc -E hello.c > hello.i</code>. Il file <code>hello.i</code> conterrà tutte le sostituzioni effettuate dal preprocessore e come puoi vedere quindi ha molto più contenuto del file di partenza <code>hello.c</code>, spiegheremo le chiamate al preprocessore nei prossimi paragrafi.</p>
+<p align="justify">il preprocessore (<code>cpp</code>) esegue sostituzioni di testo, disabilita/abilita condizionalmente parti di codice in fase di compilazione. Il risultato della sua elaborazione è un file con estensione <code>.i</code>: nel nostro caso quindi <code>hello.i</code>. Per bloccare il processo di compilazione alla fase di preprocessamento puoi eseguire questo comando: <code>gcc -E hello.c > hello.i</code>. Il file <code>hello.i</code> conterrà tutte le sostituzioni effettuate dal preprocessore e come puoi vedere da solo, ha molto più contenuto del file di partenza <code>hello.c</code>, spiegheremo le chiamate al preprocessore nei prossimi paragrafi.</p>
 
 2. **Compilazione** (_Compilation_):
 <p align="justify">il compilatore (<code>cc</code>) trasforma il contenuto testuale del file <code>hello.i</code> (che è scritto in codice c) nel corrispettivo codice assembly (<code>hello.s</code>) specifico per l'architettura del processore target. Puoi bloccare il processo alla fase di compilazione producendo il corrispettivo codice assembly in questo modo: <code>gcc -S -masm=intel hello.c</code>
