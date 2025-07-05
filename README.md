@@ -126,15 +126,15 @@ Di seguito provvederemo a dare una definizione sommaria per ogni componente sopr
 >  Una **variabile** è una locazione di memoria a cui è stato associato un **identificatore** cioè un nome per referenziare nel codice quella cella di memoria
 
 <p align="justify">
-Una variabile ha un <b>tipo</b>; il tipo associato ad una variabile definisce appunto che tipo di dato essa può contenere (un numero intero, un numero reale, un carattere etc.) in altre parole il tipo della variabile definisce il numero di byte occupati dalla locazione di memoria referenziata dall'identificatore
-Una variabile può cambiare il valore in essa contenuto durante il ciclo di vita del programma. L'operazione mediante la quale si assegna un valore iniziale ad una variabile è detto <b>inizializzazione</b>, l'operazione attraverso cui si associa un nuovo valore ad una variabile già inizializzata è detto <b>assegnamento</b>
-Prima di usare una variabile è necessario prima dichiararla cioè assegnarle un tipo ed un identificatore.
+Una variabile ha un <b>tipo</b>; il tipo associato ad una variabile definisce appunto che genere di dato essa può contenere (un numero intero, un numero reale, un carattere etc.) in altre parole il tipo della variabile definisce il numero di byte occupati dalla locazione di memoria referenziata dall'identificatore.
+Una variabile può cambiare il valore in essa contenuto durante il ciclo di vita del programma. L'operazione mediante la quale si assegna un valore iniziale ad una variabile è detto <b>inizializzazione</b>, l'operazione attraverso cui si associa un nuovo valore ad una variabile già inizializzata è detta <b>assegnamento</b>
+Prima di usare una variabile è necessario prima dichiararla cioè assegnarle un tipo ed un identificatore. Non è obbligatorio invece assegnare un valore iniziale ad una variabile in fase di dichiarazione. Una variabile dichiarata ma non inizializzata conterrà un valore assolutamente casuale, in pratica il valore che era precedentemente contenuto nella locazione di memoria che è stata associata alla varabile (o meglio al suo identificatore).
 </p>
 <hr>
 
 ```c
 int var_intera; // dichiarazione di variabile senza inizializzazione
-var_intera = 5; // assegnamento di varabile precedentemente inizalizzata
+var_intera = 5; // assegnamento di varabile precedentemente non inizializzata
 int var_intera_inizializzata = 3; // dichirazione di variabile con inizializzazione
 var_intera_inizializzata = 9; // assegnamento
 ```
@@ -155,7 +155,7 @@ const double pi = 3.14; // costante pi greco
 > **Una funzione** è una collezione di istruzioni che svolgono uno specifico compito
 
 <p align="justify">
-una funzione ha un nome (<code>differenza</code> nel nostro esempio), un valore di ritorno, dei parametri di input (<code>minuendo</code> e <code>sottraendo</code> nel codice d'esempio) ed un corpo che è delimitato da una parenti graffa aperta <code>{</code> ed una chiusa <code>}</code>.
+una funzione ha un nome (<code>differenza</code> nel codice sottostante), un valore di ritorno, dei parametri di input (<code>minuendo</code> e <code>sottraendo</code> nel codice d'esempio) ed un corpo che è delimitato da una parentesi graffa aperta <code>{</code> ed una chiusa <code>}</code>.
 I parametri d'ingresso detti anche parametri formali sono racchiusi tra una coppia di parentesi tonde: <code>(</code>, <code>)</code>.
 </p>
 
