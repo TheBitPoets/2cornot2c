@@ -265,10 +265,11 @@ questo l'output sulla mia macchina:
 
 Alla riga 2 il prototipo di `printf()`.
 
-Infine, terminata la propria computazione il nostro programma ritora 0 per informare il sistema operativo che ha terminato senza errori.
+Infine, terminata la propria computazione il nostro programma ritorna 0 per informare il sistema operativo che ha terminato la propria esecuzione senza errori.
 
-Riassumendo: 
-* riga 14: inclusione del file d'intestazione `stdio.h` contente il prototipo della funzione `printf()`. Il prototipo serve al compilatore per verificare che il programmatore utilizzi correttamente la funzione, in questo caso la `printf()`
+Riassumendo [/lab/0_intro/0_hello.c](https://github.com/kinderp/2cornot2c/blob/18b60e866c1e0e22c59835fe953cbe3c534e7422/lab/0_intro/0_hello.c):
+
+* riga 14: inclusione del file d'intestazione `stdio.h` contenente il prototipo della funzione `printf()`. Il prototipo serve al compilatore per verificare che il programmatore utilizzi correttamente la funzione, in questo caso la `printf()`
 * riga 16-19: definizione della funzione `main()`
  
 ## Funzioni
