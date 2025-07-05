@@ -178,7 +178,7 @@ Il programma di sotto stampa a schermo una semplice frase: `Ciao Mondo` in ingle
 
 [/lab/0_intro/0_hello.c](https://github.com/kinderp/2cornot2c/blob/18b60e866c1e0e22c59835fe953cbe3c534e7422/lab/0_intro/0_hello.c)
 
-```c
+```c {.line-numbers}
 #include <stdio.h>
 
 int main(void){
@@ -202,7 +202,7 @@ void main()
 ```
 
 <p align="justify">
-La prima forma è tollerata da vecchia versioni del C (C90) o pre ANSI C ma non è accettata da quelle successive (C99, C11); la seconda potrebbe essere tollerata da alcuni compilatori ma se il tuo codice deve funzionare anche su altre macchine è meglio usare qualcosa che funziona sempre: dunque evitala.
+La prima forma è tollerata da vecchia versioni del C (C90) o pre ANSI C ma non è accettata da quelle successive (C99, C11); la seconda potrebbe essere tollerata da alcuni compilatori ma se il tuo codice deve funzionare anche su altre macchine è meglio usare qualcosa che funzioni sempre: dunque evitala.
 </p>
 
 > [!IMPORTANT]
