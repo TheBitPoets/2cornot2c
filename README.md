@@ -286,7 +286,7 @@ int differenza(int minuendo, int sottraendo){
 ```
 
 <p align="justify">
-la prima riga rappresenta l'intestazione della funzione (escluso la parentesi graffa), tutto il codice compreso da <code>{</code> e <code>}</code> è il corpo.
+la prima riga rappresenta l'intestazione della funzione (esclusa la parentesi graffa), tutto il codice compreso da <code>{</code> e <code>}</code> è il corpo. Il corpo di una funzione è dunque rappresentato da tutte le istruzioni comprese dalla coppia di graffe, tutto ciò che precede è l'intestazione.
 Come anticipato, quando viene fornita sia l'intestazione che il corpo (l'implementazione) si parla di <b>definizione di funzione</b>, se viene fornita solo l'intestazione (anche detta <b>prototipo</b>) si parla di <b>dichiarazione di funzione</b>.
 Il prototipo della funzione <code>sottrazione</code> è dunque il seguente:
 </p>
@@ -303,7 +303,7 @@ int differenza(int, int);
 
 <p align="justify">
 Per il compilatore non cambia nulla ma può aiutare un altro programmatore a comprendere il significato e l'uso dei parametri in ingresso.
-Di sotto è riportato un esempio completo che fa uso della funzione <code>sottrazione</code>, come è possibile vedere questa è richiamta all'interno del <code>main()</code> alla riga 8 fornendo in ingresso i due parametri previsti durante le definzione. Se avessimo fornio un numero diverso (sia inferiore che superiore) di parametri o di tipo diverso rispetto al tipo intero il compilatore ci avrebbe dato errore (o forse nel secondo caso no...?!?)
+Di sotto è riportato un esempio completo che fa uso della funzione <code>sottrazione</code>, come è possibile vedere questa è richiamata all'interno del <code>main()</code> alla riga 8 fornendo in ingresso i due parametri previsti durante le definzione. Se avessimo fornito un numero diverso (sia inferiore che superiore) di parametri o di tipo diverso rispetto al tipo intero il compilatore ci avrebbe dato errore (o forse nel secondo caso no...?!?)
 </p>
 
 [/lab/0_intro/1_funzioni.c](https://github.com/kinderp/2cornot2c/blob/849c8731e84196bab6b5a17aed9e983d045cb025/lab/0_intro/1_funzioni.c)
@@ -326,7 +326,7 @@ int sottrazione(int minuendo, int sottraendo){
 ```
 
 <p align="justify">
-Siccome la definzione della funzione <code>sottrazione</code> è stata fornita successivamente (riga 12-14) al punto in cui questa è richiamata (riga 8) per permettere al compilatore di controllare il corretto uso da parte del programmatore è stato necessario fornire prima della riga 8 il prototipo della funzione (riga 3). Commentando la riga 3 il compilatore darebbe errore o almeno rileverebbe un warning circa una dichiarazione implicita che non è in grado di verificare.
+A causa del fatto che la definzione della funzione <code>sottrazione</code> è stata fornita successivamente (riga 12-14) al punto in cui questa è richiamata (riga 8) per permettere al compilatore di controllare il corretto uso da parte del programmatore è stato necessario fornire prima della riga 8 il prototipo della funzione (riga 3). Commentando la riga 3 il compilatore darebbe errore o almeno rileverebbe un warning circa una dichiarazione implicita che non è in grado di verificare.
 Come spiegato ampiamente in precedenza, facciamo uso anche della funzione <code>printf()</code> ed in questo caso per fornire il prototipo sfruttiamo la direttiva al preprocessore <code>#inclde <stdio.h></code>
 </p>
 
