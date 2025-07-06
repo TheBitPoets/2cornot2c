@@ -1256,7 +1256,9 @@ void f(int d, register int e){
 
 ### Suddivisione in moduli di un programma
 
+<p align="justify">
 La capacità di separare l'implementazione delle funzioni dai loro prototipi attraverso l'uso dei file header e la possibilità di poter condividere variabili tra file diversi del programma ci permettono ora di fare un uleriore passo nel miglioamento della nostra calcolatrice. Vogliamo riorganizzare il codice in modo da ottenere dei moduli separati, ora vedremo cosa significa e quali sono i vantaggi nel fare ciò. Pensare di realizzare programmi di grandi dimensioni usando un unico grande file sorgente è una cattiva idea per tante ragioni, le principali sono:
+</p>
 
 * una modifica anche piccola al codice richiede la ricompilazione dell'intero file sorgente che essendo molto esteso può richiedere tanto tempo
 * in un unico file sorgente può risultare difficile trovare la porzione di codice su cui dobbiamo lavorare o da correggere, al contrario usando un approccio modulare la ricerca di una certa funzionalità richiede di analizzare solo il file sorgente e d'intestazione corrispondente
@@ -1273,17 +1275,23 @@ Abbiamo già detto che i file che compongono un programma sono:
 * file sorgenti: (_source files_) con estensione `.c`
 * file d'intestazione (_header files_) con estensione `.h`
 
-Di solito si raggruppano tutte le funzioni ed i dati relativi ad una certa funzionalità in un unico file sorgente (`.c`) e si crea un corrispondente file header `.h` (con lo stesso nome del file sorgente a cui si riferisce ma con ovviamente estensione diversa) che contiene i prototipi delle funzioni (implementate nel file sorgente) e la definizione dei tipi di dato usati dal modulo (se è richiesto).
+<p align="justify">
+Di solito si raggruppano tutte le funzioni ed i dati relativi ad una certa funzionalità in un unico file sorgente (<code>.c</code>) e si crea un corrispondente file header <code>.h</code> (con lo stesso nome del file sorgente a cui si riferisce ma con ovviamente estensione diversa) che contiene i prototipi delle funzioni (implementate nel file sorgente) e la definizione dei tipi di dato usati dal modulo (se è richiesto).
+</p>
 
 > [!CAUTION]
 > Nei file header `.h` devono essere inseriti solo le definizioni dei tipi ed i prototipi (le dichiarazioni) della funzioni. L'implementazione delle funzioni risiede nel file sorgente `.c` 
 
-Brevemete, il `5_variabili_main.c` inseriamo la logica di interazione con l'utente, l'implementazione delle funzioni matematiche viene spostata in un file sorgnete separato: `5_variabili.c` ed i prototipi nel corrispondente file header `5_variabili.h`
+<p align="justify">
+Brevemete, il <code>5_variabili_main.c</code> inseriamo la logica di interazione con l'utente, l'implementazione delle funzioni matematiche viene spostata in un file sorgnete separato: <code>5_variabili.c</code> ed i prototipi nel corrispondente file header <code>5_variabili.h</code>
+</p>
 
 > [!NOTE]
 > Il file sorgente che contiene le funzioni matematiche ed il suo corrispettivo file d'intestazione hanno stesso nome ma estensioni differenti: `5_variabili.c` e `5_variabili.h`
 
-Nel file `5_varibili_main.c` facciamo uso delle funzioni matematiche quindi prima del loro utilizzo all'interno dello `switch` importiamo il file header contenente i prototipi, ovvviamente facciamo lo stesso anche per la funzione `printf()`.
+<p align="justify">
+Nel file <code>5_varibili_main.c</code> facciamo uso delle funzioni matematiche quindi prima del loro utilizzo all'interno dello <code>switch</code> importiamo il file header contenente i prototipi, ovvviamente facciamo lo stesso anche per la funzione <code>printf()</code>.
+</p>
 
 > [!WARNING]
 > Fai attenzione che per includere il file header per la funzione `printf()` si usano le parentesi angolari `<` `>` in quanto si tratta di funzioni del linguaggio, per includere file d'intestazioni definite dal programmatore si usano i doppi apici `"`
@@ -1293,7 +1301,9 @@ Nel file `5_varibili_main.c` facciamo uso delle funzioni matematiche quindi prim
 #include "5_variabili.h" // header definito dal programmatore
 ```
 
-In aggiunta, sostituaimo il costrutto `if-else` con lo `switch`. Lo `switch` è assolutamente equivalente ad un `if-esle` e serve a scegliere tra diversi blocchi di istruzioni in base al valore di una espressione intera. La sintassi è la seguente:
+<p align="justify">
+In aggiunta, sostituaimo il costrutto <code>if-else</code> con lo <code>switch</code>. Lo <code>switch</code> è assolutamente equivalente ad un <code>if-else</code> e serve a scegliere tra diversi blocchi di istruzioni in base al valore di una espressione intera. La sintassi è la seguente:
+</p>
 
 ```c
 switch ( espressione-intera ) {
