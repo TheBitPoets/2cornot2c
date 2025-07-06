@@ -590,7 +590,7 @@ char operazione;
 Conoscere la differenza tra variabili globali e locali è un buon punto di partenza, le cose sono però più complesse.
 Agli identificatori è associato uno **scope** (**visibilità**), alle variabili invece uno **storage duration** (**tempo di vita**) ed il **linkage** (**collegamento**).
 
-Lo scope può essere di quattro tipi:
+Lo **scope** può essere di quattro tipi:
 
 * **block scope**
 * **file scope**
@@ -625,7 +625,7 @@ Esempi di blocchi (alcuni li abbbimao già incontrati) sono:
 
   ```c
   int differenza(int minuendo, int sottraendo){
-  
+      // tutte le istruzioni comprese tra le due graffe rappresentano il corpo
   }
   ```
 
@@ -657,7 +657,7 @@ Esempi di blocchi (alcuni li abbbimao già incontrati) sono:
 > Storicamente le variabili con **block scope** dovevano essere dichiarate all'inizio del blocco.
 > 
 > Dal C99 è possibile dichiarare le variabili all'interno del blocco in qualsiasi posizione al suo interno.
-> Questo è utile soprattutto per le variabili indici di un loop o per documentare meglio il proprio codice dichiarando le variabili il più vicino possibile alla riga che fa   uso effettivamente della stessa.
+> Questo è utile soprattutto per le variabili indici di un ciclo o per documentare meglio il proprio codice dichiarando le variabili il più vicino possibile alla riga che fa   uso effettivamente della stessa.
  
 ## File scope
 
@@ -692,11 +692,11 @@ Le variabili con un <b>block scope</b> (quelle locali) sono <b>no linkage</b>: c
 
 <p align="justify">
 Le variabili con un <b>file scope</b>  (quelle globali) sono o <b>external linkage</b> o <b>interanl</b>: se <code>external</code> la variabile può essere vista anche in altri file del programma.
-Se <code>internal</code> la variabile è visibile in tutto il file (quindi a tutte le funzione in esso definite) in cui è stata definita ma non in altri file del programma.
+Se <code>internal</code> la variabile è visibile in tutto il file (quindi a tutte le funzione del file) in cui è stata definita ma non in altri file del programma.
 </p>
 
 <p align="justify">
-Le variabili globali hanno automaticamente un <b>external linkage</b> quindi potenzialmente possono essere visti in altri file sorgente del programma. Per restringere il linkage da <b>external</b> ad <b>internal</b> si usa la <i>keyword</i> <b>static</b> al momento della definizione della variabile, vediamo un esempio
+Le variabili globali hanno automaticamente un <b>external linkage</b> quindi potenzialmente possono essere viste in altri file sorgente del programma. Per restringere il linkage da <b>external</b> ad <b>internal</b> si usa la <i>keyword</i> <b>static</b> al momento della definizione della variabile, vediamo un esempio
 </p>
 
 ```c
@@ -719,7 +719,7 @@ E' buona norma, soprattutto se il tuo programma ha grosse dimensioni in termini 
 </p>
 
 > [!CAUTION]
-> La parola chiave **static** non ha nulla a che vedere con lo **storage duration** di tipo static. Tutte le variabili globali (sia di tipo **external** che **internal** linkage) hanno uno **storage durantion** di tipo _static_ cioè esistono in memoria per tutto il tempo di esecuzione del programma.
+> La parola chiave **static** non ha nulla a che vedere con lo **storage duration** di tipo static. Tutte le variabili globali (sia di tipo **external** che **internal** linkage) hanno uno **storage durantion** di tipo _static_ cioè esistono in memoria per tutto il tempo di esecuzione del programma. Affronteremo nel dettaglio lo storage duration nei paragrafi successivi.
 
 ## Storage duration
 
@@ -746,7 +746,7 @@ int main(void){
 ## Auto storage duration
 
 <p align="justify">
-Variabili che hanno un tempo di vita limitato che non coincide che il tempo di esecuzione del programma: sono le variabili con <b>block scope</b> che vengono allocate quando il programma entra nel blocco in quale queste sono definite e poi deallocate quando si esce dal blocco.
+Variabili che hanno un tempo di vita limitato che non coincide che il tempo di esecuzione del programma: sono le variabili con <b>block scope</b> che vengono allocate quando il programma entra nel blocco nel quale queste sono definite e poi deallocate quando si esce dallo stesso.
 </p>
 
 > [!IMPORTANT]  
@@ -792,7 +792,7 @@ Una variabile appartenente alla **classe di memorizzazione automatica** (`auto`)
 * no linkage
 
 Qualsiasi variabile dichiarata all'interno di un blocco (`{` e `}`) è di tipo `auto`, in pratica è la classe di memorizzazione per tutte le variabili locali.
-Le variabili di classe `auto` non sono inizializzata automaticamente, questo è il motivo per cui le variabili locali devono essere inizializzate esplicitamente altrimenti ospitano un valore assolutamente casuale, sporco.
+Le variabili di classe `auto` non sono inizializzate automaticamente, questo è il motivo per cui le variabili locali devono essere inizializzate esplicitamente altrimenti ospitano un valore assolutamente casuale, sporco.
 
 ```c
 int main(void){
