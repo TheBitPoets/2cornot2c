@@ -1076,7 +1076,7 @@ for (int i=0; i<10; i++)
 Il codice del fle header <code>4_variabili.h</code> ed il sorgente <code>4_variabili.c</code> è mostrato di sotto, la cosa da far notare è la variabile esterna <code>NUM_ITERATIONS</code> che è DICHIARATA nel <code>.h`</code>; il file d'intestazoine verrà, attraverso la direttiva include incluso nel <code>.c</code> dal prepocessore e sarà poi effettivamente parte integrante del file <code>.i</code>. Per esplicitare che si sta usando una variabile DEFINITA in un altro file, nel <code>.c</code> si effettua una DICHIARAZIONE della variabile usando la <i>keyword</i> <code>extern</code>.
 </p>
 
-[/lab/0_intro/4_variabili.h](https://github.com/TheBitPoets/2cornot2c/blob/m ain/lab/0_intro/4_variabili.h)
+[/lab/0_intro/4_variabili.h](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/4_variabili.h)
 
 ```c
 const int NUM_ITERATIONS = 2; 
