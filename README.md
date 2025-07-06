@@ -835,8 +835,8 @@ Ricordati quindi che all'uscita del blocco il valore contenuto nella variabile v
 ## Variabili register (regiter class)
 
 <p align="justify">
-Le variabili <code>register</code> sono della variabili di tipo <code>auto</code> (block scope, no linkage, automatic storage duration) solamente che dichiarandole in questo modo il programmatore richiede al compilatore di memorizzarle nella memoria più veloce a disposizione che appunto dovrebbero essere i registri della cpu e non la ram.
-Questa è una richiesta che può anche non essere esaudita del compilatore se i registri sono occupati o la dimensione del dato è troppo grando rispetto alla capacità dei registri della cpu. Si dichiarano <code>register</code> le variabili che devono essere accedute spesso e con grande velocità: ad esempio gli indici dei cicli. L'uso di variabili <code>register</code> ha perso la sua importanza in quanto i moderni compilatori sono in grado di effettuare queste considerazioni per l'ottimizzazione del codice da soli anche se usare variabili `register` potrebbe aiutare a capire quali variabili ricihedono velocità di accesso.
+Le variabili <code>register</code> sono delle variabili di tipo <code>auto</code> (block scope, no linkage, automatic storage duration). Dichiarando una variabile di classe register, il programmatore richiede al compilatore di memorizzarla nella memoria più veloce a disposizione che dovrebbe essere rappresentata dai registri della cpu; questi come noto sono molto più veloci della normale ram.
+Questa è una richiesta che può anche non essere soddisfatta del compilatore se i registri sono occupati o la dimensione del dato è troppo grando rispetto alla capacità dei registri della cpu. Si dichiarano <code>register</code> le variabili che devono essere accedute spesso e con grande velocità: ad esempio gli indici dei cicli. L'uso di variabili <code>register</code> ha perso la sua importanza in quanto i moderni compilatori sono in grado di effettuare queste considerazioni per l'ottimizzazione del codice da soli anche se usare variabili `register` potrebbe aiutare a capire quali variabili ricihedono velocità di accesso.
 Da ricordare è che una volta che una variabili è dichiarata <code>register</code> non è possbile recuperare l'indirizzo della variabile. Si possono dichiarare di classe <code>register</code> anche i parametri formali delle funzioni.
 </p>
 
@@ -853,7 +853,7 @@ int uno(register int a);
 ## Varabili statiche locali (static variables with block scope)
 
 <p align="justify">
-Una variabile con block scope ha visibilità limitata all'interno del blocco in cui è dichiarata ed ovviamente nessun linkage (non è visibile alle altre funzione nel file corrente e negli altri file). Lo storage duration è limitato al tempo di esecuzione del blocco in cui è dichiarata; la variabile è allocata in memoria appena si entra nel blocco e deallocata all'uscita. Queste variabili sono le variaili locali. Rendere statica una variabile locale significa modificare il suo storage duration che coinciderà con il tempo di esecuzione del programma e non più con il tempo di esecuzione del blocco; in altre parole la variabile sarà allocata quando il programma verrà eseguito e deallocata alla sua terminazione. Ovviamente lo scope resta di tipo block quindi anche se la variabile non viene deallocata all'uscita del blocco il suo identificatore non è più visibile e quindi non è possibile accedere alla locazione di memoria. Quando il flusso di esecuzione rientrerà nel blocco il valore precedetemente conservato sarà disponibile attraverso l'identificatore. Per dichiarare statica una variabile locale si usa la <i>keyword</i> <b>static</b>, vediamo un esempio:
+Una variabile con block scope ha visibilità limitata all'interno del blocco in cui è dichiarata ed ovviamente nessun linkage (non è visibile alle altre funzioni nel file corrente e negli altri file). Lo storage duration è limitato al tempo di esecuzione del blocco in cui è dichiarata; la variabile è allocata in memoria appena si entra nel blocco e deallocata all'uscita. Queste variabili sono le variaili locali. Rendere statica una variabile locale significa modificare il suo storage duration in modo da farlo coincidere con il tempo di esecuzione del programma e non più con il tempo di esecuzione del blocco; in altre parole la variabile sarà allocata quando il programma verrà eseguito e deallocata alla sua terminazione. Ovviamente lo scope resta di tipo block quindi anche se la variabile non viene deallocata all'uscita del blocco il suo identificatore non è più visibile e quindi non è possibile accedere alla locazione di memoria. Quando il flusso di esecuzione rientrerà nel blocco il valore precedetemente conservato sarà disponibile attraverso l'identificatore. Per dichiarare statica una variabile locale si usa la <i>keyword</i> <b>static</b>, vediamo un esempio:
 </p>
 
 La funzione `example_static_var` dichiara due variabili: `a` di tipo automatica e `b` statica (con block scope). Vediamo le differenze pratiche:
@@ -865,14 +865,14 @@ void example_static_var(void);
 
 int main(void){
         /* Richiamiamo cinque volte la funzione example_static_var: la variabile a ad ogni
-	 * nouva chiamata verrà prima allocata poi inizializzata a zero, incrementata di 1
+	 * nuova chiamata verrà prima allocata poi inizializzata a zero, incrementata di 1
 	 * e poi deallocata. una successiva chiamata alla funzione example_static_var rial
 	 * -locherà spazio in memoria per la variabile e la inizializzerà a 0 e  così via.
 	 * Al  massimo  la variabile a potrà valere 1. Al contrario la variabile di nome b
 	 * viene allocata una sola volta all' esecuzione e deallocata  alla  terminazione,
 	 * quindi il suo valore sarà conservato  tra due chiamate successive alla funzione
-	 * example_static_var, il valore di b infatti  sarà incrementato cinque volta pari
-	 * al numero di chiamate della funzione example_static_var   
+	 * example_static_var, il valore di b infatti  sarà incrementato cinque volte,  un
+	 * valore pari al numero di chiamate alla funzione example_static_var   
          
         example_static_var();
         example_static_var();
@@ -925,7 +925,7 @@ Fino a questo punto abbiamo usato i termini dichiarazione e definizione in modo 
 La definizione di una variabile coincide con l'istruzione per cui avviene l'allocazione di spazio in memoria per la variabile. La dichiarazione invece consiste nel dichiarare al compilatore che si farà uso di una variabile già allocata nel file corrente o in un altro file.
 Per le variabili locali (<code>auto</code>) la definizione coincide con la dichiarazione, per le variabili globali ha senso conoscere questa leggera differenza.
 Una variabile globale ha file scope ed external linkage, per questo viene anche detta variabile esterna (visibile anche all'esterno del file, negli altri file del programma).
-Ricordiamo che una variabile esterna (globale) è DEFINITA fuori dalle funzioni all'inizio del file, in questo modo:
+Ricordiamo che una variabile esterna (globale) è **DEFINITA** fuori dalle funzioni all'inizio del file, in questo modo:
 </p>
 
 ```c
@@ -950,9 +950,9 @@ int main(void){
  					* basta usare la keyword extern.Serve esclusivamente per
 					* documentare che nella funzione verrà usata una variabi
 					* le globale (non locale automatica)e di stare attenti a
-					* come questa viene va lorizzata e manipolata in  quanto
+					* come questa viene valorizzata e  manipolata in  quanto
 					* ha visibilità in tutto il file e potenzialmente in tut
-					* -ti i file
+					* -ti i file dell'intero programma
 					*/
 }
 ```
@@ -1005,8 +1005,8 @@ extern int esterna = 2; // DICHIARAZIONE ERRORE
 ```
 
 <p align="justify">
-Alla luce di queste nuove conocsenze modifichiamo il programma visto in <code>3_variabili.c</code> spostando i prototipi della funzioni e la DEFINIZIONE delle variabili globali in un file <code>header</code> (estensione <code>.h</code>). Abbiamo già incontrato questi file quando abbiamo introdotto la funzione <code>printf()</code> ed avevamo detto che era necessario includere il file header <code>stdio.h</code> che conteneva il prototipo della <code>printf()</code>. I file header o d'intestazione contengono sia i prototipi delle funzioni sia le strutture dati (quindi anche le variabili globali) che saranno utili nel corrispondente file sorgeten (estensione <code>.c</code>).
-I file d'intestazione possono essere sia di sistema (cioè forniti dal linguaggio stesso) e vengono inclusi nella direttiva <code>#include</code> usando le parentesi angolari <code><</code> <code>></code>, in questo modo:
+Alla luce di queste nuove conoscenze modifichiamo il programma visto in <code>3_variabili.c</code> spostando i prototipi della funzioni e la DEFINIZIONE delle variabili globali in un file <code>header</code> (estensione <code>.h</code>). Abbiamo già incontrato questi file quando abbiamo introdotto la funzione <code>printf()</code> ed avevamo detto che era necessario includere il file header <code>stdio.h</code> che conteneva il prototipo della <code>printf()</code>. I file header o d'intestazione contengono sia i prototipi delle funzioni sia le strutture dati (quindi anche le variabili globali) che saranno utili nel corrispondente file sorgente (estensione <code>.c</code>).
+I file d'intestazione possono essere sia di sistema (cioè forniti dal linguaggio stesso) e, come detto, vengono inclusi con la direttiva <code>#include</code> usando le parentesi angolari <code><</code> <code>></code>, in questo modo:
 </p>
 
 ```c
@@ -1023,11 +1023,11 @@ i file d'instestazione definiti dal programmatore vengono inclusi usando i doppi
 
 <p align="justify">
 Il nostro compito è allora spostare tutti i prototipi e le variabili globali di <code>3_variabili.c</code> in un file d'instazione (<code>4_variabili.h</code>) ed includere il file header nel corrispondente file sorgente (<code>4_variabili.c</code>).
-Ovviamente fare qualche piccola modifica e miglioramente al programma precedente, nello specifico:
+Ovviamente faremo anche qualche piccola modifica e miglioramento al programma precedente, nello specifico:
 
 <ul>
 	<li>
-	Nel file <code>4_variabili.h</code> oltre che dichiarare i prototipi della funzioni, definiamo una nuova variabile esterna (costante) <code>NUM_ITERATIONS</code> che rappresenta il numero di volte che il programma richiederà all'utente di eseguire un'operazione prima di terminare autonomamente.
+	Nel file <code>4_variabili.h</code> oltre che dichiarare i prototipi delle funzioni, definiamo una nuova variabile esterna (costante) <code>NUM_ITERATIONS</code> che rappresenta il numero di volte che il programma richiederà all'utente di eseguire un'operazione prima di terminare autonomamente.
 	</li>	
 </ul>
 </p>
@@ -1040,7 +1040,7 @@ const int NUM_ITERATIONS = 2;
 <p>
 <ul>
 	<li align="justify">
-		Per iterare più volte il processo di calcolo (richiesta di inserimento operandi ed operazione) usiamo un nouvo costrutto di controllo del flusso: il <code>for</code>. Anche questo verrà trattato in dettaglio in un altro paragrafo ma brevemente possiamo anticipare che il costrutto <code>for</code> serve per realizzare un clico (o loop), permette di eseguire un insieme di istruzioni per un certo numero di volte. Ha questa forma: <code>for ( espr1 ; espr2 ; espr3 ) istr</code>. Prima di iniziare il ciclo viene valutata <b>una volta sola</b> <code>espr1</code> che viene tipicamente usata per inizalizzare le variabili che controllano il ciclo (dette indici del ciclo). Poi viene valutata l'espressione <code>espr2</code> che, se vera, determina l'esecuzione del corpo del ciclo costituito dal blocco di istruzioni <code>istr</code>, in caso contrario (<code>espr2</code> è falsa) il ciclo termina. Prima di valutare nuovamente (passo successivo) <code>espr2</code>, viene valutata l'espressione <code>espr3</code> che tipicamente viene usata per incrementare o decrementare la variabile (indice) che controlla il ciclo (in <code>espr2</code>).	
+		Per iterare più volte il processo di calcolo (richiesta di inserimento operandi ed operazione) usiamo un nuovo costrutto di controllo del flusso: il <code>for</code>. Anche questo verrà trattato in dettaglio in un altro paragrafo ma brevemente possiamo anticipare che il costrutto <code>for</code> serve per realizzare un clico (o loop), permette di eseguire un insieme di istruzioni un certo numero di volte. Ha questa forma: <code>for ( espr1 ; espr2 ; espr3 ) istr</code>. Prima di iniziare il ciclo viene valutata <b>una volta sola</b> <code>espr1</code> che viene tipicamente usata per inizalizzare le variabili che controllano il ciclo (dette indici del ciclo). Poi viene valutata l'espressione <code>espr2</code> che, se vera, determina l'esecuzione del corpo del ciclo costituito dal blocco di istruzioni <code>istr</code>, in caso contrario (<code>espr2</code> è falsa) il ciclo termina. Prima di valutare nuovamente (passo successivo) <code>espr2</code>, viene valutata l'espressione <code>espr3</code> che tipicamente viene usata per incrementare o decrementare la variabile (indice) che controlla il ciclo (in <code>espr2</code>).	
 	</li>
 </ul>
 </p>
@@ -1073,10 +1073,10 @@ for (int i=0; i<10; i++)
 *  Aggiungiamo l'operazione di divisione che mancava nella versione precedente
 
 <p align="justify">
-Il codice del fle header <code>4_variabili.h</code> e sorgente <code>4_variabili.c</code> è mostrato di sotto, la cosa da far notare è la variabile esterna <code>NUM_ITERATIONS</code> che è DICHIARATA nel <code>.h`</code>, questo verrà include nel <code>.c</code> dal prepocessore quindi sarà poi effettivamente parte del file <code>.i</code> ma per esplicitare che si sta usando una variabile DEFINITA in un altro file, nel <code>.c</code> si effettua una DICHIARAZIONE della variabile usando la <i>keyword</i> <code>extern</code>.
+Il codice del fle header <code>4_variabili.h</code> ed il sorgente <code>4_variabili.c</code> è mostrato di sotto, la cosa da far notare è la variabile esterna <code>NUM_ITERATIONS</code> che è DICHIARATA nel <code>.h`</code>; il file d'intestazoine verrà, attraverso la direttiva include incluso nel <code>.c</code> dal prepocessore e sarà poi effettivamente parte integrante del file <code>.i</code>. Per esplicitare che si sta usando una variabile DEFINITA in un altro file, nel <code>.c</code> si effettua una DICHIARAZIONE della variabile usando la <i>keyword</i> <code>extern</code>.
 </p>
 
-[/lab/0_intro/4_variabili.h](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/4_variabili.h)
+[/lab/0_intro/4_variabili.h](https://github.com/TheBitPoets/2cornot2c/blob/m ain/lab/0_intro/4_variabili.h)
 
 ```c
 const int NUM_ITERATIONS = 2; 
@@ -1146,7 +1146,7 @@ int divisione(int dividendo, int divisore){
 
 ## Variabili globali con Internal Linkage (Static variables with Internal Linkage)
 
-Queste variabili sono globali ed hanno file scope, static storage duration ma internal linkage: questo vuol dire che la loro visibilità è limitata al file che le contiene. La loro DEFINIZIONE è: come tutte le variabili globali effettuata fuori da tutte le funzioni di solito all'inizio del file con l'aggiunta della parola chiave **static**.ù
+Queste variabili sono globali ed hanno file scope, static storage duration ma internal linkage: questo vuol dire che la loro visibilità è limitata al file che le contiene. La loro DEFINIZIONE è: come tutte le variabili globali effettuata fuori da tutte le funzioni di solito all'inizio del file con l'aggiunta della parola chiave **static**.
 
 ```c
 int global_external; /* DEFINIZIONE di variabile globale esterna, visibile nel file ed in tutti gli altri file del programma */
@@ -1157,9 +1157,10 @@ int main(void){
 	extern int global_internal;  /* DICHIARAZIONE opzionale di variabile globale interna */
 }
 ```
+
 ## Sintassi dichiarazione variabili
 
-Una dichiarazine di variabili ha questa forma:
+Una dichiarazine di variabile ha questa forma:
 
 ```
 specificatori-dichiarazione dichiaratori
@@ -1209,7 +1210,7 @@ extern const unsigned long int a[10];
 ```
 ### Classi di memorizzazione per le funzioni
 
-La definizione (e dichiarazione) di funzione, come per le variabili, può contenere una classe di memorizzazione. Per le funzioni abbiamo solo due classi di memorizzazione: `extern` e `static`. La _keyword_ `extern` all'inizio della dichiarazione o definizione di funzioni specifica che la questa ha **external linkage**: può essere chiamata da funzioni in altri file del programma. La parola chiave `static` invece indica **internal linkage** e quindi limita l'uso della funzione all'interno del file in cui è definita. **Se non viene specificata una classe di memorizzazione per la funzione questa assume la classe `extern`**.
+La definizione (e dichiarazione) di funzione, come per le variabili, può contenere una classe di memorizzazione. Per le funzioni abbiamo solo due classi di memorizzazione: `extern` e `static`. La _keyword_ `extern` all'inizio della dichiarazione o definizione di funzioni specifica che la funzione ha **external linkage**: può essere chiamata da funzioni in altri file del programma. La parola chiave `static` invece indica **internal linkage** e quindi limita l'uso della funzione all'interno del file in cui è definita. **Se non viene specificata una classe di memorizzazione per la funzione questa assume la classe `extern`**.
 
 ```c
 extern int f(int i);
@@ -1246,7 +1247,7 @@ void f(int d, register int e){
 | j     | static           | block     |**Nota**  |
 | k     | automatic        | block     | none     |
 
-**Nota**: La definizione di  `b` e di `j` non sono mostrate quindi non è possibile determinare il **linkage** di queste variabili. Nella maggior parte dei casi le variabili saranno definite in un altro file ed avranno quindi **external linkage**
+**Nota**: La definizione di  `b` e di `j` non sono mostrate, quindi non è possibile determinare il **linkage** di queste variabili. Nella maggior parte dei casi le variabili saranno definite in un altro file ed avranno quindi **external linkage**
 
 ### Suddivisione in moduli di un programma
 
