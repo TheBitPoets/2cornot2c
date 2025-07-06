@@ -1146,7 +1146,9 @@ int divisione(int dividendo, int divisore){
 
 ## Variabili globali con Internal Linkage (Static variables with Internal Linkage)
 
-Queste variabili sono globali ed hanno file scope, static storage duration ma internal linkage: questo vuol dire che la loro visibilità è limitata al file che le contiene. La loro DEFINIZIONE è: come tutte le variabili globali effettuata fuori da tutte le funzioni di solito all'inizio del file con l'aggiunta della parola chiave **static**.
+<p align="justify">
+Queste variabili sono globali ed hanno file scope, static storage duration ma internal linkage: questo vuol dire che la loro visibilità è limitata al file che le contiene. La loro DEFINIZIONE è: come tutte le variabili globali effettuata fuori da tutte le funzioni di solito all'inizio del file con l'aggiunta della parola chiave <b>static</b>.
+</p>
 
 ```c
 int global_external; /* DEFINIZIONE di variabile globale esterna, visibile nel file ed in tutti gli altri file del programma */
@@ -1167,6 +1169,7 @@ specificatori-dichiarazione dichiaratori
 ```
 
 Gli specificatori di dichiarazione descrivono le proprietà della variabile o della funzione oggetto della dichiarazione.
+
 Gli specificatori di dichiarazione sono raggruppabili in tre categorie:
 
 * classi di memorizzazione (storage classes): sono quattro `auto`, `static`, `extern` e `register`. Al massimo una di queste può presentarsi in una dichiarazione e se presente deve essere la prima _keyword_ nella dichiarazione
@@ -1210,7 +1213,9 @@ extern const unsigned long int a[10];
 ```
 ### Classi di memorizzazione per le funzioni
 
-La definizione (e dichiarazione) di funzione, come per le variabili, può contenere una classe di memorizzazione. Per le funzioni abbiamo solo due classi di memorizzazione: `extern` e `static`. La _keyword_ `extern` all'inizio della dichiarazione o definizione di funzioni specifica che la funzione ha **external linkage**: può essere chiamata da funzioni in altri file del programma. La parola chiave `static` invece indica **internal linkage** e quindi limita l'uso della funzione all'interno del file in cui è definita. **Se non viene specificata una classe di memorizzazione per la funzione questa assume la classe `extern`**.
+<p align="justify">
+La definizione (e dichiarazione) di funzione, come per le variabili, può contenere una classe di memorizzazione. Per le funzioni abbiamo solo due classi di memorizzazione: <code>extern</code> e <code>static</code>code>. La <i>keyword</i> <code>extern</code> all'inizio della dichiarazione o definizione di funzioni specifica che la funzione ha <b>external linkage</b>: può essere chiamata da funzioni in altri file del programma. La parola chiave <code>static</code> invece indica <b>internal linkage</b> e quindi limita l'uso della funzione all'interno del file in cui è definita. <b>Se non viene specificata una classe di memorizzazione per la funzione questa assume la classe <code>extern</code></b>.
+</p>
 
 ```c
 extern int f(int i);
