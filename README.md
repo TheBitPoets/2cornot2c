@@ -1214,7 +1214,7 @@ extern const unsigned long int a[10];
 ### Classi di memorizzazione per le funzioni
 
 <p align="justify">
-La definizione (e dichiarazione) di funzione, come per le variabili, può contenere una classe di memorizzazione. Per le funzioni abbiamo solo due classi di memorizzazione: <code>extern</code> e <code>static</code>code>. La <i>keyword</i> <code>extern</code> all'inizio della dichiarazione o definizione di funzioni specifica che la funzione ha <b>external linkage</b>: può essere chiamata da funzioni in altri file del programma. La parola chiave <code>static</code> invece indica <b>internal linkage</b> e quindi limita l'uso della funzione all'interno del file in cui è definita. <b>Se non viene specificata una classe di memorizzazione per la funzione questa assume la classe <code>extern</code></b>.
+La definizione (e dichiarazione) di funzione, come per le variabili, può contenere una classe di memorizzazione. Per le funzioni abbiamo solo due classi di memorizzazione: <code>extern</code> e <code>static</code>. La <i>keyword</i> <code>extern</code> all'inizio della dichiarazione o definizione di funzioni specifica che la funzione ha <b>external linkage</b>: può essere chiamata da funzioni in altri file del programma. La parola chiave <code>static</code> invece indica <b>internal linkage</b> e quindi limita l'uso della funzione all'interno del file in cui è definita. <b>Se non viene specificata una classe di memorizzazione per la funzione questa assume la classe <code>extern</code></b>.
 </p>
 
 ```c
