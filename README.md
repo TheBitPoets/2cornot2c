@@ -1322,11 +1322,20 @@ switch ( espressione-intera ) {
 } 
 ```
 
+<details>
+<summary>lab/0_intro/5_variabili_main.c#L1-L34</summary>
 https://github.com/kinderp/2cornot2c/blob/23edeb0541fb524a4389e3728b72eec3df1da49e/lab/0_intro/5_variabili_main.c#L1-L34
+</details>
 
+<details>
+<summary>lab/0_intro/5_variabili.h#L1-L6</summary>
 https://github.com/kinderp/2cornot2c/blob/23edeb0541fb524a4389e3728b72eec3df1da49e/lab/0_intro/5_variabili.h#L1-L6
+</details>
 
+<details>
+<summary>lab/0_intro/5_variabili.c#L1-L15</summary>
 https://github.com/kinderp/2cornot2c/blob/23edeb0541fb524a4389e3728b72eec3df1da49e/lab/0_intro/5_variabili.c#L1-L15
+</details>
 
 ### Il preprocessore
 
