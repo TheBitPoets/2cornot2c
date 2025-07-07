@@ -1659,7 +1659,7 @@ vagrant@ubuntu2204:~$ ./conditional_compilation
 Staging code, debugging is enabled
 ```
 
-Ovviamente è possibile all'interno del codice annulla la dichiarazione del simbolo con `#undef DEBUG` in questo modo:
+Ovviamente è possibile all'interno del codice annullare la dichiarazione del simbolo con `#undef DEBUG` in questo modo:
 
 ```c
 #include<stdio.h>
@@ -1675,7 +1675,7 @@ int main(void){
 }
 ```
 
-anche definendo il simbolo da `gcc` questo verrà annullato dalla direttiva `#undef` e l'output del programma sarà:
+anche definendo il simbolo attraverso `gcc`, a tempo di compilazoine, questo verrà annullato dalla direttiva `#undef` e l'output del programma sarà:
 
 ```bash
 vagrant@ubuntu2204:~$ gcc -o conditional_compilation -DDEBUG conditional_compilation.c
