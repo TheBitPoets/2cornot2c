@@ -1373,7 +1373,7 @@ Ha questa forma:
 ```
 
 <p align="justify">
-A seguito della riga sopra, tutte le successiva occorrenze dell'identificatore <code>nome</code> presenti nel codice saranno sostituite con <code>nuovo-nome</code> (non viene considerato lo spazio tra <code>nome</code> e <code>nuovo-nome</code>).
+A seguito della riga sopra, tutte le successive occorrenze dell'identificatore <code>nome</code> presenti nel codice saranno sostituite con <code>nuovo-nome</code> (non viene considerato lo spazio tra <code>nome</code> e <code>nuovo-nome</code>).
 Il testo da sostituire può estendersi su più di una riga se l'ultimo carattere della linea è <code>\</code> che fa ignorare il carattere di nuova riga <code>\n</code> al preprocessore.
 </p>
 
