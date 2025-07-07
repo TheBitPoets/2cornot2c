@@ -1448,9 +1448,10 @@ Per evitare errori sarebbe stato giusto definire la **macro** in questo modo:
 
 #### La direttiva #include
 
-Abbiamo accennata a questa direttiva nei paragrafi introduttivi spiegando che serviva per includere il file header `stdio.h` che conteneva il prototipo della funzione `printf()`.
+Abbiamo accennato a questa direttiva nei paragrafi introduttivi spiegando che serviva ad includere, nel file sorgente, il file header `stdio.h` che conteneva il prototipo della funzione `printf()`.
 
 La direttiva `#include` sostituisce il contenuto di un intero file nella riga di codice dove è inserita.
+
 Esiste in due forme: con parentesi angolari o con doppi apici:
 
 ```c
@@ -1465,7 +1466,8 @@ La prima forma (parentesi angoli `<` `>`) è usata per includere il contenuto di
 
 #### Le direttive #if #ifdef #ifndef 
 
-Con queste direttive si possono escludere porzioni di codice in base al verificarsi o meno di certe condizioni
+Con queste direttive si possono escludere porzioni di codice in base al verificarsi o meno di certe condizioni.
+
 La direttiva `#if` valuta **un'espressione intera costante** il cui **valore deve essere noto all'atto della compilazione**.
 
 ```c
@@ -1493,6 +1495,7 @@ La direttiva `#ifdef` è molto simile, non valuta un'espressione costante ma la 
 ```
 
 `#ifdef `include il codice tra se stessa e la direttiva `#endif` solo se la macro è definita.
+
 E' possibile ottenere il comportamento opposto con `#ifndef`, come segue:
 
 ```c
@@ -1509,7 +1512,9 @@ E' possibile ottenere il comportamento opposto con `#ifndef`, come segue:
 
 ### Eliminazione temporanea di codice
 
-In fase di debugging può essere utile eliminare temporaneamente porzioni di codice senza cancellarle, oppure al contrario far eseguire certi pezzi di codice (`printf()` di variabili per valutarne il valore) solo in fase di debug/testing. A questi scopi possiamo usare le direttive mostrate sopra, vediamo come:
+<p align="justify">
+In fase di debugging può essere utile eliminare temporaneamente porzioni di codice senza cancellarle, oppure al contrario far eseguire certi pezzi di codice (<code>printf()</code> di variabili per valutarne il valore) solo in fase di debug/testing. A questi scopi possiamo usare le direttive mostrate sopra, vediamo come:
+</p>
 
 ```c
 #if 0
@@ -1517,7 +1522,7 @@ In fase di debugging può essere utile eliminare temporaneamente porzioni di cod
 #endif
 ```
 
-Una volta eliminati i problemi si può rispristinare il codice cambiando rimuovedo le righe contenenti `#if` `#endif` oppure cambiando il valore zero con il valore uno come mostrato sotto:
+Una volta eliminati i problemi si può rispristinare il codice cambiando rimuovedo le righe contenenti <code>#if</code> <code>#endif</code> oppure cambiando il valore zero con il valore uno come mostrato sotto:
 
 ```c
 #if 1
@@ -1546,7 +1551,9 @@ Si può ottenere lo stesso risultato con la direttiva `#ifdef` in questo modo:
 #endif
 ```
 
-Questa seconda soluzione, più elegante, può essere utilizzata anche per includere dei pezzi di codice in fase di testing/debugging (per esempio uan serie di stampe su schermo dei valori della variabili). Per farlo basta definire una macro `DEBUG` con la direttiva `#define` ed usare `#ifdef` o `#ifndef` per includere il codice di test in questo modo:
+<p align="justify">
+Questa seconda soluzione, più elegante, può essere utilizzata anche per includere dei pezzi di codice in fase di testing/debugging (per esempio uan serie di stampe su schermo dei valori della variabili). Per farlo basta definire una macro <code>DEBUG</code> con la direttiva <code>#define</code> ed usare <code>#ifdef</code> o <code>#ifndef</code> per includere il codice di test in questo modo:
+</p>
 
 ```c
 #define DEBUG
@@ -1561,7 +1568,9 @@ Questa seconda soluzione, più elegante, può essere utilizzata anche per includ
 #endif
 ```
 
-Per non considerare il codice basta rimuovere la prima riga `#define DEBUG` ma, per rendere esplicito che DEBUG è usato per una compilazione condizionale del codice attraverso il preprocessore e che questo è stato disattivato, è meglio usare la direttiva `#undef` in questo modo:
+<p align="justify">
+Per non considerare il codice basta rimuovere la prima riga <code>#define DEBUG</code> ma, per rendere esplicito che DEBUG è usato per una compilazione condizionale del codice attraverso il preprocessore e che questo è stato disattivato, è meglio usare la direttiva <code>#undef</code> in questo modo:
+</p>
 
 ```c
 #undef DEBUG
