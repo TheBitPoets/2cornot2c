@@ -1283,18 +1283,18 @@ Di solito si raggruppano tutte le funzioni ed i dati relativi ad una certa funzi
 > Nei file header `.h` devono essere inseriti solo le definizioni dei tipi ed i prototipi (le dichiarazioni) della funzioni. L'implementazione delle funzioni risiede nel file sorgente `.c` 
 
 <p align="justify">
-Brevemete, il <code>5_variabili_main.c</code> inseriamo la logica di interazione con l'utente, l'implementazione delle funzioni matematiche viene spostata in un file sorgnete separato: <code>5_variabili.c</code> ed i prototipi nel corrispondente file header <code>5_variabili.h</code>
+Brevemete, in <code>5_variabili_main.c</code> inseriamo la logica di interazione con l'utente, l'implementazione delle funzioni matematiche viene spostata in un file sorgnete separato: <code>5_variabili.c</code> ed i prototipi nel corrispondente file header <code>5_variabili.h</code>
 </p>
 
 > [!NOTE]
 > Il file sorgente che contiene le funzioni matematiche ed il suo corrispettivo file d'intestazione hanno stesso nome ma estensioni differenti: `5_variabili.c` e `5_variabili.h`
 
 <p align="justify">
-Nel file <code>5_varibili_main.c</code> facciamo uso delle funzioni matematiche quindi prima del loro utilizzo all'interno dello <code>switch</code> importiamo il file header contenente i prototipi, ovvviamente facciamo lo stesso anche per la funzione <code>printf()</code>.
+Nel file <code>5_varibili_main.c</code> facciamo uso delle funzioni matematiche, quindi, prima del loro utilizzo all'interno dello <code>switch</code>, importiamo il file header contenente i prototipi; ovvviamente facciamo lo stesso anche per la funzione <code>printf()</code>.
 </p>
 
 > [!WARNING]
-> Fai attenzione che per includere il file header per la funzione `printf()` si usano le parentesi angolari `<` `>` in quanto si tratta di funzioni del linguaggio, per includere file d'intestazioni definite dal programmatore si usano i doppi apici `"`
+> Fai attenzione che per includere il file header per la funzione `printf()` si usano le parentesi angolari `<` `>` in quanto si tratta di funzioni del linguaggio, per includere file d'intestazione definiti dal programmatore si usano i doppi apici `"`
 
 ```c
 #include <stdio.h> // header della libreria c
@@ -1339,8 +1339,10 @@ https://github.com/kinderp/2cornot2c/blob/23edeb0541fb524a4389e3728b72eec3df1da4
 
 ### Il preprocessore
 
+<p align="justify">
 Il preprocessore elabora il contenuto di un file sorgente **prima della compilazione** ed opera delle sostituzioni di testo: la sostituzione di parti del codice sorgente originale con altro testo.
 Il preprocessamento è il primo step del processo che porta alla generazione del file eseguibile. Il preprocessore può svolgere differenti sostituzioni, tutte le chiamate al preprocessore sono dette **direttive al preprocessore**, le più famose sono:
+</p>
 
 * `#define`
 * `#include`
@@ -1353,10 +1355,10 @@ Queste direttiva permettono di:
 
 * includere il cotenuto di altri file all'interno del sorgente
 * ridefinire il significato degli identificatori
-* disabilitare condizionalmente parti di codice in fase di compilazione eliminando il testo prima che il compilatore lo elabori
+* disabilitare condizionalmente parti di codice in fase di compilazione, eliminando il testo prima che il compilatore lo elabori
 
 > [!TIP]
-> E' il preprocessore che elimina tutti i commneti presenti nel codice sorgente in modo che sia compilatore solo il codice vero e proprio
+> E' il preprocessore che elimina tutti i commenti presenti nel codice sorgente in modo che sia compilato solo il codice vero e proprio
 
 
 #### La direttiva #define 
