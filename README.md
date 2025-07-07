@@ -1522,7 +1522,7 @@ In fase di debugging può essere utile eliminare temporaneamente porzioni di cod
 #endif
 ```
 
-Una volta eliminati i problemi si può rispristinare il codice cambiando rimuovedo le righe contenenti <code>#if</code> <code>#endif</code> oppure cambiando il valore zero con il valore uno come mostrato sotto:
+Una volta eliminati i problemi si può rispristinare il codice rimuovendo le righe contenenti <code>#if</code> <code>#endif</code> oppure cambiando il valore zero con il valore uno come mostrato sotto:
 
 ```c
 #if 1
