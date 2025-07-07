@@ -1340,8 +1340,8 @@ https://github.com/kinderp/2cornot2c/blob/23edeb0541fb524a4389e3728b72eec3df1da4
 ### Il preprocessore
 
 <p align="justify">
-Il preprocessore elabora il contenuto di un file sorgente **prima della compilazione** ed opera delle sostituzioni di testo: la sostituzione di parti del codice sorgente originale con altro testo.
-Il preprocessamento è il primo step del processo che porta alla generazione del file eseguibile. Il preprocessore può svolgere differenti sostituzioni, tutte le chiamate al preprocessore sono dette **direttive al preprocessore**, le più famose sono:
+Il preprocessore elabora il contenuto di un file sorgente <b>prima della compilazione</b> ed opera delle sostituzioni di testo: la sostituzione di parti del codice sorgente originale con altro testo.
+Il preprocessamento è il primo step del processo che porta alla generazione del file eseguibile. Il preprocessore può svolgere differenti sostituzioni, tutte le chiamate al preprocessore sono dette <b>direttive al preprocessore</b>, le più famose sono:
 </p>
 
 * `#define`
@@ -1363,17 +1363,22 @@ Queste direttiva permettono di:
 
 #### La direttiva #define 
 
-La direttiva `#define` viene usata per creare le **macro**. Le **macro** sono utilizzate per effettuare sostituzioni tipografiche nel codice sorgente prima della compilazione. 
+<p align="justify">
+La direttiva <code>#define</code> viene usata per creare le <b>macro</b>. Le <b>macro</b> sono utilizzate per effettuare sostituzioni tipografiche nel codice sorgente prima della compilazione. 
 Ha questa forma:
+</p>
 
 ```c
 #define nome nuovo-nome
 ```
 
-A seguito della riga sopra, tutte le successiva occorrenze dell'identificatore `nome` presenti nel codice saranno sostituite con `nuovo-nome` (non viene considerato lo spazio tra `nome` e `nuovo-nome`).
-Il testo da sostituire può estendersi su più di una riga se l'ultimo carattere della linea è `\` che fa ignorare il carattere di nuova riga `\n` al preprocessore.
+<p align="justify">
+A seguito della riga sopra, tutte le successiva occorrenze dell'identificatore <code>nome</code> presenti nel codice saranno sostituite con <code>nuovo-nome</code> (non viene considerato lo spazio tra <code>nome</code> e <code>nuovo-nome</code>).
+Il testo da sostituire può estendersi su più di una riga se l'ultimo carattere della linea è <code>\</code> che fa ignorare il carattere di nuova riga <code>\n</code> al preprocessore.
+</p>
 
 Ecco alcuni esempi di uso di `#define`:
+
 
 ```c
 #define NUM_ITERATIONS 10
@@ -1409,7 +1414,10 @@ int main(void){
 ```
 
 Si usa dire che la **macro** è stata espansa.
-Le **macro** sono molto più veloci delle funzioni ma usandole è più facile inserire nel codice errori difficilmente identificabili. Inoltre i moderni compilatori sono in grado di effetturare ottimizzazioni sul codice e capire autonomamente quando evitare una chiamata a funzione espondedo il codice in essa contenuta. In generale quindi l'uso eccessivo di **macro** o l'utilizzo di **macro complesse** non porta a miglioramenti delle prestazioni ma può comportare l'insorgere di bug difficili da risolvere. Vediamo un esempio:
+
+<p align="justify">
+Le <b>macro</b> sono molto più veloci delle funzioni ma usandole è più facile inserire nel codice errori difficilmente identificabili. Inoltre i moderni compilatori sono in grado di effetturare ottimizzazioni sul codice e capire autonomamente quando evitare una chiamata a funzione espandendo il codice in essa contenuta. In generale quindi l'uso eccessivo di <b>macro</b> o l'utilizzo di <b>macro complesse</b> non porta a miglioramenti delle prestazioni ma può comportare l'insorgere di bug difficili da risolvere. Vediamo un esempio:
+</p>
 
 ```c
 #define QUADRATO(x) x*x
