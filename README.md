@@ -1652,7 +1652,7 @@ Posso definire il simbolo `DEBUG` da riga di comando a tempo di compilazione pas
 ```bash
 gcc -DDEBUG -o conditional_compilation conditional_compilation.c
 ```
-Anche se nel file non è presente nessuna riga `#define DEBUG` il simbolo è stato definito a tempo di compilazione quindi siamo in stagig è l'output del programma sarà:
+Anche se nel file non è presente alcuna riga `#define DEBUG` il simbolo è stato definito a tempo di compilazione quindi siamo in staging è l'output del programma sarà:
 
 ```bash
 vagrant@ubuntu2204:~$ ./conditional_compilation
