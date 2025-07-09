@@ -1768,7 +1768,7 @@ typedef int Bool;
 ```
 
 <p align="justify">
-Al momento dell'inclusione se il simbolo <code>__FILE3_H__</code> non è stato ancora definito questo verrà definito e verrà anche incluso il contenuto del file d'intestazione altrimenti se `file3.h` è stato già incluso una prima volta il simbolo <code>__FILE3_H__</code> sarà già definito ed il contenuto del file d'intestazione fino ad <code>#endif</code> verrà ignorato evitando così una seconda inutile inclusione. Verifichiamo di aver risolto rilanciando lo step di preprocessamento:
+Al momento dell'inclusione se il simbolo <code>__FILE3_H__</code> non è stato ancora definito questo verrà definito e verrà anche incluso il contenuto del file d'intestazione altrimenti se <code>file3.h</code> è stato già incluso una prima volta il simbolo <code>__FILE3_H__</code> sarà già definito ed il contenuto del file d'intestazione fino ad <code>#endif</code> verrà ignorato evitando così una seconda inutile inclusione. Verifichiamo di aver risolto rilanciando lo step di preprocessamento:
 </p>
 
 ```bash
