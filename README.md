@@ -1685,9 +1685,11 @@ Production code, no debugging enabled
 
 ### Protezione del contenuto dei file d'intestazione
 
-I file d'intestazione contengono dichiarazioni sia di funzioni (prototipi) ma anche di dati (strutture, definizione di tipo, variabili e costanti); questi file possono essere inclusi in più file correndo il rischio di avere una situazione in cui lo stesso file d'intestazione è incluso due volte nello stesso sorgente; in queste situzioni il preprocessore copierà due volte il contenuto del file d'intestazione.
-Se non è grosso problema, all'interno di un file `.c`, avere due o più dichiarazioni (prototipi) della stessa funzione; il compilatore invece darà errore se trova due dichiarazioni di tipo identiche. Dobbiamo quindi trovare un modo di evitare inclusioni multiple dello stesso file d'intestazione in un file sorgente.
-Per capire meglio facciamo un esempio: supponiamo di avere tre file header: `file1.h` `file2.h` `file3.h` ed un file sorgente `prog.c`. La situazione, mostrata nella figura di sotto, è la seguente: sia `file1.h` che `file2.h` includono `file3.h` mentre `prog.c` include `file1.h` e `file2.h`. In `prog.c` `file3.h` verrà incluso due volte: la prima volta a seguito dell'inclusione di `file1.h` e la seconda per l'inclusione di `file2.h` 
+<p align="justify">
+I file d'intestazione contengono dichiarazioni sia di funzioni (prototipi) ma anche di dati (strutture, definizione di tipo, variabili e costanti); questi file possono essere inclusi in più sorgenti correndo il rischio di avere una situazione in cui lo stesso file d'intestazione è incluso due volte nello stesso sorgente; in queste situzioni il preprocessore copierà due volte il contenuto del file d'intestazione.
+Non è grosso problema, all'interno di un file <code>.c</code>, avere due o più dichiarazioni (prototipi) della stessa funzione; il compilatore invece darà errore se trova due dichiarazioni di tipo identiche. Dobbiamo quindi trovare un modo di evitare inclusioni multiple dello stesso file d'intestazione in un file sorgente.
+Per capire meglio facciamo un esempio: supponiamo di avere tre file header: <code>file1.h</code> <code>file2.h</code>code> <code>file3.h</code> ed un file sorgente <code>prog.c</code>. La situazione, mostrata nella figura di sotto, è la seguente: sia <code>file1.h</code> che <code>file2.h</code> includono <code>file3.h</code> mentre <code>prog.c</code> include <code>file1.h</code> e <code>file2.h</code>. In <code>prog.c</code> <code>file3.h</code> verrà incluso due volte: la prima volta a seguito dell'inclusione di <code>file1.h</code> e la seconda per l'inclusione di <code>file2.h</code> 
+</p>
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/inclusione_multipla.png)
 
@@ -1765,7 +1767,9 @@ typedef int Bool;
 #endif
 ```
 
-Al momento dell'inclusione se il simbolo `__FILE3_H__` non è stato ancora definito questo verrà definito e verrà anche incluso il contenuto del file d'intestazione altrimenti se `file3.h` è stato già incluso una prima volta il simbolo `__FILE3_H__` sarà già definito ed il contenuto del file d'intestazione fino ad `#endif` verrà ignorato evitando così una seconda inutile inclusione. Verifichiamo di aver risolto rilanciando lo step di preprocessamento:
+<p align="justify">
+Al momento dell'inclusione se il simbolo <code>__FILE3_H__</code> non è stato ancora definito questo verrà definito e verrà anche incluso il contenuto del file d'intestazione altrimenti se `file3.h` è stato già incluso una prima volta il simbolo <code>__FILE3_H__</code> sarà già definito ed il contenuto del file d'intestazione fino ad <code>#endif</code> verrà ignorato evitando così una seconda inutile inclusione. Verifichiamo di aver risolto rilanciando lo step di preprocessamento:
+</p>
 
 ```bash
 vagrant@ubuntu2204:~$ gcc -E prog.c
