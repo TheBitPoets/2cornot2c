@@ -1974,14 +1974,14 @@ $TMin$ : Estremo inferiore intervallo codifica   con segno
 U = Unsigned
 T = Two's complement
 
-<p align=center>
+<div align=center>
 
 | Codifica         | Intervallo valori |  Caso generale (W bit)       | W = 4
 | -------------    | -------------     | -------------                | -------------
 | Senza segno      | $[0, UMax]$       | $[0, 2^W -1]$                | $[0, 16]$ 
 | Complemento a 2  | $[TMin, TMax]$    | $[-2^{W-1}:-1, 0:2^{W-1}-1]$ | $[-8:-1, 0:7]$
 
-</p>
+</div>
 
 Come anticipato le sequenze di bit sono le stesse, le due codifiche si sovrappongono (una sequenza di bit ha lo stesso valore associato in entrambe le codifiche) solo nel range dei numeri positivi da $0$ a $UMax$, poi oltre questo valore, le stesse sequenze rappresentano rispettivamente valori positivi per la unsigned e negativi per la signed (fondamentalmente le sequenze di bit con MSB=1 saranno quelle per cui la codifica è differente). 
 
