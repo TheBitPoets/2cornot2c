@@ -1908,9 +1908,11 @@ Alcuni esempi:
 
 #### Condifica interi con segno (complemento a due)
 
+<p align=justify>
 La codifica in complmento a due è la più utilizzata per i numeri interi con segno (positivi e negativi). Il motivo principale è che ci permette per svolgere le operazione aritmetiche gli stessi circuiti usati per i numeri senza segno ed inoltre anche in questo caso ogni valore ha associato una sola rappresentazione (come nel caso dei numer senza segno).
 Per rappresentare il segno usiamo il bit più a sinistra (MSB) il più significativo. Se MSB è alto (1) il numero sarà negativo, se MSB è basso (0) il numero è positivo. 
 Data una sequenza di $W$ bit codificata in complemento a due, il valore associato alla sequenza è ricavabile dalla formula:
+</p>
 
 ```math
 -x_{W-1}*2^{W-1} + \sum_{i=0}^{W-2} x_i*2^i
@@ -1936,20 +1938,32 @@ Alcuni esempi:
 1111 = -1*2^3 + 1*2^2 + 1*2^1 + 1*2^0 = -8 + 4 + 2 + 1 = -1
 ```
 
+<p align=justify>
 Se noti abbiamo usato le stesse quattro sequenze degli esempi per la codifica dei numeri senza segno. Anche se le sequenze di bit sono le stesse le codifiche (come i bit vengono interpretati) sono diverse ed i valori ottenuti a seguito del processo di codifica può essere diverso. Da notare come i valori positivi coincidono in entrambe le codifiche (il bit di segno è 0 e le due codifiche coincidono) mentre quando il bit di segno è alto il valore rappresentato è diverso (è negativo).
+</p>
 
+<p align=justify>
 Anche in questo caso ogni valore ha associata una sola sequenza di bit, non ci sono due sequenze o più associate allo stesso valore. Il range di valori rappresentabili con $W$ bit è $[-2^{W-1}:-1, 0:2^{W-1}-1]$
 In quanto con $W$ bit ho $2^W$ sequenze possibili da distribuire metà ai numeri positivi $\frac{2^{W}}{2} = 2^W*2^{-1} = 2^{W-1}$ e metà ai negativi $2^{W-1}$ ma nei numeri positivi abbiamo lo zero a cui associare una sequenze delle $2^{W-1}$ quindi il valore massimo (estremo superiore) per i numeri positivi sarà appunto $2^{W-1}-1$ (-1 perchè appunto devo considerare lo zero che non ho invece nei numeri negativi). **Il range dei numeri rappresentabili è dunque asimmetrico** maggiore per i negativi di uno.
+</p>
 
-**Lo standard C non richiede che i numeri interi con segno siano rappresentati con codifica in complemento a due** ma quasi tutti i sistemi fanno questo. **L'unica cosa prevista dallo standard sono gli intervalli** (tutti simmetrici) per i tipi di dati predefiniti mostrati nell'immagine di sotto
+<p align=justify>
+<b>Lo standard C non richiede che i numeri interi con segno siano rappresentati con codifica in complemento a due</b> ma quasi tutti i sistemi fanno questo. <b>L'unica cosa prevista dallo standard sono gli intervalli</b> (tutti simmetrici) per i tipi di dati predefiniti mostrati nell'immagine di sotto
+</p>
 
-![](https://github.com/kinderp/2cornot2c/blob/main/images/c_datatype_ranges.png)
+<p align=center>
+<img src="https://github.com/kinderp/2cornot2c/blob/main/images/c_datatype_ranges.png">
+</p>
 
-Il file d'intestazione `<limits.h>` contiene informazioni circa gli intervalli (costanti per estremo superiore ed inferiore: `INT_MAX`, `INT_MIN`, `U_INT_MAX`) per i diversi tipi di interi relativi all'architettura di default del compilatore.
+<p align=justify>
+Il file d'intestazione <code><limits.h></code> contiene informazioni circa gli intervalli (costanti per estremo superiore ed inferiore: <code>INT_MAX</code>, <code>INT_MIN</code>, <code>U_INT_MAX</code>) per i diversi tipi di interi relativi all'architettura di default del compilatore.
 
 Nella figura di sotto sono invece riportati i range reali per i vari tipi che le implementazioni del C hanno rispettivamente per macchine a 32 e 64 bit
+</p>
 
-![](https://github.com/kinderp/2cornot2c/blob/main/images/c_32_64_bit_datatype_ranges.png)
+<p align=center>
+<img src="https://github.com/kinderp/2cornot2c/blob/main/images/c_32_64_bit_datatype_ranges.png">
+</p>
 
 ### Mapping signed - unsigned
 
