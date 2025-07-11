@@ -925,7 +925,7 @@ Fino a questo punto abbiamo usato i termini dichiarazione e definizione in modo 
 La definizione di una variabile coincide con l'istruzione per cui avviene l'allocazione di spazio in memoria per la variabile. La dichiarazione invece consiste nel dichiarare al compilatore che si farà uso di una variabile già allocata nel file corrente o in un altro file.
 Per le variabili locali (<code>auto</code>) la definizione coincide con la dichiarazione, per le variabili globali ha senso conoscere questa leggera differenza.
 Una variabile globale ha file scope ed external linkage, per questo viene anche detta variabile esterna (visibile anche all'esterno del file, negli altri file del programma).
-Ricordiamo che una variabile esterna (globale) è **DEFINITA** fuori dalle funzioni all'inizio del file, in questo modo:
+Ricordiamo che una variabile esterna (globale) è <b>DEFINITA</b> fuori dalle funzioni all'inizio del file, in questo modo:
 </p>
 
 ```c
