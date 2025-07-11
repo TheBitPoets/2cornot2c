@@ -2083,7 +2083,7 @@ X^1 = X_{unsigned} mod 2^k
 ```
 
 <p align=justify>
-Detto in altri termini, troncare k bit da una sequenza di $W+k$ bit comporta la creazione di una nuova sequenza di $W$ bit il cui valore intero è pari al valore **senza segno** intero della prima rappresentazione modulo $2^k$
+Detto in altri termini, troncare k bit da una sequenza di $W+k$ bit comporta la creazione di una nuova sequenza di $W$ bit il cui valore intero è pari al valore <b>senza segno</b> intero della prima rappresentazione modulo $2^k$
 </p>
 
 Per esempio:
