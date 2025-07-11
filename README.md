@@ -2046,7 +2046,7 @@ Per esempio:
 <img src=https://github.com/kinderp/2cornot2c/blob/main/images/esempio_estensione_segno.png>
 </p>
 
-### Trancamento rappresentazione binaria di un numero
+### Troncamento rappresentazione binaria di un numero
 
 <p align=justify>
 Data una rappresentazione di un numero intero (con o senza segno) di $W+k$ per convertirla in una rappresentazione di $W$ bit che rappresenti lo stesso intero dovremmo eliminare i $k$ bit più significativi in questo modo:
