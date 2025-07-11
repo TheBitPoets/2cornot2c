@@ -1869,11 +1869,13 @@ Esistono tre diversi modi per codificare i numeri:
 
 #### Codifica interi senza segno
 
+<p align=justify>
 Per i numeri interi senza segno si usa la tradizionale codifica binaria tradizionale.
 Dati $W$ bit per rappresentare un numero intero senza segno (positivo), possiamo esprimere $2^W$ numeri in un range $[0, 2^W-1]$
 $0$ è  l'estremo negativo $U_{min}$ , $2^W-1$ è l'estremo positivo: $U_{max}$
 
 Il valore decimale corrispondente alla sequenza di bit ad esso associata è ricavabile attraverso la seguente formula:
+</p>
 
 $$
 \sum_{i=0}^{W-1} x_i*2^i
@@ -1881,7 +1883,9 @@ $$
 
 dove $x_i$ è il simbolo in posizione $i$ all'interno della sequenza
 
+<p align=justify>
 La proprietà di questa codifica ($W$ bit per la codifica) è che ciascun valore rappresentato nel range: $[0, 2^W-1]$ ha un'unica codica ad esso associato, non abbiamo due sequenze associate ad uno stesso valore.
+</p>
 
 Alcuni esempi:
 
