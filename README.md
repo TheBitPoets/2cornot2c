@@ -2025,8 +2025,13 @@ Per ottnere il valore nella rappresentazione senza segno dovremmo sommare a 2 il
 <p align=justify>
 Può capitare di dover convertire una rappresentazione binaria (una sequenza binaria) di un numero intero in un'altra con capacità (numero di bit per rappresentare i diversi valori) maggiore.
 Consideriamo il caso di una rappresentazione di un numero intero di $W$ bit da convertire (estendere) nella rappresentazione di $W+k$ bit, senza alterare il valore dell'intero rappresentato. 
+</p>
 
+<p align=justify>
 Per i numeri senza segno (positivi) basterà effettuare una <b>zero extension</b>: cioè porre a zero i $k$ bit (che sono sempre i MSB rispetto ai $W$ bit di partenza).  
+</p>
+
+<p align=justify>
 Per i numeri con segno (complemneto a 2) basterà effetturare una <b>sign extension</b>: cioè copiare nei nuovi $k$ bit il valore contenuto nel MSB dei $W$ bit di partenza.
 La figura di sotto ti aiuterà a capire meglio
 </p>
