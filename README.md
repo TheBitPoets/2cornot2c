@@ -2048,33 +2048,49 @@ Per esempio:
 
 ### Trancamento rappresentazione binaria di un numero
 
+<p align=justify>
 Data una rappresentazione di un numero intero (con o senza segno) di $W+k$ per convertirla in una rappresentazione di $W$ bit che rappresenti lo stesso intero dovremmo eliminare i $k$ bit più significativi in questo modo:
+</p>
 
-![](https://github.com/kinderp/2cornot2c/blob/main/images/troncamento_signed_unsigned.png)
+<p align=center>
+<img src=https://github.com/kinderp/2cornot2c/blob/main/images/troncamento_signed_unsigned.png>
+</p>
 
+<p align=justify>
 Da un punto di vista matematico dobbiamo distinguere i casi di troncamento di numero con o senza segno.
+</p>
 
-**Nel caso di numero senza segno** possiamo dire che:
+<p align=justify>
+<b>Nel caso di numero senza segno</b> possiamo dire che:
 Data una rappresentazione $X$ di $W+k$ bit un troncamento di $k$ bit determina una nuova rappresentazione $X^1$ il cui valore intero è:
+</p>
 
 ```math
 X^1 = X mod 2^k 
 ```
 
+<p align=justify>
 Detto in altri termini, troncare k bit da una sequenza di $W+k$ bit comporta la creazione di una nuova sequenza di $W$ bit il cui valore intero è pari al valore intero della prima rappresentazione modulo $2^k$
+</p>
 
-**Nel caso di numero con segno** possiamo dire che:
+<p align=justify>
+<b>Nel caso di numero con segno</b> possiamo dire che:
 Data una rappresentazione $X$ di $W+k$ bit un troncamento di $k$ bit determina una nuova rappresentazione $X^1$ il cui valore intero è:
+</p>
 
 ```math
 X^1 = X_{unsigned} mod 2^k 
 ```
 
+<p align=justify>
 Detto in altri termini, troncare k bit da una sequenza di $W+k$ bit comporta la creazione di una nuova sequenza di $W$ bit il cui valore intero è pari al valore **senza segno** intero della prima rappresentazione modulo $2^k$
+</p>
 
 Per esempio:
 
-![](https://github.com/kinderp/2cornot2c/blob/main/images/esempio_troncamento.png)
+<p align=center>
+<img src=https://github.com/kinderp/2cornot2c/blob/main/images/esempio_troncamento.png>
+</p>
 
 ### Addizione senza segno
 
