@@ -774,6 +774,9 @@ int uno(void){
 ## Classi di memorizzazione
 
 Scope, linkage e storage duration sono combinati assieme per definire le **classi di memorizzazione**
+
+<div align=center>
+	
 | Class                 | Storage Duration | Scope | Linkage   | Come dichiarare |
 |----------------------:|------------------|-------|-----------|-----------------|
 |automatic              |Automatic         |Block  | No linkage| Dentro un blocco|        
@@ -782,6 +785,7 @@ Scope, linkage e storage duration sono combinati assieme per definire le **class
 |static internal linkage|Static            |File   | Internal  | Fuori dalle funzione con _keyword_ **static**|
 |static no linkagge     |Static            |Block  | No linkage| Dentro un blocco con _keyword_ **static**|
 
+</div>
 
 ## Variabili automatiche (automatic class)
 
