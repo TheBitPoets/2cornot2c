@@ -1983,12 +1983,18 @@ T = Two's complement
 
 </div>
 
+<p align=justify>
 Come anticipato le sequenze di bit sono le stesse, le due codifiche si sovrappongono (una sequenza di bit ha lo stesso valore associato in entrambe le codifiche) solo nel range dei numeri positivi da $0$ a $UMax$, poi oltre questo valore, le stesse sequenze rappresentano rispettivamente valori positivi per la unsigned e negativi per la signed (fondamentalmente le sequenze di bit con MSB=1 saranno quelle per cui la codifica è differente). 
+</p>
 
-![](https://github.com/kinderp/2cornot2c/blob/main/images/mappa_signed_unsigned.png)
+<p align=center>
+<img src=https://github.com/kinderp/2cornot2c/blob/main/images/mappa_signed_unsigned.png>
+</p>
 
+<p align=justify>
 Data una sequenza di bit e conosciuto il valore in una codifica è possibile passare al valore nell'altra codifica aggiungendo o togliendo a quest'ultimo una valore pari a: $UMax+1=2^W$. 
 Per esempio con $W=4$ $UMax+1=2^W=16$ data la sequenza $1110$ nella codifica senza segno:
+</p>
 
 ```math
 1110 = 1*2^3 + 1*2^2 + 1*2^1 + 0*2^0 = 8 + 4 + 2 = 14
