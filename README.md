@@ -1243,6 +1243,8 @@ void f(int d, register int e){
 }
 ```
 
+<div align=center>
+	
 | Name  | Storage Duration | Scope     | Linkage  |
 | :---: |     :---:        | :---:     | :---:    |
 | a     | static           | file      | external |
@@ -1255,6 +1257,8 @@ void f(int d, register int e){
 | i     | static           | block     | none     |
 | j     | static           | block     |**Nota**  |
 | k     | automatic        | block     | none     |
+
+</div>
 
 **Nota**: La definizione di  `b` e di `j` non sono mostrate, quindi non è possibile determinare il **linkage** di queste variabili. Nella maggior parte dei casi le variabili saranno definite in un altro file ed avranno quindi **external linkage**
 
