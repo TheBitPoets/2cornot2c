@@ -2094,11 +2094,15 @@ Per esempio:
 
 ### Addizione senza segno
 
-![](https://github.com/kinderp/2cornot2c/blob/main/images/unsigned_addition.png)
+<p align=center>
+<img src=https://github.com/kinderp/2cornot2c/blob/main/images/unsigned_addition.png>
+</p>
 
 ### Addizione con segno
 
-![](https://github.com/kinderp/2cornot2c/blob/main/images/two_complement_addition.png)
+<p align=center>
+<img src=https://github.com/kinderp/2cornot2c/blob/main/images/two_complement_addition.png>
+</p>
 
 ### Tipi di dato
 
