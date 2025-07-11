@@ -1956,7 +1956,7 @@ In quanto con $W$ bit ho $2^W$ sequenze possibili da distribuire metà ai numeri
 </p>
 
 <p align=justify>
-Il file d'intestazione <code><limits.h></code> contiene informazioni circa gli intervalli (costanti per estremo superiore ed inferiore: <code>INT_MAX</code>, <code>INT_MIN</code>, <code>U_INT_MAX</code>) per i diversi tipi di interi relativi all'architettura di default del compilatore.
+Il file d'intestazione <code>limits.h</code> contiene informazioni circa gli intervalli (costanti per estremo superiore ed inferiore: <code>INT_MAX</code>, <code>INT_MIN</code>, <code>U_INT_MAX</code>) per i diversi tipi di interi relativi all'architettura di default del compilatore.
 
 Nella figura di sotto sono invece riportati i range reali per i vari tipi che le implementazioni del C hanno rispettivamente per macchine a 32 e 64 bit
 </p>
