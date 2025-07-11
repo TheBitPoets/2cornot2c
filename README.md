@@ -1821,11 +1821,15 @@ In esadecimale usiamo 16 simboli da 0 a F per rappresentare tutti i possibili va
 Ogni simbolo esadecimale (da 0 a F) può rappresentare 4 bit ($2^4=16$).
 La seguente sequenza di bit: 
 
+<p align="center">>
 $0001 0111 0011 1010 0100 1100$
+</p>
 
 diventa in esacimale:
 
+<p align="center">
 $1 7 3 A 4 C$
+</p>
 
 ### Big & Little endian
 
