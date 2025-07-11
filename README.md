@@ -1813,6 +1813,9 @@ Il bit è l'unità atomica, l'elemento minimo, per rappresentare informazioni. I
 
 Queste sequenze di bit possono essere difficili da interpretare e lunghe da stampare su shermo per questo si fa uso della loro rappresentazione in esadecimale di seguito riportata
 
+<p align="center">
+<img src="https://github.com/kinderp/2cornot2c/blob/main/images/tabella_binario_esadecimale_decimale.png">
+</p>
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/tabella_binario_esadecimale_decimale.png)
 
 In esadecimale usiamo 16 simboli da 0 a F per rappresentare tutti i possibili valori. 
