@@ -1807,7 +1807,9 @@ Il computer rappresenta le informazioni attraverso sequenze di bit. Qualsiasi ti
 Il bit è l'unità atomica, l'elemento minimo, per rappresentare informazioni. Il bit può essumere solamente due valori <code>0</code> (falso/basso) <code>1</code> (vero/falso). Dati $N$ bit è possible costruire $2^N$ diverse combinazioni di queste sequenze. Per intenderci facciamo un esempio con $N = 4$ abbiamo $2^4=16$ diverse sequenze di bit (sotto riportate).
 </p>
 
+<p align="center">
 <img src="https://github.com/kinderp/2cornot2c/blob/main/images/sequenza_binaria.jpg" align="center">
+</p>
 
 Queste sequenze di bit possono essere difficili da interpretare e lunghe da stampare su shermo per questo si fa uso della loro rappresentazione in esadecimale di seguito riportata
 
