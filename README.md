@@ -5529,7 +5529,7 @@ Nota che il codice all'interno del blocco <code>if</code> è eseguito solo dal p
 </p>
 
 <p align=justify>
-La systam call `exec()` sostituisce il programma eseguito all'interno del processo con un nuovo programma. Quando un programma richiama la <code>exec()</code> il processo smette immediatamente di eseguire il programma e ed inizio l'esecuzione del nuovo programma richiamato dalla <code>exec()</code>.
+La systam call <code>exec()</code> sostituisce il programma eseguito all'interno del processo con un nuovo programma. Quando un programma richiama la <code>exec()</code> il processo smette immediatamente di eseguire il programma e ed inizio l'esecuzione del nuovo programma richiamato dalla <code>exec()</code>.
 </p>
 
 Ci sono diverse versioni della <code>exec()</code>:
@@ -5594,7 +5594,9 @@ int main ()
 }
 ```
 
+<p align=justify>
 Eseguendo il programma ti accorgerai che il processo padre termina immediatamente ("done with the main program") successivamente viene stampato il prompt e poco dopo l'output del processo figlio sporca il terminale perchè continua a scrivere sullo stdout. In generale non è possibile sapere quale processo tra il padre ed il figlio concluda per primo ma vedremo che è possibile sincronizzare l'esecuzione dei due processi facendo in modo che il processo padre attenda la terminazione dei suoi figli prima di concludere la propria esecuzione.
+</p>
 
 ```bash
 vagrant@ubuntu2204:/lab2/0_processes$ bin/3_fork_exec
