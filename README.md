@@ -5313,6 +5313,16 @@ Fino a questo momento, abbiamo parlato informalmente dei segmenti come blocchi d
 Per definire un segmento è sufficiente dichiarare il limite di paragrafo dal quale esso inizia. Ma invece, cosa definisce quanto è lungo un segmento? Niente!. Un segmento è più un orizzonte che un luogo. Una volta che definisci dove inizia un segmento, quel segmento può racchiudere qualsiasi posizione nella memoria tra quel punto di partenza e l'orizzonte - che è 65.536 byte più in là. Niente stabilisce, ovviamente, che un segmento debba utilizzare tutta quella memoria. Nella maggior parte dei casi, quando un segmento è definito a qualche indirizzo di segmento, un programma considera solo i successivi pochi centinaia o forse qualche migliaio di byte come parte di quel segmento, a meno che non si tratti di un programma davvero di prima classe. La maggior parte dei principianti che leggono riguardo i segmenti li considerano come una sorta di allocazione di memoria, una regione di memoria protetta con pareti su entrambi i lati, riservata per un uso specifico. Non è assolutamente così e ciò è la cosa più lontana dalla verità che si possa pensare. <b>In modalità reale nulla è protetto all'interno di un segmento</b> e i <b>segmenti non sono riservati</b> per alcun accesso specifico. <b>I segmenti possono sovrapporsi</b>. (Le persone spesso non pensano a questo o non lo realizzano.) In un certo senso, i segmenti non esistono realmente, tranne come orizzonti oltre i quali un certo tipo di riferimento di memoria non può andare. Si torna a quel blocco di 64K di paraocchi che la CPU indossa. Vediamola in questo modo: <b>un segmento è la posizione nella memoria in cui sono posizionati i paraocchi da 64K della CPU</b>. Guardando la memoria attraverso i paraocchi, puoi vedere byte che partono dall'indirizzo di segmento e continuano fino a quando i paraocchi ti bloccano, 64K byte più in là. La chiave per comprendere questa definizione ammettiamo metafisica di un segmento è sapere come vengono utilizzati i segmenti - e comprendere questo richiede infine una discussione dettagliata sui registri della CPU.
 </p>
 
+### I Registri
+
+<p align=justify>
+Un registro è un tipo di memoria all'interno del chip della CPU, piuttosto che all'esterno della CPU in RAM o da qualche parte. L'8088, l'8086 e l'80286 sono spesso chiamati CPU a 16 bit perché i loro registri interni sono quasi tutti di 16 bit di dimensione. L'80386 e i suoi successori sono chiamati CPU a 32 bit perché la maggior parte dei loro registri interni sono di 32 bit di dimensione. Dalla metà degli anni 2000, molte delle nuove CPU x86 sono state progettate a 64 bit, con registri larghi 64 bit. Le CPU x86 hanno un numero abbastanza elevato di registri, e sono un gruppo davvero interessante.
+</p>
+
+<p align=justify>
+I registri svolgono molte funzioni, ma forse il loro compito più importante è quello di memorizzare gli indirizzi di posizioni importanti in memoria( l'indirizzo della prossima istruzione da eseguire, l'indirizzo all'inizio dello stack etc.). Se ricordi, l'8086 e l'8088 hanno 20 pin per indirizzi, e il loro megabyte di memoria (che è la memoria segmentata in modalità reale di cui stiamo parlando) richiede indirizzi di 20 bit.
+</p>
+
 ## Controllo dei processi
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.01.png)
