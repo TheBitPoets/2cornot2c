@@ -5453,11 +5453,15 @@ vagrant@ubuntu2204:/lab2/0_processes$ ps -e -o pid,ppid,command
 
 ### Uccidere un processo
 
-Tu puoi uccidere un processo con il comando `kill`. Semplicemente indica sulla riga di comand il pid del processo che deve essere ucciso. Il comando kill invia al processo un signale `SIGTERM`. La ricezione di questo segnale determina (a meno che il processo non gestisca il signale o lo ignori) la terminazione del processo.
+<p align=justify>
+Tu puoi uccidere un processo con il comando <code>kill</code>. Semplicemente indica sulla riga di comando il pid del processo che deve essere ucciso. Il comando kill invia al processo un signale <code>SIGTERM</code>. La ricezione di questo segnale determina (a meno che il processo non gestisca il signale o lo ignori) la terminazione del processo.
+</p>
 
 ### Creare un processo
 
+<p align=justify>
 Ci sono due modi per crare un processo; il primo è relativamente semplice ma è inefficiente e rischioso da un punto di vista di sicurezza, il secondo è più complesso ma fornisce maggiore sicurezza e flessibilità.
+</p>
 
 #### `system()`
 
