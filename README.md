@@ -5269,7 +5269,8 @@ Ti ricordo che ogni cifra esadecimale rappresenta 4 bit infatti per rappresentar
 I primi 256 byte di memoria erano chiamati <i>program segment prefix</i> (PSP) ed erano usati per i buffer di I/O dei programmi. Il codice eseguibile del programma caricato in memoria iniziava solamente dopo l'indirizzo <code>0100H</code>
 </p>
 
-
+<p align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/cpm-memory.png">
 </p>
 
 
