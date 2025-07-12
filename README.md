@@ -5465,7 +5465,9 @@ Ci sono due modi per crare un processo; il primo è relativamente semplice ma è
 
 #### `system()`
 
-La funzione `system()` è fornita nella libreria standard del linguaggio C e fornisce un modo semplice per eseguire un comando all'interno di un programma come se il comando fosse stato digitato all'interno di una shell. La funzione `system()` crea un sottoprocesso  lanciando `/bin/sh`. Per esempio il codice di sotto invoce il comando `ls` per mostrare il contenuto della root directory come se si fosse digitato `ls -l /` direttamente dalla shell
+<p align=justify>
+La funzione <code>system()</code> è fornita nella libreria standard del linguaggio C e fornisce un modo semplice per eseguire un comando all'interno di un programma come se il comando fosse stato digitato all'interno di una shell. La funzione <code>system()</code> crea un sottoprocesso  lanciando `/bin/sh`. Per esempio il codice di sotto invoca il comando <code>ls</code> per mostrare il contenuto della root directory come se si fosse digitato <code>ls -l /</code> direttamente dalla shell
+</p>
 
 ```c
 /***********************************************************************
