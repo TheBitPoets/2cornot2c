@@ -5283,6 +5283,9 @@ Per ottenere questo funzionamento si fece uso dei registri di segmento che sono 
 <img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/8080model_inside8086.png">
 </p>
 
+<p align=justify>
+Quando si parla dell'8086 e dell'8088, ci sono quattro registri di segmento da considerare. Nella figura di sopra, considera il registro chiamato CS - che sta per code segment ancora una volta come un puntatore a una posizione all'interno del megabyte di memoria dell'8086. Questa posizione funge da punto di partenza per una regione di memoria di 64K, all'interno della quale un programma CP/M-80 rapidamente convertito potrebbe funzionare molto felicemente. Questo è stato un pensiero a breve termine molto saggio - e un pensiero a lungo termine catastroficamente sbagliato. Un elevato numero di programmi CP/M-80 è stato convertito per l'8086 nel giro di un paio d'anni. I problemi sono iniziati quando i programmatori hanno tentato di creare nuovi programmi da zero che non avevano mai visto l'8080 e non avevano bisogno del modello di memoria segmentato. Purtroppo il modello segmentato ha dominato l'architettura dell'8086. I programmi che necessitavano di più di 64K di memoria alla volta dovevano usare la memoria in blocchi da 64K, passando da un blocco all'altro cambiando valori dentro e fuori dai registri di segmento. Questo era un vero incubo. Tuttavia, c'è un buon motivo per impararlo: comprendere il modo in cui funziona l'indirizzamento della memoria segmentata in modalità reale ti aiuterà a comprendere come funzionano i due modelli piatti x86 e, nel processo, arriverai a capire molto meglio la natura della CPU.
+</p>
 
 ## Controllo dei processi
 
