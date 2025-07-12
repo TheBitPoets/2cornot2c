@@ -5279,6 +5279,10 @@ Il processore 8086 però aveva un bus indirizzi di 20 bit mentre i registri inte
 Per ottenere questo funzionamento si fece uso dei registri di segmento che sono semplicemente registri della CPU che contegono indirizzi di memoria dove il segmento inizia. In altre parole, i registri di segmento sono dei semplici puntatori alla memoria che indicano dove, all'interno del megabyte di memoria dell'8086, inizierebbe un programma portato dal mondo dell'8080.
 </p>
 
+<p align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/8080model_inside8086.png">
+</p>
+
 
 ## Controllo dei processi
 
