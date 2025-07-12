@@ -5256,7 +5256,7 @@ I primi due modelli sono ormai un retaggio del passato, per intenderci il modell
 </p>
 
 <p align=justify>
-Il predecessore di questi processori citati (8086, 8088, 80286 e 80386) 8088 supportava solo il primo modello: real mode flat model. Siamo circa alla metà degli anni settanta e le potenze di calcolo e di storage erano assai inferiori a quelle a cui siamo abituati oggi. L' 8088 era un processore ad 8 bit e quindi manipolava 8 bit d'informazione alla volta ma la dimensione dei registri interni e del bus indirizzi era di 16 bit. Un bus indirizzi di 16 bit si traduce in una quantità totale di bytes indirizzabili pari a $2^{16}=65536=64KB che era un valore notevole considerando che le memorie in quegli anni erano di circa 4K-8K.
+Il predecessore di questi processori citati (8086, 8088, 80286 e 80386) l' 8080 supportava solo il primo modello: real mode flat model. Siamo circa alla metà degli anni settanta e le potenze di calcolo e di storage erano assai inferiori a quelle a cui siamo abituati oggi. L' 80880 era un processore ad 8 bit e quindi manipolava 8 bit d'informazione alla volta ma la dimensione dei registri interni e del bus indirizzi era di 16 bit. Un bus indirizzi di 16 bit si traduce in una quantità totale di byte indirizzabili pari a $2^{16} = 65536 =64KB che era un valore notevole considerando che le memorie in quegli anni erano di circa 4K-8K.
 </p>
 
 <p align=justify>
