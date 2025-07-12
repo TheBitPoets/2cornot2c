@@ -5466,7 +5466,7 @@ Ci sono due modi per crare un processo; il primo è relativamente semplice ma è
 #### `system()`
 
 <p align=justify>
-La funzione <code>system()</code> è fornita nella libreria standard del linguaggio C e fornisce un modo semplice per eseguire un comando all'interno di un programma come se il comando fosse stato digitato all'interno di una shell. La funzione <code>system()</code> crea un sottoprocesso  lanciando `/bin/sh`. Per esempio il codice di sotto invoca il comando <code>ls</code> per mostrare il contenuto della root directory come se si fosse digitato <code>ls -l /</code> direttamente dalla shell
+La funzione <code>system()</code> è fornita nella libreria standard del linguaggio C e fornisce un modo semplice per eseguire un comando all'interno di un programma come se il comando fosse stato digitato all'interno di una shell. La funzione <code>system()</code> crea un sottoprocesso  lanciando <code>/bin/sh</code>. Per esempio il codice di sotto invoca il comando <code>ls</code> per mostrare il contenuto della root directory come se si fosse digitato <code>ls -l /</code> direttamente dalla shell
 </p>
 
 ```c
@@ -5488,9 +5488,13 @@ int main ()
 
 ### `fork()` `exec()`
 
-La system call `fork()` crea un nuovo processo che è la copia identica del processo padre. La `exec()` permette di sostituire il processo padre con un nuovo programma nel processo appena creato con la `fork()`.
+<p align=justify>
+La system call <code>fork()</code> crea un nuovo processo che è la copia identica del processo padre. La <code>exec()</code> permette di sostituire il processo padre con un nuovo programma nel processo appena creato con la <code>fork()</code>.
+</p>
 
-Per distinguire il padre del figlio la funzione `fork()` restituisce un intero: in particolare restituisce zero  al processo figlio ed il **pid** del processo figlio al padre. 
+<p align=justify>
+Per distinguire il padre del figlio la funzione <code>fork()</code> restituisce un intero: in particolare restituisce zero  al processo figlio ed il <b>pid</b> del processo figlio al padre. 
+</p>
 
 ```c
 /***********************************************************************
