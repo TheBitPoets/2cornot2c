@@ -5290,9 +5290,11 @@ Quando dalla riga di comando invochiamo il nome di un programma o clicchiamo sul
 	
 #### Process IDs
 
-Ciascun processo in Linux è identificato da un id univoco detto *process ID* anche detto **PID**. Un **PID** è lungo 16 bit ($s^16=65536$). Ciascun processo ha un processo padre (tranne il processo che viene creato per primo all'avvio del sistema operativo detto processo **init** che ha **PID** 1 e nessun padre).
-Il process ID del processo padre è anche detto **PPID**. I processi sui sistemi Linux sono quindi rappresentabili attraverso un albero dove la radice è il processo **init**.
-Quando in C si vuole rappresentare il **PID** di un processo si usa il tipo `pid_t` definito in `<sys/types.h`>. Per ottenere il proprio **PID** si richiamo la system call `getpid()`, allo stesso modo per ottenere il **PPID** si richiama la `getppid()`. Vediamo un esempio:
+<p align="justify">
+Ciascun processo in Linux è identificato da un id univoco detto <b>process ID</b> anche detto <b>PID</b>. Un <b>PID</b> è lungo 16 bit ($s^16=65536$). Ciascun processo ha un processo padre (tranne il processo che viene creato per primo all'avvio del sistema operativo detto processo <b>init</b> che ha <b>PID</b> 1 e nessun padre).
+Il process ID del processo padre è anche detto <b>PPID</b>. I processi sui sistemi Linux sono quindi rappresentabili attraverso un albero dove la radice è il processo <b>init</b>.
+Quando in C si vuole rappresentare il <b>PID</b> di un processo si usa il tipo <code>pid_t</code> definito in <code>sys/types.h</code>. Per ottenere il proprio <b>PID</b> si richiamo la system call <code>getpid()</code>, allo stesso modo per ottenere il <b>PPID</b> si richiama la <code>getppid()</code>. Vediamo un esempio:
+</p>
 
 ```c
 /***********************************************************************
