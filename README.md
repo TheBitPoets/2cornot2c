@@ -5228,7 +5228,7 @@ void calcola_media(struct studente *i){
         float media = 0.0;
         for(int j=0; j<10; j++)
                 i->media += i->voti[j];
-        i->media = i->media / 10;
+        i->media = i->media / 10;te
 }
 ```
 
@@ -5238,6 +5238,40 @@ Mario Rossi di eta' 21 ha una media di 29.200001
 Andrea Verdi di eta' 24 ha una media di 25.200001
 Luigi Bianchi di eta' 31 ha una media di 19.700001
 ```
+
+## Sistema Operativo
+
+### I modelli di memoria
+
+<p align=justify>
+Uno dei concetti più complessi dei sistemi e della programmazione a basso livello (in linguaggio assembly del processore) è l'indirizzamento della memoria ovvero come la CPU indirizza la memoria. In questa sede faremo riferimento all'architettura: <code>x86</code> dei processori intel e amd. L'indirizzamento della memoria da parte del processore è argomento complesso in quanto, nella nostra architettura di riferimento, esistono diversi modi con cui i processori <code>x86</code> indirizzano la memoria. Nello specifico esistono tre <b>modelli di memoria</code> che gli attuali processori della famiglia <code>x86</code> supportano:
+</b>
+
+1. real mode flat model
+2. real mode segmented model
+3. protected mode flat model
+
+<p align=justify>
+I primi due modelli sono ormai un retaggio del passato, per intenderci il modello segmentato era usato dal DOS mentre il modello flat in real mode erano usato dal CP/M. A partire da windows 95 e successive (Windows 2000/XP/Vista/7/10/11) il modello di memoria utilizzato è il flat in protected mode. Attenzione che il protected mode flat model è disponibile solo a partire dal 80386; i processori precedenti: 8086, 8088 e 80286 non supportano questo modello. Possiamo considerare il protected model flat model come una versione più ampia del real mode flat model, il real mode segmented model è una bestia infernale che è stata introdotta da intel per questioni più di business che tecnologiche.
+</p>
+
+<p align=justify>
+Il predecessore di questi processori citati (8086, 8088, 80286 e 80386) 8088 supportava solo il primo modello: real mode flat model. Siamo circa alla metà degli anni settanta e le potenze di calcolo e di storage erano assai inferiori a quelle a cui siamo abituati oggi. L' 8088 era un processore ad 8 bit e quindi manipolava 8 bit d'informazione alla volta ma la dimensione dei registri interni e del bus indirizzi era di 16 bit. Un bus indirizzi di 16 bit si traduce in una quantità totale di bytes indirizzabili pari a $2^{16}=65536=64KB che era un valore notevole considerando che le memorie in quegli anni erano di circa 4K-8K.
+</p>
+
+<p align=justify>
+Lo schema d'indirizzamento dell' 8080 era molto semplice: il processore inseriva l'indirizzo di memoria sul bus indirizzo e dopo un certo tempo riceveva, sul bus dati, gli 8 bit presenti nella cella indirizzata dai 16 bit precedenti (indirizzo di memoria della cella).
+</p>
+
+<p align=justify>
+Il sistema operativo più utilizzato con l'8080 era il CP/M-80. Questo sistema operativo risiedeva nella zona alta della memoria intallata in modo da lasciare spazio e avere un punto di partenza coerente per i programmi transitori cioè quelli che a differenza del sistema operativo venivano caricati in memoria ed eseguiti solo quando necessario. Quando CP/M-80 leggeva un programma dal disco per eseguirlo, lo caricava in memoria bassa all'indirizzo $#0100, cioè 256 byte dopo la cella più bassa di memoria.
+Ti ricordo che ogni cifra esadecimale rappresenta 4 bit infatti per rappresentare sedici cifre (0,1,2,3,4,5,6,7,8,9,A,B,C,D,E,F) ho bisogno di 4 bit: $2^4=16 quindi il numero esadecimale $#0100 in binario diventa $0000-0001-0000-0000 il cui valore decimale è $2^8=256
+</p>
+
+
+</p>
+
+
 
 ## Controllo dei processi
 
