@@ -5281,7 +5281,7 @@ Luigi Bianchi di eta' 31 ha una media di 19.700001
 
 ### Processi
 
-<p aling=justufy>
+<p aling=justify>
 Un processo è un instanza di un programma (un file eseguibile presente sul disco) che è stato caricato in memoria.
 Quando dalla riga di comando invochiamo il nome di un programma o clicchiamo sull'icona presente sulla scrivania, il file eseguibile viene caricato in memoria ed ha inizio la sua esecuzione in un nuovo processo. Un singolo programma può far uso di più processi contemporaneamente per fare più cose contemporaneamente. La maggior parte dell funzioni per la manipolazione dei processi richiedono l'inclusione del file header <code>unistd.h></code>
 </p>
