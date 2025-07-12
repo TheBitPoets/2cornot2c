@@ -5632,17 +5632,26 @@ drwxr-xr-x  13 root    root          4096 Aug 10  2023 var
 
 #### Segnali
 
-I segnali sono un meccanismo per comunicare e manipolare i processi in Linux. Un segnale è semplicemente un messaggio inviato ad un processo. I segnali sono definiti il linux in `/usr/include/bits/signum.h` ma per usarli basta includere `<signal.h>` nel tuo sorgente.
+<p align=justify>
+I segnali sono un meccanismo per comunicare e manipolare i processi in Linux. Un segnale è semplicemente un messaggio inviato ad un processo. I segnali sono definiti il linux in <code>/usr/include/bits/signum.h</code> ma per usarli basta includere <code>signal.h</code> nel tuo sorgente.
+<p>
 
+<p align=justify>
 Quando un processo riceve un segnale può comportarsi in modi differenti sulla base della disposizione di default che determina che cosa accade se il programma non specifica qualche altre comportamente specifico per il segnale. Per ciascun segnale, un programma può:
+</p>
+
 1. Specificare un diverso comportamente dalla disposizione di default
 2. Ignora il segnale
 3. Chiamare una funzione, detta **signal-handler** per rispondere in modo personalizzato al segnale
 
-Se una funzione **signal-handler** è usata, l'esecuzione del programma è messa in pausa e la funzione è immeditamente eseguita e solo dopo che questa termina l'esecuzione del programma riprende nel punto dove si era interrotta.
+<p align=justify>
+Se una funzione <b>signal-handler</b> è usata, l'esecuzione del programma è messa in pausa e la funzione è immeditamente eseguita e solo dopo che questa termina l'esecuzione del programma riprende nel punto dove si era interrotta.
+</p>
 
 Alcuni esempi di segnali sono 
 
+<div align=center>
+	
 | First Header  | Significato | Disposizione
 | ------------- | ------------- |------------- |
 | `SIGSEGV`  | segmentation fault  | termina il processo
@@ -5652,6 +5661,7 @@ Alcuni esempi di segnali sono
 | `SIGUSR2`  | Definito dall'utente  |
 | `SIGHUP`   | Risveglia un processo o lo mette in sleep o lo costringe e rileggere la sua configurazione |
 
+</div>
 
 #### sigaction
 
