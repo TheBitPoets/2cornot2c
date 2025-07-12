@@ -5291,6 +5291,10 @@ Quando si parla dell'8086 e dell'8088, ci sono quattro registri di segmento da c
 Quando un processore lavora col modello segmentato in modalità reale si imposta da solo per usare 20 dei 32 o 64 pin d'indirizzo e quindi sul bus indirizzi possono passare solamente indirizzi lunghi 20 bit. Il problema con questo modello è che in questo modo anche se le CPU potrebbero vedere l'intero megabyte di memoria sono costrette a vedere il megabyte attraverso limitazioni a 16 bit; come puoi vedere nella figuara di sotto: Il lungo rettangolo rappresenta il megabyte di memoria a cui la CPU può accedere nel modello segmentato in modalità reale. La CPU è sulla destra. Al centro c'è un pezzo di cartone metaforico con una fessura tagliata. La fessura è larga 1 byte e lunga 65.536 byte. La CPU può far scorrere quel pezzo di cartone su e giù per l'intera lunghezza del suo sistema di memoria. Tuttavia, in un dato momento, può accedere solo a 65.536 byte
 </p>
 
+<p align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/64kblinder.png">
+</p>
+
 ## Controllo dei processi
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.01.png)
