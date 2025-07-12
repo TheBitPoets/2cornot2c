@@ -5256,7 +5256,7 @@ I primi due modelli sono ormai un retaggio del passato, per intenderci il modell
 </p>
 
 <p align=justify>
-Il predecessore di questi processori citati (8086, 8088, 80286 e 80386) l' 8080 supportava solo il primo modello: real mode flat model. Siamo circa alla metà degli anni settanta e le potenze di calcolo e di storage erano assai inferiori a quelle a cui siamo abituati oggi. L' 80880 era un processore ad 8 bit e quindi manipolava 8 bit d'informazione alla volta ma la dimensione dei registri interni e del bus indirizzi era di 16 bit. Un bus indirizzi di 16 bit si traduce in una quantità totale di byte indirizzabili pari a $2^{16} = 65536 =64KB che era un valore notevole considerando che le memorie in quegli anni erano di circa 4K-8K.
+Il predecessore di questi processori citati (8086, 8088, 80286 e 80386) l' 8080 supportava solo il primo modello: real mode flat model. Siamo circa alla metà degli anni settanta e le potenze di calcolo e di storage erano assai inferiori a quelle a cui siamo abituati oggi. L' 80880 era un processore ad 8 bit e quindi manipolava 8 bit d'informazione alla volta ma la dimensione dei registri interni e del bus indirizzi era di 16 bit. Un bus indirizzi di 16 bit si traduce in una quantità totale di byte indirizzabili pari a $2^{16} = 65536 = 64KB$ che era un valore notevole considerando che le memorie in quegli anni erano di circa 4K-8K.
 </p>
 
 <p align=justify>
@@ -5264,8 +5264,8 @@ Lo schema d'indirizzamento dell' 8080 era molto semplice: il processore inseriva
 </p>
 
 <p align=justify>
-Il sistema operativo più utilizzato con l'8080 era il CP/M-80. Questo sistema operativo risiedeva nella zona alta della memoria intallata in modo da lasciare spazio e avere un punto di partenza coerente per i programmi transitori cioè quelli che a differenza del sistema operativo venivano caricati in memoria ed eseguiti solo quando necessario. Quando CP/M-80 leggeva un programma dal disco per eseguirlo, lo caricava in memoria bassa all'indirizzo $#0100, cioè 256 byte dopo la cella più bassa di memoria.
-Ti ricordo che ogni cifra esadecimale rappresenta 4 bit infatti per rappresentare sedici cifre (0,1,2,3,4,5,6,7,8,9,A,B,C,D,E,F) ho bisogno di 4 bit: $2^4=16 quindi il numero esadecimale $#0100 in binario diventa $0000-0001-0000-0000 il cui valore decimale è $2^8=256
+Il sistema operativo più utilizzato con l'8080 era il CP/M-80. Questo sistema operativo risiedeva nella zona alta della memoria intallata in modo da lasciare spazio e avere un punto di partenza coerente per i programmi transitori cioè quelli che a differenza del sistema operativo venivano caricati in memoria ed eseguiti solo quando necessario. Quando CP/M-80 leggeva un programma dal disco per eseguirlo, lo caricava in memoria bassa all'indirizzo $#0100$, cioè 256 byte dopo la cella più bassa di memoria.
+Ti ricordo che ogni cifra esadecimale rappresenta 4 bit infatti per rappresentare sedici cifre (0,1,2,3,4,5,6,7,8,9,A,B,C,D,E,F) ho bisogno di 4 bit: $2^4=16 quindi il numero esadecimale $#0100 in binario diventa $0000-0001-0000-0000$ il cui valore decimale è $2^8=256$
 </p>
 
 
