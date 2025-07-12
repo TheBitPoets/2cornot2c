@@ -5490,7 +5490,7 @@ int main ()
 
 <p align=justify>
 La system call <code>fork()</code> crea un nuovo processo che è la copia identica del processo padre. La <code>exec()</code> permette di sostituire il processo padre con un nuovo programma nel processo appena creato con la <code>fork()</code>.
-</p>
+</p></b>
 
 <p align=justify>
 Per distinguire il padre del figlio la funzione <code>fork()</code> restituisce un intero: in particolare restituisce zero  al processo figlio ed il <b>pid</b> del processo figlio al padre. 
@@ -5524,11 +5524,15 @@ int main ()
   return 0;
 }
 ```
+<p align=justify>
+Nota che il codice all'interno del blocco <code>if</code> è eseguito solo dal processo padre, mentre il codice dentro il blocco <code>else</code> è eseguito dal processo figlio.
+</p>
 
-Nota che il codice all'interno del blocco `if` è eseguito solo dal processo padre, mentre il codice dentro il blocco `else` è eseguito dal processo figlio.
+<p align=justify>
+La systam call `exec()` sostituisce il programma eseguito all'interno del processo con un nuovo programma. Quando un programma richiama la <code>exec()</code> il processo smette immediatamente di eseguire il programma e ed inizio l'esecuzione del nuovo programma richiamato dalla <code>exec()</code>.
+</p>
 
-La systam call `exec()` sostituisce il programma eseguito all'interno del processo con un nuovo programma. Quando un programma richiama la `exec()` il processo smette immediatamente di eseguire il programma e ed inizio l'esecuzione del nuovo programma richiamata dalla `exec()`.
-Ci sono diverse versioni della `exec()`:
+Ci sono diverse versioni della <code>exec()</code>:
 
 * Funzioni che contengono la lettera `p` nel nome (`exexcvp`, `execlp`) accettano il nome del programma e lo cercano nel sistema; le funzioni che non contengono la `p` nel nome necessitano del percorso assoluto del programma da eseguire
 * Funzioni che contengono la lettera `v` nel nome (`execv`, `execvp`, `execve`) accettano una  lista di argomenti da passare in ingresso al nuovo programma come un array di puntatori a caratteri terminati da `NULL`. Le funzioni invece che contengono la lettra `l` (`execl` `execlp`, `execle`) accettano una lista di argomenti in ingresso secondo il meccanismo delle `vargargs` del lingugiaggio C
