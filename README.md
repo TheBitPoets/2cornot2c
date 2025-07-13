@@ -5348,13 +5348,13 @@ L'8088, l'8086 e l'80286 hanno esattamente quattro registri di segmento specific
 <p align=justify>
 <ul>
 	<li>
-		CS sta per segmento di codice. Le istruzioni della macchina esistono a un certo offset all'interno di un segmento di codice. L'indirizzo del segmento del segmento di codice dell'istruzione attualmente in esecuzione è contenuto in CS.
+		CS sta per segmento di codice. Le istruzioni della macchina esistono a un certo offset all'interno di un segmento di codice. L'indirizzo del segmento di codice dell'istruzione attualmente in esecuzione è contenuto in CS.
 	</li>
 	<li>
-		DS sta per segmento di dati. Le variabili e altri dati esistono a un certo offset in un segmento di dati. Potrebbero esserci molti segmenti di dati, ma la CPU può utilizzare solo uno alla volta, collocando l'indirizzo del segmento di quel segmento nel registro DS. 
+		DS sta per segmento di dati. Le variabili e altri dati esistono a un certo offset in un segmento di dati. Potrebbero esserci molti segmenti di dati, ma la CPU può utilizzare solo uno alla volta, collocando l'indirizzo di quel segmento nel registro DS. 
 	</li>
 	<li>
-		SS sta per segmento di stack. Lo stack è un componente molto importante della CPU utilizzato per l'archiviazione temporanea di dati e indirizzi. Spiegheremo come funziona lo stack un più avabtu; per ora è sufficiente comprendere che, come tutto il resto all'interno del megabyte di memoria della modalità reale, lo stack ha un indirizzo di segmento, che è contenuto in SS. 
+		SS sta per segmento di stack. Lo stack è un componente molto importante della CPU utilizzato per l'archiviazione temporanea di dati e indirizzi (chiamate a funzioni in c etc). Spiegheremo come funziona lo stack un più avanti; per ora è sufficiente comprendere che, come tutto il resto all'interno del megabyte di memoria della modalità reale, lo stack ha un indirizzo di segmento, che è contenuto in SS. 
 	</li>
 	<li>
 		ES sta per segmento extra. Il segmento extra è esattamente quello: un segmento di riserva che può essere utilizzato per specificare una posizione in memoria. 	</li>
