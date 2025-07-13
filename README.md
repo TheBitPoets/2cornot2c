@@ -5363,7 +5363,11 @@ L'8088, l'8086 e l'80286 hanno esattamente quattro registri di segmento specific
 	</li>
 </ul>
 </p>
-	
+
+ ### I registri General-Purpose
+
+I registri di segmento esistono solo per contenere indirizzi di segmento. Possono essere costretti a fare poche altre cose in modalità reale, ma, in generale, i registri di segmento devono essere considerati specialisti nel contenere indirizzi di segmento. Le CPU x86 hanno un insieme di registri generalisti per svolgere il resto del lavoro del calcolo in linguaggio assembly. Tra le molte altre cose, <b>questi registri a uso generale vengono anche utilizzati per contenere gli indirizzi di offset</b> che devono essere abbinati agli indirizzi di segmento per individuare una singola posizione nella memoria. Contengono anche valori per le manipolazioni aritmetiche, per lo spostamento di bit (di più su questo più avanti) e molte altre cose. Sono davvero le tasche dell'artigiano all'interno della CPU.
+ 
  ## Controllo dei processi
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.01.png)
