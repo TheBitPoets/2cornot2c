@@ -5338,7 +5338,33 @@ Come si inserisce un indirizzo di memoria a 20 bit in un registro a 16 bit? Non 
 <p align=justify>
 Un byte arbitrario in qualche punto del mezzo del megabyte di memoria della modalità reale può cadere in letteralmente migliaia di segmenti diversi. Quale segmento contiene effettivamente il byte è strettamente una questione di convenzione. In sintesi: esprimere un indirizzo a 20 bit in due registri a 16 bit significa mettere l'indirizzo del segmento in un registro a 16 bit e l'indirizzo di offset in un altro registro a 16 bit. I due registri presi insieme identificano un byte tra tutti i 1.048.576 byte nella memoria del megabyte della modalità reale.
  </p>
-## Controllo dei processi
+
+### I registri di segmento
+
+<p align=justify>
+L'8088, l'8086 e l'80286 hanno esattamente quattro registri di segmento specificamente designati come contenitori degli indirizzi di memoria dove ha inizio uno specifico segmento. I processori 386 e successivi ne hanno altri due che possono essere utilizzati anche in modalità reale. (Devi essere consapevole del modello di CPU su cui stai eseguendo il tuo codice se intendi utilizzare i due registri di segmento aggiuntivi, poiché le CPU più vecchie, precedenti il 386, non hanno affatto questi registri.) Ogni registro di segmento è una zona di memoria a 16 bit che esiste all'interno del chip della CPU stessa. Non importa cosa stia facendo la CPU, se sta indirizzando qualche locazione in memoria, allora l'indirizzo di segmento di quella locazione è presente in uno dei sei registri di segmento. I registri di segmento hanno nomi che riflettono le loro funzioni generali: CS, DS, SS, ES, FS e GS. FS e GS esistono solo nei processori Intel x86 386 e successivi, ma sono ancora di dimensioni 16 bit. <b>Tutti i registri di segmento sono di dimensioni 16 bit</b>, indipendentemente dalla CPU. Questo è vero anche per le CPU a 32 e 64 bit.
+</p>
+
+<p align=justify>
+<ul>
+	<li>
+		CS sta per segmento di codice. Le istruzioni della macchina esistono a un certo offset all'interno di un segmento di codice. L'indirizzo del segmento del segmento di codice dell'istruzione attualmente in esecuzione è contenuto in CS.
+	</li>
+	<li>
+		DS sta per segmento di dati. Le variabili e altri dati esistono a un certo offset in un segmento di dati. Potrebbero esserci molti segmenti di dati, ma la CPU può utilizzare solo uno alla volta, collocando l'indirizzo del segmento di quel segmento nel registro DS. 
+	</li>
+	<li>
+		SS sta per segmento di stack. Lo stack è un componente molto importante della CPU utilizzato per l'archiviazione temporanea di dati e indirizzi. Spiegheremo come funziona lo stack un più avabtu; per ora è sufficiente comprendere che, come tutto il resto all'interno del megabyte di memoria della modalità reale, lo stack ha un indirizzo di segmento, che è contenuto in SS. 
+	</li>
+	<li>
+		ES sta per segmento extra. Il segmento extra è esattamente quello: un segmento di riserva che può essere utilizzato per specificare una posizione in memoria. 	</li>
+	<li>
+		FS e GS sono clone di ES. Sono entrambi segmenti aggiuntivi senza un compito o specialità specifica. I loro nomi derivano dal fatto che sono stati creati dopo ES (pensa, E, F, G). Non dimenticare che esistono solo nelle CPU x86 386 e successive!
+	</li>
+</ul>
+</p>
+	
+ ## Controllo dei processi
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.01.png)
 
