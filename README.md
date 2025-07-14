@@ -5379,11 +5379,18 @@ I registri a uso generale rientrano in quattro classi generali: i registri a uso
 Quindi, erano solo registri più grandi, o nuovi registri? Entrambi. Come con molte cose nel linguaggio assembly, questo diventa molto più chiaro disegnando un diagramma. La figura 4-6 mostra come SI, DI, BP e SP siano raddoppiati in dimensione e abbiano ottenuto nuovi nomi, senza perdere del tutto i loro nomi precedenti.
 </p>
 
+<p align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/general_purpose_register_32.png">
+</p>
+
 <p align=justify>
 Quindi riassumendo, una CPU x86-64 contiene un insieme di 16 registri a uso generale che memorizzano valori a 64 bit. Questi registri sono utilizzati per memorizzare dati interi e puntatori. Nella figura di sotto, i loro nomi iniziano tutti con %r (register), ma seguono altrimenti diverse convenzioni di denominazione, a causa dell'evoluzione storica dell'insieme di istruzioni. <b>L'originale 8086 aveva otto registri a 16 bit</b>, denominati AX, BX, CX, DX, SI, DI, BP, SP. Ognuno aveva uno scopo specifico, e pertanto furono dati nomi che riflettevano come dovevano essere utilizzati. <b>Con l'estensione a IA32</b> (estensione a 32 bit), questi registri furono ampliati a registri a 32 bit, etichettati EAX, EBX, ECX, EDX, ESI, EDI, EBP, ESP. <b>Nell'estensione a x86-64</b>, gli otto registri originali furono ampliati a 64 bit, etichettati RAX, RBX, RCX, RDX, RSI, RDI, RBP, RSP. Inoltre, furono aggiunti otto nuovi registri, ai quali furono dati nomi secondo una nuova convenzione di denominazione: R8, R9, R10, R11, R12, R13, R14, R15. Le istruzioni del set x86-64 possono operare su dati di diverse dimensioni memorizzati nei byte a ordine inferiore dei 16 registri. Le operazioni a livello di byte possono accedere al byte meno significativo, le operazioni a 16 bit possono accedere ai 2 byte meno significativi, le operazioni a 32 bit possono accedere ai 4 byte meno significativi, e le operazioni a 64 bit possono accedere all'intero registro.
 </p>
 
- 
+<p align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/general_purpose_register_64.png">
+</p>
+
  ## Controllo dei processi
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.01.png)
