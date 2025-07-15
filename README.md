@@ -5264,8 +5264,8 @@ Lo schema d'indirizzamento dell' 8080 era molto semplice: il processore inseriva
 </p>
 
 <p align=justify>
-Il sistema operativo più utilizzato con l'8080 era il CP/M-80. Questo sistema operativo risiedeva nella zona alta della memoria intallata in modo da lasciare spazio e avere un punto di partenza coerente per i programmi transitori, cioè quelli che a differenza del sistema operativo venivano caricati in memoria ed eseguiti solo quando necessario. Quando il CP/M-80 leggeva un programma dal disco per eseguirlo, lo caricava in memoria bassa all'indirizzo $0100H$, cioè 256 byte dopo la cella più bassa di memoria.
-Ti ricordo che ogni cifra esadecimale rappresenta 4 bit, infatti per rappresentare sedici cifre (0,1,2,3,4,5,6,7,8,9,A,B,C,D,E,F) ho bisogno di 4 bit: $2^4=16 quindi il numero esadecimale $#0100 in binario diventa $0000-0001-0000-0000$ il cui valore decimale è $2^8=256$.
+Il sistema operativo più utilizzato con l'8080 era il CP/M-80. Questo sistema operativo risiedeva nella zona alta della memoria installata in modo da lasciare spazio e avere un punto di partenza coerente per i programmi transitori, cioè quelli che a differenza del sistema operativo venivano caricati in memoria ed eseguiti solo quando necessario. Quando il CP/M-80 leggeva un programma dal disco per eseguirlo, lo caricava in memoria bassa all'indirizzo $0100H$, cioè 256 byte dopo la cella più bassa di memoria.
+Ti ricordo che ogni cifra esadecimale rappresenta 4 bit, infatti per rappresentare sedici cifre (0,1,2,3,4,5,6,7,8,9,A,B,C,D,E,F) ho bisogno di 4 bit: $2^4=16$ quindi il numero esadecimale $#0100 in binario diventa $0000-0001-0000-0000$ il cui valore decimale è $2^8=256$.
 I primi 256 byte di memoria erano chiamati <i>program segment prefix</i> (PSP) ed erano usati per i buffer di I/O dei programmi. Il codice eseguibile del programma caricato in memoria iniziava solamente dopo l'indirizzo <code>0100H</code>
 </p>
 
