@@ -5359,7 +5359,7 @@ L'8088, l'8086 e l'80286 hanno esattamente quattro registri di segmento specific
 	<li>
 		<b>ES</b> sta per segmento extra. Il segmento extra è esattamente quello: un segmento di riserva che può essere utilizzato per specificare una posizione in memoria. 	</li>
 	<li>
-		<b>FS</b> e GS</b> sono clone di ES. Sono entrambi segmenti aggiuntivi senza un compito o specialità specifica. I loro nomi derivano dal fatto che sono stati creati dopo ES (pensa, E, F, G). Non dimenticare che esistono solo nelle CPU x86 386 e successive!
+		<b>FS</b> e <b>GS</b> sono clone di ES. Sono entrambi segmenti aggiuntivi senza un compito o specialità specifica. I loro nomi derivano dal fatto che sono stati creati dopo ES (pensa, E, F, G). Non dimenticare che esistono solo nelle CPU x86 386 e successive!
 	</li>
 </ul>
 </p>
@@ -5371,7 +5371,7 @@ I registri di segmento esistono solo per contenere indirizzi di segmento. Posson
 </p>
 
 <p align=justify>
-Ma qui arriviamo a una delle differenze più grandi e ovvie tra le vecchie CPU x86 a 16 bit (l'8086, l'8088 e l'80286) e le nuove CPU x86 a 32 e 64 bit a partire dal 386: la dimensione dei registri a uso generale. Quando scrissi la prima edizione di questo libro nel 1989, l'8088 dominava ancora il mondo del calcolo PC, e mi limitai a discutere ciò che l'8088 conteneva. La 'bitness' del mondo è quasi interamente definita dalla larghezza dei registri della CPU x86. Come i registri di segmento, i registri a uso generale sono posizioni di memoria esistenti all'interno del chip della CPU stesso; e come i registri di segmento, hanno tutti un nome piuttosto che indirizzi numerici. I registri a uso generale sono davvero generalisti in quanto tutti condividono una vasta gamma di capacità. Tuttavia, alcuni dei registri a uso generale hanno anche quello che chiamo un 'agenda nascosta': un compito o un insieme di compiti che solo esso può eseguire. Alcune delle agende nascoste sono in realtà limitazioni delle vecchie CPU a 16 bit. I nuovi registri a uso generale sono molto più, beh, generali.
+Ma qui arriviamo a una delle differenze più grandi e ovvie tra le vecchie CPU x86 a 16 bit (l'8086, l'8088 e l'80286) e le nuove CPU x86 a 32 e 64 bit a partire dal 386: la dimensione dei registri a uso generale. La 'bitness' del mondo è quasi interamente definita dalla larghezza dei registri della CPU x86. Come i registri di segmento, i registri a uso generale sono posizioni di memoria esistenti all'interno del chip della CPU stesso; e come i registri di segmento, hanno tutti un nome piuttosto che indirizzi numerici. I registri a uso generale sono davvero generalisti in quanto tutti condividono una vasta gamma di capacità. Tuttavia, alcuni dei registri a uso generale hanno anche quello che chiamo un 'agenda nascosta': un compito o un insieme di compiti che solo esso può eseguire. Alcune delle agende nascoste sono in realtà limitazioni delle vecchie CPU a 16 bit. I nuovi registri a uso generale sono molto più, beh, generali.
 </p>
 
 <p align=justify>
@@ -5388,7 +5388,7 @@ Nell'estensione a 64 bit gli otto registri originali furono ampliati a 64 bit, e
 </p>
 
 <p align=justify>
-Ciascuno dei quattro registri mostrati nella di sopra è di dimensione 32 bit. Tuttavia, in ciascun registro, i 16 bit inferiori hanno un proprio nome. I 16 bit inferiori di ESI, ad esempio, possono essere referenziati come SI. I 16 bit inferiori di EDI possono essere referenziati come DI. Se stai scrivendo programmi da eseguire in modalità reale su una macchina 8088 come il vecchio IBM PC, puoi fare riferimento solo alla parte DI: i 16 bit superiori non esistono su quella CPU! Sfortunatamente, i 16 bit superiori dei registri generali a 32 bit non hanno nomi propri. Puoi accedere ai 16 bit bassi di ESI come SI, ma per accedere ai 16 bit superiori, devi fare riferimento a ESI e ottenere l'intero pacchetto a 32 bit.
+Ciascuno dei quattro registri mostrati nella figura di sopra è di dimensione 32 bit. Tuttavia, in ciascun registro, i 16 bit inferiori hanno un proprio nome. I 16 bit inferiori di ESI, ad esempio, possono essere referenziati come SI. I 16 bit inferiori di EDI possono essere referenziati come DI. Se stai scrivendo programmi da eseguire in modalità reale su una macchina 8088 come il vecchio IBM PC, puoi fare riferimento solo alla parte DI: i 16 bit superiori non esistono su quella CPU! Sfortunatamente, i 16 bit superiori dei registri generali a 32 bit non hanno nomi propri. Puoi accedere ai 16 bit bassi di ESI come SI, ma per accedere ai 16 bit superiori, devi fare riferimento a ESI e ottenere l'intero pacchetto a 32 bit.
 </p>
 
 <p align=justify>
