@@ -5429,16 +5429,57 @@ La natura di questo indirizzo dipende dal tipo di CPU che stai utilizzando e dal
 
 ## Real Mode Flat Model (modello piatto in modalità reale)
 
+<p align=justify>
 In modalità reale, se ricordi, la CPU può vedere solo un megabyte (1.048.576) di memoria. Puoi accedere a ogni singolo byte di quei milioni utilizzando il trucco del registro segmento:offset mostrato in precedenza per formare un indirizzo a 20 bit da due indirizzi a 16 bit contenuti in due registri. Oppure, puoi accontentarti di 64K di memoria e non preoccuparti affatto dei segmenti. Nel modello piatto della modalità reale, il tuo programma e tutti i dati su cui lavora devono esistere all'interno di un singolo blocco di memoria di 64K. Sessantaquattro kilobyte! Cosa potresti mai realizzare in soli 64K di byte? Bene, la prima versione di WordStar per l'IBM PC stava in 64K. Anche i primi tre rilasci principali di Turbo Pascal - in effetti, il programma Turbo Pascal stesso occupava molto meno di 64K perché compilava i suoi programmi in memoria. L'intero pacchetto Turbo Pascal - compilatore, editor di testo e alcuni strumenti vari - arrivò a poco più di 39K. Trentuno kilobyte! Non riesci nemmeno a scrivere una lettera a tua madre (usando Microsoft Word) in quel poco spazio al giorno d'oggi!
+</p>
 
+<p align=justify>
 Cose spettacolari sono successe una volta in 64K, e mentre potresti non essere mai chiamato a limitarti al modello piatto in modalità reale, la disciplina che tutti quei programmatori ora con i capelli grigi hanno sviluppato a causa del numero limitato di risorse è molto utile. Più precisamente, il modello piatto in modalità reale è il "fratello minore" del modello piatto in modalità protetta, che è il modello di codice che userai quando programmi sotto Linux. Se impari i modi del modello piatto in modalità reale, il modello piatto in modalità protetta sarà un gioco da ragazzi. (Qualsiasi problema avrai non sarà con il codice assembly o i modelli di memoria, ma con i requisiti bizantini di Linux e le sue librerie di codice canoniche.) Il modello piatto in modalità reale è mostrato graficamente nella figura di sotto. Non c'è molto da dire. I registri di segmento sono tutti impostati per puntare all'inizio del blocco di 64K di memoria con cui puoi lavorare. (Il sistema operativo li imposta quando carica e esegue il tuo programma.) Tutti puntano a quello stesso posto e non cambiano mai finché il tuo programma è in esecuzione. Nessun registro di segmento, niente inganni con i segmenti, e nessuna delle complicazioni brutte che vengono con essi. Poiché un registro a 16 bit come BX può contenere qualsiasi valore da 0 a 65.535, può localizzare qualsiasi singolo byte all'interno del pieno 64K con cui il tuo programma deve lavorare. L'indirizzamento della memoria può quindi avvenire senza l'uso esplicito dei registri di segmento. I registri di segmento continuano a funzionare, ovviamente, dal punto di vista della CPU. Non scompaiono e sono ancora presenti, ma il sistema operativo li imposta a valori a sua scelta quando avvia il tuo programma, e quei valori saranno validi finché il tuo programma è in esecuzione. Non è necessario accedere ai registri di segmento in alcun modo per scrivere il tuo programma.
+</p>
 
-<p align=center
+<p align=center>
 <img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/real_mode_flat_model.png">
 </p>
 
+<p align=justify>
 La maggior parte dei registri generali può contenere indirizzi di posizioni in memoria. Li usi in congiunzione con le istruzioni della macchina per prelevare dati dalla memoria e scriverli di nuovo.
+</p>
 
+## Real Mode Segmented Model (modello segmentato in modalità reale)
+
+<p align=center>
+Il modello segmentato in modalità reale era il modello di programmazione principale durante l'era MS-DOS, e che entra ancora in gioco quando si avvia una finestra MS-DOS per eseguire un software 'legacy'. È un sistema complicato e brutto che richiede di ricordare molte piccole regole e insidie, ma è utile da comprendere perché illustra molto chiaramente la natura e la funzione dei segmenti. Si noti che sotto entrambi i modelli piatti è possibile strizzare un po' gli occhi e fingere che i segmenti e i registri di segmento non esistano realmente, ma sono entrambi ancora lì e funzionano, e una volta che ci si addentra in alcuni degli stili di programmazione più esotici, sarà necessario essere consapevoli di essi e comprendere come funzionano. Nel modello segmentato in modalità reale, il tuo programma può vedere l'intero 1 MB di memoria disponibile per la CPU in modalità reale. Ciò avviene combinando un indirizzo segmento a 16 bit con un indirizzo offset a 16 bit. Tuttavia, non si tratta semplicemente di unirli in un indirizzo a 32 bit. Devi tornare alla discussione sui segmenti nei paragrafi precedenti. Un indirizzo di segmento non è realmente un indirizzo di memoria. Un indirizzo di segmento specifica uno dei 65.535 spazi in cui un segmento può iniziare. Uno di questi spazi esiste ogni 16 byte dalla parte inferiore della memoria fino alla parte superiore. L'indirizzo di segmento 0000H specifica il primo di tali spazi, in corrispondenza della prima posizione nella memoria. L'indirizzo di segmento 0001H specifica il successivo spazio, che si trova 16 byte più in alto nella memoria. Saltando ulteriormente nella memoria altri 16 byte si arriva all'indirizzo di segmento 0002H, e così via. Puoi tradurre un indirizzo di segmento in un effettivo indirizzo di memoria a 20 bit moltiplicandolo per 16. L'indirizzo di segmento 0002H è quindi equivalente all'indirizzo di memoria 0020H, che è il 32° byte nella memoria.
+</p>
+
+<p align=center>
+Ma tale moltiplicazione non è qualcosa che devi fare. La CPU gestisce internamente la combinazione dei segmenti e degli offset in un indirizzo completo a 20 bit. Il tuo compito è dire alla CPU dove si trovano i due diversi componenti di quell'indirizzo a 20 bit. La notazione consueta è separare il registro del segmento dal registro dell'offset con due punti, come mostrato nel seguente esempio: 
+</p>
+
+* `SS:SP` 
+* `SS:BP` 
+* `ES:DI` 
+* `DS:SI` 
+* `CS:BX` 
+
+<p align=center>
+Ognuna di queste cinque combinazioni di registri specifica un indirizzo completo a 20 bit. ES:DI, ad esempio, specifica l'indirizzo come la distanza in DI dall'inizio del segmento indicato in ES.
+</p>
+
+<p align=center>
+Il diagramma sottostante delinea il modello segmentato a modalità. In contrasto con il modello piatto a modalità reale (mostrato nella figura di sopra), il diagramma qui mostra tutta la memoria, non solo il piccolo blocco di 64K che il tuo programma del modello piatto a modalità reale può allocare quando viene eseguito. Un programma scritto per il modello segmentato a modalità reale può vedere tutta la memoria della modalità reale.
+</p>
+
+<p align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/real_mode_segmented_model.png">
+</p>
+
+<p align=center>
+Il diagramma mostra due segmenti di codice e due segmenti di dati. In pratica, puoi avere un numero ragionevole di segmenti di codice e di dati, non solo due di ciascuno. Puoi accedere a due segmenti di dati contemporaneamente, perché hai due registri di segmento disponibili per svolgere il lavoro: DS ed ES. (Nei processori 386 e successivi, hai due registri di segmento aggiuntivi, FS e GS.) Ognuno può specificare un segmento di dati e puoi trasferire dati da un segmento all'altro utilizzando alcune istruzioni macchina. Tuttavia, hai solo un registro di segmento di codice, CS. CS punta sempre al segmento di codice corrente e la prossima istruzione da eseguire è puntata dal registro IP. Non carichi valori direttamente in CS per passare da un segmento di codice a un altro. Le istruzioni macchina chiamati salti cambiano il segmento di codice necessario. Il tuo programma può estendersi su diversi segmenti di codice e quando un'istruzione di salto (di cui ce ne sono diversi tipi) deve portare l'esecuzione in un altro segmento di codice, cambia il valore in CS per te.
+</p>
+
+<p align=center>
+Esiste un solo segmento di stack per ogni singolo programma, specificato dal registro del segmento di stack SS. Il puntatore dello stack SP del registro punta all'indirizzo di memoria (relativo a SS, anche se alla direzione capovolta) in cui avrà luogo l'operazione dello stack successivo. La pila richiede alcune spiegazioni considerevoli, che riprenderò in diversi punti più avanti in. È necessario tenere presente che in modalità reale, ci saranno parti del sistema operativo (e se si utilizza un 8086 o un 8088, sarà l'intero sistema operativo) in memoria con il tuo programma, insieme a importanti tabelle di dati di sistema. È possibile distruggere parti del sistema operativo con l'uso incauto dei registri di segmento, che causerà l'arresto anomalo del sistema operativo e porterà con sé il programma. Questo è il pericolo che ha spinto Intel a creare nuove funzionalità nelle sue CPU 80386 e successive per supportare una modalità "protetta". In modalità protetta, i programmi applicativi, ovvero i programmi scritti dall'utente, anziché il sistema operativo o i driver di periferica, non possono eliminare il sistema operativo o altri programmi applicativi in esecuzione in un altro punto della memoria tramite il multitasking. Questo è ciò che significa protetto. Infine, anche se è vero che c'era una sorta di rudimentale modalità protetta presente nell'80286, nessun sistema operativo l'ha mai veramente usata, e non vale la pena discuterne oggi
+</p>
 
 ## Controllo dei processi
 
