@@ -1,4 +1,4 @@
-# 2cornot2c
+<# 2cornot2c
 It's a 101 C course for my students.
 Sorry, only italian version so far.
 
@@ -5411,7 +5411,24 @@ Quindi riassumendo, una CPU x86-64 contiene un insieme di 16 registri a uso gene
 <img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/general_purpose_register_64.png">
 </p>
 
- ## Controllo dei processi
+### Instruction Pointer
+
+<p align=justify>
+Ancora un altro tipo di registro risiede all'interno delle CPU x86. Il puntatore all'istruzione (in genere denominato IP o, in modalità protetta a 32 bit, EIP ed RIP a 64 bit) si trova in una classe a sé stante. In radicale contrasto con gli otto registri generici, può fare solo una cosa: <b>contiene l'indirizzo di offset della prossima istruzione macchina da eseguire nel segmento di codice corrente</b>. <b>Un segmento di codice è un'area di memoria in cui vengono memorizzate le istruzioni della macchina</b>. I salti e i test di cui è composto un programma sono contenuti in segmenti di codice. A seconda del modello di programmazione che stai utilizzando (ne parleremo a breve) potrebbero esserci molti segmenti di codice in un programma o solo uno. <b>Il segmento di codice corrente è quel segmento di codice il cui indirizzo del segmento è attualmente memorizzato nel registro del segmento di codice CS</b> . L'istruzione della macchina attualmente in esecuzione esiste all'interno del segmento di codice corrente. Nel modello real mode segmentato, il valorein CS può cambiare frequentemente. Nei due modelli piatti, il valore in CS non cambia (quasi) mai, e certamente non cambia mai su richiesta di un programma applicativo. (Come vedrete più avanti, in modalità protetta tutti i registri di segmento appartengono al sistema operativo e non sono modificabili dai programmi ordinari.)
+</p>
+
+<p align=justify>
+Durante l'esecuzione di un programma, la CPU utilizza l'IP per tenere traccia di dove si trova nel segmento di codice corrente. Ogni volta che un'istruzione viene eseguita, l'IP viene incrementato di un certo numero di byte. Il numero di byte corrisponde alla dimensione dell'istruzione appena eseguita. Il risultato netto è che l'IP viene spostato ulteriormente nella memoria, in modo che punti all'inizio della prossima istruzione da eseguire. Le istruzioni hanno dimensioni diverse, che vanno tipicamente da 1 a 6 byte. (Alcune delle forme più arcane delle istruzioni più arcane possono essere ancora più grandi.) La CPU è attenta ad incrementare l'IP del giusto numero di byte, in modo che alla fine punti all'inizio della prossima istruzione e non semplicemente nel mezzo dell'ultima istruzione o di un'altra istruzione. Se l'IP contiene l'indirizzo di offset della prossima istruzione macchina, dove si trova allora l'indirizzo del segmento? L'indirizzo del segmento è conservato nel registro del segmento di codice CS. Insieme, CS e IP contengono l'indirizzo completo della prossima istruzione macchina da eseguire.
+</p>
+
+<p align=justify>
+La natura di questo indirizzo dipende dal tipo di CPU che stai utilizzando e dal modello di programmazione per cui lo stai utilizzando. Nelle CPU 8088, 8086 e 80286, l'IP è di 16 bit. Nelle CPU 386 e successive, l'IP (come tutti gli altri registri tranne i registri di segmento) passa a 32 bit e diventa EIP. <b>In modalità reale, il modello segmentato, CS e IP lavorano insieme per fornire un indirizzo di 20 bit che punta a uno dei 1.048.576 byte (1MB) nella memoria in modalità reale</b>. In entrambi i modelli piatti (di cui parleremo tra poco), CS è impostato dal sistema operativo e rimane costante. L'IP gestisce tutti i puntamenti delle istruzioni che tu, il programmatore, devi gestire. Nel modello piatto a 16 bit (modello piatto in modalità reale), ciò significa che l'IP può seguire l'esecuzione delle istruzioni attraverso un intero segmento di memoria di 64K. Il modello piatto a 32 bit fa ben più che raddoppiare; 32 bit possono rappresentare 4.294.967.290 (4GB) indirizzi di memoria diversi. Pertanto, nel modello piatto a 32 bit (cioè, modello piatto in modalità protetta), l'IP può seguire l'esecuzione delle istruzioni attraverso oltre 4 gigabyte di memoria che un tempo era una quantità di memoria inimmaginabile, e ora è comune. L'IP è notevole perché è l'unico registro che non può essere né letto né scritto direttamente. Ci sono trucchi che possono essere usati per ottenere il valore corrente dell'IP, ma avere il valore dell'IP non è utile come si potrebbe pensare, e non sarà spesso necessario farlo.
+</p>
+
+### I tre principali modelli di programmazione per x86
+
+
+## Controllo dei processi
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.01.png)
 
