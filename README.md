@@ -5320,7 +5320,7 @@ Per definire un segmento è sufficiente dichiarare il limite di paragrafo dal qu
 ### I Registri
 
 <p align=justify>
-Un registro è un tipo di memoria all'interno del chip della CPU, piuttosto che all'esterno della CPU in RAM o da qualche parte. L'8088, l'8086 e l'80286 sono spesso chiamati CPU a 16 bit perché i loro registri interni sono quasi tutti di 16 bit di dimensione. L'80386 e i suoi successori sono chiamati CPU a 32 bit perché la maggior parte dei loro registri interni sono di 32 bit di dimensione. Dalla metà degli anni 2000, molte delle nuove CPU x86 sono state progettate a 64 bit, con registri larghi 64 bit. Le CPU x86 hanno un numero abbastanza elevato di registri, e sono un gruppo davvero interessante.
+Un registro è un tipo di memoria all'interno del chip della CPU, piuttosto che all'esterno della CPU in RAM o da qualche parte. L'8088, l'8086 e l'80286 sono spesso chiamati CPU a 16 bit perché i loro registri interni sono quasi tutti di 16 bit di dimensione. L'80386 e i suoi successori sono chiamati CPU a 32 bit perché la maggior parte dei loro registri interni sono di 32 bit di dimensione. Dalla metà degli anni 2000, molte delle nuove CPU x86 sono state progettate a 64 bit, con registri larghi 64 bit. Le CPU x86 hanno un numero abbastanza elevato di registri.
 </p>
 
 <p align=justify>
