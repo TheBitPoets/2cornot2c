@@ -5427,6 +5427,18 @@ La natura di questo indirizzo dipende dal tipo di CPU che stai utilizzando e dal
 
 ### I tre principali modelli di programmazione per x86
 
+## Real Mode Flat Model (modello piatto in modalità reale)
+
+In modalità reale, se ricordi, la CPU può vedere solo un megabyte (1.048.576) di memoria. Puoi accedere a ogni singolo byte di quei milioni utilizzando il trucco del registro segmento:offset mostrato in precedenza per formare un indirizzo a 20 bit da due indirizzi a 16 bit contenuti in due registri. Oppure, puoi accontentarti di 64K di memoria e non preoccuparti affatto dei segmenti. Nel modello piatto della modalità reale, il tuo programma e tutti i dati su cui lavora devono esistere all'interno di un singolo blocco di memoria di 64K. Sessantaquattro kilobyte! Cosa potresti mai realizzare in soli 64K di byte? Bene, la prima versione di WordStar per l'IBM PC stava in 64K. Anche i primi tre rilasci principali di Turbo Pascal - in effetti, il programma Turbo Pascal stesso occupava molto meno di 64K perché compilava i suoi programmi in memoria. L'intero pacchetto Turbo Pascal - compilatore, editor di testo e alcuni strumenti vari - arrivò a poco più di 39K. Trentuno kilobyte! Non riesci nemmeno a scrivere una lettera a tua madre (usando Microsoft Word) in quel poco spazio al giorno d'oggi!
+
+Cose spettacolari sono successe una volta in 64K, e mentre potresti non essere mai chiamato a limitarti al modello piatto in modalità reale, la disciplina che tutti quei programmatori ora con i capelli grigi hanno sviluppato a causa del numero limitato di risorse è molto utile. Più precisamente, il modello piatto in modalità reale è il "fratello minore" del modello piatto in modalità protetta, che è il modello di codice che userai quando programmi sotto Linux. Se impari i modi del modello piatto in modalità reale, il modello piatto in modalità protetta sarà un gioco da ragazzi. (Qualsiasi problema avrai non sarà con il codice assembly o i modelli di memoria, ma con i requisiti bizantini di Linux e le sue librerie di codice canoniche.) Il modello piatto in modalità reale è mostrato graficamente nella figura di sotto. Non c'è molto da dire. I registri di segmento sono tutti impostati per puntare all'inizio del blocco di 64K di memoria con cui puoi lavorare. (Il sistema operativo li imposta quando carica e esegue il tuo programma.) Tutti puntano a quello stesso posto e non cambiano mai finché il tuo programma è in esecuzione. Nessun registro di segmento, niente inganni con i segmenti, e nessuna delle complicazioni brutte che vengono con essi. Poiché un registro a 16 bit come BX può contenere qualsiasi valore da 0 a 65.535, può localizzare qualsiasi singolo byte all'interno del pieno 64K con cui il tuo programma deve lavorare. L'indirizzamento della memoria può quindi avvenire senza l'uso esplicito dei registri di segmento. I registri di segmento continuano a funzionare, ovviamente, dal punto di vista della CPU. Non scompaiono e sono ancora presenti, ma il sistema operativo li imposta a valori a sua scelta quando avvia il tuo programma, e quei valori saranno validi finché il tuo programma è in esecuzione. Non è necessario accedere ai registri di segmento in alcun modo per scrivere il tuo programma.
+
+<p align=center
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/real_mode_flat_model.png">
+</p>
+
+La maggior parte dei registri generali può contenere indirizzi di posizioni in memoria. Li usi in congiunzione con le istruzioni della macchina per prelevare dati dalla memoria e scriverli di nuovo.
+
 
 ## Controllo dei processi
 
