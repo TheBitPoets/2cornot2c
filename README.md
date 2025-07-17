@@ -5271,6 +5271,16 @@ Ti ricordo che ogni cifra esadecimale rappresenta 4 bit, infatti per rappresenta
 I primi 256 byte di memoria erano chiamati <i>program segment prefix</i> (PSP) ed erano usati per i buffer di I/O dei programmi. Il codice eseguibile del programma caricato in memoria iniziava solamente dopo l'indirizzo <code>0100H</code>
 </p>
 
+
+<table>
+	<td>:memo: <b>Note</b>
+	<p align=justify>
+I microcomputer primordiali come i sistemi 8080 che eseguivano CP/M-80 avevano un'architettura della memoria semplice. I programmi venivano scritti per essere caricati e eseguiti a un indirizzo di memoria fisico specifico. Per CP/M, questo era 0100H. Il programmatore poteva assumere che qualsiasi programma iniziasse a 0100H e procedesse da lì. Gli indirizzi di memoria degli elementi di dati e delle procedure erano indirizzi fisici reali e ogni volta che il programma veniva eseguito, i suoi elementi di dati venivano caricati e riferiti esattamente nello stesso posto in memoria.
+Tutto ciò è cambiato con l'arrivo dell'8086 e dei sistemi operativi specifici per l'8086 come CP/M-86 e PC DOS. I miglioramenti nell'architettura Intel introdotti con l'8086 hanno reso superflua l'assemblaggio del programma per essere eseguito a un indirizzo di memoria fisico specifico. Questa caratteristica è chiamata <b>relocatabilità</b> ed è una parte necessaria di qualsiasi sistema operativo moderno, specialmente quando più programmi possono essere in esecuzione contemporaneamente. Gestire la relocatabilità è complesso, una volta che ti sentirai più a tuo agio con il linguaggio assembly, diventerà un argomento degno di ulteriori ricerche.
+	</p>
+	</td>
+</table>
+
 <p align=center>
 <img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/cpm-memory.png">
 </p>
