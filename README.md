@@ -5244,12 +5244,13 @@ Luigi Bianchi di eta' 31 ha una media di 19.700001
 ### I modelli di memoria
 
 <p align=justify>
-Uno dei concetti più complessi dei sistemi e della programmazione a basso livello (in linguaggio assembly del processore) è l'indirizzamento della memoria, ovvero come la CPU indirizza la memoria cioè in che modo questa permette l'accesso alle celle di memoria; questo è molto importante perchè influenza il modo con cui il programmatore vede la RAM. Anche se la RAM fisicamente è una sequenza ordinata di celle di 8 byte, l'indirizzamento della CPU può influenzare come il programmatore vede ed usa questa sequenza di byte. In questa sede faremo riferimento all'architettura: <code>x86</code> dei processori intel/amd. L'indirizzamento della memoria da parte del processore è argomento complesso in quanto, nella nostra architettura di riferimento, esistono diversi modi con cui i processori <code>x86</code> indirizzano la memoria. Nello specifico esistono tre <b>modelli di memoria</code> che gli attuali processori della famiglia <code>x86</code> supportano:
+Uno dei concetti più complessi dei sistemi e della programmazione a basso livello (in linguaggio assembly del processore) è l'indirizzamento della memoria, ovvero come la CPU indirizza la memoria cioè in che modo questa permette l'accesso alle celle di memoria; questo è molto importante perchè influenza il modo con cui il programmatore vede la RAM. Anche se la RAM fisicamente è una sequenza ordinata di celle di 8 byte, l'indirizzamento della CPU può influenzare come il programmatore vede ed usa questa sequenza di byte. In questa sede faremo riferimento all'architettura: <code>x86</code> dei processori intel/amd. L'indirizzamento della memoria da parte del processore è argomento complesso in quanto, nella nostra architettura di riferimento, esistono diversi modi con cui i processori <code>x86</code> indirizzano la memoria. Nello specifico esistono quattro <b>modelli di memoria</code> che gli attuali processori della famiglia <code>x86</code> supportano:
 </b>
 
 1. **real mode flat model** (modello piatto in modalità reale)
 2. **real mode segmented model** (modello segmentato in modalità reale)
-3. **protected mode flat model** (modello piatto in modalità protetta)
+3. **32-bit protected mode flat model** (modello piatto in modalità protetta)
+4. **64-bit long mode flat model** (modello piatto in modalità lunga)
 
 <p align=justify>
 Nella programmazione per Linux moderno a 64 bit, sei praticamente limitato a un solo modello di memoria (modello piatto in modalità protetta), e una volta che comprenderai meglio l'indirizzamento della memoria, ne sarai molto contento.
