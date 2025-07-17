@@ -5517,7 +5517,7 @@ Ognuna di queste cinque combinazioni di registri specifica un indirizzo completo
 </p>
 
 <p align=justify>
-Il diagramma sottostante delinea il modello segmentato a modalità. In contrasto con il modello piatto a modalità reale (mostrato nella figura di sopra), il diagramma qui mostra tutta la memoria, non solo il piccolo blocco di 64K che il tuo programma del modello piatto a modalità reale può allocare quando viene eseguito. Un programma scritto per il modello segmentato a modalità reale può vedere tutta la memoria della modalità reale.
+Il diagramma sottostante delinea il modello segmentato in modalità reale. In contrasto con il modello piatto in modalità reale (mostrato nella figura di sopra), il diagramma qui mostra tutta la memoria, non solo il piccolo blocco di 64K che il tuo programma del modello piatto in modalità reale può allocare quando viene eseguito. Un programma scritto per il modello segmentato in modalità reale può vedere tutta la memoria della modalità reale (1MB).
 </p>
 
 <p align=center>
