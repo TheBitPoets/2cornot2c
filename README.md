@@ -5850,9 +5850,9 @@ Nel lavoro di assemblaggio ordinario, quasi tutte le variabili di stringa sono d
 </p>
 
  ```asm
-	WordString: dw 'CQ' 
- 	DoubleString: dd 'Stop' 
- 	QuadString: dq 'KANGAROO' 
+        WordString: dw 'CQ' 
+        DoubleString: dd 'Stop' 
+        QuadString: dq 'KANGAROO' 
  ```
 
  <p align=justify>
