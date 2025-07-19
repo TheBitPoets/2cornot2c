@@ -5738,7 +5738,7 @@ SECTION .text           ; Section containing code
 global   main           ; Linker needs this to find the entry point!
 
 main:
- mov rbp,rsp            ; SASM may add another copy of this in debug mode!
+  mov rbp,rsp            ; SASM may add another copy of this in debug mode!
  
   mov rax,1             ; 1 = sys_write for syscall    
   mov rdi,1             ; 1 = fd for stdout
@@ -5793,9 +5793,9 @@ main:
 
      nop
 
-   mov rax,60   	; Code for Exit Syscall
-   mov rdi,0		; Return a code of zero    
-   syscall		; Make kernel call      
+     mov rax,60   	; Code for Exit Syscall
+     mov rdi,0		; Return a code of zero    
+     syscall		; Make kernel call      
 ```
 
 <p align=justify>
