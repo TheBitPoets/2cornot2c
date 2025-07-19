@@ -5708,6 +5708,8 @@ _start:
     syscall             ; Call syscall to exit
 ```
 
+## Il primo programmma assembly in SASM (eatsyscallgcc.asm)
+
 <p align=justify>
 Se il tuo assemblatore è SAMS (un assemblatore grafico, al contrario di asm che è solo a riga di comando) il codice è leggermente differente, parleremo delle differenze nei paragrafi successivi
 </p>
@@ -5750,19 +5752,79 @@ main:
   syscall               ; Call syscall to exit   
 ```
 
-### Segmento .data
+### Template per nasm
+
+```asm
+section .data
+section .text
+section .bss
+
+global 	_start
+	
+_start:
+
+     nop
+
+; Put your experiments between the two nops...
+; Put your experiments between the two nops...
+
+     nop
+
+     mov rax,60   	; Code for Exit Syscall
+     mov rdi,0		; Return a code of zero    
+     syscall		; Make kernel call      
+```
+
+### Template per sasm
+
+```asm
+section .data
+section .text
+section .bss
+
+global main
+
+main:
+    mov rbp,rsp  ; Save stack pointer for debugger
+    nop
+
+; Put your experiments between the two nops...
+; Put your experiments between the two nops...
+
+     nop
+
+   mov rax,60   	; Code for Exit Syscall
+   mov rdi,0		; Return a code of zero    
+   syscall		; Make kernel call      
+```
+
+<p align=justify>
+Ciò di cui abbiamo bisogno è un punto di partenza contrassegnato come globale — qui, l'etichetta principale. (<b>L'uso di main è un requisito di SASM, non di NASM.</b> vedi il template di nasm sopra) Dobbiamo anche definire una sezione dati e una sezione testo come mostrato. La sezione dati (<code>.data</code>) contiene i dati a cui devono essere assegnati valori iniziali quando il programma viene eseguito. Il vecchio messaggio pubblicitario "Eat at Joe's" era un elemento dati nominato nella sezione dati. La sezione testo (<code>.text</code>) contiene il codice del programma. <b>Entrambe queste sezioni (<code>.data</code> <code>.text</code>) sono necessarie per creare un eseguibile, anche se una o entrambe sono vuote</b>. <b>La sezione contrassegnata <code>.bss</code> non è strettamente essenziale</b>, ma è utile averla se prevedi di sperimentare. <b>La sezione <code>.bss</code> contiene dati non inizializzati</b>, cioè spazio riservato per elementi dati a cui non vengono assegnati valori iniziali quando il programma inizia a essere eseguito. Questi sono fondamentalmente buffer vuoti, per dati che saranno generati o letti da qualche parte mentre il programma è in esecuzione. Per consuetudine, la sezione .bss si trova dopo la sezione .text. 
+</p>
+
+<p align=justify>
+Nei template sono presenti due istruzioni NOP. Ricorda che le istruzioni NOP non fanno altro che richiedere un po' di tempo. Sono lì per rendere più facile guardare il programma nel debugger SASM. Per giocare con le istruzioni della macchina, inserisci le istruzioni di tua scelta tra i due commenti. Compila il programma, fai clic sul pulsante Debug e divertiti! Impostare un punto di interruzione in corrispondenza della prima istruzione inserita tra i commenti e fare clic su Debug. L'esecuzione inizierà e si fermerà in corrispondenza del punto di interruzione. Per osservare gli effetti di tale istruzione, fare clic sul pulsante Esegui passaggio. Ecco perché c'è la seconda istruzione NOP: quando si esegue un'istruzione a passo singolo, ci deve essere un'istruzione dopo quell'istruzione per l'esecuzione su cui mettere in pausa. Se la prima istruzione nella sandbox è l'ultima istruzione, l'esecuzione verrà "eseguita oltre il limite" nel primo passaggio singolo e il programma terminerà. Quando ciò accade, i riquadri Registri e Memoria di SASM diventeranno vuoti e non sarai in grado di vedere gli effetti di quell'unica istruzione! L'idea di correre fuori dal bordo del programma è interessante. Se fai clic sul pulsante Debug o premi il tasto di scelta rapida F5, vedrai cosa succede quando non chiudi correttamente il programma: Linux consegnerà un errore di segmentazione, che può avere una serie di cause. Tuttavia, ciò che è accaduto in questo caso è che il programma ha tentato di eseguire una posizione oltre la fine della sezione .text. Linux sa quanto è lungo il tuo programma e non ti permetterà di eseguire istruzioni che non erano presenti nel tuo programma quando è stato caricato. Non c'è alcun danno duraturo in questo, ovviamente. Linux è molto bravo a gestire programmi che si comportano male e malformati (specialmente quelli semplici), e nulla di ciò che probabilmente farai per caso avrà alcun effetto sull'integrità di Linux stesso. È possibile evitare di generare l'errore di segmentazione facendo clic sul pulsante rosso Stop prima di inviare l'esecuzione alla fine del piccolo programma sperimentale. SASM passerà dalla modalità di debug alla modalità di modifica. Tenere presente che se si esce dalla modalità di debug, non sarà più possibile visualizzare i registri o gli elementi di memoria. Naturalmente, se si desidera semplicemente far eseguire un programma, è possibile aggiungere alcune righe che effettuano una SYSCALL alla routine di uscita x64 alla fine della sandbox. In questo modo, se l'esecuzione viene eseguita dalla parte inferiore degli esperimenti, la chiamata SYSCALL interromperà automaticamente l'esecuzione. Di seguito è riportato il codice per l'uscita SYSCALL. Posiziona questo codice dopo il secondo NOP, e sei a posto.
+</p>
+
+```asm
+mov rax,60   	; Code for Exit Syscall
+mov rdi,0	; Return a code of zero    
+syscall		; Make kernel call  
+```
+
+### Sezione .data
 
 <p align=justify>
 I normali programmi utente (che girano nello spazio utente e non in quello kernel) scritti per Linux sono divisi in <b>tre sezioni</b>. L'ordine in cui queste sezioni si presentano nel tuo programma non è davvero importante, ma per convenzione la sezione <b>.data</b> viene prima, seguita dalla sezione <b>.bss</b> e poi dalla sezione <b>.text</b>. <b>La sezione .data contiene definizioni di dati di elementi inizializzati</b>. I dati inizializzati sono dati che hanno un valore prima che il programma inizi a essere eseguito. Questi valori fanno parte del file eseguibile. Vengono caricati in memoria quando il file eseguibile viene caricato in memoria per l'esecuzione. Non devi caricarli con i loro valori e non vengono utilizzati cicli di macchina nella loro creazione al di là di quanto necessario per caricare il programma nel suo insieme in memoria. La cosa importante da ricordare sulla sezione .data è che maggiore è il numero di elementi di dati inizializzati che definisci, più grande sarà il file eseguibile e più tempo ci vorrà per caricarlo da disco in memoria quando lo esegui. Parleremo in dettaglio di come vengono definiti gli elementi di dati inizializzati a breve.
 </p>
 
-### Segmento .bss
+### Sezione .bss
 
 <p align=justify>
 Non tutti gli elementi di dati devono avere valori prima che il programma inizi a essere eseguito. Quando leggi dati da un file sul disco, ad esempio, hai bisogno di un posto dove inserire i dati dopo che arrivano dal disco. I buffer di dati come quello sono definiti nella sezione <b>Block Start Symbol</b> (<b>.bss</b>) del tuo programma. E' stato chiamato in altri modi nel corso degli anni, come Buffer Start Symbol. L'acronimo non ha importanza. Nella sezione .bss, allochi blocchi di memoria da utilizzare in seguito e dai nomi a quei blocchi, questi blocchi conterranno dei valori solo successivamente, durante l'esecuzione del programma. Tutti gli assemblatori hanno un modo per riservare un certo numero di byte per un buffer e dare un nome a quel buffer, ma non specifichi quali valori devono essere memorizzati nel buffer. I valori appariranno dopo a seguito dell'azione del programma mentre il programma è in esecuzione. <b>C'è una differenza cruciale tra gli elementi di dati definiti nella sezione .data e gli elementi di dati definiti nella sezione .bss</b>: Gli elementi di dati nella sezione .data aumentano la dimensione del tuo file eseguibile. Gli elementi di dati nella sezione .bss non lo fanno. Un buffer che occupa 16.000 byte (o più, a volte molto di più) può essere definito in .bss e aggiungere quasi nulla (circa 50 byte per la descrizione) alla dimensione del file eseguibile. Questo è possibile grazie al modo in cui il caricatore di Linux porta il programma nella memoria. Quando compili il tuo file eseguibile, il linker di Linux aggiunge informazioni al file descrivendo tutti i simboli che hai definito, compresi i simboli che nominano gli elementi di dati. Il caricatore sa quali elementi di dati non hanno valori iniziali, e riserva spazio in memoria per loro quando porta l'eseguibile dal disco. Gli elementi di dati con valori iniziali vengono letti insieme ai loro valori. Avere una sezione .bss vuota non aumenta la dimensione del tuo file eseguibile, e cancellare una sezione .bss vuota non riduce la dimensione del tuo file eseguibile.
 </p>
 
-### Segmento .text
+### Sezione .text
 <p align=justify>
 Le vere istruzioni macchina che compongono il tuo programma vanno nella sezione <b>.text</b>. Ordinariamente, non ci sono elementi di dati definiti in .text. La sezione .text contiene simboli chiamati <b>etichette</b> (labels) che identificano posizioni nel codice del programma per salti e chiamate, ma al di là di questo, è tutto qui. Tutte le etichette globali devono essere dichiarate nella sezione .text, altrimenti le etichette non possono essere "visibili" al di fuori del tuo programma, né dal linker di Linux né dal caricatore di Linux. Esaminiamo la questione delle etichette con maggiore attenzione.
 </p>
