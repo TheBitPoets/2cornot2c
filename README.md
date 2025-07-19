@@ -5829,7 +5829,7 @@ Le stringhe sono un'eccezione alla regola generale secondo cui una direttiva di 
 </p>	
 
 ```asm
- Yukkh: db 'He said, "How disgusting!" and threw up.', 10
+	Yukkh: db 'He said, "How disgusting!" and threw up.', 10
 ```
 
 <p align=justify>
@@ -5852,7 +5852,7 @@ Nel lavoro di assemblaggio ordinario, quasi tutte le variabili di stringa sono d
  ```asm
 	WordString: dw 'CQ' 
  	DoubleString: dd 'Stop' 
-  	QuadString: dq 'KANGAROO' 
+ 	QuadString: dq 'KANGAROO' 
  ```
 
  <p align=justify>
@@ -5866,7 +5866,7 @@ La direttiva <code>DW</code> definisce una variabile a lunghezza parola (word), 
 ```
 
 <p align=justify>
-<b>Ricorda qui che per spostare i dati da una variabile in un registro, devi inserire il nome della variabile (che è il suo indirizzo) tra parentesi quadre</b>. Senza le parentesi quadre, ciò che sposti nel registro è l'indirizzo della variabile in memoria, non quali dati esistono a quell'indirizzo. Nella prima istruzione <code>MOV</code>, i caratteri <code>CQ</code> vengono posizionati nel registro <code>AX</code>, con il carattere <code>C</code> nel registro <code>AL</code> e la <code>Q</code> in <code>AH</code>. Nella seconda istruzione <code>MOV</code>, i caratteri <code>Stop</code> vengono caricati in <code>EDX</code> <b>in ordine little-endian</b>, con la <code>S</code> nel byte di ordine più basso di <code>EDX</code>, la <code>t</code> nel secondo byte più basso, e così via. Se guardi la stringa <code>QuadString</code> caricata in <code>RAX</code> da SASM, vedrai che contiene “OORAGNAK” scritto al contrario. Caricare stringhe in un singolo registro in questo modo (supponendo che ci stiano!) è molto meno comune (e meno utile) rispetto a usare DB per definire stringhe di caratteri, e non ti capiterà spesso di farlo. Poiché eatsyscall.asm non definisce dati non inizializzati nella sua sezione .bss, rimanderò la discussione di tali definizioni finché non esamineremo il prossimo programma di esempio.
+<b>Ricorda qui che per spostare i dati da una variabile in un registro, devi inserire il nome della variabile (che è il suo indirizzo) tra parentesi quadre</b>. Senza le parentesi quadre, ciò che sposti nel registro è l'indirizzo della variabile in memoria, non quali dati esistono a quell'indirizzo. Nella prima istruzione <code>MOV</code>, i caratteri <code>CQ</code> vengono posizionati nel registro <code>AX</code>, con il carattere <code>C</code> nel registro <code>AL</code> e la <code>Q</code> in <code>AH</code>. Nella seconda istruzione <code>MOV</code>, i caratteri <code>Stop</code> vengono caricati in <code>EDX</code> <b>in ordine little-endian</b>, con la <code>S</code> nel byte di ordine più basso di <code>EDX</code>, la <code>t</code> nel secondo byte più basso, e così via. Se guardi la stringa <code>QuadString</code> caricata in <code>RAX</code> da SASM, vedrai che contiene “OORAGNAK” scritto al contrario. Caricare stringhe in un singolo registro in questo modo (supponendo che ci stiano!) è molto meno comune (e meno utile) rispetto a usare <code>DB</code> per definire stringhe di caratteri, e non ti capiterà spesso di farlo. Poiché eatsyscall.asm non definisce dati non inizializzati nella sua sezione .bss, rimanderò la discussione di tali definizioni finché non esamineremo il prossimo programma di esempio.
 </p>
 	
 ## Controllo dei processi
