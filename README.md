@@ -5812,6 +5812,61 @@ mov rdi,0	; Return a code of zero
 syscall		; Make kernel call  
 ```
 
+### Le Istruzione ed i loro operandi
+
+<p align=justify>
+L'attività più comune nel lavoro con il linguaggio assembly è spostare dati da un luogo all'altro. Ci sono diversi modi specializzati per farlo, ma solo un modo veramente generale: l'istruzione <code>MOV</code>. <code>MOV</code> può spostare un byte, una parola (16 bit), una doppia parola (32 bit) o una quadrupla parola (64 bit) di dati da un registro a un altro, da un registro alla memoria, o dalla memoria a un registro. <b>Ciò che <code>MOV</code> non può fare è spostare dati direttamente da un indirizzo in memoria a un altro indirizzo in memoria</b>. (Per farlo, sono necessarie due istruzioni MOV separate: prima dalla memoria a un registro e poi da quel registro di nuovo in un altro luogo nella memoria.) Il nome <code>MOV</code> è un po' fuorviante, poiché ciò che accade effettivamente è che i dati vengono copiati da una sorgente a una destinazione. Una volta copiati nella destinazione, tuttavia, i dati non scompaiono dalla sorgente, ma continuano a esistere in entrambi i luoghi. Questo confligge un po' con la nostra nozione intuitiva di spostare qualcosa, che di solito significa che qualcosa scompare da un luogo sorgente e riappare in un luogo di destinazione.
+</p>
+
+### Operandi Sorgente e Destinazione
+
+<p align=justify>
+La maggior parte delle istruzioni della macchina, inclusa <code>MOV</code>, ha uno o più operandi. (Alcune istruzioni non hanno operandi o operano implicitamente su registri o memoria. Quando questo è il caso, lo menzionerò nel testo.) Considera questa istruzione macchina: 
+</p>	
+
+```asm
+ 	mov rax,1
+``` 
+ 
+<p align=justify>
+Ci sono due operandi nell'istruzione precedente. Il primo è RAX e il secondo è il numero 1. <b>Per convenzione nel linguaggio assembly, il primo operando (quello più a sinistra) appartenente a un'istruzione macchina è l'operando di destinazione</b>. <b>Il secondo operando da sinistra è l'operando sorgente</b>. Con l'istruzione  <code>MOV</code>, il significato dei due operandi è piuttosto letterale: l'operando sorgente viene copiato nell'operando di destinazione. Nell'istruzione precedente, l'operando sorgente (il valore letterale 1) viene copiato nell'operando di destinazione RAX. Il significato di sorgente e destinazione non è affatto così letterale in altre istruzioni, ma una regola generale è questa: ogni volta che un'istruzione macchina causa la generazione di un nuovo valore, quel nuovo valore viene posto nell'operando di destinazione. <b>Ci sono tre diversi tipi di dati che possono essere utilizzati come operandi</b>. Questi sono: <b>dati di memoria</b>, <b>dati di registri</b> e <b>dati immediati</b>. Ho esposto alcune istruzioni <code>MOV</code> di esempio nella tabella di sotto per darti un'idea di come i diversi tipi di dati sono specificati come operandi per l'istruzione <code>MOV</code>
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/move_and_its_operands.png">
+</div>
+
+### Dati Immediati
+
+<p align=justify>
+L'istruzione <code>MOV RAX,42h</code> è un buon esempio dell'uso di quello che si chiama <i>dato immediato</i>, acceduto attraverso una modalità di indirizzamento chiamata <b>indirizzamento immediato</b>. L'indirizzamento immediato prende il suo nome dal fatto che <b>l'elemento indirizzato è un dato incorporato direttamente nell'istruzione della macchina stessa</b>. La CPU non deve cercare altrove per trovare i dati immediati. Non si trova in un registro, né è memorizzato in un elemento dati da qualche parte nella memoria. I dati immediati si trovano sempre all'interno dell'istruzione che viene recuperata ed eseguita.
+</p>
+
+<p align=justify>
+I dati immediati devono avere una dimensione appropriata per l'operando. Ad esempio, non puoi spostare un valore immediato a 16 bit in una sezione di registro a 8 bit come AH o DL. NASM non ti permetterà di assemblare un'istruzione come questa: 
+</p>
+
+```asm
+	mov cl,067EFh 
+ ```
+
+<p align=justify>
+CL è un registro a 8 bit e <code>067EFh</code> è una quantità a 16 bit. Non funziona! Poiché è incorporato direttamente in un'istruzione macchina, potresti pensare che i dati immediati sarebbero rapidi da accedere. Questo è vero solo fino a un certo punto: recuperare qualcosa dalla memoria richiede più tempo rispetto a recuperare qualcosa da un registro e le istruzioni sono, dopo tutto, memorizzate in memoria. Quindi, mentre indirizzare i dati immediati è un po' più veloce rispetto ad indirizzare dati normali memorizzati in memoria, nessuno dei due è così veloce come semplicemente estrarre un valore da un registro della CPU. Tieni anche presente che solo l'operando sorgente può essere un dato immediati. L'operando di destinazione è il luogo dove i dati arrivano, non da dove provengono. Poiché i dati immediati consistono in costanti letterali (numeri come 1, 0, 42 o 07F2Bh), cercare di copiare qualcosa nei dati immediati piuttosto che da essi non ha alcun significato ed è sempre un errore. NASM consente alcune interessanti forme di dati immediati. Ad esempio, la seguente è perfettamente legale, anche se non necessariamente utile come sembra a prima vista: 
+</p>
+
+```asm
+	mov eax,'WXYZ'
+```
+
+<p align=justify>
+Questa è una buona istruzione da caricare nel tuo assemblatore ed eseguire nel debugger. Guarda il contenuto del registro EAX nella vista registri: 0x5a595857 Questo potrebbe sembrare strano, ma guarda da vicino: gli equivalenti numerici dei caratteri ASCII maiuscoli W, X, Y e Z sono stati caricati in ordine in EAX. W è 57h, X è 58h, Y è 59h e Z è 5Ah. Ogni carattere equivalente ha una dimensione di 8 bit, quindi quattro di essi si adattano perfettamente nel registro a 32 bit EAX. Tuttavia, sono invertiti.
+Bene, no. Ricorda il concetto di "endianness". L'architettura x86/x64 è "little endian", il che significa che il byte meno significativo in una sequenza multibyte è memorizzato all'indirizzo più basso. Questo si applica anche ai registri e ha senso una volta che capisci come ci riferiamo alle unità di memoria all'interno di un registro. La confusione nasce dalla nostra abitudine di leggere il testo da sinistra a destra, mentre leggiamo i numeri da destra a sinistra. Dai un'occhiata alla figura di sotto. (Questo esempio utilizza il registro a 32 bit EAX per rendere la figura meno complessa e più facile da capire.) Trattato come una sequenza di caratteri di testo, la W in WXYZ è considerata l'elemento meno significativo. EAX, tuttavia, è un contenitore per numeri, dove la colonna meno significativa è sempre (per le lingue occidentali) a destra. Il byte meno significativo in EAX lo chiamiamo AL, ed è lì che va la W. Il secondo byte meno significativo in EAX lo chiamiamo AH, ed è lì che va la X. I due byte più significativi in EAX non hanno nomi separati e non possono essere indirizzati individualmente, ma sono comunque byte a 8 bit e possono contenere valori a 8 bit come caratteri ASCII. Il carattere più significativo nella sequenza WXYZ è la Z, e viene memorizzato nel byte più significativo di EAX.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/strings_as_immediate_data.png">
+</div>
+
 ### Sezione .data
 
 <p align=justify>
