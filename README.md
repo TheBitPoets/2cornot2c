@@ -6126,6 +6126,56 @@ In poche parole, questo codice colloca determinati valori in determinati registr
 <img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/system_call_conventions_for_system_v_abi.png">
 </div>
 
+<p align=justify>
+Tutte le colonne tranne System Call sono registri. System Call è il nome leggibile dall'uomo della chiamata di sistema, che è il nome utilizzato da linguaggi di alto livello come Pascal e C per effettuare chiamate di sistema tramite l'istruzione SYSCALL. Il registro RAX è dedicato al codice numerico che specifica la chiamata di sistema da effettuare. Il nome della chiamata di sistema 1 è <code>sys_write</code>. I registri dopo il nome della chiamata di sistema (RDI, RSI) contengono i parametri. L'ABI specifica sei registri da utilizzare per i parametri. Non tutte le chiamate di sistema richiedono sei parametri. La chiamata <code>sys_write</code> utilizzata in <code>eatsyscall.asm</code> neha solo tre. L'elenco dei parametri inizia sempre con RDI e utilizza i registri nell'ordine dato nella tabella. 
+<br>	RDI, RSI, RDX, R10, R8, R9.<br> 
+Dopo che i parametri di una chiamata di sistema sono stati tutti assegnati ai registri, eventuali registri rimasti inutilizzati per la chiamata di sistema non si applicano alla chiamata di sistema e vengono lasciati vuoti. I parametri per <code>sys_write</code> sono questi.
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+			<b>RDI</b>: Il descrittore di file su cui verrà scritto il testo. In Linux (e in tutte le varianti di Unix) il descrittore di file per <code>sys_write</code> è 1.
+		</p>
+	</li>
+	<li>
+		<p align=justify>
+			<b>RSI</b>: L'indirizzo del testo da scrivere nella console.
+		</p>
+	</li>
+	<li>
+		<p align=justify>
+			<b>RDX</b>: La lunghezza (numero di caratteri) del testo da scrivere sulla console
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+Se una chiamata di sistema deve restituire un valore numerico, quel valore viene restituito dal sistema in RAX.
+</p>
+
+### Terminare un programma via SYSCALL
+
+<p align=justify>
+C'è un secondo comando SYSCALL in eatsyscall.asm, e ha un compito umile ma cruciale: chiudere il programma e restituire il controllo a Linux. Questo sembra più semplice di quanto sia, e una volta che comprendi un po' meglio gli interni di Linux, inizierai ad apprezzare il lavoro che deve essere fatto sia per avviare un processo sia per chiuderlo. Tuttavia, dal punto di vista del tuo stesso programma, è estremamente semplice: inserisci il numero del servizio sys_exit in RAX, inserisci un codice di ritorno in RDI e poi esegui SYSCALL:
+</p>
+
+```asm
+	mov rax,60	; 60 = sys_exit to exit the program gracefully
+	mov rdi,0	; Return value in rdi 0 = nothing to return
+ 	syscall        	; Call syscall to exit this program
+```
+
+<p align=justify>
+Il codice di ritorno è un valore numerico che puoi definire come preferisci. Tecnicamente, non ci sono restrizioni su cosa sia (a parte il fatto di dover adattarsi a un registro a 64 bit), ma per convenzione, un valore di ritorno di 0 significa "tutto ha funzionato correttamente; arresto normale." Valori di ritorno diversi da 0 indicano tipicamente un errore di qualche tipo. Tieni presente che nei programmi più grandi, devi fare attenzione a cose che non funzionano come previsto: un file su disco non può essere trovato, un'unità disco è piena e così via. Se un programma non riesce a svolgere il proprio compito e deve terminare prematuramente, dovrebbe avere un modo per dirti (o in alcuni casi, a un altro programma) cosa è andato storto. Il codice di ritorno è un buon modo per farlo. Uscire in questo modo non è solo una cortesia. Ogni programma x64 che scrivi deve uscire effettuando una chiamata a <code>sys_exit</code> tramite il dispatcher dei servizi del kernel. Se un programma semplicemente "scivola via" dal limite, in realtà si fermerà, ma Linux solleverà un errore di segmentazione e non avrai idea di cosa sia successo. Questa è la ragione per cui i tuoi programmi "sandbox" sono utilizzati solo per il debugging all'interno di SASM. Sono frammenti di programma e genereranno un errore di segmentazione se li lasci semplicemente funzionare. I programmi scritti in SASM utilizzano elementi della Standard C Library, che fornisce ai programmi una sezione "codice di arresto" che effettivamente effettua la chiamata di sistema per l'uscita. Tali programmi terminano eseguendo un'istruzione RET, come spiegherò in seguito.
+</p>
+
+### Registri sporcati da una SYSCALL
+
+<p align=justify>
+Anche se x64 ti offre il doppio del numero di registri a uso generale rispetto a x86, non tutti quei registri "a uso generale" sono liberi per essere utilizzati ovunque e in qualsiasi momento. Da uno a sei di quei registri sono richiesti per effettuare una chiamata di sistema Linux con SYSCALL. Quelli sei sono indicati nella tabella di sopra. Il numero di registri utilizzati varia in base alla chiamata di sistema, e dovrai consultarli in una tabella delle chiamate di sistema per vedere quanti ne servono. Se una chiamata di sistema non ha bisogno di tutti e sei i registri dei parametri SYSCALL (<code>sys_read</code> e <code>sys_write</code> ne utilizzano solo tre), puoi utilizzare quelli che non sono richiesti per quella chiamata di sistema nel tuo codice. <b>L'istruzione SYSCALL stessa utilizza internamente RAX, RCX e R11</b>. <b>Dopo che la SYSCALL restituisce, non puoi presumere che RAX, RCX o R11 avranno gli stessi valori che avevano prima della SYSCALL</b>.
+</p>
+
 ## Controllo dei processi
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.01.png)
