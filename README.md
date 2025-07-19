@@ -5868,7 +5868,83 @@ La direttiva <code>DW</code> definisce una variabile a lunghezza parola (word), 
 <p align=justify>
 <b>Ricorda qui che per spostare i dati da una variabile in un registro, devi inserire il nome della variabile (che è il suo indirizzo) tra parentesi quadre</b>. Senza le parentesi quadre, ciò che sposti nel registro è l'indirizzo della variabile in memoria, non quali dati esistono a quell'indirizzo. Nella prima istruzione <code>MOV</code>, i caratteri <code>CQ</code> vengono posizionati nel registro <code>AX</code>, con il carattere <code>C</code> nel registro <code>AL</code> e la <code>Q</code> in <code>AH</code>. Nella seconda istruzione <code>MOV</code>, i caratteri <code>Stop</code> vengono caricati in <code>EDX</code> <b>in ordine little-endian</b>, con la <code>S</code> nel byte di ordine più basso di <code>EDX</code>, la <code>t</code> nel secondo byte più basso, e così via. Se guardi la stringa <code>QuadString</code> caricata in <code>RAX</code> da SASM, vedrai che contiene “OORAGNAK” scritto al contrario. Caricare stringhe in un singolo registro in questo modo (supponendo che ci stiano!) è molto meno comune (e meno utile) rispetto a usare <code>DB</code> per definire stringhe di caratteri, e non ti capiterà spesso di farlo. Poiché eatsyscall.asm non definisce dati non inizializzati nella sua sezione .bss, rimanderò la discussione di tali definizioni finché non esamineremo il prossimo programma di esempio.
 </p>
+
+### Derivare la lunghezza della stringa con EQU e $
+
+<p align=justify>
+Sotto la definizione di <code>EatMsg</code> nel file <code>eatsyscall.asm</code> c'è un construtto interessante. 
+</p>	
+
+```asm
+	EatLen: equ $-EatMsg
+```
+
+<p align=justify>
+Questo è un esempio di una classe più ampia di cose chiamate calcoli a tempo di assemblaggio. Quello che stiamo facendo qui è calcolare la lunghezza della variabile stringa <code>EatMsg</code> e rendere quel valore di lunghezza accessibile al codice del programma attraverso l'etichetta <code>EatLen</code>. In qualsiasi punto del tuo programma, se hai bisogno di usare la lunghezza di <code>EatMsg</code>, puoi usare l'etichetta <code>EatLen</code>. Una dichiarazione contenente la direttiva <code>EQU</code> è chiamata <b>un'uguaglianza o simbolo</b> (<i>equate</i>). <b>Un simbolo è un modo per associare un valore a un'etichetta</b>. Tale etichetta è quindi trattata in molto simile a una costante C. Ogni volta che l'assemblatore incontra un'equazione durante l'assemblaggio, sostituirà il nome dell'equazione con il suo valore. Ecco un esempio: 
+</p>	
 	
+```asm 
+ FieldWidth: equ 10
+```
+
+<p align=justify>
+Qui, stiamo dicendo all'assemblatore che l'etichetta <code>FieldWidth</code> rappresenta il valore numerico 10. Una volta definito il simbolo, le seguenti due istruzioni macchina di sotto, fanno esattamente la stessa cosa:
+<p>
+
+```asm
+	mov eax,10
+	mov eax,FieldWidth
+```
+
+<p align=justify>
+Ci sono due vantaggi in questo:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		Un simbolo rende l'istruzione più facile da comprendere utilizzando un nome descrittivo per un valore. Sappiamo a cosa serve il valore 10; è la larghezza di un campo.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Un simbolo rende i programmi più facili da modificare in futuro. Se la larghezza del campo cambia da 10 a 12 in un dato momento, dobbiamo modificare solo un'unica riga nel file del codice sorgente invece di farlo ovunque accediamo alla larghezza del campo.
+		</p>
+  	</li>
+</ul>
+
+<p align=justify>
+Non sottovalutare il valore di questo secondo vantaggio. Una volta che i tuoi programmi diventano più grandi e più sofisticati, potresti trovarti a utilizzare un valore particolare dozzine o centinaia di volte all'interno di un singolo programma. O rendi quel valore un simbolo e cambi una sola riga per modificare un valore utilizzato 267 volte, oppure puoi esaminare il tuo codice e cambiare individualmente tutti e 267 usi del valore, tranne per i cinque o sei che perdi, causando caos quando successivamente compili e esegui il tuo programma. Combinare il calcolo in linguaggio assembly con i simboli consente di fare cose meravigliose in modo molto semplice. Come spiegherò a breve, per visualizzare una stringa in Linux, devi passare sia l'indirizzo della stringa che la sua lunghezza al sistema operativo. Puoi rendere la lunghezza della stringa un simbolo in questo modo.
+</p>
+
+```asm
+	EatMsg: db "Eat at Joe's!",10
+	EatLen: equ 14
+```
+
+<p align=justify>
+Questo funziona, perché la stringa EatMsg è in effetti lunga 14 caratteri, incluso il carattere EOL. Ma supponiamo che Joe venda il suo ristorante a Ralph e tu sostituisca "Joe" con "Ralph". Devi cambiare non solo il messaggio dell'annuncio ma anche la sua lunghezza.
+</p>
+
+```asm
+ 	EatMsg: db "Eat at Ralph's!",10
+ 	EatLen: equ 16 
+ ```
+
+<p align=justify>
+Quali sono le probabilità che tu ti scordi di aggiornare l'equivalente di EatLen con la nuova lunghezza del messaggio? Se fai spesso questo tipo di errore, succederà. Con un calcolo a tempo di assemblaggio, cambi semplicemente la definizione della variabile stringa e la sua lunghezza viene calcolata automaticamente da NASM durante il tempo di assemblaggio. Come? In questo modo.
+</p>
+
+```asm
+	EatMsg: db "Eat at Ralph's!",10
+	EatLen: equ $-EatMsg
+```
+
+<p align=justify>
+Tutto dipende dal token magico "qui", espresso dall'umile simbolo del dollaro. Durante la fase di assemblaggio, l'assemblatore analizza i tuoi file di codice sorgente e costruisce un file intermedio con estensione <code>.o</code> (il file oggetto). Il token <code>$</code> segna il punto in cui l'assemblatore si trova nella costruzione del file intermedio (non del file di codice sorgente!). L'etichetta EatMsg segna l'inizio della stringa dello slogan pubblicitario. Immediatamente dopo l'ultimo carattere di EatMsg c'è l'etichetta EatLen. Ricorda, le etichette non sono dati, ma posizioni, e nel caso del linguaggio assembly, indirizzi. Quando l'assemblatore raggiunge l'etichetta EatLen, il valore di <code>$</code> è la posizione immediatamente dopo l'ultimo carattere di EatMsg. Il calcolo durante l'assemblaggio consiste nel prendere la posizione rappresentata dal token <code>$</code> (che quando il calcolo è completato contiene la posizione appena dopo la fine della stringa EatMsg) e sottrarre da essa la posizione dell'inizio della stringa EatMsg. <code>Fine – Inizio = Lunghezza</code>
+	. Questo calcolo viene eseguito ogni volta che assembli il file, quindi ogni volta che modifichi il contenuto di EatMsg, il valore di EatLen sarà ricalcolato automaticamente. Puoi cambiare il testo all'interno della stringa come preferisci e non dover mai preoccuparti di cambiare un valore di lunghezza da nessuna parte nel programma. Il calcolo durante l'assemblaggio ha altri usi, ma questo è il più comune e l'unico che probabilmente userai come principiante.
+</p>
+
 ## Controllo dei processi
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.01.png)
