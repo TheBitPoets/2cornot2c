@@ -46,6 +46,10 @@ Vagrant.configure("2") do |config|
    config.vm.synced_folder "./lab", "/lab"
    config.vm.synced_folder "./lab2", "/lab2"
 
+
+   if Vagrant.has_plugin?("vagrant-vbguest")
+      config.vbguest.auto_update = false
+   end
   # Disable the default share of the current code directory. Doing this
   # provides improved isolation between the vagrant box and your host
   # by making sure your Vagrantfile isn't accessible to the vagrant box.
@@ -57,13 +61,14 @@ Vagrant.configure("2") do |config|
   # backing providers for Vagrant. These expose provider-specific options.
   # Example for VirtualBox:
   #
-  # config.vm.provider "virtualbox" do |vb|
+   config.vm.provider "virtualbox" do |vb|
   #   # Display the VirtualBox GUI when booting the machine
-  #   vb.gui = true
+    vb.gui = true
+  #  vb.customize ["storageattach", :id, "--storagectl", "IDE Controller", "--port", "1", "--device", "0", "--type", "dvddrive", "--medium", "emptydrive"]
   #
   #   # Customize the amount of memory on the VM:
   #   vb.memory = "1024"
-  # end
+   end
   #
   # View the documentation for the provider you are using for more
   # information on available options.
@@ -77,6 +82,7 @@ Vagrant.configure("2") do |config|
      add-apt-repository restricted
      add-apt-repository multiverse      
      apt-get update
-     apt-get install -y gcc gdb vim
+     apt-get install -y gcc gdb vim xfce4
    SHELL
+   config.vm.provision "shell", inline: "sudo sed -i 's/allowed_users=.*$/allowed_users=anybody/' /etc/X11/Xwrapper.config"
 end
