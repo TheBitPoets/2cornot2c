@@ -5867,6 +5867,60 @@ Bene, no. Ricorda il concetto di "endianness". L'architettura x86/x64 è "little
 <img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/strings_as_immediate_data.png">
 </div>
 
+### Dati di Registro
+
+<p align=justify>
+I dati memorizzati all'interno di un registro della CPU sono noti come <i>dati di registro</i>, e accedere ai dati di registro direttamente è una modalità di indirizzamento chiamata <b>indirizzamento per registro</b>. L'indirizzamento per registro viene effettuato semplicemente nominando il registro con cui vogliamo lavorare. Ecco alcuni esempi completamente legali di dati di registro e indirizzamento per registro:
+</p>
+
+```asm
+	mov rbp,rsi   ; 64-bit
+	add ecx,edx   ; 32-bit
+	add di,ax     ; 16-bit
+	mov bl,ch     ; 8-bit
+```
+
+<p align=justify>
+Non stiamo parlando solo dell'istruzione <code>MOV</code> qui. L'istruzione <code>ADD</code> fa esattamente ciò che ci si può aspettare e aggiunge gli operandi sorgente e destinazione. La somma sostituisce qualunque cosa fosse presente nell'operando di destinazione. Indipendentemente dall'istruzione, l'indirizzamento dei registri avviene ogni volta che i dati in un registro vengono utilizzati direttamente. Certe operazioni non sono legali: esempio, spostare una sorgente di 8 byte in una destinazione di 2 byte e mentre spostare una sorgente di 2 byte in una destinazione di 8 byte potrebbe sembrare possibile e talvolta persino ragionevole, la CPU non lo supporta e non può essere fatto direttamente. Se ci provi, NASM ti darà questo errore.
+</p>
+
+```
+ 	error: invalid combination of opcode and operands
+```
+
+<p align=justify>
+In altre parole, <b>se stai spostando dati da un registro a un altro, i registri sorgente e di destinazione devono avere la stessa dimensione</b>. Osservare i dati dei registri nel debugger è un buon modo per avere un'idea di come funziona, soprattutto quando stai iniziando. Facciamo un po' di pratica. Inserisci queste istruzioni nel tuo sandbox, costruisci l'eseguibile e carica l'eseguibile del sandbox nel debugger.
+</p>
+
+```asm
+	xor rbx,rbx
+ 	xor rcx,rcx
+ 	mov rax,067FEh
+ 	mov rbx,rax
+ 	mov cl,bh
+ 	mov ch,bl
+```
+
+<p align=justify>
+Imposta un punto di interruzione sulla prima delle istruzioni, quindi clicca su Esegui. Procedi passo dopo passo attraverso le istruzioni, prestando attenzione a quello che accade a RAX, RBX e RCX. Tieni presente che la finestra dei Registri di SASM non mostra le sezioni dei registri a 8 bit, 16 bit o 32 bit separatamente e individualmente. EAX fa parte di RAX, AX fa parte di EAX e CL fa parte di ECX, ecc. Qualsiasi cosa tu metta in RAX è già presente in EAX, AX e AL. Una volta terminato il passo dopo passo, clicca sull'icona rossa Stop per terminare il programma. Ricorda che se selezioni Debug ➪ Continua o cerchi di avanzare oltre la fine del programma, Linux ti darà un errore di segmentazione per non aver terminato il programma correttamente. Nulla sarà danneggiato dall'errore; ricorda che il sandbox non è previsto per essere un programma Linux completo e corretto. È buona prassi "terminare" il programma tramite Stop piuttosto che generare l'errore, tuttavia. Nota le prime due istruzioni. <b>Quando vuoi mettere il valore 0 in un registro, il modo più veloce è usare l'istruzione <code>XOR</code></b>, che esegue un'operazione XOR bitwise sugli operandi sorgente e destinazione. Sì, potresti usare
+</p>
+
+```asm
+ 	mov rbx,0
+```
+
+<p align=justify>
+ma in questo modo si deve andare in memoria per caricare il valore immediato 0. L'operazione <code>XOR</code> tra un registro e se stesso non va in memoria né per l'operando sorgente né per l'operando di destinazione e pertanto è leggermente più veloce. Una volta azzerati RBX e RCX, ecco cosa succede: La prima istruzione (<code>mov rax,067FEh</code>) <code>MOV</code> è un esempio di indirizzamento immediato utilizzando registri a 64 bit. Il valore esadecimale a 16 bit <code>067FEH</code> viene spostato nel registro RAX. (Nota qui che puoi <code>MOV</code> un valore immediato di 16 bit o di qualsiasi altra dimensione che possa adattarsi al registro di destinazione.) La seconda istruzione (<code>mov rbx,rax</code>) utilizza l'indirizzamento del registro per copiare i dati del registro da EAX a EBX. La terza e la quarta istruzione <code>MOV</code> spostano entrambe i dati tra segmenti di registri a 8 bit piuttosto che a 16, 32 o 64 bit. Queste due istruzioni realizzano qualcosa di interessante. Guarda l'ultima visualizzazione del registro e confronta i valori di RBX e RCX. Spostando il valore da BX a CX un byte alla volta, è possibile invertire l'ordine dei due byte che costituiscono BX. La metà alta di BX (quello che a volte chiamiamo il byte più significativo, o MSB, di BX) è stata spostata nella metà bassa di CX. Poi la metà bassa di BX (quello che a volte chiamiamo il byte meno significativo, o LSB, di BX) è stata spostata nella metà alta di CX. Questo è solo un esempio dei tipi di trucchi che puoi fare con i registri a uso generale. Solo per disabituarti all'idea che l'istruzione <code>MOV</code> debba essere utilizzata per scambiare le due metà di un registro a 16 bit, lasciami suggerire di fare quanto segue: Torna a SASM e aggiungi questa istruzione alla fine della tua sandbox:
+</p>
+
+```asm
+	xchg cl,ch
+```
+
+<p align=justify>
+Ricostruisci la sandbox e torna al debugger per vedere cosa succede. L'istruzione <code>XCHG</code> scambia i valori contenuti nei suoi due operandi. Ciò che è stato scambiato in precedenza viene scambiato di nuovo e il valore in RCX corrisponderà ai valori già presenti in RAX e RBX. Una buona idea durante la scrittura dei primi programmi in linguaggio assembly è quella di ricontrollare periodicamente il set di istruzioni per vedere che ciò che si è messo insieme con quattro o cinque istruzioni non è possibile utilizzando una singola istruzione. Il set di istruzioni Intel è molto bravo a ingannarti in questo senso. C'è un'avvertenza qui: a volte un "caso speciale" è più veloce in termini di tempo di esecuzione della macchina rispetto a un caso più generale. La divisione per una potenza di 2 può essere eseguita utilizzando l'istruzione <code>DIV</code>, ma può anche essere eseguita utilizzando l'istruzione <code>SHR</code> (Shift Right). <code>DIV</code> è più generale (puoi usarlo per dividere per qualsiasi intero senza segno, non semplicemente potenze di 2), ma è molto più lento. La velocità delle singole istruzioni conta molto meno ora di quanto non lo fosse 30 anni fa. Detto questo, per i programmi con funzioni ripetitive complesse che vengono eseguite migliaia o centinaia di migliaia di volte in un ciclo, la velocità delle istruzioni può fare la differenza
+</p>
+
 ### Sezione .data
 
 <p align=justify>
