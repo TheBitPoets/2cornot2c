@@ -5797,6 +5797,78 @@ jmp GoHome
 Nota che i due punti non vengono utilizzati qui. I due punti vengono posti solo dove l'etichetta è definita, non dove viene riferita. Pensa in questo modo: usa i due punti quando stai contrassegnando una posizione, non quando ci stai andando. C'è solo un'etichetta in <code>eatsyscall.asm</code>, e questa è un po' speciale. <b>L'etichetta <code>_start</code> indica dove inizia il programma</b>. (È sensibile alle maiuscole, quindi non provare a usare _START o _Start.) <b>Questa etichetta deve essere contrassegnata come globale nella parte superiore della sezione <code>.text</code></b>. Ora se invece di utilizzare nasm (che l'assemblatore a riga di comando) stai usando SASM, un assemblatore con interfaccia grafica (GUI) questo cambia un po' le cose. Quando compili un programma in linguaggio assembly in SASM, l'etichetta _start diventa main. SASM usa il compilatore Gnu C gcc per fungere da intermediario tra NASM e il linker Linux, ld. Quello che fa SASM, in un certo senso, è creare un programma C senza alcun codice C al suo interno. Tutti i programmi C devono avere un punto di partenza, e in un programma C quel punto di partenza è sempre main. Ci sono motivi per fare ciò che coinvolgono il collegamento di funzioni scritte in C al tuo programma assembly, come spiegherò più avanti. Ricorda questo: quando assembli da un file make, usa _start. Quando assembli da dentro SASM, usa main.
 </p>
 
+### Variabili per i dati inizializzati
+
+<p align=justify>
+L'identificatore <code>EatMsg</code> nella sezione <code>.data</code> definisce una variabile. Specificamente, <b>EatMsg è una variabile di tipo stringa</b> (di cui parleremo tra poco), ma comunque, <b>come tutte le variabili, fa parte di una classe di elementi che chiamiamo dati inizializzati</b>: qualcosa che arriva con un valore e non solo una scatola vuota nella quale possiamo inserire un valore in un momento futuro. <b>Una variabile è definita associando un identificatore a una direttiva di definizione dei dati</b>. Le direttive di definizione dei dati appaiono in questo modo:
+</p>
+
+```asm
+ MyByte:	db 07h 			; 8 bits in size     
+ MyWord: 	dw 0FFFFh  		; 16 bits in size   
+ MyDouble: 	dd 0B8000000h 		; 32 bits in size 
+ MyQuad:     	dq 07FFFFFFFFFFFFFFFh  	; 64 bits in size  
+```
+
+<p align=justify>
+Pensa alla direttiva <code>DB</code> come "Definisci Byte." <code>DB</code> riserva un byte di memoria per la memorizzazione dei dati. Pensa alla direttiva <code>DW</code> come "Definisci Parola." <code>DW</code> riserva una parola (16 bit, o due byte) di memoria per la memorizzazione dei dati. Pensa alla direttiva <code>DD</code> come "Definisci Doppio." DD riserva una doppia word in memoria per la memorizzazione. <code>DQ</code> significa "Definisci Quad," cioè una quad word, che ha una dimensione di 64 bit.
+</p>
+
+### Variabili Stringa
+
+<p align=justify>
+Le variabili stringa sono un caso speciale interessante. Una stringa è proprio questo: <b>una sequenza di caratteri</b>, tutti in fila in memoria. Una variabile stringa è definita in <code>eatsyscall.asm</code>: 
+</p>
+
+```asm
+	EatMsg: db "Eat at Joe's!", 10 
+ ```
+
+<p align=justify>
+Le stringhe sono un'eccezione alla regola generale secondo cui una direttiva di definizione dei dati riserva una particolare quantità di memoria. <b>La direttiva DB di solito riserva solo un byte. Tuttavia, una stringa può essere di qualsiasi lunghezza tu desideri</b>. Poiché non esiste una direttiva di dati che riserva 17 byte o 42, le stringhe sono definite semplicemente associando un'etichetta con il punto in cui la stringa inizia. L'etichetta EatMsg e la sua direttiva DB specificano un byte in memoria come punto di partenza della stringa. Il numero di caratteri nella stringa è ciò che dice all'assemblatore quanti byte di memoria riservare per quella stringa. Possono essere utilizzati caratteri di singola virgoletta (‘) o di doppia virgoletta (”) per delimitare una stringa, e la scelta spetta a te, a meno che tu non stia definendo un valore di stringa che contiene uno o più caratteri di virgoletta. Nota che in <code>eatsyscall.asm</code> la variabile di stringa EatMsg contiene un carattere di singola virgoletta usato come apostrofo. Poiché la stringa contiene un carattere di singola virgoletta, devi delimitarla con doppi apici. Il contrario è anche vero: se definisci una stringa che contiene uno o più caratteri di doppia virgoletta, devi delimitarla usando caratteri di singola virgoletta:
+</p>	
+
+```asm
+ Yukkh: db 'He said, "How disgusting!" and threw up.', 10
+```
+
+<p align=justify>
+Puoi combinare più sottostringhe separate in una singola variabile di stringa separando le sottostringhe con virgole. Questo è un modo perfettamente legale (e a volte utile) per definire una variabile di stringa: 
+</p>
+
+```asm
+	TwoLineMsg: db ""Eat at Joe's...",10,
+	"...Ten million flies can't ALL be wrong!", 10
+```
+
+<p align=justify>
+Ma a che serve il numero letterale 10 usato nei precedenti esempi di stringa? In Linux, il carattere di fine riga (EOL) ha il valore numerico decimale pari a 10 , o 0Ah. Indica al sistema operativo dove finisce una riga inviata per la visualizzazione nella console. Qualsiasi testo successivo visualizzato nella console verrà mostrato sulla riga successiva, al margine sinistro. Nella variabile TwoLineMsg, il carattere EOL tra le due sottostringhe indicherà a Linux di visualizzare la prima sottostringa su una riga della console e la seconda sottostringa sulla riga della console sottostante. <br> Puoi concatenare numeri individuali all'interno di una stringa, ma devi ricordare che, come con EOL, non appariranno come numeri. Una stringa è una stringa di caratteri. Un numero aggiunto a una stringa sarà interpretato dalla maggior parte delle routine del sistema operativo come un carattere ASCII. Per mostrare numeri in una stringa, devi rappresentarli come caratteri ASCII, sia come letterali di carattere, come il carattere cifra 7, sia come gli equivalenti numerici ai caratteri ASCII, come 37h.
+</p>
+
+<p align=justify>
+Nel lavoro di assemblaggio ordinario, quasi tutte le variabili di stringa sono definite utilizzando la direttiva <code>DB</code> e possono essere considerate stringhe di byte. (Un carattere ASCII è grande un byte.) Puoi definire variabili di stringa utilizzando <code>DW</code>, <code>DD</code> o <code>DQ</code>, ma vengono gestite in modo leggermente diverso rispetto a quelle definite con <code>DB</code>. Considera queste variabili: 
+</p>
+
+ ```asm
+	WordString: dw 'CQ' 
+ 	DoubleString: dd 'Stop' 
+  	QuadString: dq 'KANGAROO' 
+ ```
+
+ <p align=justify>
+La direttiva <code>DW</code> definisce una variabile a lunghezza parola (word), una parola (16 bit) può contenere due caratteri a 8 bit. Allo stesso modo, la direttiva <code>DD</code> definisce una variabile a doppia parola (32 bit, double word), che può contenere quattro caratteri a 8 bit. La direttiva <code>DQ</code> definisce una variabile a quadrupla parola, che può contenere otto caratteri a 8 bit. La gestione differente si verifica quando carichi queste stringhe nominate nei registri. Considera queste tre istruzioni:
+ </p>
+
+ ```asm
+	mov ax,[WordString]
+	mov edx,[DoubleString]
+	mov rax,[QuadString]
+```
+
+<p align=justify>
+<b>Ricorda qui che per spostare i dati da una variabile in un registro, devi inserire il nome della variabile (che è il suo indirizzo) tra parentesi quadre</b>. Senza le parentesi quadre, ciò che sposti nel registro è l'indirizzo della variabile in memoria, non quali dati esistono a quell'indirizzo. Nella prima istruzione <code>MOV</code>, i caratteri <code>CQ</code> vengono posizionati nel registro <code>AX</code>, con il carattere <code>C</code> nel registro <code>AL</code> e la <code>Q</code> in <code>AH</code>. Nella seconda istruzione <code>MOV</code>, i caratteri <code>Stop</code> vengono caricati in <code>EDX</code> <b>in ordine little-endian</b>, con la <code>S</code> nel byte di ordine più basso di <code>EDX</code>, la <code>t</code> nel secondo byte più basso, e così via. Se guardi la stringa <code>QuadString</code> caricata in <code>RAX</code> da SASM, vedrai che contiene “OORAGNAK” scritto al contrario. Caricare stringhe in un singolo registro in questo modo (supponendo che ci stiano!) è molto meno comune (e meno utile) rispetto a usare DB per definire stringhe di caratteri, e non ti capiterà spesso di farlo. Poiché eatsyscall.asm non definisce dati non inizializzati nella sua sezione .bss, rimanderò la discussione di tali definizioni finché non esamineremo il prossimo programma di esempio.
+</p>
+	
 ## Controllo dei processi
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.01.png)
