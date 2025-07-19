@@ -5972,6 +5972,160 @@ A rendere le cose un po' più difficili da visualizzare è il fatto che <b>lo st
 <img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/linux_memory.png">
 </div>
 
+### Istruzione Push
+
+<p align=justify>
+Puoi inserire i dati nello stack in diversi modi, ma il modo più semplice comporta due istruzioni della macchina correlate, PUSH e PUSHFQ. Le due sono simili nel loro funzionamento e differiscono principalmente per ciò che inseriscono nello stack:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+			<code>PUSH</code> inserisce nello stack(spinge, <i>push</i>) un registro a 16 bit o 64 bit o un valore di memoria che è specificato da te nel tuo codice sorgente. Nota che <b>non puoi spingere un valore a 8 bit o a 32 bit nello stack!</b> Riceverai un errore se ci provi.
+		</p>
+	</li>
+	<li>
+		<p align=justify>
+			<code>PUSHFQ</code> spinge l'intero registro RFlags a 64 bit nello stack. (La Q significa "quadword" qui.) Questo nonostante più della metà dei flag in RFlags siano riservati e non abbiano alcun uso. Non utilizzerai spesso PUSHFQ, ma c'è se ne hai bisogno.
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+Ecco alcuni esempi delle istruzioni della famiglia PUSH in uso
+</p>
+
+```asm
+	pushfq		; Push the RFlags register       
+	push rax	; Push the RAX register
+	push bx		; Push the 16-bit register BX
+	push [rdx]   	; Push the quadword in memory at RDX
+```
+
+<p align=justify>
+Nota che <code>PUSHFQ</code> non richiede operandi. Genererai un errore di assemblatore se provi a dare operandi a PUSHFQ; l'istruzione spinge il registro RFlags a 64 bit nello stack, e questo è tutto ciò che è in grado di fare. 
+</p>
+
+<p align=justify>
+<code>PUSH</code> funziona in questo modo, per operandi a 64 bit: prima RSP viene decrementato di 64 bit (otto byte) in modo che punti a un'area vuota di memoria nello stack lunga otto byte. Poi ciò che deve essere spinto nello stack viene scritto in memoria all'indirizzo in RSP. Voilà! I dati sono al sicuro nello stack, e RSP è sceso di otto byte verso il fondo della memoria. <code>PUSH</code> può anche spingere valori a 16 bit nello stack, e quando lo fa, l'unica differenza è che RSP si sposta di due byte invece che otto. Tutta la memoria tra la posizione iniziale di RSP e la sua posizione attuale (la cima dello stack) contiene dati reali che sono stati esplicitamente spinti nello stack e presumibilmente verranno estratti dallo stack in seguito. Alcuni di questi dati sono stati spinti nello stack dal sistema operativo prima di eseguire il tuo programma
+</p>
+
+<p align=justify>
+Cosa può e non può essere spinto nello stack in modalità <b>long x64</b> è ragionevolmente semplice: <b>Qualsiasi dei registri a 16 bit e 64 bit a uso generale può essere spinto individualmente nello stack</b>. Non puoi spingere AL o BH o qualsiasi altro registro a 8 bit. <b>Dati immediati a 16 bit e 64 bit possono essere spinti nello stack</b>. I programmi user-space di Linux non possono spingere i registri di segmento nello stack in nessuna circostanza. <b>Con x64, i registri di segmento appartengono al sistema operativo e non sono disponibili per i programmi user-space</b>. Per quanto strano possa sembrare, i valori a 32 bit (inclusi tutti i registri a 32 bit) non possono essere spinti nello stack.
+</p>
+
+### Istruzione Pop
+
+<p align=justify>
+In generale, ciò che viene spinto deve essere rimosso, altrimenti si possono incorrere in diversi tipi di problemi. Rimuovere un elemento di dati dallo stack è più facilmente fatto con un'altra coppia di istruzioni, <code>POP</code> e <code>POPFQ</code>. Come ci si potrebbe aspettare, <code>POP</code> è l'istruzione generale per rimuovere un elemento alla volta, mentre <code>POPFQ</code> è dedicata alla rimozione dei flags del registro RFlags.
+</p>
+
+```asm
+	popfq		; Pop the top 8 bytes from the stack into RFlags
+	pop rcx		; Pop the top 8 bytes from the stack into RCX  
+	pop bx		; Pop the top 2 bytes from the stack into BX
+	pop [rbx]	; Pop the top 8 bytes from the stack into memory at EBX
+```
+
+<p align=justify>
+Come per <code>PUSH</code>, <code>POP</code> opera solo su operandi a 16 bit o 64 bit. Non cercare di estrarre dati dallo stack in un registro a 8 bit o 32 bit come AH o ECX. POP funziona praticamente allo stesso modo di <code>PUSH</code>, ma al contrario. Come con <code>PUSH</code>, <b>quanto viene estratto dallo stack dipende dalla dimensione dell'operando</b>. Estrarre dallo stack in un registro a 16 bit preleva i due byte superiori dallo stack. Estrarre dallo stack in un registro a 64 bit preleva gli otto byte superiori dallo stack. Nota che niente nella CPU né in Linux ricorda le dimensioni degli elementi dati che posizioni nello stack. Spetta a te conoscere la dimensione dell'ultimo elemento inserito nello stack. Se l'ultimo elemento che hai inserito nello stack era un registro a 16 bit, estrarre dallo stack in un registro a 64 bit porterà via sei byte in più dallo stack rispetto a quelli che hai inserito. Questo è chiamato <b>disallineamento dello stack</b> e non è altro che un problema, uno dei motivi per cui dovresti lavorare con registri a 64 bit e valori di memoria ogni volta che puoi ed evitare di usare lo stack con valori a 16 bit. Quando un'istruzione <code>POP</code> viene eseguita, le cose funzionano in quest'ordine: Prima, i dati all'indirizzo attualmente memorizzato in RSP vengono copiati dallo stack e collocati nell'operando di <code>POP</code>, qualunque tu abbia specificato. Dopo di che, RSP viene incrementato (anziché decrementato) della dimensione dell'operando—sia 16 bit che 64 bit— in modo che di fatto RSP si muova rispettivamente di due o otto byte verso l'alto nello stack, lontano dalla memoria bassa. È significativo che RSP venga decrementato prima di posizionare una parola nello stack al momento di <code>PUSH</code>, ma incrementato dopo aver rimosso una parola dallo stack al momento di <code>POP</code>. Alcune altre CPU al di fuori dell'universo x86 operano in modo opposto, il che va bene—basta non confonderle. Per x86/x64, questo è sempre vero: A meno che lo stack non sia completamente vuoto, RSP punta a dati reali, non a spazio vuoto. Di solito, non devi ricordare questo fatto, poiché <code>PUSH</code> e <code>POP</code> lo gestiscono tutto per te e non devi tenere traccia manualmente di ciò a cui RSP punta.
+</p>
+
+### PUSHA E POPA sono stati rimossi
+
+<p align=justify>
+Quasi tutto ciò che avevi nell'assembly a 32 bit è ancora presente nell'assembly x64. Alcune cose sono cambiate, ma molto poco è stato rimosso quando x86 è diventato x64. Sono stati fatti dei sacrifici. Quattro istruzioni sono completamente scomparse: <code>PUSHA</code>, <code>PUSHAD</code>, <code>POPA</code> e <code>POPAD</code>. Nelle architetture precedenti, <b>queste istruzioni venivano utilizzate per pushare o poppare tutti i registri a scopo generale contemporaneamente</b>. Quindi, perché sono scomparse? Non ho mai trovato una spiegazione autorevole, ma ho una teoria: ci sono molti più registri a scopo generale in x64. Pushare 15 registri a 64 bit nello stack invece di 7 registri a 32 bit occupa un grande spazio nello stack. (Il puntatore dello stack ESP non è stato influenzato da PUSHA/POPA per ovvi motivi, dato che ESP definisce lo stack!) Se vuoi preservare i registri a scopo generale nello stack per qualche motivo, dovrai pusharli e popparli singolarmente.
+</p>
+
+### Push e Pop in dettaglio
+
+<p align=justify>
+Se hai ancora qualche dubbio su come funziona lo stack, permettimi di presentarti un esempio che mostra come opera lo stack in dettaglio, con valori reali. A scopo di chiarezza nel diagramma associato, utilizzerò registri a 16 bit piuttosto che registri a 64 bit. Questo mi permetterà di mostrare i singoli byte nello stack. Funziona allo stesso modo con valori a 64 bit. La differenza, ancora una volta, è che otto byte vengono spinti o rimossi piuttosto che due. La Figura di sotto mostra come appare lo stack dopo l'esecuzione di ciascuna delle quattro istruzioni. (Sto usando valori a 16 bit nella figura per chiarezza. Il meccanismo è lo stesso per i valori a 64 bit.) I valori dei quattro registri generali X a 16 bit in un ipotetico punto dell'esecuzione di un programma sono mostrati nella parte superiore della figura. AX viene spinto per primo nello stack. Il suo byte meno significativo si trova a RSP, e il suo byte più significativo si trova a RSP+1. (Ricorda che entrambi <b>i byte vengono spinti nello stack contemporaneamente, come un'unità!</b>)
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/how_stack_works.png">
+</div>
+
+<p align=justify>
+Ogni volta che uno dei registri a 16 bit viene inserito nello stack, RSP viene decrementato di due byte, scendendo verso la memoria bassa. Le prime tre colonne mostrano AX, BX e CX che vengono spinti nello stack, rispettivamente. Ma nota cosa succede nella quarta colonna, quando viene eseguita l'istruzione POP DX. Il puntatore dello stack viene incrementato di due byte e si allontana dalla memoria bassa. DX ora contiene una copia del contenuto di CX. Di fatto, CX è stato inserito nello stack e poi immediatamente estratto in DX. Se vuoi provare le istruzioni in figura, apri un nuovo ambiente e aggiungi queste istruzioni macchina:
+</p>
+
+```asm
+	xor rax,rax  ;We first zero out all 4 64-bit "x" registers
+	xor rbx,rbx  ;so there are no "leftovers" in the high bits
+	xor rcx,rcx
+	xor rdx,rdx
+
+	mov ax,01234h  ;Place values in AX, BX, and CX
+	mov bx,04ba7h
+	mov cx,0ff17h
+
+	push ax		;Push AX,BX,& CX onto the stack       
+	push bx
+	push cx
+
+	pop dx		;Pop the top of the stack into DX.         
+```
+
+<p align=justify>
+Vai in modalità debug e esegui passo-passo queste istruzioni, osservando sia il puntatore dello stack RSP che i quattro registri a 16 bit dopo ogni passo. Puoi seguire l'azione anche nella figura di sopra. Sì, è un modo indiretto piuttosto complesso per copiare il valore di CX in DX. <code>MOV DX,CX</code> è molto più veloce e diretto. Tuttavia, a volte è necessario spostare i valori dei registri tramite lo stack. Ricorda che <b>l'istruzione MOV non opererà sul registro RFlags</b>. Se vuoi caricare una copia di RFlags in un registro a 64 bit, devi prima spingere RFlags nello stack con PUSHFQ e poi estrarre il valore dei flag dallo stack nel registro di tua scelta con POP. Quindi, per ottenere RFlags in RBX, si utilizza il seguente codice. Puoi vederlo funzionare mettendo queste righe in un sandbox e procedendo passo-passo attraverso di esse.
+</p>
+
+```asm
+	xor rbx,rbx	; Clear rbx
+	pushfq		; Push the RFlags register onto the stack          
+	pop qword rbx   ; ...and pop it immediately into RBX...why not POPFQ??
+```
+
+<p align=justify>
+Sebbene tu possa ripristinare i valori dei flag in RFlags utilizzando <code>POPFQ</code>, non tutti i bit di RFlags possono essere modificati estraendoli dallo stack in RFlags. I bit VM e RF non sono influenzati da POPFQ. Piccole insidie come questa suggeriscono che non dovresti cercare di salvare e ripristinare i flag finché non sai precisamente cosa stai facendo.
+</p>
+
+### Syscall del kernel
+
+<p align=justify>
+Lo stack dovrebbe essere considerato un luogo dove riporre temporaneamente le cose. <b>Gli oggetti memorizzati nello stack</b> non hanno nomi e in generale <b>devono essere rimossi dallo stack nell'ordine inverso in cui sono stati aggiunti</b>. Ultimo arrivato, primo servito, ricorda. LIFO! Un ottimo uso dello stack consente ai pochi registri di svolgere molteplici funzioni. Se hai bisogno di un registro per mantenere temporaneamente un valore da utilizzare nella CPU e tutti i registri sono occupati, spingi uno dei registri occupati nello stack. Il suo valore rimarrà sicuro nello stack mentre usi il registro per altre cose. Quando hai finito di usare il registro, estrai il suo vecchio valore dallo stack—e hai guadagnato i vantaggi di un registro aggiuntivo senza averne realmente uno. (Il costo, ovviamente, è il tempo che spendi per spostare il valore di quel registro dentro e fuori dallo stack. Non è qualcosa che vuoi fare nel mezzo di un ciclo spesso ripetuto!) <b>La memorizzazione a breve termine durante l'esecuzione del programma è l'uso più semplice e ovvio dello stack</b>, ma il suo <b>utilizzo più importante è probabilmente nell'invocazione di procedure e nei servizi del kernel di Linux</b>. E ora che comprendi lo stack, possiamo affrontare la misteriosa questione delle chiamate di sistema di Linux.
+</p>
+
+<p align=justify>
+Tutto il resto in <code>eatsyscall.asm</code> è preparazione per l'unica istruzione che esegue il vero lavoro del programma: visualizzare una riga di testo nella console di Linux. Al cuore del programma c'è una chiamata al sistema operativo Linux. Una seconda chiamata a Linux è alla fine, quando il programma si conclude e deve informare Linux che ha finito. Ci sono diverse centinaia di servizi del kernel Linux disponibili. Uno dei servizi che Linux fornisce è un semplice accesso in modalità testo al display del tuo PC. Per le esigenze di <code>eatsyscall.asm</code> - che è solo una lezione per scrivere e far funzionare il tuo primo programma in linguaggio assembly - servizi semplici sono sufficienti. Quindi, come utilizziamo i servizi di Linux? Se hai guardato da vicino <code>eatsyscall.asm</code>, dovresti ricordare due istanze dell'istruzione macchina <code>SYSCALL</code>. Nelle istanze x64 di Linux, l'istruzione <code>SYSCALL</code> è il modo in cui accedi ai servizi del kernel Linux.
+</p>
+
+<p align=justify>
+Nelle versioni a 32 bit di Linux, l'interruzione software <code>INT 80h</code> era il modo per raggiungere il dispatcher dei servizi del kernel. <code>INT 80h</code> non viene più utilizzato. L'architettura x64 ci offre qualcosa di molto meglio: l'istruzione <code>SYSCALL</code>. La sfida nell'accesso ai servizi del kernel è la seguente: passare l'esecuzione a una libreria di codice senza avere idea di dove si trovi quella libreria. L'istruzione <code>SYSCALL</code> guarda in un registro della CPU a cui i programmi in user-space non possono accedere. Quando il kernel di Linux si avvia, inserisce l'indirizzo del suo dispatcher dei servizi in questo registro. Una delle prime cose che fa l'istruzione <code>SYSCALL</code> è elevare il suo livello di privilegio dal livello 3 (utente) al livello 0 (kernel). Poi legge l'indirizzo nel registro di dispatch dei servizi e salta a quell'indirizzo per invocare il dispatcher. La maggior parte delle chiamate di sistema x64 che utilizzano <code>SYSCALL</code> hanno parametri, che vengono passati nei registri della CPU. Quali registri? Non è casuale. Infatti, c'è qualcosa chiamata <b>System V Application Binary Interface</b> (<b>ABI</b>) per Linux, che definisce un intero sistema per passare parametri a Linux tramite SYSCALL. Fa anche di più, ma ciò che ci interessa qui è il meccanismo che ti consente di chiamare i servizi del kernel utilizzando <code>SYSCALL</code>.
+</p>
+
+### ABI (Application Binary Interface)
+
+<p align=justify>
+Questo è un buon punto per una breve digressione. Se hai esperienza di programmazione, probabilmente hai già sentito parlare di "chiamate API" o "l'API di Windows". Qual è, allora, la differenza tra un ABI e un API? API sta per interfaccia di programmazione delle applicazioni. Un'API è una raccolta di funzioni chiamabili da utilizzare principalmente da linguaggi di programmazione di alto livello come Pascal o C. È possibile per un programma in linguaggio assembly chiamare una funzione API, e te lo mostrerò più avanti. Un'interfaccia binaria applicativa, al contrario, è una descrizione dettagliata di ciò che accade a livello di codice macchina quando un pezzo di codice macchina binario parla con un altro o con hardware di CPU come i registri. È uno strato "sotto" l'API. L'ABI definisce una raccolta di funzioni fondamentali chiamabili, generalmente fornite dal sistema operativo, come avviene in Linux. Questa definizione descrive come passare parametri alle molte funzioni di servizio del kernel. Un ABI definisce anche come i linkers collegano i moduli compilati o assemblati in un unico programma eseguibile binario e molte altre cose.
+</p>
+
+### Lo Schema dei Parametri del Registro ABI
+
+<p align=justify>
+Esaminiamo più da vicino il programma <code>eatsyscall.asm</code>. Il codice seguente scrive un messaggio testuale nella console di Linux:
+</p>
+
+```asm
+	mov rax,1		; 1 = sys_write for syscall         
+	mov rdi,1		; 1 = fd for stdout; i.e., write to the terminal window
+                        
+	mov rsi,EatMsg		; Put address of the message string in rsi
+ 	mov rdx,EatLen		; Length of string to be written in rdx
+
+	syscall          	; Make the system call
+```
+
+<p align=justify>
+In poche parole, questo codice colloca determinati valori in determinati registri e poi esegue l'istruzione <code>SYSCALL</code>. Il dispatcher dei servizi di Linux raccoglie i valori posti in quei registri e poi chiama la funzione specificata in RAX. C'è un sistema per specificare quali registri vengono utilizzati per quale servizio e quali parametri (se presenti) per quel servizio. Il modo migliore per spiegare è mostrarti le prime due righe della tabella delle chiamate di sistema dell'ABI System V, nella tabella di sotto.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/system_call_conventions_for_system_v_abi.png">
+</div>
+
 ## Controllo dei processi
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.01.png)
