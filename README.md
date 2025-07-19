@@ -5663,6 +5663,140 @@ La modalità long è una vera modalità a 64 bit; e quando la CPU è in modalit�
 Come ho descritto in precedenza, 32 bit possono indirizzare solo 4 gigabyte di memoria. Sono state utilizzate varie astuzie per rendere disponibile più memoria ai programmi in esecuzione su CPU IA-32. In modalità long a 64 bit abbiamo un problema simile al contrario: 64 bit possono indirizzare un'immensità di memoria tale che i sistemi di memoria che richiedono uno spazio di indirizzo di 64 bit non saranno creati per molti anni a venire. (Mi trattengo un po' qui ricordando a me stesso e a tutti voi che abbiamo detto cose simili in passato, solo per ritrovarci con le mani nei capelli.) 64 bit possono indirizzare 16 exabyte. Un exabyte è 2^60 byte, che può essere descritto più comprensibilmente come un miliardo di gigabyte, che equivale a poco più di un quintilione di byte. Ci arriveremo prima o poi, ma non ci siamo ancora. La questione critica per il qui e ora è questa: gestire tutti i bit in quegli indirizzi a 64 bit richiede transistor all'interno della microarchitettura della CPU. Pertanto, invece di sprecare transistor sul chip per gestire le linee di indirizzo di memoria che non verranno utilizzate durante la vita prevista del chip della CPU (o anche dell'architettura x86-64 stessa), i produttori di chip hanno limitato il numero di linee di indirizzo che sono realmente funzionali nelle implementazioni attuali dei chip. I chip CPU x86-64 che puoi acquistare oggi implementano 48 bit di indirizzo per la memoria virtuale e solo 40 bit per la memoria fisica. Questo è ancora molto più memoria fisica di quanto tu possa inserire in qualsiasi computer fisico al momento: 2^40 rappresenta un terabyte; praticamente poco più di mille gigabyte, o un trilione di byte. Ci sono alcune differenze nel modo in cui Linux a 64 bit gestisce le chiamate di funzione, ma la modalità long a 64 bit è ancora un modello piatto, ed è molto più simile al modello piatto a 32 bit di quanto il modello piatto a 32 bit sia al modello segmentato della modalità reale che abbiamo subito per i primi 15 o 20 anni dell'era PC. Questo è sufficiente per ora riguardo alla piattaforma su cui il nostro codice verrà eseguito. 
 </p>
 
+## Il primo programmma assembly (eatsyscall.asm)
+
+```asm
+;  Executable name : eatsyscall
+;  Version         : 1.0
+;  Created date    : 4/25/2022
+;  Last update     : 5/10/2023
+;  Author          : Jeff Duntemann
+;  Architecture    : x64
+;  From            : x64 Assembly Language Step By Step, 4th Edition
+;  Description     : A simple program in assembly for x64 Linux, using NASM 2.14,
+;                    demonstrating the use of the syscall instruction to display text.
+;                    Not for use with SASM.
+;
+;  Build using these commands:
+;    nasm -f elf64 -g -F stabs eatsyscall.asm
+;    ld -o eatsyscall eatsyscall.o
+;
+
+SECTION .data          ; Section containing initialised data
+	
+	EatMsg: db "Eat at Joe's!",10
+ 	EatLen: equ $-EatMsg	
+	
+SECTION .bss           ; Section containing uninitialized data	
+
+SECTION .text          ; Section containing code
+
+global 	_start	       ; Linker needs this to find the entry point!
+	
+_start:
+    push rbp
+    mov rbp,rsp
+
+    mov rax,1           ; 1 = sys_write for syscall
+    mov rdi,1           ; 1 = fd for stdout; i.e., write to the terminal window
+    mov rsi,EatMsg      ; Put address of the message string in rsi
+    mov rdx,EatLen      ; Length of string to be written in rdx
+    syscall             ; Make the system call
+
+    mov rax,60          ; 60 = exit the program
+    mov rdi,0           ; Return value in rdi 0 = nothing to return
+    syscall             ; Call syscall to exit
+```
+
+<p align=justify>
+Se il tuo assemblatore è SAMS (un assemblatore grafico, al contrario di asm che è solo a riga di comando) il codice è leggermente differente, parleremo delle differenze nei paragrafi successivi
+</p>
+
+```asm
+;  Executable name : eatsyscallgcc (For linking with gcc)
+;  Version         : 1.0
+;  Created date    : 4/25/2022    
+;  Last update     : 4/10/2023     
+;  Author          : Jeff Duntemann          
+;  Architecture    : x64    
+;  From            : x64 Assembly Language Step By Step, 4th Edition
+;  Description     : A simple program in assembly for x64 Linux, using NASM 2.14,
+;                  : demonstrating the use of the syscall instruction to display text.
+;
+;                  : Build using the default build configuration in SASM
+;  
+ 
+SECTION .data           ; Section containing initialized dat
+ EatMsg: db "Eat at Joe's!",10
+ EatLen: equ $-EatMsg
+ 
+SECTION .bss            ; Section containing uninitialized data       
+SECTION .text           ; Section containing code           
+
+global   main           ; Linker needs this to find the entry point!
+
+main:
+ mov rbp,rsp            ; SASM may add another copy of this in debug mode!
+ 
+  mov rax,1             ; 1 = sys_write for syscall    
+  mov rdi,1             ; 1 = fd for stdout
+                        ; write to theterminal window
+  mov rsi,EatMsg        ; Put address of the message string in rsi
+  mov rdx,EatLen        ; Length of string to be written in rdx
+  syscall               ; Make the system call
+
+  mov rax,60            ; 60 = exit the program 
+  mov rdi,0             ; Return value in rdi 0 = nothing to return
+  syscall               ; Call syscall to exit   
+```
+
+### Segmento .data
+
+<p align=justify>
+I normali programmi utente (che girano nello spazio utente e non in quello kernel) scritti per Linux sono divisi in <b>tre sezioni</b>. L'ordine in cui queste sezioni si presentano nel tuo programma non è davvero importante, ma per convenzione la sezione <b>.data</b> viene prima, seguita dalla sezione <b>.bss</b> e poi dalla sezione <b>.text</b>. <b>La sezione .data contiene definizioni di dati di elementi inizializzati</b>. I dati inizializzati sono dati che hanno un valore prima che il programma inizi a essere eseguito. Questi valori fanno parte del file eseguibile. Vengono caricati in memoria quando il file eseguibile viene caricato in memoria per l'esecuzione. Non devi caricarli con i loro valori e non vengono utilizzati cicli di macchina nella loro creazione al di là di quanto necessario per caricare il programma nel suo insieme in memoria. La cosa importante da ricordare sulla sezione .data è che maggiore è il numero di elementi di dati inizializzati che definisci, più grande sarà il file eseguibile e più tempo ci vorrà per caricarlo da disco in memoria quando lo esegui. Parleremo in dettaglio di come vengono definiti gli elementi di dati inizializzati a breve.
+</p>
+
+### Segmento .bss
+
+<p align=justify>
+Non tutti gli elementi di dati devono avere valori prima che il programma inizi a essere eseguito. Quando leggi dati da un file sul disco, ad esempio, hai bisogno di un posto dove inserire i dati dopo che arrivano dal disco. I buffer di dati come quello sono definiti nella sezione <b>Block Start Symbol</b> (<b>.bss</b>) del tuo programma. E' stato chiamato in altri modi nel corso degli anni, come Buffer Start Symbol. L'acronimo non ha importanza. Nella sezione .bss, allochi blocchi di memoria da utilizzare in seguito e dai nomi a quei blocchi, questi blocchi conterranno dei valori solo successivamente, durante l'esecuzione del programma. Tutti gli assemblatori hanno un modo per riservare un certo numero di byte per un buffer e dare un nome a quel buffer, ma non specifichi quali valori devono essere memorizzati nel buffer. I valori appariranno dopo a seguito dell'azione del programma mentre il programma è in esecuzione. <b>C'è una differenza cruciale tra gli elementi di dati definiti nella sezione .data e gli elementi di dati definiti nella sezione .bss<b>: Gli elementi di dati nella sezione .data aumentano la dimensione del tuo file eseguibile. Gli elementi di dati nella sezione .bss non lo fanno. Un buffer che occupa 16.000 byte (o più, a volte molto di più) può essere definito in .bss e aggiungere quasi nulla (circa 50 byte per la descrizione) alla dimensione del file eseguibile. Questo è possibile grazie al modo in cui il caricatore di Linux porta il programma nella memoria. Quando compili il tuo file eseguibile, il linker di Linux aggiunge informazioni al file descrivendo tutti i simboli che hai definito, compresi i simboli che nominano gli elementi di dati. Il caricatore sa quali elementi di dati non hanno valori iniziali, e riserva spazio in memoria per loro quando porta l'eseguibile dal disco. Gli elementi di dati con valori iniziali vengono letti insieme ai loro valori. Avere una sezione .bss vuota non aumenta la dimensione del tuo file eseguibile, e cancellare una sezione .bss vuota non riduce la dimensione del tuo file eseguibile.
+</p>
+
+### Segmento .text
+<p align=justify>
+Le vere istruzioni macchina che compongono il tuo programma vanno nella sezione <b>.text</b>. Ordinariamente, non ci sono elementi di dati definiti in .text. La sezione .text contiene simboli chiamati <b>etichette</b> (labels) che identificano posizioni nel codice del programma per salti e chiamate, ma al di là di questo, è tutto qui. Tutte le etichette globali devono essere dichiarate nella sezione .text, altrimenti le etichette non possono essere "visibili" al di fuori del tuo programma, né dal linker di Linux né dal caricatore di Linux. Esaminiamo la questione delle etichette con maggiore attenzione.
+</p>
+
+### Labels (Etichette)
+
+<p align=justify>
+Un'etichetta è una sorta di segnalibro, che descrive un punto nel codice del programma e gli dà un nome più facile da ricordare rispetto a un indirizzo di memoria nudo e crudo. Le etichette vengono utilizzate per indicare i luoghi dove le istruzioni di salto devono saltare e per dare nomi alle procedure in linguaggio assembly richiamabili. Spiegherò come tutto ciò viene fatto successivamente. Nel frattempo, ecco le cose più importanti da sapere sulle etichette.
+</p>
+
+<ul>
+	<li>
+		Le etichette devono iniziare con una lettera, con un trattino basso, un punto o un punto interrogativo. Questi ultimi tre (<code>_</code>, <code>.</code>, <code>?</code> hanno significati speciali per l'assemblatore, quindi non usarli finché non sai come l'assemblatore li interpreta.
+	</li>
+	<li>
+		Le etichette devono essere seguite da due punti quando vengono definite. Questo è fondamentalmente ciò che dice a NASM che l'identificatore che si sta definendo è un'etichetta. NASM ignorerà se non ci sono due punti e non segnalerà un errore, ma i due punti fissano la questione e prevengono che un mnemonico di istruzione digitato in modo errato venga scambiato per un'etichetta. Quindi usa i due punti!
+	</li>
+	<li>
+		Le etichette fanno distinzione tra maiuscole e minuscole. Ad esempio, yikes:, Yikes: e YIKES: sono tre etichette completamente diverse
+	</li>
+</ul>
+
+<p align=justify>
+Più tardi, vedremo tali etichette utilizzate come obiettivi delle istruzioni di salto e chiamata. Ad esempio, la seguente istruzione macchina trasferisce il flusso di esecuzione delle istruzioni alla posizione contrassegnata dall'etichetta GoHome: 
+</p>
+
+```asm
+jmp GoHome
+```
+
+<p align=justify>
+Nota che i due punti non vengono utilizzati qui. I due punti vengono posti solo dove l'etichetta è definita, non dove viene riferita. Pensa in questo modo: usa i due punti quando stai contrassegnando una posizione, non quando ci stai andando. C'è solo un'etichetta in <code>eatsyscall.asm</code>, e questa è un po' speciale. <b>L'etichetta <code>_start</code> indica dove inizia il programma</b>. (È sensibile alle maiuscole, quindi non provare a usare _START o _Start.) <b>Questa etichetta deve essere contrassegnata come globale nella parte superiore della sezione <code>.text</code></b>. Ora se invece di utilizzare nasm (che l'assemblatore a riga di comando) stai usando SASM, un assemblatore con interfaccia grafica (GUI) questo cambia un po' le cose. Quando compili un programma in linguaggio assembly in SASM, l'etichetta _start diventa main. SASM usa il compilatore Gnu C gcc per fungere da intermediario tra NASM e il linker Linux, ld. Quello che fa SASM, in un certo senso, è creare un programma C senza alcun codice C al suo interno. Tutti i programmi C devono avere un punto di partenza, e in un programma C quel punto di partenza è sempre main. Ci sono motivi per fare ciò che coinvolgono il collegamento di funzioni scritte in C al tuo programma assembly, come spiegherò più avanti. Ricorda questo: quando assembli da un file make, usa _start. Quando assembli da dentro SASM, usa main.
+</p>
+
 ## Controllo dei processi
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.01.png)
