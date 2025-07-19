@@ -5775,13 +5775,13 @@ Un'etichetta è una sorta di segnalibro, che descrive un punto nel codice del pr
 
 <ul>
 	<li>
-		Le etichette devono iniziare con una lettera, con un trattino basso, un punto o un punto interrogativo. Questi ultimi tre (<code>_</code>, <code>.</code>, <code>?</code> hanno significati speciali per l'assemblatore, quindi non usarli finché non sai come l'assemblatore li interpreta.
+		<p align=justify>Le etichette devono iniziare con una lettera, con un trattino basso, un punto o un punto interrogativo. Questi ultimi tre (<code>_</code>, <code>.</code>, <code>?</code> hanno significati speciali per l'assemblatore, quindi non usarli finché non sai come l'assemblatore li interpreta.</p>
 	</li>
 	<li>
-		Le etichette devono essere seguite da due punti quando vengono definite. Questo è fondamentalmente ciò che dice a NASM che l'identificatore che si sta definendo è un'etichetta. NASM ignorerà se non ci sono due punti e non segnalerà un errore, ma i due punti fissano la questione e prevengono che un mnemonico di istruzione digitato in modo errato venga scambiato per un'etichetta. Quindi usa i due punti!
+		<p align=justify>Le etichette devono essere seguite da due punti quando vengono definite. Questo è fondamentalmente ciò che dice a NASM che l'identificatore che si sta definendo è un'etichetta. NASM ignorerà se non ci sono due punti e non segnalerà un errore, ma i due punti fissano la questione e prevengono che un mnemonico di istruzione digitato in modo errato venga scambiato per un'etichetta. Quindi usa i due punti!</p>
 	</li>
 	<li>
-		Le etichette fanno distinzione tra maiuscole e minuscole. Ad esempio, yikes:, Yikes: e YIKES: sono tre etichette completamente diverse
+		<p align=justify>Le etichette fanno distinzione tra maiuscole e minuscole. Ad esempio, yikes:, Yikes: e YIKES: sono tre etichette completamente diverse</p>
 	</li>
 </ul>
 
