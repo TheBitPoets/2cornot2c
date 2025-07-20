@@ -6091,6 +6091,10 @@ Devi ricordare che le descrizioni sui flags fatte sopra sono solo generalizzazio
 	</td>
 </table>
 
+<p align=justify>
+Il registro RFlags è un registro, proprio come RAX, e quando si è in modalità di debug, il suo valore viene visualizzato nella vista Registri di SASM. I valori dei flags sono indicati tra parentesi quadre. Quando si inizia a eseguire il debug del codice in spazio utente, SASM mostra in genere i nomi dei flag PF, ZF e IF. [ PF ZF IF ] Ciò significa che, per qualsiasi motivo, quando Linux consente di iniziare il debug, vengono impostati i flag Parity, Zero e Interrupt Enable. Questi valori iniziali sono "residui" del codice eseguito in precedenza e non sono in alcun modo causati dal codice nel debugger. I loro valori, inoltre, non hanno alcun significato nella sessione di debug e quindi non hanno bisogno di interpretazione. Quando si esegue un'istruzione che influisce sui flag in una sessione di debug, SASM mostrerà il nome di un flag se tale flag è impostato o cancellerà il nome del flag se tale flag viene cancellato
+</p>
+
 ### Sezione .data
 
 <p align=justify>
