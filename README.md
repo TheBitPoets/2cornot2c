@@ -6095,6 +6095,23 @@ Devi ricordare che le descrizioni sui flags fatte sopra sono solo generalizzazio
 Il registro RFlags è un registro, proprio come RAX, e quando si è in modalità di debug, il suo valore viene visualizzato nella vista Registri di SASM. I valori dei flags sono indicati tra parentesi quadre. Quando si inizia a eseguire il debug del codice in spazio utente, SASM mostra in genere i nomi dei flag PF, ZF e IF. [ PF ZF IF ] Ciò significa che, per qualsiasi motivo, quando Linux consente di iniziare il debug, vengono impostati i flag Parity, Zero e Interrupt Enable. Questi valori iniziali sono "residui" del codice eseguito in precedenza e non sono in alcun modo causati dal codice nel debugger. I loro valori, inoltre, non hanno alcun significato nella sessione di debug e quindi non hanno bisogno di interpretazione. Quando si esegue un'istruzione che influisce sui flag in una sessione di debug, SASM mostrerà il nome di un flag se tale flag è impostato o cancellerà il nome del flag se tale flag viene cancellato
 </p>
 
+### Aggiungere e Sottrarre 1 con INC e DEC
+
+<p align=justify>
+Una semplice lezione sul comportamento dei flags coinvolge le due istruzioni <code>INC</code> e <code>DEC</code>. Diverse istruzioni macchina x86 arrivano in coppie, tra cui <code>INC</code> e <code>DEC</code>. Esse incrementano e decrementano un operando di uno, rispettivamente. Aggiungere uno a qualcosa o sottrarre uno da qualcosa sono azioni che si verificano molto nella programmazione informatica. Se stai contando il numero di volte in cui un programma esegue un ciclo, contando i byte in una tabella, o facendo qualcosa che avanza o retrocede di uno alla volta, <code>INC</code> e <code>DEC</code> possono essere modi molto rapidi per rendere l'aggiunta o la sottrazione effettiva. Sia <code>INC</code> che <code>DEC</code> richiedono solo un operando. Un errore verrà segnalato dall'assemblatore se provi a utilizzare <code>INC</code> o <code>DEC</code> con due operandi o senza alcun operando. Nessuno dei due funzionerà sui dati immediati. Prova entrambi aggiungendo le seguenti istruzioni nel tuo sandbox. Costruisci il sandbox come al solito, entra in modalità debug e fai un passo attraverso di esso:
+</p>
+
+```asm
+	 mov eax,0FFFFFFFFh
+	 mov ebx,02Dh
+	 dec ebx
+	 inc eax
+```
+
+<p align=justify>
+Osserva cosa succede ai registri EAX e EBX. Decrementare EBX trasforma prevedibilmente il valore 2DH nel valore 2CH. Incrementare 0FFFFFFFFH, d'altra parte, fa ripartire il registro EAX a 0, perché 0FFFFFFFFH è il valore non firmato più grande che può essere espresso in un registro a 32 bit. (Ho usato EAX nell'esempio qui perché riempire il registro a 64 bit RAX con bit richiede molti Fs!) Aggiungere 1 a esso lo riporta a zero, proprio come aggiungere 1 a 99 porta le due cifre più a destra della somma a zero creando il numero 100. La differenza con INC è che non c'è carry. Il flag Carry non è influenzato da INC, quindi non cercare di usarlo per eseguire aritmetica a più cifre.
+</p>
+
 ### Sezione .data
 
 <p align=justify>
