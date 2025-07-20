@@ -6032,53 +6032,53 @@ RFlags è un vero e proprio cassetto di spazzatura di piccoli pezzi di informazi
 </p>
 
 <div align=center>
-<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/rflags_register.png"
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/rflags_register.png">
 </div>
 
 <ul>
 	<li>
 		<p align=justify>
-			<b>OF</b>Il flag di Overflow è impostato quando il risultato di un'operazione aritmetica su una quantità intera firmata diventa troppo grande per adattarsi all'operando che occupava originariamente. OF è generalmente usato come il “flag di riporto” nell'aritmetica firmata.
+			<b>OF:</b> Il flag di Overflow è impostato quando il risultato di un'operazione aritmetica su una quantità intera firmata diventa troppo grande per adattarsi all'operando che occupava originariamente. OF è generalmente usato come il “flag di riporto” nell'aritmetica firmata.
+		</p>
+	</li>	
+ 	<li>
+		<p align=justify>
+			<b>DF:</b> Il flag di direzione è un'anomalia tra i flag in quanto comunica alla CPU qualcosa che si desidera che essa sappia, piuttosto che il contrario. Esso determina la direzione in cui l'attività si muove (verso la memoria alta o verso la memoria bassa) durante l'esecuzione delle istruzioni di stringa. Quando DF è attivato, le istruzioni di stringa procedono dalla memoria alta verso la memoria bassa. Quando DF è disattivato, le istruzioni di stringa procedono dalla memoria bassa verso la memoria alta.
+		</p>
+	</li>
+  	<li>
+		<p align=justify>
+			<b>IF:</b> Il flag di abilitazione degli interrupt è un flag a due vie. La CPU lo imposta in determinate condizioni e puoi impostarlo tu stesso utilizzando le istruzioni STI e CLI—anche se probabilmente non lo farai; vedi sotto. Quando IF è impostato, gli interrupt sono abilitati e possono verificarsi su richiesta. Quando IF è disattivato, gli interrupt sono ignorati dalla CPU. I programmi ordinari potevano impostare e disattivare questo flag senza conseguenze in Modalità Reale, nell'era DOS. Sotto Linux (sia a 32 bit che a 64 bit) IF è riservato all'uso del sistema operativo e talvolta dei suoi driver. Se provi a utilizzare le istruzioni STI e CLI all'interno di uno dei tuoi programmi, Linux ti mostrerà un errore di protezione generale e il tuo programma verrà terminato. Considera IF come off-limits per la programmazione degli spazi utente, come stiamo discutendo in questo libro.
 		</p>
 	</li>
  	<li>
 		<p align=justify>
-			<b>DF</b>Il flag di direzione è un'anomalia tra i flag in quanto comunica alla CPU qualcosa che si desidera che essa sappia, piuttosto che il contrario. Esso determina la direzione in cui l'attività si muove (verso la memoria alta o verso la memoria bassa) durante l'esecuzione delle istruzioni di stringa. Quando DF è attivato, le istruzioni di stringa procedono dalla memoria alta verso la memoria bassa. Quando DF è disattivato, le istruzioni di stringa procedono dalla memoria bassa verso la memoria alta.
+			<b>TF:</b> Quando impostato, il flag di Trap consente ai debugger di gestire il passo singolo, costringendo la CPU ad eseguire solo un'istruzione prima di chiamare una routine di interrupt. Questo non è un flag particolarmente utile per la programmazione ordinaria, e non avrò nulla di più da dire al riguardo in questo libro.
 		</p>
 	</li>
  	<li>
 		<p align=justify>
-			<b>IF</b>Il flag di abilitazione degli interrupt è un flag a due vie. La CPU lo imposta in determinate condizioni e puoi impostarlo tu stesso utilizzando le istruzioni STI e CLI—anche se probabilmente non lo farai; vedi sotto. Quando IF è impostato, gli interrupt sono abilitati e possono verificarsi su richiesta. Quando IF è disattivato, gli interrupt sono ignorati dalla CPU. I programmi ordinari potevano impostare e disattivare questo flag senza conseguenze in Modalità Reale, nell'era DOS. Sotto Linux (sia a 32 bit che a 64 bit) IF è riservato all'uso del sistema operativo e talvolta dei suoi driver. Se provi a utilizzare le istruzioni STI e CLI all'interno di uno dei tuoi programmi, Linux ti mostrerà un errore di protezione generale e il tuo programma verrà terminato. Considera IF come off-limits per la programmazione degli spazi utente, come stiamo discutendo in questo libro.
+			<b>SF:</b> Il flag di segnale diventa attivo quando il risultato di un'operazione costringe l'operando a diventare negativo. Con negativo intendiamo solo che il bit di ordine più alto nell'operando (il bit di segno) diventa 1 durante un'operazione aritmetica con segno. Qualsiasi operazione che lascia il segno del risultato positivo azzererà SF.
 		</p>
 	</li>
  	<li>
 		<p align=justify>
-			<b>TF</b>Quando impostato, il flag di Trap consente ai debugger di gestire il passo singolo, costringendo la CPU ad eseguire solo un'istruzione prima di chiamare una routine di interrupt. Questo non è un flag particolarmente utile per la programmazione ordinaria, e non avrò nulla di più da dire al riguardo in questo libro.
+			<b>ZF:</b> Il flag Zero viene impostato quando i risultati di un'operazione diventano zero. Se l'operando di destinazione invece diventa un valore diverso da zero, ZF viene resettato. Userai questo flag molto spesso per i salti condizionali.
 		</p>
 	</li>
  	<li>
 		<p align=justify>
-			<b>SF</b>Il flag di segnale diventa attivo quando il risultato di un'operazione costringe l'operando a diventare negativo. Con negativo intendiamo solo che il bit di ordine più alto nell'operando (il bit di segno) diventa 1 durante un'operazione aritmetica con segno. Qualsiasi operazione che lascia il segno del risultato positivo azzererà SF.
+			<b>A:</b> Il flag di trasporto ausiliario è utilizzato solo per l'aritmetica BCD. L'aritmetica BCD tratta ogni byte operando come una coppia di "nybbles" a 4 bit e consente di eseguire direttamente nel hardware della CPU un'aritmetica che si avvicina al decimale (base 10) utilizzando una delle istruzioni di aritmetica BCD. Queste istruzioni sono considerate obsolete e non sono presenti in x64. Non le tratto in questo libro.
 		</p>
 	</li>
  	<li>
 		<p align=justify>
-			<b>ZF</b>Il flag Zero viene impostato quando i risultati di un'operazione diventano zero. Se l'operando di destinazione invece diventa un valore diverso da zero, ZF viene resettato. Userai questo flag molto spesso per i salti condizionali.
+			<b>PF:</b> Il flag di parità sembrerà istantaneamente familiare a chiunque comprenda le comunicazioni dati seriali e totalmente bizzarro a chi non lo fa. PF indica se il numero di bit impostati (1) nel byte di ordine inferiore di un risultato è pari o dispari. Ad esempio, se il risultato è 0F2H, PF sarà resettato perché 0F2H (11110010) contiene un numero dispari di bit a 1. Allo stesso modo, se il risultato è 3AH (00111100), PF sarà impostato perché ci sono un numero pari (quattro) di bit a 1 nel risultato. Questo flag è una sopravvivenza dei tempi in cui tutte le comunicazioni informatiche venivano effettuate tramite una porta seriale, per la quale un sistema di rilevamento degli errori chiamato controllo della parità dipende dal sapere se un conteggio dei bit impostati in un byte di carattere è pari o dispari. PF è usato molto raramente e non lo descriverò ulteriormente.
 		</p>
 	</li>
  	<li>
 		<p align=justify>
-			<b>A</b>Il flag di trasporto ausiliario è utilizzato solo per l'aritmetica BCD. L'aritmetica BCD tratta ogni byte operando come una coppia di "nybbles" a 4 bit e consente di eseguire direttamente nel hardware della CPU un'aritmetica che si avvicina al decimale (base 10) utilizzando una delle istruzioni di aritmetica BCD. Queste istruzioni sono considerate obsolete e non sono presenti in x64. Non le tratto in questo libro.
-		</p>
-	</li>
- 	<li>
-		<p align=justify>
-			<b>PF</b>Il flag di parità sembrerà istantaneamente familiare a chiunque comprenda le comunicazioni dati seriali e totalmente bizzarro a chi non lo fa. PF indica se il numero di bit impostati (1) nel byte di ordine inferiore di un risultato è pari o dispari. Ad esempio, se il risultato è 0F2H, PF sarà resettato perché 0F2H (11110010) contiene un numero dispari di bit a 1. Allo stesso modo, se il risultato è 3AH (00111100), PF sarà impostato perché ci sono un numero pari (quattro) di bit a 1 nel risultato. Questo flag è una sopravvivenza dei tempi in cui tutte le comunicazioni informatiche venivano effettuate tramite una porta seriale, per la quale un sistema di rilevamento degli errori chiamato controllo della parità dipende dal sapere se un conteggio dei bit impostati in un byte di carattere è pari o dispari. PF è usato molto raramente e non lo descriverò ulteriormente.
-		</p>
-	</li>
- 	<li>
-		<p align=justify>
-			<b>CF</b>Il flag di riporto viene utilizzato nelle operazioni aritmetiche senza segno. Se il risultato di un'operazione aritmetica o di spostamento "riporta" un bit dall'operando, CF viene impostato. Altrimenti, se non viene riportato nulla, CF viene azzerato.
+			<b>CF:</b> Il flag di riporto viene utilizzato nelle operazioni aritmetiche senza segno. Se il risultato di un'operazione aritmetica o di spostamento "riporta" un bit dall'operando, CF viene impostato. Altrimenti, se non viene riportato nulla, CF viene azzerato.
 		</p>
 	</li>
 </ul>
