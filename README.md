@@ -5921,6 +5921,168 @@ ma in questo modo si deve andare in memoria per caricare il valore immediato 0. 
 Ricostruisci la sandbox e torna al debugger per vedere cosa succede. L'istruzione <code>XCHG</code> scambia i valori contenuti nei suoi due operandi. Ciò che è stato scambiato in precedenza viene scambiato di nuovo e il valore in RCX corrisponderà ai valori già presenti in RAX e RBX. Una buona idea durante la scrittura dei primi programmi in linguaggio assembly è quella di ricontrollare periodicamente il set di istruzioni per vedere che ciò che si è messo insieme con quattro o cinque istruzioni non è possibile utilizzando una singola istruzione. Il set di istruzioni Intel è molto bravo a ingannarti in questo senso. C'è un'avvertenza qui: a volte un "caso speciale" è più veloce in termini di tempo di esecuzione della macchina rispetto a un caso più generale. La divisione per una potenza di 2 può essere eseguita utilizzando l'istruzione <code>DIV</code>, ma può anche essere eseguita utilizzando l'istruzione <code>SHR</code> (Shift Right). <code>DIV</code> è più generale (puoi usarlo per dividere per qualsiasi intero senza segno, non semplicemente potenze di 2), ma è molto più lento. La velocità delle singole istruzioni conta molto meno ora di quanto non lo fosse 30 anni fa. Detto questo, per i programmi con funzioni ripetitive complesse che vengono eseguite migliaia o centinaia di migliaia di volte in un ciclo, la velocità delle istruzioni può fare la differenza
 </p>
 
+### Dati di Memoria ed Effective Addresses
+
+<p align=justify>
+I dati immediati sono incorporati direttamente nell'istruzione macchina. I dati di registro vengono memorizzati in uno dei registri interni della CPU. Al contrario, i dati di memoria vengono memorizzati in qualche luogo nella porzione di memoria di sistema possudeta da un programma, a un indirizzo di memoria a 64 bit. Con una o due eccezioni importanti (le istruzioni sulle stringhe), <b>solo uno dei due operandi di un'istruzione può specificare una posizione di memoria</b>. In altre parole, puoi trasferire un valore immediato in memoria, un valore di memoria in un registro, o qualche altra combinazione simile, ma <b>non puoi trasferire un valore di memoria direttamente in un altro valore di memoria</b>. Questa è una limitazione intrinseca delle CPU Intel di tutte le generazioni (non solo x64), e dobbiamo farci i conti, per quanto possa essere scomodo a volte. <b>Per specificare che desideriamo i dati nella posizione di memoria contenuta in un registro piuttosto che i dati nel registro stesso, utilizziamo le parentesi quadre attorno al nome del registro<b>. In altre parole, per spostare il quadword in memoria all'indirizzo contenuto in RBX nel registro RAX, useremmo la seguente istruzione.
+</p>
+
+```asm
+ mov rax,[rbx]
+```
+
+<p align=justify>
+Le parentesi quadre possono contenere più del nome di un singolo registro a 64 bit, come impareremo in dettaglio più avanti. Ad esempio, puoi aggiungere una costante letterale a un registro all'interno delle parentesi quadre, e NASM eseguirà il calcolo. 
+</p>
+
+```asm
+	mov rax,[rbx+16]
+```
+
+<p align=justify>
+Lo stesso vale per l'aggiunta di due registri a uso generale, in questo modo: 
+</p>
+
+```asm
+	mov rax,[rbx+rcx]
+```
+
+<p align=justify>
+E come se non bastasse, puoi aggiungere due registri più una costante letterale. 
+</p>
+
+```asm
+	mov rax,[rbx+rcx+11]
+```
+
+<p align=justify>
+Naturalmente non tutto è consentito. <b>Ciò che si trova all'interno delle parentesi quadre è chiamato indirizzo efficace (<i>effective address</i>)</b> di un elemento dati in memoria, e ci sono regole che dettano ciò che può essere un indirizzo efficace valido e ciò che non può. Nell'attuale evoluzione dell'hardware Intel, è possibile sommare due registri per formare l'indirizzo efficace, ma non tre o più. In altre parole, queste non sono forme legali di indirizzo efficace: 
+
+```asm
+	mov rax,[rbx+rcx+rdx] 
+ 	mov rax,[rbx+rcx+rsi+rdi] 
+```
+
+### Il dato ed il suo indirizzo
+
+<p align=justify>
+Questo suona banale, ma fidati, è una cosa abbastanza facile da fare. Torniamo alla Definizione di dati nella Lista 5.1, avevamo questa definizione di dati e questa istruzione: 
+</p>
+
+```asm
+	EatMsg: db "Mangia da Joe!" 
+ 	. . . . 
+ 	mov rsi, EatMsg 
+```
+
+<p align=justify>
+Se hai avuto qualche esperienza con linguaggi di alto livello, il tuo primo istinto potrebbe essere quello di assumere che qualsiasi dato conservato in EatMsg verrà copiato in RSI. L'assemblaggio non funziona in questo modo. Quella istruzione <code>MOV</code> copia effettivamente l'indirizzo di EatMsg, non ciò che è memorizzato in (effettivamente, presso) EatMsg. <b>Nel linguaggio assemblatore, i nomi delle variabili rappresentano indirizzi, non dati!</b> Quindi, come si fa a "raggiungere" i dati rappresentati da una variabile come EatMsg? Ancora una volta, si fa con le parentesi quadre. 
+</p>	
+
+```asm
+	mov rdx, [EatMsg]
+```
+
+<p align=justify>
+Ciò che fa questa istruzione è andare alla posizione in memoria specificata dall'indirizzo rappresentato da EatMsg, prelevare i primi 64 bit di dati da quell'indirizzo e caricare quei dati in RDX partendo dal byte meno significativo in RDX. Date le informazioni che abbiamo definito per EatMsg, ciò sarebbero gli otto caratteri E, a, t, uno spazio, a, t, uno spazio e J.
+</p>
+
+### La dimensione dei dati di memoria
+
+<p align=justify>
+Ma cosa succede se si vuole lavorare con un solo byte e non con i primi otto? Fondamentalmente, se si desidera utilizzare un byte di dati, è necessario caricarlo in un contenitore di dimensione di un byte. Il registro RAX ha una dimensione di 64 bit. Tuttavia, possiamo indirizzare il byte meno significativo di RAX come AL. AL ha una dimensione di un byte e, rendendo AL l'operando di destinazione, possiamo riportare il primo byte di EatMsg in questo modo:
+</p>
+
+```asm
+	mov al,[EatMsg] AL
+```
+
+<p align=justify>
+ovviamente, è contenuto all'interno di RAX, non è un registro separato. Ma il nome "AL" ci permette di recuperare dalla memoria un solo byte alla volta. Possiamo eseguire un trucco simile usando il nome EAX per riferirci ai 4 byte inferiori (32 bit) di RAX: 
+</p>	
+
+```asm
+ mov eax,[EatMsg]
+```
+
+<p align=justify>
+Questa volta, i caratteri E, a, t e uno spazio vengono letti dalla memoria e inseriti nei quattro byte meno significativi di RAX. Il problema delle dimensioni diventa complicato quando si scrivono i dati in un registro in memoria. NASM non "ricorda" le dimensioni delle variabili, come fanno i linguaggi di livello superiore. Sa dove inizia EatMsg nella memoria, e basta. Devi dire a NASM quanti byte di dati spostare. Questa operazione viene eseguita da un identificatore di dimensioni. Ecco un esempio:
+</p>	
+
+```asm
+  mov byte [EatMsg],'G'
+```
+
+<p align=justify>
+Qui, diciamo a NASM che vogliamo spostare solo un singolo byte in memoria utilizzando l'identificatore di dimensione BYTE. Altri identificatori di dimensioni includono WORD (16 bit), DWORD (32 bit) e QWORD (64 bit).
+</p>
+
+<p align=justify>
+Sii felice di imparare l'assembly Intel ai giorni nostri. Era molto più complicato negli anni passati. In modalità reale sotto DOS, c'erano diverse restrizioni sui componenti di un <i>effective addrress</i> che semplicemente non esistono oggi, né in modalità protetta a 32 bit né in modalità lunga a 64 bit. In modalità reale, solo alcuni registri generali x86 potevano contenere un indirizzo di memoria: BX, BP, SI e DI. Gli altri, AX, CX e DX, non potevano. Peggio ancora, ogni indirizzo aveva due parti. Dovevi prestare attenzione a quale segmento apparteneva un indirizzo e dovevi assicurarti di specificare il segmento quando non era ovvio.
+</p>
+
+### Il registro RFLAGS
+
+<p align=justify>
+RFlags è un vero e proprio cassetto di spazzatura di piccoli pezzi di informazioni disgiunte ed è difficile (e forse fuorviante) sedersi e descrivere tutto in dettaglio tutto in una volta. Quello che farò è descrivere brevemente i flag della CPU qui e poi in modo più dettagliato mentre li incontriamo discutendo delle varie istruzioni che modificano i valori dei flag o li usano durante un ramificamento. Un flag è un singolo bit di informazioni il cui significato è indipendente da qualsiasi altro bit. Un bit può essere impostato a 1 o azzerato a 0 dalla CPU secondo necessità. L'idea è di comunicare a te, il programmatore, lo stato di certe condizioni all'interno della CPU in modo che il tuo programma possa testare e agire in base agli stati di quelle condizioni. Molto più raramente, sei tu, il programmatore, a impostare un flag come modo per segnalare qualcosa alla CPU. RFlags nel suo insieme è un singolo registro a 64 bit sepolto all'interno della CPU. È l'estensione a 64 bit del registro EFlags a 32 bit, che a sua volta è l'estensione a 32 bit del registro Flags a 16 bit presente nelle antiche CPU 8086/8088. <b>Solo 18 bit del registro RFlags sono effettivamente flag</b>. Il resto è riservato per un uso futuro nelle generazioni future di CPU Intel.
+</p>
+
+<p align=justify>
+È un po' un pasticcio, ma dai un'occhiata alla figura di sotto , che riassume tutti flags ttualmente definite nell'architettura x64. I flags su uno sfondo grigio sono quelle arcane che puoi ignorare tranquillamente per il momento. Gli spazi e le linee colorate di nero sono considerati riservati e non contengono flags definite. Ogni flags del registro RFlags ha un simbolo di due, tre o quattro lettere con cui la maggior parte dei programmatori le conosce. Ecco i flags più comuni, i loro simboli e brevi descrizioni di cosa rappresentano:
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/rflags_register.png"
+</div>
+
+<ul>
+	<li>
+		<p align=justify>
+			<b>OF</b>Il flag di Overflow è impostato quando il risultato di un'operazione aritmetica su una quantità intera firmata diventa troppo grande per adattarsi all'operando che occupava originariamente. OF è generalmente usato come il “flag di riporto” nell'aritmetica firmata.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			<b>DF</b>Il flag di direzione è un'anomalia tra i flag in quanto comunica alla CPU qualcosa che si desidera che essa sappia, piuttosto che il contrario. Esso determina la direzione in cui l'attività si muove (verso la memoria alta o verso la memoria bassa) durante l'esecuzione delle istruzioni di stringa. Quando DF è attivato, le istruzioni di stringa procedono dalla memoria alta verso la memoria bassa. Quando DF è disattivato, le istruzioni di stringa procedono dalla memoria bassa verso la memoria alta.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			<b>IF</b>Il flag di abilitazione degli interrupt è un flag a due vie. La CPU lo imposta in determinate condizioni e puoi impostarlo tu stesso utilizzando le istruzioni STI e CLI—anche se probabilmente non lo farai; vedi sotto. Quando IF è impostato, gli interrupt sono abilitati e possono verificarsi su richiesta. Quando IF è disattivato, gli interrupt sono ignorati dalla CPU. I programmi ordinari potevano impostare e disattivare questo flag senza conseguenze in Modalità Reale, nell'era DOS. Sotto Linux (sia a 32 bit che a 64 bit) IF è riservato all'uso del sistema operativo e talvolta dei suoi driver. Se provi a utilizzare le istruzioni STI e CLI all'interno di uno dei tuoi programmi, Linux ti mostrerà un errore di protezione generale e il tuo programma verrà terminato. Considera IF come off-limits per la programmazione degli spazi utente, come stiamo discutendo in questo libro.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			<b>TF</b>Quando impostato, il flag di Trap consente ai debugger di gestire il passo singolo, costringendo la CPU ad eseguire solo un'istruzione prima di chiamare una routine di interrupt. Questo non è un flag particolarmente utile per la programmazione ordinaria, e non avrò nulla di più da dire al riguardo in questo libro.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			<b>SF</b>Il flag di segnale diventa attivo quando il risultato di un'operazione costringe l'operando a diventare negativo. Con negativo intendiamo solo che il bit di ordine più alto nell'operando (il bit di segno) diventa 1 durante un'operazione aritmetica con segno. Qualsiasi operazione che lascia il segno del risultato positivo azzererà SF.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			<b>ZF</b>Il flag Zero viene impostato quando i risultati di un'operazione diventano zero. Se l'operando di destinazione invece diventa un valore diverso da zero, ZF viene resettato. Userai questo flag molto spesso per i salti condizionali.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			<b>A</b>Il flag di trasporto ausiliario è utilizzato solo per l'aritmetica BCD. L'aritmetica BCD tratta ogni byte operando come una coppia di "nybbles" a 4 bit e consente di eseguire direttamente nel hardware della CPU un'aritmetica che si avvicina al decimale (base 10) utilizzando una delle istruzioni di aritmetica BCD. Queste istruzioni sono considerate obsolete e non sono presenti in x64. Non le tratto in questo libro.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			<b>PF</b>Il flag di parità sembrerà istantaneamente familiare a chiunque comprenda le comunicazioni dati seriali e totalmente bizzarro a chi non lo fa. PF indica se il numero di bit impostati (1) nel byte di ordine inferiore di un risultato è pari o dispari. Ad esempio, se il risultato è 0F2H, PF sarà resettato perché 0F2H (11110010) contiene un numero dispari di bit a 1. Allo stesso modo, se il risultato è 3AH (00111100), PF sarà impostato perché ci sono un numero pari (quattro) di bit a 1 nel risultato. Questo flag è una sopravvivenza dei tempi in cui tutte le comunicazioni informatiche venivano effettuate tramite una porta seriale, per la quale un sistema di rilevamento degli errori chiamato controllo della parità dipende dal sapere se un conteggio dei bit impostati in un byte di carattere è pari o dispari. PF è usato molto raramente e non lo descriverò ulteriormente.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			<b>CF</b>Il flag di riporto viene utilizzato nelle operazioni aritmetiche senza segno. Se il risultato di un'operazione aritmetica o di spostamento "riporta" un bit dall'operando, CF viene impostato. Altrimenti, se non viene riportato nulla, CF viene azzerato.
+		</p>
+	</li>
+</ul>
+
 ### Sezione .data
 
 <p align=justify>
