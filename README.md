@@ -6083,6 +6083,8 @@ RFlags è un vero e proprio cassetto di spazzatura di piccoli pezzi di informazi
 	</li>
 </ul>
 
+Quello che chiamo "etichetta delle bandiere" è il modo in cui una determinata istruzione influisce sulle bandiere nel registro RFlags. Devi ricordare che le descrizioni delle bandiere nelle pagine precedenti sono solo generalizzazioni e sono soggette a specifiche restrizioni e casi speciali imposti da istruzioni individuali. L'etichetta delle bandiere per singole bandiere varia ampiamente da istruzione a istruzione, anche se il significato dell'uso della bandiera può essere lo stesso in ogni caso. Ad esempio, alcune istruzioni che causano l'apparire di uno zero in un operando impostano ZF, mentre altre no. Purtroppo, non c'è un sistema e non c'è un modo facile per tenerlo chiaro nella tua mente. Quando intendi usare le bandiere nei test tramite istruzioni di salto condizionale, devi controllare ogni singola istruzione per vedere come vengono influenzate le varie bandiere.
+
 ### Sezione .data
 
 <p align=justify>
