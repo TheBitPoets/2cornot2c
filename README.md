@@ -6112,6 +6112,122 @@ Una semplice lezione sul comportamento dei flags coinvolge le due istruzioni <co
 Osserva cosa succede ai registri EAX e EBX. Decrementare EBX trasforma prevedibilmente il valore 2DH nel valore 2CH. Incrementare 0FFFFFFFFH, d'altra parte, fa ripartire il registro EAX a 0, perché 0FFFFFFFFH è il valore non firmato più grande che può essere espresso in un registro a 32 bit. (Ho usato EAX nell'esempio qui perché riempire il registro a 64 bit RAX con bit richiede molti Fs!) Aggiungere 1 a esso lo riporta a zero, proprio come aggiungere 1 a 99 porta le due cifre più a destra della somma a zero creando il numero 100. La differenza con INC è che non c'è carry. Il flag Carry non è influenzato da INC, quindi non cercare di usarlo per eseguire aritmetica a più cifre.
 </p>
 
+<ul>
+	<li>
+		<p align=justify>
+			Il flag di overflow (OF) è stato azzerato perché l'operando, interpretato come un intero con segno, non è diventato troppo grande per adattarsi in EBX. Questo potrebbe non esserti utile se non sai cosa rende un numero "con segno", quindi per il momento lasciamo stare.
+		</p>	
+	</li>
+ 	<li>
+		<p align=justify>
+			Il flag di segnale (SF) è stato azzerato perché il bit alto di EBX non è diventato 1 a seguito dell'operazione. Se il bit alto di EBX fosse diventato 1, il valore in EBX, interpretato come un valore intero firmato, sarebbe diventato negativo, e SF è impostato quando un valore diventa negativo. Come per OF, SF non è molto utile a meno che non si stia eseguendo aritmetica firmata.
+		</p>	
+	</li>
+ 	<li>
+		<p align=justify>
+			Il flag Zero (ZF) è stato azzerato perché l'operando di destinazione non è diventato zero. Se fosse diventato zero, ZF sarebbe stato impostato a 1.
+		</p>	
+	</li>
+ 	<li>
+		<p align=justify>
+			La flag di riporto ausiliario (AF) è stata azzerata perché non c'era alcun riporto BCD dai quattro bit inferiori di EBX ai successivi quattro bit superiori. (Le istruzioni BCD sono state rimosse dal set di istruzioni x64, quindi AF non è più utile oggi e può essere ignorata.)
+		</p>	
+	</li>
+ 	<li>
+		<p align=justify>
+			Il flag di parità (PF) è stato azzerato perché il numero di bit a 1 nell'operando dopo la decrescita era tre, e PF è azzerato quando il numero di bit nell'operando di destinazione è dispari. Controllalo tu stesso: il valore in EBX dopo l'istruzione DEC è 02Ch. In binario, questo è 00101100. Ci sono tre bit a 1 nel valore, e quindi PF è azzerato.
+		</p>	
+	</li>
+</ul>
+
+<p align=justify>
+L'istruzione DEC non influisce sul flag IF, che è rimasto attivo. Infatti, quasi nulla cambia il flag IF, e le applicazioni in user space come la sandbox (e tutto il resto che è probabile tu scriva mentre impari l'assembly) sono vietate a modificare l'IF. Ora, esegui l'istruzione INC EAX e visualizza di nuovo i registri nella vista Console. Boom! Questa volta ci sono molte azioni.
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+			La flag di parità PF è stata impostata perché il numero di bit 1 in EAX è ora zero, e PF è impostato quando il numero di bit 1 nell'operando diventa pari. Zero è considerato un numero pari.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Il flag Carry ausiliario AF è stato impostato perché i quattro bit inferiori in EAX sono passati da FFFF a 0000. Questo implica un riporto dei quattro bit inferiori ai quattro bit superiori, e AF è impostato quando si verifica un riporto dai quattro bit inferiori dell'operando. (Ancora una volta, non puoi usare AF nella programmazione x64.)
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Il flag Zero ZF è stato impostato perché EAX è diventato zero.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Come prima, il flag IF non cambia e rimane impostato in ogni momento. Ricorda che l'IF appartiene esclusivamente a Linux e non è influenzato dal codice dell'utente.
+		</p>
+	</li>
+</ul>
+
+### Come i Flags cambiano l'esecuzione del programma
+
+<p align=justify>
+Osservare i flags cambiare valore dopo l'esecuzione delle istruzioni è un buon modo per imparare il comportamento dei flags. Tuttavia, lo scopo e il vero valore dei flags non risiedono nei loro valori, di per sé, ma in come influenzano il flusso delle istruzioni macchina nei tuoi programmi. Esiste un'intera categoria di istruzioni macchina che "saltano" a una posizione diversa nel tuo programma in base al valore corrente di una o più flags. Queste istruzioni sono chiamate <b>istruzioni di salto condizionale</b>, e la maggior parte dei flags in RFLAGS ha una o più istruzioni di salto condizionale associate. La maggior parte delle istruzioni macchina sono passi effettuati in un elenco che generalmente scorre dall'alto verso il basso. Le istruzioni di salto condizionale sono i test. Esse verificano la condizione di uno dei flags e continuano o saltano a una posizione diversa nel tuo programma. L'esempio più semplice di un'istruzione di salto condizionale, e quella che probabilmente utilizzerai di più, è <code>JNZ</code>, Salta Se Non Zero. L'istruzione <code>JNZ</code> verifica il valore del flag Zero. Se ZF è impostato (cioè, uguale a 1), non succede nulla, e la CPU passa a eseguire la prossima istruzione in sequenza. Tuttavia, se ZF non è impostato (cioè, se è azzerato e uguale a 0), allora l'esecuzione si sposta a una nuova destinazione nel tuo programma. Questo sembra peggio di quanto non sia. Non devi preoccuparti di aggiungere o sottrarre nulla. In quasi tutti i casi, la <b>destinazione è fornita come un'etichetta</b>. <b>Le etichette sono nomi descrittivi dati a posizioni nei tuoi programmi</b>. In NASM, un'etichetta è una stringa di caratteri seguita da due punti, generalmente posta su una riga contenente un'istruzione. Come molte cose nel linguaggio assembly, questo diventerà più chiaro con un semplice esempio. Apri un nuovo ambiente di lavoro e digita le seguenti istruzioni.
+</p>
+
+```asm
+ 	mov rax,5
+ DoMore:  dec rax
+	  jnz DoMore
+
+	nop
+```
+
+<p align=justify>
+Costruisci il codice e passa in modalità di debug. Osserva il valore di RAX nella vista Registri mentre esegui queste istruzioni. In particolare, osserva cosa succede nella finestra del codice sorgente quando esegui l'istruzione <code>JNZ</code>. <code>JNZ</code> salta sull'etichetta denominata come il suo operando se ZF è 0. Se ZF = 1, 'cade' sull'istruzione successiva. L'istruzione <code>DEC</code> decrementa il valore nel suo operando; qui, RAX. Finché il valore in RAX non cambia a 0, il flag Zero rimane azzerato. E finché il flag Zero è azzerato, JNZ salta di nuovo all'etichetta DoMore. Quindi, per cinque passaggi, DEC riduce il valore in RAX e JNZ salta di nuovo a DoMore. Ma non appena DEC riduce RAX a 0, il flag Zero si attiva, e JNZ 'cade' sull'istruzione NOP alla fine del codice. Strutture come questa si chiamano <b>cicli</b> e sono comuni in tutti i programmi, non solo nel linguaggio assembly. Il ciclo mostrato in precedenza non è utile, ma <b>dimostra come puoi ripetere un'istruzione quante volte ti serve, caricando un valore di conteggio iniziale in un registro e decrementando quel valore una volta per ogni passaggio nel ciclo</b>. L'istruzione <code>JNZ</code> testa ZF ogni volta che passa e sa di uscire dal ciclo quando il registro di conteggio arriva a 0. Possiamo rendere il ciclo un po' più utile senza aggiungere troppa complessità. Ciò che dobbiamo aggiungere è un elemento dati su cui il ciclo deve lavorare. 
+</p>
+
+```asm
+section .data
+	Snippet	db "KANGAROO"
+
+section .text
+	global main
+
+main:
+    mov rbp,rsp ;Save stack pointer for debugger
+
+    nop     
+; Put your experiments between the two nops...
+
+	mov rbx,Snippet
+	mov rax,8
+DoMore:	add byte [rbx],32
+	inc rbx
+	dec rax
+	jnz DoMore     
+	
+; Put your experiments between the two nops...
+	nop
+```
+
+<p align=justify>
+Il programma definisce una variabile e poi la modifica. Quindi, come possiamo vedere quali modifiche vengono apportate? SASM ha la capacità di visualizzare variabili in modalità debug. Dovrei notare qui che, al momento della scrittura, non ha la capacità di visualizzare regioni arbitrarie di memoria, in stile hexdump. I debugger più avanzati lo faranno. Quello che fa SASM è visualizzare variabili con nomi. Per utilizzare questa funzione, devi selezionare la casella di controllo Mostra memoria quando sei in modalità debug. (La casella di controllo è disattivata in modalità modifica.) Per impostazione predefinita, la finestra Mostra memoria è nella parte superiore della visualizzazione di SASM. Per mostrare il contenuto di una variabile nominata in un programma o in una sandbox che hai costruito, devi fare questo:
+</p>
+
+
+1. Entra nella modalità di debug.
+2. Nel campo Variabile O Espressione, inserisci Snippet.
+3. Nel campo Tipo, seleziona Smart dal menu a discesa più a sinistra.
+4. Nel campo successivo, seleziona b dal menu a discesa.
+5. Nel campo successivo, digita la lunghezza della variabile che desideri visualizzare, in byte. Per questo esempio, poiché il contenuto di Snippet è lungo otto caratteri, inserisci 8.
+
+<p align=justify>
+Una volta fatto ciò, vedrai “KANGAROO” nel campo Valore. È ciò che c'è nello Snippet. Una volta fatto, esegui il programma con Snippet a display. Dopo otto passaggi nel ciclo, “KANGAROO” è diventato “kangaroo”— come? Guarda l'istruzione <code>ADD</code> situata all'etichetta DoMore. In precedenza nel programma, avevamo copiato l'indirizzo di memoria di Snippet nel registro RBX. L'istruzione <code>ADD</code> aggiunge il valore letterale 32 a qualsiasi numero si trovi all'indirizzo memorizzato in RBX. Se guardi le tabelle ASCII noterai che la differenza tra il valore delle lettere maiuscole ASCII e le lettere minuscole ASCII è 32. Una K maiuscola ha il valore 4Bh, e una k minuscola ha il valore 6Bh. 6Bh–4Bh è 20h, che in decimale è 32. Quindi, se consideriamo le lettere ASCII come numeri, possiamo aggiungere 32 a una lettera maiuscola e trasformarla in una lettera minuscola.
+</p>
+
+<p align=justify>
+Ciò che il ciclo fa è effettuare otto passaggi, uno per ogni lettera in "KANGAROO." Dopo ogni <code>ADD</code>, il programma incrementa l'indirizzo in RBX, il che mette il prossimo carattere di "KANGAROO" nel mirino. Decrementa anche RAX, che era stato caricato con il numero di caratteri nella variabile Snippet prima che il ciclo iniziasse. Quindi, all'interno dello stesso ciclo, il programma conta verso l'alto lungo la lunghezza di Snippet in RBX, mentre conta verso il basso la lunghezza delle lettere rimaste in RAX. Quando RAX arriva a zero, significa che abbiamo esaminato tutti i caratteri in Snippet e abbiamo finito. Gli operandi dell'istruzione  <code>ADD</code> meritano un'ulteriore analisi. <b>Mettere RBX tra parentesi quadre fa riferimento al contenuto di Snippet</b>, piuttosto che al suo indirizzo. Ma ciò che è più importante, lo specificatore di dimensione BYTE dice a NASM che stiamo scrivendo solo un singolo byte all'indirizzo di memoria in RBX. NASM non ha modo di sapere altrimenti. È possibile scrivere un byte, due byte, quattro byte, o otto byte in memoria contemporaneamente, a seconda di ciò che dobbiamo realizzare. Tuttavia, dobbiamo dire a NASM quanti byte vogliamo che utilizzi, con un specificatore di dimensione. 
+</p>
+
 ### Sezione .data
 
 <p align=justify>
