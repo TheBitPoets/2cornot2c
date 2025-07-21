@@ -63,7 +63,7 @@ Apri il terminale o il prompt dei comandi, vai alla directory del progetto Vagra
      vagrant plugin install vagrant-vbguest
 ```
 
-2. Configura il Guest Additions nel uo Vagrantfile:
+2. Configura il Guest Additions nel tuo Vagrantfile:
 
 <p align="justify">	
 Apri il tuo Vagrantfile.<br>
@@ -6228,6 +6228,101 @@ Una volta fatto ciò, vedrai “KANGAROO” nel campo Valore. È ciò che c'è n
 Ciò che il ciclo fa è effettuare otto passaggi, uno per ogni lettera in "KANGAROO." Dopo ogni <code>ADD</code>, il programma incrementa l'indirizzo in RBX, il che mette il prossimo carattere di "KANGAROO" nel mirino. Decrementa anche RAX, che era stato caricato con il numero di caratteri nella variabile Snippet prima che il ciclo iniziasse. Quindi, all'interno dello stesso ciclo, il programma conta verso l'alto lungo la lunghezza di Snippet in RBX, mentre conta verso il basso la lunghezza delle lettere rimaste in RAX. Quando RAX arriva a zero, significa che abbiamo esaminato tutti i caratteri in Snippet e abbiamo finito. Gli operandi dell'istruzione  <code>ADD</code> meritano un'ulteriore analisi. <b>Mettere RBX tra parentesi quadre fa riferimento al contenuto di Snippet</b>, piuttosto che al suo indirizzo. Ma ciò che è più importante, lo specificatore di dimensione BYTE dice a NASM che stiamo scrivendo solo un singolo byte all'indirizzo di memoria in RBX. NASM non ha modo di sapere altrimenti. È possibile scrivere un byte, due byte, quattro byte, o otto byte in memoria contemporaneamente, a seconda di ciò che dobbiamo realizzare. Tuttavia, dobbiamo dire a NASM quanti byte vogliamo che utilizzi, con un specificatore di dimensione. 
 </p>
 
+### Valori Signed ed Unsigned
+
+<p align=justify>
+Nel linguaggio Assembly possiamo lavorare sia con valori numerici con segno che senza segno. I valori con segno, ovviamente, sono valori che possono diventare negativi. Un valore senza segno è sempre positivo. Ci sono istruzioni per le quattro operazioni aritmetiche di base nel set di istruzioni x64 e queste istruzioni possono operare su valori sia con segno che senza segno. (Con moltiplicazione e divisione, ci sono istruzioni separate per i calcoli con segno e senza segno) La chiave per comprendere la differenza tra valori numerici con segno e senza segno è sapere dove la CPU pone il segno. Non è un carattere trattino, ma effettivamente un bit nel modello binario che rappresenta il numero. Il bit più alto nel byte più significativo di un valore con segno è il <b>bit di segno</b>. Se il bit di segno è un 1, il numero è negativo. Se il bit di segno è un 0, il numero è positivo. Se intendiamo eseguire operazioni aritmetiche con segno, il bit più alto di un valore di registro o di una posizione di memoria è considerato il bit di segno. Se non intendiamo eseguire operazioni aritmetiche con segno, i bit più alti degli stessi valori negli stessi posti saranno semplicemente i bit più significativi di valori senza segno. La natura circa il segno di un valore si basa su come trattiamo il valore, non sulla natura del modello di bit sottostante che rappresenta il valore. Ad esempio, il numero binario 10101111 rappresenta un valore con segno o senza segno? La domanda è priva di senso senza contesto: se abbiamo bisogno di trattare il valore come un valore con segno, trattiamo il bit più significativo come il bit di segno, e il valore è -81. Se abbiamo bisogno di trattare il valore come un valore senza segno, trattiamo il bit alto semplicemente come un'altra cifra in un numero binario, e il valore è 175.
+</p>
+
+### Complemento a due e NEG
+
+<p align=justify>
+Un errore che i principianti commettono a volte è assumere che si possa rendere un valore negativo impostando il bit di segno a 1. Non è così! Non puoi semplicemente prendere il valore 42 e trasformarlo in -42 impostando il bit di segno. Il valore che otterrai sarà certamente negativo, ma non sarà -42. Un modo per avere un'idea di come i numeri negativi siano espressi nel linguaggio assembly è decrementare un numero positivo fino a entrare nel territorio negativo. Apri una sandbox pulita e inserisci queste istruzioni.
+</p>
+
+```asm
+	mov eax,5
+ DoMore: dec eax
+	jmp DoMore
+```
+
+<p align=justify>
+(Sto usando il registro EAX a 32 bit qui perché un registro “completo” a 64 bit è complicato da visualizzare sulla pagina stampata. Il concetto è lo stesso.) Costruisci il sandbox come al solito ed entra in modalità di debug. Nota che abbiamo aggiunto una nuova istruzione qui: <code>JMP</code>, e' un po' pericolosa: l'istruzione <code>JMP</code> non guarda i flag. Quando viene eseguita, salta sempre al suo operando; quindi, l'esecuzione tornerà all'etichetta DoMore ogni singola volta che JMP viene eseguita. Se sei astuto, noterai che non c'è modo di uscire da questa sequenza particolare di istruzioni, e sì, questo è il leggendario “ciclo infinito” in cui ti imbatterai di tanto in tanto. Quindi, assicurati di impostare un punto di interruzione sull'istruzione MOV inizial. Se clicchi sul quadrato rosso, SASM fermerà il programma. Sotto DOS, saresti rimasto bloccato e avresti dovuto riavviare il PC. Linux è una piattaforma di programmazione molto più robusta, una che non va in crisi al tuo più piccolo errore. Inizia a eseguire il sandbox passo dopo passo, e guarda EAX nella vista Registri. Il valore iniziale di 5 scenderà a 4, poi 3, poi 2, poi 1, poi 0, e poi…0FFFFFFFFh! Questa è l'espressione a 32 bit del valore semplice -1. Se continui a decrementare EAX, avrai un'idea di cosa succede.
+</p>
+
+```asm
+ 0FFFFFFFFh (-1)
+ 0FFFFFFFEh (-2)
+ 0FFFFFFFDh (-3)
+ 0FFFFFFFCh (-4)
+ 0FFFFFFFBh (-5)
+ 0FFFFFFFAh (-6)
+ 0FFFFFFF9h (-7)
+```
+
+<p align=justify>
+…e così via. Quando i numeri negativi vengono gestiti in questo modo, li chiamiamo <b>complemento a due</b>. Nel linguaggio assembly Intel, <b>i numeri negativi sono memorizzati come la forma in complemento a due del loro valore assoluto</b>, che se ti ricordi dalla matematica delle scuole medie è la distanza di un numero da 0, sia nella direzione positiva che negativa. La magia di esprimere numeri negativi in forma di complemento a due è che la CPU non ha realmente bisogno di sottrarre a livello di transistor. Genera semplicemente il complemento a due del sottraendo e lo aggiunge al minuendo. Questo è relativamente facile per la CPU, e tutto avviene in modo trasparente per i tuoi programmi, dove la sottrazione viene eseguita come ti aspetteresti. La buona notizia è che quasi mai devi calcolare manualmente un valore in complemento a due. C'è un'istruzione macchina che lo farà per te: <code>NEG</code>. L'istruzione <code>NEG</code> prenderà un valore positivo come operando e ne nega quel valore, ovvero lo rende negativo. Lo fa generando la forma in complemento a due del valore positivo. Carica le seguenti istruzioni in un'area sicura e esegui un passo alla volta attraverso di esse. Guarda EAX nella vista Registri.
+</p>
+
+```asm
+ mov eax,42
+ neg eax
+ add eax,42
+```
+<p align=justify>
+In un colpo solo, 42 diventa 0FFFFFFD6h, l'espressione esadecimale del complemento a due di -42. Aggiungi 42 a questo valore e guarda EAX andare a 0. A questo punto, potrebbe sorgere la domanda: Quali sono i più grandi numeri positivi e negativi che possono essere espressi in uno, due, quattro o otto byte? Quei due valori, più tutti i valori intermedi, costituiscono l'intervallo di un valore espresso in un dato numero di bit. Ho presentato questo nella figura di sotto.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/range_of_signed_values.png">
+</div>
+
+<p align=justify>
+Se sei abile e sai contare in esadecimale, potresti notare qualcosa qui dalla tabella: il valore positivo massimo e il valore negativo massimo per una data dimensione sono separati da un conteggio. Cioè, se stai lavorando a 8 bit e aggiungi uno al valore positivo massimo, 7Fh, ottieni 80h, il valore negativo massimo. Puoi osservare questo accadere in SASM eseguendo le seguenti due istruzioni in un sandbox e osservando RAX nel display dei Registri:
+</p>
+
+```asm
+ mov rax,07FFFFFFFFFFFFFFFh
+ inc rax
+```
+
+<p align=justify>
+(Assicurati di avere il numero corretto di F! Ci sono un 7 e 15 F.) Dopo che l'istruzione MOV è stata eseguita, RAX mostrerà il valore decimale 9223372036854775807. Questo è il valore intero con segno più alto esprimibile in 64 bit. Incrementa il valore di 1 con l'istruzione INC, e immediatamente il valore in RAX diventa -9223372036854775808.
+</p>
+
+### Estensione del segno e MOVSX
+
+<p align=justify>
+C'è un sottile problema da evitare quando si lavora con valori con segno di dimensioni diverse. Il bit di segno è il bit alto in un byte, parola o doppia parola con segno. Ma cosa succede quando devi trasferire un valore con segno in un registro o in una posizione di memoria più grande? Cosa succede, ad esempio, se devi spostare un valore con segno a 16 bit in un registro a 32 bit? Se usi l'istruzione <code>MOV</code>, niente di buono. Prova questo.
+</p>
+
+```asm
+ mov ax,-42
+ mov ebx,eax
+```
+
+<p align=justify>
+La forma esadecimale di -42 è 0FFD6h. Se hai quel valore in un registro a 16 bit come AX e usi <code>MOV</code> per spostare il valore in un registro più grande come EBX o RBX, il bit di segno non sarà più il bit di segno. In altre parole, una volta che -42 passa da un contenitore a 16 bit a un contenitore a 32 bit, cambia da -42 a 65494. Il bit di segno è ancora lì. Non è stato azzerato. Tuttavia, in un registro più grande, il vecchio bit di segno è ora solo un altro bit in un valore binario, senza significato speciale. Questo esempio è un po' fuorviante. Prima di tutto, non possiamo letteralmente spostare un valore da AX a EBX. <b>L'istruzione <code>MOV</code> gestirà solo operandi di registro della stessa dimensione</b>. Tuttavia, ricorda che AX è semplicemente i due byte inferiori di EAX. Possiamo spostare AX in EBX spostando EAX in EBX, ed è quello che abbiamo fatto nell'esempio precedente. Purtroppo, SASM non è in grado di mostrarci valori con segno a 8 bit, 16 bit o 32 bit. Il suo debugger può visualizzare solo RAX, e possiamo vedere AL, AH, AX o EAX solo vedendoli all'interno di RAX. Ecco perché, nell'esempio precedente, SASM mostra il valore che pensavamo fosse -42 come 65494. La visualizzazione dei Registri di SASM non ha concetto di un bit di segno tranne che nel bit più alto di un valore a 64 bit. Le moderne CPU Intel ci forniscono una via d'uscita da questa trappola, sotto forma dell'istruzione <code>MOVSX</code>. <code>MOVSX</code> significa 'Sposta con Estensione del Segno', ed è una delle molte istruzioni che non erano presenti nelle CPU originali 8086/8088. <code>MOVSX</code> è stata introdotta con la famiglia di CPU 386, e poiché Linux non può girare su nulla di più vecchio di una 386, puoi presumere che qualsiasi PC Linux supporti l'istruzione <code>MOVSX</code> Carica questo in un ambiente di test e prova.
+</p>
+
+```asm
+ xor rax,rax
+ mov ax,-42
+ movsx rbx,ax
+```
+
+<p align=justify>
+La prima riga serve semplicemente a azzerare RAX per garantire che non ci siano "avanzi" memorizzati in esso da codice eseguito in precedenza. Ricorda che SASM non può visualizzare AX singolarmente, quindi mostrerà RAX come contenente 65494. Tuttavia, quando trasferisci AX in RBX con <code>MOVSX</code>, il valore di RBX verrà quindi mostrato come -42. Ciò che è successo è che l'istruzione <code>MOVSX</code> ha eseguito l'estensione del segno sui suoi operandi, prendendo il bit di segno dalla quantità a 16 bit in AX e rendendolo il bit di segno della quantità a 64 bit in RBX. <code>MOVSX</code> è significativamente diverso da <code>MOV</code> in quanto <b></b>i suoi operandi possono essere di dimensioni diverse</p>. <code>MOVSX</code> ha diverse possibili variazioni, che ho riassunto nella figura di sotto.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/movsx_instruction.png">
+</div>
+
+<p align=justify>
+Nota che l'operando di destinazione può essere solo un registro. La notazione qui è una che vedrai in molti riferimenti al linguaggio assembly nella descrizione degli operandi delle istruzioni. La notazione “r16” è un'abbreviazione per “qualsiasi registro a 16 bit.” Allo stesso modo, “r/m” significa “registro o memoria” ed è seguita dalla dimensione in bit. Ad esempio, “r/m16” significa “qualsiasi registro a 16 bit o posizione di memoria a 16 bit.” Detto ciò, potresti scoprire, dopo aver risolto alcuni problemi in assembly, che l'aritmetica con segno è usata meno spesso di quanto pensi. È buono sapere come funziona, ma non sorprenderti se passi mesi o addirittura anni senza mai averne bisogno.
+</p>
+
 ### Sezione .data
 
 <p align=justify>
@@ -6241,6 +6336,7 @@ Non tutti gli elementi di dati devono avere valori prima che il programma inizi 
 </p>
 
 ### Sezione .text
+
 <p align=justify>
 Le vere istruzioni macchina che compongono il tuo programma vanno nella sezione <b>.text</b>. Ordinariamente, non ci sono elementi di dati definiti in .text. La sezione .text contiene simboli chiamati <b>etichette</b> (labels) che identificano posizioni nel codice del programma per salti e chiamate, ma al di là di questo, è tutto qui. Tutte le etichette globali devono essere dichiarate nella sezione .text, altrimenti le etichette non possono essere "visibili" al di fuori del tuo programma, né dal linker di Linux né dal caricatore di Linux. Esaminiamo la questione delle etichette con maggiore attenzione.
 </p>
