@@ -6323,6 +6323,62 @@ La prima riga serve semplicemente a azzerare RAX per garantire che non ci siano 
 Nota che l'operando di destinazione può essere solo un registro. La notazione qui è una che vedrai in molti riferimenti al linguaggio assembly nella descrizione degli operandi delle istruzioni. La notazione “r16” è un'abbreviazione per “qualsiasi registro a 16 bit.” Allo stesso modo, “r/m” significa “registro o memoria” ed è seguita dalla dimensione in bit. Ad esempio, “r/m16” significa “qualsiasi registro a 16 bit o posizione di memoria a 16 bit.” Detto ciò, potresti scoprire, dopo aver risolto alcuni problemi in assembly, che l'aritmetica con segno è usata meno spesso di quanto pensi. È buono sapere come funziona, ma non sorprenderti se passi mesi o addirittura anni senza mai averne bisogno.
 </p>
 
+### Operandi impliciti e MUL
+
+<p align=justify>
+Per la maggior parte del tempo, passi i valori alle istruzioni della macchina tramite uno o due operandi posti proprio lì sulla linea accanto al mnemonico. Questo è buono, perché quando dici <code>MOV RAX,RBX</code>, sai precisamente cosa si sta muovendo, da dove proviene e dove sta andando. Purtroppo, questo non è sempre il caso. Alcune istruzioni agiscono su registri o persino su posizioni di memoria che non sono dichiarate in un elenco di operandi. Queste istruzioni hanno infatti operandi, ma rappresentano assunzioni fatte dall'istruzione. Tali operandi sono chiamati <b>operandi impliciti</b> e non cambiano e non possono essere cambiati. Per aggiungere confusione, la maggior parte delle istruzioni che hanno operandi impliciti ha anche operandi espliciti. I migliori esempi di operandi impliciti nel set di istruzioni x64 sono le istruzioni di moltiplicazione e divisione. Il set di istruzioni x64 ha due insiemi di istruzioni per moltiplicare e dividere. Un insieme, <code>MUL</code> e <code>DIV</code>, che gestisce calcoli senza segno. L'altro, <code>IMUL</code> e <code>IDIV</code>, gestisce calcoli con segno <code>MUL</code> e <code>DIV</code> sono usati molto più frequentemente delle loro alternative a matematica con segno, e sono quelli di cui parlerò in questa sezione. L'istruzione <code>MUL</code> fa ciò che ti aspetteresti: moltiplica due valori e restituisce un prodotto. Tra le operazioni matematiche di base, tuttavia, la moltiplicazione ha un problema speciale: genera valori di output che sono spesso enormemente più grandi dei valori di input. Questo rende impossibile seguire il modello convenzionale negli operandi delle istruzioni Intel, dove il valore generato da un'istruzione va nell'operando di destinazione.
+</p>
+
+<p align=justify>
+Considera un'operazione di moltiplicazione a 32 bit. Il valore più grande senza segno che può essere contenuto in un registro a 32 bit è 4.294.967.295. Moltiplicalo anche solo per due e ottieni un prodotto a 33 bit, che non potrà più essere contenuto in alcun registro a 32 bit. Questo problema ha afflitto le architetture Intel (tutte le architetture, in effetti) sin dall'inizio. Quando l'x86 era un'architettura a 16 bit, il problema era dove collocare il prodotto di due valori a 16 bit, che può facilmente superare un registro a 16 bit. I progettisti di Intel hanno risolto il problema nel unico modo possibile: <b>utilizzando due registri per contenere il prodotto</b>. Non è immediatamente ovvio per chi non è matematico, ma è vero (provalo su una calcolatrice!) che il prodotto più grande di due numeri binari può essere espresso in non più del doppio dei bit richiesti dal fattore più grande. In parole povere, qualsiasi prodotto di due valori a 16 bit può essere contenuto in 32 bit, e qualsiasi prodotto di due valori a 32 bit può essere contenuto in 64 bit. Quindi, mentre potrebbero essere necessari due registri per contenere il prodotto, mai più di due registri saranno necessari. Questo ci porta all'istruzione <code>MUL</code>. code>MUL</code> è un'istruzione curiosa dal punto di vista degli operandi: prende solo un operando, che contiene uno dei fattori da moltiplicare. L'altro fattore è implicito, così come la coppia di registri che riceve il prodotto del calcolo. <code>MUL</code> appare quindi ingannevolmente semplice.
+</p>
+
+```asm
+ mul rbx
+```
+
+<p align=justify>
+Ovviamente, se si sta eseguendo una moltiplicazione, qui è coinvolto qualcosa di più del semplice RBX. Gli operandi impliciti dipendono dalla dimensione di quello esplicito. Questo ci dà quattro variazioni, che ho riassunto nella figura di sotto.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/mul_instruction.png">
+</div>
+
+<p align=justify>
+Il primo fattore è dato nel singolo operando esplicito, che può essere un valore in un registro o in una posizione di memoria. Il secondo fattore è implicito e sempre nel registro generico "A" appropriato alla dimensione del primo fattore. Se il primo fattore è un valore a 8 bit, il secondo fattore è sempre nel registro AL a 8 bit. Se il primo fattore è un valore a 16 bit, il secondo fattore si trova sempre nel registro AX a 16 bit e così via. Una volta che il prodotto richiede più di 16 bit, i registri DX vengono redatti per contenere la parte di ordine superiore del prodotto. Per "di alto livello" qui intendo la parte del prodotto che non rientra nel registro "A". Ad esempio, se si moltiplicano due valori a 16 bit e il prodotto è 02A456Fh, il registro AX conterrà 0456Fh e il registro DX conterrà 02Ah. Si noti che quando un prodotto è abbastanza piccolo da entrare interamente nel primo dei due registri che contengono il prodotto, il registro di ordine superiore (sia esso AH, DX, EDX o RDX) viene azzerato. I registri spesso scarseggiano nel lavoro di assemblaggio, ma anche se si è sicuri che le moltiplicazioni coinvolgano sempre prodotti di piccole dimensioni, non è possibile utilizzare il registro di ordine superiore per nient'altro mentre viene eseguita un'istruzione <code>MUL</code>. Si noti inoltre che i valori immediati non possono essere utilizzati come operandi per <code>MUL</code>; Cioè, non puoi farlo, per quanto sarebbe spesso utile indicare il primo fattore come un valore immediato
+</p>
+
+```asm
+ mul 42
+```
+
+### MUL ed il Carry Flag
+
+<p align=justify>
+Non tutte le moltiplicazioni generano prodotti sufficientemente grandi da richiedere due registri. Per la maggior parte del tempo scoprirai che 64 bit sono più che sufficienti. Quindi, come puoi capire se ci sono cifre significative nel registro di ordine superiore? <code>MUL</code> imposta molto utilmente il flag di riporto CF quando il valore del prodotto oltrepassa il registro di ordine inferiore. Se, dopo una <code>MUL</code>, trovi CF impostato su 0, puoi ignorare il registro di ordine superiore, sicuro della conoscenza che l'intero prodotto si trova nel registro di ordine inferiore dei due registri. Vale la pena fare una rapida dimostrazione. Prima, prova una moltiplicazione 'piccola' dove il prodotto si adatterà facilmente in un singolo registro a 32 bit.
+</p>
+
+```asm
+ mov eax,447
+ mov ebx,1739
+ mul ebx
+```
+
+<p align=justify>
+Ricorda che stiamo moltiplicando EAX per EBX qui. Procedi attraverso le tre istruzioni e, dopo che l'istruzione MUL è stata eseguita, guarda nella vista dei Registri per vedere il prodotto in EDX e EAX. EAX contiene 777333 e EDX contiene 0. Guarda poi lo stato attuale dei vari flag. Nessun segno di CF, il che significa che CF è stato azzerato a 0. Successivamente, aggiungi le seguenti istruzioni al tuo sandbox, dopo le tre mostrate in precedenza:
+</p>
+
+```asm
+ mov eax,0FFFFFFFFh
+ mov ebx,03B72h
+ mul ebx
+```
+
+<p align=justify>
+Procedi come al solito, osservando il contenuto di EAX, EDX ed EBX nella vista Registri. Dopo l'istruzione <code>MUL</code>, guarda i flag nella vista Registri. Il flag di carry CF sarà impostato su 1 (quindi avere anche il flag di overflow OF, il flag di segno SF, il flag di abilitazione dell'interrupt IF e il flag di parità PF, ma questi non sono generalmente utili in aritmetica senza segno). Ciò che CF ti dice fondamentalmente qui è che ci sono cifre significative nella parte alta del prodotto, e queste sono memorizzate in EDX per le moltiplicazioni a 32 bit, RDX per le moltiplicazioni a 64 bit, e così via.
+</p>
+
 ### Sezione .data
 
 <p align=justify>
