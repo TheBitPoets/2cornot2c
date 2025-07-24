@@ -6656,54 +6656,87 @@ I simboli usati per indicare la natura degli operandi nella sezione <b>Legal For
 <ul>
 	<li>
 		<p align=justify>
-			<b>r8</bUn registro a 8 bit, metà, uno di AH, AL, BH, BL, CH, CL, DH o DL
+			<b>r8</b>Un registro a 8 bit, metà, uno di AH, AL, BH, BL, CH, CL, DH o DL
 		</p>
+	</li>
+	<li>
   		<p align=justify>
 			<b>r16</b>Un registro a uso generale a 16 bit, uno tra AX, BX, CX, DX, BP, SP, SI o DI.
-		</p>
+		</p>	
+	</li>
+ 	<li>
   		<p align=justify>
 			<b>r32</b>Un registro generale a 32 bit, uno tra EAX, EBX, ECX, EDX, EBP, ESP, ESI o EDI.
 		</p>
-  		<p align=justify>
+  		
+	</li>
+	<li> 
+    		<p align=justify>
 			<b>r64</b>Un registro a 64 bit di uso generale, uno di RAX, RBX, RCX, RDX, RBP, RSP, RSI, RDI, o uno di R8-R15
-		</p>
-  		<p align=justify>
+		</p>	
+	</li>
+ 	<li>
+    		<p align=justify>
 			<b>sr</b>Uno dei registri di segmento, CS, DS, SS, ES, FS o GS
-		</p>
-  		<p align=justify>
+		</p>	
+	</li>
+ 	<li>
+    		<p align=justify>
 			<b>m8</b>Un byte di memoria a 8 bit
-		</p>
-  		<p align=justify>
+		</p>	
+	</li>
+ 	<li>
+    		<p align=justify>
 			<b>m16</b>Una parola di dati di memoria a 16 bit
-		</p>
-  		<p align=justify>
+		</p>	
+	</li>
+ 	<li>
+    		<p align=justify>
 			<b>m32</b>Una parola di dati di memoria a 32 bit
-		</p>
-  		<p align=justify>
+		</p>	
+	</li>
+ 	<li>
+    		<p align=justify>
 			<b>m64</b>Una parola di 64 bit di dati in memoria.
 		</p>
-  		<p align=justify>
+	</li>
+ 	<li>
+    		<p align=justify>
 			<b>i8</b>Un byte a 8 bit di dati immediati.
-		</p>
-  		<p align=justify>
+		</p>	
+	</li>
+ 	<li>
+    		<p align=justify>
 			<b>i16</b>Una parola a 16 bit di dati immediati.
-		</p>
-  		<p align=justify>
+		</p>	
+	</li>
+ 	<li>
+    		<p align=justify>
 			<b>i32</b>Una parola a 32 bit di dati immediati.
-		</p>
-  		<p align=justify>
+		</p>	
+	</li>
+ 	<li>
+    		<p align=justify>
 			<b>i64</b>Una parola a 64 bit di dati immediati.
-		</p>
-  		<p align=justify>
+		</p>	
+	</li>
+ 	<li>
+    		<p align=justify>
 			<b>d8</b>Un spostamento a 8 bit con segno. Non ne abbiamo ancora parlato, ma uno spostamento è una distanza tra la posizione attuale nel codice e un'altra posizione nel codice a cui vogliamo saltare. È con segno (cioè, può essere negativo o positivo) perché uno spostamento positivo ti porta più in alto (in avanti) nella memoria, mentre uno spostamento negativo ti porta più in basso (indietro) nella memoria. Esamineremo questo concetto in dettaglio più avanti.
-		</p>
-  		<p align=justify>
+		</p>	
+	</li>
+ 	<li>
+    		<p align=justify>
 			<b>d16</b>Uno spostamento firmato a 16 bit. Ancora una volta, per l'uso con istruzioni di salto e chiamata.
-		</p>
-  		<p align=justify>
+		</p>	
+	</li>
+ 	<li>
+    		<p align=justify>
 			<b>d32</b>Un spostamento firmato a 32 bit.
 		</p>
-		<p align=justify>
+	</li>
+ 	<li>
+  		<p align=justify>
 			<b>d64</b>Un spostamento firmato a 64 bit.
 		</p>
 	</li>
