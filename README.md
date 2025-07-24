@@ -7473,6 +7473,149 @@ Exit:   ret
 Questo sembra spaventoso, ma consiste quasi interamente in istruzioni e concetti di cui abbiamo già discusso. Ecco alcune note su cose che potresti non comprendere completamente a questo punto.
 </p>
 
+<ul>
+	<li>
+		<p align=justify>
+			Buff è una variabile non inizializzata e quindi si trova nella sezione .bss del programma. È uno spazio riservato con un indirizzo. Buff non ha un valore iniziale e non contiene nulla fino a quando non leggiamo un carattere da stdin e lo memorizziamo lì.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Quando una chiamata a sys_read restituisce 0, sys_read ha raggiunto la fine del file da cui sta leggendo. Se restituisce un valore positivo, questo valore è il numero di caratteri che ha letto dal file. In questo caso, poiché abbiamo richiesto solo un carattere, sys_read restituirà un conteggio di 1 o 0 per indicare che non ci sono più caratteri.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			L'istruzione CMP confronta i suoi due operandi e imposta i flag di conseguenza. L'istruzione di salto condizionale che segue ogni istruzione CMP agisce in base allo stato dei flag.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			L'istruzione JB (Jump If Below) salta se l'operando sinistro del CMP precedente è inferiore in valore rispetto al suo operando destro.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			L'istruzione JA (Salta se Maggiore) salta se l'operando sinistro del CMP precedente è superiore in valore rispetto all'operando destro.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Poiché un indirizzo di memoria (come Buff) punta semplicemente a una posizione in memoria di dimensioni non specifiche, devi inserire il qualificatore BYTE tra CMP e il suo operando di memoria per dire all'assemblatore che vuoi confrontare due valori a 8 bit. In questo caso, i due valori a 8 bit sono un carattere ASCII come w e un valore esadecimale come 7Ah.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Poiché i programmi scritti in SASM utilizzano la Standard C Library, di solito terminano con un'istruzione RET anziché con la funzione SYSCALL Exit.
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+L'esecuzione del programma eseguibile avviene utilizzando la reindirizzamento I/O. La riga di comando per uppercaser1 appare così.
+</p>
+
+```
+./uppercaser1> outputfile < inputfile
+```
+
+<p align=justify>
+Sia il file di input che il file di output possono essere qualsiasi file di testo. Ecco una cosa da provare
+</p>
+
+```asm
+./uppercaser1> allupper.txt < uppercaser1.asm
+```
+
+<p align=justify>
+Il file allupper.txt verrà creato quando esegui il programma e sarà riempito con il codice sorgente del programma, forzando tutti i caratteri a maiuscolo. Nota che se stai lavorando all'interno di SASM, puoi inserire il testo da convertire nella finestra di Input. (Carica un file di testo puro in un editor di testo e estrai del testo tramite il comando Copia, quindi incollalo nella finestra di Input tramite Incolla.) Quando esegui il programma, leggerà il testo dalla finestra di Input, lo forzerà a maiuscolo e poi scriverà il testo convertito nella finestra di Output. SASM mappa la finestra di Input a stdin e la finestra di Output a stdout.
+</p>
+
+<p align=justify>
+Specialmente mentre sei un principiante, potresti scoprire, mentre tenti questo ultimo passo di passare dal pseudocodice alle istruzioni per la macchina, che hai frainteso qualcosa o dimenticato qualcosa e che il tuo pseudocodice non è completo o corretto. (O entrambi!) Potresti anche renderti conto che ci sono modi migliori per fare qualcosa nelle istruzioni in assembly rispetto a quello che una traduzione letterale del pseudocodice potrebbe darti. Apprendere è un'attività disordinata e, non importa quanto tu pensi di essere bravo, continuerai sempre a imparare. Un buon esempio, e uno che potrebbe effettivamente esserti venuto in mente mentre leggi il precedente codice assembly, è questo: il programma non ha alcun rilevamento degli errori. Presume semplicemente che qualsiasi nome di file di input inserito dall'utente per la reindirizzazione I/O sia un file esistente e non corrotto con dati al suo interno, che ci sarà spazio sull'unità corrente per il file di output, e così via. È un modo per operare pericoloso, anche se Dio sa che è stato fatto. Le chiamate di sistema Linux relative ai file restituiscono valori di errore e qualsiasi programma che le utilizza dovrebbe esaminare quei valori di errore e agire di conseguenza. Ci saranno quindi momenti in cui dovrai seriamente riorganizzare il tuo pseudocodice a metà del processo, o addirittura scartarlo completamente e ricominciare da capo. Queste intuizioni hanno la fastidiosa abitudine di verificarsi quando sei in quella fase finale di conversione del pseudocodice in istruzioni per la macchina. Sii pronto.
+</p>
+
+<p align=justify>
+E c'è un'altra questione che potrebbe esserti venuta in mente, se sai qualcosa sui file I/O a basso livello: la chiamata al kernel sys_read di Linux non è limitata a restituire un singolo carattere alla volta. Passi l'indirizzo di un buffer a sys_read, e sys_read cercherà di riempire quel buffer con quanti più caratteri dal file di input come gli dici di fare. Se configuri un buffer di 500 byte, puoi chiedere a sys_read di portare 500 caratteri da stdin e metterli in quel buffer. Una singola chiamata a sys_read può quindi fornire 500 caratteri (o 1.000, o 16.000) su cui lavorare, tutti in una volta. Questo riduce il tempo che Linux impiega a muoversi avanti e indietro tra il suo filesystem e il tuo programma, ma cambia anche in modo significativo la forma del programma. Riempie il buffer, e poi devi scorrere il buffer un carattere alla volta, convertendo quello che c'è in minuscolo in maiuscolo. Sì, avresti dovuto saperlo in anticipo, mentre affinavi una soluzione in pseudocodice al tuo problema—e dopo un po' di tempo lo farai. Ci sono un numero scoraggiante di dettagli di questo tipo che devi avere a portata di mano nella tua mente, e non li memorizzerai tutti in un pomeriggio. Di tanto in tanto, una tale rivelazione può costringerti a 'riavvolgere' un paio di iterazioni e riformulare parte del tuo pseudocodice.
+</p>
+
+### Scansionare un Buffer
+
+<p align=justify>
+È il caso dell'esempio attuale. Il programma ha bisogno di gestione degli errori, che in questo caso implica principalmente il test dei valori di ritorno da sys_read e sys_write e la visualizzazione di messaggi significativi sulla console Linux. Non c'è differenza tecnica tra la visualizzazione dei messaggi di errore e la visualizzazione di slogan per i diner a buon mercato, quindi potrei lasciarti aggiungere la gestione degli errori da solo come esercizio. (Non dimenticare stderr.) La sfida più interessante, tuttavia, riguarda l'I/O di file bufferizzato. Le chiamate di sistema Unix read e write sono orientate ai buffer e non ai caratteri, quindi dobbiamo rielaborare il nostro pseudocodice per riempire i buffer con i caratteri e poi elaborare i buffer.
+</p>
+
+<p align=justify>
+Torniamo al pseudocodice e proviamo.
+</p>
+
+```
+ Read:  Set up registers for the sys_read kernel call.
+        Call sys_read to read a buffer full of characters from stdin.
+        Test for EOF.
+        If we're at EOF, jump to Exit.
+ 
+        Set up registers as a pointer to scan the buffer.
+ Scan:  Test the character at buffer pointer to see if it's lowercase.
+        If it's not a lowercase character, skip conversion.
+        Convert the character to uppercase by subtracting 20h.
+        Decrement buffer pointer.
+        If we still have characters in the buffer, jump to Scan.
+ 
+Write: Set up registers for the Write kernel call.
+       Call sys_write to write the processed buffer to stdout.
+       Jump back to Read and get another buffer full of characters.
+ 
+Exit:  Set up registers for terminating the program via sys_exit.
+       Call sys_exit.
+```
+
+<p align=justify>
+Questo aggiunge tutto ciò di cui hai bisogno per leggere un buffer da disco, esaminare e convertire i caratteri nel buffer e poi scrivere di nuovo il buffer su disco. (Naturalmente, il buffer deve essere ingrandito da un carattere a una dimensione utile, come 1024 caratteri.) Il succo del trucco del buffer è impostare un puntatore nel buffer e poi esaminare e (se necessario) convertire il carattere all'indirizzo espresso dal puntatore. Poi spostiamo il puntatore al carattere successivo nel buffer e facciamo la stessa cosa, ripetendo il processo finché non abbiamo trattato tutti i caratteri nel buffer. Scansionare un buffer è un ottimo esempio di un ciclo in linguaggio assembly. Ad ogni passaggio attraverso il ciclo dobbiamo testare qualcosa per vedere se siamo finiti e se dovremmo uscire dal ciclo. Il “qualcosa” in questo caso è il puntatore. Possiamo impostare il puntatore all'inizio del buffer e testare per vedere quando raggiunge la fine, oppure potremmo impostare il puntatore alla fine del buffer e lavorare verso l'inizio, testando per vedere quando raggiungiamo l'inizio del buffer. Entrambi gli approcci funzioneranno. Tuttavia, partire dalla fine e lavorare verso l'inizio del buffer può essere fatto un po' più rapidamente e con meno istruzioni. (Spiegherò il perché a breve.) La nostra prossima rifinitura dovrebbe iniziare a parlare di specifiche: quali registri fanno cosa, e così via.
+</p>
+
+```
+ Read:  Set up registers for the sys_read kernel call.
+        Call sys_read to read a buffer full of characters from stdin.
+        Store the number of characters read in RSI
+        Test for EOF (rax = 0).
+        If we're at EOF, jump to Exit.
+ 
+        Put the address of the buffer in rsi.
+        Put the number of characters read into the buffer in rdx.
+ Scan:  Compare the byte at [r13+rbx] against 'a'.
+        If the byte is below 'a' in the ASCII sequence, jump to Next.
+        Compare the byte at [r13+rbx] against 'z'.
+        If the byte is above 'z' in the ASCII sequence, jump to Next.
+        Subtract 20h from the byte at [r13+rbx].
+ Next:  Decrement rbx by one.
+        Jump if not zero to Scan.
+ Write: Set up registers for the Write kernel call.
+        Call sys_write to write the processed buffer to stdout.
+        Jump back to Read and get another buffer full of characters.
+ Exit:  Set up registers for terminating the program via sys_exit.
+        Call sys_exit.
+```
+
+<p align=justify>
+Questo affinamento riconosce che non c'è un solo test da effettuare, ma due. I caratteri minuscoli rappresentano un intervallo nella sequenza ASCII, e gli intervalli hanno inizio e fine. Dobbiamo determinare se il carattere in esame rientra nell'intervallo. Per farlo, è necessario testare il carattere per vedere se è inferiore al carattere più basso nell'intervallo delle minuscole (a) o superiore al carattere più alto nell'intervallo delle minuscole (z). Se il carattere in questione non è minuscolo, non è necessaria alcuna elaborazione, e passiamo al codice che aumenta il puntatore al carattere successivo. Navigare all'interno del buffer coinvolge due registri. L'indirizzo dell'inizio del buffer è posto in R13. Il numero di caratteri nel buffer è posto nel registro RBX. Se si sommano i due registri, si ottiene l'indirizzo dell'ultimo carattere nel buffer. Se si decrementa il contatore dei caratteri in RBX, la somma di R13 e RBX punterà al penultimo carattere nel buffer. Ogni volta che si decrementa RBX, si avrà l'indirizzo di un carattere più vicino all'inizio del buffer. Quando RBX viene deprivato di uno fino a zero, sarete all'inizio del buffer, e tutti i caratteri saranno stati elaborati.
+</p>
+
+<p align=justify>
+Ma aspetta... non è del tutto vero. C'è un bug nel pseudocodice, ed è uno dei bug più comuni per i principianti in tutto il linguaggio assembly: il leggendario errore "off by one". La somma di R13 e RBX punterà a un indirizzo oltre la fine del buffer. E quando il conteggio in RBX scende a zero, un carattere—quello all'inizio del buffer—rimarrà inesaminato e (se è minuscolo) intoccato. Il modo più semplice per spiegare da dove proviene questo bug è disegnarlo, come ho fatto nella figura di sotto. C'è un file di testo molto breve nel l'archivio delle liste per questo libro chiamato gazabo.txt. Contiene solo la singola parola senza senso gazabo e il marcatore EOL, per un totale di sette caratteri. La figura di sotto mostra il file gazabo.txt come apparirebbe dopo che Linux lo carica in un buffer in memoria. L'indirizzo del buffer è stato caricato nel registro R13, e il numero di caratteri (qui, 7) è stato caricato in RBX. Se sommi R13 e RBX, l'indirizzo risultante va oltre la fine del buffer in una memoria non utilizzata (si spera!).
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/off_by_one_error.png">
+</div>
+
+<p align=justify>
+Questo tipo di problema può verificarsi ogni volta che si iniziano a mescolare gli offset degli indirizzi e i conteggi delle cose. I conteggi iniziano da 1, e gli offset iniziano da 0. Il carattere #1 si trova realmente all'offset 0 dall'inizio del buffer, il carattere #2 si trova all'offset 1, e così via. Stiamo cercando di utilizzare un valore in RBX sia come conteggio che come offset, e se gli offset nel buffer sono assunti da 0, un errore di uno è inevitabile. La soluzione è semplice: decrementare l'indirizzo del buffer (che è memorizzato in R13) di 1 prima di cominciare la scansione. R13 ora punta alla posizione di memoria immediatamente prima del primo carattere nel buffer. Con R13 impostato in questo modo, possiamo utilizzare il valore di conteggio in R13 sia come conteggio che come offset. Quando il valore in R13 è decrementato a 0, abbiamo elaborato il carattere g e usciamo dal ciclo. Un esperimento interessante è “commentare” l'istruzione macchina DEC R13 e poi eseguire il programma. Questo si fa semplicemente mettendo un punto e virgola all'inizio della riga contenente DEC R13 e ricompilando. Digita gazabo o qualsiasi altra cosa in minuscolo nella finestra di input e poi esegui il programma.
+</p>
+
+### Dallo Pseudocodice al codice Assembly
+
+
 ## Controllo dei processi
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.01.png)
