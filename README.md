@@ -7615,6 +7615,116 @@ Questo tipo di problema può verificarsi ogni volta che si iniziano a mescolare 
 
 ### Dallo Pseudocodice al codice Assembly
 
+<p align=justify>
+A questo punto farò quel salto spaventoso verso le istruzioni della macchina reale, ma per brevità mostrerò solo il ciclo stesso.
+</p>
+
+```asm
+ ; Set up the registers for the process buffer step:
+     mov rbx,rax          ; Place the number of bytes read into rbx
+     mov r13,Buff         ; Place address of buffer into r13
+     dec r13              ; Adjust r13 to offset by one
+ 
+; Go through the buffer and convert lowercase to uppercase characters:
+ Scan:
+     cmp byte [r13+rbx],61h  ; Test input char against lowercase 'a'
+     jb Next                 ; If below 'a' in ASCII, not lowercase
+     cmp byte [r13+rbx],7Ah  ; Test input char against lowercase 'z'
+     ja Next                 ; If above 'z' in ASCII, not lowercase
+                             ; At this point, we have a lowercase char
+     sub byte [r13+rbx],20h  ; Subtract 20h to give uppercase...
+ Next:
+     dec rbx                 ; Decrement counter
+     jnz Scan                ; If characters remain, loop back
+```
+
+<p align=justify>
+Lo stato del buffer e dei registri puntatore prima di iniziare la scansione è mostrato nella seconda parte della figura di sopra. La prima volta, il valore in RBX è il conteggio dei caratteri nel buffer. La somma R13 + RBX punta al carattere EOL alla fine del buffer. La volta successiva, RBX viene decrementato a 6, e R13 + RBX punta alla lettera o in gazabo. Ogni volta che decretiamo RBX, controlliamo il flag Zero usando l'istruzione JNZ, che salta di nuovo all'etichetta Scan quando il flag Zero non è impostato. Nell'ultima passata attraverso il ciclo, RBX contiene 1, e R13 + RBX punta alla lettera g nella primissima posizione del buffer. Solo quando RBX è decrementato a zero JNZ "scorre" e il ciclo termina. I puristi potrebbero pensare che decrementare l'indirizzo in R13 prima che inizi il ciclo sia un trucco rischioso. Hanno in parte ragione: dopo essere stato decrementato, R13 punta a una posizione in memoria al di fuori dei limiti del buffer. Se il programma tentasse di scrivere in quella posizione, un'altra variabile potrebbe essere corrotta, o potrebbe verificarsi un errore di segmentazione. La logica del ciclo non richiede di scrivere in quell'indirizzo particolare, ma potrebbe facilmente esserlo fatto per errore.
+</p>
+
+<p align=justify>
+Il codice di sotto mostra il programma completato, completamente commentato con tutto il pseudocodice convertito in codice assembly.
+</p>
+
+```asm
+ ;  Executable name  : 	uppercaser2gcc
+ ;  Version          : 	2.0
+ ;  Created date     : 	6/17/2022
+ 
+ ;  Last update      : 	5/8/2023
+
+ ;  Author           : 	Jeff Duntemann
+
+ ;  Description      : 	A simple program in assembly for Linux, using NASM 2.15.05
+ ;		       	demonstrating simple text file I/O
+ ;			(through redirection) for reading an input file to
+ ;			a buffer in blocks, forcing lowercase characters to
+ ;			uppercase, and writing the modified buffer to
+ ;			an output file.
+ ;                    
+ ;                    
+ ;  Run it this way in a terminal window:
+ ;
+ ;    uppercaser2> (output file) < (input file)  
+ ;
+ ;  Build in SASM using the default make lines and x64 checked
+ ;
+
+ SECTION .bss      		; Section containing uninitialized data
+    
+	BUFFLEN  equ 128	; Length of buffer       
+	Buff:	 resb BUFFLEN  	; Text buffer itself
+
+ SECTION .data			; Section containing initialised data         
+
+ SECTION .text			; Section containing code         
+
+global main           		; Linker needs this to find the entry point
+main:
+    mov rbp,rsp       ; for correct debugging
+; Read a buffer full of text from stdin:
+Read:
+    mov rax,0        ; Specify sys_read call
+    mov rdi,0        ; Specify File Descriptor 0: Standard Input
+    mov rsi,Buff     ; Pass offset of the buffer to read to
+    mov rdx,BUFFLEN  ; Pass number of bytes to read at one pass
+    syscall          ; Call sys_read to fill the buffer
+    mov r12,rax      ; Copy sys_read return value to r12 for later
+    cmp rax,0        ; If rax=0, sys_read reached EOF on stdin
+    je Done          ; Jump If Equal (to 0, from compare)
+; Set up the registers for the process buffer step:
+    mov rbx,rax      ; Place the number of bytes read into rbx
+    mov r13,Buff     ; Place address of buffer into r13
+    dec r13          ; Adjust count to offset
+; Go through the buffer and convert lowercase to uppercase characters:
+Scan:
+    cmp byte [r13+rbx],61h  ; Test input char against lowercase 'a'
+    jb .Next                ; If below 'a' in ASCII, not lowercase
+    cmp byte [r13+rbx],7Ah  ; Test input char against lowercase 'z'
+    ja .Next                ; If above 'z' in ASCII, not lowercase
+                            ; At this point, we have a lowercase char
+    sub byte [r13+rbx],20h  ; Subtract 20h to give uppercase...
+.Next:
+    dec rbx                 ; Decrement counter
+    cmp rbx,0
+    jnz Scan                ; If characters remain, loop back
+; Write the buffer full of processed text to stdout:
+Write:
+    mov rax,1		    ; Specify sys_write call             
+    mov rdi,1               ; Specify File Descriptor 1: Standard output
+    mov rsi,Buff            ; Pass offset of the buffer
+    mov rdx,r12             ; Pass # of bytes of data in the buffer
+    syscall            	    ; Make kernel call     
+    jmp Read                ; Loop back and load another buffer full
+
+; All done! Let's end this party:
+ Done:
+   ret
+```
+
+<p align=justify>
+C'è un difetto in SASM su cui potresti inciampare, se stai testando programmi come uppercaser2gcc all'interno di SASM, utilizzando le finestre di Immissione e Uscita. Il problema è che la finestra di Uscita può contenere solo una certa quantità di testo. Se riempi il buffer della finestra di Uscita, ulteriori output non genereranno errori, ma l'ultimo pezzo di testo spingerà il primo pezzo di testo fuori dal bordo superiore della finestra di Uscita. Una volta che hai un programma ragionevolmente funzionante in SASM, salva il file EXE su disco. Poi esci da SASM, apri una finestra del terminale, naviga nella directory del progetto ed esegui il tuo programma lì. Non so se Linux imponga un limite su quanto testo può passare attraverso stdout, ma ho passato alcuni file piuttosto grandi a stdout senza che alcun testo andasse perso.
+</p>
 
 ## Controllo dei processi
 
