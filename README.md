@@ -2,7 +2,7 @@
 It's a 101 C course for my students.
 Sorry, only italian version so far.
 
-## 
+## Indice
 
   * [Introduzione](#introduzione)
   * [Installare l'ambiente di sviluppo](#installare-l-ambiente-di-sviluppo)
@@ -146,6 +146,15 @@ Sorry, only italian version so far.
     + [Estensione del segno e MOVSX](#estensione-del-segno-e-movsx)
     + [Operandi impliciti e MUL](#operandi-impliciti-e-mul)
     + [MUL ed il Carry Flag](#mul-ed-il-carry-flag)
+    + [Divisione senza segno con DIV](#divisione-senza-segno-con-div)
+    + [MUL e DIV sono dei ritardatari](#mul-e-div-sono-dei-ritardatari)
+    + [Leggere ed Usare una guida all'assembly](#leggere-ed-usare-una-guida-all-assembly)
+    + [Legal Forms](#legal-forms)
+    + [Operand Symbols](#operand-symbols)
+    + [Examples](#examples)
+    + [Notes](#notes)
+    + [Cosa manca](#cosa-manca)
+    + [Esaminiamo `EASTSYSCALL.ASM`](#esaminiamo--eastsyscallasm-)
     + [Sezione .data](#sezione-data)
     + [Sezione .bss](#sezione-bss)
     + [Sezione .text](#sezione-text)
@@ -163,6 +172,9 @@ Sorry, only italian version so far.
     + [Lo Schema dei Parametri del Registro ABI](#lo-schema-dei-parametri-del-registro-abi)
     + [Terminare un programma via SYSCALL](#terminare-un-programma-via-syscall)
     + [Registri sporcati da una SYSCALL](#registri-sporcati-da-una-syscall)
+    + [Progettare un programma](#progettare-un-programma)
+    + [Scansionare un Buffer](#scansionare-un-buffer)
+    + [Dallo Pseudocodice al codice Assembly](#dallo-pseudocodice-al-codice-assembly)
   * [Controllo dei processi](#controllo-dei-processi)
   * [Linux Programming](#linux-programming)
     + [Processi](#processi)
