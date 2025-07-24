@@ -6765,6 +6765,108 @@ Ho omesso qualsiasi istruzione dall'insieme di istruzioni x64. L'Appendice B che
 Finalmente, non ho incluso nulla in questo libro che indichi quanti cicli macchina vengono spesi da un dato comando macchina. Un ciclo macchina è un impulso dell'orologio master che fa magicamente funzionare il PC. Ogni istruzione utilizza un certo numero di quei cicli per svolgere il proprio lavoro, e il numero varia in base a criteri che non spiegherò in questo libro. Peggio ancora, il numero di cicli macchina utilizzati da una data istruzione varia da un modello di processore Intel all'altro. Un'istruzione può utilizzare meno cicli sul Pentium rispetto al 486, o forse più. (In generale, le istruzioni macchina Intel hanno iniziato ad utilizzare meno cicli di clock nel corso degli anni, ma ciò non è vero per ogni singola istruzione.) Inoltre, come spiega Michael Abrash nel suo immenso libro Michael Abrash's Graphics Programming Black Book (Coriolis Group Books, 1997), conoscere i requisiti di ciclo per istruzioni individuali è raramente sufficiente per permettere anche a un esperto programmatori in linguaggio assembly di calcolare quanto tempo impiegherà una data serie di istruzioni per essere eseguita. La cache della CPU, il prefetching, la previsione dei salti, l'iperthreading e un numero qualsiasi di altri fattori si combinano e interagiscono per rendere tali calcoli quasi impossibili, tranne in termini generali. Lui ed io concordiamo entrambi sul fatto che non sia un argomento adatto ai principianti, ma se desideri sapere di più in un certo momento, ti consiglio di cercare il suo libro e vedere da te.
 </p>
 
+### Esaminiamo `EASTSYSCALL.ASM`
+
+```asm
+;  Executable name : eatsyscall
+;  Version         : 1.0
+;  Created date    : 4/25/2022
+;  Last update     : 5/10/2023
+;  Author          : Jeff Duntemann
+;  Architecture    : x64
+;  From            : x64 Assembly Language Step By Step, 4th Edition
+;  Description     : A simple program in assembly for x64 Linux, using NASM 2.14,
+;                    demonstrating the use of the syscall instruction to display text.
+;                    Not for use with SASM.
+;
+;  Build using these commands:
+;    nasm -f elf64 -g -F stabs eatsyscall.asm
+;    ld -o eatsyscall eatsyscall.o
+;
+
+SECTION .data          ; Section containing initialised data
+	
+	EatMsg: db "Eat at Joe's!",10
+ 	EatLen: equ $-EatMsg	
+	
+SECTION .bss           ; Section containing uninitialized data	
+
+SECTION .text          ; Section containing code
+
+global 	_start	       ; Linker needs this to find the entry point!
+	
+_start:
+    push rbp
+    mov rbp,rsp
+
+    mov rax,1           ; 1 = sys_write for syscall
+    mov rdi,1           ; 1 = fd for stdout; i.e., write to the terminal window
+    mov rsi,EatMsg      ; Put address of the message string in rsi
+    mov rdx,EatLen      ; Length of string to be written in rdx
+    syscall             ; Make the system call
+
+    mov rax,60          ; 60 = exit the program
+    mov rdi,0           ; Return value in rdi 0 = nothing to return
+    syscall             ; Call syscall to exit
+```
+
+<p align=justify>
+Come hai visto quando l'hai eseguito, il programma <code>EASTSYSCALL.ASM</code> visualizza una (breve) riga di testo sullo schermo. "Eat at Joe's!" Per questo, hai dovuto fornire 35 righe di testo all'assemblatore! Molte di quelle 35 righe sono commenti e non necessari nel senso più stretto, ma fungono da documentazione interna per permetterti di capire cosa sta facendo il programma (o, cosa più importante, come lo sta facendo) sei mesi o un anno da adesso. 
+</p>
+
+<p align=justify>
+Uno degli obiettivi della programmazione in linguaggio assembly è utilizzare il minor numero possibile di istruzioni per portare a termine il lavoro. Ciò non significa creare un file di codice sorgente il più breve possibile. La dimensione del file sorgente non ha nulla a che fare con la dimensione del file eseguibile assemblato da esso! Più commenti metti nel tuo file, meglio ricorderai come funzionano le cose all'interno del programma la prossima volta che lo riprendi. Penso che ti sorprenderà quanto velocemente la logica di un complicato programma in linguaggio assembly si affievolisca nella tua mente. Dopo non più di 48 ore di lavoro su altri progetti, sono tornato a progetti in assembly e ho dovuto faticare per tornare alla velocità massima nello sviluppo. I commenti non sono né tempo né spazio sprecato. IBM soleva dire: "Una riga di commenti per riga di codice." Questo è buono—e dovrebbe essere considerato un minimo per il lavoro in linguaggio assembly. Un approccio migliore (che seguirò in effetti negli esempi più complicati più avanti nel capitolo) è usare una breve riga di commento a destra di ogni riga di codice, insieme a un blocco di commenti all'inizio di ciascuna sequenza di istruzioni che lavorano insieme per portare a termine un compito discreto. In cima a ogni programma dovrebbe esserci una sorta di blocco di commenti standardizzato, contenente alcune informazioni importanti.
+</p>
+
+<p align=justify>
+<ul>
+	<li>
+		<p align=justify>
+		Il nome del file di codice sorgente.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Il nome del file eseguibile.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		 The date you created the file.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		La data in cui hai modificato per lasta il file
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Il nome della persona che l'ha scritto.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Il nome e la versione dell'assemblatore utilizzato per crearla
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Una descrizione 'generale' di cosa fa il programma o la libreria. Prendi tutto lo spazio di cui hai bisogno. Non importa la dimensione o la velocità del programma eseguibile.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Una copia dei comandi utilizzati per costruire il file, presa dal file make se utilizzi un file make o dalla dialog di Build di SASM se utilizzi SASM.
+		</p>
+	</li>
+</ul>
+</p>
+
+<p align=justify>
+La sfida con un blocco di commento iniziale è aggiornarlo per riflettere lo stato attuale del tuo progetto. Nessuno dei tuoi strumenti lo farà automaticamente. Sta a te.
+</p>
+
 ### Sezione .data
 
 <p align=justify>
