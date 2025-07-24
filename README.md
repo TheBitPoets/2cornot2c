@@ -6642,6 +6642,73 @@ Immediatamente sotto il mnemonico c'è un minigrafico dei flag della CPU nel reg
 <img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/example_x86_reference.png">
 </div>
 
+### Legal Forms
+
+<p align=justify>
+Le istruzioni possono includere più di una forma legale. La forma di un'istruzione varia in base al tipo e all'ordine degli operandi ad essa passati. Ciò che le singole forme rappresentano effettivamente sono diversi codici operativi binari (<i>opcodes</i>). Ad esempio, sotto la superficie, l'istruzione <code>POP RAX</code> è il numero 058h, mentre l'istruzione <code>POP RSI</code> è il numero 05Eh. La maggior parte dei codici operativi x64 non sono singoli valori a 8 bit, e la maggior parte sono lunghi almeno due byte, spesso quattro o più. Quando vuoi utilizzare un'istruzione con un certo insieme di operandi, assicurati di controllare la sezione delle Forme Legali della guida di riferimento per quell'istruzione per assicurarti che la combinazione sia legale. Ora ci sono più forme legali rispetto ai vecchi tempi del DOS, e molte delle restrizioni residue riguardano i registri di segmento, che comunque non potrai usare quando scrivi normali applicazioni utente in modalità long a 64 bit. Nella pagina di riferimento dell'istruzione <code>NEG</code>, vedi che un registro di segmento non può essere un operando per NEG. (Se potesse, ci sarebbe un elemento NEG sr nell'elenco delle Forme Legali.)
+</p>
+
+### Operand Symbols
+<p align=justify>
+I simboli usati per indicare la natura degli operandi nella sezione <b>Legal Forms</b> sono riassunti in fondo a ogni pagina delle istruzioni nell'Appendice A. Sono quasi autoesplicativi, ma mi prenderò un momento per espanderli leggermente qui:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+			<b>r8</bUn registro a 8 bit, metà, uno di AH, AL, BH, BL, CH, CL, DH o DL
+		</p>
+  		<p align=justify>
+			<b>r16</b>Un registro a uso generale a 16 bit, uno tra AX, BX, CX, DX, BP, SP, SI o DI.
+		</p>
+  		<p align=justify>
+			<b>r32</b>Un registro generale a 32 bit, uno tra EAX, EBX, ECX, EDX, EBP, ESP, ESI o EDI.
+		</p>
+  		<p align=justify>
+			<b>r64</b>Un registro a 64 bit di uso generale, uno di RAX, RBX, RCX, RDX, RBP, RSP, RSI, RDI, o uno di R8-R15
+		</p>
+  		<p align=justify>
+			<b>sr</b>Uno dei registri di segmento, CS, DS, SS, ES, FS o GS
+		</p>
+  		<p align=justify>
+			<b>m8</b>Un byte di memoria a 8 bit
+		</p>
+  		<p align=justify>
+			<b>m16</b>Una parola di dati di memoria a 16 bit
+		</p>
+  		<p align=justify>
+			<b>m32</b>Una parola di dati di memoria a 32 bit
+		</p>
+  		<p align=justify>
+			<b>m64</b>Una parola di 64 bit di dati in memoria.
+		</p>
+  		<p align=justify>
+			<b>i8</b>Un byte a 8 bit di dati immediati.
+		</p>
+  		<p align=justify>
+			<b>i16</b>Una parola a 16 bit di dati immediati.
+		</p>
+  		<p align=justify>
+			<b>i32</b>Una parola a 32 bit di dati immediati.
+		</p>
+  		<p align=justify>
+			<b>i64</b>Una parola a 64 bit di dati immediati.
+		</p>
+  		<p align=justify>
+			<b>d8</b>Un spostamento a 8 bit con segno. Non ne abbiamo ancora parlato, ma uno spostamento è una distanza tra la posizione attuale nel codice e un'altra posizione nel codice a cui vogliamo saltare. È con segno (cioè, può essere negativo o positivo) perché uno spostamento positivo ti porta più in alto (in avanti) nella memoria, mentre uno spostamento negativo ti porta più in basso (indietro) nella memoria. Esamineremo questo concetto in dettaglio più avanti.
+		</p>
+  		<p align=justify>
+			<b>d16</b>Uno spostamento firmato a 16 bit. Ancora una volta, per l'uso con istruzioni di salto e chiamata.
+		</p>
+  		<p align=justify>
+			<b>d32</b>Un spostamento firmato a 32 bit.
+		</p>
+		<p align=justify>
+			<b>d64</b>Un spostamento firmato a 64 bit.
+		</p>
+	</li>
+</ul>
+
 ### Sezione .data
 
 <p align=justify>
