@@ -7294,6 +7294,185 @@ Il codice di ritorno è un valore numerico che puoi definire come preferisci. Te
 Anche se x64 ti offre il doppio del numero di registri a uso generale rispetto a x86, non tutti quei registri "a uso generale" sono liberi per essere utilizzati ovunque e in qualsiasi momento. Da uno a sei di quei registri sono richiesti per effettuare una chiamata di sistema Linux con SYSCALL. Quelli sei sono indicati nella tabella di sopra. Il numero di registri utilizzati varia in base alla chiamata di sistema, e dovrai consultarli in una tabella delle chiamate di sistema per vedere quanti ne servono. Se una chiamata di sistema non ha bisogno di tutti e sei i registri dei parametri SYSCALL (<code>sys_read</code> e <code>sys_write</code> ne utilizzano solo tre), puoi utilizzare quelli che non sono richiesti per quella chiamata di sistema nel tuo codice. <b>L'istruzione SYSCALL stessa utilizza internamente RAX, RCX e R11</b>. <b>Dopo che la SYSCALL restituisce, non puoi presumere che RAX, RCX o R11 avranno gli stessi valori che avevano prima della SYSCALL</b>.
 </p>
 
+### Progettare un programma
+
+<p align=justify>
+A questo punto, sai gran parte di ciò che devi sapere per progettare e scrivere piccole utility che svolgono un lavoro significativo - un lavoro che potrebbe persino essere utile. In questa sezione, affronteremo la sfida di scrivere un programma utility dal punto di vista dell'ingegneria per risolvere un problema. Questo comporta più che semplicemente scrivere codice. Comporta dichiarare il problema, suddividerlo nelle sue parti costitutive e poi ideare una soluzione al problema come una serie di passaggi e test che possono essere implementati come un programma in linguaggio assembly. C'è una certa questione del tipo "gallo e uovo" con questa sezione: è difficile scrivere un programma assembly non banale senza salti condizionali e difficile spiegare i salti condizionali senza dimostrarli in un programma non banale. Ho toccato i salti un po' nei capitoli precedenti e li affronterò in dettaglio nel Capitolo 9. I salti che sto usando nel programma dimostrativo in questa sezione sono piuttosto diretti e se hai un po' di confusione sui dettagli, leggi il Capitolo 9 e poi torna a esaminare di nuovo questa sezione e i suoi esempi.
+</p>
+
+<p align=justify>
+Anni fa, ero in un team che stava scrivendo un sistema che raccoglieva e validava dati dagli uffici sul campo in tutto il mondo e inviava quei dati a un grande centro di calcolo centrale, dove venivano tabulati, analizzati e utilizzati per generare rapporti di stato. Questo sembra abbastanza semplice e, in effetti, raccogliere i dati stessi negli uffici sul campo non era difficile. Ciò che rendeva difficile il progetto era che coinvolgeva diversi tipi di computer separati e molto diversi tra loro che vedevano i dati in modi completamente diversi e spesso incompatibili. Il problema era legato alla questione della codifica dei dati che ho accennato brevemente nel Capitolo 6. Dovevamo affrontare tre diversi sistemi di codifica per i caratteri dei dati. Un carattere che veniva interpretato in un modo su un sistema non sarebbe stato considerato lo stesso carattere su uno degli altri sistemi. Per trasferire i dati da un sistema a un altro, dovevamo creare software che traducesse la codifica dei dati da uno schema all'altro. Uno degli schemi utilizzava un gestore di database che non digeriva bene i caratteri minuscoli, per ragioni che sembravano peculiari all'epoca e che sono probabilmente incomprensibili oggi. Dovevamo tradurre qualsiasi carattere minuscolo in maiuscolo prima di poter inserire i file di dati in quel sistema. C'erano altri problemi di codifica, ma questo era uno importante, e poiché è un problema semplice da descrivere e poi risolvere, è un buon primo esercizio nella vera progettazione di programmi in linguaggio assembly. A un livello molto alto, il problema da risolvere qui può essere formulato in questo modo: convertire eventuali caratteri minuscoli in un file di dati in maiuscolo. Tenendo presente ciò, è una buona idea prendere appunti sul problema. In particolare, prendi appunti sui limiti di qualsiasi soluzione proposta. Una volta li chiamavamo i “limiti” della soluzione, e devono essere tenuti a mente mentre pensiamo al programma che risolverà il problema.
+</p>
+
+
+  
+<ul>
+	<li>
+		<p align=justify>
+			Lavoreremo sotto Linux. 
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			I dati esistono in file su disco.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Non sappiamo prima quanto saranno grandi i file.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			 Non c'è una dimensione massima né minima per i file.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Utilizzeremo la reindirizzamento I/O per passare i nomi dei file al programma.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Tutti i file di input sono nello stesso schema di codifica. Il programma può assumere che un carattere 'a' in un file sia codificato nello stesso modo di un 'a' in un altro file. (Nel nostro caso, questo è ASCII.) 
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			 Dobbiamo preservare il file originale nella sua forma originale, piuttosto che leggere i dati dal file originale e poi scriverli di nuovo nel file originale. (Perché? Se il processo si blocca, abbiamo distrutto il file originale senza generare completamente un file di output.)
+		</p>
+	</li>
+ 	
+</ul>
+
+<p align=justify>
+In un progetto del mondo reale potrebbero esserci pagine e pagine di queste note, ma solo alcuni fatti qui serviranno a plasmare la nostra semplice soluzione al problema del maiuscolo e minuscolo. Si noti che queste note espandono ciò che deve essere fatto e, in una certa misura, pongono limiti sulla natura della soluzione finale, ma non tentano di dire come deve essere fatto. È ciò che faremo nel passo successivo.
+</p>
+
+<p align=justify>
+Una volta che comprendiamo la natura del problema il più a fondo possibile, possiamo iniziare a creare una soluzione. All'inizio, questo assomiglia molto al processo che descrivo nel Capitolo 1, dove qualcuno fa una lista di compiti per le commissioni della giornata. Espressi una soluzione in forma generale e in quante meno affermazioni possibile. Poi, poco a poco, affini la soluzione dichiarata suddividendo i passaggi più grandi in quelli più piccoli che i passaggi più grandi contengono. Nel nostro caso, la soluzione è piuttosto facile da esprimere in termini generali. Per iniziare, ecco una forma che la dichiarazione potrebbe assumere.
+</p>
+
+```
+ Read a character from the input file.
+ Convert the character to uppercase (if necessary)
+ Write the character to the output file.
+ Repeat until done.
+```
+
+<p align=justify>
+Questa è davvero una soluzione, sebbene possa sembrare un estremo "punto di vista dall'alto". È carente di dettagli, ma non di funzioni. Se eseguiamo i passaggi elencati, avremo un programma che fa ciò che abbiamo bisogno che faccia. Nota anche che le affermazioni fornite non sono affermazioni scritte in alcun linguaggio di programmazione. Di certo non sono istruzioni di linguaggio assembly. Sono descrizioni di diverse azioni, indipendenti da qualsiasi sistema particolare per realizzare quelle azioni. Elenchi di affermazioni come questo, poiché non sono deliberatamente scritti come codice per un particolare ambiente di programmazione, sono chiamati pseudocodice.
+</p>
+
+<p align=justify>
+Dalla nostra prima dichiarazione completa ma priva di dettagli della soluzione, ci spostiamo verso una dichiarazione della soluzione più dettagliata. Lo facciamo affinando le dichiarazioni in pseudocodice in modo che ognuna sia più specifica su come deve essere eseguita l'azione descritta. Ripetiamo questo processo, aggiungendo più dettagli ogni volta, fino a quando ciò che abbiamo può essere prontamente tradotto in istruzioni di linguaggio assembly reali. Questo processo, chiamato affinamento successivo, non è specifico per il linguaggio assembly. Viene utilizzato con tutti i linguaggi di programmazione in una misura o nell'altra, ma funziona in modo particolarmente efficace con l'assembly. Diamo un'occhiata allo pseudocodice fornito in precedenza e creiamo una nuova versione con ulteriori dettagli. Sappiamo che stiamo per usare Linux per il programma — fa parte delle specifiche e uno dei limiti di qualsiasi soluzione — quindi possiamo iniziare ad aggiungere dettagli specifici al modo di fare tali cose in Linux. Il prossimo affinamento potrebbe apparire così.
+</p>
+
+```
+ Read a character from standard input (stdin)
+ Test the character to see if it's lowercase.
+ If the character is lowercase, convert it to uppercase by
+ subtracting 20h.
+ Write the character to standard output (stdout).
+ Repeat until done.
+ Exit the program by calling sys_exit.
+```
+
+<p align=justify>
+Ad ogni passaggio, guarda a lungo e con attenzione ciascuna dichiarazione di azione per vedere quali dettagli potrebbe nascondere e amplia quei dettagli nella prossima raffinazione. A volte questo sarà facile; a volte, beh, non così facile. Nella versione precedente, la dichiarazione "Ripeti fino a completamento" suona piuttosto semplice e ovvia all'inizio, fino a quando non pensi a cosa significa "completamento" qui: esaurire i dati nel file di input. Come facciamo a sapere quando il file di input è privo di caratteri? Questo potrebbe richiedere un po' di ricerca, ma nella maggior parte dei sistemi operativi (inclusi Linux) la routine che chiami per leggere i dati da un file restituisce un valore. Questo valore può indicare una lettura riuscita, un errore di lettura o risultati in casi speciali come "fine del file" (EOF). I dettagli precisi possono venire dopo; ciò che conta qui è che dobbiamo testare per EOF quando leggiamo i caratteri dal file. Una versione espansa (e leggermente riorganizzata) del pseudocodice della soluzione potrebbe apparire in questo modo.
+</p>
+
+```
+ Read a character from standard input (stdin)
+ Test if we have reached End Of File (EOF)
+ If we have reached EOF, we're done, so jump to exit
+ Test the character to see if it's lowercase.
+ If the character is lowercase, convert it to uppercase by
+ subtracting 20h.
+ Write the character to standard output (stdout).
+ Go back and read another character.
+ Exit the program by calling sys_exit
+```
+
+<p align=justify>
+E così procediamo, aggiungendo dettagli ogni volta. Nota che questo inizia a sembrare un po' più codice di programma ora. Così sia: Con l'aumento del numero di istruzioni, è utile aggiungere etichette a quelle istruzioni che rappresentano obiettivi di salto in modo da non confondere gli obiettivi di salto, anche nei pseudocodici. Aiuta anche a suddividere il pseudocodice in blocchi, con istruzioni correlate raggruppate insieme. Prima o poi arriveremo a qualcosa di simile al seguente.
+</p>
+
+```
+ Read:  Set up registers for the sys_read kernel call.
+ Call sys_read to read from stdin.
+ Test for EOF.
+ If we're at EOF, jump to Exit.
+ Test the character to see if it's lowercase.
+ If it's not a lowercase character, jump to Write.
+ Convert the character to uppercase by subtracting 20h.
+ Write: Set up registers for the Write kernel call.
+ Call sys_write to write to stdout.
+ Jump back to Read and get another character.
+ Exit:  Set up registers for terminating the program via
+ sys_exit.
+ Call sys_exit
+```
+
+<p align=justify>
+Questo è un buon esempio di "flessione" dell'istruzione in pseudocodice nella direzione del sistema operativo e del linguaggio di programmazione che intendi utilizzare. Tutti i linguaggi di programmazione hanno le loro peculiarità, le loro limitazioni e una "forma" generale. Se tieni a mente questa forma mentre elabori il tuo pseudocodice, la transizione finale al codice reale sarà più semplice. A un certo punto, il tuo pseudocodice avrà tutti i dettagli che può contenere e rimanere comunque pseudocodice. Per andare oltre, dovrai iniziare a trasformare il tuo pseudocodice in codice assembly reale. Ciò significa che devi prendere ogni istruzione e chiederti: So come convertire questa istruzione in pseudocodice in una o più istruzioni di linguaggio assembly? Questo è particolarmente vero quando sei un principiante, ma anche dopo aver acquisito esperienza come programmatore in linguaggio assembly, potresti non sapere tutto ciò che c'è da sapere. Nella maggior parte dei linguaggi di programmazione (incluso l'assembly), ci sono spesso diversi o a volte molti modi diversi di implementare una determinata azione. Alcuni potrebbero essere più veloci di altri; alcuni potrebbero essere più lenti ma più facili da leggere e modificare. Alcune soluzioni potrebbero essere limitate a un sottoinsieme della gamma completa delle CPU Intel. Il tuo programma deve essere eseguito su CPU x86 più vecchie? O puoi presumere che tutti avranno un sistema con una CPU a 64 bit? (Le tue note originali dovrebbero includere tali condizioni di vincolo per qualsiasi soluzione utilizzabile al problema originale.)
+</p>
+
+<p align=justify>
+Il salto dal pseudocodice alle istruzioni potrebbe sembrare grande, ma la buona notizia è che una volta convertito il tuo pseudocodice in istruzioni, puoi creare un file di codice sorgente in linguaggio assembly e lasciare che SASM lo analizzi per scovare i tuoi errori sintattici. Aspettati di dedicare del tempo a correggere errori assembly e poi bug del programma, ma se hai affrontato il processo di raffinamento con una mente chiara e una pazienza ragionevole, potresti essere sorpreso da quanto sia buono un programma al tuo primo tentativo. Una traduzione competente del precedente pseudocodice in assembly reale è mostrata nel Listing 8.2. (Questa è la versione che si collega tramite gcc invece di ld. Aprila e compilala in SASM.) Leggila e verifica se riesci a seguire la traduzione dal pseudocodice, sapendo ciò che già conosci sul linguaggio assembly. Il codice mostrato funzionerà ma non è 'completo' in alcun senso reale. È un 'primo taglio' per il codice reale nel processo di raffinamento successivo. Ha bisogno di una riflessione approfondita su quanto sia buono e quanto sia completa la soluzione al problema originale. Un programma funzionante non è necessariamente un programma finito.
+</p>
+
+```asm
+section .bss
+	Buff resb 1
+
+section .data
+
+section .text
+	global main
+
+main:
+    mov rbp, rsp   ; for correct debugging
+
+Read:
+    mov rax,0      ; Specify sys_read call
+	mov rdi,0      ; Specify File Descriptor 0: Standard Input
+	mov rsi,Buff   ; Pass address of the buffer to read to
+	mov rdx,1      ; Tell sys_read to read one char from stdin
+	syscall        ; Call sys_read
+
+	cmp rax,0      ; Look at sys_read's return value in RAX
+	je Exit        ; Jump If Equal to 0 (0 means EOF) to Exit:
+			       ; or fall through to test for lowercase
+
+	cmp byte [Buff],61h    ; Test input char against lowercase 'a'
+	jb Write               ; If below 'a' in ASCII chart, not lowercase
+	cmp byte [Buff],7Ah    ; Test input char against lowercase 'z'
+	ja Write               ; If above 'z' in ASCII chart, not lowercase
+
+                           ; At this point, we have a lowercase character
+	sub byte [Buff],20h    ; Subtract 20h from lowercase to give uppercase...
+                           ; ...and then write out the char to stdout
+Write:  
+    mov rax,1      ; Specify sys_write call
+    mov rdi,1      ; Specify File Descriptor 1: Standard output
+    mov rsi,Buff   ; Pass address of the character to write
+    mov rdx,1      ; Pass number of chars to write
+    syscall	       ; Call sys_write...
+    jmp Read       ; ...then go to the beginning to get another character
+        
+Exit:   ret        
+
+;Exit:
+     mov rax,60    ; 60 = exit the program
+;    mov rdi,0     ; Return value in rdi 0 = nothing to return
+;    syscall       ; Call syscall to exit
+```
+
+<p align=justify>
+Questo sembra spaventoso, ma consiste quasi interamente in istruzioni e concetti di cui abbiamo già discusso. Ecco alcune note su cose che potresti non comprendere completamente a questo punto.
+</p>
+
 ## Controllo dei processi
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.01.png)
