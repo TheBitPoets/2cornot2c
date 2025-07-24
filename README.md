@@ -6653,6 +6653,7 @@ Le istruzioni possono includere più di una forma legale. La forma di un'istruzi
 I simboli usati per indicare la natura degli operandi nella sezione <b>Legal Forms</b> sono riassunti in fondo a ogni pagina delle istruzioni nell'Appendice A. Sono quasi autoesplicativi, ma mi prenderò un momento per espanderli leggermente qui:
 </p>
 
+<p align=justify>
 <ul>
 	<li>
 		<p align=justify>
@@ -6668,7 +6669,6 @@ I simboli usati per indicare la natura degli operandi nella sezione <b>Legal For
   		<p align=justify>
 			<b>r32</b>Un registro generale a 32 bit, uno tra EAX, EBX, ECX, EDX, EBP, ESP, ESI o EDI.
 		</p>
-  		
 	</li>
 	<li> 
     		<p align=justify>
@@ -6741,6 +6741,7 @@ I simboli usati per indicare la natura degli operandi nella sezione <b>Legal For
 		</p>
 	</li>
 </ul>
+</p>
 
 ### Sezione .data
 
