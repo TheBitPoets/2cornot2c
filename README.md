@@ -6743,6 +6743,28 @@ I simboli usati per indicare la natura degli operandi nella sezione <b>Legal For
 </ul>
 </p>
 
+### Examples
+
+<p align=justify>
+Mentre la sezione delle Forme Legali mostra quali combinazioni di operandi sono legali per una data istruzione, la sezione Esempi mostra esempi dell'istruzione in uso reale, proprio come verrebbe codificata in un programma in linguaggio assembly. Ho cercato di fornire un buon campione di esempi per ciascuna istruzione, dimostrando la gamma di diverse possibilità con l'istruzione. Non tutte le singole forme legali saranno presenti negli esempi.
+</p>
+
+### Notes
+
+<p align=justify>
+La sezione Note della pagina di riferimento descrive brevemente l'azione dell'istruzione e fornisce informazioni su come influisce sui flag, su come potrebbe essere limitata nel suo utilizzo e su qualsiasi altro dettaglio che deve essere ricordato, specialmente su cose che i principianti potrebbero trascurare o male interpretare.
+</p>
+
+### Cosa manca
+
+<p align=justify>
+Ho omesso qualsiasi istruzione dall'insieme di istruzioni x64. L'Appendice B che non esiste più nell'Appendice B si differenzia dalla maggior parte dei riferimenti dettagliati al linguaggio assembly per il fatto che non include le informazioni sulla codifica dell'opcode binario, né indicazioni su quanti cicli di macchina vengono utilizzati da ciascuna forma dell'istruzione. La codifica binaria di un'istruzione è la sequenza effettiva di byte binari che la CPU digerisce e riconosce come istruzione macchina. Quello che noi chiameremmo POP RAX, la macchina lo vede come il numero binario 58h. Quello che chiamiamo ADD RSI,07733h, la macchina lo vede come la sequenza di 7 byte 48h 81h 0C6h 33h 77h 00h 00h. Le istruzioni macchina sono codificate in da un minimo di uno a un massimo di 15 byte a seconda di quale istruzione siano e quali siano i loro operandi. Disporre il sistema per determinare quale sarà la codifica per qualsiasi istruzione dato è estremamente complicato, in quanto i suoi byte componenti devono essere impostati bit per bit da diversi grandi tavoli. Ho deciso che questo libro non è il posto per quella particolare discussione e ho lasciato fuori le informazioni di codifica dall'Appendice B. (Questo problema è una delle ragioni per cui i libri di riferimento delle istruzioni Intel sono così grandi.)
+</p>
+
+<p align=justify>
+Finalmente, non ho incluso nulla in questo libro che indichi quanti cicli macchina vengono spesi da un dato comando macchina. Un ciclo macchina è un impulso dell'orologio master che fa magicamente funzionare il PC. Ogni istruzione utilizza un certo numero di quei cicli per svolgere il proprio lavoro, e il numero varia in base a criteri che non spiegherò in questo libro. Peggio ancora, il numero di cicli macchina utilizzati da una data istruzione varia da un modello di processore Intel all'altro. Un'istruzione può utilizzare meno cicli sul Pentium rispetto al 486, o forse più. (In generale, le istruzioni macchina Intel hanno iniziato ad utilizzare meno cicli di clock nel corso degli anni, ma ciò non è vero per ogni singola istruzione.) Inoltre, come spiega Michael Abrash nel suo immenso libro Michael Abrash's Graphics Programming Black Book (Coriolis Group Books, 1997), conoscere i requisiti di ciclo per istruzioni individuali è raramente sufficiente per permettere anche a un esperto programmatori in linguaggio assembly di calcolare quanto tempo impiegherà una data serie di istruzioni per essere eseguita. La cache della CPU, il prefetching, la previsione dei salti, l'iperthreading e un numero qualsiasi di altri fattori si combinano e interagiscono per rendere tali calcoli quasi impossibili, tranne in termini generali. Lui ed io concordiamo entrambi sul fatto che non sia un argomento adatto ai principianti, ma se desideri sapere di più in un certo momento, ti consiglio di cercare il suo libro e vedere da te.
+</p>
+
 ### Sezione .data
 
 <p align=justify>
