@@ -8066,7 +8066,7 @@ Nella sezione .data del programma è definita una lookup table molto semplice. L
 </p>
 
 ``asm
-	Digits db '0123456789ABCDEF'
+	Digits db \'0123456789ABCDEF\'
 ```
 
 <p align=justify>
