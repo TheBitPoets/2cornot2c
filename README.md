@@ -8046,6 +8046,7 @@ Ricorda che i valori letti da Linux da un file vengono letti in memoria come val
 
 ```asm
  and al,0Fh
+
 ```
 
 <p align=justify>
