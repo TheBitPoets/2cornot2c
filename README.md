@@ -8065,8 +8065,8 @@ Mascherare l' high nybble dal byte di input in AL lo distrugge. Abbiamo bisogno 
 Nella sezione .data del programma è definita una lookup table molto semplice. La tabella Digits ha questa definizione: 
 </p>
 
-``asm
-	Digits db \'0123456789ABCDEF\'
+```asm
+	Digits db '0123456789ABCDEF'
 ```
 
 <p align=justify>
