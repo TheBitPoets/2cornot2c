@@ -205,6 +205,19 @@ Sorry, only italian version so far.
     + [Cercare un bit a 1 con TEST](#cercare-un-bit-a-1-con-test)
     + [Cercare un bit a 0 con  BT](#cercare-un-bit-a-0-con--bt)
     + [X64 Long Mode Memory Addressing](#x64-long-mode-memory-addressing)
+    + [Calcolo dell' Effective Address](#calcolo-dell--effective-address)
+    + [Displacements (Scostamento)](#displacements--scostamento-)
+    + [Il problema della dimensione dello scostamento in x64](#il-problema-della-dimensione-dello-scostamento-in-x64)
+    + [Base Addressing (indirizzamento di base)](#base-addressing--indirizzamento-di-base-)
+    + [Base + Displacement Addressing](#base---displacement-addressing)
+    + [Base + Index Addressing](#base---index-addressing)
+    + [Index X Scale + Displacement Addressing](#index-x-scale---displacement-addressing)
+    + [Altri Schemi d'Indirizzamento](#altri-schemi-d-indirizzamento)
+    + [Istruzione LEA](#istruzione-lea)
+    + [Tabella di traduzione caratteri](#tabella-di-traduzione-caratteri)
+    + [Tabella di traduzione](#tabella-di-traduzione)
+    + [Tradurre con MOV o XLAT](#tradurre-con-mov-o-xlat)
+    + [Tabelle al posto di calcoli](#tabelle-al-posto-di-calcoli)
   * [Controllo dei processi](#controllo-dei-processi)
   * [Linux Programming](#linux-programming)
     + [Processi](#processi)
@@ -246,6 +259,9 @@ Sorry, only italian version so far.
     + [Signal Handling](#signal-handling)
     + [La chiamata di sistema Clone()](#la-chiamata-di-sistema-clone--)
     + [Processi vs Thread](#processi-vs-thread)
+
+<small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
+
 
 ## 
 
