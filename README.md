@@ -7730,6 +7730,194 @@ Write:
 C'è un difetto in SASM su cui potresti inciampare, se stai testando programmi come uppercaser2gcc all'interno di SASM, utilizzando le finestre di Immissione e Uscita. Il problema è che la finestra di Uscita può contenere solo una certa quantità di testo. Se riempi il buffer della finestra di Uscita, ulteriori output non genereranno errori, ma l'ultimo pezzo di testo spingerà il primo pezzo di testo fuori dal bordo superiore della finestra di Uscita. Una volta che hai un programma ragionevolmente funzionante in SASM, salva il file EXE su disco. Poi esci da SASM, apri una finestra del terminale, naviga nella directory del progetto ed esegui il tuo programma lì. Non so se Linux imponga un limite su quanto testo può passare attraverso stdout, ma ho passato alcuni file piuttosto grandi a stdout senza che alcun testo andasse perso.
 </p>
 
+### Operazioni sui Bit
+
+<p align=justify>
+Il linguaggio assembly si basa molto sui bit. I bit, dopotutto, sono ciò di cui sono composti i byte, e una competenza essenziale del linguaggio assembly è costruire byte e smontarli di nuovo. Una tecnica chiamata bit mapping è ampiamente utilizzata nel linguaggio assembly. Il bit mapping assegna significati speciali ai singoli bit all'interno di un byte per risparmiare spazio e spremere l'ultimo piccolo bit di utilità da una certa quantità di memoria. C'è una famiglia di istruzioni nel set di istruzioni x64 che ti consente di manipolare i bit all'interno dei byte applicando operazioni logiche booleane tra byte su base bit per bit. Queste sono le istruzioni logiche bitwise: <code>AND</code>, <code>OR</code>, <code>XOR</code> e <code>NOT</code>. Un'altra famiglia di istruzioni ti consente di spostare i bit avanti e indietro all'interno di un singolo byte o parola. Queste sono le istruzioni di shift/rotate più utilizzate: <code>ROL</code>, <code>ROR</code>, <code>RCL</code>, <code>RCR</code>, <code>SHL</code> e <code>SHR</code>. 
+</p>
+
+### Bit Numbering
+
+<p align=justify>
+Gestire i bit richiede che abbiamo un modo per specificare quali bit stiamo trattando. Per convenzione, i bit nel linguaggio assembly sono numerati, partendo da 0, dal bit meno significativo nel byte, word, doppio word o altro elemento che stiamo utilizzando come mappa di bit. Il bit meno significativo è quello con il valore più basso nel sistema numerico binario. È anche il bit all'estrema destra, se scrivi il valore come un numero binario nel modo convenzionale. L'ho mostrato nella figura di sotto, per una word a 16 bit. La numerazione dei bit funziona esattamente allo stesso modo, indipendentemente da quanti bit stai trattando: byte, word, doppio word o quadword. Il bit 0 è sempre all'estremità destra, e i numeri dei bit aumentano verso sinistra.
+</p>
+
+<div aling=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/bit_numbering.png"
+</div>
+
+<p align=justify>
+Quando conti i bit, inizia con il bit all'estremità destra e numerali verso sinistra a partire da 0.
+</p>
+
+### Operazioni Binarie
+
+<p align=justify>
+Il termine logica booleaniana suona arcano e minaccioso, ma sorprendentemente riflette le realtà del pensiero e dell'azione ordinari. L'operatore booleano <ocde>AND</ocde>, ad esempio, si presenta in molte delle decisioni che prendi ogni giorno della tua vita. Ad esempio, per scrivere un assegno che non venga rifiutato, devi avere denaro nel tuo conto corrente <code>AND</code> assegni nel tuo libretto degli assegni. Nessuno dei due da solo svolgerà il lavoro. Non puoi scrivere un assegno che non hai, e un assegno senza denaro dietro di esso verrà rifiutato. Le persone che vivono con i loro libretti degli assegni utilizzano spesso l'operatore <code>AND</code>. Quando i matematici parlano di logica booleaniana, manipolano valori astratti chiamati Vero e Falso. L'operatore <code>AND</code> funziona in questo modo: <i>Condizione1 <code>AND</code> Condizione2</i>i> sarà considerato Vero se entrambe Condizione1 e Condizione2 sono Vere. Se una delle condizioni è Falsa, il risultato sarà Falso. Ci sono infatti quattro diverse combinazioni dei due valori di input, quindi le operazioni logiche tra due valori sono solitamente riassunte in una forma chiamata tabella di verità. La tabella di verità per l'operatore logico <code>AND</code> (non l'istruzione <code>AND</code> ancora; ci arriveremo a breve) è mostrata nella figura di sotto.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/and_table.png">
+</div>
+
+<p align=justify>
+Non c'è nulla di misterioso nella tabella della verità. È solo un riepilogo di tutte le possibilità dell'operatore AND applicato a due condizioni di input. La cosa importante da ricordare riguardo l'AND è che solo quando entrambi i valori di input sono Veri, anche il risultato sarà Vero. Questo è il modo in cui i matematici vedono l'AND. In termini di linguaggio assembly, l'istruzione AND analizza due bit e produce un terzo bit in base ai valori dei primi due bit. Per convenzione, consideriamo un bit 1 come Vero e un bit 0 come Falso. La logica è identica; stiamo solo usando simboli diversi per rappresentare Vero e Falso. Tenendo presente questo, possiamo riscrivere la tabella della verità dell'AND per renderla più significativa per il lavoro in linguaggio assembly. Vedi la figura di sotto.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/and_table_asm.png">
+</div>
+
+### Istruzione AND
+
+<p align=justify>
+L'istruzione AND incarna questo concetto nel set di istruzioni x64. L'istruzione AND esegue l'operazione logica AND su due operandi di dimensioni simili e sostituisce l'operando di destinazione con il risultato dell'operazione nel suo complesso. (Ricorda che l'operando di destinazione è l'operando più vicino al mnemonico.) In altre parole, considera questa istruzione: 
+</p>
+
+```asm
+	and al,bl. 
+ ```
+
+<p align=justify>
+Ciò che accadrà qui è che la CPU eseguirà un gruppo di otto operazioni AND bitwise sugli otto bit in AL e BL. Il bit 0 di AL viene messo in AND con il bit 0 di BL, il bit 1 di AL viene messo in AND con il bit 1 di BL, e così via. Ogni operazione AND genera un bit di risultato, e quel bit viene posizionato nell'operando di destinazione (qui, AL) dopo che tutte e otto le operazioni AND sono state eseguite. Questo è un filo comune tra le istruzioni della macchina che eseguono un'operazione su due operandi e producono un risultato: il risultato sostituisce il primo operando (l'operando di destinazione) e non il secondo!
+</p>
+
+### Mascherare i Bit
+
+<p align=justify>
+Un uso importante dell'istruzione AND è isolare uno o più bit da un valore di byte, parola, dword o qword. Isolare qui significa semplicemente impostare tutti i bit indesiderati su un valore affidabile di 0. Per esempio, supponiamo di essere interessati a testare i bit 4 e 5 di un valore per vedere quali sono. Per farlo, dobbiamo essere in grado di ignorare gli altri bit (dal bit 0 al 3 e dal 6 al 7), e l'unico modo per ignorare in modo sicuro i bit è impostarli a 0. AND è la soluzione. Impostiamo una maschera di bit in cui i numeri dei bit che vogliamo esaminare e testare sono impostati su 1, e i bit che desideriamo ignorare sono impostati su 0. Per mascherare tutti i bit tranne i bit 4 e 5, dobbiamo configurare una maschera in cui i bit 4 e 5 sono impostati su 1, mentre tutti gli altri bit sono 0. Questa maschera in binario è 00110000B o 30H. (Per verificarlo, conta i bit dall'estremità destra del numero binario, iniziando da 0.) Questa maschera di bit viene quindi messa in AND con il valore in questione. La figura di sotto mostra questa operazione in azione, con la maschera di bit 30H appena descritta e un valore iniziale di 9DH.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/and_instruction.png">
+</div>
+
+<p align=justify>
+I tre valori binari coinvolti sono mostrati disposti verticalmente, con il bit meno significativo (cioè, l'estremità destra) di ciascun valore in cima. Dovresti essere in grado di seguire ogni operazione AND e verificarla consultando la tabella precendete. Il risultato finale è che tutti i bit tranne i bit 4 e 5 sono garantiti essere 0 e possono quindi essere ignorati in sicurezza. I bit 4 e 5 potrebbero essere sia 0 che 1. (Ecco perché dobbiamo testarli; non sappiamo quale sia il loro valore.) Con il valore iniziale di 9DH, il bit 4 risulta essere 1 e il bit 5 risulta essere 0. Se il valore iniziale fosse stato un altro, i bit 4 e 5 potrebbero essere entrambi 0, entrambi 1, o qualche combinazione dei due. Non dimenticare: <b>il risultato dell'istruzione AND sostituisce l'operando di destinazione dopo che l'operazione è completata</b>.
+</p>
+
+### Istruzione OR
+
+<p align=justify>
+Correlato strettamente all'operazione logica AND è OR, che, come l'operazione logica AND, ha una realizzazione con lo stesso nome nel set di istruzioni x86/x64. Strutturalmente, l'istruzione OR funziona in modo identico a AND. Solo la sua tabella della verità è diversa: mentre AND richiede che entrambi i suoi operandi siano 1 affinché il risultato sia 1, OR è soddisfatto che almeno un operando abbia un valore di 1. La tabella della verità per OR è mostrata nella figura di sotto.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/or_instruction.png">
+</div>
+
+<p align=justify>
+Poiché è inadeguato per isolare i bit, l'istruzione OR viene utilizzata molto meno frequentemente rispetto all'AND.
+</p>
+
+### Istruzione XOR
+
+<p align=justify>
+In una classe a sé stante c'è l'operazione OR esclusivo, incarnata nell'istruzione XOR. XOR, di nuovo, fa in termini generali ciò che fa AND e OR: esegue un'operazione logica bit per bit sui suoi due operandi, e il risultato sostituisce l'operando di destinazione. L'operazione logica, tuttavia, è esclusiva o, il che significa che <b>il risultato è 1 solo se i due operandi sono diversi</b> (cioè 1 e 0 oppure 0 e 1). La tabella di verità per XOR (vedi figura di sotto) dovrebbe rendere questa nozione leggermente scivolosa un po' più chiara.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/xor_instruction.png">
+</div>
+
+<p align=justify>
+Guarda la figura di sopra con attenzione! Nei primi e ultimi casi, dove i due operandi sono gli stessi, il risultato è 0. Nei due casi centrali, dove i due operandi sono diversi, il risultato è 1. Si possono fare alcune cose interessanti con l'istruzione XOR, ma la maggior parte di esse è un po' arcana per un libro per principianti come questo. Un uso non ovvio ma utile di XOR è questo: eseguire l'XOR di qualsiasi valore contro se stesso produce 0. In altre parole, se esegui l'istruzione XOR con entrambi gli operandi come lo stesso registro, quel registro verrà azzerato a 0: 
+</p>
+
+```asm
+ xor rax,rax ; Azzerare il registro rax.
+```
+
+<p align=justify>
+Nei tempi passati, questo era più veloce che caricare uno 0 in un registro da dati immediati utilizzando MOV. Anche se non è più il caso, è un trucco interessante da conoscere. Come funziona dovrebbe essere ovvio dalla lettura della tabella della verità, ma per chiarirlo l'ho mostrato nella di sotto. Segui ciascuna delle singole operazioni di esclusione OR attraverso la figura fino al suo valore di risultato. Poiché ogni bit in AL è messo in XOR contro se stesso, in ogni caso le operazioni di XOR avvengono tra due operandi identici. A volte entrambi sono 1, a volte entrambi sono 0, ma in ogni caso i due sono gli stessi. Con l'operazione XOR, quando i due operandi sono gli stessi, il risultato è sempre 0. Voilà! Zero in un registro.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/xor_to_zero_register.png">
+</div>
+
+### Istruzione NOT
+
+<p align=justify>
+La più facile da capire tra tutte le istruzioni logiche bit a bit è NOT. La tabella della verità per NOT è più semplice rispetto alle altre esaminate perché NOT prende solo un operando. E ciò che fa è semplice: NOT prende lo stato di ciascun bit nel suo unico operando e cambia quel bit nel suo stato opposto. Ciò che era 1 diventa 0, e ciò che era 0 diventa 1. Mostro questo nella figura di sotto.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/not_instruction.png">
+</div>
+
+### I segmenti di registro non rispondono alla logica
+
+<p align=justify>
+Non accederai direttamente ai registri di segmento fino a quando non ti immergerai nelle profondità della programmazione del sistema operativo. I registri di segmento ora appartengono al sistema operativo, e i programmi nello spazio utente non possono modificarli in alcun modo. Ma anche quando inizi a lavorare a livello di sistema operativo, i registri di segmento presentano limitazioni significative. Una di queste limitazioni è che non possono essere utilizzati con nessuna delle istruzioni logiche bit a bit. Se ci provi, l'assemblatore ti darà un errore "Uso illegale del registro di segmento". Se hai bisogno di eseguire un'operazione logica su un registro di segmento, devi prima copiare il valore del registro di segmento in uno dei registri a uso generale, eseguire l'operazione logica sul registro GP, e poi copiare il risultato dal registro GP di nuovo nel registro di segmento. I registri a uso generale sono chiamati "a uso generale" per una ragione, e i registri di segmento non sono in alcun modo a uso generale. Sono specialisti nell'indirizzamento della memoria, e se mai devi lavorare sui valori dei segmenti, l'approccio generale è fare il lavoro in un registro a uso generale e poi copiare il valore modificato di nuovo nel registro di segmento in questione.
+</p>
+
+### Shiftare i Bit
+
+<p align=justify>
+L'altro modo di manipolare i bit all'interno di un byte è un po' più diretto: li sposti verso un lato o l'altro. Ci sono alcuni dettagli nel processo, ma le istruzioni di spostamento più semplici sono piuttosto ovvie: <code>SHL</code> sposta il suo operando a sinistra, mentre <code>SHR</code> sposta il suo operando a destra. Tutte le istruzioni di spostamento (compresi quelle leggermente più complesse che descriverò tra poco) hanno la stessa forma generale, illustrata qui dall'istruzione <code>SHL</code>:
+</p>
+
+```asm
+ shl <register/memory>,<count>
+```
+
+<p align=justify>
+Il primo operando è l'obiettivo dell'operazione di spostamento, cioè il valore che stai per spostare. Può essere dati di registro o dati di memoria, ma non dati immediati. Il secondo operando specifica il numero di bit con cui spostare.
+</p>
+
+<p align=justify>
+Questo operando <count> ha una storia peculiare. Sugli antichi 8086 e 8088, poteva essere una delle due cose: il numero immediato 1, o il registro CL. (Non CX!) Se specificavi il conteggio come 1, allora lo spostamento sarebbe stato di un bit. Se volevi spostare più di un bit alla volta, dovevi prima caricare il conteggio dello spostamento nel registro CL. Nei tempi precedenti a quando i registri generali x86 divennero davvero generali, contare le cose era l'”agenda nascosta” di CX (e quindi di CL). Contava gli spostamenti, i passaggi nei cicli, gli elementi di stringa e alcune altre cose. È per questo che a volte viene chiamato registro conteggio e può essere ricordato dalla C in conteggio. A partire dal 286 e per tutte le CPU x86/x64 più recenti, l'operando <count> può essere qualsiasi valore immediato da 0 a 255. Il conteggio degli spostamenti può anche essere passato in CL se lo preferisci. Nota che non puoi specificare RCX per il conteggio, anche se “contiene” CL. <b>Anche in x64, le istruzioni di spostamento richiedono davvero un valore immediato da 0 a 255 o CL</b>b>. <b>Qualsiasi altro registro specificato per il valore di conteggio attiverà un errore dell'assemblatore</b>. Ovviamente, spostare di 0 bit è inutile, ma è possibile e non è considerato un errore. Fai attenzione alla tua digitazione. Ora, c'è un'importante asterisco nel paragrafo precedente: non puoi spostare più posizioni di quante ne abbia il registro di destinazione. In modalità lunga a 64 bit, non puoi spostare (o ruotare; vedi la sezione successiva) più di 63 conteggi. Tentare di farlo non attiverà un errore. Semplicemente non funzionerà. 
+</p>
+
+### Come funziona lo shifting dei bit
+
+<p align=justify>
+Comprendere le istruzioni di spostamento richiede di pensare ai numeri spostati come numeri binari, e non come numeri esadecimali o decimali. Un esempio semplice partirebbe dal registro AX che contiene un valore di 0B76FH. (Sto usando AX per l'esempio qui per mantenere i numeri binari brevi e comprensibili, ma le istruzioni di spostamento possono essere utilizzate su registri di qualsiasi dimensione.) Espressa come numero binario (e quindi come modello di bit), 0B76FH è la seguente:
+</p>
+
+```
+ 1011011101101111
+```
+
+<p align=justify>
+Tieni presente che ogni cifra in un numero binario è un bit. Se esegui un'istruzione <code>SHL AX,1</code>, ciò che troveresti in AX dopo lo spostamento è il seguente:
+</p>
+
+```
+0110111011011110
+```
+
+<p align=justify>
+Un 0 è stato inserito all'estremità destra del numero, e tutto quanto è stato spostato verso sinistra di una cifra. Nota che un bit 1 è stato spostato all'estremità sinistra del numero nel nulla cosmico. Puoi persino usare le istruzioni di shift su CL, con CL che contiene il conteggio. Questo è legale, anche se sembra peculiare, e potrebbe non essere la migliore idea:
+</p>
+
+```asm
+ mov cl,1
+ shl cl,cl
+```
+
+<p align=justify>
+Quello che accade in questo esempio è che il valore di conteggio in CL viene spostato a sinistra dal valore che contiene CL. Qui il bit 1 in CL viene spostato per diventare un bit 2. Se questo sembra ancora strano, mettilo in una sandbox e osserva i registri.
+</p>
+
+### Colpire i Bit nel Carry Flag
+
+<p align=justify>
+Spostare un po' a sinistra un valore binario non significa esattamente mandare quel bit nel nulla cosmico. Un bit spostato fuori dall'estremità sinistra di un valore binario viene spostato in un contenitore temporaneo per i bit chiamato Flag di Riporto (CF, Carry Flag) . Il Flag di Riporto è uno di quei bit informativi raccolti insieme nel registro RFlags, che ho descritto nei paragrafi precedenti. Puoi testare lo stato del Flag di Riporto con un'istruzione di branching, come spiegherò un po' più avanti. Tuttavia, tieni presente, quando usi le istruzioni di shift, che molte altre istruzioni diverse usano il Flag di Riporto (non solo le istruzioni di shift). Se sposti un bit nel Flag di Riporto con l'intento di testare quel bit più tardi per vedere cosa è, testalo prima di eseguire un'altra istruzione che influisce sul Flag di Riporto. Quella lista include tutte le istruzioni aritmetiche, tutte le istruzioni logiche bit a bit, alcune altre istruzioni varie e, naturalmente, tutte le altre istruzioni di shift. Se sposti un bit nel Flag di Riporto e poi esegui immediatamente un'altra istruzione di shift, il bit spostato nel Flag di Riporto in precedenza verrà spedito fuori dall'estremità del mondo nel nulla cosmico.
+</p>
+
+### L'istruzione Rotate
+
+<p align=justify>
+Detto questo, se il destino di un bit non è quello di perdersi nel nulla cosmico, è necessario utilizzare le istruzioni di rotazione RCL, RCR, ROL e COR. Le istruzioni di rotazione sono quasi identiche alle istruzioni di spostamento, ma con una differenza cruciale: il bit sbattuto fuori da un'estremità dell'operando riappare all'estremità opposta dell'operando. Quando si ruota un operando di più di un bit, i bit marciano costantemente in una direzione, cadendo dall'estremità e riapparendo immediatamente all'estremità opposta. I bit quindi "ruotano" attraverso l'operando mentre viene eseguita l'istruzione di rotazione. Come tante cose, questo si vede meglio graficamente che a parole. Dai un'occhiata alla figura di sotto. L'esempio mostrato qui è l'istruzione <code>ROL</code> (Rotate Left), ma l'istruzione <code>ROR</code> funziona allo stesso modo, con i bit che si muovono nella direzione opposta. Un valore binario iniziale di <code>10110010</code> (0B2h) viene inserito in AL. Quando viene eseguita un'istruzione <code>ROL AL,1</code> tutti i bit in AL marciano verso sinistra di una posizione. Il bit a 1 in posizione 7 esce dall registro AL a sinistra ma gira e riappare immediatamente a destra in posizione 0. Anche in questo caso, il <code>ROR</code> funziona esattamente allo stesso modo, ma il movimento dei bit è da sinistra a destra invece che (come con <code>ROL</code>) da destra a sinistra. Il numero di bit in base ai quali viene ruotato un operando può essere un valore immediato o un valore in CL.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/how_rotate_works.png">
+</div>
+
+
 ## Controllo dei processi
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.01.png)
