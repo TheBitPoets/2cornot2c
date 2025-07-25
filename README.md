@@ -8182,6 +8182,128 @@ Questo potrebbe sembrare goffo, ma sorprendentemente, è ancora più veloce risp
 Riferisciti a due figure prima, per calcolare questo da solo: inizi con l'indirizzo di HexStr nella sua interezza. RDX contiene l'offset del primo carattere in un dato ingresso. Per ottenere l'indirizzo dell'ingresso in questione, aggiungi HexStr e RDX. Tuttavia, quell'indirizzo è del primo carattere nell'ingresso, che in HexStr è sempre un carattere spazio. La posizione del digit LSB in un ingresso è l'offset dell'ingresso +2, e la posizione del digit MSB in un ingresso è l'offset dell'ingresso +1. L'indirizzo del digit LSB è quindi HexStr + l'offset dell'ingresso + 2. L'indirizzo del digit MSB è quindi HexStr + l'offset dell'ingresso + 1.
 </p>
 
+### Flags, Tests e Branches
+
+<p align=justify>
+L'idea delle istruzioni di salto condizionale è semplice e senza di essa non si può fare molto in assembly. Ho usato i salti condizionali in modo informale negli ultimi programmi di esempio senza dire molto al riguardo, perché il senso dei salti era piuttosto ovvio dal contesto ed erano necessari per dimostrare altre cose. Ma sotto la semplicità dell'idea dei salti in linguaggio assembly si nasconde una grande complessità. È tempo di approfondire e coprire questo in dettaglio.
+</p>
+
+### Salti Incondizionati
+
+<p align=justify>
+Un salto è proprio questo: un cambiamento brusco nel flusso di esecuzione delle istruzioni. Ordinariamente, le istruzioni vengono eseguite una dopo l'altra, in ordine, passando dalla memoria bassa alla memoria alta. Le istruzioni di salto alterano l'indirizzo della prossima istruzione da eseguire. Esegui un'istruzione di salto, e zac! All'improvviso sei da un'altra parte. Un'istruzione di salto può spostare l'esecuzione avanti nella memoria o indietro. Può piegare l'esecuzione in un ciclo (e può legare la logica del tuo programma in nodi). Ci sono due tipi di salti: condizionali e incondizionati. Un salto incondizionato è un salto che avviene sempre. Prende questa forma.
+</p>
+
+```asm
+  jmp <label>
+```
+
+<p align=justify>
+Quando questa istruzione viene eseguita, la sequenza di esecuzione passa all'istruzione situata all'etichetta specificata da <code>label</code>. È così semplice.
+</p>
+	
+### Salti Condizionati
+
+<p align=justify>
+Un'istruzione di salto condizionale è uno di quei famosi test che ho introdotto nel Capitolo 1. Quando viene eseguita, un salto condizionale testa qualcosa, di solito uno, occasionalmente due, o molto più raramente tre dei flag nel registro RFlags. Se il flag o i flag testati si trovano in uno stato particolare, l'esecuzione salterà a un'etichetta da qualche altra parte; altrimenti, semplicemente passa all'istruzione successiva nella sequenza. Questa natura a due vie è importante. O un'istruzione di salto condizionale salta o passa. Salto o nessun salto. Non può saltare in uno di due luoghi o tre. Se salta o meno dipende dal valore corrente di un insieme molto ridotto di bit all'interno della CPU. Come ho menzionato precedentemente in questo libro discutendo del registro RFlags nel suo insieme, c'è un flag che viene impostato a 1 da alcune istruzioni quando il risultato di quella istruzione è zero: il flag Zero ZF. L'istruzione DEC (DECrement) è un buon esempio. DEC sottrae 1 dal suo operando. Se con quella sottrazione l'operando diventa zero, ZF è impostato a 1. Una delle istruzioni di salto condizionale, JZ (Jump if Zero), testa ZF. Se ZF risulta impostato a 1, si verifica un salto e l'esecuzione si trasferisce all'etichetta dopo il mnemonico JZ. Se ZF risulta essere 0, l'esecuzione passa all'istruzione successiva nella sequenza. Questo potrebbe essere il salto condizionale più comune nell'intero set di istruzioni x86/x64. È spesso usato quando si conta un registro fino a zero mentre si esegue un ciclo e, quando il conteggio del registro raggiunge zero grazie all'istruzione DEC, il ciclo termina e l'esecuzione riprende all'istruzione subito dopo il ciclo. Ecco un esempio semplice (sebbene non ottimale), usando istruzioni che dovresti già capire.
+</p>
+
+```asm
+ mov [RunningSum],0 ; Clear the running total
+ mov rcx,17         ; We're going to do this 17 times
+
+ WorkLoop:
+   add [RunningSum],3 ; Add three to the running total
+   dec rcx            ; Subtract 1 from the loop counter
+   jz SomewhereElse    ; If the counter is 0, we're done!
+   jmp WorkLoop
+```
+
+<p align=justify>
+La variabile RunningSum è stata definita in precedenza con il modificatore DQ, rendendola di dimensione 64 bit. Prima che inizi il ciclo, impostiamo un valore in RCX, che funge da registro contatore e contiene il numero di volte che attraverseremo il ciclo. Il corpo del ciclo è dove viene eseguita un'operazione ad ogni passaggio attraverso il ciclo. In questo esempio è un'unica istruzione ADD, ma il corpo potrebbe contenere decine o centinaia di istruzioni. Dopo che il lavoro del ciclo è completato, il registro contatore viene decrementato di 1 con un'istruzione DEC. Subito dopo, l'istruzione JZ testa il flag Zero. Decrementare RCX da 17 a 16, o da 4 a 3, non attiva ZF, e l'istruzione JZ semplicemente passa oltre. L'istruzione dopo JZ è un'istruzione di salto incondizionato, che obbedientemente e costantemente riporta l'esecuzione all'etichetta WorkLoop ogni volta. Ora, decrementare RCX da 1 a 0 attiva ZF... e questo è il momento in cui il ciclo termina. JZ ci porta finalmente fuori dal ciclo saltando a SomewhereElse (un'etichetta nel programma più grande che non è mostrata qui), e l'esecuzione esce dal ciclo. Potresti essere abbastanza acuto (o abbastanza esperto) da pensare che questo sia un modo orribile per impostare un ciclo, e hai ragione. (Ciò non significa che non sia mai stato fatto, né che tu stesso non possa farlo in un momento di impazienza nel cuore della notte.) Ciò che stiamo realmente cercando ogni volta che attraversiamo il ciclo è quando una condizione—il flag Zero—non è impostata, e c'è un'istruzione per questo.
+</p>
+
+### Saltare sull'assenza di una condizione
+
+<p align=justify>
+Ci sono diverse istruzioni di salto condizionale, di cui ne discuterò alcune, ma non tutte, in questo libro. Il loro numero è aumentato dal fatto che quasi ogni istruzione di salto condizionale ha un alter ego: un salto quando la condizione specificata non è impostata su 1. L'istruzione JZ fornisce un buon esempio di salto su una condizione. JZ salta a una nuova posizione nel segmento di codice se il flag Zero (ZF) è impostato su 1. L'alter ego di JZ è JNZ (Salta se Non Zero). JNZ salta a un'etichetta se ZF è 0 e passa avanti se ZF è 1. Questo può essere confuso all'inizio, perché JNZ salta quando ZF è uguale a 0. Tieni presente che il nome dell'istruzione si applica alla condizione testata e non necessariamente al valore binario del flag. Nell'esempio di codice precedente, JZ è saltato quando l'istruzione DEC ha decrementato un contatore a zero. La condizione testata è qualcosa di connesso con un'istruzione precedente, non semplicemente lo stato di ZF. Pensala in questo modo: una condizione solleva un flag. “Alzare un flag” significa impostare il flag su 1. Quando una delle numerose istruzioni costringe un operando a un valore di zero (che è la condizione), il flag Zero viene alzato. La logica dell'istruzione si riferisce alla condizione, non al flag. Come esempio, miglioriamo il piccolo ciclo mostrato prima cambiando la logica del ciclo per utilizzare JNZ:
+</p>
+
+```asm
+ mov word [RunningSum],0  ; Clear the running total
+ mov ecx,17               ; We're going to do this 17 times
+
+ WorkLoop:
+ add word [RunningSum],3  ; Add 3 to the running total
+ dec ecx                  ; Subtract 1 from the loop counter
+ jnz WorkLoop             ; If the counter is 0, we're done!
+```
+
+<p align=justify>
+L'istruzione JZ è stata sostituita con un'istruzione JNZ. Questo ha molto più senso, poiché per chiudere il ciclo dobbiamo saltare, e chiudiamo il ciclo solo quando il contatore è maggiore di 0. Il salto di ritorno all'etichetta WorkLoop avverrà solo quando il contatore è maggiore di 0. Una volta che il contatore si riduce a 0, il ciclo è considerato completato. JNZ "continua" ed il codice che segue il ciclo (che non mostro qui) viene eseguito. Il punto è che se puoi posizionare il compito successivo del programma immediatamente dopo l'istruzione JNZ, non hai affatto bisogno di utilizzare l'istruzione JMP incondizionata. L'esecuzione delle istruzioni passerà semplicemente in modo naturale al compito successivo da eseguire. Il programma avrà un flusso più naturale e meno ingarbugliato dall'alto verso il basso e sarà più facile da leggere e comprendere.
+</p>
+
+### Flags
+
+<p align=justify>
+Precedentemente, ho spiegato il registro RFlags e descritto brevemente gli scopi di tutti i flag in esso contenuti. RFlags è scarso; più della metà è riservata per usi futuri e quindi indefinita. La maggior parte dei flag definiti non è particolarmente utile, specialmente quando stai appena iniziando come programmatori assembly. Il flag Carry (CF) e il flag Zero (ZF) costituiranno il 90 percento del tuo coinvolgimento con i flag come principiante, mentre il flag Direction (DF), il flag Sign (SF) e il flag Overflow (OF) insieme rappresentano un ulteriore 9.998 percento. Potrebbe essere una buona idea rileggere quella parte su RFalgsora, nel caso in cui la tua comprensione dell'etichetta dei flag sia un po' arrugginita. Come ho spiegato in precedenza, JZ salta quando ZF è 1, mentre JNZ salta quando ZF è 0. La maggior parte delle istruzioni che eseguono un'operazione su un operando (come AND, OR, XOR, INC, DEC e tutte le istruzioni aritmetiche) impostano ZF in base ai risultati dell'operazione. D'altra parte, le istruzioni che semplicemente spostano dati (come MOV, XCHG, PUSH e POP) non influenzano ZF né alcuno degli altri flag. (Ovviamente, POPF influisce sui flag estraendo il valore in cima allo stack in essi.) Un'eccezione irritante è l'istruzione NOT, che esegue un'operazione logica sul suo operando ma non imposta alcun flag — anche quando provoca che il suo operando diventi 0. Prima di scrivere codice che dipende dai flag, controlla il tuo riferimento delle istruzioni per assicurarti che tu abbia compreso correttamente l'etichetta dei flag per quella particolare istruzione. 
+</p>
+
+### Confronti con CMP
+
+<p align=justify>
+Un uso principale delle flag è nel controllo dei cicli. Un altro è nelle comparazioni tra due valori. I tuoi programmi dovranno spesso sapere se un valore in un registro o nella memoria è uguale a un altro valore. Inoltre, potresti voler sapere se un valore è maggiore di un valore o minore di un valore se non è uguale a quel valore. Esiste un'istruzione di salto per soddisfare ogni esigenza, ma qualcosa deve impostare le flag a beneficio dell'istruzione di salto. L'istruzione CMP (CoMPare) è quella che imposta le flag per i compiti di confronto. L'uso di CMP è semplice e intuitivo. Il secondo operando viene confrontato con il primo e diverse flag vengono impostate di conseguenza:
+</p>
+
+```asm
+cmp <op1>,<op2>    ; Sets OF, SF, ZF, AF, PF, and CF
+```
+
+<p align=justify>
+Il senso del confronto può essere ricordato se si riformula semplicemente il confronto in termini aritmetici.
+</p>
+
+```asm
+ Result = <op1> - <op2>
+```
+
+<p align=justify>
+CMP è in gran parte un'operazione di sottrazione in cui il risultato della sottrazione viene scartato e solo i flag sono influenzati. Il secondo operando viene sottratto dal primo. In base ai risultati della sottrazione, i flag che influenzano vengono impostati ai valori appropriati. Dopo un'istruzione CMP, puoi saltare in base a diverse condizioni aritmetiche. Le persone che hanno una ragionevole conoscenza della matematica, e i programmatori FORTRAN o Pascal, riconosceranno le condizioni: Uguale, Diverso, Maggiore di, Minore di, Maggiore o uguale a, e Minore o uguale a. Il senso di questi operatori deriva dai loro nomi ed è esattamente come il senso degli operatori equivalenti nella maggior parte dei linguaggi di alto livello.
+</p>
+
+### Una giungla di istruzioni JUMP
+
+<p align=justify>
+C'è una serie disorientante di istruzioni di salto, ma quelle che trattano le relazioni aritmetiche si suddividono bene in sole sei categorie, una categoria per ciascuna delle sei condizioni che ho appena elencato. La complicazione nasce dal fatto che ci sono due mnemonici per ogni istruzione della macchina, ad esempio, JLE (Salta se Minore o Uguale) e JNG (Salta se Non Maggiore di). Questi due mnemonici sono sinonimi in quanto l'assemblatore genera l'identico opcode binario quando incontra uno dei due mnemonici. I sinonimi sono una comodità per te programmatore in quanto offrono due modi alternativi di pensare a una data istruzione di salto. Nell'esempio precedente, Salta se Minore o Uguale è logicamente identico a Salta se Non Maggiore. (Pensaci!) Se l'importanza del confronto precedente era vedere se un valore è minore o uguale a un altro, useresti il mnemonico JLE. D'altra parte, se stavi testando per essere sicuro che una quantità non fosse maggiore di un'altra, useresti JNG. La scelta è tua. Un'altra complicazione è che c'è un insieme separato di istruzioni per i confronti aritmetici firmati e non firmati. Non ho parlato molto della matematica del linguaggio assembly in questo libro e quindi non ho detto molto sulla differenza tra quantità firmate e non firmate. Una quantità firmata è quella in cui il bit alto della quantità è considerato un flag incorporato che indica se la quantità è negativa. Se quel bit è 1, la quantità è considerata negativa. Se quel bit è 0, la quantità è considerata positiva. L'aritmetica firmata nel linguaggio assembly è complessa e sottile e non è così utile come potresti pensare immediatamente. Non la coprirò in dettaglio in questo libro, anche se la maggior parte dei libri di linguaggio assembly la trattano in una certa misura. Tutto ciò che devi sapere per avere una comprensione di alto livello dell'aritmetica firmata è che, nell'aritmetica firmata, le quantità negative sono legali e il bit più significativo di un valore è trattato come il bit di segno. (Se il bit di segno è impostato su 1, il valore è considerato negativo.) L'aritmetica non firmata, d'altra parte, non riconosce numeri negativi, e il bit più significativo è solo un bit in più nel numero binario che esprime il valore in esame.
+</p>
+
+<p align=justify>
+Per distinguere i salti firmati da quelli non firmati, i mnemonici usano due espressioni diverse per la relazione tra due valori:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+			I valori con segno sono considerati maggiori o minori. Ad esempio, per verificare se un operando con segno è maggiore di un altro, utilizzeresti il mnemonico JG (Salta se Maggiore) dopo un'istruzione CMP.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			I valori non firmati sono considerati come se fossero sopra o sotto. Ad esempio, per determinare se un operando non firmato è maggiore (sopra) di un altro, si utilizzerà il mnemonico JA (Salta se sopra) dopo un'istruzione CMP.
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+La tabella di sotto riassume i mnemonici di salto aritmetico e i loro sinonimi. Qualsiasi mnemonico contenente le parole sopra o sotto è per valori senza segno, mentre qualsiasi mnemonico contenente le parole maggiore o minore è per valori con segno. Confronta i mnemonici con i loro sinonimi e vedi come i due rappresentano punti di vista opposti da cui guardare istruzioni identiche.
+</p>
+
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/Jump_Instruction_Mnemonics.png">
+</div>
+
+
 ## Controllo dei processi
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.01.png)
