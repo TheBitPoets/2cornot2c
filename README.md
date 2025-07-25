@@ -8399,7 +8399,684 @@ Qualcosa di cui fare attenzione, specialmente se sei abituato a usare TEST, è c
 
 ###  X64 Long Mode Memory Addressing
 
+<p align=justify>
+In molti modi, la vita è migliore ora. E non sto parlando solo di odontoiatria moderna, networking plug-and-play e CPU a otto core. Programmavo in assembly per le CPU 8088 in modalità reale nel primo IBM PC. E ricordo l'indirizzamento della memoria in modalità reale. Come l'odontoiatria negli anni '50, l'indirizzamento della memoria in modalità reale basato su 8088 era semplicemente... doloroso. Era un terribile groviglio di restrizioni, insidie e limiti, tutti i quali urlavano che la CPU aveva disperatamente bisogno di più transistor sul die. Ad esempio, l'indirizzamento della memoria era limitato a BX e BP nella maggior parte delle istruzioni, il che significava un sacco di manovre ingegnose quando diversi elementi separati dovevano essere indirizzati in memoria contemporaneamente. E pensare alla gestione dei segmenti ancora mi fa rabbrividire. Beh, negli ultimi 40 anni le nostre CPU della famiglia Intel hanno ottenuto praticamente tutti i transistor di cui avevano bisogno, e la maggior parte di quelle frustranti limitazioni di indirizzamento della memoria a 16 bit sono semplicemente scomparse. Puoi indirizzare la memoria con uno qualsiasi dei registri a scopo generale. Puoi persino indirizzare la memoria direttamente con il puntatore dello stack RSP, qualcosa che il suo antenato a 16 bit SP non poteva fare. (Non dovresti cambiare il valore in RSP senza una considerevole attenzione, ma RSP può ora partecipare a modalità di indirizzamento dalle quali il puntatore dello stack era escluso nel regno della modalità reale a 16 bit.)
+</p>
 
+<p align=justify>
+La modalità protetta a 32 bit sulla famiglia di CPU 386 ha introdotto uno schema di indirizzamento della memoria a uso generale in cui tutti i registri GP potevano partecipare in modo uguale. L'indirizzamento della memoria nella modalità long x64 implementa lo stesso schema con pochissime modifiche. L'ho schematizzato nella Figura 9.9, che potrebbe benissimo essere la figura più importante di tutto questo libro. L'indirizzamento della memoria è l'abilità chiave nel lavoro con il linguaggio assembly. Se non capisci come la CPU indirizza la memoria, niente altro ha importanza.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/x64_long_mode_memory_addressing.png">
+</div>
+
+<p align=justify>
+Quando ho studiato e compreso per la prima volta questo schema, con ferite ancora sanguinanti dall'indirizzamento della memoria segmentata a 16 bit 8088, sembrava troppo bello per essere vero. Ma è vero! Ecco le regole
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		I registri base e indice possono essere qualsiasi dei registri generali a 64 bit, incluso RSP
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Lo spostamento può essere qualsiasi costante a 32 bit, sia un valore letterale che un valore nominato. È ovvio che 0, sebbene legale, non è utile.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		La scala deve essere uno dei valori 1, 2, 4 o 8. Ecco tutto! Il valore 1 è legale, ma dato che la scala è usata per moltiplicare un altro valore, 1 non fa nulla di utile.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Il registro degli indici viene moltiplicato per la scala prima che vengano effettuate le addizioni. In altre parole, non è (base + indice) × scala. Solo il registro degli indici può essere moltiplicato per la scala.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Tutti gli elementi sono facoltativi e possono essere utilizzati in quasi qualsiasi combinazione
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Sia i registri a 32 bit che quelli a 64 bit possono essere utilizzati, ma non è possibile mescolare le dimensioni dei registri in un singolo indirizzo. Cioè, i registri in un'unica operazione di indirizzamento della memoria devono essere tutti a 32 bit o tutti a 64 bit.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		I registri a 16 bit e a 8 bit non possono essere utilizzati nell'indirizzamento della memoria.
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+All'interno di quelle regole, ci sono diversi modi per accedere alla memoria, raccogliendo i componenti dell'indirizzo mostrati nella figura di sopra in diverse combinazioni. Gli esempi sono mostrati nella figura di sotto.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/64_Bit_Long_Mode_Memory_Addressing_Schemes.png">
+</div>
+
+### Calcolo dell' Effective Address
+
+<p align=justify>
+Ognuna delle righe nella figura di sopra riassume un metodo di espressione di un indirizzo di memoria in modalità lunga a 64 bit. Tutti tranne i primi due coinvolgono un po' di aritmetica tra due o più termini all'interno delle parentesi che significano un indirizzo. Questa aritmetica è chiamata calcolo dell'effective address, e il risultato del calcolo è l'effective address. Questo termine indica l'indirizzo che verrà utilizzato per leggere o scrivere nella memoria, indipendentemente da come viene espresso. Il calcolo dell'effective address viene eseguito dall'istruzione, quando l'istruzione viene eseguita. L'effective address nello schema Base è semplicemente il valore a 64 bit memorizzato nel registro GP tra le parentesi. Non è coinvolto alcun calcolo, ma ciò che vediamo nel codice sorgente non è un indirizzo letterale o simbolico. Quindi, anche se l'istruzione è codificata con un nome di registro tra le parentesi, l'indirizzo che verrà inviato al sistema di memoria quando il codice viene eseguito è memorizzato all'interno del registro. Nella maggior parte dei casi in cui si tratta di un effective address, c'è un certo operare aritmetico. Ad esempio, nello schema Base + Indice, il contenuto dei due registri GP tra le parentesi vengono aggiunti quando l'istruzione viene eseguita per formare l'effective address.
+</p>
+
+### Displacements (Scostamento)
+
+<p align=justify>
+Tra i diversi componenti di un indirizzo in modalità long x64 legale, il termine di spostamento è in realtà il più difficile da comprendere. Come ho indicato nel paragrafo precedente, il termine di spostamento può essere un indirizzo letterale, ma in tutti i miei anni di programmazione assembly in modalità protetta non l'ho mai fatto né ho visto qualcun altro farlo. Il motivo? Non sai quasi mai l'indirizzo letterale di qualcosa al momento della compilazione. C'è un altro motivo per non utilizzare indirizzi letterali, di cui parlerò a breve. Quando il termine di spostamento è isolato, è praticamente sempre un indirizzo simbolico. Con questo intendo un elemento di dati con un nome che hai definito nelle tue sezioni .data o .bss, come la variabile HexStr del programma hexdump1 nell'elenco 9.1:
+</p>
+
+```asm
+ mov rax,HexStr
+```
+
+<p align=justify>
+Ciò che viene posto in RAX qui è l'indirizzo dato alla variabile HexStr quando il programma viene caricato in memoria dal sistema operativo. Come tutti gli indirizzi, è solo un numero, ma viene determinato quando il programma viene caricato piuttosto che al momento della codifica, come farebbe un indirizzo numerico costante letterale. Si noti anche che il precedente blocco di codice sorgente carica un indirizzo in RAX, non il valore in memoria a quell'indirizzo. Per quello hai bisogno delle parentesi:
+</p>
+
+```asm
+ mov rax,[HexStr]
+```
+
+<p align=justify>
+Molti principianti si confondono quando vedono quelli che sembrano essere due termini di spostamento in un unico indirizzo. La confusione deriva dal fatto che se NASM vede due (o più) valori costanti in un riferimento di memoria, li combinerà durante il tempo di assemblaggio in un unico valore di spostamento, che viene posizionato in RAX dall'istruzione MOV. È ciò che viene fatto qui:
+</p>
+
+```asm
+ mov rax,HexStr+3
+```
+
+<p align=justify>
+Nota l'assenza di parentesi. L'indirizzo a cui si fa riferimento simbolicamente tramite la variabile chiamata HexStr viene semplicemente aggiunto alla costante letterale 3 per formare un singolo valore di spostamento. La caratteristica chiave di un termine di spostamento è che non viene memorizzato in un registro.
+</p>
+
+### Il problema della dimensione dello scostamento in x64
+
+<p align=justify>
+Ora, c'è un problema specifico per x64 riguardo ai dislocamenti: un valore di dislocamento non deve superare i 32 bit di dimensione. Perché? Come a volte devo dire... è complicato. E non ha nulla a che fare con il numero di bit di indirizzo supportati nel silicio di una data CPU x64. In parole povere, limitare i dislocamenti a 32 bit è stata una decisione di design di AMD all'alba del tempo x64 che "è rimasta." Potrebbe essere corretto un giorno — o non lo sarà. Ma, ehi, non dire mai "mai." Nel frattempo, dobbiamo solo convivere con esso.
+</p>
+
+### Base Addressing (indirizzamento di base)
+
+<p align=justify>
+Quando escludi l'indirizzamento per spostamento, tutto l'indirizzamento della memoria x64 si basa su registri. Lo schema di indirizzamento di Base utilizza semplicemente un singolo registro nel quale è stato caricato un indirizzo. Si chiama Base perché tutti gli schemi di indirizzamento più complessi partono da Base e lo estendono. Ecco un esempio di indirizzamento di Base:
+</p>
+
+```asm
+ mov qword rax,[rcx]
+```
+
+<p align=justify>
+Questa istruzione prende il valore a 64 bit memorizzato nella memoria all'indirizzo contenuto nel registro RCX e lo carica nel registro RAX.
+</p>
+
+### Base + Displacement Addressing
+
+<p align=justify>
+Uno schema di indirizzamento semplice e comune è Base + Displacement, e l'ho dimostrato nel programma hexdump1 nella Lista 9.1. L'istruzione che inserisce un carattere ASCII nella riga di output appare così:
+</p>
+
+```asm
+ mov byte [HexStr+rdx+2],al
+```
+
+<p align=justify>
+Ciò che accade qui è che un valore di carattere a 8 bit memorizzato nel registro AL viene scritto nel byte in memoria indirizzato come HexStr+RDX+2. Questo è un perfetto esempio di un caso in cui ci sono due termini di spostamento che NASM combina in uno. Il nome della variabile HexStr si risolve in un numero (l'indirizzo di HexStr) e si aggiunge facilmente alla costante letterale 2. Quindi, in verità, c'è solo un termine di base (RDX) e un termine di spostamento. È anche un buon esempio di come i registri a 8 bit abbiano ancora il loro utilizzo, soprattutto quando si trattano valori a 8 bit come i caratteri ASCII. Nota anche che l'ordine dei termini in un indirizzo non conta. L'indirizzo efficace potrebbe essere stato RDX+HexStr+2.
+</p>
+
+### Base + Index Addressing
+
+<p align=justify>
+Forse il sistema di indirizzamento singolo più comune è Base + Indice, nel quale l'indirizzo effettivo viene calcolato sommando i contenuti di due registri GP all'interno delle parentesi. Ho dimostrato questo schema di indirizzamento nel Capitolo 8, nel programma uppercaser2 nell'Elenco 8.2. Convertire un carattere nel buffer di input da minuscolo a maiuscolo viene effettuato sottraendo 20h da esso:
+</p>
+
+```asm
+ sub byte [r13+rbx],20h
+```
+
+<p align=justify>
+L'indirizzo del buffer era precedentemente posizionato in RBP, e il numero in RCX è lo spostamento dall'inizio del buffer del carattere in fase di elaborazione durante un dato passaggio nel ciclo. Aggiungere l'indirizzo del buffer con uno spostamento nel buffer porta all'indirizzo effettivo del carattere su cui agisce l'istruzione SUB. Ma aspetta... perché non usare l'indirizzamento Base + Displacement? Questa istruzione sarebbe legale:
+</p>
+
+```asm
+ sub byte [Buff+rbx],20h
+```
+
+<p align=justify>
+Tuttavia, se ricordi dal programma (e varrebbe la pena tornare indietro e leggere il testo associato), dovevamo decrementare l'indirizzo di Buff di 1 prima di iniziare il ciclo. Ma aspetta ancora... potremmo far fare a NASM quella piccola modifica aggiungendo un secondo termine di spostamento di -1? In effetti, potremmo farlo, e funzionerebbe. Il ciclo centrale del programma uppercaser2 apparirebbe quindi così:
+</p>
+
+```asm
+; Set up the registers for the process buffer step:
+ 
+     mov rbx,rax          ; Place the number of bytes read into rbx
+     mov r13,Buff         ; Place address of buffer into r13
+ ;    dec r13                We don't need this instruction anymore!
+ 
+; Go through the buffer and convert lowercase to uppercase characters:
+ 
+Scan:
+     cmp byte [r13-1+rbx],61h  ; Test input char against lowercase 'a'
+     jb Next                   ; If below 'a' in ASCII, not lowercase
+     cmp byte [r13-1+rbx],7Ah  ; Test input char against lowercase 'z'
+     ja Next                  ; If above 'z' in ASCII, not lowercase
+ 
+                              ; Now we have a lowercase char
+     sub byte [r13-1+rbx],20h ; Subtract 20h to give uppercase…
+ 
+Next:
+     dec rbx                  ; Decrement counter
+     jnz Scan                 ; If characters remain, loop back
+
+```
+
+<p align=justify>
+L'istruzione DEC R13 nel primo blocco non è più necessaria, e nel codice precedente quella riga è commentata. NASM fa i calcoli, e l'indirizzo di Buff viene decrementato di 1 all'interno dell'espressione dell'indirizzo effettivo quando il programma si carica. Questo è effettivamente il modo corretto di programmare questo particolare ciclo, e ci ho pensato a lungo se mostrarlo di nuovo nel Capitolo 8 o aspettare di poter spiegare gli schemi di indirizzamento della memoria in dettaglio. Alcune persone trovano il nome “Base + Displacement” confuso, perché nella maggior parte dei casi, il termine Displacement contiene un indirizzo, e il termine Base è un registro che contiene un offset in un elemento di dati a quell'indirizzo. La parola displacement somiglia alla parola offset nell'esperienza della maggior parte delle persone, il che può portare a confusione. Questo è uno dei motivi per cui non metto in evidenza i nomi dei vari schemi di indirizzamento della memoria in questo libro e certamente non raccomando di memorizzare i nomi. Comprendere come funziona il calcolo dell'indirizzo effettivo e ignorare i nomi degli schemi.
+</p>
+
+### Index X Scale + Displacement Addressing
+
+<p align=justify>
+L'indirizzamento Base + Index è ciò che tipicamente utilizzerai per esaminare un buffer in memoria byte per byte. Ma cosa succede se hai bisogno di accedere a un elemento di dati in un buffer o in una tabella dove ogni elemento di dati non è un singolo byte, ma una parola o una doppia parola? Questo richiede una logica di indirizzamento della memoria leggermente più potente. A proposito, l'array di parole è il termine generale per ciò che ho definito un buffer o una tabella. Altri scrittori possono chiamare una tabella un array, specialmente quando il contesto della discussione è un linguaggio di alto livello. Ma tutti e tre i termini si riducono alla stessa definizione: una sequenza di elementi di dati in memoria, tutti della stessa dimensione e della stessa definizione interna. Nei programmi che ti ho mostrato finora, abbiamo parlato solo di tabelle e buffer molto semplici consistenti in una sequenza di valori a 1 byte tutti in fila. La tabella Digits nel programma hexdump1 è una di queste tabelle:
+</p>
+
+```asm
+ Digits: db "0123456789ABCDEF"
+```
+
+<p align=justify>
+Consiste in 16 caratteri ASCII a byte singolo in sequenza in memoria, a partire dall'indirizzo rappresentato dai Digits. Puoi accedere al carattere “C” all'interno dei Digits in questo modo, utilizzando l'indirizzamento Base + Displacement:
+</p>
+
+```asm
+ mov rcx,12
+ mov rdx,[Digits+rcx]
+```
+
+<p align=justify>
+Ma cosa succede se hai una tabella contenente valori numerici a 64 bit? Una tale tabella è abbastanza facile da definire:
+</p>
+
+```asm
+ Sums: dq "15,12,6,0,21,14,4,0,0,19"
+```
+
+<p align=justify>
+Il qualificatore DQ informa NASM che ogni elemento nella tabella Sums è una quantità di 64 bit (quad word). Le costanti letterali inseriscono un valore numerico in ciascun elemento della tabella. L'indirizzo del primo elemento (qui, 15) in Sums è semplicemente l'indirizzo della tabella nel suo insieme. Quindi qual è l'indirizzo del secondo elemento, 12? E come si accede a esso dal codice assembly? Tieni presente che la memoria è indirizzata byte per byte, e non doppio word per doppio word o quad word per quad word. La seconda voce nella tabella si trova a un offset di 8 byte all'interno della tabella. Se provassi a fare riferimento alla seconda voce nella tabella usando un indirizzo [Sums+1], otterresti uno dei byte all'interno del quad word del primo elemento della tabella, e questo non sarebbe utile. Qui entra in gioco il concetto di scaling. Un indirizzo può includere un termine di scala, che è un moltiplicatore e può essere uno dei valori letterali 2, 4 o 8. (La costante letterale 1 è tecnicamente legale, ma poiché la scala è un moltiplicatore, 1 non è un valore di scala utile.) Il prodotto dell'indice e dei termini di scala è aggiunto allo spostamento per dare l'indirizzo efficace. Questo è noto come schema di indirizzamento Indice × Scala + Displacement. Tieni presente che il termine di scala può essere utilizzato solo con il termine di indice. Tipicamente, il termine di scala è la dimensione dei singoli elementi nella tabella. Se la tua tabella consiste in valori di word da 2 byte, la scala sarebbe 2. Se la tua tabella consiste in valori di double word da 4 byte, la scala sarebbe 4. Se la tua tabella consiste in valori di quad word da 8 byte, la scala sarebbe 8.
+</p>
+
+<p align=justify>
+Il modo migliore per spiegare questo è con un diagramma. Nella Figura di sotto, ci troviamo di fronte all'indirizzo [DQTable+ECX*8]. DQTable è una tabella di valori a parola quadrupla (64 bit). L'indirizzo di DQTable è lo spostamento. Il registro RCX è l'indice e, per questo esempio, contiene 2, che è il numero dell'elemento della tabella che vuoi accedere. Poiché si tratta di una tabella di parole quadruple di 8 byte, il valore di scala è 8. Nota anche che il simbolo di moltiplicazione non è una “x” ma un asterisco. Il simbolo di moltiplicazione “×” non fa parte del set di caratteri ASCII, quindi, come nella maggior parte dei linguaggi di alto livello, l'assembly utilizza l'asterisco come simbolo dell'operatore di moltiplicazione. Poiché ogni elemento della tabella è di 8 byte, l'offset dell'elemento #2 dall'inizio della tabella è 16. L'indirizzo effettivo dell'elemento viene calcolato moltiplicando prima l'indice per la scala e poi aggiungendo il prodotto all'indirizzo di DQTable. Eccolo!
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/how_address_scaling_works.png">
+</div>
+
+### Altri Schemi d'Indirizzamento
+
+<p align=justify>
+Qualsiasi schema di indirizzamento che include la scalatura funziona in questo modo. Le differenze risiedono in quali altri termini vengono considerati nell'indirizzo effettivo. Lo schema Base + Indice × Scala aggiunge un indice scalato a un valore base in registro piuttosto che a uno spostamento:
+</p>
+
+```asm
+mov rcx,2           ; Index is in rcx
+mov rbp,DDTable     ; Table address is in rbp
+mov rdx,[rbp+rcx*8] ; Put the selected element into rdx
+```
+
+<p align=justify>
+Non lavorerai sempre con l'indirizzo di una variabile predefinita come DDTable. A volte l'indirizzo della tabella verrà da qualche altra parte, più spesso da una tabella bidimensionale composta da un certo numero di sotto-tabelle in memoria, ciascuna delle quali contiene un certo numero di elementi. Tali tabelle vengono accedute in due fasi: Prima si deriva l'indirizzo della sotto-tabella nella tabella esterna, e poi si deriva l'indirizzo dell'elemento desiderato all'interno della sotto-tabella. L'esempio più conosciuto di questo tipo di tabella bidimensionale è qualcosa che ho presentato in edizioni precedenti di questo libro, scritto per DOS. Il buffer di memoria video testo di 25 righe × 80 caratteri sotto DOS era una tabella bidimensionale. Ciascuna delle 25 righe era una tabella di 80 caratteri, e ciascun carattere era rappresentato da una parola di 2 byte. (Un byte era il valore ASCII, e l'altro byte specificava attributi come colore, sottolineatura, e così via.) Quindi, il buffer nel suo insieme era una tabella complessiva di 24 tabelle più piccole, ciascuna contenente 80 valori di parola di 2 byte. Quel tipo di sistema di accesso video è morto con DOS; Linux non consente l'accesso diretto alla memoria video del PC. È stato fatto molto nell'era DOS, tuttavia, ed è un buon esempio di tabella bidimensionale. La scalabilità ti servirà bene per tabelle con elementi di 2 byte, 4 byte o 8 byte. E se la tua tabella è composta da elementi di 3 byte? O di 5 byte? O di 17 byte? Ahimè, in tali casi dovrai fare dei calcoli aggiuntivi per concentrare su un particolare elemento. Il calcolo dell'indirizzo efficace non farà tutto il lavoro da solo. La stringa di visualizzazione della linea è una tabella di elementi di 3 byte. Ciascun elemento contiene un carattere di spazio seguito dai due caratteri esadecimali. Poiché gli elementi sono lunghi tre caratteri, la scala non può essere effettuata all'interno dell'istruzione e deve essere gestita separatamente. Non è difficile. La scalabilità per gli elementi di 3 byte nella tabella HexStr nel programma hexdump1 è fatta in questo modo:
+</p>
+
+```asm
+mov rdx,rcx     ; Copy the character counter into rdx
+shl rdx,1       ; Multiply counter by 2 using left shift
+add rdx,rcx     ; Complete the multiplication X3
+```
+
+<p align=justify>
+Il calcolo per moltiplicare un valore in RDX per 3 viene effettuato con una combinazione di un'istruzione SHL per moltiplicare per 2, seguita da un'istruzione ADD che aggiunge una terza copia del valore dell'indice al valore dell'indice spostato, moltiplicando efficacemente il valore originale per 3. La scalatura per altri valori di indice può essere effettuata allo stesso modo. La scalatura per 5 sarebbe eseguita spostando il valore dell'indice a sinistra di 2 bit, moltiplicandolo così per 4, seguita dall'aggiunta di un'altra copia del valore dell'indice per completare la moltiplicazione per 5. In termini generali, per scalare un valore di indice per X:
+</p>
+
+1. Trova la potenza di 2 più grande di X.
+2. Sposta il valore dell'indice a sinistra di quella potenza di 2.
+3. Aggiungi una copia del valore dell'indice originale alla copia spostata tante volte quanto è necessario per completare la moltiplicazione per X.
+
+<p align=justify>
+Ad esempio, se X è 11, il calcolo della scala verrebbe fatto in questo modo:
+</p>
+
+```asm
+ mov rdx,rcx ; Copy the index into rdx
+ shl rdx,3   ; Multiply index X 8 by shifting index left 3X
+ add rdx,rcx ; Add first of 3 additional copies of index
+ add rdx,rcx ; Add second of 3 additional copies of index
+ add rdx,rcx ; Add third of 3 additional copies of index
+```
+
+<p align=justify>
+Questo funziona meglio per valori di dimensioni relativamente piccole; una volta che superi 20, ci saranno molte istruzioni ADD. A quel punto, la risposta non è calcolare la scala ma cercare la scala in una tabella appositamente definita per un determinato valore di scala. Ad esempio, supponi che gli elementi della tua tabella siano lunghi ciascuno 25 byte. Potresti definire una tabella con multipli di 25:
+</p>
+
+```asm
+ScaleValues: dd 0,25,50,75,100,125,150,175,200,225,250,275
+```
+
+<p align=justify>
+Per scalare un valore indice di 6 per una dimensione di voce di 25, dovresti cercare il prodotto di 6 × 25 nella tabella in questo modo.
+</p>
+
+```asm
+ mov rcx,6
+ mov rax,[ScaleValues+rcx*4]
+```
+
+<p align=justify>
+Il valore in RAX ora contiene l'indirizzo efficace del primo byte dell'elemento 6, contando gli elementi (come al solito) da 0.
+</p>
+
+### Istruzione LEA
+
+<p align=justify>
+Ma aspetta, c'è di più. Una delle istruzioni più bizzarre e sotto alcuni aspetti più meravigliose nell'architettura Intel è LEA, Carica Indirizzo Efficace. In superficie, ciò che fa è semplice: calcola un indirizzo efficace utilizzando i termini tra le parentesi del suo operando sorgente e carica quell'indirizzo in un qualsiasi registro a 64 bit dato come operando di destinazione. Guarda di nuovo il codice mostrato poco prima dell'inizio di questa sezione. L'istruzione MOV cerca l'elemento con indice 6 nella tabella ScaleValues. Per cercare l'elemento all'indice 6, deve prima calcolare l'indirizzo efficace dell'elemento all'indice 6. Questo indirizzo viene poi utilizzato per accedere alla memoria. Ma cosa succede se vuoi salvare quell'indirizzo in un registro per utilizzarlo successivamente senza doverlo calcolare di nuovo? Ecco cosa fa LEA. Ecco LEA in azione:
+</p>
+
+```asm
+ lea rbx,[ScaleValues+rcx*4]
+```
+
+<p align=justify>
+Quello che succede qui è che la CPU calcola l'indirizzo effettivo fornito all'interno delle parentesi e carica quell'indirizzo nel registro RBX. Tenere presente che le singole voci di una tabella non dispongono di etichette e quindi non è possibile farvi riferimento direttamente. LEA ti dà la possibilità di calcolare l'indirizzo effettivo di qualsiasi elemento in una tabella (o qualsiasi indirizzo calcolabile!) e di inserire quell'indirizzo in un registro. Di per sé questo è molto utile. Tuttavia, LEA ha uno scopo "off-label": fare matematica veloce senza turni, aggiunte o MUL. Se ricordi, c'è un calcolo nel programma hexdump1gcc che moltiplica per 3 usando uno spostamento e un'addizione
+</p>
+
+```asm
+ mov rdx,rcx   ; Copy the character counter into rdx
+ shl rdx,1     ; Multiply pointer by 2 using left shift
+ add rdx,rcx   ; Complete the multiplication X3
+```
+
+<p align=justify>
+Questo funziona. Ma guarda cosa possiamo usare che fa esattamente la stessa cosa.
+</p>
+
+```asm
+ mov rdx,rcx         ; Copy the character counter into rdx
+ lea rdx,[rdx*2+rdx] ; Multiply rdx X 3
+```
+
+<p align=justify>
+Non solo questo è praticamente sempre più veloce rispetto alle operazioni di spostamento combinate con le addizioni, ma è anche più chiaro dal tuo codice sorgente che tipo di calcolo viene effettivamente eseguito. Il fatto che ciò che finisce in RDX potrebbe non essere in realtà l'indirizzo legale di nulla è irrilevante. LEA non cerca di fare riferimento all'indirizzo che calcola. Esegue i calcoli sui valori all'interno delle parentesi e deposita il risultato nell'operando di destinazione. Lavoro terminato. La memoria non viene toccata e i flag non vengono influenzati. Naturalmente, sei limitato da quali calcoli possono essere effettuati che producono indirizzi efficaci. Ma subito, puoi moltiplicare qualsiasi registro GP per 2, 3, 4, 5, 8 e 9. Non è matematica arbitraria, ma moltiplicare per 2, 3, 4, 5, 8 e 9 si verifica regolarmente nel lavoro di assembly, e puoi combinare LEA con spostamenti e addizioni per fare calcoli più complessi e “riempire i buchi.” Puoi anche usare più istruzioni LEA in fila. Due istruzioni LEA consecutive possono moltiplicare un valore per 10, il che è davvero utile:
+</p>
+
+```asm
+ lea rbx,[rbx*2]      ; Multiply rbx X 2, put product in RBX
+ lea rbx,[rbx*4+rbx]  ; Multiply rbx X 5 for a total of X 10
+```
+
+<p align=justify>
+Alcune persone considerano questo uso di LEA un trucco meschino, ma in tutti gli anni in cui ho lavorato con l'assembly x86/x64 non ho mai visto un inconveniente. Prima di lanciare cinque o sei istruzioni nella pentola per cucinare una particolare moltiplicazione, verifica se due o tre LEA possono fare lo stesso lavoro. LEA svolge il suo lavoro in un ciclo di macchina, e la matematica della CPU non diventa più veloce di così!
+</p>
+
+
+### Tabella di traduzione caratteri
+
+<p align=justify>
+Esiste un tipo di ricerca in tabella che è (o forse era) talmente comune che gli ingegneri di Intel hanno integrato un'intera istruzione nell'architettura x86 per farlo. Il tipo di ricerca in tabella a cui alludevo è la conversione dei caratteri. Nei primi anni '80 avevo bisogno di convertire i set di caratteri in modi diversi, il più semplice dei quali era forzare tutti i caratteri minuscoli in maiuscolo. E così nei paragrafi precedenti abbiamo costruito un programma semplice che scorreva un file un buffer alla volta, acquisendo caratteri, convertendo tutti i caratteri minuscoli in maiuscolo e poi riscrivendoli nuovamente in un nuovo file. La conversione stessa era semplice: facendo riferimento alla tabella ASCII per la relazione tra tutti i caratteri maiuscoli e i loro associati caratteri minuscoli, potevamo convertire un carattere minuscolo in maiuscolo semplicemente sottraendo 20h (32) dal carattere. Questo è affidabile, ma è molto un caso speciale. Succede proprio che i caratteri minuscoli ASCII siano sempre 32 più alti nella tabella rispetto ai loro equivalenti caratteri maiuscoli. Cosa fai se hai bisogno di convertire tutti i caratteri “barra verticale” (ASCII 124) in punti esclamativi? (Dovetti farlo una volta, perché uno dei vecchi mainframe non riusciva a gestire le barre verticali.) Puoi scrivere codice speciale per ciascun caso individuale con cui devi confrontarti... ...oppure puoi usare una tabella di traduzione.
+</p>
+
+### Tabella di traduzione
+
+<p align=justify>
+Una tabella di traduzione è un tipo speciale di tabella e funziona nel seguente modo: si imposta una tabella di valori, con un'entrata per ogni possibile valore che deve essere tradotto. Un numero (o un carattere, trattato come un valore numerico) viene utilizzato come indice nella tabella. Alla posizione dell'indice nella tabella c'è un valore che viene utilizzato per sostituire il valore originale utilizzato come indice. In breve, il valore originale accede alla tabella e trova un nuovo valore che sostituisce il valore originale, traducendo così il vecchio valore in uno nuovo. Lo abbiamo già fatto una volta, nel programma hexdump1gcc nella sezione 9.1. Ricorda la tabella delle cifre:
+</p>
+
+```asm
+Digits: db "0123456789ABCDEF"
+```
+
+<p align=justify>
+Questa è una tabella di traduzione, anche se all'epoca non l'ho chiamata così. L'idea, se ricordi, era di separare le due metà da 4 bit di un byte da 8 bit e convertire quei valori da 4 bit in caratteri ASCII che rappresentano cifre esadecimali. Il focus all'epoca era separare i byte in due nybbles tramite operazioni logiche bit a bit, ma c'era anche una traduzione in corso. La traduzione è stata realizzata da queste tre istruzioni.
+</p>
+
+```asm
+mov al,byte [rsi+rcx]    ; Put a byte from the input buffer
+ 			 ; into al
+and al,0Fh               ; Mask out all but the low nybble
+mov al,byte [Digits+rax] ; Look up the char equivalent of nybble
+```
+
+<p align=justify>
+La prima istruzione carica un byte dal buffer di input nel registro AL a 8 bit. La seconda istruzione maschera tutto tranne il basso nybble di AL. La terza istruzione esegue un recupero della memoria: utilizza il valore in AL per indicizzare nella tabella Digits e riporta qualsiasi valore fosse nella voce ALth nella tabella. (Questo deve essere fatto utilizzando RAX tra parentesi, perché AL non può prendere parte ai calcoli dell'indirizzo efficaci. Ricorda solo che AL è il byte di ordine più basso nel registro RAX.) Se AL teneva premuto 0, il calcolo dell'indirizzo effettivo aggiungeva 0 all'indirizzo di Digits, riportando la voce 0 della tabella, che è il carattere ASCII per 0. Se AL teneva premuto 5, il calcolo dell'indirizzo effettivo aggiungeva 5 all'indirizzo di Digits, riportando la quinta voce della tabella, che è il carattere ASCII per 5. E così andrebbe per tutti i 16 possibili valori che possono essere espressi in un nybble a 4 bit. Fondamentalmente, il codice viene utilizzato per tradurre un numero nell'equivalente del carattere ASCII di quel numero. Ci sono solo 16 cifre esadecimali possibili, quindi la tabella di conversione in hexdump1gcc deve essere lunga solo 16 byte. Un byte contiene abbastanza bit per rappresentare 256 valori diversi, quindi se vogliamo tradurre valori di dimensioni in byte, avremo bisogno di una tabella con 256 voci. Tecnicamente, il set di caratteri ASCII utilizza solo i primi 128 valori, ma come ho descritto in precedenza in questo libro, i valori "alti" di 128 sono stati spesso assegnati a caratteri speciali come lettere non inglesi, caratteri "box-draw", simboli matematici e così via. Un uso comune della traduzione dei caratteri consiste nel convertire tutti i caratteri con valori superiori a 128 in qualcosa di inferiore a 128 per evitare il caos nei sistemi più vecchi che non sono in grado di gestire valori ASCII estesi. Una tabella di questo tipo è abbastanza facile da definire in un programma in linguaggio assembly:
+</p>
+
+```asm
+UpCase:
+ db 20h,20h,20h,20h,20h,20h,20h,20h,20h,09h,0Ah,20h,20h,20h,20h,20h
+ db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+ db 20h,21h,22h,23h,24h,25h,26h,27h,28h,29h,2Ah,2Bh,2Ch,2Dh,2Eh,2Fh
+ db 30h,31h,32h,33h,34h,35h,36h,37h,38h,39h,3Ah,3Bh,3Ch,3Dh,3Eh,3Fh
+ db 40h,41h,42h,43h,44h,45h,46h,47h,48h,49h,4Ah,4Bh,4Ch,4Dh,4Eh,4Fh
+ db 50h,51h,52h,53h,54h,55h,56h,57h,58h,59h,5Ah,5Bh,5Ch,5Dh,5Eh,5Fh
+ db 60h,41h,42h,43h,44h,45h,46h,47h,48h,49h,4Ah,4Bh,4Ch,4Dh,4Eh,4Fh
+ db 50h,51h,52h,53h,54h,55h,56h,57h,58h,59h,5Ah,7Bh,7Ch,7Dh,7Eh,20h
+ db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+ db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+ db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+ db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+ db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+ db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+ db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+ db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+```
+
+<p align=justify>
+La tabella UpCase è definita in 16 righe di 16 valori esadecimali separati. Il fatto che sia suddivisa in 16 righe nell'elenco del codice è puramente per leggibilità su schermo o pagina stampata e non influisce sulla tabella binaria che NASM genera nel file .o di output. Una volta in binario, si tratta di 256 valori a 8 bit in fila. Una rapida nota sintattica qui: quando si definiscono tabelle (o qualsiasi struttura dati contenente più valori predefiniti), le virgole vengono utilizzate per separare i valori all'interno di una singola definizione. Non è necessario usare virgole alla fine delle righe delle definizioni DB nella tabella precedente. Ogni definizione DB è separata e indipendente, ma poiché sono adiacenti in memoria, possiamo trattare le 16 definizioni DB come un'unica tabella di 256 byte. Qualsiasi tabella di traduzione può essere vista come espressione di una o più “regole” che governano cosa avviene durante il processo di traduzione. La tabella UpCase mostrata in precedenza esprime queste regole di traduzione:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		Tutti i caratteri ASCII minuscoli vengono tradotti in maiuscolo
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Tutti i caratteri ASCII stampabili inferiori a 127 che non sono minuscoli vengono tradotti in se stessi. (Non vengono esattamente "lasciati in pace", ma vengono comunque tradotti, solo negli stessi caratteri.)
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Tutti i valori dei caratteri "alti" da 127 a 255 vengono tradotti nel carattere di spazio ASCII (32, o 20h)
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Tutti i caratteri ASCII non stampabili (fondamentalmente, i valori 0–31, più 127) vengono tradotti in spazi tranne che per i valori 9 e 10.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		I valori dei caratteri 9 e 10 (tabulazione e fine riga) sono tradotti come se stessi.
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+Non male per un singolo dato, eh? (Immagina solo quanto lavoro sarebbe fare tutto quel fastidio solo con istruzioni di macchina!)
+</p>
+
+### Tradurre con MOV o XLAT
+
+<p align=justify>
+Quindi, come utilizziamo la tabella UpCase? Il modo ovvio sarebbe questo:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+			Carica il carattere da tradurre in AL.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Crea un riferimento di memoria utilizzando AL come termine base e UpCase come termine di spostamento, e sposta il byte al riferimento di memoria in AL, sostituendo il valore originale usato come termine base.
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+L'istruzione MOV ipotetica apparirebbe così
+</p>
+
+```asm
+ mov al, byte [UpCase+al]
+```
+
+<p align=justify>
+C'è solo un problema: NASM non ti permette di fare questo. In modalità protetta a 32 bit e in modalità long x64, il registro AL non può partecipare ai calcoli dell'indirizzo efficace, né possono farlo gli altri registri a 8 bit. Entra in gioco XLAT. L'istruzione XLAT è codificata in modo rigido per utilizzare determinati registri in modi specifici. I suoi due operandi sono entrambi impliciti:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+			L'indirizzo della tabella di traduzione deve essere in RBX.
+   		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Il carattere da tradurre deve essere in AL
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Il carattere tradotto sarà restituito in AL, sostituendo il carattere originariamente posto in AL.
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+Con i registri configurati, l'istruzione XLAT non ha operandi ed è utilizzata tutta da sola:
+</p>
+
+```asm
+ xlat
+```
+
+<p align=justify>
+Sarò onesto: XLAT è meno vantaggioso di quanto fosse in passato. In modalità long x64, la stessa cosa può essere fatta con la seguente istruzione:
+</p>
+
+```asm
+ mov al, byte [UpCase+rax]
+```
+
+<p align=justify>
+Il registro a 64 bit RAX può sostituire il piccolo AL a 8 bit quando si calcola un indirizzo efficace del carattere usato per tradurre il carattere in AL. C'è solo un problema: devi rimuovere eventuali valori "residui" nei 56 bit superiori di RAX, altrimenti potresti indicizzare accidentalmente ben oltre i limiti della tabella di traduzione. Il problema non si presenta con XLAT poiché l'istruzione XLAT utilizza solo AL per l'indice, ignorando qualsiasi altra cosa possa trovarsi nei bit superiori di RAX. Azzerare RAX prima di caricare il valore da tradurre in AL viene fatto in uno di questi due modi comuni:
+</p>
+
+```asm
+ xor rax,rax
+ mov rax,0
+```
+
+<p align=justify>
+In verità, dato il requisito di XLAT di utilizzare AL e RBX, è una cosa neutra, ma il tema più ampio della traduzione dei caratteri tramite tabelle è davvero ciò che sto cercando di presentare qui. Il codice di sotto mette tutto in azione. Il programma come mostrato fa esattamente quello che fa il programma uppercaser2: forza tutti i caratteri minuscoli in un file di input a essere maiuscoli e li scrive in un file di output. Non l'ho chiamato "uppercaser3" perché è un traduttore di caratteri per scopi generali. In questo particolare esempio, con la tabella UpCase, traduce i caratteri minuscoli in maiuscoli; tuttavia, quella è semplicemente una delle regole che esprime la tabella UpCase. Cambia la tabella e cambiano le regole. Puoi tradurre qualsiasi valore o tutti i 256 valori differenti in un byte in qualsiasi valore o valori a 8 bit. Ho aggiunto una seconda tabella al programma per farti sperimentare. La tabella Personalizzata esprime queste regole:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		Tutti i caratteri ASCII stampabili inferiori a 127 vengono tradotti in se stessi. (Non vengono precisamente "lasciati in pace" ma vengono comunque tradotti, solo negli stessi caratteri.)   			</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Tutti i valori dei caratteri "alti" da 127 a 255 vengono tradotti nel carattere di spazio ASCII (32, o 20h.)		
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Tutti i caratteri ASCII non stampabili (fondamentalmente, i valori 0–31, più 127) vengono tradotti in spazi tranne i valori 9 e 10.		
+		</p>
+	</li>
+	 <li>
+		<p align=justify>
+		I valori dei caratteri 9 e 10 (tabulazione e fine riga) sono tradotti come se stessi.
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+Fondamentalmente, lascia inalterati tutti i caratteri stampabili (più tab e EOL) e converte tutti gli altri valori dei caratteri in 20h, il carattere spazio. Puoi sostituire l'etichetta Custom con UpCase nel programma, apportare modifiche alla tabella Custom e provarla. Converti quel fastidioso barre verticale in un punto esclamativo. Cambia tutti i caratteri “Z” in “Q.” Cambiare le regole è fatto modificando la tabella. Il codice non cambia affatto! Come nei programmi precedenti, xlat1gcc legge dall'input standard e scrive nell'output standard. Copia del testo negli appunti e incollalo nella finestra di input di SASM. Poi esegui il programma e guarda cosa scrive nella finestra di output.
+</p>
+
+```asm
+;  Executable name : xlat1gcc
+;  Version         : 2.0
+;  Created date    : 8/21/2022
+;  Last update     : 7/17/2023
+;  Author          : Jeff Duntemann
+;  Description     : A simple program in assembly for Linux, 
+;                  : using NASM 2.15, demonstrating the XLAT 
+;                  : instruction to translate characters using 
+;                  : translation tables.
+;
+;  Run it either in SASM or using this command in the Linux terminal:
+;
+;     xlat1gcc < input file > output file
+;
+;       If an output file is not specified, output goes to stdout
+;
+;  Build using SASM's default build setup for x64
+;  To test from a terminal, save out the executable to disk.
+
+SECTION .data       ; Section containing initialised data
+	
+    StatMsg: db "Processing...",10
+    StatLen: equ $-StatMsg
+    DoneMsg: db "...done!",10
+    DoneLen: equ $-DoneMsg
+	
+; The following translation table translates all lowercase characters
+; to uppercase. It also translates all non-printable characters to 
+; spaces, except for LF and HT. This is the table used by default in 
+; this program.
+    UpCase: 
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,09h,0Ah,20h,20h,20h,20h,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+    db 20h,21h,22h,23h,24h,25h,26h,27h,28h,29h,2Ah,2Bh,2Ch,2Dh,2Eh,2Fh
+    db 30h,31h,32h,33h,34h,35h,36h,37h,38h,39h,3Ah,3Bh,3Ch,3Dh,3Eh,3Fh
+    db 40h,41h,42h,43h,44h,45h,46h,47h,48h,49h,4Ah,4Bh,4Ch,4Dh,4Eh,4Fh
+    db 50h,51h,52h,53h,54h,55h,56h,57h,58h,59h,5Ah,5Bh,5Ch,5Dh,5Eh,5Fh
+    db 60h,41h,42h,43h,44h,45h,46h,47h,48h,49h,4Ah,4Bh,4Ch,4Dh,4Eh,4Fh
+    db 50h,51h,52h,53h,54h,55h,56h,57h,58h,59h,5Ah,7Bh,7Ch,7Dh,7Eh,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+
+; The following translation table is "stock" in that it translates all
+; printable characters as themselves, and converts all non-printable
+; characters to spaces except for LF and HT. You can modify this to
+; translate anything you want to any character you want. To use it,
+; replace the default table name (UpCase) with Custom in the code below.
+    Custom: 
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,09h,0Ah,20h,20h,20h,20h,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+    db 20h,21h,22h,23h,24h,25h,26h,27h,28h,29h,2Ah,2Bh,2Ch,2Dh,2Eh,2Fh
+    db 30h,31h,32h,33h,34h,35h,36h,37h,38h,39h,3Ah,3Bh,3Ch,3Dh,3Eh,3Fh
+    db 40h,41h,42h,43h,44h,45h,46h,47h,48h,49h,4Ah,4Bh,4Ch,4Dh,4Eh,4Fh
+    db 50h,51h,52h,53h,54h,55h,56h,57h,58h,59h,5Ah,5Bh,5Ch,5Dh,5Eh,5Fh
+    db 60h,61h,62h,63h,64h,65h,66h,67h,68h,69h,6Ah,6Bh,6Ch,6Dh,6Eh,6Fh
+    db 70h,71h,72h,73h,74h,75h,76h,77h,78h,79h,7Ah,7Bh,7Ch,7Dh,7Eh,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+
+SECTION .bss            ; Section containing uninitialized data
+
+    READLEN	    equ 1024        ; Length of buffer
+    ReadBuffer: resb READLEN    ; Text buffer itself
+	
+SECTION .text           ; Section containing code
+
+global  main
+
+main:
+    mov rbp,rsp      ; This keeps gdb happy...
+
+; Display the "I'm working..." message via stderr:
+    mov rax,1        ; Specify sys_write call
+    mov rdi,2        ; Specify File Descriptor 2: Standard error
+    mov rsi,StatMsg  ; Pass address of the message
+    mov rdx,StatLen  ; Pass the length of the message
+    syscall          ; Make kernel call
+
+; Read a buffer full of text from stdin:
+read:
+    mov rax,0           ; Specify sys_read call
+    mov rdi,0           ; Specify File Descriptor 0: Standard Input
+    mov rsi,ReadBuffer  ; Pass address of the buffer to read to
+    mov rdx,READLEN     ; Pass number of bytes to read at one pass
+    syscall
+    mov rbp,rax         ; Copy sys_read return value for safekeeping
+    cmp rax,0           ; If rax=0, sys_read reached EOF
+    je done             ; Jump If Equal (to 0, from compare)
+
+; Set up the registers for the translate step:
+    mov rbx,UpCase      ; Place the address of the table into rbx
+    mov rdx,ReadBuffer  ; Place the address of the buffer into rdx
+    mov rcx,rbp         ; Place number of bytes in the buffer into rcx
+    
+; Use the xlat instruction to translate the data in the buffer:
+translate:
+    xor rax,rax             ; Clear rax
+    mov al,byte [rdx-1+rcx] ; Load character into AL for translation
+    xlat                    ; Translate character in AL via table
+    mov byte [rdx-1+rcx],al ; Put the xlated character back in buffer
+    dec rcx                 ; Decrement character count
+    jnz translate           ; If there are more chars in the buffer, repeat
+
+; Write the buffer full of translated text to stdout:
+write:
+    mov rax,1           ; Specify sys_write call
+    mov rdi,1           ; Specify File Descriptor 1: Standard output
+    mov rsi,ReadBuffer  ; Pass address of the buffer
+    mov rdx,rbp         ; Pass the # of bytes of data in the buffer
+    syscall             ; Make kernel call
+    jmp read            ; Loop back and load another buffer full
+
+; Display the "I'm done" message via stderr:
+done:	
+    mov rax,1           ; Specify sys_write call
+    mov rdi,2           ; Specify File Descriptor 2: Standard error
+    mov rsi,DoneMsg     ; Pass address of the message
+    mov rdx,DoneLen     ; Pass the length of the message
+    syscall             ; Make kernel call
+
+; All done! Let's end this party:
+    ret                 ; Return to the glibc shutdown code
+```
+
+### Tabelle al posto di calcoli
+
+<p align=justify>
+La standardizzazione tra i sistemi informatici ha reso la traduzione dei caratteri molto meno comune di quanto fosse in passato, ma le tabelle di traduzione possono essere estremamente utili in altre aree. Una di queste è per eseguire operazioni matematiche più veloci. Considera la seguente tabella:
+</p>
+
+```asm
+ Squares: db 0,1,4,9,16,25,36,49,64,81,100,121,144,169,196,225
+```
+
+<p align=justify>
+Nessun mistero qui: Squares è una tabella dei quadrati dei numeri da 0 a 15. Se avessi bisogno del quadrato di 14 in un calcolo, potresti usare MUL, che è più lento della maggior parte delle istruzioni e richiede due registri GP. Oppure potresti semplicemente ottenere il risultato dalla tabella Squares:
+</p>
+
+```asm
+ mov rcx,14
+ mov al,byte [Squares+rcx]
+```
+
+<p align=justify>
+Ecco! RAX ora contiene il quadrato di 14. Puoi fare lo stesso trucco con XLAT, anche se richiede di utilizzare determinati registri. Ricorda anche che XLAT è limitato a quantità di 8 bit. La tabella dei quadrati mostrata qui è la tabella dei valori quadrati più grande che XLAT può utilizzare, poiché il successivo valore quadrato (di 16) è 256, che non può essere espresso in 8 bit e quindi una tabella di ricerca che lo contenga non può essere utilizzata da XLAT. Rendere le voci di una tabella di ricerca dei valori quadrati di dimensione 16 bit ti permetterà di includere i quadrati di tutti gli interi fino a 255. E se dai a ciascuna voce nella tabella 32 bit, puoi includere i quadrati di interi fino a 65.535, ma sarebbe una tabella molto sostanziale! Non ho spazio in questo libro per approfondire la matematica in virgola mobile, ma una volta si faceva molto frequentemente uso di tabelle per cercare valori per cose come le radici quadrate. I moderni CPU con sistemi matematici come AVX rendono tali tecniche molto meno allettanti. Tuttavia, quando si è di fronte a una sfida di calcolo matematico, dovresti sempre tenere a mente la possibilità di utilizzare tabelle di ricerca.
+</p>
+	
 ## Controllo dei processi
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.01.png)
