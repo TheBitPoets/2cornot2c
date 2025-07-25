@@ -8035,7 +8035,7 @@ Done:
 ```
 
 <p align=justify>
-Il programma hexdump1 è fondamentalmente un programma di filtro e ha lo stesso meccanismo generale di filtro cutilizzato nel programma uppercaser. Le parti importanti del programma per questa discussione sono quelle che leggono 16 byte dal buffer di input e li convertono in una stringa di caratteri da visualizzare sulla console Linux. Questo è il codice tra l'etichetta <code>Scan</code> e l'istruzione <code>RET<code>. Farò riferimento a quel blocco di codice nella discussione che segue.
+Il programma hexdump1 è fondamentalmente un programma di filtro e ha lo stesso meccanismo generale di filtro cutilizzato nel programma uppercaser. Le parti importanti del programma per questa discussione sono quelle che leggono 16 byte dal buffer di input e li convertono in una stringa di caratteri da visualizzare sulla console Linux. Questo è il codice tra l'etichetta <code>Scan</code> e l'istruzione <code>RET</code>code>. Farò riferimento a quel blocco di codice nella discussione che segue.
 </p>
 
 ### Dividere un Byte in due Nibble
