@@ -8298,10 +8298,76 @@ Per distinguere i salti firmati da quelli non firmati, i mnemonici usano due esp
 La tabella di sotto riassume i mnemonici di salto aritmetico e i loro sinonimi. Qualsiasi mnemonico contenente le parole sopra o sotto è per valori senza segno, mentre qualsiasi mnemonico contenente le parole maggiore o minore è per valori con segno. Confronta i mnemonici con i loro sinonimi e vedi come i due rappresentano punti di vista opposti da cui guardare istruzioni identiche.
 </p>
 
-
 <div align=center>
 <img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/Jump_Instruction_Mnemonics.png">
 </div>
+
+<p align=justify>
+La figura di sopra serve semplicemente ad espandere i mnemonici in una forma più comprensibile e ad associare un mnemonico con il suo sinonimo. La figura di sotto, d'altra parte, ordina i mnemonici in base alla condizione logica e al loro utilizzo con valori con segno e senza segno. Nella figura di sotto sono inoltre elencati i flag i cui valori vengono testati da ciascuna istruzione di salto. Notate che alcune delle istruzioni di salto richiedono uno dei due possibili valori del flag per eseguire il salto, mentre altre richiedono entrambi i valori del flag. Diversi salti con segno confrontano due dei flag l'uno contro l'altro. JG, ad esempio, salterà quando ZF è 0 o quando il Flag di Segno (SF) è uguale al Flag di Overflow (OF). Non spenderò ulteriore tempo a spiegare la natura del Flag di Segno o del Flag di Overflow. Finché non hai compreso il significato di ciascuna istruzione, capire esattamente come le istruzioni testano i flag può aspettare finché non hai acquisito un po' di esperienza nella programmazione.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/Arithmetic_Tests_Useful_After_CMP_Instruction.png">
+</div>
+
+<p align=justify>
+Alcune persone hanno difficoltà a capire come i mnemonici JE e JZ siano sinonimi, così come lo sono JNE e JNZ. Pensa di nuovo a come viene effettuato un confronto all'interno della CPU: il secondo operando viene sottratto dal primo, e se il risultato è 0 (indica che i due operandi erano in effetti uguali), il flag Zero ZF viene impostato su 1. Ecco perché JE e JZ sono sinonimi: entrambi stanno semplicemente testando lo stato del flag Zero.
+</p>
+
+### Cercare un bit a 1 con TEST
+
+<p align=justify>
+L'insieme di istruzioni x86/x64 riconosce che il testing dei bit è molto comune nel linguaggio assembly e fornisce quello che equivale a un'istruzione CMP per i bit: TEST. TEST esegue un'operazione logica AND tra due operandi e poi imposta i flag come farebbe l'istruzione AND, senza alterare l'operando di destinazione, come farebbe AND. Ecco la sintassi dell'istruzione TEST:
+</p>
+
+```asm
+test <operand>,<bit mask>
+```
+
+<p align=justify>
+L'operando della maschera di bit dovrebbe contenere un bit 1 in ogni posizione in cui si desidera cercare un bit 1 nell'operando, e bit 0 in tutti gli altri bit. Ciò che fa il TEST è eseguire l'operazione logica AND tra l'operando di destinazione dell'istruzione e la maschera di bit e poi impostare i flag come farebbe l'istruzione AND. Il risultato dell'operazione AND viene scartato e l'operando di destinazione non cambia. Ad esempio, se vuoi determinare se il bit 3 di RAX è impostato su 1, potresti utilizzare questa istruzione:
+</p>
+
+```asm
+ test rax,08h       ; Bit 3 in binary is 00001000B, or 08h
+```
+
+<p align=justify>
+Il bit 3, ovviamente, non ha il valore numerico 3: devi guardare il pattern di bit della maschera e esprimerlo come un valore binario o esadecimale. (Il bit 3 rappresenta il valore 8 in binario.) Usare il binario per costanti letterali è perfettamente legale in NASM ed è spesso l'espressione più chiara di ciò che stai facendo quando lavori con le maschere di bit.
+</p>
+
+```asm
+ test rax,00001000B ; Bit 3 in binary is 00001000B, or 08h
+```
+
+<p align=justify>
+L'operando di destinazione RAX non cambia a seguito dell'operazione, ma la tabella della verità AND è affermata tra RAX e il modello binario 00001000. Se il bit 3 in RAX è un bit 1, allora il flag Zero è azzerato a 0. Se il bit 3 in RAX è un bit 0, allora il flag Zero è impostato a 1. Perché? Se esegui un AND tra 1 (nel mascheramento dei bit) e 0 (in RAX), ottieni 0. (Controlla nella tabella di verità della AND, che ho mostrato nei paragrafi precedenti.) E se tutte e otto le operazioni AND bitwise restituiscono 0, il risultato è 0 e il flag Zero è sollevato a 1, indicando che il risultato è 0. La chiave per comprendere TEST è pensare a TEST come a una sorta di Fantasma dell'Opcode, dove l'Opcode è AND. TEST indossa una maschera (per così dire) e finge di essere AND, ma poi non porta a termine i risultati dell'operazione. Imposta semplicemente i flag come se fosse avvenuta un'operazione AND. L'istruzione CMP di cui abbiamo parlato prima è un altro Fantasma dell'Opcode e ha la stessa relazione con SUB che TEST ha con AND. CMP sottrae il suo secondo operando dal primo, ma non completa l'operazione e non memorizza il risultato nell'operando di destinazione. Imposta semplicemente i flag come se fosse avvenuta una sottrazione. Come abbiamo già visto, questo può essere molto utile quando è combinato con istruzioni di salto condizionale. Ecco qualcosa di importante da tenere a mente: TEST è utile solo per trovare bit 1. Se hai bisogno di identificare bit 0, devi prima invertire ogni bit nel suo stato opposto con l'istruzione NOT. NOT cambia tutti i bit 1 in bit 0 e cambia tutti i bit 0 in bit 1. Una volta che tutti i bit 0 sono stati invertiti in bit 1, puoi testare per un bit 1 dove hai bisogno di trovare un bit 0. (A volte è utile disegnarlo su un foglio per tenere tutto chiaro nella tua mente.) Infine, TEST non testerà in modo affidabile la presenza di due o più bit 1 nell'operando contemporaneamente. TEST non verifica la presenza di un modello di bit; verifica la presenza di un singolo bit 1. In altre parole, se hai bisogno di verificare che entrambi i bit 4 e 5 siano impostati a 1, TEST non funzionerà.
+</p>
+
+### Cercare un bit a 0 con  BT
+
+<p align=justify>
+Come ho spiegato, TEST ha i suoi limiti: non è adatto a determinare quando un bit è impostato a 0. TEST è presente sin dai primi CPU X86, ma i processori 386 e più recenti hanno un'istruzione che ti consente di testare sia i bit 0 che i bit 1. BT (Bit Test) svolge un compito molto semplice: copia il bit specificato dal primo operando nel flag di carry CF. In altre parole, se il bit selezionato era un bit 1, il flag di carry diventa impostato. Se il bit selezionato era un bit 0, il flag di carry viene azzerato. Puoi quindi usare qualsiasi delle istruzioni di salto condizionale che esaminano e agiscono sullo stato di CF. BT è facile da usare. Richiede due operandi: l'operando di destinazione è il valore che contiene il bit in questione. L'operando sorgente è il numero ordinale del bit che vuoi testare, contando da 0:
+</p>
+
+```asm
+  bt <value containing bit>,<bit number>
+```
+
+<p align=justify>
+Una volta eseguita un'istruzione BT, dovresti immediatamente testare il valore nel flag Carry e diramarti in base al suo valore. Ecco un esempio.
+</p>
+
+```asm
+ bt  rax,4   ; Test bit 4 of RAX
+ jnc quit    ; We're all done if bit 4 = 0
+```
+
+<p align=justify>
+Qualcosa di cui fare attenzione, specialmente se sei abituato a usare TEST, è che non stai creando una maschera di bit. Con l'operando sorgente di BT stai specificando il numero ordinale di un bit. La costante letterale 4 mostrata nel codice precedente è il numero del bit, non il valore del bit, e questa è una differenza cruciale. Nota anche nel codice precedente che stiamo facendo un salto se CF non è impostato; questo è ciò che fa JNC (Salta se Non C'è Riporto).
+</p>
+
+###  X64 Long Mode Memory Addressing
 
 
 ## Controllo dei processi
