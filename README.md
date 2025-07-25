@@ -7917,6 +7917,269 @@ Detto questo, se il destino di un bit non è quello di perdersi nel nulla cosmic
 <img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/how_rotate_works.png">
 </div>
 
+### Ruotare i Bit attraverso il Carry Flag
+
+<p align=justify>
+C'è un secondo paio di istruzioni di rotazione nel set di istruzioni x86/x64: <code>RCR</code> (Ruota Carry a Destra, Rotate Carry Right) e <code>RCL</code> (Ruota Carry a Sinistra, (Rotate Carry Left). Queste operano come ROL e ROR, ma con una differenza: I bit che vengono spostati fuori dalla fine di un operando e rientrano nell'operando all'inizio viaggiano attraverso il flag Carry. Il percorso che un singolo bit percorre in una rotazione tramite CF è quindi di un bit più lungo rispetto a quello che sarebbe in ROL e ROR. L'ho mostrato graficamente nella figura di sotto.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/how_rotate_with_carry_flag_works.png">
+</div>
+
+### Settare un valore conosciuto nel Carry Flag
+
+<p align=justify>
+È anche utile ricordare che le istruzioni precedenti possono lasciare valori nel CF, e quei valori verranno ruotati in un operando durante un'istruzione RCL o RCR. Alcune persone hanno la comprensione errata che il CF venga forzato a 0 prima di un'istruzione di shift o rotate, e questo non è affatto vero. Se un'altra istruzione lascia un bit 1 nel CF immediatamente prima di un'istruzione RCR o RCL, quel bit 1 entrerà obbedientemente nell'operando di destinazione, che tu lo voglia o meno. Se è importante iniziare una rotazione con un valore noto nel CF, c'è una coppia di istruzioni x86 che faranno il lavoro per te: <code>CLC</code> e <code>STC</code>. <code>CLC</code> azzera il flag di carry a 0. <code>STC</code> imposta il flag di carry a 1. Nessuna delle due istruzioni prende un operando e nessuna ha altri effetti.
+</p>
+
+###  Bit-Bashing
+
+<p align=justify>
+Linux ha un metodo piuttosto conveniente per visualizzare il testo sullo schermo. Il problema è che visualizza solo testo: se vuoi visualizzare un valore numerico da un registro come una coppia di cifre esadecimali, Linux non può aiutarti. Devi prima convertire il valore numerico nella sua rappresentazione stringa e poi visualizzare la rappresentazione stringa chiamando il servizio kernel sys_write tramite syscall. Convertire numeri esadecimali in cifre esadecimali non è difficile, e il codice che svolge questo compito dimostra diversi dei nuovi concetti che stiamo esplorando in questo capitolo. Il codice di sotto è il nucleo essenziale di un'utilità di dump esadecimale. Quando reindirizzi il suo input da un file di qualsiasi tipo, leggerà quel file 16 byte alla volta e visualizzerà quei 16 byte in una riga, come 16 valori esadecimali separati da spazi. Il codice contiene un numero di nuove tecniche che vale la pena discutere.
+</p>
+
+```asm
+;  Executable name : hexdump1gcc
+;  Version         : 2.0
+;  Created date    : 5/9/2022
+;  Last update     : 5/8/2023
+;  Author          : Jeff Duntemann
+;  Description     : A simple program in assembly for Linux, using NASM 2.15
+;    under the SASM IDE, demonstrating the conversion of binary values to 
+;    hexadecimal strings. It acts as a very simple hex dump utility for files, 
+;    without the ASCII equivalent column.
+;
+;  Run it this way:
+;    hexdump1gcc < (input file)  
+;
+;  Build using SASM's default build setup for x64
+
+;
+SECTION .bss              ; Section containing uninitialized data
+
+	BUFFLEN	equ 16        ; We read the file 16 bytes at a time
+	Buff: 	resb BUFFLEN  ; Text buffer itself, reserve 16 bytes
+	
+SECTION .data             ; Section containing initialised data
+
+    HexStr:	db " 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",10
+    HEXLEN equ $-HexStr
+
+    Digits: db "0123456789ABCDEF"
+		
+SECTION .text             ; Section containing code
+
+global  main              ; Linker needs this to find the entry point!
+	
+main:
+    mov rbp,rsp       ; SASM Needs this for debugging
+
+; Read a buffer full of text from stdin:
+Read:
+    mov rax,0             ; Specify sys_read call 0
+    mov rdi,0             ; Specify File Descriptor 0: Standard Input
+    mov rsi,Buff          ; Pass offset of the buffer to read to
+    mov rdx,BUFFLEN       ; Pass number of bytes to read at one pass
+    syscall               ; Call sys_read to fill the buffer
+    mov r15,rax           ; Save # of bytes read from file for later
+    cmp rax,0             ; If rax=0, sys_read reached EOF on stdin
+    je Done               ; Jump If Equal (to 0, from compare)
+
+; Set up the registers for the process buffer step:parm
+    mov rsi,Buff          ; Place address of file buffer into esi
+    mov rdi,HexStr        ; Place address of line string into edi
+    xor rcx,rcx           ; Clear line string pointer to 0
+
+; Go through the buffer and convert binary values to hex digits:
+Scan:
+    xor rax,rax           ; Clear rax to 0
+
+; Here we calculate the offset into the line string, which is rcx X 3
+    mov rdx,rcx               ; Copy the pointer into line string into rdx
+;   shl rdx,1                 ; Multiply pointer by 2 using left shift
+;   add rdx,rcx               ; Complete the multiplication X3
+    lea rdx,[rdx*2+rdx]       ; This does what the above 2 lines do!
+                              ; See discussion of LEA later in Ch. 9
+
+; Get a character from the buffer and put it in both rax and rbx:
+    mov al,byte [rsi+rcx]     ; Put a byte from the input buffer into al
+    mov rbx,rax               ; Duplicate byte in bl for second nybble
+
+; Look up low nybble character and insert it into the string:
+    and al,0Fh                   ; Mask out all but the low nybble
+    mov al,byte [Digits+rax]     ; Look up the char equivalent of nybble
+    mov byte [HexStr+rdx+2],al   ; Write the char equivalent to line string
+
+; Look up high nybble character and insert it into the string:
+    shr bl,4                     ; Shift high 4 bits of char into low 4 bits
+    mov bl,byte [Digits+rbx]     ; Look up char equivalent of nybble
+    mov byte [HexStr+rdx+1],bl   ; Write the char equivalent to line string
+
+; Bump the buffer pointer to the next character and see if we're done:
+    inc rcx         ; Increment line string pointer
+    cmp rcx,r15     ; Compare to the number of characters in the buffer
+    jna Scan        ; Loop back if rcx is <= number of chars in buffer
+
+; Write the line of hexadecimal values to stdout:
+    mov rax,1       ; Specify syscall call 1: sys_write
+    mov rdi,1       ; Specify File Descriptor 1: Standard output
+    mov rsi,HexStr  ; Pass address of line string in rsi
+    mov rdx,HEXLEN  ; Pass size of the line string in rdx
+    syscall         ; Make kernel call to display line string
+    jmp Read        ; Loop back and load file buffer again
+
+; All done! Let's end this party:
+Done:
+    ret             ; Return to the glibc shutdown code
+```
+
+<p align=justify>
+Il programma hexdump1 è fondamentalmente un programma di filtro e ha lo stesso meccanismo generale di filtro cutilizzato nel programma uppercaser. Le parti importanti del programma per questa discussione sono quelle che leggono 16 byte dal buffer di input e li convertono in una stringa di caratteri da visualizzare sulla console Linux. Questo è il codice tra l'etichetta <code>Scan</code> e l'istruzione <code>RET<code>. Farò riferimento a quel blocco di codice nella discussione che segue.
+</p>
+
+### Dividere un Byte in due Nibble
+
+<p align=justify>
+Ricorda che i valori letti da Linux da un file vengono letti in memoria come valori binari. L' esadecimale è un modo per visualizzare i valori binari, e per visualizzare i valori binari come cifre esadecimali ASCII visibili, devi fare alcune conversioni. Visualizzare un singolo valore binario a 8 bit richiede due cifre esadecimali. I quattro bit inferiori in un byte sono rappresentati da una cifra (la cifra meno significativa o la cifra più a destra), e i quattro bit superiori del byte sono rappresentati da un'altra cifra (la cifra più significativa o la cifra più a sinistra). Il valore binario <code>11100110</code>, per esempio, è equivalente a <code>E6</code> in esadecimale. Convertire un valore a 8 bit in due cifre a 4 bit deve essere fatto una cifra alla volta, il che significa che dobbiamo separare il singolo byte in due quantità a 4 bit, che sono spesso chiamate <b>nibble</b>, specialmente nel lavoro di assemblaggio. Nel programma <code>hexdump1</code>, un byte viene letto da Buff e viene collocato in due registri, RAX e RBX. Questo viene fatto perché separare il nibble alto da quello basso in un byte è distruttivo, in quanto di fatto annulliamo il nibble che non vogliamo. Per isolare il nibble basso in un byte, dobbiamo mascherare il nibble alto indesiderato. Questo viene fatto con un'istruzione AND:
+</p>
+
+```asm
+ and al,0Fh
+```
+
+<p align=justify>
+Il costante immediato 0Fh espresso in binario è 00001111. Se segui l'operazione attraverso la tabella di verità AND (Tabella 9.2), vedrai che qualsiasi bit ANDato contro 0 è 0. ANDiamo il nibble alto del registro AL con 0000, che azzera qualsiasi cosa possa esserci. ANDando il nibble basso contro 1111 lascia i bit del nibble basso esattamente come erano. Quando abbiamo finito, abbiamo il nibble basso del byte letto da Buff in AL.
+</p>
+
+### Shiftare il nibble alto nel nibble basso
+
+<p align=justify>
+Mascherare l' high nybble dal byte di input in AL lo distrugge. Abbiamo bisogno di quel high nybble, ma abbiamo una seconda copia in RBX, ed è da quella copia che estrarremo l'high nybble. Come per il low nybble, lavoreremo effettivamente con gli otto bit meno significativi di RBX, detti BL. Ricorda che BL è solo un modo diverso di riferirsi agli otto bit più bassi di RBX. Non è un registro diverso. Se un valore è caricato in RBX, i suoi otto bit meno significativi sono in BL. Potremmo mascherare il low nybble in BL con un'istruzione AND, lasciando indietro l'high nybble, ma c'è un problema: mascherare i quattro bit bassi di un byte non rende i quattro bit alti un nybble. Dobbiamo in qualche modo spostare i quattro bit alti del byte di input nei quattro bit bassi. Il modo più veloce per farlo è spostare semplicemente BL a destra di quattro bit. Questo è ciò che fa l'istruzione <code>SHR BL,4</code>. Il low nybble viene semplicemente spostato fuori dal bordo di BL, nel flag di carry, e poi nel nulla cosmico. Dopo lo shift, ciò che era l'high nybble in BL è ora il low nybble. A questo punto, abbiamo il low nybble del byte di input in AL e l'high nybble del byte di input in BL. La prossima sfida è convertire il numero binario a quattro bit in un nybble (ad esempio, 1110) nel suo carattere esadecimale ASCII visualizzabile; in questo esempio, è il carattere “E”.
+</p>
+
+### Usare una Lookup Table
+
+<p align=justify>
+Nella sezione .data del programma è definita una lookup table molto semplice. La tabella Digits ha questa definizione: 
+</p>
+
+``asm
+	Digits db '0123456789ABCDEF'
+```
+
+<p align=justify>
+È importante notare che ogni cifra occupa una posizione nella stringa il cui offset dall'inizio della stringa è il valore che rappresenta. In altre parole, il carattere ASCII 0 si trova all'inizio della stringa, a zero byte dall'inizio della stringa. Il carattere 7 si trova a sette byte dall'inizio della stringa, e così via. Noi "cerchiamo" un carattere nella tabella Digits usando un riferimento di memoria:
+</p>
+
+```asm
+mov al,byte [Digits+rax]
+```
+
+<p align=justify>
+Come nella maggior parte del linguaggio assembly, tutto qui dipende dall' addressing della memoria. Il primo carattere esadecimale nella tabella di ricerca si trova all'indirizzo in Digits. Per ottenere la cifra desiderata, dobbiamo indicizzare nella tabella di ricerca. Lo facciamo aggiungendo un offset nella tabella all'indirizzo all'interno delle parentesi quadre. Questo offset è il nybble in AL. Aggiungendo l'offset in AL all'indirizzo di Digits (usando RAX) ci porta direttamente al carattere che è l'equivalente ASCII del valore in AL. Ho illustrato questo graficamente nella figura di sotto. Ci sono due aspetti che potrebbero risultare confusi riguardo all'istruzione MOV che recupera una cifra da Digits e la posiziona in AL:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+			Dobbiamo usare RAX nel riferimento di memoria piuttosto che AL, perché AL non può partecipare ai calcoli degli indirizzi effettivi. Non dimenticare che AL è "all'interno" di RAX! (Magari parleremo di più sui calcoli degli indirizzi effettivi un po' più tardi in questo capitolo.)
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Stiamo sostituendo il nybble in AL con il suo equivalente carattere. L'istruzione prima recupera l'equivalente carattere del nybble dalla tabella e poi memorizza di nuovo l'equivalente carattere in AL. Il nybble che era in AL viene sovrascritto e quindi è scomparso.
+		</p>
+	</li>
+</ul
+
+<p align=justify>
+Finora, abbiamo letto un carattere dalla tabella di ricerca in AL. La conversione di quel nybble è stata completata. Il compito successivo sembra semplice ma in realtà è sorprendentemente complesso: scrivere il carattere ASCII esadecimale ora memorizzato in AL nella stringa di visualizzazione in HexStr.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/using_a_lookup_table.png">
+</div>
+
+### Moltiplicare attraverso Shifting e Somme
+
+<p align=justify>
+Il programma hexdump1 legge i byte da un file e li visualizza in righe, con 16 byte rappresentati in esadecimale in ciascuna riga. Un campione dell'output di hexdump1 è mostrato qui.
+</p>
+
+```
+3B 20 20 45 78 65 63 75 74 61 62 6C 65 20 6E 61
+6D 65 20 3A 20 45 40 54 53 59 53 43 40 4C 4C 0D
+0A 3B 20 20 56 65 72 73 69 6F 6E 20 20 20 20 20
+20 20 20 20 3A 20 30 2E 30 0D 0A 3B 20 20 43 72
+65 60 74 65 64 20 64 60 74 65 20 20 20 20 3A 20
+30 2F 37 2F 32 30 30 39 0D 0A 3B 20 20 4C 60 73
+74 20 75 70 64 60 74 65 20 20 20 20 20 3A 20 32
+2F 30 38 2F 32 30 30 39 0D 0A 3B 20 20 40 75 74
+68 6F 72 20 20 20 20 20 20 20 20 20 20 3A 20 4A
+```
+
+<p align=justify>
+Ognuna di queste righe è una visualizzazione dello stesso elemento di dati: HexStr, una stringa di 48 caratteri con un valore EOL (0ah) alla fine. Ogni volta che hexdump1 legge un blocco di 16 byte dal file di input, li formatta come cifre esadecimali ASCII e li inserisce in HexStr. In un certo senso, questo è un altro tipo di manipolazione tabellare, tranne per il fatto che invece di cercare qualcosa in una tabella, stiamo scrivendo valori in una tabella basata su un indice. Un modo per pensare a HexStr è come una tabella di 16 voci, ciascuna lunga tre caratteri. (Vedi figura di sotto.) In ciascuna voce, il primo carattere è uno spazio, e il secondo e il terzo carattere sono le cifre esadecimali stesse. I caratteri di spazio sono già presenti, come parte della definizione originale di HexStr nella sezione .data. L'originale HexStr "vuoto" ha 0 caratteri in tutte le posizioni delle cifre esadecimali. Per "riempire" HexStr con dati "reali" per la visualizzazione di ciascuna riga, dobbiamo scorrere HexStr in un ciclo di linguaggio assembly, scrivendo separatamente il carattere del nybble inferiore e il carattere del nybble superiore in HexStr.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/table_of_16_three_byte_entries.png">
+</div>
+
+<p align=justify>
+Il problema difficile qui è che ad ogni passaggio attraverso il ciclo, dobbiamo "aumentare" l'indice in HexStr di tre invece che solo di uno. L'offset di una di quelle voci da 3 byte in HexStr è l'indice dell'entrata moltiplicato per tre. Ho già descritto le istruzioni MUL, che gestiscono la moltiplicazione senza segno arbitraria nel set di istruzioni x86/x64. Tuttavia, MUL è lenta rispetto ad altre istruzioni. Ha anche altre limitazioni, specialmente i modi in cui richiede registri specifici per i suoi operandi impliciti. Fortunatamente, con un po' di astuzia, ci sono altri modi più veloci per moltiplicare in assembly. Questi modi si basano sul fatto che è molto facile e veloce moltiplicare per potenze di due, usando l'istruzione SHL (Shift Left). Potrebbe non essere immediatamente ovvio per te, ma <b>ogni volta che sposti una quantità di un bit a sinistra, stai moltiplicando quella quantità per due</b>. Sposta una quantità di due bit a sinistra e la moltiplichi per quattro. Spostala di tre bit a sinistra e stai moltiplicando per otto, e così via. Puoi credere alla mia parola per questo, oppure puoi realmente vedere che succede in una sandbox. Configura una nuova sandbox in SASM ed inserisci le seguenti istruzioni:
+</p>
+
+```asm
+ mov al,3
+ shl al,1
+ shl al,1
+ shl al,2
+```
+
+<p align=justify>
+Costruisci il sandbox e vai in modalità debug. Poi segui le istruzioni, osservando il valore di RAX cambiare nella vista Registri per ogni passaggio. La prima istruzione carica il valore 3 in AL. La successiva istruzione sposta AL a sinistra di un bit. Il valore in AL diventa 6. La seconda istruzione SHL sposta AL a sinistra di un bit ancora, e il 6 diventa 12. La terza istruzione SHL sposta AL di due bit, e il 12 diventa 48. L'ho mostrato graficamente nella figura di sotto.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/multiplying_by_shifting.png">
+</div>
+
+<p align=justify>
+Ma cosa fai se vuoi moltiplicare per tre? Facile: moltiplichi per 2 e poi aggiungi un'altra copia del moltiplicando al prodotto. Nel programma hexdump1, si fa in questo modo:
+</p>
+
+```asm
+ mov rdx,rcx   ; Copy the character counter into edx
+ shl rdx,1     ; Multiply pointer by 2 using left shift
+ add rdx,rcx   ; Complete the multiplication X3
+```
+
+<p align=justify>
+Qui, il moltiplicando viene caricato dal contatore di ciclo RCX in RDX. RDX viene poi spostato a sinistra di un bit per moltiplicarlo per 2. Infine, RCX viene aggiunto una volta al prodotto RDX per effettuare una moltiplicazione per 3. La moltiplicazione per altri numeri che non sono potenze di due può essere eseguita combinando un SHL e uno o più ADD. Per moltiplicare un valore in RCX per sette, faresti così:
+</p>
+
+```asm
+ mov rdx,rcx   ; Keep a copy of the multiplicand in rcx
+ shl rdx,2     ; Multiply rdx by 4  
+ add rdx,rcx   ; Makes it X 5
+ add rdx,rcx   ; Makes it X 6
+ add rdx,rcx   ; Makes it X 7
+```
+
+<p align=justify>
+Questo potrebbe sembrare goffo, ma sorprendentemente, è ancora più veloce rispetto all'uso di MUL! (E c'è un modo ancora più veloce per moltiplicare per tre che ti mostrerò un po' più avanti in questo capitolo.) Una volta che hai capito come è impostata la tabella delle stringhe HexStr, scrivere le cifre esadecimali al suo interno è semplice. La cifra esadecimale meno significativa è in AL, e la cifra esadecimale più significativa è in BL. Scrivere entrambe le cifre esadecimali in HexString avviene attraverso un indirizzo di memoria effettivo a tre parti:
+</p>
+
+```asm
+ mov byte [HexStr+rdx+2],al ; Write LSB char digit to line string
+ mov byte [HexStr+rdx+1],bl ; Write MSB char digit to line string
+```
+
+<p align=justify>
+Riferisciti a due figure prima, per calcolare questo da solo: inizi con l'indirizzo di HexStr nella sua interezza. RDX contiene l'offset del primo carattere in un dato ingresso. Per ottenere l'indirizzo dell'ingresso in questione, aggiungi HexStr e RDX. Tuttavia, quell'indirizzo è del primo carattere nell'ingresso, che in HexStr è sempre un carattere spazio. La posizione del digit LSB in un ingresso è l'offset dell'ingresso +2, e la posizione del digit MSB in un ingresso è l'offset dell'ingresso +1. L'indirizzo del digit LSB è quindi HexStr + l'offset dell'ingresso + 2. L'indirizzo del digit MSB è quindi HexStr + l'offset dell'ingresso + 1.
+</p>
 
 ## Controllo dei processi
 
