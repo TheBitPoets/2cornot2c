@@ -1,4 +1,4 @@
-# 2cornot2c
+<img width="3840" height="2160" alt="image" src="https://github.com/user-attachments/assets/8e2d97ab-fc18-4c58-9cb3-444ec207f00a" /># 2cornot2c
 It's a 101 C course for my students.
 Sorry, only italian version so far.
 
@@ -9657,6 +9657,1894 @@ La definizione delle chiamate di sistema SYSCALL include le specifiche. Questa d
 
 <p align=justify>
 Entrambi sono tavoli molto grandi che assomigliano a fogli di calcolo, con colonne per l'uso dei registri e i valori richiesti per ogni numero di chiamata di sistema. Ora, le pagine web vanno e vengono e se stai utilizzando questo libro alcuni anni dopo la sua pubblicazione nel 2023, le pagine web citate potrebbero semplicemente non esistere più. Fai una ricerca su web su "tabella delle chiamate di sistema x64" e troverai diverse. Assicurati che la tabella che usi sia per le chiamate di sistema e non per le chiamate negli spazi utente. Le chiamate negli spazi utente sono chiamate alla libreria di codice glibc utilizzata nella programmazione C, che è una questione completamente diversa. Chiamare glibc dall'assembly è possibile e spesso molto utile. Un'avvertenza seria se hai già fatto del lavoro in assembly Linux in modalità protetta a 32 bit: i parametri delle chiamate di sistema x64 non sono gli stessi di quelli in x86 a 32 bit. Nella maggior parte dei casi, non sono nemmeno vicini. In Linux x64, c'è un sistema per l'uso dei registri: il numero della chiamata di sistema (in altre parole, quale chiamata di sistema stai chiamando) è sempre in RAX. Una chiamata di sistema accetta fino a sei parametri. I registri usati per passare i parametri sono in questo ordine: RDI, RSI, RDX, R10, R8 e R9. In altre parole, il primo parametro è passato in RDI. Il secondo parametro è passato in RSI, e così via. Nessuna chiamata di sistema richiede che i parametri siano passati a essa tramite lo stack. Nota: Sia che un registro (come R9, per esempio) sia usato per passare un parametro a una chiamata di sistema, quel registro non viene preservato. Solo sette registri sono preservati da Linux durante una chiamata di sistema: R12, R13, R14, R15, RBX, RSP e RBP. Dopo una SYSCALL, RAX conterrà un valore restituito. Se RAX è negativo, indica che si è verificato un errore durante la chiamata. Per la maggior parte delle chiamate di sistema, un valore di 0 indica successo.
+</p>
+
+### PUSHAD e POPAD sono spariti
+
+<p align=justify>
+Ci sono casi in cui una procedura utilizza la maggior parte o tutti i registri a uso generale. Prima di x64, c'era una coppia di istruzioni che potevano pushare e poppare tutti i registri GP da 32 bit in una sola volta. Questi sono PUSHAD e POPAD. (Un'altra coppia di istruzioni, PUSHA e POPA, avrebbero pushato e poppato tutti i registri GP da 16 bit. Anche loro non ci sono più.) Ora che x64 ha 15 registri GP, con ogni registro che richiede otto byte nello stack, non è uno spreco di spazio nello stack? Non necessariamente. Sì, ci vuole tempo per pushare un registro nello stack, ma ricorda: in ogni caso in cui ponderi se un'istruzione richiede più tempo per essere eseguita rispetto a un'altra, devi considerare quante volte quella istruzione viene eseguita. Se un'istruzione si trova all'interno di un ciclo ristretto che viene eseguito in sequenza decine di migliaia o milioni di volte, la velocità dell'istruzione è importante. D'altra parte, se un'istruzione viene eseguita solo poche volte durante l'esecuzione di un programma, la sua velocità è al meglio una considerazione minore e di solito può essere ignorata. Sì, PUSHAD e POPAD erano scorciatoie comode. Non ci sono più. Ora devi pensare con attenzione a quali registri modifica una procedura e quindi pushare quei registri individualmente nello stack e popparli uno per uno quando la procedura restituisce. Per un buon esempio, vediamo la procedura LoadBuff mostrata in precedenza in questo capitolo in hexdump2gcc. LoadBuff preserva quattro dei registri del chiamante: RAX, RDX, RSI e RDI. Tuttavia, apporta modifiche a due altri registri, RCX e R15, senza preservarli.
+</p>
+
+<p align=justify>
+Perché? Il registro RCX contiene un valore "globale": la posizione del prossimo carattere da elaborare nella variabile del buffer file Buff. LoadBuff viene chiamato quando un buffer pieno di dati è stato completamente elaborato e un nuovo caricamento di dati deve essere portato da stdin. Quando il buffer viene riempito nuovamente, il contatore del buffer deve essere resettato a 0 in modo che l'elaborazione possa ricominciare e lavorare attraverso i nuovi dati dall'inizio. LoadBuff fa questo, e l'RCX pulito viene restituito a chi lo ha chiamato. Anche R15 ha una missione: riporta il numero di byte caricati in Buff dalla chiamata SYSCALL a sys_read. La chiamata a sys_read richiede il numero di byte specificato dall'equazione BUFFLEN vicino all'inizio del programma. Tuttavia, poiché pochi file saranno esattamente multipli di BUFFLEN, il numero di byte nell'ultima serie di dati portati da stdin sarà inferiore a BUFFLEN. Questo valore è considerato anch'esso globale e viene utilizzato dal programma principale per determinare quando il buffer corrente è stato completamente elaborato. LoadBuff preserva i registri nello stack e li ripristina prima di tornare al codice che lo ha chiamato. Ora, non c'è motivo per cui il push e il pop per preservare i registri debbano sempre essere fatti all'interno della procedura. Il codice chiamante può preservare i propri registri, e questo viene occasionalmente fatto. Ad esempio, considera questa sequenza di istruzioni (fittizia):
+</p>
+
+```asm
+ push rbx
+ push rdx
+ call CalcSpace
+ pop  rdx
+ pop  rbx
+```
+
+<p align=justify>
+C'è solo una differenza tra la conservazione dei registri all'esterno della procedura piuttosto che all'interno: il codice che chiama la procedura può scegliere quali dei suoi registri sono in uso e quindi necessitano di preservazione. Salvare tutti i registri sarebbe uno spreco se non tutti i registri sono in uso dal codice del chiamante. Ora, potrebbero esserci più di una chiamata a CalcSpace all'interno del programma. Ciascuna di queste chiamate richiede questa sequenza di cinque istruzioni invece di una sola. Se la preservazione dei registri avviene all'interno della procedura, la preservazione richiede solo quattro istruzioni, a prescindere da quante volte il codice chiama la procedura. Con i moderni PC x64, la differenza in termini di dimensioni del codice e velocità non sarà significativa. Il vantaggio di inserire la preservazione dei registri all'interno della procedura è che il codice principale del programma sarà meno ingombro. Non ci sono regole rigide su quali registri preservare, anche se ci sono forti raccomandazioni nell'ABI System V x86-64. Alcuni registri sono volatili e non è necessario preservarli. Alcuni sono non volatili e dovrebbero essere preservati. Ancora una volta, tornerò su questo nei prossimi due capitoli, che trattano anche questioni importanti come l'allineamento dello stack. Devi sapere come i registri vengono utilizzati in un dato momento nel programma e programmare di conseguenza. (Prendere buone note sull'uso dei registri mentre progetti il programma è importante.) L'unico consiglio che offrirei è conservativo e tende a evitare bug: preserva qualsiasi registri che sai non essere usati globalmente né essere usati per restituire valori al chiamante. Il tempo impiegato per la preservazione dei registri è minimo rispetto all'aggravio di bug causati da conflitti di registri.
+</p>
+
+### Dati Locali
+
+<p align=justify>
+I dati locali, in contrapposizione ai dati globali, sono dati accessibili (diciamo "visibili") solo a una particolare procedura o, in alcuni casi, a una libreria. (Di nuovo, posticipiamo per il momento la discussione sulle librerie.) Quando le procedure hanno dati locali, sono quasi sempre dati che vengono posizionati nello stack quando viene chiamata una procedura. Le istruzioni PUSH posizionano i dati nello stack. Quando una parte del tuo codice chiama una procedura con l'istruzione CALL, può passare dati a quella procedura usando PUSH una o più volte prima dell'istruzione CALL. La procedura può quindi accedere a questi elementi di dati PUSHati nello stack. Tuttavia, un avvertimento: la procedura non può semplicemente estrarre quegli elementi di dati dallo stack nei registri, perché l'indirizzo di ritorno è in mezzo. Ricorda che la prima cosa che fa CALL è spingere l'indirizzo della prossima istruzione della macchina nello stack. Quando la tua procedura ottiene il controllo, quell'indirizzo di ritorno è in cima allo stack (TOS, come diciamo) pronto per l'inevitabile istruzione RET da utilizzare per tornare a casa. Qualsiasi cosa spinta nello stack dal chiamante prima dell'istruzione CALL si trova sopra l'indirizzo di ritorno. Questi elementi possono comunque essere accessibili usando il normale indirizzamento della memoria e il puntatore dello stack RSP. Non puoi, tuttavia, usare POP per accedervi senza estrarre e riprendere l'indirizzo di ritorno. Questo funziona, e l'ho fatto un paio di volte, ma è lento e anche superfluo, una volta che comprendi la natura di un "frame dello stack" e come indirizzare la memoria all'interno di uno. Di nuovo, affronterò la nozione di frame dello stack più avanti in questo libro, poiché è assolutamente cruciale una volta che inizi a chiamare procedure di libreria scritte in C o in altri linguaggi di alto livello. Per ora, semplicemente comprendi che i dati globali sono quasi sempre definiti nelle sezioni .data e .bss del tuo programma, mentre i dati locali vengono posizionati nello stack per l'uso "locale" di una particolare chiamata a una particolare procedura. I dati locali richiedono un po' di attenzione e disciplina per essere utilizzati in modo sicuro, per motivi che spiegherò in seguito.
+</p>
+
+### Inserire Dati Costanti nelle Definizioni delle Procedure
+
+<p align=justify>
+Ormai sei abituato a pensare al codice come qualcosa che vive nella sezione .text e ai dati come qualcosa che vive nelle sezioni .data o .bss. In quasi tutti i casi, questo è un buon modo per organizzare le cose, ma non c'è una richiesta assoluta di separare codice e dati in questo modo. È possibile definire dati all'interno di una procedura utilizzando le pseudoinstruzioni di NASM, che includono DB, DW, DD e DQ. Ho creato una procedura utile che mostra come fare e che è un buon esempio di quando farlo. La procedura newlines ti consente di emettere un certo numero di caratteri di nuova riga su stdout, specificati da un valore passato alla subroutine in RDX.
+</p>
+
+```asm
+ ;--------------------------------------------------------------------
+ ; Newlines: Sends between 1-15 newlines to the Linux console
+ ; VERSION:  2.0
+ ; UPDATED:  8/27/2022
+ ; IN: EDX:  # of newlines to send, from 1 to 15
+ ; RETURNS:  Nothing
+ ; MODIFIES: RAX, RDI
+ ; CALLS:    Kernel sys_write
+ ; DESCRIPTION: The number of newline chareacters (0Ah) specified
+ ; in RDX is sent to stdout using using SYSCALL sys_write.
+ ; procedure demonstrates placing constant data in the
+ ; procedure definition itself, rather than in the .data or
+ ; .bss sections.
+ newlines:
+  cmp rdx,15       ; Make sure caller didn't ask for more than 15
+  ja .exit         ; If so, exit without doing anything
+  mov rsi,EOLs     ; Put address of EOLs table into ECX
+  mov rax,1        ; Specify sys_write
+  mov rdi,1        ; Specify stdout
+  syscall          ; Make the kernel call
+.exit:
+  Ret              ; Go home!  
+
+EOLs db 10,10,10,10,10,10,10,10,10,10,10,10,10,10,10
+```
+
+<p align=justify>
+La tabella EOLs contiene 15 caratteri EOL. Se ricordi, quando il carattere EOL viene inviato a stdout, la console lo interpreta come un a capo, in cui la posizione del cursore della console viene spostata verso il basso di una riga. Il chiamante passa il numero desiderato di a capo in RDX. La procedura newlines verifica prima di assicurarsi che il chiamante non abbia richiesto più a capo di quanti caratteri EOL ci siano nella tabella e poi passa l'indirizzo della tabella EOLs e il numero richiesto in una chiamata convenzionale a sys_write utilizzando SYSCALL. Fondamentalmente, sys_write visualizza i primi caratteri RDX della tabella EOLs sulla console, che interpreta i dati come RDX a capo. Avere i dati direttamente nella procedura significa che è facile copiare e incollare la definizione della procedura da un programma all'altro senza lasciare indietro la tabella essenziale dei caratteri EOL. Poiché l'unico codice che utilizza mai la tabella EOLs è la procedura newlines stessa, non c'è vantaggio a posizionare la tabella EOLs nella sezione .data più visibile centralmente. E anche se la tabella EOLs non è locale nel senso tecnico della scienza informatica (non è posizionata nello stack da un chiamante a newlines), “sembra” locale e tiene le sezioni .data e .bss più ordinate, evitando di sovraccaricarle con dati che vengono referenziati solo all'interno di una singola procedura. C'è un file sorgente di programma completo chiamato newlinestest.asm pronto per essere assemblato nell'archivio delle liste per questo libro. (Costruiscilo con SASM.) Contiene la procedura newlines, che ti permetterà di sperimentare con essa.
+</p>
+
+### Alcuni trucchi per le Tabelle
+
+<p align=justify>
+Il programma hexdump2gcc funziona in modo molto simile al programma hexdump1gcc dell'elenco 9.1, ma ha qualche trucco in più nel suo sacco. Uno degno di nota risiede nella definizione della variabile di linea del dump esadecimale DumpLine:
+</p>
+
+```asm
+ DumpLine:    db " 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 "
+ DUMPLEN      EQU $-DumpLine
+ ASCLine:     db "|................|",10
+ ASCLEN       EQU $-ASCLine
+ FULLLEN       EQU $-DumpLine
+```
+
+<p align=justify>
+Quello che abbiamo qui è una variabile dichiarata in due parti. Ogni parte può essere utilizzata separatamente, o (come di solito si fa) le due parti possono essere utilizzate insieme. La prima sezione di DumpLine è la stringa contenente 16 cifre esadecimali. La sua lunghezza è definita dall'equazione DUMPLEN. (Nota che la mia convenzione personale è di scrivere i nomi delle equazioni in maiuscolo. Le equazioni non sono la stessa specie di animali delle variabili, e trovo che rendere i programmi più leggibili impostando le equazioni in modo che possano essere distinte dalle variabili a colpo d'occhio sia utile. Questo non è un requisito NASM; puoi nominare le equazioni in minuscolo o in maiuscolo misto come preferisci.) La seconda sezione di DumpLine è la colonna ASCII, e ha il proprio etichetta, ASCLine. Un programma che avesse bisogno solo della colonna ASCII potrebbe utilizzare la variabile ASCLine da sola, insieme alla sua lunghezza associata, ASCLEN. Ora, poiché le due sezioni di DumpLine sono adiacenti in memoria, fare riferimento a DumpLine ti consente di fare riferimento a entrambe le sezioni come un'unità, ad esempio, quando desideri inviare una riga a stdout tramite SYSCALL. In questo caso, l'equazione che calcola la lunghezza dell'intera riga è FULLLEN. È utile avere un nome separato per le sezioni di due righe, perché i dati non vengono scritti né letti dalle due sezioni in modi simili. Dai un'occhiata alla procedura DumpChar da hexdump2gcc:
+</p>
+
+```asm
+DumpChar:
+ push rbx     ; Save caller's RBX
+ push rdi     ; Save caller's RDI
+
+ ; First we insert the input char into the ASCII portion of the dump line
+ mov bl,[DotXlat+rax]       ; Translate nonprintables to '.'
+ mov [ASCLine+rdx+1],bl     ; Write to ASCII portion
+
+ ; Next we insert the hex equivalent of the input char in the hex portion
+ ; of the hex dump line:
+ mov rbx,rax                ; Save a second copy of the input char
+ lea rdi,[rdx*2+rdx]        ; Calc offset into line string (RDX X 3)
+ 
+; Look up low nybble character and insert it into the string:
+    and rax,000000000000000Fh ; Mask out all but the low nybble
+    mov al,[HexDigits+rax]    ; Look up the char equiv. of nybble
+    mov [DumpLine+rdi+2],al   ; Write the char equiv. to line string
+ 
+; Look up high nybble character and insert it into the string:
+    and rbx,00000000000000F0h ; Mask out all the but 2nd lowest nybble
+    shr rbx,4                 ; Shift high 4 bits of byte into low 4 bits
+    mov bl,[HexDigits+rbx]    ; Look up char equiv. of nybble
+    mov [DumpLine+rdi+1],bl   ; Write the char equiv. to line string
+ 
+; Done! Let's return:
+    pop rdi     ; Restore caller's RDI
+    pop rbx     ; Restore caller's RBX
+    ret         ; Return to caller
+```
+
+<p align=justify>
+Scrivere nella colonna ASCII è molto semplice, perché ogni carattere nella colonna ASCII è un singolo byte in memoria, e l'indirizzo effettivo di una qualsiasi posizione in ASCLine è facile da calcolare:
+</p>
+
+```asm
+ mov [ASCLin+rdx+1],bl   ; Write to ASCII portion
+```
+
+<p align=justify>
+Tuttavia, ogni posizione nella parte del dump esadecimale della linea consiste di tre caratteri: uno spazio seguito da due cifre esadecimali. Considerato come una tabella, indirizzare un'entrata specifica in DumpLine richiede una scala di 3 nel calcolo dell'indirizzo effettivo:
+</p>
+
+```asm
+lea rdi,[rdx*2+rdx]   ; Calc offset into line string (RDX × 3)
+```
+
+<p align=justify>
+Nota qui che RDX*2+RDX è equivalente a RDX × 3 come citato nel commento della riga. Le due parti della linea di dump esadecimale sono trattate in modo molto diverso dal punto di vista della manipolazione dei dati, e agiscono insieme solo quando vengono inviate a stdout. È quindi utile dare a ciascuna delle due sezioni la propria etichetta. Le strutture in C e i record in Pascal sono gestiti in modo molto simile "sotto il cofano". La tabella DotXlat di hexdump2gcc è un altro esempio di traduzione dei caratteri e, come per tutte le tabelle di traduzione, esprime le regole necessarie per visualizzare in modo coerente tutti i 256 valori ASCII diversi in una linea di testo.
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		Tutti i caratteri stampabili si traducono come se stessi
+  		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Tutti i caratteri non stampabili (che includono tutti i caratteri di controllo e tutti i caratteri dal 127 in su) vengono tradotti come punti ASCII.
+  		</p>
+	</li>
+</ul>
+
+### Etichette locali e lunghezze dei salti
+
+<p align=justify>
+Prima o poi, man mano che i tuoi programmi diventano più lunghi e complessi, finirai per riutilizzare accidentalmente un'etichetta. Non presenterò alcun programma particolarmente lungo o complesso in questo libro, quindi non ci saranno problemi pratici con le etichette del codice che confliggono tra loro. Ma quando inizi a scrivere programmi più seri, alla fine scriverai centinaia o addirittura (con un po' di pratica e perseveranza) migliaia di righe di codice assembly in un singolo file di codice sorgente. Ti accorgerai presto che le etichette di codice duplicate diventeranno un problema. Come ricorderai sempre di aver già utilizzato l'etichetta Scan nella riga 187 di un programma di 2.732 righe? Non lo farai. E prima o poi (soprattutto se stai elaborando spesso buffer e tabelle), proverai a utilizzare nuovamente l'etichetta Scan. NASM te lo segnalerà con un errore. Questo è un problema abbastanza comune (soprattutto con etichette ovviamente utili come Scan) che gli autori di NASM hanno creato una funzione per affrontarlo: etichette locali. Le etichette locali si basano sul fatto che quasi tutte le etichette in assembly funzionano (escludendo i nomi delle subroutine e delle sezioni principali) in modo “locale”, nel senso che vengono solo reference da istruzioni di salto che sono molto vicine ad esse—forse solo due o tre istruzioni più in alto. Tali etichette sono solitamente parti di cicli stretti e non sono referenziate da lontano nel codice e spesso sono referenziate solo da un luogo. Ecco un esempio, dal corpo principale di hexdump2gcc.
+</p>
+
+```asm
+; Go through the buffer and convert binary byte values to hex digits:
+ Scan:
+    xor rax,rax                ; Clear RAX to 0
+    mov al,[Buff+rcx]          ; Get a byte from the buffer into AL
+    mov rdx,rsi                ; Copy total counter into RDX
+    and rdx,000000000000000Fh  ; Mask out lowest 4 bits of char counter
+    call DumpChar              ; Call the char poke procedure
+ 
+; Bump the buffer pointer to the next char and see if
+ buffer's done:
+    inc rsi           ; Increment total chars processed counter
+    inc rcx           ; Increment buffer pointer
+    cmp rcx,r15       ; Compare with # of chars in buffer
+    jb .modTest       ; If we've processed all chars in buffer...
+    call LoadBuff     ; ...go fill the buffer again
+    cmp r15,0         ; If r15=0, sys_read reached EOF on stdin
+    jbe Done          ; If we get EOF, we're done
+ 
+; See if we're at the end of a block of 16 and need to display a line:
+ .modTest:
+    test rsi,000000000000000Fh ; Test 4 lowest bits in counter for 0
+    jnz Scan          ; If counter is *not* modulo 16, loop back
+    call PrintLine    ; ...otherwise print the line
+    call ClearLine    ; Clear hex dump line to 0's
+    jmp Scan          ; Continue scanning the buffer
+```
+
+<p align=justify>
+Nota che l'etichetta .modTest ha un punto davanti ad essa. Questo punto la segna come un'etichetta locale. Un'etichetta locale è locale all'etichetta non locale (cioè, la prima etichetta non preceduta da un punto; chiamiamo queste globali) che la precede nel codice. In questo caso particolare, l'etichetta globale a cui appartiene .modTest è Scan. Il blocco precedente è la parte del corpo principale del programma che scansiona il buffer del file di input, formatta i dati di input in righe di 16 byte e visualizza quelle righe sulla console. In che modo un'etichetta globale 'possiede' un'etichetta locale? È una questione di visibilità all'interno del codice sorgente: un'etichetta locale non può essere referenziata a un livello superiore nel file di codice sorgente rispetto all'etichetta globale che la possiede, che, di nuovo, è la prima etichetta globale sopra di essa nel file. In questo caso, l'etichetta locale .modTest non può essere referenziata sopra l'etichetta globale Scan. Questo significa che potrebbe esistere un'altra etichetta .modTest nel programma, sul 'lato opposto' di Scan. Finché esiste un'etichetta globale tra due etichette locali con lo stesso nome, NASM non ha problemi a distinguerle. Le etichette locali possono anche esistere all'interno delle procedure. In un altro esempio da hexdump2gcc, c'è un'etichetta locale .poke nella procedura ClearLine. Appartiene all'etichetta ClearLine e pertanto non può essere referenziata da nessun'altra procedura altrove nel programma o nella libreria. (Non dimenticare che i nomi delle procedure sono etichette globali.) Questa isolamento all'interno di una singola procedura non è immediatamente ovvio, ma è vero e deriva dal fatto che 'sotto' una procedura in un programma o in una libreria c'è sempre un'altra procedura o l'etichetta _start o main che segna l'inizio del programma principale. È ovvio una volta che lo si vede disegnato, come ho fatto nella figura di sotto.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/local_labels_and_the_globals_that_own_them.png">
+</div>
+
+<p align=justify>
+Ecco alcune note sulle etichette locali:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		Le etichette locali all'interno delle procedure sono almeno locali alle procedure in cui sono definite. (Questo è il punto principale della figura di sopra.) Puoi, ovviamente, avere etichette globali all'interno delle procedure. Tieni presente che questo limiterà ulteriormente la visibilità delle etichette locali.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Può sembrare peculiare, ma è perfettamente legale e spesso utile definire etichette globali che non vengono mai reference, semplicemente per fornire proprietà delle etichette locali. Se stai scrivendo un programma utility semplice che si esegue in modo lineare senza molti salti o ritorni a lungo raggio, potresti andare molto lontano senza la necessità di inserire un'etichetta globale. Mi piace usare etichette globali per separare le principali parti funzionali di un programma, indipendentemente dal fatto che queste etichette vengano mai chiamate o meno. Questo mi consente di utilizzare liberamente le etichette locali all'interno di quei principali moduli funzionali.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Se stai scrivendo codice complesso con molti etichette globali e locali mescolate, fai attenzione a non cercare di JMP a un'etichetta locale dall'altra parte di un'etichetta globale. Questa è una delle ragioni per cui non avere 15 etichette locali chiamate .scan o .loopback all'interno di una parte di un programma - puoi facilmente confonderle e, cercando di saltare a una cinque istruzioni sopra, potresti inconsapevolmente saltare a una sette istruzioni sotto. NASM non ti avviserà se c'è un'etichetta locale con lo stesso nome dalla tua parte di un'etichetta globale e provi a saltare a un'etichetta locale dall'altra parte dell'etichetta globale. Bug come questo possono essere incredibilmente difficili da trovare a volte. Come qualsiasi strumento, le etichette locali devono essere utilizzate con attenzione per essere di maggior beneficio.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Ecco una regola empirica che uso: le etichette locali e tutti i salti ad esse dovrebbero avvenire all'interno di un unico schermo di codice. In altre parole, dovresti essere in grado di vedere sia un'etichetta locale che tutto ciò che si riferisce ad essa senza dover scorrere l'editor del tuo programma. Questa è solo una guida approssimativa per aiutarti a mantenere senso nei tuoi programmi, ma l'ho trovata molto utile nel mio lavoro.
+		</p>
+	</li>
+</ul>
+
+### Accesso forzato all'etichetta locale
+
+<p align=justify>
+Ogni tanto (non molto spesso), potresti sentire la necessità di accedere a un'etichetta locale dall'altra parte del suo proprietario di etichetta globale. NASM offre un modo per farlo, anche se ammetto di non averne mai avuto la necessità. La chiave per forzare l'accesso a un'etichetta locale al di fuori del suo ambito (l'area del tuo programma da cui è normalmente visibile) è comprendere come NASM tratta le etichette locali "sotto il cofano." Un'etichetta locale ha una definizione implicita che include l'etichetta globale a cui appartiene. L'etichetta locale .modTest di cui ho parlato prima in questa sezione appartiene all'etichetta globale Scan. Internamente, NASM conosce .modtest come Scan.modTest. Se ci fosse un'altra etichetta locale .modtest altrove nel programma (appartenente, diciamo, a un'etichetta globale Calc), potresti forzare un salto ad essa includendo il nome del suo proprietario nell'istruzione di salto:
+</p>
+
+```asm
+ jne Calc.modTest
+```
+
+<p align=justify>
+In un certo senso, sotto il tappeto, un'etichetta locale è semplicemente la "coda" di un'etichetta globale. Se ne hai bisogno, puoi accedere a un'etichetta locale anteponendo l'etichetta del suo proprietario globale e trattandola così come un'etichetta globale. Ancora una volta, non ho mai dovuto farlo e non lo considero una buona pratica, ma è bene sapere che l'opzione è lì nel caso si presentasse mai la necessità.
+</p>
+
+### Salti Corti, Vicini e Lontani
+
+<p align=justify>
+Uno degli errori di assemblaggio più strani che potresti incontrare può apparire in un programma completamente corretto, e se lavori con NASM abbastanza a lungo e crei programmi abbastanza grandi, lo incontrerai. Eccolo:
+</p>
+
+```asm
+error: short jump is out of range
+```
+
+<p align=justify>
+Questo errore si verifica quando un'istruzione di salto condizionale è troppo lontana dall'etichetta a cui fa riferimento, dove "troppo lontano" significa troppe posizioni in memoria. Questo si applica solo ai salti condizionali; l'istruzione di salto incondizionato JMP non è soggetta a questo errore. Il problema sorge a causa dei diversi modi in cui NASM può generare un opcode binario per una particolare istruzione di salto condizionale. Ci sono due diversi tipi di salti condizionali, a seconda di quanto lontano si trova l'etichetta di salto. Un'etichetta di salto che si trova entro 127 byte dall'istruzione di salto condizionale è chiamata. Un'etichetta di salto che è più lontana di 127 byte ma comunque all'interno del segmento di codice corrente è chiamata un salto vicino. C'è un terzo tipo di salto chiamato, che implica l'uscita totale dal segmento di codice corrente per qualsiasi motivo. Nel vecchio mondo del DOS in modalità reale, questo significava specificare sia un indirizzo di segmento che un indirizzo di offset per l'etichetta di salto. I salti lontani non venivano utilizzati molto spesso, anche se li ho usati un paio di volte nell'era del DOS. Non dimenticare che i segmenti ora appartengono al sistema operativo per il proprio utilizzo. In modalità protetta a 32 bit e in modalità estesa a 64 bit, i salti lontani sono estremamente rari e comportano tutte le complicazioni del sistema operativo che non posso trattare in questo libro. Per la programmazione nello spazio utente sono completamente non necessari. Il problema risiede davvero nella differenza tra salti brevi e salti vicini. Un'istruzione di salto condizionale breve genera un opcode binario breve—e quindi compatto. Gli opcode di salto brevi sono sempre di due byte, non di più. Gli opcode di salto vicino sono di quattro o sei byte, a seconda di vari fattori. Codice compatto significa codice veloce, e prendere un salto breve è (leggermente) più veloce nella maggior parte dei casi rispetto a un salto vicino. Inoltre, se utilizzi salti brevi per la maggior parte del tempo, i tuoi file eseguibili saranno un pochino più piccoli. Dato che il 90 percento o più delle istruzioni di salto condizionali che scriverai mirano a posizioni del programma a sole poche istruzioni di distanza, ha senso per NASM generare opcodes per salti brevi per impostazione predefinita. Infatti, NASM genera opcodes per salti brevi a meno che non gli dici esplicitamente di usare salti vicini. Un salto vicino è specificato utilizzando il qualificatore NEAR:
+</p>
+
+```asm
+ jne Scan      ; Jump within 127 bytes in either direction
+ jne near Scan ; Jump anywhere in the current code segment
+```
+
+<p align=justify>
+I principianti tendono a imbattersi in questo modo nell'errore "salto breve fuori portata": inizi un programma e metti un'etichetta come Exit: alla fine, aspettandoti di saltare all'etichetta Exit: da diverse parti del programma. Quando il programma è nuovo e ancora abbastanza piccolo, potrebbe funzionare bene. Tuttavia, alla fine, il codice aggiunto nel mezzo del programma costringe i salti condizionali vicino all'inizio del programma a essere più di 127 byte lontani dall'etichetta Exit: alla fine. Bang! NASM ti restituisce l'errore "salto breve fuori portata". La soluzione è semplice: per ogni salto che NASM chiama "fuori portata", inserisci il qualificatore NEAR tra il mnemonico dell'istruzione di salto condizionale e l'etichetta di destinazione. Lascia stare gli altri.
+</p>
+
+### Costruzione di librerie di procedure esterne
+
+<p align=justify>
+Noterai che il programma hexdump2gcc fornito ha la maggior parte del suo codice separato in procedure. Questo è proprio come dovrebbe essere, per mantenere il programma comprensibile e manutenibile. Tuttavia, le procedure dichiarate all'interno del file hexdump2gcc.asm sono utilizzabili solo dal programma hexdump2gcc stesso. Se dovessi scrivere un programma più potente che, per qualche motivo, avesse bisogno di visualizzare un dump esadecimale/ASCII di alcuni dati, quelle procedure potrebbero essere riutilizzate, ma non finché sono all'interno del file hexdump2gcc.asm. La risposta è spostare le procedure di hexdump2gcc fuori da hexdump2gcc.asm completamente e collocarle in un file di codice sorgente separato chiamato una libreria. Potrebbe essere pieno di procedure, ma non ha alcuna porzione di programma principale e quindi nessun'etichetta _start: o main: per indicare dove inizia l'esecuzione. Contiene solo procedure (e forse alcune definizioni di dati) quindi non può essere tradotto dal linker in un suo programma eseguibile. Una volta creati i file di libreria contenenti procedure, ci sono due modi per usarli:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		Un file di libreria può essere assemblato separatamente in un file .o, che a sua volta può essere collegato dal linker Linux in altri programmi che potresti scrivere in futuro.
+  		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Un file di libreria può essere incluso nel file di codice sorgente del programma principale, utilizzando una direttiva chiamata %INCLUDE. (Ti dirò molto presto come utilizzare %INCLUDE.) Questo è ciò che devi fare per utilizzare le librerie da programmi scritti in SASM.
+  		</p>
+	</li>
+</ul>
+
+### Quando i Tool raggiungono i loro limiti
+
+<p align=justify>
+Per quanto sia facile per i principianti del linguaggio macchina imparare e utilizzare SASM (per questo SASM è stato creato), l'IDE di SASM ha le sue limitazioni, e stiamo per incorrere in una significativa: SASM non può collegare insieme più file di codice oggetto dell'assembly in un singolo file eseguibile. Fondamentalmente, tranne in casi molto rari, non può eseguire assembly separato. Un singolo programma potrebbe consistere in tre o quattro file di codice sorgente .asm separati, ognuno dei quali viene assemblato separatamente in un file .o separato. Per produrre il file eseguibile finale, il linker Linux ld intreccia tutti i file .o insieme, risolvendo tutti i riferimenti da uno all'altro, creando infine il file eseguibile. L'assembly separato non è pienamente supportato da SASM. Descriverò in dettaglio l'assembly separato dei file di libreria più avanti in questo capitolo. Gli esempi dovranno essere costruiti senza SASM, utilizzando makefile. Senza SASM, il debug sarà anche una sfida, e parleremo di questo anche. Nel frattempo, c'è un trucco che SASM ha e che ti permetterà di creare librerie separate di procedure.
+</p>
+
+### Utilizzare gli include file in SASM
+
+<p align=justify>
+NASM include una direttiva che consente di "includere" un file in un altro file durante un'operazione di assemblaggio. La direttiva %INCLUDE è seguita dal nome di un file di testo, tra virgolette doppie:
+</p>
+
+```asm
+%INCLUDE "%textlibgcc.asm"
+```
+
+<p align=justify>
+(Non dimenticare le virgolette!) Qui possono essere utilizzati solo file di testo contenenti codice sorgente. Non puoi includere alcun file binario di nessun tipo. Ciò che accade è che quando NASM assemblare un file di codice sorgente e incontra una direttiva %INCLUDE, apre il file nominato dalla direttiva %INCLUDE e inizia a prelevare testo dal file incluso, riga per riga. Nota che il file incluso non è inserito nel tuo file sorgente principale del linguaggio assembly. Fondamentalmente, quando NASM incontra %INCLUDE, smette di assemblare il tuo file sorgente principale e inizia ad assemblare il file incluso. Una volta che ha elaborato tutte le righe nel file incluso, riprende esattamente da dove si era fermato dopo la direttiva %INCLUDE e continua ad assemblare il tuo file sorgente principale. Molti file inclusi non sono un problema; puoi avere quante più direttive %INCLUDE in un file sorgente di programma vuoi. Puoi anche avere direttive %INCLUDE in un file di libreria che è esso stesso un file incluso, anche se fatto a sufficienza, il tuo codice sorgente diventerà molto disordinato, e non lo consiglio a meno che tu non abbia una ragione molto valida per farlo. Non sono necessarie dichiarazioni speciali in un file incluso, poiché in un senso utilitaristico è parte del file sorgente che contiene la direttiva %INCLUDE. Per un esempio di un file di inclusione, vedere il codice di sotto, che è una libreria di file di inclusione di procedure utilizzate in hexdump3gcc.asm per scrivere testo sulla console di Linux.
+</p>
+
+```asm
+;  Library name    : textlibgcc
+;  Version         : 2.0
+;  Created date    : 5/9/2022
+;  Last update     : 5/9/2023
+;  Author          : Jeff Duntemann
+;  Description     : A simple include library demonstrating the use of
+;                  : the %INCLUDE directive within SASM
+;
+;  Note that this file cannot be assembled by itself, as SASM does not
+;  support separate assembly. It can only be used as the target of an
+;  %INCLUDE directive.
+;
+
+SECTION .bss        ; Section containing uninitialized data
+
+    BUFFLEN  EQU 10h
+    Buff     resb BUFFLEN
+
+SECTION .data       ; Section containing initialised data
+
+; Here we have two parts of a single useful data structure, implementing
+; the text line of a hex dump utility. The first part displays 16 bytes in
+; hex separated by spaces. Immediately following is a 16-character line 
+; delimited by vertical bar characters. Because they are adjacent, the two
+; parts can be referenced separately or as a single contiguous unit.
+; Remember that if DumpLin is to be used separately, you must append an
+; EOL before sending it to the Linux console.
+
+DumpLine:  db " 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 "
+DUMPLEN    EQU $-DumpLine
+ASCLine:    db "|................|",10
+ASCLEN     EQU $-ASCLine
+FULLLEN    EQU $-DumpLine
+
+; The HexDigits table is used to convert numeric values to their hex
+; equivalents. Index by nybble without a scale: [HexDigits+eax]
+HexDigits: db "0123456789ABCDEF"
+
+; This table is used for ASCII character translation, into the ASCII
+; portion of the hex dump line, via XLAT or ordinary memory lookup. 
+; All printable characters "play through" as themselves. The high 128 
+; characters are translated to ASCII period (2Eh). The non-printable
+; characters in the low 128 are also translated to ASCII period, as is
+; char 127.
+DotXlat: 
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 20h,21h,22h,23h,24h,25h,26h,27h,28h,29h,2Ah,2Bh,2Ch,2Dh,2Eh,2Fh
+    db 30h,31h,32h,33h,34h,35h,36h,37h,38h,39h,3Ah,3Bh,3Ch,3Dh,3Eh,3Fh
+    db 40h,41h,42h,43h,44h,45h,46h,47h,48h,49h,4Ah,4Bh,4Ch,4Dh,4Eh,4Fh
+    db 50h,51h,52h,53h,54h,55h,56h,57h,58h,59h,5Ah,5Bh,5Ch,5Dh,5Eh,5Fh
+    db 60h,61h,62h,63h,64h,65h,66h,67h,68h,69h,6Ah,6Bh,6Ch,6Dh,6Eh,6Fh
+    db 70h,71h,72h,73h,74h,75h,76h,77h,78h,79h,7Ah,7Bh,7Ch,7Dh,7Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+			
+	
+SECTION .text       ; Section containing code
+
+;-------------------------------------------------------------------------
+; ClearLine:    Clear a hex dump line string to 16 0 values
+; UPDATED:      5/9/2023
+; IN:           Nothing
+; RETURNS:      Nothing
+; MODIFIES:     Nothing
+; CALLS:        DumpChar
+; DESCRIPTION:  The hex dump line string is cleared to binary 0 by
+;               calling DumpChar 16 times, passing it 0 each time.
+
+ClearLine:
+    push rax       ; Save all caller's r*x GP registers
+    push rbx
+    push rcx
+    push rdx
+
+    mov rdx,15     ; We're going to go 16 pokes, counting from 0
+.poke:	
+    mov rax,0      ; Tell DumpChar to poke a '0'
+    call DumpChar  ; Insert the '0' into the hex dump string
+    sub rdx,1      ; DEC doesn't affect CF!
+    jae .poke      ; Loop back if RDX >= 0
+
+    pop rdx        ; Restore all caller's GP registers
+    pop rcx
+    pop rbx
+    pop rax
+    ret	           ; Go home
+
+;-------------------------------------------------------------------------
+; DumpChar:     "Poke" a value into the hex dump line string.
+; UPDATED:      5/9/2023
+; IN:           Pass the 8-bit value to be poked in RAX.
+;               Pass the value's position in the line (0-15) in RDX 
+; RETURNS:      Nothing
+; MODIFIES:     RAX, ASCLin, DumpLin
+; CALLS:        Nothing
+; DESCRIPTION:  The value passed in RAX will be put in both the hex dump
+;               portion and in the ASCII portion, at the position passed 
+;               in RDX, represented by a space where it is not a
+;               printable character.
+
+DumpChar:
+    push rbx    ; Save caller's RBX
+    push rdi    ; Save caller's RDI
+
+; First we insert the input char into the ASCII portion of the dump line
+    mov bl,byte [DotXlat+rax]    ; Translate nonprintables to '.'
+    mov byte [ASCLine+rdx+1],bl   ; Write to ASCII portion
+
+; Next we insert the hex equivalent of the input char in the hex portion
+; of the hex dump line:
+    mov rbx,rax           ; Save a second copy of the input char
+    lea rdi,[rdx*2+rdx]   ; Calc offset into line string (RDX X 3)
+
+; Look up low nybble character and insert it into the string:
+    and rax,000000000000000Fh    ; Mask out all but the low nybble
+    mov al,byte [HexDigits+rax]  ; Look up the char equiv. of nybble
+    mov byte [DumpLine+rdi+2],al  ; Write the char equiv. to line string
+
+; Look up high nybble character and insert it into the string:
+    and rbx,00000000000000F0h    ; Mask out all the but second-lowest nybble
+    shr rbx,4                    ; Shift high 4 bits of byte into low 4 bits
+    mov bl,byte [HexDigits+rbx]  ; Look up char equiv. of nybble
+    mov byte [DumpLine+rdi+1],bl  ; Write the char equiv. to line string
+
+;Done! Let's go home:
+    pop rdi    ; Restore caller's RDI
+    pop rbx    ; Restore caller's RBX
+    ret        ; Return to caller
+
+;-------------------------------------------------------------------------
+; PrintLine:   Displays DumpLin to stdout
+; UPDATED:     5/9/2022
+; IN:          DumpLine, FULLEN
+; RETURNS:     Nothing
+; MODIFIES:    Nothing
+; CALLS:       Kernel sys_write
+; DESCRIPTION: The hex dump line string DumpLin is displayed to stdout 
+;              using syscall function sys_write. Registers used 
+;              are preserved, along with RCX & R11.
+
+PrintLine:
+    ; Alas, we don't have pushad anymore.
+    push rax
+    push rbx
+    push rcx         ; syscall clobbers
+    push rdx
+    push rsi
+    push rdi
+    push r11         ; syscall clobbers
+
+    mov rax,1        ; Specify sys_write call
+    mov rdi,1        ; Specify File Descriptor 1: Standard output
+    mov rsi,DumpLine ; Pass address of line string
+    mov rdx,FULLLEN  ; Pass size of the line string
+    syscall          ; Make kernel call to display line string
+
+    pop r11          ; syscall clobbers
+    pop rdi
+    pop rsi
+    pop rdx
+    pop rcx          ; syscall clobbers
+    pop rbx
+    pop rax
+    ret              ; Return to caller
+
+
+;-------------------------------------------------------------------------
+; LoadBuff:    Fills a buffer with data from stdin via syscall sys_read
+; UPDATED:     5/9/2023
+; IN:          Nothing
+; RETURNS:     # of bytes read in R15
+; MODIFIES:    RCX, R15, Buff
+; CALLS:       syscall sys_read
+; DESCRIPTION: Loads a buffer full of data (BUFFLEN bytes) from stdin 
+;              using syscall sys_read and places it in Buff. Buffer
+;              offset counter RCX is zeroed, because we're starting in
+;              on a new buffer full of data. Caller must test value in
+;              R15: If R15 contains 0 on return, we've hit EOF on stdin.
+;              Less than 0 in R15 on return indicates some kind of error.
+
+LoadBuff:
+    push rax         ; Save caller's RAX
+    push rdx         ; Save caller's RDX
+    push rsi         ; Save caller's RSI
+    push rdi         ; Save caller's RDI
+
+    mov rax,0        ; Specify sys_read call
+    mov rdi,0        ; Specify File Descriptor 0: Standard Input
+    mov rsi,Buff     ; Pass offset of the buffer to read to
+    mov rdx,BUFFLEN  ; Pass number of bytes to read at one pass
+    syscall          ; Call syscall's sys_read to fill the buffer
+    mov r15,rax      ; Save # of bytes read from file for later
+    xor rcx,rcx      ; Clear buffer pointer RCX to 0
+
+    pop rdi          ; Restore caller's RDI
+    pop rsi          ; Restore caller's RSI
+    pop rdx          ; Restore caller's RDX
+    pop rax          ; Restore caller's RAX
+    ret              ; And return to calle
+```
+
+<p align=justify>
+Un programma che utilizza una libreria di procedure sarà molto più piccolo di uno che contiene tutta la macchina nel suo singolo file di codice sorgente. Il codice di sotto è fondamentalmente hexdump2gcc.asm con le sue procedure rimosse e raccolte nel file di inclusione che ho presentato nel codice di sopra.
+</p>
+
+```asm
+;  Executable name  : hexdump3gcc
+;  Version          : 2.0
+;  Created date     : 9/5/2022
+;  Last update      : 5/9/2023
+;  Author           : Jeff Duntemann
+;  Description      : A simple hex dump utility demonstrating the use of
+;                   : code libraries by inclusion via %INCLUDE
+;
+;  Build using SASM's standard x64 build setup
+;
+;  Type or paste some text into Input window and click Build & Run.
+;
+
+SECTION .bss        ; Section containing uninitialized data
+
+SECTION .data       ; Section containing initialised data		
+	
+SECTION .text       ; Containing code
+   
+%INCLUDE "textlibgcc.asm"
+
+GLOBAL main   ; You need to declare "main" here because SASM uses gcc
+              ; to do builds.
+
+;-------------------------------------------------------------------------
+; MAIN PROGRAM BEGINS HERE
+;-------------------------------------------------------------------------
+
+main:
+    mov rbp, rsp; for correct debugging
+
+; Whatever initialization needs doing before loop scan starts is here:
+    xor r15,r15     ; Zero out r15,rsi, and rcx
+    xor rsi,rsi		
+    xor rcx,rcx
+    call LoadBuff   ; Read first buffer of data from stdin
+    cmp r15,0       ; If r15=0, sys_read reached EOF on stdin
+    jbe Exit
+
+; Go through the buffer and convert binary byte values to hex digits:
+Scan:
+    xor rax,rax                ; Clear RAX to 0
+    mov al,byte[Buff+rcx]      ; Get a byte from the buffer into AL
+    mov rdx,rsi	               ; Copy total counter into RDX
+    and rdx,000000000000000Fh  ; Mask out lowest 4 bits of char counter
+    call DumpChar              ; Call the char poke procedure
+
+; Bump the buffer pointer to the next character and see if buffer's done:
+    inc rsi           ; Increment total chars processed counter
+    inc rcx           ; Increment buffer pointer
+    cmp rcx,r15       ; Compare with # of chars in buffer
+    jb .modTest        ; If we've processed all chars in buffer...
+    call LoadBuff     ; ...go fill the buffer again
+    cmp r15,0         ; If r15=0, sys_read reached EOF on stdin
+    jbe Done          ; If we get EOF, we're done
+
+; See if we're at the end of a block of 16 and need to display a line:
+.modTest:
+    test rsi,000000000000000Fh ; Test 4 lowest bits in counter for 0
+    jnz Scan                   ; If counter is *not* modulo 16, loop back
+    call PrintLine             ; ...otherwise print the line
+    call ClearLine             ; Clear hex dump line to 0's
+    jmp Scan                   ; Continue scanning the buffer
+
+; All done! Let's end this party:
+Done:
+    call PrintLine   ; Print the final "leftovers" line
+
+Exit:	
+    ret              ; Return to glibc's shutdown code
+```
+
+### Dove devono essere memorizzati i file di inclusione di SASM
+
+<p align=justify>
+Uno dei problemi in qualsiasi linguaggio di programmazione che supporta i file di inclusione è dove l'assemblatore o il compilatore cercherà quei file di inclusione. Con SASM hai due opzioni: 
+</p>
+
+1. Puoi creare e utilizzare librerie di file di inclusione nella directory di lavoro attuale, cioè la directory in cui si trova il tuo file sorgente principale. Questo è ciò che dovresti fare quando stai sviluppando la libreria che sarà successivamente utilizzata come file di inclusione.
+2. Puoi utilizzare librerie di file di inclusione che si trovano in una directory creata da SASM a tale scopo quando SASM è installato.
+
+<p align=justify>  
+Ecco la directory:
+</p>
+
+```
+/usr/share/sasm/include
+```
+
+<p align=justify>
+Non è un grande problema, vero? Bene, c'è una complicazione: devi essere connesso come root per inserire un file di inclusione nella directory di inclusione di SASM. È al di fuori dello scopo di questo libro spiegare in dettaglio i comandi di Linux, quindi se hai dubbi su come ottenere i permessi di root, fai una ricerca su internet. L'account root viene creato automaticamente quando installi Linux; devi “rivendicarlo” dandogli una password. Ancora una volta, ci sono troppi dettagli per queste pagine, ma ci sono tutorial online, ed è un'abilità di cui avrai bisogno se intendi fare qualsiasi tipo di programmazione seria su Linux. Quindi perché preoccuparsi di quella directory di inclusione difficile da raggiungere? Semplicemente questo: se mantieni le tue librerie nelle directory di lavoro di diversi progetti, una modifica apportata alla copia di una libreria di un progetto non si rifletterà in tutte le altre copie della stessa libreria altrove tra i tuoi vari progetti. Se non fai attenzione a questo, le copie di una data libreria si “evolveranno” gradualmente l'una dall'altra, e le procedure in quella libreria inizieranno a comportarsi in modo diverso o a causare bug. La tentazione di applicare correzioni “veloci e sporche” a piccoli problemi in un file di codice sorgente è forte. Non farlo, specialmente per le librerie di file di inclusione. Crea e perfeziona una libreria di file di inclusione come progetto o parte di un progetto, e poi, con i permessi di root, inseriscila nella directory di inclusione di SASM. In questo modo, tutti i tuoi progetti utilizzeranno la stessa copia della libreria di inclusione.
+</p>
+
+### Il modo migliore per creare una libreria di file di inclusione
+
+<p align=justify>
+Se hai intenzione di sviluppare una libreria di procedure in stile include da zero con SASM, ecco un processo collaudato da utilizzare: 
+</p>
+
+1. Progetta le tue procedure. Creo semplicemente un documento di testo e scrivo le descrizioni di ciò che le procedure della biblioteca devono fare, affinando gradualmente le descrizioni fino a quando le descrizioni non sono effettivamente codificate.
+2. Apri il programma sandbox che ho descritto in precedenza e inserisci il codice sorgente delle tue procedure. Se li hai già scritti come parti di altri programmi, copia/incolla il loro codice sorgente nel nuovo file.
+3. Crea un semplice codice "esercizio" nel corpo del programma sandbox che chiama le tue procedure e le mette alla prova. Eseguire il debug come sempre con il debugger SASM. Questo rivelerà booboos relativamente semplici come spingere e far scoppiare i registri nell'ordine sbagliato, cestinare i registri del chiamante e così via.
+4. Una volta terminato il debug semplice, includere il codice sorgente della libreria in un programma "reale" testare le procedure della libreria in modo più approfondito.
+5. Quando sei soddisfatto che tutte le procedure funzionino come progettato, raccoglile in un file senza il framework sandbox e rilasciale nella directory include files di SASM.
+6. Conserva una copia della nuova libreria da qualche altra parte, da qualche parte in cui esegui regolarmente il backup.
+7. Se in qualsiasi momento apporti modifiche al codice sorgente della libreria, testa accuratamente le modifiche e quindi rilascia il file modificato nella directory di inclusione di SASM, sostituendo la versione precedente già presente.
+
+<p align=justify>
+A questo punto metteremo da parte SASM per un po' e parleremo dell'utilizzo di assembly separati per collegare i file di codice oggetto .o preassemblati in un singolo file eseguibile. È facile diventare "viziati" usando SASM, perché inserisce così tanti strumenti utili all'interno di un IDE, un IDE creato appositamente per i primi passi di uno studente nella programmazione in linguaggio assembly. Continuerò a presentare il codice di esempio per l'uso all'interno di SASM in questo libro, che è un'introduzione ai concetti di informatica e linguaggio assembly. Ma avrai bisogno di sapere come funziona l'assemblaggio separato, una volta che sarai "passato" da SASM a IDE più complessi e tecniche di programmazione sofisticate
+</p>
+
+### Assemblaggio e moduli separati
+
+<p align=justify>
+Dal punto di vista del processo di assemblaggio, ogni singolo file .asm è considerato un modulo, che contenga o meno un'etichetta _start: o main:, e quindi sia un programma o contenga semplicemente procedure. Ogni modulo contiene codice e possibilmente alcune definizioni di dati. Quando tutte le dichiarazioni sono fatte correttamente, tutti i moduli possono liberamente "parlare" tra loro tramite chiamate di procedura, e qualsiasi procedura può fare riferimento a qualsiasi definizione di dati presente in uno qualsiasi dei file che il linker combina. (Le etichette locali sono ancora visibili solo alle etichette globali che le possiedono.) Ogni file eseguibile può contenere solo un'etichetta _start: o main:, quindi tra i diversi moduli collegati in un file eseguibile, solo uno può contenere un'etichetta _start: o main: e quindi essere il programma vero e proprio. Questo sembra più difficile di quanto non sia. Il trucco è semplicemente ottenere tutte le dichiarazioni corrette.
+</p>
+
+### Dichiarazioni Globali ed Esterne
+
+<p align=justify>
+Ed è molto meno complicato di quanto non fosse in passato. Ai vecchi tempi del DOS, era necessario definire segmenti di codice e segmenti di dati per l'uso delle librerie assemblate separatamente e assicurarsi che tali segmenti fossero contrassegnati come PUBLIC, e così via. Per i programmi in modalità protetta a 32 bit e in modalità lunga x64 in spazio utente sotto Linux, c'è solo un segmento, contenente codice, dati e stack, letteralmente tutto ciò che un programma ha. La maggior parte della "connessione" manuale che prima dovevamo fare viene ora eseguita automaticamente da NASM, dal linker e dal caricatore Linux. Creare librerie è ora un gioco da ragazzi, non più complesso della creazione di programmi e per certi versi anche più facile. Il cuore della programmazione nei moduli è "rimandare" la risoluzione degli indirizzi fino al momento del collegamento. È possibile che si sia già riscontrato il problema della risoluzione degli indirizzi se si è iniziato a scrivere i propri programmi in assembly. Può succedere per caso: se avete intenzione di scrivere una procedura in un programma ma nel vostro entusiasmo maniacale scrivete prima il codice che fa riferimento all'etichetta di quella procedura (non ancora scritta), NASM vi darà allegramente un messaggio di errore:
+</p>
+
+```asm
+ error: symbol 'MyProc' undefined
+```
+
+<p align=justify>
+Nella programmazione modulare, è frequente chiamare procedure che non esistono da nessuna parte nel file di codice sorgente su cui stai effettivamente lavorando. Come superare i controlli dell'assemblatore? La risposta è dichiarare una procedura esterna. Funziona molto come suona: all'assemblatore viene detto che un determinato'etichetta dovrà essere trovata altrove nel programma, in un altro modulo, in seguito. Una volta comunicato questo, NASM è felice di darti una deroga su un'etichetta non definita, per ora. Hai promesso a NASM che la fornirai in seguito, e NASM accetta la tua promessa. (Il linker ti costringerà a mantenere quella promessa durante il passaggio di collegamento.) NASM segnalerà il riferimento come esterno e continuerà senza contestare l'etichetta non definita. La promessa che fai a NASM appare così.
+</p>
+
+```asm
+EXTERN MyProc
+```
+
+<p align=justify>
+Qui hai detto all'assemblatore che l'etichetta MyProc rappresenta una procedura e che sarà trovata da qualche parte esterna al modulo attuale. Questo è tutto ciò che l'assemblatore deve sapere per trattenere il suo messaggio di errore. E dopo aver fatto ciò, la parte dell'assemblatore nell'accordo è finita. Lascia in place un socket vuoto nel tuo programma dove l'indirizzo della procedura esterna può essere inserito in seguito. A volte lo penso come un occhiello dove in seguito la procedura esterna si aggancerà. Nell'altro modulo dove la procedura MyProc è effettivamente definita, non è sufficiente solo definire la procedura. Un occhiello ha bisogno di un gancio. Devi avvisare l'assemblatore che MyProc sarà referenziato da fuori dal modulo. L'assemblatore ha bisogno di forgiare il gancio che si aggancerà all'occhiello. Forgi il gancio dichiarando la procedura globale, il che significa che altri moduli in qualsiasi parte del programma possono liberamente fare riferimento alla procedura. Dichiarare una procedura globale non è più complesso che dichiararla esterna:
+</p>
+
+```asm
+ GLOBAL MyProc
+```
+
+<p align=justify>
+Una procedura dichiarata come GLOBAL dove è definita può essere riferita da qualsiasi parte in cui la sua etichetta è dichiarata come EXTERN. Con entrambi l'uncinetto e l'eyelet in posizione, chi li collega realmente? Il linker fa questo durante l'operazione di collegamento. Al momento del collegamento, il linker prende i due file .o generati dall'assemblatore, uno dal tuo programma e l'altro dal modulo contenente MyProc, e li combina in un unico file binario eseguibile. Il numero di file .o non è limitato a due; puoi avere quasi qualsiasi numero di moduli esterni assemblati separatamente in un unico programma. (Ancora una volta, solo uno di essi—il programma vero e proprio—può avere un'etichetta _start: o main:). Quando il file eseguibile creato dal linker viene caricato ed eseguito, il programma può chiamare MyProc in modo pulito e veloce come se entrambi fossero stati dichiarati nello stesso file di codice sorgente. Questo processo è riassunto graficamente nella figura di sotto
+</p>
+
+<div aling=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/connecting_globals_and_externals.png">
+</div>
+
+<p align=justify>
+Ciò che funziona per le procedure funziona anche per i dati, e può funzionare in entrambe le direzioni. Il tuo programma può dichiarare qualsiasi variabile nominata come GLOBALE, e quella variabile può quindi essere utilizzata da qualsiasi modulo in cui lo stesso nome di variabile è dichiarato come esterno con la direttiva EXTERN. Infine, le librerie di procedure possono condividere dati e procedure tra loro in qualsiasi combinazione, a patto che tutte le dichiarazioni globali ed esterne siano gestite correttamente. Un programma o un modulo contenente procedure o variabili dichiarate come globali esporta quegli elementi. Inoltre, diciamo che un programma o un modulo che utilizza procedure o variabili che gli sono estranee importa quegli elementi.
+</p>
+
+# Il meccanismo dei Globals e Externals
+
+<p align=justify>
+Il programma hexdump2gcc contiene diverse procedure. Estraiamo quelle procedure dal modulo principale del programma e creiamo un modulo di libreria assemblato separatamente in modo da poter vedere come funziona tutto. Ho descritto in dettaglio nei capitoli precedenti i requisiti del codice sorgente dei programmi in linguaggio assembly. I moduli di libreria assemblati separatamente sono simili ai programmi e possono avere tutte e tre le sezioni (.text, .data e .bss) che i moduli di programma possono avere. Ci sono però due differenze principali riguardanti le cose di cui i moduli di libreria sono privi.
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		I moduli esterni non contengono un programma principale e quindi non hanno un indirizzo di avvio. Cioè, non esiste un'etichetta _start: o main: in una libreria per indicare al linker che questo è il punto da cui deve iniziare l'esecuzione del codice. I moduli di libreria non sono progettati per essere eseguiti autonomamente, quindi un'etichetta _start: o main: in un modulo di libreria è sia superflua sia causa di un errore fatale del linker se _start: esiste già nel modulo del programma principale.	
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		I moduli esterni non ritornano a Linux. Se solo il modulo del programma principale contiene un'etichetta _start: o main:, allora solo il modulo del programma principale dovrebbe contenere la necessaria SYSCALL sys_exit che arresta il programma e restituisce il controllo a Linux. Come regola generale, non chiamare mai sys_exit all'interno di una procedura, sia essa situata nello stesso modulo del programma principale o in un modulo di libreria esterna. Il programma principale ottiene il permesso di eseguire dal sistema operativo, e il programma principale dovrebbe restituirlo.
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+Innanzitutto, dai un'occhiata al codice di sotto. È fondamentalmente lo stesso programma di hexdump2gcc, ma con le sue procedure raccolte in un file di libreria assemblato separatamente chiamato textlib.asm. Fa esattamente le stesse cose di hexdump2gcc. È più piccolo di hexdump2gcc dal punto di vista del codice sorgente, perché la maggior parte della sua meccanica è stata esternalizzata. Esternalizzata dove? Non lo sai ancora — e non devi saperlo. NASM ritarderà la risoluzione degli indirizzi delle procedure mancanti finché non elenchi tutte le procedure mancanti utilizzando la direttiva EXTERN.
+</p>
+
+```asm
+;  Executable name : hexdump3
+;  Version         : 2.0
+;  Created date    : 9/14/2022
+;  Last update     : 7/18/2023
+;  Author          : Jeff Duntemann
+;  Description     : A simple hex dump utility demonstrating the use of
+;                  : separately assembled code libraries via EXTERN & GLOBAL
+;
+;  Build using these commands:
+;    nasm -f elf64 -g -F dwarf hexdump3.asm
+;    ld -o hexdump3 hexdump3.o <path>/textlib.o
+;
+SECTION .bss         ; Section containing uninitialized data
+
+SECTION .data        ; Section containing initialised data
+		
+SECTION .text        ; Section containing code
+
+EXTERN ClearLine, DumpChar, LoadBuff, PrintLine
+EXTERN Buff, BuffLength
+
+GLOBAL _start:
+
+_start:
+    push rbp
+    mov rbp,rsp      ; For the benefit of gdb
+;    nop              ; Ditto
+
+; Whatever initialization needs doing before the loop scan starts is here:
+    xor r15,r15
+    xor rsi,rsi		
+    xor rcx,rcx
+    call LoadBuff    ; Read first buffer of data from stdin
+    cmp r15,0        ; If r15=0, sys_read reached EOF on stdin
+    jbe Exit
+
+; Go through the buffer and convert binary values to hex digits:
+Scan:
+    xor rax,rax                ; Clear RAX to 0
+    mov al,byte[Buff+rcx]      ; Get a char from the buffer into AL
+    mov rdx,rsi                ; Copy total counter into RDX
+    and rdx,000000000000000Fh  ; Mask out lowest 4 bits of char counter
+    call DumpChar              ; Call the char poke procedure
+
+; Bump the buffer pointer to the next character and see if buffer's done:
+    inc rsi                    ; Increment buffer pointer
+    inc rcx                    ; Increment total chars processed counter
+    cmp rcx,r15                ; Compare with # of chars in buffer
+    jb modTest                 ; If we've processed all chars in buffer...
+    call LoadBuff              ; ...go fill the buffer again
+    cmp r15,0                  ; If r15=0, sys_read reached EOF on stdin
+    jbe Done                   ; If we get EOF, we're done
+
+; See if we're at the end of a block of 16 and need to display a line:
+modTest:
+    test rsi,000000000000000Fh ; Test 4 lowest bits in counter for 0
+    jnz Scan                   ; If counter is *not* modulo 16, loop back
+    call PrintLine             ; ...otherwise print the line
+    call ClearLine             ; Clear hex dump line to 0's
+    jmp Scan                   ; Continue scanning the buffer
+
+; All done! Let's end this party:
+Done:
+    call PrintLine             ; Print the "leftovers" line
+
+Exit:	
+    mov rax,60                 ; Code for Exit system call
+    mov rdi,0                  ; Return a code of zero	
+    syscall                    ; Make system call
+```
+
+<p align=justify>
+Le dichiarazioni esterne di più elementi possono essere messe su una sola riga, separate da virgole, come in hexdump3:
+</p>
+
+```asm
+ EXTERN ClearLine, DumpChar, PrintLine
+```
+
+<p align=justify>
+Non deve esserci una sola direttiva EXTERN. Possono esisterne diverse in un modulo; ogni identificatore esterno, infatti, può avere la propria direttiva EXTERN. Sta a te decidere. Tuttavia, quando hai un elenco piuttosto lungo di identificatori esterni, non commettere questo errore, che è un errore:
+</p>
+
+```asm
+EXTERN InitBlock, ReadBlock, ValidateBlock, WriteBlock,
+CleanUp, ShowStats, PrintSummary            ; ERROR!
+```
+
+<p align=justify>
+Le dichiarazioni EXTERN non possono estendersi oltre i confini di riga. (In effetti, quasi nulla nel linguaggio assembly può estendersi oltre i confini di riga, specialmente con NASM. I programmatori Pascal e C si imbattono in questa peculiarità abbastanza spesso quando sono alle prime armi con il linguaggio assembly.) Se hai troppe dichiarazioni esterne per adattarle a una singola riga con un singolo EXTERN, posiziona ulteriori direttive EXTERN sulle righe seguenti. Per collegare hexdump3 in un programma eseguibile funzionante, dobbiamo creare un modulo di libreria esterna per ciascuna delle sue procedure. Tutto ciò di cui abbiamo bisogno sono le procedure e i loro dati nelle sezioni corrette e le necessarie dichiarazioni GLOBAL. Questo è ciò che si trova nel codice di sotto:
+</p>
+
+```asm
+;  Module name      : textlib.asm
+;  Version          : 2.0
+;  Created date     : 9/14/2022
+;  Last update      : 7/18/2023
+;  Author           : Jeff Duntemann
+;  Description      : A simple procedure library demonstrating the use of
+;                   : separately assembled code libraries via EXTERN
+;
+;  Build using this command:
+;    nasm -f elf64 -g -F dwarf textlib.asm
+;
+;
+		
+SECTION .bss               ; For containing uninitialized data
+	
+    BUFFLEN  EQU 10h       ; We read the input file 16 bytes at a time
+	Buff:    resb BUFFLEN  ; Reserve memory for the input file read buffer
+
+SECTION .data              ; For containing initialised data
+
+; Here we have two parts of a single useful data structure, implementing the
+; text line of a hex dump utility. The first part displays 16 bytes in hex
+; separated by spaces. Immediately following is a 16-character line delimited
+; by vertical bar characters. Because they are adjacent, they can be
+; referenced separately or as a single contiguous unit. Remember that if
+; DumpLin is to be used separately, you must append an EOL before sending it
+; to the Linux console.
+
+DumpLine:   db " 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 "
+DUMPLEN     EQU $-DumpLine
+ASCLine:    db "|................|",10
+ASCLEN      EQU $-ASCLine
+FULLLEN     EQU $-DumpLine
+
+; The equates shown above must be applied to variables to be exported:
+DumpLength: dq DUMPLEN
+ASCLength:  dq ASCLEN
+FullLength: dq FULLLEN
+BuffLength: dq BUFFLEN
+
+; The HexDigits table is used to convert numeric values to their hex
+; equivalents. Index by nybble without a scale, e.g.: [HexDigits+rax]
+HexDigits:  db "0123456789ABCDEF"
+
+; This table allows us to generate text equivalents for binary numbers. 
+; Index into the table by the nybble using a scale of 4: 
+; [BinDigits + rcx*4]
+BinDigits:  db "0000","0001","0010","0011"
+            db "0100","0101","0110","0111"
+            db "1000","1001","1010","1011"
+            db "1100","1101","1110","1111"
+
+; Exported data items and procedures:            
+GLOBAL  Buff, DumpLine, ASCLine, HexDigits, BinDigits
+GLOBAL  ClearLine, DumpChar, NewLines, PrintLine, LoadBuff
+            
+; This table is used for ASCII character translation, into the ASCII
+; portion of the hex dump line, via XLAT or ordinary memory lookup. 
+; All printable characters "play through" as themselves. The high 128 
+; characters are translated to ASCII period (2Eh). The non-printable
+; characters in the low 128 are also translated to ASCII period, as is
+; char 127.
+    DotXlat: 
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 20h,21h,22h,23h,24h,25h,26h,27h,28h,29h,2Ah,2Bh,2Ch,2Dh,2Eh,2Fh
+    db 30h,31h,32h,33h,34h,35h,36h,37h,38h,39h,3Ah,3Bh,3Ch,3Dh,3Eh,3Fh
+    db 40h,41h,42h,43h,44h,45h,46h,47h,48h,49h,4Ah,4Bh,4Ch,4Dh,4Eh,4Fh
+    db 50h,51h,52h,53h,54h,55h,56h,57h,58h,59h,5Ah,5Bh,5Ch,5Dh,5Eh,5Fh
+    db 60h,61h,62h,63h,64h,65h,66h,67h,68h,69h,6Ah,6Bh,6Ch,6Dh,6Eh,6Fh
+    db 70h,71h,72h,73h,74h,75h,76h,77h,78h,79h,7Ah,7Bh,7Ch,7Dh,7Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+		
+SECTION .text              ; For code
+
+;-------------------------------------------------------------------------
+; ClearLine:   Clear a Full-Length hex dump line to 16 0 values
+; UPDATED:     9/21/2022
+; IN:          Nothing
+; RETURNS:     Nothing
+; MODIFIES:    Nothing
+; CALLS:       DumpChar
+; DESCRIPTION: The hex dump line string is cleared to binary 0. 
+
+ClearLine:
+    push rax        ; Save all caller's r*x GP registers
+    push rbx
+    push rcx
+    push rdx
+
+    mov rdx,15      ; We're going to go 16 pokes, counting from 0
+.poke:	
+    mov rax,0       ; Tell DumpChar to poke a '0'
+    call DumpChar   ; Insert the '0' into the hex dump string
+    sub rdx,1       ; DEC doesn't affect CF!
+    jae .poke       ; Loop back if RDX >= 0
+	
+    pop rdx         ; Restore caller's r*x GP registers
+    pop rcx
+    pop rbx
+    pop rax
+    ret             ; Go home
+
+;-------------------------------------------------------------------------
+; DumpChar:     "Poke" a value into the hex dump line string DumpLine.
+; UPDATED:      9/21/2022
+; IN:           Pass the 8-bit value to be poked in RAX.
+;               Pass the value's position in the line (0-15) in RDX 
+; RETURNS:      Nothing
+; MODIFIES:     RAX
+; CALLS:        Nothing
+; DESCRIPTION:  The value passed in RAX will be placed in both the hex dump
+;               portion and in the ASCII portion, at the position passed 
+;               in RCX, represented by a space where it is not a printable 
+;               character.
+
+DumpChar:
+	push rbx    ; Save caller's RBX
+	push rdi    ; Save caller's RDI
+
+; First we insert the input char into the ASCII portion of the dump line
+    mov bl,byte [DotXlat+rax]      ; Translate nonprintables to '.'
+    mov byte [ASCLine+rdx+1],bl    ; Write to ASCII portion
+
+; Next we insert the hex equivalent of the input char in the hex portion
+; of the hex dump line:
+    mov rbx,rax                    ; Save a second copy of the input char
+    lea rdi,[rdx*2+rdx]            ; Calc offset into line string (RDX X 3)
+
+; Look up low nybble character and insert it into the string:
+    and rax,000000000000000Fh      ; Mask out all but the low nybble
+    mov al,byte [HexDigits+rax]    ; Look up the char equivalent of nybble
+    mov byte [DumpLine+rdi+2],al   ; Write the char equivalent to line string
+
+; Look up high nybble character and insert it into the string:
+    and rbx,00000000000000F0h      ; Mask out all the but second-lowest nybble
+    shr rbx,4                      ; Shift high 4 bits of char into low 4 bits
+    mov bl,byte [HexDigits+rbx]    ; Look up char equivalent of nybble
+    mov byte [DumpLine+rdi+1],bl   ; Write the char equiv. to line string
+
+;Done! Let's go home:
+    pop rdi     ; Restore caller's EDI register value
+    pop rbx     ; Restore caller's EBX register value
+    ret         ; Return to caller
+
+;-------------------------------------------------------------------------
+; Newlines:     Sends between 1-15 newlines to the Linux console
+; UPDATED:      5/9/2023
+; IN:           # of newlines to send, from 1 to 15
+; RETURNS:      Nothing
+; MODIFIES:     Nothing
+; CALLS:        Kernel sys_write
+; DESCRIPTION:  The number of newline chareacters (0Ah) specified in RDX
+;               is sent to stdout using using SYSCALL sys_write. This
+;               procedure demonstrates placing constant data in the 
+;               procedure definition itself, rather than in .data or .bss
+
+Newlines:
+    push rax       ; Push caller's registers
+    push rsi
+    push rdi
+    push rcx       ; Used by syscall
+    push rdx
+    push r11       ; Used by syscall
+        
+    cmp rdx,15     ; Make sure caller didn't ask for more than 15
+    ja .exit       ; If so, exit without doing anything
+    mov rcx,EOLs   ; Put address of EOLs table into ECX
+    mov rax,1      ; Specify sys_write call
+    mov rdi,1      ; Specify File Descriptor 1: Standard output
+    syscall        ; Make the system call
+
+.exit:   
+    pop r11        ; Restore all caller's registers
+    pop rdx
+    pop rcx
+    pop rdi
+    pop rsi
+    pop rax
+    ret            ; Go home!
+
+EOLs db 10,10,10,10,10,10,10,10,10,10,10,10,10,10,10
+
+;-------------------------------------------------------------------------
+; PrintLine:    Displays the hex dump line string via SYSCALL sys_write
+; UPDATED:      5/9/2023
+; IN:           Nothing
+; RETURNS:      Nothing
+; MODIFIES:     RAX RCX RDX RDI RSI
+; CALLS:        SYSCALL sys_write
+; DESCRIPTION:  The hex dump line string DumpLine is displayed to stdout 
+;               using SYSCALL sys_write.
+
+
+PrintLine:
+    ; Alas, we don't have pushad anymore.
+    push rax            ; Push caller's registers
+    push rbx
+    push rcx            ; Used by syscall
+    push rdx
+    push rsi
+    push rdi
+    push r11            ; Used by syscall
+        
+    mov rax,1           ; Specify sys_write call
+    mov rdi,1           ; Specify File Descriptor 1: Standard output
+    mov rsi,DumpLine    ; Pass offset of line string
+    mov rdx,FULLLEN     ; Pass size of the line string
+    syscall             ; Make system call to display line string
+        
+    pop r11             ; Restore callers registers
+    pop rdi             
+    pop rsi
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
+    ret                 ; Go home!
+
+;-------------------------------------------------------------------------
+; LoadBuff:     Fills a buffer with data from stdin via syscall sys_read
+; UPDATED:      5/9/2023
+; IN:           Nothing
+; RETURNS:      # of bytes read in R15
+; MODIFIES:     RAX, RDX, RSI, RDI, RCX, R15, Buff
+; CALLS:        syscall sys_read
+; DESCRIPTION:  Loads a buffer full of data (BUFFLEN bytes) from stdin 
+;               using syscall sys_read and places it in Buff. Buffer
+;               offset counter RCX is zeroed, because we're starting in
+;               on a new buffer full of data. Caller must test value in
+;               R15: If R15 contains 0 on return, we've hit EOF on stdin.
+;               Less than 0 in R15 on return indicates some kind of error.
+
+LoadBuff:
+	push rax        ; Save caller's RAX
+	push rdx        ; Save caller's RDX
+	push rsi        ; Save caller's RSI
+	push rdi        ; Save caller's RDI
+
+	mov rax,0       ; Specify sys_read call
+	mov rdi,0       ; Specify File Descriptor 0: Standard Input
+	mov rsi,Buff    ; Pass offset of the buffer to read to
+	mov rdx,BUFFLEN	; Pass number of bytes to read at one pass
+	syscall         ; Call syscall's sys_read to fill the buffer
+	mov r15,rax     ; Save # of bytes read from file for later
+	xor rcx,rcx     ; Clear buffer pointer RCX to 0
+
+	pop rdi         ; Restore caller's RDI
+	pop rsi         ; Restore caller's RSI
+	pop rdx         ; Restore caller's RDX
+	pop rax         ; Restore caller's RAX
+	ret             ; And return to caller
+```
+
+<p align=justify>
+Ci sono due righe di dichiarazioni di identificatori globali, ciascuna con la propria direttiva GLOBAL. Come convenzione nel mio lavoro, separo le dichiarazioni di procedure e di elementi di dati nominati e assegno a ciascuna la propria riga. (Naturalmente, poiché le dichiarazioni GLOBAL non possono attraversare una riga di testo, potresti aver bisogno di più di due righe se hai molti globali da esportare.)
+</p>
+
+```asm
+ GLOBAL  Buff, DumpLine, ASCLine, HexDigits, BinDigits
+ GLOBAL  ClearLine, DumpChar, NewLines, PrintLine, LoadBuff
+```
+
+<p align=justify>
+Qualsiasi procedura o elemento di dati che deve essere esportato (cioè reso disponibile al di fuori del modulo) deve essere dichiarato su una riga dopo una direttiva GLOBAL. Non è necessario dichiarare tutto in un modulo come globale. Infatti, un modo per gestire la complessità e prevenire certi tipi di bug è riflettere con attenzione e limitare rigorosamente ciò che altri moduli possono "vedere" all'interno dei loro moduli. Un modulo può avere procedure "private" e elementi di dati nominati che possono essere referenziati solo all'interno del modulo. Rendere questi elementi privati è infatti l'impostazione predefinita: basta non dichiararli globali. Nota bene che tutti gli elementi dichiarati globali devono essere dichiarati globali prima di essere definiti nel codice sorgente. In pratica, questo significa che è necessario dichiarare le procedure globali nella parte superiore della sezione .text, prima che qualsiasi procedura sia effettivamente definita. Allo stesso modo, tutti gli elementi di dati nominati globali devono essere dichiarati nella sezione .data prima che gli elementi di dati siano definiti. Gli equates possono essere esportati dai moduli, sebbene questa sia un'innovazione dell'assemblatore NASM e non necessariamente vera per tutti gli assemblatori. Penso che sia rischioso e invece di esportare equates, definisco variabili nominate per contenere valori definiti da equates:
+</p>
+
+```asm
+ DumpLength:     
+ ASCLength:      
+ FullLength:     
+ BuffLength:     
+ dq DUMPLEN
+ dq ASCLEN
+ dq FULLLEN
+ dq BUFFLEN 
+```
+
+<p align=justify>
+Se vuoi che vengano esportate, dichiara le variabili GLOBAL. Nota che gli esempi mostrati non sono esportati da textlib.asm e servono solo a illustrare la tecnica.
+</p>
+
+### Linkare le librerie nei tuoi programmi
+
+<p align=justify>
+Per tutti i precedenti programmi di esempio presentati in questo libro, i makefile sono abbastanza semplici. Qui, ad esempio, c'è il makefile per il programma hexdump2:
+</p>
+
+```make
+ hexdump2: hexdump2.o
+	 ld -o hexdump2 hexdump2.o
+ hexdump2.o: hexdump2.asm
+ 	nasm -f elf64 -g -F dwarf hexdump2.asm
+```
+
+<p align=justify>
+L'invocazione del linker converte HEXDUMP2.O nel file eseguibile hexdump2, e questo è tutto ciò che deve fare. Aggiungere un file di libreria complica leggermente le cose. Il linker ora deve fare un vero e proprio collegamento di più file. File di libreria aggiuntivi nel formato .o vengono aggiunti all'invocazione del linker dopo il nome del file collegabile del programma principale. Può esserci un numero (ragionevole) di file .o in un passaggio di collegamento. Per costruire hexdump3, ne servono solo due. Ecco il makefile per hexdump3:
+</p>
+
+```make
+ hexdump3: hexdump3.o
+ 	ld -o hexdump3 hexdump3.o ../textlib/textlib.o
+ hexdump3.o: hexdump3.asm
+ 	nasm -f elf64 -g -F dwarf hexdump3.asm
+```
+
+<p align=justify>
+Il file textlib.o è semplicemente posizionato sulla riga di invocazione del linker dopo il file .o per il programma stesso. C'è una sottigliezza nel makefile precedente: il file della libreria si trova su un percorso relativo alla directory contenente il progetto hexdump3. Posizionare ../textlib/ davanti al nome del file textlib.o consente al linker di raggiungere "su, attraverso e giù" attraverso il file system Linux nella directory del progetto per la libreria. Altrimenti, dovresti posizionare textlib.o nella stessa directory di hexdump3.o, o copiarlo in una directory sotto usr/lib, che si trova nel percorso di ricerca predefinito. Una directory sotto usr/lib sarebbe effettivamente un ottimo posto per esso, una volta che è finito e ben testato—per grandi valori di “ben testato.” Mentre stai ancora lavorando attivamente a una libreria, è meglio tenerla in una directory di progetto a sé stante all'interno della stessa struttura di directory di tutte le tue altre directory di progetto, così puoi correggere bug e aggiungere funzionalità che non ti vengono in mente fino a quando non l'hai usata per un po' a costruire altri programmi.
+</p>
+
+### I pericoli di troppe procedure e tropte librerie
+
+<p align=justify>
+Nella programmazione assembly, come nella vita, si può avere troppo di una cosa buona. Ho visto librerie di codice costituite da centinaia di file, ciascun file contenente una singola procedura. Queste non sono neanche procedure autonome. Si chiamano l'una con l'altra a destra e a manca, in una fitta rete di esecuzione che è molto difficile da tracciare a livello di codice sorgente, specialmente se hai ereditato una tale libreria da qualcun altro e devi afferrare (spesso molto rapidamente) come funzionano effettivamente i meccanismi implementati dalla libreria. In assenza di una documentazione testuale molto dettagliata, non c'è una “vista dall'alto” che ti aiuti a capire cosa chiama cosa e da dove. Se la libreria proviene da un'altra parte ed è usata come una “scatola nera”, ciò potrebbe non essere una catastrofe, anche se mi piace comunque sapere come funzionano le librerie che utilizzo. C'è, ahimè, una ragione valida per creare librerie con singole procedure come questa: quando colleghi una libreria a un programma, l'intera libreria viene aggiunta al file eseguibile, comprese quelle procedure e definizioni di dati che non vengono mai referenziate dal programma principale. Se ogni procedura viene assemblata separatamente in un suo comodo file .o, il linker aggiungerà solo quelle procedure al tuo programma che verranno effettivamente chiamate da (e quindi eseguite da) esso. Molto dipende da dove finisce il tuo codice. Se il tuo obiettivo è il file eseguibile più piccolo possibile, questo è significativo, e ci sono alcuni continenti nel mondo del linguaggio assembly (soprattutto quelli relativi ai sistemi embedded) dove ogni byte conta e il “codice morto” che non viene mai eseguito aggiunge costi inutili all'hardware di fascia bassa su cui il codice deve girare. La dimensione del codice in linguaggio assembly non sarà un problema su normali PC Linux con 16 gigabyte di memoria e un terabyte di disco. Se è lì che il tuo codice girerà, potresti trovare più vantaggioso avere meno librerie e più codice sorgente comprensibile, anche se finisci con qualche migliaio di byte di codice nei tuoi file eseguibili che in realtà non incontrano mai la CPU faccia a faccia.
+</p>
+
+### L'arte di creare procedure
+
+<p align=justify>
+Creare delle procedure richiede un po' più di semplicemente ritagliare una sezione di codice da uno dei tuoi programmi e farne un panino CALL e RET. Lo scopo principale dell'intera idea di procedure è quello di rendere il tuo codice più manutenibile, raggruppando istruzioni che servono a uno scopo comune in entità nominate. Non dimenticare i marziani e come hanno rapito il mio sfortunato formattatore di testo APL nel 1977. La manutenibilità è probabilmente il più difficile problema da risolvere nel design software, e la manutenibilità dipende completamente dalla comprensibilità. L'intera idea nella creazione di librerie di procedure è quella di rendere il tuo codice comprensibile— principalmente per te, ma molto probabilmente anche per altre persone che potrebbero ereditare o tentare di utilizzare il tuo codice. Quindi, in questa sezione, parlerò un po' di come pensare alle procedure e al processo della loro creazione, tenendo a mente la manutenibilità del codice.
+</p>
+
+### Manutenibilità e Riutilizzo
+
+<p align=justify>
+Lo scopo più importante delle procedure è gestire la complessità nei tuoi programmi sostituendo una sequenza di istruzioni di macchina con un nome descrittivo. Il secondo scopo più importante è il riutilizzo del codice. Non ha senso riscrivere gli stessi meccanismi comuni da zero ogni volta che inizi un nuovo progetto. Scrivili una volta, scrivili bene e usali per sempre. I due scopi interagiscono. Il riutilizzo del codice aiuta la manutenibilità del codice in vari modi:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		Il riutilizzo significa che c'è meno codice in totale da mantenere in tutti i tuoi progetti.
+ 		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Il riutilizzo mantiene il tuo tempo e sforzo investiti nella debug.
+ 		</p>
+	</li>
+  	<li>
+		<p align=justify>
+		Il riutilizzo ti costringe a mantenere determinate convenzioni di codifica nei tuoi progetti nel tempo (perché le tue librerie lo richiedono), il che conferisce ai tuoi progetti una "somiglianza di famiglia" che li rende più facili da comprendere dopo che sei stato lontano da essi per un po'.
+ 		</p>
+	</li>
+  	<li>
+		<p align=justify>
+		Il riuso significa che avrai meno sequenze di codice che fanno praticamente la stessa cosa, ma in modi leggermente diversi.
+ 		</p>
+	</li>
+ 
+</ul>
+
+<p align=justify>
+Questo ultimo punto è sottile ma importante. Quando stai facendo debugging, ciò a cui ti riferisci costantemente nella parte posteriore della tua mente è la comprensione di come funziona ogni sezione del tuo programma. Ti piacerebbe che questa comprensione fosse unica per ogni programma che scrivi, ma non funziona in questo modo. La memoria è imprecisa e i ricordi di cose separate ma molto simili tendono a confondersi dopo un certo periodo di tempo. (Velocemente: è una Toyota 4Runner del 2001 o una Toyota 4Runner del 2003?) Nella programmazione, i dettagli sono cruciali e nella programmazione in linguaggio assembly ci sono molti dettagli. Se hai scritto a mano una procedura RefreshText tre volte per tre programmi diversi che differiscono solo in modi minori, potresti fare affidamento su una comprensione di un'implementazione di RefreshText mentre stai guardando un'altra. Più indietro nel tempo vanno queste procedure simili ma non identiche, più è probabile che tu le confonda e perda tempo a chiarire le piccole peculiarità di come ciascuna di esse funziona. Tuttavia, se c'è solo una procedura RefreshText, c'è solo una comprensione di RefreshText da avere. Tutti i punti di vantaggio della riutilizzazione menzionati si riducono a questo: gestire la complessità semplicemente riducendo la quantità di complessità che deve essere gestita.
+</p>
+
+### Decidere cosa dovrebbe essere una procedura
+
+Quindi, quando dovrebbe essere estratto un blocco di istruzioni e trasformato in una procedura? Non ci sono regole rigide, ma ci sono alcune euristiche utili che vale la pena discutere:
+
+<ul>
+	<li>
+		<p align=justify>
+		Cerca azioni che accadono frequentemente all'interno di un programma
+ 		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Cerca azioni che potrebbero non accadere molto frequentemente all'interno di un singolo programma, ma che tendono a verificarsi in modi simili in molti o nella maggior parte dei programmi.
+ 		</p>
+	</li>
+  	<li>
+		<p align=justify>
+		Quando i programmi diventano grandi (e con "grandi" intendo oltre alla classe dimostrativa del libro di tutorial; diciamo circa 1.000 righe), cerca dei blocchi funzionali che possono essere trasformati in procedure in modo che il flusso complessivo di esecuzione nel programma principale diventi più breve, semplice e quindi più facile da comprendere. (Di più su questo tra un momento.)
+ 		</p>
+	</li>
+  	<li>
+		<p align=justify>
+		Cerca azioni all'interno di un programma che possono cambiare nel tempo in risposta a forze fuori dal tuo controllo (specifiche dei dati, librerie di terze parti, cose del genere) e isola quelle azioni in procedure.
+ 		</p>
+	</li>
+ 
+</ul>
+
+<p align=justify>
+In breve: Pensa in grande e pensa a lungo termine. Non rimarrai un principianti per sempre. Cerca di anticipare i tuoi sforzi di programmazione "nel lungo periodo" e crea procedure di utilità generale. "Generale" qui significa non solo utile all'interno del singolo programma su cui stai lavorando attualmente, ma anche utile nei programmi che scriverai in futuro. Non c'è una "dimensione minima" per le procedure se vengono chiamate abbastanza frequentemente. Procedure estremamente semplici, anche quelle con sole quattro o cinque istruzioni, non nascondono di per sé una grande complessità. Forniscono nomi descrittivi per determinate azioni frequentemente utilizzate, il che è prezioso di per sé. Possono anche fornire mattoni di base standard per la creazione di procedure più grandi e potenti. Detto ciò, una breve sequenza di codice (5-10 istruzioni) che viene chiamata solo una volta o forse due volte all'interno di un programma di media grandezza di diverse centinaia di istruzioni macchina è un cattivo candidato per essere una procedura, a meno che non sia un candidato per il riutilizzo in programmi futuri. Allora appartiene a una libreria di codice, e il codice non può essere in una libreria a meno che non sia in una procedura. Non c'è neanche una "dimensione massima" per le procedure, e ci sono circostanze in cui procedure molto grandi hanno senso, se servono a uno scopo ben definito. Ricorda che le procedure non devono sempre essere in librerie. Potresti trovare utile definire procedure grandi che vengono chiamate solo una volta quando il tuo programma diventa sufficientemente grande da richiedere di essere suddiviso in parti funzionali per la comprensibilità. Un programma in linguaggio assembly di mille righe potrebbe essere suddiviso bene in una sequenza di sette o otto procedure grandi. Ogni procedura è destinata ad essere chiamata solo una volta dal programma principale, ma questo consente al tuo programma principale di essere breve, facilmente comprensibile e molto indicativo di ciò che il programma sta facendo:
+</p>
+
+```asm
+ Start: call Initialize    ; Open spec files, create buffers
+        call OpenFile      ; Open the target data file
+ Input: call GetRec        ; Fetch a record from the open file
+        cmp rax,0          ; Test for EOF on file read
+	je Done            ; If we've hit EOF, time to shut'er down
+        call ProcessRec    ; Crunch the rec     
+        call VerifyRec     ; Validate the modified data against the spec
+        call WriteRec      ; Write the modified record out to the file
+        jmp Input          ; Go back and do it all again
+ Done:  call CloseFile     ; Close the opened file
+        call CleanUp       ; Delete the temp files
+        mov rax,60         ; Code for Exit system call
+        mov rdi,0          ; Return a code of zero
+        syscall            ; Make system call
+```
+
+<p align=justify>
+Questo corpo di programma (immaginario) è pulito e leggibile e fornisce una necessaria visione dall'alto quando inizi ad avvicinarti a un programma in linguaggio assembly di mille righe. Ricorda che i marziani si nascondono sempre da qualche parte nelle vicinanze, ansiosi di trasformare i tuoi programmi in geroglifici illeggibili. Non c'è arma contro di loro con metà della potenza delle procedure.
+</p>
+
+### Usare i commenti!
+
+<p align=justify>
+Col passare del tempo, ti renderai conto di creare dozzine o addirittura centinaia di procedure per gestire la complessità. Le librerie di procedure “pronte” che la maggior parte dei fornitori di linguaggi di alto livello fornisce con i propri compilatori non esistono affatto con NASM. Per lo più, quando hai bisogno di una funzione o di un'altra, dovrai scriverla tu stesso. Mantenere un elenco di routine ordinato non è un compito facile quando le hai scritte tutte tu. Devi documentare i fatti essenziali su ciascuna procedura individuale o le dimenticherai, oppure le ricorderai in modo errato e agirai su informazioni sbagliate. (I bug risultanti sono spesso diavolosamente difficili da trovare perché sei sicuro di ricordare tutto ciò che c'è da sapere su quella procedura! Dopotutto, l'hai scritta tu!) Raccomando vivamente di aggiungere un'intestazione di commento a ogni procedura che scrivi, non importa quanto semplice. Tale intestazione dovrebbe contenere almeno le seguenti informazioni:
+</p>
+
+* Il nome della procedura
+* La data dell'ultima modifica
+* Il nome di ciascun punto di entrata, se la procedura ha più punti di entrata
+* Cosa fa la procedura
+* Quali elementi di dati il chiamante deve passarle per farla funzionare correttamente
+* Quali dati (se presenti) vengono restituiti dalla procedura e dove vengono restituiti (ad esempio, nel registro RCX)
+* Quali registri o elementi di dati la procedura modifica
+* Quali altre procedure, se presenti, vengono chiamate dalla procedura
+* Eventuali "gotchas" che devono essere tenuti a mente mentre si scrive codice che utilizza la procedura
+* Oltre a ciò, altre informazioni possono essere utili nei commenti di intestazione:
+	* La versione della procedura, se si utilizza il versioning
+ 	* La data di creazione
+  	* Il nome della persona che ha scritto la procedura, se si sta trattando di codice condiviso all'interno di un team
+
+ ```asm
+--------
+; LoadBuff:     Fills a buffer with data from stdin via syscall sys_read
+; UPDATED:      10/9/2022
+; IN:	        Nothing          
+; RETURNS:      # of bytes read in RAX
+; MODIFIES:     RCX, R15, Buff
+; CALLS:        syscall sys_read
+; DESCRIPTION:  Loads a buffer full of data (BUFFLEN bytes) from stdin     
+; 		using syscall sys_read and places it in Buff.
+: 		offset counter RCX is zeroed, because we're
+; 		on a new buffer full of data. Caller must test
+; 		RAX: If RAX contains 0 on return, we hit EOF on stdin
+; 		< 0 in RAX on return indicates some kind of
+```
+
+<p align=justify>
+Un'intestazione di commento non ti solleva dalla responsabilità di commentare le singole righe di codice all'interno della procedura! Come ho detto molte volte, è una buona idea mettere un breve commento a destra di ogni riga che contiene un mnemonico di istruzione della macchina, e anche (nelle procedure più lunghe) un blocco di commento che descriva ogni blocco funzionale principale all'interno della procedura.
+</p>
+
+### Controllo semplice del cursore nella console di Linux
+
+<p align=justify>
+Come passaggio dalle procedure del linguaggio assembly ai macro del linguaggio assembly, vorrei dedicare un po' di tempo ai dettagli del controllo della visualizzazione della console di Linux all'interno dei vostri programmi. Torniamo al nostro piccolo display pubblicitario per il diner di Joe. Andiamo a migliorarlo un po', prima cancellando la console di Linux e poi centrando il testo dell'annuncio sulla visualizzazione cancellata. Presenterò lo stesso programma due volte, prima con diverse parti espresse come procedure e in seguito con le stesse parti espresse come macro. Procediamo con le procedure per prime, come mostrato nel codice di sotto.
+</p>
+
+```asm
+;  Executable name : eattermgcc
+;  Version         : 2.0
+;  Created date    : 6/18/2022
+;  Last update     : 5/17/2023
+;  Author          : Jeff Duntemann
+;  Description     : A simple program in assembly for Linux, using 
+;                  : NASM 2.15, demonstrating the use of escape 
+;                  : sequences to do simple "full-screen" text output
+;                  : to a terminal like Konsole.
+;
+;  Build using SASM's x64 build configuration.
+;
+;  Run by executing the executable binary file.
+;
+
+section .data      ; Section containing initialised data
+
+    SCRWIDTH       equ 80             ; Default is 80 chars wide
+    PosTerm:       db 27,"[01;01H"    ; <ESC>[<Y>;<X>H
+    POSLEN         equ $-PosTerm      ; Length of term position string
+    ClearTerm:     db 27,"[2J"        ; <ESC>[2J
+    CLEARLEN       equ $-ClearTerm    ; Length of term clear string
+    AdMsg:         db "Eat At Joe's!" ; Ad message
+    ADLEN          equ $-AdMsg        ; Length of ad message
+    Prompt:        db "Press Enter: " ; User prompt
+    PROMPTLEN      equ $-Prompt       ; Length of user prompt
+
+; This table gives us pairs of ASCII digits from 0-80. Rather than 
+; calculate ASCII digits to insert in the terminal control string, 
+; we look them up in the table and read back two digits at once to 
+; a 16-bit register like DX, which we then poke into the terminal 
+; control string PosTerm at the appropriate place. See GotoXY.
+; If you intend to work on a larger console than 80 X 80, you must
+; add additional ASCII digit encoding to the end of Digits. Keep in
+; mind that the code shown here will only work up to 99 X 99.
+    Digits: db "0001020304050607080910111213141516171819"
+            db "2021222324252627282930313233343536373839"
+            db "4041424344454647484950515253545556575859"
+            db "606162636465666768697071727374757677787980"
+
+SECTION .bss       ; Section containing uninitialized data
+
+SECTION .text      ; Section containing code
+
+;-------------------------------------------------------------------------
+; ClrScr:       Clear the Linux console
+; UPDATED:      9/13/2022
+; IN:           Nothing
+; RETURNS:      Nothing
+; MODIFIES:     Nothing
+; CALLS:        SYSCALL sys_write
+; DESCRIPTION:  Sends the predefined control Estring <ESC>[2J to the
+;               console, which clears the full display
+
+ClrScr:
+    push rax          ; Save pertinent registers
+    push rbx
+    push rcx
+    push rdx
+    push rsi
+    push rdi
+
+    mov rsi,ClearTerm ; Pass offset of terminal control string
+    mov rdx,CLEARLEN  ; Pass the length of terminal control string
+    call WriteStr     ; Send control string to console
+
+    pop rdi           ; Restore pertinent registers
+    pop rsi
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
+    ret               ; Go home
+
+
+;-------------------------------------------------------------------------
+; GotoXY:       Position the Linux Console cursor to an X,Y position
+; UPDATED:      9/13/2022
+; IN:           X in AH, Y     nop            ; This no-op keeps gdb happy...in AL
+; RETURNS:      Nothing
+; MODIFIES:     PosTerm terminal control sequence string
+; CALLS:        Kernel sys_write
+; DESCRIPTION:  Prepares a terminal control string for the X,Y coordinates
+;               passed in AL and AH and calls sys_write to position the
+;               console cursor to that X,Y position. Writing text to the
+;               console after calling GotoXY will begin display of text
+;               at that X,Y position.
+
+GotoXY:
+    push rax                ; Save caller's registers
+    push rbx
+    push rcx
+    push rdx
+    push rsi
+
+    xor rbx,rbx             ; Zero RBX
+    xor rcx,rcx             ; Ditto RCX
+
+; Poke the Y digits:
+    mov bl,al                   ; Put Y value into scale term RBX
+    mov cx,[Digits+rbx*2]  ; Fetch decimal digits to CX
+    mov [PosTerm+2],cx ; Poke digits into control string
+
+; Poke the X digits:
+    mov bl,ah              ; Put X value into scale term EBX
+    mov cx,[Digits+rbx*2]  ; Fetch decimal digits to CX
+    mov [PosTerm+5],cx     ; Poke digits into control string
+
+; Send control sequence to stdout:
+    mov rsi,PosTerm         ; Pass address of the control string
+    mov rdx,POSLEN          ; Pass the length of the control string
+    call WriteStr           ; Send control string to the console
+
+; Wrap up and go home:
+    pop rsi                 ; Restore caller's registers
+    pop rdx
+    pop rcx			   
+    pop rbx
+    pop rax
+    ret                     ; Go home
+
+;-------------------------------------------------------------------------
+; WriteCtr:     Send a string centered to an 80-char wide Linux console
+; UPDATED:      5/10/2023
+; IN:           Y value in AL, String address in RSI, string length in RDX
+; RETURNS:      Nothing
+; MODIFIES:     PosTerm terminal control sequence string
+; CALLS:        GotoXY, WriteStr
+; DESCRIPTION:  Displays a string to the Linux console centered in an
+;               80-column display. Calculates the X for the passed-in 
+;               string length, then calls GotoXY and WriteStr to send 
+;               the string to the console
+
+WriteCtr:
+    push rbx           ; Save caller's RBX
+    xor rbx,rbx        ; Zero RBX
+    mov bl,SCRWIDTH    ; Load the screen width value to BL
+    sub bl,dl          ; Take diff. of screen width and string length
+    shr bl,1           ; Divide difference by two for X value
+    mov ah,bl          ; GotoXY requires X value in AH
+    call GotoXY        ; Position the cursor for display
+    call WriteStr      ; Write the string to the console
+    pop rbx            ; Restore caller's RBX
+    ret                ; Go home
+
+
+;-------------------------------------------------------------------------
+; WriteStr:     Send a string to the Linux console
+; UPDATED:      5/10/2023
+; IN:           String address in RSI, string length in RDX
+; RETURNS:      Nothing
+; MODIFIES:     Nothing
+; CALLS:        Kernel sys_write
+; DESCRIPTION:  Displays a string to the Linux console through a 
+;               sys_write kernel call
+
+WriteStr:
+    push rax    ; Save pertinent registers
+    push rdi
+    mov rax,1   ; Specify sys_write call
+    mov rdi,1   ; Specify File Descriptor 1: Stdout
+    syscall     ; Make the kernel call
+    pop rdi     ; Restore pertinent registers
+    pop rax
+    ret         ; Go home
+
+global  main
+
+main:
+    push rbp       ; Prolog
+    mov rbp, rsp   ; for correct debugging
+
+; First we clear the terminal display...
+    call ClrScr
+
+; Then we post the ad message centered on the 80-wide console:
+    xor rax,rax    ; Zero out RAX.
+    mov al,12
+    mov rsi,AdMsg
+    mov rdx,ADLEN
+    call WriteCtr
+
+; Position the cursor for the "Press Enter" prompt:
+    mov rax,0117h  ; X,Y = 1,23 as a single hex value in AX
+    call GotoXY    ; Position the cursor
+
+; Display the "Press Enter" prompt:
+    mov rsi,Prompt      ; Pass offset of the prompt
+    mov rdx,PROMPTLEN   ; Pass the length of the prompt
+    call WriteStr       ; Send the prompt to the console
+
+; Wait for the user to press Enter:
+    mov rax,0      ; Code for sys_read
+    mov rdi,0      ; Specify File Descriptor 0: Stdin	
+    syscall        ; Make kernel call
+
+; And we're done!
+Exit:
+    pop rbp
+    ret
+   
+```
+
+<p align=justify>
+C'è un nuovo macchinario qui. Tutti i programmi che ho presentato finora in questo libro inviano semplicemente righe di testo in sequenza all'output standard, e la console le visualizza sequenzialmente, ogni riga nella riga successiva, scorrendo verso l'alto dal fondo. Questo può essere molto utile, ma non è il meglio che possiamo fare. Nel Capitolo 6, descrivo brevemente il modo in cui la console di Linux può essere controllata inviando “sequenze di escape” incorporati nel flusso di testo che viaggia dal tuo programma a stdout. Sarebbe utile rileggere quella sezione “Controllo del terminale con sequenze di escape” se è passato del tempo, poiché non ricapitolerei a fondo qui. L'esempio più semplice di una sequenza di escape per controllare la console cancella l'intero display della console a spazi vuoti. (Fondamentalmente, caratteri di spazio.) Nel programma eattermgcc, questa sequenza è una variabile di stringa chiamata ClearTerm:
+</p>
+
+```
+ ClearTerm:      db 27,"[2J"  ; <ESC>[2J
+```
+
+<p align=justify>
+La sequenza di escape è long quattro caratteri. Inizia con ESC, un carattere non stampabile che di solito descriviamo con il suo valore decimale nella tabella ASCII, 27. (Oppure esadecimale, che è 1Bh.) Immediatamente dopo il carattere ESC ci sono i tre caratteri stampabili: [2J. Sono stampabili, ma non vengono stampati perché seguono ESC. La console controlla i caratteri ESC e interpreta qualsiasi carattere che segue ESC in un modo speciale, secondo uno schema ampio e molto complicato. Sequenze particolari rappresentano comandi particolari per la console, come questa, che svuota il display. Non c'è un marcatore alla fine di una sequenza di escape per indicare che la sequenza è finita. La console conosce ogni singola sequenza di escape a menadito, comprese le lunghezze di ciascuna e non ci sono ambiguità. Nel caso della sequenza ClearTerm, la console sa che quando vede il carattere “J”, la sequenza è completa. Poi svuota il suo display e riprende a visualizzare i caratteri che il tuo programma invia a stdout. Non è necessario fare nulla di speciale per inviare una sequenza di escape alla console. La sequenza di escape va a stdout tramite SYSCALL, proprio come tutto il testo. Puoi incorporare sequenze di escape nel mezzo di testo stampabile tramite un'attenta disposizione delle direttive DB nelle sezioni .text dei tuoi programmi. Questo è importante: anche se le sequenze di escape non vengono mostrate sul display della console, devono comunque essere contate quando passi la lunghezza di una sequenza di testo a sys_write tramite SYSCALL. La sequenza di escape per svuotare il display è facile da capire, perché è sempre la stessa e fa sempre la stessa cosa. La sequenza che posiziona il cursore è molto più complicata, perché richiede parametri che specificano la posizione X,Y a cui il cursore deve essere spostato. Ognuno di questi parametri è un numero decimale testuale a due cifre in ASCII che deve essere incorporato nella sequenza dal tuo programma prima che la sequenza venga inviata a stdout. Tutta la difficoltà nel muovere il cursore nella console Linux coinvolge l'incorporamento di quei parametri X e Y nella sequenza di escape. La sequenza predefinita come definita in eattermgcc si chiama PosTerm:
+</p>
+
+```asm
+PosTerm:      db 27,"[01;01H"      ; <ESC>[<Y>;<X>H
+```
+
+<p align=justify>
+Come con ClearTerm, inizia con un carattere ESC. Tra il carattere [ e il carattere H ci sono i due parametri. Il valore Y viene per primo ed è separato dal valore X da un punto e virgola. Nota bene che questi non sono numeri binari, ma due caratteri ASCII che rappresentano cifre numeriche decimali, in questo caso, ASCII 48 (0) e ASCII 49 (1). Non puoi semplicemente inserire il valore binario 1 nella sequenza di escape. La console non comprende il valore binario 1 come ASCII 49. I valori binari per le posizioni X e Y devono essere convertiti nei loro equivalenti ASCII e poi inseriti nella sequenza di escape. Questo è ciò che fa la procedura GotoXY. I valori binari vengono convertiti nei loro equivalenti ASCII consultando i caratteri ASCII in una tabella. La tabella Digits presenta rappresentazioni ASCII a due cifre di valori numerici da 0 a 80. I valori inferiori a 10 hanno zeri iniziali, come in 01, 02, 03, e così via. Ecco dove avviene la magia all'interno di GotoXY:
+</p>
+
+```asm
+ ; Poke the Y digits:
+ mov bl,al                ; Put Y value into scale term    
+ mov cx,[Digits+rbx*2]    ; Fetch decimal digits to CX
+ mov [PosTerm+2],cx       ; Poke digits into control string
+ ; Poke the X digits:
+ mov bl,ah   		  ; Put X value into scale term
+ mov cx,[Digits+rbx*2]   ; Fetch decimal digits to CX
+ mov [PosTerm+5],cx       ; Poke digits into control string
+```
+
+<p align=justify>
+è posizionato in un RBX liberato che diventa un termine in un indirizzo efficace a partire da Digits. Poiché ogni elemento della tabella Digits è grande due caratteri, dobbiamo scalare l'offset per due. Il trucco (se ce n'è uno) consiste nel portare giù entrambi i numeri ASCII con un'unica referenza di memoria e collocarli nel registro a 16 bit CX. Con i due numeri ASCII in CX, poi li inseriamo simultaneamente nella loro corretta posizione nella stringa della sequenza di escape. Il valore Y inizia all'offset 2 nella stringa, e il valore X inizia all'offset 5. Una volta che la stringa PosTerm è stata modificata per una particolare coppia di coordinate X,Y, la stringa viene inviata a stdout e interpretata dalla console come una sequenza di escape che controlla la posizione del cursore. Il prossimo carattere inviato alla console apparirà nella nuova posizione del cursore, e i caratteri successivi seguiranno nelle posizioni successive finché non viene inviata un'altra sequenza di controllo del cursore alla console. Assicurati quando esegui programmi che emettono codici di controllo del cursore che la finestra della tua console sia più grande dei massimi valori X e Y che il tuo cursore assumerà, altrimenti le righe si piegheranno e nulla apparirà esattamente dove intendi. Il programma eattermgcc ha una tabella Digits valida fino a 80 × 80. Se desideri lavorare su un display più grande, dovrai espandere la tabella Digits con gli equivalenti ASCII dei valori a due cifre fino a 99. A causa del modo in cui la tabella è configurata e referenziata, puoi recuperare solo valori a due cifre, e quindi con il codice mostrato qui sei limitato a una console da 99 × 99 caratteri. Questo non è un problema serio, poiché gli schermi in modalità testo in Linux generalmente rispettano il vecchio standard dei terminali di testo di 80 × 24.
+</p>
+
+### Avvertenze per il controllo della console
+
+<p align=justify>
+Tutto ciò sembra fantastico, ma non è proprio così fantastico come sembra. Le sequenze di controllo fondamentali come cancellare il display e spostare il cursore sono probabilmente universali e funzioneranno in modo identico su qualsiasi console Linux tu possa trovare. Certamente funzionano su GNOME Terminal e Konsole, le due utility per terminale console più popolari per le distro Linux basate su Debian. Sfortunatamente, la storia dei terminal Unix e del controllo del terminale è una storia molto macchiata e, per le funzioni di controllo della console più avanzate, le sequenze potrebbero non essere supportate o potrebbero essere diverse da un'implementazione della console all'altra. Per garantire che tutto funzioni, i tuoi programmi dovrebbero sondare la console per scoprire quale specifica del terminale supporta e poi emettere le sequenze di escape di conseguenza. È un peccato. In Konsole, la seguente sequenza di escape rende lo sfondo della console verde:
+</p>
+
+```asm
+ GreenBack:    db 27,"[42m"
+```
+
+<p align=justify>
+Almeno lo fa in Konsole. Quanto sia universale questa sequenza e altre simili, non lo so. Stessa cosa per la moltitudine di altri comandi di controllo della console, tramite i quali puoi accendere e spegnere i LED della tastiera del PC, modificare i colori del primo piano, visualizzare con sottolineature, e così via. Maggiori informazioni su questo (nello stile conciso di Unix) possono essere trovate nelle pagine man di Linux sotto la parola chiave "console_codes". Ti invito a sperimentare, tenendo presente che diverse console (soprattutto quelle su implementazioni Unix non Linux) possono reagire in modi diversi a sequenze diverse. Tuttavia, controllare l'output della console non è la cosa peggiore. Il sacro graal della programmazione in console è creare applicazioni testuali a schermo intero che "disegnano" un modulo sulla console, completo di campi per l'inserimento dati, e poi consentire all'utente di passare da un campo all'altro, inserendo dati in ogni campo. Questo diventa diabolico in Linux a causa della necessità di accedere a singole pressioni di tasti sulla tastiera della console, attraverso qualcosa chiamato modalità raw. Anche solo spiegare come funziona la modalità raw richiederebbe la maggior parte di un capitolo e coinvolgerebbe molti argomenti Linux piuttosto avanzati, per i quali non ho spazio in questo libro. Il modo standard di Unix per trattare la console è una libreria C chiamata ncurses, e anche se ncurses può essere chiamata dall'assembly, è veramente una cosa pesante e brutta. Una scelta migliore per i programmatori in assembly è una libreria molto più recente scritta specificamente per l'assembly NASM, chiamata LinuxAsmTools. È stata originariamente scritta da Jeff Owens e fa quasi tutto ciò che fa ncurses senza le convenzioni di chiamata forzate di C e altri pesanti cruft di C. LinuxAsmTools è gratuita e open-source. Purtroppo, dovrai cercarla. Fai una ricerca su Google per "Linux ASM Tools" e dovresti trovare un link, molto probabilmente a GitHub. La libreria è stata spostata diverse volte da quando l'ho scoperta per la prima volta a metà degli anni 2000, e sospetto che si sposterà di nuovo.
+</p>
+
+### Creare ed Usare Macro
+
+<p align=justify>
+Ci sono più di un modo per suddividere un programma in linguaggio assembly in segmenti più gestibili. Le procedure sono il modo più ovvio e certamente il più facile da comprendere. Il meccanismo per chiamare e tornare dalle procedure è integrato direttamente nella CPU ed è indipendente da qualsiasi prodotto assembler specifico. I principali assemblatori odierni forniscono un altro strumento di gestione della complessità: le macro. Le macro sono tutta un'altra cosa. Mentre le procedure sono implementate tramite le istruzioni CALL e RET integrate nel set di istruzioni, le macro sono un'astuzia dell'assembler e non dipendono da nessuna istruzione particolare o gruppo di istruzioni. In termini semplici, una macro è un'etichetta che rappresenta una sequenza di righe di testo. Questa sequenza di righe di testo può essere (ma non è necessariamente) una sequenza di istruzioni. Quando l'assembler incontra l'etichetta della macro in un file di codice sorgente, sostituisce l'etichetta della macro con le righe di testo che rappresenta. Questo è chiamato macro, perché il nome della macro (che occupa una riga di testo) viene sostituito da più righe di testo, che vengono quindi assemblate come se fossero apparse nel file di codice sorgente fin dall'inizio. (Naturalmente, una macro non deve per forza consistere in più righe di testo. Può essere solo una - ma in tal caso ci sono molti meno vantaggi nell'usarle!) Le macro somigliano a file di inclusione, come quelli che ho spiegato in precedenza in questo capitolo. Potresti pensare a una macro come a un file di inclusione integrato nel file di codice sorgente. È una sequenza di righe di testo che viene definita una volta, data un nome descrittivo e poi inserita nel codice sorgente continuamente secondo necessità semplicemente utilizzando il nome della macro. Questo processo è mostrato nella figura di sotto. Il codice sorgente memorizzato su disco ha una definizione della macro, racchiusa tra le direttive %MACRO e %ENDMACRO. Più avanti nel file, il nome della macro appare più volte. Quando l'assembler elabora questo file, copia la definizione della macro in un buffer da qualche parte nella memoria. Mentre assembla il testo letto dal disco, l'assembler inserisce le istruzioni contenute nella macro nel testo ovunque compaia il nome della macro. Il file sul disco non viene influenzato; l'espansione delle macro avviene solo in memoria.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/how_macros_work.png">
+</div>
+
+### Il Meccanisco della definizione di Macro
+
+<p align=justify>
+Una definizione di macro assomiglia un po' a una definizione di procedura, racchiusa tra una coppia di direttive speciali NASM: %MACRO e %ENDMACRO. Si noti che la direttiva %ENDMACRO si trova sulla riga dopo l'ultima riga della macro. Non commettere l'errore di trattare %ENDMACRO come un'etichetta che segna l'ultima riga della macro. Una piccola mancanza delle macro rispetto alle procedure è che le macro possono avere solo un punto di entrata. Una macro, in fin dei conti, è una sequenza di righe di codice che vengono inserite nel programma nel corso dell'esecuzione. Non si chiama una macro e non si ritorna da essa. La CPU la esegue proprio come esegue qualsiasi sequenza di istruzioni. Molte o la maggior parte delle procedure possono essere espresse come macro con un po' di attenzione. Nella codice di sotto, ho preso il programma precedente e ho convertito tutte le procedure in macro affinché tu possa vedere le differenze tra i due approcci.
+</p>
+
+```asm
+;  Executable name : eatmacro
+;  Version         : 2.0
+;  Created date    : 10/11/2022
+;  Last update     : 7/18/2023
+;  Author          : Jeff Duntemann
+;  Description     : A simple program in assembly for Linux, using 
+;                  : NASM 2.14.2, demonstrating the use of escape 
+;                  : escape sequences to do simple "full-screen" text
+;                  ; output through macros rather than procedures
+;
+;  Build using these commands:
+;    nasm -f elf -g -F dwarf eatmacro.asm
+;    ld -o eatmacro eatmacro.o
+;
+;
+section .data      ; Section containing initialized data
+
+    SCRWIDTH:   equ 80              ; By default 80 chars wide
+    PosTerm:    db 27,"[01;01H"     ; <ESC>[<Y>;<X>H
+    POSLEN:     equ $-PosTerm       ; Length of term position string
+    ClearTerm:  db 27,"[2J"         ; <ESC>[2J
+    CLEARLEN    equ $-ClearTerm     ; Length of term clear string
+    AdMsg:      db "Eat At Joe's!"  ; Ad message
+    ADLEN:      equ $-AdMsg         ; Length of ad message
+    Prompt:     db "Press Enter: "  ; User prompt
+    PROMPTLEN:  equ $-Prompt        ; Length of user prompt
+
+; This table gives us pairs of ASCII digits from 0-80. Rather than 
+; calculate ASCII digits to insert in the terminal control string, 
+; we look them up in the table and read back two digits at once to 
+; a 16-bit register like DX, which we then poke into the terminal 
+; control string PosTerm at the appropriate place. See GotoXY.
+; If you intend to work on a larger console than 80 X 80, you must
+; add additional ASCII digit encoding to the end of Digits. Keep in
+; mind that the code shown here will only work up to 99 X 99.
+    Digits: db "0001020304050607080910111213141516171819"
+	        db "2021222324252627282930313233343536373839"
+            db "4041424344454647484950515253545556575859"
+            db "606162636465666768697071727374757677787980"
+
+SECTION .bss       ; Section containing uninitialized data
+
+SECTION .text      ; Section containing code
+
+;-------------------------------------------------------------------------
+; ExitProg:     Terminate program and return to Linux
+; UPDATED:      10/11/2022
+; IN:           Nothing
+; RETURNS:      Nothing
+; MODIFIES:     Nothing
+; CALLS:        Kernel sys_exit
+; DESCRIPTION:  Calls syscall sys_edit to terminate the program and return
+;               control to Linux
+
+%macro  ExitProg 0
+    mov rsp,rbp     ; Epilog
+    pop rbp
+
+    mov rax,60      ; 60 = exit the program
+    mov rdi,0       ; Return value in rdi 0 = nothing to return
+    syscall         ; Call syscall sys_exit to return to Linux
+%endmacro
+
+
+;-------------------------------------------------------------------------
+; WaitEnter:    Wait for the user to press Enter at the console
+; UPDATED:      10/11/2022
+; IN:           Nothing
+; RETURNS:      Nothing
+; MODIFIES:     Nothing
+; CALLS:        Kernel sys_read
+; DESCRIPTION:  Calls sys_read to wait for the user to type a newline at
+;               the console
+
+%macro WaitEnter 0
+    mov rax,0      ; Code for sys_read
+    mov rdi,0      ; Specify File Descriptor 0: Stdin	
+    syscall        ; Make kernel call
+%endmacro
+
+
+;-------------------------------------------------------------------------
+; WriteStr:     Send a string to the Linux console
+; UPDATED:      5/10/2023
+; IN:           String address in %1, string length in %2
+; RETURNS:      Nothing
+; MODIFIES:     Nothing
+; CALLS:        Kernel sys_write
+; DESCRIPTION:  Displays a string to the Linux console through a 
+;               sys_write kernel call
+
+%macro WriteStr 2   ; %1 = String address; %2 = string length
+    push r11    ; Save pertinent registers
+    push rax
+    push rcx
+    mov rax,1   ; 1 = sys_write for syscall
+    mov rdi,1   ; 1 = fd for stdout; i.e., write to the terminal window
+    mov rsi,%1  ; Put address of the message string in rsi
+    mov rdx,%2  ; Length of string to be written in rdx
+    syscall     ; Make the system call
+    pop rcx
+    pop rax
+    pop r11
+%endmacro
+
+
+;-------------------------------------------------------------------------
+; ClrScr:       Clear the Linux console
+; UPDATED:      5/10/2023
+; IN:           Nothing
+; RETURNS:      Nothing
+; MODIFIES:     Nothing
+; CALLS:        Kernel sys_write
+; DESCRIPTION:  Sends the predefined control string <ESC>[2J to the
+;               console, which clears the full display
+
+%macro ClrScr 0
+    push rax    ; Save pertinent registers
+    push rbx
+    push rcx
+    push rdx
+    push rsi
+    push rdi
+; Use WriteStr macro to write control string to console:
+	WriteStr ClearTerm,CLEARLEN
+	pop rdi     ; Restore pertinent registers
+	pop rsi
+	pop rdx
+	pop rcx
+	pop rbx
+	pop rax	
+%endmacro
+
+
+;-------------------------------------------------------------------------
+; GotoXY:       Position the Linux Console cursor to an X,Y position
+; UPDATED:      10/11/2022
+; IN:           X in %1, Y in %2
+; RETURNS:      Nothing
+; MODIFIES:     PosTerm terminal control sequence string
+; CALLS:        Kernel sys_write
+; DESCRIPTION:  Prepares a terminal control string for the X,Y coordinates
+;               passed in AL and AH and calls sys_write to position the
+;               console cursor to that X,Y position. Writing text to the
+;               console after calling GotoXY will begin display of text
+;               at that X,Y position.
+
+%macro GotoXY 2 ; %1 is X value; %2 id Y value		
+    push rdx          ; Save caller's registers
+    push rcx
+    push rbx
+    push rax
+    push rsi
+    push rdi
+    xor rdx,rdx       ; Zero EDX
+    xor rcx,rcx       ; Ditto ECX
+; Poke the Y digits:
+    mov dl,%2                  ; Put Y value into offset term EDX
+    mov cx,word [Digits+rdx*2] ; Fetch decimal digits to CX
+    mov word [PosTerm+2],cx    ; Poke digits into control string
+; Poke the X digits:
+    mov dl,%1                    ; Put X value into offset term EDX
+    mov cx,word [Digits+rdx*2]   ; Fetch decimal digits to CX
+    mov word [PosTerm+5],cx	     ; Poke digits into control string
+; Send control sequence to stdout:
+    WriteStr PosTerm,POSLEN
+; Wrap up and go home:
+    pop rdi           ; Restore caller's registers
+    pop rsi
+    pop rbx
+    pop rcx
+    pop rdx
+%endmacro
+
+;-------------------------------------------------------------------------
+; WriteCtr:     Send a string centered to an 80-char wide Linux console
+; UPDATED:      5/10/2023
+; IN:           Y value in %1, String address in %2, string length in %3
+; RETURNS:      Nothing
+; MODIFIES:     PosTerm terminal control sequence string
+; CALLS:        GotoXY, WriteStr
+; DESCRIPTION:  Displays a string to the Linux console centered in an
+;               80-column display. Calculates the X for the passed-in 
+;               string length, then calls GotoXY and WriteStr to send 
+;               the string to the console
+
+%macro WriteCtr 3  ; %1 = row; %2 = String addr; %3 = String length
+    push rbx       ; Save caller's RBX
+    push rdx       ; Save caller's RDX
+    mov rdx,%3     ; Load string length into RDX
+    xor rbx,rbx      ; Zero RBX
+    mov bl,SCRWIDTH  ; Load the screen width value to BL
+    sub bl,dl      ; Calc diff. of screen width and string length
+    shr bl,1       ; Divide difference by two for X value
+    GotoXY bl,%1   ; Position the cursor for display
+    WriteStr %2,%3 ; Write the string to the console
+    pop rdx        ; Restore caller's RDX
+    pop rbx        ; Restore caller's RBX
+%endmacro
+
+
+global  _start     ; Linker needs this to find the entry point!
+
+_start:
+    push rbp       ; Stack alignment ptolog
+    mov rbp,rsp    ; for correct debugging
+    and rsp,-16
+
+; First we clear the terminal display...
+	ClrScr
+; Then we post the ad message centered on the 80-wide console:
+	WriteCtr 12,AdMsg,ADLEN
+; Position the cursor for the "Press Enter" prompt:
+	GotoXY 1,23
+; Display the "Press Enter" prompt:
+	WriteStr Prompt,PROMPTLEN	
+; Wait for the user to press Enter:
+	WaitEnter
+; Aand we're done!
+    ExitProg
+```
+
+<p align=justify>
+Confronta i macro in eatmacro con i loro equivalenti di procedura in eattermgcc. Hanno eliminato le loro istruzioni RET (e per quei macro che invocano altri macro, le loro istruzioni CALL) ma per la maggior parte consistono quasi esattamente nello stesso codice. I macro sono invocati semplicemente nominando loro. Ancora una volta, non usare l'istruzione CALL. Basta scrivere il nome del macro su una riga.
+</p>
+
+```asm
+ClrScr
+```
+
+<p align=justify>
+L'assemblatore si occuperà del resto
+</p>
+
+### Definire Macron con parametri
+
+<p align=justify>
+Le macro sono per la maggior parte un semplice trucco di sostituzione del testo, ma la sostituzione del testo ha alcune caratteristiche interessanti e a volte utili. Una di queste è la possibilità di passare parametri a un macro quando il macro viene invocato. Ad esempio, in eatmacro c'è un'invocazione del macro WriteCtr con tre parametri.
+</p>
+
+```asm
+ WriteCtr 12,AdMsg,ADDLEN
+```
+
+<p align=justify>
+La costante letterale 12 viene passata "dentro" il macro e utilizzata per specificare la riga dello schermo su cui il testo centrato deve essere visualizzato; in questo caso, la riga 12 dall'alto. Potresti sostituire il 12 con 3 o 16 o qualsiasi altro numero inferiore al numero di righe attualmente visualizzate nella console Linux. (Se tenti di posizionare il cursore su una riga che non esiste nella console, i risultati sono difficili da prevedere. In genere, il testo appare sulla riga inferiore del display.) Gli altri due parametri ricevono l'indirizzo e la lunghezza della stringa da visualizzare. I parametri del macro sono, di nuovo, artefatti dell'assemblatore. Non vengono spinti nello stack o impostati in un'area di memoria condivisa o qualcosa del genere. I parametri sono semplicemente segnaposto per i valori effettivi (chiamati) che passi al macro attraverso i suoi parametri. Diamo un'occhiata più da vicino al macro WriteCtr per vedere come funziona:
+</p>
+
+```asm
+%macro WriteCtr 3  ; %1 = row; %2 = String addr; %3 = String length
+    push rbx       ; Save caller's RBX
+    push rdx       ; Save caller's RDX
+    mov rdx,%3     ; Load string length into RDX
+    xor rbx,rbx        ; Zero RBX
+    mov bl,SCRWIDTH    ; Load the screen width value to BL
+    sub bl,dl      ; Calc diff. of screen width and string length
+    shr bl,1       ; Divide difference by two for X value
+    GotoXY bl,%1   ; Position the cursor for display
+    WriteStr %2,%3 ; Write the string to the console
+    pop rdx        ; Restore caller's RDX
+    pop rbx        ; Restore caller's RBX
+ %endmacro
+
+```
+
+<p align=justify>
+Quindi, dove sono i parametri? Questa è un'altra area in cui NASM differisce radicalmente da MASM di Microsoft. MASM ti consente di utilizzare nomi simbolici—come la parola Row o StringLength—per rappresentare i parametri. NASM si basa su un sistema più semplice che dichiara il numero di parametri nella definizione della macro e poi fa riferimento a ciascun parametro per numero all'interno della macro, piuttosto che tramite un nome simbolico. Nella definizione della macro WriteCtr, il numero 3 dopo il nome della macro indica che l'assemblatore deve cercare tre parametri. Questo numero deve essere presente—anche come 0—anche quando hai una macro come ClrScr senza parametri. Ogni macro deve avere un conteggio dei parametri. Nella definizione della macro, i parametri sono referenziati per numero. %1 indica il primo parametro utilizzato dopo l'invocazione del nome della macro WriteCtr. %2 indica il secondo parametro, contando da sinistra a destra. %3 indica il terzo parametro, e così via. I valori effettivi passati nei parametri sono chiamati argomenti. Non confondere i valori effettivi con i parametri. Se capisci Pascal, è esattamente come la differenza tra parametri formali e parametri effettivi. I parametri di una macro corrispondono ai parametri formali di Pascal, mentre gli argomenti di una macro corrispondono ai parametri effettivi di Pascal. I parametri della macro sono le etichette che seguono il nome della macro nella riga in cui è definita. Gli argomenti sono i valori specificati sulla riga in cui la macro è invocata. I parametri delle macro sono un tipo di etichetta e possono essere referenziati ovunque all'interno della macro—ma solo all'interno della macro. In WriteCtr, il parametro %3 è referenziato come operando di un'istruzione MOV. L'argomento passato alla macro in %3 viene quindi caricato nel registro RDX. Gli argomenti delle macro possono essere passati come parametri ad altre macro. Questo è ciò che accade all'interno di WriteCtr quando WriteCtr invoca la macro WriteStr. WriteStr prende due parametri e WriteCtr passa i suoi parametri %2 e %3 a WriteStr come suoi argomenti.
+</p>
+
+### Il Meccanismo d'invocazione delle Macro
+
+<p align=justify>
+Puoi passare un valore costante letterale come argomento a una macro, proprio come il valore della riga è passato alla macro WriteCtr nel programma eatmacro. Puoi anche passare un nome di registro come argomento. Questo è legale ed è un'invocazione perfettamente ragionevole di WriteCtr:
+</p>
+
+```asm
+ mov al,4
+ WriteCtr al,AdMsg,ADLEN
+```
+
+<p align=justify>
+All'interno del macro WriteCtr, NASM sostituisce il nome del registro AL con il parametro %1
+</p>
+
+```asm
+GotoXY bl,%1  ; Position the cursor for display
+```
+
+<p align=justify>
+diventa:
+</p>
+
+```asm
+ GotoXY bl,al
+```
+
+<p align=justify>
+Nota bene che tutte le consuete regole che governano gli operandi d'istruzione si applicano. Il parametro %1 può contenere solo un argomento a 8 bit, perché in ultima analisi %1 viene caricato in un registro a 8 bit all'interno di GotoXY. Non puoi legalmente passare il registro RBP o CX a WriteCtr nel parametro %1, perché non puoi spostare direttamente un registro a 64 bit, 32 bit o 16 bit in un registro a 8 bit. Allo stesso modo, puoi passare un indirizzo tra parentesi come argomento:
+</p>
+
+```asm
+WriteCtr [RowValue],AdMsg,ADLEN
+```
+
+<p align=justify>
+Questo presuppone, ovviamente, che RowValue sia una variabile nominata definita come un elemento dati a 8 bit. Se un parametro macro viene utilizzato in un'istruzione che richiede un argomento a 64 bit (come i parametri %2 e %3 di WriteCtr), puoi anche passare etichette che rappresentano indirizzi a 64 bit o valori numerici a 64 bit. Quando una macro viene invocata, i suoi argomenti sono separati da virgole. NASM inserisce gli argomenti nei parametri della macro in ordine, da sinistra verso destra. Se passi solo due argomenti a una macro con tre parametri, è probabile che tu riceva un messaggio di errore dall'assemblatore, a seconda di come hai fatto riferimento al parametro non compilato. Se passi più argomenti a una macro rispetto ai parametri disponibili per riceverli, gli argomenti superflui verranno ignorati.
+</p>
+
+### Etichette Locali all'interno di macro
+
+<p align=justify>
+I macro che ho incluso in eatmacro.asm sono stati progettati per essere semplici e piuttosto ovvi. Nessuno di essi contiene istruzioni di salto, ma il codice nelle macro può utilizzare salti condizionali e incondizionati proprio come il codice nelle procedure o nei corpi dei programmi. Tuttavia, c'è un problema importante con le etichette usate all'interno delle macro: Le etichette nei programmi in linguaggio assembly devono essere uniche, eppure una macro è essenzialmente duplicata nel codice sorgente tante volte quanto viene richiamata. Ciò significa che ci saranno messaggi di errore che segnalano etichette duplicate... a meno che le etichette di una macro non siano trattate come locali. Gli elementi locali non hanno significato al di fuori dell'immediato contesto in cui sono definiti. Le etichette locali a una macro non sono visibili al di fuori della definizione della macro, il che significa che non possono essere riferite se non dal codice all'interno dei confini %MACRO...%ENDMACRO. Tutte le etichette definite all'interno di una macro sono considerate locali alla macro e sono gestite in modo speciale dal montatore. Ecco un esempio; è un'adattamento di macro di un pezzo di codice che ho presentato in precedenza, per forzare i caratteri in un buffer da minuscole a maiuscole:
+</p>
+
+```asm
+ %macro UpCase 2      ; %1 = Address of buffer; %2 = Chars in buffer
+      mov rdx,%1     ; Place the offset of the buffer into rdx
+      mov rcx,%2     ; Place the number of bytes in the buffer into rcx
+ %%IsLC:cmp byte [rdx+rcx-1],'a'   ; Below 'a'?
+      jb %%Bump                   ; Not lowercase. Skip
+      cmp byte [rdx+rcx-1],'z'    ; Above 'z'?
+      ja %%Bump                   ; Not lowercase. Skip
+      sub byte [rdx+rcx-1],20h    ; Force byte in buffer to uppercase
+ %%Bump:dec rcx                   ; Decrement character count
+      jnz %%IsLC                  ; If more chars in the
+ buffer, repeat
+ %endmacro
+```
+
+<p align=justify>
+Un'etichetta in una macro è resa locale all'inizio con due simboli di percentuale: %% . Quando si segna una posizione nella macro, l'etichetta locale deve essere seguita da un due punti. Quando è usata come operando per un'istruzione di salto o chiamata (come JA, JB e JNZ nel precedente), l'etichetta locale non è seguita da un due punti. La cosa importante è capire che a meno che le etichette IsLC e Bump non siano state rese locali alla macro aggiungendo il prefisso %% a ciascuna, ci sarebbero più istanze di un'etichetta nel programma (supponendo che la macro sia stata invocata più di una volta), e l'assemblatore genererebbe un errore di etichetta duplicata alla seconda e a ogni successiva invocazione. Poiché le etichette devono essere in effetti uniche all'interno del tuo programma, NASM prende un'etichetta locale come %%Bump e genera un'etichetta da essa che sarà unica nel tuo programma. Lo fa usando il prefisso ..@ più un numero di quattro cifre e il nome dell'etichetta. Ogni volta che la tua macro è invocata, NASM cambierà il numero e così genererà sinonimi unici per ogni etichetta locale all'interno della macro. L'etichetta %%Bump, per esempio, potrebbe diventare ..@1771.Bump per una data invocazione, e il numero sarebbe diverso ogni volta che la macro è invocata. Questo avviene in background, e raramente sarai consapevole che sta accadendo a meno che non leggi i file di elenco del dump di codice generati da NASM.
+</p>
+
+### Librerie Macro come File di Inclusione
+
+<p align=justify>
+Proprio come le procedure possono essere raccolte in moduli di libreria esterni al programma, così le macro possono essere raccolte in librerie di macro. Una libreria di macro non è altro che un file di testo che contiene il codice sorgente per le macro nella libreria. A differenza delle procedure raccolte in un modulo, le librerie di macro non sono assemblate separatamente e devono essere passate attraverso l'assemblatore ogni volta che il programma viene assemblato. Questo è un problema con le macro in generale, non solo con le macro raccolte nelle librerie. I programmi che gestiscono la complessità dividendo il codice in macro verranno assemblati più lentamente rispetto ai programmi che sono stati divisi in moduli assemblati separatamente. Data la velocità dei PC del 2020, questo è molto meno un problema oggi rispetto al 1989 quando ho scritto la prima edizione di questo libro, ma per progetti molto grandi può influire sulla velocità di costruzione. Le librerie di macro vengono utilizzate "includendole" nel file di codice sorgente del programma. Il mezzo per farlo è la direttiva %INCLUDE. La direttiva %INCLUDE precede il nome della libreria di macro:
+</p>
+
+```asm
+%include "mylib.mac"
+```
+
+<p align=justify>
+Tecnicamente, questa dichiarazione può trovarsi ovunque nel file di codice sorgente, ma è importante tenere presente che tutte le macro devono essere completamente definite prima di essere invocate. Per questo motivo, è una buona idea utilizzare la direttiva %INCLUDE vicino all'inizio della sezione .text del file di codice sorgente, prima di qualsiasi possibile invocazione di una delle macro della libreria. Se il file macro che desideri includere in un programma non si trova nella stessa directory del tuo programma, potrebbe essere necessario fornire un percorso completamente qualificato come parte della direttiva %INCLUDE:
+</p>
+
+```asm
+ %include "../macrolibs/mylib.mac"
+```
+
+<p align=justify>
+Altrimenti, NASM potrebbe non essere in grado di trovare il file macro e ti darà un messaggio di errore. (Fai un po' di ricerca se non sai come creare un percorso completamente qualificato in Linux, poiché non è davvero un argomento di programmazione.)
+</p>
+
+### Macro contro Procedure: Pro e Contro
+
+<p align=justify>
+Ci sono vantaggi nei macro rispetto alle procedure. Uno di questi è la velocità. Ci vuole tempo per eseguire le istruzioni CALL e RET che controllano l'ingresso e l'uscita da una procedura. In un macro, nessuna delle due istruzioni viene utilizzata. Vengono eseguite solo le istruzioni che svolgono il lavoro effettivo del macro, quindi il lavoro del macro viene eseguito il più rapidamente possibile. C'è un costo per questa velocità, e il costo è in memoria extra utilizzata, specialmente se il macro viene invocato un numero molto elevato di volte. Nota nella di sopra che tre invocazioni del macro WriteStr generano un totale di 18 istruzioni in memoria. Se il macro fosse stato impostato come una procedura, avrebbe richiesto le sei istruzioni nel corpo della procedura, più un'istruzione RET e tre istruzioni CALL per svolgere lo stesso lavoro. Questo richiederebbe un totale di otto istruzioni per l'implementazione della procedura e diciotto per l'implementazione del macro. E se il macro fosse chiamato cinque, sette volte o più, la differenza crescerebbe. Ogni volta che un macro viene chiamato, tutte le sue istruzioni vengono duplicate nel programma un'altra volta. Nei programmi brevi, questo potrebbe non essere un problema, e in situazioni in cui il codice deve essere il più veloce possibile—come nei driver grafici— i macro hanno molti vantaggi, eliminando il sovraccarico procedurale delle chiamate e dei ritorni. È un semplice compromesso da comprendere: pensa ai macro per la velocità e alle procedure per la compattezza.
+</p>
+
+<p align=justify>
+D'altra parte, a meno che tu non stia veramente scrivendo qualcosa che dipende assolutamente dalle prestazioni—come i driver grafici—questo compromesso è minore al punto da essere insignificante. Per il software ordinario, la differenza di dimensione tra un'implementazione orientata alle procedure e un'implementazione orientata ai macro potrebbe essere di soli 2.000 o 3.000 byte, e la differenza di velocità probabilmente non sarebbe rilevabile. Su CPU moderne, è molto difficile prevedere le prestazioni di un determinato pezzo di software, e i dispositivi di archiviazione massicci e i sistemi di memoria rendono la dimensione del programma molto meno importante rispetto a un generatione fa. Se stai cercando di decidere se andare per procedure o per macro in un dato caso, fattori diversi dalla dimensione o dalla velocità prevarranno. Ad esempio, ho sempre trovato il software intensivo in macro molto più difficile da debug. Gli strumenti software non trattano necessariamente bene le macro. Ad esempio, il componente Insight del debugger Gdb non mostra il testo espanso delle macro nella sua finestra di codice sorgente. Insight non è stato progettato tenendo a mente il debug in puro assembly (Gdb, come la maggior parte degli strumenti Unix, ha un forte bias verso il C), e quando entri in una macro, l'evidenziazione del codice sorgente semplicemente si ferma, fino a quando l'esecuzione non esce dalla macro. Pertanto non puoi eseguire il passo attraverso il codice di una macro come puoi fare con il codice di procedura o programma. Gdb continuerà a fare il debug come sempre dalla finestra della console, ma il debug della console è un processo molto doloroso rispetto alla prospettiva visiva disponibile da SASM o Insight. Infine, c'è un'altra questione connessa alle macro che è molto più difficile da spiegare, ma è il motivo per cui mi sento famoso discomfort con esse: usa troppo le macro e il tuo codice non assomiglierà più al linguaggio assembly. Rivediamo la parte principale del programma eatmacro.asm, senza i suoi commenti:
+</p>
+
+```asm
+ ClrScr
+ WriteCtr 12,AdMsg,ADLEN
+ GotoXY 1,23
+ WriteStr Prompt,PROMPTLEN    
+ WaitEnter
+ ExitProg
+```
+
+<p align=justify>
+Questo è l'intero programma principale. L'intera cosa è stata assorbita da invocazioni di macro. È questo un linguaggio assembly, o è—buon Dio!—un dialetto di BASIC? Ammetto che ho sostituito l'intero programma principale con invocazioni di macro qui per farlo notare, ma è certamente possibile creare così tante macro che i tuoi programmi assembly iniziano a sembrare un linguaggio di alto livello strano. In realtà, ho usato qualcosa di simile alla fine degli anni '70 quando ero programmatore per la Xerox. Avevano un linguaggio interno che era fondamentalmente un assemblatore 8080 con carichi di macro da utilizzare su microcomputer 8080 basati su longobarde (molto lenti; ci crederesti 1 megahertz?). Funzionava. Doveva farlo, con quella poca potenza computazionale per eseguire i suoi processi. La difficile verità è che le macro possono chiarire cosa sta facendo un programma, oppure, usate in modo eccessivo, possono oscurare completamente come funzionano le cose realmente "sotto la superficie". Nei miei progetti, uso le macro esclusivamente per ridurre il disordine di sequenze di istruzioni molto ripetitive, specialmente cose come l'impostazione dei registri prima di effettuare chiamate di sistema Linux. Del resto, l'intero obiettivo della programmazione assembly è promuovere una comprensione completa di ciò che sta accadendo dove il software incontra la CPU. Qualsiasi cosa che ostacola quella comprensione dovrebbe essere usata con cautela, abilità e (soprattutto) parsimonia—o potresti anche benissimo imparare il C.
 </p>
 
 ## Controllo dei processi
