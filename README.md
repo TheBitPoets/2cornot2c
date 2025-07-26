@@ -9092,7 +9092,573 @@ Nessun mistero qui: Squares è una tabella dei quadrati dei numeri da 0 a 15. Se
 <p align=justify>
 Ecco! RAX ora contiene il quadrato di 14. Puoi fare lo stesso trucco con XLAT, anche se richiede di utilizzare determinati registri. Ricorda anche che XLAT è limitato a quantità di 8 bit. La tabella dei quadrati mostrata qui è la tabella dei valori quadrati più grande che XLAT può utilizzare, poiché il successivo valore quadrato (di 16) è 256, che non può essere espresso in 8 bit e quindi una tabella di ricerca che lo contenga non può essere utilizzata da XLAT. Rendere le voci di una tabella di ricerca dei valori quadrati di dimensione 16 bit ti permetterà di includere i quadrati di tutti gli interi fino a 255. E se dai a ciascuna voce nella tabella 32 bit, puoi includere i quadrati di interi fino a 65.535, ma sarebbe una tabella molto sostanziale! Non ho spazio in questo libro per approfondire la matematica in virgola mobile, ma una volta si faceva molto frequentemente uso di tabelle per cercare valori per cose come le radici quadrate. I moderni CPU con sistemi matematici come AVX rendono tali tecniche molto meno allettanti. Tuttavia, quando si è di fronte a una sfida di calcolo matematico, dovresti sempre tenere a mente la possibilità di utilizzare tabelle di ricerca.
 </p>
+
+### Procedure
+
+<p align=justify>
+Tutti i linguaggi di programmazione comunemente usati oggi implementano procedure in una forma o nell'altra, e il linguaggio assembly non fa eccezione. Il tuo programma in linguaggio assembly può avere numerose procedure. In effetti, non c'è limite al numero di procedure che puoi includere in un programma, purché il numero totale di byte di codice contenuti da tutte le procedure insieme, più i dati che utilizzano, possa essere contenuto nella memoria che Linux assegna a esso. Al giorno d'oggi, con la memoria economica disponibile in blocchi multi-gigabyte, scrivere codice che non si adatta all'allocazione di Linux è sempre meno probabile. Qualsiasi complessità tu possa generare in linguaggio assembly può essere gestita con le procedure. Cominciamo presto con un esempio di procedure in azione. Leggi attentamente il codice di sotto e vediamo cosa lo fa funzionare e (per essere più precisi) cosa aiuta a mantenerlo comprensibile.
+</p>
+
+```asm
+;  Executable name : hexdump2gcc
+;  Version         : 2.0
+;  Created date    : 5/9/2022
+;  Last update     : 5/17/2023
+;  Author          : Jeff Duntemann
+;  Description     : A simple hexdump utility demonstrating the use of
+;                  : assembly language procedures
+;
+;  Build using SASM's 64-bit build feature, which uses gcc & requires "main"
+;  To run, type or paste some text into SASM's Input window and click Run.
+;  The hex dump of the input text will appear in SASM's Output window.
+
+SECTION .bss       ; Section containing uninitialized data
+
+    BUFFLEN        EQU 10h
+    Buff:          resb BUFFLEN
+
+SECTION .data      ; Section containing initialised data
+
+; Here we have two parts of a single useful data structure, implementing
+; the text line of a hex dump utility. The first part displays 16 bytes in
+; hex separated by spaces. Immediately following is a 16-character line 
+; delimited by vertical bar characters. Because they are adjacent, the two
+; parts can be referenced separately or as a single contiguous unit.
+; Remember that if DumpLin is to be used separately, you must append an
+; EOL before sending it to the Linux console.
+
+DumpLine:       db " 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 "
+DUMPLEN         EQU $-DumpLine
+ASCLine:        db "|................|",10
+ASCLEN          EQU $-ASCLine
+FULLLEN         EQU $-DumpLine
+
+; The HexDigits table is used to convert numeric values to their hex
+; equivalents. Index by nybble without a scale: [HexDigits+eax]
+HexDigits:      db "0123456789ABCDEF"
+
+; This table is used for ASCII character translation, into the ASCII
+; portion of the hex dump line, via XLAT or ordinary memory lookup. 
+; All printable characters "play through" as themselves. The high 128 
+; characters are translated to ASCII period (2Eh). The non-printable
+; characters in the low 128 are also translated to ASCII period, as is
+; char 127.
+DotXlat: 
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 20h,21h,22h,23h,24h,25h,26h,27h,28h,29h,2Ah,2Bh,2Ch,2Dh,2Eh,2Fh
+    db 30h,31h,32h,33h,34h,35h,36h,37h,38h,39h,3Ah,3Bh,3Ch,3Dh,3Eh,3Fh
+    db 40h,41h,42h,43h,44h,45h,46h,47h,48h,49h,4Ah,4Bh,4Ch,4Dh,4Eh,4Fh
+    db 50h,51h,52h,53h,54h,55h,56h,57h,58h,59h,5Ah,5Bh,5Ch,5Dh,5Eh,5Fh
+    db 60h,61h,62h,63h,64h,65h,66h,67h,68h,69h,6Ah,6Bh,6Ch,6Dh,6Eh,6Fh
+    db 70h,71h,72h,73h,74h,75h,76h,77h,78h,79h,7Ah,7Bh,7Ch,7Dh,7Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+			
 	
+SECTION .text      ; Section containing code
+
+;-------------------------------------------------------------------------
+; ClearLine:   Clear a hex dump line string to 16 0 values
+; UPDATED:     5/9/2022
+; IN:          Nothing
+; RETURNS:     Nothing
+; MODIFIES:    Nothing
+; CALLS:       DumpChar
+; DESCRIPTION: The hex dump line string is cleared to binary 0 by
+;              calling DumpChar 16 times, passing it 0 each time.
+
+ClearLine:
+    push rax       ; Save all caller's r*x GP registers
+    push rbx
+    push rcx
+    push rdx
+    
+    mov  rdx,15    ; We're going to go 16 pokes, counting from 0
+.poke:	
+    mov rax,0      ; Tell DumpChar to poke a '0'
+    call DumpChar  ; Insert the '0' into the hex dump string
+    sub rdx,1      ; DEC doesn't affect CF!
+    jae .poke       ; Loop back if RDX >= 0
+    
+    pop rdx        ; Restore caller's r*x GP registers
+    pop rcx
+    pop rbx
+    pop rax
+    ret            ; Go home
+
+;-------------------------------------------------------------------------
+; DumpChar:    "Poke" a value into the hex dump line string.
+; UPDATED:     5/9/2022
+; IN:          Pass the 8-bit value to be poked in RAX.
+;              Pass the value's position in the line (0-15) in RDX 
+; RETURNS:     Nothing
+; MODIFIES:    RAX, ASCLin, DumpLin
+; CALLS:       Nothing
+; DESCRIPTION: The value passed in RAX will be put in both the hex dump
+;              portion and in the ASCII portion, at the position passed 
+;              in RDX, represented by a space where it is not a
+;              printable character.
+
+DumpChar:
+    push rbx    ; Save caller's RBX
+    push rdi    ; Save caller's RDI
+
+; First we insert the input char into the ASCII portion of the dump line
+    mov bl,[DotXlat+rax]      ; Translate nonprintables to '.'
+    mov [ASCLine+rdx+1],bl    ; Write to ASCII portion
+
+; Next we insert the hex equivalent of the input char in the hex portion
+; of the hex dump line:
+    mov rbx,rax               ; Save a second copy of the input char
+    lea rdi,[rdx*2+rdx]       ; Calc offset into line string (RDX X 3)
+
+; Look up low nybble character and insert it into the string:
+    and rax,000000000000000Fh      ; Mask out all but the low nybble
+    mov al,[HexDigits+rax]    ; Look up the char equiv. of nybble
+    mov [DumpLine+rdi+2],al   ; Write the char equiv. to line string
+
+; Look up high nybble character and insert it into the string:
+    and rbx,00000000000000F0h      ; Mask out all the but second-lowest nybble
+    shr rbx,4                      ; Shift high 4 bits of byte into low 4 bits
+    mov bl,[HexDigits+rbx]    ; Look up char equiv. of nybble
+    mov [DumpLine+rdi+1],bl   ; Write the char equiv. to line string
+
+; Done! Let's return:
+    pop rdi     ; Restore caller's RDI
+    pop rbx	    ; Restore caller's RBX
+    ret         ; Return to caller
+
+;-------------------------------------------------------------------------
+; PrintLine:    Displays DumpLin to stdout
+; UPDATED: 	    5/8/2023
+; IN:           DumpLin, FULLEN
+; RETURNS:      Nothing
+; MODIFIES:     Nothing
+; CALLS:        Kernel sys_write
+; DESCRIPTION:  The hex dump line string DumpLin is displayed to stdout 
+;          using syscall function sys_write. Registers used are preserved.
+
+PrintLine:
+        
+    push rax          ; Alas, we don't have pushad anymore.
+    push rbx
+    push rcx
+    push rdx
+    push rsi
+    push rdi
+        
+    mov rax,1         ; Specify sys_write call
+    mov rdi,1         ; Specify File Descriptor 1: Standard output
+    mov rsi,DumpLine  ; Pass address of line string
+    mov rdx,FULLLEN   ; Pass size of the line string
+    syscall           ; Make kernel call to display line string
+
+    pop rdi           ; Nor popad.
+    pop rsi
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
+    ret               ; Return to caller
+
+
+;-------------------------------------------------------------------------
+; LoadBuff:    Fills a buffer with data from stdin via syscall sys_read
+; UPDATED:     5/8/2023
+; IN:          Nothing
+; RETURNS:     # of bytes read in R15
+; MODIFIES:    RCX, R15, Buff
+; CALLS:       syscall sys_read
+; DESCRIPTION: Loads a buffer full of data (BUFFLEN bytes) from stdin 
+;              using syscall sys_read and places it in Buff. Buffer
+;              offset counter RCX is zeroed, because we're starting in
+;              on a new buffer full of data. Caller must test value in
+;              R15: If R15 contains 0 on return, we've hit EOF on stdin.
+;              Less than 0 in R15 on return indicates some kind of error.
+
+LoadBuff:
+    push rax      ; Save caller's RAX
+    push rdx      ; Save caller's RDX
+    push rsi      ; Save caller's RSI
+    push rdi      ; Save caller's RDI
+
+    mov rax,0     ; Specify sys_read call
+    mov rdi,0     ; Specify File Descriptor 0: Standard Input
+    mov rsi,Buff      ; Pass offset of the buffer to read to
+    mov rdx,BUFFLEN   ; Pass number of bytes to read at one pass
+    syscall       ; Call syscall's sys_read to fill the buffer
+    mov r15,rax   ; Save # of bytes read from file for later
+    xor rcx,rcx   ; Clear buffer pointer RCX to 0
+
+    pop rdi       ; Restore caller's RDI
+    pop rsi       ; Restore caller's RSI
+    pop rdx       ; Restore caller's RDX
+    pop rax       ; Restore caller's RAX
+    ret           ; And return to caller
+
+GLOBAL main ; You need to declare "main" here because SASM uses gcc
+            ; to do builds.
+
+; ------------------------------------------------------------------------
+; MAIN PROGRAM BEGINS HERE
+;-------------------------------------------------------------------------
+
+main:
+    mov rbp,rsp; for correct debugging
+
+; Whatever initialization needs doing before loop scan starts is here:
+    xor r15,r15     ; Zero out r15,rsi, and rcx
+    xor rsi,rsi		
+    xor rcx,rcx
+    call LoadBuff   ; Read first buffer of data from stdin
+    cmp r15,0       ; If r15=0, sys_read reached EOF on stdin
+    jbe Exit
+
+; Go through the buffer and convert binary byte values to hex digits:
+Scan:
+    xor rax,rax                ; Clear RAX to 0
+    mov al,byte[Buff+rcx]      ; Get a byte from the buffer into AL
+    mov rdx,rsi	               ; Copy total counter into RDX
+    and rdx,000000000000000Fh  ; Mask out lowest 4 bits of char counter
+    call DumpChar              ; Call the char poke procedure
+
+; Bump the buffer pointer to the next character and see if buffer's done:
+    inc rsi           ; Increment total chars processed counter
+    inc rcx           ; Increment buffer pointer
+    cmp rcx,r15       ; Compare with # of chars in buffer
+    jb .modTest       ; If we've processed all chars in buffer...
+    call LoadBuff     ; ...go fill the buffer again
+    cmp r15,0         ; If r15=0, sys_read reached EOF on stdin
+    jbe Done          ; If we get EOF, we're done
+
+; See if we're at the end of a block of 16 and need to display a line:
+.modTest:
+    test rsi,000000000000000Fh ; Test 4 lowest bits in counter for 0
+    jnz Scan                   ; If counter is *not* modulo 16, loop back
+    call PrintLine             ; ...otherwise print the line
+    call ClearLine             ; Clear hex dump line to 0's
+    jmp Scan                   ; Continue scanning the buffer
+
+; All done! Let's end this party:
+Done:
+    call PrintLine   ; Print the final "leftovers" line
+
+Exit:	
+    mov rsp,rbp
+    ret
+```
+
+<p align=justify>
+Ammetto, che sembra un po' spaventoso. Sono più di 200 righe di codice e rappresenta di gran lunga il programma più grande di questo libro finora. Tuttavia, quello che fa è abbastanza semplice. È un'estensione diretta del programma hexdump1gcc dall'elenco 9.1. Se ricordi, un programma di hexdump prende un file di qualsiasi tipo (testo, eseguibile, dati binari, qualunque cosa) e lo visualizza sullo schermo (qui, sulla console Linux) in modo che ogni byte del programma sia mostrato in esadecimale. L'elenco 9.1 faceva questa operazione. Ciò che hexdump2gcc aggiunge è una seconda colonna di visualizzazione in cui vengono mostrati i caratteri ASCII stampabili (lettere, numeri, simboli) nella loro forma “vera”, con i caratteri non stampabili rappresentati da un carattere di riempimento. Questo carattere di riempimento è tipicamente un carattere punto ASCII, ma è solo una convenzione e può essere qualsiasi cosa. Se salvi il file eseguibile su disco da SASM, puoi visualizzare un hexdump di qualsiasi file Linux utilizzando hexdump2gcc, invocandolo in questo modo.
+</p>
+
+```
+$./hexdump2gcc < filename
+```
+
+<p align=justify>
+L'operatore di reindirizzamento I/O < prende i dati esistenti nel file che nomini a destra e passa quei dati all'input standard. Il programma hexdump2gcc prende dati dall'input standard e li stampa in formato dump esadecimale, 16 byte per riga, per quante più righe serve a mostrare l'intero file. 
+Data la complessità di hexdump2gcc, potrebbe essere utile mostrarti come funziona il programma attraverso il pseudocodice prima di addentrarci troppo nelle meccaniche di come funziona internamente un meccanismo di procedura. Ecco come funziona il programma, da un'altezza (alta):
+</p>
+	
+```
+ As long as there is data available from stdin, do the
+ following:
+ 	Read data from stdin
+ 	Convert data bytes to a suitable hexadecimal/ASCII display form
+    	Insert formatted data bytes into a 16-byte hex dump line
+    	Every 16 bytes, display the hex dump line
+```
+
+<p align=justify>
+Questo è un buon esempio di una prima iterazione di pseudocodice, quando sai approssimativamente cosa vuoi che il programma faccia ma sei ancora un po' confuso su come farlo esattamente. Dovrebbe darti un vantaggio nella comprensione dello pseudocodice molto più dettagliato (e orientato al 'come') mostrato qui:
+</p>
+
+```
+Zero out the byte count total (RSI) and offset counter (RCX)
+Call LoadBuff to fill a buffer with first batch of data from stdin
+    Test number of bytes fetched into the buffer from stdin
+        If the number of bytes was 0, the file was empty;
+jump to Exit
+Scan:
+    Get a byte from the buffer and put it in AL
+    Derive the byte's position in the hex dump line string
+    Call DumpChar to poke the byte into the line string
+    Increment the total counter and the buffer offset counter
+    Test and see if we've processed the last byte in the
+buffer:
+        If so, call LoadBuff to fill the buffer with data from stdin
+        Test number of bytes fetched into the buffer from stdin
+            If the number of bytes was 0, we hit EOF; jump to Exit
+    Test and see if we've poked 16 bytes into the hex dump line
+        If so, call PrintLine to display the hex dump line
+ Loop back to Scan
+ Exit:
+    Shut down the program gracefully per Linux requirements
+```
+
+<p align=justify>
+ci sono riferimenti espliciti a procedure qui. Penso che possano essere quasi autoesplicativi dal contesto, il che è il segno di una buona procedura. Per esempio, CALL LoadBuff significa "eseguire una procedura che carica il buffer." Questo è ciò che fa LoadBuff, e questo è tutto ciò che fa LoadBuff. Non devi affrontare tutti i dettagli di come LoadBuff svolge il suo lavoro. Questo rende più facile afferrare il flusso logico più ampio espresso dal programma nel suo insieme. Dai un'occhiata al codice di sotto e cerca di capire come il precedente pseudocodice si relaziona alle istruzioni della macchina effettive. Una volta che hai una comprensione di questo, possiamo iniziare a parlare delle procedure in modo più approfondito.
+</p>
+
+### Chiamare e Ritornare
+
+<p align=justify>
+Proprio all'inizio del blocco principale del programma in hexdump2gcc c'è un'istruzione macchina che non ho mai usato prima in questo libro.
+</p>
+
+```asm
+ call LoadBuff
+```
+
+<p align=justify>
+L'etichetta LoadBuff si riferisce a una procedura. Come potresti aver capito (soprattutto se hai programmato in un linguaggio più antico come BASIC o FORTRAN), CALL LoadBuff semplicemente dice alla CPU di andare a eseguire una procedura chiamata LoadBuff e poi tornare quando LoadBuff ha finito di essere eseguita. LoadBuff è definito precedentemente nel codice, ma per chiarezza nella seguente discussione lo riprodurrò qui. LoadBuff è un buon primo esempio di una procedura, perché è abbastanza lineare in termini di logica, e utilizza istruzioni e concetti di cui abbiamo già discusso. Come i programmi in linguaggio assembly in generale, una procedura come LoadBuff inizia a essere eseguita dall'inizio, esegue in modo sequenziale le istruzioni nel suo corpo, e a un certo punto termina. La fine non deve necessariamente essere proprio in fondo alla sequenza di istruzioni, ma la “fine” di una procedura è sempre il punto dove la procedura torna nella parte del programma che l'ha chiamata. Questo punto è ovunque tu veda l'alter ego di CALL, RET (per RETorno).
+</p>
+
+```asm
+LoadBuff:
+    push rax       ; Save caller's RAX
+    push rdx       ; Save caller's RDX
+    push rsi       ; Save caller's RSI
+    push rdi       ; Save caller's RDI
+    mov rax,0      ; Specify sys_read call
+    mov rdi,0      ; Specify File Descriptor 0: Standard
+ Input
+    mov rsi,Buff   ; Pass offset of the buffer to read to
+    mov rdx,BUFFLEN   ; Pass number of bytes to read at one pass
+    syscall        ; Call syscall's sys_read function fill the buffer
+    mov r15,rax    ; Save # of bytes read from file for later
+    xor rcx,rcx     ; Clear buffer pointer RCX to 0
+    pop rdi        ; Restore caller's RDI
+    pop rsi         ; Restore caller's RSI
+    pop rdx         ; Restore caller's RDX
+    pop rax         ; Restore caller's RAX
+    ret             ; And return to caller
+```
+
+<p align=justify>
+In un esempio molto semplice come LoadBuff, il RET si trova alla fine della sequenza di istruzioni nella procedura. Tuttavia, il RET può trovarsi ovunque nella procedura, e ci sono situazioni in cui può essere più semplice avere più di un'istruzione RET in una procedura. Quale delle diverse istruzioni RET riporta effettivamente l'esecuzione al chiamante dipende da ciò che fa la procedura e dalle circostanze che incontra, ma questo è irrilevante. Ogni RET è un "punto di uscita" che riporta al codice che ha chiamato la procedura e (cosa più importante) tutte le istruzioni RET all'interno di una procedura riportano l'esecuzione allo stesso identico punto: l'istruzione immediatamente dopo l'istruzione CALL che ha invocato la procedura.
+</p>
+
+<p align=justify>
+I punti importanti della struttura della procedura sono i seguenti:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+			Una procedura deve iniziare con un'etichetta, che è (come dovresti ricordare) un identificatore seguito da due punti.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Da qualche parte all'interno della procedura, deve esserci almeno un'istruzione RET.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Potrebbero esserci più di un'istruzione RET. L'esecuzione deve tornare da una procedura attraverso un'istruzione RET, ma ci possono essere più di una porta d'uscita da una procedura. Quale uscita viene presa dipende dal flusso di esecuzione della procedura, ma con istruzioni di salto condizionale si possono avere uscite ovunque soddisfino i requisiti della logica della procedura. Tutte quelle uscite portano allo stesso posto: l'istruzione dopo l'istruzione CALL che ha chiamato la procedura.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Una procedura può utilizzare CALL per chiamare un'altra procedura. (Di più su questo a breve.)
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+I mezzi tramite i quali operano CALL e RET possono sembrare familiari: CALL prima inserisce l'indirizzo della prossima istruzione dopo di essa nello stack. Poi CALL trasferisce l'esecuzione all'indirizzo rappresentato dall'etichetta che nomina la procedura, in questo caso LoadBuff. Le istruzioni contenute nella procedura vengono eseguite. Infine, la procedura viene terminata dall'istruzione RET. L'istruzione RET estrae l'indirizzo di ritorno dalla cima dello stack e trasferisce l'esecuzione a quell'indirizzo. Poiché l'indirizzo inserito era l'indirizzo della prima istruzione dopo l'istruzione CALL, l'esecuzione continua come se CALL non avesse affatto cambiato il flusso dell'esecuzione delle istruzioni. Vedi figura di sotto
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/calling_procedure_and_returning.png">
+</div>
+
+### Chiamate all'interno di chiamate
+
+<p align=justify>
+All'interno di una procedura puoi fare qualsiasi cosa che puoi fare all'interno del programma principale stesso. Questo include chiamare altre procedure da una procedura e fare chiamate SYSCALL ai servizi del kernel Linux. C'è un semplice esempio in hexdump2gcc: la procedura ClearLine chiama la procedura DumpChar per "cancellare" la variabile della linea di dump esadecimale.
+</p>
+
+```asm
+DumpLine:
+ ClearLine:
+    push rax       ; Save all caller's r*x GP registers
+    push rbx
+    push rcx
+    push rdx
+    mov rdx,15     ; We're going to go 16 pokes, counting from 0
+ .poke:
+    mov rax,0      ; Tell DumpChar to poke a '0'
+    call DumpChar  ; Insert the '0' into the hex dump string
+    sub rdx,1      ; DEC doesn't affect CF!
+    jae .poke      ; Loop back if RDX>= 0
+    pop rdx        ; Restore all caller's r*x registers
+    pop rcx
+    pop rbx
+    pop rax
+    ret            ; Go home
+```
+
+<p align=justify>
+Fondamentalmente, ciò che fa ClearLine è fare un uso speciale della procedura DumpChar, che spiegherò in dettaglio a breve. Quando è piena di dati e visualizzata sulla console, la variabile DumpLine appare così.
+</p>
+
+```
+ 75 6D 70 32 2E 61 73 6D 0A 09 6E 61 73 6D 20 2D |ump2.asm..nasm -|
+```
+
+<p align=justify>
+Ogni valore esadecimale a due caratteri e ogni carattere ASCII nella colonna ASCII a destra, è stato inserito tramite una singola chiamata a DumpChar. Sono necessarie 16 chiamate a DumpChar per "riempire" la variabile DumpLine. A quel punto può essere visualizzata. Dopo che DumpLine è stata visualizzata nella console, hexdump2gcc continua il suo ciclo e inizia a riempire di nuovo DumpLine. Ogni 16 chiamate a DumpChar, hexdump2gcc mostra DumpLine sulla console... eccetto per l'ultima volta. Un file che viene scaricato sulla console potrebbe non essere (e di solito non è) un preciso multiplo di 16 byte. Quindi la visualizzazione finale di DumpLine potrebbe riguardare una riga parziale di due, tre, nove, undici o quanti più caratteri meno di sedici, che chiamo "avanzi". Quando viene visualizzata una riga parziale, gli ultimi byte nella riga scaricata potrebbero essere dati "vecchi" inviati alla console nella visualizzazione precedente di DumpLine. Per evitare ciò, DumpLine viene azzerato immediatamente dopo ogni volta che viene visualizzato nel terminale. Questo è ciò che fa ClearLine. Dopo una chiamata a ClearLine, DumpLine appare in questo modo:
+</p>
+
+```
+ 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|
+```
+
+<p align=justify>
+ClearLine fa la cosa semplice e ovvia: chiama DumpChar 16 volte, passando ogni volta a DumpChar il valore 0 in RAX. DumpChar 'inietta' un equivalente ASCII sia del valore esadecimale 00 che di un punto ASCII per rappresentare il valore 0 in tutte le posizioni nella colonna ASCII. 00 non è un carattere ASCII visualizzabile e, come tutti i caratteri non visualizzabili, è rappresentato da un punto nell'output del hexdump.
+</p>
+
+### Il pericolo della ricorsione accidentale
+
+<p align=justify>
+Chiamare procedure dall'interno di procedure richiede di prestare almeno un po' di attenzione a una cosa: lo spazio dello stack. Ricorda che ogni chiamata a procedura spinge un indirizzo di ritorno a 64 bit nello stack. Questo indirizzo di ritorno non viene rimosso dallo stack fino a quando non viene eseguita l'istruzione RET per quella procedura. Se esegui un'altra istruzione CALL prima di tornare da una procedura, la seconda istruzione CALL spinge un altro indirizzo di ritorno nello stack. Se continui a chiamare procedure dall'interno di procedure, un indirizzo di ritorno si accumulerà nello stack per ogni CALL fino a quando non inizierai a tornare da tutte quelle procedure annidate. Questo era un vero problema sotto DOS, quando la memoria era scarsa e i programmi potevano allocare solo poche centinaia di byte di memoria allo stack, a volte anche meno. Ogni indirizzo spinto nello stack fa crescere lo stack in direzione delle sezioni .data e .text del programma. Chiamare in modo "profondo" potrebbe far collidere lo stack con i dati o il codice, causando un crash del programma che spesso portava giù anche DOS. Sotto x64 Linux hai a disposizione molta più memoria, più un gestore della memoria virtuale nel sistema operativo, e dovresti annidare procedure letteralmente milioni di volte per avere problemi, e questo sarebbe davvero un programma ambizioso. Tuttavia... puoi comunque incorrere in un problema simile abusando di una tecnica di programmazione avanzata chiamata ricorsione. Nella ricorsione, una procedura chiama se stessa per completare il proprio lavoro. Questo spesso sembra peculiare ai principianti, ma è un modo rispettato e legittimo di esprimere un certo tipo di logica di programma. Il trucco con la ricorsione, naturalmente, è sapere quando fermarsi. Per ogni CALL a se stessa, una procedura ricorsiva deve alla fine eseguire un RET. Anche se la procedura ricorsiva chiama se stessa dozzine o centinaia di volte, fintanto che le istruzioni CALL bilanciano le istruzioni RET, non succederà nulla di male.
+I problemi iniziano quando scrivi una procedura ricorsiva in modo errato e la logica che determina quando utilizzare quella fondamentale istruzione RET è codificata in modo errato. Quando ritornare è generalmente regolato da un'istruzione di salto condizionale. Se sbagli il senso o l'etichetta del flag di quell'istruzione, la procedura non ritorna mai, ma continua a chiamarsi ripetutamente. Su un PC moderno, una procedura in linguaggio assembly può chiamarsi un milione di volte in un secondo o meno. A un certo punto, lo stack raggiunge il limite estremo della sua crescita (impostato dal sistema operativo) dove esaurisce lo spazio di memoria. Quando ciò accade, Linux ti restituisce un errore di segmentazione. Come ho detto, la ricorsione è un argomento avanzato e non spiegherò come usarla correttamente in questo libro. Lo menziono qui solo perché è possibile utilizzare la ricorsione accidentalmente. Seguendo il nostro esempio attuale, supponi di stare programmando ClearLine a tarda notte, e nel punto in cui ClearLine chiama DumpChar, scrivi in modo confuso CALL ClearLine dove intendevi scrivere CALL DumpChar. Non scuotere la testa; programmo dal 1970 e l'ho fatto più di una volta. Prima o poi lo farai anche tu. ClearLine non è stato progettato per essere ricorsivo, quindi andrà in un ciclo non proprio infinito, chiamandosi fino a esaurire la memoria dello stack e generare un errore di segmentazione. Aggiungi "ricorsione accidentale" alla lista dei bug che cerchi quando Linux ti restituisce un errore di segmentazione. Appartiene alla categoria di bug che chiamo "rari ma inevitabili."
+</p>
+
+### Un errore di etichetta sul flag di cui fare attenzione
+
+<p align=justify>
+E mentre parliamo di bug, la procedura ClearLine è piuttosto semplice e svolge un lavoro semplice. Fornisce anche un utile momento di insegnamento su un bug relativo ai flag che mette in difficoltà regolarmente i principianti. Dai un'occhiata al seguente modo alternativo di codificare ClearLine:
+</p>
+
+```asm
+ClearLine:
+    push rax       ; Save all caller's r*x GP registers
+    push rbx
+    push rcx
+    push rdx
+    
+    mov  rdx,15    ; We're going to go 16 pokes, counting
+ from 0
+ 
+.poke:
+    mov rax,0      ; Tell DumpChar to poke a '0'
+    call DumpChar  ; Insert the '0' into the hex dump string
+    sub rdx,1      ; DEC doesn't affect CF!
+    jae .poke       ; Loop back if RDX>= 0
+    
+    pop rdx        ; Restore caller's r*x GP registers
+    pop rcx
+    pop rbx
+    pop rax
+    ret            ; Go home
+```
+
+<p align=justify>
+Funzionerebbe? Se lo pensi, ripensaci. Sì, stiamo contando da 15 a 0, facendo 16 passaggi attraverso un semplice ciclo. Sì, l'istruzione DEC è usata molto nei cicli, quando contiamo fino a zero. Ma questo ciclo è un po' diverso, poiché dobbiamo fare del lavoro quando il valore del contatore in RDX è 0 e poi decrimentare un'altra volta. Il salto condizionale mostrato è JAE, Jump Above or Equal. Deve saltare di nuovo a Poke quando il valore in EDX scende sotto zero. DEC conterà un contatore fino a zero e poi sotto zero senza problemi... quindi perché JAE non salta dopo DEC? Il senso è giusto. Tuttavia, l'etichetta dei flag è sbagliata. Se controlli il riferimento all'istruzione nell'Appendice B per JAE, vedrai che salta quando CF=0. La CPU non capisce il “senso” in JAE. Non è una mente; è solo una piccola pila di sabbia molto pulita. Tutto ciò che capisce è che l'istruzione JAE salta quando CF=0. Ora, se guardi l'istruzione DEC nell'Appendice B e scrutinizzi l'elenco dei flag, vedrai che DEC non influenza affatto CF, e CF è ciò che JAE esamina prima di decidere se saltare o meno. Questo è il motivo per cui usiamo l'istruzione SUB per decrimentare il registro del contatore in questo caso, perché SUB influisce su CF e consente all'istruzione JAE di funzionare correttamente. Non ci sono problemi di velocità; SUB è altrettanto veloce quanto DEC. La lezione qui è che devi capire i modi in cui le istruzioni di salto condizionale interpretano i vari flag. Il senso di un salto può essere ingannevole. È l'etichetta dei flag che conta.
+</p>
+
+### Le Procedure ed i dati di cui hanno bisogno
+
+<p align=justify>
+I programmi svolgono il loro lavoro agendo sui dati: dati nei buffer, dati in variabili denominate e dati nei registri. Le procedure sono spesso create per eseguire un singolo tipo di manipolazione su un particolare tipo di dati. I programmi che chiamano tali procedure le trattano come tritacarne di dati: un certo tipo di dati entra, e un dato trasformato di un altro tipo esce. Inoltre, i dati vengono spesso forniti a una procedura per controllare o dirigere il lavoro che essa svolge. Una procedura potrebbe aver bisogno di un valore conteggio per sapere quante volte eseguire un'operazione, ad esempio, o potrebbe aver bisogno di una maschera di bit da applicare a dei valori di dati per qualche motivo, e quella maschera di bit potrebbe non essere precisamente la stessa ogni volta. Quando scrivi procedure, devi decidere quali dati la procedura necessiti per svolgere il suo lavoro e come quei dati saranno resi disponibili alla procedura. Ci sono due classi generali di dati nel lavoro in assembly (e nella maggior parte della programmazione in lingue non esotiche) in base al metodo di accesso: globale e locale. I dati globali sono molto comuni nel lavoro in puro assembly, specialmente per programmi di dimensioni contenute come quelli che presento in questo libro. I dati globali sono accessibili da qualsiasi codice in qualsiasi punto del programma. Un elemento di dati globale è definito nelle sezioni .data o .bss del programma. I registri della CPU sono anche contenitori per dati globali, poiché i registri fanno parte della CPU e possono essere accessibili da qualsiasi punto di un programma.
+La nozione di dati globali diventa più complessa quando si separa un programma in un programma principale e in più gruppi di procedure chiamate librerie, come spiegherò tra poco in questo capitolo. Ma per programmi semplici, il modo più ovvio per passare dati a una procedura è spesso il migliore: mettere i dati in uno o più registri e poi chiamare la procedura. Abbiamo già visto questo meccanismo in azione, nel fare chiamate ai servizi del kernel Linux tramite l'istruzione SYSCALL. Per l'input della console, si mette il numero del servizio in RAX, il descrittore del file in RDI, l'indirizzo di una stringa in RSI e la lunghezza della stringa in RDX. Poi si effettua la chiamata con SYSCALL. Non è diverso per le procedure ordinarie. Si scrive una procedura presupponendo che, quando la procedura inizia a essere eseguita, i valori di cui ha bisogno siano in registri particolari. Devi assicurarti che il codice che chiama la procedura metta i valori giusti nei registri giusti prima di chiamare la procedura, ma in realtà non è più complesso di così. Tabelle, buffer e altri elementi dati nominati vengono accessi dalle procedure proprio come da qualsiasi altra parte del programma, tramite espressioni di indirizzamento della memoria "tra le parentesi."
+</p>
+
+### Salvare i registri del chiamante
+
+<p align=justify>
+Una volta che inizi a scrivere programmi significativi in assembly, ti renderai conto che non puoi mai avere abbastanza registri, e (a differenza dei linguaggi di alto livello come C e Pascal) non puoi semplicemente crearne di più quando ne hai bisogno. I registri devono essere usati con attenzione, e scoprirai che all'interno di qualsiasi programma di complessità significativa, tutti i registri sono generalmente in uso tutto il tempo. Entrare in una procedura dall'interno del tuo programma principale (o da un'altra procedura) comporta un problema specifico e sottile. Puoi chiamare una procedura da qualsiasi punto — il che significa che non saprai sempre quali registri sono già in uso quando viene chiamata la procedura. O lo saprai? Esiste una convenzione riguardo quali registri devono essere preservati all'interno di una procedura e quali non lo devono essere. Questa convenzione fa parte dell'interfaccia binaria di applicazione System V ABI x86-x64. Alcuni registri sono considerati 'volatili', il che significa che possono essere modificati da una procedura, mentre altri sono 'non volatili', il che significa che devono essere preservati. Attendi; sta arrivando. Se una procedura esamina solo un valore di registro (ma non lo modifica), non è necessario preservare il registro. Ad esempio, una procedura può assumere che un certo registro contenga un valore di contatore di cui ha bisogno per indicizzare una tabella, e può utilizzare liberamente quel registro finché non vengono apportate modifiche al suo valore. Tuttavia, ogni volta che un registro viene modificato da una procedura (a meno che il chiamante non si aspetti esplicitamente un valore di ritorno in un registro), deve essere salvato e ripristinato prima che la procedura esegua RET per tornare al chiamante. 
+</p>	
+
+<p align=justify>
+Il salvataggio dei valori dei registri avviene con PUSH:
+</p>
+
+```asm
+ push rbx
+ push rsi
+ push rdi
+```
+
+<p align=justify>
+Ogni istruzione PUSH inserisce un valore di registro a 64 bit nello stack. Quei valori rimarranno al sicuro nello stack fino a quando non verranno estratti nuovamente negli stessi registri poco prima di tornare al chiamante:
+</p>
+
+```asm
+ pop rdi
+ pop rsi
+ pop rbx
+ ret
+```
+
+<p align=justify>
+C'è un dettaglio assolutamente cruciale qui, uno che causa una moltitudine di bug nei programmi molto peculiari: i valori del chiamante devono essere estratti dallo stack nell'ordine inverso rispetto a come sono stati inseriti. In altre parole, se inserisci RBX, seguito da RSI, seguito da RDI, devi estrarli dallo stack in questo ordine: RDI, seguito da RSI, seguito da RBX. La CPU estrarrà obbedientemente i valori memorizzati nello stack in qualsiasi registro nell'ordine che scrivi. Ma se sbagli l'ordine, in sostanza stai cambiando i registri del chiamante invece di salvarli. Ciò che era in RBX potrebbe ora trovarsi in RDI, e la logica del programma del chiamante potrebbe semplicemente andare in crisi. Ho mostrato come questo accade quando inizialmente spiegai lo stack, ma potrebbe non essere stato chiaro all'epoca. Dai un veloce sguardo alla figura dello stack e vedi cosa succede nella colonna più a destra. Il valore di CX era stato inserito nello stack, ma l'istruzione successiva era POP DX. Ciò che era in CX ora si trovava in DX. Se è quello che vuoi, va bene—e a volte potrebbe essere il modo migliore per risolvere un problema particolare. Ma se stai spingendo i valori dei registri per preservarli, l'ordine degli inserimenti e delle estrazioni è assolutamente critico. Il modo migliore per affrontare la preservazione dei registri è di inserire/estrarre qualsiasi registro modificato dalla procedura all'interno della procedura stessa. Questo esclude i registri che passano valori alla procedura: erano stati cambiati deliberatamente dal chiamante subito prima della chiamata della procedura. Considera che una procedura è definita una volta ma chiamata molte volte da molti altri posti nel tuo codice. Se cerchi di salvare registri e la procedura cambia prima di chiamare la procedura, avrai molti più inserimenti ed estrazioni rispetto a se preservi i registri che una procedura utilizza all'interno della procedura. Inoltre, se una procedura restituisce un valore al chiamante in un registro, il chiamante presume che il valore del registro cambierà e utilizzerà il nuovo valore in quel registro. Oh, c'è un altro problema: le tue procedure non sono le uniche che utilizzano—e cambiano—i registri. Anche Linux ha una parte in questo.
+</p>
+
+### Preservare i registri attraverso le chiamate di sistema Linux
+
+<p align=justify>
+Anche Linux utilizza registri. Lo fa in modo piuttosto trasparente per il tuo codice. L'unico problema serio è sapere quali registri vengono modificati durante le chiamate di sistema tramite l'istruzione SYSCALL e quali registri rimangono intatti. Purtroppo, non c'è una risposta semplice. Dipende completamente dalla chiamata di sistema che effettui. Ma prima di tutto, l'istruzione SYSCALL stessa utilizza due registri:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+			SYSCALL memorizza l'indirizzo di ritorno nel registro RCX
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			SYSCALL memorizza RFlags nel registro R11
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+Questo è l'equivalente funzionale di SYSCALL che inserisce RCX e R11 nello stack. Tuttavia, salvare valori nei registri è molto più veloce che inserire valori nello stack. Rimuovere valori dallo stack è anche lento, quindi SYSCALL non ripristina nulla. Ogni volta che esegui SYSCALL, RCX e R11 saranno sovrascritti. E non è tutto il sovrascrivere coinvolto nell'effettuare una chiamata di sistema. L'uso dei registri durante una chiamata di sistema rientra in tre categorie:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		Devi passare i parametri al codice della chiamata di sistema nei registri.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Il codice della chiamata di sistema utilizza alcuni registri aggiuntivi.
+		</p>
+	</li>
+	 <li>
+		<p align=justify>
+		La chiamata di sistema può restituire valori nei registri di cui il tuo codice potrebbe aver bisogno.
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+La definizione delle chiamate di sistema SYSCALL include le specifiche. Questa definizione fa parte dell'ABI System V x86-64. Se il corpo più ampio del tuo codice utilizza un registro che viene sovrascritto durante una chiamata di sistema, devi scegliere un altro registro da utilizzare nel corpo del programma o salvarlo nello stack con un'istruzione PUSH prima di impostare i parametri ed eseguire SYSCALL. Dopo la chiamata di sistema, devi ripristinarlo tramite un'istruzione POP. Usare lo stack in questo modo può causare problemi con l'allineamento dello stack a meno che tu non comprenda cosa rende lo stack allineato e come mantenerlo tale. C'è anche la questione dei registri volatili rispetto a quelli non volatili. Il processo di effettuare una chiamata di sistema tramite SYSCALL non è complesso. Tuttavia, l'ultima volta che ho controllato, ce n'erano 335. Ogni chiamata di sistema richiede che certe cose vengano passate in registri specifici. È molto da ricordare. Per lo più dovrai cercare i dettagli su come effettuare chiamate di sistema in un riferimento stampato o online. Dei riferimenti sono elencati sotto.
+</p>
+
+[x86-64-linux-syscalls](https://hackeradam.com/x86-64-linux-syscalls/)
+
+[Linux_System_Call_Table_for_x86_64](https://blog.rchapman.org/posts/Linux_System_Call_Table_for_x86_64/)
+
+<p align=justify>
+Entrambi sono tavoli molto grandi che assomigliano a fogli di calcolo, con colonne per l'uso dei registri e i valori richiesti per ogni numero di chiamata di sistema. Ora, le pagine web vanno e vengono e se stai utilizzando questo libro alcuni anni dopo la sua pubblicazione nel 2023, le pagine web citate potrebbero semplicemente non esistere più. Fai una ricerca su web su "tabella delle chiamate di sistema x64" e troverai diverse. Assicurati che la tabella che usi sia per le chiamate di sistema e non per le chiamate negli spazi utente. Le chiamate negli spazi utente sono chiamate alla libreria di codice glibc utilizzata nella programmazione C, che è una questione completamente diversa. Chiamare glibc dall'assembly è possibile e spesso molto utile. Un'avvertenza seria se hai già fatto del lavoro in assembly Linux in modalità protetta a 32 bit: i parametri delle chiamate di sistema x64 non sono gli stessi di quelli in x86 a 32 bit. Nella maggior parte dei casi, non sono nemmeno vicini. In Linux x64, c'è un sistema per l'uso dei registri: il numero della chiamata di sistema (in altre parole, quale chiamata di sistema stai chiamando) è sempre in RAX. Una chiamata di sistema accetta fino a sei parametri. I registri usati per passare i parametri sono in questo ordine: RDI, RSI, RDX, R10, R8 e R9. In altre parole, il primo parametro è passato in RDI. Il secondo parametro è passato in RSI, e così via. Nessuna chiamata di sistema richiede che i parametri siano passati a essa tramite lo stack. Nota: Sia che un registro (come R9, per esempio) sia usato per passare un parametro a una chiamata di sistema, quel registro non viene preservato. Solo sette registri sono preservati da Linux durante una chiamata di sistema: R12, R13, R14, R15, RBX, RSP e RBP. Dopo una SYSCALL, RAX conterrà un valore restituito. Se RAX è negativo, indica che si è verificato un errore durante la chiamata. Per la maggior parte delle chiamate di sistema, un valore di 0 indica successo.
+</p>
+
 ## Controllo dei processi
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.01.png)
