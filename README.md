@@ -12964,6 +12964,274 @@ Se questo non ti è completamente chiaro, torna indietro e leggilo di nuovo. L'i
 Accedere agli elementi nello stack estraendoli con pop nei registri funziona sicuramente, ma ora nel 2023 ti consiglio di evitare di estrarre cose dallo stack a meno che il tuo codice non le abbia inserite lì. Come puoi immaginare, estrarre il conteggio degli argomenti in un registro come RAX modifica i contenuti originali dello stack spostando RSP. Se puoi fare riferimento ai contenuti dello stack tramite un singolo indirizzo di memoria basato su RBP, non dovrai preoccuparti tanto dei bug che possono verificarsi una volta che RSP non punta più alla cima dello stack come lo hai ricevuto originalmente da Linux.
 </p>
 
+
+### Usare gcc per l'assembly
+
+<p align=justify>
+Perché usare un compilatore C per lavorare in assembly? Principalmente questo: gcc fa molto di più che semplicemente compilare il codice C. È una sorta di strumento di sviluppo multiuso. Infatti, potrei caratterizzare meglio ciò che fa come costruire software piuttosto che semplicemente compilarlo. Oltre a compilare il codice C in codice oggetto, gcc governa sia il passaggio di assembly che il passaggio di linking. Passaggio di assembly? Sì, proprio così. Esiste un assemblatore GNU chiamato gas, anche se è una cosa strana che non è realmente destinata ad essere utilizzata da programmatori umani. Ciò che fa gcc è controllare gas e il linker GNU ld (che stai già usando nei makefile) come marionette sui fili. Se usi gcc, specialmente a livello principiante, non devi fare molto direttamente con gas o ld. Parliamo di più di questo.
+</p>
+
+<p align=justify>
+Il lavoro con il linguaggio assembly è un distacco dal lavoro in C, e gcc è prima di tutto un compilatore C. Pertanto, dobbiamo prima esaminare il processo di costruzione del codice C. A prima vista, costruire un programma C per Linux utilizzando gli strumenti GNU è piuttosto semplice. Tuttavia, dietro le quinte, è un affare seriamente complicato. Anche se sembra che gcc faccia tutto il lavoro, ciò che gcc fa veramente è agire come un controllore principale per diversi strumenti GNU, supervisionando una catena di assemblaggio del codice che non è necessario vedere a meno che non lo desideri specificamente. Teoricamente, questo è tutto ciò che devi fare per generare un file binario eseguibile dal codice sorgente C:
+</p>
+
+```
+gcc eatc.c –o eatc
+
+```
+
+<p align=justify>
+Qui, gcc prende il file eatc.c (che è un file di codice sorgente C) e lo elabora per produrre il file eseguibile eatc. (L'opzione -o dice a gcc come nominare il file di output eseguibile.) Tuttavia, c'è di più in corso qui di quanto sembri a prima vista. Dai un'occhiata alla figura di sotto mentre la esaminiamo. Nella figura, le frecce in ombra indicano il movimento delle informazioni. Le frecce vuote indicano il controllo del programma.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/how_gcc_builds_linux_executables.png">
+</div>
+
+<p align=justify>
+Il programmatore invoca gcc dalla riga di comando della shell, di solito in una finestra del terminale. Poi gcc prende il controllo del sistema e invoca immediatamente un'utilità chiamata preprocessore C, cpp. Il preprocessore prende il file sorgente C originale e gestisce determinati elementi come #includes e #defines. Può essere considerato come una sorta di passaggio di espansione macro sul file sorgente C. Quando cpp ha finito il suo lavoro, gcc prende il comando in modo serio. Dal file sorgente C preprocessato, gcc genera un file di codice sorgente in linguaggio assembly con un'estensione .s. Questo è letteralmente il codice assembly equivalente delle dichiarazioni C nel file .c originale, in forma leggibile dagli esseri umani. Se sviluppi qualche abilità nella lettura della sintassi e dei mnemonici dell'assembly AT&T (di cui parleremo tra poco), puoi imparare molto ispezionando i file .s prodotti da gcc. Quando gcc ha completato la generazione dell'equivalente in linguaggio assembly del file sorgente C, invoca l'assemblatore GNU, gas, per assemblare il file .s in codice oggetto. Questo codice oggetto viene scritto in un file con estensione .o. L'ultimo passaggio coinvolge il linker, ld. Il file .o contiene codice binario, ma è solo il codice binario generato dalle dichiarazioni nel file .c originale. Il file .o non contiene il codice delle librerie C standard che sono così importanti nella programmazione C. Quelle librerie sono già state compilate e devono semplicemente essere collegate all'applicazione. Il linker ld svolge questo lavoro sotto la direzione di gcc. La cosa positiva è che gcc sa esattamente quali librerie C standard devono essere collegate alla tua applicazione per farla funzionare e include sempre le librerie giuste nelle loro versioni corrette. Quindi, anche se gcc non fa effettivamente il collegamento, sa cosa deve essere collegato e questa è veramente una conoscenza preziosa, man mano che i tuoi programmi diventano sempre più complessi. Infine, ld restituisce il file del programma completamente collegato ed eseguibile. A quel punto, la compilazione è completata e gcc restituisce il controllo alla shell di Linux. Nota che tutto ciò è generalmente fatto con un semplice comando a gcc!
+</p>
+
+### SAMSusa GCC
+
+<p align=justify>
+Alcuni di questi concetti potrebbero iniziare a suonare familiari. Abbiamo utilizzato SASM per diversi capitoli ormai, e SASM ha un modo di lavorare fondamentalmente diverso da quello che abbiamo imparato con i makefile e l'utility make di Linux. Ho accennato all'inizio al fatto che ciò che SASM produce è in realtà un programma C scritto in linguaggio assembly. Se guardi la scheda Build nel menu delle Impostazioni di SASM, nota che gcc (e non ld) è mostrato nel percorso del linker. Questo non significa che ld non venga utilizzato, come accade quando usiamo i makefile. Significa che gcc ha il pieno controllo del processo di collegamento, chiamando ld quando necessario per collegare librerie precompilate di codice C binario.
+</p>
+
+### Come usare GCC in assembly
+
+<p align=justify>
+Il processo che ho appena descritto, e che ho illustrato per voi nella figura precedente, è come un programma C viene costruito sotto Linux utilizzando gli strumenti GNU. Sono andato nei dettagli qui perché useremo parte—anche se solo parte—di questo processo per rendere più facile la nostra programmazione in assembly. È vero che non abbiamo bisogno di convertire il codice sorgente C in codice assembly—e infatti, non abbiamo bisogno di gas per convertire il codice sorgente assembly gas in codice oggetto. Tuttavia, abbiamo bisogno dell'esperienza di gcc nel collegamento. Ci atterremo al processo di costruzione del codice GNU nella fase di collegamento in modo che gcc possa coordinare per noi il passo di collegamento. Quando assembliamo un programma .asm per Linux utilizzando NASM, NASM genera un file .o contenente codice oggetto binario. Come abbiamo visto, invocare NASM sotto Linux a 64 bit si fa tipicamente in questo modo:
+</p>
+
+```
+nasm –f elf64 -g -F dwarf eatclib.asm
+```
+
+<p align=justify>
+Questo comando indirizzerà NASM a assemblare il file eatclib.asm e a generare un file chiamato eatclib.o. La parte -f elf64 indica a NASM di generare codice oggetto nel formato ELF a 64 bit piuttosto che in uno dei numerosi altri formati di codice oggetto che NASM è in grado di produrre. La parte -g -F dwarf abilita la generazione di informazioni di debug nel file di output, nel formato DWARF. Il file eatclib.o non è eseguibile da solo. Deve essere linkato. Quindi, chiamiamo gcc e lo istruiamo a collegare il programma per noi.
+</p>
+
+```
+gcc eatclib.o –o eatclib –no-pie
+```
+
+<p align=justify>
+Cosa di tutto ciò dice a gcc di linkare e non compilare? L'unico file di input menzionato nel comando è un file .o contenente codice oggetto. Questo fatto da solo dice a gcc che tutto ciò che deve essere fatto è collegare il file .o con la libreria runtime C per produrre l'eseguibile finale. La parte –o eatclib dice a gcc che il nome del file eseguibile finale deve essere eatclib. Includere il delimitatore –o è importante. Se non dici a gcc con precisione come nominare il file eseguibile finale, si fermerà e darà al file il nome predefinito per un eseguibile, a.out. L'argomento della riga di comando -no-pie dice a gcc di non collegare l'eseguibile per la tecnologia degli eseguibili indipendenti dalla posizione (PIE). Spiegherò questo in dettaglio più avanti in questo capitolo. Si tratta di ridurre la vulnerabilità di un eseguibile a determinati exploit. È accettabile utilizzare l'opzione –no-pie in programmi semplici e didattici come quelli in questo libro. Per il codice di produzione, hai bisogno di PIE.
+</p>
+
+### Perchè no GAS?
+
+<p align=justify>
+Potresti chiederti perché, se c'è un assemblatore perfettamente funzionante installato automaticamente con ogni copia di Linux, mi sia preoccupato di mostrarti come installarne e utilizzarne un altro. Due motivi:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		L'assemblatore GNU gas utilizza una sintassi peculiare che è completamente diversa da quella di tutti gli altri assemblatori familiari utilizzati nel mondo x86/x64, incluso NASM. Ha un insieme intero di mnemonici di istruzione unici. Li trovo brutti, non intuitivi e difficili da leggere. Questa è la sintassi AT&T, così chiamata perché è stata creata da AT&T come una notazione di assembly portatile per rendere più facile il porting di Unix da una CPU sottostante a un'altra. È brutta in parte perché è stata progettata per essere generica e può essere riconfigurata per qualsiasi architettura CPU ragionevole che potrebbe apparire.
+		</p>
+	</li>
+		<li>
+		<p align=justify>
+		Più specificamente, il concetto di un "linguaggio assembly portatile" è, a mio avviso, una contraddizione in termini. Un linguaggio assembly dovrebbe essere un riflesso diretto, completo, uno-a-uno dell'architettura della macchina sottostante. Qualsiasi tentativo di rendere un linguaggio assembly generico allontana il linguaggio dalla macchina e limita la capacità di un programmatore assembly di dirigere la CPU come è stata progettata per essere diretta. L'organizzazione che crea e evolve un'architettura CPU è nella posizione migliore per definire i mnemonici delle istruzioni di una CPU e la sintassi del linguaggio assembly senza compromessi. È per questo che utilizzerò sempre e insegnerò i mnemonici Intel.
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+Se fosse così semplice, non menzionerei affatto il gas, poiché non è necessaria l'unità di gas per scrivere in linguaggio assembly Linux in NASM. Tuttavia, uno dei principali modi per imparare molte delle chiamate standard della libreria C è utilizzarle in brevi programmi C e poi ispezionare i file di output assembly .s generati da gcc. Pertanto, avere una certa capacità di leggere le mnemotecniche AT&T può essere utile mentre ti senti a tuo agio con le convenzioni di chiamata C utilizzate sotto Linux. Fornirò una panoramica della sintassi AT&T un po' più avanti in questo capitolo.
+</p>
+
+### Linking alla libreria standand del C
+
+<p align=justify>
+Quando scrivi un programma interamente in assembly utilizzando un makefile e l'utility make, scrivi tutto. A parte un'occasionale immersione nei servizi del kernel Linux, tutto il codice che viene eseguito è solo il codice che scrivi. L'integrazione di librerie di procedure in linguaggio assembly esterno complica un po' questo quadro, soprattutto se non sei tu a aver scritto quelle librerie. L'integrazione di funzioni nella libreria standard C (che per Linux si chiama glibc) complica ulteriormente la situazione. Può essere un conforto sapere che l'integrazione delle routine di glibc è più semplice nel linguaggio assembly x64 rispetto a quanto lo fosse nell'assembly x86 a 32 bit. Come ho accennato in precedenza, scrivere un programma in assembly in SASM è molto simile a scrivere un programma C nel quale scrivi il corpo principale del programma in assembly. I programmi generati da SASM sono una sorta di ibrido tra C e linguaggio assembly. Se crei un programma in linguaggio assembly per Linux che integra le funzioni di glibc, stai facendo praticamente la stessa cosa. La struttura di questo ibrido è mostrata nella figura di sotto
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/structure_of_hybrid_C_assembly.png">
+</div>
+
+<p align=justify>
+Il tuo programma non è più il semplice affare di iniziare dall'alto e scendere come lo erano i tuoi precedenti programmi di assemblaggio. glibc non è solo una raccolta di funzioni disgiunte. È la libreria di runtime standard C e, come parte della sua standardità, impone una certa struttura a tutti i programmi che si collegano ad essa. Questa struttura include un blocco di codice che viene eseguito prima che il tuo programma inizi e un altro blocco di codice che viene eseguito dopo che il tuo programma è terminato. Il tuo programma è chiamato dal codice di avvio come se fosse una procedura (con l'istruzione CALL) e restituisce il controllo al codice della libreria C utilizzando un'istruzione RET. Tecnicamente, il tuo programma è una procedura (ancora una volta, chiamata funzione nel mondo C) e aiuta pensarlo come tale. È così che l'ho rappresentato nella figura di sopra. Quando Linux inizia a eseguire il tuo programma, in realtà inizia, non dall'inizio del codice che hai scritto, ma dall'inizio del blocco di codice di avvio. Quando il codice di avvio ha fatto ciò che deve, esegue un'istruzione CALL che porta l'esecuzione nel tuo codice di assemblaggio. Quando il tuo programma in linguaggio assembly restituisce il controllo al suo chiamante tramite RET, inizia l'esecuzione del codice di chiusura, ed è il codice di chiusura che restituisce effettivamente il controllo a Linux tramite la necessaria chiamata di sistema al kernel. Una volta che colleghi codice C ai tuoi programmi di assemblaggio, non è una buona idea utilizzare il servizio SYSCALL 60 per terminare un programma e tornare a Linux. Ci sono alcune operazioni di gestione da fare, che possono includere lo svuotamento dei buffer e la chiusura dei file o delle connessioni di rete. Il codice di chiusura C fa tutto questo, e se lo salti, possono succedere brutte cose. Quelle brutte cose probabilmente non accadranno quando stai lavorando su semplici esempi di codice come quelli presentati in questo libro, ma una volta che inizi a diventare ambizioso e scrivere programmi di mille righe, tutto ciò diventa possibile e ti causerà non poca disperazione. Fondamentalmente, quando lavori con C, fai le cose nel modo C. Tra il codice di avvio e il codice di chiusura, puoi fare quante più chiamate a glibc desideri. Quando colleghi il tuo programma usando gcc, il codice contenente le routine della libreria C che chiami è collegato al tuo programma. Nota bene che il codice di avvio e di chiusura, così come tutto il codice per le funzioni della libreria che il tuo programma chiama, è tutto fisicamente presente nel file eseguibile che generi con gcc.
+</p>
+
+### Convensioni di chiamata C
+
+<p align=justify>
+La libreria glibc non tratta in modo speciale i programmi in linguaggio assembly. I programmi in puro C funzionano quasi esattamente allo stesso modo, ed è per questo che la parte principale di un programma C è chiamata funzione main. È davvero una funzione, il codice standard della libreria C per l'avvio la chiama con un'istruzione CALL, e restituisce il controllo al codice di chiusura eseguendo un'istruzione RET. Il modo in cui il programma principale ottiene il controllo è quindi il primo esempio che vedrai di un insieme di regole che chiamiamo convenzioni di chiamata C. La libreria standard C non è niente se non coerente, e questo è il suo maggiore pregio. Tutte le funzioni della libreria C implementate su processori x64 seguono queste regole. Incidentalmente, fissale nei tuoi sinapsi sin dall'inizio, e perderai molto meno capelli di quanto ho fatto io cercando di capirle sbattendo la testa contro di esse. Prima di tutto, il tuo programma deve iniziare con l'etichetta globale main:. Usare _start: non funzionerà. La funzione main è etichettata come main:, punto. I programmi SASM iniziano sempre con main: perché SASM usa gcc per collegare il codice da glibc. Questa è la partenza. Il resto diventa piuttosto complicato piuttosto rapidamente.
+</p>
+
+### Chiamanti, Chiamati e Sovrascrittori
+
+<p align=justify>
+Se hai mai studiato la programmazione assembly per Linux a 32 bit, hai appreso che passare parametri a funzioni in stile C avveniva spingendo i parametri nello stack prima di effettuare la chiamata. Tutto scomparso. (Ok, quasi tutto scomparso. Ci tornerò.) La maggiore differenza singola tra le convenzioni di chiamata a 32 bit e quelle a 64 bit risiede nel modo in cui si passano i parametri alle funzioni. Passare i primi sei parametri a una funzione x64 avviene tramite registri piuttosto che nello stack. Se una funzione ha più di sei parametri (cosa poco comune e spesso una cattiva progettazione) i parametri rimanenti vengono passati nello stack. Questo è stato fatto perché abbiamo molti più registri ora di quanti ne avessimo nell'era a 32 bit. Spingere e sollevare dallo stack tocca la memoria e quindi è lento. Scrivere e leggere dai registri rimane all'interno della CPU e quindi è molto più veloce. La tecnologia moderna della cache della CPU rende l'uso dello stack più veloce rispetto ai tempi antichi, è vero, ma anche l'accesso alla cache della memoria è più lento rispetto all'accesso ai registri. Potresti ricordare che nei capitoli precedenti i programmi passavano parametri alle chiamate di funzione di Linux utilizzando l'istruzione x64 SYSCALL. Tutti i parametri del genere (almeno nei semplici programmi con cui abbiamo lavorato) vengono passati nei registri. Inoltre, c'è un sistema in questo: i primi sei parametri vengono passati in registri specifici in un ordine molto specifico. Questo ordine è il seguente:
+</p>
+
+1. RDI
+2. RSI
+3. RDX
+4. RCX
+5. R8
+6. R9
+
+<p align=justify>
+Il primo parametro passato a una funzione è sempre passato in RDI. Se ci sono due parametri da passare a una funzione, il primo è passato in RDI e il secondo in RSI, e così via. Questo è vero per le chiamate tramite SYSCALL, ed è anche vero per la chiamata delle funzioni della libreria C. L'ordine dei parametri nei registri è semplice. La parte successiva è sottile: quali registri può utilizzare internamente una funzione e quindi modificare, e quali registri devono rimanere invariati dopo l'esecuzione della funzione? Per dirlo in gergo da programmatore: quali registri possiamo sovrascrivere? Ancora una volta, c'è un sistema. Questi sette registri non possono essere sovrascritti da una funzione: RSP, RBP, RBX, R12, R13, R14 e R15. Questo gruppo di registri è chiamato registri non volatili, il che significa fondamentalmente registri che devono essere preservati (o lasciati non utilizzati) dall'ebitente. Aspetta—cosa? Maggiore gergo. Le funzioni possono chiamare altre funzioni. Una funzione che chiama un'altra funzione è il chiamante. La funzione che viene chiamata è l'ebitente. C'è una sorta di rapporto di fiducia tra il chiamante e l'ebitente: l'ebitente promette al chiamante che i valori di RSP, RBP, RBX, R12, R13, R14 e R15 saranno gli stessi quando l'ebitente termina l'esecuzione rispetto a quando l'ebitente inizia l'esecuzione. L'ebitente può utilizzare i registri non volatili, ma quelli che utilizza devono prima essere salvati (spinti nello stack) e ripristinati (estratti dallo stack) prima che l'ebitente torni al chiamante. Gli altri registri sono chiamati volatili, il che significa che l'ebitente può usarli e modificarli senza problemi. Questi sono RAX, RCX, RDX, RSI, RDI, R8, R9, R10 e R11. Se sei sveglio, noterai che tutti e sei i registri utilizzati nella convenzione di chiamata C sono registri volatili. Questo ha senso poiché il chiamante li sta già utilizzando per passare valori all'ebitente. Ma cosa succede se il chiamante sta già utilizzando alcuni dei registri volatili? Se il chiamante desidera che uno dei registri volatili sopravviva a un viaggio attraverso l'ebitente, il chiamante deve salvarli prima di chiamare la funzione dell'ebitente. Dopo che l'ebitente è tornato al chiamante, il chiamante ripristina quindi i registri volatili che aveva salvato nello stack estraendo i valori salvati nei registri.
+</p>
+
+<p align=justify>
+Questo implica molto più push e pop di quanto accada di solito. Una delle sfide che un buon programmatore di linguaggio assembly deve affrontare è semplicemente rimanere fuori dalla memoria, il che include il push e il pop dello stack. Abbiamo più registri da utilizzare ora e l'ingegnosità nell'uso di quei registri ripaga, rendendo l'accesso allo stack meno frequente. 
+</p>
+
+<p align=justify>
+<i>Salva solo i registri che devi salvare, dopo aver esaurito tutte le altre opzioni.</i> 
+</p>
+
+<p align=justify>
+Ci sono state ragioni per cui il set di istruzioni x64 ha eliminato PUSHA e POPA.
+</p>
+
+### Impostare lo Stack Frame
+
+<p align=justify>
+Nonostante ci siano più registri, lo stack è ancora estremamente importante nel lavoro di linguaggio assembly, e questo è doppiamente vero nei programmi che si interfacciano con il C, perché nel C (e in verità nella maggior parte degli altri linguaggi di alto livello a codice nativo, inclusi Pascal) lo stack ha un ruolo centrale. Un meccanismo di basso livello che ha a che fare con il lavoro in assembly su Linux è quello del frame dello stack. I compilatori si basano sui frame dello stack per creare variabili locali nelle funzioni, e mentre i frame dello stack sono meno utili nel lavoro di puro assembly, devi comprenderli se intendi chiamare funzioni scritte da un compilatore di linguaggio di alto livello. Un frame dello stack è una posizione nello stack contrassegnata come appartenente a una particolare funzione, inclusa la funzione main(). È fondamentalmente la regione tra gli indirizzi contenuti in due registri: il puntatore base RBP e il puntatore dello stack RSP. Questo si spiega meglio di quanto non si disegni; vedi figura di sotto. Un frame dello stack viene creato spingendo una copia di RBP nello stack e poi copiando il puntatore dello stack RSP nel registro RBP. Le prime due istruzioni in qualsiasi programma assembly che rispetti le convenzioni di chiamata del C devono essere queste:
+</p>
+
+```asm
+ push rbp
+ mov  rbp,rsp
+```
+
+<p align=justify>
+Molte persone chiamano questo il prologo del programma, poiché deve essere incluso all'inizio di qualsiasi programma che rispetti le convenzioni di chiamata C. A meno che il prologo non sia presente, il debugger gdb e le sue interfacce come Insight non opereranno correttamente. Una volta che RBP è ancorato come un capo del tuo frame dello stack, il puntatore dello stack RSP è libero di muoversi su e giù nello stack come il tuo codice richiede per la memoria temporanea. Chiamare funzioni in glibc sotto x64 richiede meno push e pop rispetto a quanto non fosse nel vecchio mondo a 32 bit, ora che la maggior parte dei parametri viene passata alle funzioni in registri.
+</p>
+
+<div aling=center>
+<img src"https://github.com/TheBitPoets/2cornot2c/blob/main/images/stack_frame.png">
+</div>
+
+### Distruggere lo Stack Frame (in the Epilog - epilogo)
+
+<p align=justify>
+Prima che il tuo programma termini la sua esecuzione restituendo il controllo al codice di avvio/chiusura (fai riferimento alla penultima figura se questa relazione non è chiara), il suo frame dello stack deve essere distrutto. Questo sembra a molte persone come se stesse accadendo qualcosa di sbagliato, ma non è così: il frame dello stack deve essere distrutto, altrimenti il tuo programma andrà in crash. (“Riporre” potrebbe essere un termine migliore di “distruggere”... ma i programmatori preferiscono linguaggio colorito, come imparerai una volta che trascorrerai del tempo significativo tra loro.) Il tuo stack deve essere pulito prima di distruggere il frame dello stack e restituire il controllo al codice di chiusura. Questo significa semplicemente che eventuali registri salvati dal chiamato e valori temporanei che potresti aver inviato nello stack durante l'esecuzione del programma devono essere eliminati. Pop quello che pushi! Una volta fatto ciò, annulliamo la logica seguita nella creazione del frame dello stack: estraiamo il valore RBP del chiamante dallo stack e usciamo, tramite due istruzioni che insieme vengono spesso chiamate epilogo.
+</p>
+
+```asm
+ pop rbp
+ ret
+```
+
+<p align=justify>
+Ecco! Il frame dello stack è scomparso e lo stack è ora nello stesso stato in cui si trovava quando il codice di avvio ha passato il controllo al tuo programma. L'istruzione RET invia il controllo al codice di chiusura della libreria C, in modo che possa fare qualsiasi operazione di pulizia necessaria prima di restituire il controllo a Linux.
+</p>
+
+### Allineamento dello Stack
+
+<p align=justify>
+Lo scopo del prologo e dell'epilogo non è immediatamente ovvio, specialmente se si arriva a x64 per la prima volta dopo aver lavorato nel mondo Linux a 32 bit. Si riduce a un nuovo requisito: lo stack x64 deve essere allineato su un confine di 16 byte. Ciò significa che quando si ritorna da una funzione (inclusa main:), il puntatore dello stack deve puntare a un indirizzo divisibile uniformemente per 16. Perché è un problema? Ricorda che quando viene chiamata una procedura (una funzione nel gergo C), il chiamante spinge l'indirizzo di ritorno nello stack. Un indirizzo di ritorno è di 8 byte. Ma se accedi allo stack dopo aver aggiunto 8 byte ad esso (anziché 16), possono succedere cose cattive. Non è una garanzia, ma può succedere, specialmente quando il tuo codice diventa più ambizioso degli esempi semplici in questo libro. Il prologo spinge RBP nello stack. Questo aggiunge altri 8 byte allo stack, per un totale di 16. Lo stack è quindi ancora allineato. Nell'epilogo, riprendi il valore di RBP dallo stack. L'istruzione RET che termina l'epilogo preleva l'indirizzo di ritorno dallo stack nel puntatore delle istruzioni, quindi hai rimosso un totale di 16 byte dallo stack. Lo stack era allineato quando la tua funzione main: ha preso il controllo, grazie al codice di avvio della glibc, e sarebbe meglio se continuasse a essere allineato quando il tuo programma esegue l'istruzione RET che restituisce il controllo al codice di spegnimento della glibc. L'allineamento dello stack è richiesto anche quando la glibc non è coinvolta, come nei programmi che utilizzano un'etichetta _start: invece di main:. Questa volta la glibc non ti aiuterà perché non è presente. Un prologo e un epilogo devono comunque essere presenti, anche se c'è un po' più da fare rispetto a quando colleghi la glibc nel tuo programma. Il prologo richiesto è chiamato il prologo di allineamento dello stack:
+</p>
+
+```asm
+ push rbp
+ mov rbp,rsp
+ and rsp,-16
+```
+
+<p align=justify>
+La differenza risiede nell'istruzione AND RSP,-16. Questa istruzione azzera i quattro bit più bassi del puntatore dello stack RSP. L'ultima cifra esadecimale dell'indirizzo diventa quindi 0 e lo stack è allineato su un confine di 16 byte. Se sei attento nel tuo utilizzo dello stack, esso rimarrà allineato, come vedremo tra poco. Ecco l'epilogo dell'allineamento dello stack.
+</p>
+
+```asm
+ mov rsp,rbp
+ pop rbp
+```
+
+<p align=justify>
+Un'altra differenza quando si utilizza _start è che l'epilogo non può restituire il controllo a Linux eseguendo un'istruzione RET. Devi usare il servizio Exit tramite SYSCALL, come ho spiegato nei capitoli precedenti. Dopo aver eseguito POP RBP, puoi utilizzare il servizio SYSCALL 60 per restituire il controllo a Linux. E per quanto riguarda le procedure che scrivi da solo? Idealmente, tutte le procedure dovrebbero iniziare con il prologo e finire con l'epilogo. Spesso puoi fare a meno di utilizzare il prologo/epilogo nelle tue funzioni, specialmente se sono semplici e non fanno molto con lo stack. Ho omesso il prologo/epilogo in alcuni dei programmi esempio di questo libro per semplificare. Inoltre, non approfondisco i frame dello stack in dettaglio fino a questo capitolo finale, ed è impossibile dare senso all'allineamento dello stack senza sapere come funziona lo stack. Più avanti , nell'esempio, randtest, il programma passa un settimo parametro a printf() mettendo il parametro nello stack. Mantenere lo stack allineato su un confine di 16 byte viene fatto in un altro modo: mettendo un elemento "dummy" nello stack (qui, RAX; il suo contenuto è ininfluente) e poi, dopo aver chiamato printf(), aggiungendo 16 a RSP invece di 8. Ecco dove viene fatto; non preoccuparti se non capisci tutto nel seguente frammento.
+</p>
+
+```asm
+shownums:
+    mov r12,qword [Pulls]    ; Put pull count into r12
+    xor r13,r13
+ .dorow:
+    mov rdi,ShowArray        ; Pass address of base string
+    mov rsi,[Stash+r13*8+0]  ; Pass first element
+    mov rdx,[Stash+r13*8+8]  ; Pass second element
+    mov rcx,[Stash+r13*8+16] ; Pass third element
+    mov r8,[Stash+r13*8+24]  ; Pass fourth element
+    mov r9,[Stash+r13*8+32]  ; Pass fifth element
+    push rax                 ; To keep the stack 16 bytes
+ aligned
+    push qword [Stash+r13*8+40] ; Pass sixth element on the
+ stack.
+    xor rax,rax         ; Tell printf() no vector values
+ coming
+    call printf         ; Display the random numbers
+    add rsp,16          ; Stack cleanup: 2 item X 8 bytes = 16
+```
+
+<p align=justify>
+In questa parte del codice, il push di RAX decrementa lo stack di 8. Il push del settimo parametro sullo stack decrementa ulteriormente lo stack di altri 8, per un totale di 16, mantenendo lo stack allineato. Finora tutto bene. Ma questo è solo metà del lavoro. Quindi, dopo che la chiamata a printf() è stata effettuata, 'ripuliamo' lo stack con un po' di aritmetica veloce: aggiungiamo di nuovo le dimensioni sia del parametro sia della copia fittizia di RAX al puntatore dello stack. Nel frammento, il push di due valori QWORD sullo stack ha spostato l'indirizzo in RSP in direzione della memoria verso il basso di 16 byte. Per ripulire, aggiungiamo di nuovo questi 16 byte con un'istruzione ADD RSP,16. Lo stack sarà quindi di nuovo sia allineato che 'pulito'.
+</p>
+
+<p align=justify>
+In precedenza ti ho detto di "pop what you push". A volte il pop non è pratico. Finché ripristini il puntatore dello stack al valore che aveva prima del push, tutto funzionerà. Se metti valori nello stack come memoria locale, assicurati di aggiungere alla RSP la dimensione totale di tutti quei valori per rendere di nuovo "pulito" lo stack. E se non stai mettendo un multiplo di 16 byte nello stack, riempilo spingendo valori fittizi fino a quando il totale non è un multiplo di 16. Ora, perché gli autori dell'ABI System V x86-64 hanno imposto uno stack allineato a 16 byte? Mantenere lo stack allineato su confini di 16 byte in ogni momento semplifica il codice per diversi aspetti, incluso l'uso dei vettori SSE quando vengono memorizzati nello stack. Non tratterò SSE o gli altri sottosistemi matematici nei processori Intel in questo libro, quindi non preoccuparti se non ha senso per ora. Una volta che avrai acquisito esperienza nel linguaggio assembly, ti incoraggio a esplorare le istruzioni matematiche x64 e i registri dei vettori. Una nota finale sull'allineamento dello stack: SASM ha problemi con il prologo e l'epilogo che mostro qui. Ha bisogno dell'istruzione mov rbp, rsp all'inizio, ma nulla oltre a questo. L'epilogo di SASM è semplicemente il RET finale.
+</p>
+
+### Caratteri via Puts()
+
+<p align=justify>
+Una delle funzioni più semplici e utili in glibc è puts(), che invia caratteri all'output standard. Effettuare una chiamata a puts() dal linguaggio assembly è così semplice che può essere fatto in tre righe di codice. Il programma di sotto dimostra puts(). Il programma eatlibc include il prologo e l'epilogo. Se rimuovi le tre istruzioni che impostano e fanno la chiamata a puts(), puoi trattare il resto come boilerplate per creare nuovi programmi che chiamano funzioni in glibc. Chiamare puts() in questo modo è un buon esempio, in miniatura, del processo generale che utilizzerai per chiamare la maggior parte delle routine delle librerie C. Ancora una volta, in conformità con le convenzioni di chiamata x64 generali, posizioniamo l'indirizzo della stringa da visualizzare in RDI. Non è necessario passare un valore della lunghezza della stringa. La funzione puts() inizia all'inizio della stringa all'indirizzo passato in RDI e invia caratteri a stdout fino a quando non incontra un carattere 0 (null). Qualunque sia il numero di caratteri che si trova tra il primo byte della stringa e il primo null, è il numero di caratteri che la console riceve.
+</p>
+
+```asm
+;  Executable name : eatlibc
+;  Version         : 3.0
+;  Created date    : 11/12/2022
+;  Last update     : 5/13/2023
+;  Author          : Jeff Duntemann
+;  Description     : Demonstrates calls made into libc, using NASM 2.14.02 
+;                    to send a short text string to stdout with puts().
+;
+;  Build using these commands:
+;    nasm -f elf64 -g -F dwarf eatlibc.asm
+;    gcc eatlibc.o -o eatlibc
+
+
+SECTION .data           ; Section containing initialised data
+	
+EatMsg: db "Eat at Joe's!",0	
+	
+SECTION .bss            ; Section containing uninitialized data
+
+SECTION .text           ; Section containing code
+	
+extern puts             ; The simple "put string" routine from libc
+global main             ; Required so the linker can find the entry point
+	
+main:
+    push rbp            ; Set up stack frame for debugger
+	mov rbp,rsp
+;;; Everything before this is boilerplate; use it for all ordinary apps!
+		
+    mov rdi,EatMsg      ; Put address of string into rdi	
+    call puts           ; Call libc function for displaying strings
+    xor rax,rax         ; Pass a 0 as the program's return value.
+
+;;; Everything after this is boilerplate; use it for all ordinary apps!
+	mov rsp,rbp	        ; Destroy stack frame before returning
+    pop rbp
+
+    mov rax,60
+    mov rdi,0
+    syscall             ; Return control to Linux
+```
+### Testo formattato con printf()
+
+
+
 ## Controllo dei processi
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.01.png)
