@@ -11547,6 +11547,1127 @@ D'altra parte, a meno che tu non stia veramente scrivendo qualcosa che dipende a
 Questo è l'intero programma principale. L'intera cosa è stata assorbita da invocazioni di macro. È questo un linguaggio assembly, o è—buon Dio!—un dialetto di BASIC? Ammetto che ho sostituito l'intero programma principale con invocazioni di macro qui per farlo notare, ma è certamente possibile creare così tante macro che i tuoi programmi assembly iniziano a sembrare un linguaggio di alto livello strano. In realtà, ho usato qualcosa di simile alla fine degli anni '70 quando ero programmatore per la Xerox. Avevano un linguaggio interno che era fondamentalmente un assemblatore 8080 con carichi di macro da utilizzare su microcomputer 8080 basati su longobarde (molto lenti; ci crederesti 1 megahertz?). Funzionava. Doveva farlo, con quella poca potenza computazionale per eseguire i suoi processi. La difficile verità è che le macro possono chiarire cosa sta facendo un programma, oppure, usate in modo eccessivo, possono oscurare completamente come funzionano le cose realmente "sotto la superficie". Nei miei progetti, uso le macro esclusivamente per ridurre il disordine di sequenze di istruzioni molto ripetitive, specialmente cose come l'impostazione dei registri prima di effettuare chiamate di sistema Linux. Del resto, l'intero obiettivo della programmazione assembly è promuovere una comprensione completa di ciò che sta accadendo dove il software incontra la CPU. Qualsiasi cosa che ostacola quella comprensione dovrebbe essere usata con cautela, abilità e (soprattutto) parsimonia—o potresti anche benissimo imparare il C.
 </p>
 
+### Le stringhe in lunguaggio Assembly
+
+<p align=justify>
+A volte le parole ci tradiscono, raccogliendo significati con la stessa facilità con cui un magnete raccoglie trucioli di ferro. La parola "string" è uno dei principali colpevoli qui. Significa grossomodo la stessa cosa in tutta la programmazione informatica, ma ci sono una moltitudine di piccole variazioni su quel tema unico. Se hai imparato a conoscere le stringhe in Pascal (come ho fatto io), scoprirai che ciò che sai non è totalmente applicabile quando programmi in C/C++, Python, BASIC o (soprattutto) assembly. Quindi ecco la Vista Generale: Una stringa è qualsiasi gruppo contiguo di byte in memoria, contenente qualsiasi tipo di dati, di qualsiasi dimensione arbitraria che il tuo sistema operativo consente. (Per un moderno Linux, questo può essere molto.) Il concetto fondamentale di una stringa in un linguaggio assembly è che i suoi byte costituenti sono tutti in fila, senza interruzioni. Questo è piuttosto fondamentale. La maggior parte dei linguaggi di alto livello si basa sul concetto di stringa in diversi modi. Le implementazioni di Pascal che discendono da UCSD (e successivamente Turbo) Pascal trattano le stringhe come un tipo di dati separato, con un contatore di lunghezza all'inizio della stringa per indicare quanti byte ci sono nella stringa. In C, una stringa non ha un byte di lunghezza davanti a sé. Invece, si dice che una stringa C finisca quando viene incontrato un byte con un valore binario di 0. Questo sarà importante nel lavoro di assembly, molto del quale si relaziona intimamente con C e la libreria standard C, dove vive il meccanismo di gestione delle stringhe di C. In BASIC, le stringhe sono memorizzate in qualcosa chiamato string space, che ha molta codifica incorporata associata, per gestire lo spazio delle stringhe e gestire la manipolazione profonda dei dati delle stringhe. Quando inizi a lavorare in assembly, devi rinunciare a tutte quelle cose dei linguaggi di alto livello. Le stringhe in assembly sono semplicemente regioni contigue di memoria. Iniziano a un indirizzo specificato, avanzano per un certo numero di byte e si fermano. Non c'è un contatore di lunghezza per dirti quanti byte ci sono nella stringa, senza caratteri di confine standard come il numero binario 0 per indicare dove inizia o finisce una stringa. Puoi certamente scrivere routine in linguaggio assembly che allocano stringhe in stile Pascal o in stile C e le manipolano. Tuttavia, per evitare confusione, devi quindi pensare ai dati elaborati dalle tue routine come stringhe Pascal o C piuttosto che come stringhe di linguaggio assembly.
+</p>
+
+<p align=justify>
+Le stringhe in assembly non hanno valori di confine o indicatori di lunghezza. Possono contenere qualsiasi valore, incluso il 0 binario. Infatti, devi davvero smettere di pensare alle stringhe in termini di regioni specifiche nella memoria. Dovresti invece pensare alle stringhe in termini dei valori dei registri che le definiscono. È leggermente al contrario rispetto a come pensi alle stringhe in linguaggi come Pascal, ma funziona: hai una stringa quando imposti un registro per puntarne una. E una volta che punti a una stringa, la lunghezza di quella stringa è definita dal valore che poni nel registro RCX. Questo è fondamentale, e a rischio di ripetermi lo dirò di nuovo: le stringhe in assembly sono completamente definite dai valori che poni nei registri. C'è un insieme di presupposti sulle stringhe e sui registri integrati nel silicio della CPU. Quando esegui una delle istruzioni per le stringhe (come descriverò a breve), la CPU utilizza quei presupposti per determinare quale area di memoria legge o scrive.
+</p>
+
+### Stringa Sorgente e stringa Destinazione
+
+<p align=justify>
+Ci sono due tipi di stringhe nel lavoro in assembly x64. Le stringhe di origine sono le stringhe da cui si legge. Le stringhe di destinazione sono le stringhe su cui si scrive. La differenza tra le due è solo una questione di registri; le stringhe di origine e le stringhe di destinazione possono sovrapporsi. Infatti, la stessa regione di memoria può essere sia una stringa di origine che una stringa di destinazione, tutto allo stesso tempo. Qui ci sono le assunzioni che la CPU fa sulle stringhe quando esegue un'istruzione di stringa in modalità lunga a 64 bit:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		Una stringa sorgente è puntata da RSI.
+ 		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Una stringa di destinazione è puntata da RDI.
+ 		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		La lunghezza di entrambi i tipi di stringhe è il valore che inserisci in RCX. Come questa lunghezza viene utilizzata dalla CPU dipende dall'istruzione specifica e da come viene utilizzata.
+ 		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		I dati provenienti da una stringa sorgente o destinati a una stringa di destinazione devono iniziare il viaggio da, terminare il viaggio a, o passare attraverso il registro RAX.
+ 		</p>
+	</li>
+</ul>
+
+
+<p align=justify>
+La CPU è in grado di riconoscere contemporaneamente sia una stringa di origine che una stringa di destinazione, perché RSI e RDI possono contenere valori indipendenti l'uno dall'altro. Tuttavia, poiché esiste un solo registro RCX, la lunghezza delle stringhe di origine e di destinazione deve essere identica quando vengono utilizzate contemporaneamente, come nella copia di una stringa di origine in una stringa di destinazione. Un modo per ricordare la differenza tra le stringhe di origine e le stringhe di destinazione è costituito dai relativi registri di offset. Il "SI" in RSI significa "indice di origine" e il "DI" in RDI significa "indice di destinazione". La "R", come ormai sapete, è la convenzione in base alla quale i registri per uso generale sono contrassegnati con una dimensione di 64 bit.
+</p>
+
+### Uno schermo virtuale di visualizzazione del testo
+
+<p align=justify>
+Il modo migliore per cementare tutte quelle informazioni di base sulle stringhe nella tua mente è vedere alcune istruzioni sulle stringhe in azione. Nel codice di soto  ho implementato un meccanismo interessante utilizzando le istruzioni sulle stringhe: un semplice display di testo virtuale per la console di Linux. Ai tempi della programmazione in modalità reale sotto DOS su macchine compatibili con PC, avevamo accesso senza restrizioni alla memoria del buffer di aggiornamento del video sullo strumento grafico del PC. Se scrivevamo un carattere ASCII o una stringa di caratteri nella regione di memoria che comprende il buffer di visualizzazione della scheda, Bam! I glifi di testo associati apparivano istantaneamente sullo schermo. Nelle edizioni precedenti di questo libro che trattavano DOS, ho sfruttato tale meccanismo di accesso diretto al display e presentato una serie di routine di visualizzazione utili che dimostravano le istruzioni sulle stringhe dell'architettura Intel. Sotto Linux, questo non è più possibile. Il buffer di visualizzazione grafica è ancora lì, ma ora è di proprietà del sistema operativo Linux, e le applicazioni in spazio utente non possono scriverci o nemmeno leggerlo direttamente. Scrivere applicazioni in modalità testo in assembly per la console di Linux non è affatto semplice come lo era sotto DOS. Nel Capitolo 10, ho spiegato come un controllo molto semplice del terminale della console potesse essere fatto scrivendo sequenze di escape sulla console tramite la SYSCALL sys_write. Tuttavia, tranne per i due o tre comandi più semplici, le variazioni nell'implementazione del terminale rendono l'uso di sequenze di escape "nude" un po' rischioso. Una determinata sequenza potrebbe significare una cosa per un terminale e qualcosa di completamente diverso per un altro. Le librerie di codice come ncurses fanno grandi sforzi per rilevare e adattarsi alla moltitudine di specifiche dei terminali esistenti. Il codice per farlo non è qualcosa che puoi assemblare in un pomeriggio e, in effetti, è un argomento troppo ampio da trattare in dettaglio in un libro introduttivo come questo.
+</p>
+
+<p align=justify>
+Tuttavia... Possiamo fare qualche trucco contro lo scorbuto e imparare alcune cose facendoli. Uno consiste nell'allocare il nostro buffer di aggiornamento video di testo in memoria come variabile denominata e scrivere periodicamente l'intero buffer nella console Linux tramite una singola istruzione SYSCALL. I nostri PC sono diventati estremamente veloci dall'era DOS e i buffer video di testo non sono grandi. Un buffer di visualizzazione del testo da 25 × 80 è lungo solo 2.000 caratteri e il tutto può essere inviato alla console Linux con una singola chiamata sys_write SYSCALL. Il buffer appare sulla console istantaneamente, almeno per quanto qualsiasi osservatore umano possa discernere. L'inserimento del testo nel buffer è una semplice questione di calcolo dell'indirizzo di una data posizione di riga e colonna nel buffer e di scrittura dei valori dei caratteri ASCII nella variabile del buffer a partire da quell'indirizzo. Dopo ogni modifica della variabile buffer, è possibile aggiornare la visualizzazione della console scrivendo l'intero buffer nella console tramite SYSCALL. Gli esperti stanchi potrebbero chiamarla "forza bruta" (e sì, non è neanche lontanamente versatile come la libreria ncurses), ma è facile da capire. Non ti dà il controllo sul colore o sugli attributi del carattere (sottolineatura, lampeggiamento e così via), ma ti darà una buona comprensione di base delle istruzioni della stringa x86. Dai un'occhiata al codice. Nelle sezioni seguenti, lo esaminerò pezzo per pezzo. Si noti che è disponibile un file separato per la compilazione tramite SASM, denominato vidbuff1gcc.asm. I due file sono quasi identici e differiscono quasi interamente negli indirizzi iniziali globali _start rispetto a quelli principali, richiesti da SASM
+</p>
+
+```asm
+;  Executable name : vidbuff1
+;  Version         : 2.0
+;  Created date    : 10/12/2022
+;  Last update     : 7/18/2023
+;  Author          : Jeff Duntemann
+;  Description     : A simple program in assembly for Linux, using NASM 2.14.02,
+;                  : demonstrating string instruction operation by "faking" 
+;                  : full-screen memory-mapped text I/O.
+;
+;    Note that the output to the console from this program will NOT display
+;    correctly unless you have enabled the IBM850 character encoding in
+;    the terminal program being used to display the console! 
+;
+
+SECTION .data           ; Section containing initialized data
+    EOL     equ 10      ; Linux end-of-line character
+    FILLCHR equ 32      ; ASCII space character
+    HBARCHR equ 196     ; Use dash char if this won't display
+    STRTROW equ 2       ; Row where the graph begins
+
+; We use this to display a ruler across the screen. 
+    TenDigits   db 31,32,33,34,35,36,37,38,39,30
+    DigitCount  db 10
+    RulerString db "12345678901234567890123456789012345678901234567890123456789012345678901234567890" 
+    RULERLEN    equ $-RulerString
+                      
+; The dataset is just a table of byte-length numbers:
+    Dataset db 9,17,71,52,55,18,29,36,18,68,77,63,58,44,0
+    Message db "Data current as of 5/13/2023"
+    MSGLEN  equ $-Message
+
+; This escape sequence will clear the console terminal and place the
+; text cursor to the origin (1,1) on virtually all Linux consoles:
+    ClrHome db 27,"[2J",27,"[01;01H"
+    CLRLEN  equ $-ClrHome   ; Length of term clear string
+	
+SECTION .bss            ; Section containing uninitialized data	
+
+    COLS    equ 81          ; Line length + 1 char for EOL
+    ROWS    equ 25          ; Number of lines in display
+    VidBuff resb COLS*ROWS  ; Buffer size adapts to ROWS & COLS
+
+SECTION .text           ; Section containing code
+
+global  _start          ; Linker needs this to find the entry point!
+
+ClearTerminal:
+    push r11            ; Save all modified registers
+    push rax
+    push rcx
+    push rdx
+    push rsi
+    push rdi
+
+    mov rax,1           ; Specify sys_write call
+    mov rdi,1           ; Specify File Descriptor 1: Standard Output
+    mov rsi,ClrHome     ; Pass address of the escape sequence
+    mov rdx,CLRLEN      ; Pass the length of the escape sequence
+    syscall             ; Make system call
+
+    pop rdi             ; Restore all modified registers
+    pop rsi
+    pop rdx
+    pop rcx
+    pop rax
+    pop r11
+    ret
+
+;-------------------------------------------------------------------------
+; Show:         Display a text buffer to the Linux console
+; UPDATED:      5/10/2023
+; IN:           Nothing
+; RETURNS:      Nothing
+; MODIFIES:     Nothing
+; CALLS:        Linux sys_write
+; DESCRIPTION:  Sends the buffer VidBuff to the Linux console via sys_write.
+;               The number of bytes sent to the console is calculated by
+;               multiplying the COLS equate by the ROWS equate.
+
+Show:	
+    push r11           ; Save all registers we're going to change
+    push rax
+    push rcx
+    push rdx
+    push rsi
+    push rdi
+    mov rax,1          ; Specify sys_write call
+    mov rdi,1          ; Specify File Descriptor 1: Standard Output
+    mov rsi,VidBuff    ; Pass address of the buffer
+    mov rdx,COLS*ROWS  ; Pass the length of the buffer
+    syscall            ; Make system call
+    pop rdi            ; Restore all modified registers
+    pop rsi
+    pop rdx
+    pop rcx
+    pop rax
+    pop r11
+    ret
+
+
+;-------------------------------------------------------------------------
+; ClrVid:       Clears a buffer to spaces and replaces overwritten EOLs
+; UPDATED:      5/10/2023
+; IN:           Nothing
+; RETURNS:      Nothing
+; MODIFIES:     VidBuff, DF
+; CALLS:        Nothing
+; DESCRIPTION:  Fills the buffer VidBuff with a predefined character
+;               (FILLCHR) and then places an EOL character at the end
+;               of every line, where a line ends every COLS bytes in
+;               VidBuff.
+
+ClrVid:
+    push rax            ; Save registers that we change
+    push rcx
+    push rdi
+    cld                 ; Clear DF; we're counting up-memory
+    mov al,FILLCHR      ; Put the buffer filler char in AL
+    mov rdi,VidBuff     ; Point destination index at buffer
+    mov rcx,COLS*ROWS   ; Put count of chars stored into RCX
+    rep stosb           ; Blast byte-length chars at the buffer
+
+; Buffer is cleared; now we need to re-insert the EOL char after each line:
+    mov rdi,VidBuff     ; Point destination at buffer again
+    dec rdi             ; Start EOL position count at VidBuff char 0
+    mov rcx,ROWS        ; Put number of rows in count register
+.PtEOL:
+    add rdi,COLS        ; Add column count to RDI
+    mov byte [rdi],EOL  ; Store EOL char at end of row
+    loop .PtEOL         ; Loop back if still more lines
+    pop rdi             ; Restore caller's registers
+    pop rcx
+    pop rax
+    ret                 ; and go home!
+
+
+;-------------------------------------------------------------------------
+; WrtLn:        Writes a string to a text buffer at a 1-based X,Y position
+; UPDATED:      5/10/2023
+; IN:           The address of the string is passed in RSI
+;               The 1-based X position (row #) is passed in RBX
+;               The 1-based Y position (column #) is passed in RAX
+;               The length of the string in chars is passed in RCX
+; RETURNS:      Nothing
+; MODIFIES:     VidBuff, RDI, DF
+; CALLS:        Nothing
+; DESCRIPTION:  Uses REP MOVSB to copy a string from the address in RSI
+;               to an X,Y location in the text buffer VidBuff.
+
+WrtLn:
+    push rax        ; Save registers we will change
+    push rbx
+    push rcx
+    push rdi
+    cld             ; Clear DF for up-memory write
+    mov rdi,VidBuff ; Load destination index with buffer address
+    dec rax         ; Adjust Y value down by 1 for address calculation
+    dec rbx         ; Adjust X value down by 1 for address calculation
+    mov ah,COLS     ; Move screen width to AH
+    mul ah          ; Do 8-bit multiply AL*AH to AX
+    add rdi,rax     ; Add Y offset into vidbuff to RDI
+    add rdi,rbx     ; Add X offset into vidbuf to RDI
+    rep movsb       ; Blast the string into the buffer
+    pop rdi         ; Restore registers we changed
+    pop rcx
+    pop rbx
+    pop rax
+    ret             ; and go home!
+
+
+;-------------------------------------------------------------------------
+; WrtHB:        Generates a horizontal line bar at X,Y in text buffer
+; UPDATED:      5/10/2023
+; IN:           The 1-based X position (row #) is passed in RBX
+;               The 1-based Y position (column #) is passed in RAX
+;               The length of the bar in chars is passed in RCX
+; RETURNS:      Nothing
+; MODIFIES:     VidBuff, DF
+; CALLS:        Nothing
+; DESCRIPTION:  Writes a horizontal bar to the video buffer VidBuff, 
+;               at th1e 1-based X,Y values passed in RBX,RAX. The bar is
+;               "made of" the character in the equate HBARCHR. The
+;               default is character 196; if your terminal won't display
+;               that (you need the IBM 850 character set) change the
+;               value in HBARCHR to ASCII dash or something else supported
+;               in your terminal.
+
+WrtHB:
+    push rax         ; Save registers we change
+    push rbx
+    push rcx
+    push rdi
+    cld              ; Clear DF for up-memory write
+    mov rdi,VidBuff  ; Put buffer address in destination register
+    dec rax          ; Adjust Y value down by 1 for address calculation
+    dec rbx          ; Adjust X value down by 1 for address calculation
+    mov ah,COLS      ; Move screen width to AH
+    mul ah           ; Do 8-bit multiply AL*AH to AX
+    add rdi,rax      ; Add Y offset into vidbuff to EDI
+    add rdi,rbx      ; Add X offset into vidbuf to EDI
+    mov al,HBARCHR   ; Put the char to use for the bar in AL
+    rep stosb        ; Blast the bar char into the buffer
+    pop rdi          ; Restore registers we changed
+    pop rcx
+    pop rbx
+    pop rax
+    ret              ; And go home!
+
+
+;-------------------------------------------------------------------------
+; Ruler:        Generates a "1234567890"-style ruler at X,Y in text buffer
+; UPDATED:      5/10/2023
+; IN:           The 1-based X position (row #) is passed in RBX
+;               The 1-based Y position (column #) is passed in RAX
+;               The length of the ruler in chars is passed in RCX
+; RETURNS:      Nothing
+; MODIFIES:     VidBuff
+; CALLS:        Nothing
+; DESCRIPTION:  Writes a ruler to the video buffer VidBuff, at the 1-based
+;               X,Y position passed in RBX,RAX. The ruler consists of a
+;               repeating sequence of the digits 1 through 0. The ruler
+;               will wrap to subsequent lines and overwrite whatever EOL
+;               characters fall within its length, if it will not fit
+;               entirely on the line where it begins. Note that the Show
+;               procedure must be called after Ruler to display the ruler
+;               on the console.
+
+Ruler:
+    push rax         ; Save the registers we change
+    push rbx
+    push rcx
+    push rdx
+    push rdi
+    mov rdi,VidBuff  ; Load video buffer address to RDI
+    dec rax          ; Adjust Y value down by 1 for address calculation
+    dec rbx          ; Adjust X value down by 1 for address calculation
+    mov ah,COLS      ; Move screen width to AH
+    mul ah           ; Do 8-bit multiply AL*AH to AX
+    add rdi,rax      ; Add Y offset into vidbuff to RDI
+    add rdi,rbx      ; Add X offset into vidbuf to RDI
+        
+; RDI now contains the memory address in the buffer where the ruler
+; is to begin. Now we display the ruler, starting at that position:
+    mov rdx,RulerString ; Load address of ruler string into RDX
+DoRule: 
+    mov al,[rdx] ; Load first digit in the ruler to AL
+    stosb             ; Store 1 char; note that there's no REP prefix!
+    inc rdx           ; Increment RDX to point to next char in ruler string
+    loop DoRule       ; Decrement RCX & Go back for another char until RCX=0
+    pop rdi           ; Restore the registers we changed
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
+    ret               ; And go home!
+
+;-------------------------------------------------------------------------
+; MAIN PROGRAM:
+	
+_start:
+    push rbp
+    mov rbp,rsp
+    and rsp,-16
+
+; Get the console and text display text buffer ready to go:
+    call ClearTerminal ; Send terminal clear string to console
+    call ClrVid        ; Init/clear the video buffer
+
+; Next we display the top ruler:
+    mov rax,1        ; Load Y position to AL
+    mov rbx,1        ; Load X position to BL
+    mov rcx,COLS-1   ; Load ruler length to RCX
+    call Ruler       ; Write the ruler to the buffer
+
+; Thow up an informative message centered on the last line
+    mov rsi,Message  ; Load the address of the message to RSI
+    mov rcx,MSGLEN   ; and its length to RCX
+    mov rbx,COLS     ; and the screen width to RBX
+    sub rbx,rcx      ; Calc diff of message length and screen width
+    shr rbx,1        ; Divide difference by 2 for X value
+    mov rax,20       ; Set message row to Line 24
+    call WrtLn       ; Display the centered message
+
+; Here we loop through the dataset and graph the data:
+    mov rsi,Dataset  ; Put the address of the dataset in RSI
+    mov rbx,1        ; Start all bars at left margin (X=1)
+    mov r15,0        ; Dataset element index starts at 0
+.blast:	
+    mov rax,r15      ; Add dataset number to element index
+    add rax,STRTROW  ; Bias row value by row # of first bar
+    mov cl,byte [rsi+r15]   ; Put dataset value in lowest byte of RCX
+    cmp rcx,0        ; See if we pulled a 0 from the dataset
+    je .rule2        ; If we pulled a 0 from the dataset, we're done
+    call WrtHB       ; Graph the data as a horizontal bar
+    inc r15          ; Increment the dataset element index
+    jmp .blast       ; Go back and do another bar
+
+; Display the bottom ruler:
+.rule2:	
+    mov rax,r15      ; Use the dataset counter to set the ruler row
+    add rax,STRTROW  ; Bias down by the row # of the first bar
+    mov rbx,1        ; Load X position to BL
+    mov rcx,COLS-1   ; Load ruler length to RCX
+    call Ruler       ; Write the ruler to the buffer
+
+; Having written all that to the buffer, send the buffer to the console:
+    call Show        ; Refresh the buffer to the console
+
+; And return control to Linux:
+Exit:
+    mov rsp,rbp
+    pop rbp
+    
+    mov rax,60       ; End program via Exit Syscall
+    mov rdi,0        ; Return a code of zero	
+    syscall          ; Return to Linux
+```
+
+### REP STOSB, la mitragliatrice software
+
+<p align=justify>
+Il nostro buffer di visualizzazione del testo virtuale non è altro che una regione di memoria grezza riservata nella sezione .bss, utilizzando la direttiva RESB. La dimensione del buffer è definita da due equazioni, che specificano il numero di righe e colonne che desideri. Per impostazione predefinita, l'ho impostato su 25 righe e 80 colonne, ma i display della console del 2023 possono visualizzare uno schermo di testo molto più grande di così. Puoi cambiare le equazioni COLS e ROWS per definire buffer grandi fino a 255 × 255, anche se se la finestra del tuo terminale non è così grande, i tuoi risultati saranno (per dirla gentilmente) imprevedibili. Cambiare le dimensioni della tua visualizzazione del testo viene fatto modificando una o entrambe quelle equazioni. Qualsiasi altro cambiamento necessario nel codice viene gestito automaticamente. Tieni presente che questo deve essere fatto al tempo dell'assemblaggio poiché molti dei calcoli sono calcoli di tempo di assemblaggio eseguiti da NASM quando costruisci il programma. Non è necessario far combaciare esattamente la dimensione della finestra del terminale ai valori ROWS e COLS scelti, purché la finestra del terminale sia più grande di ROWS × COLS. Se massimizzi la finestra del terminale (come Konsole), la tua visualizzazione del testo apparirà a partire dall'angolo in alto a sinistra dello schermo.
+</p>
+
+### Mitragliatrice sul display virtuale
+
+<p align=justify>
+Quando Linux carica i tuoi programmi in memoria, solitamente azzera le variabili non inizializzate (come VidBuff nell'elenco 11.1) a zeri binari. Questo è buono, ma gli zeri binari non vengono visualizzati correttamente sulla console di Linux. Per apparire "vuoto" sulla console, la memoria del buffer di visualizzazione deve essere azzerata al carattere spazio ASCII. Ciò significa scrivere il valore 20h nella memoria dall'inizio del buffer fino alla sua fine. Tali operazioni dovrebbero sempre essere eseguite in cicli stretti. Il modo ovvio è mettere l'indirizzo del buffer di visualizzazione in RDI, il numero di byte nel tuo buffer di aggiornamento in RCX, il valore ASCII per azzerare il buffer in AL, e poi codificare un ciclo stretto in questo modo:
+</p>
+
+```asm
+Clear:  mov [rdi],al  ; Write the value in AL to memory
+ 	inc rdi       ; Bump RDI to next byte in the buffer
+ 	dec rcx       ; Decrement RCX by one position
+	jnz Clear      ; And loop again until RCX is 0
+```
+
+<p align=justify>
+Questo funzionerà. È anche ragionevolmente veloce, specialmente su CPU più recenti. Ma tutto il codice precedente è equivalente a quest'unica istruzione:
+</p>
+
+```asm
+ rep stosb
+```
+
+<p align=justify>
+Davvero. No, sul serio. L'istruzione STOSB è la più semplice delle istruzioni di stringa Intel ed è un buon punto di partenza. Ci sono due parti nell'istruzione come l'ho mostrata, una situazione che non abbiamo visto prima. REP è un nuovo tipo di elemento, chiamato prefisso, e cambia il modo in cui la CPU tratta il mnemonico dell'istruzione che lo segue. Torneremo a REP a breve. Adesso, diamo un'occhiata a STOSB. Il mnemonico significa STOrare la Stringa per Byte. Come tutte le istruzioni di stringa, STOSB fa certe assunzioni su alcuni registri della CPU. Funziona solo sulla stringa di destinazione, quindi RSI non è coinvolto. Tuttavia, queste assunzioni devono essere rispettate e affrontate:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		RDI deve essere caricato con l'indirizzo della stringa di destinazione. (Pensa: RDI, per indice di destinazione.)
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		RCX deve essere caricato con il numero di volte che il valore in AL deve essere memorizzato nella stringa
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		AL deve essere caricato con il valore a 8 bit da memorizzare nella stringa.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Il flag di direzione DF deve essere impostato o azzerato, a seconda se si desidera che la ricerca sia verso l'alto nella memoria (azzerrato; usa CLD) o verso il basso nella memoria (impostato; usa STD). Avrò di più da dire su DF come utilizzato con STOSB un po' più tardi.
+		</p>
+	</li>
+</ul>
+
+### Esecuzione dell'istruzione STOSB
+
+<p align=justify>
+Una volta che hai impostato questi tre registri, puoi eseguire in sicurezza un'istruzione STOSB. Quando lo fai, ecco cosa succede: 
+</p>
+
+1. Il valore byte in AL viene copiato nell'indirizzo di memoria memorizzato in RDI.
+2. RDI viene incrementato di 1, in modo che ora punti al byte successivo in memoria dopo quello appena scritto.
+
+<p align=justify>
+Nota che non stiamo sparando a raffica qui—non ancora, almeno. Una copia di AL viene copiata in una posizione di memoria. Il registro RDI viene regolato affinché sia pronto per la prossima volta che viene eseguita STOSB. Un punto molto importante da ricordare è che RCX non viene decrimentato da STOSB. RCX viene decrimentato automaticamente solo se metti il prefisso REP davanti a STOSB. Senza il prefisso REP, devi fare tu stesso il decrimento, sia esplicitamente tramite DEC o tramite l'istruzione LOOP, come spiegherò un po' più avanti in questo capitolo. Quindi, non puoi far funzionare STOSB automaticamente senza REP. Tuttavia, se vuoi, puoi eseguire altre istruzioni prima di eseguire un altro STOSB. Finché non disturbi RDI o RCX, puoi fare quello che vuoi. Poi, quando esegui di nuovo STOSB, un'altra copia di AL andrà alla posizione puntata da RDI, e RDI sarà adeguatamente aggiornato di nuovo. (Devi ricordarti di decrimentare RCX in qualche modo.) Nota che puoi cambiare il valore in AL se vuoi, ma il valore cambiato verrà copiato nella memoria. Potresti volerlo fare—non c'è legge che dice che devi riempire una stringa con solo un singolo valore. Tuttavia, questo è come la differenza tra un'arma semiautomatica (che spara un colpo ogni volta che premi e rilasci il grilletto) e un'arma completamente automatica, che spara colpi continuamente finché tieni premuto il grilletto. Per rendere STOSB completamente automatica, basta mettere il prefisso REP davanti ad essa. Ciò che fa REP è splendidamente semplice: imposta il ciclo più serrato di tutti i cicli completamente all'interno della CPU e spara copie di AL nella memoria ripetutamente (il motivo del suo nome), incrementando RDI di 1 ogni volta e decrimentando RCX di 1, fino a quando RCX non viene decrimentato a 0. Poi si ferma, e quando il fumo si dirada, vedrai che l'intera stringa di destinazione, per quanto grande, è stata riempita con copie di AL. Amico, ora questo è programmare!
+</p>
+
+<p align=justify>
+Nel programma vidbuff1, il codice per cancellare il buffer di visualizzazione si trova nella procedura ClrVid. Le righe pertinenti sono quelle mostrate qui:
+</p>
+
+```asm
+cld                 ; Clear DF so we're counting up-memory
+mov al,FILLCHR      ; Put the buffer filler char in AL
+mov rdi,VidBuff     ; Point destination index at buffer 
+mov rcx,COLS*ROWS   ; Put count of chars stored into RCX
+rep stosb           ; Blast chars at the buffer 
+```
+
+<p align=justify>
+L'equivalente FILLCHR è impostato di default a 32, che è il carattere di spazio ASCII. Puoi impostarlo per riempire il buffer con un altro carattere, anche se quanto possa essere utile questo non è chiaro. Nota anche che il numero di caratteri da scrivere in memoria viene calcolato da NASM al momento dell'assemblaggio come COLONNE per RIGHE. Questo ti consente di modificare la dimensione del tuo display virtuale senza cambiare il codice che svuota il buffer del display.
+</p>
+
+### STOSB e il Flag di Direzione DF
+
+<p align=justify>
+A guidare la sequenza di codice breve mostrata in precedenza c'è un'istruzione di cui non ho parlato prima: CLD. Essa controlla qualcosa di fondamentale nel lavoro con le istruzioni delle stringhe: la direzione in memoria che l'operazione su stringa prende. La maggior parte del tempo in cui userai STOSB, vorrai eseguirla "verso l'alto" in memoria, cioè, da un indirizzo di memoria più basso a un indirizzo di memoria più alto. In ClrVid, metti l'indirizzo dell'inizio del buffer di aggiornamento video in RDI e poi invii caratteri in memoria a indirizzi di memoria progressivamente più alti. Ogni volta che STOSB invia un byte in memoria, RDI viene incrementato per puntare al byte successivo più alto in memoria. Questo è il modo logico di lavorare, ma non deve essere fatto in questo modo in ogni momento. STOSB può tranquillamente iniziare da un indirizzo alto e muoversi verso il basso in memoria. Ad ogni memorizzazione in memoria, RDI può essere decrementato di 1 invece. Quale direzione STOSB segua—verso l'alto verso indirizzi di memoria progressivamente più alti o verso il basso verso indirizzi progressivamente più bassi—è governato da uno dei flag nel registro RFlags. Questo è il flag di Direzione DF. Il compito principale di DF è controllare la direzione dell'azione intrapresa da istruzioni particolari che, come STOSB, possono muoversi in una delle due direzioni in memoria. La maggior parte di queste (come STOSB e i suoi simili) sono istruzioni sulle stringhe.
+</p>
+
+<p align=justify>
+Il senso del DF è questo: Quando il DF è impostato (cioè, quando il DF ha il valore 1), STOSB e le sue istruzioni stringa correlate funzionano in discesa, da indirizzi più alti a indirizzi più bassi. Quando il DF è resettato (cioè, quando ha il valore 0), STOSB e i suoi simili lavorano in salita, da indirizzi più bassi a indirizzi più alti. Questo a sua volta è semplicemente la direzione in cui viene regolato il registro RDI: quando il DF è impostato, RDI viene decrementato durante l'esecuzione delle istruzioni stringa. Quando il DF è resettato, RDI viene incrementato. Il flag di Direzione predefinito è 0 (in salita) quando la CPU viene resettata. Generalmente viene cambiato in uno dei due modi: con l'istruzione CLD, o con l'istruzione STD. CLD azzera il DF a 0, e STD imposta il DF a 1. (Dovresti tenere a mente quando fai il debug che l'istruzione POPF può anche cambiare il DF estraendo un nuovo set completo di flag dallo stack nel registro RFlags.) Poiché lo stato predefinito del DF è azzerato a 0 e tutte le istruzioni stringa nel programma demo vidbuff1 lavorano in salita nella memoria, non è tecnicamente necessario includere un'istruzione CLD nella procedura ClrVid. Tuttavia, altre parti di un programma possono cambiare il DF. È sempre una buona idea inserire l'appropriato CLD o STD proprio prima di un'istruzione stringa per assicurarti che la tua mitragliatrice spari nella giusta direzione! A volte le persone si confondono e pensano che il DF governi anche se RCX viene incrementato o decrementato dalle istruzioni stringa. Non è così! Nulla in un'istruzione stringa incrementa mai RCX. RCX tiene un valore di conteggio, non un indirizzo di memoria. Inserisci un conteggio in RCX, e conta giù ogni volta che un'istruzione stringa viene eseguita fino a raggiungere 0. Il DF non ha nulla da dire al riguardo. Fondamentalmente, RDI è dove si trova l'obiettivo, e RCX è il numero di proiettili nel tuo caricatore.
+</p>
+
+### Definire le linee nel buffer di visualizzazione
+
+<p align=justify>
+Tuttavia, cancellare VidBuff per spazi vuoti non è del tutto la fine della storia. Per essere visualizzato correttamente nei programmi terminali che mostrano la console Linux, i dati di visualizzazione devono essere suddivisi in righe. Le righe sono delimitate dal carattere EOL, ASCII 10. Una riga inizia all'inizio del buffer e termina con il primo carattere EOL. La riga successiva inizia immediatamente dopo il carattere EOL e continua fino al prossimo carattere EOL, e così via. Quando il testo viene scritto a pezzi nella console, ogni riga può avere una lunghezza diversa. Nel nostro sistema di visualizzazione virtuale, tuttavia, l'intero buffer viene scritto nella console in un'unica chiamata di sistema, come una sequenza di righe tutte della stessa lunghezza. Questo significa che quando cancelliamo il buffer, dobbiamo anche inserire i caratteri EOL dove vogliamo che ciascuna riga visualizzata termini. Questo viene fatto nel resto della procedura ClrVid. Quello che dobbiamo fare è scrivere un carattere EOL nel buffer ogni COLS byte. Questo viene fatto con un ciclo molto stretto. Se guardi la seconda parte di ClrVid, potresti notare che il ciclo in questione non è del tutto ordinario. Tieni a mente questo pensiero—tornerò all'istruzione LOOP fra un po'.
+</p>
+
+### Invio del Buffer alla Console di Linux
+
+<p align=justify>
+Devo ribadire: stiamo parlando di un display virtuale qui. VidBuff è semplicemente una regione di memoria nella quale puoi scrivere caratteri e stringhe di caratteri con istruzioni di linguaggio assembly ordinarie. Tuttavia, nulla apparirà sul tuo monitor finché non invierai il buffer alla console Linux. Questo è abbastanza semplice. La procedura Show nel programma precedente effettua una sola chiamata al servizio kernel sys_write tramite SYSCALL e invia l'intero buffer alla console in una sola volta. I caratteri di fine riga (EOL) incorporati nel buffer ogni COLS byte vengono trattati come i caratteri di fine riga vengono sempre trattati dalla console e costringono a iniziare una nuova riga immediatamente dopo ciascun EOL. Poiché tutte le righe sono della stessa lunghezza, inviare VidBuff alla console crea una regione rettangolare di testo che verrà visualizzata correttamente su qualsiasi finestra del terminale che sia almeno COLS per ROWS in dimensione. (Finestra più piccole confonderanno il testo di VidBuff. Prova a eseguire il programma vidbuff1 in finestre di terminale di varie dimensioni e vedrai rapidamente cosa intendo.) Ciò che è importante è che i tuoi programmi chiamino Show ogni volta che vuoi un aggiornamento dello schermo. Questo può essere fatto ogni volta che desideri. Su PC Linux moderni, l'aggiornamento avviene così rapidamente da apparire istantaneo. Con quella velocità, non c'è motivo per cui tu non debba chiamare Show dopo ogni scrittura su VidBuff, ma dipende da te.
+</p>
+
+### L'Arma Semiautomatica: STOSB Senza REP
+
+<p align=justify>
+Tra tutte le istruzioni di stringa, ho scelto di mostrarti prima REP STOSB perché è estremamente drammatico. Ma più precisamente, è semplice: in effetti, è più semplice usare REP piuttosto che non usarlo. REP semplifica l'elaborazione delle stringhe dal punto di vista del programmatore, perché porta l'intero ciclo di istruzioni all'interno della CPU. Puoi usare l'istruzione STOSB senza REP, ma è un po' più complicato. Il lavoro comporta la preparazione del ciclo di istruzioni al di fuori della CPU e assicurarsi che sia corretto. Perché preoccuparsi? Semplicemente questo: con REP STOSB puoi ripetutamente memorizzare lo stesso valore nella stringa di destinazione. Qualunque cosa tu metta in AL prima di eseguire REP STOSB è il valore che verrà memorizzato in memoria per RCX volte. STOSB può essere utilizzato per memorizzare valori diversi nella stringa di destinazione facendolo semiautomatizzando e cambiando il valore in AL tra ciascun colpo del grilletto. Perdi un po' di tempo gestendo il ciclo da solo al di fuori della CPU. Questo perché c'è un certo tempo speso per recuperare i byte delle istruzioni del ciclo dalla memoria. Tuttavia, se mantieni il tuo ciclo il più stretto possibile, non perdi una quantità di velocità inaccettabile, specialmente sui moderni processori Intel/AMD, che fanno un uso molto efficace della cache e non recuperano le istruzioni dalla memoria esterna ogni volta che vengono eseguite.
+</p>
+
+### Chi Decrementa RCX?
+
+<p align=justify>
+All'inizio della mia esperienza con il linguaggio assembly x86, ricordo di essere stato massicciamente confuso su dove e quando il registro RCX (in realtà, molto tempo fa, era semplicemente il registro CX) venisse decrementato quando si utilizzavano le istruzioni di stringa. È una questione chiave, soprattutto quando non si utilizza il prefisso REP. Quando si usa REP STOSB (o REP con qualsiasi delle istruzioni di stringa), RCX viene decrementato automaticamente, di 1, per ogni accesso alla memoria effettuato dall'istruzione. E una volta che RCX viene decrementato a 0, REP STOSB rileva che RCX è ora 0 e smette di scrivere nella memoria. Il controllo passa quindi alla prossima istruzione in coda. Ma togli il REP, e il decremento automatico di RCX si ferma. Quindi, anche la rilevazione automatica quando RCX è stato conteggiato fino a 0. Ovviamente, qualcosa deve decrementare RCX poiché RCX governa quante volte l'istruzione di stringa accede alla memoria. Se STOSB non lo fa—hai indovinato—devi farlo in un altro posto, con un'altra istruzione. Il modo ovvio per decrementare RCX è utilizzare DEC RCX. E il modo ovvio per determinare se RCX è stato decrementato a 0 è seguire l'istruzione DEC RCX con un'istruzione JNZ (Salta se Non Zero). JNZ testa il flag Zero ZF e salta di nuovo all'istruzione STOSB fino a quando ZF diventa vero. E ZF diventa vero quando un'istruzione DEC causa che il suo operando (qui, RCX) diventi 0.
+</p>
+
+### L'Istruzione LOOP
+
+<p align=justify>
+Tenendo tutto ciò a mente, considera il seguente ciclo di istruzioni in linguaggio assembly. Questo non è tratto dal programma precedente, ma un esempio assemblato del modo "difficile" di fare le cose:
+</p>
+
+```asm
+     mov al,30h  ; Put the value of character "0" in AL
+ DoChar:
+     stosb       ; Note that there's no REP prefix!
+     inc al      ; Bump the character value in AL up by 1     
+     dec rcx     ; Decrement the count by 1..
+     jnz DoChar  ; ..and loop again if RCX> 0
+```
+
+<p align=justify>
+Guarda come funziona il ciclo. STOSB si attiva, AL viene modificato e poi RCX viene decrementato. L'istruzione JNZ verifica se l'istruzione DEC ha forzato RCX a zero. Se sì, il flag Zero ZF viene impostato e il ciclo termina. Ma fino a quando ZF non è impostato, il salto viene effettuato di nuovo all'etichetta DoChar, dove STOSB si attiva ancora una volta. C'è un modo più semplice, usando un'istruzione di cui non ho parlato fino ad ora: LOOP. L'istruzione LOOP combina il decremento di RCX con un test e un salto basato su ZF. Si presenta così:
+</p>
+
+```asm
+     mov al,30h   ; Put the value of character "0" in AL
+ DoChar:
+     stosb        ; Note that there's no REP prefix!
+     inc al        ; Bump the character value in AL up by 1
+     loop DoChar  ; Go back & do another char until RCX goes to 0
+```
+
+<p align=justify>
+Quando viene eseguita, l'istruzione LOOP prima decrementa RCX di 1. Poi controlla il flag Zero per vedere se l'operazione di decremento ha portato RCX a zero. Se sì, passa all'istruzione successiva. Se no (cioè, se ZF rimane 0, indicando che RCX è ancora maggiore di 0), LOOP salta all'etichetta specificata come suo operando. Quindi, il ciclo continua a ripetere LOOP finché RCX non arriva a 0. A quel punto, il ciclo è terminato e l'esecuzione continua con l'istruzione successiva dopo LOOP.
+</p>
+
+### Visualizzare un righello sullo schermo
+
+<p align=justify>
+Come dimostrazione utile di quando ha senso utilizzare STOSB senza REP (ma con LOOP), lasciami offrirti un altro elemento per il tuo toolkit video. La procedura Ruler nel programma precedente visualizza una sequenza ripetitiva di cifre ascendenti a partire da 1, di qualsiasi lunghezza, in una posizione selezionabile sullo schermo. In altre parole, puoi visualizzare una stringa di cifre come questa ovunque tu voglia:
+</p>
+
+```
+ 123456789012345678901234567890123456789012345678901234567890
+```
+
+<p align=justify>
+Questo potrebbe consentirti di determinare dove, nella dimensione orizzontale della finestra della console, inizia una riga o dove cade un certo carattere. La procedura Ruler ti consente di specificare quanto è lunga la riga, in cifre, e dove sullo schermo verrà visualizzata.
+</p>
+
+<p align=justify>
+Una chiamata tipica a Ruler somiglierebbe a qualcosa del genere:
+</p>
+
+```asm
+ mov rax,1       ; Load Y position to AL
+ mov rbx,1        ; Load X position to BL
+ mov rcx,COLS-1  ; Load ruler length to RCX
+ call Ruler      ; Write the ruler to the buffer
+````
+
+<p align=justify>
+Questa invocazione posiziona un righello nell'angolo in alto a sinistra del display, iniziando dalla posizione 1,1. La lunghezza del righello è passata in RCX. Qui, stai specificando un righello lungo un carattere in meno rispetto alla larghezza del display. Questo fornisce un righello che copre l'intera larghezza visibile del tuo display di testo virtuale. Perché un carattere in meno? Ricorda che c'è un carattere EOL alla fine di ogni riga. Questo carattere EOL non è visibile direttamente, ma è comunque un carattere e richiede un byte nel buffer per contenerlo. L'equivalente COLS deve sempre tenerne conto: se vuoi un display largo 80 caratteri, COLS deve essere impostato su 81. Se vuoi un display largo 96 caratteri, COLS deve essere impostato su 97. Se codifichi una chiamata a Ruler come mostrato in precedenza, NASM eseguirà alcuni calcoli durante l'assemblaggio e genererà sempre un righello che copre l'intera larghezza (visibile) del display di testo. Oltre all'istruzione LOOP, qui c'è una notevole quantità di nuove tecnologie di assemblaggio in gioco che meriterebbero una spiegazione. Facciamo una deviazione dalle istruzioni a stringa per un momento e diamo un'occhiata più da vicino.
+</p>
+
+### MUL non è IMUL
+
+<p align=justify>
+Ho descritto l'istruzione MUL e i suoi operandi impliciti molto tempo fa. La procedura Ruler usa anche MUL per calcolare una posizione X,Y nel buffer di memoria di visualizzazione dove STOSB può iniziare a posizionare i caratteri della riga. L'algoritmo per determinare l'offset in byte nel buffer per valori X e Y qualsiasi appare così.
+</p>
+
+```asm
+ Offset = ((Y * width in characters of a screen line) + X)
+```
+
+<p align=justify>
+Abbastanza ovviamente, devi spostarti Y righe verso il basso nel buffer dello schermo e poi spostarti di X byte dal margine sinistro dello schermo per raggiungere la tua posizione X,Y. Il calcolo viene fatto in questo modo all'interno della procedura Ruler:
+</p>
+
+```asm
+ mov rdi,VidBuff   ; Load video buffer address to RDI
+     dec rax       ; Adjust Y value down by 1 for address calculation
+     dec rbx       ; Adjust X value down by 1 for address calculation
+     mov ah,COLS   ; Move screen width to AH
+     mul ah        ; Do 8-bit multiply AL*AH to AX
+     add rdi,rax   ; Add Y offset into vidbuff to RDI
+     add rdi,rbx   ; Add X offset into vidbuf to RDI
+```
+
+<p align=justify>
+Le due istruzioni DEC si occupano del fatto che le posizioni X,Y in questo sistema sono basate su 1; cioè, l'angolo superiore sinistro dello schermo è la posizione 1,1 piuttosto che 0,0, come avviene in alcuni sistemi di coordinate X,Y. Pensala in questo modo: se vuoi visualizzare un righello che inizia nell'angolo superiore sinistro dello schermo, devi scrivere i caratteri del righello che partono dall'inizio del buffer, senza alcuno spostamento. A fini di calcolo, quindi, i valori X,Y devono essere basati su 0. Per una moltiplicazione a 8 bit utilizzando MUL, uno dei fattori è implicito: AL contiene il valore Y e il chiamante passa a Ruler il valore Y in RAX. Inseriamo la larghezza dello schermo in AH e poi moltiplichiamo AH per AL con MUL. (Vedi la discussione su MUL nei paragrafi precedenti se è diventato poco chiaro nel frattempo.) Il prodotto sostituisce i valori sia in AH che in AL e viene accesso come il valore in AX. Aggiungendo quel prodotto e il valore X (passato a Ruler in BL) a RDI ottieni l'indirizzo di memoria preciso in cui devono essere scritti i caratteri del righello. Ora, c'è un bug piuttosto comune di cui avvertirti: MUL non è IMUL…la maggior parte del tempo. MUL e IMUL sono istruzioni sorelle che svolgono entrambe la moltiplicazione. MUL tratta i suoi valori operandi come non firmati, mentre IMUL li tratta come firmati. Questa differenza non importa finché entrambi i fattori rimangono positivi in un contesto firmato. In termini pratici, per una moltiplicazione a 8 bit, MUL e IMUL funzionano identicamente su valori di 127 o meno. A 128 tutto cambia. I valori superiori a 127 sono considerati negativi in un contesto firmato a 8 bit. MUL considera 128 come…128. IMUL considera 128 come -1. Ops. Potresti sostituire l'istruzione MUL con IMUL in Ruler, e la procedura funzionerebbe identicamente fino a quando non le passi una dimensione dello schermo maggiore di 127. Poi, all'improvviso, IMUL calcolerebbe un prodotto che è nominalmente negativo…ma solo se stai trattando il valore come un valore firmato. Un numero negativo trattato come non firmato è un numero positivo molto grande, e un riferimento di memoria all'indirizzo rappresentato da RDI più quel valore anomalo genererà un errore di segmentazione. Provalo! Nessun danno fatto, ed è una lezione interessante. IMUL è per valori firmati. Per i calcoli degli indirizzi di memoria, lascialo perdere e assicurati di usare MUL invece.
+</p>
+
+<p align=justify>
+La procedura Ruler è un buon esempio di utilizzo di STOSB senza il prefisso REP. Dobbiamo cambiare il valore in AL ogni volta che memorizziamo AL in memoria e quindi non possiamo usare REP STOSB. Nota che non viene fatto nulla a RDI o RCX mentre cambiamo la cifra da visualizzare, e quindi i valori memorizzati in quei registri vengono mantenuti per la prossima esecuzione di STOSB. Ruler è un buon esempio di come LOOP funzioni con STOSB per ridurre RCX e restituire il controllo all'inizio del ciclo. LOOP, in un certo senso, fa all'esterno della CPU ciò che REP fa all'interno della CPU: regola RCX e chiude il ciclo. Cerca di mantenere questo concetto chiaro nella tua mente quando utilizzi qualsiasi delle istruzioni di stringa!
+</p>
+
+### Le quattro dimensioni di STOS
+
+<p align=justify>
+Prima di passare ad altre istruzioni sulle stringhe, vale la pena sottolineare che ci sono quattro diverse "dimensioni" dell'istruzione di stringa STOS:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		STOSB memorizza il valore a 8 bit in AL nella memoria.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		STOSW memorizza il valore a 16 bit in AX nella memoria.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		STOSD memorizza il valore a 32 bit in EAX nella memoria
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		STOSQ memorizza il valore a 64 bit in RAX nella memoria
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+STOSW, STOSD e STOSQ funzionano quasi allo stesso modo di STOSB. La principale differenza risiede nel modo in cui viene modificato l'indirizzo di destinazione RDI dopo ogni operazione di trasferimento di memoria. RDI viene modificato in base alle dimensioni della quantità su cui agisce l'istruzione. Per STOSW, RDI cambia di due byte, verso l'alto o verso il basso a seconda dello stato di DF. Per STOSD, RDI cambia di quattro byte, ancora una volta verso l'alto o verso il basso a seconda dello stato di DF. STOSQ cambia RDI di otto byte, verso l'alto o verso il basso a seconda dello stato di DF. Tuttavia, in tutti i casi, con il prefisso REP davanti all'istruzione, il registro contatore (in x64, RCX) viene decrementato di uno dopo ogni operazione di trasferimento di memoria. Viene sempre decrementato, e sempre di uno. RCX conta le operazioni. Non ha nulla a che fare con gli indirizzi di memoria né con la dimensione del valore memorizzato in memoria.
+</p>
+
+### Addio Matematica BCD
+
+<p align=justify>
+Questo potrebbe sembrare un posto strano per parlare di istruzioni macchina che non sono più disponibili, ma ho un motivo. I lettori che hanno visto le edizioni precedenti di questo libro, in particolare l'edizione del 2009, potrebbero ricordare che il programma di esempio vidbuff1 utilizzava l'aritmetica BCD per generare i caratteri che compongono il righello. Per essere chiari, gli architetti di x64 hanno rimosso tutte le istruzioni di matematica BCD trovate nella definizione x86. Questo equivale a sei istruzioni: AAA, DAA, DAS, AAS, AAM, AAD. È al di fuori dell'ambito di questo libro spiegare la matematica BCD (l'edizione del 2009 ha una certa copertura se sei veramente interessato), e lo menziono solo perché nell'edizione del 2009, il programma vidbuff1 utilizzava la matematica BCD. Ci sono casi d'uso per la matematica BCD, principalmente nei calcoli finanziari, ma le istruzioni BCD di Intel risalgono a molto tempo fa, e oggi abbiamo tecniche di calcolo finanziario migliori. Fondamentalmente, la matematica BCD ti consentiva di aggiungere un carattere ASCII a un altro carattere ASCII. È complicato e lento e non è più possibile—perché le istruzioni che lo realizzano non sono più disponibili.
+</p>
+
+### MOVSB: Copie di blocco veloci
+
+<p align=justify>
+L'istruzione STOSB è un elemento affascinante, ma per pura azione racchiusa in una singola riga di codice assembly, non c'è nulla che possa eguagliare l'istruzione MOVS. Come STOS, MOVS viene in quattro "dimensioni", per gestire byte (MOVSB), parole a 16 bit (MOVSW), doppie parole a 32 bit (MOVSD) e quadruple parole a 64 bit (MOVSQ). Per lavorare con caratteri ASCII come facciamo in questo capitolo, MOVSB è quella da usare. La sostanza dell'istruzione MOVSB è questa: un blocco di dati di memoria all'indirizzo memorizzato in RSI viene copiato all'indirizzo memorizzato in RDI. Il numero di byte da spostare è posto nel registro RCX. RCX conta a rovescio di uno dopo che ogni byte è copiato, e gli indirizzi in RSI e RDI vengono regolati di uno. Per MOVSW, i registri di origine e destinazione vengono regolati di due dopo che ogni parola è copiata; per MOVSD, vengono regolati di quattro dopo che ogni doppia parola è copiata, e per MOVSQ, vengono regolati di otto byte dopo che ogni quadrupla parola è copiata. Queste regolazioni sono incrementi o decrementi, a seconda dello stato di DF. In tutti i casi, RCX viene decrementato di uno ogni volta che un elemento di dati passa dall'indirizzo sorgente all'indirizzo di destinazione. Ricorda che RCX conta le operazioni di trasferimento di memoria, non i byte di indirizzo! Il registro DF influisce su MOVSB nello stesso modo in cui influisce su STOSB. Per impostazione predefinita, DF è cancellato e le operazioni di stringa operano “in salita” dalla memoria bassa verso la memoria alta. Se DF è impostato, la direzione in cui funzionano le operazioni di stringa va in senso contrario, dalla memoria alta verso la memoria bassa. MOVSB può operare sia semiautomatica che automaticamente, proprio come con STOSB. Aggiungi il prefisso REP a MOVSB, e (presumendo che tu abbia impostato correttamente i registri) un blocco di memoria verrà copiato da qui a lì in un'unica istruzione, in un ciclo stretto all'interno della CPU. Per dimostrare MOVSB, ho aggiunto una breve procedura chiamata WrtLn. WrtLn copia una stringa in una certa posizione X,Y nel buffer di visualizzazione VidBuff. Fa un lavoro molto simile a Write in Pascal o print in C. Prima di chiamare WrtLn, posizioni l'indirizzo sorgente della stringa in RSI, le coordinate X,Y basate su 1 in RBX e RAX, e la lunghezza della stringa in byte in RCX. Il codice che fa il lavoro in WrtLn è piuttosto semplice:
+</p>
+
+```asm
+ cld             ; Clear DF for up-memory write
+ mov rdi,VidBuff  ; Load destination index with buffer address
+ dec rax          ; Adjust Y value down by 1 for address calculation
+ dec rbx          ; Adjust X value down by 1 for address calculation
+ mov ah,COLS      ; Move screen width to AH
+ mul ah           ; Do 8-bit multiply AL*AH to AX
+ add rdi,rax      ; Add Y offset into vidbuff to RDI
+ add rdi,rbx      ; Add X offset into vidbuf to RDI
+ rep movsb        ; Blast the string into the buffer
+```
+
+<p align=justify>
+Il codice per calcolare l'offset nel VidBuff dai valori X,Y utilizzando MUL è lo stesso utilizzato in Ruler. Nella sezione principale del programma di vidbuff1, vengono effettuati alcuni calcoli aggiuntivi per visualizzare una stringa centrata nel buffer visibile, piuttosto che in una specifica posizione X,Y:
+</p>
+
+```asm
+ mov rsi,Message  ; Load the address of the message to RSI
+ mov rcx,MSGLEN   ; and its length to RCX
+ mov rbx,COLS     ; and the screen width to RBX
+ sub rbx,rcx      ; Calc diff of message length and screen width
+ shr rbx,1        ; Divide difference by 2 for X value
+ mov rax,20       ; Set message row to Line 20
+ call WrtLn       ; Display the centered message
+```
+
+### DF e Mosse di Blocco Sovrapposte
+
+<p align=justify>
+Il semplice programma dimostrativo vidbuff1 utilizza MOVSB per copiare un messaggio dalla sezione .data del programma nel buffer di visualizzazione. Sebbene WrtLn utilizzi MOVSB per copiare il messaggio "in salita" dalla memoria bassa a quella alta, si potrebbe sostenere che si potrebbe altrettanto facilmente copiarlo dalla memoria alta "in discesa" a quella bassa, e avresti ragione. Il flag di direzione DF non sembra essere più di una questione di preferenza... a meno che e fino a quando i tuoi blocchi di memoria sorgente e destinazione non si sovrappongano. Nulla richiede che RSI e RDI puntino a aree di memoria completamente separate. I blocchi di memoria sorgente e destinazione possono sovrapporsi e questo può spesso essere estremamente utile. Ecco un esempio: considera la sfida di modificare un testo memorizzato in un buffer di memoria. Supponiamo di avere una stringa in un buffer e di voler inserire un carattere da qualche parte a metà della stringa. Tutti i caratteri nella stringa oltre il punto di inserimento devono essere "spostati da parte" per fare spazio al nuovo carattere inserito. (Questo presuppone che ci sia spazio vuoto alla fine del buffer.) Questa è un'applicazione naturale per REP MOVSB—ma predisporla potrebbe essere più complicato di quanto sembri a prima vista. Ricordo vividamente la prima volta che ho provato, che non è coincidente, era la prima volta che ho mai tentato di usare MOVSB. Ciò che ho fatto è mostrato schematicamente nella parte sinistra della figura di sotto. L'obiettivo era spostare una stringa a destra di una posizione in modo da poter inserire un carattere spazio davanti ad essa.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/movsb_on_overlapping_memory_blocks.png">
+</div>
+
+
+<p align=justify>
+Ho puntato RSI al primo byte della stringa e ho puntato RDI alla posizione in cui volevo spostare la stringa. Ho quindi eseguito un'istruzione REP MOVSB "in salita" e, quando la polvere si è posata, ho scoperto di aver sostituito l'intera stringa con il suo carattere iniziale. Sì, è un errore ovvio... una volta che lo vedi accadere realmente. (Sì, quando ho commesso questo errore, i registri erano di 16 bit e ero molto più giovane, ma le cose funzionano allo stesso modo in modalità long x64, e il bug è ancora molto facile da commettere.) Sul lato destro della figura c'è il modo in cui un'inserzione del genere dovrebbe essere effettivamente eseguita. Devi iniziare dalla parte alta della stringa e lavorare "in discesa" verso il punto di inserimento. Il primo spostamento del carattere deve portare l'ultimo carattere della stringa in uno spazio di buffer vuoto e fuori dal cammino del successivo spostamento del carattere, e così via. In questo modo, due aree di memoria che si sovrappongono tranne che per un byte possono essere copiate l'una nell'altra senza perdere alcun dato. Questo si mostra più facilmente di quanto si racconti. Se puoi osservare lo spostamento avvenire, diventa molto più chiaro. Ho creato una demo sandbox di un movimento di blocco sovrapposto nel codice di sotto. È progettata per SASM, motivo per cui ha il suffisso gcc.
+</p>
+
+```asm
+section .data
+                 ;0000000000011
+                 ;0123456789012
+    EditBuff: db 'abcdefghijklm '
+    BUFFLEN   equ $-EditBuff
+    ENDPOS    equ 12         ; 0-based number of last visible character
+    INSRTPOS  equ 1
+	
+section .text
+
+global main
+
+main:
+    mov rbp, rsp; for correct debugging
+
+; Put your experiments between the two nops...
+    nop
+
+    std                        ; We're doing a "downhill" transfer
+    mov rbx,EditBuff
+    mov rsi,EditBuff+ENDPOS    ; Start at end of visible text
+    mov rdi,EditBuff+ENDPOS+1  ; Bump text right by 1
+    mov rcx,ENDPOS-INSRTPOS+2  ; # of chars to bump; not a 0-based address but a count
+    rep movsb                  ; Move 'em!
+    mov byte [rbx],' '         ; Write a space at insert point
+
+; Put your experiments between the two nops...
+    nop
+```
+
+<p align=justify>
+Per guardare il film in SASM, devi caricare il codice, compilarlo e poi avviare il debugger. Una volta che sei in modalità di debug, seleziona Debug ➪ Mostra memoria. Nel campo Variabile o espressione, inserisci EditBuff. Nel campo Tipo, seleziona Char dal primo menu a discesa e b dal secondo menu a discesa. EditBuff è lungo 14 caratteri (incluso lo spazio finale), quindi inserisci 14 nel terzo campo. Non fare clic sulla casella di controllo Indirizzo. Ecco come funziona: ENDPOS è l'offset basato su 0 dell'ultimo carattere non spazio nella stringa. Nota che questo non è un conteggio, ma un offset dall'inizio di EditBuff. L'offset dell'ultimo carattere “m” dall'inizio del buffer è di 12 byte. Se inizi con l'indirizzo di EditBuff in RSI e aggiungi 12, RSI punterà a “m.” RDI, a sua volta, è puntato all'offset della prima posizione del buffer dopo l'ultimo carattere nella stringa, che è la ragione per il calcolo in fase di assemblaggio ENDPOS + 1, che punta al carattere di spazio alla fine di EditBuff. Derivare il conteggio da inserire in RCX deve tenere conto della natura basata su 0 degli offset degli indirizzi. Devi aggiungere 2 alla differenza tra la posizione finale della stringa (ENDPOS) e la posizione di inserimento (INSRTPOS) perché entrambe sono basate su 0, e per ottenere un conteggio corretto, devi aggiungere di nuovo i due 1 in più che avresti se ENDPOS e INSRTPOS fossero entrambi numeri basati su 1. (Ricorda che i conteggi di cose non sono basati su 0!) Nota l'istruzione STD che inizia il blocco di codice. STD imposta il Flag di Direzione DF su 1, il che costringe le istruzioni stringa a funzionare "in discesa" dalla memoria alta verso la memoria bassa. DF di default è 0, quindi per far funzionare questo codice, l'istruzione STD deve essere presente!
+</p>
+
+### Istruzioni di stringa REP con passo singolo
+
+<p align=justify>
+Dovrei menzionare qui che, anche se un'istruzione REP MOVSB sembra essere un'unica istruzione, in realtà si tratta di un ciclo estremamente ristretto implementato come un'unica istruzione. Fase per fase, la REP MOVSB in un debugger non esegue l'intero ciclo in un colpo solo! Ogni volta che fai clic sull'icona 'Step Into' di SASM, verrà eseguita solo un'operazione di trasferimento di memoria. Se RCX è caricato con un valore di conteggio di 13, ad esempio, dovrai fare clic sull'icona 'Step Into' 13 volte per avanzare attraverso l'intera istruzione. Questo ti consente di osservare i cambiamenti in memoria e nei registri mentre l'istruzione opera. Tuttavia, per valori di conteggio elevati in RCX, questo può comportare molti clic. Se sei sicuro della correttezza della configurazione della tua istruzione stringa, potresti voler inserire un break point dopo l'istruzione REP string e fare clic su 'Continue' (o premere F5) per eseguire l'istruzione stringa a piena velocità senza fermarti dopo ogni operazione di trasferimento di memoria. SASM si fermerà al break point, e potrai ispezionare lo stato finale del buffer di memoria e continuare a fare il single-stepping da lì. L'altro problema relativo all'osservazione dei trasferimenti di memoria con il debugger di SASM è il modo strano in cui SASM visualizza i buffer delle stringhe. Se selezioni 'Smart' dal primo menu a discesa, SASM visualizzerà EditBuff come una stringa di caratteri nella forma “abcdefghijklm” ma senza lo spazio finale. Puoi osservare il trasferimento avvenire con quella visualizzazione, ma non è l'intera situazione e potrebbe confonderti. La visualizzazione Char di EditBuff è in parte così perchè consente di includere caratteri non visualizzabili come EOL. Un carattere è mostrato come il suo equivalente decimale e poi il carattere reale tra apici singoli, come questo.
+</p>
+
+```asm
+{97'a',98'b',99'c',100'd',101'e',102'f'103'g', ... 32''}
+```
+
+<p align=justify>
+Questo formato ti mostrerà il carattere spaziatore alla fine di EditBuff, ma dovrai guardare attentamente per vedere il movimento mentre accade. La mia sincera speranza è che SASM un giorno includa una visualizzazione della memoria in stile hexdump, simile a quella di Insight.
+</p>
+
+### Memorizzare dati in stringhe discontinue
+
+<p align=justify>
+A volte devi infrangere le regole. Fino ad ora ho spiegato le istruzioni della stringa assumendo che la stringa di destinazione sia sempre una sequenza continua di byte in memoria. Questo non è necessariamente vero. Oltre a cambiare il valore in RAX tra le esecuzioni di STOSB, puoi anche cambiare l'indirizzo di destinazione. Il risultato finale è che puoi memorizzare dati in diverse aree di memoria all'interno di un singolo ciclo molto ristretto.
+</p>
+
+### Visualizzazione di una tabella ASCII
+
+<p align=justify>
+Ho creato un piccolo programma demo per SASM per mostrarvi cosa intendo. Non è utile come la procedura Ruler nel codice di prima, ma fa il suo punto ed è facile da capire se mi hai seguito finora. Il programma showchargcc utilizza molti degli stessi macchinari di base di vidbuff1, incluso il meccanismo di visualizzazione virtuale e il righello. Quindi, per risparmiare spazio sulla pagina del libro, non mostrerò l'intero programma qui. Il file completo del codice sorgente (come tutto il codice presentato in questo libro) può essere scaricato dalla mia pagina web in linguaggio assembly nel file zip dell'archivio degli elenchi. Il programma showchargcc cancella lo schermo, visualizza un righello sulla riga 1 e sotto mostra una tabella contenente 224 dei 256 caratteri ASCII, visualizzati ordinatamente in 7 righe di 32 caratteri ciascuna. La tabella include i 127 caratteri ASCII "alti", inclusi i caratteri delle lingue straniere, i caratteri di disegno delle linee e i simboli vari. Ciò che non visualizza sono i primi 32 caratteri ASCII. Linux li considera come caratteri di controllo, e anche quei caratteri per i quali sono disponibili glifi non vengono visualizzati nella console. Il programma showchargcc introduce un paio di nuovi concetti e istruzioni, tutti relativi ai cicli di programma. (Le istruzioni per stringhe come STOSB e i cicli di programma sono intimamente correlate.) Per risparmiare spazio sulla pagina, il listato di sotto presenta showchargcc senza le sue procedure. Tutte le procedure e le macro che invoca sono presenti nel codice precedente.
+</p>
+
+```asm
+;  Executable name : showchargcc
+;  Version         : 2.0
+;  Created date    : 10/19/2022
+;  Last update     : 7/15/2023
+;  Author          : Jeff Duntemann
+;  Description     : A simple program in assembly for Linux, 
+;    demonstrating discontinuous string writes to memory using STOSB without
+;    REP. The program loops through characters 32 through 255 and writes a
+;    simple "ASCII chart" in a display buffer. The chart consists of 8 lines
+;    of 32 characters, with the lines not continuous in memory.
+;
+;  Build using the standard SASM x64 build lines
+;
+
+SECTION .data       ; Section containing initialized data
+    EOL 	equ 10  ; Linux end-of-line character
+    FILLCHR	equ 32  ; Default to ASCII space character
+    CHRTROW	equ 2   ; Chart begins 2 lines from top
+    CHRTLEN	equ 32  ; Each chart line shows 32 chars
+
+; This escape sequence will clear the console terminal and place the
+; text cursor to the origin (1,1) on virtually all Linux consoles:
+    ClrHome db 27,"[2J",27,"[01;01H"
+    CLRLEN  equ $-ClrHome    ; Length of term clear string
+    EOL     equ 10           ; Linux end-of-line character
+
+	
+; We use this to display a ruler across the screen. 
+    RulerString db "12345678901234567890123456789012345678901234567890123456789012345678901234567890" 
+    RULERLEN    equ $-RulerString
+	
+SECTION .bss                ; Section containing uninitialized data	
+
+    COLS	equ 81          ; Line length + 1 char for EOL
+    ROWS	equ 25          ; Number of lines in display
+    VidBuff	resb COLS*ROWS  ; Buffer size adapts to ROWS & COLS
+
+SECTION .text               ; Section containing code
+
+global   main                ; Linker needs this to find the entry point!
+
+ClearTerminal:
+    push r11            ; Save all modified registers
+    push rax
+    push rcx
+    push rdx
+    push rsi
+    push rdi
+
+    mov rax,1           ; Specify sys_write call
+    mov rdi,1           ; Specify File Descriptor 1: Standard Output
+    mov rsi,ClrHome     ; Pass address of the escape sequence
+    mov rdx,CLRLEN      ; Pass the length of the escape sequence
+    syscall	            ; Make system call
+
+    pop rdi             ; Restore all modified registers
+    pop rsi
+    pop rdx
+    pop rcx
+    pop rax
+    pop r11
+    ret
+
+;-------------------------------------------------------------------------
+; Show:         Display a text buffer to the Linux console
+; UPDATED:      5/10/2023
+; IN:           Nothing
+; RETURNS:      Nothing
+; MODIFIES:     Nothing
+; CALLS:        Linux sys_write
+; DESCRIPTION:  Sends the buffer VidBuff to the Linux console via sys_write.
+;               The number of bytes sent to the console is calculated by
+;               multiplying the COLS equate by the ROWS equate.
+
+Show:	
+    push r11            ; Save all registers we're going to change
+    push rax
+    push rcx
+    push rdx
+    push rsi
+    push rdi
+
+    mov rax,1           ; Specify sys_write call
+    mov rdi,1           ; Specify File Descriptor 1: Standard Output
+    mov rsi,VidBuff     ; Pass address of the buffer
+    mov rdx,COLS*ROWS   ; Pass the length of the buffer
+    syscall             ; Make system call
+
+    pop rdi             ; Restore all modified registers
+    pop rsi
+    pop rdx
+    pop rcx
+    pop rax
+    pop r11
+    ret
+
+;-------------------------------------------------------------------------
+; ClrVid:       Clears a buffer to spaces and replaces overwritten EOLs
+; UPDATED:      5/10/2023
+; IN:           Nothing
+; RETURNS:      Nothing
+; MODIFIES:     VidBuff, DF
+; CALLS:        Nothing
+; DESCRIPTION:  Fills the buffer VidBuff with a predefined character
+;               (FILLCHR) and then places an EOL character at the end
+;               of every line, where a line ends every COLS bytes in
+;               VidBuff.
+
+ClrVid:	push rax        ; Save registers that we change
+	push rcx
+	push rdi
+	cld                 ; Clear DF; we're counting up-memory
+	mov al,FILLCHR      ; Put the buffer filler char in AL
+	mov rdi,VidBuff     ; Point destination index at buffer
+	mov rcx,COLS*ROWS   ; Put count of chars stored into RCX
+	rep stosb           ; Blast byte-length chars at the buffer
+
+; Buffer is cleared; now we need to re-insert the EOL char after each line:
+	mov rdi,VidBuff     ; Point destination at buffer again
+	dec rdi             ; Start EOL position count at VidBuff char 0
+	mov rcx,ROWS        ; Put number of rows in count register
+
+.PtEOL:	add rdi,COLS    ; Add column count to RDI
+	mov byte [rdi],EOL  ; Store EOL char at end of row
+	loop .PtEOL         ; Loop back if still more lines
+	pop rdi             ; Restore caller's registers
+	pop rcx
+	pop rax
+	ret                 ; and go home!
+
+;-------------------------------------------------------------------------
+; Ruler:        Generates a "1234567890"-style ruler at X,Y in text buffer
+; UPDATED:      5/10/2023
+; IN:           The 1-based X position (row #) is passed in RBX
+;               The 1-based Y position (column #) is passed in RAX
+;               The length of the ruler in chars is passed in RCX
+; RETURNS:      Nothing
+; MODIFIES:     VidBuff
+; CALLS:        Nothing
+; DESCRIPTION:  Writes a ruler to the video buffer VidBuff, at the 1-based
+;               X,Y position passed in RBX,RAX. The ruler consists of a
+;               repeating sequence of the digits 1 through 0. The ruler
+;               will wrap to subsequent lines and overwrite whatever EOL
+;               characters fall within its length, if it will not fit
+;               entirely on the line where it begins. Note that the Show
+;               procedure must be called after Ruler to display the ruler
+;               on the console.
+
+Ruler:  
+    push rax         ; Save the registers we change
+    push rbx
+    push rcx
+    push rdx
+    push rdi
+
+    mov rdi,VidBuff   ; Load video buffer address to RDI
+    dec rax           ; Adjust Y value down by 1 for address calculation
+    dec rbx           ; Adjust X value down by 1 for address calculation
+    mov ah,COLS       ; Move screen width to AH
+    mul ah            ; Do 8-bit multiply AL*AH to AX
+    add rdi,rax       ; Add Y offset into vidbuff to RDI
+    add rdi,rbx       ; Add X offset into vidbuf to RDI
+        
+; RDI now contains the memory address in the buffer where the ruler
+; is to begin. Now we display the ruler, starting at that position:
+    mov rdx,RulerString  ; Losd address of ruler string into RDX
+
+DoRule: 
+    mov byte al,[rdx] ; Load first digit in the ruler to AL
+    stosb             ; Store 1 char; note that there's no REP prefix!
+    inc rdx           ; Increment RDX to point to next char in ruler string
+    loop DoRule       ; Decrement RCX & Go back for another char until RCX=0
+
+    pop rdi           ; Restore the registers we saved
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
+    ret    
+
+;-------------------------------------------------------------------------
+; MAIN PROGRAM:
+;-------------------------------------------------------------------------	
+main:
+    mov rbp,rsp
+
+; Get the console and text display text buffer ready to go:
+    call ClearTerminal  ; Send terminal clear string to console
+    call ClrVid         ; Init/clear the video buffer
+
+; Show a 64-character ruler above the table display:
+    mov rax,1           ; Start ruler at display position 1,1
+    mov rbx,1
+    mov rcx,32          ; Make ruler 32 characters wide
+    call Ruler          ; Generate the ruler
+
+; Now let's generate the chart itself:
+    mov rdi,VidBuff     ; Start with buffer address in RDI
+    add rdi,COLS*CHRTROW    ; Begin table display down CHRTROW lines
+    mov rcx,224         ; Show 256 chars minus first 32
+    mov al,32           ; Start with char 32; others won't show
+.DoLn:	mov bl,CHRTLEN  ; Each line will consist of 32 chars
+.DoChr:	stosb           ; Note that there's no REP prefix!
+    jrcxz AllDone       ; When the full set is printed, quit
+    inc al              ; Bump the character value in AL up by 1
+    dec bl              ; Decrement the line counter by one
+    loopnz .DoChr       ; Go back & do another char until BL goes to 0
+    add rdi,COLS-CHRTLEN   ; Move RDI to start of next line
+    jmp .DoLn           ; Start display of the next line
+
+; Having written all that to the buffer, send the buffer to the console:
+AllDone:
+    call Show           ; Refresh the buffer to the console
+Exit:
+    ret
+```
+### Cicli di istruzioni annidati
+
+<p align=justify>
+Una volta che tutti i registri sono stati impostati correttamente secondo le ipotesi fatte da STOSB, il lavoro reale di showchargcc è svolto da due cicli di istruzioni, uno dentro l'altro. Il ciclo interno visualizza una linea composta da 32 caratteri. Il ciclo esterno suddivide la visualizzazione in sette di queste linee. Il ciclo interno è di gran lunga il più interessante dei due. Ecco qui:
+</p>
+
+```asm
+ .DoChr:
+     stosb          ; Note that there's no REP prefix!
+     jrcxz AllDone  ; When the full set is printed, quit
+     inc al         ; Bump the character value in AL up by 1
+     dec bl         ; Decrement the line counter by one
+     loopnz .DoChr  ; Go back & do another char until BL goes to 0
+```
+
+<p align=justify>
+Il lavoro qui (mettere un carattere nel buffer di visualizzazione) è nuovamente svolto da STOSB. Ancora una volta, STOSB lavora da solo, senza REP. Senza REP per tirare il ciclo all'interno della CPU, devi impostare tu stesso il ciclo. Tieni presente cosa accade ogni volta che STOSB si attiva: il carattere in AL viene scritto nella posizione di memoria puntata da RDI, e RDI viene incrementato di 1. All'altra estremità del ciclo, l'istruzione LOOPNZ decrementa RCX di 1 e chiude il ciclo. Durante l'impostazione dei registri, abbiamo caricato RCX con il numero di caratteri che volevamo visualizzare - in questo caso, 224. (Sono 224 caratteri perché i primi 32 caratteri dell'elenco completo di 256 sono principalmente caratteri di controllo e non possono essere visualizzati.) Ogni volta che STOSB si attiva, inserisce un altro carattere nel buffer di visualizzazione VidBuff, e ci sono un carattere in meno da visualizzare. RCX funge da master counter, tenendo traccia di quando finalmente visualizziamo l'ultimo carattere rimanente. Quando RCX arriva a zero, abbiamo visualizzato il sottoinsieme appropriato del set di caratteri ASCII e il lavoro è completato.
+</p>
+
+### Salto quando RCX arriva a 0
+
+<p align=justify>
+JRCXZ è un'istruzione di salto speciale creata specificamente per aiutare con i cicli come questo. Ho spiegato come sia possibile effettuare un salto usando una delle molte variazioni dell'istruzione JMP, basata sullo stato di uno o più flag della CPU. All'inizio di questo capitolo, ho spiegato l'istruzione LOOP, che è una sorta di JMP con uno scopo speciale, combinata con un'istruzione DEC RCX implicita. JRCXZ è un'altra varietà di istruzione JMP, ma una che non osserva alcun flag o diminuisce alcun registro. Invece, JRCXZ osserva il registro RCX. Quando vede che RCX è appena andato a zero, salta all'etichetta specificata. Se RCX è ancora diverso da zero, l'esecuzione passa all'istruzione successiva in linea. Nel caso del ciclo interno mostrato in precedenza, JRCXZ salta al codice 'chiudiamo bottega' quando vede che RCX è finalmente arrivato a 0. Questo è il modo in cui termina il programma showchar. La maggior parte delle altre istruzioni JMP ha partner che saltano quando il flag di controllo non è vero. Cioè, JC (Jump on Carry) salta quando il flag di riporto è uguale a 1. Il suo partner, JNC (Jump on Not Carry), salta se il flag di riporto non è 1. Tuttavia, JRCXZ è un solitario. Non c'è istruzione JRCXNZ, quindi non cercarne una nel riferimento delle istruzioni!
+</p>
+
+### Chiusura del ciclo interno
+
+<p align=justify>
+Si supponga che RCX non sia ancora stato decrementato a 0 dall'istruzione STOSB (una condizione monitorata da JRCXZ), il ciclo continua. AL viene incrementato. In questo modo viene selezionato il successivo carattere ASCII in linea. Il valore in AL viene inviato alla posizione memorizzata in RDI da STOSB. Se incrementi il valore in AL, cambi il carattere visualizzato con il successivo nella linea. Ad esempio, se AL contiene il valore per il carattere A (65), incrementando AL cambia il carattere A in un B (66). Nella successiva esecuzione del ciclo, STOSW invierà un B allo schermo invece di un A. Dopo che il codice del carattere in AL è stato incrementato, BL viene decrementato. Ora, BL non è direttamente correlato alle istruzioni della stringa. Nulla in nessuna delle assunzioni fatte dalle istruzioni della stringa coinvolge BL. Stiamo usando BL per qualcos'altro completamente qui. BL funge da contatore che governa la lunghezza delle righe di caratteri visualizzate sullo schermo. BL è stato caricato in precedenza con il valore rappresentato dall'equazione CHRTLEN, che ha il valore 32. Ad ogni passaggio attraverso il ciclo, l'istruzione DEC BL decrementa il valore di BL di 1. Quindi, l'istruzione LOOPNZ ottiene il suo momento di gloria. LOOPNZ è leggermente diverso dal nostro amico LOOP che abbiamo esaminato in precedenza. È solo abbastanza diverso da metterti nei guai se non capisci veramente come funziona. Sia LOOP che LOOPNZ decrementano il registro RCX di 1. LOOP monitora lo stato del registro RCX e chiude il ciclo finché RCX non arriva a 0. LOOPNZ osserva sia lo stato del registro RCX sia lo stato del flag zero ZF. (LOOP ignora ZF.) LOOPNZ chiuderà il ciclo solo se RCX <> 0 e ZF = 0. In altre parole, LOOPNZ chiude il ciclo solo se RCX ha ancora qualcosa al suo interno e se il flag Zero ZF non è impostato. Quindi, cosa sta esattamente osservando LOOPNZ qui? Ricorda che immediatamente prima dell'istruzione LOOPNZ, stiamo decrementando BL di 1 attraverso un'istruzione DEC BL. L'istruzione DEC influisce sempre su ZF. Se l'operando di DEC arriva a zero per effetto dell'istruzione DEC, ZF diventa 1 (è impostato). Altrimenti, ZF rimane 0 (rimane azzerato). Quindi, effettivamente, LOOPNZ sta monitorando lo stato del registro BL. Finché BL non viene decrementato a 0 (impostando ZF), LOOPNZ chiude il ciclo. Dopo che BL è arrivato a zero, il ciclo interno è terminato e l'esecuzione passa attraverso LOOPNZ all'istruzione successiva. E per quanto riguarda RCX? Bene, LOOPNZ sta infatti osservando RCX, ma anche JRCXZ. JRCXZ è in realtà l'interruttore che governa quando l'intero ciclo —sia le porzioni interne che quelle esterne—ha svolto il suo lavoro e deve fermarsi. Quindi, mentre LOOPNZ osserva RCX, qualcun altro sta svolgendo quel compito e quel qualcun altro agirà su RCX prima che LOOPNZ possa farlo. Il compito di LOOPNZ è quindi quello di decrementare RCX ma di monitorare BL. Governa il ciclo interno dei due.
+</p>
+
+### Chiusura del ciclo esterno
+
+<p align=justify>
+Ma significa questo che JRCXZ chiude il ciclo esterno? No. JRCXZ ci dice quando entrambi i cicli sono terminati. La chiusura del ciclo esterno viene eseguita in modo leggermente diverso rispetto alla chiusura del ciclo interno. Dai un'altra occhiata ai due cicli nidificati:
+</p>
+
+```asm
+ .DoLn:
+ 	mov bl,CHRTLEN        ; Each line will consist of 32 chars
+
+ .DoChr:
+ 	stosb                 ; Note that there's no REP prefix!
+	jrcxz AllDone         ; When the full set is printed, quit
+	inc al                ; Bump the character value in AL up by 1
+ 	dec bl                ; Decrement the line counter by one
+	loopnz .DoChr         ; Go back & do another char until BL = 0
+	add rdi,COLS-CHRTLEN  ; Move RDI to start of next line
+	jmp .DoLn             ; Start display of the next line
+```
+
+<p align=justify>
+Il ciclo interno si considera completato quando abbiamo visualizzato un'intera riga della tabella ASCII sullo schermo. BL governa la lunghezza di una riga e quando BL arriva a zero (cosa che l'istruzione LOOPNZ rileva), una riga è finita. LOOPNZ quindi passa all'istruzione ADD che modifica RDI. Modifichiamo RDI per saltare dall'indirizzo della fine di una riga completata nel buffer di visualizzazione all'inizio della riga successiva al margine sinistro. Questo significa che dobbiamo "avvolgere" un certo numero di caratteri dalla fine della riga della tabella ASCII alla fine dello schermo visibile. Il numero di byte richiesto è dato dall'espressione a tempo di assemblaggio COLS-CHRTLEN. Questo è fondamentalmente la differenza tra la lunghezza di una riga della tabella ASCII e la larghezza dello schermo virtuale. (Non la larghezza della finestra del terminale a cui lo schermo virtuale è visualizzato!) Il risultato dell'espressione è il numero di byte che dobbiamo muovere ulteriormente nel buffer di visualizzazione per arrivare all'inizio della riga successiva al margine sinistro dello schermo. Ma dopo che quell'avvolgimento è stato realizzato modificando RDI, il lavoro del ciclo esterno è finito e chiudiamo il ciclo. Questa volta lo facciamo incondizionatamente tramite un semplice JMP. L'obiettivo dell'istruzione JMP è l'etichetta locale .DoLn. Nessun se, nessun argomento. Alla cima del ciclo esterno (rappresentato dall'etichetta .DoLn), ricarichiamo la lunghezza di una riga della tabella nel registro BL ora vuoto e poi torniamo nel ciclo interno. Il ciclo interno inizia a lanciare caratteri di nuovo nel buffer e continuerà a farlo finché JRCXZ non rileva che RCX è arrivato a 0. A quel punto, sia i cicli interno che esterno sono finiti e l'intera tabella ASCII è stata scritta in VidBuff. Con questo completato, il buffer può essere inviato alla console Linux chiamando la procedura Show.
+</p>
+
+###  Showchar Recap
+
+<p align=justify>
+Rivisitiamo ciò che abbiamo appena passato, poiché è indubbiamente piuttosto complesso. Il programma showchar contiene due cicli annidati: il ciclo interno invia caratteri allo schermo tramite STOSB. Il ciclo esterno invia righe di caratteri allo schermo, ripetendo il ciclo interno un certo numero di volte. (Qui, 7.) Il ciclo interno è governato dal valore nel registro BL, che è inizialmente impostato per prendere la lunghezza di una riga di caratteri. (Qui, 32.) Il ciclo esterno non è esplicitamente governato dal numero di righe da visualizzare. Cioè, non si carica il numero 7 in un registro e lo si decrementa. Invece, il ciclo esterno continua fino a quando il valore in RCX non scende a 0, indicando che l'intero lavoro—visualizzare tutti i 224 caratteri che vogliamo mostrare—è completato. Entrambi i cicli, interno ed esterno, modificano i registri con cui lavora STOSB. Il ciclo interno modifica AL dopo ogni carattere inviato allo schermo. Questo rende possibile visualizzare un carattere diverso ogni volta che STOSB viene eseguito. Il ciclo esterno modifica RDI (il registro dell'indice di destinazione) ogni volta che una riga di caratteri è completata. Questo ci consente di suddividere la stringa di destinazione in sette righe separate, non contigue e non identiche.
+</p>
+
+### Argomenti da linea di comando, ricerche di stringhe e lo stack di Linux
+
+<p align=justify>
+Quando avvii un programma al prompt dei comandi della console Linux, hai la possibilità di includere un numero ragionevole di argomenti dopo il percorso del programma eseguibile. In altre parole, puoi eseguire un programma chiamato showargs1 in questo modo:
+</p>
+
+```
+$./showargs1 time for tacos
+```
+
+<p align=justify>
+I tre argomenti seguono il nome del programma e sono separati da caratteri di spazio. Nota che questi non sono gli stessi dei parametri di reindirizzamento I/O, che richiedono l'uso degli operatori di reindirizzamento “>” o “<” e sono gestiti separatamente da Linux. Quando uno dei tuoi programmi inizia a essere eseguito, qualsiasi argomento della riga di comando che è stato inserito al momento del lancio del programma viene passato al programma nello stack di Linux. In questo capitolo, vedremo come accedere agli argomenti della riga di comando di un programma da un programma in linguaggio assembly. Nel processo, vedremo un'altra istruzione di stringa x86 in azione: SCASB.
+</p>
+
+### Visualizzazione degli argomenti della riga di comando da SASM
+
+<p align=justify>
+Il fatto che Linux posizioni gli argomenti della riga di comando nello stack non significa che tu debba accedere direttamente allo stack per ottenerli. Dai programmi scritti all'interno dell'IDE SASM, l'accesso agli argomenti ti arriva nei registri RSI e RDI. Funziona in questo modo:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		All'avvio del programma, il registro RDI contiene un valore, 1 o maggiore, che indica il numero di argomenti della riga di comando. Il valore è sempre almeno 1 perché Linux posiziona sempre il testo di invocazione della riga di comando del programma come primo elemento nella sua lista di argomenti della riga di comando.
+		</p>
+	</li>
+ 		<p align=justify>
+		All'avvio, il registro RSI contiene l'indirizzo del primo elemento nella lista degli argomenti della riga di comando. Ricorda che quel primo elemento è sempre l'invocazione della riga di comando del programma. Se non ci sono argomenti della riga di comando, il testo di invocazione è l'unica cosa a cui puoi accedere da RSI. Se ci sono argomenti della riga di comando, ci sarà un elenco di indirizzi in memoria, con ogni indirizzo che punta a uno degli argomenti.
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+Ricorda che questo vale per i programmi che crei con SASM utilizzando i parametri di build predefiniti, o per i programmi non SASM che colleghi con gcc. Perché? SASM utilizza il compilatore Gnu C gcc come linker e richiede l'etichetta main: come inizio del programma. Tutti i programmi C hanno quella che viene chiamata la funzione principale, main(), che è la parte del programma che scrivi. In sostanza, ciò che SASM costruisce è un programma C per il quale si scrive la funzione main(). La parte difficile è che gcc si collega a un blocco di codice che viene eseguito prima che la funzione main() inizi l'esecuzione. Questo codice di "avvio" fa una serie di cose. Per questa discussione, ciò che conta è che copi il conteggio degli argomenti e il puntatore alla tabella degli argomenti dallo stack e nei registri RSI e RDI. Vedere la Figura di sotto. Si noti che i programmi collegati a glibc ma costruiti al di fuori di SASM hanno le stesse informazioni utili in RSI e RDI, per gentile concessione del codice di avvio di glibc. Più avanti spiegherò come i programmi assembly compilati senza collegarsi con gcc possono leggere le stesse informazioni dallo stack. Per ora date un'occhiata al listato di sotto, un programma che visualizza i parametri della riga di comando, scritto per SASM.
+</p>
+
+```asm
+;  Executable name : showargs1gcc
+;  Version         : 2.0
+;  Created date    : 10/17/2022
+;  Last update     : 7/18/2023
+;  Author          : Jeff Duntemann
+;  Description     : A simple program in assembly for Linux, using NASM 2.14.02,
+;                    demonstrating how to access command line arguments from
+;                    programs written/built in SASM.
+;
+;                Build using SASM standard x64 build setup
+;
+SECTION .data                   ; Section containing initialised data
+
+    ErrMsg db "Terminated with error.",10
+    ERRLEN equ $-ErrMsg
+        
+    MAXARGS equ 5               ; More than 5 arguments triggers an error
+	
+SECTION .bss                    ; Section containing uninitialized data	
+
+SECTION .text                   ; Section containing code
+
+global 	main                    ; Linker needs this to find the entry point!
+	
+main:
+    mov rbp, rsp            ; for correct SASM debugging
+    nop                     ; This no-op keeps gdb happy...
+
+    mov r14,rsi             ; Put offset of arg table in r14
+    mov r15,rdi             ; Put argument count in r15
+
+    cmp qword r15,MAXARGS   ; Test for too many arguments
+    ja Error                ; Show error message if too many args & quit
+              
+; Use SCASB to find the 0 at the end of the single argument
+    xor rbx,rbx             ; RBX contains the 0-based # (not address) of current arg 
+Scan1:
+    xor rax,rax             ; Searching for string-termination 0, so clear AL to 0
+    mov rcx,0000ffffh       ; Limit search to 65535 bytes max
+    mov rdi,qword [r14+rbx*8] ; Put address of string to search in RDI, for SCASB     
+    mov rdx,rdi             ; Copy string address into RDX for subtraction
+                                                                                                                                                                                                                                                                                                                    
+    cld                     ; Set search direction to up-memory
+    repne scasb             ; Search for null (0) in string at RDI
+    jnz Error               ; Jump to error message display if null not found.
+
+    mov byte [rdi-1],10     ; Store an EOL where the null used to be
+    sub rdi,rdx             ; Subtract position of 0 in RDI from start address in RDX
+    mov r13,rdi             ; Put calculated arg length into R13
+
+; Display the argument to stdout:
+    mov rax,1               ; Specify sys_write call
+    mov rdi,1               ; Specify File Descriptor 1: Standard Output
+    mov rsi,rdx             ; Pass offset of the arg in RSI
+    mov rdx,r13             ; Pass length of arg in RDX
+    syscall                 ; Make kernel call
+
+    inc rbx                 ; Increment the argument counter
+    cmp rbx,r15             ; See if we've displayed all the arguments
+    jb Scan1                ; If not, loop back and do another
+    jmp Exit                ; We're done! Let's pack it in!
+
+Error:
+    mov rax,1               ; Specify sys_write call
+    mov rdi,1               ; Specify File Descriptor 2: Standard Error
+    mov rsi,ErrMsg          ; Pass offset of the error message
+    mov rdx,ERRLEN          ; Pass the length of the message
+    syscall                 ; Make kernel call
+
+Exit:
+    ret
+```
+
+<div aling=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/how_to_access_parameters_from_within_SASM.png">
+</div>
+
 ## Controllo dei processi
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.01.png)
