@@ -12668,6 +12668,302 @@ Exit:
 <img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/how_to_access_parameters_from_within_SASM.png">
 </div>
 
+### Ricerche di stringhe con SCASB
+
+<p align=justify>
+Poiché il codice di avvio di glibc copia il conteggio degli argomenti e il puntatore alla tabella nei registri per te, accedere agli argomenti della riga di comando è facile. Hai quello che equivale a una tabella di indirizzi nello stack, e ogni indirizzo punta a un argomento. L'unica parte complicata è determinare quanti byte appartengono a ciascun argomento in modo da poter copiare i dati degli argomenti altrove se necessario, o passarli a una chiamata di sistema Linux come sys_write. Poiché ogni argomento termina con un singolo byte 0, la sfida è chiara: dobbiamo cercare quel 0. Questo può essere fatto nel modo ovvio, in un ciclo che legge un byte da un indirizzo in memoria, e poi confronta quel byte con 0 prima di incrementare un contatore e leggere il byte successivo in memoria. Tuttavia, la buona notizia è che il set di istruzioni x64 implementa un tale ciclo in un'istruzione di stringa che non memorizza dati (come STOSB) o copia dati (come MOVSB) ma cerca invece in memoria un valore di dato particolare. Questa istruzione è SCASB (Scan String by Byte), e se hai seguito la mia presentazione sulle altre istruzioni di stringa finora, capirla dovrebbe essere un gioco da ragazzi. Il codice di sopra dimostra SCASB esaminando gli argomenti della riga di comando nello stack e costruendo una tabella delle lunghezze degli argomenti. Successivamente, restituisce gli argomenti (insieme al testo di invocazione del file eseguibile) a stdout tramite una chiamata a sys_write. La prima cosa da fare è copiare il conteggio degli argomenti e il puntatore della tabella in registri differenti, in questo caso R14 e R15. Perché? I registri RSI e RDI hanno entrambi agende segrete: RDI fa parte dell'uso di SCASB (ne parlerò tra poco) e RSI è utilizzato per effettuare chiamate sys_write. Vuoi mantenere il conteggio degli argomenti e il puntatore della tabella degli indirizzi al sicuro in registri che non saranno utilizzati per altre cose. Stiamo usando un prefisso qui per la prima volta in questo libro: REPNE. Questo può essere letto come “Ripeti finché non è uguale.” Spiegherò questo in maggior dettaglio tra poco. Quando REPNE è usato insieme a SCASB, l'istruzione REPNE SCASB può trovare il byte 0 alla fine di ogni argomento. Configurare SCASB è grossomodo lo stesso che configurare STOSB:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		Per le ricerche in memoria avanzata (come questa), viene utilizzata l'istruzione CLD per garantire che il flag di Direzione DF sia resettato.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		L'indirizzo del primo byte della stringa da cercare è collocato in RDI. Qui, è l'indirizzo di un argomento della riga di comando memorizzato da qualche parte nello stack.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Il valore da cercare è posizionato nel registro a 8 bit AL. (Qui, il numero binario 0.)
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Un conteggio massimo è impostato in RCX. Questo viene fatto per evitare di cercare troppo lontano nella memoria nel caso in cui il byte che stai cercando non sia effettivamente presente.
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+Con tutto ciò in atto, REPNE SCASB può essere eseguito. Come con STOSB, questo crea un ciclo stretto all'interno della CPU. Ad ogni passaggio nel ciclo, il byte a [RDI] viene confrontato con il valore in AL. Se i valori sono uguali, il ciclo è soddisfatto e REPNE SCASB smette di essere eseguito. Se i valori non sono uguali, RDI viene incrementato di 1, RCX viene decrementato di 1 e il ciclo continua con un altro test del byte a [RDI]. Quando REPNE SCASB trova il carattere in AL e termina, RDI punterà al byte dopo la posizione del carattere trovato nella stringa di ricerca. Se vuoi accedere al carattere trovato, devi sottrarre 1 da RDI, come fa il programma quando sostituisce il carattere terminatore 0 con un carattere EOL:
+</p>
+
+```asm
+mov byte [rdi-1],10 ; Store an EOL where the 0 used to be
+```
+
+### REPNE vs. REPE
+
+<p align=justify>
+Vale la pena dare un'occhiata più da vicino al prefisso REPNE qui, insieme al suo partner con il senso opposto, REPE. L'istruzione SCASB è un po' diversa da STOSB e MOVSB in quanto è un'istruzione di stringa condizionale. STOSB e MOVSB ripetono entrambi la loro azione incondizionatamente quando sono preceduti dal prefisso REP. Non ci sono test in corso se non il test di RCX per vedere se il ciclo è continuato per il numero di iterazioni predeterminato. Al contrario, SCASB esegue un test separato ogni volta che viene attivato, e ogni test può andare in due modi. Ecco perché non utilizziamo il prefisso REP incondizionato con SCASB, ma il prefisso REPNE oppure il prefisso REPE. Quando stiamo cercando un byte nella stringa di ricerca che corrisponde al byte in AL, usiamo il prefisso REPNE, come viene fatto nel programma showargs1gcc. Quando stiamo cercando un byte nella stringa di ricerca che non corrisponde al byte in AL, usiamo REPE. Potresti pensare che suoni all'incontrario in qualche modo, e lo è. Tuttavia, il senso del prefisso REPNE è questo: Ripeti SCASB finché [RDI] non è uguale ad AL. Allo stesso modo, il senso del prefisso REPE è questo: Ripeti SCASB finché [RDI] è uguale ad AL. Il prefisso indica per quanto tempo l'istruzione SCASB dovrebbe continuare a scattare, non quando dovrebbe fermarsi. È importante ricordare che REPNE SCASB può terminare per due motivi: trova una corrispondenza con il byte in AL, oppure conta RCX fino a 0. Nella quasi totalità dei casi, se RCX è zero quando REPNE SCASB finisce, significa che il byte in AL non è stato trovato nella stringa di ricerca. Tuttavia, c'è la possibilità casuale che RCX sia semplicemente conteggiato fino a zero quando [RDI] conteneva una corrispondenza con AL. Questo non è molto probabile, ma ci sono alcune combinazioni di dati in cui potrebbe verificarsi. Ogni volta che SCASB scatta, esegue un confronto, e quel confronto imposta o cancella il flag Zero ZF. REPNE terminerà l'istruzione quando il suo confronto imposta ZF a 1. REPE terminerà l'istruzione quando il suo confronto cancella ZF a 0. Tuttavia, per essere assolutamente sicuro di catturare il risultato "ricerca fallita", devi testare immediatamente ZF dopo la fine dell'istruzione SCASB.
+</p>
+
+<p align=justify>
+Per REPNE SCASB: Usa JNZ. 
+</p>
+
+<p align=justify>
+Per REPE SCASB: Usa JZ
+</p>
+
+### Non puoi passare argomenti da linea di comando ai programmi all'interno di SASM
+
+<p align=justify>
+Se costruisci e poi esegui il Listato codice di sopra all'interno di SASM, ciò che verrà mostrato sarà il primo elemento nell'elenco, che è il testo di invocazione per il programma. Tuttavia, questo testo di invocazione non includerà il nome showargs1gcc. Quello che vedrai sarà questo o qualcosa di molto simile a questo:
+</p>
+
+```
+/tmp/SASM/SASMprog.exe
+```
+
+<p align=justify>
+Perché? Quando esegui un programma all'interno di SASM, ciò che stai eseguendo è un file binario temporaneo chiamato SASMprog.exe. SASM genera questo file quando costruisce un programma per te. È lo stesso nome del file per qualsiasi programma tu scriva in SASM. Il file eseguibile showargs1gcc non esiste finché non lo crei salvando l'eseguibile su disco. E non puoi eseguirlo fino a quando non apri una finestra del terminale, non navighi nella cartella in cui esiste il programma eseguibile, e poi lo esegui dalla riga di comando. Questo ci porta a uno dei principali difetti di SASM: per quanto ne so, non esiste un meccanismo in SASM per memorizzare gli argomenti della riga di comando che verranno passati a un programma eseguito all'interno di SASM. Per far sì che showargs1gcc mostri effettivamente gli argomenti, devi salvarlo come file eseguibile ed eseguirlo dalla riga di comando del terminale.
+</p>
+
+<p align=justify>
+Se esegui showargs1gcc dalla riga di comando in questo modo:
+</p>
+
+```
+$ ./showargs1gcc time for tacos
+```
+
+<p align=justify>
+vedrai il seguente nella finestra del terminale:
+</p>
+
+```
+./showargs1gcc
+ time
+ for
+ tacos
+```
+
+<p align=justify>
+Ogni argomento della riga di comando è su una riga separata perché il programma sostituisce il byte 0 alla fine di ogni argomento con un carattere EOL. Solo un rapido promemoria: salva un file eseguibile selezionando l'elemento di menu File ➪ Salva .exe in SASM e poi inserendo il nome che vuoi dare al file del programma eseguibile. Il nome non deve essere necessariamente quello del file del codice sorgente meno il .asm. Non è necessario usare il suffisso .exe. La maggior parte degli eseguibili Linux sono semplicemente un nome senza alcun suffisso. Puoi chiamarlo come vuoi. Tuttavia, ti consiglio vivamente di salvare il file eseguibile nella stessa cartella in cui si trovano il suo file di codice sorgente e il makefile.
+</p>
+
+### Lo Stack, la sua struttura e come usarlo
+
+<p align=justify>
+Lo stack è molto più grande e complesso di quanto tu possa pensare. Quando Linux carica il tuo programma, posiziona una grande quantità di informazioni nello stack prima di permettere l'esecuzione del codice del programma. Questo include il testo di invocazione dell'eseguibile in esecuzione, eventuali argomenti della riga di comando inseriti dall'utente durante l'esecuzione del programma e lo stato corrente dell'ambiente Linux, che è una grande collezione di stringhe di configurazione testuali che definiscono come è impostato Linux. Tutto questo è organizzato secondo un piano, e ho riassunto il piano nella figura di sotto. Prima, alcune rinfrescate di gergo: la parte superiore dello stack è (controintuitivamente) in fondo al diagramma. È il luogo di memoria indicato da RSP quando il tuo programma inizia a essere eseguito. La parte inferiore dello stack è in cima al diagramma. È l'indirizzo più alto nello spazio degli indirizzi virtuali che Linux assegna al tuo programma quando lo carica e lo esegue. Questa distinzione tra “alto” e “basso” è una convenzione antica che confonde molte persone. I diagrammi di memoria solitamente iniziano con la memoria bassa in fondo alla pagina e raffigurano la memoria più alta sopra di essa, anche se questo significa che la parte inferiore dello stack si trova in cima al diagramma. Abituati, se vuoi comprendere la letteratura, non hai scelta. Linux costruisce lo stack dalla memoria alta verso la memoria bassa, iniziando dalla parte inferiore dello stack e proseguendo verso la memoria più bassa. Quando il codice del tuo programma inizia effettivamente a essere eseguito, RSP punta alla parte superiore dello stack. Ecco una descrizione più dettagliata di ciò che troverai nello stack all'avvio:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		In RSP (cioè, la cima dello stack) c'è un numero a 64 bit che indica il numero di argomenti della riga di comando presenti nello stack. Questo valore è sempre almeno 1, anche se non sono stati inseriti argomenti. Il testo digitato dall'utente durante l'esecuzione del programma viene conteggiato insieme a eventuali parametri della riga di comando, e questo "testo di invocazione" è sempre presente, motivo per cui il conteggio è sempre almeno 1.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Il prossimo elemento a 64 bit in memoria a partire da RSP è l'indirizzo del testo di invocazione con cui è stato eseguito il file eseguibile. Il testo può essere completamente qualificato, il che significa che il percorso include il percorso della directory al file dalla tua directory /home; ad esempio, /home/asmstuff/asm4ecode/showargs2/showargs2. Questo è come appare il testo di invocazione quando esegui il tuo programma dal debugger Insight. (Ulteriori informazioni su Insight nell'Appendice A.) Se utilizzi il metodo "punto slash" per invocare un eseguibile dalla directory corrente, vedrai il nome dell'eseguibile preceduto da ./.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Se sono stati inseriti dei parametri da riga di comando, i loro indirizzi a 64 bit si trovano sopra la memoria rispetto a RSP, con l'indirizzo del primo (più a sinistra) parametro seguito dall'indirizzo del secondo, e così via. Il numero di parametri è ovviamente variabile, anche se raramente avrai bisogno di più di quattro o cinque.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		La lista degli indirizzi degli argomenti della riga di comando è terminata da un puntatore nullo, che è gergo per 64 bit di zero binario.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		La memoria superiore dal puntatore nullo inizia un lungo elenco di indirizzi a 64 bit. Quanti siano dipende dal tuo particolare sistema Linux, ma può essere vicino a 200. Ognuno di questi indirizzi punta a una stringa terminata da nullo (ne parleremo tra poco) contenente una delle definizioni appartenenti all'ambiente Linux.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Alla fine dell'elenco degli indirizzi delle variabili ambientali di Linux c'è un altro puntatore nullo a 64 bit, e questo segna la fine della "directory" dello stack. Oltre questo punto, utilizzi gli indirizzi trovati in precedenza nello stack per accedere a elementi ancora più in alto nella memoria.
+		</p>
+	</li>
+</ul>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/linux_stack_at_program_execution.png">
+</div>
+
+### Accedere allo Stack direttamente
+
+<p align=justify>
+Il Listato di sopra viene eseguito in SASM, e il codice di avvio C copia utilmente il conteggio degli argomenti e l'indirizzo della tabella degli argomenti nei registri. Se non stai usando SASM, quel passaggio utile non avverrà. Devi accedere direttamente allo stack. Il Listato di sotto mostra come ciò può essere fatto.
+</p>
+
+```asm
+;  Executable   : showargs2
+;  Version      : 2.0
+;  Created date : 11/3/2022
+;  Last update  : 5/11/2023
+;  Author       : Jeff Duntemann
+;  Description  : A simple program in assembly for Linux, using NASM 2.15.05,
+;                 demonstrating the way to access command line arguments on 
+;                 the stack. This version accesses the stack "nondestructively"
+;                 by using memory references calculated from RBP rather than
+;                 POP instructions.
+;
+;    Use this makefile to build:
+;    showargs2: showargs2.o
+;        ld -o showargs2 -g showargs2.o
+;    showargs2.o: showargs2.asm
+;        nasm -f elf64 -g -F dwarf showargs2.asm -l showargs2.lst 
+;
+
+SECTION .data           ; Section containing initialized data
+
+    ErrMsg db "Terminated with error.",10
+    ERRLEN equ $-ErrMsg
+	
+SECTION .bss            ; Section containing uninitialized data	
+
+; This program handles up to MAXARGS command-line arguments. Change the
+; value of MAXARGS if you need to handle more arguments than the default 10.
+; Argument lengths are stored in a table. Access arg lengths this way:
+;     [ArgLens + <index reg>*8]
+; Note that when the argument lengths are calculated, an EOL char (10h) is
+; stored into each string where the terminating null was originally. This
+; makes it easy to print out an argument using sys_write. 
+
+    MAXARGS   equ  10       ; Maximum # of args we support
+    ArgLens:  resq MAXARGS	; Table of argument lengths
+
+SECTION .text       ; Section containing code
+
+global  _start      ; Linker needs this to find the entry point!
+	
+_start:
+    push rbp        ; Standard prolog
+    mov rbp, rsp
+    and rsp,-16    
+
+
+; Copy the command line argument count from the stack and validate it:
+    mov r13,[rbp+8]         ; Copy argument count from the stack
+    cmp qword r13,MAXARGS   ; See if the arg count exceeds MAXARGS
+    ja Error                ; If so, exit with an error message
+
+; Here we calculate argument lengths and store lengths in table ArgLens:
+    mov rbx,1               ; Stack address offset starts at RBX*8
+
+ScanOne:
+    xor rax,rax     ; Searching for 0, so clear AL to 0
+    mov rcx,0000ffh ; Limit search to 65535 bytes max
+    mov rdi,[rbp+8+rbx*8] ; Put address of string to search in RDI
+    mov rdx,rdi     ; Copy starting address into RDX
+
+    cld	            ; Set search direction to up-memory
+    repne scasb     ; Search for null (binary 0) in string at RDI
+    jnz Error       ; REPNE SCASB ended without finding AL
+
+    mov byte [rdi-1],10	; Store an EOL where the null used to be
+    sub rdi,rdx     ; Subtract position of 0 from start address
+    mov [ArgLens+rbx*8],rdi    ; Put length of arg into table
+    inc rbx         ; Add 1 to argument counter
+    cmp rbx,r13     ; See if arg counter exceeds argument count
+    jbe ScanOne     ; If not, loop back and scan another one
+
+; Display all arguments to stdout:
+    mov rbx,1 ; Start (for stack addressing reasons) at 1
+Showem:
+    mov rax,1       ; Specify sys_write call
+    mov rdi,1       ; Specify File Descriptor 1: Standard Output
+    mov rsi,[rbp+8+rbx*8]   ; Pass offset of the argument
+    mov rdx,[ArgLens+rbx*8] ; Pass the length of the argument
+    syscall         ; Make kernel call
+    inc rbx         ; Increment the argument counter
+    cmp rbx,r13     ; See if we've displayed all the arguments
+    jbe Showem      ; If not, loop back and do another
+    jmp Exit        ; We're done! Let's pack it in!
+
+Error:
+    mov rax,1       ; Specify sys_write call
+    mov rdi,1       ; Specify File Descriptor 2: Standard Error
+    mov rsi,ErrMsg  ; Pass offset of the error message
+    mov rdx,ERRLEN  ; Pass the length of the message
+    syscall         ; Make kernel call
+
+Exit:
+    mov rsp,rbp
+    pop rbp
+    
+    mov rax,60      ; Code for Exit Syscall
+    mov rdi,0       ; Return a code of zero	
+    syscall         ; Make kernel call
+```
+
+### Stack Alignment Prolog
+
+```asm
+ push rbp        ; Alignment prolog
+ mov rbp, rsp
+ and rsp,-16
+```
+
+<p align=justify>
+Va all'inizio dei programmi che non si collegano con la libreria glibc. (Questi sono programmi che iniziano con l'etichetta _start: I programmi creati con make di solito usano il prologo di allineamento.) Lo standard x64 ABI richiede che lo stack sia allineato su un confine di 16 byte (non bit!). L'istruzione AND RSP,-16 è quella che garantisce l'allineamento dello stack. Ho già parlato dell'AND prima; dovresti afferrare rapidamente che questa istruzione costringe i quattro bit inferiori del puntatore dello stack a 0. Ora è allineato su un confine di 16 byte, anche se prima non lo era. Il push di RBP nello stack ti fornisce un'ancora da cui indirizzare elementi di dati come i parametri della riga di comando esistenti “più in basso” (il che significa veramente “in memoria più alta”) nello stack. Aiuta anche a mantenere lo stack allineato, anche se come funziona dovrà aspettare il prossimo capitolo. La conseguenza pratica di avere RBP in cima allo stack è che contiene il valore originale del puntatore dello stack. Lo svantaggio è che devi saltarlo per arrivare agli argomenti della riga di comando. C'è anche qualcosa chiamato epilogo, che arriva alla fine del programma, proprio prima che restituisca il controllo a Linux. L'epilogo (di nuovo, solo per programmi non-SASM) arriva giusto prima che il programma esca usando SYSCALL.
+</p>
+
+```asm
+ mov rsp,rbp
+ pop rbp
+```
+
+<p align=justify>
+Lo scopo dell'epilogo è ripristinare lo stack allo stato in cui si trovava all'ingresso nella funzione. Ora, potreste chiedere qui perché abbiamo utilizzato il prologo di allineamento in questo esempio e non in quelli precedenti. Per i programmi collegati con il compilatore gcc e la libreria glibc, lo stack sarà già allineato. Quindi, i programmi SASM non hanno bisogno del prologo di allineamento. SASM richiede istruzione MOV RBP,RSP all'inizio della funzione MAIN:, altrimenti la sua interfaccia di debug potrebbe non funzionare correttamente. Ancora, parlerò dell'allineamento dello stack in modo più dettagliato successivamente. Per programmi semplici che non utilizzano molto lo stack (come la maggior parte degli esempi in questo libro), il disallineamento dello stack potrebbe non causare molti o nessun problema. Tuttavia, è una buona idea prendere l'abitudine di inserire il prologo di allineamento all'inizio dei vostri programmi non-SASM.
+</p>
+
+### Indirizzamento dei dati nello Stack
+
+<p align=justify>
+Il "dove" inizia da quello che chiamiamo la cima dello stack, che è l'indirizzo presente nel puntatore dello stack RSP quando il programma inizia a essere eseguito. Nota che subito dopo aver spinto RBP nello stack, il prologo copia RSP in RBP. Questo ti fornisce un puntatore solido allo stack così come esisteva quando Linux ha iniziato a eseguire il tuo programma. Con la cima originale dello stack a disposizione in RBP, il puntatore dello stack RSP può spostarsi verso l'alto o verso il basso man mano che le procedure vengono chiamate e restituite. (Il programma showargs2 non fa nulla di questo, per semplificare.) Inoltre, puoi spingere valori temporanei nello stack per un uso successivo, anche se, con il doppio dei registri generali nell'architettura x64, questo viene fatto sempre meno man mano che viene scritto nuovo codice. RBP era un tempo BP nell'era a 16 bit, e il nome significava "puntatore di base". È stato creato per contenere il valore iniziale del puntatore dello stack, fornendo una "base" da cui fare riferimento ad altri elementi nello stack. Allora, cosa c'è nello stack mentre lo erediti da Linux? L'ho disegnato nella figura di sopra. Questo è il suo stato prima che il prologo spinga RBP su di esso. In cima allo stack c'è un valore di 8 byte che rappresenta il numero di argomenti della riga di comando. C'è sempre almeno 1 elemento nello stack: il testo di invocazione del programma. In altre parole, se il valore in [RBP] è 5, ci sono quattro argomenti reali della riga di comando. Il quinto elemento è il testo di invocazione, che appare per primo nello stack. Il programma visualizzerà un messaggio di errore se vengono inseriti più di MAXARGS argomenti (qui, 10). Immediatamente dopo il conteggio degli argomenti c'è una tabella di indirizzi a 64 bit che puntano agli argomenti reali. Quanti indirizzi ci sono dipende da quanti argomenti sono stati inseriti sulla riga di comando. C'è sempre almeno uno. Il primo indirizzo nella tabella è l'indirizzo del testo inserito dall'utente per invocare il programma. Dopo di ciò, gli indirizzi puntano agli argomenti della riga di comando nell'ordine in cui sono stati inseriti dall'utente. Tutto ciò che viene letto dallo stack in showargs2 è letto in base all'indirizzo in RBP. Il test del numero di argomenti rispetto a un valore massimo viene effettuato in questo modo:
+</p>
+
+```asm
+ mov r13,[rbp+8]   ; Copy argument count from the stack into R13
+ cmp r13,MAXARGS   ; See if the arg count exceeds MAXARGS
+ ja Error          ; If so, exit with an error message
+```
+
+<p align=justify>
+Qui, il conteggio degli argomenti si trova all'indirizzo contenuto in RBP più otto byte, perché RBP è stato inserito nello stack dal prologo e deve essere "superato" per raggiungere il conteggio degli argomenti. Il fatto che RBP contenga l'indirizzo informa l'assemblatore che il valore rappresentato da MAXARGS deve essere trattato come una parola quad di 64 bit, anche se il suo valore è solo 10. Ricorda che le equazioni sono valori, non posizioni in memoria. Se il conteggio degli argomenti è superiore a 10, il programma si interrompe con un breve messaggio di errore. La scansione di ciascuno degli argomenti per localizzare il suo carattere zero di terminazione è effettuata utilizzando il calcolo dell'indirizzo efficace più complesso possibile in x64: <code>Base + (Indice x Scala) + Dislocamento</code>. (Vedi la discussione sugli effective address, specialmente le figure)
+</p>
+
+```asm
+ mov rsi,qword [rbp+8+rbx*8]
+```
+
+<p align=justify>
+I termini dell'indirizzo efficace qui sono mostrati in un ordine diverso nel codice per renderlo un po' più facile da capire come funziona questo particolare riferimento alla memoria. Leggilo in questo modo:
+</p>
+
+1. Inizi con l'indirizzo "base" per il riferimento allo stack, in RBP.
+2. Aggiungi 8 alla base per "superare" RBP in cima allo stack. Questo è il termine di "spostamento" dell'indirizzo efficace.
+3. Moltiplichi il numero ordinale a partire da 1 dell'indirizzo a cui si accede per 8, che è la dimensione (in byte) di tutti gli indirizzi in x64. In altre parole, per il secondo elemento nella lista degli argomenti, moltiplicheresti il numero ordinale memorizzato in RBX per 8, la dimensione degli indirizzi in x64. Il valore più piccolo aggiunto è almeno 8, che ti porta oltre il conteggio degli argomenti.
+4. Aggiungi il prodotto di RBX e 8 alla base più lo spostamento, e avrai l'indirizzo del primo argomento nella tabella. Questo indirizzo è copiato in RDI, per essere utilizzato con l'istruzione REPNE SCASB.
+
+<p align=justify>
+Se questo non ti è completamente chiaro, torna indietro e leggilo di nuovo. L'indirizzamento della memoria è il concetto più importante nel lavoro con il linguaggio assembly. Se non comprendi l'indirizzamento della memoria, conoscere le istruzioni della macchina e i registri ti aiuterà poco, se non del tutto.
+</p>
+
+<p align=justify>
+Accedere agli elementi nello stack estraendoli con pop nei registri funziona sicuramente, ma ora nel 2023 ti consiglio di evitare di estrarre cose dallo stack a meno che il tuo codice non le abbia inserite lì. Come puoi immaginare, estrarre il conteggio degli argomenti in un registro come RAX modifica i contenuti originali dello stack spostando RSP. Se puoi fare riferimento ai contenuti dello stack tramite un singolo indirizzo di memoria basato su RBP, non dovrai preoccuparti tanto dei bug che possono verificarsi una volta che RSP non punta più alla cima dello stack come lo hai ricevuto originalmente da Linux.
+</p>
+
 ## Controllo dei processi
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.01.png)
