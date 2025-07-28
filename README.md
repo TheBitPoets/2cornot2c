@@ -1,4 +1,4 @@
-# 2cornot2c
+<img width="3840" height="2160" alt="image" src="https://github.com/user-attachments/assets/def10af0-1078-4c42-983f-c53b3f55dfc8" /><img width="3840" height="2160" alt="image" src="https://github.com/user-attachments/assets/46ca3029-0de7-40e5-9997-daff0ef9ded6" /><img width="3840" height="2160" alt="image" src="https://github.com/user-attachments/assets/536205d5-6170-481f-bcb2-f9f8e03aa867" /># 2cornot2c
 It's a 101 C course for my students.
 Sorry, only italian version so far.
 
@@ -13230,7 +13230,984 @@ main:
 ```
 ### Testo formattato con printf()
 
+<p align=justify>
+La routine della libreria puts() può sembrare piuttosto utile, ma rispetto ad alcuni dei suoi più sofisticati "fratelli", è roba da bambini. Con puts() puoi inviare solo una semplice stringa di testo a un file (per impostazione predefinita, stdout), senza alcun tipo di formattazione. Peggio ancora, puts() include sempre un carattere EOL alla fine della sua visualizzazione, sia che tu ne includa uno nei tuoi dati di stringa o meno. Questo ti impedisce di utilizzare più chiamate a puts() per stampare più stringhe di testo tutte sulla stessa riga nel terminale. Circa il meglio che puoi dire per puts() è che ha la virtù della semplicità. Per quasi tutte le tue necessità di output di caratteri, è molto meglio usare una funzione di libreria molto più potente chiamata printf(). La funzione printf() ti consente di fare un numero di cose davvero utili, il tutto con una sola chiamata di funzione:
+</p>
 
+<ul>
+	<li>
+		<p align=justify>
+		Output testo con o senza un EOL terminante
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Convertire i dati numerici in testo in numerosi formati, fornendo i codici di formattazione insieme ai dati.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Scrivi il testo in un file che include più stringhe memorizzate separatamente.
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+Se hai lavorato con C per più di mezz'ora, printf() ti sarà perfettamente ovvio, ma per le persone che provengono da altri linguaggi potrebbe prendere un po' di spiegazioni. La routine printf() mostrerà volentieri una stringa semplice come "Mangia da Joe!"—ma puoi unire altre stringhe di testo e dati numerici convertiti con quella stringa base mentre viaggia verso l'output standard, e mostrarle tutte insieme senza problemi. Questo viene fatto inserendo i codici di formattazione nella stringa base e poi passando un elemento dati a printf() per ciascuno di quei codici di formattazione, insieme alla stringa base. Un codice di formattazione inizia con un segno di percento e include informazioni relative al tipo e alla dimensione dell'elemento dati che viene unito con la stringa base, così come a come quelle informazioni devono essere presentate. Diamo un'occhiata a un esempio molto semplice per cominciare. Ecco una stringa base contenente un codice di formattazione:
+</p>
+
+```c
+ "The answer is %d, and don't you forget it!"
+```
+
+<p align=justify>
+Il codice di formattazione %d indica semplicemente a printf() di convertire un valore intero firmato in testo e sostituire quel testo per il codice di formattazione nella stringa base. Ovviamente, ora devi passare un valore intero a printf() (e ti mostrerò come si fa a breve), ma quando lo fai, printf() convertirà l'intero in testo e lo fonderà con la stringa base mentre invia testo allo stream. Se il valore decimale passato è 42, sulla console vedrai questo:
+</p>
+
+```c
+ The answer is 42, and don't you forget it!
+```
+
+<p align=justify>
+Un codice di formattazione ha in realtà una buona quantità di struttura, e il meccanismo printf() nel suo insieme ha più complessità di quante ne possa descrivere in dettaglio in questo libro. Qualsiasi buona guida C spiegherà tutto in dettaglio. Il trattamento su Wikipedia è eccellente.
+</p>
+
+[https://en.wikipedia.org/wiki/Printf](https://en.wikipedia.org/wiki/Printf)
+
+<p align=justify>
+Il miglioramento più significativo che puoi apportare ai codici di formattazione è inserire un valore intero tra il simbolo % e la lettera del codice:
+</p>
+
+```c
+ %5d
+```
+
+<p align=justify>
+Questo codice dice a printf() di visualizzare il valore allineato a destra all'interno di un campo largo cinque caratteri. Se non inserisci un valore per la larghezza del campo, printf() semplicemente darà al valore tanto spazio quanto richiedono le sue cifre. Ricorda che se hai bisogno di visualizzare un simbolo percentuale, devi includere due simboli percentuali consecutivi nella stringa: il primo è un codice di formattazione che dice a printf() di visualizzare il secondo come se stesso, e non come l'inizio di un codice di formattazione.
+</p>
+
+### Passaggio di parametri a printf()
+
+<p align=justify>
+Passare valori a printf() segue le convenzioni di chiamata x64. Se stai visualizzando una stringa con codici di formato incorporati, la stringa base dovrebbe essere il primo parametro, con il suo indirizzo passato in RDI. Dopo, il primo valore da unire alla stringa viene passato in RSI, il secondo in RDX e così via, nell'ordine standard dei registri dei parametri. I valori vengono inseriti nei codici della stringa in ordine, da sinistra a destra. Il programma di sotto presenta una dimostrazione molto semplice del formato di printf(). Una cosa interessante da notare è che puoi passare numeri sia per riferimento che per valore. Il primo intero viene passato posizionando il suo indirizzo in RSI. Il secondo intero viene passato copiando un valore letterale in RDX. Il terzo intero è anch'esso passato come letterale in RCX. Il terzo valore è mostrato in notazione esadecimale, anche se il letterale era un semplice valore intero decimale caricato in RCX. La funzione printf() può effettuare molte conversioni di questo tipo. Puoi unire stringhe di testo alla stringa base in modo simile caricando gli indirizzi delle stringhe da unire nei registri e utilizzando il codice %s che istruisce printf() su dove inserire le stringhe secondarie. Ho eliminato l'intestazione del commento per risparmiare spazio sulla pagina. Il makefile per answer.asm è questo:
+</p>
+
+```make
+answer: answer.o
+     gcc answer.o –o answer –no-pie
+answer.o: answer.asm
+     nasm –f elf64 –g –F dwarf answer.asm
+```
+
+<p align=justify>
+Non dimenticare di inserire le tabulazioni richieste se digiti e salvi il makefile
+</p>
+
+```asm
+section .data
+        answermsg db    "The answer is %d ... or is it %d? No! It's 0x%x!",10,0
+        answernum dd    42
+
+section .bss
+
+section .text
+
+extern  printf
+
+global  main
+
+main:
+    push rbp            ; Prolog
+    mov rbp,rsp
+
+    mov rax,0           ; Count of floating point args..here, 0
+
+    mov rdi,answermsg   ; Message/format string goes in RDI
+    mov rsi,[answernum] ; Second arg in RSI
+    mov rdx,43          ; Third arg in RDX. You can use a numeric literal
+    mov rcx,42          ; Fourth arg in RCX. Show this one in hex
+    call printf         ; Call printf()
+
+    mov rsp,rbp         ; Epilog
+    pop rbp
+
+    ret                 ; Return from main() to shutdown code
+```
+
+<p align=justify>
+Quando esegui la risposta, questo è ciò che vedrai
+</p>
+
+```
+The answer is 42 ... or is it 43? No! It's 0x2a!
+```
+
+### Printf() necessita di uno 0 precedente in RAX
+
+<p align=justify>
+C'è un'altra piccola sottigliezza nell'uso di printf(). In quasi tutti i casi (e certamente mentre stai appena iniziando con l'assembly), dovresti posizionare l'istruzione MOV RAX,0 prima della chiamata a printf(). Lo 0 in RAX dice alla funzione printf() che non ci sono parametri in virgola mobile nei registri vettoriali che le vengono passati. Una volta che inizi a usare valori vettoriali, devi inserire il conteggio di quei parametri in RAX prima di chiamare printf(). Spiegare i registri in virgola mobile e vettoriali va oltre l'ambito di questo libro, quindi se sei interessato, fai delle ricerche online. Questo stesso requisito si applica anche a scanf().
+</p>
+
+### Gcc --no-pie
+
+<p align=justify>
+Nei makefile per i programmi di questo capitolo che usano gcc come linker, vedrai l'opzione gcc –no-pie. Lo scopo di questa opzione è impedire a gcc di collegare il tuo programma come un PIE. Spiegare in dettaglio il PIE sarebbe un argomento avanzato ben oltre lo scopo di questo libro. In breve: il PIE è un modo per prevenire certi tipi di exploit del codice, collocando porzioni del file eseguibile in posizioni casuali quando l'eseguibile viene caricato. Questo rende impossibile prevedere dove una determinata sezione di codice verrà eseguita. Gli attacchi di programmazione orientata al ritorno (ROP) dipendono dalla conoscenza di dove si trovano alcune porzioni di un programma nel sistema di memoria virtuale di Linux. I programmi PIE sono meno vulnerabili agli attacchi ROP. L'opzione –no pie indica che il linker non genererà un PIE. Questo rende teoricamente vulnerabili ai attacchi i programmi di esempio –no-pie di questo libro. Teoricamente. Una volta che sei un programmatore esperto che produce software per uso generale (e non semplicemente apprendendo la programmazione), dovresti sapere abbastanza per comprendere le problematiche e dovresti informarti online. Il PIE complica qualche aspetto del debugging, motivo per cui non uso il PIE nei miei esempi qui. Ma una volta che un programma che stai scrivendo è stato debuggato e funziona bene, ricompilalo come PIE, che è il valore predefinito quando gcc funge da linker.
+</p>
+
+### Dati in con fgets() e scanf()
+
+<p align=justify>
+Leggere i caratteri dalla tastiera Linux utilizzando l'istruzione SYSCALL e la chiamata di sistema sys_read è semplice ma non molto versatile. La libreria standard C ha un modo migliore. Infatti, le funzioni della libreria C per leggere dati dalla tastiera (che è la sorgente di dati predefinita assegnata all'input standard) sono quasi l'inverso di quelle che visualizzano dati sull'output standard. Se fai un po' di ricerche in un riferimento della libreria C (e dovresti - ci sono una moltitudine di routine interessanti che puoi chiamare dai programmi in assembly), potresti scoprire la routine gets(). Potresti esserti chiesto (se non ho scelto di dirti qui) perché non l'ho trattata. La routine gets() è di una semplicità disarmante: gli passi il nome di un array di stringhe in cui posizionare i caratteri, e poi l'utente digita i caratteri sulla tastiera, che vengono collocati nell'array. Quando l'utente preme Invio, gets() aggiunge un null alla fine del testo inserito e restituisce. Cosa c'è da non amare? Ebbene, quanto è grande l'array? E quanto è stupido il tuo utente? Ecco il problema: non c'è modo di dire a gets() quando smettere di accettare caratteri. Se l'utente digita più caratteri di quanti ne hai allocato nello spazio per accettarli in un array, gets() continuerà felicemente ad accettare caratteri e sovrascriverà qualsiasi dato sia seduto accanto al tuo array in memoria. Se quel qualcosa è qualcosa di importante, il tuo programma malfunzionerà quasi certamente e potrebbe semplicemente bloccarsi. È per questo che, se provi a usare gets(), gcc ti avviserà che gets() è pericoloso. È un'antica routine, e molto meglio è stata creata negli (innumerevoli) decenni trascorsi da quando Unix e la libreria standard C furono progettati per la prima volta. Il successore designato di gets() è fgets(), che ha alcuni elementi di sicurezza incorporati - e anche alcune complicazioni. Le complicazioni derivano dal fatto che devi passare un handle di file a fgets(). In generale, le routine della libreria standard C i cui nomi iniziano con f agiscono su file. (Spiegherò come lavorare con i file su disco un po' più avanti in questo capitolo.) Puoi usare fgets() per leggere testo da un file su disco - ma ricorda, in termini Unix, la tua tastiera è già collegata a un file, il file chiamato input standard, stdin. Se possiamo collegare fgets() all'input standard, possiamo leggere testo dalla tastiera, che è ciò che la vecchia e pericolosa funzione gets() fa automaticamente.
+</p>
+
+<p align=justify>
+Il vantaggio nell'uso di fgets() è che ci consente di specificare un numero massimo di caratteri che la routine può accettare dalla tastiera. Qualsiasi altra cosa che l'utente digita sarà troncata e scartata. Se questo valore massimo non è maggiore del buffer di stringa che definisci per contenere i caratteri inseriti dall'utente, non c'è possibilità che l'uso di fgets() faccia crashare il tuo programma. Collegare fgets() all'input standard è facile. Come ho spiegato in precedenza in questo libro, Linux predefinisce tre gestori di file standard, e questi gestori sono collegati automaticamente al tuo programma. I tre sono stdin (input standard), stdout (output standard) e stderr (errore standard). Per accettare input dalla tastiera attraverso fgets(), vogliamo usare l'identificatore stdin. È già lì; devi semplicemente dichiararlo come EXTERN per riferirlo all'interno dei tuoi programmi in linguaggio assembly. Quindi, ecco come utilizzare la funzione fgets().
+</p>
+
+1. Assicurati di aver dichiarato EXTERN fgets e EXTERN stdin insieme alle tue altre dichiarazioni esterne nella parte superiore della sezione .text del tuo programma.
+2. Dichiara una variabile buffer abbastanza grande da contenere i dati della stringa che vuoi che l'utente inserisca. Usa la direttiva RESB nella sezione .bss del tuo programma.
+3. Carica l'indirizzo del buffer in RDI.
+4. Successivamente, carica il valore che indica il numero massimo di caratteri che vuoi che fgets() accetti in RSI. Assicurati che non sia maggiore della variabile buffer che dichiari in .bss!
+5. Carica il valore di stdin in RDX. Nota bene: Non passare l'indirizzo del valore esterno stdin. Passa il valore reale che l'elemento esterno stdin contiene, usando le parentesi: [stdin]
+6. Chiama fgets.
+
+<p align=justify>
+Come sempre, i parametri che passi a fgets() vengono inseriti nei registri nell'ordine specificato nella convenzione di chiamata x64. Questo è molto più comodo rispetto a spingerli nello stack, come avveniva nel mondo a 32 bit. Il codice sotto è un semplice programma che dimostra come ottenere testo dall'input standard tramite fgets(). Di nuovo, per brevità ho omesso l'intestazione dei commenti.
+</p>
+
+```asm
+;  Executable name : fgetstest
+;  Version         : 3.0
+;  Created date    : 11/19/2022
+;  Last update     : 7/18/2022
+;  Author          : Jeff Duntemann
+;  Description     : Demonstrates calls made into libc, using NASM 2.14.02 
+;                    to enter a short text string with gets() and display 
+;                    with printf().
+;
+;                  : Build with this makefile, being midful of the required tabs:
+;   fgetstest: fgetstest.o
+;       gcc fgetstest.o -o fgetstest -no-pie
+;   fgetstest.o: fgetstest.asm
+;       nasm -f elf64 -g -F dwarf fgetstest.asm
+
+SECTION .data           ; Section containing initialized data	
+
+message: db "You just entered: %s."	
+	
+SECTION .bss            ; Section containing uninitialized data
+
+testbuf: resb 20 
+BUFLEN   equ $-testbuf
+
+SECTION .text           ; Section containing code
+
+extern printf
+extern stdin	
+extern fgets
+
+global main             ; Required so the linker can find the entry point
+	
+main:
+    push rbp             ; Set up stack frame for debugger
+	mov rbp,rsp
+    and rsp,-16
+;;; Everything before this is boilerplate; use it for all ordinary apps!
+
+; Get a number of characters from the user:		
+    mov rdi,testbuf      ; Put address of buffer into RDI
+    mov rsi,BUFLEN       ; Put # of chars to enter in RSI
+    mov rdx,[stdin]
+    call fgets           ; Call libc function for entering data
+
+;Display the entered characters:
+    mov rdi,message      ; Base string's address goes in RDI
+    mov rsi,testbuf      ; Data entry buffer's address goes in RSI
+    xor rax,rax          ; 0 in RAX tells printf no SSE registers are coming    
+    call printf          ; Call libc function to display entered chars
+
+;;; Everything after this is boilerplate; use it for all ordinary apps!
+	mov rsp,rbp          ; Destroy stack frame before returning
+    pop rbp
+
+    ret                  ; Return to glibc shutdown code
+```
+
+<p align="justify">
+Il programma fgetstest dimostra come incorporare un codice stringa %s nella stringa base. Non è necessario fare altro che posizionare %s nella stringa base e poi copiare l'indirizzo della stringa da inserire nel prossimo registro disponibile secondo la convenzione di chiamata x64. Qui, si tratta di RSI. Dal lato dell'utente dello schermo, fgets() accetta semplicemente caratteri fino a quando l'utente non preme Invio. Non ritorna automaticamente dopo che l'utente ha digitato il numero massimo di caratteri consentiti. (Questo impedirebbe all'utente di correggere l'input.) Tuttavia, qualsiasi cosa digitata dall'utente oltre il numero di caratteri consentiti viene scartata.
+</p>
+
+### Utilizzando scanf() per l'inserimento di valori numerici
+
+<p align="justify">
+In un modo peculiare, la funzione scanf() della libreria C è printf() che funziona all'indietro: invece di produrre dati formattati in un flusso di caratteri, scanf() prende un flusso di dati carattere dalla tastiera e lo converte in dati numerici memorizzati in una variabile numerica. La funzione scanf() funziona molto bene e comprende molti formati che non sarò in grado di spiegare qui, specialmente per l'inserimento di numeri in virgola mobile. (I valori in virgola mobile rappresentano un problema speciale nel lavoro in assembly e non li tratterò in questo libro.) La voce di Wikipedia è molto buona.
+</p>
+
+[https://en.wikipedia.org/wiki/Scanf_format_string](https://en.wikipedia.org/wiki/Scanf_format_string)
+
+<p align="justify">
+Per la maggior parte dei programmi semplici che potresti scrivere mentre prendi confidenza con l'assembly, inserirai numeri interi semplici, e scanf() è molto utile per questo. Passi a scanf() il nome di una variabile numerica in cui memorizzare il valore inserito e un codice di formato che indica quale forma avrà quel valore all'ingresso dei dati. La funzione scanf() prenderà i caratteri digitati dall'utente e li convertirà nel valore intero che i caratteri rappresentano. Cioè, scanf() prenderà i due caratteri ASCII "4" e "2" inseriti consecutivamente e li convertirà nel valore numerico in base 10 42 dopo che l'utente preme Invio. E per quanto riguarda una stringa di richiesta, che istruisce l'utente su cosa digitare? Bene, molti nuovi arrivati hanno l'idea che puoi combinare la richiesta con il codice di formato in un'unica stringa passata a scanf(), ma purtroppo, questo non funzionerà. Sembra che dovrebbe funzionare—dopo tutto, puoi combinare i codici di formato con la stringa base da visualizzare usando printf(). E in scanf(), teoricamente puoi usare una stringa base contenente codici di formato ... ma poi l'utente dovrebbe digitare sia la richiesta che i dati numerici! Quindi, in termini pratici, l'unica stringa utilizzata da scanf() è una stringa contenente i codici di formato. Se vuoi una richiesta, devi visualizzarla usando printf() prima di chiamare scanf(). Per mantenere la richiesta e l'inserimento dei dati sulla stessa riga, assicurati di non avere un carattere EOL alla fine della tua stringa di richiesta! La funzione scanf() acquisisce automaticamente input di caratteri da input standard. Non devi passarle il gestore di file stdin, come fai con fgets(). Esiste una funzione glibc separata chiamata fscanf() a cui devi passare un gestore di file, ma per l'inserimento di dati interi non c'è rischio nell'usare scanf(). Ecco come utilizzare la routine scanf(): 
+</p>
+
+1. Assicurati di aver dichiarato EXTERN scanf insieme alle tue altre dichiarazioni esterne nella parte superiore della sezione .TEXT.
+2. Dichiarare una variabile di memoria del tipo appropriato per contenere i dati numerici letti e convertiti da scanf(). I miei esempi qui saranno per dati interi, quindi dovresti creare tale variabile con la direttiva DQ o la direttiva RESQ. Ovviamente, se intendi mantenere diversi valori separati, dovrai dichiarare una variabile per ogni valore inserito.
+3. Per chiamare scanf() per l'inserimento di un singolo valore, prima copia l'indirizzo della stringa di formato che specifica in quale formato arriveranno i dati in RDI. Per i valori interi, questa è tipicamente la stringa %d.
+4. Copia l'indirizzo della variabile di memoria che conterrà il valore in RSI. (Vedi la seguente discussione sull'inserimento di più valori in una sola chiamata.)
+5. Azzerare RAX, dicendo a scanf() che nessun parametro di registro vettoriale viene passato nella chiamata di funzione.
+6. Chiama scanf().
+
+<p align="justify">
+È possibile presentare a scanf() una stringa contenente più codici di formattazione in modo che l'utente possa inserire più valori numerici con una sola chiamata a scanf(). L'ho provato e risulta in un'interfaccia utente piuttosto peculiare. Questa funzionalità è meglio utilizzata se stai scrivendo un programma per leggere un file di testo contenente righe di valori interi espressi come testo e convertirli in variabili intere reali in memoria. Per ottenere semplicemente valori numerici dall'utente tramite la tastiera, è meglio accettare solo un valore per ogni chiamata a scanf(). Il programma charsin.asm (vedi sotto) mostra come impostare messaggi insieme a un campo di inserimento dati per accettare sia dati stringa che dati numerici dall'utente attraverso la tastiera. Dopo aver accettato i dati, il programma visualizza ciò che è stato inserito, utilizzando printf()
+</p>
+
+```asm
+
+;  Executable name : charsin
+;  Version         : 3.0
+;  Created date    : 11/19/2022
+;  Last update     : 11/20/2022
+;  Author          : Jeff Duntemann
+;  Description     : A character input demo for Linux, using NASM 2.14.02,
+;                  : incorporating calls to both fgets() and scanf().
+;
+;  Build using these commands:
+;    nasm -f elf64 -g -F dwarf charsin.asm
+;    gcc charsin.o -o charsin -no-pie
+;	
+
+[SECTION .data]         ; Section containing initialised data
+	
+SPrompt  db 'Enter string data, followed by Enter: ',0		
+IPrompt  db 'Enter an integer value, followed by Enter: ',0
+IFormat  db '%d',0
+SShow    db 'The string you entered was: %s',10,0
+IShow    db 'The integer value you entered was: %5d',10,0
+	
+[SECTION .bss]          ; Section containing uninitialized data
+
+IntVal   resq 1         ; Reserve an uninitialized double word
+InString resb 128       ; Reserve 128 bytes for string entry buffer
+		
+[SECTION .text]         ; Section containing code
+
+extern stdin            ; Standard file variable for input
+extern fgets
+extern printf	
+extern scanf		
+
+global main             ; Required so linker can find entry point
+	
+main:
+    push rbp            ; Set up stack frame
+    mov rbp,rsp
+
+;;; Everything before this is boilerplate; use it for all ordinary apps!
+
+; First, an example of safely limited string input using fgets:
+    mov rdi,SPrompt	    ; Load address of the prompt string into RDI
+    call printf         ; Display it
+
+    mov rdi,InString    ; Copy address of buffer for entered chars
+    mov rsi,72          ; Accept no more than 72 chars from keybd
+    mov rdx,[stdin]     ; Load file handle for standard input into RDX
+    call fgets          ; Call fgets to allow user to enter chars
+
+    mov rdi,SShow       ; Copy address of the string prompt into RSI
+    mov rsi,InString    ; Copy address of entered string data into RDI
+    call printf         ; Display it
+
+; Next, use scanf() to enter numeric data:
+    mov rdi,IPrompt     ; Copy address of integer input prompt into RDI
+    call printf         ; Display it
+
+    mov rdi,IFormat     ; Copy address of the integer format string into RDI
+    mov rsi,IntVal      ; Copy address of the integer buffer into RSI
+    call scanf          ; Call scanf to enter numeric data
+
+    mov rdi,IShow       ; Copy address of base string into RDI
+    mov rsi,[IntVal]    ; Copy the integer value to display into RSI
+    call printf         ; Call printf to convert & display the integer
+
+;;; Everything after this is boilerplate; use it for all ordinary apps!
+
+    mov rsp,rbp         ; Destroy stack frame before returning
+    pop rbp
+	
+    ret                 ; Return control to Linux
+```
+
+### Essere un Signore del Tempo Linux
+
+<p align="justify">
+Le librerie standard C contengono un gruppo piuttosto sostanzioso di funzioni che manipolano date e orari. Sebbene queste funzioni siano state originariamente progettate per gestire valori di data generati dall'orologio in tempo reale nell'hardware dei minicomputer AT&T dell'antichità, che era attuale negli anni '70, sono ormai diventate un'interfaccia standard per il supporto dell'orologio in tempo reale di qualsiasi sistema operativo. Le persone che programmando in C per Windows utilizzano lo stesso gruppo di funzioni e funzionano più o meno allo stesso modo indipendentemente dal sistema operativo su cui si sta lavorando. Comprendendo come chiamare queste funzioni come procedure in linguaggio assembly, sarai in grado di leggere la data corrente, esprimere i valori di tempo e data in numerosi formati, applicare timestamp ai file e fare molte altre cose molto utili. Diamo un'occhiata a come funziona.
+</p>
+
+### La macchina del tempo della libreria C
+
+<p align="justify">
+Da qualche parte nel profondo della libreria standard C, c'è un blocco di codice che, quando invocato, guarda all'orologio in tempo reale del computer, legge la data e l'ora correnti e traduce questo in un valore intero firmato standard. Questo valore è (teoricamente) il numero di secondi trascorsi nell'“epoca Unix”, (o negli ambienti di programmazione, semplicemente “l'epoca”), che è iniziata il 1 gennaio 1970, 00:00:00 ora universale. Ogni secondo che passa aggiunge 1 a questo valore. Quando leggi l'ora o la data corrente tramite la libreria C, ciò che recupererai è il valore attuale di questo numero. Il numero si chiama time_t. Per quasi tutta la sua storia, time_t era un intero firmato a 32 bit. Col passare degli anni, la gente ha iniziato a chiedersi cosa sarebbe successo quando un intero firmato a 32 bit non sarebbe stato abbastanza grande per contenere il numero di secondi dal 1970. Alle 3:14:07 UTC del 19 gennaio 2038, i computer che considerano time_t come un intero firmato a 32 bit lo vedranno azzerarsi a 0, perché un intero firmato a 32 bit può esprimere quantità solo fino a 2.147.483.647. Sono un sacco di secondi (e un tempo ragionevolmente lungo per prepararsi), ma io avrò solo 86 anni e mi aspetto di essere qui quando accadrà. (Ricordo tutta la panico del Y2K, eh.) In verità, non succederà, proprio come il famigerato fenomeno Y2K non ha fatto crollare la civiltà, come certa gente che avrebbe dovuto saperlo ha affermato all'epoca. Una libreria C implementata correttamente non presuppone affatto che time_t sia una quantità a 32 bit. Quindi, quando il time_t firmato a 32 bit scoppierà nel 2038, avremo utilizzato valori a 64 bit per tutto e il problema sarà rimandato per altri 292 miliardi di anni o giù di lì. Se non lo avremo risolto una volta per tutte entro allora, meriteremo di andare giù con l'intero universo nel Big Crunch che i cosmologi prevedono poco dopo. Certamente il problema non esiste più in Linux. Tutti i sistemi Linux a 64 bit utilizzano un time_t a 64 bit e, dalla versione 5.6 di Linux nel 2020, anche le versioni a 32 bit del sistema operativo utilizzano un time_t a 64 bit.
+</p>
+
+<p align="justify">
+Il valore time_t è semplicemente un conteggio arbitrario dei secondi e di per sé non ti dice molto, anche se può essere utile per calcolare i tempi trascorsi in secondi. Un altro tipo di dato standard implementato dalla libreria standard C è molto più utile. Una struttura tm (che viene spesso chiamata struct, e tra le persone del Pascal un record) è un raggruppamento di nove valori numerici a 32 bit che esprimono l'ora e la data attuali in segmenti utili separatamente, come riassunto nella figura di sotto. Nota che, sebbene una struct (o record) sia nominalmente un raggruppamento di valori dissimili, nell'attuale implementazione x64 di Linux, un valore tm è più simile a un array o a una tabella dati, poiché tutti e nove gli elementi hanno la stessa dimensione, che è 32 bit, o 4 byte. L'ho descritto in questo modo nella figura di sotto, includendo un valore che rappresenta l'offset dall'inizio della struttura per ciascun elemento della struttura. Questo ti consente di utilizzare un puntatore all'inizio della struttura e un offset dall'inizio per creare l'indirizzo effettivo di un dato elemento della struttura. Nota che anche in un'istanza Linux a 64 bit, i campi tm sono di dimensioni 32 bit. Perché ancora 32 bit? Facile: nessuno degli elementi in tm ha bisogno di qualcosa vicino a 8 byte per essere espresso. Il valore più grande possibile è tm_yday, che contiene il numero ordinale del giorno corrente, ovvero un numero da 1 a 366, con 1 che è il primo giorno di gennaio. Naturalmente, tra alcuni secoli, il numero di anni dal 1900 supererà 366, ma ancora una volta, non aspettarti.
+</p>
+
+<div aling=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/values_contained_in_the_tm_structure.png">
+</div>
+
+<p align="justify">
+L'unico elemento che necessita di una spiegazione un po' più dettagliata è tm_isdst. Il valore in tm_isdst è positivo se l'ora legale (DST) è in vigore e zero se l'ora legale non è in vigore. Se il sistema non riesce a determinare se l'ora legale è in vigore, il valore in tm_isdst è negativo. Esistono funzioni della libreria C che convertono i valori time_t in valori tm e viceversa. Ne tratto alcune in questo capitolo, ma sono tutte piuttosto semplici e, una volta che hai assimilato a fondo le convenzioni di chiamata C, dovresti essere in grado di elaborare un protocollo di chiamata in assembly per ciascuna di esse. Un'altra nota precauzionale: il valore time_t non è il numero esatto e preciso di secondi dall'inizio dell'epoca Unix. Ci sono problemi nel modo in cui Unix conta i secondi e il time_t non è corretto per gli errori astronomici accumulati come fa il tempo reale NIST, attraverso i "secondi intercalari". Quindi, su brevi intervalli (idealmente, meno di un anno), il time_t può essere considerato accurato. Oltre a questo, si deve presumere che sarà impreciso di alcuni secondi o più, senza un modo semplice per capire come compensare gli errori.
+</p>
+
+### Recupero valori time_t dall'orologio di sistema
+
+<p align="justify">
+Ogni singolo secondo di tempo (almeno quei secondi dopo il 1 gennaio 1970) può essere rappresentato come un intero con segno a 64 bit in un sistema compatibile con Unix. Il recupero del valore per l'ora corrente viene eseguito chiamando la funzione time(). Come tutte le funzioni progettate in conformità con le convenzioni di chiamata x64, time() restituisce il suo valore time_t in RAX. Tuttavia, c'è un problema che a volte fa inciampare i principianti: time() può prendere un parametro. Come tutti i primi parametri, viene passato a time() in RDI. Il trucco: è facoltativo. Più o meno. Quando si chiama time(), se RDI contiene 0, il valore time_t verrà restituito in RAX. Se RDI contiene qualcosa di diverso da 0, time() presumerà che il valore in RDI sia un indirizzo e tenterà di scrivere il valore time_t in memoria a quell'indirizzo. Se RDI contiene "avanzi" che non sono indirizzi validi, la chiamata time() di solito causa un errore di segmentazione. Dico "di solito" perché ho sentito dire che su alcuni sistemi, l'implementazione di time() contiene alcuni macchinari extra per rilevare gli indirizzi spazzatura, e se un indirizzo in RDI è spazzatura, tornerà a restituire il valore in RAX. Tuttavia, non puoi contare su questo. Non è necessario passare altri parametri a time(). Al ritorno, avrai il valore time_t corrente in RAX. Questo è tutto quello che c'è da fare. Data la possibilità di differenze di implementazione, non consiglio di consegnare a time() un indirizzo. Quello che consiglio è di avere il valore time_t restituito in RAX. Ciò richiede che si cancelli RDI su 0 prima di chiamare time().
+</p>
+
+### Convertire un valore time_t in una stringa formattata
+
+<p align="justify">
+Ancora una volta, da solo, un valore time_t non ti dice molto. La libreria C contiene una funzione che restituirà un puntatore a una rappresentazione di stringa formattata di un dato valore time_t. Questa è la funzione ctime(). Restituisce un puntatore a una stringa sepolta da qualche parte nella libreria di runtime. Questa stringa ha il seguente formato:
+</p>
+
+```
+ Wed Nov 28 12:13:21 2022
+```
+
+<p align="justify">
+Il primo campo è un codice di tre caratteri per il giorno della settimana, seguito da un codice di tre caratteri per il mese e un campo di due spazi per il giorno del mese. L'ora segue, in formato 24 ore, e l'anno chiude il tutto. Per completezza (anche se a volte può essere una seccatura), la stringa restituita da ctime termina con una nuova linea. Ecco come chiamare ctime e visualizzare la stringa di data/ora che genera:
+</p>
+
+```asm
+mov rdi,TimeValue   ; Copy *address* of time_t value into rdi
+call ctime          ; Returns pointer to ASCII time string in rax
+mov rdi,rax         ; Copy the address in rax into rdi
+call puts           ; Call puts to display the ASCII time string
+```
+
+<p align="justify">
+Questo sembra piuttosto convenzionale, ma c'è qualcosa di cui devi essere consapevole, poiché si discosta dalla nostra recente esperienza con glibc: devi passare a ctime() l'indirizzo di un valore time_t, non il valore stesso! Sei abituato a passare valori interi alle funzioni copiando quei valori in RDI, RSI e così via. Non è così qui. Un valore time_t è attualmente, sotto Linux, rappresentato come un intero a 8 byte, ma non c'è alcuna garanzia che rimanga sempre così. Le versioni più vecchie di Linux potrebbero utilizzare un time_t a 32 bit. Altre implementazioni di Unix potrebbero variare notevolmente. Quindi, per mantenere aperte le sue opzioni (e per assicurarsi che Unix possa essere utilizzato per migliaia o addirittura miliardi di anni a venire, eh), la funzione della libreria C ctime() richiede un puntatore al valore time_t corrente piuttosto che un valore time_t stesso. Passa l'indirizzo del valore time_t che vuoi rappresentare come stringa in RDI, e poi chiama ctime(). Ciò che ctime() restituisce in RAX è un puntatore alla stringa, che mantiene da qualche parte all'interno della libreria di runtime. Puoi usare quel puntatore per visualizzare la stringa sullo schermo tramite puts o printf o scriverla su un file di testo.
+</p>
+
+### Generazione di valori locali di tempo separati
+
+<p align="justify">
+La libreria glibc ti offre anche una funzione per separare i vari componenti di data e ora in valori distinti in modo da poterli utilizzare separatamente o in varie combinazioni. Questa funzione è localtime(), e dato un valore time_t, separerà la data e l'ora nei campi di una struttura tm, come descritto nella figura di sopra. Ecco il codice per chiamarla:
+</p>
+
+```asm
+ mov rdi,TimeValue    ; Pass address of calendar time value in rdi
+ call localtime       ; Returns pointer to static time structure in rax
+```
+
+<p align="justify">
+Qui, TimeValue è un valore time_t. Data questo valore, localtime() restituisce in RAX—molto come ctime()—un puntatore a una struttura tm all'interno della libreria C da qualche parte. Utilizzando questo puntatore come indirizzo base, puoi accedere ai singoli campi nella struttura. Il trucco sta nel conoscere l'offset dentro tm per il singolo campo data/ora che desideri, e utilizzare quell'offset come uno spostamento costante dall'indirizzo base.
+</p>
+
+```asm
+ mov rdi, yrmsg           ; Pass address of the base string in rdi
+ mov rsi, dword [rax+20]  ; Year value tm_year is 20 bytes offset into tm
+ mov rax,0                ; Count of vector regs..here, 0
+ call printf              ; Display string and year value with printf
+```
+
+<p align="justify">
+Utilizzando gli spostamenti mostrati nella figura di sopra, è possibile accedere a tutti gli altri componenti dell'ora e della data nella struttura tm, ciascuno memorizzato come un valore intero a 32 bit.
+</p>
+
+### Creare una copia della struttura tm di glibc con MOVSD
+
+<p align="justify">
+A volte è utile mantenere una copia separata di una struttura tm, soprattutto se stai lavorando con diversi valori di data/ora contemporaneamente. Quindi, dopo aver usato localtime() per riempire la struttura tm nascosta della libreria C con valori di data/ora, puoi copiare quella struttura in una struttura allocata nella sezione .bss o .data del tuo programma. Effettuare una tale copia è un uso diretto dell'istruzione REP MOVSD (Ripeti Copia Stringa Doppia), una delle istruzioni che ho introdotto nei pragrafi precedenti. MOVSD è una cosa quasi magica: una volta impostati i puntatori sull'area dati che vuoi copiare e sul luogo in cui vuoi copiarla, memorizzi la dimensione dell'area in RCX e lasci che REP MOVSD faccia il resto. In un'unica operazione copierà un intero buffer da un luogo nella memoria a un altro. Per usare REP MOVSD, posizioni l'indirizzo dei dati sorgente—cioè, i dati da copiare—nell'RSI. Sposti l'indirizzo della posizione di destinazione—dove i dati devono essere posizionati—nell'RDI. Il numero di elementi da spostare viene posto in RCX. Ti assicuri che il flag di Direzione DF sia resettato (per ulteriori dettagli, vedi paragrafi precedenti) e poi esegui REP MOVSD:
+</p>
+
+```asm
+ mov rsi,rax    ; Copy address of static tm from rax to rsi
+ mov rdi,tmcopy ; Put the address of the local tm vartiable in rdi
+ mov rcx,9      ; A tm struct is 9 dwords in size under Linux
+ cld            ; Clear df to 0 so we move up-memory
+ rep movsd      ; Copy static tm struct to local tm copy
+```
+
+<p align="justify">
+Perché usare MOVSD invece del suo fratello maggiore MOVSQ a 64 bit? La struttura tm è fondamentalmente un array di nove elementi da 4 byte, non da 8 byte. Qui, stiamo trasferendo la struttura tm della libreria C in un buffer allocato nella sezione .bss del programma. La struttura tm è composta da nove parole doppie—36 byte—di dimensione. Quindi, dobbiamo riservare tanto spazio e dargli un nome.
+</p>
+
+```asm
+ TmCopy resd 9 ; Reserve 9 32-bit fields for time struct tm
+```
+
+<p align="justify">
+Il codice precedente presuppone che l'indirizzo della struttura tm già compilata della libreria C sia in RAX e che sia stata allocata una struttura tm TmCopy. Una volta eseguito, copierà tutti i dati tm dal suo nascondiglio all'interno della libreria di esecuzione C nel tuo buffer appena allocato TmCopy.
+</p>
+
+<p align="justify">
+Il prefisso REP mette MOVSD in modalità fucile automatico, come ho spiegato nei paragrafi precedenti. Cioè, MOVSD continuerà a spostare dati dall'indirizzo in RSI all'indirizzo in RDI, decrementando RCX di uno ad ogni spostamento, fino a quando RCX non arriva a zero. Poi si ferma. Un errore facile da evitare è dimenticare che il conteggio in RCX è il conteggio degli elementi di dati da spostare, non il numero di byte da spostare! In virtù della D alla fine del suo mnemonico, MOVSD sposta doppie parole, e il valore che inserisci in RCX deve essere il numero di elementi da 4 byte da spostare. Quindi, spostando nove doppie parole, MOVSD trasporta effettivamente 36 byte da una posizione a un'altra - ma stai contando doppie parole qui, non byte. Il programma nell'Elenco 12.5 unisce tutti questi frammenti di codice in una demo delle principali funzionalità di cronologia di Unix. Ci sono molte altre funzioni temporali da studiare nella libreria C, e con ciò che ora sai sulle chiamate di funzione C, dovresti essere in grado di elaborare protocolli di chiamata per ognuna di esse.
+</p>
+
+```asm
+;  Executable name : timetest
+;  Version         : 3.0
+;  Created date    : 11/28/2022
+;  Last update     : 11/28/2022
+;  Author          : Jeff Duntemann
+;  Description     : A demo of time-related functions for Linux, using
+;                    NASM 2.14.02
+;
+;  Build using these commands:
+;    nasm -f elf64 -g -F stabs timetest.asm
+;    gcc timetest.o -o timetest -no-pie
+;
+
+[SECTION .data]         ; Section containing initialised data
+
+TimeMsg  db "Hey, what time is it?  It's %s",10,0
+YrMsg	 db "The year is %d.",10,10,0
+PressEnt db "Press enter after a few seconds: ",0
+Elapsed  db "A total of %d seconds has elapsed since program began running.",10,0	
+	
+[SECTION .bss]          ; Section containing uninitialized data
+
+OldTime	 resq 1         ; Reserve 3 quadwords for time_t values
+NewTime  resq 1
+TimeDiff resq 1	
+TimeStr  resb 40        ; Reserve 40 bytes for time string
+TmCopy	 resd 9         ; Reserve 9 integer fields for time struct tm			
+
+[SECTION .text]         ; Section containing code
+
+extern ctime
+extern difftime
+extern getchar
+extern printf
+extern localtime	
+extern strftime	
+extern time
+									
+global main             ; Required so linker can find entry point
+	
+main:
+    push rbp            ; Set up stack frame
+    mov rbp,rsp
+    
+;;; Everything before this is boilerplate; use it for all ordinary apps!	
+
+; Generate a time_t calendar time value with clib's time function
+    xor rdi,rdi         ; Clear rdi to 0
+    call time           ; Returns calendar time in rax
+    mov [OldTime],rax   ; Save time value in memory variable
+
+; Generate a string summary of local time with clib's ctime function
+    mov rdi,OldTime     ; Push address of calendar time value
+    call ctime          ; Returns pointer to ASCII time string in rax
+
+    mov rdi,TimeMsg     ; Pass address of base string in rdi
+    mov rsi,rax         ; Pass pointer to ASCII time string in rsi
+    call printf         ; Merge and display the two strings
+
+; Generate local time values into libc's static tm struct
+    mov rdi,OldTime     ; Push address of calendar time value
+    call localtime      ; Returns pointer to static time structure in rax
+
+; Make a local copy of libc's static tm struct
+    mov rsi,rax         ; Copy address of static tm from rax to rsi
+    mov rdi,TmCopy      ; Put the address of the local tm copy in rdi
+    mov rcx,9           ; A tm struct is 9 dwords in size under Linux
+    cld                 ; Clear DF so we move up-memory
+    rep movsd           ; Copy static tm struct to local copy
+
+; Display one of the fields in the tm structure
+	mov rdx,[TmCopy+20] ; Year field is 20 bytes offset into tm
+	add rdx,1900        ; Year field is # of years since 1900
+	mov rdi,YrMsg       ; Put address of the base string into rdi
+    mov rsi,rdx
+	call printf         ; Display string and year value with printf
+
+; Display the 'Press Enter: ' prompt
+    mov rdi,PressEnt    ; Put the address of the base string into rdi
+    call printf
+
+; Wait a few seconds for user to press Enter so we have a time difference:
+    call getchar        ; Wait for user to press Enter
+
+; Calculating seconds passed since program began running:
+    xor rdi,rdi         ; Clear rdi to 0
+    call time           ; Get current time value; return in EAX
+    mov [NewTime],rax   ; Save new time value
+
+    sub rax,[OldTime]   ; Calculate time difference value
+    mov [TimeDiff],rax  ; Save time difference value
+
+    mov rsi,[TimeDiff]  ; Put difference in seconds rdi
+    mov rdi,Elapsed     ; Push addr. of elapsed time message string
+    call printf         ; Display elapsed time
+		
+;;; Everything after this is boilerplate; use it for all ordinary apps!
+
+    mov rsp,rbp         ; Destroy stack frame before returning
+    pop rbp
+
+    ret                 ; Return to glibc shutdown code
+```
+
+<p align="justify">
+Se mai ti trasferisci in altre implementazioni di Unix al di fuori della sfera GNU, tieni presente che il valore di time_t potrebbe già avere una definizione diversa da un intero a 32 bit. In questo momento, glibc definisce time_t come un intero a 64 bit, e puoi calcolare le differenze di tempo tra due valori di time_t semplicemente sottraendoli. Per altre implementazioni di Unix non GNU, è meglio utilizzare la funzione difftime() nella libreria libc per restituire una differenza tra due valori di time_t.
+</p>
+
+### Comprendere i mnemonici di istruzione AT&T
+
+<p align="justify">
+Esistono più di un insieme di mnemoniche per le istruzioni delle CPU x86, e questo è stato fonte di molta confusione. Una mnemonica di istruzione è semplicemente un modo per gli esseri umani di ricordare cosa significa per la CPU il modello binario 1000100111000011. Invece di scrivere 16 uno e zero in fila (o anche l'equivalente esadecimale leggermente più comprensibile 89C3h), diciamo MOV BX,AX. Tieni presente che le mnemoniche sono proprio questo: stimolatori della memoria per gli esseri umani, e sono creature sconosciute alla CPU stessa. Gli assemblatori traducono le mnemoniche in istruzioni macchina. Anche se possiamo concordare tra di noi che MOV BX,AX si tradurrà in 1000100111000011, non c'è nulla di magico nella stringa MOV BX,AX. Avremmo potuto anche concordare su COPY AX TO BX o STICK GPREGA INTO GPREGB. Usamo MOV BX,AX perché è stata l'indicazione suggerita da Intel, e poiché Intel ha progettato e produce i chip per CPU, potrebbe sapere meglio come descrivere i dettagli interni dei propri prodotti. L'insieme alternativo di mnemoniche per istruzioni x86 che chiamiamo mnemoniche AT&T è emerso dal desiderio di rendere Unix il più facile possibile da portare su diverse architetture di computer. Tuttavia, gli obiettivi degli implementatori dell'insieme di istruzioni non sono gli stessi di quelli dei programmatori in linguaggio assembly, e se il tuo obiettivo è avere un comando completo e ottimale delle CPU x86/x64, è meglio scrivere codice con l'insieme Intel, come ho insegnato in questo libro. In verità, le mnemoniche AT&T appaiono strane e un po' opache, anche per me. Il motivo è che non sono mai state progettate per essere utilizzate dagli esseri umani per scrivere programmi in linguaggio assembly. Sono state progettate per essere un linguaggio intermedio facilmente portabile, cioè un linguaggio scritto da un pezzo di software per essere elaborato da un pezzo di software completamente diverso. In Linux, questo sarebbe generalmente il compilatore di linguaggio C gcc e l'assemblatore Gnu, gas. Infatti, il linguaggio C era originariamente considerato un 'assemblatore di alto livello', e rispetto ad altri linguaggi di programmazione come COBOL, FORTRAN o Pascal, lo è. Anche se ci sono buone ragioni per saper leggere le mnemoniche e la sintassi AT&T, è diventato abbastanza complesso che non posso giustificare di insegnarlo in modo approfondito in un libro per principianti come questo.
+</p>
+
+### Convezioni mnemoniche di AT&T
+
+<p align="justify">
+Quindi ecco un riepilogo: quando gcc compila un file di codice sorgente C in codice macchina, ciò che fa realmente è tradurre il codice sorgente C in codice sorgente assembly, utilizzando i mnemonici AT&T. Torna alla figura su gcc. Il compilatore gcc prende come input un file di codice sorgente .c e genera un file di codice sorgente assembly .s, che viene poi passato all'assemblatore GNU gas per l'assemblaggio. Questo è il modo in cui gli strumenti GNU funzionano su tutte le piattaforme, con tutti i linguaggi GNU, dei quali ce ne sono diversi oltre a C e C++. Il passaggio assembly è generalmente invisibile per il programmatore, con il file .s scartato dopo che gas lo converte in codice macchina e ld lo collega. Puoi far salvare a gcc il file di codice sorgente assembly AT&T su disco utilizzando l'opzione -S:
+</p>
+
+```
+gcc eatc.c –S –o eatc
+```
+
+<p align="justify">
+Nota che l'opzione –S utilizza una S maiuscola. Quasi tutto in Linux e in altri discendenti di Unix è sensibile al maiuscolo e minuscolo. Ora, se hai intenzione di affrontare la libreria standard C e le moltitudini di altre librerie di funzioni scritte in C e per C, ha senso diventare almeno vagamente familiari con i mnemotecnici AT&T. Ci sono alcune regole generali che, una volta metabolizzate, rendono tutto molto più facile. Ecco l'elenco in breve.
+</p>
+
+<ul>
+	<li>
+		<p align="justify">
+		Le mnemoniche e i nomi dei registri AT&T sono invariabilmente in minuscolo. Questo è in linea con la convenzione Unix di sensibilità al maiuscolo e al minuscolo. Ho mescolato maiuscole e minuscole nel testo e negli esempi per farti abituare a vedere il codice assembly in entrambi i modi, ma devi ricordare che mentre la sintassi di Intel (e quindi NASM) suggerisce l'uso delle maiuscole ma accetterà le minuscole, la sintassi AT&T richiede l'uso delle minuscole.
+   		</p>
+	</li>
+ 	<li>
+		<p align="justify">
+		I nomi dei registri sono sempre preceduti dal simbolo di percentuale, %. Cioè, ciò che Intel scriverebbe come AX o RBX, AT&T lo scriverebbe come %ax e %rbx. Questo aiuta l'assemblatore a riconoscere i nomi dei registri.
+   		</p>
+	</li>
+ 	<li>
+		<p align="justify">
+		Ogni mnemonico di istruzione macchina AT&T che ha operandi ha un suffisso di un singolo carattere che indica la grandezza dei suoi operandi. Le lettere del suffisso sono b, w, l e q che indicano byte (8 bit), parola (16 bit), lungo (32 bit) e quad (64 bit). Ciò che Intel scriverebbe come MOV RBX,RAX, AT&T lo scriverebbe come movq %rax,%rbx.
+   		</p>
+	</li>
+ 	<li>
+		<p align="justify">
+		Quando un'istruzione non prende operandi (call, leave, ret), non ha un suffisso di dimensione dell'operando. Le chiamate e i ritorni sembrano praticamente uguali sia nella sintassi Intel che in quella AT&T.
+   		</p>
+	</li>
+ 	<li>
+		<p align="justify">
+		Nella sintassi AT&T, gli operandi sorgente e destinazione sono posti nell'ordine opposto rispetto alla sintassi Intel. Cioè, ciò che Intel scriverebbe come MOV RBX,RAX, AT&T lo scriverebbe come movq %rax,%rbx. In altre parole, nella sintassi AT&T, l'operando sorgente viene prima, seguito dall'operando di destinazione.
+   		</p>
+	</li>
+ 	<li>
+		<p align="justify">
+		Nella sintassi AT&T, gli operandi immediati sono sempre preceduti dal simbolo del dollaro, $. Ciò che Intel scriverebbe come PUSH 42, AT&T lo scriverebbe come pushq $42. Questo aiuta l'assemblatore a riconoscere gli operandi immediati.
+   		</p>
+	</li>
+ 	<li>
+		<p align="justify">
+		Non tutte le mnemoniche di istruzione AT&T sono generate da gcc. Gli equivalenti di JCXZ, JECXZ, LOOP, LOOPZ, LOOPE, LOOPNZ e LOOPNE di Intel sono stati aggiunti al set di mnemoniche AT&T non molto tempo fa e, in alcune versioni, gcc non genera codice che le utilizza.
+   		</p>
+	</li>
+ 	<li>
+		<p align="justify">
+		Nella sintassi AT&T, gli spostamenti nelle riferimenti di memoria sono quantità con segno posizionate all'esterno delle parentesi contenenti i valori di base, indice e scala. Tratterò questo separatamente un po' più tardi, poiché lo vedrai spesso nei file .s, e dovresti essere in grado di leggere e comprendere la sintassi degli indirizzi di memoria di ATT.
+   		</p>
+	</li>
+ 	<li>
+		<p align="justify">	
+		Quando viene citato, il nome di una stringa di messaggio è preceduto da un simbolo di dollaro ($) nello stesso modo in cui lo sono i letterali numerici. In NASM, una variabile di stringa nominata è considerata una variabile e non un letterale. Questo è solo un altro peccadillo di AT&T di cui essere a conoscenza.
+   		</p>
+	</li>
+ 	<li>
+		<p align="justify">
+		Si noti che il delimitatore dei commenti nello schema AT&T è il cancelletto (#) piuttosto che il punto e virgola utilizzato in quasi tutti gli assemblatori in stile Intel, compreso NASM.
+   		</p>
+	</li>
+</ul>
+
+### Sintassi di riferimento della memoria AT&T
+
+<p align="justify">
+Come ricorderai dai capitoli precedenti, fare riferimento a una posizione di memoria (a differenza di fare riferimento al suo indirizzo) avviene racchiudendo la posizione dell'indirizzo tra parentesi quadre, in questo modo:
+</p>
+
+```asm
+ mov rax,[rbp]
+```
+
+<p align="justify">
+Qui, stiamo prendendo qualsiasi quantità a 64 bit che si trova all'indirizzo contenuto in RBP e caricandola nel registro RAX. Un indirizzamento della memoria più complesso può apparire così:
+</p>
+
+```asm
+ mov rax,[rbx-8]         ; Base minus displacement
+ mov ax, word [bx+di+28] ; Base plus index plus displacement
+ mov al, byte [bx+di*4]  ; Base plus index times scale
+```
+
+<p align="justify">
+la sintassi per l'indirizzamento della memoria è considerevolmente diversa. In vece delle parentesi quadre, le mnemoniche AT&T usano le parentesi tonde per racchiudere i componenti di un indirizzo di memoria:
+</p>
+
+```asm
+ movb (%rbx),%al     # mov byte al,[rbx] in Intel syntax
+```
+
+<p align="justify">
+Qui, stiamo spostando la quantità di byte in [rbx] in AL. (Non dimenticare che l'ordine degli operandi è invertito rispetto a come fa la sintassi Intel!) All'interno delle parentesi metti la base, l'indice e il fattore di scala, quando presente. (La base deve esserci sempre.) Lo spostamento, quando esiste, deve andare davanti e all'esterno delle parentesi:
+</p>
+
+```asm
+ movl –8(%rbx),%rax       # mov dword rax,[rbx-8] (Intel)
+ movb 28(%rbx,%rdi),%eax  # mov byte rax,[rbx+edi+28] (Intel)
+```
+
+<p align="justify">
+Si noti che nella sintassi AT&T, non si esegue il calcolo all'interno delle parentesi. La base, l'indice e il fattore di scala sono separati da virgole, e i segni più e gli asterischi non sono consentiti. Lo schema per interpretare un riferimento di memoria AT&T è il seguente:
+</p>
+
+```asm
+ ±disp(base,index,scale)
+```
+
+<p align="justify">
+Il simbolo ± che uso nell'esempio schematico precedente indica che lo spostamento è firmato; cioè, può essere sia positivo che negativo per indicare se il valore dello spostamento viene aggiunto o sottratto al resto dell'indirizzo. Di solito, vedi il segno solo come esplicitamente negativo; senza il simbolo meno, il predefinito è che lo spostamento sia positivo. I valori di spostamento e scala sono facoltativi. Tuttavia, ciò che vedrai la maggior parte delle volte è un tipo molto semplice di riferimento alla memoria:
+</p>
+
+```asm
+-16(%rbp)
+```
+
+<p align="justify">
+Gli spostamenti varieranno, ovviamente, ma ciò che questo significa quasi sempre è che un'istruzione fa riferimento a un elemento dati da qualche parte nello stack. Il codice C alloca le sue variabili nello stack, in un frame dello stack, e poi fa riferimento a quelle variabili tramite offset letterali rispetto al valore in RBP. RBP funge da punto di partenza per l'indirizzo, e gli elementi nello stack possono essere referenziati in termini di offset (sia positivi che negativi) rispetto a RBP. Il riferimento precedente indicherebbe a un'istruzione macchina di lavorare con un elemento all'indirizzo in RBP meno 16 bytes.
+</p>
+
+### Generazione di numeri casuali
+
+<p align="justify">
+assemblaggio, facciamo qualcosa di seriamente casuale. (O modestamente pseudocasuale, perlomeno.) La libreria standard C ha un paio di funzioni che consentono ai programmi di generare numeri pseudocasuali. Il pseudo è significativo qui. Le ricerche suggeriscono che non esiste un modo provabile per generare un numero veramente casuale esclusivamente tramite software. In effetti, l'intero concetto di ciò che significa veramente casuale è inquietante e tiene molti matematici lontani dalle strade. Teoreticamente, avresti bisogno di ottenere attivatori da qualche fenomeno quantistico (la radioattività è quello più spesso menzionato) per raggiungere la vera casualità. Creature di questo tipo esistono. Ma mancando un generatore di numeri casuali attivato dalla radiazione, dovremo tornare al pseudo e imparare a viverci. Una definizione semplificata di pseudocasuale sarebbe qualcosa del genere: un generatore di numeri pseudocasuali produce una sequenza di numeri senza un modello riconoscibile, ma la sequenza può essere ripetuta passando lo stesso valore di seme al generatore. Un valore di seme è semplicemente un numero intero che funge da valore di input per un algoritmo arcano che crea la sequenza di numeri pseudocasuali. Passa lo stesso seme al generatore e ottieni la stessa sequenza. Tuttavia, all'interno della sequenza, la distribuzione dei numeri all'interno dell'intervallo del generatore è ragionevolmente dispersa e casuale. La libreria standard C contiene due funzioni relative ai numeri pseudocasuali:
+</p>
+
+<ul>
+	<li>
+		<p align="justify">
+		La funzione srand() passa un nuovo valore di seme al generatore di numeri casuali. Questo valore deve essere un intero a 32 bit. Se non viene passato alcun valore di seme, il valore di seme predefinito è 1.
+   		</p>
+	</li>
+ 	<li>
+		<p align="justify">
+		La funzione rand() restituisce un numero pseudorandom di 31 bit. Il bit più alto è sempre 0 e quindi il valore è sempre positivo se trattato come un intero con segno di 32 bit.
+   		</p>
+	</li>
+</ul>
+
+<p align="justify">
+Una volta che capisci come funzionano, usarli è quasi banale.
+</p>
+
+### Inizializzare il generatore con srand()
+
+<p align="justify">
+Inserire il valore del seme nel generatore è in realtà più complesso rispetto a effettuare la chiamata che estrae il prossimo numero pseudocasuale nella sequenza corrente. E non è che la chiamata a srand() sia così difficile: carichi il valore del seme in RDI e poi chiami srand(). È tutto quello che devi fare! La funzione srand() non restituisce un valore. Ma... cosa utilizzi come valore del seme? Ecco il problema. Se è importante che i tuoi programmi non funzionino con la stessa esatta sequenza di numeri pseudocasuali ogni volta che vengono eseguiti, chiaramente non vuoi usare un intero ordinario codificato nel programma. Idealmente, vorresti ottenere un valore del seme diverso ogni volta che esegui il programma. Il modo più semplice per farlo (anche se ce ne sono altri) è di utilizzare il conteggio dei secondi dal 1 gennaio 1970, come restituito dalla funzione time(), per alimentare le chiamate a srand(). Questo valore, chiamato time_t, è un intero firmato che cambia ogni secondo, quindi con ogni secondo che passa hai un nuovo valore del seme a tua disposizione, uno che per definizione non si ripeterà mai. (Sto assumendo qui che il problema del rollover di time_t di cui ho parlato nella sezione precedente sarà risolto entro l'anno 2038.) Quasi tutti fanno così, e l'unico avvertimento è che devi essere certo di non chiamare srand() per rinfrescare la sequenza più spesso di una volta al secondo. Nella maggior parte dei casi, per programmi che vengono eseguiti, fanno il loro lavoro e terminano in pochi minuti o ore, devi chiamare srand() solo una volta, quando il programma inizia l'esecuzione. Se stai scrivendo un programma che rimarrà in esecuzione per giorni o settimane o più a lungo senza terminare (come un server), potrebbe essere una buona idea ripristinare il generatore di numeri casuali una volta al giorno. Ecco un breve frammento di codice che chiama time() per recuperare il valore attuale di time_t e poi passa il valore del tempo a srand() in RDI:
+</p>
+
+```asm
+ xor rdi,rdi  ; Make sure rdi is set to 0 before calling time()
+ call time    ; Returns time_t value (32-bit integer) in rax
+ mov rdi,rax  ; Pass the seed value to srand in rdi
+ call srand   ; Time_t is the seed value for random # generator
+```
+
+<p align="justify">
+Impostare RDI a 0 prima di chiamare time() informa la funzione time() che non stai passando una variabile per accettare il valore del tempo. Il valore time_t che desideri mantenere viene restituito in RAX.
+</p>
+
+### Generazione di numeri pseudocasuali
+
+<p align="justify">
+Una volta che hai seminato il generatore, ottenere numeri nella sequenza pseudocasuale è facile: estrai il numero successivo nella sequenza con ogni chiamata a rand(). E la funzione rand() è facile da usare come qualsiasi altra cosa nella libreria C: non prende parametri (quindi non devi passare nulla alla funzione) e il numero pseudocasuale viene restituito in RAX. Il programma randtest.asm (vedi sotto) dimostra come funzionano srand() e rand(). Mostra anche un paio di altri trucchi interessanti in assembly, e trascorrerò il resto di questa sezione a discuterne.
+</p>
+
+```asm
+;  Executable name : randtest
+;  Version         : 3.0
+;  Created date    : 11/29/2022
+;  Updated date    : 7/18/2023
+;  Author          : Jeff Duntemann
+;  Description     : A demo of Unix rand & srand using NASM 2.14.02
+;
+;  Build using these commands or the makefile:
+;    nasm -f elf64 -g -F dwarf randtest.asm
+;    gcc randtest.o -o randtest
+;
+
+section .data
+
+Pulls      dq 36 ; How many numbers do we pull? (Must be a multiple of 6!)
+Display    db 10,'Here is an array of %d %d-bit random numbners:',10,0
+ShowArray  db '%10d %10d %10d %10d %10d %10d',10,0
+NewLine    db 0		
+CharTbl    db '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-@'
+
+section .bss
+
+[SECTION .bss]          ; Section containing uninitialized data
+
+BUFSIZE  equ 70         ; # of randomly chosen chars
+RandVal  resq 1         ; Reserve an integer variable
+Stash    resq 72        ; Reserve an array of 72 integers for randoms
+RandChar resb BUFSIZE+5 ; Buffer for storing randomly chosen characters
+
+section .text
+
+extern printf	
+extern puts
+extern rand
+extern scanf	
+extern srand
+extern time	
+
+;------------------------------------------------------------------------------
+;  Random number generator procedures  --  Last update 5/13/2023
+;
+;  This routine provides 6 entry points, and returns 6 different "sizes" of
+;  pseudorandom numbers based on the value returned by rand. Note first of 
+;  all that rand pulls a 31-bit value. The high 16 bits are the most "random"
+;  so to return numbers in a smaller range, you fetch a 31-bit value and then
+;  right-shift it to zero-fill all but the number of bits you want. An 8-bit
+;  random value will range from 0-255, a 7-bit value from 0-127, and so on.
+;  Respects RBP, RSI, RDI, RBX, and RSP. Returns random value in RAX.
+;------------------------------------------------------------------------------
+pull31: mov rcx,0       ; For 31 bit random, we don't shift
+	jmp pull
+pull20: mov rcx,11      ; For 20 bit random, shift by 11 bits
+    jmp pull
+pull16: mov rcx,15      ; For 16 bit random, shift by 15 bits
+	jmp pull
+pull8:  mov rcx,23      ; For 8 bit random, shift by 23 bits
+	jmp pull
+pull7:  mov rcx,24      ; For 7 bit random, shift by 24 bits
+	jmp pull
+pull6:  mov rcx,25      ; For 6 bit random, shift by 25 bits
+	jmp pull
+pull4:  mov rcx,27      ; For 4 bit random, shift by 27 bits
+
+pull:	
+    push rcx            ; rand trashes rcx; save shift value on stack
+    call rand           ; Call rand for random value; returned in RAX
+    pop rcx             ; Pop stashed shift value back into RCX
+    shr rax,cl          ; Shift the random value in RAX by the chosen factor
+                        ;  keeping in mind that part we want is in CL
+    ret                 ; Go home with random number in RAX
+
+;; This subroutine pulls random values and stuffs them into an
+;; integer array.  Not intended to be general purpose.  Note that
+;; the address of the random number generator entry point must
+;; be loaded into r13 before this is called, or you'll seg fault!
+
+puller:
+    mov r12,[Pulls]     ; Put pull count into R12
+.grab:
+    dec r12             ; Decrement counter in RSI
+    call r13            ; Pull the value; it's returned in RAX
+    mov [Stash+r12*8],rax   ; Store random value in the array
+    cmp r12,0           ; See if we've pulled all STASH-ed numbers yet
+    jne .grab           ; Do another if R12 <> 0 
+    ret                 ; Otherwise, go home!
+
+    ;; This subroutine displays numbers six at a time
+    ;; Not intended to be general-purpose...
+shownums:	
+    mov r12,qword [Pulls]    ; Put pull count into r12
+    xor r13,r13
+.dorow:	
+    mov rdi,ShowArray        ; Pass address of base string
+    mov rsi,[Stash+r13*8+0]  ; Pass first element
+    mov rdx,[Stash+r13*8+8]  ; Pass second element
+    mov rcx,[Stash+r13*8+16] ; Pass third element
+    mov r8,[Stash+r13*8+24]  ; Pass fourth element
+    mov r9,[Stash+r13*8+32]  ; Pass fifth element
+    push qword [Stash+r13*8+40] ; Pass sixth element on the stack.
+    call printf              ; Display the random numbers
+    add rsp,8                ; Stack cleanup: 1 item X 8 bytes = 8
+	
+    add r13,6       ; Point to the next group of six randoms in Stash 
+    sub r12,6       ; Decrement pull counter
+    cmp r12,0       ; See if pull count has gone to 0
+    ja .dorow       ; If not, we go back and do another row!
+    ret             ; Done, so go home!
+
+; MAIN PROGRAM:
+					
+global main         ; Required so linker can find entry point
+	
+main:
+    push rbp        ; Set up stack frame
+	mov rbp,rsp
+	
+;;; Everything before this is boilerplate; 
+
+; Begin by seeding the random number generator with a time_t value:	
+
+Seedit:	
+    xor rdi,rdi		; Mske sure rdi starts out with a 0
+    call time	    ; Returns time_t value (64-bit integer) in rax
+    mov rdi,rax	    ; Pass srand a time_t seed in rdi
+    call srand	    ; Seed the random number generator
+
+; All of the following code blocks are identical except for the size of
+; the random value being generated:
+	
+; Create and display an array of 31-bit random values
+    mov r13,pull31  ; Copy address of random # subroutine into RDI
+    call puller     ; Pull as many numbers as called for in [Pulls]
+	
+    mov rdi,Display ; Display the base string
+    mov rsi,[Pulls] ; Display the number of randoms displayed
+    mov rdx,32      ; Display the size of the randoms displayed
+    call printf     ; Display the label
+    call shownums   ; Display the rows of random numbers
+
+; Create and display an array of 20-bit random values
+    mov r13,pull20  ; Copy address of random # subroutine into RDI
+    call puller     ; Pull as many numbers as called for in [Pulls]
+		
+    mov rdi,Display ; Display the base string
+    mov rsi,[Pulls] ; Display the number of randoms displayed
+    mov rdx,20      ; Display the size of the randoms displayed
+    call printf     ; Display the label
+    call shownums   ; Display the rows of random numbers
+
+; Create and display an array of 16-bit random values
+    mov r13,pull16  ; Copy address of random # subroutine into RDI
+    call puller     ; Pull as many numbers as called for in [Pulls]
+	
+    mov rdi,Display ; Display the base string
+    mov rsi,[Pulls] ; Display the number of randoms displayed
+    mov rdx,16      ; Display the size of the randoms displayed
+    call printf     ; Display the label
+    call shownums   ; Display the rows of random numbers
+
+; Create and display an array of 8-bit random values
+    mov r13,pull8   ; Copy address of random # subroutine into RDI
+    call puller     ; Pull as many numbers as called for in [Pulls]
+    	
+    mov rdi,Display ; Display the base string
+    mov rsi,[Pulls] ; Display the number of randoms displayed
+    mov rdx,8       ; Display the size of the randoms displayed
+    call printf     ; Display the label
+    call shownums   ; Display the rows of random numbers
+
+; Create and display an array of 7-bit random values
+    mov r13,pull7   ; Copy address of random # subroutine into RDI
+    call puller     ; Pull as many numbers as called for in [Pulls]
+	
+    mov rdi,Display ; Display the base string
+    mov rsi,[Pulls] ; Display the number of randoms displayed
+    mov rdx,7       ; Display the size of the randoms displayed
+    call printf     ; Display the label
+    call shownums   ; Display the rows of random numbers
+
+; Create and display an array of 6-bit random values
+    mov r13,pull6   ; Copy address of random # subroutine into RDI
+    call puller     ; Pull as many numbers as called for in [Pulls]
+	
+    mov rdi,Display ; Display the base string
+    mov rsi,[Pulls] ; Display the number of randoms displayed
+    mov rdx,6       ; Display the size of the randoms displayed
+    call printf     ; Display the label
+    call shownums   ; Display the rows of random numbers
+
+; Create and display an array of 4-bit random values
+    mov r13,pull4   ; Copy address of random # subroutine into RDI
+    call puller     ; Pull as many numbers as called for in [Pulls]
+	
+    mov rdi,Display ; Display the base string
+    mov rsi,[Pulls] ; Display the number of randoms displayed
+    mov rdx,4       ; Display the size of the randoms displayed
+    call printf     ; Display the label
+    call shownums   ; Display the rows of random numbers
+
+; Clear a buffer to nulls:
+Bufclr:	
+    mov rcx, BUFSIZE+5  ; Fill whole buffer plus 5 for safety
+.loop:	
+    dec rcx             ; BUFSIZE is 1-based so decrement first!
+    mov byte [RandChar+rcx],0     ; Mov null into the buffer
+    cmp rcx,0           ; Are we done yet?
+    jnz .loop           ; If not, go back and stuff another null
+
+; Create a string of random alphanumeric characters:
+Pulchr:	
+    mov rbx, BUFSIZE    ; BUFSIZE tells us how many chars to pull
+.loop:	
+    dec rbx             ; BUFSIZE is 1-based, so decrement first!
+    mov r13,pull6       ; For random in the range 0-63
+    call r13
+    mov cl,[CharTbl+rax]  ; Use random # in rax as offset into table
+                          ;  and copy character from table into CL
+    mov [RandChar+rbx],cl ; Copy char from CL to character buffer
+    cmp rbx,0           ; Are we done having fun yet?
+    jne .loop           ; If not, go back and pull another
+
+; Display the string of random characters:
+    mov rdi,NewLine     ; Output a newline
+    call puts           ;  using the newline procedure
+    mov rdi,RandChar    ; Push the address of the char buffer 
+    call puts           ; Call puts to display it
+    mov rdi,NewLine     ; Output a newline
+    call puts
+
+;;; Everything after this is boilerplate; use it for all ordinary apps!
+
+    mov rsp,rbp         ; Destroy stack frame before returning
+    pop rbp
+
+    ret                 ; Return to glibc shutdown code
+```
+
+### Alcuni bit sono più casuali di altri
+
+<p align="justify">
+Sotto Linux x64, la funzione rand() restituisce un valore senza segno a 31 bit in RAX come un intero a 64 bit. (Il bit di segno dell'intero - il più alto di tutti i 64 bit - è sempre azzerato a 0.) La documentazione Unix per rand() e srand() indica che i bit a bassa ordine di un valore generato da rand() sono meno casuali rispetto ai bit ad alta ordine. Questo significa che se stai per usare solo alcuni dei bit del valore generato da rand(), dovresti usare i bit ad alta ordine che puoi. Onestamente, non so perché dovrebbe essere così, né quanto sia grave il problema. Non sono un esperto di matematica profonda e accetterò la parola delle persone che hanno scritto la documentazione di rand(). Ma questo riguarda la questione di come limitare l'intervallo dei numeri casuali che generi. La questione è piuttosto ovvia: supponi di voler estrarre un certo numero di caratteri alfanumerici ASCII casuali. Non hai bisogno di numeri che vanno da 0 a 2 miliardi. Ci sono solo 127 caratteri ASCII e in effetti solo 62 sono lettere e numeri. (Gli altri sono segni di punteggiatura, spazi bianchi, caratteri di controllo o caratteri non stampabili come le faccine.) Quello che vuoi fare è estrarre numeri casuali tra 0 e 61. Estrarre numeri che vanno da 0 a 2 miliardi finché non ne trovi uno inferiore a 62 richiederà molto tempo. Chiaramente, hai bisogno di un approccio diverso. Quello che ho preso tratta il valore a 31 bit restituito da rand() come una collezione di bit casuali. Estraggo un sottoinsieme di quei bit appena grande abbastanza da soddisfare le mie esigenze. Sei bit possono esprimere valori da 0 a 63, quindi prendo i 6 bit ad alta ordine dal valore originale a 31 bit e li uso per specificare caratteri casuali. È facile: semplicemente sposto il valore a 31 bit verso destra finché tutti i bit tranne i 6 bit ad alta ordine non sono stati spostati via dal lato destro del valore nell'oblio. Lo stesso trucco funziona con qualsiasi numero (ragionevole) di bit. Tutto ciò che devi fare è selezionare di quanti bit spostare.
+</p>
+
+```
+pull31: mov rcx,0   ; For 31 bit random, we don't shift
+    jmp pull
+ pull20: mov rcx,11  ; For 20 bit random, shift by 11 bits
+    jmp pull
+ pull16: mov rcx,15  ; For 16 bit random, shift by 15 bits
+    jmp pull
+ pull8:  mov rcx,23  ; For 8 bit random, shift by 23 bits
+    jmp pull
+ pull7:  mov rcx,24  ; For 7 bit random, shift by 24 bits
+    jmp pull
+ pull6:  mov rcx,25  ; For 6 bit random, shift by 25 bits
+    jmp pull
+ pull4:  mov rcx,27  ; For 4 bit random, shift by 27 bits
+ 
+pull:
+    push rbp            ; Prolog: Create stack frame
+    mov rbp,rsp
+ 
+    mov r15,rcx         ; rand trashes rcx; save shift value in R15         
+    call rand           ; Call rand for random value;
+ returned in RAX
+    mov rcx,r15         ; Restore shift value back into RCX
+    shr rax,cl          ; Shift the value in RAX by the chosen factor
+                        ; keeping in mind that part we want is in CL
+    pop rbp             ; Epilog: Destroy stack frame
+    ret                 ; Go home with random number in RAX
+```
+
+<p align="justify">
+Per estrarre un numero casuale a 16 bit, chiama pull16. Per estrarre un numero casuale a 8 bit, chiama pull8, e così via. Ho scoperto che i numeri più piccoli non sono così casuali come quelli più grandi, e i numeri restituiti da pull4 probabilmente non sono abbastanza casuali da essere utili. (Ho lasciato il codice di pull4 così puoi vedere da solo eseguendo randtest.) La logica qui dovrebbe essere facile da seguire: selezioni un valore di spostamento, lo metti in RCX, copi RCX in R15, chiami rand(), copi RCX di nuovo da R15, e poi sposti il numero casuale (che rand() restituisce in RAX) per il valore in CL—che, ovviamente, è i 8 bit più bassi di RCX. Perché RCX deve essere salvato in R15? RCX non è uno dei registri preservati dal chiamato nelle convenzioni di chiamata C, e praticamente tutte le routine della libreria C usano RCX internamente e quindi ne danneggiano il valore. Se vuoi mantenere un valore in RCX attraverso una chiamata a una funzione di libreria, devi salvare il tuo valore da qualche parte prima della chiamata e ripristinarlo dopo che la chiamata è completata. C'era un solo posto per salvare un registro: lo stack. Ora, con i nuovi registri a uso generale di x64, potresti essere in grado di svolgere tutto il tuo lavoro con registri che le routine di glibc non danneggiano e quindi non devono essere salvate nello stack. Uso la routine pull6 per estrarre numeri casuali a 6 bit per selezionare caratteri da una tabella di caratteri, creando così una stringa di caratteri alfanumerici casuali. Riempio la tabella a 64 elementi con due caratteri aggiuntivi (- e @) in modo da non dover testare ogni numero estratto per vedere se è minore di 62. Se devi limitare i valori casuali a un intervallo che non è una potenza di 2, scegli la potenza di 2 più grande successiva—ma cerca di progettare il tuo programma in modo da non dover scegliere valori casuali in un intervallo come 0 a 65. Molto è stato scritto sui numeri casuali nei libri di algoritmi, quindi se il concetto ti affascina, ti indirizzo lì per ulteriori studi.
+</p>
 
 ## Controllo dei processi
 
