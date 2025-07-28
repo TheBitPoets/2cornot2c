@@ -14209,6 +14209,173 @@ pull:
 Per estrarre un numero casuale a 16 bit, chiama pull16. Per estrarre un numero casuale a 8 bit, chiama pull8, e così via. Ho scoperto che i numeri più piccoli non sono così casuali come quelli più grandi, e i numeri restituiti da pull4 probabilmente non sono abbastanza casuali da essere utili. (Ho lasciato il codice di pull4 così puoi vedere da solo eseguendo randtest.) La logica qui dovrebbe essere facile da seguire: selezioni un valore di spostamento, lo metti in RCX, copi RCX in R15, chiami rand(), copi RCX di nuovo da R15, e poi sposti il numero casuale (che rand() restituisce in RAX) per il valore in CL—che, ovviamente, è i 8 bit più bassi di RCX. Perché RCX deve essere salvato in R15? RCX non è uno dei registri preservati dal chiamato nelle convenzioni di chiamata C, e praticamente tutte le routine della libreria C usano RCX internamente e quindi ne danneggiano il valore. Se vuoi mantenere un valore in RCX attraverso una chiamata a una funzione di libreria, devi salvare il tuo valore da qualche parte prima della chiamata e ripristinarlo dopo che la chiamata è completata. C'era un solo posto per salvare un registro: lo stack. Ora, con i nuovi registri a uso generale di x64, potresti essere in grado di svolgere tutto il tuo lavoro con registri che le routine di glibc non danneggiano e quindi non devono essere salvate nello stack. Uso la routine pull6 per estrarre numeri casuali a 6 bit per selezionare caratteri da una tabella di caratteri, creando così una stringa di caratteri alfanumerici casuali. Riempio la tabella a 64 elementi con due caratteri aggiuntivi (- e @) in modo da non dover testare ogni numero estratto per vedere se è minore di 62. Se devi limitare i valori casuali a un intervallo che non è una potenza di 2, scegli la potenza di 2 più grande successiva—ma cerca di progettare il tuo programma in modo da non dover scegliere valori casuali in un intervallo come 0 a 65. Molto è stato scritto sui numeri casuali nei libri di algoritmi, quindi se il concetto ti affascina, ti indirizzo lì per ulteriori studi.
 </p>
 
+### Chiamate a indirizzi nei registri
+
+<p align="justify">
+Utilizzo una tecnica in randtest che a volte viene dimenticata dai principianti dell'assemblaggio: puoi eseguire un'istruzione CALL a un indirizzo di procedura memorizzato in un registro. Non è sempre necessario utilizzare CALL con un'etichetta immediata. In altre parole, le seguenti due istruzioni CALL sono entrambe completamente legali ed equivalenti:
+</p>
+
+```asm
+  mov r13,pull8  ; Copy the address represented by label pull8 into r13
+  call pull8     ; Call the address represented by pull8
+  call r13        ; Call the address stored in r13
+```
+
+<p align="justify">
+Perché fare questo? Troverai le tue ragioni col passare del tempo, ma in generale ti permette di trattare le chiamate di procedura come parametri. In randtest, ho estratto molto codice in una procedura chiamata puller e poi ho chiamato puller diverse volte per diverse dimensioni di numeri casuali. Ho passato a puller l'indirizzo della corretta procedura per il numero casuale da chiamare caricando l'indirizzo di quella procedura in RDI:
+</p>
+
+```asm
+ ; Create and display an array of 8-bit random values:
+ mov r13,pull8 ; Copy address of random # subroutine into r13
+ call puller   ; Pull as many numbers as called for in [pulls]
+```
+<p align="justify">
+Nella procedura di estrazione, il codice chiama la procedura di numero casuale richiesta in questo modo:
+</p>
+
+```asm
+ puller:
+ 	mov r12,[Pulls]      ; Put pull count into R12
+
+.grab:
+ 	dec r12              ; Decrement counter in RSI
+
+	call r13             ; Pull the value; it's returned in RAX
+	mov [Stash+r12*8],rax   ; Store random value in the array
+
+	cmp r12,0            ; See if we've pulled all STASH-ed numbers yet
+	jne .grab            ; Do another if R12 <> 0
+	ret                  ; Otherwise, go home!
+
+```
+
+<p align="justify">
+Vedi l'istruzione CALL R13? In questa situazione (dove R13 era precedentemente caricato con l'indirizzo della procedura pull8), ciò che viene chiamato è pull8—anche se l'etichetta pull8 non è presente nella procedura puller. Lo stesso codice in puller può essere usato per riempire un buffer con tutte le diverse dimensioni di numeri casuali, chiamando l'indirizzo della procedura passato a esso in R13. Chiamare un indirizzo in un registro ti dà molta potenza per generalizzare il codice—assicurati solo di documentare ciò che stai facendo, poiché l'etichetta che stai chiamando non è contenuta nell'istruzione CALL.
+</p>
+
+### Usare puts() per inviare una linea vuota alla console
+
+<p align="justify">
+Il programma randtest dimostra anche qualcosa di semplice ma non ovvio: come inviare una newline "nuda" alla console di Linux. Ho spiegato prima che la funzione puts() di libc termina sempre quello che visualizza con una newline, anche se preferiresti che non ne visualizzasse affatto. Per visualizzare le cose sulla console senza una newline, devi usare printf(). Quindi cosa fare se vuoi inviare un linefeed alla console, ma nient'altro? Facile: definisci una variabile (la chiamo NewLine) come un singolo byte e metti un 0 al suo interno. Poi copia l'indirizzo della variabile NewLine in RDI e poi chiama puts():
+</p>
+
+```asm
+  mov rdi,NewLine  ; Output a newline
+  call puts
+```
+
+<p align="justify">
+Ricorda che puts() visualizza tutto a partire dall'indirizzo passato ad esso in RDI fino al primo null (cioè, uno 0) che incontra. Se l'unica cosa a quell'indirizzo è un null, puts() invierà una nuova riga alla console e nient'altro.
+</p>
+
+### Come passare più di sei parametri a una funzione libc
+
+<p align="justify">
+Se ti ricordi, nella convenzione di chiamata x64, i primi sei parametri passati a una funzione vengono passati in RDI, RSI, RDX, RCX, R8 e R9. Quindi, cosa succede se vuoi passare a printf() sette parametri o più? Qualsiasi cosa oltre sei parametri deve andare nello stack. Ho progettato appositamente randtest per passare sette parametri a printf(). L'azione avviene nella procedura chiamata shownums:
+</p>
+
+```asm
+    mov r12,qword [Pulls]    ; Put pull count into r12
+    xor r13,r13
+ .dorow:
+    mov rdi,ShowArray        ; Pass address of base string
+    mov rsi,[Stash+r13*8+0]  ; Pass first element
+    mov rdx,[Stash+r13*8+8]  ; Pass second element
+    mov rcx,[Stash+r13*8+16] ; Pass third element
+    mov r8,[Stash+r13*8+24]  ; Pass fourth element
+    mov r9,[Stash+r13*8+32]  ; Pass fifth element
+    push rax                 ; To keep the stack 16 bytes
+ aligned
+    push qword [Stash+r13*8+40] ; Pass sixth element on the
+ stack.
+    xor rax,rax         ; Tell printf() no vector values
+ coming
+    call printf         ; Display the random numbers
+    add rsp,16          ; Stack cleanup: 2 item X 8 bytes = 16
+ 
+```
+
+<p align="justify">
+All'etichetta dorow: c'è una sequenza di sei istruzioni MOV, tutte le quali passano parametri da utilizzare con printf(). L'indirizzo della stringa base va prima (in RDI) seguito dai sei numeri casuali che costituiscono una riga. Una volta arrivati al sesto numero, non abbiamo più registri per passare ulteriori valori. Quindi, l'ultimo valore del parametro viene spinto nello stack, immediatamente prima di chiamare printf(). Beh, quasi immediatamente. In precedenza in questo capitolo ho trattato questo stesso codice da una direzione diversa: l'allineamento dello stack. Anche se il codice di avvio glibc allinea lo stack a un valore di 16 byte, spingere solo un elemento nello stack aggiunge solo 8 byte al puntatore dello stack, e quindi disallinea lo stack. Per risolvere questo problema, spingi RAX nello stack proprio prima di spingere quel settimo parametro nello stack. RAX aggiunge altri 8 byte allo stack, riportandolo a un allineamento di 16 byte. (Ciò che è effettivamente in RAX non importa. Sono solo 8 byte di riempimento.) Se ci fossero otto parametri, l'ottavo sarebbe spinto nello stack immediatamente dopo il settimo senza necessità di alcuna istruzione PUSH RAX. Ecco perché: L'essenza dell'allineamento dello stack è far crescere o ridurre lo stack solo in blocchi di 16 byte, anche se metà di uno di quei blocchi è un registro “fittizio”. Spingere due valori di parametro nello stack fa crescere lo stack di 16 byte, quindi non è necessario alcun valore fittizio. Infatti, se dimentichi e aggiungi comunque un PUSH RAX, disallineerai lo stack! La funzione printf() sa dove guardare e troverà e utilizzerà tutti i parametri passati ad essa. Tuttavia, printf() non pulisce dopo se stessa. Se spingi valori nello stack per una chiamata a printf(), una volta che printf() ha finito di usarli, devi pulire lo stack. Questo non viene fatto con un pop (almeno non in questo caso particolare) ma aggiungendo la dimensione dell'elemento che hai spinto nello stack a RSP. Ricorda che lo stack cresce “in giù” (verso indirizzi più bassi). Se spingiamo qualcosa, RSP diventa più piccolo della dimensione del valore spinto, in questo caso, un intero a 64 bit. Per pulire lo stack, aggiungiamo la dimensione di ciò che abbiamo spinto di nuovo in RSP. In questo caso, abbiamo spinto un registro di 8 byte più un intero di 8 byte per un totale di 16 byte di dimensione, quindi aggiungiamo 16 a RSP. Voilà! Lo stack è ora pulito, almeno dalla chiamata a printf(). Tieni traccia del tuo stack: per pop ciò che spingi, oppure aggiungi la dimensione di un elemento spinto di nuovo in RSP. Fai attenzione: se mescoli lo stack, un errore di segmentazione è quasi inevitabile.
+</p>
+
+### Come C vede gli argomenti della riga di comando
+
+<p align="justify">
+Ho spiegato come accedere agli argomenti della riga di comando da un programma Linux come parte di una discussione più generale sui frame dello stack. Una delle cose più strane riguardo il collegamento e la chiamata alle funzioni della libreria standard C in glibc è che il modo di accedere agli argomenti della riga di comando cambia e cambia in modo significativo. Gli argomenti sono ancora sullo stack, così come la tabella degli indirizzi degli argomenti. Tuttavia, non è più necessario frugare su e giù nello stack per trovarli. La chiave è questa: main() è una funzione. È solo una parte di un programma C. Ci sono anche il codice di avvio e il codice di spegnimento. Una volta che il codice di avvio ha completato il suo lavoro, chiama main() proprio come chiamerebbe qualsiasi altra funzione. Quando main() è finita, restituisce il controllo al codice di spegnimento, che svolge il suo lavoro e poi restituisce il controllo a Linux. Ciò che rende più facile il processo di trovare gli argomenti della riga di comando è che il codice di avvio segue le convenzioni di chiamata x64 quando chiama main(). I primi sei parametri vengono passati a una funzione nei registri. Il primo registro a ricevere un parametro è RDI. Quando il codice di avvio chiama main(), pone il conteggio degli argomenti (argc nel gergo C) in RDI. L'unico altro parametro normalmente passato a main() è l'indirizzo della tabella dei puntatori nello stack, nel gergo C argv. Ogni indirizzo nella tabella argv punta al suo testo di argomento effettivo. Il puntatore alla tabella dei puntatori viene passato nel secondo registro della convenzione di chiamata, RSI. Il codice si sotto è funzionalmente equivalente al programma showargs2 presentato precedentemente. Tuttavia, è significativamente più semplice. Diamo un'occhiata e lo esamineremo insieme.
+</p>
+
+```asm
+;  Executable name : showargs3
+;  Version         : 3.0
+;  Created date    : 10/1/1999
+;  Last update     : 7/18/2023
+;  Author          : Jeff Duntemann
+;  Description     : A demo that shows how to access command line arguments
+;                    stored on the stack by addressing them relative to rbp.
+;
+;  Build using these commands:
+;    nasm -f elf64 -g -F dwarf showargs3.asm
+;    gcc showargs3.o -o showargs3
+;
+
+[SECTION .data]    ; Section containing initialised data
+		
+ArgMsg db "Argument %d: %s",10,0
+
+[SECTION .bss]     ; Section containing uninitialized data
+	
+[SECTION .text]    ; Section containing code
+				
+global main        ; Required so linker can find entry point
+extern printf      ; Notify linker that we're calling printf
+
+main:
+    push rbp       ; Set up stack frame for debugger
+    mov rbp,rsp
+
+;;; Everything before this is boilerplate; use it for all ordinary apps!
+
+    mov r14,rdi    ; Get arc count (argc) from RDI
+    mov r13,rsi    ; Put the pointer to the arg table argv from RSI
+    xor r12,r12    ; Clear r12 to 0
+
+.showit:
+
+    mov rdi,ArgMsg ; Pass address of display string in rdi
+    mov rsi,r12    ; Pass argument number in rsi
+    mov rdx,qword [r13+r12*8]   ; Pass address of an argument in RDX
+    call printf    ; Display the argument # and argument
+
+    inc r12        ; Bump argument # to next argument
+    dec r14        ; Decrement argument counter by 1
+    jnz .showit    ; If argument count is 0, we're done
+
+;;; Everything after this is boilerplate; use it for all ordinary apps!
+
+    mov rsp,rbp    ; Destroy stack frame before returning
+    pop rbp
+
+	ret            ; Return to glibc shutdown code
+```
+
+<p align="justify">
+Dopo il prologo, il valore del conteggio argc è copiato in R14. L'indirizzo della tabella argv è copiato in R13. R12 è azzerato a 0. Ad ogni passaggio attraverso il ciclo .showit, i valori vengono passati alla funzione printf(), tutto secondo la convenzione di chiamata x64. L'indirizzo della stringa di visualizzazione è passato in RDI e il numero dell'argomento è passato in RSI, numerato da 0. L'indirizzo del testo di ogni argomento è passato in RDX, utilizzando un indirizzo effettivo calcolato in questo modo:
+</p>
+
+```asm
+ mov rdx,qword  [r13+r12*8]
+```
+
+<p align="justify">
+Il termine base è R13, che è l'indirizzo dell'inizio della tabella. Ogni indirizzo nella tabella occupa 8 byte, quindi si tratta la posizione ordinaria delle voci della tabella (cioè l'elemento 0, 1, 2, 3, ecc.) come l'indice e lo si moltiplica per il fattore di scala, 8 poiché gli indirizzi in x64 sono tutti di 8 byte. Quando il calcolo è completato, l'indirizzo effettivo dell'elemento scelto nella tabella viene copiato in RDX. RDX quindi porta l'indirizzo dell'elemento argv da visualizzare in printf(). (Si noti che non c'è termine di spostamento in questo particolare calcolo dell'indirizzo effettivo.) Durante il ciclo .showit, R14 conta all'indietro il numero di argomenti, mentre R12 assegna a ciascun argomento il proprio numero ordinario. In altre parole, R14 conta quanti argomenti abbiamo ancora da visualizzare e per ogni argomento R12 gli assegna un numero ordinario che aumenta, da visualizzare con printf(). Tutto ciò dovrebbe essere chiaro dalla figura di sotto
+</p>
+
+<div aling=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/accessing_command_line_arguments_from_main.png">
+</div>
+
 ## Controllo dei processi
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.01.png)
