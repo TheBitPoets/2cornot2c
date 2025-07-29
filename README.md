@@ -1,4 +1,4 @@
-# 2cornot2c
+<img width="3840" height="2160" alt="image" src="https://github.com/user-attachments/assets/fb6878ac-491a-4b29-b1ee-371d528761b3" /># 2cornot2c
 It's a 101 C course for my students.
 Sorry, only italian version so far.
 
@@ -14375,6 +14375,492 @@ Il termine base è R13, che è l'indirizzo dell'inizio della tabella. Ogni indir
 <div aling=center>
 <img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/accessing_command_line_arguments_from_main.png">
 </div>
+
+### Semplici operazioni di I/O sui file
+
+<p align="justify">
+L'ultimo programma di esempio che presento qui è nominalmente dedicato al lavoro con file di testo su disco. Tuttavia, raccoglie molti trucchi e funzionalità di assembly che ho spiegato in precedenza e ne aggiunge alcuni altri. È il programma più grande e complesso che ti ho mostrato, e se riesci a leggerlo e seguire il flusso della logica, hai appreso tutto ciò che mi ero ripromesso di insegnarti in questo libro. È più simile a un programma 'reale' rispetto a qualsiasi altra cosa in questo libro, in quanto lavora con argomenti da riga di comando, scrive l'output in un file su disco e fa altre cose utili che qualsiasi utility che intendi costruire richiederà probabilmente. Il programma textfile.asm (vedi sotto) crea e riempie un file di testo con del testo. Puoi specificare il numero di righe da riempire nel file, così come il testo per le righe. Se non specifichi il testo per il file, il programma genererà una riga di caratteri scelti casualmente e userà quella al suo posto. L'invocazione del programma avviene in questo modo: 
+</p>
+
+```
+$./textfile 50 Tempo per i tacos!
+```
+
+<p align="justify">
+Questa invocazione crea un nuovo file (il cui nome è fissato nel programma come testeroo.txt) e scrive il testo "Tempo per i tacos!" nel file 50 volte prima di chiudere il file. Se il file testeroo.txt esiste già, verrà sovrascritto dall'inizio. Se non digiti nulla dopo il numero di righe, il programma riempirà il file con caratteri alfanumerici casuali. Se non digiti un intero come primo argomento (ad esempio, la lettera Q), textfile visualizzerà un messaggio di errore su una riga. Se digiti solo il nome del programma e premi Invio, textfile visualizzerà diverse righe che spiegano cos'è e come usarlo.
+</p>
+
+### Convertire le stringhe in numeri con sscanf()
+
+<p align="justify">
+Quando digiti un numero nella riga di comando mentre invochi un programma, puoi accedere a quel numero come uno degli argomenti della riga di comando, attraverso i meccanismi che ho descritto poco prima in questo capitolo. Tuttavia, c'è un problema: il numero è presente come testo, e non puoi semplicemente prendere la stringa testuale “751” e caricarla in un registro o in una variabile intera. Per utilizzare gli argomenti numerici come numeri, devi prima convertire la loro espressione testuale in forma numerica. La libreria standard C ha diverse funzioni per affrontare questa sfida. Alcune di esse, come strtod(), sono abbastanza specifiche e limitate e convertono il testo solo in un tipo numerico. Tuttavia, una di esse ha la capacità di convertire quasi qualsiasi espressione testuale di un valore numerico legale in una forma numerica appropriata. Questa è sscanf(), e sarà quella che useremo nel programma di sotto
+</p>
+
+<p align="justify">
+La funzione sscanf() accetta tre parametri, che è necessario caricare nei registri dei parametri standard, nel seguente ordine:
+</p>
+
+1. Il primo parametro è l'indirizzo della stringa di testo da convertire nel valore numerico che rappresenta. In textfile.asm, carichiamo RDI con l'indirizzo di arg(1), che è il primo argomento della riga di comando che digiti quando invochi il programma.
+2. Successivamente carichiamo RSI con l'indirizzo di una stringa di codice di formattazione che indica a sscanf() quale formato numerico desideri che il testo di input venga convertito. Qui la stringa di codice è %d, che, come potresti ricordare dalla nostra discussione su printf(), è il codice per gli interi.
+3. Il terzo parametro è l'indirizzo di una variabile numerica che conterrà il valore numerico generato da sscanf(). Questo va in RDX. Qui stiamo generando un intero a 64 bit. Quindi, in textfile.asm, passiamo l'indirizzo della variabile IntBuffer, che è dichiarata come intero a 64 bit.
+4. Come con printf() e scanf(), azzera RAX a 0 immediatamente prima di effettuare la chiamata a sscanf().
+
+<p align="justify">
+Una volta che questi tre elementi sono stati caricati nei registri appropriati e RAX è stato azzerato, chiama sscanf(). Restituisce il valore convertito nella variabile numerica il cui indirizzo hai passato come terzo parametro. Restituisce anche un codice in RAX per indicare se la conversione è stata riuscita. Se il valore restituito in RAX è 0, allora si è verificato un errore e non dovresti presumere di avere qualcosa di significativo nella tua variabile numerica. Se la conversione è andata a buon fine, vedrai il valore 1 in RAX. Questo è il modo più semplice per utilizzare sscanf(). Può convertire interi array di numeri contemporaneamente, ma questo è un uso più specializzato di cui probabilmente non hai bisogno quando stai appena iniziando. Fare queste cose specializzate richiede spesso registri vettoriali, che non sto trattando in questo libro. Tuttavia, è importante azzerare RAX a 0 prima di chiamare sscanf() nel programma di esempio per dire alla funzione che non verranno utilizzati registri vettoriali. La stringa passata a sscanf() come secondo parametro può contenere più codici di formattazione e in tal caso la stringa il cui indirizzo passi come primo parametro dovrebbe avere del testo che descrive i valori numerici per ciascun codice di formattazione presente nella stringa di formato. Nel codice di sotto, il testo di formato specifica solo un valore, utilizzando il codice di formato %d. L'intero processo appare così:
+</p>
+
+```ams
+ xor rax,rax         ; Clear rax to 0
+ mov rdi,qword [r13+8] ; Pass address of an argument in rdi
+ mov rsi,IntFormat   ; Pass address of integer format code in rsi
+ mov rdx,IntBuffer   ; Pass address of integer buffer for sscanf output
+ mov rax,0           ; Tell sscanf() that there are no vector arguments
+ call sscanf         ; Convert string arg to number with sscanf()    
+ cmp rax,1           ; Return value of 1 says we got a number
+ je chkdata          ; If we got a number, go on; else abort
+
+ mov rdi,Err1        ; Pass address of error 1-line message in rdi
+ mov rax,0           ; Tell printf() that there are no vector arguments
+ call printf         ; Show the error message
+ jmp gohome          ; Exit the program
+```
+
+<p align="justify">
+Assumendo che l'utente abbia inserito almeno un argomento nella riga di comando (e il programma abbia già verificato questo prima dell'estratto sopra), un puntatore a quell'argomento iniziale si trova a un offset di 8 dall'inizio della tabella dei puntatori degli argomenti della riga di comando. (Il primo elemento della tabella, che chiamiamo arg(0), punta al nome del programma così come l'utente l'ha digitato nella riga di comando.) Ecco perché carichiamo il contenuto dell'argomento a [R13+8] nello stack; avevamo già caricato R13 con l'indirizzo della tabella dei puntatori degli argomenti. Quello che si trova a [R13+8] è il puntatore a arg(1), il primo vero argomento della riga di comando. (Il primo argomento, arg(0), è il testo con cui hai invocato il programma.) Vedi la figura precedente se questo è ancora poco chiaro.
+</p>
+
+### Creare ed Aprire i File
+
+<p align="justify">
+A questo punto dovresti essere abbastanza a tuo agio con il meccanismo generale per effettuare chiamate alle librerie C dall'assembly. E che tu te ne renda conto o meno, sei già abbastanza a tuo agio con alcuni dei meccanismi per manipolare i file di testo. Hai già usato printf() per visualizzare testo formattato sullo schermo tramite l'output standard. Lo stesso meccanismo viene utilizzato per scrivere testo formattato nei file di testo su disco: stai praticamente sostituendo un file su disco reale con l'output standard. Quindi, capire l'I/O dei file di testo non dovrebbe essere un grande salto concettuale. Ma, a differenza dell'output standard, che è predefinito per te dalla libreria C ed è sempre disponibile, devi creare o aprire un file di testo su disco per usarlo. La funzione fopen() è quella che svolge il lavoro. Ci sono tre modi generali per aprire un file: per leggere, per scrivere e per aggiungere. Quando apri un file per la lettura, puoi leggere il testo da esso tramite funzioni come fgets(), ma non puoi scrivere nel file. Quando apri un file per scrivere, qualsiasi cosa ci fosse nel file prima viene scartata e nuovo materiale viene scritto all'inizio del file. Quando apri un file per aggiungere, puoi scrivere nel file, ma nuovo materiale viene scritto dopo qualsiasi materiale esistente e qualsiasi cosa fosse originariamente nel file viene mantenuta.
+</p>
+
+<p align="justify">
+Di solito, quando apri un file per la scrittura non puoi leggerci, ma ci sono modalità speciali che consentono sia la lettura che la scrittura su un file. Per i file di testo in particolare (di cui stiamo parlando qui) questo introduce alcune complicazioni, quindi per la maggior parte, i file di testo vengono aperti o per la lettura o per la scrittura, ma non per entrambi contemporaneamente. Nel sistema di file Unix, se apri un file per la scrittura o per l'aggiunta e il file non esiste già, il file viene creato. Se non sai se un file esiste e devi scoprirlo, prova ad aprirlo per la lettura e non per la scrittura, altrimenti otterrai un file che sia realmente esistito prima o meno! Per usare fopen(), devi impostare i seguenti parametri nei registri prima della chiamata:
+</p>
+
+1. Inserire l'indirizzo della stringa di caratteri contenente il nome del file da aprire in RDI.
+2. Inserire l'indirizzo di un codice che indica in quale modalità il file deve essere aperto in RSI. Le varie modalità disponibili per Linux sono elencate nella figura di sotto. Quelli che userai tipicamente per i file di testo sono r, w e a. Questi dovrebbero essere definiti come brevi stringhe di caratteri, seguite da un null:
+
+```asm
+ WriteCode  db 'w',0
+ OpenCode   db 'r',0
+```
+
+<p align="justify">
+Con questi due elementi nei registri, fai la chiamata a fopen(). Se il file è stato aperto con successo, fopen() restituirà un handle del file in RAX. Un handle del file è un numero a 64 bit assegnato da Linux a un file durante la chiamata a fopen(). Se l'apertura non ha avuto successo, RAX conterrà il valore 0 invece di un handle del file. Ecco come appare l'apertura di un file per la lettura nel codice:
+</p>
+
+```
+mov rdi,Filename     ; Pass filename to fopen in RDI
+mov rsi,ReadCode     ; Pass pointer to write/create code ('r') in rsi
+call fopen           ; Open file for reading
+cmp rax,0            ; Test for successful file open: failed if 0
+je OpenErr           ; Jump to error handling code if open failed
+<use opened file>
+```
+
+<p align="justify">
+Il processo di creazione di un file e poi di scrittura su di esso è identico, tranne per il fatto che devi usare il codice w invece del codice r. Vedremo come funziona questo nel programma textfile.asm.
+</p>
+
+<div aling=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/fopen_file_access_mode.png">
+</div>
+
+### Leggere testo dai file con fgets()
+
+<p align="justify">
+Quando fopen() crea o apre con successo un file per te, restituisce un handle del file in RAX. Tieni al sicuro quell'handle del file da qualche parte: ti consiglio di copiarlo in una variabile di memoria allocata per questo scopo o di metterlo in un registro che sai non verrà utilizzato per nient'altro. Questo è importante: se lo memorizzi in RAX, RCX o RDX e poi chiami quasi qualsiasi funzione della libreria C, l'handle del file nel registro verrà danneggiato e lo perderai. Una volta che un file è aperto per la lettura, puoi leggere le righe di testo da esso sequenzialmente con la funzione fgets(). Ogni volta che chiami fgets() su un file di testo aperto, leggerà una riga del file, che è definita come tutti i caratteri fino al prossimo carattere EOL (“newline”) (ASCII 10), che nel mondo Unix indica sempre la fine di una riga di testo. Ora, in un dato file non c'è modo di sapere quanti caratteri ci saranno fino al prossimo newline, quindi sarebbe pericoloso lasciare semplicemente fgets() libero di riportare i caratteri fino a quando non incontra un newline. Se tenti di aprire il tipo sbagliato di file (un file di codice binario è una possibilità, o un file di dati compressi), potresti portare dentro migliaia di byte prima di imbattersi nel valore binario 10 che il file system considera un newline. Qualunque buffer tu abbia allocato per contenere il testo in arrivo traboccherà e fgets() potrebbe forse distruggere dati adiacenti e/o far crashare il tuo programma.
+</p>
+
+<p align="justify">
+Per questo motivo, devi anche passare un valore limite a fgets(). Quando fgets() inizia a leggere una riga, tiene traccia di quanti caratteri ha estratto dal file e quando arriva a uno meno del valore limite, smette di leggere i caratteri. Aggiunge quindi un carattere EOL al buffer per l'ultimo carattere e restituisce. Configura le chiamate a fgets() in questo modo:
+</p>
+
+1. Prima, carica RDI con l'indirizzo del buffer di caratteri in cui fgets() memorizzerà i caratteri letti dal file.
+2. Successivamente, carica RSI con il valore limite del conteggio dei caratteri. Questo deve essere il valore intero effettivo, e non un puntatore al valore!
+3. Infine, carica RDX con il gestore del file restituito da fopen() quando il file è stato aperto.
+
+<p align="justify">
+Con tutto ciò fatto, chiama fgets(). Se fgets() restituisce 0 in RAX, significa che hai raggiunto la fine del file oppure si è verificato un errore di lettura durante il caricamento. In entrambi i casi, non ci sono ulteriori dati provenienti dal file. Ma senza un 0 restituito in RAX, puoi presumere che ci sia testo valido presente nel buffer all'indirizzo che hai passato a fgets() in RDI. Ho usato fgets() per creare un sistema di aiuto molto semplice basato su disco per textfile.asm. Quando l'utente non inserisce affatto argomenti da riga di comando, il programma textfile legge un breve file di testo dal disco e lo visualizza in uscita standard. Se il file di aiuto basato su disco non può essere aperto, textfile visualizza un breve messaggio a tal riguardo. Questo è un modo comune e cortese di fare con i programmi da riga di comando, e consiglio che tutte le utility che costruisci per l'uso quotidiano funzionino in questo modo. Il codice per il sistema di aiuto è relativamente semplice e dimostra sia fopen() che fgets():
+</p>
+
+```asm
+ diskhelp:
+    mov rdi,DiskHelpNm ; Pointer to name of help file is passed in rdi
+    mov rsi,OpenCode   ; Pointer to open-for-read code "r" gpes in rsi
+    call fopen         ; Attempt to open the file for reading
+    cmp rax,0          ; fopen returns null if attempted open failed
+    jne .disk          ; Read help info from disk, else from memory
+    call memhelp
+    ret
+ 
+.disk:
+    mov rbx,rax        ; Save handle of opened file in ebx
+ .rdln:
+    mov rdi,HelpLine   ; Pass pointer to buffer in rdi
+    mov rsi,HELPLEN    ; Pass buffer size in rsi
+    mov rdx,rbx        ; Pass file handle to fgets in rdx
+    call fgets         ; Read a line of text from the file
+    cmp rax,0          ; A returned null indicates error or EOF
+    jle .done          ; If we get 0 in rax, close up &
+ return
+    mov rdi,HelpLine   ; Pass address of help line in rdi
+    mov rax,0          ; Tell printf() there are no vector
+ arguments
+    call printf        ; Call printf to display help line
+    jmp .rdln
+ 
+.done:
+    mov rdi,rbx        ; Pass the handle of the file to be
+ closed in rdi
+    call fclose        ; Close the file
+    jmp gohome         ; Go home
+```
+
+<p align="justify">
+Prima che venga chiamata la procedura diskhelp, il chiamante passa un puntatore al nome del file di aiuto da leggere in RBX. Il codice tenta poi di aprire questo file. Se il tentativo di aprire il file di aiuto fallisce, viene visualizzato un messaggio di aiuto "fail safe" molto breve, proveniente da stringhe memorizzate nella sezione .data del programma. (Questa è la chiamata a memhelp, che è un'altra breve procedura in textfile.asm.) Non lasciare mai l'utente a fissare un cursore muto, chiedendosi cosa stia succedendo! Una volta che il file di aiuto basato su disco è stato aperto, iniziamo a scorrere una sequenza che legge righe di testo dal file aperto con fgets() e poi scrive quelle righe sull'output standard con printf(). La lunghezza massima delle righe da leggere è definita dall'equazione HELPLEN. Perché un'equazione? Invece di essere specificata in diversi posti nel tuo codice sorgente, la lunghezza massima delle righe del file di aiuto è definita in un solo posto, eliminando le possibilità di posizionare accidentalmente valori multipli in diverse parti del tuo codice sorgente. Se hai bisogno di cambiarla, utilizzando un'equazione, puoi cambiare il valore ovunque venga utilizzato modificando solo quella singola equazione. Le equazioni combattono i bug. Usale ogni volta che puoi. Ogni volta che una riga viene letta dal file, l'indirizzo della riga viene passato a printf() in RDI e visualizzato. Quando non ci sono più righe disponibili da leggere nel file di aiuto, fgets() restituisce un 0 in RAX, e il programma si dirama alla chiamata della funzione che chiude il file. Nota la funzione fclose(), che in uso è piuttosto semplice: copi l'handle del file di un file aperto in RDI e chiami fclose(). È tutto ciò che serve per chiudere il file!
+</p>
+
+### Scrivere testo su file con fprintf()
+
+<p align="justify">
+In precedenza in questo capitolo, ho spiegato come scrivere testo formattato sul display tramite l'output standard, utilizzando la funzione printf(). La libreria standard C fornisce una funzione che scrive lo stesso testo formattato su qualsiasi file di testo aperto. La funzione fprintf() fa esattamente ciò che fa printf(), ma richiede un parametro aggiuntivo nello stack: il gestore del file di un file di testo aperto. Lo stesso flusso di testo che printf() invierebbe all'output standard viene inviato da fprintf() a quel file aperto. Quindi non mi prenderò la briga di riesplorare come formattare il testo per printf() utilizzando codici di formattazione e stringhe di base. Si fa nello stesso modo, con gli stessi identici codici. Invece, semplicemente riassumerò come impostare una chiamata a fprintf():
+</p>
+
+1. Prima (e qui è dove fprintf() si differenzia da printf()), copia il gestore del file del file a cui il testo dovrebbe essere scritto in RDI.
+2. Successivamente, copia l'indirizzo della stringa base contenente i codici di formattazione in RSI. Ancora una volta, proprio come per printf().
+3. Infine, passa i puntatori ai valori controllati dalla stringa base nei registri, secondo l'ordine specificato nella convenzione di chiamata C. Non c'è differenza rispetto al modo in cui viene fatto per una chiamata a printf(). Come con printf(), possono esserci più di uno. Nel file textfile.asm, il primo è il numero della riga (passato in RDX), e il secondo è la riga di testo inserita dall'utente, passata in RCX.
+4. Come con printf(), azzera RAX a 0 prima di chiamare fprintf().
+
+<p align="justify">
+Quindi chiama fprintf(). Il tuo testo verrà scritto nel file aperto. Nota che per utilizzare fprintf(), il file di destinazione deve essere stato aperto per scrittura o appending. Se tenti di utilizzare fprintf() su un file aperto per lettura, genererai un errore e fprintf() restituirà senza scrivere alcun dato. In tal caso, verrà restituito un codice di errore in RAX. Tuttavia, a differenza delle altre funzioni di cui abbiamo parlato finora, il codice di errore è un numero negativo, non 0! Quindi, sebbene tu debba confrontare il valore restituito con 0, in realtà devi saltare su un valore inferiore a 0—anziché 0 stesso. Tipicamente, per saltare su una condizione di errore di fprintf(), utilizzeresti l'istruzione JL (Jump if Less), che salterà su un valore inferiore a 0.
+</p>
+
+<p align="justify">
+Ecco la chiamata fprintf() da textfile.asm:
+</p>
+
+```asm
+ writeline:
+    cmp qword r15,0     ; Has the line count gone to 0?
+    je closeit          ; If so, close the file and exit
+    mov rdi,rbx         ; Pass the file handle in rdi
+    mov rsi,WriteBase   ; Pass the base string in rsi
+    mov rdx,r14         ; Pass the line number in rdx
+    mov rcx,Buff        ; Pass the pointer to the text buffer in rcx
+    mov rax,0           ; Tell fprintf that there are no vector arguments     
+    call fprintf        ; Write the text line to the file
+    dec r15             ; Decrement the count of lines to be written
+    inc r14             ; Increment the line number
+    jmp writeline       ; Loop back and do it again
+ 
+    ;; We're done writing text; now let's close the file:
+ closeit:
+    mov rdi,rbx         ; Pass the handle of the file to be closed in rdi
+    call fclose         ; Closes the file
+```
+
+### Note sulla raccolta delle procedure in librerie
+
+<p align="justify">
+Ecco un riassunto su come raccogliere le procedure in librerie:
+</p>
+
+<ul>
+	<li>
+		<p align="justify">
+		Crea un nuovo file di codice sorgente e incolla il codice sorgente della procedura nel file, che deve avere un'estensione di file .ASM.
+   		</p>
+	</li>
+ 	<li>
+		<p align="justify">
+		Dichiarare i punti di ingresso chiamabili per tutte le procedure nella libreria, così come qualsiasi altro identificatore che possa essere utilizzato da altri programmi e librerie, come globale. Questo rende quegli item visibili (e quindi utilizzabili) da altri programmi o librerie collegate con la nuova libreria.
+   		</p>
+	</li>
+ 	<li>
+		<p align="justify">
+		Se le procedure richiamano funzioni della libreria C o procedure in altre librerie di tua proprietà o che hai creato, o utilizzano variabili o altri identificatori definiti al di fuori della libreria, dichiara tutti questi identificatori esterni come extern.
+   		</p>
+	</li>
+ 	<li>
+		<p align="justify">
+		Quando si chiamano le procedure della libreria da un programma, aggiorna il makefile per quel programma in modo che l'eseguibile finale abbia una dipendenza dalla libreria.
+   		</p>
+	</li>
+</ul>
+
+<p align="justify">
+Questo ultimo punto è l'unico che richiede ulteriori discussioni. Il file make mostrato di seguito costruisce il programma demo textfile.asm, che collega una libreria chiamata linlib.asm. Si noti che c'è una nuova riga che specifica come il file oggetto linlib.o venga assemblato e anche che il file binario finale textfile dipende sia da textfile.o che da linlib.o. Poiché l'eseguibile textfile dipende sia da textfile.o che da linlib.o, ogni volta che apporti modifiche a textfile.asm o linlib.asm, l'utility make ricompilerà completamente il file eseguibile tramite gcc. Tuttavia, a meno che tu non cambi entrambi i file .asm, solo il file .asm che viene modificato sarà assemblato nuovamente. La magia di make è che non fa nulla che non sia necessario.
+</p>
+
+```make
+ textfile: textfile.o linlib.o
+	 gcc textfile.o linlib.o -o textfile –no-pie
+ textfile.o: textfile.asm
+ 	nasm -f elf64 -g -F dwarf textfile.asm
+ linlib.o: linlib.asm
+	 nasm -f elf64 -g -F dwarf linlib.asm
+```
+
+<p align="justify">
+Il file completo linlib.asm è presente nell'archivio degli elenchi per questo libro. Le procedure che contiene sono state raccolte da altri programmi mostrati in questo capitolo, quindi sarebbe ripetitivo ristamparle tutte qui. Infine, segue il programma textfile.asm, nella sua interezza. Assicurati di poterlo leggere tutto - non c'è nulla qui che non abbia già trattato da qualche parte in questo libro. E se vuoi una sfida, eccone una per il tuo prossimo progetto: Adatta textfile.asm per leggere un file di testo e riscriverlo di nuovo con i numeri di linea preceduti davanti a ciascuna riga di testo. Permetti all'utente di inserire da riga di comando il nome di un nuovo file per contenere il testo modificato. Mantieni il sistema di aiuto e scrivi un nuovo file di testo di aiuto per esso. Se ci riesci, puoi inchinarti: sarai un programmatore di linguaggio assembly!
+</p>
+
+```asm
+;  Executable name : textfile
+;  Version         : 3.0
+;  Created date    : 11/21/1999
+;  Last update     : 7/18/2023
+;  Author          : Jeff Duntemann
+;  Description     : A text file I/O demo for Linux, using NASM 2.14.02
+;
+;  Build executable using these commands:
+;    nasm -f elf64 -g -F dwarf textfile.asm
+;    nasm -f elf64 -g -F dwarf linlib.asm
+;    gcc textfile.o linlib.o -o textfile -no-pie
+;
+;  Note that the textfile program requires several procedures
+;  in an external library named LINLIB.ASM.
+
+[SECTION .data]     ; Section containing initialized data
+		
+IntFormat   dq '%d',0
+WriteBase   db 'Line # %d: %s',10,0	
+NewFilename db 'testeroo.txt',0			
+DiskHelpNm  db 'helptextfile.txt',0
+WriteCode   db 'w',0
+OpenCode    db 'r',0			
+CharTbl     db '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-@'	
+Err1        db 'ERROR: The first command line argument must be an integer!',10,0
+HelpMsg     db 'TEXTTEST: Generates a test file.  Arg(1) should be the # of ',10,0
+HELPSIZE    EQU $-HelpMsg
+            db 'lines to write to the file.  All other args are concatenated',10,0
+            db 'into a single line and written to the file.  If no text args',10,0
+            db 'are entered, random text is written to the file.  This msg  ',10,0
+            db 'appears only if the file HELPTEXTFILE.TXT cannot be opened. ',10,0
+HelpEnd     dq 0
+
+[SECTION .bss]             ; Section containing uninitialized data
+
+LineCount   resq 1         ; Reserve integer to hold line count
+IntBuffer   resq 1         ; Reserve integer for sscanf's return value
+HELPLEN     EQU 72         ; Define length of a line of help text data
+HelpLine    resb HELPLEN   ; Reserve space for disk-based help text line
+BUFSIZE     EQU 64         ; Define length of text line buffer buff
+Buff        resb BUFSIZE+5 ; Reserve space for a line of text 
+		
+[SECTION .text]            ; Section containing code
+
+;; These externals are all from the glibc standard C library:	 
+extern fopen
+extern fclose
+extern fgets	
+extern fprintf
+extern printf		
+extern sscanf
+extern time
+
+;; These externals are from the associated library linlib.asm:
+extern seedit           ; Seeds the random number generator
+extern pull6            ; Generates a 6-bit random number from 0-63
+
+global main             ; Required so linker can find entry point
+	
+main:
+    push rbp            ; Prolog: Set up stack frame
+    mov rbp,rsp
+    and rsp,-16
+
+    mov r12,rdi         ; Save the argument count in r12
+    mov r13,rsi         ; Save the argument pointer table to r13
+
+    call seedit         ; Seed the random number generator
+
+    ;; First test is to see if there are command-line arguments at all.
+    ;; If there are none, we show the help info as several lines.  Don't
+    ;; forget that the first arg is always the program name, so there's
+    ;; always at least 1 command-line argument, even if we don't use it!
+
+    cmp r12,1           ; If count in r12 is 1, there are no arguments
+    ja chkarg2          ; Continue if arg count is > 1
+    mov rbx,DiskHelpNm  ; Put address of help file name in rbx 
+    call diskhelp       ; If only 1 arg, show help info...
+    jmp gohome          ; ...and exit the program
+
+    ;; Next we check for a numeric command line argument 1:
+
+chkarg2:
+    mov rdi,qword [r13+8] ; Pass address of an argument in rdi
+    mov rsi,IntFormat   ; Pass address of integer format code in rsi
+    mov rdx,IntBuffer   ; Pass address of integer buffer for sscanf output
+    xor rax,rax         ; 0 says there will be no vector parameters
+    call sscanf         ; Convert string arg to number with sscanf()    
+    cmp rax,1           ; Return value of 1 says we got a number
+    je chkdata          ; If we got a number, go on; else abort
+
+    mov rdi,Err1        ; Pass address of error 1-line message in rdi
+    xor rax,rax         ; 0 says there will be no vector parameters
+    call printf         ; Show the error message
+    jmp gohome          ; Exit the program
+
+    ;; Here we're looking to see if there are more arguments.  If there
+    ;; are, we concatenate them into a single string no more than BUFSIZE
+    ;; chars in size.  (Yes, I DO know this does what strncat does...)
+
+chkdata:
+    mov r15,[IntBuffer] ; Store the # of lines to write in r15
+    cmp r12,3           ; Is there a second argument?
+    jae getlns          ; If so, we have text to fill a file with
+    call randline       ; If not, generate a line of random text for file
+                        ; Note that randline returns ptr to line in rsi
+    jmp genfile         ; Go on to create the file
+
+    ;; Here we copy as much command line text as we have, up to BUFSIZE
+    ;; chars, into the line buffer Buff. We skip the first two args
+    ;; (which at this point we know exist) but we know we have at least
+    ;; one text arg in arg(2). Going into this section, we know that
+    ;; r13 contains the pointer to the arg table. All other bets are off.
+
+getlns:
+    mov r14,2           ; We know we have at least arg(2), start there
+    mov rdi,Buff        ; Destination pointer is start of char buffer
+    xor rax,rax         ; Clear rax to 0 for the character counter
+    cld                 ; Clear direction flag for up-memory movsb
+
+grab:
+    mov rsi,qword [r13+r14*8]   ; Copy pointer to next arg into rsi
+.copy:
+    cmp byte [rsi],0    ; Have we found the end of the arg?
+    je .next            ; If so, bounce to the next arg
+    movsb               ; Copy char from [rsi] to [rdi]; inc rdi & rsi
+    inc rax             ; Increment total character count
+    cmp rax,BUFSIZE     ; See if we've filled the buffer to max count
+    je addnul           ; If so, go add a null to Buff & we're done
+    jmp .copy
+
+.next:	
+    mov byte [rdi],' ' ; Copy space to Buff to separate the args
+    inc rdi            ; Increment destination pointer for space
+    inc rax            ; Add one to character count too
+    cmp rax,BUFSIZE    ; See if we've now filled Buff
+    je addnul          ; If so, go down to add a nul and we're done
+    inc r14            ; Otherwise, increment the arg processed count
+    cmp r14,r12        ; Compare against argument count in r12
+    jae addnul         ; If r14 = arg count in r12, we're done
+    jmp grab           ; Otherwise, go back and copy it
+
+addnul:
+    mov byte [rdi],0   ; Tack a null on the end of Buff
+    mov rsi,Buff       ; File write code expects ptr to text in rsi
+
+    ;; Now we create a file to fill with the text we have:	
+genfile:
+    mov rdi,NewFilename ; Pass filename to fopen in RDI
+    mov rsi,WriteCode   ; Pass pointer to write/create code ('w') in rsi
+    call fopen          ; Create/open file
+    mov rbx,rax         ; rax contains the file handle; save in rbx
+
+    ;; File is open.  Now let's fill it with text:
+    mov r14,1           ; R14 now holds the line # in the text file
+
+writeline:
+    cmp qword r15,0     ; Has the line count gone to 0?
+    je closeit          ; If so, close the file and exit
+    mov rdi,rbx         ; Pass the file handle in rdi
+    mov rsi,WriteBase   ; Pass the base string in rsi
+    mov rdx,r14         ; Pass the line number in rdx
+    mov rcx,Buff        ; Pass the pointer to the text buffer in rcx
+    xor rax,rax         ; 0 says there will be no vector parameters  
+    call fprintf        ; Write the text line to the file
+    dec r15             ; Decrement the count of lines to be written
+    inc r14             ; Increment the line number
+    jmp writeline       ; Loop back and do it again
+
+    ;; We're done writing text; now let's close the file:
+closeit:
+    mov rdi,rbx         ; Pass the handle of the file to be closed in rdi
+    call fclose         ; Closes the file
+
+gohome:	                ; End program execution
+	mov rsp,rbp         ; Epilog: Destroy stack frame before returning
+	pop rbp
+	ret                 ; Return control to to the C shutdown code
+
+
+;;; SUBROUTINES================================================================
+
+;------------------------------------------------------------------------------
+;  Disk-based mini-help subroutine  --  Last update 12/16/2022
+;
+;  This routine reads text from a text file, the name of which is passed by
+;  way of a pointer to the name string in ebx. The routine opens the text file,   
+;  reads the text from it, and displays it to standard output.  If the file   
+;  cannot be opened, a very short memory-based message is displayed instead.          
+;------------------------------------------------------------------------------	
+diskhelp:
+    mov rdi,DiskHelpNm  ; Pointer to name of help file is passed in rdi
+    mov rsi,OpenCode    ; Pointer to open-for-read code "r" gpes in rsi
+    call fopen          ; Attempt to open the file for reading
+    cmp rax,0           ; fopen returns null if attempted open failed
+    jne .disk           ; Read help info from disk, else from memory
+    call memhelp		
+    ret
+
+.disk:
+    mov rbx,rax         ; Save handle of opened file in ebx
+.rdln:	
+    mov rdi,HelpLine    ; Pass pointer to buffer in rdi
+    mov rsi,HELPLEN     ; Pass buffer size in rsi
+    mov rdx,rbx         ; Pass file handle to fgets in rdx
+    call fgets          ; Read a line of text from the file
+    cmp rax,0           ; A returned null indicates error or EOF
+    jle .done           ; If we get 0 in rax, close up & return
+    mov rdi,HelpLine    ; Pass address of help line in rdi
+    xor rax,rax         ; Passs 0 to show there will be no fp registers    
+    call printf         ; Call printf to display help line
+    jmp .rdln
+
+.done:	
+    mov rdi,rbx         ; Pass the handle of the file to be closed in rdi
+    call fclose         ; Close the file 
+    jmp gohome          ; Go home
+
+memhelp:
+    mov rax,5           ; rax contains the number of newlines we want 
+    mov rbx,HelpMsg     ; Load address of help text into rbx
+.chkln:	
+    cmp qword [rbx],0   ; Does help msg pointer point to a null?
+    jne .show           ; If not, show the help lines
+    ret                 ; If yes, go home
+.show:
+    mov rdi,rbx         ; Pass address of help line in rdi
+    xor rax,rax         ; 0 in RAX says there will be no vector parameters
+    call printf         ; Display the line
+    add rbx,HELPSIZE    ; Increment address by length of help line
+    jmp .chkln          ; Loop back and check to see if we're done yet
+
+showerr:
+    mov rdi,rax         ; On entry, rax contains address of error message
+    xor rax,rax         ; 0 in RAX says there will be no vector parameters
+    call printf         ; Show the error message
+    ret                 ; Pass control to shutdown code; no returned values
+
+randline:
+    mov rbx,BUFSIZE     ; BUFSIZE tells us how many chars to pull
+    mov byte [Buff+BUFSIZE+1],0 ; Put a null at the end of the buffer first
+.loopback:
+    dec rbx             ; BUFSIZE is 1-based, so decrement
+    call pull6          ; Go get a random number from 0-63
+    mov cl,[CharTbl+rax]  ; Use random # in rax as offset into char table
+                          ;  and copy character from table into cl
+    mov [Buff+rbx],cl   ; Copy char from cl to character buffer
+    cmp rbx,0           ; Are we done having fun yet?
+    jne .loopback       ; If not, go back and pull another
+    mov rsi,Buff        ; Copy address of the buffer into rsi
+    ret                 ;   and go home
+```
 
 ## Controllo dei processi
 
