@@ -1,4 +1,4 @@
-<img width="3840" height="2160" alt="image" src="https://github.com/user-attachments/assets/fb6878ac-491a-4b29-b1ee-371d528761b3" /># 2cornot2c
+# 2cornot2c
 It's a 101 C course for my students.
 Sorry, only italian version so far.
 
