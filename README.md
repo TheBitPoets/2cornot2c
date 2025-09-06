@@ -397,6 +397,10 @@ I link forniti sopra portano alle versioni dei software per architettura `amd64`
  ## Installare l'ambiente di sviluppo
 
 <p align="justify">
+Guarda il <a href="https://drive.google.com/file/d/1WkLleojruhYkJ31kiY00jUknGVAGrHiR/view?usp=sharing">video</a> se i passaggi elencati sotto non ti sono chiari. Il video è senza tagli in modo da mostrare l'intero processo di installazione.
+</p>
+
+<p align="justify">
 I passi seguenti permettono di duplicare sulla tua macchina locale l'ambiente di sviluppo (codice e vm).
 Nella directory radice del progetto (<code>2cornot2c</code> che otterrai clonando il repository nei passi seguenti) troverai una directory <code>lab</code>con il codice c per tutti laboratori. 
 Questa cartella <code>2cornot2c\lab</code> è montata automaticamente sul file system della macchina virtuale nella cartella <code>/lab</code>. 
