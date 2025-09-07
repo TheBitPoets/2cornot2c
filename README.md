@@ -612,7 +612,7 @@ const double pi = 3.14; // costante pi greco
 ```
 
 <table align="center">
-	<td>❗: <b>Note</b>
+	<td>❗: <b>Importante</b>
 	<p align=justify>
 <b>Una funzione</b> è una collezione di istruzioni che svolgono uno specifico compito
 	</p>
@@ -631,7 +631,7 @@ int differenza(int minuendo, int sottraendo){
 ```
 
 <table align="center">
-	<td>❗: <b>Note</b>
+	<td>❗: <b>Importante</b>
 	<p align=justify>
 Il preprocessore viene richiamato dal compilatore come primo step nel processo di generazione del file eseguibile. Il preprocessore ha il compito di effettuare delle semplici sostituzioni di testo; esistono diverse sostituzioni che il preprocessore può effettuare per conto nostro. L'insieme di queste operazioni sono dette <b>chiamate al preprocessore</b>.
 	</p>
@@ -675,7 +675,7 @@ La prima forma è tollerata da vecchia versioni del C (C90) o pre ANSI C ma non 
 </p>
 
 <table align="center">
-	<td>❗: <b>Note</b>
+	<td>❗: <b>Importante</b>
 	<p align=justify>
 <b>Dichiarazione di funzione</b> (o <b>prototipo</b>): il tipo di ritorno, i tipi dei parametri in ingresso ed il nome della funzione rappresentano il prototipo della funzione. Quando si fornisce il prototipo di una funzione si usa dire che si effettua la dichiarazione della funzione
 	</p>
@@ -683,7 +683,7 @@ La prima forma è tollerata da vecchia versioni del C (C90) o pre ANSI C ma non 
 </table>
 
 <table align="center">
-	<td>❗: <b>Note</b>
+	<td>❗: <b>Importante</b>
 	<p align=justify>
 <b>Definizione di funzione</b>: quando si fornisce l'implementazione della funzione (il corpo: cioè le istruzioni contenute tra la coppia di graffe <code>{</code> <code>}</code>) allora si dice che la funzione è definita. La definizione implica anche la dichiarazione
 	</p>
@@ -717,7 +717,7 @@ int differenza(int minuendo, int sottraendo);  // prototipo della funzione diffe
 ```
 
 <table align="center">
-	<td>❗: <b>Note</b>
+	<td>❗: <b>Importante</b>
 	<p align=justify>
 Il compilatore quando incontra una chiamata a funzione deve conoscerne almeno il prototipo per verificare che questa stia venendo usata correttamente (il corretto numero e tipo per i parametri di ingresso e che il valore di ritorno sia assegnato ad una variabile compatibile, dello stesso tipo). E' necessario dunque, prima di usare una qualsiasi funzione, aver fornito nelle righe precedenti l'uso della funzione almeno il suo prototipo o la definizione completa. 
 	</p>
