@@ -570,10 +570,8 @@ Un programma C è di fatto una collezione di:
 Di seguito provvederemo a dare una definizione sommaria per ogni componente sopra citato, rimandiamo ai singoli paragrafi per una trattazione completa.
 </p>
 
-<hr>
-
-<table>
-	<td>:exclamation: <b>Note</b>
+<table align="center">
+	<td>:exclamation: <b>Importante</b>
 	<p align=justify>
  Una <b>variabile</b> è una locazione di memoria a cui è stato associato un <b>identificatore</b> cioè un nome per referenziare nel codice quella cella di memoria
 	</p>
@@ -585,7 +583,6 @@ Una variabile ha un <b>tipo</b>; il tipo associato ad una variabile definisce ap
 Una variabile può cambiare il valore in essa contenuto durante il ciclo di vita del programma. L'operazione mediante la quale si assegna un valore iniziale ad una variabile è detto <b>inizializzazione</b>, l'operazione attraverso cui si associa un nuovo valore ad una variabile già inizializzata è detta <b>assegnamento</b>
 Prima di usare una variabile è necessario prima dichiararla cioè assegnarle un tipo ed un identificatore. Non è obbligatorio invece assegnare un valore iniziale ad una variabile in fase di dichiarazione. Una variabile dichiarata ma non inizializzata conterrà un valore assolutamente casuale, in pratica il valore che era precedentemente contenuto nella locazione di memoria che è stata associata alla varabile (o meglio al suo identificatore).
 </p>
-<hr>
 
 ```c
 int var_intera; // dichiarazione di variabile senza inizializzazione
@@ -594,16 +591,16 @@ int var_intera_inizializzata = 3; // dichirazione di variabile con inizializzazi
 var_intera_inizializzata = 9; // assegnamento
 ```
 
-<table>
-	<td>⚠️: <b>Note</b>
+<table align="center">
+	<td>⚠️: <b>Attenzione</b>
 	<p align=justify>
 Le variabili possono essere sia dichiarate che definite e spesso due termini sono usati per esprimere la stessa cosa. E' prematuro spiegarne la lieve differenza ma tieni a mente per adesso i due termini non sono la stessa cosa.
 	</p>
 	</td>
 </table>
 
-<table>
-	<td>❗: <b>Note</b>
+<table align="center">
+	<td>❗: <b>Importante</b>
 	<p align=justify>
 Per la <b>costante</b> valgono le stesse considerazioni fatte per le variabili con l'eccezione che per le costanti non è possibile assegnare un nuovo valore una volta che questa è stata inizializzata
 	</p>
@@ -614,10 +611,7 @@ Per la <b>costante</b> valgono le stesse considerazioni fatte per le variabili c
 const double pi = 3.14; // costante pi greco
 ```
 
-<hr>
-
-
-<table>
+<table align="center">
 	<td>❗: <b>Note</b>
 	<p align=justify>
 <b>Una funzione</b> è una collezione di istruzioni che svolgono uno specifico compito
@@ -636,9 +630,7 @@ int differenza(int minuendo, int sottraendo){
 }
 ```
 
-<hr>
-
-<table>
+<table align="center">
 	<td>❗: <b>Note</b>
 	<p align=justify>
 Il preprocessore viene richiamato dal compilatore come primo step nel processo di generazione del file eseguibile. Il preprocessore ha il compito di effettuare delle semplici sostituzioni di testo; esistono diverse sostituzioni che il preprocessore può effettuare per conto nostro. L'insieme di queste operazioni sono dette <b>chiamate al preprocessore</b>.
@@ -682,13 +674,25 @@ void main()
 La prima forma è tollerata da vecchia versioni del C (C90) o pre ANSI C ma non è accettata da quelle successive (C99, C11); la seconda potrebbe essere tollerata da alcuni compilatori ma se il tuo codice deve funzionare anche su altre macchine è meglio usare qualcosa che funzioni sempre: dunque evitala.
 </p>
 
-> [!IMPORTANT]
-> **Dichiarazione di funzione** (o **prototipo**): il tipo di ritorno, i tipi dei parametri in ingresso ed il nome della funzione rappresentano il prototipo della funzione. Quando si fornisce il prototipo di una funzione si usa dire che si effettua la dichiarazione della funzione
+<table align="center">
+	<td>❗: <b>Note</b>
+	<p align=justify>
+<b>Dichiarazione di funzione</b> (o <b>prototipo</b>): il tipo di ritorno, i tipi dei parametri in ingresso ed il nome della funzione rappresentano il prototipo della funzione. Quando si fornisce il prototipo di una funzione si usa dire che si effettua la dichiarazione della funzione
+	</p>
+	</td>
+</table>
 
-> [!IMPORTANT]
-> **Definizione di funzione**: quando si fornisce l'implementazione della funzione (il corpo: cioè le istruzioni contenute tra la coppia di graffe `{` `}`) allora si dice che la funzione è definita. La definizione implica anche la dichiarazione
+<table align="center">
+	<td>❗: <b>Note</b>
+	<p align=justify>
+<b>Definizione di funzione</b>: quando si fornisce l'implementazione della funzione (il corpo: cioè le istruzioni contenute tra la coppia di graffe <code>{</code> <code>}</code>) allora si dice che la funzione è definita. La definizione implica anche la dichiarazione
+	</p>
+	</td>
+</table>
 
-Riprendendo la funzione `differenza` usata precedentemente avremo rispettivamente: la definizione in basso
+<p align=justify>
+Riprendendo la funzione <code>differenza</code> usata precedentemente avremo rispettivamente: la definizione in basso
+</p>
 
 ```c
 /* definizione della funzione differenza */
@@ -696,21 +700,29 @@ int differenza(int minuendo, int sottraendo){
     return minuendo - sottraendo;
 }
 ```
-
+<p align=justify>
 e la dichiarazione o prototipo di seguito:
+</p>
 
 ```c
 int differenza(int, int);  // prototipo della funzione differenza
 ```
 
+<p align=justify>
 volendo è possibile fornire anche i nomi dei parametri in ingresso ma nulla cambia ai fini della dichiarazione.
+</p>
 
 ```c
 int differenza(int minuendo, int sottraendo);  // prototipo della funzione differenza
 ```
 
-> [!IMPORTANT]
-> Il compilatore quando incontra una chiamata a funzione deve conoscerne almeno il prototipo per verificare che questa stia venendo usata correttamente (il corretto numero e tipo per i parametri di ingresso e che il valore di ritorno sia assegnato ad una variabile compatibile, dello stesso tipo). E' necessario dunque, prima di usare una qualsiasi funzione, aver fornito nelle righe precedenti l'uso della funzione almeno il suo prototipo o la definizione completa. 
+<table align="center">
+	<td>❗: <b>Note</b>
+	<p align=justify>
+Il compilatore quando incontra una chiamata a funzione deve conoscerne almeno il prototipo per verificare che questa stia venendo usata correttamente (il corretto numero e tipo per i parametri di ingresso e che il valore di ritorno sia assegnato ad una variabile compatibile, dello stesso tipo). E' necessario dunque, prima di usare una qualsiasi funzione, aver fornito nelle righe precedenti l'uso della funzione almeno il suo prototipo o la definizione completa. 
+	</p>
+	</td>
+</table>
 
 <p align="justify">
 La funzione <code>main()</code> fa uso di un'altra funzione: <code>printf()</code> che viene usata per stampare su schermo. Questa funzione è fornita (la sua implementazione) dal linguaggio C stesso, quindi non viene definita (non si fornisce l'implementazione nel nostro file). L'implementazione della <code>printf()</code> sarà fornita sotto forma di file oggetto <code>.o</code> che verrà assemblato dal linker assieme al nostro .o: <code>hello.o</code> all'interno del file eseguibile finale. Il compilatore, come anticipato, ha però bisogno di conoscere almeno il prototipo della funzione <code>printf()</code> per verificarne l'uso corretto. Il prototipo della funzione <code>printf()</code> è fornito all'interno del file <code>stdio.h</code>; risulta necessario copiare il contenuto di questo file nel nostro esempio nelle righe precedenti a quella dove la funzione <code>printf()</code> è effettivamente usata (chiamata a funzione). Non c'è bisogno di copiare ed incollare il file <code>stdio.h</code> ma è possibile usare una direttiva del preprocessore <code>#include<stdio.h></code> che sostuisce il contenuto del file <code>stdio.h</code> a partire dalla riga di codice dove è inserita.
@@ -720,7 +732,10 @@ Per verificare l'effettiva aggiunta del prototipo di <code>printf()</code> da pa
 ```bash
  gcc -E 0_hello.c |grep 'printf'
 ```
+
+<p align="justify">
 questo l'output sulla mia macchina:
+</p>
 
 ```bash
       1 extern int fprintf (FILE *__restrict __stream,
@@ -740,15 +755,29 @@ questo l'output sulla mia macchina:
      15  printf("Hello World\n");
 ```
 
-Alla riga 2 il prototipo di `printf()`.
+<p align="justify">
+Alla riga 2 il prototipo di <code>printf()</code>.
+</p>
 
+<p align="justify">
 Infine, terminata la propria computazione il nostro programma ritorna 0 per informare il sistema operativo che ha terminato la propria esecuzione senza errori.
+</p>
 
 Riassumendo [/lab/0_intro/0_hello.c](https://github.com/kinderp/2cornot2c/blob/18b60e866c1e0e22c59835fe953cbe3c534e7422/lab/0_intro/0_hello.c):
 
-* riga 14: inclusione del file d'intestazione `stdio.h` contenente il prototipo della funzione `printf()`. Il prototipo serve al compilatore per verificare che il programmatore utilizzi correttamente la funzione, in questo caso la `printf()`
-* riga 16-19: definizione della funzione `main()`
- 
+<ul>
+	<li>
+		<p align="justify">
+riga 14: inclusione del file d'intestazione <code>stdio.h</code> contenente il prototipo della funzione <code>printf()</code>. Il prototipo serve al compilatore per verificare che il programmatore utilizzi correttamente la funzione, in questo caso la <code>printf()</code>
+  		</p>
+	</li>
+ 	<li>
+		<p align="justify">
+riga 16-19: definizione della funzione <code>main()</code>
+  		</p>
+	</li>
+</ul>
+
 ## Funzioni
 
 <p align="justify">
