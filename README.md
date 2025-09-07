@@ -380,16 +380,23 @@ Sorry, only italian version so far.
 
 ## Introduzione
 
-
+<p align=justify>
 Il corso è fondamentalmente pratico, non è richiesto alcun prerequisito e nulla è dato per scontato.
+</p>
+
+<p align=justify>
 Prima di iniziare è giusto ricordare che per svolgere i laboratori richiesti è necessaria la conoscenza di alcuni strumenti, in particolare:
+</p>
 
 * [git](https://git-scm.com/download/win)
 * [virtualbox](https://www.virtualbox.org/wiki/Downloads) Installa la versione 7.0 che è la più recente compatibile con vagrant. Leggi [qui](https://developer.hashicorp.com/vagrant/docs/providers/virtualbox) per maggiori info
   * [Microsoft Visual C++](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170) Solo in caso ti venga richiesto durante l'installaizone di VBox (dovrebbe andare in errore)
 * [vagrant](https://developer.hashicorp.com/vagrant/install?ajs_aid=e022a39f-7694-4bed-a4cd-f721f515b885&product_intent=vagrant#windows)
 
+<p align=justify>
 I link forniti sopra portano alle versioni dei software per architettura `amd64` in ambiente `windows`, questo a causa dell'assenza di macchine linux nei lab scolastici.
+</p>
+
 <p align="justify">
  <b>GIT</b> e <b>VAGRANT</b> ci serviranno per ottenere un ambiente di sviluppo identico per tutti e per un provisioning automatico; in altre parole git ci permetterà di condividere il codice dei laboratori e vagrant di condividere la stessa macchina virtuale (<code>ubuntu-22.04</code>) con l'ambiente di sviluppo preinstallato.
 </p>
@@ -470,16 +477,19 @@ Questo assicura che l'impostazione è applicata solamente se il plugin è instal
 
 3. Gestisci i Guest Additions (Opzionale):
 
-
+<p align=justify>
 Se vuoi in maggiore controllo sull'installazione dei Guest Additions, tu puoi usare i seguenti comandi:
+</p>
 
 * `vagrant vbguest`: Questo comando controlla lo stato delle Guest Additions e tenta di installarle o aggiornarle se necessario.
 * `vagrant vbguest --do install`: Questo forza l'installazione delle Guest Additions.
 * `vagrant vbguest --do rebuild`: Questo ricostruisce i moduli del kernel del Guest Additions, il che può essere utile se hai aggiornato il tuo kernel.
 * `vagrant vbguest --status`: Questo mostra lo stato attuale delle aggiunte degli ospiti.
 
+<p align=justify>
 Tu puoi anche scaricare il file ISO dei Guest Additions e montarlo manualmente all'interno della VM se secessario
- 
+</p>
+
 4. Starta or Ricarica la tua macchina: 
 
 <p align="justify">	
@@ -545,20 +555,30 @@ il linker (<code>ld</code>) ha il compito di aggreggare in un unico file oggetto
 
 ## Introduzione
 
+<p align=justify>
 Un programma C è di fatto una collezione di:
+</p>
 
-* Variabili
-* Costanti 
-* Funzioni
-* Chiamate al preprocessore
+<ul>
+	<li>Variabili</li>
+	<li>Costanti</li>
+	<li>Funzioni</li>
+	<li>Chiamate al preprocessore</li>
+</ul>
 
+<p align=justify>
 Di seguito provvederemo a dare una definizione sommaria per ogni componente sopra citato, rimandiamo ai singoli paragrafi per una trattazione completa.
-
+</p>
 
 <hr>
 
-> [!IMPORTANT]
->  Una **variabile** è una locazione di memoria a cui è stato associato un **identificatore** cioè un nome per referenziare nel codice quella cella di memoria
+<table>
+	<td>:exclamation: <b>Note</b>
+	<p align=justify>
+ Una <b>variabile</b> è una locazione di memoria a cui è stato associato un <b>identificatore</b> cioè un nome per referenziare nel codice quella cella di memoria
+	</p>
+	</td>
+</table>
 
 <p align="justify">
 Una variabile ha un <b>tipo</b>; il tipo associato ad una variabile definisce appunto che genere di dato essa può contenere (un numero intero, un numero reale, un carattere etc.) in altre parole il tipo della variabile definisce il numero di byte occupati dalla locazione di memoria referenziata dall'identificatore.
@@ -574,11 +594,21 @@ int var_intera_inizializzata = 3; // dichirazione di variabile con inizializzazi
 var_intera_inizializzata = 9; // assegnamento
 ```
 
-> [!WARNING]  
-> Le variabili possono essere sia dichiarate che definite e spesso due termini sono usati per esprimere la stessa cosa. E' prematuro spiegarne la lieve differenza ma tieni a mente per adesso i due termini non sono la stessa cosa.
+<table>
+	<td>⚠️: <b>Note</b>
+	<p align=justify>
+Le variabili possono essere sia dichiarate che definite e spesso due termini sono usati per esprimere la stessa cosa. E' prematuro spiegarne la lieve differenza ma tieni a mente per adesso i due termini non sono la stessa cosa.
+	</p>
+	</td>
+</table>
 
-> [!IMPORTANT]
-> Per la **costante** valgono le stesse considerazioni fatte per le variabili con l'eccezione che per le costanti non è possibile assegnare un nuovo valore una volta che questa è stata inizializzata
+<table>
+	<td>❗: <b>Note</b>
+	<p align=justify>
+Per la <b>costante</b> valgono le stesse considerazioni fatte per le variabili con l'eccezione che per le costanti non è possibile assegnare un nuovo valore una volta che questa è stata inizializzata
+	</p>
+	</td>
+</table>
 
 ```c
 const double pi = 3.14; // costante pi greco
@@ -586,8 +616,14 @@ const double pi = 3.14; // costante pi greco
 
 <hr>
 
-> [!IMPORTANT]
-> **Una funzione** è una collezione di istruzioni che svolgono uno specifico compito
+
+<table>
+	<td>❗: <b>Note</b>
+	<p align=justify>
+<b>Una funzione</b> è una collezione di istruzioni che svolgono uno specifico compito
+	</p>
+	</td>
+</table>
 
 <p align="justify">
 una funzione ha un nome (<code>differenza</code> nel codice sottostante), un valore di ritorno, dei parametri di input (<code>minuendo</code> e <code>sottraendo</code> nel codice d'esempio) ed un corpo che è delimitato da una parentesi graffa aperta <code>{</code> ed una chiusa <code>}</code>.
@@ -602,14 +638,20 @@ int differenza(int minuendo, int sottraendo){
 
 <hr>
 
-> [!IMPORTANT]
-> Il preprocessore viene richiamato dal compilatore come primo step nel processo di generazione del file eseguibile. Il preprocessore ha il compito di effettuare delle semplici sostituzioni di testo; esistono diverse sostituzioni che il preprocessore può effettuare per conto nostro. L'insieme di queste operazioni sono dette **chiamate al preprocessore**.
+<table>
+	<td>❗: <b>Note</b>
+	<p align=justify>
+Il preprocessore viene richiamato dal compilatore come primo step nel processo di generazione del file eseguibile. Il preprocessore ha il compito di effettuare delle semplici sostituzioni di testo; esistono diverse sostituzioni che il preprocessore può effettuare per conto nostro. L'insieme di queste operazioni sono dette <b>chiamate al preprocessore</b>.
+	</p>
+	</td>
+</table>
 
 ## Il primo programma in C
 
-Come da tradizione, il primo esempio di codice è il classico `Hello World`.
-Il programma di sotto stampa a schermo una semplice frase: `Ciao Mondo` in inglese.
-
+<p align="justify">
+Come da tradizione, il primo esempio di codice è il classico <code>Hello World</code>.
+Il programma di sotto stampa a schermo una semplice frase: <code>Ciao Mondo</code> in inglese.
+</p>
 
 [/lab/0_intro/0_hello.c](https://github.com/kinderp/2cornot2c/blob/18b60e866c1e0e22c59835fe953cbe3c534e7422/lab/0_intro/0_hello.c)
 
