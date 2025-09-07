@@ -645,7 +645,10 @@ Come da tradizione, il primo esempio di codice è il classico <code>Hello World<
 Il programma di sotto stampa a schermo una semplice frase: <code>Ciao Mondo</code> in inglese.
 </p>
 
+<details>
+<summary>lab/0_intro/0_hello.c</summary>
 [/lab/0_intro/0_hello.c](https://github.com/kinderp/2cornot2c/blob/18b60e866c1e0e22c59835fe953cbe3c534e7422/lab/0_intro/0_hello.c)
+</details>
 
 ```c {.line-numbers}
 #include <stdio.h>
@@ -763,7 +766,12 @@ Alla riga 2 il prototipo di <code>printf()</code>.
 Infine, terminata la propria computazione il nostro programma ritorna 0 per informare il sistema operativo che ha terminato la propria esecuzione senza errori.
 </p>
 
-Riassumendo [/lab/0_intro/0_hello.c](https://github.com/kinderp/2cornot2c/blob/18b60e866c1e0e22c59835fe953cbe3c534e7422/lab/0_intro/0_hello.c):
+Riassumendo:
+
+<details>
+<summary>lab/0_intro/0_hello.c</summary>
+[/lab/0_intro/0_hello.c](https://github.com/kinderp/2cornot2c/blob/18b60e866c1e0e22c59835fe953cbe3c534e7422/lab/0_intro/0_hello.c)
+</details>
 
 <ul>
 	<li>
@@ -812,7 +820,10 @@ Per il compilatore non cambia nulla ma può aiutare un altro programmatore a com
 Di sotto è riportato un esempio completo che fa uso della funzione <code>sottrazione</code>, come è possibile vedere questa è richiamata all'interno del <code>main()</code> alla riga 8 fornendo in ingresso i due parametri previsti durante le definzione. Se avessimo fornito un numero diverso (sia inferiore che superiore) di parametri o di tipo diverso rispetto al tipo intero il compilatore ci avrebbe dato errore (o forse nel secondo caso no...?!?)
 </p>
 
+<details>
+<summary>lab/0_intro/1_funzioni.c</summary>
 [/lab/0_intro/1_funzioni.c](https://github.com/kinderp/2cornot2c/blob/849c8731e84196bab6b5a17aed9e983d045cb025/lab/0_intro/1_funzioni.c)
+</details>
 
 ```c
 #include<stdio.h>
@@ -855,7 +866,9 @@ int answer;
 <img src="https://github.com/kinderp/2cornot2c/blob/main/images/dichiarazione_variabile.png">
 </p>
 
-Una volta dichiarata la variabile è pronta ad ospitare un valore del tipo corrispondente a quello scelto nella dichiarazione; questa operazione è detta **assegnamento**
+<p align="center">
+Una volta dichiarata la variabile è pronta ad ospitare un valore del tipo corrispondente a quello scelto nella dichiarazione; questa operazione è detta <b>assegnamento</b>
+</p>
 
 ```c
 int answer;   // dichiarazione di variabile, tipo intero
@@ -866,19 +879,25 @@ answer = 12;  // assegnamento del valore 12 alla variabile sopra dichiarata
 <img src="https://github.com/kinderp/2cornot2c/blob/main/images/assegnamento_variabile.png">
 </p>
 
-E' possible associare un valore ad una variabile direttamente nella dichiarazione, questa operazione è detta **inizializzazione**
+<p align="center">
+E' possible associare un valore ad una variabile direttamente nella dichiarazione, questa operazione è detta <b>inizializzazione</b>
+</p>
 
 ```c
 int answer = 12; // dichiarazione con inizializzazione
 ```
 
+<p align="center">
 E' possibile dichiarare più variabile nella stessa riga, purchè esse siano dello stesso tipo. In questo modo:
+</p>
 
 ```c
 int question, answer;
 ```
 
-Oltre al tipo ed all'identificatore una variabile è caratterizzata dalla **visibilità** (`scope` in inglese) ed il **tempo di vita** (`lifetime` o `storage duration`)
+<p align="center">
+Oltre al tipo ed all'identificatore una variabile è caratterizzata dalla <b>visibilità</b> (<code>scope</code> in inglese) ed il <b>tempo di vita</b> (<code>lifetime</code> o <code>storage duration</code>)
+</p>
 
 > [!IMPORTANT]
 > **Visibilità**: porzioni di codice nel programma in cui la variabile (il suo identificatore) è visibile e quindi è possibile fare riferimento alla variabile. Se in un dato punto del programma la variabile non è visibile, anche se effettivamente allocata in memoria (ha associata una locazine di memoria), è inutilizzabile o comunque non è possibile accedere al suo contenuto.
