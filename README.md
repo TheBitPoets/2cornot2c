@@ -434,7 +434,7 @@ cd 2cornot2c
 vagrant up
 ```
 
-4) Aspetta che il comando al punto 3 termini e successivamente, sempre nella cartella `2cornot2c` Installa il plugin `vagrant-vbguest`:
+4) Aspetta che il comando al punto 3 termini e successivamente, sempre nella cartella `2cornot2c`, installa il plugin `vagrant-vbguest`:
 
 ```
      vagrant plugin install vagrant-vbguest
@@ -442,11 +442,15 @@ vagrant up
 
 5) Installa la Guest Additions
 
-`vagrant vbguest`
+```
+vagrant vbguest
+```
 
 6) Ricarica le impostazioni della macchina
 
-`vagrant reload`
+```
+vagrant reload
+```
 
 7) Apri una sessione ssh sulla macchina appena avviata
 
