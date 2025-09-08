@@ -422,25 +422,40 @@ Tutto quello che verrà modificato sulla macchina linux in <code>/lab</code>( vm
 git clone https://github.com/kinderp/2cornot2c.git
 ```
 
-2) Entra dentro la directory root del repository
+2) Entra dentro la directory root del repository (`2cornot2c`)
    
 ```bash
 cd 2cornot2c
 ```
 
-3) Avvia la macchina virtuale
+3) Avvia la macchina virtuale (devi essere nella cartella `2cornot2c` altrimenti il comando di sotto non funziona)
 
 ```bash
 vagrant up
 ```
 
-4) Apri una sessione ssh sulla macchina appena avviata
+4) Aspetta che il comando al punto 3 termini e successivamente, sempre nella cartella `2cornot2c` Installa il plugin `vagrant-vbguest`:
+
+```
+     vagrant plugin install vagrant-vbguest
+```
+
+5) Installa la Guest Additions
+
+`vagrant vbguest`
+
+6) Ricarica le impostazioni della macchina
+
+`vagrant reload`
+
+7) Apri una sessione ssh sulla macchina appena avviata
 
 ```bash
 vagrant ssh
 ```
 
 ### Guest Additions
+Questo paragrafo ti fornisce informazioni aggiuntive sul plugin per installare le Guest Additions in caso ne avessi necessità.
 
 1. Installa il plugin `vagrant-vbguest`:
 
