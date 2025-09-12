@@ -677,7 +677,7 @@ Il programma di sotto stampa a schermo una semplice frase: <code>Ciao Mondo</cod
 
 <details>
 <summary>lab/0_intro/0_hello.c</summary>
-[/lab/0_intro/0_hello.c](https://github.com/kinderp/2cornot2c/blob/18b60e866c1e0e22c59835fe953cbe3c534e7422/lab/0_intro/0_hello.c)
+<a href="https://github.com/kinderp/2cornot2c/blob/18b60e866c1e0e22c59835fe953cbe3c534e7422/lab/0_intro/0_hello.c">/lab/0_intro/0_hello.c</a>
 </details>
 
 ```c {.line-numbers}
