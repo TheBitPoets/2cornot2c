@@ -575,7 +575,8 @@ il linker (<code>ld</code>) ha il compito di aggreggare in un unico file oggetto
 </p>
 
 <details>
-	<summary>Lab 0</summary>
+<summary>/lab/0_intro/0_hello.c</summary>
+<a href="https://github.com/kinderp/2cornot2c/blob/18b60e866c1e0e22c59835fe953cbe3c534e7422/lab/0_intro/0_hello.c">/lab/0_intro/0_hello.c</a>
 	<ul>
 		<li>Entra nella macchina Linux con <code>vagrant ssh</code></li>
 		<li>Spostati nella cartella <code>lab/0_intro</code></li>
@@ -676,7 +677,7 @@ Il programma di sotto stampa a schermo una semplice frase: <code>Ciao Mondo</cod
 </p>
 
 <details>
-<summary>lab/0_intro/0_hello.c</summary>
+<summary>/lab/0_intro/0_hello.c</summary>
 <a href="https://github.com/kinderp/2cornot2c/blob/18b60e866c1e0e22c59835fe953cbe3c534e7422/lab/0_intro/0_hello.c">/lab/0_intro/0_hello.c</a>
 </details>
 
