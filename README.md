@@ -897,7 +897,7 @@ int answer;
 <img src="https://github.com/kinderp/2cornot2c/blob/main/images/dichiarazione_variabile.png">
 </p>
 
-<p align="center">
+<p align="justify">
 Una volta dichiarata la variabile è pronta ad ospitare un valore del tipo corrispondente a quello scelto nella dichiarazione; questa operazione è detta <b>assegnamento</b>
 </p>
 
@@ -910,7 +910,7 @@ answer = 12;  // assegnamento del valore 12 alla variabile sopra dichiarata
 <img src="https://github.com/kinderp/2cornot2c/blob/main/images/assegnamento_variabile.png">
 </p>
 
-<p align="center">
+<p align="justify">
 E' possible associare un valore ad una variabile direttamente nella dichiarazione, questa operazione è detta <b>inizializzazione</b>
 </p>
 
@@ -918,7 +918,7 @@ E' possible associare un valore ad una variabile direttamente nella dichiarazion
 int answer = 12; // dichiarazione con inizializzazione
 ```
 
-<p align="center">
+<p align="justify">
 E' possibile dichiarare più variabile nella stessa riga, purchè esse siano dello stesso tipo. In questo modo:
 </p>
 
@@ -926,7 +926,7 @@ E' possibile dichiarare più variabile nella stessa riga, purchè esse siano del
 int question, answer;
 ```
 
-<p align="center">
+<p align="justify">
 Oltre al tipo ed all'identificatore una variabile è caratterizzata dalla <b>visibilità</b> (<code>scope</code> in inglese) ed il <b>tempo di vita</b> (<code>lifetime</code> o <code>storage duration</code>)
 </p>
 
