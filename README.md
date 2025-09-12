@@ -622,7 +622,7 @@ var_intera_inizializzata = 9; // assegnamento
 ```
 
 <table align="center">
-	<td>⚠️: <b>Attenzione</b>
+	<td>⚠️ <b>Attenzione</b>
 	<p align=justify>
 Le variabili possono essere sia dichiarate che definite e spesso due termini sono usati per esprimere la stessa cosa. E' prematuro spiegarne la lieve differenza ma tieni a mente per adesso i due termini non sono la stessa cosa.
 	</p>
@@ -630,7 +630,7 @@ Le variabili possono essere sia dichiarate che definite e spesso due termini son
 </table>
 
 <table align="center">
-	<td>❗: <b>Importante</b>
+	<td>❗ <b>Importante</b>
 	<p align=justify>
 Per la <b>costante</b> valgono le stesse considerazioni fatte per le variabili con l'eccezione che per le costanti non è possibile assegnare un nuovo valore una volta che questa è stata inizializzata
 	</p>
@@ -642,7 +642,7 @@ const double pi = 3.14; // costante pi greco
 ```
 
 <table align="center">
-	<td>❗: <b>Importante</b>
+	<td>❗ <b>Importante</b>
 	<p align=justify>
 <b>Una funzione</b> è una collezione di istruzioni che svolgono uno specifico compito
 	</p>
@@ -708,7 +708,7 @@ La prima forma è tollerata da vecchia versioni del C (C90) o pre ANSI C ma non 
 </p>
 
 <table align="center">
-	<td>❗: <b>Importante</b>
+	<td>❗ <b>Importante</b>
 	<p align=justify>
 <b>Dichiarazione di funzione</b> (o <b>prototipo</b>): il tipo di ritorno, i tipi dei parametri in ingresso ed il nome della funzione rappresentano il prototipo della funzione. Quando si fornisce il prototipo di una funzione si usa dire che si effettua la dichiarazione della funzione
 	</p>
@@ -716,7 +716,7 @@ La prima forma è tollerata da vecchia versioni del C (C90) o pre ANSI C ma non 
 </table>
 
 <table align="center">
-	<td>❗: <b>Importante</b>
+	<td>❗ <b>Importante</b>
 	<p align=justify>
 <b>Definizione di funzione</b>: quando si fornisce l'implementazione della funzione (il corpo: cioè le istruzioni contenute tra la coppia di graffe <code>{</code> <code>}</code>) allora si dice che la funzione è definita. La definizione implica anche la dichiarazione
 	</p>
@@ -750,7 +750,7 @@ int differenza(int minuendo, int sottraendo);  // prototipo della funzione diffe
 ```
 
 <table align="center">
-	<td>❗: <b>Importante</b>
+	<td>❗ <b>Importante</b>
 	<p align=justify>
 Il compilatore quando incontra una chiamata a funzione deve conoscerne almeno il prototipo per verificare che questa stia venendo usata correttamente (il corretto numero e tipo per i parametri di ingresso e che il valore di ritorno sia assegnato ad una variabile compatibile, dello stesso tipo). E' necessario dunque, prima di usare una qualsiasi funzione, aver fornito nelle righe precedenti l'uso della funzione almeno il suo prototipo o la definizione completa. 
 	</p>
@@ -800,7 +800,7 @@ Riassumendo:
 
 <details>
 <summary>lab/0_intro/0_hello.c</summary>
-[/lab/0_intro/0_hello.c](https://github.com/kinderp/2cornot2c/blob/18b60e866c1e0e22c59835fe953cbe3c534e7422/lab/0_intro/0_hello.c)
+<a href="https://github.com/kinderp/2cornot2c/blob/18b60e866c1e0e22c59835fe953cbe3c534e7422/lab/0_intro/0_hello.c">[/lab/0_intro/0_hello.c</a>
 </details>
 
 <ul>
