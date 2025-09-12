@@ -579,9 +579,10 @@ il linker (<code>ld</code>) ha il compito di aggreggare in un unico file oggetto
 	<ul>
 		<li>Entra nella macchina Linux con <code>vagrant ssh</code></li>
 		<li>Spostati nella cartella <code>lab/0_intro</code></li>
-		<li>Compila il file 0_hello.c . L'eseguibile finale deve avere nome <code>bin/0_hello</code></li>
+		<li>Compila il file <code>0_hello.c</code> . L'eseguibile finale deve avere nome <code>bin/0_hello</code></li>
 	</ul>
 </details>
+
 ## Introduzione
 
 <p align=justify>
