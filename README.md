@@ -800,7 +800,7 @@ Riassumendo:
 
 <details>
 <summary>lab/0_intro/0_hello.c</summary>
-<a href="https://github.com/kinderp/2cornot2c/blob/18b60e866c1e0e22c59835fe953cbe3c534e7422/lab/0_intro/0_hello.c">[/lab/0_intro/0_hello.c</a>
+<a href="https://github.com/kinderp/2cornot2c/blob/18b60e866c1e0e22c59835fe953cbe3c534e7422/lab/0_intro/0_hello.c">/lab/0_intro/0_hello.c</a>
 </details>
 
 <ul>
