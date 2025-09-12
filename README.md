@@ -851,8 +851,8 @@ Di sotto è riportato un esempio completo che fa uso della funzione <code>sottra
 </p>
 
 <details>
-<summary>lab/0_intro/1_funzioni.c</summary>
-[/lab/0_intro/1_funzioni.c](https://github.com/kinderp/2cornot2c/blob/849c8731e84196bab6b5a17aed9e983d045cb025/lab/0_intro/1_funzioni.c)
+<summary>/lab/0_intro/1_funzioni.c</summary>
+<a href="https://github.com/kinderp/2cornot2c/blob/849c8731e84196bab6b5a17aed9e983d045cb025/lab/0_intro/1_funzioni.c">/lab/0_intro/1_funzioni.c</a>
 </details>
 
 ```c
