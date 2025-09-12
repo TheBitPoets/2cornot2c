@@ -574,6 +574,14 @@ l'assemblatore <code>as</code> trasforma il codice assembly contenuto in <code>h
 il linker (<code>ld</code>) ha il compito di aggreggare in un unico file oggetto (il file eseguibile) eventuali altri file oggetto di librerie esterne o del linguaggio. Nel nostro esempio il programmatore ha fatto uso di una funzione del linguaggio (<code>printf()</code>) quindi il linker aggregerà nel file eseguibile (<code>hello</code>) il file oggetto <code>hello.o</code> ed il file oggetto relativo al codice della funzione printf: <code>printf.o</code>. Puoi generare il file eseguibile in questo modo: <code>gcc -o hello hello.c</code>
 </p>
 
+<details>
+	<summary>Lab 0</summary>
+	<ul>
+		<li>Entra nella macchina Linux con <code>vagrant ssh</code></li>
+		<li>Spostati nella cartella <code>lab/0_intro</code></li>
+		<li>Compila il file 0_hello.c . L'eseguibile finale deve avere nome <code>bin/0_hello</code></li>
+	</ul>
+</details>
 ## Introduzione
 
 <p align=justify>
