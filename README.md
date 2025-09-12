@@ -661,7 +661,7 @@ int differenza(int minuendo, int sottraendo){
 ```
 
 <table align="center">
-	<td>❗: <b>Importante</b>
+	<td>❗ <b>Importante</b>
 	<p align=justify>
 Il preprocessore viene richiamato dal compilatore come primo step nel processo di generazione del file eseguibile. Il preprocessore ha il compito di effettuare delle semplici sostituzioni di testo; esistono diverse sostituzioni che il preprocessore può effettuare per conto nostro. L'insieme di queste operazioni sono dette <b>chiamate al preprocessore</b>.
 	</p>
