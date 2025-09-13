@@ -575,7 +575,7 @@ il linker (<code>ld</code>) ha il compito di aggreggare in un unico file oggetto
 </p>
 
 <details>
-<summary>/lab/0_intro/0_hello.c</summary>
+<summary>💻 /lab/0_intro/0_hello.c</summary>
 <a href="https://github.com/kinderp/2cornot2c/blob/18b60e866c1e0e22c59835fe953cbe3c534e7422/lab/0_intro/0_hello.c">/lab/0_intro/0_hello.c</a>
 	<ul>
 		<li>Entra nella macchina Linux con <code>vagrant ssh</code></li>
@@ -800,7 +800,7 @@ Infine, terminata la propria computazione il nostro programma ritorna 0 per info
 Riassumendo:
 
 <details>
-<summary>lab/0_intro/0_hello.c</summary>
+<summary>/lab/0_intro/0_hello.c</summary>
 <a href="https://github.com/kinderp/2cornot2c/blob/18b60e866c1e0e22c59835fe953cbe3c534e7422/lab/0_intro/0_hello.c">/lab/0_intro/0_hello.c</a>
 </details>
 
@@ -877,6 +877,33 @@ int sottrazione(int minuendo, int sottraendo){
 A causa del fatto che la definzione della funzione <code>sottrazione</code> è stata fornita successivamente (riga 12-14) al punto in cui questa è richiamata (riga 8) per permettere al compilatore di controllare il corretto uso da parte del programmatore è stato necessario fornire prima della riga 8 il prototipo della funzione (riga 3). Commentando la riga 3 il compilatore darebbe errore o almeno rileverebbe un warning circa una dichiarazione implicita che non è in grado di verificare.
 Come spiegato ampiamente in precedenza, facciamo uso anche della funzione <code>printf()</code> ed in questo caso per fornirne il prototipo sfruttiamo la direttiva al preprocessore <code>#include <stdio.h></code>
 </p>
+
+<details>
+<summary>💻 /lab/0_intro/1_funzioni.c</summary>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/1_funzioni.c">/lab/0_intro/1_funzioni.c</a>
+	<ul>
+		<li>Entra nella macchina Linux con <code>vagrant ssh</code></li>
+		<li>Spostati nella cartella <code>lab/0_intro</code></li>
+		<li>
+		<p align="justify">
+			Aiutandoti con il file <code>1_funzioni.c</code>, crea un file <code>addizione.c</code> con queste caratteristiache:
+		</p>
+		</li>
+		<ol>
+			<li>
+				<p align="justify">
+				Dichiari e definisca la funzione <code>int addizione(int, int)</code>
+				</p>
+			</li>
+			<li>
+				<p align="justify">
+				Richiami la funzione <code>addizione()</code> nel <code>main()</code> passando due variabili intere <code>a</code> e <code>b</code> contetente dei valori a tuo piacimento
+				</p>
+			</li>
+		</ol>
+	</ul>
+</details>
+
 
 ## Variabili
 
