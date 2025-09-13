@@ -1014,7 +1014,10 @@ Mentre <code>printf()</code> serve per stampare a schermo il contenuto di una va
 
 Le definizioni della funzioni `somma()`, `differenza()` e `moltiplicazione()` sono fornite dopo la loro effettiva chiamata nel `main()` e quindi per permettere al compilatore di controllare l'uso corretto di queste funzioni da parte del programmatore è stato necessario, prima del `main()`, fornire i prototipoi.
 
-[/lab/0_intro/2_variabili.c](https://github.com/kinderp/2cornot2c/blob/8fcadf5f8a958f9b6194c4dac724d5a21ecef717/lab/0_intro/2_variabili.c)
+<details>
+<summary>/lab/0_intro/2_variabili.c</summary>
+<a href="https://github.com/kinderp/2cornot2c/blob/8fcadf5f8a958f9b6194c4dac724d5a21ecef717/lab/0_intro/2_variabili.c">/lab/0_intro/2_variabili.c</a>
+</details>
 
 ```c
 #include <stdio.h>
@@ -1117,7 +1120,11 @@ Per comunicare con le funzioni e scambiare valori col chiamante è sempre prefer
 Di sotto è riportato il codice corretto che elimina l'uso improprio delle variabili globali:
 </p>
 
-[/lab/0_intro/3_variabili.c](https://github.com/kinderp/2cornot2c/blob/9c77cc456006b9edb0dddea96eaf5860037e7b8c/lab/0_intro/3_variabili.c)
+<details>
+	<summary>/lab/0_intro/3_variabili.c</summary>
+	https://github.com/kinderp/2cornot2c/blob/9c77cc456006b9edb0dddea96eaf5860037e7b8c/lab/0_intro/3_variabili.c
+</details>
+
 
 ```c
 #include<stdio.h>
