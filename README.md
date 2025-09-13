@@ -957,14 +957,25 @@ int question, answer;
 Oltre al tipo ed all'identificatore una variabile è caratterizzata dalla <b>visibilità</b> (<code>scope</code> in inglese) ed il <b>tempo di vita</b> (<code>lifetime</code> o <code>storage duration</code>)
 </p>
 
-> [!IMPORTANT]
-> **Visibilità**: porzioni di codice nel programma in cui la variabile (il suo identificatore) è visibile e quindi è possibile fare riferimento alla variabile. Se in un dato punto del programma la variabile non è visibile, anche se effettivamente allocata in memoria (ha associata una locazine di memoria), è inutilizzabile o comunque non è possibile accedere al suo contenuto.
+<table align="center">
+	<td>❗ <b>Importante</b>
+	<p align=justify>
+<b>Visibilità</b>: porzioni di codice nel programma in cui la variabile (il suo identificatore) è visibile e quindi è possibile fare riferimento alla variabile. Se in un dato punto del programma la variabile non è visibile, anche se effettivamente allocata in memoria (ha associata una locazine di memoria), è inutilizzabile o comunque non è possibile accedere al suo contenuto.
+	</p>
+	</td>
+</table>
 
-> [!IMPORTANT]
-> **Tempo di vita**: porzione di tempo all'interno del ciclo di esecuzione del programma durante il quale alla variabile è associata una locazione di  memoria
+<table align="center">
+	<td>❗ <b>Importante</b>
+	<p align=justify>
+<b>Tempo di vita</b>: porzione di tempo all'interno del ciclo di esecuzione del programma durante il quale alla variabile è associata una locazione di  memoria
+	</p>
+	</td>
+</table>
 
-Sulla base del tempo di vita e della visibilità possiamo classificare le variabili in due grandi categorie: **variabili globali** e **variabili locali**.
-
+<p align=justify>
+Sulla base del tempo di vita e della visibilità possiamo classificare le variabili in due grandi categorie: <b>variabili globali</b> e <b>variabili locali</b>.
+</p>
 
 <p align="justify">
 <b>Le variabili locali</b> sono definite all'interno delle funzioni e hanno una visibilità limitata: dal punto in cui sono dichiarate fino al termine del corpo della funzione (ti ricordo che il corpo è compreso tra <code>{</code> e <code>}</code>); il loro tempo di vita è anche limitato: la locazione di memoria ad esse associata è allocata quando la funzione viene invocata ed è liberata quando l'esecuzione dell'intero corpo della funzione termina.
