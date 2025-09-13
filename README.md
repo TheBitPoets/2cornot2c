@@ -1122,7 +1122,7 @@ Di sotto è riportato il codice corretto che elimina l'uso improprio delle varia
 
 <details>
 	<summary>/lab/0_intro/3_variabili.c</summary>
-	https://github.com/kinderp/2cornot2c/blob/9c77cc456006b9edb0dddea96eaf5860037e7b8c/lab/0_intro/3_variabili.c
+	<a href="https://github.com/kinderp/2cornot2c/blob/9c77cc456006b9edb0dddea96eaf5860037e7b8c/lab/0_intro/3_variabili.c">/lab/0_intro/3_variabili.c</a>
 </details>
 
 
