@@ -910,7 +910,7 @@ Come spiegato ampiamente in precedenza, facciamo uso anche della funzione <code>
 <p align="justify">
 Abbiamo precedentemente detto che una variabile è semplicemente una locazione di memoria a cui è associato un identificatore ed un tipo.
 L'identificatore è un nome mnemonico che ci permette, all'interno del codice, di accedere al valore contenuto nella locazione di memoria corrispondente. Il tipo definisce lo spazio (in terminit di byte) che la locazione di memoria può contenere.
-<b>Una variabile prima di essere usata deve esssere sempre dichiarata</b>. Come anticipato, **l'operazione di dichiarazione consiste nell'allocare spazio di memoria per la variabile ed associargli l'identificatore**; lo spazio riservato viene dedotto dal tipo della variabile.
+<b>Una variabile prima di essere usata deve esssere sempre dichiarata</b>. Come anticipato, <b>l'operazione di dichiarazione consiste nell'allocare spazio di memoria per la variabile ed associargli l'identificatore</b>; lo spazio riservato viene dedotto dal tipo della variabile.
 I diversi tipi privisti del C hanno un numero di byte prefissati dipendenti dall'architettura; per esempio <code>int</code> di solito occupa 32 o 64 bit, <code>char</code> 8 bit etc.
 Se ti può aiutare puoi pensare ad una variabile come ad una scatola, vedi immagine di sotto.
 </p>
