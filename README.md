@@ -1262,7 +1262,7 @@ I parametri formali di una funzione, anche se dichiarati fuori del corpo della f
 <table align="center">
 	<td>:pill: <b>Nota</b>
 	<p align=justify>
- Storicamente le variabili con **block scope** dovevano essere dichiarate all'inizio del blocco.
+ Storicamente le variabili con <b>block scope</b> dovevano essere dichiarate all'inizio del blocco.
 	</p>
 	<p align=justify>
 Dal C99 è possibile dichiarare le variabili all'interno del blocco in qualsiasi posizione al suo interno.
