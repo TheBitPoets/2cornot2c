@@ -1251,14 +1251,25 @@ Esempi di blocchi (alcuni li abbbimao già incontrati) sono:
   Una variabile all'interno di un blocco ha un **block scope** ed è quindi visibile (**scope**) dal punto in cui è definita fino alla fine del blocco che contiene la sua definizione.
   Le variabili locali sono di tipo **block scope**.
 
-> [!IMPORTANT]
-> I parametri formali di una funzione, anche se dichiarati fuori del corpo della funzione (dal blocco) appartengono al corpo e quindi hanno anch'essi un **block scope**
+<table align="center">
+	<td>❗ <b>Importante</b>
+	<p align=justify>
+I parametri formali di una funzione, anche se dichiarati fuori del corpo della funzione (dal blocco) appartengono al corpo e quindi hanno anch'essi un <b>block scope</b>
+	</p>
+	</td>
+</table>
 
-> [!NOTE]  
-> Storicamente le variabili con **block scope** dovevano essere dichiarate all'inizio del blocco.
-> 
-> Dal C99 è possibile dichiarare le variabili all'interno del blocco in qualsiasi posizione al suo interno.
-> Questo è utile soprattutto per le variabili indici di un ciclo o per documentare meglio il proprio codice dichiarando le variabili il più vicino possibile alla riga che fa   uso effettivamente della stessa.
+<table align="center">
+	<td>:pill: <b>Nota</b>
+	<p align=justify>
+ Storicamente le variabili con **block scope** dovevano essere dichiarate all'inizio del blocco.
+	</p>
+	<p align=justify>
+Dal C99 è possibile dichiarare le variabili all'interno del blocco in qualsiasi posizione al suo interno.
+Questo è utile soprattutto per le variabili indici di un ciclo o per documentare meglio il proprio codice dichiarando le variabili il più vicino possibile alla riga che fa   uso effettivamente della stessa.
+	</p>
+	</td>
+</table>
  
 ## File scope
 
@@ -1319,8 +1330,13 @@ int main(void) {
 E' buona norma, soprattutto se il tuo programma ha grosse dimensioni in termini di file, dichiarare <b>static</b> le tue variabili globali se queste servono solo all'interno del file corrente. Questo previene il problema di uno spazio di nomi globale pieno di identificatori già utilizzati.
 </p>
 
-> [!CAUTION]
-> La parola chiave **static** non ha nulla a che vedere con lo **storage duration** di tipo static. Tutte le variabili globali (sia di tipo **external** che **internal** linkage) hanno uno **storage durantion** di tipo _static_ cioè esistono in memoria per tutto il tempo di esecuzione del programma. Affronteremo nel dettaglio lo storage duration nei paragrafi successivi.
+<table align="center">
+	<td>⚠️ <b>Attenzione</b>
+	<p align=justify>
+La parola chiave <b>static</b> non ha nulla a che vedere con lo <b>storage duration</b> di tipo static. Tutte le variabili globali (sia di tipo <b>external</b> che <b>internal</b> linkage) hanno uno <b>storage durantion</b> di tipo <i>static</i> cioè esistono in memoria per tutto il tempo di esecuzione del programma. Affronteremo nel dettaglio lo storage duration nei paragrafi successivi.
+	</p>
+	</td>
+</table>
 
 ## Storage duration
 
@@ -1350,8 +1366,13 @@ int main(void){
 Variabili che hanno un tempo di vita limitato che non coincide che il tempo di esecuzione del programma: sono le variabili con <b>block scope</b> che vengono allocate quando il programma entra nel blocco nel quale queste sono definite e poi deallocate quando si esce dallo stesso.
 </p>
 
-> [!IMPORTANT]  
-> E' possibile per una variabile con **block scope** avere uno **storage duration** non **auto** ma **static**. Per farlo basta dichiarare la variabile all'interno del blocco usando la _keyword_ **static** come mostrato sotto:
+<table align="center">
+	<td>❗ <b>Importante</b>
+	<p align=justify>
+E' possibile per una variabile con <b>block scope</b> avere uno <b>storage duration<b> non <b>auto</b> ma <b>static</b>. Per farlo basta dichiarare la variabile all'interno del blocco usando la <i>keyword</i> <b>static</b> come mostrato sotto:
+	</p>
+	</td>
+</table>
 
 ```c
 int main(void){
@@ -1567,10 +1588,14 @@ E' possibile dopo aver DEFINITO la variabile esterna, a scopo di documentazione,
 Infine per rendere visibile in un file una variabile esterna (globale) che è stata DEFINITA in un altro file è OBBLIGATORIA la DICHIARAZIONE con <i>keyword</i> <code>extern</code> nel secondo file come è stato fatto sopra per la variabile <code>global_var_somewhere_in_other_file</code>
 </p>
 
-> [!CAUTION]
-> Se togliessimo la _keyword_ `extern` nella DICHIARAZIONE della variabile `global_var_somewhere_in_other_file` questa si traformerebbe in una DEFINIZIONE
->  di nuova variabile e causerebbe un errore in quanto (in qualche altro file) già esiste una variabile globale esterna con queste nome ed ovviamente non
->  possono esistere due variabili (due locazione di memoria diverse) con lo stesso nome nel medesimo spazio di nomi.
+<table align="center">
+	<td>⚠️ <b>Attenzione</b>
+	<p align=justify>
+Se togliessimo la <i>keyword</i> <code>extern</code> nella DICHIARAZIONE della variabile <code>global_var_somewhere_in_other_file</code> questa si traformerebbe in una DEFINIZIONE
+di nuova variabile e causerebbe un errore in quanto (in qualche altro file) già esiste una variabile globale esterna con queste nome ed ovviamente non possono esistere due variabili (due locazione di memoria diverse) con lo stesso nome nel medesimo spazio di nomi.
+	</p>
+	</td>
+</table>
 
 ```c
 #include<stdio.h>
@@ -1861,7 +1886,13 @@ void f(int d, register int e){
 
 </div>
 
-**Nota**: La definizione di  `b` e di `j` non sono mostrate, quindi non è possibile determinare il **linkage** di queste variabili. Nella maggior parte dei casi le variabili saranno definite in un altro file ed avranno quindi **external linkage**
+<table align="center">
+	<td>:pill: <b>Nota</b>
+	<p align=justify>
+La definizione di  <code>b</code> e di <code>j</code> non sono mostrate, quindi non è possibile determinare il <code>linkage</code> di queste variabili. Nella maggior parte dei casi le variabili saranno definite in un altro file ed avranno quindi <b>external linkage</b>
+	</p>
+	</td>
+</table>
 
 ### Suddivisione in moduli di un programma
 
@@ -1888,22 +1919,36 @@ Abbiamo già detto che i file che compongono un programma sono:
 Di solito si raggruppano tutte le funzioni ed i dati relativi ad una certa funzionalità in un unico file sorgente (<code>.c</code>) e si crea un corrispondente file header <code>.h</code> (con lo stesso nome del file sorgente a cui si riferisce ma con ovviamente estensione diversa) che contiene i prototipi delle funzioni (implementate nel file sorgente) e la definizione dei tipi di dato usati dal modulo (se è richiesto).
 </p>
 
-> [!CAUTION]
-> Nei file header `.h` devono essere inseriti solo le definizioni dei tipi ed i prototipi (le dichiarazioni) della funzioni. L'implementazione delle funzioni risiede nel file sorgente `.c` 
+<table align="center">
+	<td>⚠️ <b>Attenzione</b>
+Nei file header <code>.h</code> devono essere inseriti solo le definizioni dei tipi ed i prototipi (le dichiarazioni) della funzioni. L'implementazione delle funzioni risiede nel file sorgente <code>.c</code> 
+	</p>
+	</td>
+</table>
 
 <p align="justify">
 Brevemete, in <code>5_variabili_main.c</code> inseriamo la logica di interazione con l'utente, l'implementazione delle funzioni matematiche viene spostata in un file sorgnete separato: <code>5_variabili.c</code> ed i prototipi nel corrispondente file header <code>5_variabili.h</code>
 </p>
 
-> [!NOTE]
-> Il file sorgente che contiene le funzioni matematiche ed il suo corrispettivo file d'intestazione hanno stesso nome ma estensioni differenti: `5_variabili.c` e `5_variabili.h`
+<table align="center">
+	<td>:pill: <b>Nota</b>
+	<p align=justify>
+Il file sorgente che contiene le funzioni matematiche ed il suo corrispettivo file d'intestazione hanno stesso nome ma estensioni differenti: <code>5_variabili.c</code> e <code>5_variabili.h</code>
+	</p>
+	</td>
+</table>
 
 <p align="justify">
 Nel file <code>5_varibili_main.c</code> facciamo uso delle funzioni matematiche, quindi, prima del loro utilizzo all'interno dello <code>switch</code>, importiamo il file header contenente i prototipi; ovvviamente facciamo lo stesso anche per la funzione <code>printf()</code>.
 </p>
 
-> [!WARNING]
-> Fai attenzione che per includere il file header per la funzione `printf()` si usano le parentesi angolari `<` `>` in quanto si tratta di funzioni del linguaggio, per includere file d'intestazione definiti dal programmatore si usano i doppi apici `"`
+<table align="center">
+	<td>⚠️ <b>Attenzione</b>
+	<p align=justify>
+Fai attenzione che per includere il file header per la funzione <code>printf()</code> si usano le parentesi angolari <code><</code> <code>></code> in quanto si tratta di funzioni del linguaggio, per includere file d'intestazione definiti dal programmatore si usano i doppi apici <code>"</code>
+	</p>
+	</td>
+</table>
 
 ```c
 #include <stdio.h> // header della libreria c
@@ -1957,8 +2002,13 @@ Il preprocessamento è il primo step del processo che porta alla generazione del
 * `#include`
 * `#if` `#ifdef`
 
-> [!IMPORTANT]
-> Tutte le righe nel codice che iniziano con il carattere `#` sono direttive al preprocessore
+<table align="center">
+	<td>❗ <b>Importante</b>
+	<p align=justify>
+Tutte le righe nel codice che iniziano con il carattere `#` sono direttive al preprocessore
+	</p>
+	</td>
+</table>
 
 Queste direttiva permettono di:
 
@@ -1966,9 +2016,13 @@ Queste direttiva permettono di:
 * ridefinire il significato degli identificatori
 * disabilitare condizionalmente parti di codice in fase di compilazione, eliminando il testo prima che il compilatore lo elabori
 
-> [!TIP]
-> E' il preprocessore che elimina tutti i commenti presenti nel codice sorgente in modo che sia compilato solo il codice vero e proprio
-
+<table align="center">
+	<td>:pill: <b>Nota</b>
+	<p align=justify>
+E' il preprocessore che elimina tutti i commenti presenti nel codice sorgente in modo che sia compilato solo il codice vero e proprio
+	</p>
+	</td>
+</table>
 
 #### La direttiva #define 
 
@@ -2052,8 +2106,13 @@ Per evitare errori sarebbe stato giusto definire la **macro** in questo modo:
 #define QUADRATO(x) ((x)*(x))
 ```
 
-> [!CAUTION]
-> L'uso di macro con parametri senza l'uso di parentesi tonde porta ad errori difficili da identificare
+<table align="center">
+	<td>⚠️ <b>Attenzione</b>
+	<p align=justify>
+L'uso di macro con parametri senza l'uso di parentesi tonde porta ad errori difficili da identificare
+	</p>
+	</td>
+</table>
 
 #### La direttiva #include
 
@@ -2115,9 +2174,13 @@ E' possibile ottenere il comportamento opposto con `#ifndef`, come segue:
 	 */
 ```
 
-> [!IMPORTANT]
-> La definizione del simbolo macro deve essere effettuata con la direttiva `#define`
-
+<table align="center">
+	<td>❗ <b>Importante</b>
+	<p align=justify>
+La definizione del simbolo macro deve essere effettuata con la direttiva <code>#define</code>
+	</p>
+	</td>
+</table>
 
 ### Eliminazione temporanea di codice
 
