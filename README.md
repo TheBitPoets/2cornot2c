@@ -711,7 +711,7 @@ La prima forma è tollerata da vecchie versioni del C (C90) o pre-ANSI C, ma non
 <table align="center">
 	<td>❗ <b>Importante</b>
 	<p align=justify>
-<b>Dichiarazione di funzione</b> (o <b>prototipo</b>): il tipo di ritorno, i tipi dei parametri in ingresso ed il nome della funzione rappresentano il prototipo della funzione. Quando si fornisce il prototipo di una funzione si usa dire che si effettua la dichiarazione della funzione
+<b>Dichiarazione di funzione</b> (o <b>prototipo</b>): il tipo di ritorno, i tipi dei parametri in ingresso e il nome della funzione rappresentano il prototipo della funzione. Quando si fornisce il prototipo di una funzione si usa dire che si effettua la dichiarazione della funzione.
 	</p>
 	</td>
 </table>
@@ -719,7 +719,7 @@ La prima forma è tollerata da vecchie versioni del C (C90) o pre-ANSI C, ma non
 <table align="center">
 	<td>❗ <b>Importante</b>
 	<p align=justify>
-<b>Definizione di funzione</b>: quando si fornisce l'implementazione della funzione (il corpo: cioè le istruzioni contenute tra la coppia di graffe <code>{</code> <code>}</code>) allora si dice che la funzione è definita. La definizione implica anche la dichiarazione
+<b>Definizione di funzione</b>: quando si fornisce l'implementazione della funzione (il corpo, cioè le istruzioni contenute tra la coppia di graffe <code>{</code> <code>}</code>), allora si dice che la funzione è definita. La definizione implica anche la dichiarazione.
 	</p>
 	</td>
 </table>
