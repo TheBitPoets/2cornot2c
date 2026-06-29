@@ -394,7 +394,7 @@ Prima di iniziare è giusto ricordare che per svolgere i laboratori richiesti è
 * [Vagrant](https://developer.hashicorp.com/vagrant/install?ajs_aid=e022a39f-7694-4bed-a4cd-f721f515b885&product_intent=vagrant#windows)
 
 <p align=justify>
-I link forniti sopra portano alle versioni dei software per architettura `amd64` in ambiente `windows`, questo a causa dell'assenza di macchine linux nei lab scolastici.
+I link forniti sopra portano alle versioni dei software per architettura `amd64` in ambiente `Windows`; questo a causa dell'assenza di macchine Linux nei lab scolastici.
 </p>
 
 <p align="justify">
