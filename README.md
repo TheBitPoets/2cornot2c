@@ -820,8 +820,8 @@ Righe 16-19: definizione della funzione <code>main()</code>.
 ## Funzioni
 
 <p align="justify">
-Le funzioni sono un blocco di codice, un insieme di istruzioni che vengono raggruppate e possono essere richiamate in qualsiasi momento all'interno di un programma. Per intenderci, se nel nostro programma calcoliamo più volte la media pesata dei nostri voti, è consigliabile racchiudere tutte le istruzioni all'interno di una funzione e richiamarla ogni volta che ne abbiamo bisogno piuttosto che riscrivere più volte lo stesso identico codice in punti diversi. Le funzioni possono ritornare un valore come risultato della loro elaborazione (possono anche non ritornare nulla al chiamante) e possono ricevere in ingresso un certo numero di parameti.
-Una funzione ha un'intestazione ed un corpo, usando sempre la solita funzione <code>differenza</code> vista in precedenza avremo:
+Le funzioni sono un blocco di codice, un insieme di istruzioni che vengono raggruppate e possono essere richiamate in qualsiasi momento all'interno di un programma. Per intenderci, se nel nostro programma calcoliamo più volte la media pesata dei nostri voti, è consigliabile racchiudere tutte le istruzioni all'interno di una funzione e richiamarla ogni volta che ne abbiamo bisogno, piuttosto che riscrivere più volte lo stesso identico codice in punti diversi. Le funzioni possono ritornare un valore come risultato della loro elaborazione (possono anche non ritornare nulla al chiamante) e possono ricevere in ingresso un certo numero di parametri.
+Una funzione ha un'intestazione e un corpo; usando sempre la solita funzione <code>differenza</code> vista in precedenza avremo:
 </p>
 
 ```c
@@ -831,9 +831,9 @@ int differenza(int minuendo, int sottraendo){
 ```
 
 <p align="justify">
-la prima riga rappresenta l'intestazione della funzione (esclusa la parentesi graffa), tutto il codice compreso da <code>{</code> e <code>}</code> è il corpo. Il corpo di una funzione è dunque rappresentato da tutte le istruzioni comprese dalla coppia di graffe, tutto ciò che precede è l'intestazione.
-Come anticipato, quando viene fornita sia l'intestazione che il corpo (l'implementazione) si parla di <b>definizione di funzione</b>, se viene fornita solo l'intestazione (anche detta <b>prototipo</b>) si parla di <b>dichiarazione di funzione</b>.
-Il prototipo della funzione <code>sottrazione</code> è dunque il seguente:
+La prima riga rappresenta l'intestazione della funzione (esclusa la parentesi graffa); tutto il codice compreso tra <code>{</code> e <code>}</code> è il corpo. Il corpo di una funzione è dunque rappresentato da tutte le istruzioni comprese nella coppia di graffe, tutto ciò che precede è l'intestazione.
+Come anticipato, quando vengono forniti sia l'intestazione che il corpo (l'implementazione), si parla di <b>definizione di funzione</b>; se viene fornita solo l'intestazione (anche detta <b>prototipo</b>), si parla di <b>dichiarazione di funzione</b>.
+Il prototipo della funzione <code>differenza</code> è dunque il seguente:
 </p>
 
 ```c
@@ -848,7 +848,7 @@ int differenza(int, int);
 
 <p align="justify">
 Per il compilatore non cambia nulla ma può aiutare un altro programmatore a comprendere il significato e l'uso dei parametri in ingresso.
-Di sotto è riportato un esempio completo che fa uso della funzione <code>sottrazione</code>, come è possibile vedere questa è richiamata all'interno del <code>main()</code> alla riga 8 fornendo in ingresso i due parametri previsti durante le definzione. Se avessimo fornito un numero diverso (sia inferiore che superiore) di parametri o di tipo diverso rispetto al tipo intero il compilatore ci avrebbe dato errore (o forse nel secondo caso no...?!?)
+Di seguito è riportato un esempio completo che fa uso della funzione <code>sottrazione</code>; come è possibile vedere, questa è richiamata all'interno del <code>main()</code> alla riga 8 fornendo in ingresso i due parametri previsti durante la definizione. Se avessimo fornito un numero diverso di parametri (sia inferiore che superiore) o parametri di tipo diverso rispetto al tipo intero, il compilatore ci avrebbe dato errore (o forse nel secondo caso no...?).
 </p>
 
 <details>
@@ -874,8 +874,8 @@ int sottrazione(int minuendo, int sottraendo){
 ```
 
 <p align="justify">
-A causa del fatto che la definzione della funzione <code>sottrazione</code> è stata fornita successivamente (riga 12-14) al punto in cui questa è richiamata (riga 8) per permettere al compilatore di controllare il corretto uso da parte del programmatore è stato necessario fornire prima della riga 8 il prototipo della funzione (riga 3). Commentando la riga 3 il compilatore darebbe errore o almeno rileverebbe un warning circa una dichiarazione implicita che non è in grado di verificare.
-Come spiegato ampiamente in precedenza, facciamo uso anche della funzione <code>printf()</code> ed in questo caso per fornirne il prototipo sfruttiamo la direttiva al preprocessore <code>#include <stdio.h></code>
+Poiché la definizione della funzione <code>sottrazione</code> è stata fornita successivamente (righe 12-14) al punto in cui questa è richiamata (riga 8), per permettere al compilatore di controllarne il corretto uso da parte del programmatore è stato necessario fornire prima della riga 8 il prototipo della funzione (riga 3). Commentando la riga 3 il compilatore darebbe errore o almeno rileverebbe un warning circa una dichiarazione implicita che non è in grado di verificare.
+Come spiegato ampiamente in precedenza, facciamo uso anche della funzione <code>printf()</code> e in questo caso, per fornirne il prototipo, sfruttiamo la direttiva al preprocessore <code>#include <stdio.h></code>.
 </p>
 
 <details>
@@ -886,18 +886,18 @@ Come spiegato ampiamente in precedenza, facciamo uso anche della funzione <code>
 		<li>Spostati nella cartella <code>lab/0_intro</code></li>
 		<li>
 		<p align="justify">
-			Aiutandoti con il file <code>1_funzioni.c</code>, crea un file <code>addizione.c</code> con queste caratteristiache:
+			Aiutandoti con il file <code>1_funzioni.c</code>, crea un file <code>addizione.c</code> con queste caratteristiche:
 		</p>
 		</li>
 		<ol>
 			<li>
 				<p align="justify">
-				Dichiari e definisca la funzione <code>int addizione(int, int)</code>
+				Dichiara e definisci la funzione <code>int addizione(int, int)</code>.
 				</p>
 			</li>
 			<li>
 				<p align="justify">
-				Richiami la funzione <code>addizione()</code> nel <code>main()</code> passando due variabili intere <code>a</code> e <code>b</code> contetente dei valori a tuo piacimento
+				Richiama la funzione <code>addizione()</code> nel <code>main()</code> passando due variabili intere <code>a</code> e <code>b</code> contenenti dei valori a tuo piacimento.
 				</p>
 			</li>
 		</ol>
