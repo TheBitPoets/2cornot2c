@@ -471,11 +471,11 @@ Apri il terminale o il prompt dei comandi, vai alla directory del progetto Vagra
      vagrant plugin install vagrant-vbguest
 ```
 
-2. Configura il Guest Additions nel tuo Vagrantfile:
+2. Configura le Guest Additions nel tuo Vagrantfile:
 
 <p align="justify">	
 Apri il tuo Vagrantfile.<br>
-Aggiungi le seguenti line all'interno del blocco `config.vm.provision` (o in cima se lo vuoi applicare a tutte le VMs)
+Aggiungi le seguenti righe all'interno del blocco `config.vm.provision` (o in cima se vuoi applicarle a tutte le VM)
 </p>
 
 ```
@@ -483,7 +483,7 @@ Aggiungi le seguenti line all'interno del blocco `config.vm.provision` (o in cim
 ```
 
 <p align="justify">	
-La riga di sopra disabilita gli aggiornamenti automatici delle Guest Additions, il che può essere utile se preferisci gestirli manualmente o se riscontri problemi con il processo di aggiornamento automatico. In alternativa, puoi abilitarlo in base alla presenza o meno del plugin:
+La riga precedente disabilita gli aggiornamenti automatici delle Guest Additions, il che può essere utile se preferisci gestirli manualmente o se riscontri problemi con il processo di aggiornamento automatico. In alternativa, puoi abilitarli in base alla presenza o meno del plugin:
 </p>
 
 ```
@@ -493,28 +493,28 @@ La riga di sopra disabilita gli aggiornamenti automatici delle Guest Additions, 
 ```
 
 <p align="justify">	
-Questo assicura che l'impostazione è applicata solamente se il plugin è installato
+Questo assicura che l'impostazione sia applicata solamente se il plugin è installato.
 </p>
 
-3. Gestisci i Guest Additions (Opzionale):
+3. Gestisci le Guest Additions (opzionale):
 
 <p align=justify>
-Se vuoi in maggiore controllo sull'installazione dei Guest Additions, tu puoi usare i seguenti comandi:
+Se vuoi un maggiore controllo sull'installazione delle Guest Additions, puoi usare i seguenti comandi:
 </p>
 
 * `vagrant vbguest`: Questo comando controlla lo stato delle Guest Additions e tenta di installarle o aggiornarle se necessario.
 * `vagrant vbguest --do install`: Questo forza l'installazione delle Guest Additions.
-* `vagrant vbguest --do rebuild`: Questo ricostruisce i moduli del kernel del Guest Additions, il che può essere utile se hai aggiornato il tuo kernel.
+* `vagrant vbguest --do rebuild`: Questo ricostruisce i moduli del kernel delle Guest Additions, il che può essere utile se hai aggiornato il tuo kernel.
 * `vagrant vbguest --status`: Questo mostra lo stato attuale delle aggiunte degli ospiti.
 
 <p align=justify>
-Tu puoi anche scaricare il file ISO dei Guest Additions e montarlo manualmente all'interno della VM se secessario
+Puoi anche scaricare il file ISO delle Guest Additions e montarlo manualmente all'interno della VM se necessario.
 </p>
 
-4. Starta or Ricarica la tua macchina: 
+4. Avvia o ricarica la tua macchina: 
 
 <p align="justify">	
-Dopo aver apportato modifiche al tuo Vagrantfile, esegui <code>vagrant up</code> per avviare il computer o <code>vagrant reload</code> per applicare le modifiche. Il plugin <code>vagrant-vbguest</code> gestirà l'installazione o l'aggiornamento delle Guest Additions in base alla tua configurazione. Seguendo questi passaggi, puoi gestire efficacemente l'installazione e l'aggiornamento delle Guest Additions di VirtualBox all'interno del tuo ambiente Vagrant.
+Dopo aver apportato modifiche al tuo Vagrantfile, esegui <code>vagrant up</code> per avviare la macchina o <code>vagrant reload</code> per applicare le modifiche. Il plugin <code>vagrant-vbguest</code> gestirà l'installazione o l'aggiornamento delle Guest Additions in base alla tua configurazione. Seguendo questi passaggi, puoi gestire efficacemente l'installazione e l'aggiornamento delle Guest Additions di VirtualBox all'interno del tuo ambiente Vagrant.
 </p>
 
 ## Laboratori
