@@ -673,7 +673,7 @@ Il preprocessore viene richiamato dal compilatore come primo step nel processo d
 
 <p align="justify">
 Come da tradizione, il primo esempio di codice è il classico <code>Hello World</code>.
-Il programma di sotto stampa a schermo una semplice frase: <code>Ciao Mondo</code> in inglese.
+Il programma qui sotto stampa a schermo una semplice frase: <code>Ciao Mondo</code>, in inglese.
 </p>
 
 <details>
