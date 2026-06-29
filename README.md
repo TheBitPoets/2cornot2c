@@ -571,7 +571,7 @@ l'assemblatore <code>as</code> trasforma il codice assembly contenuto in <code>h
 
 4. **Linkaggio** (_Linking_):
 <p align="justify">
-il linker (<code>ld</code>) ha il compito di aggreggare in un unico file oggetto (il file eseguibile) eventuali altri file oggetto di librerie esterne o del linguaggio. Nel nostro esempio il programmatore ha fatto uso di una funzione del linguaggio (<code>printf()</code>) quindi il linker aggregerà nel file eseguibile (<code>hello</code>) il file oggetto <code>hello.o</code> ed il file oggetto relativo al codice della funzione printf: <code>printf.o</code>. Puoi generare il file eseguibile in questo modo: <code>gcc -o hello hello.c</code>
+il linker (<code>ld</code>) ha il compito di aggregare in un unico file oggetto (il file eseguibile) eventuali altri file oggetto di librerie esterne o del linguaggio. Nel nostro esempio il programmatore ha fatto uso di una funzione del linguaggio (<code>printf()</code>), quindi il linker aggregherà nel file eseguibile (<code>hello</code>) il file oggetto <code>hello.o</code> e il file oggetto relativo al codice della funzione <code>printf()</code>: <code>printf.o</code>. Puoi generare il file eseguibile in questo modo: <code>gcc -o hello hello.c</code>.
 </p>
 
 <details>
