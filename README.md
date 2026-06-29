@@ -528,10 +528,10 @@ Ogni lab al suo interno contiene una cartella <code>bin</code> destinata ad ospi
 ## Il processo di compilazione
 
 <p align="justify">
-I programmi sono scriti in un qualche linguaggio di programmazione, il programmatore scrive il codice sorgente; nel caso del linguaggio C i file sorgente hanno estensione <code>.c</code> o <code>.h</code>. Il codice sorgente contiene tutte le istruzioni che il programma dovrà eseguire. Le istruzioni all'interno del codice sorgente scritte in un qualsiasi linguaggio di programmazione devono essere tradotte in una sequenza di bit (in altri termini nel linguaggio macchina) perchè la cpu è in grado di comprendere solo il linguaggio macchina, esclusivamente sequenze di bit e nient'altro. In sintesi si dice che il programma sorgente deve essere trasformato in un file eseguibile (file binario) che contiene le istruzioni (sequenze di bit) per la specifica architettura del nostro processore.
-Questo processo di trasformazione del sorgente in binario è detto processo di compilazione ed è svolto dal compilatore. In realtà queto processo è articolato in vari step e non coinvolge solo il compilatore. Vediamo brevemente di studiarne le fasi.
-Se non lo hai già fatto avvia la macchina virtuale con <code>vagrant up</code> ed al termine del boot avvia una sessione ssh con il comando <code>vagrant ssh</code>.
-Una volta dentro, nella tua home directory (utente vagrant) usa vim per creare un nuovo file in questo modo: <code>vim hello.c</code> e copia il codice mostrato sotto:
+I programmi sono scritti in un qualche linguaggio di programmazione; il programmatore scrive il codice sorgente. Nel caso del linguaggio C, i file sorgente hanno estensione <code>.c</code> o <code>.h</code>. Il codice sorgente contiene tutte le istruzioni che il programma dovrà eseguire. Le istruzioni all'interno del codice sorgente, scritte in un qualsiasi linguaggio di programmazione, devono essere tradotte in una sequenza di bit (in altri termini, nel linguaggio macchina) perché la CPU è in grado di comprendere solo il linguaggio macchina, esclusivamente sequenze di bit e nient'altro. In sintesi si dice che il programma sorgente deve essere trasformato in un file eseguibile (file binario) che contiene le istruzioni (sequenze di bit) per la specifica architettura del nostro processore.
+Questo processo di trasformazione del sorgente in binario è detto processo di compilazione ed è svolto dal compilatore. In realtà questo processo è articolato in vari step e non coinvolge solo il compilatore. Vediamo brevemente di studiarne le fasi.
+Se non lo hai già fatto, avvia la macchina virtuale con <code>vagrant up</code> e, al termine del boot, avvia una sessione SSH con il comando <code>vagrant ssh</code>.
+Una volta dentro, nella tua home directory (utente vagrant), usa Vim per creare un nuovo file in questo modo: <code>vim hello.c</code> e copia il codice mostrato sotto:
 </p>
 
 ```c
