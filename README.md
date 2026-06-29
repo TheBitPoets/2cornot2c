@@ -388,10 +388,10 @@ Il corso è fondamentalmente pratico, non è richiesto alcun prerequisito e null
 Prima di iniziare è giusto ricordare che per svolgere i laboratori richiesti è necessaria la conoscenza di alcuni strumenti, in particolare:
 </p>
 
-* [git](https://git-scm.com/download/win)
-* [virtualbox](https://www.virtualbox.org/wiki/Downloads) Installa la versione 7.0 che è la più recente compatibile con vagrant. Leggi [qui](https://developer.hashicorp.com/vagrant/docs/providers/virtualbox) per maggiori info
-  * [Microsoft Visual C++](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170) Solo in caso ti venga richiesto durante l'installaizone di VBox (dovrebbe andare in errore)
-* [vagrant](https://developer.hashicorp.com/vagrant/install?ajs_aid=e022a39f-7694-4bed-a4cd-f721f515b885&product_intent=vagrant#windows)
+* [Git](https://git-scm.com/download/win)
+* [VirtualBox](https://www.virtualbox.org/wiki/Downloads) Installa la versione 7.0, che è la più recente compatibile con Vagrant. Leggi [qui](https://developer.hashicorp.com/vagrant/docs/providers/virtualbox) per maggiori informazioni
+  * [Microsoft Visual C++](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170) solo in caso ti venga richiesto durante l'installazione di VBox (dovrebbe andare in errore)
+* [Vagrant](https://developer.hashicorp.com/vagrant/install?ajs_aid=e022a39f-7694-4bed-a4cd-f721f515b885&product_intent=vagrant#windows)
 
 <p align=justify>
 I link forniti sopra portano alle versioni dei software per architettura `amd64` in ambiente `windows`, questo a causa dell'assenza di macchine linux nei lab scolastici.
