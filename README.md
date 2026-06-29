@@ -991,14 +991,14 @@ Hanno visibilità globale, cioè sono visibili a tutte le funzioni nel file in c
 </p>
 
 <p align="justify">
-Il programma di sotto fa uso di variabili globali e locali; semplicemente sono definite tre funzioni: <code>somma()</code>, <code>differenza()</code> e <code>moltiplicazione()</code>. I due operandi su cui le funzioni devono lavorare (<code>primo</code> e <code>secondo</code>) vengono definiti coeme variabili globali; essendo globali queste variabili sono visibili da tutte le funzioni nel file. 
+Il programma qui sotto fa uso di variabili globali e locali; semplicemente sono definite tre funzioni: <code>somma()</code>, <code>differenza()</code> e <code>moltiplicazione()</code>. I due operandi su cui le funzioni devono lavorare (<code>primo</code> e <code>secondo</code>) vengono definiti come variabili globali; essendo globali, queste variabili sono visibili da tutte le funzioni nel file. 
 </p>
 
 ```c
 int primo, secondo; /* variabili globali */
 ```
 
-Il risultato dell'operazione ed il tipo di operazione da svolgere sono definiti come variabili locali (dentro la funzione `main()`)
+Il risultato dell'operazione e il tipo di operazione da svolgere sono definiti come variabili locali (dentro la funzione `main()`).
 
 ```c
 int risultato; 	 // variabile locale
@@ -1008,7 +1008,7 @@ char operazione; // variabile locale
 Queste due variabili sono visibili solo all'interno della funzione `main()` (dove sono effettivamente dichiarate come variabili locali) e non dalle altre funzioni.
 
 <p align="justify">
-Inoltre, siccome facciamo uso della funzione <code>printf()</code> e <code>scanf()</code> dobbiamo includere attraverso la direttiva al preprocessore (<code>#include<stdio.h></code>) i rispettivi prototipi contenuti nel file header: <code>stdio.h</code>.
+Inoltre, siccome facciamo uso delle funzioni <code>printf()</code> e <code>scanf()</code>, dobbiamo includere attraverso la direttiva al preprocessore (<code>#include<stdio.h></code>) i rispettivi prototipi contenuti nel file header: <code>stdio.h</code>.
 Mentre <code>printf()</code> serve per stampare a schermo il contenuto di una variabile, <code>scanf()</code> viene usata per leggere un valore da tastiera e memorizzarlo in una variabile.
 </p>
 
