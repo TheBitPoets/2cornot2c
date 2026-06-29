@@ -705,7 +705,7 @@ void main()
 ```
 
 <p align="justify">
-La prima forma è tollerata da vecchia versioni del C (C90) o pre ANSI C ma non è accettata da quelle successive (C99, C11); la seconda potrebbe essere tollerata da alcuni compilatori ma se il tuo codice deve funzionare anche su altre macchine è meglio usare qualcosa che funzioni sempre: dunque evitala.
+La prima forma è tollerata da vecchie versioni del C (C90) o pre-ANSI C, ma non è accettata da quelle successive (C99, C11); la seconda potrebbe essere tollerata da alcuni compilatori, ma se il tuo codice deve funzionare anche su altre macchine è meglio usare qualcosa che funzioni sempre: dunque evitala.
 </p>
 
 <table align="center">
