@@ -831,9 +831,9 @@ int differenza(int minuendo, int sottraendo){
 ```
 
 <p align="justify">
-la prima riga rappresenta l'intestazione della funzione (esclusa la parentesi graffa), tutto il codice compreso da <code>{</code> e <code>}</code> è il corpo. Il corpo di una funzione è dunque rappresentato da tutte le istruzioni comprese dalla coppia di graffe, tutto ciò che precede è l'intestazione.
-Come anticipato, quando viene fornita sia l'intestazione che il corpo (l'implementazione) si parla di <b>definizione di funzione</b>, se viene fornita solo l'intestazione (anche detta <b>prototipo</b>) si parla di <b>dichiarazione di funzione</b>.
-Il prototipo della funzione <code>sottrazione</code> è dunque il seguente:
+La prima riga rappresenta l'intestazione della funzione (esclusa la parentesi graffa); tutto il codice compreso tra <code>{</code> e <code>}</code> è il corpo. Il corpo di una funzione è dunque rappresentato da tutte le istruzioni comprese nella coppia di graffe, tutto ciò che precede è l'intestazione.
+Come anticipato, quando vengono forniti sia l'intestazione che il corpo (l'implementazione), si parla di <b>definizione di funzione</b>; se viene fornita solo l'intestazione (anche detta <b>prototipo</b>), si parla di <b>dichiarazione di funzione</b>.
+Il prototipo della funzione <code>differenza</code> è dunque il seguente:
 </p>
 
 ```c
