@@ -1064,7 +1064,7 @@ int moltiplicazione(){
 ```
 
 <p align="justify">
-Inoltre nel codice incontriamo il primo costrutto per il controllo del flusso e precisamente <code>if-else</code>.
+Inoltre, nel codice incontriamo il primo costrutto per il controllo del flusso, precisamente <code>if-else</code>.
 Vedremo in dettaglio la sintassi più avanti, ora forniamo solo una breve spiegazione.
 Il costrutto <code>if</code> serve per realizzare l'istruzione di salto condizionale ed assume questa forma:
 </p>
@@ -1072,7 +1072,7 @@ Il costrutto <code>if</code> serve per realizzare l'istruzione di salto condizio
 `if (espr) istr`
 
 <p align="justify">
-Se la condizione specificata dall'espressione <code>espr</code> è vera (cioè diversa da zero) viene eseguito il blocco di istruzioni <code>istr</code> alrimenti si prosegue con l'elaborazione
+Se la condizione specificata dall'espressione <code>espr</code> è vera (cioè diversa da zero), viene eseguito il blocco di istruzioni <code>istr</code>; altrimenti si prosegue con l'elaborazione.
 </p>
 
 Il costrutto `if` ammette l'enunciato opzionale `else`. Il costrutto `if-else` assume questa forma:
@@ -1080,7 +1080,7 @@ Il costrutto `if` ammette l'enunciato opzionale `else`. Il costrutto `if-else` a
 `if (espr) istr1 else istr2`
 
 <p align="justify">
-I blocchi di istrzioni <code>istr1</code> e <code>istr2</code> vengono eseguiti a seconda se l'espressione <code>espr</code> sia vera o falsa. Se è vera si esegue <code>espr1</code> se è falsa <code>espr2</code>
+I blocchi di istruzioni <code>istr1</code> e <code>istr2</code> vengono eseguiti a seconda che l'espressione <code>espr</code> sia vera o falsa. Se è vera si esegue <code>istr1</code>, se è falsa <code>istr2</code>.
 Nel nostro codice abbiamo qualcosa di un po' più complesso, analizziamolo assieme:
 </p>
 
