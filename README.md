@@ -1340,16 +1340,16 @@ La parola chiave <b>static</b> non ha nulla a che vedere con lo <b>storage durat
 
 ## Storage duration
 
-Esistono quattro tipi diversi di **storage duration**: `static` `thread` `auto` `allocated`.
+Esistono quattro tipi diversi di **storage duration**: `static`, `thread`, `auto` e `allocated`.
 
-Per il momento affrontiamo solamente i tipi: `static` ed `auto`.
+Per il momento affrontiamo solamente i tipi `static` e `auto`.
 
 ## Static storage duration
 
-Variabili che esistono in memoria per l'intero tempo di esecuzione del programma: sono le variabili con **file scope** (variabili globali sia di tipo `external` che `internal` **linkage**)
+Variabili che esistono in memoria per l'intero tempo di esecuzione del programma: sono le variabili con **file scope** (variabili globali sia di tipo `external` sia di tipo `internal` **linkage**).
 
 ```c
-int file_scope_extenal_linkage;         /* variabile globale con file scope ed external linkage */
+int file_scope_external_linkage;        /* variabile globale con file scope ed external linkage */
 static int file_scope_internal_linkage; /* variabile globale con file scope ma internal linkage:
                                          * è usata la keyword static che limita la visibilità al
 					 * solo file corrente
@@ -1363,13 +1363,13 @@ int main(void){
 ## Auto storage duration
 
 <p align="justify">
-Variabili che hanno un tempo di vita limitato che non coincide che il tempo di esecuzione del programma: sono le variabili con <b>block scope</b> che vengono allocate quando il programma entra nel blocco nel quale queste sono definite e poi deallocate quando si esce dallo stesso.
+Variabili che hanno un tempo di vita limitato, che non coincide con il tempo di esecuzione del programma: sono le variabili con <b>block scope</b>, che vengono allocate quando il programma entra nel blocco nel quale sono definite e poi deallocate quando si esce dallo stesso.
 </p>
 
 <table align="center">
 	<td>❗ <b>Importante</b>
 	<p align=justify>
-E' possibile per una variabile con <b>block scope</b> avere uno <b>storage duration<b> non <b>auto</b> ma <b>static</b>. Per farlo basta dichiarare la variabile all'interno del blocco usando la <i>keyword</i> <b>static</b> come mostrato sotto:
+È possibile per una variabile con <b>block scope</b> avere uno <b>storage duration</b> non <b>auto</b>, ma <b>static</b>. Per farlo basta dichiarare la variabile all'interno del blocco usando la <i>keyword</i> <b>static</b>, come mostrato sotto:
 	</p>
 	</td>
 </table>
@@ -1380,15 +1380,15 @@ int main(void){
 }
 
 int uno(void){
-	static int variabile_statica = 0; /* variabile statica anche se dichiarata all' interno di
-  					   * un blocco (dovrebbe essere di tipo auto senza la paro
-					   * -la chiave static).
-                                           * La  memoria per la  variabile è  allocata all' inizio
-					   * del  programma e deallocata al termine del programma.
- 					   * Se fosse rimasta auto la memoria sarebbe stata alloca
-					   * ta solo all' entrata  del flusso nella  funzione e ri
-					   * -mossa all'uscita
-                                           */
+	static int variabile_statica = 0; /* variabile statica anche se dichiarata all'interno di
+	                                   * un blocco (dovrebbe essere di tipo auto senza la
+	                                   * parola chiave static).
+	                                   * La memoria per la variabile è allocata all'inizio
+	                                   * del programma e deallocata al termine del programma.
+	                                   * Se fosse rimasta auto, la memoria sarebbe stata allocata
+	                                   * solo all'entrata del flusso nella funzione e rimossa
+	                                   * all'uscita
+	                                   */
 }
 ```
 
