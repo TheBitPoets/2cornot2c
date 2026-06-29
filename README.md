@@ -908,11 +908,11 @@ Come spiegato ampiamente in precedenza, facciamo uso anche della funzione <code>
 ## Variabili
 
 <p align="justify">
-Abbiamo precedentemente detto che una variabile è semplicemente una locazione di memoria a cui è associato un identificatore ed un tipo.
-L'identificatore è un nome mnemonico che ci permette, all'interno del codice, di accedere al valore contenuto nella locazione di memoria corrispondente. Il tipo definisce lo spazio (in terminit di byte) che la locazione di memoria può contenere.
-<b>Una variabile prima di essere usata deve esssere sempre dichiarata</b>. Come anticipato, <b>l'operazione di dichiarazione consiste nell'allocare spazio di memoria per la variabile ed associargli l'identificatore</b>; lo spazio riservato viene dedotto dal tipo della variabile.
-I diversi tipi privisti del C hanno un numero di byte prefissati dipendenti dall'architettura; per esempio <code>int</code> di solito occupa 32 o 64 bit, <code>char</code> 8 bit etc.
-Se ti può aiutare puoi pensare ad una variabile come ad una scatola, vedi immagine di sotto.
+Abbiamo precedentemente detto che una variabile è semplicemente una locazione di memoria a cui sono associati un identificatore e un tipo.
+L'identificatore è un nome mnemonico che ci permette, all'interno del codice, di accedere al valore contenuto nella locazione di memoria corrispondente. Il tipo definisce lo spazio (in termini di byte) che la locazione di memoria può contenere.
+<b>Una variabile prima di essere usata deve essere sempre dichiarata</b>. Come anticipato, <b>l'operazione di dichiarazione consiste nell'allocare spazio di memoria per la variabile e nell'associarle l'identificatore</b>; lo spazio riservato viene dedotto dal tipo della variabile.
+I diversi tipi previsti dal C hanno un numero di byte prefissato dipendente dall'architettura; per esempio <code>int</code> di solito occupa 32 o 64 bit, <code>char</code> 8 bit etc.
+Se ti può aiutare, puoi pensare a una variabile come a una scatola: vedi immagine sotto.
 </p>
 
 ```c
@@ -925,7 +925,7 @@ int answer;
 </p>
 
 <p align="justify">
-Una volta dichiarata la variabile è pronta ad ospitare un valore del tipo corrispondente a quello scelto nella dichiarazione; questa operazione è detta <b>assegnamento</b>
+Una volta dichiarata, la variabile è pronta a ospitare un valore del tipo corrispondente a quello scelto nella dichiarazione; questa operazione è detta <b>assegnamento</b>.
 </p>
 
 ```c
@@ -938,7 +938,7 @@ answer = 12;  // assegnamento del valore 12 alla variabile sopra dichiarata
 </p>
 
 <p align="justify">
-E' possible associare un valore ad una variabile direttamente nella dichiarazione, questa operazione è detta <b>inizializzazione</b>
+È possibile associare un valore a una variabile direttamente nella dichiarazione; questa operazione è detta <b>inizializzazione</b>.
 </p>
 
 ```c
@@ -946,7 +946,7 @@ int answer = 12; // dichiarazione con inizializzazione
 ```
 
 <p align="justify">
-E' possibile dichiarare più variabile nella stessa riga, purchè esse siano dello stesso tipo. In questo modo:
+È possibile dichiarare più variabili nella stessa riga, purché esse siano dello stesso tipo. In questo modo:
 </p>
 
 ```c
@@ -954,13 +954,13 @@ int question, answer;
 ```
 
 <p align="justify">
-Oltre al tipo ed all'identificatore una variabile è caratterizzata dalla <b>visibilità</b> (<code>scope</code> in inglese) ed il <b>tempo di vita</b> (<code>lifetime</code> o <code>storage duration</code>)
+Oltre al tipo e all'identificatore, una variabile è caratterizzata dalla <b>visibilità</b> (<code>scope</code> in inglese) e dal <b>tempo di vita</b> (<code>lifetime</code> o <code>storage duration</code>).
 </p>
 
 <table align="center">
 	<td>❗ <b>Importante</b>
 	<p align=justify>
-<b>Visibilità</b>: porzioni di codice nel programma in cui la variabile (il suo identificatore) è visibile e quindi è possibile fare riferimento alla variabile. Se in un dato punto del programma la variabile non è visibile, anche se effettivamente allocata in memoria (ha associata una locazine di memoria), è inutilizzabile o comunque non è possibile accedere al suo contenuto.
+<b>Visibilità</b>: porzioni di codice nel programma in cui la variabile (il suo identificatore) è visibile e quindi è possibile fare riferimento alla variabile. Se in un dato punto del programma la variabile non è visibile, anche se effettivamente allocata in memoria (ha associata una locazione di memoria), è inutilizzabile o comunque non è possibile accedere al suo contenuto.
 	</p>
 	</td>
 </table>
@@ -968,7 +968,7 @@ Oltre al tipo ed all'identificatore una variabile è caratterizzata dalla <b>vis
 <table align="center">
 	<td>❗ <b>Importante</b>
 	<p align=justify>
-<b>Tempo di vita</b>: porzione di tempo all'interno del ciclo di esecuzione del programma durante il quale alla variabile è associata una locazione di  memoria
+<b>Tempo di vita</b>: porzione di tempo all'interno del ciclo di esecuzione del programma durante la quale alla variabile è associata una locazione di memoria.
 	</p>
 	</td>
 </table>
@@ -978,27 +978,27 @@ Sulla base del tempo di vita e della visibilità possiamo classificare le variab
 </p>
 
 <p align="justify">
-<b>Le variabili locali</b> sono definite all'interno delle funzioni e hanno una visibilità limitata: dal punto in cui sono dichiarate fino al termine del corpo della funzione (ti ricordo che il corpo è compreso tra <code>{</code> e <code>}</code>); il loro tempo di vita è anche limitato: la locazione di memoria ad esse associata è allocata quando la funzione viene invocata ed è liberata quando l'esecuzione dell'intero corpo della funzione termina.
+<b>Le variabili locali</b> sono definite all'interno delle funzioni e hanno una visibilità limitata: dal punto in cui sono dichiarate fino al termine del corpo della funzione (ti ricordo che il corpo è compreso tra <code>{</code> e <code>}</code>); anche il loro tempo di vita è limitato: la locazione di memoria a esse associata è allocata quando la funzione viene invocata ed è liberata quando l'esecuzione dell'intero corpo della funzione termina.
 </p>
 
 <p align="justify">
 <b>Le variabili globali</b> sono definite fuori dalle funzioni, di solito dopo le direttive <code>#include</code> nelle righe iniziali. 
-Hanno visibilità globale appunto, cioè sono visibili a tutte le funzioni nel file in cui sono dichiarate (e potenzialmente anche alle funzioni in altri file del programma, ma questo lo vedremo in seguito); il loro tempo di vita coincide con quello globale di esecuzione del programma.
+Hanno visibilità globale, cioè sono visibili a tutte le funzioni nel file in cui sono dichiarate (e potenzialmente anche alle funzioni in altri file del programma, ma questo lo vedremo in seguito); il loro tempo di vita coincide con quello globale di esecuzione del programma.
 </p>
 
 <p align="justify">
-<b>Le variabili globali</b> se non inizializzate vengono poste a zero automaticamente, al contrario <b>le variabili locali</b> se non inizializzate contengono semplicemente un valore sporco ed assolutamente non prevedibile (il valore che era precedentemente contenuto nella locazione di memoria che è stata associata alla variabile, al suo identificatore).
+<b>Le variabili globali</b>, se non inizializzate, vengono poste a zero automaticamente; al contrario <b>le variabili locali</b>, se non inizializzate, contengono semplicemente un valore sporco e assolutamente non prevedibile (il valore che era precedentemente contenuto nella locazione di memoria che è stata associata alla variabile, al suo identificatore).
 </p>
 
 <p align="justify">
-Il programma di sotto fa uso di variabili globali e locali; semplicemente sono definite tre funzioni: <code>somma()</code>, <code>differenza()</code> e <code>moltiplicazione()</code>. I due operandi su cui le funzioni devono lavorare (<code>primo</code> e <code>secondo</code>) vengono definiti coeme variabili globali; essendo globali queste variabili sono visibili da tutte le funzioni nel file. 
+Il programma qui sotto fa uso di variabili globali e locali; semplicemente sono definite tre funzioni: <code>somma()</code>, <code>differenza()</code> e <code>moltiplicazione()</code>. I due operandi su cui le funzioni devono lavorare (<code>primo</code> e <code>secondo</code>) vengono definiti come variabili globali; essendo globali, queste variabili sono visibili da tutte le funzioni nel file. 
 </p>
 
 ```c
 int primo, secondo; /* variabili globali */
 ```
 
-Il risultato dell'operazione ed il tipo di operazione da svolgere sono definiti come variabili locali (dentro la funzione `main()`)
+Il risultato dell'operazione e il tipo di operazione da svolgere sono definiti come variabili locali (dentro la funzione `main()`).
 
 ```c
 int risultato; 	 // variabile locale
@@ -1008,11 +1008,11 @@ char operazione; // variabile locale
 Queste due variabili sono visibili solo all'interno della funzione `main()` (dove sono effettivamente dichiarate come variabili locali) e non dalle altre funzioni.
 
 <p align="justify">
-Inoltre, siccome facciamo uso della funzione <code>printf()</code> e <code>scanf()</code> dobbiamo includere attraverso la direttiva al preprocessore (<code>#include<stdio.h></code>) i rispettivi prototipi contenuti nel file header: <code>stdio.h</code>.
+Inoltre, siccome facciamo uso delle funzioni <code>printf()</code> e <code>scanf()</code>, dobbiamo includere attraverso la direttiva al preprocessore (<code>#include<stdio.h></code>) i rispettivi prototipi contenuti nel file header: <code>stdio.h</code>.
 Mentre <code>printf()</code> serve per stampare a schermo il contenuto di una variabile, <code>scanf()</code> viene usata per leggere un valore da tastiera e memorizzarlo in una variabile.
 </p>
 
-Le definizioni della funzioni `somma()`, `differenza()` e `moltiplicazione()` sono fornite dopo la loro effettiva chiamata nel `main()` e quindi per permettere al compilatore di controllare l'uso corretto di queste funzioni da parte del programmatore è stato necessario, prima del `main()`, fornire i prototipoi.
+Le definizioni delle funzioni `somma()`, `differenza()` e `moltiplicazione()` sono fornite dopo la loro effettiva chiamata nel `main()` e quindi, per permettere al compilatore di controllare l'uso corretto di queste funzioni da parte del programmatore, è stato necessario fornire i prototipi prima del `main()`.
 
 <details>
 <summary>/lab/0_intro/2_variabili.c</summary>
@@ -1064,7 +1064,7 @@ int moltiplicazione(){
 ```
 
 <p align="justify">
-Inoltre nel codice incontriamo il primo costrutto per il controllo del flusso e precisamente <code>if-else</code>.
+Inoltre, nel codice incontriamo il primo costrutto per il controllo del flusso, precisamente <code>if-else</code>.
 Vedremo in dettaglio la sintassi più avanti, ora forniamo solo una breve spiegazione.
 Il costrutto <code>if</code> serve per realizzare l'istruzione di salto condizionale ed assume questa forma:
 </p>
@@ -1072,7 +1072,7 @@ Il costrutto <code>if</code> serve per realizzare l'istruzione di salto condizio
 `if (espr) istr`
 
 <p align="justify">
-Se la condizione specificata dall'espressione <code>espr</code> è vera (cioè diversa da zero) viene eseguito il blocco di istruzioni <code>istr</code> alrimenti si prosegue con l'elaborazione
+Se la condizione specificata dall'espressione <code>espr</code> è vera (cioè diversa da zero), viene eseguito il blocco di istruzioni <code>istr</code>; altrimenti si prosegue con l'elaborazione.
 </p>
 
 Il costrutto `if` ammette l'enunciato opzionale `else`. Il costrutto `if-else` assume questa forma:
@@ -1080,7 +1080,7 @@ Il costrutto `if` ammette l'enunciato opzionale `else`. Il costrutto `if-else` a
 `if (espr) istr1 else istr2`
 
 <p align="justify">
-I blocchi di istrzioni <code>istr1</code> e <code>istr2</code> vengono eseguiti a seconda se l'espressione <code>espr</code> sia vera o falsa. Se è vera si esegue <code>espr1</code> se è falsa <code>espr2</code>
+I blocchi di istruzioni <code>istr1</code> e <code>istr2</code> vengono eseguiti a seconda che l'espressione <code>espr</code> sia vera o falsa. Se è vera si esegue <code>istr1</code>, se è falsa <code>istr2</code>.
 Nel nostro codice abbiamo qualcosa di un po' più complesso, analizziamolo assieme:
 </p>
 
@@ -1098,26 +1098,26 @@ if (operazione == 's'){
 ```
 
 <p align="justify">
-La funzione <code>scanf()</code> legge un carattere da tastiera ed inserisce il valore all'interno della variabile <code>operazione</code>, il costrutto <code>if-else</code> ci serve per eseguire la funzione corrispondente all'operazione richiesta dall'utente attraverso la digitazione di un carattere della tastiera.
-Se <code>operazione</code> contiene il carattere <code>s</code> allora si eseguirà la funzione <code>somma()</code> (solo quella e nessun'altra) altrimenti se il carattere è <code>d</code> si esegue la funzione <code>differenza()</code> e così via. Se il carattere contenuto in <code>operazione</code> non è tra i tre attesi <code>s</code> <code>d</code> <code>m</code> allora (ultimo <code>else</code>) si stampa un messaggio che informa l'utente che l'operazione non è stata riconosciuta.
+La funzione <code>scanf()</code> legge un carattere da tastiera e inserisce il valore all'interno della variabile <code>operazione</code>; il costrutto <code>if-else</code> ci serve per eseguire la funzione corrispondente all'operazione richiesta dall'utente attraverso la digitazione di un carattere della tastiera.
+Se <code>operazione</code> contiene il carattere <code>s</code>, allora si eseguirà la funzione <code>somma()</code> (solo quella e nessun'altra); altrimenti, se il carattere è <code>d</code>, si esegue la funzione <code>differenza()</code> e così via. Se il carattere contenuto in <code>operazione</code> non è tra i tre attesi <code>s</code>, <code>d</code>, <code>m</code>, allora (ultimo <code>else</code>) si stampa un messaggio che informa l'utente che l'operazione non è stata riconosciuta.
 </p>
 
-Tornando alle variabili possiamo riassumere quanto segue:
+Tornando alle variabili, possiamo riassumere quanto segue:
 
 **Variabili globali**: 
 * visibili in tutto il file da ogni funzione
-* se non inizializzate ad un valore sono settate a zero automaticamente
+* se non inizializzate a un valore, sono settate a zero automaticamente
 * il loro ciclo di vita coincide con quello del programma, la memoria è allocata prima dell'esecuzione e deallocata al termine dell'esecuzione
   
 **Variabili locali**:
 * visibili solo nel blocco dove sono state dichiarate
-* se non inizializzate settate ad un valore assolutamente casuale
+* se non inizializzate, sono settate a un valore assolutamente casuale
 * il loro ciclo di vita è limitato all'esecuzione del blocco dove sono dichiarate
 
 <p align="justify">
-L'uso di variabili globali per comunicare con le funzioni è scorretto ed è stato mostrato solo come esempio per introdurre le variabili globali. Meno uso facciamo delle variabili globali e meglio è.
-Per comunicare con le funzioni e scambiare valori col chiamante è sempre preferibile usare i parametri in ingresso ed i valori di ritorno, quindi le variabili locali.
-Di sotto è riportato il codice corretto che elimina l'uso improprio delle variabili globali:
+L'uso di variabili globali per comunicare con le funzioni è scorretto ed è stato mostrato solo come esempio per introdurre le variabili globali. Meno uso facciamo delle variabili globali, meglio è.
+Per comunicare con le funzioni e scambiare valori col chiamante è sempre preferibile usare i parametri in ingresso e i valori di ritorno, quindi le variabili locali.
+Di seguito è riportato il codice corretto che elimina l'uso improprio delle variabili globali:
 </p>
 
 <details>
@@ -1177,7 +1177,7 @@ int moltiplicazione(int primo_fattore, int secondo_fattore){
 ```
 
 <p align="justify">
-come puoi vedere le variabili <code>primo</code> e <code>secondo</code> sono state dichiarate dentro la funzione <code>main()</code> e quindi sono locali (sono visibili solo all'interno di questa funzione), esattamente come <code>risultato</code> ed <code>operazione</code>. Solo <code>risultato</code> è inizializzato a zero, le altre variabili conterranno all'inizio un valore casuale (le variabili locali non sono inizializzate automaticamente)
+Come puoi vedere, le variabili <code>primo</code> e <code>secondo</code> sono state dichiarate dentro la funzione <code>main()</code> e quindi sono locali (sono visibili solo all'interno di questa funzione), esattamente come <code>risultato</code> e <code>operazione</code>. Solo <code>risultato</code> è inizializzato a zero; le altre variabili conterranno all'inizio un valore casuale (le variabili locali non sono inizializzate automaticamente).
 </p>
 
 ```c
