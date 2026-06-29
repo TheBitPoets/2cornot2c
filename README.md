@@ -598,34 +598,34 @@ Un programma C è di fatto una collezione di:
 </ul>
 
 <p align=justify>
-Di seguito provvederemo a dare una definizione sommaria per ogni componente sopra citato, rimandiamo ai singoli paragrafi per una trattazione completa.
+Di seguito daremo una definizione sommaria per ogni componente sopra citato; rimandiamo ai singoli paragrafi per una trattazione completa.
 </p>
 
 <table align="center">
 	<td>:exclamation: <b>Importante</b>
 	<p align=justify>
- Una <b>variabile</b> è una locazione di memoria a cui è stato associato un <b>identificatore</b> cioè un nome per referenziare nel codice quella cella di memoria
+ Una <b>variabile</b> è una locazione di memoria a cui è stato associato un <b>identificatore</b>, cioè un nome per referenziare nel codice quella cella di memoria.
 	</p>
 	</td>
 </table>
 
 <p align="justify">
-Una variabile ha un <b>tipo</b>; il tipo associato ad una variabile definisce appunto che genere di dato essa può contenere (un numero intero, un numero reale, un carattere etc.) in altre parole il tipo della variabile definisce il numero di byte occupati dalla locazione di memoria referenziata dall'identificatore.
-Una variabile può cambiare il valore in essa contenuto durante il ciclo di vita del programma. L'operazione mediante la quale si assegna un valore iniziale ad una variabile è detto <b>inizializzazione</b>, l'operazione attraverso cui si associa un nuovo valore ad una variabile già inizializzata è detta <b>assegnamento</b>
-Prima di usare una variabile è necessario prima dichiararla cioè assegnarle un tipo ed un identificatore. Non è obbligatorio invece assegnare un valore iniziale ad una variabile in fase di dichiarazione. Una variabile dichiarata ma non inizializzata conterrà un valore assolutamente casuale, in pratica il valore che era precedentemente contenuto nella locazione di memoria che è stata associata alla varabile (o meglio al suo identificatore).
+Una variabile ha un <b>tipo</b>; il tipo associato a una variabile definisce appunto che genere di dato essa può contenere (un numero intero, un numero reale, un carattere, etc.). In altre parole, il tipo della variabile definisce il numero di byte occupati dalla locazione di memoria referenziata dall'identificatore.
+Una variabile può cambiare il valore in essa contenuto durante il ciclo di vita del programma. L'operazione mediante la quale si assegna un valore iniziale a una variabile è detta <b>inizializzazione</b>; l'operazione attraverso cui si associa un nuovo valore a una variabile già inizializzata è detta <b>assegnamento</b>.
+Prima di usare una variabile è necessario dichiararla, cioè assegnarle un tipo e un identificatore. Non è obbligatorio invece assegnare un valore iniziale a una variabile in fase di dichiarazione. Una variabile dichiarata ma non inizializzata conterrà un valore assolutamente casuale, in pratica il valore che era precedentemente contenuto nella locazione di memoria che è stata associata alla variabile (o meglio al suo identificatore).
 </p>
 
 ```c
 int var_intera; // dichiarazione di variabile senza inizializzazione
-var_intera = 5; // assegnamento di varabile precedentemente non inizializzata
-int var_intera_inizializzata = 3; // dichirazione di variabile con inizializzazione
+var_intera = 5; // assegnamento di variabile precedentemente non inizializzata
+int var_intera_inizializzata = 3; // dichiarazione di variabile con inizializzazione
 var_intera_inizializzata = 9; // assegnamento
 ```
 
 <table align="center">
 	<td>⚠️ <b>Attenzione</b>
 	<p align=justify>
-Le variabili possono essere sia dichiarate che definite e spesso due termini sono usati per esprimere la stessa cosa. E' prematuro spiegarne la lieve differenza ma tieni a mente per adesso i due termini non sono la stessa cosa.
+Le variabili possono essere sia dichiarate che definite e spesso i due termini sono usati per esprimere la stessa cosa. È prematuro spiegarne la lieve differenza, ma tieni a mente per adesso che i due termini non sono la stessa cosa.
 	</p>
 	</td>
 </table>
@@ -633,7 +633,7 @@ Le variabili possono essere sia dichiarate che definite e spesso due termini son
 <table align="center">
 	<td>❗ <b>Importante</b>
 	<p align=justify>
-Per la <b>costante</b> valgono le stesse considerazioni fatte per le variabili con l'eccezione che per le costanti non è possibile assegnare un nuovo valore una volta che questa è stata inizializzata
+Per la <b>costante</b> valgono le stesse considerazioni fatte per le variabili, con l'eccezione che per le costanti non è possibile assegnare un nuovo valore una volta che queste sono state inizializzate.
 	</p>
 	</td>
 </table>
@@ -645,14 +645,14 @@ const double pi = 3.14; // costante pi greco
 <table align="center">
 	<td>❗ <b>Importante</b>
 	<p align=justify>
-<b>Una funzione</b> è una collezione di istruzioni che svolgono uno specifico compito
+<b>Una funzione</b> è una collezione di istruzioni che svolgono uno specifico compito.
 	</p>
 	</td>
 </table>
 
 <p align="justify">
-una funzione ha un nome (<code>differenza</code> nel codice sottostante), un valore di ritorno, dei parametri di input (<code>minuendo</code> e <code>sottraendo</code> nel codice d'esempio) ed un corpo che è delimitato da una parentesi graffa aperta <code>{</code> ed una chiusa <code>}</code>.
-I parametri d'ingresso detti anche parametri formali sono racchiusi tra una coppia di parentesi tonde: <code>(</code>, <code>)</code>.
+Una funzione ha un nome (<code>differenza</code> nel codice sottostante), un valore di ritorno, dei parametri di input (<code>minuendo</code> e <code>sottraendo</code> nel codice d'esempio) e un corpo che è delimitato da una parentesi graffa aperta <code>{</code> e una chiusa <code>}</code>.
+I parametri d'ingresso, detti anche parametri formali, sono racchiusi tra una coppia di parentesi tonde: <code>(</code>, <code>)</code>.
 </p>
 
 ```c
@@ -664,7 +664,7 @@ int differenza(int minuendo, int sottraendo){
 <table align="center">
 	<td>❗ <b>Importante</b>
 	<p align=justify>
-Il preprocessore viene richiamato dal compilatore come primo step nel processo di generazione del file eseguibile. Il preprocessore ha il compito di effettuare delle semplici sostituzioni di testo; esistono diverse sostituzioni che il preprocessore può effettuare per conto nostro. L'insieme di queste operazioni sono dette <b>chiamate al preprocessore</b>.
+Il preprocessore viene richiamato dal compilatore come primo step nel processo di generazione del file eseguibile. Il preprocessore ha il compito di effettuare delle semplici sostituzioni di testo; esistono diverse sostituzioni che il preprocessore può effettuare per conto nostro. L'insieme di queste operazioni è detto <b>chiamate al preprocessore</b>.
 	</p>
 	</td>
 </table>
