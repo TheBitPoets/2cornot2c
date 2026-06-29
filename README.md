@@ -848,7 +848,7 @@ int differenza(int, int);
 
 <p align="justify">
 Per il compilatore non cambia nulla ma può aiutare un altro programmatore a comprendere il significato e l'uso dei parametri in ingresso.
-Di sotto è riportato un esempio completo che fa uso della funzione <code>sottrazione</code>, come è possibile vedere questa è richiamata all'interno del <code>main()</code> alla riga 8 fornendo in ingresso i due parametri previsti durante le definzione. Se avessimo fornito un numero diverso (sia inferiore che superiore) di parametri o di tipo diverso rispetto al tipo intero il compilatore ci avrebbe dato errore (o forse nel secondo caso no...?!?)
+Di seguito è riportato un esempio completo che fa uso della funzione <code>sottrazione</code>; come è possibile vedere, questa è richiamata all'interno del <code>main()</code> alla riga 8 fornendo in ingresso i due parametri previsti durante la definizione. Se avessimo fornito un numero diverso di parametri (sia inferiore che superiore) o parametri di tipo diverso rispetto al tipo intero, il compilatore ci avrebbe dato errore (o forse nel secondo caso no...?).
 </p>
 
 <details>
