@@ -520,9 +520,9 @@ Dopo aver apportato modifiche al tuo Vagrantfile, esegui <code>vagrant up</code>
 ## Laboratori
 
 <div align="justify">	
-All'interno della cartella <code>/lab</code> nella macchian Linux troverai il codice su cui lavorare.
-Ogni lab ha un numero ed un nome ad esso associato, ad esempio al primo laboratorio è assegnato il numero <code>0</code> ed il nome <code>intro</code>; questo significa che per questo lab esisterà una cartella <code>lab/0_intro</code> che conterrà tutto il codice del lab. All'interno della cartella del laboratorio troverai dei file sorgente con estensione <code>.c</code> o <code>.h</code> anche questi con un numero ed un nome; ad esempio il primo sorgente del lab <code>0_intro</code> è <code>0_hello.c</code>.
-Ogni lab al suo interno contiene una cartella <code>bin</code> destinata ad ospitare i file eseguibili ottenuti al termine del processo di compilazione.
+All'interno della cartella <code>/lab</code> nella macchina Linux troverai il codice su cui lavorare.
+Ogni lab ha un numero e un nome associati; ad esempio, al primo laboratorio sono assegnati il numero <code>0</code> e il nome <code>intro</code>. Questo significa che per questo lab esisterà una cartella <code>lab/0_intro</code> che conterrà tutto il codice del lab. All'interno della cartella del laboratorio troverai dei file sorgente con estensione <code>.c</code> o <code>.h</code>, anche questi con un numero e un nome; ad esempio il primo sorgente del lab <code>0_intro</code> è <code>0_hello.c</code>.
+Ogni lab contiene al suo interno una cartella <code>bin</code> destinata a ospitare i file eseguibili ottenuti al termine del processo di compilazione.
 </div>
 
 ## Il processo di compilazione
