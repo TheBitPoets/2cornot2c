@@ -725,7 +725,7 @@ La prima forma è tollerata da vecchie versioni del C (C90) o pre-ANSI C, ma non
 </table>
 
 <p align=justify>
-Riprendendo la funzione <code>differenza</code> usata precedentemente avremo rispettivamente: la definizione in basso
+Riprendendo la funzione <code>differenza</code> usata precedentemente, avremo rispettivamente la definizione in basso:
 </p>
 
 ```c
@@ -743,7 +743,7 @@ int differenza(int, int);  // prototipo della funzione differenza
 ```
 
 <p align=justify>
-volendo è possibile fornire anche i nomi dei parametri in ingresso ma nulla cambia ai fini della dichiarazione.
+Volendo è possibile fornire anche i nomi dei parametri in ingresso, ma nulla cambia ai fini della dichiarazione.
 </p>
 
 ```c
