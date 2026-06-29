@@ -416,13 +416,13 @@ Questa cartella <code>2cornot2c\lab</code> è montata automaticamente sul file s
 Tutto quello che verrà modificato sulla macchina Linux in <code>/lab</code> (VM o macchina guest) verrà visto sulla macchina Windows (host) in <code>2cornot2c\lab</code>. 
 </p>
 
-1) Clona il repository con il codice ed il Vagrantfile
+1) Clona il repository con il codice e il Vagrantfile
 
  ```bash
 git clone https://github.com/kinderp/2cornot2c.git
 ```
 
-2) Entra dentro la directory root del repository (`2cornot2c`)
+2) Entra nella directory root del repository (`2cornot2c`)
    
 ```bash
 cd 2cornot2c
@@ -440,7 +440,7 @@ vagrant up
      vagrant plugin install vagrant-vbguest
 ```
 
-5) Installa la Guest Additions
+5) Installa le Guest Additions
 
 ```
 vagrant vbguest
@@ -452,7 +452,7 @@ vagrant vbguest
 vagrant reload
 ```
 
-7) Apri una sessione ssh sulla macchina appena avviata
+7) Apri una sessione SSH sulla macchina appena avviata
 
 ```bash
 vagrant ssh
