@@ -604,21 +604,21 @@ Di seguito daremo una definizione sommaria per ogni componente sopra citato; rim
 <table align="center">
 	<td>:exclamation: <b>Importante</b>
 	<p align=justify>
- Una <b>variabile</b> è una locazione di memoria a cui è stato associato un <b>identificatore</b> cioè un nome per referenziare nel codice quella cella di memoria
+ Una <b>variabile</b> è una locazione di memoria a cui è stato associato un <b>identificatore</b>, cioè un nome per referenziare nel codice quella cella di memoria.
 	</p>
 	</td>
 </table>
 
 <p align="justify">
-Una variabile ha un <b>tipo</b>; il tipo associato ad una variabile definisce appunto che genere di dato essa può contenere (un numero intero, un numero reale, un carattere etc.) in altre parole il tipo della variabile definisce il numero di byte occupati dalla locazione di memoria referenziata dall'identificatore.
-Una variabile può cambiare il valore in essa contenuto durante il ciclo di vita del programma. L'operazione mediante la quale si assegna un valore iniziale ad una variabile è detto <b>inizializzazione</b>, l'operazione attraverso cui si associa un nuovo valore ad una variabile già inizializzata è detta <b>assegnamento</b>
-Prima di usare una variabile è necessario prima dichiararla cioè assegnarle un tipo ed un identificatore. Non è obbligatorio invece assegnare un valore iniziale ad una variabile in fase di dichiarazione. Una variabile dichiarata ma non inizializzata conterrà un valore assolutamente casuale, in pratica il valore che era precedentemente contenuto nella locazione di memoria che è stata associata alla varabile (o meglio al suo identificatore).
+Una variabile ha un <b>tipo</b>; il tipo associato a una variabile definisce appunto che genere di dato essa può contenere (un numero intero, un numero reale, un carattere, etc.). In altre parole, il tipo della variabile definisce il numero di byte occupati dalla locazione di memoria referenziata dall'identificatore.
+Una variabile può cambiare il valore in essa contenuto durante il ciclo di vita del programma. L'operazione mediante la quale si assegna un valore iniziale a una variabile è detta <b>inizializzazione</b>; l'operazione attraverso cui si associa un nuovo valore a una variabile già inizializzata è detta <b>assegnamento</b>.
+Prima di usare una variabile è necessario dichiararla, cioè assegnarle un tipo e un identificatore. Non è obbligatorio invece assegnare un valore iniziale a una variabile in fase di dichiarazione. Una variabile dichiarata ma non inizializzata conterrà un valore assolutamente casuale, in pratica il valore che era precedentemente contenuto nella locazione di memoria che è stata associata alla variabile (o meglio al suo identificatore).
 </p>
 
 ```c
 int var_intera; // dichiarazione di variabile senza inizializzazione
-var_intera = 5; // assegnamento di varabile precedentemente non inizializzata
-int var_intera_inizializzata = 3; // dichirazione di variabile con inizializzazione
+var_intera = 5; // assegnamento di variabile precedentemente non inizializzata
+int var_intera_inizializzata = 3; // dichiarazione di variabile con inizializzazione
 var_intera_inizializzata = 9; // assegnamento
 ```
 
