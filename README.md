@@ -553,7 +553,7 @@ Compila il sorgente <code>hello.c</code> lanciando il seguente comando: <code>gc
 </p>
 
 <p align="justify">
-Nella figura di sopra è mostato l'intero processo di compilazione che è composto da almeno quattro fasi; come puoi vedere i due parametri passati al compilatore con: <code>gcc -o hello hello.c</code> sono ripsettivamente il nome del file di input del processo (<code>hello.c</code>) cioè il sorgente di partenza ed il file di output (<code>hello</code>) cioè l'eseguibile che vogliamo generare al termine del processo.
+Nella figura sopra è mostrato l'intero processo di compilazione, che è composto da almeno quattro fasi; come puoi vedere, i due parametri passati al compilatore con <code>gcc -o hello hello.c</code> sono rispettivamente il nome del file di input del processo (<code>hello.c</code>), cioè il sorgente di partenza, e il file di output (<code>hello</code>), cioè l'eseguibile che vogliamo generare al termine del processo.
 Volendo è possibile richiedere al compilatore di fermarsi ad uno specifico step senza produrre l'output finale. Le quattro fasi del processo di compilazione sono rispettivamente:
 </p>
 
