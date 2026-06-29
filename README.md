@@ -1102,22 +1102,22 @@ La funzione <code>scanf()</code> legge un carattere da tastiera e inserisce il v
 Se <code>operazione</code> contiene il carattere <code>s</code>, allora si eseguirà la funzione <code>somma()</code> (solo quella e nessun'altra); altrimenti, se il carattere è <code>d</code>, si esegue la funzione <code>differenza()</code> e così via. Se il carattere contenuto in <code>operazione</code> non è tra i tre attesi <code>s</code>, <code>d</code>, <code>m</code>, allora (ultimo <code>else</code>) si stampa un messaggio che informa l'utente che l'operazione non è stata riconosciuta.
 </p>
 
-Tornando alle variabili possiamo riassumere quanto segue:
+Tornando alle variabili, possiamo riassumere quanto segue:
 
 **Variabili globali**: 
 * visibili in tutto il file da ogni funzione
-* se non inizializzate ad un valore sono settate a zero automaticamente
+* se non inizializzate a un valore, sono settate a zero automaticamente
 * il loro ciclo di vita coincide con quello del programma, la memoria è allocata prima dell'esecuzione e deallocata al termine dell'esecuzione
   
 **Variabili locali**:
 * visibili solo nel blocco dove sono state dichiarate
-* se non inizializzate settate ad un valore assolutamente casuale
+* se non inizializzate, sono settate a un valore assolutamente casuale
 * il loro ciclo di vita è limitato all'esecuzione del blocco dove sono dichiarate
 
 <p align="justify">
-L'uso di variabili globali per comunicare con le funzioni è scorretto ed è stato mostrato solo come esempio per introdurre le variabili globali. Meno uso facciamo delle variabili globali e meglio è.
-Per comunicare con le funzioni e scambiare valori col chiamante è sempre preferibile usare i parametri in ingresso ed i valori di ritorno, quindi le variabili locali.
-Di sotto è riportato il codice corretto che elimina l'uso improprio delle variabili globali:
+L'uso di variabili globali per comunicare con le funzioni è scorretto ed è stato mostrato solo come esempio per introdurre le variabili globali. Meno uso facciamo delle variabili globali, meglio è.
+Per comunicare con le funzioni e scambiare valori col chiamante è sempre preferibile usare i parametri in ingresso e i valori di ritorno, quindi le variabili locali.
+Di seguito è riportato il codice corretto che elimina l'uso improprio delle variabili globali:
 </p>
 
 <details>
