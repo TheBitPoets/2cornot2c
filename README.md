@@ -1188,8 +1188,8 @@ char operazione;
 
 ## Classi di memorizzazione
 
-Conoscere la differenza tra variabili globali e locali è un buon punto di partenza, le cose sono però più complesse.
-Agli identificatori è associato uno **scope** (**visibilità**), alle variabili invece uno **storage duration** (**tempo di vita**) ed il **linkage** (**collegamento**).
+Conoscere la differenza tra variabili globali e locali è un buon punto di partenza; le cose sono però più complesse.
+Agli identificatori è associato uno **scope** (**visibilità**), alle variabili invece uno **storage duration** (**tempo di vita**) e il **linkage** (**collegamento**).
 
 Lo **scope** può essere di quattro tipi:
 
@@ -1207,7 +1207,7 @@ Lo **storage duration** può essere di quattro tipi:
 * **auto**
 * **allocated**
 
-Ricordiamo che lo **storage duration** rappresenta il tempo di vita della variabile ovvero per quanto tempo questa rimane allocata in memoria
+Ricordiamo che lo **storage duration** rappresenta il tempo di vita della variabile, ovvero per quanto tempo questa rimane allocata in memoria.
 
 Il **linkage** può essere di tre tipi:
 
@@ -1220,9 +1220,9 @@ Il **linkage** definisce se una variabile può essere condivisa dal codice dello
 ## Block scope
 
 Un blocco è un insieme di istruzioni comprese tra `{` e `}`.
-Esempi di blocchi (alcuni li abbbimao già incontrati) sono:
+Esempi di blocchi (alcuni li abbiamo già incontrati) sono:
 
-* il corpo nella definzione di una funzione
+* il corpo nella definizione di una funzione
 
   ```c
   int differenza(int minuendo, int sottraendo){
@@ -1230,7 +1230,7 @@ Esempi di blocchi (alcuni li abbbimao già incontrati) sono:
   }
   ```
 
-* il corpo nei costrutti di controllo del flusso `if-else`, `for`, `while` etc
+* il corpo nei costrutti di controllo del flusso `if-else`, `for`, `while` etc.
 
   ```c
   if(operazione == 's'){
@@ -1254,7 +1254,7 @@ Esempi di blocchi (alcuni li abbbimao già incontrati) sono:
 <table align="center">
 	<td>❗ <b>Importante</b>
 	<p align=justify>
-I parametri formali di una funzione, anche se dichiarati fuori del corpo della funzione (dal blocco) appartengono al corpo e quindi hanno anch'essi un <b>block scope</b>
+I parametri formali di una funzione, anche se dichiarati fuori dal corpo della funzione (dal blocco), appartengono al corpo e quindi hanno anch'essi un <b>block scope</b>.
 	</p>
 	</td>
 </table>
@@ -1266,7 +1266,7 @@ I parametri formali di una funzione, anche se dichiarati fuori del corpo della f
 	</p>
 	<p align=justify>
 Dal C99 è possibile dichiarare le variabili all'interno del blocco in qualsiasi posizione al suo interno.
-Questo è utile soprattutto per le variabili indici di un ciclo o per documentare meglio il proprio codice dichiarando le variabili il più vicino possibile alla riga che fa   uso effettivamente della stessa.
+Questo è utile soprattutto per le variabili indice di un ciclo o per documentare meglio il proprio codice, dichiarando le variabili il più vicino possibile alla riga che ne fa effettivamente uso.
 	</p>
 	</td>
 </table>
