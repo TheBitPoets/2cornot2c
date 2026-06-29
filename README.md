@@ -1,6 +1,6 @@
 # 2cornot2c
-It's a 101 C course for my students.
-Sorry, only italian version so far.
+This is a C 101 course for my students.
+Sorry, only the Italian version is available so far.
 
 ## Indice
   * [Introduzione](#introduzione)
@@ -388,17 +388,17 @@ Il corso è fondamentalmente pratico, non è richiesto alcun prerequisito e null
 Prima di iniziare è giusto ricordare che per svolgere i laboratori richiesti è necessaria la conoscenza di alcuni strumenti, in particolare:
 </p>
 
-* [git](https://git-scm.com/download/win)
-* [virtualbox](https://www.virtualbox.org/wiki/Downloads) Installa la versione 7.0 che è la più recente compatibile con vagrant. Leggi [qui](https://developer.hashicorp.com/vagrant/docs/providers/virtualbox) per maggiori info
-  * [Microsoft Visual C++](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170) Solo in caso ti venga richiesto durante l'installaizone di VBox (dovrebbe andare in errore)
-* [vagrant](https://developer.hashicorp.com/vagrant/install?ajs_aid=e022a39f-7694-4bed-a4cd-f721f515b885&product_intent=vagrant#windows)
+* [Git](https://git-scm.com/download/win)
+* [VirtualBox](https://www.virtualbox.org/wiki/Downloads) Installa la versione 7.0, che è la più recente compatibile con Vagrant. Leggi [qui](https://developer.hashicorp.com/vagrant/docs/providers/virtualbox) per maggiori informazioni
+  * [Microsoft Visual C++](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170) solo in caso ti venga richiesto durante l'installazione di VBox (dovrebbe andare in errore)
+* [Vagrant](https://developer.hashicorp.com/vagrant/install?ajs_aid=e022a39f-7694-4bed-a4cd-f721f515b885&product_intent=vagrant#windows)
 
 <p align=justify>
-I link forniti sopra portano alle versioni dei software per architettura `amd64` in ambiente `windows`, questo a causa dell'assenza di macchine linux nei lab scolastici.
+I link forniti sopra portano alle versioni dei software per architettura `amd64` in ambiente `Windows`; questo a causa dell'assenza di macchine Linux nei lab scolastici.
 </p>
 
 <p align="justify">
- <b>GIT</b> e <b>VAGRANT</b> ci serviranno per ottenere un ambiente di sviluppo identico per tutti e per un provisioning automatico; in altre parole git ci permetterà di condividere il codice dei laboratori e vagrant di condividere la stessa macchina virtuale (<code>ubuntu-22.04</code>) con l'ambiente di sviluppo preinstallato.
+ <b>Git</b> e <b>Vagrant</b> ci serviranno per ottenere un ambiente di sviluppo identico per tutti e per un provisioning automatico; in altre parole, Git ci permetterà di condividere il codice dei laboratori e Vagrant di condividere la stessa macchina virtuale (<code>ubuntu-22.04</code>) con l'ambiente di sviluppo preinstallato.
 </p>
 
 A questo [link](https://drive.google.com/file/d/14UWaWALUwGvrCgxXmXmGykfPFDSZhM0K/view?usp=sharing) trovi un video con tutti i passaggi per installare i software sopra elencati.
@@ -410,19 +410,19 @@ Guarda il <a href="https://drive.google.com/file/d/1WkLleojruhYkJ31kiY00jUknGVAG
 </p>
 
 <p align="justify">
-I passi seguenti permettono di duplicare sulla tua macchina locale l'ambiente di sviluppo (codice e vm).
-Nella directory radice del progetto (<code>2cornot2c</code> che otterrai clonando il repository nei passi seguenti) troverai una directory <code>lab</code>con il codice c per tutti laboratori. 
+I passi seguenti permettono di duplicare sulla tua macchina locale l'ambiente di sviluppo (codice e VM).
+Nella directory radice del progetto (<code>2cornot2c</code> che otterrai clonando il repository nei passi seguenti) troverai una directory <code>lab</code> con il codice C per tutti i laboratori. 
 Questa cartella <code>2cornot2c\lab</code> è montata automaticamente sul file system della macchina virtuale nella cartella <code>/lab</code>. 
-Tutto quello che verrà modificato sulla macchina linux in <code>/lab</code>( vm o macchina guest) verrà visto sulla macchina windows (host) in <code>2cornot2c\lab</code>. 
+Tutto quello che verrà modificato sulla macchina Linux in <code>/lab</code> (VM o macchina guest) verrà visto sulla macchina Windows (host) in <code>2cornot2c\lab</code>. 
 </p>
 
-1) Clona il repository con il codice ed il Vagrantfile
+1) Clona il repository con il codice e il Vagrantfile
 
  ```bash
 git clone https://github.com/kinderp/2cornot2c.git
 ```
 
-2) Entra dentro la directory root del repository (`2cornot2c`)
+2) Entra nella directory root del repository (`2cornot2c`)
    
 ```bash
 cd 2cornot2c
@@ -440,7 +440,7 @@ vagrant up
      vagrant plugin install vagrant-vbguest
 ```
 
-5) Installa la Guest Additions
+5) Installa le Guest Additions
 
 ```
 vagrant vbguest
@@ -452,7 +452,7 @@ vagrant vbguest
 vagrant reload
 ```
 
-7) Apri una sessione ssh sulla macchina appena avviata
+7) Apri una sessione SSH sulla macchina appena avviata
 
 ```bash
 vagrant ssh
@@ -471,11 +471,11 @@ Apri il terminale o il prompt dei comandi, vai alla directory del progetto Vagra
      vagrant plugin install vagrant-vbguest
 ```
 
-2. Configura il Guest Additions nel tuo Vagrantfile:
+2. Configura le Guest Additions nel tuo Vagrantfile:
 
 <p align="justify">	
 Apri il tuo Vagrantfile.<br>
-Aggiungi le seguenti line all'interno del blocco `config.vm.provision` (o in cima se lo vuoi applicare a tutte le VMs)
+Aggiungi le seguenti righe all'interno del blocco `config.vm.provision` (o in cima se vuoi applicarle a tutte le VM)
 </p>
 
 ```
@@ -483,7 +483,7 @@ Aggiungi le seguenti line all'interno del blocco `config.vm.provision` (o in cim
 ```
 
 <p align="justify">	
-La riga di sopra disabilita gli aggiornamenti automatici delle Guest Additions, il che può essere utile se preferisci gestirli manualmente o se riscontri problemi con il processo di aggiornamento automatico. In alternativa, puoi abilitarlo in base alla presenza o meno del plugin:
+La riga precedente disabilita gli aggiornamenti automatici delle Guest Additions, il che può essere utile se preferisci gestirli manualmente o se riscontri problemi con il processo di aggiornamento automatico. In alternativa, puoi abilitarli in base alla presenza o meno del plugin:
 </p>
 
 ```
@@ -493,36 +493,36 @@ La riga di sopra disabilita gli aggiornamenti automatici delle Guest Additions, 
 ```
 
 <p align="justify">	
-Questo assicura che l'impostazione è applicata solamente se il plugin è installato
+Questo assicura che l'impostazione sia applicata solamente se il plugin è installato.
 </p>
 
-3. Gestisci i Guest Additions (Opzionale):
+3. Gestisci le Guest Additions (opzionale):
 
 <p align=justify>
-Se vuoi in maggiore controllo sull'installazione dei Guest Additions, tu puoi usare i seguenti comandi:
+Se vuoi un maggiore controllo sull'installazione delle Guest Additions, puoi usare i seguenti comandi:
 </p>
 
 * `vagrant vbguest`: Questo comando controlla lo stato delle Guest Additions e tenta di installarle o aggiornarle se necessario.
 * `vagrant vbguest --do install`: Questo forza l'installazione delle Guest Additions.
-* `vagrant vbguest --do rebuild`: Questo ricostruisce i moduli del kernel del Guest Additions, il che può essere utile se hai aggiornato il tuo kernel.
+* `vagrant vbguest --do rebuild`: Questo ricostruisce i moduli del kernel delle Guest Additions, il che può essere utile se hai aggiornato il tuo kernel.
 * `vagrant vbguest --status`: Questo mostra lo stato attuale delle aggiunte degli ospiti.
 
 <p align=justify>
-Tu puoi anche scaricare il file ISO dei Guest Additions e montarlo manualmente all'interno della VM se secessario
+Puoi anche scaricare il file ISO delle Guest Additions e montarlo manualmente all'interno della VM se necessario.
 </p>
 
-4. Starta or Ricarica la tua macchina: 
+4. Avvia o ricarica la tua macchina: 
 
 <p align="justify">	
-Dopo aver apportato modifiche al tuo Vagrantfile, esegui <code>vagrant up</code> per avviare il computer o <code>vagrant reload</code> per applicare le modifiche. Il plugin <code>vagrant-vbguest</code> gestirà l'installazione o l'aggiornamento delle Guest Additions in base alla tua configurazione. Seguendo questi passaggi, puoi gestire efficacemente l'installazione e l'aggiornamento delle Guest Additions di VirtualBox all'interno del tuo ambiente Vagrant.
+Dopo aver apportato modifiche al tuo Vagrantfile, esegui <code>vagrant up</code> per avviare la macchina o <code>vagrant reload</code> per applicare le modifiche. Il plugin <code>vagrant-vbguest</code> gestirà l'installazione o l'aggiornamento delle Guest Additions in base alla tua configurazione. Seguendo questi passaggi, puoi gestire efficacemente l'installazione e l'aggiornamento delle Guest Additions di VirtualBox all'interno del tuo ambiente Vagrant.
 </p>
 
 ## Laboratori
 
 <div align="justify">	
-All'interno della cartella <code>/lab</code> nella macchian Linux troverai il codice su cui lavorare.
-Ogni lab ha un numero ed un nome ad esso associato, ad esempio al primo laboratorio è assegnato il numero <code>0</code> ed il nome <code>intro</code>; questo significa che per questo lab esisterà una cartella <code>lab/0_intro</code> che conterrà tutto il codice del lab. All'interno della cartella del laboratorio troverai dei file sorgente con estensione <code>.c</code> o <code>.h</code> anche questi con un numero ed un nome; ad esempio il primo sorgente del lab <code>0_intro</code> è <code>0_hello.c</code>.
-Ogni lab al suo interno contiene una cartella <code>bin</code> destinata ad ospitare i file eseguibili ottenuti al termine del processo di compilazione.
+All'interno della cartella <code>/lab</code> nella macchina Linux troverai il codice su cui lavorare.
+Ogni lab ha un numero e un nome associati; ad esempio, al primo laboratorio sono assegnati il numero <code>0</code> e il nome <code>intro</code>. Questo significa che per questo lab esisterà una cartella <code>lab/0_intro</code> che conterrà tutto il codice del lab. All'interno della cartella del laboratorio troverai dei file sorgente con estensione <code>.c</code> o <code>.h</code>, anche questi con un numero e un nome; ad esempio il primo sorgente del lab <code>0_intro</code> è <code>0_hello.c</code>.
+Ogni lab contiene al suo interno una cartella <code>bin</code> destinata a ospitare i file eseguibili ottenuti al termine del processo di compilazione.
 </div>
 
 ## Il processo di compilazione
