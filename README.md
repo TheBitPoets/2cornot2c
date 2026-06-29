@@ -753,7 +753,7 @@ int differenza(int minuendo, int sottraendo);  // prototipo della funzione diffe
 <table align="center">
 	<td>❗ <b>Importante</b>
 	<p align=justify>
-Il compilatore quando incontra una chiamata a funzione deve conoscerne almeno il prototipo per verificare che questa stia venendo usata correttamente (il corretto numero e tipo per i parametri di ingresso e che il valore di ritorno sia assegnato ad una variabile compatibile, dello stesso tipo). E' necessario dunque, prima di usare una qualsiasi funzione, aver fornito nelle righe precedenti l'uso della funzione almeno il suo prototipo o la definizione completa. 
+Il compilatore, quando incontra una chiamata a funzione, deve conoscerne almeno il prototipo per verificare che questa venga usata correttamente (il corretto numero e tipo dei parametri di ingresso e che il valore di ritorno sia assegnato a una variabile compatibile, dello stesso tipo). È necessario dunque, prima di usare una qualsiasi funzione, aver fornito nelle righe precedenti almeno il suo prototipo o la definizione completa. 
 	</p>
 	</td>
 </table>
