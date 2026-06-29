@@ -1177,7 +1177,7 @@ int moltiplicazione(int primo_fattore, int secondo_fattore){
 ```
 
 <p align="justify">
-come puoi vedere le variabili <code>primo</code> e <code>secondo</code> sono state dichiarate dentro la funzione <code>main()</code> e quindi sono locali (sono visibili solo all'interno di questa funzione), esattamente come <code>risultato</code> ed <code>operazione</code>. Solo <code>risultato</code> è inizializzato a zero, le altre variabili conterranno all'inizio un valore casuale (le variabili locali non sono inizializzate automaticamente)
+Come puoi vedere, le variabili <code>primo</code> e <code>secondo</code> sono state dichiarate dentro la funzione <code>main()</code> e quindi sono locali (sono visibili solo all'interno di questa funzione), esattamente come <code>risultato</code> e <code>operazione</code>. Solo <code>risultato</code> è inizializzato a zero; le altre variabili conterranno all'inizio un valore casuale (le variabili locali non sono inizializzate automaticamente).
 </p>
 
 ```c
