@@ -645,14 +645,14 @@ const double pi = 3.14; // costante pi greco
 <table align="center">
 	<td>❗ <b>Importante</b>
 	<p align=justify>
-<b>Una funzione</b> è una collezione di istruzioni che svolgono uno specifico compito
+<b>Una funzione</b> è una collezione di istruzioni che svolgono uno specifico compito.
 	</p>
 	</td>
 </table>
 
 <p align="justify">
-una funzione ha un nome (<code>differenza</code> nel codice sottostante), un valore di ritorno, dei parametri di input (<code>minuendo</code> e <code>sottraendo</code> nel codice d'esempio) ed un corpo che è delimitato da una parentesi graffa aperta <code>{</code> ed una chiusa <code>}</code>.
-I parametri d'ingresso detti anche parametri formali sono racchiusi tra una coppia di parentesi tonde: <code>(</code>, <code>)</code>.
+Una funzione ha un nome (<code>differenza</code> nel codice sottostante), un valore di ritorno, dei parametri di input (<code>minuendo</code> e <code>sottraendo</code> nel codice d'esempio) e un corpo che è delimitato da una parentesi graffa aperta <code>{</code> e una chiusa <code>}</code>.
+I parametri d'ingresso, detti anche parametri formali, sono racchiusi tra una coppia di parentesi tonde: <code>(</code>, <code>)</code>.
 </p>
 
 ```c
