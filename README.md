@@ -1296,29 +1296,29 @@ int uno(){
 
 Il **linkage** definisce se una variabile è visibile in più file diversi o solo nel file in cui è definita.
 
-Esistono tre tipi di **linkage**: `no linkage` `external` ed `internal`.
+Esistono tre tipi di **linkage**: `no linkage`, `external linkage` e `internal linkage`.
 
 <p align=justify>
-Le variabili con un <b>block scope</b> (quelle locali) sono <b>no linkage</b>: cioè non sono visibili nell'intero file in cui sono definite ma la loro visibilità è limitata al blocco che le ospita.
+Le variabili con un <b>block scope</b> (quelle locali) hanno <b>no linkage</b>: cioè non sono visibili nell'intero file in cui sono definite, ma la loro visibilità è limitata al blocco che le ospita.
 </p>
 
 <p align="justify">
-Le variabili con un <b>file scope</b>  (quelle globali) sono o <b>external linkage</b> o <b>interanl</b>: se <code>external</code> la variabile può essere vista anche in altri file del programma.
-Se <code>internal</code> la variabile è visibile in tutto il file (quindi a tutte le funzione del file) in cui è stata definita ma non in altri file del programma.
+Le variabili con un <b>file scope</b> (quelle globali) hanno o <b>external linkage</b> o <b>internal linkage</b>: se hanno <code>external</code>, possono essere viste anche in altri file del programma.
+Se hanno <code>internal</code>, sono visibili in tutto il file in cui sono state definite (quindi a tutte le funzioni del file), ma non in altri file del programma.
 </p>
 
 <p align="justify">
-Le variabili globali hanno automaticamente un <b>external linkage</b> quindi potenzialmente possono essere viste in altri file sorgente del programma. Per restringere il linkage da <b>external</b> ad <b>internal</b> si usa la <i>keyword</i> <b>static</b> al momento della definizione della variabile, vediamo un esempio
+Le variabili globali hanno automaticamente un <b>external linkage</b>, quindi possono potenzialmente essere viste in altri file sorgente del programma. Per restringere il linkage da <b>external</b> a <b>internal</b>, si usa la <i>keyword</i> <b>static</b> al momento della definizione della variabile. Vediamo un esempio:
 </p>
 
 ```c
 int globale_esterna = 10; /* variabile globale, file scope, external linkage.
-                           * E' visibile all'interno del file sorgente corrente e potenzialmente
-			   * anche in tutti gli altri sorgenti del programma
+                           * È visibile all'interno del file sorgente corrente e potenzialmente
+			   * anche in tutti gli altri file sorgente del programma
                            */
 
-int static globale_interna = 100; /* variabile globale, file scope, internal linkage in  quanto usa
-                                   * keyword static. E' visibile solo all'interno del file sorgente
+int static globale_interna = 100; /* variabile globale, file scope, internal linkage in quanto usa
+                                   * la keyword static. È visibile solo all'interno del file sorgente
 				   * corrente
                                    */
 
@@ -1327,13 +1327,13 @@ int main(void) {
 }
 ```
 <p align="justify">
-E' buona norma, soprattutto se il tuo programma ha grosse dimensioni in termini di file, dichiarare <b>static</b> le tue variabili globali se queste servono solo all'interno del file corrente. Questo previene il problema di uno spazio di nomi globale pieno di identificatori già utilizzati.
+È buona norma, soprattutto se il tuo programma è di grandi dimensioni in termini di file, dichiarare <b>static</b> le variabili globali che servono solo all'interno del file corrente. Questo previene il problema di uno spazio di nomi globale pieno di identificatori già utilizzati.
 </p>
 
 <table align="center">
 	<td>⚠️ <b>Attenzione</b>
 	<p align=justify>
-La parola chiave <b>static</b> non ha nulla a che vedere con lo <b>storage duration</b> di tipo static. Tutte le variabili globali (sia di tipo <b>external</b> che <b>internal</b> linkage) hanno uno <b>storage durantion</b> di tipo <i>static</i> cioè esistono in memoria per tutto il tempo di esecuzione del programma. Affronteremo nel dettaglio lo storage duration nei paragrafi successivi.
+La parola chiave <b>static</b> non ha nulla a che vedere con lo <b>storage duration</b> di tipo <i>static</i>. Tutte le variabili globali (sia di tipo <b>external</b> sia di tipo <b>internal</b> linkage) hanno uno <b>storage duration</b> di tipo <i>static</i>, cioè esistono in memoria per tutto il tempo di esecuzione del programma. Affronteremo nel dettaglio lo storage duration nei paragrafi successivi.
 	</p>
 	</td>
 </table>
