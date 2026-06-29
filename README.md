@@ -398,7 +398,7 @@ I link forniti sopra portano alle versioni dei software per architettura `amd64`
 </p>
 
 <p align="justify">
- <b>GIT</b> e <b>VAGRANT</b> ci serviranno per ottenere un ambiente di sviluppo identico per tutti e per un provisioning automatico; in altre parole git ci permetterà di condividere il codice dei laboratori e vagrant di condividere la stessa macchina virtuale (<code>ubuntu-22.04</code>) con l'ambiente di sviluppo preinstallato.
+ <b>Git</b> e <b>Vagrant</b> ci serviranno per ottenere un ambiente di sviluppo identico per tutti e per un provisioning automatico; in altre parole, Git ci permetterà di condividere il codice dei laboratori e Vagrant di condividere la stessa macchina virtuale (<code>ubuntu-22.04</code>) con l'ambiente di sviluppo preinstallato.
 </p>
 
 A questo [link](https://drive.google.com/file/d/14UWaWALUwGvrCgxXmXmGykfPFDSZhM0K/view?usp=sharing) trovi un video con tutti i passaggi per installare i software sopra elencati.
