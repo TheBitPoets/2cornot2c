@@ -410,10 +410,10 @@ Guarda il <a href="https://drive.google.com/file/d/1WkLleojruhYkJ31kiY00jUknGVAG
 </p>
 
 <p align="justify">
-I passi seguenti permettono di duplicare sulla tua macchina locale l'ambiente di sviluppo (codice e vm).
-Nella directory radice del progetto (<code>2cornot2c</code> che otterrai clonando il repository nei passi seguenti) troverai una directory <code>lab</code>con il codice c per tutti laboratori. 
+I passi seguenti permettono di duplicare sulla tua macchina locale l'ambiente di sviluppo (codice e VM).
+Nella directory radice del progetto (<code>2cornot2c</code> che otterrai clonando il repository nei passi seguenti) troverai una directory <code>lab</code> con il codice C per tutti i laboratori. 
 Questa cartella <code>2cornot2c\lab</code> è montata automaticamente sul file system della macchina virtuale nella cartella <code>/lab</code>. 
-Tutto quello che verrà modificato sulla macchina linux in <code>/lab</code>( vm o macchina guest) verrà visto sulla macchina windows (host) in <code>2cornot2c\lab</code>. 
+Tutto quello che verrà modificato sulla macchina Linux in <code>/lab</code> (VM o macchina guest) verrà visto sulla macchina Windows (host) in <code>2cornot2c\lab</code>. 
 </p>
 
 1) Clona il repository con il codice ed il Vagrantfile
