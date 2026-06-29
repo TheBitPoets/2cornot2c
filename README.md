@@ -673,7 +673,7 @@ Il preprocessore viene richiamato dal compilatore come primo step nel processo d
 
 <p align="justify">
 Come da tradizione, il primo esempio di codice è il classico <code>Hello World</code>.
-Il programma di sotto stampa a schermo una semplice frase: <code>Ciao Mondo</code> in inglese.
+Il programma qui sotto stampa a schermo una semplice frase: <code>Ciao Mondo</code>, in inglese.
 </p>
 
 <details>
@@ -692,7 +692,7 @@ int main(void){
 
 <p align="justify">
 Compila il sorgente con: <code>gcc -o 0_hello bin/0_hello</code> e poi esegui il programma con: <code>bin/0_hello</code>.
-Riconosciamo subito una funzione: <code>main()</code>. Questa è una funzione speciale, tutti i programmi C devono averne una in quanto rappresenta il punto di partenza per l'esecuzione di ogni programma. Sei libero di chiamare tutte le altre funzioni a tuo piacimento ma la funzione da cui parte l'esecuzione si deve chiamare <code>main()</code>. Come qualsiasi funzione, <code>main()</code> ha un tipo di ritorno <code>int</code> e dei parametri in ingresso opzionali, in questo caso la funzione <code>main()</code> non si aspetta nessun parametro in ingresso dal chiamante (il sistema operativo) e per esprimere che questa non accetta alcun valore in ingresso si usa la parola riservata <code>void</code>.
+Riconosciamo subito una funzione: <code>main()</code>. Questa è una funzione speciale: tutti i programmi C devono averne una, in quanto rappresenta il punto di partenza per l'esecuzione di ogni programma. Sei libero di chiamare tutte le altre funzioni a tuo piacimento, ma la funzione da cui parte l'esecuzione si deve chiamare <code>main()</code>. Come qualsiasi funzione, <code>main()</code> ha un tipo di ritorno <code>int</code> e dei parametri in ingresso opzionali; in questo caso la funzione <code>main()</code> non si aspetta alcun parametro in ingresso dal chiamante (il sistema operativo) e, per esprimere che questa non accetta alcun valore in ingresso, si usa la parola riservata <code>void</code>.
 Ti potrebbe capitare di vedere la funzione <code>main()</code> in queste versioni:
 </p>
 
@@ -705,13 +705,13 @@ void main()
 ```
 
 <p align="justify">
-La prima forma è tollerata da vecchia versioni del C (C90) o pre ANSI C ma non è accettata da quelle successive (C99, C11); la seconda potrebbe essere tollerata da alcuni compilatori ma se il tuo codice deve funzionare anche su altre macchine è meglio usare qualcosa che funzioni sempre: dunque evitala.
+La prima forma è tollerata da vecchie versioni del C (C90) o pre-ANSI C, ma non è accettata da quelle successive (C99, C11); la seconda potrebbe essere tollerata da alcuni compilatori, ma se il tuo codice deve funzionare anche su altre macchine è meglio usare qualcosa che funzioni sempre: dunque evitala.
 </p>
 
 <table align="center">
 	<td>❗ <b>Importante</b>
 	<p align=justify>
-<b>Dichiarazione di funzione</b> (o <b>prototipo</b>): il tipo di ritorno, i tipi dei parametri in ingresso ed il nome della funzione rappresentano il prototipo della funzione. Quando si fornisce il prototipo di una funzione si usa dire che si effettua la dichiarazione della funzione
+<b>Dichiarazione di funzione</b> (o <b>prototipo</b>): il tipo di ritorno, i tipi dei parametri in ingresso e il nome della funzione rappresentano il prototipo della funzione. Quando si fornisce il prototipo di una funzione si usa dire che si effettua la dichiarazione della funzione.
 	</p>
 	</td>
 </table>
@@ -719,13 +719,13 @@ La prima forma è tollerata da vecchia versioni del C (C90) o pre ANSI C ma non 
 <table align="center">
 	<td>❗ <b>Importante</b>
 	<p align=justify>
-<b>Definizione di funzione</b>: quando si fornisce l'implementazione della funzione (il corpo: cioè le istruzioni contenute tra la coppia di graffe <code>{</code> <code>}</code>) allora si dice che la funzione è definita. La definizione implica anche la dichiarazione
+<b>Definizione di funzione</b>: quando si fornisce l'implementazione della funzione (il corpo, cioè le istruzioni contenute tra la coppia di graffe <code>{</code> <code>}</code>), allora si dice che la funzione è definita. La definizione implica anche la dichiarazione.
 	</p>
 	</td>
 </table>
 
 <p align=justify>
-Riprendendo la funzione <code>differenza</code> usata precedentemente avremo rispettivamente: la definizione in basso
+Riprendendo la funzione <code>differenza</code> usata precedentemente, avremo rispettivamente la definizione in basso:
 </p>
 
 ```c
@@ -743,7 +743,7 @@ int differenza(int, int);  // prototipo della funzione differenza
 ```
 
 <p align=justify>
-volendo è possibile fornire anche i nomi dei parametri in ingresso ma nulla cambia ai fini della dichiarazione.
+Volendo è possibile fornire anche i nomi dei parametri in ingresso, ma nulla cambia ai fini della dichiarazione.
 </p>
 
 ```c
@@ -753,13 +753,13 @@ int differenza(int minuendo, int sottraendo);  // prototipo della funzione diffe
 <table align="center">
 	<td>❗ <b>Importante</b>
 	<p align=justify>
-Il compilatore quando incontra una chiamata a funzione deve conoscerne almeno il prototipo per verificare che questa stia venendo usata correttamente (il corretto numero e tipo per i parametri di ingresso e che il valore di ritorno sia assegnato ad una variabile compatibile, dello stesso tipo). E' necessario dunque, prima di usare una qualsiasi funzione, aver fornito nelle righe precedenti l'uso della funzione almeno il suo prototipo o la definizione completa. 
+Il compilatore, quando incontra una chiamata a funzione, deve conoscerne almeno il prototipo per verificare che questa venga usata correttamente (il corretto numero e tipo dei parametri di ingresso e che il valore di ritorno sia assegnato a una variabile compatibile, dello stesso tipo). È necessario dunque, prima di usare una qualsiasi funzione, aver fornito nelle righe precedenti almeno il suo prototipo o la definizione completa. 
 	</p>
 	</td>
 </table>
 
 <p align="justify">
-La funzione <code>main()</code> fa uso di un'altra funzione: <code>printf()</code> che viene usata per stampare su schermo. Questa funzione è fornita (la sua implementazione) dal linguaggio C stesso, quindi non viene definita (non si fornisce l'implementazione nel nostro file). L'implementazione della <code>printf()</code> sarà fornita sotto forma di file oggetto <code>.o</code> che verrà assemblato dal linker assieme al nostro .o: <code>hello.o</code> all'interno del file eseguibile finale. Il compilatore, come anticipato, ha però bisogno di conoscere almeno il prototipo della funzione <code>printf()</code> per verificarne l'uso corretto. Il prototipo della funzione <code>printf()</code> è fornito all'interno del file <code>stdio.h</code>; risulta necessario copiare il contenuto di questo file nel nostro esempio nelle righe precedenti a quella dove la funzione <code>printf()</code> è effettivamente usata (chiamata a funzione). Non c'è bisogno di copiare ed incollare il file <code>stdio.h</code> ma è possibile usare una direttiva del preprocessore <code>#include<stdio.h></code> che sostuisce il contenuto del file <code>stdio.h</code> a partire dalla riga di codice dove è inserita.
+La funzione <code>main()</code> fa uso di un'altra funzione: <code>printf()</code>, che viene usata per stampare su schermo. Questa funzione è fornita (la sua implementazione) dal linguaggio C stesso, quindi non viene definita nel nostro file (non se ne fornisce l'implementazione). L'implementazione della <code>printf()</code> sarà fornita sotto forma di file oggetto <code>.o</code>, che verrà assemblato dal linker assieme al nostro <code>.o</code>: <code>hello.o</code>, all'interno del file eseguibile finale. Il compilatore, come anticipato, ha però bisogno di conoscere almeno il prototipo della funzione <code>printf()</code> per verificarne l'uso corretto. Il prototipo della funzione <code>printf()</code> è fornito all'interno del file <code>stdio.h</code>; risulta necessario copiare il contenuto di questo file nel nostro esempio, nelle righe precedenti a quella dove la funzione <code>printf()</code> è effettivamente usata (chiamata a funzione). Non c'è bisogno di copiare e incollare il file <code>stdio.h</code>, ma è possibile usare una direttiva del preprocessore <code>#include<stdio.h></code> che sostituisce il contenuto del file <code>stdio.h</code> a partire dalla riga di codice dove è inserita.
 Per verificare l'effettiva aggiunta del prototipo di <code>printf()</code> da parte del preprocessore puoi lanciare:
 </p>
 
@@ -768,7 +768,7 @@ Per verificare l'effettiva aggiunta del prototipo di <code>printf()</code> da pa
 ```
 
 <p align="justify">
-questo l'output sulla mia macchina:
+Questo è l'output sulla mia macchina:
 </p>
 
 ```bash
@@ -794,7 +794,7 @@ Alla riga 2 il prototipo di <code>printf()</code>.
 </p>
 
 <p align="justify">
-Infine, terminata la propria computazione il nostro programma ritorna 0 per informare il sistema operativo che ha terminato la propria esecuzione senza errori.
+Infine, terminata la propria computazione, il nostro programma ritorna 0 per informare il sistema operativo che ha terminato la propria esecuzione senza errori.
 </p>
 
 Riassumendo:
@@ -807,12 +807,12 @@ Riassumendo:
 <ul>
 	<li>
 		<p align="justify">
-riga 14: inclusione del file d'intestazione <code>stdio.h</code> contenente il prototipo della funzione <code>printf()</code>. Il prototipo serve al compilatore per verificare che il programmatore utilizzi correttamente la funzione, in questo caso la <code>printf()</code>
+Riga 14: inclusione del file d'intestazione <code>stdio.h</code> contenente il prototipo della funzione <code>printf()</code>. Il prototipo serve al compilatore per verificare che il programmatore utilizzi correttamente la funzione, in questo caso la <code>printf()</code>.
   		</p>
 	</li>
  	<li>
 		<p align="justify">
-riga 16-19: definizione della funzione <code>main()</code>
+Righe 16-19: definizione della funzione <code>main()</code>.
   		</p>
 	</li>
 </ul>
