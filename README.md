@@ -1098,8 +1098,8 @@ if (operazione == 's'){
 ```
 
 <p align="justify">
-La funzione <code>scanf()</code> legge un carattere da tastiera ed inserisce il valore all'interno della variabile <code>operazione</code>, il costrutto <code>if-else</code> ci serve per eseguire la funzione corrispondente all'operazione richiesta dall'utente attraverso la digitazione di un carattere della tastiera.
-Se <code>operazione</code> contiene il carattere <code>s</code> allora si eseguirà la funzione <code>somma()</code> (solo quella e nessun'altra) altrimenti se il carattere è <code>d</code> si esegue la funzione <code>differenza()</code> e così via. Se il carattere contenuto in <code>operazione</code> non è tra i tre attesi <code>s</code> <code>d</code> <code>m</code> allora (ultimo <code>else</code>) si stampa un messaggio che informa l'utente che l'operazione non è stata riconosciuta.
+La funzione <code>scanf()</code> legge un carattere da tastiera e inserisce il valore all'interno della variabile <code>operazione</code>; il costrutto <code>if-else</code> ci serve per eseguire la funzione corrispondente all'operazione richiesta dall'utente attraverso la digitazione di un carattere della tastiera.
+Se <code>operazione</code> contiene il carattere <code>s</code>, allora si eseguirà la funzione <code>somma()</code> (solo quella e nessun'altra); altrimenti, se il carattere è <code>d</code>, si esegue la funzione <code>differenza()</code> e così via. Se il carattere contenuto in <code>operazione</code> non è tra i tre attesi <code>s</code>, <code>d</code>, <code>m</code>, allora (ultimo <code>else</code>) si stampa un messaggio che informa l'utente che l'operazione non è stata riconosciuta.
 </p>
 
 Tornando alle variabili possiamo riassumere quanto segue:
