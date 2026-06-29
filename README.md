@@ -1395,17 +1395,17 @@ int uno(void){
 
 ## Classi di memorizzazione
 
-Scope, linkage e storage duration sono combinati assieme per definire le **classi di memorizzazione**
+Scope, linkage e storage duration sono combinati assieme per definire le **classi di memorizzazione**.
 
 <div align=center>
 	
 | Class                 | Storage Duration | Scope | Linkage   | Come dichiarare |
 |----------------------:|------------------|-------|-----------|-----------------|
-|automatic              |Automatic         |Block  | No linkage| Dentro un blocco|        
+|automatic              |Automatic         |Block  | No linkage| Dentro un blocco|
 |register               |Automatic         |Block  | No linkage| Dentro un blocco con _keyword_ **register**|
 |static external linkage|Static            |File   | External  | Fuori dalle funzioni|
-|static internal linkage|Static            |File   | Internal  | Fuori dalle funzione con _keyword_ **static**|
-|static no linkagge     |Static            |Block  | No linkage| Dentro un blocco con _keyword_ **static**|
+|static internal linkage|Static            |File   | Internal  | Fuori dalle funzioni con _keyword_ **static**|
+|static no linkage      |Static            |Block  | No linkage| Dentro un blocco con _keyword_ **static**|
 
 </div>
 
