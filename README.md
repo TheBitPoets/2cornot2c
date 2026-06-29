@@ -561,7 +561,7 @@ Volendo è possibile richiedere al compilatore di fermarsi a uno specifico step 
 <p align="justify">il preprocessore (<code>cpp</code>) esegue sostituzioni di testo, disabilita/abilita condizionalmente parti di codice in fase di compilazione. Il risultato della sua elaborazione è un file con estensione <code>.i</code>: nel nostro caso quindi <code>hello.i</code>. Per bloccare il processo di compilazione alla fase di preprocessamento puoi eseguire questo comando: <code>gcc -E hello.c > hello.i</code>. Il file <code>hello.i</code> conterrà tutte le sostituzioni effettuate dal preprocessore e, come puoi vedere da solo, ha molto più contenuto del file di partenza <code>hello.c</code>; spiegheremo le chiamate al preprocessore nei prossimi paragrafi.</p>
 
 2. **Compilazione** (_Compilation_):
-<p align="justify">il compilatore (<code>cc</code>) trasforma il contenuto testuale del file <code>hello.i</code> (che è scritto in codice c) nel corrispettivo codice assembly (<code>hello.s</code>) specifico per l'architettura del processore target. Puoi bloccare il processo alla fase di compilazione producendo il corrispettivo codice assembly in questo modo: <code>gcc -S -masm=intel hello.c</code>
+<p align="justify">il compilatore (<code>cc</code>) trasforma il contenuto testuale del file <code>hello.i</code> (che è scritto in codice C) nel corrispondente codice assembly (<code>hello.s</code>) specifico per l'architettura del processore target. Puoi bloccare il processo alla fase di compilazione producendo il corrispondente codice assembly in questo modo: <code>gcc -S -masm=intel hello.c</code>.
 </p>
 
 3. **Assemblaggio** (_Assembly_):
