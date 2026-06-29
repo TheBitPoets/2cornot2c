@@ -794,7 +794,7 @@ Alla riga 2 il prototipo di <code>printf()</code>.
 </p>
 
 <p align="justify">
-Infine, terminata la propria computazione il nostro programma ritorna 0 per informare il sistema operativo che ha terminato la propria esecuzione senza errori.
+Infine, terminata la propria computazione, il nostro programma ritorna 0 per informare il sistema operativo che ha terminato la propria esecuzione senza errori.
 </p>
 
 Riassumendo:
@@ -807,12 +807,12 @@ Riassumendo:
 <ul>
 	<li>
 		<p align="justify">
-riga 14: inclusione del file d'intestazione <code>stdio.h</code> contenente il prototipo della funzione <code>printf()</code>. Il prototipo serve al compilatore per verificare che il programmatore utilizzi correttamente la funzione, in questo caso la <code>printf()</code>
+Riga 14: inclusione del file d'intestazione <code>stdio.h</code> contenente il prototipo della funzione <code>printf()</code>. Il prototipo serve al compilatore per verificare che il programmatore utilizzi correttamente la funzione, in questo caso la <code>printf()</code>.
   		</p>
 	</li>
  	<li>
 		<p align="justify">
-riga 16-19: definizione della funzione <code>main()</code>
+Righe 16-19: definizione della funzione <code>main()</code>.
   		</p>
 	</li>
 </ul>
