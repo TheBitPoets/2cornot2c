@@ -633,7 +633,7 @@ Le variabili possono essere sia dichiarate che definite e spesso i due termini s
 <table align="center">
 	<td>❗ <b>Importante</b>
 	<p align=justify>
-Per la <b>costante</b> valgono le stesse considerazioni fatte per le variabili con l'eccezione che per le costanti non è possibile assegnare un nuovo valore una volta che questa è stata inizializzata
+Per la <b>costante</b> valgono le stesse considerazioni fatte per le variabili, con l'eccezione che per le costanti non è possibile assegnare un nuovo valore una volta che queste sono state inizializzate.
 	</p>
 	</td>
 </table>
