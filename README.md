@@ -566,7 +566,7 @@ Volendo è possibile richiedere al compilatore di fermarsi a uno specifico step 
 
 3. **Assemblaggio** (_Assembly_):
 <p align="justify">
-l'assemblatore <code>as</code> trasforma il codice assembly contenuto in <code>hello.s</code> nelle istruzioni macchina dell'architettura della cpu, il risultato è il file oggetto rilocabile <code>hello.o</code>. Puoi bloccare il processo in questa fase con il comando: <code>gcc -c hello.c</code>
+l'assemblatore <code>as</code> trasforma il codice assembly contenuto in <code>hello.s</code> nelle istruzioni macchina dell'architettura della CPU; il risultato è il file oggetto rilocabile <code>hello.o</code>. Puoi bloccare il processo in questa fase con il comando: <code>gcc -c hello.c</code>.
 </p>
 
 4. **Linkaggio** (_Linking_):
