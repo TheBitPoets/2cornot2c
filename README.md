@@ -978,16 +978,16 @@ Sulla base del tempo di vita e della visibilità possiamo classificare le variab
 </p>
 
 <p align="justify">
-<b>Le variabili locali</b> sono definite all'interno delle funzioni e hanno una visibilità limitata: dal punto in cui sono dichiarate fino al termine del corpo della funzione (ti ricordo che il corpo è compreso tra <code>{</code> e <code>}</code>); il loro tempo di vita è anche limitato: la locazione di memoria ad esse associata è allocata quando la funzione viene invocata ed è liberata quando l'esecuzione dell'intero corpo della funzione termina.
+<b>Le variabili locali</b> sono definite all'interno delle funzioni e hanno una visibilità limitata: dal punto in cui sono dichiarate fino al termine del corpo della funzione (ti ricordo che il corpo è compreso tra <code>{</code> e <code>}</code>); anche il loro tempo di vita è limitato: la locazione di memoria a esse associata è allocata quando la funzione viene invocata ed è liberata quando l'esecuzione dell'intero corpo della funzione termina.
 </p>
 
 <p align="justify">
 <b>Le variabili globali</b> sono definite fuori dalle funzioni, di solito dopo le direttive <code>#include</code> nelle righe iniziali. 
-Hanno visibilità globale appunto, cioè sono visibili a tutte le funzioni nel file in cui sono dichiarate (e potenzialmente anche alle funzioni in altri file del programma, ma questo lo vedremo in seguito); il loro tempo di vita coincide con quello globale di esecuzione del programma.
+Hanno visibilità globale, cioè sono visibili a tutte le funzioni nel file in cui sono dichiarate (e potenzialmente anche alle funzioni in altri file del programma, ma questo lo vedremo in seguito); il loro tempo di vita coincide con quello globale di esecuzione del programma.
 </p>
 
 <p align="justify">
-<b>Le variabili globali</b> se non inizializzate vengono poste a zero automaticamente, al contrario <b>le variabili locali</b> se non inizializzate contengono semplicemente un valore sporco ed assolutamente non prevedibile (il valore che era precedentemente contenuto nella locazione di memoria che è stata associata alla variabile, al suo identificatore).
+<b>Le variabili globali</b>, se non inizializzate, vengono poste a zero automaticamente; al contrario <b>le variabili locali</b>, se non inizializzate, contengono semplicemente un valore sporco e assolutamente non prevedibile (il valore che era precedentemente contenuto nella locazione di memoria che è stata associata alla variabile, al suo identificatore).
 </p>
 
 <p align="justify">
