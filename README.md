@@ -954,13 +954,13 @@ int question, answer;
 ```
 
 <p align="justify">
-Oltre al tipo ed all'identificatore una variabile è caratterizzata dalla <b>visibilità</b> (<code>scope</code> in inglese) ed il <b>tempo di vita</b> (<code>lifetime</code> o <code>storage duration</code>)
+Oltre al tipo e all'identificatore, una variabile è caratterizzata dalla <b>visibilità</b> (<code>scope</code> in inglese) e dal <b>tempo di vita</b> (<code>lifetime</code> o <code>storage duration</code>).
 </p>
 
 <table align="center">
 	<td>❗ <b>Importante</b>
 	<p align=justify>
-<b>Visibilità</b>: porzioni di codice nel programma in cui la variabile (il suo identificatore) è visibile e quindi è possibile fare riferimento alla variabile. Se in un dato punto del programma la variabile non è visibile, anche se effettivamente allocata in memoria (ha associata una locazine di memoria), è inutilizzabile o comunque non è possibile accedere al suo contenuto.
+<b>Visibilità</b>: porzioni di codice nel programma in cui la variabile (il suo identificatore) è visibile e quindi è possibile fare riferimento alla variabile. Se in un dato punto del programma la variabile non è visibile, anche se effettivamente allocata in memoria (ha associata una locazione di memoria), è inutilizzabile o comunque non è possibile accedere al suo contenuto.
 	</p>
 	</td>
 </table>
@@ -968,7 +968,7 @@ Oltre al tipo ed all'identificatore una variabile è caratterizzata dalla <b>vis
 <table align="center">
 	<td>❗ <b>Importante</b>
 	<p align=justify>
-<b>Tempo di vita</b>: porzione di tempo all'interno del ciclo di esecuzione del programma durante il quale alla variabile è associata una locazione di  memoria
+<b>Tempo di vita</b>: porzione di tempo all'interno del ciclo di esecuzione del programma durante la quale alla variabile è associata una locazione di memoria.
 	</p>
 	</td>
 </table>
