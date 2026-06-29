@@ -886,18 +886,18 @@ Come spiegato ampiamente in precedenza, facciamo uso anche della funzione <code>
 		<li>Spostati nella cartella <code>lab/0_intro</code></li>
 		<li>
 		<p align="justify">
-			Aiutandoti con il file <code>1_funzioni.c</code>, crea un file <code>addizione.c</code> con queste caratteristiache:
+			Aiutandoti con il file <code>1_funzioni.c</code>, crea un file <code>addizione.c</code> con queste caratteristiche:
 		</p>
 		</li>
 		<ol>
 			<li>
 				<p align="justify">
-				Dichiari e definisca la funzione <code>int addizione(int, int)</code>
+				Dichiara e definisci la funzione <code>int addizione(int, int)</code>.
 				</p>
 			</li>
 			<li>
 				<p align="justify">
-				Richiami la funzione <code>addizione()</code> nel <code>main()</code> passando due variabili intere <code>a</code> e <code>b</code> contetente dei valori a tuo piacimento
+				Richiama la funzione <code>addizione()</code> nel <code>main()</code> passando due variabili intere <code>a</code> e <code>b</code> contenenti dei valori a tuo piacimento.
 				</p>
 			</li>
 		</ol>
