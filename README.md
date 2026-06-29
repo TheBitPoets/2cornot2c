@@ -692,7 +692,7 @@ int main(void){
 
 <p align="justify">
 Compila il sorgente con: <code>gcc -o 0_hello bin/0_hello</code> e poi esegui il programma con: <code>bin/0_hello</code>.
-Riconosciamo subito una funzione: <code>main()</code>. Questa è una funzione speciale, tutti i programmi C devono averne una in quanto rappresenta il punto di partenza per l'esecuzione di ogni programma. Sei libero di chiamare tutte le altre funzioni a tuo piacimento ma la funzione da cui parte l'esecuzione si deve chiamare <code>main()</code>. Come qualsiasi funzione, <code>main()</code> ha un tipo di ritorno <code>int</code> e dei parametri in ingresso opzionali, in questo caso la funzione <code>main()</code> non si aspetta nessun parametro in ingresso dal chiamante (il sistema operativo) e per esprimere che questa non accetta alcun valore in ingresso si usa la parola riservata <code>void</code>.
+Riconosciamo subito una funzione: <code>main()</code>. Questa è una funzione speciale: tutti i programmi C devono averne una, in quanto rappresenta il punto di partenza per l'esecuzione di ogni programma. Sei libero di chiamare tutte le altre funzioni a tuo piacimento, ma la funzione da cui parte l'esecuzione si deve chiamare <code>main()</code>. Come qualsiasi funzione, <code>main()</code> ha un tipo di ritorno <code>int</code> e dei parametri in ingresso opzionali; in questo caso la funzione <code>main()</code> non si aspetta alcun parametro in ingresso dal chiamante (il sistema operativo) e, per esprimere che questa non accetta alcun valore in ingresso, si usa la parola riservata <code>void</code>.
 Ti potrebbe capitare di vedere la funzione <code>main()</code> in queste versioni:
 </p>
 
