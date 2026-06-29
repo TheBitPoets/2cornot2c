@@ -768,7 +768,7 @@ Per verificare l'effettiva aggiunta del prototipo di <code>printf()</code> da pa
 ```
 
 <p align="justify">
-questo l'output sulla mia macchina:
+Questo è l'output sulla mia macchina:
 </p>
 
 ```bash
