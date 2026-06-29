@@ -925,7 +925,7 @@ int answer;
 </p>
 
 <p align="justify">
-Una volta dichiarata la variabile è pronta ad ospitare un valore del tipo corrispondente a quello scelto nella dichiarazione; questa operazione è detta <b>assegnamento</b>
+Una volta dichiarata, la variabile è pronta a ospitare un valore del tipo corrispondente a quello scelto nella dichiarazione; questa operazione è detta <b>assegnamento</b>.
 </p>
 
 ```c
@@ -938,7 +938,7 @@ answer = 12;  // assegnamento del valore 12 alla variabile sopra dichiarata
 </p>
 
 <p align="justify">
-E' possible associare un valore ad una variabile direttamente nella dichiarazione, questa operazione è detta <b>inizializzazione</b>
+È possibile associare un valore a una variabile direttamente nella dichiarazione; questa operazione è detta <b>inizializzazione</b>.
 </p>
 
 ```c
@@ -946,7 +946,7 @@ int answer = 12; // dichiarazione con inizializzazione
 ```
 
 <p align="justify">
-E' possibile dichiarare più variabile nella stessa riga, purchè esse siano dello stesso tipo. In questo modo:
+È possibile dichiarare più variabili nella stessa riga, purché esse siano dello stesso tipo. In questo modo:
 </p>
 
 ```c
