@@ -1274,13 +1274,13 @@ Questo è utile soprattutto per le variabili indice di un ciclo o per documentar
 ## File scope
 
 Una variabile definita al di fuori di qualsiasi funzione in un file `.c` o `.h` ha un **file scope** ed è visibile dal punto in cui è definita fino alla fine del file che la contiene.
-Questo è il caso delle variabili globali che abbiamo trattato, esse infatti hanno un **file scope**.
+Questo è il caso delle variabili globali che abbiamo trattato: esse infatti hanno un **file scope**.
 
 ```c
 #include<stdio.h>
 	     
 int N = 100 /* N è globale: ha un file scope, è definita fuori da qualsiasi funzione, è visibile
-	     * al main() ed alla funzione uno()
+	     * al main() e alla funzione uno()
              */
 
 int main(){
