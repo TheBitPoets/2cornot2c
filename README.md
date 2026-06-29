@@ -598,7 +598,7 @@ Un programma C è di fatto una collezione di:
 </ul>
 
 <p align=justify>
-Di seguito provvederemo a dare una definizione sommaria per ogni componente sopra citato, rimandiamo ai singoli paragrafi per una trattazione completa.
+Di seguito daremo una definizione sommaria per ogni componente sopra citato; rimandiamo ai singoli paragrafi per una trattazione completa.
 </p>
 
 <table align="center">
