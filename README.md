@@ -1188,8 +1188,8 @@ char operazione;
 
 ## Classi di memorizzazione
 
-Conoscere la differenza tra variabili globali e locali è un buon punto di partenza, le cose sono però più complesse.
-Agli identificatori è associato uno **scope** (**visibilità**), alle variabili invece uno **storage duration** (**tempo di vita**) ed il **linkage** (**collegamento**).
+Conoscere la differenza tra variabili globali e locali è un buon punto di partenza; le cose sono però più complesse.
+Agli identificatori è associato uno **scope** (**visibilità**), alle variabili invece uno **storage duration** (**tempo di vita**) e il **linkage** (**collegamento**).
 
 Lo **scope** può essere di quattro tipi:
 
@@ -1207,7 +1207,7 @@ Lo **storage duration** può essere di quattro tipi:
 * **auto**
 * **allocated**
 
-Ricordiamo che lo **storage duration** rappresenta il tempo di vita della variabile ovvero per quanto tempo questa rimane allocata in memoria
+Ricordiamo che lo **storage duration** rappresenta il tempo di vita della variabile, ovvero per quanto tempo questa rimane allocata in memoria.
 
 Il **linkage** può essere di tre tipi:
 
