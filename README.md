@@ -625,7 +625,7 @@ var_intera_inizializzata = 9; // assegnamento
 <table align="center">
 	<td>⚠️ <b>Attenzione</b>
 	<p align=justify>
-Le variabili possono essere sia dichiarate che definite e spesso due termini sono usati per esprimere la stessa cosa. E' prematuro spiegarne la lieve differenza ma tieni a mente per adesso i due termini non sono la stessa cosa.
+Le variabili possono essere sia dichiarate che definite e spesso i due termini sono usati per esprimere la stessa cosa. È prematuro spiegarne la lieve differenza, ma tieni a mente per adesso che i due termini non sono la stessa cosa.
 	</p>
 	</td>
 </table>
