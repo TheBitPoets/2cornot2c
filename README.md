@@ -1,6 +1,6 @@
 # 2cornot2c
-It's a 101 C course for my students.
-Sorry, only italian version so far.
+This is a C 101 course for my students.
+Sorry, only the Italian version is available so far.
 
 ## Indice
   * [Introduzione](#introduzione)
