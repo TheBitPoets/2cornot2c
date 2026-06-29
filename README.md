@@ -1012,7 +1012,7 @@ Inoltre, siccome facciamo uso delle funzioni <code>printf()</code> e <code>scanf
 Mentre <code>printf()</code> serve per stampare a schermo il contenuto di una variabile, <code>scanf()</code> viene usata per leggere un valore da tastiera e memorizzarlo in una variabile.
 </p>
 
-Le definizioni della funzioni `somma()`, `differenza()` e `moltiplicazione()` sono fornite dopo la loro effettiva chiamata nel `main()` e quindi per permettere al compilatore di controllare l'uso corretto di queste funzioni da parte del programmatore è stato necessario, prima del `main()`, fornire i prototipoi.
+Le definizioni delle funzioni `somma()`, `differenza()` e `moltiplicazione()` sono fornite dopo la loro effettiva chiamata nel `main()` e quindi, per permettere al compilatore di controllare l'uso corretto di queste funzioni da parte del programmatore, è stato necessario fornire i prototipi prima del `main()`.
 
 <details>
 <summary>/lab/0_intro/2_variabili.c</summary>
