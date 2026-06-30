@@ -7942,7 +7942,7 @@ E c'è un'altra questione che potrebbe esserti venuta in mente, se sai qualcosa 
 </p>
 
 <p align=justify>
-Torniamo al pseudocodice e proviamo.
+Torniamo allo pseudocodice e proviamo.
 </p>
 
 ```
@@ -7950,24 +7950,24 @@ Torniamo al pseudocodice e proviamo.
         Call sys_read to read a buffer full of characters from stdin.
         Test for EOF.
         If we're at EOF, jump to Exit.
- 
+
         Set up registers as a pointer to scan the buffer.
  Scan:  Test the character at buffer pointer to see if it's lowercase.
         If it's not a lowercase character, skip conversion.
         Convert the character to uppercase by subtracting 20h.
         Decrement buffer pointer.
         If we still have characters in the buffer, jump to Scan.
- 
+
 Write: Set up registers for the Write kernel call.
        Call sys_write to write the processed buffer to stdout.
        Jump back to Read and get another buffer full of characters.
- 
+
 Exit:  Set up registers for terminating the program via sys_exit.
        Call sys_exit.
 ```
 
 <p align=justify>
-Questo aggiunge tutto ciò di cui hai bisogno per leggere un buffer da disco, esaminare e convertire i caratteri nel buffer e poi scrivere di nuovo il buffer su disco. (Naturalmente, il buffer deve essere ingrandito da un carattere a una dimensione utile, come 1024 caratteri.) Il succo del trucco del buffer è impostare un puntatore nel buffer e poi esaminare e (se necessario) convertire il carattere all'indirizzo espresso dal puntatore. Poi spostiamo il puntatore al carattere successivo nel buffer e facciamo la stessa cosa, ripetendo il processo finché non abbiamo trattato tutti i caratteri nel buffer. Scansionare un buffer è un ottimo esempio di un ciclo in linguaggio assembly. Ad ogni passaggio attraverso il ciclo dobbiamo testare qualcosa per vedere se siamo finiti e se dovremmo uscire dal ciclo. Il “qualcosa” in questo caso è il puntatore. Possiamo impostare il puntatore all'inizio del buffer e testare per vedere quando raggiunge la fine, oppure potremmo impostare il puntatore alla fine del buffer e lavorare verso l'inizio, testando per vedere quando raggiungiamo l'inizio del buffer. Entrambi gli approcci funzioneranno. Tuttavia, partire dalla fine e lavorare verso l'inizio del buffer può essere fatto un po' più rapidamente e con meno istruzioni. (Spiegherò il perché a breve.) La nostra prossima rifinitura dovrebbe iniziare a parlare di specifiche: quali registri fanno cosa, e così via.
+Questo aggiunge tutto ciò di cui hai bisogno per leggere un buffer da disco, esaminare e convertire i caratteri nel buffer e poi scrivere di nuovo il buffer su disco. (Naturalmente, il buffer deve essere ingrandito da un carattere a una dimensione utile, come 1024 caratteri.) Il succo del trucco del buffer è impostare un puntatore nel buffer e poi esaminare e, se necessario, convertire il carattere all'indirizzo espresso dal puntatore. Poi spostiamo il puntatore al carattere successivo nel buffer e facciamo la stessa cosa, ripetendo il processo finché non abbiamo trattato tutti i caratteri nel buffer. Scansionare un buffer è un ottimo esempio di ciclo in linguaggio assembly. Ad ogni passaggio attraverso il ciclo dobbiamo testare qualcosa per vedere se abbiamo finito e se dobbiamo uscire dal ciclo. Il “qualcosa” in questo caso è il puntatore. Possiamo impostare il puntatore all'inizio del buffer e testare per vedere quando raggiunge la fine, oppure potremmo impostare il puntatore alla fine del buffer e lavorare verso l'inizio, testando per vedere quando raggiungiamo l'inizio del buffer. Entrambi gli approcci funzioneranno. Tuttavia, partire dalla fine e lavorare verso l'inizio del buffer può essere fatto un po' più rapidamente e con meno istruzioni. (Spiegherò il perché a breve.) Il nostro prossimo affinamento dovrebbe iniziare a parlare di specifiche: quali registri fanno cosa, e così via.
 </p>
 
 ```
@@ -7976,7 +7976,7 @@ Questo aggiunge tutto ciò di cui hai bisogno per leggere un buffer da disco, es
         Store the number of characters read in RSI
         Test for EOF (rax = 0).
         If we're at EOF, jump to Exit.
- 
+
         Put the address of the buffer in rsi.
         Put the number of characters read into the buffer in rdx.
  Scan:  Compare the byte at [r13+rbx] against 'a'.
@@ -7994,11 +7994,11 @@ Questo aggiunge tutto ciò di cui hai bisogno per leggere un buffer da disco, es
 ```
 
 <p align=justify>
-Questo affinamento riconosce che non c'è un solo test da effettuare, ma due. I caratteri minuscoli rappresentano un intervallo nella sequenza ASCII, e gli intervalli hanno inizio e fine. Dobbiamo determinare se il carattere in esame rientra nell'intervallo. Per farlo, è necessario testare il carattere per vedere se è inferiore al carattere più basso nell'intervallo delle minuscole (a) o superiore al carattere più alto nell'intervallo delle minuscole (z). Se il carattere in questione non è minuscolo, non è necessaria alcuna elaborazione, e passiamo al codice che aumenta il puntatore al carattere successivo. Navigare all'interno del buffer coinvolge due registri. L'indirizzo dell'inizio del buffer è posto in R13. Il numero di caratteri nel buffer è posto nel registro RBX. Se si sommano i due registri, si ottiene l'indirizzo dell'ultimo carattere nel buffer. Se si decrementa il contatore dei caratteri in RBX, la somma di R13 e RBX punterà al penultimo carattere nel buffer. Ogni volta che si decrementa RBX, si avrà l'indirizzo di un carattere più vicino all'inizio del buffer. Quando RBX viene deprivato di uno fino a zero, sarete all'inizio del buffer, e tutti i caratteri saranno stati elaborati.
+Questo affinamento riconosce che non c'è un solo test da effettuare, ma due. I caratteri minuscoli rappresentano un intervallo nella sequenza ASCII, e gli intervalli hanno inizio e fine. Dobbiamo determinare se il carattere in esame rientra nell'intervallo. Per farlo, è necessario testare il carattere per vedere se è inferiore al carattere più basso nell'intervallo delle minuscole (a) o superiore al carattere più alto nell'intervallo delle minuscole (z). Se il carattere in questione non è minuscolo, non è necessaria alcuna elaborazione, e passiamo al codice che aumenta il puntatore al carattere successivo. Navigare all'interno del buffer coinvolge due registri. L'indirizzo dell'inizio del buffer è posto in R13. Il numero di caratteri nel buffer è posto nel registro RBX. Se si sommano i due registri, si ottiene l'indirizzo dell'ultimo carattere nel buffer. Se si decrementa il contatore dei caratteri in RBX, la somma di R13 e RBX punterà al penultimo carattere nel buffer. Ogni volta che si decrementa RBX, si avrà l'indirizzo di un carattere più vicino all'inizio del buffer. Quando RBX viene decrementato di uno fino a zero, sarete all'inizio del buffer e tutti i caratteri saranno stati elaborati.
 </p>
 
 <p align=justify>
-Ma aspetta... non è del tutto vero. C'è un bug nel pseudocodice, ed è uno dei bug più comuni per i principianti in tutto il linguaggio assembly: il leggendario errore "off by one". La somma di R13 e RBX punterà a un indirizzo oltre la fine del buffer. E quando il conteggio in RBX scende a zero, un carattere—quello all'inizio del buffer—rimarrà inesaminato e (se è minuscolo) intoccato. Il modo più semplice per spiegare da dove proviene questo bug è disegnarlo, come ho fatto nella figura di sotto. C'è un file di testo molto breve nel l'archivio delle liste per questo libro chiamato gazabo.txt. Contiene solo la singola parola senza senso gazabo e il marcatore EOL, per un totale di sette caratteri. La figura di sotto mostra il file gazabo.txt come apparirebbe dopo che Linux lo carica in un buffer in memoria. L'indirizzo del buffer è stato caricato nel registro R13, e il numero di caratteri (qui, 7) è stato caricato in RBX. Se sommi R13 e RBX, l'indirizzo risultante va oltre la fine del buffer in una memoria non utilizzata (si spera!).
+Ma aspetta... non è del tutto vero. C'è un bug nello pseudocodice, ed è uno dei bug più comuni per i principianti in tutto il linguaggio assembly: il leggendario errore "off by one". La somma di R13 e RBX punterà a un indirizzo oltre la fine del buffer. E quando il conteggio in RBX scende a zero, un carattere, quello all'inizio del buffer, rimarrà inesaminato e, se è minuscolo, intoccato. Il modo più semplice per spiegare da dove proviene questo bug è disegnarlo, come ho fatto nella figura qui sotto. C'è un file di testo molto breve nell'archivio dei listati per questo libro chiamato gazabo.txt. Contiene solo la singola parola senza senso gazabo e il marcatore EOL, per un totale di sette caratteri. La figura qui sotto mostra il file gazabo.txt come apparirebbe dopo che Linux lo carica in un buffer in memoria. L'indirizzo del buffer è stato caricato nel registro R13, e il numero di caratteri (qui, 7) è stato caricato in RBX. Se sommi R13 e RBX, l'indirizzo risultante va oltre la fine del buffer in una memoria non utilizzata (si spera!).
 </p>
 
 <div align=center>
@@ -8006,13 +8006,13 @@ Ma aspetta... non è del tutto vero. C'è un bug nel pseudocodice, ed è uno dei
 </div>
 
 <p align=justify>
-Questo tipo di problema può verificarsi ogni volta che si iniziano a mescolare gli offset degli indirizzi e i conteggi delle cose. I conteggi iniziano da 1, e gli offset iniziano da 0. Il carattere #1 si trova realmente all'offset 0 dall'inizio del buffer, il carattere #2 si trova all'offset 1, e così via. Stiamo cercando di utilizzare un valore in RBX sia come conteggio che come offset, e se gli offset nel buffer sono assunti da 0, un errore di uno è inevitabile. La soluzione è semplice: decrementare l'indirizzo del buffer (che è memorizzato in R13) di 1 prima di cominciare la scansione. R13 ora punta alla posizione di memoria immediatamente prima del primo carattere nel buffer. Con R13 impostato in questo modo, possiamo utilizzare il valore di conteggio in R13 sia come conteggio che come offset. Quando il valore in R13 è decrementato a 0, abbiamo elaborato il carattere g e usciamo dal ciclo. Un esperimento interessante è “commentare” l'istruzione macchina DEC R13 e poi eseguire il programma. Questo si fa semplicemente mettendo un punto e virgola all'inizio della riga contenente DEC R13 e ricompilando. Digita gazabo o qualsiasi altra cosa in minuscolo nella finestra di input e poi esegui il programma.
+Questo tipo di problema può verificarsi ogni volta che si iniziano a mescolare gli offset degli indirizzi e i conteggi delle cose. I conteggi iniziano da 1, e gli offset iniziano da 0. Il carattere #1 si trova realmente all'offset 0 dall'inizio del buffer, il carattere #2 si trova all'offset 1, e così via. Stiamo cercando di utilizzare un valore in RBX sia come conteggio sia come offset, e se gli offset nel buffer partono da 0, un errore di uno è inevitabile. La soluzione è semplice: decrementare l'indirizzo del buffer (che è memorizzato in R13) di 1 prima di cominciare la scansione. R13 ora punta alla posizione di memoria immediatamente prima del primo carattere nel buffer. Con R13 impostato in questo modo, possiamo utilizzare il valore di conteggio in RBX sia come conteggio sia come offset. Quando il valore in RBX viene decrementato a 0, abbiamo elaborato il carattere g e usciamo dal ciclo. Un esperimento interessante è “commentare” l'istruzione macchina DEC R13 e poi eseguire il programma. Questo si fa semplicemente mettendo un punto e virgola all'inizio della riga contenente DEC R13 e ricompilando. Digita gazabo o qualsiasi altra cosa in minuscolo nella finestra di input e poi esegui il programma.
 </p>
 
-### Dallo Pseudocodice al codice Assembly
+### Dallo pseudocodice al codice assembly
 
 <p align=justify>
-A questo punto farò quel salto spaventoso verso le istruzioni della macchina reale, ma per brevità mostrerò solo il ciclo stesso.
+A questo punto farò quel salto spaventoso verso le istruzioni macchina reali, ma per brevità mostrerò solo il ciclo stesso.
 </p>
 
 ```asm
@@ -8020,7 +8020,7 @@ A questo punto farò quel salto spaventoso verso le istruzioni della macchina re
      mov rbx,rax          ; Place the number of bytes read into rbx
      mov r13,Buff         ; Place address of buffer into r13
      dec r13              ; Adjust r13 to offset by one
- 
+
 ; Go through the buffer and convert lowercase to uppercase characters:
  Scan:
      cmp byte [r13+rbx],61h  ; Test input char against lowercase 'a'
@@ -8035,18 +8035,18 @@ A questo punto farò quel salto spaventoso verso le istruzioni della macchina re
 ```
 
 <p align=justify>
-Lo stato del buffer e dei registri puntatore prima di iniziare la scansione è mostrato nella seconda parte della figura di sopra. La prima volta, il valore in RBX è il conteggio dei caratteri nel buffer. La somma R13 + RBX punta al carattere EOL alla fine del buffer. La volta successiva, RBX viene decrementato a 6, e R13 + RBX punta alla lettera o in gazabo. Ogni volta che decretiamo RBX, controlliamo il flag Zero usando l'istruzione JNZ, che salta di nuovo all'etichetta Scan quando il flag Zero non è impostato. Nell'ultima passata attraverso il ciclo, RBX contiene 1, e R13 + RBX punta alla lettera g nella primissima posizione del buffer. Solo quando RBX è decrementato a zero JNZ "scorre" e il ciclo termina. I puristi potrebbero pensare che decrementare l'indirizzo in R13 prima che inizi il ciclo sia un trucco rischioso. Hanno in parte ragione: dopo essere stato decrementato, R13 punta a una posizione in memoria al di fuori dei limiti del buffer. Se il programma tentasse di scrivere in quella posizione, un'altra variabile potrebbe essere corrotta, o potrebbe verificarsi un errore di segmentazione. La logica del ciclo non richiede di scrivere in quell'indirizzo particolare, ma potrebbe facilmente esserlo fatto per errore.
+Lo stato del buffer e dei registri puntatore prima di iniziare la scansione è mostrato nella seconda parte della figura qui sopra. La prima volta, il valore in RBX è il conteggio dei caratteri nel buffer. La somma R13 + RBX punta al carattere EOL alla fine del buffer. La volta successiva, RBX viene decrementato a 6, e R13 + RBX punta alla lettera o in gazabo. Ogni volta che decrementiamo RBX, controlliamo il flag Zero usando l'istruzione JNZ, che salta di nuovo all'etichetta Scan quando il flag Zero non è impostato. Nell'ultima passata attraverso il ciclo, RBX contiene 1, e R13 + RBX punta alla lettera g nella primissima posizione del buffer. Solo quando RBX viene decrementato a zero JNZ "scorre" e il ciclo termina. I puristi potrebbero pensare che decrementare l'indirizzo in R13 prima che inizi il ciclo sia un trucco rischioso. Hanno in parte ragione: dopo essere stato decrementato, R13 punta a una posizione in memoria al di fuori dei limiti del buffer. Se il programma tentasse di scrivere in quella posizione, un'altra variabile potrebbe essere corrotta, o potrebbe verificarsi un errore di segmentazione. La logica del ciclo non richiede di scrivere in quell'indirizzo particolare, ma potrebbe facilmente farlo per errore.
 </p>
 
 <p align=justify>
-Il codice di sotto mostra il programma completato, completamente commentato con tutto il pseudocodice convertito in codice assembly.
+Il codice qui sotto mostra il programma completato, completamente commentato con tutto lo pseudocodice convertito in codice assembly.
 </p>
 
 ```asm
  ;  Executable name  : 	uppercaser2gcc
  ;  Version          : 	2.0
  ;  Created date     : 	6/17/2022
- 
+
  ;  Last update      : 	5/8/2023
 
  ;  Author           : 	Jeff Duntemann
@@ -8057,23 +8057,23 @@ Il codice di sotto mostra il programma completato, completamente commentato con 
  ;			a buffer in blocks, forcing lowercase characters to
  ;			uppercase, and writing the modified buffer to
  ;			an output file.
- ;                    
- ;                    
+ ;
+ ;
  ;  Run it this way in a terminal window:
  ;
- ;    uppercaser2> (output file) < (input file)  
+ ;    uppercaser2> (output file) < (input file)
  ;
  ;  Build in SASM using the default make lines and x64 checked
  ;
 
  SECTION .bss      		; Section containing uninitialized data
-    
-	BUFFLEN  equ 128	; Length of buffer       
+
+	BUFFLEN  equ 128	; Length of buffer
 	Buff:	 resb BUFFLEN  	; Text buffer itself
 
- SECTION .data			; Section containing initialised data         
+ SECTION .data			; Section containing initialised data
 
- SECTION .text			; Section containing code         
+ SECTION .text			; Section containing code
 
 global main           		; Linker needs this to find the entry point
 main:
@@ -8106,11 +8106,11 @@ Scan:
     jnz Scan                ; If characters remain, loop back
 ; Write the buffer full of processed text to stdout:
 Write:
-    mov rax,1		    ; Specify sys_write call             
+    mov rax,1		    ; Specify sys_write call
     mov rdi,1               ; Specify File Descriptor 1: Standard output
     mov rsi,Buff            ; Pass offset of the buffer
     mov rdx,r12             ; Pass # of bytes of data in the buffer
-    syscall            	    ; Make kernel call     
+    syscall            	    ; Make kernel call
     jmp Read                ; Loop back and load another buffer full
 
 ; All done! Let's end this party:
@@ -8119,7 +8119,7 @@ Write:
 ```
 
 <p align=justify>
-C'è un difetto in SASM su cui potresti inciampare, se stai testando programmi come uppercaser2gcc all'interno di SASM, utilizzando le finestre di Immissione e Uscita. Il problema è che la finestra di Uscita può contenere solo una certa quantità di testo. Se riempi il buffer della finestra di Uscita, ulteriori output non genereranno errori, ma l'ultimo pezzo di testo spingerà il primo pezzo di testo fuori dal bordo superiore della finestra di Uscita. Una volta che hai un programma ragionevolmente funzionante in SASM, salva il file EXE su disco. Poi esci da SASM, apri una finestra del terminale, naviga nella directory del progetto ed esegui il tuo programma lì. Non so se Linux imponga un limite su quanto testo può passare attraverso stdout, ma ho passato alcuni file piuttosto grandi a stdout senza che alcun testo andasse perso.
+C'è un difetto in SASM su cui potresti inciampare, se stai testando programmi come uppercaser2gcc all'interno di SASM, utilizzando le finestre di Input e Output. Il problema è che la finestra di Output può contenere solo una certa quantità di testo. Se riempi il buffer della finestra di Output, ulteriore output non genererà errori, ma l'ultimo pezzo di testo spingerà il primo pezzo di testo fuori dal bordo superiore della finestra di Output. Una volta che hai un programma ragionevolmente funzionante in SASM, salva il file EXE su disco. Poi esci da SASM, apri una finestra del terminale, naviga nella directory del progetto ed esegui il tuo programma lì. Non so se Linux imponga un limite su quanto testo può passare attraverso stdout, ma ho passato alcuni file piuttosto grandi a stdout senza che alcun testo andasse perso.
 </p>
 
 ### Operazioni sui Bit
