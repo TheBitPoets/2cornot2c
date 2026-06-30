@@ -3998,11 +3998,11 @@ int main(void){
 
 ## I puntatori
 
-Un puntatore è una variabile che contiene un indirizzo di memoria (di un'altra cella di memoria). 
+Un puntatore è una variabile che contiene un indirizzo di memoria (di un'altra cella di memoria).
 
 Un puntatore è un intero positivo (`unsigned int`). Di solito nelle macchine UNIX è di tipo `unsigned long` dato che deve contenere indirizzi da 64 bit.
 
-Per dichiarare un puntatore è necessario specificare il tipo della locazione di memoria a cui esso dovrà puntare. Un puntatore che ospita l'indirizzo di una variabile `int` è di tipo diverso rispetto ad un puntatore che ospita l'indirizzo di una variabile di tipo `char`. Per dichiarare il tipo del puntatore si utilizza il simbolo `*` insieme al tipo della variabile a cui esso dovrà puntare. Per esempio nel codice di sotto dichiariamo una variabile intera `thing` che viene inizializzata al valore 6, nella riga di sotto dichiariamo un puntatore (variabile `thing_ptr`) di tipo (`int *`) che conterrà l'indirizzo di memoria della variabile `int` di nome `thing`.
+Per dichiarare un puntatore è necessario specificare il tipo della locazione di memoria a cui esso dovrà puntare. Un puntatore che ospita l'indirizzo di una variabile `int` è di tipo diverso rispetto a un puntatore che ospita l'indirizzo di una variabile di tipo `char`. Per dichiarare il tipo del puntatore si utilizza il simbolo `*` insieme al tipo della variabile a cui esso dovrà puntare. Per esempio, nel codice di sotto dichiariamo una variabile intera `thing` che viene inizializzata al valore 6; nella riga di sotto dichiariamo un puntatore (variabile `thing_ptr`) di tipo (`int *`) che conterrà l'indirizzo di memoria della variabile `int` di nome `thing`.
 
 ```c
 int thing = 6;
@@ -4016,9 +4016,9 @@ char thing = 'A';
 char *thing_prt;
 ```
 
-Quando un putatore è dichiarato il suo contenuto (come ogni variabile locale automatica) contiene un valore sporco assolutamente casuale. Come per tutte le altre variabili è necessario quindi inizializzare una variabile puntatore ad un indirizzo di memoria valido, per fare questo si usa l'operatore unario `&` (**operatore di indirizzamento**) che permette di ottenere l'indirizzo di memoria di una qualsiasi variabile.
+Quando un puntatore è dichiarato il suo contenuto (come ogni variabile locale automatica) contiene un valore sporco assolutamente casuale. Come per tutte le altre variabili, è necessario quindi inizializzare una variabile puntatore a un indirizzo di memoria valido; per fare questo si usa l'operatore unario `&` (**operatore di indirizzamento**) che permette di ottenere l'indirizzo di memoria di una qualsiasi variabile.
 
-Tornando al nostro esempio se volessimo inizializzare il puntatore ad intero `thing_ptr` all'indirizzo di memoria della variabile intera `thing` dovremmo usare l'operatore `&` in questo modo:
+Tornando al nostro esempio, se volessimo inizializzare il puntatore a intero `thing_ptr` all'indirizzo di memoria della variabile intera `thing` dovremmo usare l'operatore `&` in questo modo:
 
 ```c
 int thing = 6;  /* ipotizziamo che l'indirizzo della variabile thing sia 0x1000 */
@@ -4028,18 +4028,18 @@ int *thing_ptr; /* la variabile puntatore thing_ptr punta ad un indirizzo casual
 
 thing_ptr = &thing; /* ora  nella  locazione di  memoria rappresentata da thing_ptr
 		     * c'è il valore 0x1000, cioè l'indirizzo della variabile thing
-		     * ora thing_ptr è inizializzata correttamente,può essere usata
+		     * ora thing_ptr è inizializzata correttamente, può essere usata
 		     */
 ```
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/puntatore.png)
 
-Una volta che abbiamo inizializzato `thing_ptr` all'indirizzo di memoria di `thing` possiamo accedere (leggere e modificare) il contenuto di `thing` attraverso `thing_ptr` usando l'operatore `*` (**operatore di deferenziazione**)
+Una volta che abbiamo inizializzato `thing_ptr` all'indirizzo di memoria di `thing` possiamo accedere al contenuto di `thing` (leggerlo e modificarlo) attraverso `thing_ptr`, usando l'operatore `*` (**operatore di dereferenziazione**).
 
 > [!NOTE]
-> L'operazione di accesso alla locazione di memoria di una variabile è detta **deferenziazione** per questo motivo `&` è detto **operatore di deferenziazione**
+> L'operazione di accesso alla locazione di memoria di una variabile attraverso un puntatore è detta **dereferenziazione**; per questo motivo `*` è detto **operatore di dereferenziazione**.
 
-Una variabile puntatore può essere pensata come ad una freccia che punta ad una cella di memoria (ad un'altra variabile).
+Una variabile puntatore può essere pensata come una freccia che punta a una cella di memoria (a un'altra variabile).
 
 ```c
 int thing = 5;  /* ipotizziamo che l'indirizzo della variabile thing sia 0x1000 */
@@ -4049,10 +4049,10 @@ int *thing_ptr; /* la variabile puntatore thing_ptr punta ad un indirizzo casual
 
 thing_ptr = &thing; /* ora  nella  locazione di  memoria rappresentata da thing_ptr
 		     * c'è il valore 0x1000, cioè l'indirizzo della variabile thing
-		     * ora thing_ptr è inizializzata correttamente,può essere usata
+		     * ora thing_ptr è inizializzata correttamente, può essere usata
 		     */
 
-int other = *thing_ptr /* accedo al contenuto della variabile puntata da thing_prt cioè
+int other = *thing_ptr /* accedo al contenuto della variabile puntata da thing_ptr, cioè
 			* thing (il suo contenuto è il valore 5 ) e lo copio nella varia
 			* bile other
 			* /
@@ -4127,7 +4127,7 @@ int main(void){
 
 ### Puntatori non inizializzati
 
-Abbiamo detto che **prima di essere usati** (deferenziazione) per accedere alla memoria **i puntatori devono essere inizializzati** ad un indirizzo valido altrimenti il programma potrebbe crashare o avere comportamenti imprevisti e difficili da indiduare. Vediamo un esempio
+Abbiamo detto che **prima di essere usati** (dereferenziazione) per accedere alla memoria **i puntatori devono essere inizializzati** a un indirizzo valido, altrimenti il programma potrebbe crashare o avere comportamenti imprevisti e difficili da individuare. Vediamo un esempio.
 
 ```c
 #include<stdio.h>
@@ -4135,13 +4135,13 @@ Abbiamo detto che **prima di essere usati** (deferenziazione) per accedere alla 
 int main(void){
         int i;  /* i non è inizializzata, è locale quindi avrà un valore sporco (casuale) */
         int *p; /* anche  p  non è inizializzato,  punta ad una cella a caso, deve essere
-                 * inizializzato prima di essere usato con l'operatore di deferenziazione
+                 * inizializzato prima di essere usato con l'operatore di dereferenziazione
                  * *p
                  */
 
         printf("i  = %d\n", i); /* non possiamo prevedere che valore stamperà */
         printf("&i = %p\n", &i);
-        printf("p  = %p\n", p); /* cella  di memoria casuale forse appartenete
+        printf("p  = %p\n", p); /* cella  di memoria casuale forse appartenente
                                  * ad un altro processo a cui non possiamo mai
                                  * accedere
                                  */
@@ -4155,7 +4155,7 @@ int main(void){
 
 ### Il puntatore nullo (NULL)
 
-Il puntatore nullo vale zero e non è un puntatore valido, non può essere utilizzato per un'operazione di derenziazione.
+Il puntatore nullo vale zero e non è un puntatore valido, non può essere utilizzato per un'operazione di dereferenziazione.
 Il valore `NULL` è definito tramite macro al preprocessore (`#define`) in questo modo:
 
 ```c
@@ -4163,14 +4163,14 @@ Il valore `NULL` è definito tramite macro al preprocessore (`#define`) in quest
 ```
 
 Sfruttando il valore `NULL` è possibile identificare un puntatore nullo, `NULL` è confrontabile con qualsiasi puntatore.
-E' buona norma inizializzare una variabile puntatore a `NULL` se la sua inizializzazione valida avverrà successivamente nel codice e controllare se il puntatore è nullo prima di effettuare operazioni di deferenziazione. Vediamo un esempio
+È buona norma inizializzare una variabile puntatore a `NULL` se la sua inizializzazione valida avverrà successivamente nel codice e controllare se il puntatore è nullo prima di effettuare operazioni di dereferenziazione. Vediamo un esempio.
 
 ```c
 #include<stdio.h>
 
 int main(void){
         int *p = NULL; /* inizializzo il puntatore p a NULL */
-        if (p != NULL)  /* prima di deferenziare controllo se p e' diverso da NULL */
+        if (p != NULL)  /* prima di dereferenziare controllo se p e' diverso da NULL */
                 printf("*p = %d", *p);
 
 }
@@ -4183,10 +4183,10 @@ int main(void){
 #### Aritmetica puntatori
 
 I puntatori sono variabili che hanno tutte la stessa lunghezza (`unsigned long` di solito nelle architetture a 64 bit) fissata dall'architettura (32, 64 bit). Però abbiamo detto che quando dichiariamo una variabile puntatore dobbiamo specificare anche il suo tipo che rappresenta il tipo della variabile puntata.
-Questo serve al compilatore per effettuare i calcoli quando si usa **l'artimetica dei puntatori**. L'aritmetica dei puntatori ci permette di spostarci, usando l'operatore `+`, nelle celle di memoria adiacenti a quella puntata dal puntatore.
-Vediamo un esempio, se ho tre variabili intere (`a`, `b`, `c`) contingue in memoria (`int` occupa 4 byte) ed ho un puntatore (`ptr_a`) che punta alla prima variabile (`a`) posso accedere ai due interi successivi (`b`, `c`) rispettiva con `ptr_a + 1` (accedo a `b`) e `ptr_a + 2` (accedo a c). 
+Questo serve al compilatore per effettuare i calcoli quando si usa **l'aritmetica dei puntatori**. L'aritmetica dei puntatori ci permette di spostarci, usando l'operatore `+`, nelle celle di memoria adiacenti a quella puntata dal puntatore.
+Vediamo un esempio: se ho tre variabili intere (`a`, `b`, `c`) contigue in memoria (`int` occupa 4 byte) e ho un puntatore (`ptr_a`) che punta alla prima variabile (`a`), posso accedere ai due interi successivi (`b`, `c`) rispettivamente con `ptr_a + 1` (accedo a `b`) e `ptr_a + 2` (accedo a `c`).
 La sintassi `ptr_a + 1` o `ptr_a + 2` indica che ci vogliamo spostare dall'indirizzo puntato da `ptr_a` di un numero di byte pari alla dimensione di un intero (`ptr_a + 1`) o di due interi (`ptr_a + 2`) quindi nel nostro caso di interi a 4 byte il compilatore calcola per noi i byte dello scostamento in questo modo $ptr_a + 1*(4)$ e $ptr_a + 2*(4)$
-Ecco perchè è necessario specificare il tipo del puntatore (il tipo della variabile puntata).
+Ecco perché è necessario specificare il tipo del puntatore (il tipo della variabile puntata).
 
 ```c
 #include<stdio.h>
@@ -4206,7 +4206,7 @@ int main(void){
 }
 ```
 
-Come puoi vedere dall'output del programma usando l'artimetica dei puntatori riusciamo ad accedere agli interi (`b` e `c`) adiacenti alla variabile puntata da `ptr_a` (variabile `a`)
+Come puoi vedere dall'output del programma, usando l'aritmetica dei puntatori riusciamo ad accedere agli interi (`b` e `c`) adiacenti alla variabile puntata da `ptr_a` (variabile `a`).
 
 ```bash
 vagrant@ubuntu2204:/lab/6_pointers$ bin/33_pointers
@@ -4215,7 +4215,7 @@ b = 2
 a = 3
 ```
 
-L'aritmetica dei puntatoti è potentissima, ipotizziamo ora di avere un intero il cui valore sia posto a $16909060$ (variabile `magic`)
+L'aritmetica dei puntatori è potentissima, ipotizziamo ora di avere un intero il cui valore sia posto a $16909060$ (variabile `magic`).
 Il numero decimale $16909060$ ha una codifica binaria (32 bit, 4 byte) pari a:
 
 ```math
@@ -4228,13 +4228,13 @@ Lo stesso valore in esadecimale vale
 0x 01 02 03 04
 ```
 
-Il primo byte vale 01, il secondo 02, il terzo 03, quarto 04.
-Ora se recupero l'indirizzo di questa variabile e la assegno ad un puntatore ad intero cosa accade se faccio un cast da puntatore ad intero ad un puntaore a carattere? Nulla, il valore dell'indirizzo non cambia ma quando uso l'artimetica dei puntatori per spostarmi con `+1` `+2` non aumento di 4byte (dimensione di un intero) ma di 1byte (dimensione di un carattere) perchè il tipo del puntatore è cambiato (da `int *` a `char *)`. Questo mi permettere di spostarmi attraverso i quattro byte del mio intero e di stamparne il valore, come mostrato nel codice di sotto.
+Il primo byte vale 01, il secondo 02, il terzo 03, il quarto 04.
+Ora, se recupero l'indirizzo di questa variabile e lo assegno a un puntatore a intero, cosa accade se faccio un cast da puntatore a intero a puntatore a carattere? Nulla, il valore dell'indirizzo non cambia, ma quando uso l'aritmetica dei puntatori per spostarmi con `+1` `+2` non aumento di 4 byte (dimensione di un intero), ma di 1 byte (dimensione di un carattere), perché il tipo del puntatore è cambiato (da `int *` a `char *`). Questo mi permette di spostarmi attraverso i quattro byte del mio intero e di stamparne il valore, come mostrato nel codice di sotto.
 
 ```c
 #include<stdio.h>
 
-int main(void){o 
+int main(void){
         int magic = 16909060;
         int after_magic = 123456789;
         printf("magic        = %#x\n", magic);
@@ -4257,7 +4257,7 @@ int main(void){o
 }
 ```
 
-Nell'output del programma, mostrato sotto, è interessante notare come siamo in configurazione **big endian** perchè l'indirizzo più alto (`ptr_a + 4`) è assegnato al byte MSB (quello più a sinistra, che contiene il valore 01)
+Nell'output del programma, mostrato sotto, è interessante notare come siamo in configurazione **big endian** perché l'indirizzo più alto (`ptr_a + 4`) è assegnato al byte MSB (quello più a sinistra, che contiene il valore 01).
 
 ```bash
 vagrant@ubuntu2204:/lab/6_pointers$ bin/4_pointers
@@ -4271,11 +4271,11 @@ ptr_byte3    = 2
 ptr_byte4    = 1
 ```
 
-L'artimetica dei puntatori ci sarà molto utile quando lavoreremo con i vettori (array).
+L'aritmetica dei puntatori ci sarà molto utile quando lavoreremo con i vettori (array).
 
 ### Vettori
 
-I vettori (o array) permettono di allocare un insieme di elementi **dello stesso tipo** in una zona contingua di memoria.
+I vettori (o array) permettono di allocare un insieme di elementi **dello stesso tipo** in una zona contigua di memoria.
 La sintassi per dichiarare un array è la seguente:
 
 ```c
@@ -4286,13 +4286,13 @@ nome-tipo identificatore[cardinalità];
 * `identificatore` è il nome del vettore con cui si accede ai suoi elementi
 * `cardinalità` è **una costante** che indica il numero degli elementi
   
-Per esempio, per dichiarare un vettore di interi di dieci elemetni
+Per esempio, per dichiarare un vettore di interi di dieci elementi:
 
 ```c
 int vettore[10];
 ```
 
-Per accedere ai singoli elmenti di un vettore (operazione di **indicizzazione**) basta indicare tra le parentesi quadre (`[` `]`) l'indice del vettore a cui si vuole accedere.
+Per accedere ai singoli elementi di un vettore (operazione di **indicizzazione**) basta indicare tra le parentesi quadre (`[` `]`) l'indice del vettore a cui si vuole accedere.
 **Il primo elemento di un vettore ha indice zero** quindi nel nostro esempio avremo:
 
 ```c
@@ -4304,10 +4304,10 @@ vettore[9] = 10 // ultimo elemento del vettore, assume valore 10
 
 > [!IMPORTANT]
 > **Limiti indicizzazione di un vettore**
-> Dato un vettore di cardinalità N (N elementi contigui in memoria) il primo elemento avrà indice **0**, l'ultimo elemento avrà indice **N - 1**. Se si accede oltre il limite massimo il comportamento del programma è indefinito quindi non bisogna mai accedere un cella di memoria oltre il limite dell'indice massimo.
+> Dato un vettore di cardinalità N (N elementi contigui in memoria) il primo elemento avrà indice **0**, l'ultimo elemento avrà indice **N - 1**. Se si accede oltre il limite massimo il comportamento del programma è indefinito quindi non bisogna mai accedere a una cella di memoria oltre il limite dell'indice massimo.
 
 > [!IMPORTANT]
-> ** Nome del vettore
+> **Nome del vettore**
 > Il nome (identificatore) di un vettore contiene l'indirizzo del primo elemento del vettore, in particolare è un **puntatore costante** al **primo elemento del vettore**. Questo vuol dire che per accedere all'elemento i-esimo entrambe le sintassi di sotto sono lecite
 
 ```c
@@ -4325,7 +4325,7 @@ int main(void){
                 printf("%d ", vettore[i]);
         printf("\n");
 
-        /* accedo agli elementi del vettore tramite aritemetica puntatori */
+        /* accedo agli elementi del vettore tramite aritmetica puntatori */
         for(int j=0; j < 5; j++)
                 printf("%d ", *(vettore + j));
         printf("\n");
@@ -4356,7 +4356,7 @@ int main(void){
 }
 ```
 
-possiamo anche non esplicitare la cardinalità (parentesi quadre vuote) nella dichiarazione che verrà allora dedotta dal numero dei valori specificati nell'inizializzazione
+Possiamo anche non esplicitare la cardinalità (parentesi quadre vuote) nella dichiarazione, che verrà allora dedotta dal numero dei valori specificati nell'inizializzazione.
 
 ```c
 #include<stdio.h>
@@ -4372,7 +4372,7 @@ int main(void){
 }
 ```
 
-Se vogliamo inizializzare tutti gli elementi del vettore allo stesso valore possiamo usare questa sintassi
+Se vogliamo inizializzare tutti gli elementi del vettore allo stesso valore possiamo usare questa sintassi:
 
 ```c
 #include<stdio.h>
@@ -4389,7 +4389,7 @@ int main(void){
 ```
 
 Spesso nella dichiarazione di un vettore si usa la direttiva `#define` per specificare la cardinalità del vettore come mostrato nel codice di sotto.
-Come puoi vedere se dovessi cambiare la cardinalità non dovrei modidificare la riga della dichiarazione e quella del ciclo ma solamente la riga con la direttiva `#define`
+Come puoi vedere, se dovessi cambiare la cardinalità non dovrei modificare la riga della dichiarazione e quella del ciclo, ma solamente la riga con la direttiva `#define`.
 
 ```c
 #include<stdio.h>
@@ -4461,7 +4461,7 @@ vettore + 4 = 0x7fff64c6243c + 4 = 0x7fff64c62440
 
 #### Dimensione vettore (`sizeof`)
 
-Abbiamo visto come l'operatore `sizeof` ci permetta di conoscere il numero di byte occupati da una variabile o di un tipo di dato. Possiamo sfruttare questo operatore per conoscere il numero di elementi di un vettore a tempo di esecuzione svolgendo semplicemente la divisione tra il numero di byte totali occupati dal vettore ed il numero di byte occupati dal singolo elemento del vettore (ricordiamo che gli elementi di un vettore sono tutti dello stesso tipo ed allocati in celle contigue in memoria).
+Abbiamo visto come l'operatore `sizeof` ci permetta di conoscere il numero di byte occupati da una variabile o da un tipo di dato. Possiamo sfruttare questo operatore per conoscere il numero di elementi di un vettore a tempo di esecuzione svolgendo semplicemente la divisione tra il numero di byte totali occupati dal vettore e il numero di byte occupati dal singolo elemento del vettore (ricordiamo che gli elementi di un vettore sono tutti dello stesso tipo e allocati in celle contigue in memoria).
 
 ```c
 #include<stdio.h>
@@ -4470,7 +4470,7 @@ Abbiamo visto come l'operatore `sizeof` ci permetta di conoscere il numero di by
 int main(void){
         int array[NUM_ELEM] = {0};
 
-        unsigned int num_byte_array = sizeof(array); /* n. di byte occupati dall'intero verrore (100*4) */
+        unsigned int num_byte_array = sizeof(array); /* n. di byte occupati dall'intero vettore (100*4) */
         unsigned int num_byte_int   = sizeof(int);   /* n. di byte occupati da un intero in questa arch */
 
         unsigned int n_elem = num_byte_array / num_byte_int;
@@ -4504,7 +4504,7 @@ Volendo è possibile definire una macro da usare ogni volta che è necessario ca
 int main(void){
         int array[NUM_ELEM] = {0};
 
-        unsigned int num_byte_array = sizeof(array); /* n. di byte occupati dall'intero verrore (100*4) */
+        unsigned int num_byte_array = sizeof(array); /* n. di byte occupati dall'intero vettore (100*4) */
         unsigned int num_byte_int   = sizeof(int);   /* n. di byte occupati da un intero in questa arch */
 
         unsigned int n_elem = ARRAY_SIZE(array);
@@ -4518,8 +4518,8 @@ int main(void){
 ### Relazione tra array e puntatori
 
 Abbiamo detto che il nome di un array è un puntatore costante al primo elemento del vettore.
-Quello che non abbiamo detto che i puntatori come gli array possono essere indicizzati con le parentesi `[` `]` esattamente come i vettori.
-La differenza tra nome di un array e puntatori è che il primo è un puntatore costante quindi non è possibile fare le operazione seguenti:
+Quello che non abbiamo detto è che i puntatori, come gli array, possono essere indicizzati con le parentesi `[` `]` esattamente come i vettori.
+La differenza tra nome di un array e puntatori è che il primo è un puntatore costante quindi non è possibile fare le operazioni seguenti:
 
 ```c
 #define N 300
@@ -4528,9 +4528,9 @@ int main(void){
         int a[N] = {1};
         int *p;
 
-        a = p;   // errore: a è un puntaore costante, non lo posso cambiare assegnando un altro indirizzo
-        p = a++; // errore: a è un puntaore costante, non lo posso incrementare con operatore ++ ma (a+1) ok
-        p = &a;  // errore: a è un puntaore costante, non posso accedere al suo indirizzo
+        a = p;   // errore: a è un puntatore costante, non lo posso cambiare assegnando un altro indirizzo
+        p = a++; // errore: a è un puntatore costante, non lo posso incrementare con operatore ++ ma (a+1) ok
+        p = &a;  // errore: a è un puntatore costante, non posso accedere al suo indirizzo
 }
 ```
 
@@ -4555,16 +4555,16 @@ int main(void){
          *   *(a + 1) // aritmetica puntatori con nome array
          *   a[i]     // indicizzazione array con nome array
          *   p[i]     // indicizzazione array con  puntatore
-         *   *(p +1)  // aritemetica puntatori con puntatore
+         *   *(p +1)  // aritmetica puntatori con puntatore
          */
 
         int risultato = 0;
-        /* ciclo il vettore usando l'indicizzazione dei vettore sul nome del vettore */
+        /* ciclo il vettore usando l'indicizzazione del vettore sul nome del vettore */
         for(i = 0; i < N; i++)
                 risultato += a[i];
         printf("%d\n", risultato);
 
-        /* ciclo il vettore uando l'artmetica dei puntatori sul puntatore*/
+        /* ciclo il vettore usando l'aritmetica dei puntatori sul puntatore */
         risultato = 0;
         for(p = a; p < &a[N]; p++)
                 risultato += *p;
@@ -4617,7 +4617,7 @@ int main(void){
         printf("%ld\n", (long)q - (long)p);
         printf("\n");
 
-        /* questi vale anche se le variabili puntate non sono elementi di un array */
+        /* questo vale anche se le variabili puntate non sono elementi di un array */
         int b = 2;
         int c = 1;
         int d = 3;
@@ -4656,10 +4656,10 @@ Una stringa in C deve essere racchiusa tra **doppi apici**: `"` in questo modo
 "Questa è una stringa"
 ```
 
-**Una costante stringa come quella di sopra è tratta dal compilatore come un puntatore a carattere** quindi per assegnare una costante stringa ad una variabile abbiamo due possibilità. La prima è dichiarare un array di catteri sufficientemente capiente per contenere tutti i caratteri della stringa. Tutte le stringhe vengono terminate (ultimo elemento della stringa) dal carattere `\0` detto di fine stringa che ovviamente non è stampabile ma serve per delimitare la fine della stringa. Nel calcolo della dimensione del vettore di carattere che conterrà la stringa dobbiamo quindi tenere conto del `\0` ed aumentare la dimenisone di 1 per esempio: la stringa "ciao" è composta da quattro caratteri, dobbiamo dichiarare un array di 5 caratteri per ospitare anche il carattere `\0`, in questo modo:
+**Una costante stringa come quella di sopra è trattata dal compilatore come un puntatore a carattere** quindi per assegnare una costante stringa a una variabile abbiamo due possibilità. La prima è dichiarare un array di caratteri sufficientemente capiente per contenere tutti i caratteri della stringa. Tutte le stringhe vengono terminate (ultimo elemento della stringa) dal carattere `\0` detto di fine stringa, che ovviamente non è stampabile ma serve per delimitare la fine della stringa. Nel calcolo della dimensione del vettore di caratteri che conterrà la stringa dobbiamo quindi tenere conto del `\0` e aumentare la dimensione di 1; per esempio: la stringa "ciao" è composta da quattro caratteri, dobbiamo dichiarare un array di 5 caratteri per ospitare anche il carattere `\0`, in questo modo:
 
 > [!NOTE]
-> Il carattere di fine stringa `\0` è diverso dal catattere '0' (il valore in ACII del carattere '0' è 48). `\0` in ASCII ha valore 0.
+> Il carattere di fine stringa `\0` è diverso dal carattere '0' (il valore in ASCII del carattere '0' è 48). `\0` in ASCII ha valore 0.
 
 ```c
 #include<stdio.h>
@@ -4686,7 +4686,7 @@ c       i       a       o
 > [!CAUTION]
 > I doppi apici `"` devono essere utilizzati per le stringhe, i singoli apici `'` per i caratteri. Fai attenzione a non scambiare i simboli tra loro.
 
-Un altra possibilità per assegnare una costante stringa ad una variabile è quella di utilizzare una variabile di tipo puntatore a carattere `char *` in questo modo:
+Un'altra possibilità per assegnare una costante stringa a una variabile è quella di utilizzare una variabile di tipo puntatore a carattere `char *` in questo modo:
 
 ```c
 #include<stdio.h>
@@ -4738,7 +4738,7 @@ Anche in questo caso possiamo scordarci di `\0`.
 
 ### Dettagli sull'inizializzazione
 
-Anche se esistono due modi diversi per dichiarare una stringa (il primo pensandola come un array di carattere e il secondo pensandola come un literals puntato da un puntatore a carattere) esistono delle differenza sottili tra i due metodi che vanno oltre il non doversi preoccupare di allocare spazio per '\0'.
+Anche se esistono due modi diversi per dichiarare una stringa (il primo pensandola come un array di caratteri e il secondo pensandola come un literal puntato da un puntatore a carattere), esistono delle differenze sottili tra i due metodi che vanno oltre il non doversi preoccupare di allocare spazio per '\0'.
 Vediamole in questo esempio:
 
 ```c
@@ -4747,13 +4747,13 @@ Vediamole in questo esempio:
 
 int main(void){
         char ciao[] = "ciao";
-        /*  Il nome di un array e' un putatore costante al primo elemento del vettore
-         *  non posso farlo puntatore ad un'altro indirizzo, si ottiene un errore:
+        /*  Il nome di un array e' un puntatore costante al primo elemento del vettore
+         *  non posso farlo puntare ad un altro indirizzo, si ottiene un errore:
          *  error: assignment to expression with array type
          */
-        //ciao = "miao";/* errore: ciao e' puntaore costante */
+        //ciao = "miao";/* errore: ciao e' puntatore costante */
 
-        /* Il puntatore non può essere modificato ma i caratteri ovviamente si come
+        /* Il puntatore non può essere modificato ma i caratteri ovviamente sì, come
          * singoli elementi del vettore oppure usando la strcpy()
          */
         ciao[0] = 'm'; // corretto
@@ -4764,7 +4764,7 @@ int main(void){
         printf("\n");
 
         /* Se assegno la stringa ad un puntatore a carattere posso far puntare ciao_
-         * ad un' altra  cella di memoria senza problemi perche' il puntatore non e'
+         * ad un'altra  cella di memoria senza problemi perche' il puntatore non e'
          * const
          */
         char *ciao_ = "ciao";
@@ -4805,7 +4805,7 @@ Fare un ciclo `for` per stampare carattere dopo carattere tutti gli elementi del
 int main(void){
         char ciao_v1[5] = "ciao"; // vettore dimensione fissa (+1 per '\0')
         char *ciao_v2 = "ciao";   // puntatore a carattere
-        char ciao_v3[] = "ciao";  // vettore dimensine dedotta dal numero di caratteri
+        char ciao_v3[] = "ciao";  // vettore dimensione dedotta dal numero di caratteri
 
         printf("%s\n", ciao_v1);
         printf("%s\n", ciao_v2);
@@ -4825,8 +4825,8 @@ ciao
 
 ### Funzioni
 
-Quando un certo numero di istruzioni vengono usate più volte nel codice, piuttosto che copiarle ed incollarle in tutte le parti dove ne abbiamo bisogno, è preferibile raggrupparle in una funzione.
-Una funzione è una porzione di codice che può essere richiamata in qualsiasi parte del programma e di solito raggruppa le istruzioni che cooperano per svolgere un certo compito. Ogni funzione ritorna uno ed un solo valore (di solito un intero che informa circa il successo o meno delle operazioni svolte oppure direttamente il risultato dell'operazione) e riceve una serie di parametri in ingresso (può anche non accettare alcun parametro in ingresso se non ne ha bisogno).
+Quando un certo numero di istruzioni viene usato più volte nel codice, piuttosto che copiarle e incollarle in tutte le parti dove ne abbiamo bisogno, è preferibile raggrupparle in una funzione.
+Una funzione è una porzione di codice che può essere richiamata in qualsiasi parte del programma e di solito raggruppa le istruzioni che cooperano per svolgere un certo compito. Ogni funzione ritorna uno e un solo valore (di solito un intero che informa circa il successo o meno delle operazioni svolte oppure direttamente il risultato dell'operazione) e riceve una serie di parametri in ingresso (può anche non accettare alcun parametro in ingresso se non ne ha bisogno).
 Una funzione ha questa forma:
 
 ```c
@@ -4843,18 +4843,18 @@ La prima riga esclusa la parentesi graffa aperta `{` è detta **prototipo** dell
 tipo-valore-ritorno nome-funzione(tipo-parametro-1 nome-parametro-1, ..., tipo-parametro-N nome-parametro-N)
 ```
 
-In realtà il nome dei paraemtri in ingresso è opzionale, quindi il prototipo di sotto (più compatto) è comunque corretto
+In realtà il nome dei parametri in ingresso è opzionale, quindi il prototipo di sotto (più compatto) è comunque corretto.
 
 ```c
 tipo-valore-ritorno nome-funzione(tipo-parametro-1, ..., tipo-parametro-N)
 ```
 
-Specificare i nomi dei parametri aiuta chi legge il codice a comprendere il tipo di operazioni che la funzione svolge, è cosa buona e giusta aggiugerli nella dichiarazione della funzione (nel prototipo)
+Specificare i nomi dei parametri aiuta chi legge il codice a comprendere il tipo di operazioni che la funzione svolge, è cosa buona e giusta aggiungerli nella dichiarazione della funzione (nel prototipo).
 
 > [!IMPORTANT]
 > **Prototipo** di funzione: consiste nel tipo di ritorno, nel nome della funzione e nella lista dei tipi dei parametri in ingresso (se presenti)
 
-tutto il codice compreso tra le parentesi graffe `{` `}` è il **corpo** (body) della funzione:
+Tutto il codice compreso tra le parentesi graffe `{` `}` è il **corpo** (body) della funzione:
 
 ```c
 {
@@ -4893,20 +4893,20 @@ questo è il suo corpo
 }
 ```
 
-Le funzioni possono essere dichiarate e definite. 
+Le funzioni possono essere dichiarate e definite.
 
 ### Dichiarazione di funzione
-**La dichiarazione è opzionale** e non prevede che si specifichino le istruzioni che compongono la funzione ma **solo il suo prototipo**. La dichiarazione serve solo per informare il compilatore circa l'esistenza di una certa funzione da qualche altra parte nel codice sorgente. In questo modo quando il compilatore incontrerà una chiamata alla funzione avrà (grazie alla dichiarazione che precede la cihamata) le informazioni necessaria per verificare la correttezza della chiamata (i parametri sono dei tipi attesi, nel numero corretto, il valore di ritorno coincide con quello nel prototipo, etc). Ovviamente **la dichiarazione della funzione deve sempre precedere la prima invocazione della funzione stessa**. La definizione (che vedremo sotto) può essere inserita in qualunque punto del codice sorgente. **La dichiarazione è il prototipo della funzione**.
+**La dichiarazione è opzionale** e non prevede che si specifichino le istruzioni che compongono la funzione ma **solo il suo prototipo**. La dichiarazione serve solo per informare il compilatore circa l'esistenza di una certa funzione da qualche altra parte nel codice sorgente. In questo modo, quando il compilatore incontrerà una chiamata alla funzione, avrà (grazie alla dichiarazione che precede la chiamata) le informazioni necessarie per verificare la correttezza della chiamata (i parametri sono dei tipi attesi, nel numero corretto, il valore di ritorno coincide con quello nel prototipo, etc). Ovviamente **la dichiarazione della funzione deve sempre precedere la prima invocazione della funzione stessa**. La definizione (che vedremo sotto) può essere inserita in qualunque punto del codice sorgente. **La dichiarazione è il prototipo della funzione**.
 
 ### Uso di void nelle funzioni
 
-Le funzioni possono non accettare al parametro in ingresso o non restituire alcun valore di ritorno. Per informare di questo il compilatore si uso il tipo `void`. Per esempio
+Le funzioni possono non accettare alcun parametro in ingresso o non restituire alcun valore di ritorno. Per informare di questo il compilatore si usa il tipo `void`. Per esempio:
 
 Questa funzione non ritorna nulla:
 
 ```c
 void stampa(char *stringa){
-	pritnf("%s\n", stringa);
+	printf("%s\n", stringa);
 }
 ```
 
@@ -4920,7 +4920,7 @@ char *saluta(void){
 
 ### Definizione di funzione
 
-La definizione di funzone include il prototipo  e le istruzioni che formano il corpo della funzione. Una definizione di funzione può comparire solo una volta nel codice sorgente. La definizione di funzione termina quando viene eseguita l'ultima istruzione o quando viene incontrata l'istruzione `return`. Quando l'istruzione termina, il programma prosegue dall'istruzione successiva alla chiamata della funzione appena terminata. Lo scopo dell'istruzione `return` è quella di specificare il valore di ritorno della funzione.
+La definizione di funzione include il prototipo e le istruzioni che formano il corpo della funzione. Una definizione di funzione può comparire solo una volta nel codice sorgente. La definizione di funzione termina quando viene eseguita l'ultima istruzione o quando viene incontrata l'istruzione `return`. Quando l'istruzione termina, il programma prosegue dall'istruzione successiva alla chiamata della funzione appena terminata. Lo scopo dell'istruzione `return` è quello di specificare il valore di ritorno della funzione.
 Una funzione può anche avere un corpo vuoto:
 
 ```c
@@ -4930,11 +4930,11 @@ void do_nothing(void){
 ```
 
 > [!CAUTION]
-> Un programma in linguaggio C deve almeno contenere la definizione della funzione main() da cui inizia l'esecuzione del programma
+> Un programma in linguaggio C deve almeno contenere la definizione della funzione main(), da cui inizia l'esecuzione del programma.
 
 ### Chiamata di funzione
 
-La chiamata di una funzione (invocazione di funzione) è l'operazione con lal quale si richiama l'esecuzione della funzione stessa. E' possibile richiamare 0 o N volte una funzione in un qualunque punto del programma. Ogni volta che la funzione viene invocata, l'esecuzione del programma si sposta dal punto di invocaione alla prima istruzione del corpo della funzione. Quando una funzione termina la propria esecuzione, il flusso di esecuzione ritorna al punto in cui la funzione era stata invocata e continua ed eseguire l'istruzione successiva.
+La chiamata di una funzione (invocazione di funzione) è l'operazione con la quale si richiama l'esecuzione della funzione stessa. È possibile richiamare 0 o N volte una funzione in un qualunque punto del programma. Ogni volta che la funzione viene invocata, l'esecuzione del programma si sposta dal punto di invocazione alla prima istruzione del corpo della funzione. Quando una funzione termina la propria esecuzione, il flusso di esecuzione ritorna al punto in cui la funzione era stata invocata e continua a eseguire l'istruzione successiva.
 Vediamo un esempio:
 
 ```c
@@ -4986,12 +4986,12 @@ vagrant@ubuntu2204:/lab/9_functions$ bin/0_functions
 
 ### Passaggio di parametri per valore
 
-I parametri di ingresso di una funzione sono **passati sempre per valore**: la funzione utilizza **una nuova variabile** (nello stack della funzione) per immagazzinare **una copia del valore** contenuto nella variabile passata come parametro in ingresso alla funzione dal chiamante. Anche se dentro la funzione il valore passato in ingresso alla funzione viene alterato (incremento/decremento etc) siccome questo valore è stato copiato in una variabile diversa rispetto a quella passata come in ingresso dal chiamante, il valore nella variabile del chiamante rimane inalterato; sarà modificato il valore nella variabile (nuova) allocata nello stack della funzione quando questa è stata invocata.
+I parametri di ingresso di una funzione sono **passati sempre per valore**: la funzione utilizza **una nuova variabile** (nello stack della funzione) per immagazzinare **una copia del valore** contenuto nella variabile passata come parametro in ingresso alla funzione dal chiamante. Anche se dentro la funzione il valore passato in ingresso viene alterato (incremento/decremento etc), siccome questo valore è stato copiato in una variabile diversa rispetto a quella passata in ingresso dal chiamante, il valore nella variabile del chiamante rimane inalterato; sarà modificato il valore nella variabile (nuova) allocata nello stack della funzione quando questa è stata invocata.
 
 > [!IMPORTANT]
-> Le variabili allocate all'interno di una funzione sono **locali** alla funzione. La memoria per queste variabili viene allocata solo al momento dell'invocazione della funzione e questa memoria è accessibile solo all'interno della funzione. Quando la funzione termina la memoria viene completamente deallocata. Questa porzione di memria usata per variabili locali delle funzioni è detta **stack**. Lo **stack** cresce verso il basso: l'allocazione della memoria sullo stack avviene partendo dagli indirizzi più alti verso gli indirizzi più bassi. La deallocazione della memoria sullo stack avviene partendo dall'ultimo elemento allocato fino al primo procedendo quindi in ordine inverso rispetto all'ordine di allocazione. Lo stack viene utilizzato per memorizzare l'indirizzo di ritorno della funzione (l'indirizzo dell'istruzione successiva del chiamante), il valore dei parametri di ritorno e dei parametri in ingresso alla funzione e per allocare la memoria per tutte le variabili locali della funzione stessa. Lo spazio sullo stack per la funzione viene allocato al momento dell'invocazione della fuznione e deallocata al termine della sua esecuzione (ultima istruzione della funzione o chiamata a `return`).
+> Le variabili allocate all'interno di una funzione sono **locali** alla funzione. La memoria per queste variabili viene allocata solo al momento dell'invocazione della funzione e questa memoria è accessibile solo all'interno della funzione. Quando la funzione termina la memoria viene completamente deallocata. Questa porzione di memoria usata per variabili locali delle funzioni è detta **stack**. Lo **stack** cresce verso il basso: l'allocazione della memoria sullo stack avviene partendo dagli indirizzi più alti verso gli indirizzi più bassi. La deallocazione della memoria sullo stack avviene partendo dall'ultimo elemento allocato fino al primo procedendo quindi in ordine inverso rispetto all'ordine di allocazione. Lo stack viene utilizzato per memorizzare l'indirizzo di ritorno della funzione (l'indirizzo dell'istruzione successiva del chiamante), il valore dei parametri di ritorno e dei parametri in ingresso alla funzione e per allocare la memoria per tutte le variabili locali della funzione stessa. Lo spazio sullo stack per la funzione viene allocato al momento dell'invocazione della funzione e deallocato al termine della sua esecuzione (ultima istruzione della funzione o chiamata a `return`).
 		
-Cechiamo di capire con un esempio:
+Cerchiamo di capire con un esempio:
 
 ```c
 #include<stdio.h>
@@ -5003,11 +5003,11 @@ int main(void){
         printf("valore = %d, &valore = %p\n\n", valore, &valore);
 
         printf("valore prima dell'invocazione: %d\n\n", valore);
-        /* quando la funzoine incremanta() viene invocata, il contenuto della variabile di nome valore
+        /* quando la funzione incrementa() viene invocata, il contenuto della variabile di nome valore
          * viene copiato all'interno della variabile valore_f ( primo parametro in input nel prototipo
          * della funzione). Il valore contenuto in questa nuova variabile puo' essere modificato ma è
-         * una copia del valore della variabile orginale nel chiamante. Quest'ultimo dunque non subisce
-         * alcuna variazione perchè si trova in un'altra variabile in memoria.
+         * una copia del valore della variabile originale nel chiamante. Quest'ultimo dunque non subisce
+         * alcuna variazione perché si trova in un'altra variabile in memoria.
          */
         int risultato = incrementa(valore, 3); /* incremento il valore di iniziale di 3 */
         printf("\n");
@@ -5044,8 +5044,8 @@ risultato                    : 103
 
 ### Passaggio di parametri per indirizzo
 
-Se si vuole modificare il valore della variabile del chiamante, bisogna passare alla funzione l'indirizzo della variabile (usando una variabile puntatore) del chiamante da modificare. Ovviamente il passaggio dell'indirizzo dal chiamante alla funzione è fatto per copia: cioè l'indirizzo della variabile del chiamante è copiato all'interno una nuova variabile di tipo puntatore ma avendo a disposizione l'indirizzo della variabile del chiamante la funzione potrà (attraverso la deferenziazione) acccedere al reale valore della variabile originale.
-Per ottenere un passaggio per indirizzo nel codice precedente dobbiamo trasformare il primo parametro della funzione (variabile `valore_f`) da `int` a `int *` rendondola un puntatore pronta ad aspitare l'indirizzo della variabile `valore` (la variabile del chiamante da modificare). Per modificare all'interno della funzione il valore della variabile `valore` basterà usare la deferenziazione sul puntatore `valore_f` in questo modo `*valore_f` di fatto accedendo alla locazione di memoria riservata alla variabile `valore`.
+Se si vuole modificare il valore della variabile del chiamante, bisogna passare alla funzione l'indirizzo della variabile (usando una variabile puntatore) del chiamante da modificare. Ovviamente il passaggio dell'indirizzo dal chiamante alla funzione è fatto per copia: cioè l'indirizzo della variabile del chiamante è copiato all'interno di una nuova variabile di tipo puntatore, ma avendo a disposizione l'indirizzo della variabile del chiamante la funzione potrà (attraverso la dereferenziazione) accedere al reale valore della variabile originale.
+Per ottenere un passaggio per indirizzo nel codice precedente dobbiamo trasformare il primo parametro della funzione (variabile `valore_f`) da `int` a `int *`, rendendola un puntatore pronto a ospitare l'indirizzo della variabile `valore` (la variabile del chiamante da modificare). Per modificare all'interno della funzione il valore della variabile `valore` basterà usare la dereferenziazione sul puntatore `valore_f` in questo modo `*valore_f`, di fatto accedendo alla locazione di memoria riservata alla variabile `valore`.
 Sotto il codice modificato:
 
 ```c
@@ -5058,8 +5058,8 @@ int main(void){
         printf("valore = %d, &valore = %p\n\n", valore, &valore);
 
         printf("valore prima dell'invocazione: %d\n\n", valore);
-        /* In questo passiamo l'indirizzo della variabile valore  e lo capiamo dentro
-         * una  variabile puntatore ad intero locale alla funzione  ( primo parametro
+        /* In questo passiamo l'indirizzo della variabile valore e lo copiamo dentro
+         * una  variabile puntatore a intero locale alla funzione  ( primo parametro
          * in  ingresso della funzione incrementa). Dentro la funzione dereferenziamo
          * il puntatore accedendo effettivamente alla locazione di memoria della vari
          * abile valore del chiamante modificando di fatto il valore originale.
@@ -5099,13 +5099,13 @@ risultato                    : 103
 
 > [!IMPORTANT]
 > L'utilizzo della tecnica del passaggio di parametri per indirizzo permette al programmatore di:
-* ritornare più di una valore da una funzione
+* ritornare più di un valore da una funzione
 * evitare di perdere tempo nella copia di dati di grandi dimensioni passando solo l'indirizzo e non il dato completo
 
 
 ### Passaggio di puntatori const
 
-Quando è necessario passare dati di grandi dimensioni ad una funzione è quindi cosa buona e giusta passare solo il puntatore al dato (tramite variabile puntatore: passaggio per indirizzo). Abbiamo visto che passando il puntatore di una variabile ad una funzione applichiamo un passaggio per indirizzo ed il dato originale nel chiamante è di fatto modificabile dalla funzione che lo riceve. Se non vogliamo che la funzione sia in grado di modificare il dato passato per indirizzo attraverso la deferenziazione del puntatore possiamo dichiarare il puntatore const nel prototipo della funzione rendendo di fatto il dato a sola lettura dentro la funzione. Vediamo un esempio:
+Quando è necessario passare dati di grandi dimensioni a una funzione è quindi cosa buona e giusta passare solo il puntatore al dato (tramite variabile puntatore: passaggio per indirizzo). Abbiamo visto che passando il puntatore di una variabile a una funzione applichiamo un passaggio per indirizzo e il dato originale nel chiamante è di fatto modificabile dalla funzione che lo riceve. Se non vogliamo che la funzione sia in grado di modificare il dato passato per indirizzo attraverso la dereferenziazione del puntatore possiamo dichiarare il puntatore `const` nel prototipo della funzione rendendo di fatto il dato a sola lettura dentro la funzione. Vediamo un esempio:
 
 ```c
 #include<stdio.h>
@@ -5122,9 +5122,9 @@ int main(void){
 
 void leggi(const char *qualcosa){
         // qualcosa[0] = '\0';
-        /* Se decommenti la riga sopra e provi a ricompilare ottineni errore
+        /* Se decommenti la riga sopra e provi a ricompilare ottieni errore
          * error: assignment of read-only location *qualcosa
-         * perchè stai provando a modificare una locazione di memoria in sola
+         * perché stai provando a modificare una locazione di memoria in sola
          * lettura (puntatore costante)
          */
         printf("%s\n",qualcosa);
@@ -5138,7 +5138,7 @@ xxx voglio essere modificata
 
 ### Array come parametri a funzioni
 
-In una definizione di funzione, un parametro in ingresso dichiarato come array è in realtà un puntatore. Quindi, quando un array viene passato ad una funzione, viene fatto un passaggio per valore dell'indirizzo del primo elemento dell'array; gli elementi degli array non vengono mai copiati. Per convenienza notaionale, il compilatore permette l'utilizzo della notazione con le parentesi quadre (vuote) degli array per dichiarare parametri di tipo puntatore. Vediamo un esempio:
+In una definizione di funzione, un parametro in ingresso dichiarato come array è in realtà un puntatore. Quindi, quando un array viene passato a una funzione, viene fatto un passaggio per valore dell'indirizzo del primo elemento dell'array; gli elementi degli array non vengono mai copiati. Per convenienza notazionale, il compilatore permette l'utilizzo della notazione con le parentesi quadre (vuote) degli array per dichiarare parametri di tipo puntatore. Vediamo un esempio:
 
 ```c
 #include<stdio.h>
@@ -5180,21 +5180,21 @@ vagrant@ubuntu2204:/lab/9_functions$ bin/3_functions
 
 ### Allocazione dinamica della memoria
 
-Quando si dichiara una variabile, il compilatore alloca automaticamente lo spazio in memoria necessario per memorizzare la variabile. La quantità di spazio allocato dipende dal tipo della variabile. Quando si dichiara un puntatore ad un determinato tipo, viene allocato spazio in memoria per il puntatore soltanto (che è sempre la stessa `unsisgned long` 8byte) indipendentemente dalla dimensione del tipo puntato. Il puntatore potrà successivamente essere assegnato per contenere l'indirizzo di una variabile dello stesso tipo del puntatore e da quel momento si potrà utilizzare il puntatore per accedere al contenuto della variabile passando per il suo indirizzo (usando l'operazione di derenziazione dei puntatori che abbiamo studiato).
-Questo tipo di allocazione della memoria avviene a tempo di compilazione ed è spesso detta **allocazione statica della memoria**. L'allocazione statica può risultare inutile soprattutto nel caso dei vettori se la dimensione (il numero di elementi del vettore) non è noto a tempo di compilazione ma solo durante l'esecuzione del programma (ad esempio il numero degli elementi è scelto dall'utente ad ogni nuova esecuzione). Il linguaggio C permette di effettuare l'allocazione di memoria a tempo di esecuzione; questo tipo di allcoazione è detta: **allocazione dinamica della memmoria**.
-Esistono diverse funzioni offerte dal libreria standard del C, per allocare dinamicamente la memoria a tempo di esecuzione. Per adesso vediamo la più comune: la funzione **malloc()**.
+Quando si dichiara una variabile, il compilatore alloca automaticamente lo spazio in memoria necessario per memorizzare la variabile. La quantità di spazio allocato dipende dal tipo della variabile. Quando si dichiara un puntatore a un determinato tipo, viene allocato spazio in memoria per il puntatore soltanto (che è sempre lo stesso `unsigned long`, 8 byte) indipendentemente dalla dimensione del tipo puntato. Il puntatore potrà successivamente essere assegnato per contenere l'indirizzo di una variabile dello stesso tipo del puntatore e da quel momento si potrà utilizzare il puntatore per accedere al contenuto della variabile passando per il suo indirizzo (usando l'operazione di dereferenziazione dei puntatori che abbiamo studiato).
+Questo tipo di allocazione della memoria avviene a tempo di compilazione ed è spesso detta **allocazione statica della memoria**. L'allocazione statica può risultare inutile soprattutto nel caso dei vettori se la dimensione (il numero di elementi del vettore) non è nota a tempo di compilazione ma solo durante l'esecuzione del programma (ad esempio il numero degli elementi è scelto dall'utente a ogni nuova esecuzione). Il linguaggio C permette di effettuare l'allocazione di memoria a tempo di esecuzione; questo tipo di allocazione è detta: **allocazione dinamica della memoria**.
+Esistono diverse funzioni offerte dalla libreria standard del C per allocare dinamicamente la memoria a tempo di esecuzione. Per adesso vediamo la più comune: la funzione **malloc()**.
 Questo è il suo prototipo:
 
 ```c
 void * malloc(size_t n);
 ```
 
-La funzione `malloc()` alloca n byte contigui in memoria e ritorna in caso di successo il puntatore al primo elemento della memoria allocata o in caso di errore `NULL`.
+La funzione `malloc()` alloca n byte contigui in memoria e ritorna, in caso di successo, il puntatore al primo elemento della memoria allocata o, in caso di errore, `NULL`.
 
 * `size_t n`: n è il numero di byte da allocare contigui in memoria
 * `void *`: ritorna un puntatore a void (che può essere trasformato in un puntatore di qualsiasi tipo) che punta al primo elemento della memoria contigua allocata
 
-Tornando `NULL` in caso di errore è cosa buona e giusta, prima di usare la memoria allocata, effettuare un controllo sul puntatore tornato da `malloc()` in questo modo:
+Ritornando `NULL` in caso di errore, è cosa buona e giusta, prima di usare la memoria allocata, effettuare un controllo sul puntatore tornato da `malloc()` in questo modo:
 
 ```c
 	int *ptr = (int *)malloc(sizeof(int));
@@ -5214,7 +5214,7 @@ o anche esplicitamente
 ```
 
 > [!CAUTION]
-> Tutta la memoria allocata dinamicamente deve essere rilasciata quando non più necessaria. A questo scopo si richiama la funzione free() che accetta come parametro un puntatore contenente la memoria da deallocara
+> Tutta la memoria allocata dinamicamente deve essere rilasciata quando non più necessaria. A questo scopo si richiama la funzione free() che accetta come parametro un puntatore contenente la memoria da deallocare.
 > Chiamare free() su un puntatore non allocato o precedentemente deallocato può portare a comportamenti del programma imprevedibili. Chiamare free() su un puntatore nullo (`NULL`) non ha alcun effetto.
 
 ```c
@@ -5240,8 +5240,8 @@ int main(void){
         printf("Quanti elementi per il vettore?\n");
         scanf("%d", &M);
         /* malloc alloca n byte contigui in memoria e ritorna l'indirizzo del primo
-         * byte relativo allo spazio allocato.Nota come la variabile dinamico e' un
-         * puntaore ma nel ciclo posso usare l'indicizzazione come fosse un vettore
+         * byte relativo allo spazio allocato. Nota come la variabile dinamico e' un
+         * puntatore ma nel ciclo posso usare l'indicizzazione come fosse un vettore
          */
         int *dinamico = (int *) malloc(M * sizeof(int));
         /* dinamico e' un puntatore*/
@@ -5274,7 +5274,7 @@ dinamico: 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14
 
 ### Array bidimensionali
 
-Gli array sono memorizzati in modo contiguo (linearmente) in memoria ma spesso è utile pensare a vettori a due dimensioni (detti anche matrici) in cui un elmento del vettore a due dimensioni è indentificato da due indici: **indice di riga** e **indice di colonna**.
+Gli array sono memorizzati in modo contiguo (linearmente) in memoria ma spesso è utile pensare a vettori a due dimensioni (detti anche matrici) in cui un elemento del vettore a due dimensioni è identificato da due indici: **indice di riga** e **indice di colonna**.
 La dichiarazione di una matrice prevede quindi due cardinalità per il numero delle righe e per il numero delle colonne.
 
 ```c
@@ -5289,25 +5289,25 @@ int mat[6][7];
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/matrici.png)
 
-Come puoi vedere nella figura di sopra anche se da un punto di vista di indicizzazione `mat` ha due indici quindi è bidimensionale in memoria lo spazio allocato è lineare e continguo (la RAM ha una struttura monodimensionale): viene allocato spazio contiguo per 42 interi.
-Rimane la relazione tra array e puntatori, il nome della matrice è un puntatore doppio (punta ad un puntatore) cioè se faccio la deferenziazione `*mat` non ottengo il valore del primo elemento del vettore contingue di 42 elementi ma l'indirizzo del primo elemento del vettore contiguo in RAM; usando l'aritmetica dei puntatori a partire da questo indirizzo mi sposto tra i vari elementi.
-Per esempio data una matrice di `N_RIGHE=6` e `N_COLONNE=7`: `mat[6][7]` sia `i` l'indice di riga e `j` l'indice colonna, per accedere al 21° elemento (ultimo elemento della terza riga) quindi `i=2` (gli indici partono sempre da zero, i=0 prima riga, i=2 terza riga) `j=6` (settima ed ultima colonna) possiamo usare: 
+Come puoi vedere nella figura di sopra, anche se da un punto di vista di indicizzazione `mat` ha due indici quindi è bidimensionale, in memoria lo spazio allocato è lineare e contiguo (la RAM ha una struttura monodimensionale): viene allocato spazio contiguo per 42 interi.
+Rimane la relazione tra array e puntatori: il nome della matrice è un puntatore doppio (punta a un puntatore), cioè se faccio la dereferenziazione `*mat` non ottengo il valore del primo elemento del vettore contiguo di 42 elementi ma l'indirizzo del primo elemento del vettore contiguo in RAM; usando l'aritmetica dei puntatori a partire da questo indirizzo mi sposto tra i vari elementi.
+Per esempio data una matrice di `N_RIGHE=6` e `N_COLONNE=7`: `mat[6][7]`, sia `i` l'indice di riga e `j` l'indice colonna, per accedere al 21° elemento (ultimo elemento della terza riga), quindi `i=2` (gli indici partono sempre da zero, i=0 prima riga, i=2 terza riga) `j=6` (settima e ultima colonna), possiamo usare:
 
 * l'accesso ad indice degli array
   ```c
 	mat[i][j]
   ```
-* l'artimetica dei puntaori
+* l'aritmetica dei puntatori
   ```c
   	/*
-  	 * mat è un puntatore doppio: contiene l'indirizzo di una variabile puntatore che continene
-  	 * a suo volta l'indirizzo del primo elemento del vettore contiguo di 42 elementi.
-  	 * 1. deferenziazione sul doppio puntatore mat:
+	 * mat è un puntatore doppio: contiene l'indirizzo di una variabile puntatore che contiene
+	 * a sua volta l'indirizzo del primo elemento del vettore contiguo di 42 elementi.
+	 * 1. dereferenziazione sul doppio puntatore mat:
   	 *           *mat 
   	 * ottengo l'indirizzo del primo elemento del vettore
   	 * 2. mi sposto con aritmetica puntatori all'indirizzo del 21 elemento con la formula
   	 *           *mat + ( (i*N_COLONNE) + j) )
-  	 * 3. deferenziazione del puntatore che punta al 21 elemento
+	 * 3. dereferenziazione del puntatore che punta al 21 elemento
   	 *           *(*mat + ( (i*N_COLONNE) + j) ) )
   	 * e finalmente ottengo il valore del 21 elemento
   	 */
@@ -5337,9 +5337,9 @@ int main(void){
         printf("\n");
         /* Gli elementi della matrice sono  contigui in memoria e
          * posso accedervi senza la notazione  ad indici del vett
-         * ore ma usando l' artimetica dei  puntatori, se i e' l'
+         * ore ma usando l'aritmetica dei  puntatori, se i e' l'
          * indice di riga  e j l' indice  colonna per accedere al
-         * k-esimo elemento contigue in  memoria  basta  usare la
+         * k-esimo elemento contiguo in  memoria  basta  usare la
          * formula k = (i*N_COLONNE) + j
          * Per accedere ad esempio all' ultimo  elemento della 3°
          * riga: k = 20, i=2 (3° riga), j=6 (7° colonna) (ricorda
@@ -5369,7 +5369,7 @@ vagrant@ubuntu2204:/lab/7_array$ bin/7_array
 
 ### Array di puntatori
 
-I puntatori sono variabili come tutte le altre e quindi è possibile dichiare un vettore di puntatori. 
+I puntatori sono variabili come tutte le altre e quindi è possibile dichiarare un vettore di puntatori.
 
 ```c
 #include<stdio.h>
@@ -5394,10 +5394,10 @@ Inserisci un numero da 1 a 12
 10 -> Ottobre
 ```
 
-### Differenza tra array bidimensionali ed array di puntatori
+### Differenza tra array bidimensionali e array di puntatori
 
-Benchè simili i vettori bidimensionali (matrici) e gli array di puntatori sono diversi.
-Riprendendo l'esempio dei mesi dell'anno le due variabili: `array_di_puntatori` e `matrice` svolono lo stesso identico ruolo: contenere la lista ordinata dei mesi dell'anno
+Benché simili, i vettori bidimensionali (matrici) e gli array di puntatori sono diversi.
+Riprendendo l'esempio dei mesi dell'anno, le due variabili `array_di_puntatori` e `matrice` svolgono lo stesso identico ruolo: contenere la lista ordinata dei mesi dell'anno.
 
 ```c
 #include<stdio.h>
@@ -5429,12 +5429,12 @@ Inserisci un numero da 1 a 12
 
 e l'accesso indicizzato `array_di_puntatori[5][0]` o `matrici[5][0]` è equivalente e permette di leggere la lettera `G` (il primo carattere del mese di giugno, primo elemento dell'array in sesta posizione).
 Da un punto di vista di allocazione di memoria ci sono delle sottili differenze.
-Nel caso di vettore bidimensionale abbiamo allocato una quantità di memoria fissa pari a 12*10=120 byte (12 ovviamente sono i mesi, il 10 è dato dalla lunghezza della stringa più lunga: Settembre che misura 9 caratteri più il carattere di fine stringa `\0`) quindi abbiamo 12 righe tutte con una lunghezza di 10 colonne. C'è un certo spreco di memoria perchè non tutti i mesi sono lunghi 9 caratteri ed i byte resteranno non utlizzati.
-Nel caso di vettori di puntaori invece abbiamo una quantità di memoria allocata pari a 12 puntatori a carattere quindi 12*8=96 byte, un puntatore doppio che punta al primo elemento del vettore di puntatori quindi 8 byte e più la memoria allocata per ogni singola stringa rappresentante i mesi dell'anno. Questa volta però le stringhe occupano lo spazio strettamente necessario a contenere i loro caratteri senza spreco di spazio e qualche elemento del vettore di puntatori potrebbe anche non contenere alcun indirizzo quindi non puntatore a nulla se fosse necessario.
-La differenza sostanziale però tra i due metodi è che nel caso delle matrici gli elementi sono allocati in modo contiguo in memoria mentre in un array di puntatori solo le variabili di tipo puntatorw sono contigue in memoria mentre le variabili puntate sono sparse in memoria; questo secondo approccio si traduce in un grosso vantaggio quando si devono svolgere operazioni di ordinamento e/o spostamento tra i vari elementi se questi ultimo occupano grandi quanità di memoria.
-Il vantaggio di un array di puntaori non è tanto il risparmio di memoria nella rappresentazione degli elmenti ma piuttosto il fatto che ordinamenti e spostamenti degli elementi del vettore sono molto più facili e veloci da fare perchè lo scambio di posizione tra due elementi del vettore si traduce nello scrivere dei nuovi indirizzi nelle variabili puntatori mentre nel caso delle matrice dobbiamo spostare tutti gli elementi compresi tra i due elementi interessati.
+Nel caso di vettore bidimensionale abbiamo allocato una quantità di memoria fissa pari a 12*10=120 byte (12 ovviamente sono i mesi, il 10 è dato dalla lunghezza della stringa più lunga: Settembre che misura 9 caratteri più il carattere di fine stringa `\0`) quindi abbiamo 12 righe tutte con una lunghezza di 10 colonne. C'è un certo spreco di memoria perché non tutti i mesi sono lunghi 9 caratteri e i byte resteranno non utilizzati.
+Nel caso di vettori di puntatori invece abbiamo una quantità di memoria allocata pari a 12 puntatori a carattere quindi 12*8=96 byte, un puntatore doppio che punta al primo elemento del vettore di puntatori quindi 8 byte e più la memoria allocata per ogni singola stringa rappresentante i mesi dell'anno. Questa volta però le stringhe occupano lo spazio strettamente necessario a contenere i loro caratteri senza spreco di spazio e qualche elemento del vettore di puntatori potrebbe anche non contenere alcun indirizzo, quindi non puntare a nulla se fosse necessario.
+La differenza sostanziale però tra i due metodi è che nel caso delle matrici gli elementi sono allocati in modo contiguo in memoria mentre in un array di puntatori solo le variabili di tipo puntatore sono contigue in memoria mentre le variabili puntate sono sparse in memoria; questo secondo approccio si traduce in un grosso vantaggio quando si devono svolgere operazioni di ordinamento e/o spostamento tra i vari elementi se questi ultimi occupano grandi quantità di memoria.
+Il vantaggio di un array di puntatori non è tanto il risparmio di memoria nella rappresentazione degli elementi ma piuttosto il fatto che ordinamenti e spostamenti degli elementi del vettore sono molto più facili e veloci da fare perché lo scambio di posizione tra due elementi del vettore si traduce nello scrivere dei nuovi indirizzi nelle variabili puntatori mentre nel caso delle matrici dobbiamo spostare tutti gli elementi compresi tra i due elementi interessati.
 
-Nulla vieta di provare ad allocare un array bidimensionale dinamicamente con la funzione `malloc()` anche in questo caso avremmo la possibilità di scegliere esattamente la dimensoine dei byte da allocare per ogni singolo elemento come nel caso degli array di vettori, ma non è questo il caso d'uso dell'allocazione dinamica. Vediamo un esempio:
+Nulla vieta di provare ad allocare un array bidimensionale dinamicamente con la funzione `malloc()`; anche in questo caso avremmo la possibilità di scegliere esattamente la dimensione dei byte da allocare per ogni singolo elemento come nel caso degli array di vettori, ma non è questo il caso d'uso dell'allocazione dinamica. Vediamo un esempio:
 
 ```c
 #include<stdio.h>  // printf()
@@ -5451,13 +5451,13 @@ int main(void){
         /* array di puntatore a char allocato dinamicamente */
         char **matrice_dinamica = (char **) malloc(12*sizeof(char*)); // alloca spazio contiguo per 12 puntatori a char
         for(int k=0; k<12; k++)
-                matrice_dinamica[k] = (char *)malloc(10*sizeof(char));   // alloca spazio contiguoper 10 caretteri
+                matrice_dinamica[k] = (char *)malloc(10*sizeof(char));   // alloca spazio contiguo per 10 caratteri
 
         /* Ho allocato spazio per 10 caratteri per tutti i mesi e sto sprecando spazio ma nulla mi impedisce di allocare
          * il numero di caratteri strettamente necessario per ogni singolo mese, non avevo voglia di perdere tempo ma e'
          * una cosa fattibile ovviamente ed avremmo avuto lo stesso risultato degli array di puntatori solo che l'alloca
          * zione in questo caso è dinamica cioe' e' avvenuto a tempo di esecuzione e non statico cioe' a tempo di compil
-         * azione. Usa l'allocazione dinamica solo quando la dimensine del vettore o della matrice non e' nota se non du
+         * azione. Usa l'allocazione dinamica solo quando la dimensione del vettore o della matrice non e' nota se non du
          * rante l'esecuzione; in questo caso e' inutile usare l'allocazione dinamica perche' sia la dimensione delle ri
          * ghe che delle colonne e' nota prima dell'esecuzione.
          */
@@ -5471,7 +5471,7 @@ int main(void){
          * la lettura
          */
 
-        /* decommanta le righe di sotto e commaenta le righe con strcpy() per pro
+        /* decommenta le righe di sotto e commenta le righe con strcpy() per pro
          * vare l'errore di segmentation fault spiegato sopra
          */
 
@@ -5511,7 +5511,7 @@ int main(void){
         printf("%d -> %s\n", mese, matrice[mese-1]);
         printf("%d -> %s\n", mese, matrice_dinamica[mese-1]);
 
-        /* con l'allocazione dinamica e' compito del programmatore deallocare la memoria quando non serve piu'*/
+        /* con l'allocazione dinamica e' compito del programmatore deallocare la memoria quando non serve piu' */
 
         /* prima dealloco i 12 array di caratteri di lunghezza 10 contenenti i mesi */
         for(int k=0; k<12; k++)
@@ -5533,7 +5533,7 @@ Inserisci un numero da 1 a 12
 
 ### Sezioni di memoria di un programma C
 
-Quando un programma viene caricato in memoria per la sua esecuzione, al programma vengono assegnate delle porzioni di memoria dette **sezioni** o **segmenti**, ciscuna delle quali è deputata ad una funzione specifica. La memoria di un programma C consiste nelle seguenti sezioni:
+Quando un programma viene caricato in memoria per la sua esecuzione, al programma vengono assegnate delle porzioni di memoria dette **sezioni** o **segmenti**, ciascuna delle quali è deputata a una funzione specifica. La memoria di un programma C consiste nelle seguenti sezioni:
 
 * **text segment** (anche detto **code segment**)
 * **data segment** (che si divide in tre zone: data, BSS e heap)
@@ -5544,21 +5544,21 @@ Il **data segment** è la parte di memoria che contiene: **variabili globali**, 
 * Il segmento **data** contiene
   * le variabili inizializzate dal programmatore nella dichiarazione (es: `static int i = 10`)
 * Il segmento **BSS** (*Block Started by Symbol) contiene
-  * le variabili non inizializzate dal programmatore (es: `int vet[100]`), queste variabili vengono inizializzate dal sistema oprativo al valore 0 prima dell'esecuzione del programma
-* Il segmento **heap** è destinato ad ospitare la memoria allocata dinamicamente tramite funzioni come `malloc()`. Quando il programmatore allora o dealloca memoria dinamicamente la dimensione di questo segmento cresce o diminuisce. Questo segmento inizia dopo il **BSS** e cresce verso l'alto occupando indirizzi crescenti
-* Il segmento **stack** gestisce la chiamata a funzione ed ospita le variabili automatiche della funzione chiamata (variabil locali, classe memorizzazione `auto`) i parametri passati in ingresso alla funzione, l'indirizzo di ritorno al chiamante da cui riprendere l'esecuzine al termine dell'esecuzione della funzione ed il contenuto di alcuni registri della CPU. Lo stack cresce verso il basso dagli indirizzi più alti verso indirizzi più bassi e confina con il segmento **heap**
+  * le variabili non inizializzate dal programmatore (es: `int vet[100]`), queste variabili vengono inizializzate dal sistema operativo al valore 0 prima dell'esecuzione del programma
+* Il segmento **heap** è destinato a ospitare la memoria allocata dinamicamente tramite funzioni come `malloc()`. Quando il programmatore alloca o dealloca memoria dinamicamente la dimensione di questo segmento cresce o diminuisce. Questo segmento inizia dopo il **BSS** e cresce verso l'alto occupando indirizzi crescenti
+* Il segmento **stack** gestisce la chiamata a funzione e ospita le variabili automatiche della funzione chiamata (variabili locali, classe memorizzazione `auto`), i parametri passati in ingresso alla funzione, l'indirizzo di ritorno al chiamante da cui riprendere l'esecuzione al termine dell'esecuzione della funzione e il contenuto di alcuni registri della CPU. Lo stack cresce verso il basso dagli indirizzi più alti verso indirizzi più bassi e confina con il segmento **heap**
 
-Lo **stack** è un'area di memoria contigua all'heap e cresce in direzione opposta a quest'utlimo, quando il puntatore allo stack incontra il puntatore all'heap, lo spazio di memoria libera per il programma è esautito.
+Lo **stack** è un'area di memoria contigua all'heap e cresce in direzione opposta a quest'ultimo; quando il puntatore allo stack incontra il puntatore all'heap, lo spazio di memoria libera per il programma è esaurito.
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/memoria_programma_c.png)
 
-### L'inizializzazioni delle variabili
+### L'inizializzazione delle variabili
 
 **In assenza di inizializzazioni esplicite**, l'inizializzazione di una variabile segue alcune regole che dipendono dalla classe di memorizzazione alla quale la variabile appartiene. In particolare:
 
-* le **variabili globali** vengono **inizializzate a zero** (si trovano nel **BSS**, se fossero state inizializzate esplictiamente sarebbero state nella sezione **data** del **data segment**)
-* le **variabili statiche** vengono **inizializzate a zero** (si trovano nel **BSS**, se fossero state inizializzate esplictiamente sarebbero state nella sezione **data** del **data segment**)
-* le **variabili statiche e globali** possono essere **inizializzate solo tramite espresioni costanti** (quindi non con valori di altre variabili non statiche o globali o valori restituiti da funzioni)
+* le **variabili globali** vengono **inizializzate a zero** (si trovano nel **BSS**, se fossero state inizializzate esplicitamente sarebbero state nella sezione **data** del **data segment**)
+* le **variabili statiche** vengono **inizializzate a zero** (si trovano nel **BSS**, se fossero state inizializzate esplicitamente sarebbero state nella sezione **data** del **data segment**)
+* le **variabili statiche e globali** possono essere **inizializzate solo tramite espressioni costanti** (quindi non con valori di altre variabili non statiche o globali o valori restituiti da funzioni)
 * le **variabili locali** possono essere inizializzate anche con valori di altre variabili o restituiti da funzione e se non inizializzate esplicitamente **non vengono poste a zero ma contengono un valore casuale e non prevedibile** a priori.
 
 ### Allocazione dinamica di matrici
@@ -5598,7 +5598,7 @@ int main(void){
 char **alloc_planets_mat_dyn(int n_rows, int n_cols){
         char **matrix = (char **)malloc(n_rows*sizeof(char *)); /* alloco un vettore di puntatori a char (le righe) */
         for(int i=0; i<n_rows; i++)
-                matrix[i] = (char *)malloc(n_cols*sizeof(char)); /* alloco un vettore di caratteri (le collonne di una riga) */
+                matrix[i] = (char *)malloc(n_cols*sizeof(char)); /* alloco un vettore di caratteri (le colonne di una riga) */
         return matrix;
 }
 
@@ -5756,10 +5756,10 @@ Neptune
 Pluto
 ```
 
-### Le strutrure
+### Le strutture
 
 Una struttura o **struct** è un tipo di dato derivato che permette di raggruppare un insieme di elementi di tipo diverso con una qualche forte correlazione tra loro, detti **campi** della struttura, in un'area contigua in memoria.  
-I campi della struttura possono essere semplici (predefiniti dal linguaggio) o derivari (anche altre sterutture stesse) e come detto possono essere di tipo diverso tra loro (al contrario degli array).
+I campi della struttura possono essere semplici (predefiniti dal linguaggio) o derivati (anche altre strutture stesse) e come detto possono essere di tipo diverso tra loro (al contrario degli array).
 La sintassi per dichiarare una struttura è la seguente:
 
 ```c
@@ -5780,11 +5780,11 @@ struct punto_2d {
 };
 ```
 
-Una volta che il nuovo tipo è stata dichiarato è possibile dichiarare variabili o puntatori del nuovo tipo, in questo modo:
+Una volta che il nuovo tipo è stato dichiarato è possibile dichiarare variabili o puntatori del nuovo tipo, in questo modo:
 
 ```c
 /* dichiaro una variabile ed un puntatore del tipo struct punto_2d
- * fai attenzione che il nuovo tipo è "struct punto_2s" e non sola
+ * fai attenzione che il nuovo tipo è "struct punto_2d" e non sola
  * mente "punto_2d", non ti scordare "struct" nel nome del tipo.
  */
 struct punto_2d i;
@@ -5804,13 +5804,13 @@ struct punto_2d {
 
 int main(void){
         /* dichiaro una variabile ed un puntatore del tipo struct punto_2d
-         * fai attenzione che il nuovo tipo è "struct punto_2s" e non sola
+         * fai attenzione che il nuovo tipo è "struct punto_2d" e non sola
          * mente "punto_2d", non ti scordare "struct" nel nome del tipo.
          */
         struct punto_2d i;
         struct punto_2d *ptr = NULL; /* alloco spazio per il puntatore */
 
-        /* il puntaore deve essere inizializzato all'indirizzo della struttura
+        /* il puntatore deve essere inizializzato all'indirizzo della struttura
          * altrimenti non punta ad una locazione di memoria valida per noi
          */
         ptr = &i;
@@ -5832,7 +5832,7 @@ int main(void){
 
 #### Passaggio di strutture a funzioni
 
-Una variabile di un tipo struct può essere passata normalmenete ad una funzione; come abbiamo studiato il passaggio dei parametri in C avviene sempre per valore e questo può essere un problema in termini di prestazioni e spreco di risorse se la struct ha numerosi campi. Per questo motivo le stuct sono quasi sempre passata per riferimento, cioè passando in ingresso alla funzione un puntatore a struttura. Vediamo quindi esclusivamente il caso di passaggio per riferimento.
+Una variabile di un tipo struct può essere passata normalmente a una funzione; come abbiamo studiato, il passaggio dei parametri in C avviene sempre per valore e questo può essere un problema in termini di prestazioni e spreco di risorse se la struct ha numerosi campi. Per questo motivo le struct sono quasi sempre passate per riferimento, cioè passando in ingresso alla funzione un puntatore a struttura. Vediamo quindi esclusivamente il caso di passaggio per riferimento.
 
 ```c
 #include<stdio.h>
