@@ -9757,7 +9757,7 @@ Ci sono riferimenti espliciti a procedure qui. Penso che possano essere quasi au
 ### Chiamare e Ritornare
 
 <p align=justify>
-Proprio all'inizio del blocco principale del programma in hexdump2gcc c'è un'istruzione macchina che non ho mai usato prima in questo libro.
+Proprio all'inizio del blocco principale del programma hexdump2gcc c'è un'istruzione macchina che non ho mai usato prima in questo libro.
 </p>
 
 ```asm
@@ -9765,7 +9765,7 @@ Proprio all'inizio del blocco principale del programma in hexdump2gcc c'è un'is
 ```
 
 <p align=justify>
-L'etichetta LoadBuff si riferisce a una procedura. Come potresti aver capito (soprattutto se hai programmato in un linguaggio più antico come BASIC o FORTRAN), CALL LoadBuff semplicemente dice alla CPU di andare a eseguire una procedura chiamata LoadBuff e poi tornare quando LoadBuff ha finito di essere eseguita. LoadBuff è definito precedentemente nel codice, ma per chiarezza nella seguente discussione lo riprodurrò qui. LoadBuff è un buon primo esempio di una procedura, perché è abbastanza lineare in termini di logica, e utilizza istruzioni e concetti di cui abbiamo già discusso. Come i programmi in linguaggio assembly in generale, una procedura come LoadBuff inizia a essere eseguita dall'inizio, esegue in modo sequenziale le istruzioni nel suo corpo, e a un certo punto termina. La fine non deve necessariamente essere proprio in fondo alla sequenza di istruzioni, ma la “fine” di una procedura è sempre il punto dove la procedura torna nella parte del programma che l'ha chiamata. Questo punto è ovunque tu veda l'alter ego di CALL, RET (per RETorno).
+L'etichetta LoadBuff si riferisce a una procedura. Come potresti aver capito (soprattutto se hai programmato in un linguaggio più antico come BASIC o FORTRAN), CALL LoadBuff dice semplicemente alla CPU di andare a eseguire una procedura chiamata LoadBuff e poi tornare quando LoadBuff ha finito. LoadBuff è definita in precedenza nel codice, ma per chiarezza nella seguente discussione la riprodurrò qui. LoadBuff è un buon primo esempio di procedura, perché è abbastanza lineare in termini di logica e utilizza istruzioni e concetti di cui abbiamo già discusso. Come i programmi in linguaggio assembly in generale, una procedura come LoadBuff inizia a essere eseguita dall'inizio, esegue in modo sequenziale le istruzioni nel suo corpo e a un certo punto termina. La fine non deve necessariamente trovarsi proprio in fondo alla sequenza di istruzioni, ma la “fine” di una procedura è sempre il punto in cui la procedura torna alla parte del programma che l'ha chiamata. Questo punto è ovunque tu veda l'alter ego di CALL, RET (per return).
 </p>
 
 ```asm
@@ -9775,8 +9775,7 @@ LoadBuff:
     push rsi       ; Save caller's RSI
     push rdi       ; Save caller's RDI
     mov rax,0      ; Specify sys_read call
-    mov rdi,0      ; Specify File Descriptor 0: Standard
- Input
+    mov rdi,0      ; Specify File Descriptor 0: Standard Input
     mov rsi,Buff   ; Pass offset of the buffer to read to
     mov rdx,BUFFLEN   ; Pass number of bytes to read at one pass
     syscall        ; Call syscall's sys_read function fill the buffer
@@ -9790,7 +9789,7 @@ LoadBuff:
 ```
 
 <p align=justify>
-In un esempio molto semplice come LoadBuff, il RET si trova alla fine della sequenza di istruzioni nella procedura. Tuttavia, il RET può trovarsi ovunque nella procedura, e ci sono situazioni in cui può essere più semplice avere più di un'istruzione RET in una procedura. Quale delle diverse istruzioni RET riporta effettivamente l'esecuzione al chiamante dipende da ciò che fa la procedura e dalle circostanze che incontra, ma questo è irrilevante. Ogni RET è un "punto di uscita" che riporta al codice che ha chiamato la procedura e (cosa più importante) tutte le istruzioni RET all'interno di una procedura riportano l'esecuzione allo stesso identico punto: l'istruzione immediatamente dopo l'istruzione CALL che ha invocato la procedura.
+In un esempio molto semplice come LoadBuff, RET si trova alla fine della sequenza di istruzioni nella procedura. Tuttavia, RET può trovarsi ovunque nella procedura, e ci sono situazioni in cui può essere più semplice avere più di un'istruzione RET in una procedura. Quale delle diverse istruzioni RET riporta effettivamente l'esecuzione al chiamante dipende da ciò che fa la procedura e dalle circostanze che incontra, ma questo è irrilevante. Ogni RET è un "punto di uscita" che riporta al codice che ha chiamato la procedura e, cosa più importante, tutte le istruzioni RET all'interno di una procedura riportano l'esecuzione allo stesso identico punto: l'istruzione immediatamente successiva all'istruzione CALL che ha invocato la procedura.
 </p>
 
 <p align=justify>
@@ -9810,18 +9809,18 @@ I punti importanti della struttura della procedura sono i seguenti:
 	</li>
  	<li>
 		<p align=justify>
-			Potrebbero esserci più di un'istruzione RET. L'esecuzione deve tornare da una procedura attraverso un'istruzione RET, ma ci possono essere più di una porta d'uscita da una procedura. Quale uscita viene presa dipende dal flusso di esecuzione della procedura, ma con istruzioni di salto condizionale si possono avere uscite ovunque soddisfino i requisiti della logica della procedura. Tutte quelle uscite portano allo stesso posto: l'istruzione dopo l'istruzione CALL che ha chiamato la procedura.
+			Può esserci più di un'istruzione RET. L'esecuzione deve tornare da una procedura attraverso un'istruzione RET, ma una procedura può avere più di una porta d'uscita. Quale uscita viene presa dipende dal flusso di esecuzione della procedura, ma con istruzioni di salto condizionale si possono avere uscite ovunque soddisfino i requisiti della logica della procedura. Tutte quelle uscite portano allo stesso posto: l'istruzione dopo l'istruzione CALL che ha chiamato la procedura.
 		</p>
 	</li>
  	<li>
 		<p align=justify>
-			Una procedura può utilizzare CALL per chiamare un'altra procedura. (Di più su questo a breve.)
+			Una procedura può utilizzare CALL per chiamare un'altra procedura. (Ne parleremo meglio a breve.)
 		</p>
 	</li>
 </ul>
 
 <p align=justify>
-I mezzi tramite i quali operano CALL e RET possono sembrare familiari: CALL prima inserisce l'indirizzo della prossima istruzione dopo di essa nello stack. Poi CALL trasferisce l'esecuzione all'indirizzo rappresentato dall'etichetta che nomina la procedura, in questo caso LoadBuff. Le istruzioni contenute nella procedura vengono eseguite. Infine, la procedura viene terminata dall'istruzione RET. L'istruzione RET estrae l'indirizzo di ritorno dalla cima dello stack e trasferisce l'esecuzione a quell'indirizzo. Poiché l'indirizzo inserito era l'indirizzo della prima istruzione dopo l'istruzione CALL, l'esecuzione continua come se CALL non avesse affatto cambiato il flusso dell'esecuzione delle istruzioni. Vedi figura di sotto
+Il meccanismo con cui operano CALL e RET può sembrarti familiare: CALL inserisce prima nello stack l'indirizzo dell'istruzione successiva. Poi CALL trasferisce l'esecuzione all'indirizzo rappresentato dall'etichetta che nomina la procedura, in questo caso LoadBuff. Le istruzioni contenute nella procedura vengono eseguite. Infine, la procedura termina con l'istruzione RET. L'istruzione RET estrae l'indirizzo di ritorno dalla cima dello stack e trasferisce l'esecuzione a quell'indirizzo. Poiché l'indirizzo inserito era l'indirizzo della prima istruzione dopo l'istruzione CALL, l'esecuzione continua come se CALL non avesse affatto cambiato il flusso di esecuzione delle istruzioni. Vedi la figura qui sotto.
 </p>
 
 <div align=center>
