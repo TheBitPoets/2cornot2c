@@ -9952,7 +9952,7 @@ C'è un dettaglio assolutamente cruciale qui, che causa una moltitudine di bug m
 ### Preservare i registri attraverso le chiamate di sistema Linux
 
 <p align=justify>
-Anche Linux utilizza registri. Lo fa in modo piuttosto trasparente per il tuo codice. L'unico problema serio è sapere quali registri vengono modificati durante le chiamate di sistema tramite l'istruzione SYSCALL e quali registri rimangono intatti. Purtroppo, non c'è una risposta semplice. Dipende completamente dalla chiamata di sistema che effettui. Ma prima di tutto, l'istruzione SYSCALL stessa utilizza due registri:
+Anche Linux utilizza i registri. Lo fa in modo piuttosto trasparente per il tuo codice. L'unico problema serio è sapere quali registri vengono modificati durante le chiamate di sistema tramite l'istruzione SYSCALL e quali rimangono intatti. Purtroppo, non c'è una risposta semplice: dipende completamente dalla chiamata di sistema che effettui. Prima di tutto, però, l'istruzione SYSCALL stessa utilizza due registri:
 </p>
 
 <ul>
@@ -9963,13 +9963,13 @@ Anche Linux utilizza registri. Lo fa in modo piuttosto trasparente per il tuo co
 	</li>
  	<li>
 		<p align=justify>
-			SYSCALL memorizza RFlags nel registro R11
+			SYSCALL memorizza RFLAGS nel registro R11
 		</p>
 	</li>
 </ul>
 
 <p align=justify>
-Questo è l'equivalente funzionale di SYSCALL che inserisce RCX e R11 nello stack. Tuttavia, salvare valori nei registri è molto più veloce che inserire valori nello stack. Rimuovere valori dallo stack è anche lento, quindi SYSCALL non ripristina nulla. Ogni volta che esegui SYSCALL, RCX e R11 saranno sovrascritti. E non è tutto il sovrascrivere coinvolto nell'effettuare una chiamata di sistema. L'uso dei registri durante una chiamata di sistema rientra in tre categorie:
+Questo è l'equivalente funzionale di un'istruzione SYSCALL che inserisce RCX e R11 nello stack. Tuttavia, salvare valori nei registri è molto più veloce che inserirli nello stack. Anche rimuovere valori dallo stack è lento, quindi SYSCALL non ripristina nulla. Ogni volta che esegui SYSCALL, RCX e R11 vengono sovrascritti. E non sono le sole sovrascritture coinvolte nell'esecuzione di una chiamata di sistema. L'uso dei registri durante una chiamata di sistema rientra in tre categorie:
 </p>
 
 <ul>
@@ -9985,13 +9985,13 @@ Questo è l'equivalente funzionale di SYSCALL che inserisce RCX e R11 nello stac
 	</li>
 	 <li>
 		<p align=justify>
-		La chiamata di sistema può restituire valori nei registri di cui il tuo codice potrebbe aver bisogno.
+		La chiamata di sistema può restituire nei registri valori di cui il tuo codice potrebbe aver bisogno.
 		</p>
 	</li>
 </ul>
 
 <p align=justify>
-La definizione delle chiamate di sistema SYSCALL include le specifiche. Questa definizione fa parte dell'ABI System V x86-64. Se il corpo più ampio del tuo codice utilizza un registro che viene sovrascritto durante una chiamata di sistema, devi scegliere un altro registro da utilizzare nel corpo del programma o salvarlo nello stack con un'istruzione PUSH prima di impostare i parametri ed eseguire SYSCALL. Dopo la chiamata di sistema, devi ripristinarlo tramite un'istruzione POP. Usare lo stack in questo modo può causare problemi con l'allineamento dello stack a meno che tu non comprenda cosa rende lo stack allineato e come mantenerlo tale. C'è anche la questione dei registri volatili rispetto a quelli non volatili. Il processo di effettuare una chiamata di sistema tramite SYSCALL non è complesso. Tuttavia, l'ultima volta che ho controllato, ce n'erano 335. Ogni chiamata di sistema richiede che certe cose vengano passate in registri specifici. È molto da ricordare. Per lo più dovrai cercare i dettagli su come effettuare chiamate di sistema in un riferimento stampato o online. Dei riferimenti sono elencati sotto.
+La definizione delle chiamate di sistema SYSCALL include le specifiche. Questa definizione fa parte dell'ABI System V x86-64. Se il corpo più ampio del tuo codice utilizza un registro che viene sovrascritto durante una chiamata di sistema, devi scegliere un altro registro da utilizzare nel corpo del programma o salvarlo nello stack con un'istruzione PUSH prima di impostare i parametri ed eseguire SYSCALL. Dopo la chiamata di sistema, devi ripristinarlo tramite un'istruzione POP. Usare lo stack in questo modo può causare problemi con l'allineamento dello stack, a meno che tu non comprenda cosa rende lo stack allineato e come mantenerlo tale. C'è anche la questione dei registri volatili rispetto a quelli non volatili. Il processo per effettuare una chiamata di sistema tramite SYSCALL non è complesso. Tuttavia, l'ultima volta che ho controllato, ce n'erano 335. Ogni chiamata di sistema richiede che certe informazioni vengano passate in registri specifici. È molto da ricordare. Per lo più dovrai cercare i dettagli su come effettuare chiamate di sistema in un riferimento stampato o online. Alcuni riferimenti sono elencati sotto.
 </p>
 
 [x86-64-linux-syscalls](https://hackeradam.com/x86-64-linux-syscalls/)
@@ -9999,7 +9999,7 @@ La definizione delle chiamate di sistema SYSCALL include le specifiche. Questa d
 [Linux_System_Call_Table_for_x86_64](https://blog.rchapman.org/posts/Linux_System_Call_Table_for_x86_64/)
 
 <p align=justify>
-Entrambi sono tavoli molto grandi che assomigliano a fogli di calcolo, con colonne per l'uso dei registri e i valori richiesti per ogni numero di chiamata di sistema. Ora, le pagine web vanno e vengono e se stai utilizzando questo libro alcuni anni dopo la sua pubblicazione nel 2023, le pagine web citate potrebbero semplicemente non esistere più. Fai una ricerca su web su "tabella delle chiamate di sistema x64" e troverai diverse. Assicurati che la tabella che usi sia per le chiamate di sistema e non per le chiamate negli spazi utente. Le chiamate negli spazi utente sono chiamate alla libreria di codice glibc utilizzata nella programmazione C, che è una questione completamente diversa. Chiamare glibc dall'assembly è possibile e spesso molto utile. Un'avvertenza seria se hai già fatto del lavoro in assembly Linux in modalità protetta a 32 bit: i parametri delle chiamate di sistema x64 non sono gli stessi di quelli in x86 a 32 bit. Nella maggior parte dei casi, non sono nemmeno vicini. In Linux x64, c'è un sistema per l'uso dei registri: il numero della chiamata di sistema (in altre parole, quale chiamata di sistema stai chiamando) è sempre in RAX. Una chiamata di sistema accetta fino a sei parametri. I registri usati per passare i parametri sono in questo ordine: RDI, RSI, RDX, R10, R8 e R9. In altre parole, il primo parametro è passato in RDI. Il secondo parametro è passato in RSI, e così via. Nessuna chiamata di sistema richiede che i parametri siano passati a essa tramite lo stack. Nota: Sia che un registro (come R9, per esempio) sia usato per passare un parametro a una chiamata di sistema, quel registro non viene preservato. Solo sette registri sono preservati da Linux durante una chiamata di sistema: R12, R13, R14, R15, RBX, RSP e RBP. Dopo una SYSCALL, RAX conterrà un valore restituito. Se RAX è negativo, indica che si è verificato un errore durante la chiamata. Per la maggior parte delle chiamate di sistema, un valore di 0 indica successo.
+Entrambe sono tabelle molto grandi che assomigliano a fogli di calcolo, con colonne per l'uso dei registri e i valori richiesti per ogni numero di chiamata di sistema. Ora, le pagine web vanno e vengono e, se stai utilizzando questo libro alcuni anni dopo la sua pubblicazione nel 2023, le pagine web citate potrebbero semplicemente non esistere più. Fai una ricerca sul web su "tabella delle chiamate di sistema x64" e ne troverai diverse. Assicurati che la tabella che usi sia per le chiamate di sistema e non per le chiamate nello spazio utente. Le chiamate nello spazio utente sono chiamate alla libreria di codice glibc utilizzata nella programmazione C, che è una questione completamente diversa. Chiamare glibc dall'assembly è possibile e spesso molto utile. Un'avvertenza seria se hai già fatto del lavoro in assembly Linux in modalità protetta a 32 bit: i parametri delle chiamate di sistema x64 non sono gli stessi di quelli in x86 a 32 bit. Nella maggior parte dei casi, non sono nemmeno simili. In Linux x64 c'è un sistema per l'uso dei registri: il numero della chiamata di sistema (in altre parole, quale chiamata di sistema stai chiamando) è sempre in RAX. Una chiamata di sistema accetta fino a sei parametri. I registri usati per passare i parametri sono in questo ordine: RDI, RSI, RDX, R10, R8 e R9. In altre parole, il primo parametro viene passato in RDI, il secondo in RSI, e così via. Nessuna chiamata di sistema richiede che i parametri le vengano passati tramite lo stack. Nota: anche se un registro (come R9, per esempio) viene usato per passare un parametro a una chiamata di sistema, quel registro non viene preservato. Solo sette registri sono preservati da Linux durante una chiamata di sistema: R12, R13, R14, R15, RBX, RSP e RBP. Dopo una SYSCALL, RAX conterrà un valore restituito. Se RAX è negativo, indica che si è verificato un errore durante la chiamata. Per la maggior parte delle chiamate di sistema, un valore di 0 indica successo.
 </p>
 
 ### PUSHAD e POPAD sono spariti
