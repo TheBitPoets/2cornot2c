@@ -7339,46 +7339,46 @@ Pensa alla direttiva <code>DB</code> come "Definisci Byte". <code>DB</code> rise
 ### Variabili Stringa
 
 <p align=justify>
-Le variabili stringa sono un caso speciale interessante. Una stringa è proprio questo: <b>una sequenza di caratteri</b>, tutti in fila in memoria. Una variabile stringa è definita in <code>eatsyscall.asm</code>: 
+Le variabili stringa sono un caso speciale interessante. Una stringa è proprio questo: <b>una sequenza di caratteri</b>, tutti in fila in memoria. Una variabile stringa è definita in <code>eatsyscall.asm</code>:
 </p>
 
 ```asm
-	EatMsg: db "Eat at Joe's!", 10 
+	EatMsg: db "Eat at Joe's!", 10
  ```
 
 <p align=justify>
-Le stringhe sono un'eccezione alla regola generale secondo cui una direttiva di definizione dei dati riserva una particolare quantità di memoria. <b>La direttiva DB di solito riserva solo un byte. Tuttavia, una stringa può essere di qualsiasi lunghezza tu desideri</b>. Poiché non esiste una direttiva di dati che riserva 17 byte o 42, le stringhe sono definite semplicemente associando un'etichetta con il punto in cui la stringa inizia. L'etichetta EatMsg e la sua direttiva DB specificano un byte in memoria come punto di partenza della stringa. Il numero di caratteri nella stringa è ciò che dice all'assemblatore quanti byte di memoria riservare per quella stringa. Possono essere utilizzati caratteri di singola virgoletta (‘) o di doppia virgoletta (”) per delimitare una stringa, e la scelta spetta a te, a meno che tu non stia definendo un valore di stringa che contiene uno o più caratteri di virgoletta. Nota che in <code>eatsyscall.asm</code> la variabile di stringa EatMsg contiene un carattere di singola virgoletta usato come apostrofo. Poiché la stringa contiene un carattere di singola virgoletta, devi delimitarla con doppi apici. Il contrario è anche vero: se definisci una stringa che contiene uno o più caratteri di doppia virgoletta, devi delimitarla usando caratteri di singola virgoletta:
-</p>	
+Le stringhe sono un'eccezione alla regola generale secondo cui una direttiva di definizione dei dati riserva una particolare quantità di memoria. <b>La direttiva DB di solito riserva solo un byte. Tuttavia, una stringa può essere di qualsiasi lunghezza tu desideri</b>. Poiché non esiste una direttiva di dati che riservi 17 byte o 42, le stringhe sono definite semplicemente associando un'etichetta al punto in cui la stringa inizia. L'etichetta EatMsg e la sua direttiva DB specificano un byte in memoria come punto di partenza della stringa. Il numero di caratteri nella stringa è ciò che dice all'assemblatore quanti byte di memoria riservare per quella stringa. Possono essere utilizzati caratteri di singola virgoletta (‘) o di doppia virgoletta (”) per delimitare una stringa, e la scelta spetta a te, a meno che tu non stia definendo un valore di stringa che contiene uno o più caratteri di virgoletta. Nota che in <code>eatsyscall.asm</code> la variabile di stringa EatMsg contiene un carattere di singola virgoletta usato come apostrofo. Poiché la stringa contiene un carattere di singola virgoletta, devi delimitarla con doppi apici. Vale anche il contrario: se definisci una stringa che contiene uno o più caratteri di doppia virgoletta, devi delimitarla usando caratteri di singola virgoletta:
+</p>
 
 ```asm
 	Yukkh: db 'He said, "How disgusting!" and threw up.', 10
 ```
 
 <p align=justify>
-Puoi combinare più sottostringhe separate in una singola variabile di stringa separando le sottostringhe con virgole. Questo è un modo perfettamente legale (e a volte utile) per definire una variabile di stringa: 
+Puoi combinare più sottostringhe separate in una singola variabile di stringa separando le sottostringhe con virgole. Questo è un modo perfettamente legale (e a volte utile) per definire una variabile di stringa:
 </p>
 
 ```asm
-	TwoLineMsg: db ""Eat at Joe's...",10,
+	TwoLineMsg: db "Eat at Joe's...",10,
 	"...Ten million flies can't ALL be wrong!", 10
 ```
 
 <p align=justify>
-Ma a che serve il numero letterale 10 usato nei precedenti esempi di stringa? In Linux, il carattere di fine riga (EOL) ha il valore numerico decimale pari a 10 , o 0Ah. Indica al sistema operativo dove finisce una riga inviata per la visualizzazione nella console. Qualsiasi testo successivo visualizzato nella console verrà mostrato sulla riga successiva, al margine sinistro. Nella variabile TwoLineMsg, il carattere EOL tra le due sottostringhe indicherà a Linux di visualizzare la prima sottostringa su una riga della console e la seconda sottostringa sulla riga della console sottostante. <br> Puoi concatenare numeri individuali all'interno di una stringa, ma devi ricordare che, come con EOL, non appariranno come numeri. Una stringa è una stringa di caratteri. Un numero aggiunto a una stringa sarà interpretato dalla maggior parte delle routine del sistema operativo come un carattere ASCII. Per mostrare numeri in una stringa, devi rappresentarli come caratteri ASCII, sia come letterali di carattere, come il carattere cifra 7, sia come gli equivalenti numerici ai caratteri ASCII, come 37h.
+Ma a che serve il numero letterale 10 usato nei precedenti esempi di stringa? In Linux, il carattere di fine riga (EOL) ha il valore numerico decimale pari a 10, o 0Ah. Indica al sistema operativo dove finisce una riga inviata per la visualizzazione nella console. Qualsiasi testo successivo visualizzato nella console verrà mostrato sulla riga successiva, al margine sinistro. Nella variabile TwoLineMsg, il carattere EOL tra le due sottostringhe indicherà a Linux di visualizzare la prima sottostringa su una riga della console e la seconda sottostringa sulla riga della console sottostante. <br> Puoi concatenare numeri individuali all'interno di una stringa, ma devi ricordare che, come con EOL, non appariranno come numeri. Una stringa è una stringa di caratteri. Un numero aggiunto a una stringa sarà interpretato dalla maggior parte delle routine del sistema operativo come un carattere ASCII. Per mostrare numeri in una stringa, devi rappresentarli come caratteri ASCII, sia come letterali di carattere, come il carattere cifra 7, sia come equivalenti numerici dei caratteri ASCII, come 37h.
 </p>
 
 <p align=justify>
-Nel lavoro di assemblaggio ordinario, quasi tutte le variabili di stringa sono definite utilizzando la direttiva <code>DB</code> e possono essere considerate stringhe di byte. (Un carattere ASCII è grande un byte.) Puoi definire variabili di stringa utilizzando <code>DW</code>, <code>DD</code> o <code>DQ</code>, ma vengono gestite in modo leggermente diverso rispetto a quelle definite con <code>DB</code>. Considera queste variabili: 
+Nel lavoro di assemblaggio ordinario, quasi tutte le variabili di stringa sono definite utilizzando la direttiva <code>DB</code> e possono essere considerate stringhe di byte. (Un carattere ASCII è grande un byte.) Puoi definire variabili di stringa utilizzando <code>DW</code>, <code>DD</code> o <code>DQ</code>, ma vengono gestite in modo leggermente diverso rispetto a quelle definite con <code>DB</code>. Considera queste variabili:
 </p>
 
  ```asm
-        WordString: dw 'CQ' 
-        DoubleString: dd 'Stop' 
-        QuadString: dq 'KANGAROO' 
+        WordString: dw 'CQ'
+        DoubleString: dd 'Stop'
+        QuadString: dq 'KANGAROO'
  ```
 
  <p align=justify>
-La direttiva <code>DW</code> definisce una variabile a lunghezza parola (word), una parola (16 bit) può contenere due caratteri a 8 bit. Allo stesso modo, la direttiva <code>DD</code> definisce una variabile a doppia parola (32 bit, double word), che può contenere quattro caratteri a 8 bit. La direttiva <code>DQ</code> definisce una variabile a quadrupla parola, che può contenere otto caratteri a 8 bit. La gestione differente si verifica quando carichi queste stringhe nominate nei registri. Considera queste tre istruzioni:
+La direttiva <code>DW</code> definisce una variabile a lunghezza parola (word): una parola (16 bit) può contenere due caratteri a 8 bit. Allo stesso modo, la direttiva <code>DD</code> definisce una variabile a doppia parola (32 bit, double word), che può contenere quattro caratteri a 8 bit. La direttiva <code>DQ</code> definisce una variabile a quadrupla parola, che può contenere otto caratteri a 8 bit. La gestione differente si verifica quando carichi queste stringhe nominate nei registri. Considera queste tre istruzioni:
  </p>
 
  ```asm
@@ -7388,30 +7388,30 @@ La direttiva <code>DW</code> definisce una variabile a lunghezza parola (word), 
 ```
 
 <p align=justify>
-<b>Ricorda qui che per spostare i dati da una variabile in un registro, devi inserire il nome della variabile (che è il suo indirizzo) tra parentesi quadre</b>. Senza le parentesi quadre, ciò che sposti nel registro è l'indirizzo della variabile in memoria, non quali dati esistono a quell'indirizzo. Nella prima istruzione <code>MOV</code>, i caratteri <code>CQ</code> vengono posizionati nel registro <code>AX</code>, con il carattere <code>C</code> nel registro <code>AL</code> e la <code>Q</code> in <code>AH</code>. Nella seconda istruzione <code>MOV</code>, i caratteri <code>Stop</code> vengono caricati in <code>EDX</code> <b>in ordine little-endian</b>, con la <code>S</code> nel byte di ordine più basso di <code>EDX</code>, la <code>t</code> nel secondo byte più basso, e così via. Se guardi la stringa <code>QuadString</code> caricata in <code>RAX</code> da SASM, vedrai che contiene “OORAGNAK” scritto al contrario. Caricare stringhe in un singolo registro in questo modo (supponendo che ci stiano!) è molto meno comune (e meno utile) rispetto a usare <code>DB</code> per definire stringhe di caratteri, e non ti capiterà spesso di farlo. Poiché eatsyscall.asm non definisce dati non inizializzati nella sua sezione .bss, rimanderò la discussione di tali definizioni finché non esamineremo il prossimo programma di esempio.
+<b>Ricorda qui che per spostare i dati da una variabile in un registro, devi inserire il nome della variabile (che è il suo indirizzo) tra parentesi quadre</b>. Senza le parentesi quadre, ciò che sposti nel registro è l'indirizzo della variabile in memoria, non i dati che esistono a quell'indirizzo. Nella prima istruzione <code>MOV</code>, i caratteri <code>CQ</code> vengono posizionati nel registro <code>AX</code>, con il carattere <code>C</code> nel registro <code>AL</code> e il carattere <code>Q</code> in <code>AH</code>. Nella seconda istruzione <code>MOV</code>, i caratteri <code>Stop</code> vengono caricati in <code>EDX</code> <b>in ordine little-endian</b>, con il carattere <code>S</code> nel byte di ordine più basso di <code>EDX</code>, il carattere <code>t</code> nel secondo byte più basso, e così via. Se guardi la stringa <code>QuadString</code> caricata in <code>RAX</code> da SASM, vedrai che contiene “OORAGNAK” scritto al contrario. Caricare stringhe in un singolo registro in questo modo (supponendo che ci stiano!) è molto meno comune (e meno utile) rispetto a usare <code>DB</code> per definire stringhe di caratteri, e non ti capiterà spesso di farlo. Poiché <code>eatsyscall.asm</code> non definisce dati non inizializzati nella sua sezione <code>.bss</code>, rimanderò la discussione di tali definizioni finché non esamineremo il prossimo programma di esempio.
 </p>
 
 ### Derivare la lunghezza della stringa con EQU e $
 
 <p align=justify>
-Sotto la definizione di <code>EatMsg</code> nel file <code>eatsyscall.asm</code> c'è un construtto interessante. 
-</p>	
+Sotto la definizione di <code>EatMsg</code> nel file <code>eatsyscall.asm</code> c'è un costrutto interessante.
+</p>
 
 ```asm
 	EatLen: equ $-EatMsg
 ```
 
 <p align=justify>
-Questo è un esempio di una classe più ampia di cose chiamate calcoli a tempo di assemblaggio. Quello che stiamo facendo qui è calcolare la lunghezza della variabile stringa <code>EatMsg</code> e rendere quel valore di lunghezza accessibile al codice del programma attraverso l'etichetta <code>EatLen</code>. In qualsiasi punto del tuo programma, se hai bisogno di usare la lunghezza di <code>EatMsg</code>, puoi usare l'etichetta <code>EatLen</code>. Una dichiarazione contenente la direttiva <code>EQU</code> è chiamata <b>un'uguaglianza o simbolo</b> (<i>equate</i>). <b>Un simbolo è un modo per associare un valore a un'etichetta</b>. Tale etichetta è quindi trattata in molto simile a una costante C. Ogni volta che l'assemblatore incontra un'equazione durante l'assemblaggio, sostituirà il nome dell'equazione con il suo valore. Ecco un esempio: 
-</p>	
-	
-```asm 
+Questo è un esempio di una classe più ampia di cose chiamate calcoli a tempo di assemblaggio. Quello che stiamo facendo qui è calcolare la lunghezza della variabile stringa <code>EatMsg</code> e rendere quel valore di lunghezza accessibile al codice del programma attraverso l'etichetta <code>EatLen</code>. In qualsiasi punto del tuo programma, se hai bisogno di usare la lunghezza di <code>EatMsg</code>, puoi usare l'etichetta <code>EatLen</code>. Una dichiarazione contenente la direttiva <code>EQU</code> è chiamata <b>un'uguaglianza o simbolo</b> (<i>equate</i>). <b>Un simbolo è un modo per associare un valore a un'etichetta</b>. Tale etichetta viene quindi trattata in modo molto simile a una costante C. Ogni volta che l'assemblatore incontra un'equazione durante l'assemblaggio, sostituirà il nome dell'equazione con il suo valore. Ecco un esempio:
+</p>
+
+```asm
  FieldWidth: equ 10
 ```
 
 <p align=justify>
-Qui, stiamo dicendo all'assemblatore che l'etichetta <code>FieldWidth</code> rappresenta il valore numerico 10. Una volta definito il simbolo, le seguenti due istruzioni macchina di sotto, fanno esattamente la stessa cosa:
-<p>
+Qui, stiamo dicendo all'assemblatore che l'etichetta <code>FieldWidth</code> rappresenta il valore numerico 10. Una volta definito il simbolo, le seguenti due istruzioni macchina qui sotto fanno esattamente la stessa cosa:
+</p>
 
 ```asm
 	mov eax,10
@@ -7430,13 +7430,13 @@ Ci sono due vantaggi in questo:
 	</li>
  	<li>
 		<p align=justify>
-		Un simbolo rende i programmi più facili da modificare in futuro. Se la larghezza del campo cambia da 10 a 12 in un dato momento, dobbiamo modificare solo un'unica riga nel file del codice sorgente invece di farlo ovunque accediamo alla larghezza del campo.
+		Un simbolo rende i programmi più facili da modificare in futuro. Se la larghezza del campo cambia da 10 a 12 in un dato momento, dobbiamo modificare solo un'unica riga nel file di codice sorgente invece di farlo ovunque accediamo alla larghezza del campo.
 		</p>
   	</li>
 </ul>
 
 <p align=justify>
-Non sottovalutare il valore di questo secondo vantaggio. Una volta che i tuoi programmi diventano più grandi e più sofisticati, potresti trovarti a utilizzare un valore particolare dozzine o centinaia di volte all'interno di un singolo programma. O rendi quel valore un simbolo e cambi una sola riga per modificare un valore utilizzato 267 volte, oppure puoi esaminare il tuo codice e cambiare individualmente tutti e 267 usi del valore, tranne per i cinque o sei che perdi, causando caos quando successivamente compili e esegui il tuo programma. Combinare il calcolo in linguaggio assembly con i simboli consente di fare cose meravigliose in modo molto semplice. Come spiegherò a breve, per visualizzare una stringa in Linux, devi passare sia l'indirizzo della stringa che la sua lunghezza al sistema operativo. Puoi rendere la lunghezza della stringa un simbolo in questo modo.
+Non sottovalutare il valore di questo secondo vantaggio. Una volta che i tuoi programmi diventano più grandi e più sofisticati, potresti trovarti a utilizzare un valore particolare dozzine o centinaia di volte all'interno di un singolo programma. O rendi quel valore un simbolo e cambi una sola riga per modificare un valore utilizzato 267 volte, oppure puoi esaminare il tuo codice e cambiare individualmente tutti e 267 gli usi del valore, tranne per i cinque o sei che perdi, causando caos quando successivamente compili ed esegui il tuo programma. Combinare il calcolo in linguaggio assembly con i simboli consente di fare cose meravigliose in modo molto semplice. Come spiegherò a breve, per visualizzare una stringa in Linux, devi passare sia l'indirizzo della stringa che la sua lunghezza al sistema operativo. Puoi rendere la lunghezza della stringa un simbolo in questo modo.
 </p>
 
 ```asm
@@ -7449,12 +7449,12 @@ Questo funziona, perché la stringa EatMsg è in effetti lunga 14 caratteri, inc
 </p>
 
 ```asm
- 	EatMsg: db "Eat at Ralph's!",10
- 	EatLen: equ 16 
- ```
+	EatMsg: db "Eat at Ralph's!",10
+	EatLen: equ 16
+```
 
 <p align=justify>
-Quali sono le probabilità che tu ti scordi di aggiornare l'equivalente di EatLen con la nuova lunghezza del messaggio? Se fai spesso questo tipo di errore, succederà. Con un calcolo a tempo di assemblaggio, cambi semplicemente la definizione della variabile stringa e la sua lunghezza viene calcolata automaticamente da NASM durante il tempo di assemblaggio. Come? In questo modo.
+Quali sono le probabilità che tu ti scordi di aggiornare l'equivalente di EatLen con la nuova lunghezza del messaggio? Se fai spesso questo tipo di errore, succederà. Con un calcolo a tempo di assemblaggio, cambi semplicemente la definizione della variabile stringa e la sua lunghezza viene calcolata automaticamente da NASM durante l'assemblaggio. Come? In questo modo.
 </p>
 
 ```asm
@@ -7463,7 +7463,7 @@ Quali sono le probabilità che tu ti scordi di aggiornare l'equivalente di EatLe
 ```
 
 <p align=justify>
-Tutto dipende dal token magico "qui", espresso dall'umile simbolo del dollaro. Durante la fase di assemblaggio, l'assemblatore analizza i tuoi file di codice sorgente e costruisce un file intermedio con estensione <code>.o</code> (il file oggetto). Il token <code>$</code> segna il punto in cui l'assemblatore si trova nella costruzione del file intermedio (non del file di codice sorgente!). L'etichetta EatMsg segna l'inizio della stringa dello slogan pubblicitario. Immediatamente dopo l'ultimo carattere di EatMsg c'è l'etichetta EatLen. Ricorda, le etichette non sono dati, ma posizioni, e nel caso del linguaggio assembly, indirizzi. Quando l'assemblatore raggiunge l'etichetta EatLen, il valore di <code>$</code> è la posizione immediatamente dopo l'ultimo carattere di EatMsg. Il calcolo durante l'assemblaggio consiste nel prendere la posizione rappresentata dal token <code>$</code> (che quando il calcolo è completato contiene la posizione appena dopo la fine della stringa EatMsg) e sottrarre da essa la posizione dell'inizio della stringa EatMsg. <code>Fine – Inizio = Lunghezza</code>. Questo calcolo viene eseguito ogni volta che assembli il file, quindi ogni volta che modifichi il contenuto di EatMsg, il valore di EatLen sarà ricalcolato automaticamente. Puoi cambiare il testo all'interno della stringa come preferisci e non dover mai preoccuparti di cambiare un valore di lunghezza da nessuna parte nel programma. Il calcolo durante l'assemblaggio ha altri usi, ma questo è il più comune e l'unico che probabilmente userai come principiante.
+Tutto dipende dal token magico "qui", espresso dall'umile simbolo del dollaro. Durante la fase di assemblaggio, l'assemblatore analizza i tuoi file di codice sorgente e costruisce un file intermedio con estensione <code>.o</code> (il file oggetto). Il token <code>$</code> segna il punto in cui l'assemblatore si trova nella costruzione del file intermedio (non del file di codice sorgente!). L'etichetta EatMsg segna l'inizio della stringa dello slogan pubblicitario. Immediatamente dopo l'ultimo carattere di EatMsg c'è l'etichetta EatLen. Ricorda, le etichette non sono dati, ma posizioni e, nel caso del linguaggio assembly, indirizzi. Quando l'assemblatore raggiunge l'etichetta EatLen, il valore di <code>$</code> è la posizione immediatamente dopo l'ultimo carattere di EatMsg. Il calcolo durante l'assemblaggio consiste nel prendere la posizione rappresentata dal token <code>$</code> (che, quando il calcolo è completato, contiene la posizione appena dopo la fine della stringa EatMsg) e sottrarre da essa la posizione dell'inizio della stringa EatMsg. <code>Fine – Inizio = Lunghezza</code>. Questo calcolo viene eseguito ogni volta che assembli il file, quindi ogni volta che modifichi il contenuto di EatMsg, il valore di EatLen sarà ricalcolato automaticamente. Puoi cambiare il testo all'interno della stringa come preferisci e non dover mai preoccuparti di cambiare un valore di lunghezza da nessuna parte nel programma. Il calcolo durante l'assemblaggio ha altri usi, ma questo è il più comune e l'unico che probabilmente userai come principiante.
 </p>
 
 
