@@ -204,14 +204,14 @@ Sorry, only the Italian version is available so far.
     + [Cercare un bit a 1 con TEST](#cercare-un-bit-a-1-con-test)
     + [Cercare un bit a 0 con BT](#cercare-un-bit-a-0-con-bt)
     + [X64 Long Mode Memory Addressing](#x64-long-mode-memory-addressing)
-    + [Calcolo dell' Effective Address](#calcolo-dell--effective-address)
-    + [Displacements (Scostamento)](#displacements--scostamento-)
+    + [Calcolo dell'effective address](#calcolo-dell-effective-address)
+    + [Displacement (scostamento)](#displacement--scostamento-)
     + [Il problema della dimensione dello scostamento in x64](#il-problema-della-dimensione-dello-scostamento-in-x64)
     + [Base Addressing (indirizzamento di base)](#base-addressing--indirizzamento-di-base-)
     + [Base + Displacement Addressing](#base---displacement-addressing)
     + [Base + Index Addressing](#base---index-addressing)
-    + [Index X Scale + Displacement Addressing](#index-x-scale---displacement-addressing)
-    + [Altri Schemi d'Indirizzamento](#altri-schemi-d-indirizzamento)
+    + [Index × Scale + Displacement Addressing](#index--scale---displacement-addressing)
+    + [Altri schemi d'indirizzamento](#altri-schemi-d-indirizzamento)
     + [Istruzione LEA](#istruzione-lea)
     + [Tabella di traduzione caratteri](#tabella-di-traduzione-caratteri)
     + [Tabella di traduzione](#tabella-di-traduzione)
@@ -8758,10 +8758,10 @@ Una volta eseguita un'istruzione BT, dovresti immediatamente testare il valore n
 Un aspetto a cui fare attenzione, specialmente se sei abituato a usare TEST, è che non stai creando una maschera di bit. Con l'operando sorgente di BT stai specificando il numero ordinale di un bit. La costante letterale 4 mostrata nel codice precedente è il numero del bit, non il valore del bit, e questa è una differenza cruciale. Nota anche nel codice precedente che stiamo facendo un salto se CF non è impostato; questo è ciò che fa JNC (Salta se Non C'è Riporto).
 </p>
 
-###  X64 Long Mode Memory Addressing
+### X64 Long Mode Memory Addressing
 
 <p align=justify>
-In molti modi, la vita è migliore ora. E non sto parlando solo di odontoiatria moderna, networking plug-and-play e CPU a otto core. Programmavo in assembly per le CPU 8088 in modalità reale nel primo IBM PC. E ricordo l'indirizzamento della memoria in modalità reale. Come l'odontoiatria negli anni '50, l'indirizzamento della memoria in modalità reale basato su 8088 era semplicemente... doloroso. Era un terribile groviglio di restrizioni, insidie e limiti, tutti i quali urlavano che la CPU aveva disperatamente bisogno di più transistor sul die. Ad esempio, l'indirizzamento della memoria era limitato a BX e BP nella maggior parte delle istruzioni, il che significava un sacco di manovre ingegnose quando diversi elementi separati dovevano essere indirizzati in memoria contemporaneamente. E pensare alla gestione dei segmenti ancora mi fa rabbrividire. Beh, negli ultimi 40 anni le nostre CPU della famiglia Intel hanno ottenuto praticamente tutti i transistor di cui avevano bisogno, e la maggior parte di quelle frustranti limitazioni di indirizzamento della memoria a 16 bit sono semplicemente scomparse. Puoi indirizzare la memoria con uno qualsiasi dei registri a scopo generale. Puoi persino indirizzare la memoria direttamente con il puntatore dello stack RSP, qualcosa che il suo antenato a 16 bit SP non poteva fare. (Non dovresti cambiare il valore in RSP senza una considerevole attenzione, ma RSP può ora partecipare a modalità di indirizzamento dalle quali il puntatore dello stack era escluso nel regno della modalità reale a 16 bit.)
+In molti modi, la vita è migliore ora. E non sto parlando solo di odontoiatria moderna, networking plug-and-play e CPU a otto core. Programmavo in assembly per le CPU 8088 in modalità reale nel primo IBM PC. E ricordo l'indirizzamento della memoria in modalità reale. Come l'odontoiatria negli anni '50, l'indirizzamento della memoria in modalità reale basato su 8088 era semplicemente... doloroso. Era un terribile groviglio di restrizioni, insidie e limiti, tutti i quali urlavano che la CPU aveva disperatamente bisogno di più transistor sul die. Ad esempio, l'indirizzamento della memoria era limitato a BX e BP nella maggior parte delle istruzioni, il che significava un sacco di manovre ingegnose quando diversi elementi separati dovevano essere indirizzati in memoria contemporaneamente. E pensare alla gestione dei segmenti ancora mi fa rabbrividire. Beh, negli ultimi 40 anni le nostre CPU della famiglia Intel hanno ottenuto praticamente tutti i transistor di cui avevano bisogno, e la maggior parte di quelle frustranti limitazioni di indirizzamento della memoria a 16 bit è semplicemente scomparsa. Puoi indirizzare la memoria con uno qualsiasi dei registri a scopo generale. Puoi persino indirizzare la memoria direttamente con il puntatore dello stack RSP, qualcosa che il suo antenato a 16 bit SP non poteva fare. (Non dovresti cambiare il valore in RSP senza molta attenzione, ma RSP può ora partecipare a modalità di indirizzamento dalle quali il puntatore dello stack era escluso nel regno della modalità reale a 16 bit.)
 </p>
 
 <p align=justify>
@@ -8773,18 +8773,18 @@ La modalità protetta a 32 bit sulla famiglia di CPU 386 ha introdotto uno schem
 </div>
 
 <p align=justify>
-Quando ho studiato e compreso per la prima volta questo schema, con ferite ancora sanguinanti dall'indirizzamento della memoria segmentata a 16 bit 8088, sembrava troppo bello per essere vero. Ma è vero! Ecco le regole
+Quando ho studiato e compreso per la prima volta questo schema, con ferite ancora sanguinanti dall'indirizzamento della memoria segmentata a 16 bit 8088, sembrava troppo bello per essere vero. Ma è vero! Ecco le regole:
 </p>
 
 <ul>
 	<li>
 		<p align=justify>
-		I registri base e indice possono essere qualsiasi dei registri generali a 64 bit, incluso RSP
+		I registri base e indice possono essere qualsiasi registro generale a 64 bit, incluso RSP.
 		</p>
 	</li>
  	<li>
 		<p align=justify>
-		Lo spostamento può essere qualsiasi costante a 32 bit, sia un valore letterale che un valore nominato. È ovvio che 0, sebbene legale, non è utile.
+		Lo spostamento può essere qualsiasi costante a 32 bit, sia un valore letterale sia un valore nominato. È ovvio che 0, sebbene legale, non è utile.
 		</p>
 	</li>
  	<li>
@@ -8799,12 +8799,12 @@ Quando ho studiato e compreso per la prima volta questo schema, con ferite ancor
 	</li>
  	<li>
 		<p align=justify>
-		Tutti gli elementi sono facoltativi e possono essere utilizzati in quasi qualsiasi combinazione
+		Tutti gli elementi sono facoltativi e possono essere utilizzati in quasi qualsiasi combinazione.
 		</p>
 	</li>
  	<li>
 		<p align=justify>
-		Sia i registri a 32 bit che quelli a 64 bit possono essere utilizzati, ma non è possibile mescolare le dimensioni dei registri in un singolo indirizzo. Cioè, i registri in un'unica operazione di indirizzamento della memoria devono essere tutti a 32 bit o tutti a 64 bit.
+		Sia i registri a 32 bit sia quelli a 64 bit possono essere utilizzati, ma non è possibile mescolare le dimensioni dei registri in un singolo indirizzo. Cioè, i registri in un'unica operazione di indirizzamento della memoria devono essere tutti a 32 bit o tutti a 64 bit.
 		</p>
 	</li>
  	<li>
@@ -8815,23 +8815,23 @@ Quando ho studiato e compreso per la prima volta questo schema, con ferite ancor
 </ul>
 
 <p align=justify>
-All'interno di quelle regole, ci sono diversi modi per accedere alla memoria, raccogliendo i componenti dell'indirizzo mostrati nella figura di sopra in diverse combinazioni. Gli esempi sono mostrati nella figura di sotto.
+All'interno di queste regole, ci sono diversi modi per accedere alla memoria, combinando in modi diversi i componenti dell'indirizzo mostrati nella figura qui sopra. Gli esempi sono mostrati nella figura qui sotto.
 </p>
 
 <div align=center>
 <img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/64_Bit_Long_Mode_Memory_Addressing_Schemes.png">
 </div>
 
-### Calcolo dell' Effective Address
+### Calcolo dell'effective address
 
 <p align=justify>
-Ognuna delle righe nella figura di sopra riassume un metodo di espressione di un indirizzo di memoria in modalità lunga a 64 bit. Tutti tranne i primi due coinvolgono un po' di aritmetica tra due o più termini all'interno delle parentesi che significano un indirizzo. Questa aritmetica è chiamata calcolo dell'effective address, e il risultato del calcolo è l'effective address. Questo termine indica l'indirizzo che verrà utilizzato per leggere o scrivere nella memoria, indipendentemente da come viene espresso. Il calcolo dell'effective address viene eseguito dall'istruzione, quando l'istruzione viene eseguita. L'effective address nello schema Base è semplicemente il valore a 64 bit memorizzato nel registro GP tra le parentesi. Non è coinvolto alcun calcolo, ma ciò che vediamo nel codice sorgente non è un indirizzo letterale o simbolico. Quindi, anche se l'istruzione è codificata con un nome di registro tra le parentesi, l'indirizzo che verrà inviato al sistema di memoria quando il codice viene eseguito è memorizzato all'interno del registro. Nella maggior parte dei casi in cui si tratta di un effective address, c'è un certo operare aritmetico. Ad esempio, nello schema Base + Indice, il contenuto dei due registri GP tra le parentesi vengono aggiunti quando l'istruzione viene eseguita per formare l'effective address.
+Ognuna delle righe nella figura qui sopra riassume un metodo per esprimere un indirizzo di memoria in modalità lunga a 64 bit. Tutti tranne i primi due coinvolgono un po' di aritmetica tra due o più termini all'interno delle parentesi che indicano un indirizzo. Questa aritmetica è chiamata calcolo dell'effective address, e il risultato del calcolo è l'effective address. Questo termine indica l'indirizzo che verrà utilizzato per leggere o scrivere nella memoria, indipendentemente da come viene espresso. Il calcolo dell'effective address viene eseguito dall'istruzione quando l'istruzione viene eseguita. L'effective address nello schema Base è semplicemente il valore a 64 bit memorizzato nel registro GP tra le parentesi. Non è coinvolto alcun calcolo, ma ciò che vediamo nel codice sorgente non è un indirizzo letterale o simbolico. Quindi, anche se l'istruzione è codificata con un nome di registro tra le parentesi, l'indirizzo che verrà inviato al sistema di memoria quando il codice viene eseguito è memorizzato all'interno del registro. Nella maggior parte dei casi in cui si tratta di un effective address, c'è una qualche operazione aritmetica. Ad esempio, nello schema Base + Indice, il contenuto dei due registri GP tra le parentesi viene sommato quando l'istruzione viene eseguita per formare l'effective address.
 </p>
 
-### Displacements (Scostamento)
+### Displacement (scostamento)
 
 <p align=justify>
-Tra i diversi componenti di un indirizzo in modalità long x64 legale, il termine di spostamento è in realtà il più difficile da comprendere. Come ho indicato nel paragrafo precedente, il termine di spostamento può essere un indirizzo letterale, ma in tutti i miei anni di programmazione assembly in modalità protetta non l'ho mai fatto né ho visto qualcun altro farlo. Il motivo? Non sai quasi mai l'indirizzo letterale di qualcosa al momento della compilazione. C'è un altro motivo per non utilizzare indirizzi letterali, di cui parlerò a breve. Quando il termine di spostamento è isolato, è praticamente sempre un indirizzo simbolico. Con questo intendo un elemento di dati con un nome che hai definito nelle tue sezioni .data o .bss, come la variabile HexStr del programma hexdump1 nell'elenco 9.1:
+Tra i diversi componenti di un indirizzo legale in modalità long x64, il termine di spostamento è in realtà il più difficile da comprendere. Come ho indicato nel paragrafo precedente, il termine di spostamento può essere un indirizzo letterale, ma in tutti i miei anni di programmazione assembly in modalità protetta non l'ho mai fatto né ho visto qualcun altro farlo. Il motivo? Non conosci quasi mai l'indirizzo letterale di qualcosa al momento della compilazione. C'è un altro motivo per non utilizzare indirizzi letterali, di cui parlerò a breve. Quando il termine di spostamento è isolato, è praticamente sempre un indirizzo simbolico. Con questo intendo un elemento di dati con un nome che hai definito nelle tue sezioni .data o .bss, come la variabile HexStr del programma hexdump1 nell'elenco 9.1:
 </p>
 
 ```asm
@@ -8861,13 +8861,13 @@ Nota l'assenza di parentesi. L'indirizzo a cui si fa riferimento simbolicamente 
 ### Il problema della dimensione dello scostamento in x64
 
 <p align=justify>
-Ora, c'è un problema specifico per x64 riguardo ai dislocamenti: un valore di dislocamento non deve superare i 32 bit di dimensione. Perché? Come a volte devo dire... è complicato. E non ha nulla a che fare con il numero di bit di indirizzo supportati nel silicio di una data CPU x64. In parole povere, limitare i dislocamenti a 32 bit è stata una decisione di design di AMD all'alba del tempo x64 che "è rimasta." Potrebbe essere corretto un giorno — o non lo sarà. Ma, ehi, non dire mai "mai." Nel frattempo, dobbiamo solo convivere con esso.
+Ora, c'è un problema specifico di x64 riguardo ai displacement: un valore di displacement non deve superare i 32 bit di dimensione. Perché? Come a volte devo dire... è complicato. E non ha nulla a che fare con il numero di bit di indirizzo supportati nel silicio di una data CPU x64. In parole povere, limitare i displacement a 32 bit è stata una decisione di design di AMD all'alba dell'era x64 che "è rimasta". Potrebbe essere corretta un giorno, oppure no. Ma, ehi, non dire mai "mai". Nel frattempo, dobbiamo solo conviverci.
 </p>
 
 ### Base Addressing (indirizzamento di base)
 
 <p align=justify>
-Quando escludi l'indirizzamento per spostamento, tutto l'indirizzamento della memoria x64 si basa su registri. Lo schema di indirizzamento di Base utilizza semplicemente un singolo registro nel quale è stato caricato un indirizzo. Si chiama Base perché tutti gli schemi di indirizzamento più complessi partono da Base e lo estendono. Ecco un esempio di indirizzamento di Base:
+Quando escludi l'indirizzamento per spostamento, tutto l'indirizzamento della memoria x64 si basa su registri. Lo schema di indirizzamento Base utilizza semplicemente un singolo registro nel quale è stato caricato un indirizzo. Si chiama Base perché tutti gli schemi di indirizzamento più complessi partono da Base e lo estendono. Ecco un esempio di indirizzamento Base:
 </p>
 
 ```asm
@@ -8881,7 +8881,7 @@ Questa istruzione prende il valore a 64 bit memorizzato nella memoria all'indiri
 ### Base + Displacement Addressing
 
 <p align=justify>
-Uno schema di indirizzamento semplice e comune è Base + Displacement, e l'ho dimostrato nel programma hexdump1 nella Lista 9.1. L'istruzione che inserisce un carattere ASCII nella riga di output appare così:
+Uno schema di indirizzamento semplice e comune è Base + Displacement, e l'ho dimostrato nel programma hexdump1 nella Lista 9.1. L'istruzione che inserisce un carattere ASCII nella riga di output si presenta così:
 </p>
 
 ```asm
@@ -8889,13 +8889,13 @@ Uno schema di indirizzamento semplice e comune è Base + Displacement, e l'ho di
 ```
 
 <p align=justify>
-Ciò che accade qui è che un valore di carattere a 8 bit memorizzato nel registro AL viene scritto nel byte in memoria indirizzato come HexStr+RDX+2. Questo è un perfetto esempio di un caso in cui ci sono due termini di spostamento che NASM combina in uno. Il nome della variabile HexStr si risolve in un numero (l'indirizzo di HexStr) e si aggiunge facilmente alla costante letterale 2. Quindi, in verità, c'è solo un termine di base (RDX) e un termine di spostamento. È anche un buon esempio di come i registri a 8 bit abbiano ancora il loro utilizzo, soprattutto quando si trattano valori a 8 bit come i caratteri ASCII. Nota anche che l'ordine dei termini in un indirizzo non conta. L'indirizzo efficace potrebbe essere stato RDX+HexStr+2.
+Ciò che accade qui è che un valore di carattere a 8 bit memorizzato nel registro AL viene scritto nel byte in memoria indirizzato come HexStr+RDX+2. Questo è un perfetto esempio di un caso in cui ci sono due termini di spostamento che NASM combina in uno. Il nome della variabile HexStr si risolve in un numero (l'indirizzo di HexStr) e si aggiunge facilmente alla costante letterale 2. Quindi, in verità, c'è solo un termine di base (RDX) e un termine di spostamento. È anche un buon esempio di come i registri a 8 bit abbiano ancora il loro utilizzo, soprattutto quando si trattano valori a 8 bit come i caratteri ASCII. Nota anche che l'ordine dei termini in un indirizzo non conta. L'effective address avrebbe potuto essere RDX+HexStr+2.
 </p>
 
 ### Base + Index Addressing
 
 <p align=justify>
-Forse il sistema di indirizzamento singolo più comune è Base + Indice, nel quale l'indirizzo effettivo viene calcolato sommando i contenuti di due registri GP all'interno delle parentesi. Ho dimostrato questo schema di indirizzamento nel Capitolo 8, nel programma uppercaser2 nell'Elenco 8.2. Convertire un carattere nel buffer di input da minuscolo a maiuscolo viene effettuato sottraendo 20h da esso:
+Forse il sistema di indirizzamento singolo più comune è Base + Indice, nel quale l'effective address viene calcolato sommando il contenuto di due registri GP all'interno delle parentesi. Ho dimostrato questo schema di indirizzamento nel Capitolo 8, nel programma uppercaser2 nell'Elenco 8.2. Convertire un carattere nel buffer di input da minuscolo a maiuscolo viene effettuato sottraendo 20h da esso:
 </p>
 
 ```asm
@@ -8903,7 +8903,7 @@ Forse il sistema di indirizzamento singolo più comune è Base + Indice, nel qua
 ```
 
 <p align=justify>
-L'indirizzo del buffer era precedentemente posizionato in RBP, e il numero in RCX è lo spostamento dall'inizio del buffer del carattere in fase di elaborazione durante un dato passaggio nel ciclo. Aggiungere l'indirizzo del buffer con uno spostamento nel buffer porta all'indirizzo effettivo del carattere su cui agisce l'istruzione SUB. Ma aspetta... perché non usare l'indirizzamento Base + Displacement? Questa istruzione sarebbe legale:
+L'indirizzo del buffer era precedentemente posizionato in R13, e il numero in RBX è lo spostamento dall'inizio del buffer del carattere in fase di elaborazione durante un dato passaggio nel ciclo. Aggiungere all'indirizzo del buffer uno spostamento nel buffer porta all'effective address del carattere su cui agisce l'istruzione SUB. Ma aspetta... perché non usare l'indirizzamento Base + Displacement? Questa istruzione sarebbe legale:
 </p>
 
 ```asm
@@ -8911,24 +8911,24 @@ L'indirizzo del buffer era precedentemente posizionato in RBP, e il numero in RC
 ```
 
 <p align=justify>
-Tuttavia, se ricordi dal programma (e varrebbe la pena tornare indietro e leggere il testo associato), dovevamo decrementare l'indirizzo di Buff di 1 prima di iniziare il ciclo. Ma aspetta ancora... potremmo far fare a NASM quella piccola modifica aggiungendo un secondo termine di spostamento di -1? In effetti, potremmo farlo, e funzionerebbe. Il ciclo centrale del programma uppercaser2 apparirebbe quindi così:
+Tuttavia, se ricordi il programma (e varrebbe la pena tornare indietro e leggere il testo associato), dovevamo decrementare l'indirizzo di Buff di 1 prima di iniziare il ciclo. Ma aspetta ancora... potremmo far fare a NASM quella piccola modifica aggiungendo un secondo termine di spostamento di -1? In effetti, potremmo farlo, e funzionerebbe. Il ciclo centrale del programma uppercaser2 apparirebbe quindi così:
 </p>
 
 ```asm
 ; Set up the registers for the process buffer step:
- 
+
      mov rbx,rax          ; Place the number of bytes read into rbx
      mov r13,Buff         ; Place address of buffer into r13
  ;    dec r13                We don't need this instruction anymore!
- 
+
 ; Go through the buffer and convert lowercase to uppercase characters:
- 
+
 Scan:
      cmp byte [r13-1+rbx],61h  ; Test input char against lowercase 'a'
      jb Next                   ; If below 'a' in ASCII, not lowercase
      cmp byte [r13-1+rbx],7Ah  ; Test input char against lowercase 'z'
      ja Next                  ; If above 'z' in ASCII, not lowercase
- 
+
                               ; Now we have a lowercase char
      sub byte [r13-1+rbx],20h ; Subtract 20h to give uppercase…
  
@@ -8939,13 +8939,13 @@ Next:
 ```
 
 <p align=justify>
-L'istruzione DEC R13 nel primo blocco non è più necessaria, e nel codice precedente quella riga è commentata. NASM fa i calcoli, e l'indirizzo di Buff viene decrementato di 1 all'interno dell'espressione dell'indirizzo effettivo quando il programma si carica. Questo è effettivamente il modo corretto di programmare questo particolare ciclo, e ci ho pensato a lungo se mostrarlo di nuovo nel Capitolo 8 o aspettare di poter spiegare gli schemi di indirizzamento della memoria in dettaglio. Alcune persone trovano il nome “Base + Displacement” confuso, perché nella maggior parte dei casi, il termine Displacement contiene un indirizzo, e il termine Base è un registro che contiene un offset in un elemento di dati a quell'indirizzo. La parola displacement somiglia alla parola offset nell'esperienza della maggior parte delle persone, il che può portare a confusione. Questo è uno dei motivi per cui non metto in evidenza i nomi dei vari schemi di indirizzamento della memoria in questo libro e certamente non raccomando di memorizzare i nomi. Comprendere come funziona il calcolo dell'indirizzo effettivo e ignorare i nomi degli schemi.
+L'istruzione DEC R13 nel primo blocco non è più necessaria, e nel codice precedente quella riga è commentata. NASM fa i calcoli, e l'indirizzo di Buff viene decrementato di 1 all'interno dell'espressione dell'effective address quando il programma viene caricato. Questo è effettivamente il modo corretto di programmare questo particolare ciclo, e ci ho pensato a lungo se mostrarlo di nuovo nel Capitolo 8 o aspettare di poter spiegare gli schemi di indirizzamento della memoria in dettaglio. Alcune persone trovano il nome “Base + Displacement” confuso, perché nella maggior parte dei casi il termine Displacement contiene un indirizzo, e il termine Base è un registro che contiene un offset in un elemento di dati a quell'indirizzo. La parola displacement somiglia alla parola offset nell'esperienza della maggior parte delle persone, il che può portare a confusione. Questo è uno dei motivi per cui non metto in evidenza i nomi dei vari schemi di indirizzamento della memoria in questo libro e certamente non raccomando di memorizzare i nomi. Comprendi come funziona il calcolo dell'effective address e ignora i nomi degli schemi.
 </p>
 
-### Index X Scale + Displacement Addressing
+### Index × Scale + Displacement Addressing
 
 <p align=justify>
-L'indirizzamento Base + Index è ciò che tipicamente utilizzerai per esaminare un buffer in memoria byte per byte. Ma cosa succede se hai bisogno di accedere a un elemento di dati in un buffer o in una tabella dove ogni elemento di dati non è un singolo byte, ma una parola o una doppia parola? Questo richiede una logica di indirizzamento della memoria leggermente più potente. A proposito, l'array di parole è il termine generale per ciò che ho definito un buffer o una tabella. Altri scrittori possono chiamare una tabella un array, specialmente quando il contesto della discussione è un linguaggio di alto livello. Ma tutti e tre i termini si riducono alla stessa definizione: una sequenza di elementi di dati in memoria, tutti della stessa dimensione e della stessa definizione interna. Nei programmi che ti ho mostrato finora, abbiamo parlato solo di tabelle e buffer molto semplici consistenti in una sequenza di valori a 1 byte tutti in fila. La tabella Digits nel programma hexdump1 è una di queste tabelle:
+L'indirizzamento Base + Index è ciò che tipicamente utilizzerai per esaminare un buffer in memoria byte per byte. Ma cosa succede se hai bisogno di accedere a un elemento di dati in un buffer o in una tabella dove ogni elemento di dati non è un singolo byte, ma una word o una doubleword? Questo richiede una logica di indirizzamento della memoria leggermente più potente. A proposito, array è il termine generale per ciò che ho definito buffer o tabella. Altri autori possono chiamare una tabella un array, specialmente quando il contesto della discussione è un linguaggio di alto livello. Ma tutti e tre i termini si riducono alla stessa definizione: una sequenza di elementi di dati in memoria, tutti della stessa dimensione e della stessa definizione interna. Nei programmi che ti ho mostrato finora, abbiamo parlato solo di tabelle e buffer molto semplici, costituiti da una sequenza di valori a 1 byte tutti in fila. La tabella Digits nel programma hexdump1 è una di queste tabelle:
 </p>
 
 ```asm
@@ -8953,7 +8953,7 @@ L'indirizzamento Base + Index è ciò che tipicamente utilizzerai per esaminare 
 ```
 
 <p align=justify>
-Consiste in 16 caratteri ASCII a byte singolo in sequenza in memoria, a partire dall'indirizzo rappresentato dai Digits. Puoi accedere al carattere “C” all'interno dei Digits in questo modo, utilizzando l'indirizzamento Base + Displacement:
+Consiste in 16 caratteri ASCII a byte singolo in sequenza in memoria, a partire dall'indirizzo rappresentato da Digits. Puoi accedere al carattere “C” all'interno di Digits in questo modo, utilizzando l'indirizzamento Base + Displacement:
 </p>
 
 ```asm
@@ -8970,21 +8970,21 @@ Ma cosa succede se hai una tabella contenente valori numerici a 64 bit? Una tale
 ```
 
 <p align=justify>
-Il qualificatore DQ informa NASM che ogni elemento nella tabella Sums è una quantità di 64 bit (quad word). Le costanti letterali inseriscono un valore numerico in ciascun elemento della tabella. L'indirizzo del primo elemento (qui, 15) in Sums è semplicemente l'indirizzo della tabella nel suo insieme. Quindi qual è l'indirizzo del secondo elemento, 12? E come si accede a esso dal codice assembly? Tieni presente che la memoria è indirizzata byte per byte, e non doppio word per doppio word o quad word per quad word. La seconda voce nella tabella si trova a un offset di 8 byte all'interno della tabella. Se provassi a fare riferimento alla seconda voce nella tabella usando un indirizzo [Sums+1], otterresti uno dei byte all'interno del quad word del primo elemento della tabella, e questo non sarebbe utile. Qui entra in gioco il concetto di scaling. Un indirizzo può includere un termine di scala, che è un moltiplicatore e può essere uno dei valori letterali 2, 4 o 8. (La costante letterale 1 è tecnicamente legale, ma poiché la scala è un moltiplicatore, 1 non è un valore di scala utile.) Il prodotto dell'indice e dei termini di scala è aggiunto allo spostamento per dare l'indirizzo efficace. Questo è noto come schema di indirizzamento Indice × Scala + Displacement. Tieni presente che il termine di scala può essere utilizzato solo con il termine di indice. Tipicamente, il termine di scala è la dimensione dei singoli elementi nella tabella. Se la tua tabella consiste in valori di word da 2 byte, la scala sarebbe 2. Se la tua tabella consiste in valori di double word da 4 byte, la scala sarebbe 4. Se la tua tabella consiste in valori di quad word da 8 byte, la scala sarebbe 8.
+Il qualificatore DQ informa NASM che ogni elemento nella tabella Sums è una quantità di 64 bit (quadword). Le costanti letterali inseriscono un valore numerico in ciascun elemento della tabella. L'indirizzo del primo elemento (qui, 15) in Sums è semplicemente l'indirizzo della tabella nel suo insieme. Quindi qual è l'indirizzo del secondo elemento, 12? E come si accede a esso dal codice assembly? Tieni presente che la memoria è indirizzata byte per byte, e non doubleword per doubleword o quadword per quadword. La seconda voce nella tabella si trova a un offset di 8 byte all'interno della tabella. Se provassi a fare riferimento alla seconda voce nella tabella usando un indirizzo [Sums+1], otterresti uno dei byte all'interno della quadword del primo elemento della tabella, e questo non sarebbe utile. Qui entra in gioco il concetto di scaling. Un indirizzo può includere un termine di scala, che è un moltiplicatore e può essere uno dei valori letterali 2, 4 o 8. (La costante letterale 1 è tecnicamente legale, ma poiché la scala è un moltiplicatore, 1 non è un valore di scala utile.) Il prodotto dell'indice e del termine di scala viene aggiunto allo spostamento per dare l'effective address. Questo è noto come schema di indirizzamento Indice × Scala + Displacement. Tieni presente che il termine di scala può essere utilizzato solo con il termine di indice. Tipicamente, il termine di scala è la dimensione dei singoli elementi nella tabella. Se la tua tabella consiste in valori di word da 2 byte, la scala sarebbe 2. Se la tua tabella consiste in valori di doubleword da 4 byte, la scala sarebbe 4. Se la tua tabella consiste in valori di quadword da 8 byte, la scala sarebbe 8.
 </p>
 
 <p align=justify>
-Il modo migliore per spiegare questo è con un diagramma. Nella Figura di sotto, ci troviamo di fronte all'indirizzo [DQTable+ECX*8]. DQTable è una tabella di valori a parola quadrupla (64 bit). L'indirizzo di DQTable è lo spostamento. Il registro RCX è l'indice e, per questo esempio, contiene 2, che è il numero dell'elemento della tabella che vuoi accedere. Poiché si tratta di una tabella di parole quadruple di 8 byte, il valore di scala è 8. Nota anche che il simbolo di moltiplicazione non è una “x” ma un asterisco. Il simbolo di moltiplicazione “×” non fa parte del set di caratteri ASCII, quindi, come nella maggior parte dei linguaggi di alto livello, l'assembly utilizza l'asterisco come simbolo dell'operatore di moltiplicazione. Poiché ogni elemento della tabella è di 8 byte, l'offset dell'elemento #2 dall'inizio della tabella è 16. L'indirizzo effettivo dell'elemento viene calcolato moltiplicando prima l'indice per la scala e poi aggiungendo il prodotto all'indirizzo di DQTable. Eccolo!
+Il modo migliore per spiegare questo è con un diagramma. Nella figura qui sotto, ci troviamo di fronte all'indirizzo [DQTable+ECX*8]. DQTable è una tabella di valori a parola quadrupla (64 bit). L'indirizzo di DQTable è lo spostamento. Il registro RCX è l'indice e, per questo esempio, contiene 2, che è il numero dell'elemento della tabella a cui vuoi accedere. Poiché si tratta di una tabella di parole quadruple di 8 byte, il valore di scala è 8. Nota anche che il simbolo di moltiplicazione non è una “x” ma un asterisco. Il simbolo di moltiplicazione “×” non fa parte del set di caratteri ASCII, quindi, come nella maggior parte dei linguaggi di alto livello, l'assembly utilizza l'asterisco come simbolo dell'operatore di moltiplicazione. Poiché ogni elemento della tabella è di 8 byte, l'offset dell'elemento #2 dall'inizio della tabella è 16. L'effective address dell'elemento viene calcolato moltiplicando prima l'indice per la scala e poi aggiungendo il prodotto all'indirizzo di DQTable. Eccolo!
 </p>
 
 <div align=center>
 <img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/how_address_scaling_works.png">
 </div>
 
-### Altri Schemi d'Indirizzamento
+### Altri schemi d'indirizzamento
 
 <p align=justify>
-Qualsiasi schema di indirizzamento che include la scalatura funziona in questo modo. Le differenze risiedono in quali altri termini vengono considerati nell'indirizzo effettivo. Lo schema Base + Indice × Scala aggiunge un indice scalato a un valore base in registro piuttosto che a uno spostamento:
+Qualsiasi schema di indirizzamento che include lo scaling funziona in questo modo. Le differenze risiedono in quali altri termini vengono considerati nell'effective address. Lo schema Base + Indice × Scala aggiunge un indice scalato a un valore base in un registro piuttosto che a uno spostamento:
 </p>
 
 ```asm
@@ -8994,7 +8994,7 @@ mov rdx,[rbp+rcx*8] ; Put the selected element into rdx
 ```
 
 <p align=justify>
-Non lavorerai sempre con l'indirizzo di una variabile predefinita come DDTable. A volte l'indirizzo della tabella verrà da qualche altra parte, più spesso da una tabella bidimensionale composta da un certo numero di sotto-tabelle in memoria, ciascuna delle quali contiene un certo numero di elementi. Tali tabelle vengono accedute in due fasi: Prima si deriva l'indirizzo della sotto-tabella nella tabella esterna, e poi si deriva l'indirizzo dell'elemento desiderato all'interno della sotto-tabella. L'esempio più conosciuto di questo tipo di tabella bidimensionale è qualcosa che ho presentato in edizioni precedenti di questo libro, scritto per DOS. Il buffer di memoria video testo di 25 righe × 80 caratteri sotto DOS era una tabella bidimensionale. Ciascuna delle 25 righe era una tabella di 80 caratteri, e ciascun carattere era rappresentato da una parola di 2 byte. (Un byte era il valore ASCII, e l'altro byte specificava attributi come colore, sottolineatura, e così via.) Quindi, il buffer nel suo insieme era una tabella complessiva di 24 tabelle più piccole, ciascuna contenente 80 valori di parola di 2 byte. Quel tipo di sistema di accesso video è morto con DOS; Linux non consente l'accesso diretto alla memoria video del PC. È stato fatto molto nell'era DOS, tuttavia, ed è un buon esempio di tabella bidimensionale. La scalabilità ti servirà bene per tabelle con elementi di 2 byte, 4 byte o 8 byte. E se la tua tabella è composta da elementi di 3 byte? O di 5 byte? O di 17 byte? Ahimè, in tali casi dovrai fare dei calcoli aggiuntivi per concentrare su un particolare elemento. Il calcolo dell'indirizzo efficace non farà tutto il lavoro da solo. La stringa di visualizzazione della linea è una tabella di elementi di 3 byte. Ciascun elemento contiene un carattere di spazio seguito dai due caratteri esadecimali. Poiché gli elementi sono lunghi tre caratteri, la scala non può essere effettuata all'interno dell'istruzione e deve essere gestita separatamente. Non è difficile. La scalabilità per gli elementi di 3 byte nella tabella HexStr nel programma hexdump1 è fatta in questo modo:
+Non lavorerai sempre con l'indirizzo di una variabile predefinita come DDTable. A volte l'indirizzo della tabella verrà da qualche altra parte, più spesso da una tabella bidimensionale composta da un certo numero di sotto-tabelle in memoria, ciascuna delle quali contiene un certo numero di elementi. A tali tabelle si accede in due fasi: prima si deriva l'indirizzo della sotto-tabella nella tabella esterna, e poi si deriva l'indirizzo dell'elemento desiderato all'interno della sotto-tabella. L'esempio più conosciuto di questo tipo di tabella bidimensionale è qualcosa che ho presentato in edizioni precedenti di questo libro, scritto per DOS. Il buffer di memoria video testo di 25 righe × 80 caratteri sotto DOS era una tabella bidimensionale. Ciascuna delle 25 righe era una tabella di 80 caratteri, e ciascun carattere era rappresentato da una parola di 2 byte. (Un byte era il valore ASCII, e l'altro byte specificava attributi come colore, sottolineatura, e così via.) Quindi, il buffer nel suo insieme era una tabella complessiva di 25 tabelle più piccole, ciascuna contenente 80 valori di parola di 2 byte. Quel tipo di sistema di accesso video è morto con DOS; Linux non consente l'accesso diretto alla memoria video del PC. È stato fatto molto nell'era DOS, tuttavia, ed è un buon esempio di tabella bidimensionale. Lo scaling ti servirà bene per tabelle con elementi di 2 byte, 4 byte o 8 byte. E se la tua tabella è composta da elementi di 3 byte? O di 5 byte? O di 17 byte? Ahimè, in tali casi dovrai fare dei calcoli aggiuntivi per concentrarti su un particolare elemento. Il calcolo dell'effective address non farà tutto il lavoro da solo. La stringa di visualizzazione della riga è una tabella di elementi di 3 byte. Ciascun elemento contiene un carattere di spazio seguito dai due caratteri esadecimali. Poiché gli elementi sono lunghi tre caratteri, lo scaling non può essere effettuato all'interno dell'istruzione e deve essere gestito separatamente. Non è difficile. Lo scaling per gli elementi di 3 byte nella tabella HexStr nel programma hexdump1 è fatto in questo modo:
 </p>
 
 ```asm
@@ -9004,7 +9004,7 @@ add rdx,rcx     ; Complete the multiplication X3
 ```
 
 <p align=justify>
-Il calcolo per moltiplicare un valore in RDX per 3 viene effettuato con una combinazione di un'istruzione SHL per moltiplicare per 2, seguita da un'istruzione ADD che aggiunge una terza copia del valore dell'indice al valore dell'indice spostato, moltiplicando efficacemente il valore originale per 3. La scalatura per altri valori di indice può essere effettuata allo stesso modo. La scalatura per 5 sarebbe eseguita spostando il valore dell'indice a sinistra di 2 bit, moltiplicandolo così per 4, seguita dall'aggiunta di un'altra copia del valore dell'indice per completare la moltiplicazione per 5. In termini generali, per scalare un valore di indice per X:
+Il calcolo per moltiplicare un valore in RDX per 3 viene effettuato con una combinazione di un'istruzione SHL per moltiplicare per 2, seguita da un'istruzione ADD che aggiunge una terza copia del valore dell'indice al valore dell'indice spostato, moltiplicando di fatto il valore originale per 3. Lo scaling per altri valori di indice può essere effettuato allo stesso modo. Lo scaling per 5 sarebbe eseguito spostando il valore dell'indice a sinistra di 2 bit, moltiplicandolo così per 4, e poi aggiungendo un'altra copia del valore dell'indice per completare la moltiplicazione per 5. In termini generali, per scalare un valore di indice per X:
 </p>
 
 1. Trova la potenza di 2 più grande di X.
@@ -9041,13 +9041,13 @@ Per scalare un valore indice di 6 per una dimensione di voce di 25, dovresti cer
 ```
 
 <p align=justify>
-Il valore in RAX ora contiene l'indirizzo efficace del primo byte dell'elemento 6, contando gli elementi (come al solito) da 0.
+Il valore in RAX ora contiene l'effective address del primo byte dell'elemento 6, contando gli elementi (come al solito) da 0.
 </p>
 
 ### Istruzione LEA
 
 <p align=justify>
-Ma aspetta, c'è di più. Una delle istruzioni più bizzarre e sotto alcuni aspetti più meravigliose nell'architettura Intel è LEA, Carica Indirizzo Efficace. In superficie, ciò che fa è semplice: calcola un indirizzo efficace utilizzando i termini tra le parentesi del suo operando sorgente e carica quell'indirizzo in un qualsiasi registro a 64 bit dato come operando di destinazione. Guarda di nuovo il codice mostrato poco prima dell'inizio di questa sezione. L'istruzione MOV cerca l'elemento con indice 6 nella tabella ScaleValues. Per cercare l'elemento all'indice 6, deve prima calcolare l'indirizzo efficace dell'elemento all'indice 6. Questo indirizzo viene poi utilizzato per accedere alla memoria. Ma cosa succede se vuoi salvare quell'indirizzo in un registro per utilizzarlo successivamente senza doverlo calcolare di nuovo? Ecco cosa fa LEA. Ecco LEA in azione:
+Ma aspetta, c'è di più. Una delle istruzioni più bizzarre e sotto alcuni aspetti più meravigliose nell'architettura Intel è LEA, Carica Indirizzo Efficace. In superficie, ciò che fa è semplice: calcola un effective address utilizzando i termini tra le parentesi del suo operando sorgente e carica quell'indirizzo in un qualsiasi registro a 64 bit dato come operando di destinazione. Guarda di nuovo il codice mostrato poco prima dell'inizio di questa sezione. L'istruzione MOV cerca l'elemento con indice 6 nella tabella ScaleValues. Per cercare l'elemento all'indice 6, deve prima calcolare l'effective address dell'elemento all'indice 6. Questo indirizzo viene poi utilizzato per accedere alla memoria. Ma cosa succede se vuoi salvare quell'indirizzo in un registro per utilizzarlo successivamente senza doverlo calcolare di nuovo? Ecco cosa fa LEA. Ecco LEA in azione:
 </p>
 
 ```asm
@@ -9055,7 +9055,7 @@ Ma aspetta, c'è di più. Una delle istruzioni più bizzarre e sotto alcuni aspe
 ```
 
 <p align=justify>
-Quello che succede qui è che la CPU calcola l'indirizzo effettivo fornito all'interno delle parentesi e carica quell'indirizzo nel registro RBX. Tenere presente che le singole voci di una tabella non dispongono di etichette e quindi non è possibile farvi riferimento direttamente. LEA ti dà la possibilità di calcolare l'indirizzo effettivo di qualsiasi elemento in una tabella (o qualsiasi indirizzo calcolabile!) e di inserire quell'indirizzo in un registro. Di per sé questo è molto utile. Tuttavia, LEA ha uno scopo "off-label": fare matematica veloce senza turni, aggiunte o MUL. Se ricordi, c'è un calcolo nel programma hexdump1gcc che moltiplica per 3 usando uno spostamento e un'addizione
+Quello che succede qui è che la CPU calcola l'effective address fornito all'interno delle parentesi e carica quell'indirizzo nel registro RBX. Tieni presente che le singole voci di una tabella non dispongono di etichette e quindi non è possibile farvi riferimento direttamente. LEA ti dà la possibilità di calcolare l'effective address di qualsiasi elemento in una tabella (o qualsiasi indirizzo calcolabile!) e di inserire quell'indirizzo in un registro. Di per sé questo è molto utile. Tuttavia, LEA ha uno scopo "off-label": fare matematica veloce senza shift, addizioni o MUL. Se ricordi, c'è un calcolo nel programma hexdump1gcc che moltiplica per 3 usando uno spostamento e un'addizione:
 </p>
 
 ```asm
@@ -9065,7 +9065,7 @@ Quello che succede qui è che la CPU calcola l'indirizzo effettivo fornito all'i
 ```
 
 <p align=justify>
-Questo funziona. Ma guarda cosa possiamo usare che fa esattamente la stessa cosa.
+Questo funziona. Ma guarda cosa possiamo usare per fare esattamente la stessa cosa.
 </p>
 
 ```asm
@@ -9074,7 +9074,7 @@ Questo funziona. Ma guarda cosa possiamo usare che fa esattamente la stessa cosa
 ```
 
 <p align=justify>
-Non solo questo è praticamente sempre più veloce rispetto alle operazioni di spostamento combinate con le addizioni, ma è anche più chiaro dal tuo codice sorgente che tipo di calcolo viene effettivamente eseguito. Il fatto che ciò che finisce in RDX potrebbe non essere in realtà l'indirizzo legale di nulla è irrilevante. LEA non cerca di fare riferimento all'indirizzo che calcola. Esegue i calcoli sui valori all'interno delle parentesi e deposita il risultato nell'operando di destinazione. Lavoro terminato. La memoria non viene toccata e i flag non vengono influenzati. Naturalmente, sei limitato da quali calcoli possono essere effettuati che producono indirizzi efficaci. Ma subito, puoi moltiplicare qualsiasi registro GP per 2, 3, 4, 5, 8 e 9. Non è matematica arbitraria, ma moltiplicare per 2, 3, 4, 5, 8 e 9 si verifica regolarmente nel lavoro di assembly, e puoi combinare LEA con spostamenti e addizioni per fare calcoli più complessi e “riempire i buchi.” Puoi anche usare più istruzioni LEA in fila. Due istruzioni LEA consecutive possono moltiplicare un valore per 10, il che è davvero utile:
+Non solo questo è praticamente sempre più veloce rispetto alle operazioni di spostamento combinate con le addizioni, ma rende anche più chiaro nel codice sorgente quale tipo di calcolo viene effettivamente eseguito. Il fatto che ciò che finisce in RDX potrebbe non essere in realtà l'indirizzo legale di nulla è irrilevante. LEA non cerca di fare riferimento all'indirizzo che calcola. Esegue i calcoli sui valori all'interno delle parentesi e deposita il risultato nell'operando di destinazione. Lavoro terminato. La memoria non viene toccata e i flag non vengono influenzati. Naturalmente, sei limitato dai calcoli che possono essere effettuati per produrre effective address. Ma già così puoi moltiplicare qualsiasi registro GP per 2, 3, 4, 5, 8 e 9. Non è matematica arbitraria, ma moltiplicare per 2, 3, 4, 5, 8 e 9 capita regolarmente nel lavoro di assembly, e puoi combinare LEA con spostamenti e addizioni per fare calcoli più complessi e “riempire i buchi”. Puoi anche usare più istruzioni LEA in fila. Due istruzioni LEA consecutive possono moltiplicare un valore per 10, il che è davvero utile:
 </p>
 
 ```asm
