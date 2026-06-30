@@ -1458,12 +1458,12 @@ int main(void){
 Ricordati quindi che all'uscita del blocco il valore contenuto nella variabile viene perso perché viene deallocata e non puoi accederci perché fuori dal blocco l'identificatore non è visibile.
 </p>
 
-## Variabili register (regiter class)
+## Variabili register (register class)
 
 <p align="justify">
-Le variabili <code>register</code> sono delle variabili di tipo <code>auto</code> (block scope, no linkage, automatic storage duration). Dichiarando una variabile di classe register, il programmatore richiede al compilatore di memorizzarla nella memoria più veloce a disposizione che dovrebbe essere rappresentata dai registri della cpu; questi come noto sono molto più veloci della normale ram.
-Questa è una richiesta che può anche non essere soddisfatta del compilatore se i registri sono occupati o la dimensione del dato è troppo grando rispetto alla capacità dei registri della cpu. Si dichiarano <code>register</code> le variabili che devono essere accedute spesso e con grande velocità: ad esempio gli indici dei cicli. L'uso di variabili <code>register</code> ha perso la sua importanza in quanto i moderni compilatori sono in grado di effettuare queste considerazioni per l'ottimizzazione del codice da soli anche se usare variabili `register` potrebbe aiutare a capire quali variabili ricihedono velocità di accesso.
-Da ricordare è che una volta che una variabili è dichiarata <code>register</code> non è possbile recuperare l'indirizzo della variabile. Si possono dichiarare di classe <code>register</code> anche i parametri formali delle funzioni.
+Le variabili <code>register</code> sono variabili di tipo <code>auto</code> (block scope, no linkage, automatic storage duration). Dichiarando una variabile di classe <code>register</code>, il programmatore richiede al compilatore di memorizzarla nella memoria più veloce a disposizione, che dovrebbe essere rappresentata dai registri della CPU; questi, come noto, sono molto più veloci della normale RAM.
+Questa è una richiesta che può anche non essere soddisfatta dal compilatore se i registri sono occupati o se la dimensione del dato è troppo grande rispetto alla capacità dei registri della CPU. Si dichiarano <code>register</code> le variabili a cui si deve accedere spesso e con grande velocità: ad esempio, gli indici dei cicli. L'uso di variabili <code>register</code> ha perso la sua importanza, in quanto i moderni compilatori sono in grado di effettuare queste considerazioni per l'ottimizzazione del codice da soli, anche se usare variabili <code>register</code> potrebbe aiutare a capire quali variabili richiedono velocità di accesso.
+Da ricordare è che, una volta che una variabile è dichiarata <code>register</code>, non è possibile recuperare l'indirizzo della variabile. Si possono dichiarare di classe <code>register</code> anche i parametri formali delle funzioni.
 </p>
 
 ```c
