@@ -9442,7 +9442,7 @@ Ecco! RAX ora contiene il quadrato di 14. Puoi usare lo stesso trucco con XLAT, 
 ### Procedure
 
 <p align=justify>
-Tutti i linguaggi di programmazione comunemente usati oggi implementano procedure in una forma o nell'altra, e il linguaggio assembly non fa eccezione. Il tuo programma in linguaggio assembly può avere numerose procedure. In effetti, non c'è limite al numero di procedure che puoi includere in un programma, purché il numero totale di byte di codice contenuti da tutte le procedure insieme, più i dati che utilizzano, possa essere contenuto nella memoria che Linux assegna a esso. Al giorno d'oggi, con la memoria economica disponibile in blocchi multi-gigabyte, scrivere codice che non si adatta all'allocazione di Linux è sempre meno probabile. Qualsiasi complessità tu possa generare in linguaggio assembly può essere gestita con le procedure. Cominciamo presto con un esempio di procedure in azione. Leggi attentamente il codice di sotto e vediamo cosa lo fa funzionare e (per essere più precisi) cosa aiuta a mantenerlo comprensibile.
+Tutti i linguaggi di programmazione comunemente usati oggi implementano procedure in una forma o nell'altra, e il linguaggio assembly non fa eccezione. Il tuo programma in linguaggio assembly può avere numerose procedure. In effetti, non c'è limite al numero di procedure che puoi includere in un programma, purché il numero totale di byte di codice contenuti in tutte le procedure insieme, più i dati che utilizzano, possa essere contenuto nella memoria che Linux gli assegna. Al giorno d'oggi, con memoria economica disponibile in blocchi multi-gigabyte, scrivere codice che non rientra nell'allocazione di Linux è sempre meno probabile. Qualsiasi complessità tu possa generare in linguaggio assembly può essere gestita con le procedure. Cominciamo subito con un esempio di procedure in azione. Leggi attentamente il codice qui sotto e vediamo cosa lo fa funzionare e, per essere più precisi, cosa aiuta a mantenerlo comprensibile.
 </p>
 
 ```asm
@@ -9702,7 +9702,7 @@ Exit:
 ```
 
 <p align=justify>
-Ammetto, che sembra un po' spaventoso. Sono più di 200 righe di codice e rappresenta di gran lunga il programma più grande di questo libro finora. Tuttavia, quello che fa è abbastanza semplice. È un'estensione diretta del programma hexdump1gcc dall'elenco 9.1. Se ricordi, un programma di hexdump prende un file di qualsiasi tipo (testo, eseguibile, dati binari, qualunque cosa) e lo visualizza sullo schermo (qui, sulla console Linux) in modo che ogni byte del programma sia mostrato in esadecimale. L'elenco 9.1 faceva questa operazione. Ciò che hexdump2gcc aggiunge è una seconda colonna di visualizzazione in cui vengono mostrati i caratteri ASCII stampabili (lettere, numeri, simboli) nella loro forma “vera”, con i caratteri non stampabili rappresentati da un carattere di riempimento. Questo carattere di riempimento è tipicamente un carattere punto ASCII, ma è solo una convenzione e può essere qualsiasi cosa. Se salvi il file eseguibile su disco da SASM, puoi visualizzare un hexdump di qualsiasi file Linux utilizzando hexdump2gcc, invocandolo in questo modo.
+Ammetto che sembra un po' spaventoso. Sono più di 200 righe di codice e rappresenta di gran lunga il programma più grande di questo libro finora. Tuttavia, quello che fa è abbastanza semplice. È un'estensione diretta del programma hexdump1gcc dell'elenco 9.1. Se ricordi, un programma di hexdump prende un file di qualsiasi tipo (testo, eseguibile, dati binari, qualunque cosa) e lo visualizza sullo schermo (qui, sulla console Linux) in modo che ogni byte del file sia mostrato in esadecimale. L'elenco 9.1 faceva questa operazione. Ciò che hexdump2gcc aggiunge è una seconda colonna di visualizzazione, in cui vengono mostrati i caratteri ASCII stampabili (lettere, numeri, simboli) nella loro forma “vera”, con i caratteri non stampabili rappresentati da un carattere di riempimento. Questo carattere di riempimento è tipicamente un punto ASCII, ma è solo una convenzione e può essere qualsiasi cosa. Se salvi il file eseguibile su disco da SASM, puoi visualizzare un hexdump di qualsiasi file Linux utilizzando hexdump2gcc e invocandolo in questo modo:
 </p>
 
 ```
@@ -9710,8 +9710,8 @@ $./hexdump2gcc < filename
 ```
 
 <p align=justify>
-L'operatore di reindirizzamento I/O < prende i dati esistenti nel file che nomini a destra e passa quei dati all'input standard. Il programma hexdump2gcc prende dati dall'input standard e li stampa in formato dump esadecimale, 16 byte per riga, per quante più righe serve a mostrare l'intero file. 
-Data la complessità di hexdump2gcc, potrebbe essere utile mostrarti come funziona il programma attraverso il pseudocodice prima di addentrarci troppo nelle meccaniche di come funziona internamente un meccanismo di procedura. Ecco come funziona il programma, da un'altezza (alta):
+L'operatore di reindirizzamento I/O < prende i dati esistenti nel file che nomini a destra e passa quei dati all'input standard. Il programma hexdump2gcc prende dati dall'input standard e li stampa in formato dump esadecimale, 16 byte per riga, per tutte le righe necessarie a mostrare l'intero file.
+Data la complessità di hexdump2gcc, potrebbe essere utile mostrarti come funziona il programma attraverso lo pseudocodice prima di addentrarci troppo nei meccanismi interni di una procedura. Ecco come funziona il programma, visto dall'alto:
 </p>
 	
 ```
@@ -9724,7 +9724,7 @@ Data la complessità di hexdump2gcc, potrebbe essere utile mostrarti come funzio
 ```
 
 <p align=justify>
-Questo è un buon esempio di una prima iterazione di pseudocodice, quando sai approssimativamente cosa vuoi che il programma faccia ma sei ancora un po' confuso su come farlo esattamente. Dovrebbe darti un vantaggio nella comprensione dello pseudocodice molto più dettagliato (e orientato al 'come') mostrato qui:
+Questo è un buon esempio di una prima iterazione di pseudocodice, quando sai approssimativamente cosa vuoi che il programma faccia ma sei ancora un po' incerto su come farlo esattamente. Dovrebbe darti un vantaggio nella comprensione dello pseudocodice molto più dettagliato (e orientato al “come”) mostrato qui:
 </p>
 
 ```
@@ -9751,7 +9751,7 @@ buffer:
 ```
 
 <p align=justify>
-ci sono riferimenti espliciti a procedure qui. Penso che possano essere quasi autoesplicativi dal contesto, il che è il segno di una buona procedura. Per esempio, CALL LoadBuff significa "eseguire una procedura che carica il buffer." Questo è ciò che fa LoadBuff, e questo è tutto ciò che fa LoadBuff. Non devi affrontare tutti i dettagli di come LoadBuff svolge il suo lavoro. Questo rende più facile afferrare il flusso logico più ampio espresso dal programma nel suo insieme. Dai un'occhiata al codice di sotto e cerca di capire come il precedente pseudocodice si relaziona alle istruzioni della macchina effettive. Una volta che hai una comprensione di questo, possiamo iniziare a parlare delle procedure in modo più approfondito.
+Ci sono riferimenti espliciti a procedure qui. Penso che possano essere quasi autoesplicativi dal contesto, il che è il segno di una buona procedura. Per esempio, CALL LoadBuff significa "eseguire una procedura che carica il buffer". Questo è ciò che fa LoadBuff, e questo è tutto ciò che fa LoadBuff. Non devi affrontare tutti i dettagli di come LoadBuff svolge il suo lavoro. Questo rende più facile afferrare il flusso logico più ampio espresso dal programma nel suo insieme. Dai un'occhiata al codice precedente e cerca di capire come lo pseudocodice appena mostrato si relaziona alle istruzioni macchina effettive. Una volta compreso questo, possiamo iniziare a parlare delle procedure in modo più approfondito.
 </p>
 
 ### Chiamare e Ritornare
