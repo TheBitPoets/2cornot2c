@@ -10604,19 +10604,19 @@ Non sembra un grande problema, vero? Bene, c'è una complicazione: devi essere c
 ### Il modo migliore per creare una libreria di file di inclusione
 
 <p align=justify>
-Se hai intenzione di sviluppare una libreria di procedure in stile include da zero con SASM, ecco un processo collaudato da utilizzare: 
+Se hai intenzione di sviluppare una libreria di procedure in stile include con SASM da zero, ecco un processo collaudato da utilizzare.
 </p>
 
-1. Progetta le tue procedure. Creo semplicemente un documento di testo e scrivo le descrizioni di ciò che le procedure della biblioteca devono fare, affinando gradualmente le descrizioni fino a quando le descrizioni non sono effettivamente codificate.
-2. Apri il programma sandbox che ho descritto in precedenza e inserisci il codice sorgente delle tue procedure. Se li hai già scritti come parti di altri programmi, copia/incolla il loro codice sorgente nel nuovo file.
-3. Crea un semplice codice "esercizio" nel corpo del programma sandbox che chiama le tue procedure e le mette alla prova. Eseguire il debug come sempre con il debugger SASM. Questo rivelerà booboos relativamente semplici come spingere e far scoppiare i registri nell'ordine sbagliato, cestinare i registri del chiamante e così via.
-4. Una volta terminato il debug semplice, includere il codice sorgente della libreria in un programma "reale" testare le procedure della libreria in modo più approfondito.
-5. Quando sei soddisfatto che tutte le procedure funzionino come progettato, raccoglile in un file senza il framework sandbox e rilasciale nella directory include files di SASM.
-6. Conserva una copia della nuova libreria da qualche altra parte, da qualche parte in cui esegui regolarmente il backup.
+1. Progetta le tue procedure. Creo semplicemente un documento di testo e scrivo le descrizioni di ciò che le procedure della biblioteca devono fare, affinando gradualmente le descrizioni fino a quando non sono effettivamente codificate.
+2. Apri il programma sandbox che ho descritto in precedenza e inserisci il codice sorgente delle tue procedure. Se le hai già scritte in altre parti di altri programmi, copia/incolla il relativo codice sorgente nel nuovo file.
+3. Crea un semplice codice "esercizio" nel corpo del programma sandbox che chiama le tue procedure e le mette alla prova. Eseguire il debug come sempre con il debugger SASM. Questo rivelerà errori relativamente semplici, come spingere e far scoppiare i registri nell'ordine sbagliato, sovrascrivere i registri del chiamante e così via.
+4. Una volta terminato il debug semplice, inserisci il codice sorgente della libreria in un programma "reale" per testare più approfonditamente le procedure della libreria.
+5. Quando sei soddisfatto che tutte le procedure funzionino come previsto, raccoglile in un file senza il framework sandbox e rilascialo nella directory include files di SASM.
+6. Conserva una copia della nuova libreria in un'altra posizione, da cui esegui regolarmente backup.
 7. Se in qualsiasi momento apporti modifiche al codice sorgente della libreria, testa accuratamente le modifiche e quindi rilascia il file modificato nella directory di inclusione di SASM, sostituendo la versione precedente già presente.
 
 <p align=justify>
-A questo punto metteremo da parte SASM per un po' e parleremo dell'utilizzo di assembly separati per collegare i file di codice oggetto .o preassemblati in un singolo file eseguibile. È facile diventare "viziati" usando SASM, perché inserisce così tanti strumenti utili all'interno di un IDE, un IDE creato appositamente per i primi passi di uno studente nella programmazione in linguaggio assembly. Continuerò a presentare il codice di esempio per l'uso all'interno di SASM in questo libro, che è un'introduzione ai concetti di informatica e linguaggio assembly. Ma avrai bisogno di sapere come funziona l'assemblaggio separato, una volta che sarai "passato" da SASM a IDE più complessi e tecniche di programmazione sofisticate
+A questo punto metteremo da parte SASM per un po' e parleremo dell'utilizzo dell'assemblaggio separato per collegare i file di codice oggetto .o preassemblati in un singolo file eseguibile. È facile diventare "viziati" usando SASM, perché inserisce così tanti strumenti utili all'interno di un IDE, un IDE creato appositamente per i primi passi di uno studente nella programmazione in linguaggio assembly. Continuerò a presentare il codice di esempio per l'uso all'interno di SASM in questo libro, che è un'introduzione ai concetti di informatica e al linguaggio assembly. Ma avrai bisogno di sapere come funziona l'assemblaggio separato, una volta che sarai "passato" da SASM a IDE più complessi e tecniche di programmazione sofisticate.
 </p>
 
 ### Assemblaggio e moduli separati
