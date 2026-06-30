@@ -221,7 +221,7 @@ Sorry, only the Italian version is available so far.
     + [Chiamare e Ritornare](#chiamare-e-ritornare)
     + [Chiamate all'interno di chiamate](#chiamate-all-interno-di-chiamate)
     + [Il pericolo della ricorsione accidentale](#il-pericolo-della-ricorsione-accidentale)
-    + [Un errore di etichetta sul flag di cui fare attenzione](#un-errore-di-etichetta-sul-flag-di-cui-fare-attenzione)
+    + [Un errore di etichetta del flag a cui fare attenzione](#un-errore-di-etichetta-del-flag-a-cui-fare-attenzione)
     + [Le Procedure ed i dati di cui hanno bisogno](#le-procedure-ed-i-dati-di-cui-hanno-bisogno)
     + [Salvare i registri del chiamante](#salvare-i-registri-del-chiamante)
     + [Preservare i registri attraverso le chiamate di sistema Linux](#preservare-i-registri-attraverso-le-chiamate-di-sistema-linux)
@@ -9879,10 +9879,10 @@ Chiamare procedure dall'interno di procedure richiede di prestare almeno un po' 
 I problemi iniziano quando scrivi una procedura ricorsiva in modo errato e la logica che determina quando utilizzare quella fondamentale istruzione RET è codificata male. Il momento del ritorno è generalmente regolato da un'istruzione di salto condizionale. Se sbagli il senso o l'etichetta del flag di quell'istruzione, la procedura non ritorna mai, ma continua a chiamarsi ripetutamente. Su un PC moderno, una procedura in linguaggio assembly può chiamarsi un milione di volte in un secondo o meno. A un certo punto, lo stack raggiunge il limite estremo della sua crescita (impostato dal sistema operativo), dove esaurisce lo spazio di memoria. Quando ciò accade, Linux ti restituisce un errore di segmentazione. Come ho detto, la ricorsione è un argomento avanzato e non spiegherò come usarla correttamente in questo libro. La menziono qui solo perché è possibile usare la ricorsione accidentalmente. Seguendo il nostro esempio attuale, supponi di stare programmando ClearLine a tarda notte e, nel punto in cui ClearLine chiama DumpChar, di scrivere per confusione CALL ClearLine dove intendevi scrivere CALL DumpChar. Non scuotere la testa; programmo dal 1970 e l'ho fatto più di una volta. Prima o poi lo farai anche tu. ClearLine non è progettata per essere ricorsiva, quindi entrerà in un ciclo non proprio infinito, chiamandosi fino a esaurire la memoria dello stack e generare un errore di segmentazione. Aggiungi "ricorsione accidentale" alla lista dei bug che cerchi quando Linux ti restituisce un errore di segmentazione. Appartiene alla categoria di bug che chiamo "rari ma inevitabili".
 </p>
 
-### Un errore di etichetta sul flag di cui fare attenzione
+### Un errore di etichetta del flag a cui fare attenzione
 
 <p align=justify>
-E mentre parliamo di bug, la procedura ClearLine è piuttosto semplice e svolge un lavoro semplice. Fornisce anche un utile momento di insegnamento su un bug relativo ai flag che mette in difficoltà regolarmente i principianti. Dai un'occhiata al seguente modo alternativo di codificare ClearLine:
+E mentre parliamo di bug, la procedura ClearLine è piuttosto semplice e svolge un lavoro semplice. Offre anche un utile momento didattico su un bug relativo ai flag che mette regolarmente in difficoltà i principianti. Dai un'occhiata al seguente modo alternativo di codificare ClearLine:
 </p>
 
 ```asm
@@ -9892,8 +9892,7 @@ ClearLine:
     push rcx
     push rdx
     
-    mov  rdx,15    ; We're going to go 16 pokes, counting
- from 0
+    mov  rdx,15    ; We're going to go 16 pokes, counting from 0
  
 .poke:
     mov rax,0      ; Tell DumpChar to poke a '0'
@@ -9909,7 +9908,7 @@ ClearLine:
 ```
 
 <p align=justify>
-Funzionerebbe? Se lo pensi, ripensaci. Sì, stiamo contando da 15 a 0, facendo 16 passaggi attraverso un semplice ciclo. Sì, l'istruzione DEC è usata molto nei cicli, quando contiamo fino a zero. Ma questo ciclo è un po' diverso, poiché dobbiamo fare del lavoro quando il valore del contatore in RDX è 0 e poi decrimentare un'altra volta. Il salto condizionale mostrato è JAE, Jump Above or Equal. Deve saltare di nuovo a Poke quando il valore in EDX scende sotto zero. DEC conterà un contatore fino a zero e poi sotto zero senza problemi... quindi perché JAE non salta dopo DEC? Il senso è giusto. Tuttavia, l'etichetta dei flag è sbagliata. Se controlli il riferimento all'istruzione nell'Appendice B per JAE, vedrai che salta quando CF=0. La CPU non capisce il “senso” in JAE. Non è una mente; è solo una piccola pila di sabbia molto pulita. Tutto ciò che capisce è che l'istruzione JAE salta quando CF=0. Ora, se guardi l'istruzione DEC nell'Appendice B e scrutinizzi l'elenco dei flag, vedrai che DEC non influenza affatto CF, e CF è ciò che JAE esamina prima di decidere se saltare o meno. Questo è il motivo per cui usiamo l'istruzione SUB per decrimentare il registro del contatore in questo caso, perché SUB influisce su CF e consente all'istruzione JAE di funzionare correttamente. Non ci sono problemi di velocità; SUB è altrettanto veloce quanto DEC. La lezione qui è che devi capire i modi in cui le istruzioni di salto condizionale interpretano i vari flag. Il senso di un salto può essere ingannevole. È l'etichetta dei flag che conta.
+Funzionerebbe? Se lo pensi, ripensaci. Sì, stiamo contando da 15 a 0, facendo 16 passaggi attraverso un semplice ciclo. Sì, l'istruzione DEC è usata molto nei cicli, quando contiamo fino a zero. Ma questo ciclo è un po' diverso, poiché dobbiamo fare del lavoro quando il valore del contatore in RDX è 0 e poi decrementarlo un'altra volta. Il salto condizionale mostrato è JAE, Jump Above or Equal. Deve saltare di nuovo a Poke quando il valore in RDX scende sotto zero. DEC conterà un contatore fino a zero e poi sotto zero senza problemi... quindi perché JAE non salta dopo DEC? Il senso è giusto. Tuttavia, l'etichetta del flag è sbagliata. Se controlli il riferimento all'istruzione nell'Appendice B per JAE, vedrai che salta quando CF=0. La CPU non capisce il “senso” in JAE. Non è una mente; è solo una piccola pila di sabbia molto pulita. Tutto ciò che capisce è che l'istruzione JAE salta quando CF=0. Ora, se guardi l'istruzione DEC nell'Appendice B ed esamini l'elenco dei flag, vedrai che DEC non influenza affatto CF, e CF è ciò che JAE esamina prima di decidere se saltare o meno. Questo è il motivo per cui usiamo l'istruzione SUB per decrementare il registro del contatore in questo caso, perché SUB influisce su CF e consente all'istruzione JAE di funzionare correttamente. Non ci sono problemi di velocità; SUB è veloce quanto DEC. La lezione qui è che devi capire i modi in cui le istruzioni di salto condizionale interpretano i vari flag. Il senso di un salto può essere ingannevole. È l'etichetta del flag che conta.
 </p>
 
 ### Le Procedure ed i dati di cui hanno bisogno
