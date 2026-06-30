@@ -233,7 +233,7 @@ Sorry, only the Italian version is available so far.
     + [Accesso forzato all'etichetta locale](#accesso-forzato-all-etichetta-locale)
     + [Salti Corti, Vicini e Lontani](#salti-corti--vicini-e-lontani)
     + [Costruzione di librerie di procedure esterne](#costruzione-di-librerie-di-procedure-esterne)
-    + [Quando i Tool raggiungono i loro limiti](#quando-i-tool-raggiungono-i-loro-limiti)
+    + [Quando i tool raggiungono i loro limiti](#quando-i-tool-raggiungono-i-loro-limiti)
     + [Utilizzare gli include file in SASM](#utilizzare-gli-include-file-in-sasm)
     + [Dove devono essere memorizzati i file di inclusione di SASM](#dove-devono-essere-memorizzati-i-file-di-inclusione-di-sasm)
     + [Il modo migliore per creare una libreria di file di inclusione](#il-modo-migliore-per-creare-una-libreria-di-file-di-inclusione)
@@ -10274,10 +10274,10 @@ Noterai che il programma hexdump2gcc fornito ha la maggior parte del suo codice 
 	</li>
 </ul>
 
-### Quando i Tool raggiungono i loro limiti
+### Quando i tool raggiungono i loro limiti
 
 <p align=justify>
-Per quanto sia facile per i principianti del linguaggio macchina imparare e utilizzare SASM (per questo SASM è stato creato), l'IDE di SASM ha le sue limitazioni, e stiamo per incorrere in una significativa: SASM non può collegare insieme più file di codice oggetto dell'assembly in un singolo file eseguibile. Fondamentalmente, tranne in casi molto rari, non può eseguire assembly separato. Un singolo programma potrebbe consistere in tre o quattro file di codice sorgente .asm separati, ognuno dei quali viene assemblato separatamente in un file .o separato. Per produrre il file eseguibile finale, il linker Linux ld intreccia tutti i file .o insieme, risolvendo tutti i riferimenti da uno all'altro, creando infine il file eseguibile. L'assembly separato non è pienamente supportato da SASM. Descriverò in dettaglio l'assembly separato dei file di libreria più avanti in questo capitolo. Gli esempi dovranno essere costruiti senza SASM, utilizzando makefile. Senza SASM, il debug sarà anche una sfida, e parleremo di questo anche. Nel frattempo, c'è un trucco che SASM ha e che ti permetterà di creare librerie separate di procedure.
+Per quanto sia facile per i principianti del linguaggio macchina imparare e utilizzare SASM (per questo SASM è stato creato), l'IDE di SASM ha le sue limitazioni e stiamo per imbatterci in una significativa: SASM non può collegare insieme più file di codice oggetto assembly in un singolo file eseguibile. Fondamentalmente, tranne in casi molto rari, non può eseguire assembly separato. Un singolo programma potrebbe essere composto da tre o quattro file di codice sorgente .asm separati, ognuno dei quali viene assemblato separatamente in un file .o separato. Per produrre il file eseguibile finale, il linker Linux ld collega tutti i file .o insieme, risolvendo tutti i riferimenti tra un file e l'altro e creando infine il file eseguibile. L'assembly separato non è pienamente supportato da SASM. Descriverò in dettaglio l'assembly separato dei file di libreria più avanti in questo capitolo. Gli esempi dovranno essere costruiti senza SASM, utilizzando makefile. Senza SASM, anche il debug sarà una sfida, e ne parleremo. Nel frattempo, SASM offre un trucco che ti permetterà di creare librerie separate di procedure.
 </p>
 
 ### Utilizzare gli include file in SASM
