@@ -10221,7 +10221,7 @@ Ecco alcune note sulle etichette locali:
 ### Accesso forzato all'etichetta locale
 
 <p align=justify>
-Ogni tanto (non molto spesso), potresti sentire la necessità di accedere a un'etichetta locale dall'altra parte del suo proprietario di etichetta globale. NASM offre un modo per farlo, anche se ammetto di non averne mai avuto la necessità. La chiave per forzare l'accesso a un'etichetta locale al di fuori del suo ambito (l'area del tuo programma da cui è normalmente visibile) è comprendere come NASM tratta le etichette locali "sotto il cofano." Un'etichetta locale ha una definizione implicita che include l'etichetta globale a cui appartiene. L'etichetta locale .modTest di cui ho parlato prima in questa sezione appartiene all'etichetta globale Scan. Internamente, NASM conosce .modtest come Scan.modTest. Se ci fosse un'altra etichetta locale .modtest altrove nel programma (appartenente, diciamo, a un'etichetta globale Calc), potresti forzare un salto ad essa includendo il nome del suo proprietario nell'istruzione di salto:
+Ogni tanto (non molto spesso), potresti sentire la necessità di accedere a un'etichetta locale dall'altra parte dell'etichetta globale che la possiede. NASM offre un modo per farlo, anche se ammetto di non averne mai avuto la necessità. La chiave per forzare l'accesso a un'etichetta locale al di fuori del suo ambito (l'area del tuo programma da cui è normalmente visibile) è comprendere come NASM tratta le etichette locali "sotto il cofano". Un'etichetta locale ha una definizione implicita che include l'etichetta globale a cui appartiene. L'etichetta locale .modTest di cui ho parlato prima in questa sezione appartiene all'etichetta globale Scan. Internamente, NASM conosce .modtest come Scan.modTest. Se ci fosse un'altra etichetta locale .modtest altrove nel programma (appartenente, diciamo, a un'etichetta globale Calc), potresti forzare un salto verso di essa includendo il nome del suo proprietario nell'istruzione di salto:
 </p>
 
 ```asm
@@ -10229,7 +10229,7 @@ Ogni tanto (non molto spesso), potresti sentire la necessità di accedere a un'e
 ```
 
 <p align=justify>
-In un certo senso, sotto il tappeto, un'etichetta locale è semplicemente la "coda" di un'etichetta globale. Se ne hai bisogno, puoi accedere a un'etichetta locale anteponendo l'etichetta del suo proprietario globale e trattandola così come un'etichetta globale. Ancora una volta, non ho mai dovuto farlo e non lo considero una buona pratica, ma è bene sapere che l'opzione è lì nel caso si presentasse mai la necessità.
+In un certo senso, dietro le quinte, un'etichetta locale è semplicemente la "coda" di un'etichetta globale. Se ne hai bisogno, puoi accedere a un'etichetta locale anteponendo l'etichetta globale del suo proprietario e trattandola così come un'etichetta globale. Ancora una volta, non ho mai dovuto farlo e non lo considero una buona pratica, ma è bene sapere che l'opzione esiste, nel caso si presentasse mai la necessità.
 </p>
 
 ### Salti Corti, Vicini e Lontani
