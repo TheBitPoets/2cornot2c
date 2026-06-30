@@ -7701,7 +7701,7 @@ Anche se x64 ti offre il doppio del numero di registri a uso generale rispetto a
 ### Progettare un programma
 
 <p align=justify>
-A questo punto, sai gran parte di ciò che devi sapere per progettare e scrivere piccole utility che svolgono un lavoro significativo - un lavoro che potrebbe persino essere utile. In questa sezione, affronteremo la sfida di scrivere un programma utility dal punto di vista dell'ingegneria per risolvere un problema. Questo comporta più che semplicemente scrivere codice. Comporta dichiarare il problema, suddividerlo nelle sue parti costitutive e poi ideare una soluzione al problema come una serie di passaggi e test che possono essere implementati come un programma in linguaggio assembly. E' difficile scrivere un programma assembly non banale senza salti condizionali e difficile spiegare i salti condizionali senza dimostrarli in un programma non banale. Abbiamo accennato ai salti nei paragrafi precedenti e li affronteremo in dettaglio in quelli successivi. I salti che sto usando nel programma dimostrativo in questa sezione sono piuttosto diretti.
+A questo punto, sai gran parte di ciò che devi sapere per progettare e scrivere piccole utility che svolgono un lavoro significativo, un lavoro che potrebbe persino essere utile. In questa sezione, affronteremo la sfida di scrivere un programma utility dal punto di vista dell'ingegneria per risolvere un problema. Questo comporta più che semplicemente scrivere codice. Comporta dichiarare il problema, suddividerlo nelle sue parti costitutive e poi ideare una soluzione al problema come una serie di passaggi e test che possono essere implementati come un programma in linguaggio assembly. È difficile scrivere un programma assembly non banale senza salti condizionali, ed è difficile spiegare i salti condizionali senza dimostrarli in un programma non banale. Abbiamo accennato ai salti nei paragrafi precedenti e li affronteremo in dettaglio in quelli successivi. I salti che sto usando nel programma dimostrativo in questa sezione sono piuttosto diretti.
 </p>
 
 <p align=justify>
@@ -7712,7 +7712,7 @@ A un livello molto alto, il problema da risolvere qui può essere formulato in q
 <ul>
 	<li>
 		<p align=justify>
-			Lavoreremo sotto Linux. 
+			Lavoreremo sotto Linux.
 		</p>
 	</li>
  	<li>
@@ -7727,29 +7727,29 @@ A un livello molto alto, il problema da risolvere qui può essere formulato in q
 	</li>
  	<li>
 		<p align=justify>
-			 Non c'è una dimensione massima né minima per i file.
+			Non c'è una dimensione massima né minima per i file.
 		</p>
 	</li>
  	<li>
 		<p align=justify>
-			Utilizzeremo la reindirizzamento I/O per passare i nomi dei file al programma.
+			Utilizzeremo il reindirizzamento I/O per passare i nomi dei file al programma.
 		</p>
 	</li>
  	<li>
 		<p align=justify>
-			Tutti i file di input sono nello stesso schema di codifica. Il programma può assumere che un carattere 'a' in un file sia codificato nello stesso modo di un 'a' in un altro file. (Nel nostro caso, questo è ASCII.) 
+			Tutti i file di input sono nello stesso schema di codifica. Il programma può assumere che un carattere 'a' in un file sia codificato nello stesso modo di un 'a' in un altro file. (Nel nostro caso, questo è ASCII.)
 		</p>
 	</li>
  	<li>
 		<p align=justify>
-			 Dobbiamo preservare il file originale nella sua forma originale, piuttosto che leggere i dati dal file originale e poi scriverli di nuovo nel file originale. (Perché? Se il processo si blocca, abbiamo distrutto il file originale senza generare completamente un file di output.)
+			Dobbiamo preservare il file originale nella sua forma originale, piuttosto che leggere i dati dal file originale e poi scriverli di nuovo nel file originale. (Perché? Se il processo si blocca, abbiamo distrutto il file originale senza generare completamente un file di output.)
 		</p>
 	</li>
- 	
+
 </ul>
 
 <p align=justify>
-Una volta che comprendiamo la natura del problema il più a fondo possibile, possiamo iniziare a creare una soluzione. Poi, poco a poco, affini la soluzione dichiarata suddividendo i passaggi più grandi in quelli più piccoli che i passaggi più grandi contengono. Nel nostro caso, la soluzione è piuttosto facile da esprimere in termini generali. Per iniziare, ecco una forma che la dichiarazione potrebbe assumere.
+Una volta che comprendiamo la natura del problema il più a fondo possibile, possiamo iniziare a creare una soluzione. Poi, poco a poco, affiniamo la soluzione dichiarata suddividendo i passaggi più grandi in quelli più piccoli che essi contengono. Nel nostro caso, la soluzione è piuttosto facile da esprimere in termini generali. Per iniziare, ecco una forma che la dichiarazione potrebbe assumere.
 </p>
 
 ```
@@ -7760,11 +7760,11 @@ Una volta che comprendiamo la natura del problema il più a fondo possibile, pos
 ```
 
 <p align=justify>
-Questa è davvero una soluzione, sebbene possa sembrare un estremo "punto di vista dall'alto". È carente di dettagli, ma non di funzioni. Se eseguiamo i passaggi elencati, avremo un programma che fa ciò che abbiamo bisogno che faccia. Nota anche che le affermazioni fornite non sono affermazioni scritte in alcun linguaggio di programmazione. Di certo non sono istruzioni di linguaggio assembly. Sono descrizioni di diverse azioni, indipendenti da qualsiasi sistema particolare per realizzare quelle azioni. Elenchi di affermazioni come questo, poiché non sono deliberatamente scritti come codice per un particolare ambiente di programmazione, sono chiamati <i>pseudocodice</i>.
+Questa è davvero una soluzione, sebbene possa sembrare un estremo "punto di vista dall'alto". È carente di dettagli, ma non di funzioni. Se eseguiamo i passaggi elencati, avremo un programma che fa ciò che abbiamo bisogno che faccia. Nota anche che le affermazioni fornite non sono scritte in alcun linguaggio di programmazione. Di certo non sono istruzioni di linguaggio assembly. Sono descrizioni di diverse azioni, indipendenti da qualsiasi sistema particolare per realizzare quelle azioni. Elenchi di affermazioni come questo, poiché non sono deliberatamente scritti come codice per un particolare ambiente di programmazione, sono chiamati <i>pseudocodice</i>.
 </p>
 
 <p align=justify>
-Dalla nostra prima dichiarazione completa ma priva di dettagli della soluzione, ci spostiamo verso una dichiarazione della soluzione più dettagliata. Lo facciamo affinando le dichiarazioni in pseudocodice in modo che ognuna sia più specifica su come deve essere eseguita l'azione descritta. Ripetiamo questo processo, aggiungendo più dettagli ogni volta, fino a quando ciò che abbiamo può essere prontamente tradotto in istruzioni di linguaggio assembly reali. Questo processo, chiamato affinamento successivo, non è specifico per il linguaggio assembly. Viene utilizzato con tutti i linguaggi di programmazione in una misura o nell'altra, ma funziona in modo particolarmente efficace con l'assembly. Diamo un'occhiata allo pseudocodice fornito in precedenza e creiamo una nuova versione con ulteriori dettagli. Sappiamo che stiamo per usare Linux per il programma — fa parte delle specifiche e uno dei limiti di qualsiasi soluzione — quindi possiamo iniziare ad aggiungere dettagli specifici al modo di fare tali cose in Linux. Il prossimo affinamento potrebbe apparire così.
+Dalla nostra prima dichiarazione completa ma priva di dettagli della soluzione, ci spostiamo verso una dichiarazione della soluzione più dettagliata. Lo facciamo affinando le dichiarazioni in pseudocodice in modo che ognuna sia più specifica su come deve essere eseguita l'azione descritta. Ripetiamo questo processo, aggiungendo più dettagli ogni volta, fino a quando ciò che abbiamo può essere prontamente tradotto in istruzioni di linguaggio assembly reali. Questo processo, chiamato affinamento successivo, non è specifico del linguaggio assembly. Viene utilizzato con tutti i linguaggi di programmazione in una misura o nell'altra, ma funziona in modo particolarmente efficace con l'assembly. Diamo un'occhiata allo pseudocodice fornito in precedenza e creiamo una nuova versione con ulteriori dettagli. Sappiamo che stiamo per usare Linux per il programma, e questo fa parte delle specifiche ed è uno dei limiti di qualsiasi soluzione, quindi possiamo iniziare ad aggiungere dettagli specifici al modo di fare tali cose in Linux. Il prossimo affinamento potrebbe apparire così.
 </p>
 
 ```
@@ -7777,7 +7777,7 @@ Dalla nostra prima dichiarazione completa ma priva di dettagli della soluzione, 
 ```
 
 <p align=justify>
-Ad ogni passaggio, guarda a lungo e con attenzione ciascuna dichiarazione di azione per vedere quali dettagli potrebbe nascondere e amplia quei dettagli nella prossima raffinazione. A volte questo sarà facile; a volte, beh, non così facile. Nella versione precedente, la dichiarazione "Ripeti fino a completamento" suona piuttosto semplice e ovvia all'inizio, fino a quando non pensi a cosa significa "completamento" qui: esaurire i dati nel file di input. Come facciamo a sapere quando il file di input è privo di caratteri? Questo potrebbe richiedere un po' di ricerca, ma nella maggior parte dei sistemi operativi (inclusi Linux) la routine che chiami per leggere i dati da un file restituisce un valore. Questo valore può indicare una lettura riuscita, un errore di lettura o risultati in casi speciali come "fine del file" (EOF). I dettagli precisi possono venire dopo; ciò che conta qui è che dobbiamo testare per EOF quando leggiamo i caratteri dal file. Una versione espansa (e leggermente riorganizzata) del pseudocodice della soluzione potrebbe apparire in questo modo.
+Ad ogni passaggio, guarda a lungo e con attenzione ciascuna dichiarazione di azione per vedere quali dettagli potrebbe nascondere e amplia quei dettagli nell'affinamento successivo. A volte questo sarà facile; a volte, beh, non così facile. Nella versione precedente, la dichiarazione "Ripeti fino a completamento" suona piuttosto semplice e ovvia all'inizio, fino a quando non pensi a cosa significa "completamento" qui: esaurire i dati nel file di input. Come facciamo a sapere quando il file di input è privo di caratteri? Questo potrebbe richiedere un po' di ricerca, ma nella maggior parte dei sistemi operativi (incluso Linux) la routine che chiami per leggere i dati da un file restituisce un valore. Questo valore può indicare una lettura riuscita, un errore di lettura o risultati in casi speciali come "fine del file" (EOF). I dettagli precisi possono venire dopo; ciò che conta qui è che dobbiamo testare l'EOF quando leggiamo i caratteri dal file. Una versione espansa (e leggermente riorganizzata) dello pseudocodice della soluzione potrebbe apparire in questo modo.
 </p>
 
 ```
@@ -7792,7 +7792,7 @@ Ad ogni passaggio, guarda a lungo e con attenzione ciascuna dichiarazione di azi
 ```
 
 <p align=justify>
-E così procediamo, aggiungendo dettagli ogni volta. Nota che questo inizia a sembrare un po' più codice di programma ora. Con l'aumento del numero di istruzioni, è utile aggiungere etichette a quelle istruzioni che rappresentano obiettivi di salto in modo da non confondere gli obiettivi di salto, anche in pseudocodice. Aiuta anche a suddividere lo pseudocodice in blocchi, con istruzioni correlate raggruppate insieme. Prima o poi arriveremo a qualcosa di simile al seguente.
+E così procediamo, aggiungendo dettagli ogni volta. Nota che ora questo inizia a sembrare un po' più simile a codice di programma. Con l'aumento del numero di istruzioni, è utile aggiungere etichette alle istruzioni che rappresentano obiettivi di salto, in modo da non confondere gli obiettivi di salto, anche in pseudocodice. Aiuta anche a suddividere lo pseudocodice in blocchi, con istruzioni correlate raggruppate insieme. Prima o poi arriveremo a qualcosa di simile al seguente.
 </p>
 
 ```
@@ -7811,11 +7811,11 @@ E così procediamo, aggiungendo dettagli ogni volta. Nota che questo inizia a se
 ```
 
 <p align=justify>
-Tutti i linguaggi di programmazione hanno le loro peculiarità, le loro limitazioni e una "forma" generale. Se tieni a mente questa forma mentre elabori il tuo pseudocodice, la transizione finale al codice reale sarà più semplice. A un certo punto, il tuo pseudocodice avrà tutti i dettagli che può contenere e rimanere comunque pseudocodice. Per andare oltre, dovrai iniziare a trasformare il tuo pseudocodice in codice assembly reale. Ciò significa che devi prendere ogni istruzione e chiederti: So come convertire questa istruzione in pseudocodice in una o più istruzioni di linguaggio assembly? Questo è particolarmente vero quando sei un principiante, ma anche dopo aver acquisito esperienza come programmatore in linguaggio assembly, potresti non sapere tutto ciò che c'è da sapere. Nella maggior parte dei linguaggi di programmazione (incluso l'assembly), ci sono spesso diversi o a volte molti modi diversi di implementare una determinata azione. Alcuni potrebbero essere più veloci di altri; alcuni potrebbero essere più lenti ma più facili da leggere e modificare. Alcune soluzioni potrebbero essere limitate a un sottoinsieme della gamma completa delle CPU Intel. Il tuo programma deve essere eseguito su CPU x86 più vecchie? O puoi presumere che tutti avranno un sistema con una CPU a 64 bit? (Le tue note originali dovrebbero includere tali condizioni di vincolo per qualsiasi soluzione utilizzabile al problema originale.)
+Tutti i linguaggi di programmazione hanno le loro peculiarità, le loro limitazioni e una "forma" generale. Se tieni a mente questa forma mentre elabori il tuo pseudocodice, la transizione finale al codice reale sarà più semplice. A un certo punto, il tuo pseudocodice avrà tutti i dettagli che può contenere e rimarrà comunque pseudocodice. Per andare oltre, dovrai iniziare a trasformare il tuo pseudocodice in codice assembly reale. Ciò significa che devi prendere ogni istruzione e chiederti: so come convertire questa istruzione in pseudocodice in una o più istruzioni di linguaggio assembly? Questo è particolarmente vero quando sei un principiante, ma anche dopo aver acquisito esperienza come programmatore in linguaggio assembly, potresti non sapere tutto ciò che c'è da sapere. Nella maggior parte dei linguaggi di programmazione (incluso l'assembly), ci sono spesso diversi, o a volte molti, modi diversi di implementare una determinata azione. Alcuni potrebbero essere più veloci di altri; alcuni potrebbero essere più lenti ma più facili da leggere e modificare. Alcune soluzioni potrebbero essere limitate a un sottoinsieme della gamma completa delle CPU Intel. Il tuo programma deve essere eseguito su CPU x86 più vecchie? O puoi presumere che tutti avranno un sistema con una CPU a 64 bit? (Le tue note originali dovrebbero includere tali condizioni di vincolo per qualsiasi soluzione utilizzabile al problema originale.)
 </p>
 
 <p align=justify>
-Il salto dallo pseudocodice alle istruzioni potrebbe sembrare grande, ma la buona notizia è che una volta convertito il tuo pseudocodice in istruzioni, puoi creare un file di codice sorgente in linguaggio assembly e lasciare che SASM lo analizzi per scovare i tuoi errori sintattici. Aspettati di dedicare del tempo a correggere errori assembly e poi bug del programma, ma se hai affrontato il processo di raffinamento con una mente chiara e una pazienza ragionevole, potresti essere sorpreso da quanto sia buono un programma al tuo primo tentativo. Una traduzione competente del precedente pseudocodice in assembly reale è mostrata nel codice di sotto. (Questa è la versione che si collega tramite gcc invece di ld. Aprila e compilala in SASM.) Leggila e verifica se riesci a seguire la traduzione dallo pseudocodice, sapendo ciò che già conosci sul linguaggio assembly. Il codice mostrato funzionerà ma non è 'completo' in alcun senso reale. È un 'primo taglio' per il codice reale nel processo di raffinamento successivo. Ha bisogno di una riflessione approfondita su quanto sia buono e quanto sia completa la soluzione al problema originale. Un programma funzionante non è necessariamente un programma finito.
+Il salto dallo pseudocodice alle istruzioni potrebbe sembrare grande, ma la buona notizia è che, una volta convertito il tuo pseudocodice in istruzioni, puoi creare un file di codice sorgente in linguaggio assembly e lasciare che SASM lo analizzi per scovare i tuoi errori sintattici. Aspettati di dedicare del tempo a correggere errori assembly e poi bug del programma, ma se hai affrontato il processo di affinamento con mente chiara e pazienza ragionevole, potresti essere sorpreso da quanto sia buono un programma al tuo primo tentativo. Una traduzione competente del precedente pseudocodice in assembly reale è mostrata nel codice qui sotto. (Questa è la versione che si collega tramite gcc invece di ld. Aprila e compilala in SASM.) Leggila e verifica se riesci a seguire la traduzione dallo pseudocodice, sapendo ciò che già conosci sul linguaggio assembly. Il codice mostrato funzionerà, ma non è "completo" in alcun senso reale. È un "primo taglio" per il codice reale nel processo di affinamento successivo. Ha bisogno di una riflessione approfondita su quanto sia buona e quanto sia completa la soluzione al problema originale. Un programma funzionante non è necessariamente un programma finito.
 </p>
 
 ```asm
@@ -7849,15 +7849,15 @@ Read:
                            ; At this point, we have a lowercase character
 	sub byte [Buff],20h    ; Subtract 20h from lowercase to give uppercase...
                            ; ...and then write out the char to stdout
-Write:  
+Write:
     mov rax,1      ; Specify sys_write call
     mov rdi,1      ; Specify File Descriptor 1: Standard output
     mov rsi,Buff   ; Pass address of the character to write
     mov rdx,1      ; Pass number of chars to write
     syscall	       ; Call sys_write...
     jmp Read       ; ...then go to the beginning to get another character
-        
-Exit:   ret        
+
+Exit:   ret
 
 ;Exit:
      mov rax,60    ; 60 = exit the program
@@ -7872,7 +7872,7 @@ Sembra complicato, ma consiste quasi interamente in istruzioni e concetti di cui
 <ul>
 	<li>
 		<p align=justify>
-			<code>Buff</code> è una variabile non inizializzata e quindi si trova nella sezione .bss del programma. È uno spazio riservato con un indirizzo. Buff non ha un valore iniziale e non contiene nulla fino a quando non leggiamo un carattere da stdin e lo memorizziamo lì.
+			<code>Buff</code> è una variabile non inizializzata e quindi si trova nella sezione <code>.bss</code> del programma. È uno spazio riservato con un indirizzo. <code>Buff</code> non ha un valore iniziale e non contiene nulla fino a quando non leggiamo un carattere da stdin e lo memorizziamo lì.
 		</p>
 	</li>
  	<li>
@@ -7897,7 +7897,7 @@ Sembra complicato, ma consiste quasi interamente in istruzioni e concetti di cui
 	</li>
  	<li>
 		<p align=justify>
-			Poiché un indirizzo di memoria (come <code>Buff</code>) punta semplicemente a una posizione in memoria di dimensioni non specifiche, devi inserire il qualificatore BYTE tra CMP e il suo operando di memoria per dire all'assemblatore che vuoi confrontare due valori a 8 bit. In questo caso, i due valori a 8 bit sono un carattere ASCII come w e un valore esadecimale come 7Ah.
+			Poiché un indirizzo di memoria (come <code>Buff</code>) punta semplicemente a una posizione in memoria di dimensioni non specificate, devi inserire il qualificatore BYTE tra CMP e il suo operando di memoria per dire all'assemblatore che vuoi confrontare due valori a 8 bit. In questo caso, i due valori a 8 bit sono un carattere ASCII come w e un valore esadecimale come 7Ah.
 		</p>
 	</li>
  	<li>
@@ -7908,7 +7908,7 @@ Sembra complicato, ma consiste quasi interamente in istruzioni e concetti di cui
 </ul>
 
 <p align=justify>
-L'esecuzione del programma eseguibile avviene utilizzando la reindirizzamento I/O. La riga di comando per uppercaser1 appare così.
+L'esecuzione del programma eseguibile avviene utilizzando il reindirizzamento I/O. La riga di comando per uppercaser1 appare così.
 </p>
 
 ```
@@ -7916,7 +7916,7 @@ L'esecuzione del programma eseguibile avviene utilizzando la reindirizzamento I/
 ```
 
 <p align=justify>
-Sia il file di input che il file di output possono essere qualsiasi file di testo. Ecco una cosa da provare
+Sia il file di input sia il file di output possono essere qualsiasi file di testo. Ecco una cosa da provare:
 </p>
 
 ```asm
@@ -7924,15 +7924,15 @@ Sia il file di input che il file di output possono essere qualsiasi file di test
 ```
 
 <p align=justify>
-Il file allupper.txt verrà creato quando esegui il programma e sarà riempito con il codice sorgente del programma, forzando tutti i caratteri a maiuscolo. Nota che se stai lavorando all'interno di SASM, puoi inserire il testo da convertire nella finestra di Input. (Carica un file di testo puro in un editor di testo e estrai del testo tramite il comando Copia, quindi incollalo nella finestra di Input tramite Incolla.) Quando esegui il programma, leggerà il testo dalla finestra di Input, lo forzerà a maiuscolo e poi scriverà il testo convertito nella finestra di Output. SASM mappa la finestra di Input a stdin e la finestra di Output a stdout.
+Il file allupper.txt verrà creato quando esegui il programma e sarà riempito con il codice sorgente del programma, forzando tutti i caratteri a maiuscolo. Nota che se stai lavorando all'interno di SASM, puoi inserire il testo da convertire nella finestra di Input. (Carica un file di testo puro in un editor di testo ed estrai del testo tramite il comando Copia, quindi incollalo nella finestra di Input tramite Incolla.) Quando esegui il programma, leggerà il testo dalla finestra di Input, lo forzerà a maiuscolo e poi scriverà il testo convertito nella finestra di Output. SASM mappa la finestra di Input a stdin e la finestra di Output a stdout.
 </p>
 
 <p align=justify>
-Specialmente mentre sei un principiante, potresti scoprire, mentre tenti questo ultimo passo di passare dal pseudocodice alle istruzioni per la macchina, che hai frainteso qualcosa o dimenticato qualcosa e che il tuo pseudocodice non è completo o corretto. (O entrambi!) Potresti anche renderti conto che ci sono modi migliori per fare qualcosa nelle istruzioni in assembly rispetto a quello che una traduzione letterale del pseudocodice potrebbe darti. Apprendere è un'attività disordinata e, non importa quanto tu pensi di essere bravo, continuerai sempre a imparare. Un buon esempio, e uno che potrebbe effettivamente esserti venuto in mente mentre leggi il precedente codice assembly, è questo: il programma non ha alcun rilevamento degli errori. Presume semplicemente che qualsiasi nome di file di input inserito dall'utente per la reindirizzazione I/O sia un file esistente e non corrotto con dati al suo interno, che ci sarà spazio sull'unità corrente per il file di output, e così via. È un modo per operare pericoloso, anche se Dio sa che è stato fatto. Le chiamate di sistema Linux relative ai file restituiscono valori di errore e qualsiasi programma che le utilizza dovrebbe esaminare quei valori di errore e agire di conseguenza. Ci saranno quindi momenti in cui dovrai seriamente riorganizzare il tuo pseudocodice a metà del processo, o addirittura scartarlo completamente e ricominciare da capo. Queste intuizioni hanno la fastidiosa abitudine di verificarsi quando sei in quella fase finale di conversione del pseudocodice in istruzioni per la macchina. Sii pronto.
+Specialmente mentre sei un principiante, potresti scoprire, mentre tenti questo ultimo passo di passare dallo pseudocodice alle istruzioni per la macchina, che hai frainteso qualcosa o dimenticato qualcosa e che il tuo pseudocodice non è completo o corretto. (O entrambi!) Potresti anche renderti conto che ci sono modi migliori per fare qualcosa nelle istruzioni assembly rispetto a quello che una traduzione letterale dello pseudocodice potrebbe darti. Apprendere è un'attività disordinata e, non importa quanto tu pensi di essere bravo, continuerai sempre a imparare. Un buon esempio, e uno che potrebbe effettivamente esserti venuto in mente mentre leggi il precedente codice assembly, è questo: il programma non ha alcun rilevamento degli errori. Presume semplicemente che qualsiasi nome di file di input inserito dall'utente per il reindirizzamento I/O sia un file esistente e non corrotto con dati al suo interno, che ci sarà spazio sull'unità corrente per il file di output, e così via. È un modo di operare pericoloso, anche se Dio sa che è stato fatto. Le chiamate di sistema Linux relative ai file restituiscono valori di errore e qualsiasi programma che le utilizza dovrebbe esaminare quei valori di errore e agire di conseguenza. Ci saranno quindi momenti in cui dovrai seriamente riorganizzare il tuo pseudocodice a metà del processo, o addirittura scartarlo completamente e ricominciare da capo. Queste intuizioni hanno la fastidiosa abitudine di verificarsi quando sei in quella fase finale di conversione dello pseudocodice in istruzioni per la macchina. Sii pronto.
 </p>
 
 <p align=justify>
-E c'è un'altra questione che potrebbe esserti venuta in mente, se sai qualcosa sui file I/O a basso livello: la chiamata al kernel sys_read di Linux non è limitata a restituire un singolo carattere alla volta. Passi l'indirizzo di un buffer a sys_read, e sys_read cercherà di riempire quel buffer con quanti più caratteri dal file di input come gli dici di fare. Se configuri un buffer di 500 byte, puoi chiedere a sys_read di portare 500 caratteri da stdin e metterli in quel buffer. Una singola chiamata a sys_read può quindi fornire 500 caratteri (o 1.000, o 16.000) su cui lavorare, tutti in una volta. Questo riduce il tempo che Linux impiega a muoversi avanti e indietro tra il suo filesystem e il tuo programma, ma cambia anche in modo significativo la forma del programma. Riempie il buffer, e poi devi scorrere il buffer un carattere alla volta, convertendo quello che c'è in minuscolo in maiuscolo. Sì, avresti dovuto saperlo in anticipo, mentre affinavi una soluzione in pseudocodice al tuo problema—e dopo un po' di tempo lo farai. Ci sono un numero scoraggiante di dettagli di questo tipo che devi avere a portata di mano nella tua mente, e non li memorizzerai tutti in un pomeriggio. Di tanto in tanto, una tale rivelazione può costringerti a 'riavvolgere' un paio di iterazioni e riformulare parte del tuo pseudocodice.
+E c'è un'altra questione che potrebbe esserti venuta in mente, se sai qualcosa sull'I/O di file a basso livello: la chiamata al kernel sys_read di Linux non è limitata a restituire un singolo carattere alla volta. Passi l'indirizzo di un buffer a sys_read, e sys_read cercherà di riempire quel buffer con tanti caratteri dal file di input quanti gli dici di leggere. Se configuri un buffer di 500 byte, puoi chiedere a sys_read di portare 500 caratteri da stdin e metterli in quel buffer. Una singola chiamata a sys_read può quindi fornire 500 caratteri (o 1.000, o 16.000) su cui lavorare, tutti in una volta. Questo riduce il tempo che Linux impiega a muoversi avanti e indietro tra il suo filesystem e il tuo programma, ma cambia anche in modo significativo la forma del programma. Riempie il buffer, e poi devi scorrere il buffer un carattere alla volta, convertendo quello che è in minuscolo in maiuscolo. Sì, avresti dovuto saperlo in anticipo, mentre affinavi una soluzione in pseudocodice al tuo problema, e dopo un po' di tempo lo farai. C'è un numero scoraggiante di dettagli di questo tipo che devi avere a portata di mano nella tua mente, e non li memorizzerai tutti in un pomeriggio. Di tanto in tanto, una tale rivelazione può costringerti a "riavvolgere" un paio di iterazioni e riformulare parte del tuo pseudocodice.
 </p>
 
 ### Scansionare un Buffer
