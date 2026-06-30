@@ -7607,41 +7607,41 @@ Sebbene tu possa ripristinare i valori dei flag in RFlags utilizzando <code>POPF
 ### Syscall del kernel
 
 <p align=justify>
-Lo stack dovrebbe essere considerato un luogo dove riporre temporaneamente le cose. <b>Gli oggetti memorizzati nello stack</b> non hanno nomi e in generale <b>devono essere rimossi dallo stack nell'ordine inverso in cui sono stati aggiunti</b>. Ultimo arrivato, primo servito, ricorda. LIFO! Un ottimo uso dello stack consente ai pochi registri di svolgere molteplici funzioni. Se hai bisogno di un registro per mantenere temporaneamente un valore da utilizzare nella CPU e tutti i registri sono occupati, spingi uno dei registri occupati nello stack. Il suo valore rimarrà sicuro nello stack mentre usi il registro per altre cose. Quando hai finito di usare il registro, estrai il suo vecchio valore dallo stack—e hai guadagnato i vantaggi di un registro aggiuntivo senza averne realmente uno. (Il costo, ovviamente, è il tempo che spendi per spostare il valore di quel registro dentro e fuori dallo stack. Non è qualcosa che vuoi fare nel mezzo di un ciclo spesso ripetuto!) <b>La memorizzazione a breve termine durante l'esecuzione del programma è l'uso più semplice e ovvio dello stack</b>, ma il suo <b>utilizzo più importante è probabilmente nell'invocazione di procedure e nei servizi del kernel di Linux</b>. E ora che comprendi lo stack, possiamo affrontare la misteriosa questione delle chiamate di sistema di Linux.
+Lo stack dovrebbe essere considerato un luogo dove riporre temporaneamente le cose. <b>Gli oggetti memorizzati nello stack</b> non hanno nomi e, in generale, <b>devono essere rimossi dallo stack nell'ordine inverso in cui sono stati aggiunti</b>. Ultimo arrivato, primo servito, ricorda. LIFO! Un ottimo uso dello stack consente ai pochi registri di svolgere molteplici funzioni. Se hai bisogno di un registro per mantenere temporaneamente un valore da utilizzare nella CPU e tutti i registri sono occupati, spingi uno dei registri occupati nello stack. Il suo valore rimarrà sicuro nello stack mentre usi il registro per altre cose. Quando hai finito di usare il registro, estrai il suo vecchio valore dallo stack, e hai guadagnato i vantaggi di un registro aggiuntivo senza averne realmente uno. (Il costo, ovviamente, è il tempo che spendi per spostare il valore di quel registro dentro e fuori dallo stack. Non è qualcosa che vuoi fare nel mezzo di un ciclo spesso ripetuto!) <b>La memorizzazione a breve termine durante l'esecuzione del programma è l'uso più semplice e ovvio dello stack</b>, ma il suo <b>utilizzo più importante è probabilmente nell'invocazione di procedure e nei servizi del kernel di Linux</b>. E ora che comprendi lo stack, possiamo affrontare la misteriosa questione delle chiamate di sistema di Linux.
 </p>
 
 <p align=justify>
-Tutto il resto in <code>eatsyscall.asm</code> è preparazione per l'unica istruzione che esegue il vero lavoro del programma: visualizzare una riga di testo nella console di Linux. Al cuore del programma c'è una chiamata al sistema operativo Linux. Una seconda chiamata a Linux è alla fine, quando il programma si conclude e deve informare Linux che ha finito. Ci sono diverse centinaia di servizi del kernel Linux disponibili. Uno dei servizi che Linux fornisce è un semplice accesso in modalità testo al display del tuo PC. Per le esigenze di <code>eatsyscall.asm</code> - che è solo una lezione per scrivere e far funzionare il tuo primo programma in linguaggio assembly - servizi semplici sono sufficienti. Quindi, come utilizziamo i servizi di Linux? Se hai guardato da vicino <code>eatsyscall.asm</code>, dovresti ricordare due istanze dell'istruzione macchina <code>SYSCALL</code>. Nelle istanze x64 di Linux, l'istruzione <code>SYSCALL</code> è il modo in cui accedi ai servizi del kernel Linux.
+Tutto il resto in <code>eatsyscall.asm</code> è preparazione per l'unica istruzione che esegue il vero lavoro del programma: visualizzare una riga di testo nella console di Linux. Al cuore del programma c'è una chiamata al sistema operativo Linux. Una seconda chiamata a Linux è alla fine, quando il programma si conclude e deve informare Linux che ha finito. Ci sono diverse centinaia di servizi del kernel Linux disponibili. Uno dei servizi che Linux fornisce è un semplice accesso in modalità testo al display del tuo PC. Per le esigenze di <code>eatsyscall.asm</code>, che è solo una lezione per scrivere e far funzionare il tuo primo programma in linguaggio assembly, servizi semplici sono sufficienti. Quindi, come utilizziamo i servizi di Linux? Se hai guardato da vicino <code>eatsyscall.asm</code>, dovresti ricordare due istanze dell'istruzione macchina <code>SYSCALL</code>. Nelle istanze x64 di Linux, l'istruzione <code>SYSCALL</code> è il modo in cui accedi ai servizi del kernel Linux.
 </p>
 
 <p align=justify>
-Nelle versioni a 32 bit di Linux, l'interruzione software <code>INT 80h</code> era il modo per raggiungere il dispatcher dei servizi del kernel. <code>INT 80h</code> non viene più utilizzato. L'architettura x64 ci offre qualcosa di molto meglio: l'istruzione <code>SYSCALL</code>. La sfida nell'accesso ai servizi del kernel è la seguente: passare l'esecuzione a una libreria di codice senza avere idea di dove si trovi quella libreria. L'istruzione <code>SYSCALL</code> guarda in un registro della CPU a cui i programmi in user-space non possono accedere. Quando il kernel di Linux si avvia, inserisce l'indirizzo del suo dispatcher dei servizi in questo registro. Una delle prime cose che fa l'istruzione <code>SYSCALL</code> è elevare il suo livello di privilegio dal livello 3 (utente) al livello 0 (kernel). Poi legge l'indirizzo nel registro di dispatch dei servizi e salta a quell'indirizzo per invocare il dispatcher. La maggior parte delle chiamate di sistema x64 che utilizzano <code>SYSCALL</code> hanno parametri, che vengono passati nei registri della CPU. Quali registri? Non è casuale. Infatti, c'è qualcosa chiamata <b>System V Application Binary Interface</b> (<b>ABI</b>) per Linux, che definisce un intero sistema per passare parametri a Linux tramite SYSCALL. Fa anche di più, ma ciò che ci interessa qui è il meccanismo che ti consente di chiamare i servizi del kernel utilizzando <code>SYSCALL</code>.
+Nelle versioni a 32 bit di Linux, l'interruzione software <code>INT 80h</code> era il modo per raggiungere il dispatcher dei servizi del kernel. <code>INT 80h</code> non viene più utilizzato. L'architettura x64 ci offre qualcosa di molto meglio: l'istruzione <code>SYSCALL</code>. La sfida nell'accesso ai servizi del kernel è la seguente: passare l'esecuzione a una libreria di codice senza avere idea di dove si trovi quella libreria. L'istruzione <code>SYSCALL</code> guarda in un registro della CPU a cui i programmi in user-space non possono accedere. Quando il kernel di Linux si avvia, inserisce l'indirizzo del suo dispatcher dei servizi in questo registro. Una delle prime cose che fa l'istruzione <code>SYSCALL</code> è elevare il suo livello di privilegio dal livello 3 (utente) al livello 0 (kernel). Poi legge l'indirizzo nel registro di dispatch dei servizi e salta a quell'indirizzo per invocare il dispatcher. La maggior parte delle chiamate di sistema x64 che utilizzano <code>SYSCALL</code> ha parametri, che vengono passati nei registri della CPU. Quali registri? Non è casuale. Infatti, c'è qualcosa chiamata <b>System V Application Binary Interface</b> (<b>ABI</b>) per Linux, che definisce un intero sistema per passare parametri a Linux tramite SYSCALL. Fa anche di più, ma ciò che ci interessa qui è il meccanismo che ti consente di chiamare i servizi del kernel utilizzando <code>SYSCALL</code>.
 </p>
 
 ### ABI (Application Binary Interface)
 
 <p align=justify>
-Questo è un buon punto per una breve digressione. Se hai esperienza di programmazione, probabilmente hai già sentito parlare di "chiamate API" o "l'API di Windows". Qual è, allora, la differenza tra un ABI e un API? API sta per interfaccia di programmazione delle applicazioni. Un'API è una raccolta di funzioni chiamabili da utilizzare principalmente da linguaggi di programmazione di alto livello come Pascal o C. È possibile per un programma in linguaggio assembly chiamare una funzione API, e te lo mostrerò più avanti. Un'interfaccia binaria applicativa, al contrario, è una descrizione dettagliata di ciò che accade a livello di codice macchina quando un pezzo di codice macchina binario parla con un altro o con hardware di CPU come i registri. È uno strato "sotto" l'API. L'ABI definisce una raccolta di funzioni fondamentali chiamabili, generalmente fornite dal sistema operativo, come avviene in Linux. Questa definizione descrive come passare parametri alle molte funzioni di servizio del kernel. Un ABI definisce anche come i linkers collegano i moduli compilati o assemblati in un unico programma eseguibile binario e molte altre cose.
+Questo è un buon punto per una breve digressione. Se hai esperienza di programmazione, probabilmente hai già sentito parlare di "chiamate API" o "l'API di Windows". Qual è, allora, la differenza tra un'ABI e un'API? API sta per interfaccia di programmazione delle applicazioni. Un'API è una raccolta di funzioni chiamabili da utilizzare principalmente da linguaggi di programmazione di alto livello come Pascal o C. È possibile per un programma in linguaggio assembly chiamare una funzione API, e te lo mostrerò più avanti. Un'interfaccia binaria applicativa, al contrario, è una descrizione dettagliata di ciò che accade a livello di codice macchina quando un pezzo di codice macchina binario parla con un altro o con hardware di CPU come i registri. È uno strato "sotto" l'API. L'ABI definisce una raccolta di funzioni fondamentali chiamabili, generalmente fornite dal sistema operativo, come avviene in Linux. Questa definizione descrive come passare parametri alle molte funzioni di servizio del kernel. Un'ABI definisce anche come i linker collegano i moduli compilati o assemblati in un unico programma eseguibile binario e molte altre cose.
 </p>
 
-### Lo Schema dei Parametri del Registro ABI
+### Lo schema dei parametri del registro ABI
 
 <p align=justify>
 Esaminiamo più da vicino il programma <code>eatsyscall.asm</code>. Il codice seguente scrive un messaggio testuale nella console di Linux:
 </p>
 
 ```asm
-	mov rax,1		; 1 = sys_write for syscall         
+	mov rax,1		; 1 = sys_write for syscall
 	mov rdi,1		; 1 = fd for stdout; i.e., write to the terminal window
-                        
-	mov rsi,EatMsg		; Put address of the message string in rsi
- 	mov rdx,EatLen		; Length of string to be written in rdx
 
-	syscall          	; Make the system call
+	mov rsi,EatMsg		; Put address of the message string in rsi
+	mov rdx,EatLen		; Length of string to be written in rdx
+
+	syscall			; Make the system call
 ```
 
 <p align=justify>
-In poche parole, questo codice colloca determinati valori in determinati registri e poi esegue l'istruzione <code>SYSCALL</code>. Il dispatcher dei servizi di Linux raccoglie i valori posti in quei registri e poi chiama la funzione specificata in RAX. C'è un sistema per specificare quali registri vengono utilizzati per quale servizio e quali parametri (se presenti) per quel servizio. Il modo migliore per spiegare è mostrarti le prime due righe della tabella delle chiamate di sistema dell'ABI System V, nella tabella di sotto.
+In poche parole, questo codice colloca determinati valori in determinati registri e poi esegue l'istruzione <code>SYSCALL</code>. Il dispatcher dei servizi di Linux raccoglie i valori posti in quei registri e poi chiama la funzione specificata in RAX. C'è un sistema per specificare quali registri vengono utilizzati per quale servizio e quali parametri (se presenti) servono a quel servizio. Il modo migliore per spiegarlo è mostrarti le prime due righe della tabella delle chiamate di sistema dell'ABI System V, nella tabella qui sotto.
 </p>
 
 <div align=center>
@@ -7649,25 +7649,25 @@ In poche parole, questo codice colloca determinati valori in determinati registr
 </div>
 
 <p align=justify>
-Tutte le colonne tranne System Call sono registri. System Call è il nome leggibile dall'uomo della chiamata di sistema, che è il nome utilizzato da linguaggi di alto livello come Pascal e C per effettuare chiamate di sistema tramite l'istruzione SYSCALL. Il registro RAX è dedicato al codice numerico che specifica la chiamata di sistema da effettuare. Il nome della chiamata di sistema 1 è <code>sys_write</code>. I registri dopo il nome della chiamata di sistema (RDI, RSI) contengono i parametri. L'ABI specifica sei registri da utilizzare per i parametri. Non tutte le chiamate di sistema richiedono sei parametri. La chiamata <code>sys_write</code> utilizzata in <code>eatsyscall.asm</code> neha solo tre. L'elenco dei parametri inizia sempre con RDI e utilizza i registri nell'ordine dato nella tabella. 
-<br>	RDI, RSI, RDX, R10, R8, R9.<br> 
+Tutte le colonne tranne System Call sono registri. System Call è il nome leggibile dall'uomo della chiamata di sistema, che è il nome utilizzato da linguaggi di alto livello come Pascal e C per effettuare chiamate di sistema tramite l'istruzione SYSCALL. Il registro RAX è dedicato al codice numerico che specifica la chiamata di sistema da effettuare. Il nome della chiamata di sistema 1 è <code>sys_write</code>. I registri dopo il nome della chiamata di sistema (RDI, RSI) contengono i parametri. L'ABI specifica sei registri da utilizzare per i parametri. Non tutte le chiamate di sistema richiedono sei parametri. La chiamata <code>sys_write</code> utilizzata in <code>eatsyscall.asm</code> ne ha solo tre. L'elenco dei parametri inizia sempre con RDI e utilizza i registri nell'ordine dato nella tabella.
+<br>	RDI, RSI, RDX, R10, R8, R9.<br>
 Dopo che i parametri di una chiamata di sistema sono stati tutti assegnati ai registri, eventuali registri rimasti inutilizzati per la chiamata di sistema non si applicano alla chiamata di sistema e vengono lasciati vuoti. I parametri per <code>sys_write</code> sono questi.
 </p>
 
 <ul>
 	<li>
 		<p align=justify>
-			<b>RDI</b>: Il descrittore di file su cui verrà scritto il testo. In Linux (e in tutte le varianti di Unix) il descrittore di file per <code>sys_write</code> è 1.
+			<b>RDI</b>: il descrittore di file su cui verrà scritto il testo. In Linux (e in tutte le varianti di Unix) il descrittore di file per <code>sys_write</code> è 1.
 		</p>
 	</li>
 	<li>
 		<p align=justify>
-			<b>RSI</b>: L'indirizzo del testo da scrivere nella console.
+			<b>RSI</b>: l'indirizzo del testo da scrivere nella console.
 		</p>
 	</li>
 	<li>
 		<p align=justify>
-			<b>RDX</b>: La lunghezza (numero di caratteri) del testo da scrivere sulla console
+			<b>RDX</b>: la lunghezza (numero di caratteri) del testo da scrivere sulla console.
 		</p>
 	</li>
 </ul>
@@ -7679,23 +7679,23 @@ Se una chiamata di sistema deve restituire un valore numerico, quel valore viene
 ### Terminare un programma via SYSCALL
 
 <p align=justify>
-C'è un secondo comando SYSCALL in eatsyscall.asm, e ha un compito umile ma cruciale: chiudere il programma e restituire il controllo a Linux. Questo sembra più semplice di quanto sia, e una volta che comprendi un po' meglio gli interni di Linux, inizierai ad apprezzare il lavoro che deve essere fatto sia per avviare un processo sia per chiuderlo. Tuttavia, dal punto di vista del tuo stesso programma, è estremamente semplice: inserisci il numero del servizio sys_exit in RAX, inserisci un codice di ritorno in RDI e poi esegui SYSCALL:
+C'è un secondo comando SYSCALL in <code>eatsyscall.asm</code>, e ha un compito umile ma cruciale: chiudere il programma e restituire il controllo a Linux. Questo sembra più semplice di quanto sia, e una volta che comprendi un po' meglio gli interni di Linux, inizierai ad apprezzare il lavoro che deve essere fatto sia per avviare un processo sia per chiuderlo. Tuttavia, dal punto di vista del tuo stesso programma, è estremamente semplice: inserisci il numero del servizio sys_exit in RAX, inserisci un codice di ritorno in RDI e poi esegui SYSCALL:
 </p>
 
 ```asm
 	mov rax,60	; 60 = sys_exit to exit the program gracefully
 	mov rdi,0	; Return value in rdi 0 = nothing to return
- 	syscall        	; Call syscall to exit this program
+	syscall		; Call syscall to exit this program
 ```
 
 <p align=justify>
-Il codice di ritorno è un valore numerico che puoi definire come preferisci. Tecnicamente, non ci sono restrizioni su cosa sia (a parte il fatto di dover adattarsi a un registro a 64 bit), ma per convenzione, un valore di ritorno di 0 significa "tutto ha funzionato correttamente; arresto normale." Valori di ritorno diversi da 0 indicano tipicamente un errore di qualche tipo. Tieni presente che nei programmi più grandi, devi fare attenzione a cose che non funzionano come previsto: un file su disco non può essere trovato, un'unità disco è piena e così via. Se un programma non riesce a svolgere il proprio compito e deve terminare prematuramente, dovrebbe avere un modo per dirti (o in alcuni casi, a un altro programma) cosa è andato storto. Il codice di ritorno è un buon modo per farlo. Uscire in questo modo non è solo una cortesia. Ogni programma x64 che scrivi deve uscire effettuando una chiamata a <code>sys_exit</code> tramite il dispatcher dei servizi del kernel. Se un programma semplicemente "scivola via" dal limite, in realtà si fermerà, ma Linux solleverà un errore di segmentazione e non avrai idea di cosa sia successo. Questa è la ragione per cui i tuoi programmi "sandbox" sono utilizzati solo per il debugging all'interno di SASM. Sono frammenti di programma e genereranno un errore di segmentazione se li lasci semplicemente funzionare. I programmi scritti in SASM utilizzano elementi della Standard C Library, che fornisce ai programmi una sezione "codice di arresto" che effettivamente effettua la chiamata di sistema per l'uscita. Tali programmi terminano eseguendo un'istruzione RET, come spiegherò in seguito.
+Il codice di ritorno è un valore numerico che puoi definire come preferisci. Tecnicamente, non ci sono restrizioni su cosa sia (a parte il fatto che deve adattarsi a un registro a 64 bit), ma per convenzione, un valore di ritorno pari a 0 significa "tutto ha funzionato correttamente; arresto normale." Valori di ritorno diversi da 0 indicano tipicamente un errore di qualche tipo. Tieni presente che nei programmi più grandi devi fare attenzione alle cose che non funzionano come previsto: un file su disco non può essere trovato, un'unità disco è piena e così via. Se un programma non riesce a svolgere il proprio compito e deve terminare prematuramente, dovrebbe avere un modo per dirti (o in alcuni casi, per dire a un altro programma) cosa è andato storto. Il codice di ritorno è un buon modo per farlo. Uscire in questo modo non è solo una cortesia. Ogni programma x64 che scrivi deve uscire effettuando una chiamata a <code>sys_exit</code> tramite il dispatcher dei servizi del kernel. Se un programma semplicemente "scivola via" dal limite, in realtà si fermerà, ma Linux solleverà un errore di segmentazione e non avrai idea di cosa sia successo. Questa è la ragione per cui i tuoi programmi "sandbox" sono utilizzati solo per il debugging all'interno di SASM. Sono frammenti di programma e genereranno un errore di segmentazione se li lasci semplicemente funzionare. I programmi scritti in SASM utilizzano elementi della Standard C Library, che fornisce ai programmi una sezione "codice di arresto" che effettivamente effettua la chiamata di sistema per l'uscita. Tali programmi terminano eseguendo un'istruzione RET, come spiegherò in seguito.
 </p>
 
 ### Registri sporcati da una SYSCALL
 
 <p align=justify>
-Anche se x64 ti offre il doppio del numero di registri a uso generale rispetto a x86, non tutti quei registri "a uso generale" sono liberi per essere utilizzati ovunque e in qualsiasi momento. Da uno a sei di quei registri sono richiesti per effettuare una chiamata di sistema Linux con SYSCALL. Quelli sei sono indicati nella tabella di sopra. Il numero di registri utilizzati varia in base alla chiamata di sistema, e dovrai consultarli in una tabella delle chiamate di sistema per vedere quanti ne servono. Se una chiamata di sistema non ha bisogno di tutti e sei i registri dei parametri SYSCALL (<code>sys_read</code> e <code>sys_write</code> ne utilizzano solo tre), puoi utilizzare quelli che non sono richiesti per quella chiamata di sistema nel tuo codice. <b>L'istruzione SYSCALL stessa utilizza internamente RAX, RCX e R11</b>. <b>Dopo che la SYSCALL restituisce, non puoi presumere che RAX, RCX o R11 avranno gli stessi valori che avevano prima della SYSCALL</b>.
+Anche se x64 ti offre il doppio del numero di registri a uso generale rispetto a x86, non tutti quei registri "a uso generale" sono liberi per essere utilizzati ovunque e in qualsiasi momento. Da uno a sei di quei registri sono richiesti per effettuare una chiamata di sistema Linux con SYSCALL. Quei sei sono indicati nella tabella qui sopra. Il numero di registri utilizzati varia in base alla chiamata di sistema, e dovrai consultarli in una tabella delle chiamate di sistema per vedere quanti ne servono. Se una chiamata di sistema non ha bisogno di tutti e sei i registri dei parametri SYSCALL (<code>sys_read</code> e <code>sys_write</code> ne utilizzano solo tre), puoi utilizzare quelli che non sono richiesti per quella chiamata di sistema nel tuo codice. <b>L'istruzione SYSCALL stessa utilizza internamente RAX, RCX e R11</b>. <b>Dopo che la SYSCALL restituisce, non puoi presumere che RAX, RCX o R11 avranno gli stessi valori che avevano prima della SYSCALL</b>.
 </p>
 
 ### Progettare un programma
