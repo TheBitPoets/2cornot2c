@@ -2476,15 +2476,15 @@ int main(void){
 </p>
 
 <p align="justify">
-Il computer rappresenta le informazioni attraverso sequenze di bit. Qualsiasi tipo di dato sia esso un documento, un video, audio etc viene memorizzato come una lunga successione di bit . 
-Il bit è l'unità atomica, l'elemento minimo, per rappresentare informazioni. Il bit può essumere solamente due valori <code>0</code> (falso/basso) <code>1</code> (vero/falso). Dati $N$ bit è possible costruire $2^N$ diverse combinazioni di queste sequenze. Per intenderci facciamo un esempio con $N = 4$ abbiamo $2^4=16$ diverse sequenze di bit (sotto riportate).
+Il computer rappresenta le informazioni attraverso sequenze di bit. Qualsiasi tipo di dato, sia esso un documento, un video, audio etc., viene memorizzato come una lunga successione di bit.
+Il bit è l'unità atomica, l'elemento minimo, per rappresentare informazioni. Il bit può assumere solamente due valori: <code>0</code> (falso/basso) e <code>1</code> (vero/alto). Dati $N$ bit, è possibile costruire $2^N$ diverse combinazioni di queste sequenze. Per intenderci, facciamo un esempio: con $N = 4$ abbiamo $2^4=16$ diverse sequenze di bit (sotto riportate).
 </p>
 
 <p align="center">
 <img src="https://github.com/kinderp/2cornot2c/blob/main/images/sequenza_binaria.jpg">
 </p>
 
-Queste sequenze di bit possono essere difficili da interpretare e lunghe da stampare su shermo per questo si fa uso della loro rappresentazione in esadecimale di seguito riportata
+Queste sequenze di bit possono essere difficili da interpretare e lunghe da stampare su schermo; per questo si fa uso della loro rappresentazione in esadecimale, di seguito riportata.
 
 <p align="center">
 <img src="https://github.com/kinderp/2cornot2c/blob/main/images/tabella_binario_esadecimale_decimale.png">
@@ -2498,7 +2498,7 @@ La seguente sequenza di bit:
 $0001 0111 0011 1010 0100 1100$
 </p>
 
-diventa in esacimale:
+diventa in esadecimale:
 
 <p align="center">
 $1 7 3 A 4 C$
@@ -2507,7 +2507,7 @@ $1 7 3 A 4 C$
 ### Big & Little endian
 
 <p align=justify>
-La memoria è una sequenza di byte (8 bit), dette celle. Ad ogni cella è associato un indirizzo per leggere e scrivere da e su di essa. La dimensione (in bit) degli indirizzi di un sistema è detta <b>word size</b>. Se la word size è $N$ si potreanno indirizzare $2^N$ celle diverse di memoria. Il numero totale di celle di memoria indirizzabili è detto spazio degli indirizzi virtuale. Quindi la differenza tra una macchina a 32 bit ed a 64 bit è la dimensione in bit degli indirizzi (e probabilmente dei registri interni della CPU).
+La memoria è una sequenza di byte (8 bit), detti celle. A ogni cella è associato un indirizzo per leggere e scrivere da e su di essa. La dimensione (in bit) degli indirizzi di un sistema è detta <b>word size</b>. Se la word size è $N$, si potranno indirizzare $2^N$ celle diverse di memoria. Il numero totale di celle di memoria indirizzabili è detto spazio degli indirizzi virtuale. Quindi la differenza tra una macchina a 32 bit e una a 64 bit è la dimensione in bit degli indirizzi (e probabilmente dei registri interni della CPU).
 </p>
 
 <p align=justify>
@@ -2557,7 +2557,7 @@ $$
 dove $x_i$ è il simbolo in posizione $i$ all'interno della sequenza
 
 <p align=justify>
-La proprietà di questa codifica ($W$ bit per la codifica) è che ciascun valore rappresentato nel range: $[0, 2^W-1]$ ha un'unica codica ad esso associato, non abbiamo due sequenze associate ad uno stesso valore.
+La proprietà di questa codifica ($W$ bit per la codifica) è che ciascun valore rappresentato nel range $[0, 2^W-1]$ ha un'unica codifica a esso associata: non abbiamo due sequenze associate a uno stesso valore.
 </p>
 
 Alcuni esempi:
@@ -2579,11 +2579,11 @@ Alcuni esempi:
 1111 = 1*2^3 + 1*2^2 + 1*2^1 + 1*2^0 = 8 + 4 + 2 + 1 = 15
 ```
 
-#### Condifica interi con segno (complemento a due)
+#### Codifica interi con segno (complemento a due)
 
 <p align=justify>
-La codifica in complmento a due è la più utilizzata per i numeri interi con segno (positivi e negativi). Il motivo principale è che ci permette per svolgere le operazione aritmetiche gli stessi circuiti usati per i numeri senza segno ed inoltre anche in questo caso ogni valore ha associato una sola rappresentazione (come nel caso dei numer senza segno).
-Per rappresentare il segno usiamo il bit più a sinistra (MSB) il più significativo. Se MSB è alto (1) il numero sarà negativo, se MSB è basso (0) il numero è positivo. 
+La codifica in complemento a due è la più utilizzata per i numeri interi con segno (positivi e negativi). Il motivo principale è che ci permette di svolgere le operazioni aritmetiche con gli stessi circuiti usati per i numeri senza segno e, inoltre, anche in questo caso ogni valore ha associata una sola rappresentazione (come nel caso dei numeri senza segno).
+Per rappresentare il segno usiamo il bit più a sinistra (MSB), il più significativo. Se MSB è alto (1), il numero sarà negativo; se MSB è basso (0), il numero è positivo.
 Data una sequenza di $W$ bit codificata in complemento a due, il valore associato alla sequenza è ricavabile dalla formula:
 </p>
 
@@ -2617,7 +2617,7 @@ Se noti abbiamo usato le stesse quattro sequenze degli esempi per la codifica de
 
 <p align=justify>
 Anche in questo caso ogni valore ha associata una sola sequenza di bit, non ci sono due sequenze o più associate allo stesso valore. Il range di valori rappresentabili con $W$ bit è $[-2^{W-1}:-1, 0:2^{W-1}-1]$
-In quanto con $W$ bit ho $2^W$ sequenze possibili da distribuire metà ai numeri positivi $\frac{2^{W}}{2} = 2^W*2^{-1} = 2^{W-1}$ e metà ai negativi $2^{W-1}$ ma nei numeri positivi abbiamo lo zero a cui associare una sequenze delle $2^{W-1}$ quindi il valore massimo (estremo superiore) per i numeri positivi sarà appunto $2^{W-1}-1$ (-1 perchè appunto devo considerare lo zero che non ho invece nei numeri negativi). **Il range dei numeri rappresentabili è dunque asimmetrico** maggiore per i negativi di uno.
+In quanto con $W$ bit ho $2^W$ sequenze possibili da distribuire metà ai numeri positivi $\frac{2^{W}}{2} = 2^W*2^{-1} = 2^{W-1}$ e metà ai negativi $2^{W-1}$, ma nei numeri positivi abbiamo lo zero a cui associare una sequenza delle $2^{W-1}$, quindi il valore massimo (estremo superiore) per i numeri positivi sarà appunto $2^{W-1}-1$ (-1 perché appunto devo considerare lo zero che non ho invece nei numeri negativi). **Il range dei numeri rappresentabili è dunque asimmetrico**, maggiore per i negativi di uno.
 </p>
 
 <p align=justify>
@@ -2665,7 +2665,7 @@ Come anticipato le sequenze di bit sono le stesse, le due codifiche si sovrappon
 </p>
 
 <p align=justify>
-Data una sequenza di bit e conosciuto il valore in una codifica è possibile passare al valore nell'altra codifica aggiungendo o togliendo a quest'ultimo una valore pari a: $UMax+1=2^W$. 
+Data una sequenza di bit e conosciuto il valore in una codifica, è possibile passare al valore nell'altra codifica aggiungendo o togliendo a quest'ultimo un valore pari a: $UMax+1=2^W$.
 Per esempio con $W=4$ $UMax+1=2^W=16$ data la sequenza $1110$ nella codifica senza segno:
 </p>
 
@@ -2685,7 +2685,7 @@ Allo stesso modo se calcolassimo il valore della sequenza nella codifica in comp
 1110 = -1*2^3 + 1*2^2 + 1*2^1 + 0*2^0 = -8 + 4 + 2 = -2
 ```
 
-Per ottnere il valore nella rappresentazione senza segno dovremmo sommare a 2 il valore 16 ($UMax+1$ o anche $2^W$)
+Per ottenere il valore nella rappresentazione senza segno dovremmo sommare a 2 il valore 16 ($UMax+1$ o anche $2^W$)
 
 ```math
 1110 = -2 + 14
@@ -2705,7 +2705,7 @@ Per i numeri senza segno (positivi) basterà effettuare una <b>zero extension</b
 </p>
 
 <p align=justify>
-Per i numeri con segno (complemneto a 2) basterà effetturare una <b>sign extension</b>: cioè copiare nei nuovi $k$ bit il valore contenuto nel MSB dei $W$ bit di partenza.
+Per i numeri con segno (complemento a 2) basterà effettuare una <b>sign extension</b>: cioè copiare nei nuovi $k$ bit il valore contenuto nel MSB dei $W$ bit di partenza.
 La figura di sotto ti aiuterà a capire meglio
 </p>
 
@@ -2793,9 +2793,9 @@ int main(void){
 }
 ```
 
-Il linguaggio C riconosce differenti tipi di dato predefiniti. Fino ad ora abbiamo visto solo il tipo `int`, di seguito riportiamo tutto le _keyword_ riconosciute dal C per gli specificatori di tipo:
+Il linguaggio C riconosce differenti tipi di dato predefiniti. Fino ad ora abbiamo visto solo il tipo `int`, di seguito riportiamo tutte le _keyword_ riconosciute dal C per gli specificatori di tipo:
 
-| Keyowrd       | 
+| Keyword       |
 | ------------- |
 | `int`         |
 | `long`        |
@@ -2807,27 +2807,27 @@ Il linguaggio C riconosce differenti tipi di dato predefiniti. Fino ad ora abbia
 | `double`	|
 | `void`	|
 
-`int` permette di rappresentare in memoria i tipi interi (senza parte decimale), le successive quattro _keyword_ in tabella: `long` `short` `unsigned` e `signed` son usate per ottenere variazioni del tipo base (es: `unsigned short int` o `long long int`). `char` è usato per rappresentare i singoli caratteri, simboli d'interpuzione etc; `char` può essere utilizzato anche per esprimere `int` di piccole dimensioni. `float` `double` e `long double` sono usati per i numeri reali, numeri con parte decimale.
+`int` permette di rappresentare in memoria i tipi interi (senza parte decimale), le successive quattro _keyword_ in tabella: `long`, `short`, `unsigned` e `signed` sono usate per ottenere variazioni del tipo base (es: `unsigned short int` o `long long int`). `char` è usato per rappresentare i singoli caratteri, simboli d'interpunzione etc.; `char` può essere utilizzato anche per esprimere `int` di piccole dimensioni. `float`, `double` e `long double` sono usati per i numeri reali, numeri con parte decimale.
 
 ### `int`
 
-Il tipo `int` è `signed` questo vuol dire che possiamo esprimere sia numeri positivi (segno +) sia numeri negativa (segno -). La dimensione in bit usata per rappresentare un `int` (e quindi anche il valore intero massimo esprimibile) dipende dall'architettura. Tipicamente un `int` utilizza una word nell'architettura target: quindi nei sistemi con word a 16 bit (IBM compatibile) `int` occuperà 16 bit. Quale sarà il valore massimo e minimo rappresentabili con un `int` a 16 bit? Semplice:
+Il tipo `int` è `signed`: questo vuol dire che possiamo esprimere sia numeri positivi (segno +) sia numeri negativi (segno -). La dimensione in bit usata per rappresentare un `int` (e quindi anche il valore intero massimo esprimibile) dipende dall'architettura. Tipicamente un `int` utilizza una word nell'architettura target: quindi nei sistemi con word a 16 bit (IBM compatibile) `int` occuperà 16 bit. Quale sarà il valore massimo e minimo rappresentabili con un `int` a 16 bit? Semplice:
 
-Con 16 bit possono esprimere 65536 diverse combinazioni di bit (65536 diversi valori):
+Con 16 bit possiamo esprimere 65536 diverse combinazioni di bit (65536 diversi valori):
 
 $2^{16} = 65536$
 
-Questi 65536 valori devono essere assegnati metà ai i numeri negativi e metà ai positivi  
+Questi 65536 valori devono essere assegnati metà ai numeri negativi e metà ai positivi
 
 $\frac{65536}{2} = 32768$
 
 Per i numeri positivi le diverse 32768 combinazioni devono essere assegnate a partire dallo zero, quindi i numeri positivi andranno da 0 fino a 32767. Per i numeri negativi (non avendo lo zero) i valori andranno da -1 a -32768.
 
-Le stesse considerazioni valgono per macchina con word a 32 o 64 bit. In questi sistemi `int` sarà rispettivamente a 32 e 64 bit.
-Quindi, **lo spazio occupato in memoria da un `int` dipende dalla dimensione della word della macchina** che può essere 16,32 o 64 bit a seconda del tipo di architettura. **Lo standard ISO C specifica solo la dimensione minima di `int`: 16 bit** con range [-32767, +32767]
+Le stesse considerazioni valgono per macchine con word a 32 o 64 bit. In questi sistemi `int` sarà rispettivamente a 32 e 64 bit.
+Quindi, **lo spazio occupato in memoria da un `int` dipende dalla dimensione della word della macchina** che può essere 16, 32 o 64 bit a seconda del tipo di architettura. **Lo standard ISO C specifica solo la dimensione minima di `int`: 16 bit** con range [-32767, +32767]
 
 ```c
-int a; /* dichirazione di intero, non inizializzato */
+int a; /* dichiarazione di intero, non inizializzato */
 int b, c, d; /* dichiarazione di interi nella stessa riga */
 
 a = 10; /* assegnamento */
@@ -2876,12 +2876,12 @@ Il linguaggio offre le _keyword_ `short` `long` `unsigned` per modificare il tip
 | ----------------------------------------------  | ------------- |
 | `int`						  | **Deve essere almeno di 16 bit**. E' `signed` |
 | `short int` o `short`                           | **non può essere più grande di `int`**, potrebbe usare meno memoria di `int` salvando spazio quando si rappresentano interi piccoli. Come `int` è `signed` di default |
-| `long int`  o `long`                            | **non può essere più piccolo di `int`**, potrebbe usare più memoria di `int`, utile per rappresentare interi molti grandi. Come `int` è `signed` di default |
-| `long long int` o `long long`                   | **Deve essere almeno di 64 bit**. Potrebbe usare più  memoria di `long`. Come `int` è `signed` di default |
-| `unsigned int` o `unsigned`                     | Usato per valori solo positivi. Il tipo shifta a destra il range di rappresentazione, esempio con 16 bit avendo 65736 possibili rappresentazioni ed escludendo i valori negativi il range passa da [-32768, 32767] a [0, 65735] |
-| `unsigend long int` o `unsigned long`           | Previsto da C90 |
-| `unsigend long int` o `unsigned long`           | Previsto da C90 |
-| `unsigend long long int` o `unsigned long long` | Previsto da C99 |
+| `long int`  o `long`                            | **non può essere più piccolo di `int`**, potrebbe usare più memoria di `int`, utile per rappresentare interi molto grandi. Come `int` è `signed` di default |
+| `long long int` o `long long`                   | **Deve essere almeno di 64 bit**. Potrebbe usare più memoria di `long`. Come `int` è `signed` di default |
+| `unsigned int` o `unsigned`                     | Usato per valori solo positivi. Il tipo shifta a destra il range di rappresentazione, esempio con 16 bit avendo 65536 possibili rappresentazioni ed escludendo i valori negativi il range passa da [-32768, 32767] a [0, 65535] |
+| `unsigned long int` o `unsigned long`           | Previsto da C90 |
+| `unsigned long int` o `unsigned long`           | Previsto da C90 |
+| `unsigned long long int` o `unsigned long long` | Previsto da C99 |
 
 Lo standard quindi non specifica la dimensione precisa dei diversi interi, l'idea è che il tipo si adatterà alla dimensione della word dell'architettura di riferimento. Lo standard richiede solamente che:
 
@@ -2897,10 +2897,10 @@ Lo standard quindi non specifica la dimensione precisa dei diversi interi, l'ide
 | `long`  32    | `long`  32    | `long` 32     |
 | `long long`   | `long long`   | `long long` 64|
 
-Quando allora usare i diversi tipi di interi? Dipenda dalla situazione.
+Quando allora usare i diversi tipi di interi? Dipende dalla situazione.
 
-* `unsigned` è usato per contare perchè non rappresenta i numeri negativi e `unsigned` shiftando a destra il range rappresentabile può raggiungere valori maggiori di un `signed`
-* `long` è usato per rappresentare valori che `int` non riesce a rappresentare. Tieni conto che nei sistemi in cui `long` è maggiore di `int` usare `long` rallenta i calcoli, quindi usalo solo ne necessario. Altre considerazioni possono essere fatte sulla portabilità: se hai bisogno di interi a 32 e stai scrivendo codice su una macchina dove `int` e `long` sono a 32 bit dovresti scegliere `long` in modo tale che se il programma viene portato su macchine a 16 bit dove `int` è 16 il tuo intero sarà sempre a 32 bit perchè `long` su sistema a 16 bit è lungo 32 bit
+* `unsigned` è usato per contare perché non rappresenta i numeri negativi e, shiftando a destra il range rappresentabile, può raggiungere valori maggiori di un `signed`
+* `long` è usato per rappresentare valori che `int` non riesce a rappresentare. Tieni conto che nei sistemi in cui `long` è maggiore di `int` usare `long` rallenta i calcoli, quindi usalo solo se necessario. Altre considerazioni possono essere fatte sulla portabilità: se hai bisogno di interi a 32 bit e stai scrivendo codice su una macchina dove `int` e `long` sono a 32 bit dovresti scegliere `long`, in modo tale che se il programma viene portato su macchine a 16 bit dove `int` è 16 bit il tuo intero sarà sempre a 32 bit perché `long` su sistema a 16 bit è lungo 32 bit
 * `long long` è usato solo quando gli interi devono essere lunghi 64 bit
 * `short` è usato per risparmiare spazio, nel senso se i tuoi interi possono essere lunghi solo 16 bit usare `int` potrebbe renderli lunghi 32 bit (in macchine a 32 bit e superiori).
 
@@ -2924,7 +2924,7 @@ int main(void){
         short end = 200;
         long big = 65537;
         long long verybig = 12345678908642;
-        /* Udasa un segnaposto errara nella printf() porta a
+        /* Usare un segnaposto errato nella printf() porta a
          * risultati strani */
         printf("un  = %u  and not %d\n", un, un);
         printf("end = %hd and not %d\n", end, end);
@@ -2987,7 +2987,7 @@ Ricordiamo che dati $W$ bit per la rappresentazione i range rappresentabili sono
 * senza segno: $[0, 2^{W}-1]$
   
 Per i numeri con segno, abbiamo due casi.
-* **un intero positivo, raggiunto il valore massimo** ($+2^{W-1}-1$), **se incrementato** di un'altra unità **assume il valore minimo negativo** rappresentabile($-2^{W-1}$). In figura $W=4$, il valore massimo positivo è $2^3-1=+7$ che ha codifica $0111$ se sommiamo 1 otteniamo un effetto a cascata del riporto $1000$ che in complento a due (siamo con numeri con segno) vale:
+* **un intero positivo, raggiunto il valore massimo** ($+2^{W-1}-1$), **se incrementato** di un'altra unità **assume il valore minimo negativo** rappresentabile ($-2^{W-1}$). In figura $W=4$, il valore massimo positivo è $2^3-1=+7$ che ha codifica $0111$ se sommiamo 1 otteniamo un effetto a cascata del riporto $1000$ che in complemento a due (siamo con numeri con segno) vale:
 ```math
 -1*2^3+0*2^2+0*2^1+0*2^0=-8
 ```
@@ -3013,7 +3013,7 @@ se sommiamo 1 otteniamo $10000$ ma la rappresentazione è a 4 bit ed il primo bi
 
 # Rappresentazione binaria `int`
 
-La rappresentazione dei numeri interi con segno (`signed`, di default per la _keyword_ `int`) è in **complemento a due**, per gli interi senza senzo (`unsigned int`) si usa una normale rappresentazione binaria del valore intero.
+La rappresentazione dei numeri interi con segno (`signed`, di default per la _keyword_ `int`) è in **complemento a due**, per gli interi senza segno (`unsigned int`) si usa una normale rappresentazione binaria del valore intero.
 Nel codice di sotto proviamo a predire la sequenza binaria di un valore decimale scelto arbitrariamente. Per comprendere il codice è necessaria una conoscenza del processo di conversione da decimale a binario oltre che ovvia
 mente alle basi relative sia al sistema numerico posizionale binari che esadecimale. Trovi la teoria trattata a lezione [qui](https://github.com/kinderp/2cornot2c/tree/main/lab/lessons/UDA_1) 
 
@@ -3043,7 +3043,7 @@ mente alle basi relative sia al sistema numerico posizionale binari che esadecim
  *    1    B
  *
  * Gli interi signed sono rappresentati in questo modo, quindi
- * il valore 27 unsigned stampandolo in esacimale con printf()
+ * il valore 27 unsigned stampandolo in esadecimale con printf()
  * deve restituire 0x1B
  *
  * Per gli interi con segno si usa la rappresentazione in comp
@@ -3099,7 +3099,7 @@ Il cast è una conversione esplicita di tipo e prevede un proprio operatore. Esi
 
 > [!IMPORTANT]
 > **Conversione automatica**
-> Le conversioni automatiche prevedono che nelle espressioni che coinvolgoo costanti o variabili di tipo diverso il tipo del risultato è pari a quello dell'operando più capiente in termini di bit
+> Le conversioni automatiche prevedono che nelle espressioni che coinvolgono costanti o variabili di tipo diverso il tipo del risultato sia pari a quello dell'operando più capiente in termini di bit
 
 Nel codice di sotto il valore che viene stampato è 1, la divisione è tra due interi quindi il risultato anche se è un numero reale (con parte decimale) sarà di tipo intero e la parte decimale verrà troncata.
 
@@ -3108,7 +3108,7 @@ int x = 8, y=5;
 printf("%i\n", x/y);
 ```
 
-Nel secondo caso (codice sottostante) invece la divisione coinvolge un intero (`int`) ed un numero reale (`double`) ed il risultato sarà dunque un `double`, Il tipo del risulato è uguale a quello dell'operando con maggiore capacità in termini di bit.
+Nel secondo caso (codice sottostante) invece la divisione coinvolge un intero (`int`) e un numero reale (`double`) e il risultato sarà dunque un `double`. Il tipo del risultato è uguale a quello dell'operando con maggiore capacità in termini di bit.
 
 ```c
 int x = 8;
@@ -3180,7 +3180,7 @@ Se invece il cast venisse fatto  in questo modo:
 printf("%lf\n", (double)(x/y));
 ```
 
-il valore stampato sarebbe 1.0 perchè prima vine effettuata la divisione tra `int` ed il risultato è un `int` pari ad 1 e poi questo intero viene trasformato in `double`.
+il valore stampato sarebbe 1.0 perché prima viene effettuata la divisione tra `int` e il risultato è un `int` pari a 1, poi questo intero viene trasformato in `double`.
 
 > [!NOTE]
 > Quando si effettua il cast di una variabile i bit memorizzati non vengono alterati in alcun modo
@@ -3198,7 +3198,7 @@ Vediamo un esempio:
  * che abbiamo calcolato nell'esercizio precedente e che è: 0xE5
  *
  * shoirt int v = -27
- * è un numero con segno (complento a due) ma short (16 bit) la
+ * è un numero con segno (complemento a due) ma short (16 bit) la
  * rappresentazione in esadecimale (complemento a 2) è: 0xff-ff
  * ff-E5
  *
@@ -3266,7 +3266,7 @@ u = 65535, tu=-1
 u = 0xffff, tu=0xffffffff
 ```
 
-Il cast può avvenire sia eslicitamente con l'operatore di cast o anche implicitamente in un assegnmento:
+Il cast può avvenire sia esplicitamente con l'operatore di cast sia implicitamente in un assegnamento:
 
 ```c
 #include<stdio.h>
@@ -3322,7 +3322,7 @@ Sotto altri esempi
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/cast_implicito_valutazione_espressioni.png)
 
-### Estensione della rappresentazione binario di un numero
+### Estensione della rappresentazione binaria di un numero
 
 Come anticipato nella teoria quando si estende la rappresentazione binaria di un numero abbiamo due casi:
 
@@ -3342,13 +3342,13 @@ int main(void){
 
         int x = sx;              /* int: 32 bit, verranno aggiunti 16 bit al
                                   * la sequenza di 16 bit che rappresenta sx
-                                  * siccoma int è signed sarà effettuata una
-                                  * sign extension e non  una zero extension
+                                  * siccome int è signed sarà effettuata una
+                                  * sign extension e non una zero extension
                                   * nei  sedici bit MSB aggiunti verrà copia
-                                  * to 1 e non 0 perchè sx era negativo ed è
+                                  * to 1 e non 0 perché sx era negativo ed è
                                   * rappresentato  in complemento a due dove
                                   * MSB è il bit di segno (0=+, 1=-)
-                                  * x = -12345 (ma con 32 e non 16 bi)
+                                  * x = -12345 (ma con 32 e non 16 bit)
                                   */
 
         unsigned ux = usx;       /* usx è unsigned short,  aumentando  i bit
@@ -3373,9 +3373,9 @@ x   = -12345     0xffffcfc7
 ux  = 53191      0xcfc7
 ```
 
-Come puoi notare `sx` e `usx` sono entrambi `short` il primo con segno ed il secondo senza segno ma hanno la stessa rappresentazione binaria (il cast non cambia la configurazione dei bit ma solo l'interpretazione). Invece `x` ed `ux` sono a 32 bit rispettivamente con segno e senza segno ed hanno sequenze di bit diverse (`x` `0xffffcfc7`, `ux` `0xcfc7`) questo perchè `x` è con segno e quindi si effettua **sign extension** cioè MSB di `sx` è 1 e quindi vengono copiati nei nouvi 16 MSB tutti valori posti ad 1. Invece `ux` è unsigned ed anche se `usx` ha MSB alto (c esadecimale in binario è 1100) viene effettuato uno **zero extension**
+Come puoi notare `sx` e `usx` sono entrambi `short`, il primo con segno e il secondo senza segno, ma hanno la stessa rappresentazione binaria (il cast non cambia la configurazione dei bit ma solo l'interpretazione). Invece `x` e `ux` sono a 32 bit, rispettivamente con segno e senza segno, e hanno sequenze di bit diverse (`x` `0xffffcfc7`, `ux` `0xcfc7`): questo perché `x` è con segno e quindi si effettua **sign extension**, cioè MSB di `sx` è 1 e quindi vengono copiati nei nuovi 16 MSB tutti valori posti a 1. Invece `ux` è unsigned e, anche se `usx` ha MSB alto (c esadecimale in binario è 1100), viene effettuata una **zero extension**
 
-In una situazione in cui si effettua un cast da un tipo meno capiente con segno ad uno più capiente senza segno il C deve svolgere due operazioni: l'estensione dei bit ed il cast (cioè interpretare la sequenza di bit secondo il nuovo tipo). Non è difficile comprendere che il risultato finale (il valore) dipende dall'ordine di esecuzione di queste due operaizioni, vediamo un esempio:
+In una situazione in cui si effettua un cast da un tipo meno capiente con segno a uno più capiente senza segno il C deve svolgere due operazioni: l'estensione dei bit e il cast (cioè interpretare la sequenza di bit secondo il nuovo tipo). Non è difficile comprendere che il risultato finale (il valore) dipende dall'ordine di esecuzione di queste due operazioni, vediamo un esempio:
 
 ```c
 #include<stdio.h>
@@ -3405,7 +3405,7 @@ uy = 4294954951          ffffcfc7
 
 int main(void){
         int x = 53191;
-        /* castando int x a short avremo il trocamento dei 16 bit (MSB) */
+        /* castando int x a short avremo il troncamento dei 16 bit (MSB) */
         short sx = (short) x; /* -12345 */
         int y = sx;           /* -12345 signed short 2 signed con sign extension */
         printf("x  = %d \t %x\n", x, x);
@@ -3431,7 +3431,7 @@ char letter;
 char one, two;
 ```
 
-Per inizializzare un variabile di tipo `char` ad uno specifico carattere è necessario usare il singolo apice: `'` in questo modo:
+Per inizializzare una variabile di tipo `char` a uno specifico carattere è necessario usare il singolo apice: `'` in questo modo:
 
 ```c
 char lettera_a = 'A';
@@ -3445,11 +3445,11 @@ char errore = "T"; /* i doppi apici sono usati per le stringhe, non per i caratt
 char altro_errore = T /* T senza apici singoli è interpretata come una variabile */
 ```
 
-Il tipo `char` è lungo 1 byte (8 bit) e in verità è un tipo intero: nel senso che il carattere viene memorizzato come un intero senza sengo e poi attraverso una tabella di codifica/decondifica (ASCII) il valore numerico viene convertito nel carattere corrispondente.
+Il tipo `char` è lungo 1 byte (8 bit) e in verità è un tipo intero: nel senso che il carattere viene memorizzato come un intero senza segno e poi, attraverso una tabella di codifica/decodifica (ASCII), il valore numerico viene convertito nel carattere corrispondente.
 
 ### Stampare un `char`
 
-Per stamapre su schermo il contenuto di una variabile di tipo `char` si usa `%c`
+Per stampare su schermo il contenuto di una variabile di tipo `char` si usa `%c`
 
 ```c
 #include<stdio.h>
@@ -3483,7 +3483,7 @@ $1 = 0001
 0X41 = 0100 0001 = 1*2 + 1*2^0 = 64 + 1 = 65
 ```
 
-Il valore decimale per rappreentare il carattere `A` è 65, in memoria vengono salvati valori binali che poi attraversi il sistema di codifica **ASCII** vengono convertiti in caratteri
+Il valore decimale per rappresentare il carattere `A` è 65; in memoria vengono salvati valori binari che poi, attraverso il sistema di codifica **ASCII**, vengono convertiti in caratteri.
 
 
 ### Costanti
@@ -3492,11 +3492,11 @@ Il valore decimale per rappreentare il carattere `A` è 65, in memoria vengono s
 
 ### Operatori
 
-Gli operatori sono usati nelle operazione aritmetiche.
+Gli operatori sono usati nelle operazioni aritmetiche.
 
 #### Operatore di assegnamento: =
 
-Il simbolo di uguale `=` come abbiamo già visto viene usato per assegnare il valore ad una variabile e non rappresenta l'uguaglianza come invece siamo abitutati a pensarlo.
+Il simbolo di uguale `=` come abbiamo già visto viene usato per assegnare il valore a una variabile e non rappresenta l'uguaglianza come invece siamo abituati a pensarlo.
 
 Il codice di sotto usa l'operatore `=` per assegnare il valore `1234` alla variabile `mio_intero`
 
@@ -3507,9 +3507,9 @@ mio_intero = 1234;
 `mio_intero` è l'identificatore attraverso cui il programmatore può accedere alla locazione di memoria corrispondente. 
 `mio_intero` è anche detto **lvalue** mentre `1234` è detto **rvalue**
 
-Un **lvalue** identifica appunto una locazione di memoria (referenzia un indirizzo di memoria) e può essere usato a sinistra di un operatore di assegnamento (`l` in `lvalue` sta per **left** in inglese). Per la verità `mio_intero` è detto **modifiable lvalue** perchè è modificabile (non è una costante).
+Un **lvalue** identifica appunto una locazione di memoria (referenzia un indirizzo di memoria) e può essere usato a sinistra di un operatore di assegnamento (`l` in `lvalue` sta per **left** in inglese). Per la verità `mio_intero` è detto **modifiable lvalue** perché è modificabile (non è una costante).
 
-Un **rvalue** può essere usato a destra di un operatore di assegnamento (quantità che possono essere assegnati ad un **modifiable lvalue**) questo può essere un: una costante, una variabile o un'espressione che ritorna un valore (es. una chiamata a funzione).
+Un **rvalue** può essere usato a destra di un operatore di assegnamento (quantità che possono essere assegnate a un **modifiable lvalue**); questo può essere: una costante, una variabile o un'espressione che ritorna un valore (es. una chiamata a funzione).
 
 
 ```c
@@ -3522,7 +3522,7 @@ int main(void){
         due = (uno + 1);
         tre = due + 1;  /* ERRORE!
                          * tre è una costante (non è modificabile) non può essere usato come lvalue
-                         * di un opeatore di assegnamento.
+                         * di un operatore di assegnamento.
                          */
         due = tre - 1;
 }
@@ -3548,7 +3548,7 @@ L'operatore differenza `-` sottrae il valore dell'operando di destra al valore d
 ### Operatore segno: - e +
 
 L'operatore segno permette di specificare o alterare il segno di un valore.
-Questo è un **operatore unario** perchè agisce su un singolo operando al contrario degli operatore che abbiamo vista fino ad ora.
+Questo è un **operatore unario** perché agisce su un singolo operando, al contrario degli operatori che abbiamo visto fino ad ora.
 
 ```c
 int main(void){
@@ -3590,7 +3590,7 @@ int main(void){
 L'operatore ritorna il numero di byte occupati dal suo operando. L'operatore può essere sia una variabile sia il nome di un tipo. Il valore tornato da `sizeof` è di tipo `size_t` che è semplicemente un `unsigned int` o un `unsigned long` che è stato ridefinito con `typedef`.
 
 > [!NOTE]
-> **typedef** permette di definire un alias per un tipo di dato, per esempio `typedef unsigned int positivo` associa l'alias `positivo` al tipo `unsigned int` in moda da poter dichiarare varaibili intere positive in entramvi i seguenti modi: `unsigned int a`, `positivo a`. 
+> **typedef** permette di definire un alias per un tipo di dato, per esempio `typedef unsigned int positivo` associa l'alias `positivo` al tipo `unsigned int` in modo da poter dichiarare variabili intere positive in entrambi i seguenti modi: `unsigned int a`, `positivo a`.
 
 
 ```c
@@ -3651,7 +3651,7 @@ i = i + 1;
 i = i - 1;
 ```
 
-Perchè due versioni dello stesso operatore?
+Perché due versioni dello stesso operatore?
 
 ```c
 #include<stdio.h>
@@ -3686,7 +3686,7 @@ vagrant@ubuntu2204:/lab/4_operators$ bin/op_incremento_decremento
 i=4, j=4, z=4
 ```
 
-Sembra che il risultato sia lo stesso ma esiste una sottile differenza tra l'uso dell'operatore nella versione pre e post. Quando l'operatore precede l'operando (versione pre) prima viene incrementato il valore dell'operando di un'unità e poi viene valutato l'operando, diversamente quando l'operatore segue l'operando (versione post) prima viene valutato il valore dell'operando e successivamento lo si incrementa di uno. 
+Sembra che il risultato sia lo stesso ma esiste una sottile differenza tra l'uso dell'operatore nella versione pre e post. Quando l'operatore precede l'operando (versione pre) prima viene incrementato il valore dell'operando di un'unità e poi viene valutato l'operando; diversamente, quando l'operatore segue l'operando (versione post), prima viene valutato il valore dell'operando e successivamente lo si incrementa di uno.
 
 ```c
 #include<stdio.h>
@@ -3745,10 +3745,10 @@ Il costrutto `if` serve per realizzare l'istruzione di salta condizionale ed ha 
 if ( espr ) istr
 ```
 
-Se la condizione è vera (cioè diversa da zero) viene esguito il blocco di istruzioni `istr`, altrimenti si prosegue con l'elaborazione.
+Se la condizione è vera (cioè diversa da zero) viene eseguito il blocco di istruzioni `istr`, altrimenti si prosegue con l'elaborazione.
 
 > [!NOTE]
-> Come tutti gli altri costrutti, il blocco `istr` può rappresentare una singola istruzione, un altro costrutto di controllo, oppure un blocco di itruzioni racchiuse tra parentesi graffe
+> Come tutti gli altri costrutti, il blocco `istr` può rappresentare una singola istruzione, un altro costrutto di controllo, oppure un blocco di istruzioni racchiuse tra parentesi graffe
 
 il costrutto `if` ammette l'enunciato opzionale `else` in questa forma:
 
@@ -3918,8 +3918,8 @@ Il costrutto permette di eseguire un'istruzione o una serie di istruzioni sulla 
 > [!NOTE]
 > Le espressioni di ogni `case` devono essere **espressioni intere e costanti**
 
-* La presenza di istruzioni dopo il `case` è facoltativa per permeettere di ragruppare lo stesso codice in relazione a diversi casi
-* la presenza di `break` alla fine di un `case` è facoltativa e quindi la mancanza di `break` determina il continuamento dell'esecuzione del codice associato al `case` successivo
+* La presenza di istruzioni dopo il `case` è facoltativa per permettere di raggruppare lo stesso codice in relazione a diversi casi
+* la presenza di `break` alla fine di un `case` è facoltativa e quindi la mancanza di `break` determina il proseguimento dell'esecuzione del codice associato al `case` successivo
 * `default` è facoltativo
 * non è obbligatorio che `default` sia l'ultimo caso del costrutto
 
@@ -3948,7 +3948,7 @@ int main(void){
                         break;
                 default:
                         other++;
-                        /* non ho bisogno del break perchè è l'ultimo case se lo avessi messo sopra dovevo mettere il break altrimenti
+                        /* non ho bisogno del break perché è l'ultimo case se lo avessi messo sopra dovevo mettere il break altrimenti
                          * l'esecuzione  del  flusso  sarebbe  passata  al  codice  relativo  al  case sottostante la clausola default
                          */
         }
