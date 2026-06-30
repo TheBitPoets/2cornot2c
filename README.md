@@ -7018,14 +7018,14 @@ L'operando esplicito è il divisore, memorizzato in RBX. Il dividendo è in RAX.
 Una comune domanda da principiante su <code>MUL</code> e <code>DIV</code> riguarda le due versioni "più piccole" di entrambe le istruzioni. (Vedi le figure di sopra.) Se una moltiplicazione o divisione a 64 bit può gestire qualsiasi cosa l'architettura x64 possa mettere nei registri, perché le versioni più piccole sono necessarie? È solo una questione di compatibilità con le vecchie CPU a 16 bit? Non del tutto. In molti casi, si tratta di velocità. Le istruzioni <code>MUL</code> e <code>DIV</code> sono vicine a essere le istruzioni più lente dell'intero insieme di istruzioni x64. Certamente non sono lente come una volta, ma rispetto ad altre istruzioni come <code>MOV</code> o <code>ADD</code> sono lente. Inoltre, sia le versioni a 32 bit che a 64 bit di entrambe le istruzioni sono più lente della versione a 16 bit, e la versione a 8 bit è la più veloce di tutte. <code>DIV</code> è più lenta di <code>MUL</code>, ma entrambe sono lente. Ora, l'ottimizzazione della velocità è un affare molto scivoloso nel mondo x86/x64, e non è qualcosa di cui i principianti dovrebbero preoccuparsi. Avere le istruzioni nella cache della CPU rispetto al doverle prelevare dalla memoria è una differenza di velocità che sovrasta la maggior parte delle differenze di velocità tra le istruzioni stesse. Altri fattori entrano in gioco nelle CPU più recenti e rendono le generalizzazioni sulla velocità delle istruzioni quasi impossibili, e certamente impossibili da affermare con qualsiasi precisione. Se stai eseguendo solo poche moltiplicazioni o divisioni isolate, non lasciare che tutto ciò ti disturbi. <b>Dove la velocità delle istruzioni può diventare importante è all'interno dei cicli in cui stai eseguendo molte operazioni continuamente</b>, come nella crittografia dei dati o nelle simulazioni fisiche. La mia euristica personale è di utilizzare la versione più piccola di <code>MUL</code> e <code>DIV</code> che i valori di input consentono, temperata dall'euristica ancora più forte che la maggior parte delle volte la velocità delle istruzioni non importa. Quando sarai abbastanza esperto in assembly da prendere decisioni sulle prestazioni a livello di istruzione, lo saprai. Fino ad allora, concentrati sul rendere i tuoi programmi privi di bug e lascia stare la velocità alla CPU.
 </p>
 
-### Leggere ed Usare una guida all'assembly
+### Leggere e usare una guida all'assembly
 
 <p align=justify>
-La programmazione in linguaggio assembly riguarda i dettagli. Ci sono ampie somiglianze tra le istruzioni, ma sono le differenze a metterti nei guai quando inizi a fornire programmi all'occhio inflessibile dell'assemblatore. Ricordare un mare di piccoli dettagli intrecciati riguardanti diverse dozzine di istruzioni è brutale e non necessario. Anche i Grandi non cercano di tenere tutto in mente in ogni momento. La maggior parte tiene a disposizione qualche altro tipo di documento di riferimento per rinfrescare la memoria sui dettagli delle istruzioni della macchina.
+La programmazione in linguaggio assembly riguarda i dettagli. Ci sono ampie somiglianze tra le istruzioni, ma sono le differenze a metterti nei guai quando inizi a fornire programmi all'occhio inflessibile dell'assemblatore. Ricordare un mare di piccoli dettagli intrecciati riguardanti diverse dozzine di istruzioni è brutale e non necessario. Anche i grandi non cercano di tenere tutto in mente in ogni momento. La maggior parte tiene a disposizione qualche tipo di documento di riferimento per rinfrescare la memoria sui dettagli delle istruzioni macchina.
 </p>
 
 <p align=justify>
-Nel 1975, un documento completo e utile che riassumeva l'insieme delle istruzioni poteva essere stampato su entrambi i lati di una carta piegata in tre parti che poteva essere riposta in tasca nella camicia. Carte di questo tipo erano comuni, e si potevano ottenere per quasi qualsiasi microprocessore. Per motivi non chiari, erano chiamate "carte blu", anche se la maggior parte erano stampate su cartone bianco normale. All'inizio e a metà degli anni '80, ciò che un tempo era una singola carta era ora un opuscolo di 89 pagine, dimensionato per entrare nella tasca. La Guida di Riferimento per Programmatori di Intel per la famiglia di CPU 8086 veniva spedita con il Macro Assembler di Microsoft. Si adattava davvero nella tasca della camicia, a patto che nulla di più largo di una lista della spesa cercasse di condividere lo spazio. La potenza e la complessità dell'architettura x86 esplose a metà degli anni '80, e un riassunto completo di tutte le istruzioni in tutte le loro forme, più tutte le spiegazioni necessarie, divenne materiale di dimensioni da libro e, con il passare degli anni, richiese non uno ma diversi libri per essere coperto completamente. Intel fornisce versioni PDF della propria documentazione sui processori come download gratuiti, e puoi trovarli nel link sottostante.
+Nel 1975, un documento completo e utile che riassumeva l'insieme delle istruzioni poteva essere stampato su entrambi i lati di una carta piegata in tre parti, che poteva essere riposta nella tasca della camicia. Carte di questo tipo erano comuni, e si potevano ottenere per quasi qualsiasi microprocessore. Per motivi non chiari, erano chiamate "carte blu", anche se la maggior parte era stampata su normale cartoncino bianco. All'inizio e a metà degli anni '80, ciò che un tempo era una singola carta era ormai un opuscolo di 89 pagine, dimensionato per entrare in tasca. La Guida di Riferimento per Programmatori di Intel per la famiglia di CPU 8086 veniva spedita con il Macro Assembler di Microsoft. Si adattava davvero alla tasca della camicia, a patto che nulla di più largo di una lista della spesa cercasse di condividere lo spazio. La potenza e la complessità dell'architettura x86 esplosero a metà degli anni '80, e un riassunto completo di tutte le istruzioni in tutte le loro forme, più tutte le spiegazioni necessarie, divenne materiale di dimensioni da libro e, con il passare degli anni, richiese non uno ma diversi libri per essere coperto completamente. Intel fornisce versioni PDF della propria documentazione sui processori come download gratuiti, e puoi trovarle nel link sottostante.
 </p>
 
 [Intel® 64 and IA-32 Architectures Software Developer Manuals](https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html)
@@ -7035,33 +7035,33 @@ Vale la pena averli - ma dimentica di infilarli in tasca. Solo il riferimento de
 </p>
 
 <p align=justify>
-Il problema con i riferimenti al linguaggio assembly è che, per essere completi, non possono essere brevi. Tuttavia, gran parte della complessità degli insiemi di istruzioni x86/x64 ai giorni nostri risiede in istruzioni e meccanismi di indirizzamento della memoria che sono utili solo per sistemi operativi e driver. Per applicazioni di dimensioni contenute che girano in modalità utente, semplicemente non si applicano. Quindi, in omaggio a chi sta iniziando nel linguaggio assembly, ho messo insieme un riferimento per principianti alle istruzioni x86/x64 più comuni, nell' <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/lessons/ASSEMBLY/x64_Assembly_Language_Pocket_Reference.pdf">Appendice B</a>. Contiene almeno una pagina su ogni istruzione di cui parlo in questo libro, più alcune istruzioni aggiuntive che tutti dovrebbero conoscere. Non include descrizioni su ogni istruzione, ma solo le più comuni e utili. Una volta che sarai abbastanza abile da usare le istruzioni più arcane, dovresti essere in grado di leggere la documentazione x64 di Intel e farne buon uso. Alcune delle istruzioni del x86 a 32 bit sono state rimosse dall'insieme di istruzioni x64, e non le ho incluse. Il mnemonico dell'istruzione si trova in cima alla pagina al margine sinistro. A destra del mnemonico si trova il nome dell'istruzione, che è un po' più descrittivo del solo mnemonico. 
+Il problema con i riferimenti al linguaggio assembly è che, per essere completi, non possono essere brevi. Tuttavia, gran parte della complessità degli insiemi di istruzioni x86/x64 ai giorni nostri risiede in istruzioni e meccanismi di indirizzamento della memoria che sono utili solo per sistemi operativi e driver. Per applicazioni di dimensioni contenute che girano in modalità utente, semplicemente non si applicano. Quindi, in omaggio a chi sta iniziando con il linguaggio assembly, ho messo insieme un riferimento per principianti alle istruzioni x86/x64 più comuni, nell'<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/lessons/ASSEMBLY/x64_Assembly_Language_Pocket_Reference.pdf">Appendice B</a>. Contiene almeno una pagina su ogni istruzione di cui parlo in questo libro, più alcune istruzioni aggiuntive che tutti dovrebbero conoscere. Non include descrizioni di ogni istruzione, ma solo delle più comuni e utili. Una volta che sarai abbastanza abile da usare le istruzioni più arcane, dovresti essere in grado di leggere la documentazione x64 di Intel e farne buon uso. Alcune delle istruzioni dell'x86 a 32 bit sono state rimosse dall'insieme di istruzioni x64, e non le ho incluse. Il mnemonico dell'istruzione si trova in cima alla pagina al margine sinistro. A destra del mnemonico si trova il nome dell'istruzione, che è un po' più descrittivo del solo mnemonico.
 </p>
 
 <p align=justify>
-Immediatamente sotto il mnemonico c'è un minigrafico dei flag della CPU nel registro RFlags. Come ho descritto in precedenza, il registro RFlags è una raccolta di valori a 1 bit che mantengono alcune informazioni essenziali sullo stato della macchina per brevi periodi di tempo. Molte (ma non tutte) istruzioni x64 modificano i valori di uno o più flag. I flag possono essere quindi testati singolarmente da una delle istruzioni Jump On Condition, che cambiano il corso del programma a seconda degli stati dei flag. Ognuno dei flag ha un nome e ciascun flag ha un simbolo nel minigrafico dei flag. Con il tempo imparerai a conoscere i flag attraverso i loro simboli di due caratteri, ma fino ad allora, i nomi completi dei flag sono mostrati a destra del minigrafico. La maggior parte dei flag non viene utilizzata spesso (se non mai) nei lavori iniziali di linguaggio assembly. La maggior parte a cui presterai attenzione, in termini di flag, sono il Flag Zero (ZF) e il Flag di Riporto (CF). Ci sarà un asterisco (*) sotto il simbolo di qualsiasi flag influenzato dall'istruzione. Come il flag è influenzato dipende da cosa fa l'istruzione. Dovrai dedurlo dalla sezione Note. Quando un'istruzione non influenza affatto i flag, la parola <code>none</code> apparirà nel minigrafico dei flag. Nella pagina di esempio qui, il minigrafico indica che l'istruzione NEG influisce sul Flag Overflow, sul Flag di Segno, sul Flag Zero, sul Flag di Riporto Ausiliario, sul Flag di Parità e sul Flag di Riporto. I modi in cui i flag sono influenzati dipendono dai risultati dell'operazione di negazione sull'operando specificato. Questi modi sono riassunti nel secondo paragrafo della sezione Note.
+Immediatamente sotto il mnemonico c'è un minigrafico dei flag della CPU nel registro RFlags. Come ho descritto in precedenza, il registro RFlags è una raccolta di valori a 1 bit che mantengono alcune informazioni essenziali sullo stato della macchina per brevi periodi di tempo. Molte (ma non tutte) istruzioni x64 modificano i valori di uno o più flag. I flag possono quindi essere testati singolarmente da una delle istruzioni Jump On Condition, che cambiano il corso del programma a seconda degli stati dei flag. Ognuno dei flag ha un nome e ciascun flag ha un simbolo nel minigrafico dei flag. Con il tempo imparerai a conoscere i flag attraverso i loro simboli di due caratteri, ma fino ad allora i nomi completi dei flag sono mostrati a destra del minigrafico. La maggior parte dei flag non viene utilizzata spesso (se non mai) nei lavori iniziali in linguaggio assembly. I flag a cui presterai più attenzione sono il Flag Zero (ZF) e il Flag di Riporto (CF). Ci sarà un asterisco (*) sotto il simbolo di qualsiasi flag influenzato dall'istruzione. Il modo in cui il flag è influenzato dipende da cosa fa l'istruzione. Dovrai dedurlo dalla sezione Note. Quando un'istruzione non influenza affatto i flag, la parola <code>none</code> apparirà nel minigrafico dei flag. Nella pagina di esempio qui, il minigrafico indica che l'istruzione NEG influisce sul Flag Overflow, sul Flag di Segno, sul Flag Zero, sul Flag di Riporto Ausiliario, sul Flag di Parità e sul Flag di Riporto. I modi in cui i flag sono influenzati dipendono dai risultati dell'operazione di negazione sull'operando specificato. Questi modi sono riassunti nel secondo paragrafo della sezione Note.
 </p>
 
-<div aling=center>
+<div align=center>
 <img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/example_x86_reference.png">
 </div>
 
 ### Legal Forms
 
 <p align=justify>
-Le istruzioni possono includere più di una forma legale. La forma di un'istruzione varia in base al tipo e all'ordine degli operandi ad essa passati. Ciò che le singole forme rappresentano effettivamente sono diversi codici operativi binari (<i>opcodes</i>). Ad esempio, sotto la superficie, l'istruzione <code>POP RAX</code> è il numero 058h, mentre l'istruzione <code>POP RSI</code> è il numero 05Eh. La maggior parte dei codici operativi x64 non sono singoli valori a 8 bit, e la maggior parte sono lunghi almeno due byte, spesso quattro o più. Quando vuoi utilizzare un'istruzione con un certo insieme di operandi, assicurati di controllare la sezione delle Forme Legali della guida di riferimento per quell'istruzione per assicurarti che la combinazione sia legale. Ora ci sono più forme legali rispetto ai vecchi tempi del DOS, e molte delle restrizioni residue riguardano i registri di segmento, che comunque non potrai usare quando scrivi normali applicazioni utente in modalità long a 64 bit. Nella pagina di riferimento dell'istruzione <code>NEG</code>, vedi che un registro di segmento non può essere un operando per NEG. (Se potesse, ci sarebbe un elemento NEG sr nell'elenco delle Forme Legali.)
+Le istruzioni possono includere più di una forma legale. La forma di un'istruzione varia in base al tipo e all'ordine degli operandi che le vengono passati. Ciò che le singole forme rappresentano effettivamente sono diversi codici operativi binari (<i>opcodes</i>). Ad esempio, sotto la superficie, l'istruzione <code>POP RAX</code> è il numero 058h, mentre l'istruzione <code>POP RSI</code> è il numero 05Eh. La maggior parte dei codici operativi x64 non sono singoli valori a 8 bit, e la maggior parte è lunga almeno due byte, spesso quattro o più. Quando vuoi utilizzare un'istruzione con un certo insieme di operandi, assicurati di controllare la sezione delle Forme Legali della guida di riferimento per quell'istruzione per assicurarti che la combinazione sia legale. Ora ci sono più forme legali rispetto ai vecchi tempi del DOS, e molte delle restrizioni residue riguardano i registri di segmento, che comunque non potrai usare quando scrivi normali applicazioni utente in modalità long a 64 bit. Nella pagina di riferimento dell'istruzione <code>NEG</code>, vedi che un registro di segmento non può essere un operando per NEG. (Se potesse, ci sarebbe un elemento NEG sr nell'elenco delle Forme Legali.)
 </p>
 
 ### Operand Symbols
 <p align=justify>
-I simboli usati per indicare la natura degli operandi nella sezione <b>Legal Forms</b> sono riassunti in fondo a ogni pagina delle istruzioni nell'Appendice A. Sono quasi autoesplicativi, ma mi prenderò un momento per espanderli leggermente qui:
+I simboli usati per indicare la natura degli operandi nella sezione <b>Legal Forms</b> sono riassunti in fondo a ogni pagina delle istruzioni nell'Appendice A. Sono quasi autoesplicativi, ma mi prenderò un momento per ampliarli leggermente qui:
 </p>
 
 <p align=justify>
 <ul>
 	<li>
 		<p align=justify>
-			<b>r8</b> Un registro a 8 bit, metà, uno di AH, AL, BH, BL, CH, CL, DH o DL
+			<b>r8</b> Un registro a 8 bit, cioè uno tra AH, AL, BH, BL, CH, CL, DH o DL.
 		</p>
 	</li>
 	<li>
@@ -7076,27 +7076,27 @@ I simboli usati per indicare la natura degli operandi nella sezione <b>Legal For
 	</li>
 	<li> 
     		<p align=justify>
-			<b>r64</b> Un registro a 64 bit di uso generale, uno di RAX, RBX, RCX, RDX, RBP, RSP, RSI, RDI, o uno di R8-R15
+			<b>r64</b> Un registro a uso generale a 64 bit, uno tra RAX, RBX, RCX, RDX, RBP, RSP, RSI, RDI, o uno tra R8-R15.
 		</p>	
 	</li>
  	<li>
     		<p align=justify>
-			<b>sr</b> Uno dei registri di segmento, CS, DS, SS, ES, FS o GS
+			<b>sr</b> Uno dei registri di segmento: CS, DS, SS, ES, FS o GS.
 		</p>	
 	</li>
  	<li>
     		<p align=justify>
-			<b>m8</b> Un byte di memoria a 8 bit
+			<b>m8</b> Un byte di memoria a 8 bit.
 		</p>	
 	</li>
  	<li>
     		<p align=justify>
-			<b>m16</b> Una parola di dati di memoria a 16 bit
+			<b>m16</b> Una parola di dati di memoria a 16 bit.
 		</p>	
 	</li>
  	<li>
     		<p align=justify>
-			<b>m32</b> Una parola di dati di memoria a 32 bit
+			<b>m32</b> Una parola di dati di memoria a 32 bit.
 		</p>	
 	</li>
  	<li>
@@ -7126,22 +7126,22 @@ I simboli usati per indicare la natura degli operandi nella sezione <b>Legal For
 	</li>
  	<li>
     		<p align=justify>
-			<b>d8</b> Un spostamento a 8 bit con segno. Non ne abbiamo ancora parlato, ma uno spostamento è una distanza tra la posizione attuale nel codice e un'altra posizione nel codice a cui vogliamo saltare. È con segno (cioè, può essere negativo o positivo) perché uno spostamento positivo ti porta più in alto (in avanti) nella memoria, mentre uno spostamento negativo ti porta più in basso (indietro) nella memoria. Esamineremo questo concetto in dettaglio più avanti.
+			<b>d8</b> Uno spostamento a 8 bit con segno. Non ne abbiamo ancora parlato, ma uno spostamento è una distanza tra la posizione attuale nel codice e un'altra posizione nel codice a cui vogliamo saltare. È con segno (cioè, può essere negativo o positivo) perché uno spostamento positivo ti porta più in alto (in avanti) nella memoria, mentre uno spostamento negativo ti porta più in basso (indietro) nella memoria. Esamineremo questo concetto in dettaglio più avanti.
 		</p>	
 	</li>
  	<li>
     		<p align=justify>
-			<b>d16</b> Uno spostamento firmato a 16 bit. Ancora una volta, per l'uso con istruzioni di salto e chiamata.
+			<b>d16</b> Uno spostamento con segno a 16 bit. Ancora una volta, per l'uso con istruzioni di salto e chiamata.
 		</p>	
 	</li>
  	<li>
     		<p align=justify>
-			<b>d32</b> Un spostamento firmato a 32 bit.
+			<b>d32</b> Uno spostamento con segno a 32 bit.
 		</p>
 	</li>
  	<li>
   		<p align=justify>
-			<b>d64</b> Un spostamento firmato a 64 bit.
+			<b>d64</b> Uno spostamento con segno a 64 bit.
 		</p>
 	</li>
 </ul>
@@ -7162,11 +7162,11 @@ La sezione Note della pagina di riferimento descrive brevemente l'azione dell'is
 ### Cosa manca
 
 <p align=justify>
-Ho omesso qualsiasi istruzione dall'insieme di istruzioni x64. L'Appendice B che non esiste più nell'Appendice B si differenzia dalla maggior parte dei riferimenti dettagliati al linguaggio assembly per il fatto che non include le informazioni sulla codifica dell'opcode binario, né indicazioni su quanti cicli di macchina vengono utilizzati da ciascuna forma dell'istruzione. La codifica binaria di un'istruzione è la sequenza effettiva di byte binari che la CPU digerisce e riconosce come istruzione macchina. Quello che noi chiameremmo POP RAX, la macchina lo vede come il numero binario 58h. Quello che chiamiamo ADD RSI,07733h, la macchina lo vede come la sequenza di 7 byte 48h 81h 0C6h 33h 77h 00h 00h. Le istruzioni macchina sono codificate in da un minimo di uno a un massimo di 15 byte a seconda di quale istruzione siano e quali siano i loro operandi. Disporre il sistema per determinare quale sarà la codifica per qualsiasi istruzione dato è estremamente complicato, in quanto i suoi byte componenti devono essere impostati bit per bit da diversi grandi tavoli. Ho deciso che questo libro non è il posto per quella particolare discussione e ho lasciato fuori le informazioni di codifica dall'Appendice B. (Questo problema è una delle ragioni per cui i libri di riferimento delle istruzioni Intel sono così grandi.)
+Ho omesso qualsiasi istruzione dell'insieme di istruzioni x64 che non esiste più in x64. L'Appendice B si differenzia dalla maggior parte dei riferimenti dettagliati al linguaggio assembly per il fatto che non include le informazioni sulla codifica dell'opcode binario, né indicazioni su quanti cicli di macchina vengono utilizzati da ciascuna forma dell'istruzione. La codifica binaria di un'istruzione è la sequenza effettiva di byte binari che la CPU digerisce e riconosce come istruzione macchina. Quello che noi chiameremmo POP RAX, la macchina lo vede come il numero binario 58h. Quello che chiamiamo ADD RSI,07733h, la macchina lo vede come la sequenza di 7 byte 48h 81h 0C6h 33h 77h 00h 00h. Le istruzioni macchina sono codificate con un minimo di uno e un massimo di 15 byte, a seconda di quale istruzione siano e di quali siano i loro operandi. Predisporre il sistema per determinare quale sarà la codifica per qualsiasi istruzione data è estremamente complicato, in quanto i suoi byte componenti devono essere impostati bit per bit da diverse grandi tabelle. Ho deciso che questo libro non è il posto per quella particolare discussione e ho lasciato fuori le informazioni di codifica dall'Appendice B. (Questo problema è una delle ragioni per cui i libri di riferimento delle istruzioni Intel sono così grandi.)
 </p>
 
 <p align=justify>
-Finalmente, non ho incluso nulla in questo libro che indichi quanti cicli macchina vengono spesi da un dato comando macchina. Un ciclo macchina è un impulso dell'orologio master che fa magicamente funzionare il PC. Ogni istruzione utilizza un certo numero di quei cicli per svolgere il proprio lavoro, e il numero varia in base a criteri che non spiegherò in questo libro. Peggio ancora, il numero di cicli macchina utilizzati da una data istruzione varia da un modello di processore Intel all'altro. Un'istruzione può utilizzare meno cicli sul Pentium rispetto al 486, o forse più. (In generale, le istruzioni macchina Intel hanno iniziato ad utilizzare meno cicli di clock nel corso degli anni, ma ciò non è vero per ogni singola istruzione.) Inoltre, come spiega Michael Abrash nel suo immenso libro Michael Abrash's Graphics Programming Black Book (Coriolis Group Books, 1997), conoscere i requisiti di ciclo per istruzioni individuali è raramente sufficiente per permettere anche a un esperto programmatori in linguaggio assembly di calcolare quanto tempo impiegherà una data serie di istruzioni per essere eseguita. La cache della CPU, il prefetching, la previsione dei salti, l'iperthreading e un numero qualsiasi di altri fattori si combinano e interagiscono per rendere tali calcoli quasi impossibili, tranne in termini generali. Lui ed io concordiamo entrambi sul fatto che non sia un argomento adatto ai principianti, ma se desideri sapere di più in un certo momento, ti consiglio di cercare il suo libro e vedere da te.
+Infine, non ho incluso nulla in questo libro che indichi quanti cicli macchina vengono spesi da un dato comando macchina. Un ciclo macchina è un impulso dell'orologio master che fa magicamente funzionare il PC. Ogni istruzione utilizza un certo numero di quei cicli per svolgere il proprio lavoro, e il numero varia in base a criteri che non spiegherò in questo libro. Peggio ancora, il numero di cicli macchina utilizzati da una data istruzione varia da un modello di processore Intel all'altro. Un'istruzione può utilizzare meno cicli sul Pentium rispetto al 486, o forse più. (In generale, le istruzioni macchina Intel hanno iniziato a utilizzare meno cicli di clock nel corso degli anni, ma ciò non è vero per ogni singola istruzione.) Inoltre, come spiega Michael Abrash nel suo immenso libro Michael Abrash's Graphics Programming Black Book (Coriolis Group Books, 1997), conoscere i requisiti di ciclo per istruzioni individuali è raramente sufficiente per permettere anche a un programmatore esperto in linguaggio assembly di calcolare quanto tempo impiegherà una data serie di istruzioni per essere eseguita. La cache della CPU, il prefetching, la previsione dei salti, l'iperthreading e un numero qualsiasi di altri fattori si combinano e interagiscono per rendere tali calcoli quasi impossibili, tranne in termini generali. Lui e io concordiamo entrambi sul fatto che non sia un argomento adatto ai principianti, ma se desideri saperne di più in un certo momento, ti consiglio di cercare il suo libro e vedere di persona.
 </p>
 
 ### Esaminiamo `EASTSYSCALL.ASM`
