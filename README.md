@@ -7169,7 +7169,7 @@ Ho omesso qualsiasi istruzione dell'insieme di istruzioni x64 che non esiste pi�
 Infine, non ho incluso nulla in questo libro che indichi quanti cicli macchina vengono spesi da un dato comando macchina. Un ciclo macchina è un impulso dell'orologio master che fa magicamente funzionare il PC. Ogni istruzione utilizza un certo numero di quei cicli per svolgere il proprio lavoro, e il numero varia in base a criteri che non spiegherò in questo libro. Peggio ancora, il numero di cicli macchina utilizzati da una data istruzione varia da un modello di processore Intel all'altro. Un'istruzione può utilizzare meno cicli sul Pentium rispetto al 486, o forse più. (In generale, le istruzioni macchina Intel hanno iniziato a utilizzare meno cicli di clock nel corso degli anni, ma ciò non è vero per ogni singola istruzione.) Inoltre, come spiega Michael Abrash nel suo immenso libro Michael Abrash's Graphics Programming Black Book (Coriolis Group Books, 1997), conoscere i requisiti di ciclo per istruzioni individuali è raramente sufficiente per permettere anche a un programmatore esperto in linguaggio assembly di calcolare quanto tempo impiegherà una data serie di istruzioni per essere eseguita. La cache della CPU, il prefetching, la previsione dei salti, l'iperthreading e un numero qualsiasi di altri fattori si combinano e interagiscono per rendere tali calcoli quasi impossibili, tranne in termini generali. Lui e io concordiamo entrambi sul fatto che non sia un argomento adatto ai principianti, ma se desideri saperne di più in un certo momento, ti consiglio di cercare il suo libro e vedere di persona.
 </p>
 
-### Esaminiamo `EASTSYSCALL.ASM`
+### Esaminiamo `EATSYSCALL.ASM`
 
 ```asm
 ;  Executable name : eatsyscall
@@ -7215,11 +7215,11 @@ _start:
 ```
 
 <p align=justify>
-Come hai visto quando l'hai eseguito, il programma <code>EASTSYSCALL.ASM</code> visualizza una (breve) riga di testo sullo schermo. "Eat at Joe's!" Per questo, hai dovuto fornire 35 righe di testo all'assemblatore! Molte di quelle 35 righe sono commenti e non necessari nel senso più stretto, ma fungono da documentazione interna per permetterti di capire cosa sta facendo il programma (o, cosa più importante, come lo sta facendo) sei mesi o un anno da adesso. 
+Come hai visto quando l'hai eseguito, il programma <code>EATSYSCALL.ASM</code> visualizza una (breve) riga di testo sullo schermo: "Eat at Joe's!" Per questo, hai dovuto fornire 35 righe di testo all'assemblatore! Molte di quelle 35 righe sono commenti e non sono necessarie nel senso più stretto, ma fungono da documentazione interna per permetterti di capire cosa sta facendo il programma (o, cosa più importante, come lo sta facendo) sei mesi o un anno da adesso.
 </p>
 
 <p align=justify>
-Uno degli obiettivi della programmazione in linguaggio assembly è utilizzare il minor numero possibile di istruzioni per portare a termine il lavoro. Ciò non significa creare un file di codice sorgente il più breve possibile. La dimensione del file sorgente non ha nulla a che fare con la dimensione del file eseguibile assemblato da esso! Più commenti metti nel tuo file, meglio ricorderai come funzionano le cose all'interno del programma la prossima volta che lo riprendi. Penso che ti sorprenderà quanto velocemente la logica di un complicato programma in linguaggio assembly si affievolisca nella tua mente. Dopo non più di 48 ore di lavoro su altri progetti, sono tornato a progetti in assembly e ho dovuto faticare per tornare alla velocità massima nello sviluppo. I commenti non sono né tempo né spazio sprecato. IBM soleva dire: "Una riga di commenti per riga di codice." Questo è buono—e dovrebbe essere considerato un minimo per il lavoro in linguaggio assembly. Un approccio migliore (che seguirò in effetti negli esempi più complicati più avanti nel capitolo) è usare una breve riga di commento a destra di ogni riga di codice, insieme a un blocco di commenti all'inizio di ciascuna sequenza di istruzioni che lavorano insieme per portare a termine un compito discreto. In cima a ogni programma dovrebbe esserci una sorta di blocco di commenti standardizzato, contenente alcune informazioni importanti.
+Uno degli obiettivi della programmazione in linguaggio assembly è utilizzare il minor numero possibile di istruzioni per portare a termine il lavoro. Ciò non significa creare un file di codice sorgente il più breve possibile. La dimensione del file sorgente non ha nulla a che fare con la dimensione del file eseguibile assemblato da esso! Più commenti metti nel tuo file, meglio ricorderai come funzionano le cose all'interno del programma la prossima volta che lo riprendi. Penso che ti sorprenderà quanto velocemente la logica di un complicato programma in linguaggio assembly si affievolisca nella tua mente. Dopo non più di 48 ore di lavoro su altri progetti, sono tornato a progetti in assembly e ho dovuto faticare per riprendere la massima velocità nello sviluppo. I commenti non sono né tempo né spazio sprecato. IBM soleva dire: "Una riga di commenti per riga di codice." Questo è buono, e dovrebbe essere considerato un minimo per il lavoro in linguaggio assembly. Un approccio migliore (che seguirò in effetti negli esempi più complicati più avanti nel capitolo) è usare una breve riga di commento a destra di ogni riga di codice, insieme a un blocco di commenti all'inizio di ciascuna sequenza di istruzioni che lavorano insieme per portare a termine un compito discreto. In cima a ogni programma dovrebbe esserci una sorta di blocco di commenti standardizzato, contenente alcune informazioni importanti.
 </p>
 
 <p align=justify>
@@ -7236,12 +7236,12 @@ Uno degli obiettivi della programmazione in linguaggio assembly è utilizzare il
 	</li>
  	<li>
 		<p align=justify>
-		 The date you created the file.
+		La data in cui hai creato il file.
 		</p>
 	</li>
  	<li>
 		<p align=justify>
-		La data in cui hai modificato per lasta il file
+		La data in cui hai modificato per l'ultima volta il file.
 		</p>
 	</li>
  	<li>
@@ -7251,17 +7251,17 @@ Uno degli obiettivi della programmazione in linguaggio assembly è utilizzare il
 	</li>
  	<li>
 		<p align=justify>
-		Il nome e la versione dell'assemblatore utilizzato per crearla
+		Il nome e la versione dell'assemblatore utilizzato per crearlo.
 		</p>
 	</li>
  	<li>
 		<p align=justify>
-		Una descrizione 'generale' di cosa fa il programma o la libreria. Prendi tutto lo spazio di cui hai bisogno. Non importa la dimensione o la velocità del programma eseguibile.
+		Una descrizione generale di cosa fa il programma o la libreria. Prendi tutto lo spazio di cui hai bisogno. Non importa la dimensione o la velocità del programma eseguibile.
 		</p>
 	</li>
  	<li>
 		<p align=justify>
-		Una copia dei comandi utilizzati per costruire il file, presa dal file make se utilizzi un file make o dalla dialog di Build di SASM se utilizzi SASM.
+		Una copia dei comandi utilizzati per costruire il file, presa dal makefile se utilizzi un makefile o dalla finestra di dialogo Build di SASM se utilizzi SASM.
 		</p>
 	</li>
 </ul>
@@ -7274,13 +7274,13 @@ La sfida con un blocco di commento iniziale è aggiornarlo per riflettere lo sta
 ### Sezione .data
 
 <p align=justify>
-I normali programmi utente (che girano nello spazio utente e non in quello kernel) scritti per Linux sono divisi in <b>tre sezioni</b>. L'ordine in cui queste sezioni si presentano nel tuo programma non è davvero importante, ma per convenzione la sezione <b>.data</b> viene prima, seguita dalla sezione <b>.bss</b> e poi dalla sezione <b>.text</b>. <b>La sezione .data contiene definizioni di dati di elementi inizializzati</b>. I dati inizializzati sono dati che hanno un valore prima che il programma inizi a essere eseguito. Questi valori fanno parte del file eseguibile. Vengono caricati in memoria quando il file eseguibile viene caricato in memoria per l'esecuzione. Non devi caricarli con i loro valori e non vengono utilizzati cicli di macchina nella loro creazione al di là di quanto necessario per caricare il programma nel suo insieme in memoria. La cosa importante da ricordare sulla sezione .data è che maggiore è il numero di elementi di dati inizializzati che definisci, più grande sarà il file eseguibile e più tempo ci vorrà per caricarlo da disco in memoria quando lo esegui. Parleremo in dettaglio di come vengono definiti gli elementi di dati inizializzati a breve.
+I normali programmi utente (che girano nello spazio utente e non in quello kernel) scritti per Linux sono divisi in <b>tre sezioni</b>. L'ordine in cui queste sezioni si presentano nel tuo programma non è davvero importante, ma per convenzione la sezione <b>.data</b> viene prima, seguita dalla sezione <b>.bss</b> e poi dalla sezione <b>.text</b>. <b>La sezione .data contiene definizioni di elementi dati inizializzati</b>. I dati inizializzati sono dati che hanno un valore prima che il programma inizi a essere eseguito. Questi valori fanno parte del file eseguibile. Vengono caricati in memoria quando il file eseguibile viene caricato in memoria per l'esecuzione. Non devi caricarli con i loro valori e non vengono utilizzati cicli macchina per crearli, al di là di quanto necessario per caricare il programma nel suo insieme in memoria. La cosa importante da ricordare sulla sezione .data è che maggiore è il numero di elementi dati inizializzati che definisci, più grande sarà il file eseguibile e più tempo ci vorrà per caricarlo da disco in memoria quando lo esegui. Parleremo in dettaglio di come vengono definiti gli elementi dati inizializzati a breve.
 </p>
 
 ### Sezione .bss
 
 <p align=justify>
-Non tutti gli elementi di dati devono avere valori prima che il programma inizi a essere eseguito. Quando leggi dati da un file sul disco, ad esempio, hai bisogno di un posto dove inserire i dati dopo che arrivano dal disco. I buffer di dati come quello sono definiti nella sezione <b>Block Start Symbol</b> (<b>.bss</b>) del tuo programma. E' stato chiamato in altri modi nel corso degli anni, come Buffer Start Symbol. L'acronimo non ha importanza. Nella sezione .bss, allochi blocchi di memoria da utilizzare in seguito e dai nomi a quei blocchi, questi blocchi conterranno dei valori solo successivamente, durante l'esecuzione del programma. Tutti gli assemblatori hanno un modo per riservare un certo numero di byte per un buffer e dare un nome a quel buffer, ma non specifichi quali valori devono essere memorizzati nel buffer. I valori appariranno dopo a seguito dell'azione del programma mentre il programma è in esecuzione. <b>C'è una differenza cruciale tra gli elementi di dati definiti nella sezione .data e gli elementi di dati definiti nella sezione .bss</b>: Gli elementi di dati nella sezione .data aumentano la dimensione del tuo file eseguibile. Gli elementi di dati nella sezione .bss non lo fanno. Un buffer che occupa 16.000 byte (o più, a volte molto di più) può essere definito in .bss e aggiungere quasi nulla (circa 50 byte per la descrizione) alla dimensione del file eseguibile. Questo è possibile grazie al modo in cui il caricatore di Linux porta il programma nella memoria. Quando compili il tuo file eseguibile, il linker di Linux aggiunge informazioni al file descrivendo tutti i simboli che hai definito, compresi i simboli che nominano gli elementi di dati. Il caricatore sa quali elementi di dati non hanno valori iniziali, e riserva spazio in memoria per loro quando porta l'eseguibile dal disco. Gli elementi di dati con valori iniziali vengono letti insieme ai loro valori. Avere una sezione .bss vuota non aumenta la dimensione del tuo file eseguibile, e cancellare una sezione .bss vuota non riduce la dimensione del tuo file eseguibile.
+Non tutti gli elementi dati devono avere valori prima che il programma inizi a essere eseguito. Quando leggi dati da un file sul disco, ad esempio, hai bisogno di un posto dove inserire i dati dopo che arrivano dal disco. I buffer di dati come quello sono definiti nella sezione <b>Block Start Symbol</b> (<b>.bss</b>) del tuo programma. È stata chiamata in altri modi nel corso degli anni, come Buffer Start Symbol. L'acronimo non ha importanza. Nella sezione .bss, allochi blocchi di memoria da utilizzare in seguito e dai nomi a quei blocchi; questi blocchi conterranno dei valori solo successivamente, durante l'esecuzione del programma. Tutti gli assemblatori hanno un modo per riservare un certo numero di byte per un buffer e dare un nome a quel buffer, ma non specifichi quali valori devono essere memorizzati nel buffer. I valori appariranno dopo, a seguito dell'azione del programma mentre il programma è in esecuzione. <b>C'è una differenza cruciale tra gli elementi dati definiti nella sezione .data e gli elementi dati definiti nella sezione .bss</b>: gli elementi dati nella sezione .data aumentano la dimensione del tuo file eseguibile. Gli elementi dati nella sezione .bss non lo fanno. Un buffer che occupa 16.000 byte (o più, a volte molto di più) può essere definito in .bss e aggiungere quasi nulla (circa 50 byte per la descrizione) alla dimensione del file eseguibile. Questo è possibile grazie al modo in cui il caricatore di Linux porta il programma nella memoria. Quando compili il tuo file eseguibile, il linker di Linux aggiunge informazioni al file descrivendo tutti i simboli che hai definito, compresi i simboli che nominano gli elementi dati. Il caricatore sa quali elementi dati non hanno valori iniziali, e riserva spazio in memoria per loro quando porta l'eseguibile dal disco. Gli elementi dati con valori iniziali vengono letti insieme ai loro valori. Avere una sezione .bss vuota non aumenta la dimensione del tuo file eseguibile, e cancellare una sezione .bss vuota non riduce la dimensione del tuo file eseguibile.
 </p>
 
 ### Sezione .text
@@ -7292,23 +7292,23 @@ Le vere istruzioni macchina che compongono il tuo programma vanno nella sezione 
 ### Labels (Etichette)
 
 <p align=justify>
-Un'etichetta è una sorta di segnalibro, che descrive un punto nel codice del programma e gli dà un nome più facile da ricordare rispetto a un indirizzo di memoria nudo e crudo. Le etichette vengono utilizzate per indicare i luoghi dove le istruzioni di salto devono saltare e per dare nomi alle procedure in linguaggio assembly richiamabili. Spiegherò come tutto ciò viene fatto successivamente. Nel frattempo, ecco le cose più importanti da sapere sulle etichette.
+Un'etichetta è una sorta di segnalibro, che descrive un punto nel codice del programma e gli dà un nome più facile da ricordare rispetto a un indirizzo di memoria nudo e crudo. Le etichette vengono utilizzate per indicare i luoghi verso cui le istruzioni di salto devono saltare e per dare nomi alle procedure in linguaggio assembly richiamabili. Spiegherò come tutto ciò viene fatto successivamente. Nel frattempo, ecco le cose più importanti da sapere sulle etichette.
 </p>
 
 <ul>
 	<li>
-		<p align=justify>Le etichette devono iniziare con una lettera, con un trattino basso, un punto o un punto interrogativo. Questi ultimi tre (<code>_</code>, <code>.</code>, <code>?</code> hanno significati speciali per l'assemblatore, quindi non usarli finché non sai come l'assemblatore li interpreta.</p>
+		<p align=justify>Le etichette devono iniziare con una lettera, con un trattino basso, un punto o un punto interrogativo. Questi ultimi tre (<code>_</code>, <code>.</code>, <code>?</code>) hanno significati speciali per l'assemblatore, quindi non usarli finché non sai come l'assemblatore li interpreta.</p>
 	</li>
 	<li>
-		<p align=justify>Le etichette devono essere seguite da due punti quando vengono definite. Questo è fondamentalmente ciò che dice a NASM che l'identificatore che si sta definendo è un'etichetta. NASM ignorerà se non ci sono due punti e non segnalerà un errore, ma i due punti fissano la questione e prevengono che un mnemonico di istruzione digitato in modo errato venga scambiato per un'etichetta. Quindi usa i due punti!</p>
+		<p align=justify>Le etichette devono essere seguite da due punti quando vengono definite. Questo è fondamentalmente ciò che dice a NASM che l'identificatore che si sta definendo è un'etichetta. NASM ignorerà la riga se non ci sono due punti e non segnalerà un errore, ma i due punti fissano la questione e impediscono che un mnemonico di istruzione digitato in modo errato venga scambiato per un'etichetta. Quindi usa i due punti!</p>
 	</li>
 	<li>
-		<p align=justify>Le etichette fanno distinzione tra maiuscole e minuscole. Ad esempio, yikes:, Yikes: e YIKES: sono tre etichette completamente diverse</p>
+		<p align=justify>Le etichette fanno distinzione tra maiuscole e minuscole. Ad esempio, yikes:, Yikes: e YIKES: sono tre etichette completamente diverse.</p>
 	</li>
 </ul>
 
 <p align=justify>
-Più tardi, vedremo tali etichette utilizzate come obiettivi delle istruzioni di salto e chiamata. Ad esempio, la seguente istruzione macchina trasferisce il flusso di esecuzione delle istruzioni alla posizione contrassegnata dall'etichetta GoHome: 
+Più tardi, vedremo tali etichette utilizzate come obiettivi delle istruzioni di salto e chiamata. Ad esempio, la seguente istruzione macchina trasferisce il flusso di esecuzione delle istruzioni alla posizione contrassegnata dall'etichetta GoHome:
 </p>
 
 ```asm
@@ -7316,7 +7316,7 @@ jmp GoHome
 ```
 
 <p align=justify>
-Nota che i due punti non vengono utilizzati qui. I due punti vengono posti solo dove l'etichetta è definita, non dove viene riferita. Pensa in questo modo: usa i due punti quando stai contrassegnando una posizione, non quando ci stai andando. C'è solo un'etichetta in <code>eatsyscall.asm</code>, e questa è un po' speciale. <b>L'etichetta <code>_start</code> indica dove inizia il programma</b>. (È sensibile alle maiuscole, quindi non provare a usare _START o _Start.) <b>Questa etichetta deve essere contrassegnata come globale nella parte superiore della sezione <code>.text</code></b>. Ora se invece di utilizzare nasm (che l'assemblatore a riga di comando) stai usando SASM, un assemblatore con interfaccia grafica (GUI) questo cambia un po' le cose. Quando compili un programma in linguaggio assembly in SASM, l'etichetta _start diventa main. SASM usa il compilatore Gnu C gcc per fungere da intermediario tra NASM e il linker Linux, ld. Quello che fa SASM, in un certo senso, è creare un programma C senza alcun codice C al suo interno. Tutti i programmi C devono avere un punto di partenza, e in un programma C quel punto di partenza è sempre main. Ci sono motivi per fare ciò che coinvolgono il collegamento di funzioni scritte in C al tuo programma assembly, come spiegherò più avanti. Ricorda questo: quando assembli da un file make, usa _start. Quando assembli da dentro SASM, usa main.
+Nota che i due punti non vengono utilizzati qui. I due punti vengono posti solo dove l'etichetta è definita, non dove viene riferita. Pensa in questo modo: usa i due punti quando stai contrassegnando una posizione, non quando ci stai andando. C'è solo un'etichetta in <code>eatsyscall.asm</code>, e questa è un po' speciale. <b>L'etichetta <code>_start</code> indica dove inizia il programma</b>. (È sensibile alle maiuscole, quindi non provare a usare _START o _Start.) <b>Questa etichetta deve essere contrassegnata come globale nella parte superiore della sezione <code>.text</code></b>. Ora, se invece di utilizzare NASM (che è l'assemblatore a riga di comando) stai usando SASM, un assemblatore con interfaccia grafica (GUI), le cose cambiano un po'. Quando compili un programma in linguaggio assembly in SASM, l'etichetta _start diventa main. SASM usa il compilatore GNU C gcc per fungere da intermediario tra NASM e il linker Linux, ld. Quello che fa SASM, in un certo senso, è creare un programma C senza alcun codice C al suo interno. Tutti i programmi C devono avere un punto di partenza, e in un programma C quel punto di partenza è sempre main. Ci sono motivi per fare ciò che coinvolgono il collegamento di funzioni scritte in C al tuo programma assembly, come spiegherò più avanti. Ricorda questo: quando assembli da un makefile, usa _start. Quando assembli da dentro SASM, usa main.
 </p>
 
 ### Variabili per i dati inizializzati
@@ -7333,7 +7333,7 @@ L'identificatore <code>EatMsg</code> nella sezione <code>.data</code> definisce 
 ```
 
 <p align=justify>
-Pensa alla direttiva <code>DB</code> come "Definisci Byte." <code>DB</code> riserva un byte di memoria per la memorizzazione dei dati. Pensa alla direttiva <code>DW</code> come "Definisci Parola." <code>DW</code> riserva una parola (16 bit, o due byte) di memoria per la memorizzazione dei dati. Pensa alla direttiva <code>DD</code> come "Definisci Doppio." DD riserva una doppia word in memoria per la memorizzazione. <code>DQ</code> significa "Definisci Quad," cioè una quad word, che ha una dimensione di 64 bit.
+Pensa alla direttiva <code>DB</code> come "Definisci Byte". <code>DB</code> riserva un byte di memoria per la memorizzazione dei dati. Pensa alla direttiva <code>DW</code> come "Definisci Parola". <code>DW</code> riserva una parola (16 bit, o due byte) di memoria per la memorizzazione dei dati. Pensa alla direttiva <code>DD</code> come "Definisci Doppio". <code>DD</code> riserva una doppia word in memoria per la memorizzazione. <code>DQ</code> significa "Definisci Quad", cioè una quad word, che ha una dimensione di 64 bit.
 </p>
 
 ### Variabili Stringa
