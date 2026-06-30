@@ -227,7 +227,7 @@ Sorry, only the Italian version is available so far.
     + [Preservare i registri attraverso le chiamate di sistema Linux](#preservare-i-registri-attraverso-le-chiamate-di-sistema-linux)
     + [PUSHAD e POPAD sono spariti](#pushad-e-popad-sono-spariti)
     + [Dati locali](#dati-locali)
-    + [Inserire Dati Costanti nelle Definizioni delle Procedure](#inserire-dati-costanti-nelle-definizioni-delle-procedure)
+    + [Inserire dati costanti nelle definizioni delle procedure](#inserire-dati-costanti-nelle-definizioni-delle-procedure)
     + [Alcuni trucchi per le Tabelle](#alcuni-trucchi-per-le-tabelle)
     + [Etichette locali e lunghezze dei salti](#etichette-locali-e-lunghezze-dei-salti)
     + [Accesso forzato all'etichetta locale](#accesso-forzato-all-etichetta-locale)
@@ -10030,10 +10030,10 @@ C'è solo una differenza tra preservare i registri all'esterno della procedura i
 I dati locali, in contrapposizione ai dati globali, sono dati accessibili (diciamo "visibili") solo a una particolare procedura o, in alcuni casi, a una libreria. (Di nuovo, posticipiamo per il momento la discussione sulle librerie.) Quando le procedure hanno dati locali, si tratta quasi sempre di dati che vengono posizionati nello stack quando viene chiamata una procedura. Le istruzioni PUSH posizionano i dati nello stack. Quando una parte del tuo codice chiama una procedura con l'istruzione CALL, può passare dati a quella procedura usando PUSH una o più volte prima dell'istruzione CALL. La procedura può quindi accedere a questi elementi di dati inseriti nello stack con PUSH. Tuttavia, c'è un avvertimento: la procedura non può semplicemente estrarre quegli elementi di dati dallo stack nei registri, perché l'indirizzo di ritorno è in mezzo. Ricorda che la prima cosa che fa CALL è inserire nello stack l'indirizzo dell'istruzione macchina successiva. Quando la tua procedura ottiene il controllo, quell'indirizzo di ritorno è in cima allo stack (TOS, come diciamo), pronto per l'inevitabile istruzione RET da utilizzare per tornare al chiamante. Qualsiasi cosa inserita nello stack dal chiamante prima dell'istruzione CALL si trova sopra l'indirizzo di ritorno. Questi elementi possono comunque essere accessibili usando il normale indirizzamento della memoria e il puntatore dello stack RSP. Non puoi, tuttavia, usare POP per accedervi senza estrarre e poi reinserire l'indirizzo di ritorno. Questo funziona, e l'ho fatto un paio di volte, ma è lento e anche superfluo, una volta che comprendi la natura di un "frame dello stack" e come indirizzare la memoria al suo interno. Di nuovo, affronterò la nozione di frame dello stack più avanti in questo libro, poiché è assolutamente cruciale una volta che inizi a chiamare procedure di libreria scritte in C o in altri linguaggi di alto livello. Per ora, semplicemente comprendi che i dati globali sono quasi sempre definiti nelle sezioni .data e .bss del tuo programma, mentre i dati locali vengono posizionati nello stack per l'uso "locale" di una particolare chiamata a una particolare procedura. I dati locali richiedono un po' di attenzione e disciplina per essere utilizzati in modo sicuro, per motivi che spiegherò in seguito.
 </p>
 
-### Inserire Dati Costanti nelle Definizioni delle Procedure
+### Inserire dati costanti nelle definizioni delle procedure
 
 <p align=justify>
-Ormai sei abituato a pensare al codice come qualcosa che vive nella sezione .text e ai dati come qualcosa che vive nelle sezioni .data o .bss. In quasi tutti i casi, questo è un buon modo per organizzare le cose, ma non c'è una richiesta assoluta di separare codice e dati in questo modo. È possibile definire dati all'interno di una procedura utilizzando le pseudoinstruzioni di NASM, che includono DB, DW, DD e DQ. Ho creato una procedura utile che mostra come fare e che è un buon esempio di quando farlo. La procedura newlines ti consente di emettere un certo numero di caratteri di nuova riga su stdout, specificati da un valore passato alla subroutine in RDX.
+Ormai sei abituato a pensare al codice come qualcosa che vive nella sezione .text e ai dati come qualcosa che vive nelle sezioni .data o .bss. In quasi tutti i casi, questo è un buon modo per organizzare le cose, ma non c'è un obbligo assoluto di separare codice e dati in questo modo. È possibile definire dati all'interno di una procedura utilizzando le pseudoistruzioni di NASM, che includono DB, DW, DD e DQ. Ho creato una procedura utile che mostra come farlo e che è un buon esempio di quando conviene farlo. La procedura newlines ti consente di emettere su stdout un certo numero di caratteri di nuova riga, specificato da un valore passato alla subroutine in RDX.
 </p>
 
 ```asm
@@ -10045,9 +10045,9 @@ Ormai sei abituato a pensare al codice come qualcosa che vive nella sezione .tex
  ; RETURNS:  Nothing
  ; MODIFIES: RAX, RDI
  ; CALLS:    Kernel sys_write
- ; DESCRIPTION: The number of newline chareacters (0Ah) specified
- ; in RDX is sent to stdout using using SYSCALL sys_write.
- ; procedure demonstrates placing constant data in the
+ ; DESCRIPTION: The number of newline characters (0Ah) specified
+ ; in RDX is sent to stdout using SYSCALL sys_write.
+ ; The procedure demonstrates placing constant data in the
  ; procedure definition itself, rather than in the .data or
  ; .bss sections.
  newlines:
@@ -10058,13 +10058,13 @@ Ormai sei abituato a pensare al codice come qualcosa che vive nella sezione .tex
   mov rdi,1        ; Specify stdout
   syscall          ; Make the kernel call
 .exit:
-  Ret              ; Go home!  
+  ret              ; Go home!
 
 EOLs db 10,10,10,10,10,10,10,10,10,10,10,10,10,10,10
 ```
 
 <p align=justify>
-La tabella EOLs contiene 15 caratteri EOL. Se ricordi, quando il carattere EOL viene inviato a stdout, la console lo interpreta come un a capo, in cui la posizione del cursore della console viene spostata verso il basso di una riga. Il chiamante passa il numero desiderato di a capo in RDX. La procedura newlines verifica prima di assicurarsi che il chiamante non abbia richiesto più a capo di quanti caratteri EOL ci siano nella tabella e poi passa l'indirizzo della tabella EOLs e il numero richiesto in una chiamata convenzionale a sys_write utilizzando SYSCALL. Fondamentalmente, sys_write visualizza i primi caratteri RDX della tabella EOLs sulla console, che interpreta i dati come RDX a capo. Avere i dati direttamente nella procedura significa che è facile copiare e incollare la definizione della procedura da un programma all'altro senza lasciare indietro la tabella essenziale dei caratteri EOL. Poiché l'unico codice che utilizza mai la tabella EOLs è la procedura newlines stessa, non c'è vantaggio a posizionare la tabella EOLs nella sezione .data più visibile centralmente. E anche se la tabella EOLs non è locale nel senso tecnico della scienza informatica (non è posizionata nello stack da un chiamante a newlines), “sembra” locale e tiene le sezioni .data e .bss più ordinate, evitando di sovraccaricarle con dati che vengono referenziati solo all'interno di una singola procedura. C'è un file sorgente di programma completo chiamato newlinestest.asm pronto per essere assemblato nell'archivio delle liste per questo libro. (Costruiscilo con SASM.) Contiene la procedura newlines, che ti permetterà di sperimentare con essa.
+La tabella EOLs contiene 15 caratteri EOL. Se ricordi, quando il carattere EOL viene inviato a stdout, la console lo interpreta come un a capo: la posizione del cursore della console viene spostata verso il basso di una riga. Il chiamante passa il numero desiderato di a capo in RDX. La procedura newlines verifica prima che il chiamante non abbia richiesto più a capo di quanti caratteri EOL ci siano nella tabella e poi passa l'indirizzo della tabella EOLs e il numero richiesto in una chiamata convenzionale a sys_write utilizzando SYSCALL. In sostanza, sys_write visualizza sulla console i primi RDX caratteri della tabella EOLs, che interpreta quei dati come RDX a capo. Avere i dati direttamente nella procedura significa che è facile copiare e incollare la definizione della procedura da un programma all'altro senza lasciare indietro la tabella essenziale dei caratteri EOL. Poiché l'unico codice che usa la tabella EOLs è la procedura newlines stessa, non c'è vantaggio a posizionare la tabella EOLs nella sezione .data, più visibile e centrale. E anche se la tabella EOLs non è locale nel senso tecnico dell'informatica (non è posizionata nello stack da un chiamante a newlines), "sembra" locale e mantiene più ordinate le sezioni .data e .bss, evitando di sovraccaricarle con dati che vengono referenziati solo all'interno di una singola procedura. C'è un file sorgente di programma completo chiamato newlinestest.asm pronto per essere assemblato nell'archivio dei listati di questo libro. (Costruiscilo con SASM.) Contiene la procedura newlines, che ti permetterà di sperimentare con essa.
 </p>
 
 ### Alcuni trucchi per le Tabelle
