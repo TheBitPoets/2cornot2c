@@ -1417,45 +1417,45 @@ Una variabile appartenente alla **classe di memorizzazione automatica** (`auto`)
 * block scope
 * no linkage
 
-Qualsiasi variabile dichiarata all'interno di un blocco (`{` e `}`) è di tipo `auto`, in pratica è la classe di memorizzazione per tutte le variabili locali.
-Le variabili di classe `auto` non sono inizializzate automaticamente, questo è il motivo per cui le variabili locali devono essere inizializzate esplicitamente altrimenti ospitano un valore assolutamente casuale, sporco.
+Qualsiasi variabile dichiarata all'interno di un blocco (`{` e `}`) è di tipo `auto`: in pratica, è la classe di memorizzazione per tutte le variabili locali.
+Le variabili di classe `auto` non sono inizializzate automaticamente: questo è il motivo per cui le variabili locali devono essere inizializzate esplicitamente, altrimenti ospitano un valore assolutamente casuale, sporco.
 
 ```c
 int main(void){
-  int a; /* variabile di classe auto: il suo storage duration è limitato all'esecuzione del  blocco
+  int a; /* variabile di classe auto: il suo storage duration è limitato all'esecuzione del blocco
    	  * cioè viene allocata quando il flusso di esecuzione entra nel blocco e deallocata quando
-	  * si esce dal blocco;  quindi quando si esce dal blocco il valore in essa contenuto viene
-	  * perso,quando si rientrerà nel blocco la volta successiva verrà allocato nuovo spazio in
+	  * si esce dal blocco; quindi, quando si esce dal blocco, il valore in essa contenuto viene
+	  * perso. Quando si rientrerà nel blocco la volta successiva, verrà allocato nuovo spazio in
 	  * memoria completamente diverso rispetto a quello precedente.
-	  * Lo scope è  limitato al  blocco: cioè il suo identificatore è visibile solo all'interno
-	  * del blocco e in ultimo non ha linkage in quanto ovviamente non è visibile alle funzioni
+	  * Lo scope è limitato al blocco: cioè il suo identificatore è visibile solo all'interno
+	  * del blocco e, in ultimo, non ha linkage in quanto ovviamente non è visibile alle funzioni
 	  * nel file corrente e nei restanti file del programma.
 	  * Inoltre la variabile non è inizializzata ad alcuno valore, non possiamo prevedere quale
 	  * sia il valore iniziale che troveremo al suo interno.
-	  * /
+	  */
 }
 ```
 
 <p align="justify">
-E' possibile dichiarare la variabile usando esplicitamente la parola chiave `auto` anche se `auto` per le variabili dichiarate dentro un blocco è il default.
+È possibile dichiarare la variabile usando esplicitamente la parola chiave `auto`, anche se `auto` per le variabili dichiarate dentro un blocco è il default.
 Di solito questo ha senso quando all'interno del blocco si sta offuscando una variabile esterna e si vuole esplicitare questo evento avvertendo chi legge il 
-codice di questo o per specificare che non si vuole che si cambi la classe di memorizzazione per quella variabile. Sotto un esempio:
+codice, o per specificare che non si vuole cambiare la classe di memorizzazione per quella variabile. Di seguito un esempio:
 </p>
 
 ```c
 int a; /* variabile esterna visibile da tutte le funzioni, compreso il main() */
 
 int main(void){
-	auto int a; /* la dichiarazine di una variabile  automatica di nome a nel main() determina
+	auto int a; /* la dichiarazione di una variabile automatica di nome a nel main() determina
                      * l'offuscamento (uscita di scope) della variabile esterna con lo stesso nome.
                      * Per informare chi legge il codice di fare attenzione a questo evento si può
-                     * esplicitare la classe di memorizzazione auto nella dichiarazione 
+                     * esplicitare la classe di memorizzazione auto nella dichiarazione
                      */
 }
 ```
 
 <p align="justify">
-Ricordati quindi che all'uscita del blocco il valore contenuto nella variabile viene perso perchè viene deallocata e non puoi accederci perchè fuori dal blocco l'identificatore non è visibile.
+Ricordati quindi che all'uscita del blocco il valore contenuto nella variabile viene perso perché viene deallocata e non puoi accederci perché fuori dal blocco l'identificatore non è visibile.
 </p>
 
 ## Variabili register (regiter class)
