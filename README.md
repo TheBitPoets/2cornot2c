@@ -1793,7 +1793,7 @@ int main(void){
 
 ## Sintassi dichiarazione variabili
 
-Una dichiarazine di variabile ha questa forma:
+Una dichiarazione di variabile ha questa forma:
 
 ```
 specificatori-dichiarazione dichiaratori
@@ -1803,9 +1803,9 @@ Gli specificatori di dichiarazione descrivono le proprietà della variabile o de
 
 Gli specificatori di dichiarazione sono raggruppabili in tre categorie:
 
-* classi di memorizzazione (storage classes): sono quattro `auto`, `static`, `extern` e `register`. Al massimo una di queste può presentarsi in una dichiarazione e se presente deve essere la prima _keyword_ nella dichiarazione
-* qualificarori di tipo (type qualifiers): sono tre `const`, `volatile` e `restrict`. Una dichiarazione puà contenere zero, uno o più di un qualificatori di tipo
-* specificatori di tipo (type specifiers): `void` `char` `short` `int` `long` `float` `double` `signed` `unsigned`. Queste _keyword_ possono essere combinate assieme (`unsigned long int``) l'ordine con cui compaiono non ha importanza
+* classi di memorizzazione (storage classes): sono quattro `auto`, `static`, `extern` e `register`. Al massimo una di queste può presentarsi in una dichiarazione e, se presente, deve essere la prima _keyword_ nella dichiarazione
+* qualificatori di tipo (type qualifiers): sono tre `const`, `volatile` e `restrict`. Una dichiarazione può contenere zero, uno o più qualificatori di tipo
+* specificatori di tipo (type specifiers): `void`, `char`, `short`, `int`, `long`, `float`, `double`, `signed`, `unsigned`. Queste _keyword_ possono essere combinate assieme (`unsigned long int`); l'ordine con cui compaiono non ha importanza
 
 Vediamo alcuni esempi:
 
@@ -1845,7 +1845,7 @@ extern const unsigned long int a[10];
 ### Classi di memorizzazione per le funzioni
 
 <p align="justify">
-La definizione (e dichiarazione) di funzione, come per le variabili, può contenere una classe di memorizzazione. Per le funzioni abbiamo solo due classi di memorizzazione: <code>extern</code> e <code>static</code>. La <i>keyword</i> <code>extern</code> all'inizio della dichiarazione o definizione di funzioni specifica che la funzione ha <b>external linkage</b>: può essere chiamata da funzioni in altri file del programma. La parola chiave <code>static</code> invece indica <b>internal linkage</b> e quindi limita l'uso della funzione all'interno del file in cui è definita. <b>Se non viene specificata una classe di memorizzazione per la funzione questa assume la classe <code>extern</code></b>.
+La definizione (e dichiarazione) di funzione, come per le variabili, può contenere una classe di memorizzazione. Per le funzioni abbiamo solo due classi di memorizzazione: <code>extern</code> e <code>static</code>. La <i>keyword</i> <code>extern</code> all'inizio della dichiarazione o definizione di funzione specifica che la funzione ha <b>external linkage</b>: può essere chiamata da funzioni in altri file del programma. La parola chiave <code>static</code>, invece, indica <b>internal linkage</b> e quindi limita l'uso della funzione all'interno del file in cui è definita. <b>Se non viene specificata una classe di memorizzazione per la funzione, questa assume la classe <code>extern</code></b>.
 </p>
 
 ```c
@@ -1854,7 +1854,7 @@ static int g(int i);
 int h(int i); /* default extern */
 ```
 
-### Classi memorizzazione riassunto
+### Classi di memorizzazione: riassunto
 
 ```c
 int a;
@@ -1890,7 +1890,7 @@ void f(int d, register int e){
 <table align="center">
 	<td>:pill: <b>Nota</b>
 	<p align=justify>
-La definizione di  <code>b</code> e di <code>j</code> non sono mostrate, quindi non è possibile determinare il <code>linkage</code> di queste variabili. Nella maggior parte dei casi le variabili saranno definite in un altro file ed avranno quindi <b>external linkage</b>
+La definizione di <code>b</code> e di <code>j</code> non è mostrata, quindi non è possibile determinare il <code>linkage</code> di queste variabili. Nella maggior parte dei casi le variabili saranno definite in un altro file e avranno quindi <b>external linkage</b>.
 	</p>
 	</td>
 </table>
@@ -1898,18 +1898,18 @@ La definizione di  <code>b</code> e di <code>j</code> non sono mostrate, quindi 
 ### Suddivisione in moduli di un programma
 
 <p align="justify">
-La capacità di separare l'implementazione delle funzioni dai loro prototipi attraverso l'uso dei file header e la possibilità di poter condividere variabili tra file diversi del programma ci permettono ora di fare un uleriore passo nel miglioamento della nostra calcolatrice. Vogliamo riorganizzare il codice in modo da ottenere dei moduli separati, ora vedremo cosa significa e quali sono i vantaggi nel fare ciò. Pensare di realizzare programmi di grandi dimensioni usando un unico grande file sorgente è una cattiva idea per tante ragioni, le principali sono:
+La capacità di separare l'implementazione delle funzioni dai loro prototipi attraverso l'uso dei file header e la possibilità di condividere variabili tra file diversi del programma ci permettono ora di fare un ulteriore passo nel miglioramento della nostra calcolatrice. Vogliamo riorganizzare il codice in modo da ottenere dei moduli separati: ora vedremo cosa significa e quali sono i vantaggi nel fare ciò. Pensare di realizzare programmi di grandi dimensioni usando un unico grande file sorgente è una cattiva idea per tante ragioni; le principali sono:
 </p>
 
-* una modifica anche piccola al codice richiede la ricompilazione dell'intero file sorgente che essendo molto esteso può richiedere tanto tempo
+* una modifica anche piccola al codice richiede la ricompilazione dell'intero file sorgente, che, essendo molto esteso, può richiedere tanto tempo
 * in un unico file sorgente può risultare difficile trovare la porzione di codice su cui dobbiamo lavorare o da correggere, al contrario usando un approccio modulare la ricerca di una certa funzionalità richiede di analizzare solo il file sorgente e d'intestazione corrispondente
 * non è possibile fare _information hiding_ rendendo nascosti i dettagli alle porzioni di codice che non hanno alcun ruolo in un certo compito
 
-Vantaggi di un approccio modulare sono:
+I vantaggi di un approccio modulare sono:
 
 * in progetti di grosse dimensioni, i programmatori possono lavorare su moduli diversi
 * i moduli di un programma possono essere riutilizzati in altri progetti
-* ogni modulo contiene il codice relativo ad una singola funzionalità isolando al suo interno tutto il codice necessario
+* ogni modulo contiene il codice relativo a una singola funzionalità, isolando al suo interno tutto il codice necessario
   
 Abbiamo già detto che i file che compongono un programma sono:
 
@@ -1917,36 +1917,36 @@ Abbiamo già detto che i file che compongono un programma sono:
 * file d'intestazione (_header files_) con estensione `.h`
 
 <p align="justify">
-Di solito si raggruppano tutte le funzioni ed i dati relativi ad una certa funzionalità in un unico file sorgente (<code>.c</code>) e si crea un corrispondente file header <code>.h</code> (con lo stesso nome del file sorgente a cui si riferisce ma con ovviamente estensione diversa) che contiene i prototipi delle funzioni (implementate nel file sorgente) e la definizione dei tipi di dato usati dal modulo (se è richiesto).
+Di solito si raggruppano tutte le funzioni e i dati relativi a una certa funzionalità in un unico file sorgente (<code>.c</code>) e si crea un corrispondente file header <code>.h</code> (con lo stesso nome del file sorgente a cui si riferisce, ma con estensione diversa) che contiene i prototipi delle funzioni (implementate nel file sorgente) e la definizione dei tipi di dato usati dal modulo (se è richiesto).
 </p>
 
 <table align="center">
 	<td>⚠️ <b>Attenzione</b>
-Nei file header <code>.h</code> devono essere inseriti solo le definizioni dei tipi ed i prototipi (le dichiarazioni) della funzioni. L'implementazione delle funzioni risiede nel file sorgente <code>.c</code> 
+Nei file header <code>.h</code> devono essere inserite solo le definizioni dei tipi e i prototipi (le dichiarazioni) delle funzioni. L'implementazione delle funzioni risiede nel file sorgente <code>.c</code>.
 	</p>
 	</td>
 </table>
 
 <p align="justify">
-Brevemete, in <code>5_variabili_main.c</code> inseriamo la logica di interazione con l'utente, l'implementazione delle funzioni matematiche viene spostata in un file sorgnete separato: <code>5_variabili.c</code> ed i prototipi nel corrispondente file header <code>5_variabili.h</code>
+Brevemente, in <code>5_variabili_main.c</code> inseriamo la logica di interazione con l'utente; l'implementazione delle funzioni matematiche viene spostata in un file sorgente separato: <code>5_variabili.c</code>, e i prototipi nel corrispondente file header <code>5_variabili.h</code>.
 </p>
 
 <table align="center">
 	<td>:pill: <b>Nota</b>
 	<p align=justify>
-Il file sorgente che contiene le funzioni matematiche ed il suo corrispettivo file d'intestazione hanno stesso nome ma estensioni differenti: <code>5_variabili.c</code> e <code>5_variabili.h</code>
+Il file sorgente che contiene le funzioni matematiche e il suo corrispettivo file d'intestazione hanno lo stesso nome, ma estensioni differenti: <code>5_variabili.c</code> e <code>5_variabili.h</code>.
 	</p>
 	</td>
 </table>
 
 <p align="justify">
-Nel file <code>5_varibili_main.c</code> facciamo uso delle funzioni matematiche, quindi, prima del loro utilizzo all'interno dello <code>switch</code>, importiamo il file header contenente i prototipi; ovvviamente facciamo lo stesso anche per la funzione <code>printf()</code>.
+Nel file <code>5_variabili_main.c</code> facciamo uso delle funzioni matematiche, quindi, prima del loro utilizzo all'interno dello <code>switch</code>, importiamo il file header contenente i prototipi; ovviamente facciamo lo stesso anche per la funzione <code>printf()</code>.
 </p>
 
 <table align="center">
 	<td>⚠️ <b>Attenzione</b>
 	<p align=justify>
-Fai attenzione che per includere il file header per la funzione <code>printf()</code> si usano le parentesi angolari <code><</code> <code>></code> in quanto si tratta di funzioni del linguaggio, per includere file d'intestazione definiti dal programmatore si usano i doppi apici <code>"</code>
+Fai attenzione: per includere il file header per la funzione <code>printf()</code> si usano le parentesi angolari <code><</code> <code>></code> in quanto si tratta di funzioni del linguaggio; per includere file d'intestazione definiti dal programmatore si usano i doppi apici <code>"</code>.
 	</p>
 	</td>
 </table>
@@ -1957,7 +1957,7 @@ Fai attenzione che per includere il file header per la funzione <code>printf()</
 ```
 
 <p align="justify">
-In aggiunta, sostituaimo il costrutto <code>if-else</code> con lo <code>switch</code>. Lo <code>switch</code> è assolutamente equivalente ad un <code>if-else</code> e serve a scegliere tra diversi blocchi di istruzioni in base al valore di una espressione intera. La sintassi è la seguente:
+In aggiunta, sostituiamo il costrutto <code>if-else</code> con lo <code>switch</code>. Lo <code>switch</code> è assolutamente equivalente a un <code>if-else</code> e serve a scegliere tra diversi blocchi di istruzioni in base al valore di un'espressione intera. La sintassi è la seguente:
 </p>
 
 ```c
@@ -1966,7 +1966,7 @@ switch ( espressione-intera ) {
 	  [ istr ]
 	  [ ... ]
 	  [ break ; ]
-	case espressine-costante :
+	case espressione-costante :
 	  [ istr ]
 	  [ ... ]
 	  [ break ; ]
@@ -1995,7 +1995,7 @@ https://github.com/kinderp/2cornot2c/blob/23edeb0541fb524a4389e3728b72eec3df1da4
 ### Il preprocessore
 
 <p align="justify">
-Il preprocessore elabora il contenuto di un file sorgente <b>prima della compilazione</b> ed opera delle sostituzioni di testo: la sostituzione di parti del codice sorgente originale con altro testo.
+Il preprocessore elabora il contenuto di un file sorgente <b>prima della compilazione</b> e opera delle sostituzioni di testo: la sostituzione di parti del codice sorgente originale con altro testo.
 Il preprocessamento è il primo step del processo che porta alla generazione del file eseguibile. Il preprocessore può svolgere differenti sostituzioni, tutte le chiamate al preprocessore sono dette <b>direttive al preprocessore</b>, le più famose sono:
 </p>
 
@@ -2006,21 +2006,21 @@ Il preprocessamento è il primo step del processo che porta alla generazione del
 <table align="center">
 	<td>❗ <b>Importante</b>
 	<p align=justify>
-Tutte le righe nel codice che iniziano con il carattere `#` sono direttive al preprocessore
+Tutte le righe nel codice che iniziano con il carattere `#` sono direttive al preprocessore.
 	</p>
 	</td>
 </table>
 
-Queste direttiva permettono di:
+Queste direttive permettono di:
 
-* includere il cotenuto di altri file all'interno del sorgente
+* includere il contenuto di altri file all'interno del sorgente
 * ridefinire il significato degli identificatori
 * disabilitare condizionalmente parti di codice in fase di compilazione, eliminando il testo prima che il compilatore lo elabori
 
 <table align="center">
 	<td>:pill: <b>Nota</b>
 	<p align=justify>
-E' il preprocessore che elimina tutti i commenti presenti nel codice sorgente in modo che sia compilato solo il codice vero e proprio
+È il preprocessore che elimina tutti i commenti presenti nel codice sorgente, in modo che sia compilato solo il codice vero e proprio.
 	</p>
 	</td>
 </table>
@@ -2057,7 +2057,7 @@ for(int i=0; i < NUM_ITERATIONS; i++)
 int array[DIM_BUFFER];
 ```
 
-Le **macro** possono ricevere parametri in ingresso, vengono realizzate per realizzare piccole pseudo-funzioni:
+Le **macro** possono ricevere parametri in ingresso e vengono realizzate per creare piccole pseudo-funzioni:
 
 ```c
 #define QUADRATO(x) x*x
@@ -2068,7 +2068,7 @@ int main(void){
 }
 ```
 
-La **macro** `QUADRATO` determina la sostituzione del testo `QUADRATO(lunghezza_lato)` col testo `lunghezza_lato*lunghezza_lato` prima della compilazione, quindi il codice visto dal compilatore è:
+La **macro** `QUADRATO` determina la sostituzione del testo `QUADRATO(lunghezza_lato)` con il testo `lunghezza_lato*lunghezza_lato` prima della compilazione, quindi il codice visto dal compilatore è:
 
 ```c
 int main(void){
@@ -2080,7 +2080,7 @@ int main(void){
 Si usa dire che la **macro** è stata espansa.
 
 <p align="justify">
-Le <b>macro</b> sono molto più veloci delle funzioni ma usandole è più facile inserire nel codice errori difficilmente identificabili. Inoltre i moderni compilatori sono in grado di effetturare ottimizzazioni sul codice e capire autonomamente quando evitare una chiamata a funzione espandendo il codice in essa contenuta. In generale quindi l'uso eccessivo di <b>macro</b> o l'utilizzo di <b>macro complesse</b> non porta a miglioramenti delle prestazioni ma può comportare l'insorgere di bug difficili da risolvere. Vediamo un esempio:
+Le <b>macro</b> sono molto più veloci delle funzioni, ma usandole è più facile inserire nel codice errori difficilmente identificabili. Inoltre, i moderni compilatori sono in grado di effettuare ottimizzazioni sul codice e capire autonomamente quando evitare una chiamata a funzione espandendo il codice in essa contenuto. In generale, quindi, l'uso eccessivo di <b>macro</b> o l'utilizzo di <b>macro complesse</b> non porta a miglioramenti delle prestazioni, ma può comportare l'insorgere di bug difficili da risolvere. Vediamo un esempio:
 </p>
 
 ```c
@@ -2091,7 +2091,7 @@ int main(void){
 }
 ```
 
-Il codice di sopra viene in espanso in questo modo:
+Il codice di sopra viene espanso in questo modo:
 
 ```c
 #define QUADRATO(x) x*x
@@ -2110,14 +2110,14 @@ Per evitare errori sarebbe stato giusto definire la **macro** in questo modo:
 <table align="center">
 	<td>⚠️ <b>Attenzione</b>
 	<p align=justify>
-L'uso di macro con parametri senza l'uso di parentesi tonde porta ad errori difficili da identificare
+L'uso di macro con parametri senza l'uso di parentesi tonde porta a errori difficili da identificare.
 	</p>
 	</td>
 </table>
 
 #### La direttiva #include
 
-Abbiamo accennato a questa direttiva nei paragrafi introduttivi spiegando che serviva ad includere, nel file sorgente, il file header `stdio.h` che conteneva il prototipo della funzione `printf()`.
+Abbiamo accennato a questa direttiva nei paragrafi introduttivi spiegando che serviva a includere, nel file sorgente, il file header `stdio.h` che conteneva il prototipo della funzione `printf()`.
 
 La direttiva `#include` sostituisce il contenuto di un intero file nella riga di codice dove è inserita.
 
@@ -2131,9 +2131,9 @@ Esiste in due forme: con parentesi angolari o con doppi apici:
 #include "file.h"
 ```
 
-La prima forma (parentesi angoli `<` `>`) è usata per includere il contenuto di file d'intestazione del linguaggio, la seconda forma invece permette di includere i file header definiti dal programmatore.
+La prima forma (parentesi angolari `<` `>`) è usata per includere il contenuto di file d'intestazione del linguaggio; la seconda forma, invece, permette di includere i file header definiti dal programmatore.
 
-#### Le direttive #if #ifdef #ifndef 
+#### Le direttive #if #ifdef #ifndef
 
 Con queste direttive si possono escludere porzioni di codice in base al verificarsi o meno di certe condizioni.
 
@@ -2150,9 +2150,9 @@ La direttiva `#if` valuta **un'espressione intera costante** il cui **valore dev
 #endif
 ```
 
-Tutte le righe comprese tra `#if` e `#endif` vengono incluse nel file header solo se l'espressione è diversa da 0 altrimenti vengono rimosse.
+Tutte le righe comprese tra `#if` e `#endif` vengono incluse nel file header solo se l'espressione è diversa da 0; altrimenti vengono rimosse.
 
-La direttiva `#ifdef` è molto simile, non valuta un'espressione costante ma la definizione o meno di una macro;  vedi codice sottostoante:
+La direttiva `#ifdef` è molto simile: non valuta un'espressione costante, ma la definizione o meno di una macro. Vedi il codice sottostante:
 
 ```c
 #ifdef macro
@@ -2163,9 +2163,9 @@ La direttiva `#ifdef` è molto simile, non valuta un'espressione costante ma la 
 #endif
 ```
 
-`#ifdef `include il codice tra se stessa e la direttiva `#endif` solo se la macro è definita.
+`#ifdef` include il codice tra se stessa e la direttiva `#endif` solo se la macro è definita.
 
-E' possibile ottenere il comportamento opposto con `#ifndef`, come segue:
+È possibile ottenere il comportamento opposto con `#ifndef`, come segue:
 
 ```c
 #ifndef macro
@@ -2178,7 +2178,7 @@ E' possibile ottenere il comportamento opposto con `#ifndef`, come segue:
 <table align="center">
 	<td>❗ <b>Importante</b>
 	<p align=justify>
-La definizione del simbolo macro deve essere effettuata con la direttiva <code>#define</code>
+La definizione del simbolo macro deve essere effettuata con la direttiva <code>#define</code>.
 	</p>
 	</td>
 </table>
@@ -2186,16 +2186,16 @@ La definizione del simbolo macro deve essere effettuata con la direttiva <code>#
 ### Eliminazione temporanea di codice
 
 <p align="justify">
-In fase di debugging può essere utile eliminare temporaneamente porzioni di codice senza cancellarle, oppure al contrario far eseguire certi pezzi di codice (<code>printf()</code> di variabili per valutarne il valore) solo in fase di debug/testing. A questi scopi possiamo usare le direttive mostrate sopra, vediamo come:
+In fase di debugging può essere utile eliminare temporaneamente porzioni di codice senza cancellarle, oppure, al contrario, far eseguire certi pezzi di codice (<code>printf()</code> di variabili per valutarne il valore) solo in fase di debug/testing. A questi scopi possiamo usare le direttive mostrate sopra. Vediamo come:
 </p>
 
 ```c
 #if 0
-	/* pezzzo di codice da non considerare */
+	/* pezzo di codice da non considerare */
 #endif
 ```
 
-Una volta eliminati i problemi si può rispristinare il codice rimuovendo le righe contenenti <code>#if</code> <code>#endif</code> oppure cambiando il valore zero con il valore uno come mostrato sotto:
+Una volta eliminati i problemi, si può ripristinare il codice rimuovendo le righe contenenti <code>#if</code> <code>#endif</code>, oppure cambiando il valore zero con il valore uno, come mostrato sotto:
 
 ```c
 #if 1
@@ -2203,7 +2203,7 @@ Una volta eliminati i problemi si può rispristinare il codice rimuovendo le rig
 #endif
 ```
 
-oppure più elgantemente usando `#define` e `#if` assieme:
+oppure, più elegantemente, usando `#define` e `#if` assieme:
 
 ```c
 #define SWITCH 0
@@ -2220,12 +2220,12 @@ Si può ottenere lo stesso risultato con la direttiva `#ifdef` in questo modo:
 
 ```c
 #ifdef UNDEF
-	/* pezzo di codice non è incluso perchè UNDEF non è definita */
+	/* pezzo di codice non incluso perché UNDEF non è definita */
 #endif
 ```
 
 <p align="justify">
-Questa seconda soluzione, più elegante, può essere utilizzata anche per includere dei pezzi di codice in fase di testing/debugging (per esempio uan serie di stampe su schermo dei valori della variabili). Per farlo basta definire una macro <code>DEBUG</code> con la direttiva <code>#define</code> ed usare <code>#ifdef</code> o <code>#ifndef</code> per includere il codice di test in questo modo:
+Questa seconda soluzione, più elegante, può essere utilizzata anche per includere dei pezzi di codice in fase di testing/debugging (per esempio una serie di stampe su schermo dei valori delle variabili). Per farlo basta definire una macro <code>DEBUG</code> con la direttiva <code>#define</code> e usare <code>#ifdef</code> o <code>#ifndef</code> per includere il codice di test in questo modo:
 </p>
 
 ```c
@@ -2233,11 +2233,11 @@ Questa seconda soluzione, più elegante, può essere utilizzata anche per includ
 
 #ifdef DEBUG
 	/*
-	 * questo codice viene considerato perchè  DEBUG
+	 * questo codice viene considerato perché  DEBUG
 	 * è definito, per escludere questo codice  devi
 	 * usare la direttiva #undef o eliminare la dire-
-	 * ttiva '#define DEGUB'
-	 * /
+	 * ttiva '#define DEBUG'
+	 */
 #endif
 ```
 
@@ -2251,12 +2251,12 @@ Per non considerare il codice basta rimuovere la prima riga <code>#define DEBUG<
 #ifdef DEBUG
 	/*
 	 * questo codice non viene considerato
-	 * perchè   DEBUG   non   è   definito
-	 * /
+	 * perché   DEBUG   non   è   definito
+	 */
 #endif
 ```
 
-Ovviamente con `#ifndef` otteniamo il comportamento opposto, vediamo un esempio che usa `#ifdef` e `#ifndef` per includere e/o escludere porzioni di codice a seconda se è attivato il DEBUG o meno:
+Ovviamente con `#ifndef` otteniamo il comportamento opposto. Vediamo un esempio che usa `#ifdef` e `#ifndef` per includere e/o escludere porzioni di codice a seconda che DEBUG sia attivato o meno:
 
 ```c
 #undef DEBUG /* We are in production */
@@ -2305,7 +2305,7 @@ vagrant@ubuntu2204:~$ ./test
 CPU_FILE = arm.h
  ```
 
-La cosa interessante di questo approccio è il fatto che è possibile definire simboli passando direttamente un opzione al compilatore, se ho ad esempio il file `conditional_compilation.c` con questo contenuto:
+La cosa interessante di questo approccio è il fatto che è possibile definire simboli passando direttamente un'opzione al compilatore. Se ho, ad esempio, il file `conditional_compilation.c` con questo contenuto:
 
 ```bash
 #include<stdio.h>
@@ -2325,7 +2325,7 @@ Posso definire il simbolo `DEBUG` da riga di comando a tempo di compilazione pas
 ```bash
 gcc -DDEBUG -o conditional_compilation conditional_compilation.c
 ```
-Anche se nel file non è presente alcuna riga `#define DEBUG` il simbolo è stato definito a tempo di compilazione quindi siamo in staging è l'output del programma sarà:
+Anche se nel file non è presente alcuna riga `#define DEBUG`, il simbolo è stato definito a tempo di compilazione, quindi siamo in staging e l'output del programma sarà:
 
 ```bash
 vagrant@ubuntu2204:~$ ./conditional_compilation
@@ -2348,7 +2348,7 @@ int main(void){
 }
 ```
 
-anche definendo il simbolo attraverso `gcc`, a tempo di compilazoine, questo verrà annullato dalla direttiva `#undef` e l'output del programma sarà:
+Anche definendo il simbolo attraverso `gcc`, a tempo di compilazione, questo verrà annullato dalla direttiva `#undef` e l'output del programma sarà:
 
 ```bash
 vagrant@ubuntu2204:~$ gcc -o conditional_compilation -DDEBUG conditional_compilation.c
@@ -2359,9 +2359,9 @@ Production code, no debugging enabled
 ### Protezione del contenuto dei file d'intestazione
 
 <p align="justify">
-I file d'intestazione contengono dichiarazioni sia di funzioni (prototipi) ma anche di dati (strutture, definizione di tipo, variabili e costanti); questi file possono essere inclusi in più sorgenti correndo il rischio di avere una situazione in cui lo stesso file d'intestazione è incluso due volte nello stesso sorgente; in queste situzioni il preprocessore copierà due volte il contenuto del file d'intestazione.
-Non è un grosso problema, all'interno di un file <code>.c</code>, avere due o più dichiarazioni (prototipi) della stessa funzione; il compilatore invece darà errore se trova due dichiarazioni di tipo identiche. Dobbiamo quindi trovare un modo di evitare inclusioni multiple dello stesso file d'intestazione in un file sorgente.
-Per capire meglio facciamo un esempio: supponiamo di avere tre file header: <code>file1.h</code> <code>file2.h</code> <code>file3.h</code> ed un file sorgente <code>prog.c</code>. La situazione, mostrata nella figura di sotto, è la seguente: sia <code>file1.h</code> che <code>file2.h</code> includono <code>file3.h</code> mentre <code>prog.c</code> include <code>file1.h</code> e <code>file2.h</code>. In <code>prog.c</code> <code>file3.h</code> verrà incluso due volte: la prima volta a seguito dell'inclusione di <code>file1.h</code> e la seconda per l'inclusione di <code>file2.h</code> 
+I file d'intestazione contengono dichiarazioni sia di funzioni (prototipi) sia di dati (strutture, definizioni di tipo, variabili e costanti); questi file possono essere inclusi in più sorgenti, correndo il rischio di avere una situazione in cui lo stesso file d'intestazione è incluso due volte nello stesso sorgente. In queste situazioni il preprocessore copierà due volte il contenuto del file d'intestazione.
+Non è un grosso problema, all'interno di un file <code>.c</code>, avere due o più dichiarazioni (prototipi) della stessa funzione; il compilatore, invece, darà errore se trova due dichiarazioni di tipo identiche. Dobbiamo quindi trovare un modo per evitare inclusioni multiple dello stesso file d'intestazione in un file sorgente.
+Per capire meglio facciamo un esempio: supponiamo di avere tre file header, <code>file1.h</code>, <code>file2.h</code>, <code>file3.h</code>, e un file sorgente <code>prog.c</code>. La situazione, mostrata nella figura di sotto, è la seguente: sia <code>file1.h</code> sia <code>file2.h</code> includono <code>file3.h</code>, mentre <code>prog.c</code> include <code>file1.h</code> e <code>file2.h</code>. In <code>prog.c</code>, <code>file3.h</code> verrà incluso due volte: la prima volta a seguito dell'inclusione di <code>file1.h</code> e la seconda per l'inclusione di <code>file2.h</code>.
 </p>
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/inclusione_multipla.png)
@@ -2397,7 +2397,7 @@ int main(void){
 }
 ```
 
-Mostrando l'output prodotto dal preprocessore vediamo che effettivamente `file3.h` è stato incluso due volte in `prog.c`
+Mostrando l'output prodotto dal preprocessore, vediamo che effettivamente `file3.h` è stato incluso due volte in `prog.c`.
 
 ```bash
 vagrant@ubuntu2204:~$ gcc -E prog.c
@@ -2441,7 +2441,7 @@ typedef int Bool;
 ```
 
 <p align="justify">
-Al momento dell'inclusione se il simbolo <code>__FILE3_H__</code> non è stato ancora definito questo verrà definito e verrà anche incluso il contenuto del file d'intestazione altrimenti se <code>file3.h</code> è stato già incluso una prima volta il simbolo <code>__FILE3_H__</code> sarà già definito ed il contenuto del file d'intestazione fino ad <code>#endif</code> verrà ignorato evitando così una seconda inutile inclusione. Verifichiamo di aver risolto rilanciando lo step di preprocessamento:
+Al momento dell'inclusione, se il simbolo <code>__FILE3_H__</code> non è stato ancora definito, questo verrà definito e verrà anche incluso il contenuto del file d'intestazione. Altrimenti, se <code>file3.h</code> è stato già incluso una prima volta, il simbolo <code>__FILE3_H__</code> sarà già definito e il contenuto del file d'intestazione fino a <code>#endif</code> verrà ignorato, evitando così una seconda inutile inclusione. Verifichiamo di aver risolto rilanciando lo step di preprocessamento:
 </p>
 
 ```bash
