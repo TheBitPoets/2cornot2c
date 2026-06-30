@@ -1620,8 +1620,8 @@ int main(void){
 ## Variabili globali con External Linkage (Static variables with External Linkage)
 
 <p align="justify">
-Le variabili globali sono DEFINITE all'esterno delle funzioni, di solito all'inizio del file sorgente dopo le direttive al preprocessore (<code>#include</code>). Come anticipato queste variabili hanno: file scope (sono visibili a tutte le funzioni del file che contiene la loro definizione) static storage duration (tempo di vita in memoria coincidente con l'esecuzione del programma) ed external linkage (sono potenzialmente visibili anche in tutti i file sorgente del programma). Quindi le variabili globali sono variabili statiche con external linkage. Nella definizione non si usa la <i>keyword</i> <code>extern</code>, invece questa può essere usata (opzionale) nella dichiarazione della variabile all'interno delle funzioni che la useranno, l'uso di <code>extern</code> è invece obbligatorio quando si vuole usare una variabile globale definita in un altro file del programma, in questo caso è necessario dichiarare (nel file che vuole usare la variabile definita in altro file) esplicitamente la variabile usando la <i>keyword</i> <code>extern</code>. In soldoni <code>extern</code> non viene usata nella DEFINIZIONE (quando si crea per la prima volta la variabile globale e viene allocata la memoria) bensì è usata nelle DICHIARAZIONI per informare il compilatore che la variabile è definita da qualche altra parte e nel file si vuole solo fare uso della varabile esterna già allocata.
-Infine è importante ricordare che <b>le variabili esterne possono essere inizializzate solo una volta</b> e </b>nella DEFINIZIONE</b>, inizializzare una variabile esterna nella DICHIARAZIONE è un ERRORE:
+Le variabili globali sono DEFINITE all'esterno delle funzioni, di solito all'inizio del file sorgente dopo le direttive al preprocessore (<code>#include</code>). Come anticipato, queste variabili hanno: file scope (sono visibili a tutte le funzioni del file che contiene la loro definizione), static storage duration (tempo di vita in memoria coincidente con l'esecuzione del programma) ed external linkage (sono potenzialmente visibili anche in tutti i file sorgente del programma). Quindi le variabili globali sono variabili statiche con external linkage. Nella definizione non si usa la <i>keyword</i> <code>extern</code>; invece, questa può essere usata (opzionalmente) nella dichiarazione della variabile all'interno delle funzioni che la useranno. L'uso di <code>extern</code> è invece obbligatorio quando si vuole usare una variabile globale definita in un altro file del programma: in questo caso è necessario dichiarare esplicitamente la variabile usando la <i>keyword</i> <code>extern</code> nel file che vuole usare la variabile definita in un altro file. In soldoni, <code>extern</code> non viene usata nella DEFINIZIONE (quando si crea per la prima volta la variabile globale e viene allocata la memoria), bensì nelle DICHIARAZIONI, per informare il compilatore che la variabile è definita da qualche altra parte e che nel file si vuole solo fare uso della variabile esterna già allocata.
+Infine, è importante ricordare che <b>le variabili esterne possono essere inizializzate solo una volta</b> e <b>nella DEFINIZIONE</b>: inizializzare una variabile esterna nella DICHIARAZIONE è un ERRORE.
 </p>
 
 ```c
@@ -1636,8 +1636,8 @@ extern int esterna = 2; // DICHIARAZIONE ERRORE
 ```
 
 <p align="justify">
-Alla luce di queste nuove conoscenze modifichiamo il programma visto in <code>3_variabili.c</code> spostando i prototipi della funzioni e la DEFINIZIONE delle variabili globali in un file <code>header</code> (estensione <code>.h</code>). Abbiamo già incontrato questi file quando abbiamo introdotto la funzione <code>printf()</code> ed avevamo detto che era necessario includere il file header <code>stdio.h</code> che conteneva il prototipo della <code>printf()</code>. I file header o d'intestazione contengono sia i prototipi delle funzioni sia le strutture dati (quindi anche le variabili globali) che saranno utili nel corrispondente file sorgente (estensione <code>.c</code>).
-I file d'intestazione possono essere sia di sistema (cioè forniti dal linguaggio stesso) e, come detto, vengono inclusi con la direttiva <code>#include</code> usando le parentesi angolari <code><</code> <code>></code>, in questo modo:
+Alla luce di queste nuove conoscenze, modifichiamo il programma visto in <code>3_variabili.c</code> spostando i prototipi delle funzioni e la DEFINIZIONE delle variabili globali in un file <code>header</code> (estensione <code>.h</code>). Abbiamo già incontrato questi file quando abbiamo introdotto la funzione <code>printf()</code> e avevamo detto che era necessario includere il file header <code>stdio.h</code>, che conteneva il prototipo della <code>printf()</code>. I file header, o d'intestazione, contengono sia i prototipi delle funzioni sia le strutture dati (quindi anche le variabili globali) che saranno utili nel corrispondente file sorgente (estensione <code>.c</code>).
+I file d'intestazione possono essere di sistema (cioè forniti dal linguaggio stesso) e, come detto, vengono inclusi con la direttiva <code>#include</code> usando le parentesi angolari <code><</code> <code>></code>, in questo modo:
 </p>
 
 ```c
@@ -1645,15 +1645,15 @@ I file d'intestazione possono essere sia di sistema (cioè forniti dal linguaggi
 ```
 
 <p align="justify">
-i file d'instestazione definiti dal programmatore vengono inclusi usando i doppi apici <code>"</code> in questo modo:
+I file d'intestazione definiti dal programmatore vengono inclusi usando i doppi apici <code>"</code>, in questo modo:
 </p>
 
 ```c
-#include "4_varibili.h"
+#include "4_variabili.h"
 ```
 
 <p align="justify">
-Il nostro compito è allora spostare tutti i prototipi e le variabili globali di <code>3_variabili.c</code> in un file d'instazione (<code>4_variabili.h</code>) ed includere il file header nel corrispondente file sorgente (<code>4_variabili.c</code>).
+Il nostro compito è allora spostare tutti i prototipi e le variabili globali di <code>3_variabili.c</code> in un file d'intestazione (<code>4_variabili.h</code>) e includere il file header nel corrispondente file sorgente (<code>4_variabili.c</code>).
 Ovviamente faremo anche qualche piccola modifica e miglioramento al programma precedente, nello specifico:
 
 <ul>
@@ -1671,22 +1671,22 @@ const int NUM_ITERATIONS = 2;
 <p>
 <ul>
 	<li align="justify">
-		Per iterare più volte il processo di calcolo (richiesta di inserimento operandi ed operazione) usiamo un nuovo costrutto di controllo del flusso: il <code>for</code>. Anche questo verrà trattato in dettaglio in un altro paragrafo ma brevemente possiamo anticipare che il costrutto <code>for</code> serve per realizzare un clico (o loop), permette di eseguire un insieme di istruzioni un certo numero di volte. Ha questa forma: <code>for ( espr1 ; espr2 ; espr3 ) istr</code>. Prima di iniziare il ciclo viene valutata <b>una volta sola</b> <code>espr1</code> che viene tipicamente usata per inizalizzare le variabili che controllano il ciclo (dette indici del ciclo). Poi viene valutata l'espressione <code>espr2</code> che, se vera, determina l'esecuzione del corpo del ciclo costituito dal blocco di istruzioni <code>istr</code>, in caso contrario (<code>espr2</code> è falsa) il ciclo termina. Prima di valutare nuovamente (passo successivo) <code>espr2</code>, viene valutata l'espressione <code>espr3</code> che tipicamente viene usata per incrementare o decrementare la variabile (indice) che controlla il ciclo (in <code>espr2</code>).	
+		Per iterare più volte il processo di calcolo (richiesta di inserimento operandi e operazione), usiamo un nuovo costrutto di controllo del flusso: il <code>for</code>. Anche questo verrà trattato in dettaglio in un altro paragrafo, ma brevemente possiamo anticipare che il costrutto <code>for</code> serve per realizzare un ciclo (o loop) e permette di eseguire un insieme di istruzioni un certo numero di volte. Ha questa forma: <code>for ( espr1 ; espr2 ; espr3 ) istr</code>. Prima di iniziare il ciclo viene valutata <b>una volta sola</b> <code>espr1</code>, che viene tipicamente usata per inizializzare le variabili che controllano il ciclo (dette indici del ciclo). Poi viene valutata l'espressione <code>espr2</code> che, se vera, determina l'esecuzione del corpo del ciclo costituito dal blocco di istruzioni <code>istr</code>; in caso contrario (<code>espr2</code> è falsa), il ciclo termina. Prima di valutare nuovamente (passo successivo) <code>espr2</code>, viene valutata l'espressione <code>espr3</code>, che tipicamente viene usata per incrementare o decrementare la variabile (indice) che controlla il ciclo (in <code>espr2</code>).
 	</li>
 </ul>
 </p>
 
-Ecco un sempio di un ciclo che stampa i numeri da 0 a 9:
+Ecco un esempio di ciclo che stampa i numeri da 0 a 9:
 
 ```c
 #include <stdio.h>
 
 int main(void){
    /* i è la variabile indice del ciclo, viene inizializzata a zero in espr1
-    * se espr2 è vera:cioè se i < 0 si esegue il blocco (funzione printf() )
+    * se espr2 è vera, cioè se i < 10, si esegue il blocco (funzione printf())
     * al termine delle istruzioni del blocco (comprese tra { e } ) si esegue
-    * espr3 (i++) cioè si incrementa di uno la variabile indice i. Ii ciclo
-    * terminerà quando i = 10 cioè quando espr2 sarà falsa
+    * espr3 (i++), cioè si incrementa di uno la variabile indice i. Il ciclo
+    * terminerà quando i = 10, cioè quando espr2 sarà falsa
     */
    for (int i=0; i<10; i++){
 	printf("%d\n", i);
@@ -1704,7 +1704,7 @@ for (int i=0; i<10; i++)
 *  Aggiungiamo l'operazione di divisione che mancava nella versione precedente
 
 <p align="justify">
-Il codice del fle header <code>4_variabili.h</code> ed il sorgente <code>4_variabili.c</code> è mostrato di sotto, la cosa da far notare è la variabile esterna <code>NUM_ITERATIONS</code> che è DICHIARATA nel <code>.h`</code>; il file d'intestazoine verrà, attraverso la direttiva include incluso nel <code>.c</code> dal prepocessore e sarà poi effettivamente parte integrante del file <code>.i</code>. Per esplicitare che si sta usando una variabile DEFINITA in un altro file, nel <code>.c</code> si effettua una DICHIARAZIONE della variabile usando la <i>keyword</i> <code>extern</code>.
+Il codice del file header <code>4_variabili.h</code> e il sorgente <code>4_variabili.c</code> sono mostrati di seguito. La cosa da far notare è la variabile esterna <code>NUM_ITERATIONS</code>, che è DICHIARATA nel <code>.h</code>: il file d'intestazione verrà incluso nel <code>.c</code> dal preprocessore attraverso la direttiva include e sarà poi effettivamente parte integrante del file <code>.i</code>. Per esplicitare che si sta usando una variabile DEFINITA in un altro file, nel <code>.c</code> si effettua una DICHIARAZIONE della variabile usando la <i>keyword</i> <code>extern</code>.
 </p>
 
 [/lab/0_intro/4_variabili.h](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/4_variabili.h)
