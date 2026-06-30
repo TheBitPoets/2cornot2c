@@ -1778,11 +1778,11 @@ int divisione(int dividendo, int divisore){
 ## Variabili globali con Internal Linkage (Static variables with Internal Linkage)
 
 <p align="justify">
-Queste variabili sono globali ed hanno file scope, static storage duration ma internal linkage: questo vuol dire che la loro visibilità è limitata al file che le contiene. La loro DEFINIZIONE è: come tutte le variabili globali effettuata fuori da tutte le funzioni di solito all'inizio del file con l'aggiunta della parola chiave <b>static</b>.
+Queste variabili sono globali e hanno file scope, static storage duration, ma internal linkage: questo vuol dire che la loro visibilità è limitata al file che le contiene. La loro DEFINIZIONE, come quella di tutte le variabili globali, è effettuata fuori da tutte le funzioni, di solito all'inizio del file, con l'aggiunta della parola chiave <b>static</b>.
 </p>
 
 ```c
-int global_external; /* DEFINIZIONE di variabile globale esterna, visibile nel file ed in tutti gli altri file del programma */
+int global_external; /* DEFINIZIONE di variabile globale esterna, visibile nel file e in tutti gli altri file del programma */
 static int global_internal; /* DEFINIZIONE di variabile globale interna, non è visibile agli altri file del programma */
 
 int main(void){
