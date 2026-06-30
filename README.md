@@ -10258,18 +10258,18 @@ I principianti tendono a imbattersi in questo modo nell'errore "salto breve fuor
 ### Costruzione di librerie di procedure esterne
 
 <p align=justify>
-Noterai che il programma hexdump2gcc fornito ha la maggior parte del suo codice separato in procedure. Questo è proprio come dovrebbe essere, per mantenere il programma comprensibile e manutenibile. Tuttavia, le procedure dichiarate all'interno del file hexdump2gcc.asm sono utilizzabili solo dal programma hexdump2gcc stesso. Se dovessi scrivere un programma più potente che, per qualche motivo, avesse bisogno di visualizzare un dump esadecimale/ASCII di alcuni dati, quelle procedure potrebbero essere riutilizzate, ma non finché sono all'interno del file hexdump2gcc.asm. La risposta è spostare le procedure di hexdump2gcc fuori da hexdump2gcc.asm completamente e collocarle in un file di codice sorgente separato chiamato una libreria. Potrebbe essere pieno di procedure, ma non ha alcuna porzione di programma principale e quindi nessun'etichetta _start: o main: per indicare dove inizia l'esecuzione. Contiene solo procedure (e forse alcune definizioni di dati) quindi non può essere tradotto dal linker in un suo programma eseguibile. Una volta creati i file di libreria contenenti procedure, ci sono due modi per usarli:
+Noterai che il programma hexdump2gcc fornito ha la maggior parte del suo codice separato in procedure. Questo è proprio come dovrebbe essere, per mantenere il programma comprensibile e manutenibile. Tuttavia, le procedure dichiarate all'interno del file hexdump2gcc.asm sono utilizzabili solo dal programma hexdump2gcc stesso. Se dovessi scrivere un programma più potente che, per qualche motivo, avesse bisogno di visualizzare un dump esadecimale/ASCII di alcuni dati, quelle procedure potrebbero essere riutilizzate, ma non finché sono all'interno del file hexdump2gcc.asm. La risposta è spostare le procedure di hexdump2gcc completamente fuori da hexdump2gcc.asm e collocarle in un file di codice sorgente separato, chiamato libreria. Potrebbe essere pieno di procedure, ma non ha alcuna porzione di programma principale e quindi nessun'etichetta _start: o main: per indicare dove inizia l'esecuzione. Contiene solo procedure (e forse alcune definizioni di dati), quindi non può essere tradotto dal linker in un programma eseguibile autonomo. Una volta creati i file di libreria contenenti procedure, ci sono due modi per usarli:
 </p>
 
 <ul>
 	<li>
 		<p align=justify>
-		Un file di libreria può essere assemblato separatamente in un file .o, che a sua volta può essere collegato dal linker Linux in altri programmi che potresti scrivere in futuro.
+		Un file di libreria può essere assemblato separatamente in un file .o, che a sua volta può essere collegato dal linker Linux ad altri programmi che potresti scrivere in futuro.
   		</p>
 	</li>
  	<li>
 		<p align=justify>
-		Un file di libreria può essere incluso nel file di codice sorgente del programma principale, utilizzando una direttiva chiamata %INCLUDE. (Ti dirò molto presto come utilizzare %INCLUDE.) Questo è ciò che devi fare per utilizzare le librerie da programmi scritti in SASM.
+		Un file di libreria può essere incluso nel file di codice sorgente del programma principale, utilizzando una direttiva chiamata %INCLUDE. (Ti dirò molto presto come utilizzare %INCLUDE.) Questo è ciò che devi fare per utilizzare le librerie nei programmi scritti in SASM.
   		</p>
 	</li>
 </ul>
