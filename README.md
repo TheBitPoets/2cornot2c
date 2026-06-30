@@ -1545,12 +1545,12 @@ Infine, i parametri formali di una funzione non possono essere dichiarati static
 int no_possible_static_parameter(static int a); /* ERRORE */
 ```
 
-## Differenza tra definzione e dichiarazione di variabile
+## Differenza tra definizione e dichiarazione di variabile
 
 <p align=justify>
 Fino a questo punto abbiamo usato i termini dichiarazione e definizione in modo intercambiabile come se fossero la stessa cosa. In realtà esiste una differenza ed è arrivato il momento di affrontarla.
-La definizione di una variabile coincide con l'istruzione per cui avviene l'allocazione di spazio in memoria per la variabile. La dichiarazione invece consiste nel dichiarare al compilatore che si farà uso di una variabile già allocata nel file corrente o in un altro file.
-Per le variabili locali (<code>auto</code>) la definizione coincide con la dichiarazione, per le variabili globali ha senso conoscere questa leggera differenza.
+La definizione di una variabile coincide con l'istruzione in cui avviene l'allocazione di spazio in memoria per la variabile. La dichiarazione, invece, consiste nel dichiarare al compilatore che si farà uso di una variabile già allocata nel file corrente o in un altro file.
+Per le variabili locali (<code>auto</code>) la definizione coincide con la dichiarazione; per le variabili globali ha senso conoscere questa leggera differenza.
 Una variabile globale ha file scope ed external linkage, per questo viene anche detta variabile esterna (visibile anche all'esterno del file, negli altri file del programma).
 Ricordiamo che una variabile esterna (globale) è <b>DEFINITA</b> fuori dalle funzioni all'inizio del file, in questo modo:
 </p>
@@ -1558,42 +1558,42 @@ Ricordiamo che una variabile esterna (globale) è <b>DEFINITA</b> fuori dalle fu
 ```c
 #include<stdio.h>
 
-int extern_global_var; /* variabile globale,  è esterna ( external linkage, visibile agli altri
-			*  file ) inizializzata a zero dal compilatore perchè statica  ( static
-			* storage duration) questa è una DEFINIONE, questa istruzione determina
+int extern_global_var; /* variabile globale, è esterna (external linkage, visibile agli altri
+			* file), inizializzata a zero dal compilatore perché statica (static
+			* storage duration). Questa è una DEFINIZIONE, questa istruzione determina
 			* l'allocazione di spazio in memoria per la variabile. La variabile può
 			* essere vista anche dagli altri file del programma.
 			*/
 
-extern int global_var_somewhere_in_other_file; /* questa è una DICHIARAZIONE di variabile ester
-						* na che è stata DEFINITA in qualche altro file
-						* per renderla visibile anche in questo  file è
-						* OBBLIGATORIA la dichiazione attraverso la key
-						* -word extern
+extern int global_var_somewhere_in_other_file; /* questa è una DICHIARAZIONE di variabile
+						* esterna che è stata DEFINITA in qualche altro file.
+						* Per renderla visibile anche in questo file è
+						* OBBLIGATORIA la dichiarazione attraverso la
+						* keyword extern
 						*/
 
 int main(void){
 	extern int extern_global_var;  /* questa è una DICHIARAZIONE opzionale, NON OBBLIGATORIA
- 					* basta usare la keyword extern.Serve esclusivamente per
-					* documentare che nella funzione verrà usata una variabi
-					* le globale (non locale automatica)e di stare attenti a
-					* come questa viene valorizzata e  manipolata in  quanto
-					* ha visibilità in tutto il file e potenzialmente in tut
-					* -ti i file dell'intero programma
+					* basta usare la keyword extern. Serve esclusivamente per
+					* documentare che nella funzione verrà usata una variabile
+					* globale (non locale automatica) e di stare attenti a
+					* come questa viene valorizzata e manipolata, in quanto
+					* ha visibilità in tutto il file e potenzialmente in tutti
+					* i file dell'intero programma
 					*/
 }
 ```
 
 <p align="justify">
-E' possibile dopo aver DEFINITO la variabile esterna, a scopo di documentazione, DICHIARARLA all'interno delle funzioni che la useranno attraverso le <i>keyword</i> <code>extern</code> come fatto sopra nel <code>main()</code>.
-Infine per rendere visibile in un file una variabile esterna (globale) che è stata DEFINITA in un altro file è OBBLIGATORIA la DICHIARAZIONE con <i>keyword</i> <code>extern</code> nel secondo file come è stato fatto sopra per la variabile <code>global_var_somewhere_in_other_file</code>
+È possibile, dopo aver DEFINITO la variabile esterna, DICHIARARLA a scopo di documentazione all'interno delle funzioni che la useranno attraverso la <i>keyword</i> <code>extern</code>, come fatto sopra nel <code>main()</code>.
+Infine, per rendere visibile in un file una variabile esterna (globale) che è stata DEFINITA in un altro file, è OBBLIGATORIA la DICHIARAZIONE con <i>keyword</i> <code>extern</code> nel secondo file, come è stato fatto sopra per la variabile <code>global_var_somewhere_in_other_file</code>.
 </p>
 
 <table align="center">
 	<td>⚠️ <b>Attenzione</b>
 	<p align=justify>
-Se togliessimo la <i>keyword</i> <code>extern</code> nella DICHIARAZIONE della variabile <code>global_var_somewhere_in_other_file</code> questa si traformerebbe in una DEFINIZIONE
-di nuova variabile e causerebbe un errore in quanto (in qualche altro file) già esiste una variabile globale esterna con queste nome ed ovviamente non possono esistere due variabili (due locazione di memoria diverse) con lo stesso nome nel medesimo spazio di nomi.
+Se togliessimo la <i>keyword</i> <code>extern</code> nella DICHIARAZIONE della variabile <code>global_var_somewhere_in_other_file</code>, questa si trasformerebbe in una DEFINIZIONE
+di nuova variabile e causerebbe un errore, in quanto (in qualche altro file) già esiste una variabile globale esterna con questo nome e ovviamente non possono esistere due variabili (due locazioni di memoria diverse) con lo stesso nome nel medesimo spazio di nomi.
 	</p>
 	</td>
 </table>
@@ -1601,13 +1601,13 @@ di nuova variabile e causerebbe un errore in quanto (in qualche altro file) già
 ```c
 #include<stdio.h>
 
-int extern_global_var;  /* DEFINZIONE di variabile esterna (globale)
+int extern_global_var;  /* DEFINIZIONE di variabile esterna (globale) */
 
-int global_var_somewhere_in_other_file; /* togliendo la keyword extern questa non è più una DICHIA
-					 * RAZIONE di variabile esterna  definita in un altro file
-					 * ma una DEFINIZIONE di nuova variabile esterna,una varia
-					 * -bile esterna con lo stessso nome già esiste ed il com-
-					 * pilatore tornerà errore.
+int global_var_somewhere_in_other_file; /* togliendo la keyword extern questa non è più una
+					 * DICHIARAZIONE di variabile esterna definita in un altro file,
+					 * ma una DEFINIZIONE di nuova variabile esterna. Una variabile
+					 * esterna con lo stesso nome già esiste e il compilatore
+					 * restituirà errore.
 					 */
 
 int main(void){
