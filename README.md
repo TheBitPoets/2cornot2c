@@ -175,7 +175,7 @@ Sorry, only the Italian version is available so far.
     + [Scansionare un Buffer](#scansionare-un-buffer)
     + [Dallo Pseudocodice al codice Assembly](#dallo-pseudocodice-al-codice-assembly)
     + [Operazioni sui Bit](#operazioni-sui-bit)
-    + [Bit Numbering](#bit-numbering)
+    + [Numerazione dei bit](#numerazione-dei-bit)
     + [Operazioni Binarie](#operazioni-binarie)
     + [Istruzione AND](#istruzione-and)
     + [Mascherare i Bit](#mascherare-i-bit)
@@ -183,14 +183,14 @@ Sorry, only the Italian version is available so far.
     + [Istruzione XOR](#istruzione-xor)
     + [Istruzione NOT](#istruzione-not)
     + [I segmenti di registro non rispondono alla logica](#i-segmenti-di-registro-non-rispondono-alla-logica)
-    + [Shiftare i Bit](#shiftare-i-bit)
+    + [Shiftare i bit](#shiftare-i-bit)
     + [Come funziona lo shifting dei bit](#come-funziona-lo-shifting-dei-bit)
-    + [Colpire i Bit nel Carry Flag](#colpire-i-bit-nel-carry-flag)
+    + [Colpire i bit nel Carry Flag](#colpire-i-bit-nel-carry-flag)
     + [L'istruzione Rotate](#l-istruzione-rotate)
-    + [Ruotare i Bit attraverso il Carry Flag](#ruotare-i-bit-attraverso-il-carry-flag)
-    + [Settare un valore conosciuto nel Carry Flag](#settare-un-valore-conosciuto-nel-carry-flag)
+    + [Ruotare i bit attraverso il Carry Flag](#ruotare-i-bit-attraverso-il-carry-flag)
+    + [Settare un valore noto nel Carry Flag](#settare-un-valore-noto-nel-carry-flag)
     + [Bit-Bashing](#bit-bashing)
-    + [Dividere un Byte in due Nibble](#dividere-un-byte-in-due-nibble)
+    + [Dividere un byte in due nibble](#dividere-un-byte-in-due-nibble)
     + [Shiftare il nibble alto nel nibble basso](#shiftare-il-nibble-alto-nel-nibble-basso)
     + [Usare una Lookup Table](#usare-una-lookup-table)
     + [Moltiplicare attraverso Shifting e Somme](#moltiplicare-attraverso-shifting-e-somme)
@@ -8125,17 +8125,17 @@ C'è un difetto in SASM su cui potresti inciampare, se stai testando programmi c
 ### Operazioni sui Bit
 
 <p align=justify>
-Il linguaggio assembly si basa molto sui bit. I bit, dopotutto, sono ciò di cui sono composti i byte, e una competenza essenziale del linguaggio assembly è costruire byte e smontarli di nuovo. Una tecnica chiamata bit mapping è ampiamente utilizzata nel linguaggio assembly. Il bit mapping assegna significati speciali ai singoli bit all'interno di un byte per risparmiare spazio e spremere l'ultimo piccolo bit di utilità da una certa quantità di memoria. C'è una famiglia di istruzioni nel set di istruzioni x64 che ti consente di manipolare i bit all'interno dei byte applicando operazioni logiche booleane tra byte su base bit per bit. Queste sono le istruzioni logiche bitwise: <code>AND</code>, <code>OR</code>, <code>XOR</code> e <code>NOT</code>. Un'altra famiglia di istruzioni ti consente di spostare i bit avanti e indietro all'interno di un singolo byte o parola. Queste sono le istruzioni di shift/rotate più utilizzate: <code>ROL</code>, <code>ROR</code>, <code>RCL</code>, <code>RCR</code>, <code>SHL</code> e <code>SHR</code>. 
+Il linguaggio assembly si basa molto sui bit. I bit, dopotutto, sono ciò di cui sono composti i byte, e una competenza essenziale del linguaggio assembly è costruire byte e smontarli di nuovo. Una tecnica chiamata bit mapping è ampiamente utilizzata nel linguaggio assembly. Il bit mapping assegna significati speciali ai singoli bit all'interno di un byte per risparmiare spazio e spremere l'ultimo piccolo bit di utilità da una certa quantità di memoria. C'è una famiglia di istruzioni nel set di istruzioni x64 che ti consente di manipolare i bit all'interno dei byte applicando operazioni logiche booleane tra byte su base bit per bit. Queste sono le istruzioni logiche bitwise: <code>AND</code>, <code>OR</code>, <code>XOR</code> e <code>NOT</code>. Un'altra famiglia di istruzioni ti consente di spostare i bit avanti e indietro all'interno di un singolo byte o parola. Queste sono le istruzioni di shift/rotate più utilizzate: <code>ROL</code>, <code>ROR</code>, <code>RCL</code>, <code>RCR</code>, <code>SHL</code> e <code>SHR</code>.
 </p>
 
-### Bit Numbering
+### Numerazione dei bit
 
 <p align=justify>
-Gestire i bit richiede che abbiamo un modo per specificare quali bit stiamo trattando. Per convenzione, i bit nel linguaggio assembly sono numerati, partendo da 0, dal bit meno significativo nel byte, word, doppio word o altro elemento che stiamo utilizzando come mappa di bit. Il bit meno significativo è quello con il valore più basso nel sistema numerico binario. È anche il bit all'estrema destra, se scrivi il valore come un numero binario nel modo convenzionale. L'ho mostrato nella figura di sotto, per una word a 16 bit. La numerazione dei bit funziona esattamente allo stesso modo, indipendentemente da quanti bit stai trattando: byte, word, doppio word o quadword. Il bit 0 è sempre all'estremità destra, e i numeri dei bit aumentano verso sinistra.
+Gestire i bit richiede un modo per specificare quali bit stiamo trattando. Per convenzione, nel linguaggio assembly i bit sono numerati, partendo da 0, dal bit meno significativo nel byte, word, doubleword o altro elemento che stiamo utilizzando come mappa di bit. Il bit meno significativo è quello con il valore più basso nel sistema numerico binario. È anche il bit all'estrema destra, se scrivi il valore come un numero binario nel modo convenzionale. L'ho mostrato nella figura qui sotto, per una word a 16 bit. La numerazione dei bit funziona esattamente allo stesso modo, indipendentemente da quanti bit stai trattando: byte, word, doubleword o quadword. Il bit 0 è sempre all'estremità destra, e i numeri dei bit aumentano verso sinistra.
 </p>
 
-<div aling=center>
-<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/bit_numbering.png"
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/bit_numbering.png">
 </div>
 
 <p align=justify>
@@ -8145,7 +8145,7 @@ Quando conti i bit, inizia con il bit all'estremità destra e numerali verso sin
 ### Operazioni Binarie
 
 <p align=justify>
-Il termine logica booleaniana suona arcano e minaccioso, ma sorprendentemente riflette le realtà del pensiero e dell'azione ordinari. L'operatore booleano <ocde>AND</ocde>, ad esempio, si presenta in molte delle decisioni che prendi ogni giorno della tua vita. Ad esempio, per scrivere un assegno che non venga rifiutato, devi avere denaro nel tuo conto corrente <code>AND</code> assegni nel tuo libretto degli assegni. Nessuno dei due da solo svolgerà il lavoro. Non puoi scrivere un assegno che non hai, e un assegno senza denaro dietro di esso verrà rifiutato. Le persone che vivono con i loro libretti degli assegni utilizzano spesso l'operatore <code>AND</code>. Quando i matematici parlano di logica booleaniana, manipolano valori astratti chiamati Vero e Falso. L'operatore <code>AND</code> funziona in questo modo: <i>Condizione1 <code>AND</code> Condizione2</i>i> sarà considerato Vero se entrambe Condizione1 e Condizione2 sono Vere. Se una delle condizioni è Falsa, il risultato sarà Falso. Ci sono infatti quattro diverse combinazioni dei due valori di input, quindi le operazioni logiche tra due valori sono solitamente riassunte in una forma chiamata tabella di verità. La tabella di verità per l'operatore logico <code>AND</code> (non l'istruzione <code>AND</code> ancora; ci arriveremo a breve) è mostrata nella figura di sotto.
+Il termine logica booleana suona arcano e minaccioso, ma sorprendentemente riflette le realtà del pensiero e dell'azione ordinari. L'operatore booleano <code>AND</code>, ad esempio, si presenta in molte delle decisioni che prendi ogni giorno della tua vita. Per esempio, per scrivere un assegno che non venga rifiutato, devi avere denaro nel tuo conto corrente <code>AND</code> assegni nel tuo libretto degli assegni. Nessuno dei due da solo svolgerà il lavoro. Non puoi scrivere un assegno che non hai, e un assegno senza denaro dietro di esso verrà rifiutato. Le persone che vivono con i loro libretti degli assegni utilizzano spesso l'operatore <code>AND</code>. Quando i matematici parlano di logica booleana, manipolano valori astratti chiamati Vero e Falso. L'operatore <code>AND</code> funziona in questo modo: <i>Condizione1 <code>AND</code> Condizione2</i> sarà considerato Vero se Condizione1 e Condizione2 sono entrambe Vere. Se una delle condizioni è Falsa, il risultato sarà Falso. Ci sono infatti quattro diverse combinazioni dei due valori di input, quindi le operazioni logiche tra due valori sono solitamente riassunte in una forma chiamata tabella di verità. La tabella di verità per l'operatore logico <code>AND</code> (non ancora l'istruzione <code>AND</code>; ci arriveremo a breve) è mostrata nella figura qui sotto.
 </p>
 
 <div align=center>
@@ -8153,7 +8153,7 @@ Il termine logica booleaniana suona arcano e minaccioso, ma sorprendentemente ri
 </div>
 
 <p align=justify>
-Non c'è nulla di misterioso nella tabella della verità. È solo un riepilogo di tutte le possibilità dell'operatore AND applicato a due condizioni di input. La cosa importante da ricordare riguardo l'AND è che solo quando entrambi i valori di input sono Veri, anche il risultato sarà Vero. Questo è il modo in cui i matematici vedono l'AND. In termini di linguaggio assembly, l'istruzione AND analizza due bit e produce un terzo bit in base ai valori dei primi due bit. Per convenzione, consideriamo un bit 1 come Vero e un bit 0 come Falso. La logica è identica; stiamo solo usando simboli diversi per rappresentare Vero e Falso. Tenendo presente questo, possiamo riscrivere la tabella della verità dell'AND per renderla più significativa per il lavoro in linguaggio assembly. Vedi la figura di sotto.
+Non c'è nulla di misterioso nella tabella di verità. È solo un riepilogo di tutte le possibilità dell'operatore AND applicato a due condizioni di input. La cosa importante da ricordare riguardo all'AND è che solo quando entrambi i valori di input sono Veri, anche il risultato sarà Vero. Questo è il modo in cui i matematici vedono l'AND. In termini di linguaggio assembly, l'istruzione AND analizza due bit e produce un terzo bit in base ai valori dei primi due bit. Per convenzione, consideriamo un bit 1 come Vero e un bit 0 come Falso. La logica è identica; stiamo solo usando simboli diversi per rappresentare Vero e Falso. Tenendo presente questo, possiamo riscrivere la tabella di verità dell'AND per renderla più significativa per il lavoro in linguaggio assembly. Vedi la figura qui sotto.
 </p>
 
 <div align=center>
@@ -8163,21 +8163,21 @@ Non c'è nulla di misterioso nella tabella della verità. È solo un riepilogo d
 ### Istruzione AND
 
 <p align=justify>
-L'istruzione AND incarna questo concetto nel set di istruzioni x64. L'istruzione AND esegue l'operazione logica AND su due operandi di dimensioni simili e sostituisce l'operando di destinazione con il risultato dell'operazione nel suo complesso. (Ricorda che l'operando di destinazione è l'operando più vicino al mnemonico.) In altre parole, considera questa istruzione: 
+L'istruzione AND incarna questo concetto nel set di istruzioni x64. L'istruzione AND esegue l'operazione logica AND su due operandi di dimensioni simili e sostituisce l'operando di destinazione con il risultato dell'operazione nel suo complesso. (Ricorda che l'operando di destinazione è l'operando più vicino al mnemonico.) In altre parole, considera questa istruzione:
 </p>
 
 ```asm
-	and al,bl. 
- ```
+	and al,bl
+```
 
 <p align=justify>
-Ciò che accadrà qui è che la CPU eseguirà un gruppo di otto operazioni AND bitwise sugli otto bit in AL e BL. Il bit 0 di AL viene messo in AND con il bit 0 di BL, il bit 1 di AL viene messo in AND con il bit 1 di BL, e così via. Ogni operazione AND genera un bit di risultato, e quel bit viene posizionato nell'operando di destinazione (qui, AL) dopo che tutte e otto le operazioni AND sono state eseguite. Questo è un filo comune tra le istruzioni della macchina che eseguono un'operazione su due operandi e producono un risultato: il risultato sostituisce il primo operando (l'operando di destinazione) e non il secondo!
+Ciò che accadrà qui è che la CPU eseguirà un gruppo di otto operazioni AND bitwise sugli otto bit in AL e BL. Il bit 0 di AL viene messo in AND con il bit 0 di BL, il bit 1 di AL viene messo in AND con il bit 1 di BL, e così via. Ogni operazione AND genera un bit di risultato, e quel bit viene posizionato nell'operando di destinazione (qui, AL) dopo che tutte e otto le operazioni AND sono state eseguite. Questo è un tema ricorrente tra le istruzioni macchina che eseguono un'operazione su due operandi e producono un risultato: il risultato sostituisce il primo operando (l'operando di destinazione) e non il secondo!
 </p>
 
 ### Mascherare i Bit
 
 <p align=justify>
-Un uso importante dell'istruzione AND è isolare uno o più bit da un valore di byte, parola, dword o qword. Isolare qui significa semplicemente impostare tutti i bit indesiderati su un valore affidabile di 0. Per esempio, supponiamo di essere interessati a testare i bit 4 e 5 di un valore per vedere quali sono. Per farlo, dobbiamo essere in grado di ignorare gli altri bit (dal bit 0 al 3 e dal 6 al 7), e l'unico modo per ignorare in modo sicuro i bit è impostarli a 0. AND è la soluzione. Impostiamo una maschera di bit in cui i numeri dei bit che vogliamo esaminare e testare sono impostati su 1, e i bit che desideriamo ignorare sono impostati su 0. Per mascherare tutti i bit tranne i bit 4 e 5, dobbiamo configurare una maschera in cui i bit 4 e 5 sono impostati su 1, mentre tutti gli altri bit sono 0. Questa maschera in binario è 00110000B o 30H. (Per verificarlo, conta i bit dall'estremità destra del numero binario, iniziando da 0.) Questa maschera di bit viene quindi messa in AND con il valore in questione. La figura di sotto mostra questa operazione in azione, con la maschera di bit 30H appena descritta e un valore iniziale di 9DH.
+Un uso importante dell'istruzione AND è isolare uno o più bit da un valore di byte, word, dword o qword. Isolare qui significa semplicemente impostare tutti i bit indesiderati su un valore affidabile di 0. Per esempio, supponiamo di essere interessati a testare i bit 4 e 5 di un valore per vedere quali sono. Per farlo, dobbiamo essere in grado di ignorare gli altri bit (dal bit 0 al 3 e dal 6 al 7), e l'unico modo per ignorare in modo sicuro i bit è impostarli su 0. AND è la soluzione. Impostiamo una maschera di bit in cui i numeri dei bit che vogliamo esaminare e testare sono impostati su 1, e i bit che desideriamo ignorare sono impostati su 0. Per mascherare tutti i bit tranne i bit 4 e 5, dobbiamo configurare una maschera in cui i bit 4 e 5 sono impostati su 1, mentre tutti gli altri bit sono 0. Questa maschera in binario è 00110000B o 30H. (Per verificarlo, conta i bit dall'estremità destra del numero binario, iniziando da 0.) Questa maschera di bit viene quindi messa in AND con il valore in questione. La figura qui sotto mostra questa operazione in azione, con la maschera di bit 30H appena descritta e un valore iniziale di 9DH.
 </p>
 
 <div align=center>
@@ -8185,13 +8185,13 @@ Un uso importante dell'istruzione AND è isolare uno o più bit da un valore di 
 </div>
 
 <p align=justify>
-I tre valori binari coinvolti sono mostrati disposti verticalmente, con il bit meno significativo (cioè, l'estremità destra) di ciascun valore in cima. Dovresti essere in grado di seguire ogni operazione AND e verificarla consultando la tabella precendete. Il risultato finale è che tutti i bit tranne i bit 4 e 5 sono garantiti essere 0 e possono quindi essere ignorati in sicurezza. I bit 4 e 5 potrebbero essere sia 0 che 1. (Ecco perché dobbiamo testarli; non sappiamo quale sia il loro valore.) Con il valore iniziale di 9DH, il bit 4 risulta essere 1 e il bit 5 risulta essere 0. Se il valore iniziale fosse stato un altro, i bit 4 e 5 potrebbero essere entrambi 0, entrambi 1, o qualche combinazione dei due. Non dimenticare: <b>il risultato dell'istruzione AND sostituisce l'operando di destinazione dopo che l'operazione è completata</b>.
+I tre valori binari coinvolti sono mostrati disposti verticalmente, con il bit meno significativo (cioè, l'estremità destra) di ciascun valore in cima. Dovresti essere in grado di seguire ogni operazione AND e verificarla consultando la tabella precedente. Il risultato finale è che tutti i bit tranne i bit 4 e 5 sono garantiti come 0 e possono quindi essere ignorati in sicurezza. I bit 4 e 5 potrebbero essere sia 0 sia 1. (Ecco perché dobbiamo testarli; non sappiamo quale sia il loro valore.) Con il valore iniziale di 9DH, il bit 4 risulta essere 1 e il bit 5 risulta essere 0. Se il valore iniziale fosse stato un altro, i bit 4 e 5 potrebbero essere entrambi 0, entrambi 1, o qualche combinazione dei due. Non dimenticare: <b>il risultato dell'istruzione AND sostituisce l'operando di destinazione dopo che l'operazione è completata</b>.
 </p>
 
 ### Istruzione OR
 
 <p align=justify>
-Correlato strettamente all'operazione logica AND è OR, che, come l'operazione logica AND, ha una realizzazione con lo stesso nome nel set di istruzioni x86/x64. Strutturalmente, l'istruzione OR funziona in modo identico a AND. Solo la sua tabella della verità è diversa: mentre AND richiede che entrambi i suoi operandi siano 1 affinché il risultato sia 1, OR è soddisfatto che almeno un operando abbia un valore di 1. La tabella della verità per OR è mostrata nella figura di sotto.
+Strettamente correlata all'operazione logica AND è l'operazione OR, che, come l'operazione logica AND, ha una realizzazione con lo stesso nome nel set di istruzioni x86/x64. Strutturalmente, l'istruzione OR funziona in modo identico ad AND. Solo la sua tabella di verità è diversa: mentre AND richiede che entrambi i suoi operandi siano 1 affinché il risultato sia 1, OR richiede che almeno un operando abbia un valore di 1. La tabella di verità per OR è mostrata nella figura qui sotto.
 </p>
 
 <div align=center>
@@ -8205,7 +8205,7 @@ Poiché è inadeguato per isolare i bit, l'istruzione OR viene utilizzata molto 
 ### Istruzione XOR
 
 <p align=justify>
-In una classe a sé stante c'è l'operazione OR esclusivo, incarnata nell'istruzione XOR. XOR, di nuovo, fa in termini generali ciò che fa AND e OR: esegue un'operazione logica bit per bit sui suoi due operandi, e il risultato sostituisce l'operando di destinazione. L'operazione logica, tuttavia, è esclusiva o, il che significa che <b>il risultato è 1 solo se i due operandi sono diversi</b> (cioè 1 e 0 oppure 0 e 1). La tabella di verità per XOR (vedi figura di sotto) dovrebbe rendere questa nozione leggermente scivolosa un po' più chiara.
+In una classe a sé stante c'è l'operazione OR esclusivo, incarnata nell'istruzione XOR. XOR, di nuovo, fa in termini generali ciò che fanno AND e OR: esegue un'operazione logica bit per bit sui suoi due operandi, e il risultato sostituisce l'operando di destinazione. L'operazione logica, tuttavia, è un OR esclusivo, il che significa che <b>il risultato è 1 solo se i due operandi sono diversi</b> (cioè 1 e 0 oppure 0 e 1). La tabella di verità per XOR (vedi figura qui sotto) dovrebbe rendere questa nozione leggermente scivolosa un po' più chiara.
 </p>
 
 <div align=center>
@@ -8213,7 +8213,7 @@ In una classe a sé stante c'è l'operazione OR esclusivo, incarnata nell'istruz
 </div>
 
 <p align=justify>
-Guarda la figura di sopra con attenzione! Nei primi e ultimi casi, dove i due operandi sono gli stessi, il risultato è 0. Nei due casi centrali, dove i due operandi sono diversi, il risultato è 1. Si possono fare alcune cose interessanti con l'istruzione XOR, ma la maggior parte di esse è un po' arcana per un libro per principianti come questo. Un uso non ovvio ma utile di XOR è questo: eseguire l'XOR di qualsiasi valore contro se stesso produce 0. In altre parole, se esegui l'istruzione XOR con entrambi gli operandi come lo stesso registro, quel registro verrà azzerato a 0: 
+Guarda la figura qui sopra con attenzione! Nei primi e ultimi casi, dove i due operandi sono gli stessi, il risultato è 0. Nei due casi centrali, dove i due operandi sono diversi, il risultato è 1. Si possono fare alcune cose interessanti con l'istruzione XOR, ma la maggior parte di esse è un po' arcana per un libro per principianti come questo. Un uso non ovvio ma utile di XOR è questo: eseguire l'XOR di qualsiasi valore contro se stesso produce 0. In altre parole, se esegui l'istruzione XOR con entrambi gli operandi come lo stesso registro, quel registro verrà azzerato a 0:
 </p>
 
 ```asm
@@ -8221,7 +8221,7 @@ Guarda la figura di sopra con attenzione! Nei primi e ultimi casi, dove i due op
 ```
 
 <p align=justify>
-Nei tempi passati, questo era più veloce che caricare uno 0 in un registro da dati immediati utilizzando MOV. Anche se non è più il caso, è un trucco interessante da conoscere. Come funziona dovrebbe essere ovvio dalla lettura della tabella della verità, ma per chiarirlo l'ho mostrato nella di sotto. Segui ciascuna delle singole operazioni di esclusione OR attraverso la figura fino al suo valore di risultato. Poiché ogni bit in AL è messo in XOR contro se stesso, in ogni caso le operazioni di XOR avvengono tra due operandi identici. A volte entrambi sono 1, a volte entrambi sono 0, ma in ogni caso i due sono gli stessi. Con l'operazione XOR, quando i due operandi sono gli stessi, il risultato è sempre 0. Voilà! Zero in un registro.
+Nei tempi passati, questo era più veloce che caricare uno 0 in un registro da dati immediati utilizzando MOV. Anche se non è più il caso, è un trucco interessante da conoscere. Come funziona dovrebbe essere ovvio dalla lettura della tabella di verità, ma per chiarirlo l'ho mostrato nella figura qui sotto. Segui ciascuna delle singole operazioni di OR esclusivo attraverso la figura fino al suo valore di risultato. Poiché ogni bit in AL è messo in XOR contro se stesso, in ogni caso le operazioni di XOR avvengono tra due operandi identici. A volte entrambi sono 1, a volte entrambi sono 0, ma in ogni caso i due sono gli stessi. Con l'operazione XOR, quando i due operandi sono gli stessi, il risultato è sempre 0. Voilà! Zero in un registro.
 </p>
 
 <div align=center>
@@ -8231,7 +8231,7 @@ Nei tempi passati, questo era più veloce che caricare uno 0 in un registro da d
 ### Istruzione NOT
 
 <p align=justify>
-La più facile da capire tra tutte le istruzioni logiche bit a bit è NOT. La tabella della verità per NOT è più semplice rispetto alle altre esaminate perché NOT prende solo un operando. E ciò che fa è semplice: NOT prende lo stato di ciascun bit nel suo unico operando e cambia quel bit nel suo stato opposto. Ciò che era 1 diventa 0, e ciò che era 0 diventa 1. Mostro questo nella figura di sotto.
+La più facile da capire tra tutte le istruzioni logiche bit a bit è NOT. La tabella di verità per NOT è più semplice rispetto alle altre esaminate perché NOT prende solo un operando. E ciò che fa è semplice: NOT prende lo stato di ciascun bit nel suo unico operando e cambia quel bit nel suo stato opposto. Ciò che era 1 diventa 0, e ciò che era 0 diventa 1. Mostro questo nella figura qui sotto.
 </p>
 
 <div align=center>
@@ -8244,10 +8244,10 @@ La più facile da capire tra tutte le istruzioni logiche bit a bit è NOT. La ta
 Non accederai direttamente ai registri di segmento fino a quando non ti immergerai nelle profondità della programmazione del sistema operativo. I registri di segmento ora appartengono al sistema operativo, e i programmi nello spazio utente non possono modificarli in alcun modo. Ma anche quando inizi a lavorare a livello di sistema operativo, i registri di segmento presentano limitazioni significative. Una di queste limitazioni è che non possono essere utilizzati con nessuna delle istruzioni logiche bit a bit. Se ci provi, l'assemblatore ti darà un errore "Uso illegale del registro di segmento". Se hai bisogno di eseguire un'operazione logica su un registro di segmento, devi prima copiare il valore del registro di segmento in uno dei registri a uso generale, eseguire l'operazione logica sul registro GP, e poi copiare il risultato dal registro GP di nuovo nel registro di segmento. I registri a uso generale sono chiamati "a uso generale" per una ragione, e i registri di segmento non sono in alcun modo a uso generale. Sono specialisti nell'indirizzamento della memoria, e se mai devi lavorare sui valori dei segmenti, l'approccio generale è fare il lavoro in un registro a uso generale e poi copiare il valore modificato di nuovo nel registro di segmento in questione.
 </p>
 
-### Shiftare i Bit
+### Shiftare i bit
 
 <p align=justify>
-L'altro modo di manipolare i bit all'interno di un byte è un po' più diretto: li sposti verso un lato o l'altro. Ci sono alcuni dettagli nel processo, ma le istruzioni di spostamento più semplici sono piuttosto ovvie: <code>SHL</code> sposta il suo operando a sinistra, mentre <code>SHR</code> sposta il suo operando a destra. Tutte le istruzioni di spostamento (compresi quelle leggermente più complesse che descriverò tra poco) hanno la stessa forma generale, illustrata qui dall'istruzione <code>SHL</code>:
+L'altro modo di manipolare i bit all'interno di un byte è un po' più diretto: li sposti verso un lato o l'altro. Ci sono alcuni dettagli nel processo, ma le istruzioni di spostamento più semplici sono piuttosto ovvie: <code>SHL</code> sposta il suo operando a sinistra, mentre <code>SHR</code> sposta il suo operando a destra. Tutte le istruzioni di spostamento (comprese quelle leggermente più complesse che descriverò tra poco) hanno la stessa forma generale, illustrata qui dall'istruzione <code>SHL</code>:
 </p>
 
 ```asm
@@ -8255,11 +8255,11 @@ L'altro modo di manipolare i bit all'interno di un byte è un po' più diretto: 
 ```
 
 <p align=justify>
-Il primo operando è l'obiettivo dell'operazione di spostamento, cioè il valore che stai per spostare. Può essere dati di registro o dati di memoria, ma non dati immediati. Il secondo operando specifica il numero di bit con cui spostare.
+Il primo operando è l'obiettivo dell'operazione di spostamento, cioè il valore che stai per spostare. Può essere costituito da dati di registro o dati di memoria, ma non da dati immediati. Il secondo operando specifica il numero di bit con cui spostare.
 </p>
 
 <p align=justify>
-Questo operando <count> ha una storia peculiare. Sugli antichi 8086 e 8088, poteva essere una delle due cose: il numero immediato 1, o il registro CL. (Non CX!) Se specificavi il conteggio come 1, allora lo spostamento sarebbe stato di un bit. Se volevi spostare più di un bit alla volta, dovevi prima caricare il conteggio dello spostamento nel registro CL. Nei tempi precedenti a quando i registri generali x86 divennero davvero generali, contare le cose era l'”agenda nascosta” di CX (e quindi di CL). Contava gli spostamenti, i passaggi nei cicli, gli elementi di stringa e alcune altre cose. È per questo che a volte viene chiamato registro conteggio e può essere ricordato dalla C in conteggio. A partire dal 286 e per tutte le CPU x86/x64 più recenti, l'operando <count> può essere qualsiasi valore immediato da 0 a 255. Il conteggio degli spostamenti può anche essere passato in CL se lo preferisci. Nota che non puoi specificare RCX per il conteggio, anche se “contiene” CL. <b>Anche in x64, le istruzioni di spostamento richiedono davvero un valore immediato da 0 a 255 o CL</b>b>. <b>Qualsiasi altro registro specificato per il valore di conteggio attiverà un errore dell'assemblatore</b>. Ovviamente, spostare di 0 bit è inutile, ma è possibile e non è considerato un errore. Fai attenzione alla tua digitazione. Ora, c'è un'importante asterisco nel paragrafo precedente: non puoi spostare più posizioni di quante ne abbia il registro di destinazione. In modalità lunga a 64 bit, non puoi spostare (o ruotare; vedi la sezione successiva) più di 63 conteggi. Tentare di farlo non attiverà un errore. Semplicemente non funzionerà. 
+Questo operando <code>&lt;count&gt;</code> ha una storia peculiare. Sugli antichi 8086 e 8088, poteva essere una delle due cose: il numero immediato 1, o il registro CL. (Non CX!) Se specificavi il conteggio come 1, allora lo spostamento sarebbe stato di un bit. Se volevi spostare più di un bit alla volta, dovevi prima caricare il conteggio dello spostamento nel registro CL. Nei tempi precedenti a quando i registri generali x86 divennero davvero generali, contare le cose era l'"agenda nascosta" di CX (e quindi di CL). Contava gli spostamenti, i passaggi nei cicli, gli elementi di stringa e alcune altre cose. È per questo che a volte viene chiamato registro conteggio e può essere ricordato dalla C in conteggio. A partire dal 286 e per tutte le CPU x86/x64 più recenti, l'operando <code>&lt;count&gt;</code> può essere qualsiasi valore immediato da 0 a 255. Il conteggio degli spostamenti può anche essere passato in CL se lo preferisci. Nota che non puoi specificare RCX per il conteggio, anche se “contiene” CL. <b>Anche in x64, le istruzioni di spostamento richiedono davvero un valore immediato da 0 a 255 o CL</b>. <b>Qualsiasi altro registro specificato per il valore di conteggio attiverà un errore dell'assemblatore</b>. Ovviamente, spostare di 0 bit è inutile, ma è possibile e non è considerato un errore. Fai attenzione alla tua digitazione. Ora, c'è un asterisco importante nel paragrafo precedente: non puoi spostare più posizioni di quante ne abbia il registro di destinazione. In modalità lunga a 64 bit, non puoi spostare (o ruotare; vedi la sezione successiva) più di 63 conteggi. Tentare di farlo non attiverà un errore. Semplicemente non funzionerà.
 </p>
 
 ### Come funziona lo shifting dei bit
@@ -8290,45 +8290,45 @@ Un 0 è stato inserito all'estremità destra del numero, e tutto quanto è stato
 ```
 
 <p align=justify>
-Quello che accade in questo esempio è che il valore di conteggio in CL viene spostato a sinistra dal valore che contiene CL. Qui il bit 1 in CL viene spostato per diventare un bit 2. Se questo sembra ancora strano, mettilo in una sandbox e osserva i registri.
+Quello che accade in questo esempio è che il valore di conteggio in CL viene spostato a sinistra del valore contenuto in CL. Qui il bit 1 in CL viene spostato fino a diventare un bit 2. Se questo sembra ancora strano, mettilo in una sandbox e osserva i registri.
 </p>
 
-### Colpire i Bit nel Carry Flag
+### Colpire i bit nel Carry Flag
 
 <p align=justify>
-Spostare un po' a sinistra un valore binario non significa esattamente mandare quel bit nel nulla cosmico. Un bit spostato fuori dall'estremità sinistra di un valore binario viene spostato in un contenitore temporaneo per i bit chiamato Flag di Riporto (CF, Carry Flag) . Il Flag di Riporto è uno di quei bit informativi raccolti insieme nel registro RFlags, che ho descritto nei paragrafi precedenti. Puoi testare lo stato del Flag di Riporto con un'istruzione di branching, come spiegherò un po' più avanti. Tuttavia, tieni presente, quando usi le istruzioni di shift, che molte altre istruzioni diverse usano il Flag di Riporto (non solo le istruzioni di shift). Se sposti un bit nel Flag di Riporto con l'intento di testare quel bit più tardi per vedere cosa è, testalo prima di eseguire un'altra istruzione che influisce sul Flag di Riporto. Quella lista include tutte le istruzioni aritmetiche, tutte le istruzioni logiche bit a bit, alcune altre istruzioni varie e, naturalmente, tutte le altre istruzioni di shift. Se sposti un bit nel Flag di Riporto e poi esegui immediatamente un'altra istruzione di shift, il bit spostato nel Flag di Riporto in precedenza verrà spedito fuori dall'estremità del mondo nel nulla cosmico.
+Spostare un bit a sinistra in un valore binario non significa esattamente mandare quel bit nel nulla cosmico. Un bit spostato fuori dall'estremità sinistra di un valore binario viene spostato in un contenitore temporaneo per i bit chiamato Flag di Riporto (CF, Carry Flag). Il Flag di Riporto è uno di quei bit informativi raccolti insieme nel registro RFlags, che ho descritto nei paragrafi precedenti. Puoi testare lo stato del Flag di Riporto con un'istruzione di branching, come spiegherò un po' più avanti. Tuttavia, tieni presente, quando usi le istruzioni di shift, che molte altre istruzioni usano il Flag di Riporto (non solo le istruzioni di shift). Se sposti un bit nel Flag di Riporto con l'intento di testare quel bit più tardi per vedere cos'è, testalo prima di eseguire un'altra istruzione che influisce sul Flag di Riporto. Quella lista include tutte le istruzioni aritmetiche, tutte le istruzioni logiche bit a bit, alcune altre istruzioni varie e, naturalmente, tutte le altre istruzioni di shift. Se sposti un bit nel Flag di Riporto e poi esegui immediatamente un'altra istruzione di shift, il bit spostato in precedenza nel Flag di Riporto verrà spedito fuori dall'estremità del mondo nel nulla cosmico.
 </p>
 
 ### L'istruzione Rotate
 
 <p align=justify>
-Detto questo, se il destino di un bit non è quello di perdersi nel nulla cosmico, è necessario utilizzare le istruzioni di rotazione RCL, RCR, ROL e COR. Le istruzioni di rotazione sono quasi identiche alle istruzioni di spostamento, ma con una differenza cruciale: il bit sbattuto fuori da un'estremità dell'operando riappare all'estremità opposta dell'operando. Quando si ruota un operando di più di un bit, i bit marciano costantemente in una direzione, cadendo dall'estremità e riapparendo immediatamente all'estremità opposta. I bit quindi "ruotano" attraverso l'operando mentre viene eseguita l'istruzione di rotazione. Come tante cose, questo si vede meglio graficamente che a parole. Dai un'occhiata alla figura di sotto. L'esempio mostrato qui è l'istruzione <code>ROL</code> (Rotate Left), ma l'istruzione <code>ROR</code> funziona allo stesso modo, con i bit che si muovono nella direzione opposta. Un valore binario iniziale di <code>10110010</code> (0B2h) viene inserito in AL. Quando viene eseguita un'istruzione <code>ROL AL,1</code> tutti i bit in AL marciano verso sinistra di una posizione. Il bit a 1 in posizione 7 esce dall registro AL a sinistra ma gira e riappare immediatamente a destra in posizione 0. Anche in questo caso, il <code>ROR</code> funziona esattamente allo stesso modo, ma il movimento dei bit è da sinistra a destra invece che (come con <code>ROL</code>) da destra a sinistra. Il numero di bit in base ai quali viene ruotato un operando può essere un valore immediato o un valore in CL.
+Detto questo, se il destino di un bit non è quello di perdersi nel nulla cosmico, è necessario utilizzare le istruzioni di rotazione RCL, RCR, ROL e ROR. Le istruzioni di rotazione sono quasi identiche alle istruzioni di spostamento, ma con una differenza cruciale: il bit spinto fuori da un'estremità dell'operando riappare all'estremità opposta dell'operando. Quando si ruota un operando di più di un bit, i bit marciano costantemente in una direzione, cadendo dall'estremità e riapparendo immediatamente all'estremità opposta. I bit quindi "ruotano" attraverso l'operando mentre viene eseguita l'istruzione di rotazione. Come tante cose, questo si vede meglio graficamente che a parole. Dai un'occhiata alla figura qui sotto. L'esempio mostrato qui è l'istruzione <code>ROL</code> (Rotate Left), ma l'istruzione <code>ROR</code> funziona allo stesso modo, con i bit che si muovono nella direzione opposta. Un valore binario iniziale di <code>10110010</code> (0B2h) viene inserito in AL. Quando viene eseguita un'istruzione <code>ROL AL,1</code>, tutti i bit in AL marciano verso sinistra di una posizione. Il bit a 1 in posizione 7 esce dal registro AL a sinistra, ma gira e riappare immediatamente a destra in posizione 0. Anche in questo caso, <code>ROR</code> funziona esattamente allo stesso modo, ma il movimento dei bit è da sinistra a destra invece che (come con <code>ROL</code>) da destra a sinistra. Il numero di bit in base ai quali viene ruotato un operando può essere un valore immediato o un valore in CL.
 </p>
 
 <div align=center>
 <img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/how_rotate_works.png">
 </div>
 
-### Ruotare i Bit attraverso il Carry Flag
+### Ruotare i bit attraverso il Carry Flag
 
 <p align=justify>
-C'è un secondo paio di istruzioni di rotazione nel set di istruzioni x86/x64: <code>RCR</code> (Ruota Carry a Destra, Rotate Carry Right) e <code>RCL</code> (Ruota Carry a Sinistra, (Rotate Carry Left). Queste operano come ROL e ROR, ma con una differenza: I bit che vengono spostati fuori dalla fine di un operando e rientrano nell'operando all'inizio viaggiano attraverso il flag Carry. Il percorso che un singolo bit percorre in una rotazione tramite CF è quindi di un bit più lungo rispetto a quello che sarebbe in ROL e ROR. L'ho mostrato graficamente nella figura di sotto.
+C'è un secondo paio di istruzioni di rotazione nel set di istruzioni x86/x64: <code>RCR</code> (Ruota Carry a destra, Rotate Carry Right) e <code>RCL</code> (Ruota Carry a sinistra, Rotate Carry Left). Queste operano come ROL e ROR, ma con una differenza: i bit che vengono spostati fuori dalla fine di un operando e rientrano nell'operando all'inizio viaggiano attraverso il flag Carry. Il percorso che un singolo bit percorre in una rotazione tramite CF è quindi di un bit più lungo rispetto a quello che sarebbe in ROL e ROR. L'ho mostrato graficamente nella figura qui sotto.
 </p>
 
 <div align=center>
 <img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/how_rotate_with_carry_flag_works.png">
 </div>
 
-### Settare un valore conosciuto nel Carry Flag
+### Settare un valore noto nel Carry Flag
 
 <p align=justify>
-È anche utile ricordare che le istruzioni precedenti possono lasciare valori nel CF, e quei valori verranno ruotati in un operando durante un'istruzione RCL o RCR. Alcune persone hanno la comprensione errata che il CF venga forzato a 0 prima di un'istruzione di shift o rotate, e questo non è affatto vero. Se un'altra istruzione lascia un bit 1 nel CF immediatamente prima di un'istruzione RCR o RCL, quel bit 1 entrerà obbedientemente nell'operando di destinazione, che tu lo voglia o meno. Se è importante iniziare una rotazione con un valore noto nel CF, c'è una coppia di istruzioni x86 che faranno il lavoro per te: <code>CLC</code> e <code>STC</code>. <code>CLC</code> azzera il flag di carry a 0. <code>STC</code> imposta il flag di carry a 1. Nessuna delle due istruzioni prende un operando e nessuna ha altri effetti.
+È anche utile ricordare che le istruzioni precedenti possono lasciare valori nel CF, e quei valori verranno ruotati in un operando durante un'istruzione RCL o RCR. Alcune persone hanno la comprensione errata che il CF venga forzato a 0 prima di un'istruzione di shift o rotate, e questo non è affatto vero. Se un'altra istruzione lascia un bit 1 nel CF immediatamente prima di un'istruzione RCR o RCL, quel bit 1 entrerà obbedientemente nell'operando di destinazione, che tu lo voglia o meno. Se è importante iniziare una rotazione con un valore noto nel CF, c'è una coppia di istruzioni x86 che faranno il lavoro per te: <code>CLC</code> e <code>STC</code>. <code>CLC</code> azzera il flag di carry a 0. <code>STC</code> imposta il flag di carry a 1. Nessuna delle due istruzioni prende operandi e nessuna ha altri effetti.
 </p>
 
-###  Bit-Bashing
+### Bit-Bashing
 
 <p align=justify>
-Linux ha un metodo piuttosto conveniente per visualizzare il testo sullo schermo. Il problema è che visualizza solo testo: se vuoi visualizzare un valore numerico da un registro come una coppia di cifre esadecimali, Linux non può aiutarti. Devi prima convertire il valore numerico nella sua rappresentazione stringa e poi visualizzare la rappresentazione stringa chiamando il servizio kernel sys_write tramite syscall. Convertire numeri esadecimali in cifre esadecimali non è difficile, e il codice che svolge questo compito dimostra diversi dei nuovi concetti che stiamo esplorando in questo capitolo. Il codice di sotto è il nucleo essenziale di un'utilità di dump esadecimale. Quando reindirizzi il suo input da un file di qualsiasi tipo, leggerà quel file 16 byte alla volta e visualizzerà quei 16 byte in una riga, come 16 valori esadecimali separati da spazi. Il codice contiene un numero di nuove tecniche che vale la pena discutere.
+Linux ha un metodo piuttosto conveniente per visualizzare il testo sullo schermo. Il problema è che visualizza solo testo: se vuoi visualizzare un valore numerico da un registro come una coppia di cifre esadecimali, Linux non può aiutarti. Devi prima convertire il valore numerico nella sua rappresentazione stringa e poi visualizzare la rappresentazione stringa chiamando il servizio kernel sys_write tramite syscall. Convertire numeri esadecimali in cifre esadecimali non è difficile, e il codice che svolge questo compito dimostra diversi dei nuovi concetti che stiamo esplorando in questo capitolo. Il codice qui sotto è il nucleo essenziale di un'utilità di dump esadecimale. Quando reindirizzi il suo input da un file di qualsiasi tipo, leggerà quel file 16 byte alla volta e visualizzerà quei 16 byte in una riga, come 16 valori esadecimali separati da spazi. Il codice contiene diverse nuove tecniche che vale la pena discutere.
 </p>
 
 ```asm
@@ -8338,12 +8338,12 @@ Linux ha un metodo piuttosto conveniente per visualizzare il testo sullo schermo
 ;  Last update     : 5/8/2023
 ;  Author          : Jeff Duntemann
 ;  Description     : A simple program in assembly for Linux, using NASM 2.15
-;    under the SASM IDE, demonstrating the conversion of binary values to 
-;    hexadecimal strings. It acts as a very simple hex dump utility for files, 
+;    under the SASM IDE, demonstrating the conversion of binary values to
+;    hexadecimal strings. It acts as a very simple hex dump utility for files,
 ;    without the ASCII equivalent column.
 ;
 ;  Run it this way:
-;    hexdump1gcc < (input file)  
+;    hexdump1gcc < (input file)
 ;
 ;  Build using SASM's default build setup for x64
 
@@ -8352,18 +8352,18 @@ SECTION .bss              ; Section containing uninitialized data
 
 	BUFFLEN	equ 16        ; We read the file 16 bytes at a time
 	Buff: 	resb BUFFLEN  ; Text buffer itself, reserve 16 bytes
-	
+
 SECTION .data             ; Section containing initialised data
 
     HexStr:	db " 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",10
     HEXLEN equ $-HexStr
 
     Digits: db "0123456789ABCDEF"
-		
+
 SECTION .text             ; Section containing code
 
 global  main              ; Linker needs this to find the entry point!
-	
+
 main:
     mov rbp,rsp       ; SASM Needs this for debugging
 
@@ -8378,7 +8378,7 @@ Read:
     cmp rax,0             ; If rax=0, sys_read reached EOF on stdin
     je Done               ; Jump If Equal (to 0, from compare)
 
-; Set up the registers for the process buffer step:parm
+; Set up the registers for the process buffer step:
     mov rsi,Buff          ; Place address of file buffer into esi
     mov rdi,HexStr        ; Place address of line string into edi
     xor rcx,rcx           ; Clear line string pointer to 0
@@ -8427,34 +8427,33 @@ Done:
 ```
 
 <p align=justify>
-Il programma hexdump1 è fondamentalmente un programma di filtro e ha lo stesso meccanismo generale di filtro cutilizzato nel programma uppercaser. Le parti importanti del programma per questa discussione sono quelle che leggono 16 byte dal buffer di input e li convertono in una stringa di caratteri da visualizzare sulla console Linux. Questo è il codice tra l'etichetta <code>Scan</code> e l'istruzione <code>RET</code>. Farò riferimento a quel blocco di codice nella discussione che segue.
+Il programma hexdump1 è fondamentalmente un programma di filtro e ha lo stesso meccanismo generale di filtro utilizzato nel programma uppercaser. Le parti importanti del programma per questa discussione sono quelle che leggono 16 byte dal buffer di input e li convertono in una stringa di caratteri da visualizzare sulla console Linux. Questo è il codice tra l'etichetta <code>Scan</code> e l'istruzione <code>RET</code>. Farò riferimento a quel blocco di codice nella discussione che segue.
 </p>
 
-### Dividere un Byte in due Nibble
+### Dividere un byte in due nibble
 
 <p align=justify>
-Ricorda che i valori letti da Linux da un file vengono letti in memoria come valori binari. L' esadecimale è un modo per visualizzare i valori binari, e per visualizzare i valori binari come cifre esadecimali ASCII visibili, devi fare alcune conversioni. Visualizzare un singolo valore binario a 8 bit richiede due cifre esadecimali. I quattro bit inferiori in un byte sono rappresentati da una cifra (la cifra meno significativa o la cifra più a destra), e i quattro bit superiori del byte sono rappresentati da un'altra cifra (la cifra più significativa o la cifra più a sinistra). Il valore binario <code>11100110</code>, per esempio, è equivalente a <code>E6</code> in esadecimale. Convertire un valore a 8 bit in due cifre a 4 bit deve essere fatto una cifra alla volta, il che significa che dobbiamo separare il singolo byte in due quantità a 4 bit, che sono spesso chiamate <b>nibble</b>, specialmente nel lavoro di assemblaggio. Nel programma <code>hexdump1</code>, un byte viene letto da Buff e viene collocato in due registri, RAX e RBX. Questo viene fatto perché separare il nibble alto da quello basso in un byte è distruttivo, in quanto di fatto annulliamo il nibble che non vogliamo. Per isolare il nibble basso in un byte, dobbiamo mascherare il nibble alto indesiderato. Questo viene fatto con un'istruzione AND:
+Ricorda che i valori letti da Linux da un file vengono letti in memoria come valori binari. L'esadecimale è un modo per visualizzare i valori binari, e per visualizzare i valori binari come cifre esadecimali ASCII visibili, devi fare alcune conversioni. Visualizzare un singolo valore binario a 8 bit richiede due cifre esadecimali. I quattro bit inferiori in un byte sono rappresentati da una cifra (la cifra meno significativa o la cifra più a destra), e i quattro bit superiori del byte sono rappresentati da un'altra cifra (la cifra più significativa o la cifra più a sinistra). Il valore binario <code>11100110</code>, per esempio, è equivalente a <code>E6</code> in esadecimale. Convertire un valore a 8 bit in due cifre a 4 bit deve essere fatto una cifra alla volta, il che significa che dobbiamo separare il singolo byte in due quantità a 4 bit, che sono spesso chiamate <b>nibble</b>, specialmente nel lavoro di assemblaggio. Nel programma <code>hexdump1</code>, un byte viene letto da Buff e viene collocato in due registri, RAX e RBX. Questo viene fatto perché separare il nibble alto da quello basso in un byte è distruttivo, in quanto di fatto annulliamo il nibble che non vogliamo. Per isolare il nibble basso in un byte, dobbiamo mascherare il nibble alto indesiderato. Questo viene fatto con un'istruzione AND:
 </p>
 
 ```asm
  and al,0Fh
-
 ```
 
 <p align=justify>
-Il costante immediato 0Fh espresso in binario è 00001111. Se segui l'operazione attraverso la tabella di verità AND (Tabella 9.2), vedrai che qualsiasi bit ANDato contro 0 è 0. ANDiamo il nibble alto del registro AL con 0000, che azzera qualsiasi cosa possa esserci. ANDando il nibble basso contro 1111 lascia i bit del nibble basso esattamente come erano. Quando abbiamo finito, abbiamo il nibble basso del byte letto da Buff in AL.
+La costante immediata 0Fh espressa in binario è 00001111. Se segui l'operazione attraverso la tabella di verità AND (Tabella 9.2), vedrai che qualsiasi bit messo in AND con 0 è 0. Mettiamo in AND il nibble alto del registro AL con 0000, che azzera qualsiasi cosa possa esserci. Mettere in AND il nibble basso con 1111 lascia i bit del nibble basso esattamente come erano. Quando abbiamo finito, abbiamo il nibble basso del byte letto da Buff in AL.
 </p>
 
 ### Shiftare il nibble alto nel nibble basso
 
 <p align=justify>
-Mascherare l' high nybble dal byte di input in AL lo distrugge. Abbiamo bisogno di quel high nybble, ma abbiamo una seconda copia in RBX, ed è da quella copia che estrarremo l'high nybble. Come per il low nybble, lavoreremo effettivamente con gli otto bit meno significativi di RBX, detti BL. Ricorda che BL è solo un modo diverso di riferirsi agli otto bit più bassi di RBX. Non è un registro diverso. Se un valore è caricato in RBX, i suoi otto bit meno significativi sono in BL. Potremmo mascherare il low nybble in BL con un'istruzione AND, lasciando indietro l'high nybble, ma c'è un problema: mascherare i quattro bit bassi di un byte non rende i quattro bit alti un nybble. Dobbiamo in qualche modo spostare i quattro bit alti del byte di input nei quattro bit bassi. Il modo più veloce per farlo è spostare semplicemente BL a destra di quattro bit. Questo è ciò che fa l'istruzione <code>SHR BL,4</code>. Il low nybble viene semplicemente spostato fuori dal bordo di BL, nel flag di carry, e poi nel nulla cosmico. Dopo lo shift, ciò che era l'high nybble in BL è ora il low nybble. A questo punto, abbiamo il low nybble del byte di input in AL e l'high nybble del byte di input in BL. La prossima sfida è convertire il numero binario a quattro bit in un nybble (ad esempio, 1110) nel suo carattere esadecimale ASCII visualizzabile; in questo esempio, è il carattere “E”.
+Mascherare l'high nybble dal byte di input in AL lo distrugge. Abbiamo bisogno di quell'high nybble, ma abbiamo una seconda copia in RBX, ed è da quella copia che estrarremo l'high nybble. Come per il low nybble, lavoreremo effettivamente con gli otto bit meno significativi di RBX, detti BL. Ricorda che BL è solo un modo diverso di riferirsi agli otto bit più bassi di RBX. Non è un registro diverso. Se un valore è caricato in RBX, i suoi otto bit meno significativi sono in BL. Potremmo mascherare il low nybble in BL con un'istruzione AND, lasciando indietro l'high nybble, ma c'è un problema: mascherare i quattro bit bassi di un byte non rende i quattro bit alti un nybble. Dobbiamo in qualche modo spostare i quattro bit alti del byte di input nei quattro bit bassi. Il modo più veloce per farlo è spostare semplicemente BL a destra di quattro bit. Questo è ciò che fa l'istruzione <code>SHR BL,4</code>. Il low nybble viene semplicemente spostato fuori dal bordo di BL, nel flag di carry, e poi nel nulla cosmico. Dopo lo shift, ciò che era l'high nybble in BL è ora il low nybble. A questo punto, abbiamo il low nybble del byte di input in AL e l'high nybble del byte di input in BL. La prossima sfida è convertire il numero binario a quattro bit in un nybble (ad esempio, 1110) nel suo carattere esadecimale ASCII visualizzabile; in questo esempio, è il carattere “E”.
 </p>
 
 ### Usare una Lookup Table
 
 <p align=justify>
-Nella sezione .data del programma è definita una lookup table molto semplice. La tabella Digits ha questa definizione: 
+Nella sezione .data del programma è definita una lookup table molto semplice. La tabella Digits ha questa definizione:
 </p>
 
 ```asm
@@ -8470,21 +8469,21 @@ mov al,byte [Digits+rax]
 ```
 
 <p align=justify>
-Come nella maggior parte del linguaggio assembly, tutto qui dipende dall' addressing della memoria. Il primo carattere esadecimale nella tabella di ricerca si trova all'indirizzo in Digits. Per ottenere la cifra desiderata, dobbiamo indicizzare nella tabella di ricerca. Lo facciamo aggiungendo un offset nella tabella all'indirizzo all'interno delle parentesi quadre. Questo offset è il nybble in AL. Aggiungendo l'offset in AL all'indirizzo di Digits (usando RAX) ci porta direttamente al carattere che è l'equivalente ASCII del valore in AL. Ho illustrato questo graficamente nella figura di sotto. Ci sono due aspetti che potrebbero risultare confusi riguardo all'istruzione MOV che recupera una cifra da Digits e la posiziona in AL:
+Come nella maggior parte del linguaggio assembly, tutto qui dipende dall'addressing della memoria. Il primo carattere esadecimale nella tabella di ricerca si trova all'indirizzo in Digits. Per ottenere la cifra desiderata, dobbiamo indicizzare nella tabella di ricerca. Lo facciamo aggiungendo un offset nella tabella all'indirizzo all'interno delle parentesi quadre. Questo offset è il nybble in AL. Aggiungere l'offset in AL all'indirizzo di Digits (usando RAX) ci porta direttamente al carattere che è l'equivalente ASCII del valore in AL. Ho illustrato questo graficamente nella figura qui sotto. Ci sono due aspetti che potrebbero risultare confusi riguardo all'istruzione MOV che recupera una cifra da Digits e la posiziona in AL:
 </p>
 
 <ul>
 	<li>
 		<p align=justify>
-			Dobbiamo usare RAX nel riferimento di memoria piuttosto che AL, perché AL non può partecipare ai calcoli degli indirizzi effettivi. Non dimenticare che AL è "all'interno" di RAX! (Magari parleremo di più sui calcoli degli indirizzi effettivi un po' più tardi in questo capitolo.)
+			Dobbiamo usare RAX nel riferimento di memoria piuttosto che AL, perché AL non può partecipare ai calcoli degli indirizzi effettivi. Non dimenticare che AL è "all'interno" di RAX! (Parleremo meglio dei calcoli degli indirizzi effettivi un po' più tardi in questo capitolo.)
 		</p>
 	</li>
  	<li>
 		<p align=justify>
-			Stiamo sostituendo il nybble in AL con il suo equivalente carattere. L'istruzione prima recupera l'equivalente carattere del nybble dalla tabella e poi memorizza di nuovo l'equivalente carattere in AL. Il nybble che era in AL viene sovrascritto e quindi è scomparso.
+			Stiamo sostituendo il nybble in AL con il suo carattere equivalente. L'istruzione prima recupera dalla tabella il carattere equivalente del nybble e poi memorizza di nuovo quel carattere in AL. Il nybble che era in AL viene sovrascritto e quindi scompare.
 		</p>
 	</li>
-</ul
+</ul>
 
 <p align=justify>
 Finora, abbiamo letto un carattere dalla tabella di ricerca in AL. La conversione di quel nybble è stata completata. Il compito successivo sembra semplice ma in realtà è sorprendentemente complesso: scrivere il carattere ASCII esadecimale ora memorizzato in AL nella stringa di visualizzazione in HexStr.
@@ -8513,7 +8512,7 @@ Il programma hexdump1 legge i byte da un file e li visualizza in righe, con 16 b
 ```
 
 <p align=justify>
-Ognuna di queste righe è una visualizzazione dello stesso elemento di dati: HexStr, una stringa di 48 caratteri con un valore EOL (0ah) alla fine. Ogni volta che hexdump1 legge un blocco di 16 byte dal file di input, li formatta come cifre esadecimali ASCII e li inserisce in HexStr. In un certo senso, questo è un altro tipo di manipolazione tabellare, tranne per il fatto che invece di cercare qualcosa in una tabella, stiamo scrivendo valori in una tabella basata su un indice. Un modo per pensare a HexStr è come una tabella di 16 voci, ciascuna lunga tre caratteri. (Vedi figura di sotto.) In ciascuna voce, il primo carattere è uno spazio, e il secondo e il terzo carattere sono le cifre esadecimali stesse. I caratteri di spazio sono già presenti, come parte della definizione originale di HexStr nella sezione .data. L'originale HexStr "vuoto" ha 0 caratteri in tutte le posizioni delle cifre esadecimali. Per "riempire" HexStr con dati "reali" per la visualizzazione di ciascuna riga, dobbiamo scorrere HexStr in un ciclo di linguaggio assembly, scrivendo separatamente il carattere del nybble inferiore e il carattere del nybble superiore in HexStr.
+Ognuna di queste righe è una visualizzazione dello stesso elemento di dati: HexStr, una stringa di 48 caratteri con un valore EOL (0ah) alla fine. Ogni volta che hexdump1 legge un blocco di 16 byte dal file di input, li formatta come cifre esadecimali ASCII e li inserisce in HexStr. In un certo senso, questo è un altro tipo di manipolazione tabellare, tranne per il fatto che invece di cercare qualcosa in una tabella, stiamo scrivendo valori in una tabella basata su un indice. Un modo per pensare a HexStr è come una tabella di 16 voci, ciascuna lunga tre caratteri. (Vedi figura qui sotto.) In ciascuna voce, il primo carattere è uno spazio, e il secondo e il terzo carattere sono le cifre esadecimali stesse. I caratteri di spazio sono già presenti, come parte della definizione originale di HexStr nella sezione .data. L'originale HexStr "vuoto" ha 0 caratteri in tutte le posizioni delle cifre esadecimali. Per "riempire" HexStr con dati "reali" per la visualizzazione di ciascuna riga, dobbiamo scorrere HexStr in un ciclo di linguaggio assembly, scrivendo separatamente il carattere del nybble inferiore e il carattere del nybble superiore in HexStr.
 </p>
 
 <div align=center>
@@ -8521,7 +8520,7 @@ Ognuna di queste righe è una visualizzazione dello stesso elemento di dati: Hex
 </div>
 
 <p align=justify>
-Il problema difficile qui è che ad ogni passaggio attraverso il ciclo, dobbiamo "aumentare" l'indice in HexStr di tre invece che solo di uno. L'offset di una di quelle voci da 3 byte in HexStr è l'indice dell'entrata moltiplicato per tre. Ho già descritto le istruzioni MUL, che gestiscono la moltiplicazione senza segno arbitraria nel set di istruzioni x86/x64. Tuttavia, MUL è lenta rispetto ad altre istruzioni. Ha anche altre limitazioni, specialmente i modi in cui richiede registri specifici per i suoi operandi impliciti. Fortunatamente, con un po' di astuzia, ci sono altri modi più veloci per moltiplicare in assembly. Questi modi si basano sul fatto che è molto facile e veloce moltiplicare per potenze di due, usando l'istruzione SHL (Shift Left). Potrebbe non essere immediatamente ovvio per te, ma <b>ogni volta che sposti una quantità di un bit a sinistra, stai moltiplicando quella quantità per due</b>. Sposta una quantità di due bit a sinistra e la moltiplichi per quattro. Spostala di tre bit a sinistra e stai moltiplicando per otto, e così via. Puoi credere alla mia parola per questo, oppure puoi realmente vedere che succede in una sandbox. Configura una nuova sandbox in SASM ed inserisci le seguenti istruzioni:
+Il problema difficile qui è che ad ogni passaggio attraverso il ciclo, dobbiamo "aumentare" l'indice in HexStr di tre invece che solo di uno. L'offset di una di quelle voci da 3 byte in HexStr è l'indice della voce moltiplicato per tre. Ho già descritto le istruzioni MUL, che gestiscono la moltiplicazione senza segno arbitraria nel set di istruzioni x86/x64. Tuttavia, MUL è lenta rispetto ad altre istruzioni. Ha anche altre limitazioni, specialmente nei modi in cui richiede registri specifici per i suoi operandi impliciti. Fortunatamente, con un po' di astuzia, ci sono altri modi più veloci per moltiplicare in assembly. Questi modi si basano sul fatto che è molto facile e veloce moltiplicare per potenze di due, usando l'istruzione SHL (Shift Left). Potrebbe non essere immediatamente ovvio per te, ma <b>ogni volta che sposti una quantità di un bit a sinistra, stai moltiplicando quella quantità per due</b>. Sposta una quantità di due bit a sinistra e la moltiplichi per quattro. Spostala di tre bit a sinistra e stai moltiplicando per otto, e così via. Puoi credermi, oppure puoi vedere davvero che cosa succede in una sandbox. Configura una nuova sandbox in SASM e inserisci le seguenti istruzioni:
 </p>
 
 ```asm
@@ -8532,7 +8531,7 @@ Il problema difficile qui è che ad ogni passaggio attraverso il ciclo, dobbiamo
 ```
 
 <p align=justify>
-Costruisci il sandbox e vai in modalità debug. Poi segui le istruzioni, osservando il valore di RAX cambiare nella vista Registri per ogni passaggio. La prima istruzione carica il valore 3 in AL. La successiva istruzione sposta AL a sinistra di un bit. Il valore in AL diventa 6. La seconda istruzione SHL sposta AL a sinistra di un bit ancora, e il 6 diventa 12. La terza istruzione SHL sposta AL di due bit, e il 12 diventa 48. L'ho mostrato graficamente nella figura di sotto.
+Costruisci la sandbox e vai in modalità debug. Poi segui le istruzioni, osservando il valore di RAX cambiare nella vista Registri per ogni passaggio. La prima istruzione carica il valore 3 in AL. L'istruzione successiva sposta AL a sinistra di un bit. Il valore in AL diventa 6. La seconda istruzione SHL sposta ancora AL a sinistra di un bit, e il 6 diventa 12. La terza istruzione SHL sposta AL di due bit, e il 12 diventa 48. L'ho mostrato graficamente nella figura qui sotto.
 </p>
 
 <div align=center>
@@ -8555,14 +8554,14 @@ Qui, il moltiplicando viene caricato dal contatore di ciclo RCX in RDX. RDX vien
 
 ```asm
  mov rdx,rcx   ; Keep a copy of the multiplicand in rcx
- shl rdx,2     ; Multiply rdx by 4  
+ shl rdx,2     ; Multiply rdx by 4
  add rdx,rcx   ; Makes it X 5
  add rdx,rcx   ; Makes it X 6
  add rdx,rcx   ; Makes it X 7
 ```
 
 <p align=justify>
-Questo potrebbe sembrare goffo, ma sorprendentemente, è ancora più veloce rispetto all'uso di MUL! (E c'è un modo ancora più veloce per moltiplicare per tre che ti mostrerò un po' più avanti in questo capitolo.) Una volta che hai capito come è impostata la tabella delle stringhe HexStr, scrivere le cifre esadecimali al suo interno è semplice. La cifra esadecimale meno significativa è in AL, e la cifra esadecimale più significativa è in BL. Scrivere entrambe le cifre esadecimali in HexString avviene attraverso un indirizzo di memoria effettivo a tre parti:
+Questo potrebbe sembrare goffo, ma sorprendentemente, è ancora più veloce rispetto all'uso di MUL! (E c'è un modo ancora più veloce per moltiplicare per tre che ti mostrerò un po' più avanti in questo capitolo.) Una volta che hai capito come è impostata la tabella delle stringhe HexStr, scrivere le cifre esadecimali al suo interno è semplice. La cifra esadecimale meno significativa è in AL, e la cifra esadecimale più significativa è in BL. Scrivere entrambe le cifre esadecimali in HexStr avviene attraverso un indirizzo di memoria effettivo a tre parti:
 </p>
 
 ```asm
@@ -8571,7 +8570,7 @@ Questo potrebbe sembrare goffo, ma sorprendentemente, è ancora più veloce risp
 ```
 
 <p align=justify>
-Riferisciti a due figure prima, per calcolare questo da solo: inizi con l'indirizzo di HexStr nella sua interezza. RDX contiene l'offset del primo carattere in un dato ingresso. Per ottenere l'indirizzo dell'ingresso in questione, aggiungi HexStr e RDX. Tuttavia, quell'indirizzo è del primo carattere nell'ingresso, che in HexStr è sempre un carattere spazio. La posizione del digit LSB in un ingresso è l'offset dell'ingresso +2, e la posizione del digit MSB in un ingresso è l'offset dell'ingresso +1. L'indirizzo del digit LSB è quindi HexStr + l'offset dell'ingresso + 2. L'indirizzo del digit MSB è quindi HexStr + l'offset dell'ingresso + 1.
+Riferisciti alla figura di due sezioni fa per calcolarlo da solo: inizi con l'indirizzo di HexStr nella sua interezza. RDX contiene l'offset del primo carattere in una data voce. Per ottenere l'indirizzo della voce in questione, aggiungi HexStr e RDX. Tuttavia, quell'indirizzo è quello del primo carattere nella voce, che in HexStr è sempre un carattere spazio. La posizione del digit LSB in una voce è l'offset della voce +2, e la posizione del digit MSB in una voce è l'offset della voce +1. L'indirizzo del digit LSB è quindi HexStr + l'offset della voce + 2. L'indirizzo del digit MSB è quindi HexStr + l'offset della voce + 1.
 </p>
 
 ### Flags, Tests e Branches
