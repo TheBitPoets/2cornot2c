@@ -9830,11 +9830,10 @@ Il meccanismo con cui operano CALL e RET può sembrarti familiare: CALL inserisc
 ### Chiamate all'interno di chiamate
 
 <p align=justify>
-All'interno di una procedura puoi fare qualsiasi cosa che puoi fare all'interno del programma principale stesso. Questo include chiamare altre procedure da una procedura e fare chiamate SYSCALL ai servizi del kernel Linux. C'è un semplice esempio in hexdump2gcc: la procedura ClearLine chiama la procedura DumpChar per "cancellare" la variabile della linea di dump esadecimale.
+All'interno di una procedura puoi fare qualsiasi cosa tu possa fare all'interno del programma principale. Questo include chiamare altre procedure da una procedura e fare chiamate SYSCALL ai servizi del kernel Linux. C'è un semplice esempio in hexdump2gcc: la procedura ClearLine chiama la procedura DumpChar per "cancellare" la variabile della riga di dump esadecimale.
 </p>
 
 ```asm
-DumpLine:
  ClearLine:
     push rax       ; Save all caller's r*x GP registers
     push rbx
@@ -9854,7 +9853,7 @@ DumpLine:
 ```
 
 <p align=justify>
-Fondamentalmente, ciò che fa ClearLine è fare un uso speciale della procedura DumpChar, che spiegherò in dettaglio a breve. Quando è piena di dati e visualizzata sulla console, la variabile DumpLine appare così.
+Fondamentalmente, ciò che fa ClearLine consiste in un uso speciale della procedura DumpChar, che spiegherò in dettaglio a breve. Quando è piena di dati e visualizzata sulla console, la variabile DumpLine si presenta così:
 </p>
 
 ```
@@ -9862,7 +9861,7 @@ Fondamentalmente, ciò che fa ClearLine è fare un uso speciale della procedura 
 ```
 
 <p align=justify>
-Ogni valore esadecimale a due caratteri e ogni carattere ASCII nella colonna ASCII a destra, è stato inserito tramite una singola chiamata a DumpChar. Sono necessarie 16 chiamate a DumpChar per "riempire" la variabile DumpLine. A quel punto può essere visualizzata. Dopo che DumpLine è stata visualizzata nella console, hexdump2gcc continua il suo ciclo e inizia a riempire di nuovo DumpLine. Ogni 16 chiamate a DumpChar, hexdump2gcc mostra DumpLine sulla console... eccetto per l'ultima volta. Un file che viene scaricato sulla console potrebbe non essere (e di solito non è) un preciso multiplo di 16 byte. Quindi la visualizzazione finale di DumpLine potrebbe riguardare una riga parziale di due, tre, nove, undici o quanti più caratteri meno di sedici, che chiamo "avanzi". Quando viene visualizzata una riga parziale, gli ultimi byte nella riga scaricata potrebbero essere dati "vecchi" inviati alla console nella visualizzazione precedente di DumpLine. Per evitare ciò, DumpLine viene azzerato immediatamente dopo ogni volta che viene visualizzato nel terminale. Questo è ciò che fa ClearLine. Dopo una chiamata a ClearLine, DumpLine appare in questo modo:
+Ogni valore esadecimale a due caratteri e ogni carattere ASCII nella colonna ASCII a destra sono stati inseriti tramite una singola chiamata a DumpChar. Sono necessarie 16 chiamate a DumpChar per "riempire" la variabile DumpLine. A quel punto può essere visualizzata. Dopo che DumpLine è stata visualizzata nella console, hexdump2gcc continua il suo ciclo e inizia a riempire di nuovo DumpLine. Ogni 16 chiamate a DumpChar, hexdump2gcc mostra DumpLine sulla console... tranne l'ultima volta. Un file scaricato sulla console potrebbe non essere (e di solito non è) un multiplo esatto di 16 byte. Quindi la visualizzazione finale di DumpLine potrebbe riguardare una riga parziale di due, tre, nove, undici o comunque meno di sedici caratteri, che chiamo "avanzi". Quando viene visualizzata una riga parziale, gli ultimi byte nella riga scaricata potrebbero essere dati "vecchi", inviati alla console nella visualizzazione precedente di DumpLine. Per evitare ciò, DumpLine viene azzerata subito dopo ogni visualizzazione nel terminale. Questo è ciò che fa ClearLine. Dopo una chiamata a ClearLine, DumpLine appare in questo modo:
 </p>
 
 ```
@@ -9870,7 +9869,7 @@ Ogni valore esadecimale a due caratteri e ogni carattere ASCII nella colonna ASC
 ```
 
 <p align=justify>
-ClearLine fa la cosa semplice e ovvia: chiama DumpChar 16 volte, passando ogni volta a DumpChar il valore 0 in RAX. DumpChar 'inietta' un equivalente ASCII sia del valore esadecimale 00 che di un punto ASCII per rappresentare il valore 0 in tutte le posizioni nella colonna ASCII. 00 non è un carattere ASCII visualizzabile e, come tutti i caratteri non visualizzabili, è rappresentato da un punto nell'output del hexdump.
+ClearLine fa la cosa semplice e ovvia: chiama DumpChar 16 volte, passando ogni volta a DumpChar il valore 0 in RAX. DumpChar "inietta" l'equivalente ASCII sia del valore esadecimale 00 sia di un punto ASCII, per rappresentare il valore 0 in tutte le posizioni della colonna ASCII. 00 non è un carattere ASCII visualizzabile e, come tutti i caratteri non visualizzabili, è rappresentato da un punto nell'output dell'hexdump.
 </p>
 
 ### Il pericolo della ricorsione accidentale
