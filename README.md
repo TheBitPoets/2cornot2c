@@ -6421,7 +6421,7 @@ mov rdi,0	; Return a code of zero
 syscall		; Make kernel call  
 ```
 
-### Le Istruzione ed i loro operandi
+### Le istruzioni e i loro operandi
 
 <p align=justify>
 L'attività più comune nel lavoro con il linguaggio assembly è spostare dati da un luogo all'altro. Ci sono diversi modi specializzati per farlo, ma solo un modo veramente generale: l'istruzione <code>MOV</code>. <code>MOV</code> può spostare un byte, una parola (16 bit), una doppia parola (32 bit) o una quadrupla parola (64 bit) di dati da un registro a un altro, da un registro alla memoria, o dalla memoria a un registro. <b>Ciò che <code>MOV</code> non può fare è spostare dati direttamente da un indirizzo in memoria a un altro indirizzo in memoria</b>. (Per farlo, sono necessarie due istruzioni MOV separate: prima dalla memoria a un registro e poi da quel registro di nuovo in un altro luogo nella memoria.) Il nome <code>MOV</code> è un po' fuorviante, poiché ciò che accade effettivamente è che i dati vengono copiati da una sorgente a una destinazione. Una volta copiati nella destinazione, tuttavia, i dati non scompaiono dalla sorgente, ma continuano a esistere in entrambi i luoghi. Questo confligge un po' con la nostra nozione intuitiva di spostare qualcosa, che di solito significa che qualcosa scompare da un luogo sorgente e riappare in un luogo di destinazione.
@@ -6430,7 +6430,7 @@ L'attività più comune nel lavoro con il linguaggio assembly è spostare dati d
 ### Operandi Sorgente e Destinazione
 
 <p align=justify>
-La maggior parte delle istruzioni della macchina, inclusa <code>MOV</code>, ha uno o più operandi. (Alcune istruzioni non hanno operandi o operano implicitamente su registri o memoria. Quando questo è il caso, lo menzionerò nel testo.) Considera questa istruzione macchina: 
+La maggior parte delle istruzioni macchina, inclusa <code>MOV</code>, ha uno o più operandi. (Alcune istruzioni non hanno operandi o operano implicitamente su registri o memoria. Quando questo è il caso, lo menzionerò nel testo.) Considera questa istruzione macchina:
 </p>	
 
 ```asm
@@ -6438,7 +6438,7 @@ La maggior parte delle istruzioni della macchina, inclusa <code>MOV</code>, ha u
 ``` 
  
 <p align=justify>
-Ci sono due operandi nell'istruzione precedente. Il primo è RAX e il secondo è il numero 1. <b>Per convenzione nel linguaggio assembly, il primo operando (quello più a sinistra) appartenente a un'istruzione macchina è l'operando di destinazione</b>. <b>Il secondo operando da sinistra è l'operando sorgente</b>. Con l'istruzione  <code>MOV</code>, il significato dei due operandi è piuttosto letterale: l'operando sorgente viene copiato nell'operando di destinazione. Nell'istruzione precedente, l'operando sorgente (il valore letterale 1) viene copiato nell'operando di destinazione RAX. Il significato di sorgente e destinazione non è affatto così letterale in altre istruzioni, ma una regola generale è questa: ogni volta che un'istruzione macchina causa la generazione di un nuovo valore, quel nuovo valore viene posto nell'operando di destinazione. <b>Ci sono tre diversi tipi di dati che possono essere utilizzati come operandi</b>. Questi sono: <b>dati di memoria</b>, <b>dati di registri</b> e <b>dati immediati</b>. Ho esposto alcune istruzioni <code>MOV</code> di esempio nella tabella di sotto per darti un'idea di come i diversi tipi di dati sono specificati come operandi per l'istruzione <code>MOV</code>
+Ci sono due operandi nell'istruzione precedente. Il primo è RAX e il secondo è il numero 1. <b>Per convenzione nel linguaggio assembly, il primo operando (quello più a sinistra) appartenente a un'istruzione macchina è l'operando di destinazione</b>. <b>Il secondo operando da sinistra è l'operando sorgente</b>. Con l'istruzione <code>MOV</code>, il significato dei due operandi è piuttosto letterale: l'operando sorgente viene copiato nell'operando di destinazione. Nell'istruzione precedente, l'operando sorgente (il valore letterale 1) viene copiato nell'operando di destinazione RAX. Il significato di sorgente e destinazione non è affatto così letterale in altre istruzioni, ma una regola generale è questa: ogni volta che un'istruzione macchina causa la generazione di un nuovo valore, quel nuovo valore viene posto nell'operando di destinazione. <b>Ci sono tre diversi tipi di dati che possono essere utilizzati come operandi</b>. Questi sono: <b>dati di memoria</b>, <b>dati di registro</b> e <b>dati immediati</b>. Ho esposto alcune istruzioni <code>MOV</code> di esempio nella tabella di sotto per darti un'idea di come i diversi tipi di dati sono specificati come operandi per l'istruzione <code>MOV</code>.
 </p>
 
 <div align=center>
@@ -6448,11 +6448,11 @@ Ci sono due operandi nell'istruzione precedente. Il primo è RAX e il secondo è
 ### Dati Immediati
 
 <p align=justify>
-L'istruzione <code>MOV RAX,42h</code> è un buon esempio dell'uso di quello che si chiama <i>dato immediato</i>, acceduto attraverso una modalità di indirizzamento chiamata <b>indirizzamento immediato</b>. L'indirizzamento immediato prende il suo nome dal fatto che <b>l'elemento indirizzato è un dato incorporato direttamente nell'istruzione della macchina stessa</b>. La CPU non deve cercare altrove per trovare i dati immediati. Non si trova in un registro, né è memorizzato in un elemento dati da qualche parte nella memoria. I dati immediati si trovano sempre all'interno dell'istruzione che viene recuperata ed eseguita.
+L'istruzione <code>MOV RAX,42h</code> è un buon esempio dell'uso di quello che si chiama <i>dato immediato</i>, a cui si accede attraverso una modalità di indirizzamento chiamata <b>indirizzamento immediato</b>. L'indirizzamento immediato prende il suo nome dal fatto che <b>l'elemento indirizzato è un dato incorporato direttamente nell'istruzione macchina stessa</b>. La CPU non deve cercare altrove per trovare i dati immediati. Non si trovano in un registro, né sono memorizzati in un elemento dati da qualche parte nella memoria. I dati immediati si trovano sempre all'interno dell'istruzione che viene recuperata ed eseguita.
 </p>
 
 <p align=justify>
-I dati immediati devono avere una dimensione appropriata per l'operando. Ad esempio, non puoi spostare un valore immediato a 16 bit in una sezione di registro a 8 bit come AH o DL. NASM non ti permetterà di assemblare un'istruzione come questa: 
+I dati immediati devono avere una dimensione appropriata per l'operando. Ad esempio, non puoi spostare un valore immediato a 16 bit in una sezione di registro a 8 bit come AH o DL. NASM non ti permetterà di assemblare un'istruzione come questa:
 </p>
 
 ```asm
@@ -6460,7 +6460,7 @@ I dati immediati devono avere una dimensione appropriata per l'operando. Ad esem
  ```
 
 <p align=justify>
-CL è un registro a 8 bit e <code>067EFh</code> è una quantità a 16 bit. Non funziona! Poiché è incorporato direttamente in un'istruzione macchina, potresti pensare che i dati immediati sarebbero rapidi da accedere. Questo è vero solo fino a un certo punto: recuperare qualcosa dalla memoria richiede più tempo rispetto a recuperare qualcosa da un registro e le istruzioni sono, dopo tutto, memorizzate in memoria. Quindi, mentre indirizzare i dati immediati è un po' più veloce rispetto ad indirizzare dati normali memorizzati in memoria, nessuno dei due è così veloce come semplicemente estrarre un valore da un registro della CPU. Tieni anche presente che solo l'operando sorgente può essere un dato immediati. L'operando di destinazione è il luogo dove i dati arrivano, non da dove provengono. Poiché i dati immediati consistono in costanti letterali (numeri come 1, 0, 42 o 07F2Bh), cercare di copiare qualcosa nei dati immediati piuttosto che da essi non ha alcun significato ed è sempre un errore. NASM consente alcune interessanti forme di dati immediati. Ad esempio, la seguente è perfettamente legale, anche se non necessariamente utile come sembra a prima vista: 
+CL è un registro a 8 bit e <code>067EFh</code> è una quantità a 16 bit. Non funziona! Poiché sono incorporati direttamente in un'istruzione macchina, potresti pensare che l'accesso ai dati immediati sia rapido. Questo è vero solo fino a un certo punto: recuperare qualcosa dalla memoria richiede più tempo rispetto a recuperare qualcosa da un registro e le istruzioni sono, dopo tutto, memorizzate in memoria. Quindi, mentre indirizzare i dati immediati è un po' più veloce rispetto a indirizzare dati normali memorizzati in memoria, nessuno dei due è così veloce come semplicemente estrarre un valore da un registro della CPU. Tieni anche presente che solo l'operando sorgente può essere un dato immediato. L'operando di destinazione è il luogo dove i dati arrivano, non quello da cui provengono. Poiché i dati immediati consistono in costanti letterali (numeri come 1, 0, 42 o 07F2Bh), cercare di copiare qualcosa nei dati immediati piuttosto che da essi non ha alcun significato ed è sempre un errore. NASM consente alcune interessanti forme di dati immediati. Ad esempio, la seguente è perfettamente legale, anche se non necessariamente utile come sembra a prima vista:
 </p>
 
 ```asm
@@ -6468,8 +6468,8 @@ CL è un registro a 8 bit e <code>067EFh</code> è una quantità a 16 bit. Non f
 ```
 
 <p align=justify>
-Questa è una buona istruzione da caricare nel tuo assemblatore ed eseguire nel debugger. Guarda il contenuto del registro EAX nella vista registri: 0x5a595857 Questo potrebbe sembrare strano, ma guarda da vicino: gli equivalenti numerici dei caratteri ASCII maiuscoli W, X, Y e Z sono stati caricati in ordine in EAX. W è 57h, X è 58h, Y è 59h e Z è 5Ah. Ogni carattere equivalente ha una dimensione di 8 bit, quindi quattro di essi si adattano perfettamente nel registro a 32 bit EAX. Tuttavia, sono invertiti.
-Bene, no. Ricorda il concetto di "endianness". L'architettura x86/x64 è "little endian", il che significa che il byte meno significativo in una sequenza multibyte è memorizzato all'indirizzo più basso. Questo si applica anche ai registri e ha senso una volta che capisci come ci riferiamo alle unità di memoria all'interno di un registro. La confusione nasce dalla nostra abitudine di leggere il testo da sinistra a destra, mentre leggiamo i numeri da destra a sinistra. Dai un'occhiata alla figura di sotto. (Questo esempio utilizza il registro a 32 bit EAX per rendere la figura meno complessa e più facile da capire.) Trattato come una sequenza di caratteri di testo, la W in WXYZ è considerata l'elemento meno significativo. EAX, tuttavia, è un contenitore per numeri, dove la colonna meno significativa è sempre (per le lingue occidentali) a destra. Il byte meno significativo in EAX lo chiamiamo AL, ed è lì che va la W. Il secondo byte meno significativo in EAX lo chiamiamo AH, ed è lì che va la X. I due byte più significativi in EAX non hanno nomi separati e non possono essere indirizzati individualmente, ma sono comunque byte a 8 bit e possono contenere valori a 8 bit come caratteri ASCII. Il carattere più significativo nella sequenza WXYZ è la Z, e viene memorizzato nel byte più significativo di EAX.
+Questa è una buona istruzione da caricare nel tuo assemblatore ed eseguire nel debugger. Guarda il contenuto del registro EAX nella vista registri: 0x5a595857. Questo potrebbe sembrare strano, ma guarda da vicino: gli equivalenti numerici dei caratteri ASCII maiuscoli W, X, Y e Z sono stati caricati in ordine in EAX. W è 57h, X è 58h, Y è 59h e Z è 5Ah. Ogni carattere equivalente ha una dimensione di 8 bit, quindi quattro di essi si adattano perfettamente nel registro a 32 bit EAX. Tuttavia, sono invertiti.
+Bene, no. Ricorda il concetto di "endianness". L'architettura x86/x64 è "little endian", il che significa che il byte meno significativo in una sequenza multibyte è memorizzato all'indirizzo più basso. Questo si applica anche ai registri e ha senso una volta che capisci come ci riferiamo alle unità di memoria all'interno di un registro. La confusione nasce dalla nostra abitudine di leggere il testo da sinistra a destra, mentre leggiamo i numeri da destra a sinistra. Dai un'occhiata alla figura di sotto. (Questo esempio utilizza il registro a 32 bit EAX per rendere la figura meno complessa e più facile da capire.) Trattata come una sequenza di caratteri di testo, la W in WXYZ è considerata l'elemento meno significativo. EAX, tuttavia, è un contenitore per numeri, dove la colonna meno significativa è sempre (per le lingue occidentali) a destra. Il byte meno significativo in EAX lo chiamiamo AL, ed è lì che va la W. Il secondo byte meno significativo in EAX lo chiamiamo AH, ed è lì che va la X. I due byte più significativi in EAX non hanno nomi separati e non possono essere indirizzati individualmente, ma sono comunque byte a 8 bit e possono contenere valori a 8 bit come caratteri ASCII. Il carattere più significativo nella sequenza WXYZ è la Z, e viene memorizzato nel byte più significativo di EAX.
 </p>
 
 <div align=center>
@@ -6490,7 +6490,7 @@ I dati memorizzati all'interno di un registro della CPU sono noti come <i>dati d
 ```
 
 <p align=justify>
-Non stiamo parlando solo dell'istruzione <code>MOV</code> qui. L'istruzione <code>ADD</code> fa esattamente ciò che ci si può aspettare e aggiunge gli operandi sorgente e destinazione. La somma sostituisce qualunque cosa fosse presente nell'operando di destinazione. Indipendentemente dall'istruzione, l'indirizzamento dei registri avviene ogni volta che i dati in un registro vengono utilizzati direttamente. Certe operazioni non sono legali: esempio, spostare una sorgente di 8 byte in una destinazione di 2 byte e mentre spostare una sorgente di 2 byte in una destinazione di 8 byte potrebbe sembrare possibile e talvolta persino ragionevole, la CPU non lo supporta e non può essere fatto direttamente. Se ci provi, NASM ti darà questo errore.
+Non stiamo parlando solo dell'istruzione <code>MOV</code> qui. L'istruzione <code>ADD</code> fa esattamente ciò che ci si può aspettare e aggiunge gli operandi sorgente e destinazione. La somma sostituisce qualunque cosa fosse presente nell'operando di destinazione. Indipendentemente dall'istruzione, l'indirizzamento dei registri avviene ogni volta che i dati in un registro vengono utilizzati direttamente. Certe operazioni non sono legali: ad esempio, spostare una sorgente di 8 byte in una destinazione di 2 byte. E mentre spostare una sorgente di 2 byte in una destinazione di 8 byte potrebbe sembrare possibile e talvolta persino ragionevole, la CPU non lo supporta e non può essere fatto direttamente. Se ci provi, NASM ti darà questo errore.
 </p>
 
 ```
@@ -6498,7 +6498,7 @@ Non stiamo parlando solo dell'istruzione <code>MOV</code> qui. L'istruzione <cod
 ```
 
 <p align=justify>
-In altre parole, <b>se stai spostando dati da un registro a un altro, i registri sorgente e di destinazione devono avere la stessa dimensione</b>. Osservare i dati dei registri nel debugger è un buon modo per avere un'idea di come funziona, soprattutto quando stai iniziando. Facciamo un po' di pratica. Inserisci queste istruzioni nel tuo sandbox, costruisci l'eseguibile e carica l'eseguibile del sandbox nel debugger.
+In altre parole, <b>se stai spostando dati da un registro a un altro, i registri sorgente e di destinazione devono avere la stessa dimensione</b>. Osservare i dati dei registri nel debugger è un buon modo per avere un'idea di come funziona, soprattutto quando stai iniziando. Facciamo un po' di pratica. Inserisci queste istruzioni nella tua sandbox, costruisci l'eseguibile e carica l'eseguibile della sandbox nel debugger.
 </p>
 
 ```asm
@@ -6519,7 +6519,7 @@ Imposta un punto di interruzione sulla prima delle istruzioni, quindi clicca su 
 ```
 
 <p align=justify>
-ma in questo modo si deve andare in memoria per caricare il valore immediato 0. L'operazione <code>XOR</code> tra un registro e se stesso non va in memoria né per l'operando sorgente né per l'operando di destinazione e pertanto è leggermente più veloce. Una volta azzerati RBX e RCX, ecco cosa succede: La prima istruzione (<code>mov rax,067FEh</code>) <code>MOV</code> è un esempio di indirizzamento immediato utilizzando registri a 64 bit. Il valore esadecimale a 16 bit <code>067FEH</code> viene spostato nel registro RAX. (Nota qui che puoi <code>MOV</code> un valore immediato di 16 bit o di qualsiasi altra dimensione che possa adattarsi al registro di destinazione.) La seconda istruzione (<code>mov rbx,rax</code>) utilizza l'indirizzamento del registro per copiare i dati del registro da EAX a EBX. La terza e la quarta istruzione <code>MOV</code> spostano entrambe i dati tra segmenti di registri a 8 bit piuttosto che a 16, 32 o 64 bit. Queste due istruzioni realizzano qualcosa di interessante. Guarda l'ultima visualizzazione del registro e confronta i valori di RBX e RCX. Spostando il valore da BX a CX un byte alla volta, è possibile invertire l'ordine dei due byte che costituiscono BX. La metà alta di BX (quello che a volte chiamiamo il byte più significativo, o MSB, di BX) è stata spostata nella metà bassa di CX. Poi la metà bassa di BX (quello che a volte chiamiamo il byte meno significativo, o LSB, di BX) è stata spostata nella metà alta di CX. Questo è solo un esempio dei tipi di trucchi che puoi fare con i registri a uso generale. Solo per disabituarti all'idea che l'istruzione <code>MOV</code> debba essere utilizzata per scambiare le due metà di un registro a 16 bit, lasciami suggerire di fare quanto segue: Torna a SASM e aggiungi questa istruzione alla fine della tua sandbox:
+ma in questo modo si deve andare in memoria per caricare il valore immediato 0. L'operazione <code>XOR</code> tra un registro e se stesso non va in memoria né per l'operando sorgente né per l'operando di destinazione e pertanto è leggermente più veloce. Una volta azzerati RBX e RCX, ecco cosa succede: la prima istruzione (<code>mov rax,067FEh</code>) <code>MOV</code> è un esempio di indirizzamento immediato utilizzando registri a 64 bit. Il valore esadecimale a 16 bit <code>067FEH</code> viene spostato nel registro RAX. (Nota qui che puoi <code>MOV</code> un valore immediato di 16 bit o di qualsiasi altra dimensione che possa adattarsi al registro di destinazione.) La seconda istruzione (<code>mov rbx,rax</code>) utilizza l'indirizzamento del registro per copiare i dati del registro da EAX a EBX. La terza e la quarta istruzione <code>MOV</code> spostano entrambe i dati tra segmenti di registri a 8 bit piuttosto che a 16, 32 o 64 bit. Queste due istruzioni realizzano qualcosa di interessante. Guarda l'ultima visualizzazione del registro e confronta i valori di RBX e RCX. Spostando il valore da BX a CX un byte alla volta, è possibile invertire l'ordine dei due byte che costituiscono BX. La metà alta di BX (quello che a volte chiamiamo il byte più significativo, o MSB, di BX) è stata spostata nella metà bassa di CX. Poi la metà bassa di BX (quello che a volte chiamiamo il byte meno significativo, o LSB, di BX) è stata spostata nella metà alta di CX. Questo è solo un esempio dei tipi di trucchi che puoi fare con i registri a uso generale. Solo per disabituarti all'idea che l'istruzione <code>MOV</code> debba essere utilizzata per scambiare le due metà di un registro a 16 bit, lasciami suggerire di fare quanto segue: torna a SASM e aggiungi questa istruzione alla fine della tua sandbox:
 </p>
 
 ```asm
@@ -6527,13 +6527,13 @@ ma in questo modo si deve andare in memoria per caricare il valore immediato 0. 
 ```
 
 <p align=justify>
-Ricostruisci la sandbox e torna al debugger per vedere cosa succede. L'istruzione <code>XCHG</code> scambia i valori contenuti nei suoi due operandi. Ciò che è stato scambiato in precedenza viene scambiato di nuovo e il valore in RCX corrisponderà ai valori già presenti in RAX e RBX. Una buona idea durante la scrittura dei primi programmi in linguaggio assembly è quella di ricontrollare periodicamente il set di istruzioni per vedere che ciò che si è messo insieme con quattro o cinque istruzioni non è possibile utilizzando una singola istruzione. Il set di istruzioni Intel è molto bravo a ingannarti in questo senso. C'è un'avvertenza qui: a volte un "caso speciale" è più veloce in termini di tempo di esecuzione della macchina rispetto a un caso più generale. La divisione per una potenza di 2 può essere eseguita utilizzando l'istruzione <code>DIV</code>, ma può anche essere eseguita utilizzando l'istruzione <code>SHR</code> (Shift Right). <code>DIV</code> è più generale (puoi usarlo per dividere per qualsiasi intero senza segno, non semplicemente potenze di 2), ma è molto più lento. La velocità delle singole istruzioni conta molto meno ora di quanto non lo fosse 30 anni fa. Detto questo, per i programmi con funzioni ripetitive complesse che vengono eseguite migliaia o centinaia di migliaia di volte in un ciclo, la velocità delle istruzioni può fare la differenza
+Ricostruisci la sandbox e torna al debugger per vedere cosa succede. L'istruzione <code>XCHG</code> scambia i valori contenuti nei suoi due operandi. Ciò che è stato scambiato in precedenza viene scambiato di nuovo e il valore in RCX corrisponderà ai valori già presenti in RAX e RBX. Una buona idea durante la scrittura dei primi programmi in linguaggio assembly è quella di ricontrollare periodicamente il set di istruzioni per vedere se ciò che si è messo insieme con quattro o cinque istruzioni non sia possibile utilizzando una singola istruzione. Il set di istruzioni Intel è molto bravo a ingannarti in questo senso. C'è un'avvertenza qui: a volte un "caso speciale" è più veloce in termini di tempo di esecuzione della macchina rispetto a un caso più generale. La divisione per una potenza di 2 può essere eseguita utilizzando l'istruzione <code>DIV</code>, ma può anche essere eseguita utilizzando l'istruzione <code>SHR</code> (Shift Right). <code>DIV</code> è più generale (puoi usarlo per dividere per qualsiasi intero senza segno, non semplicemente potenze di 2), ma è molto più lento. La velocità delle singole istruzioni conta molto meno ora di quanto non lo fosse 30 anni fa. Detto questo, per i programmi con funzioni ripetitive complesse che vengono eseguite migliaia o centinaia di migliaia di volte in un ciclo, la velocità delle istruzioni può fare la differenza.
 </p>
 
 ### Dati di Memoria ed Effective Addresses
 
 <p align=justify>
-I dati immediati sono incorporati direttamente nell'istruzione macchina. I dati di registro vengono memorizzati in uno dei registri interni della CPU. Al contrario, i dati di memoria vengono memorizzati in qualche luogo nella porzione di memoria di sistema possudeta da un programma, a un indirizzo di memoria a 64 bit. Con una o due eccezioni importanti (le istruzioni sulle stringhe), <b>solo uno dei due operandi di un'istruzione può specificare una posizione di memoria</b>. In altre parole, puoi trasferire un valore immediato in memoria, un valore di memoria in un registro, o qualche altra combinazione simile, ma <b>non puoi trasferire un valore di memoria direttamente in un altro valore di memoria</b>. Questa è una limitazione intrinseca delle CPU Intel di tutte le generazioni (non solo x64), e dobbiamo farci i conti, per quanto possa essere scomodo a volte. <b>Per specificare che desideriamo i dati nella posizione di memoria contenuta in un registro piuttosto che i dati nel registro stesso, utilizziamo le parentesi quadre attorno al nome del registro</b>. In altre parole, per spostare il quadword in memoria all'indirizzo contenuto in RBX nel registro RAX, useremmo la seguente istruzione.
+I dati immediati sono incorporati direttamente nell'istruzione macchina. I dati di registro vengono memorizzati in uno dei registri interni della CPU. Al contrario, i dati di memoria vengono memorizzati in qualche luogo nella porzione di memoria di sistema posseduta da un programma, a un indirizzo di memoria a 64 bit. Con una o due eccezioni importanti (le istruzioni sulle stringhe), <b>solo uno dei due operandi di un'istruzione può specificare una posizione di memoria</b>. In altre parole, puoi trasferire un valore immediato in memoria, un valore di memoria in un registro, o qualche altra combinazione simile, ma <b>non puoi trasferire un valore di memoria direttamente in un altro valore di memoria</b>. Questa è una limitazione intrinseca delle CPU Intel di tutte le generazioni (non solo x64), e dobbiamo farci i conti, per quanto possa essere scomodo a volte. <b>Per specificare che desideriamo i dati nella posizione di memoria contenuta in un registro piuttosto che i dati nel registro stesso, utilizziamo le parentesi quadre attorno al nome del registro</b>. In altre parole, per spostare il quadword in memoria all'indirizzo contenuto in RBX nel registro RAX, useremmo la seguente istruzione.
 </p>
 
 ```asm
@@ -6541,7 +6541,7 @@ I dati immediati sono incorporati direttamente nell'istruzione macchina. I dati 
 ```
 
 <p align=justify>
-Le parentesi quadre possono contenere più del nome di un singolo registro a 64 bit, come impareremo in dettaglio più avanti. Ad esempio, puoi aggiungere una costante letterale a un registro all'interno delle parentesi quadre, e NASM eseguirà il calcolo. 
+Le parentesi quadre possono contenere più del nome di un singolo registro a 64 bit, come impareremo in dettaglio più avanti. Ad esempio, puoi aggiungere una costante letterale a un registro all'interno delle parentesi quadre, e NASM eseguirà il calcolo.
 </p>
 
 ```asm
@@ -6549,7 +6549,7 @@ Le parentesi quadre possono contenere più del nome di un singolo registro a 64 
 ```
 
 <p align=justify>
-Lo stesso vale per l'aggiunta di due registri a uso generale, in questo modo: 
+Lo stesso vale per l'aggiunta di due registri a uso generale, in questo modo:
 </p>
 
 ```asm
@@ -6557,7 +6557,7 @@ Lo stesso vale per l'aggiunta di due registri a uso generale, in questo modo:
 ```
 
 <p align=justify>
-E come se non bastasse, puoi aggiungere due registri più una costante letterale. 
+E come se non bastasse, puoi aggiungere due registri più una costante letterale.
 </p>
 
 ```asm
@@ -6565,17 +6565,17 @@ E come se non bastasse, puoi aggiungere due registri più una costante letterale
 ```
 
 <p align=justify>
-Naturalmente non tutto è consentito. <b>Ciò che si trova all'interno delle parentesi quadre è chiamato indirizzo efficace (<i>effective address</i>)</b> di un elemento dati in memoria, e ci sono regole che dettano ciò che può essere un indirizzo efficace valido e ciò che non può. Nell'attuale evoluzione dell'hardware Intel, è possibile sommare due registri per formare l'indirizzo efficace, ma non tre o più. In altre parole, queste non sono forme legali di indirizzo efficace: 
+Naturalmente non tutto è consentito. <b>Ciò che si trova all'interno delle parentesi quadre è chiamato indirizzo efficace (<i>effective address</i>)</b> di un elemento dati in memoria, e ci sono regole che dettano ciò che può essere un indirizzo efficace valido e ciò che non può esserlo. Nell'attuale evoluzione dell'hardware Intel, è possibile sommare due registri per formare l'indirizzo efficace, ma non tre o più. In altre parole, queste non sono forme legali di indirizzo efficace:
 
 ```asm
 	mov rax,[rbx+rcx+rdx] 
  	mov rax,[rbx+rcx+rsi+rdi] 
 ```
 
-### Il dato ed il suo indirizzo
+### Il dato e il suo indirizzo
 
 <p align=justify>
-Questo suona banale, ma fidati, è una cosa abbastanza facile da fare. Torniamo alla Definizione di dati nella Lista 5.1, avevamo questa definizione di dati e questa istruzione: 
+Questo suona banale, ma fidati, è una cosa abbastanza facile da fare. Torniamo alla definizione di dati nella lista 5.1: avevamo questa definizione di dati e questa istruzione:
 </p>
 
 ```asm
@@ -6585,7 +6585,7 @@ Questo suona banale, ma fidati, è una cosa abbastanza facile da fare. Torniamo 
 ```
 
 <p align=justify>
-Se hai avuto qualche esperienza con linguaggi di alto livello, il tuo primo istinto potrebbe essere quello di assumere che qualsiasi dato conservato in EatMsg verrà copiato in RSI. L'assemblaggio non funziona in questo modo. Quella istruzione <code>MOV</code> copia effettivamente l'indirizzo di EatMsg, non ciò che è memorizzato in (effettivamente, presso) EatMsg. <b>Nel linguaggio assemblatore, i nomi delle variabili rappresentano indirizzi, non dati!</b> Quindi, come si fa a "raggiungere" i dati rappresentati da una variabile come EatMsg? Ancora una volta, si fa con le parentesi quadre. 
+Se hai avuto qualche esperienza con linguaggi di alto livello, il tuo primo istinto potrebbe essere quello di assumere che qualsiasi dato conservato in EatMsg verrà copiato in RSI. L'assembly non funziona in questo modo. Quella istruzione <code>MOV</code> copia effettivamente l'indirizzo di EatMsg, non ciò che è memorizzato in EatMsg. <b>Nel linguaggio assembly, i nomi delle variabili rappresentano indirizzi, non dati!</b> Quindi, come si fa a "raggiungere" i dati rappresentati da una variabile come EatMsg? Ancora una volta, si fa con le parentesi quadre.
 </p>	
 
 ```asm
@@ -6593,7 +6593,7 @@ Se hai avuto qualche esperienza con linguaggi di alto livello, il tuo primo isti
 ```
 
 <p align=justify>
-Ciò che fa questa istruzione è andare alla posizione in memoria specificata dall'indirizzo rappresentato da EatMsg, prelevare i primi 64 bit di dati da quell'indirizzo e caricare quei dati in RDX partendo dal byte meno significativo in RDX. Date le informazioni che abbiamo definito per EatMsg, ciò sarebbero gli otto caratteri E, a, t, uno spazio, a, t, uno spazio e J.
+Ciò che fa questa istruzione è andare alla posizione in memoria specificata dall'indirizzo rappresentato da EatMsg, prelevare i primi 64 bit di dati da quell'indirizzo e caricare quei dati in RDX partendo dal byte meno significativo in RDX. Date le informazioni che abbiamo definito per EatMsg, questi sono gli otto caratteri E, a, t, uno spazio, a, t, uno spazio e J.
 </p>
 
 ### La dimensione dei dati di memoria
@@ -6603,11 +6603,11 @@ Ma cosa succede se si vuole lavorare con un solo byte e non con i primi otto? Fo
 </p>
 
 ```asm
-	mov al,[EatMsg] AL
+	mov al,[EatMsg]
 ```
 
 <p align=justify>
-ovviamente, è contenuto all'interno di RAX, non è un registro separato. Ma il nome "AL" ci permette di recuperare dalla memoria un solo byte alla volta. Possiamo eseguire un trucco simile usando il nome EAX per riferirci ai 4 byte inferiori (32 bit) di RAX: 
+AL, ovviamente, è contenuto all'interno di RAX, non è un registro separato. Ma il nome "AL" ci permette di recuperare dalla memoria un solo byte alla volta. Possiamo eseguire un trucco simile usando il nome EAX per riferirci ai 4 byte inferiori (32 bit) di RAX:
 </p>	
 
 ```asm
@@ -6627,17 +6627,17 @@ Qui, diciamo a NASM che vogliamo spostare solo un singolo byte in memoria utiliz
 </p>
 
 <p align=justify>
-Sii felice di imparare l'assembly Intel ai giorni nostri. Era molto più complicato negli anni passati. In modalità reale sotto DOS, c'erano diverse restrizioni sui componenti di un <i>effective addrress</i> che semplicemente non esistono oggi, né in modalità protetta a 32 bit né in modalità lunga a 64 bit. In modalità reale, solo alcuni registri generali x86 potevano contenere un indirizzo di memoria: BX, BP, SI e DI. Gli altri, AX, CX e DX, non potevano. Peggio ancora, ogni indirizzo aveva due parti. Dovevi prestare attenzione a quale segmento apparteneva un indirizzo e dovevi assicurarti di specificare il segmento quando non era ovvio.
+Sii felice di imparare l'assembly Intel ai giorni nostri. Era molto più complicato negli anni passati. In modalità reale sotto DOS, c'erano diverse restrizioni sui componenti di un <i>effective address</i> che semplicemente non esistono oggi, né in modalità protetta a 32 bit né in modalità lunga a 64 bit. In modalità reale, solo alcuni registri generali x86 potevano contenere un indirizzo di memoria: BX, BP, SI e DI. Gli altri, AX, CX e DX, non potevano. Peggio ancora, ogni indirizzo aveva due parti. Dovevi prestare attenzione a quale segmento apparteneva un indirizzo e dovevi assicurarti di specificare il segmento quando non era ovvio.
 </p>
 
 ### Il registro RFLAGS
 
 <p align=justify>
-RFlags è un vero e proprio cassetto di spazzatura di piccoli pezzi di informazioni disgiunte ed è difficile (e forse fuorviante) sedersi e descrivere tutto in dettaglio tutto in una volta. Quello che farò è descrivere brevemente i flag della CPU qui e poi in modo più dettagliato mentre li incontriamo discutendo delle varie istruzioni che modificano i valori dei flag o li usano durante un ramificamento. Un flag è un singolo bit di informazioni il cui significato è indipendente da qualsiasi altro bit. Un bit può essere impostato a 1 o azzerato a 0 dalla CPU secondo necessità. L'idea è di comunicare a te, il programmatore, lo stato di certe condizioni all'interno della CPU in modo che il tuo programma possa testare e agire in base agli stati di quelle condizioni. Molto più raramente, sei tu, il programmatore, a impostare un flag come modo per segnalare qualcosa alla CPU. RFlags nel suo insieme è un singolo registro a 64 bit sepolto all'interno della CPU. È l'estensione a 64 bit del registro EFlags a 32 bit, che a sua volta è l'estensione a 32 bit del registro Flags a 16 bit presente nelle antiche CPU 8086/8088. <b>Solo 18 bit del registro RFlags sono effettivamente flag</b>. Il resto è riservato per un uso futuro nelle generazioni future di CPU Intel.
+RFlags è un vero e proprio cassetto pieno di piccoli pezzi di informazioni disgiunte ed è difficile (e forse fuorviante) sedersi e descrivere tutto in dettaglio in una volta sola. Quello che farò è descrivere brevemente i flag della CPU qui e poi in modo più dettagliato mentre li incontriamo discutendo delle varie istruzioni che modificano i valori dei flag o li usano durante un ramificamento. Un flag è un singolo bit di informazioni il cui significato è indipendente da qualsiasi altro bit. Un bit può essere impostato a 1 o azzerato a 0 dalla CPU secondo necessità. L'idea è di comunicare a te, il programmatore, lo stato di certe condizioni all'interno della CPU in modo che il tuo programma possa testarle e agire in base ai loro stati. Molto più raramente, sei tu, il programmatore, a impostare un flag come modo per segnalare qualcosa alla CPU. RFlags nel suo insieme è un singolo registro a 64 bit sepolto all'interno della CPU. È l'estensione a 64 bit del registro EFlags a 32 bit, che a sua volta è l'estensione a 32 bit del registro Flags a 16 bit presente nelle antiche CPU 8086/8088. <b>Solo 18 bit del registro RFlags sono effettivamente flag</b>. Il resto è riservato per un uso futuro nelle generazioni future di CPU Intel.
 </p>
 
 <p align=justify>
-È un po' un pasticcio, ma dai un'occhiata alla figura di sotto , che riassume tutti flags ttualmente definite nell'architettura x64. I flags su uno sfondo grigio sono quelle arcane che puoi ignorare tranquillamente per il momento. Gli spazi e le linee colorate di nero sono considerati riservati e non contengono flags definite. Ogni flags del registro RFlags ha un simbolo di due, tre o quattro lettere con cui la maggior parte dei programmatori le conosce. Ecco i flags più comuni, i loro simboli e brevi descrizioni di cosa rappresentano:
+È un po' un pasticcio, ma dai un'occhiata alla figura di sotto, che riassume tutti i flag attualmente definiti nell'architettura x64. I flag su uno sfondo grigio sono quelli arcani che puoi ignorare tranquillamente per il momento. Gli spazi e le linee colorate di nero sono considerati riservati e non contengono flag definiti. Ogni flag del registro RFlags ha un simbolo di due, tre o quattro lettere con cui la maggior parte dei programmatori lo conosce. Ecco i flag più comuni, i loro simboli e brevi descrizioni di cosa rappresentano:
 </p>
 
 <div align=center>
@@ -6657,12 +6657,12 @@ RFlags è un vero e proprio cassetto di spazzatura di piccoli pezzi di informazi
 	</li>
   	<li>
 		<p align=justify>
-			<b>IF:</b> Il flag di abilitazione degli interrupt è un flag a due vie. La CPU lo imposta in determinate condizioni e puoi impostarlo tu stesso utilizzando le istruzioni STI e CLI—anche se probabilmente non lo farai; vedi sotto. Quando IF è impostato, gli interrupt sono abilitati e possono verificarsi su richiesta. Quando IF è disattivato, gli interrupt sono ignorati dalla CPU. I programmi ordinari potevano impostare e disattivare questo flag senza conseguenze in Modalità Reale, nell'era DOS. Sotto Linux (sia a 32 bit che a 64 bit) IF è riservato all'uso del sistema operativo e talvolta dei suoi driver. Se provi a utilizzare le istruzioni STI e CLI all'interno di uno dei tuoi programmi, Linux ti mostrerà un errore di protezione generale e il tuo programma verrà terminato. Considera IF come off-limits per la programmazione degli spazi utente, come stiamo discutendo in questo libro.
+			<b>IF:</b> Il flag di abilitazione degli interrupt è un flag a due vie. La CPU lo imposta in determinate condizioni e puoi impostarlo tu stesso utilizzando le istruzioni STI e CLI, anche se probabilmente non lo farai; vedi sotto. Quando IF è impostato, gli interrupt sono abilitati e possono verificarsi su richiesta. Quando IF è disattivato, gli interrupt sono ignorati dalla CPU. I programmi ordinari potevano impostare e disattivare questo flag senza conseguenze in modalità reale, nell'era DOS. Sotto Linux (sia a 32 bit che a 64 bit) IF è riservato all'uso del sistema operativo e talvolta dei suoi driver. Se provi a utilizzare le istruzioni STI e CLI all'interno di uno dei tuoi programmi, Linux ti mostrerà un errore di protezione generale e il tuo programma verrà terminato. Considera IF come off-limits per la programmazione in spazio utente, come stiamo discutendo in questo libro.
 		</p>
 	</li>
  	<li>
 		<p align=justify>
-			<b>TF:</b> Quando impostato, il flag di Trap consente ai debugger di gestire il passo singolo, costringendo la CPU ad eseguire solo un'istruzione prima di chiamare una routine di interrupt. Questo non è un flag particolarmente utile per la programmazione ordinaria, e non avrò nulla di più da dire al riguardo in questo libro.
+			<b>TF:</b> Quando impostato, il flag di trap consente ai debugger di gestire il passo singolo, costringendo la CPU a eseguire solo un'istruzione prima di chiamare una routine di interrupt. Questo non è un flag particolarmente utile per la programmazione ordinaria, e non avrò nulla di più da dire al riguardo in questo libro.
 		</p>
 	</li>
  	<li>
@@ -6677,12 +6677,12 @@ RFlags è un vero e proprio cassetto di spazzatura di piccoli pezzi di informazi
 	</li>
  	<li>
 		<p align=justify>
-			<b>A:</b> Il flag di trasporto ausiliario è utilizzato solo per l'aritmetica BCD. L'aritmetica BCD tratta ogni byte operando come una coppia di "nybbles" a 4 bit e consente di eseguire direttamente nel hardware della CPU un'aritmetica che si avvicina al decimale (base 10) utilizzando una delle istruzioni di aritmetica BCD. Queste istruzioni sono considerate obsolete e non sono presenti in x64. Non le tratto in questo libro.
+			<b>A:</b> Il flag di trasporto ausiliario è utilizzato solo per l'aritmetica BCD. L'aritmetica BCD tratta ogni byte operando come una coppia di "nybble" a 4 bit e consente di eseguire direttamente nell'hardware della CPU un'aritmetica che si avvicina al decimale (base 10) utilizzando una delle istruzioni di aritmetica BCD. Queste istruzioni sono considerate obsolete e non sono presenti in x64. Non le tratto in questo libro.
 		</p>
 	</li>
  	<li>
 		<p align=justify>
-			<b>PF:</b> Il flag di parità sembrerà istantaneamente familiare a chiunque comprenda le comunicazioni dati seriali e totalmente bizzarro a chi non lo fa. PF indica se il numero di bit impostati (1) nel byte di ordine inferiore di un risultato è pari o dispari. Ad esempio, se il risultato è 0F2H, PF sarà resettato perché 0F2H (11110010) contiene un numero dispari di bit a 1. Allo stesso modo, se il risultato è 3AH (00111100), PF sarà impostato perché ci sono un numero pari (quattro) di bit a 1 nel risultato. Questo flag è una sopravvivenza dei tempi in cui tutte le comunicazioni informatiche venivano effettuate tramite una porta seriale, per la quale un sistema di rilevamento degli errori chiamato controllo della parità dipende dal sapere se un conteggio dei bit impostati in un byte di carattere è pari o dispari. PF è usato molto raramente e non lo descriverò ulteriormente.
+			<b>PF:</b> Il flag di parità sembrerà istantaneamente familiare a chiunque comprenda le comunicazioni dati seriali e totalmente bizzarro a chi non lo fa. PF indica se il numero di bit impostati (1) nel byte di ordine inferiore di un risultato è pari o dispari. Ad esempio, se il risultato è 0F2H, PF sarà resettato perché 0F2H (11110010) contiene un numero dispari di bit a 1. Allo stesso modo, se il risultato è 3AH (00111100), PF sarà impostato perché c'è un numero pari (quattro) di bit a 1 nel risultato. Questo flag è una sopravvivenza dei tempi in cui tutte le comunicazioni informatiche venivano effettuate tramite una porta seriale, per la quale un sistema di rilevamento degli errori chiamato controllo della parità dipende dal sapere se il conteggio dei bit impostati in un byte di carattere è pari o dispari. PF è usato molto raramente e non lo descriverò ulteriormente.
 		</p>
 	</li>
  	<li>
@@ -6695,13 +6695,13 @@ RFlags è un vero e proprio cassetto di spazzatura di piccoli pezzi di informazi
 <table>
 	<td>⚠️ <b>Warning</b>
 	<p align=justify>
-Devi ricordare che le descrizioni sui flags fatte sopra sono solo generalizzazioni e sono soggette a specifiche restrizioni e casi speciali imposti da istruzioni individuali. Il comportamento dei flags varia ampiamente da istruzione a istruzione, anche se il significato dell'uso del flags può essere lo stesso in ogni caso. Ad esempio, alcune istruzioni che causano l'apparire di uno zero in un operando impostano ZF, mentre altre no. Purtroppo, non c'è un sistema e non c'è un modo facile per tenerlo chiaro nella tua mente. Quando intendi usare i flags nei test tramite istruzioni di salto condizionale, devi controllare ogni singola istruzione per vedere come vengono influenzate i vari flags.
+Devi ricordare che le descrizioni dei flag fatte sopra sono solo generalizzazioni e sono soggette a specifiche restrizioni e casi speciali imposti da singole istruzioni. Il comportamento dei flag varia ampiamente da istruzione a istruzione, anche se il significato dell'uso dei flag può essere lo stesso in ogni caso. Ad esempio, alcune istruzioni che causano l'apparire di uno zero in un operando impostano ZF, mentre altre no. Purtroppo, non c'è un sistema e non c'è un modo facile per tenerlo chiaro nella tua mente. Quando intendi usare i flag nei test tramite istruzioni di salto condizionale, devi controllare ogni singola istruzione per vedere come vengono influenzati i vari flag.
 	</p>
 	</td>
 </table>
 
 <p align=justify>
-Il registro RFlags è un registro, proprio come RAX, e quando si è in modalità di debug, il suo valore viene visualizzato nella vista Registri di SASM. I valori dei flags sono indicati tra parentesi quadre. Quando si inizia a eseguire il debug del codice in spazio utente, SASM mostra in genere i nomi dei flag PF, ZF e IF. [ PF ZF IF ] Ciò significa che, per qualsiasi motivo, quando Linux consente di iniziare il debug, vengono impostati i flag Parity, Zero e Interrupt Enable. Questi valori iniziali sono "residui" del codice eseguito in precedenza e non sono in alcun modo causati dal codice nel debugger. I loro valori, inoltre, non hanno alcun significato nella sessione di debug e quindi non hanno bisogno di interpretazione. Quando si esegue un'istruzione che influisce sui flag in una sessione di debug, SASM mostrerà il nome di un flag se tale flag è impostato o cancellerà il nome del flag se tale flag viene cancellato
+Il registro RFlags è un registro, proprio come RAX, e quando si è in modalità di debug, il suo valore viene visualizzato nella vista Registri di SASM. I valori dei flag sono indicati tra parentesi quadre. Quando si inizia a eseguire il debug del codice in spazio utente, SASM mostra in genere i nomi dei flag PF, ZF e IF. [ PF ZF IF ] Ciò significa che, per qualsiasi motivo, quando Linux consente di iniziare il debug, vengono impostati i flag Parity, Zero e Interrupt Enable. Questi valori iniziali sono "residui" del codice eseguito in precedenza e non sono in alcun modo causati dal codice nel debugger. I loro valori, inoltre, non hanno alcun significato nella sessione di debug e quindi non hanno bisogno di interpretazione. Quando si esegue un'istruzione che influisce sui flag in una sessione di debug, SASM mostrerà il nome di un flag se tale flag è impostato o cancellerà il nome del flag se tale flag viene cancellato.
 </p>
 
 ### Aggiungere e Sottrarre 1 con INC e DEC
