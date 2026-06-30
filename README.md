@@ -9090,13 +9090,13 @@ Alcune persone considerano questo uso di LEA un trucco meschino, ma in tutti gli
 ### Tabella di traduzione caratteri
 
 <p align=justify>
-Esiste un tipo di ricerca in tabella che è (o forse era) talmente comune che gli ingegneri di Intel hanno integrato un'intera istruzione nell'architettura x86 per farlo. Il tipo di ricerca in tabella a cui alludevo è la conversione dei caratteri. Nei primi anni '80 avevo bisogno di convertire i set di caratteri in modi diversi, il più semplice dei quali era forzare tutti i caratteri minuscoli in maiuscolo. E così nei paragrafi precedenti abbiamo costruito un programma semplice che scorreva un file un buffer alla volta, acquisendo caratteri, convertendo tutti i caratteri minuscoli in maiuscolo e poi riscrivendoli nuovamente in un nuovo file. La conversione stessa era semplice: facendo riferimento alla tabella ASCII per la relazione tra tutti i caratteri maiuscoli e i loro associati caratteri minuscoli, potevamo convertire un carattere minuscolo in maiuscolo semplicemente sottraendo 20h (32) dal carattere. Questo è affidabile, ma è molto un caso speciale. Succede proprio che i caratteri minuscoli ASCII siano sempre 32 più alti nella tabella rispetto ai loro equivalenti caratteri maiuscoli. Cosa fai se hai bisogno di convertire tutti i caratteri “barra verticale” (ASCII 124) in punti esclamativi? (Dovetti farlo una volta, perché uno dei vecchi mainframe non riusciva a gestire le barre verticali.) Puoi scrivere codice speciale per ciascun caso individuale con cui devi confrontarti... ...oppure puoi usare una tabella di traduzione.
+Esiste un tipo di ricerca in tabella che è (o forse era) talmente comune che gli ingegneri di Intel hanno integrato un'intera istruzione nell'architettura x86 per gestirlo. Il tipo di ricerca in tabella a cui alludevo è la conversione dei caratteri. Nei primi anni '80 avevo bisogno di convertire i set di caratteri in modi diversi, il più semplice dei quali era forzare tutti i caratteri minuscoli in maiuscolo. E così nei paragrafi precedenti abbiamo costruito un programma semplice che scorreva un file un buffer alla volta, acquisendo caratteri, convertendo tutti i caratteri minuscoli in maiuscolo e poi riscrivendoli in un nuovo file. La conversione stessa era semplice: facendo riferimento alla tabella ASCII per la relazione tra tutti i caratteri maiuscoli e i caratteri minuscoli associati, potevamo convertire un carattere minuscolo in maiuscolo semplicemente sottraendo 20h (32) dal carattere. Questo è affidabile, ma è un caso molto speciale. Succede proprio che i caratteri minuscoli ASCII siano sempre 32 posizioni più avanti nella tabella rispetto ai loro equivalenti maiuscoli. Cosa fai se hai bisogno di convertire tutti i caratteri “barra verticale” (ASCII 124) in punti esclamativi? (Dovetti farlo una volta, perché uno dei vecchi mainframe non riusciva a gestire le barre verticali.) Puoi scrivere codice speciale per ciascun caso individuale con cui devi confrontarti... oppure puoi usare una tabella di traduzione.
 </p>
 
 ### Tabella di traduzione
 
 <p align=justify>
-Una tabella di traduzione è un tipo speciale di tabella e funziona nel seguente modo: si imposta una tabella di valori, con un'entrata per ogni possibile valore che deve essere tradotto. Un numero (o un carattere, trattato come un valore numerico) viene utilizzato come indice nella tabella. Alla posizione dell'indice nella tabella c'è un valore che viene utilizzato per sostituire il valore originale utilizzato come indice. In breve, il valore originale accede alla tabella e trova un nuovo valore che sostituisce il valore originale, traducendo così il vecchio valore in uno nuovo. Lo abbiamo già fatto una volta, nel programma hexdump1gcc nella sezione 9.1. Ricorda la tabella delle cifre:
+Una tabella di traduzione è un tipo speciale di tabella e funziona nel seguente modo: si imposta una tabella di valori, con una voce per ogni possibile valore da tradurre. Un numero (o un carattere, trattato come valore numerico) viene utilizzato come indice nella tabella. Alla posizione dell'indice nella tabella c'è un valore che viene utilizzato per sostituire il valore originale usato come indice. In breve, il valore originale accede alla tabella e trova un nuovo valore che lo sostituisce, traducendo così il vecchio valore in uno nuovo. Lo abbiamo già fatto una volta, nel programma hexdump1gcc nella sezione 9.1. Ricorda la tabella delle cifre:
 </p>
 
 ```asm
@@ -9104,7 +9104,7 @@ Digits: db "0123456789ABCDEF"
 ```
 
 <p align=justify>
-Questa è una tabella di traduzione, anche se all'epoca non l'ho chiamata così. L'idea, se ricordi, era di separare le due metà da 4 bit di un byte da 8 bit e convertire quei valori da 4 bit in caratteri ASCII che rappresentano cifre esadecimali. Il focus all'epoca era separare i byte in due nybbles tramite operazioni logiche bit a bit, ma c'era anche una traduzione in corso. La traduzione è stata realizzata da queste tre istruzioni.
+Questa è una tabella di traduzione, anche se all'epoca non l'ho chiamata così. L'idea, se ricordi, era separare le due metà da 4 bit di un byte da 8 bit e convertire quei valori da 4 bit in caratteri ASCII che rappresentano cifre esadecimali. All'epoca l'attenzione era concentrata sulla separazione dei byte in due nybble tramite operazioni logiche bit a bit, ma c'era anche una traduzione in corso. La traduzione è stata realizzata da queste tre istruzioni:
 </p>
 
 ```asm
@@ -9115,7 +9115,7 @@ mov al,byte [Digits+rax] ; Look up the char equivalent of nybble
 ```
 
 <p align=justify>
-La prima istruzione carica un byte dal buffer di input nel registro AL a 8 bit. La seconda istruzione maschera tutto tranne il basso nybble di AL. La terza istruzione esegue un recupero della memoria: utilizza il valore in AL per indicizzare nella tabella Digits e riporta qualsiasi valore fosse nella voce ALth nella tabella. (Questo deve essere fatto utilizzando RAX tra parentesi, perché AL non può prendere parte ai calcoli dell'indirizzo efficaci. Ricorda solo che AL è il byte di ordine più basso nel registro RAX.) Se AL teneva premuto 0, il calcolo dell'indirizzo effettivo aggiungeva 0 all'indirizzo di Digits, riportando la voce 0 della tabella, che è il carattere ASCII per 0. Se AL teneva premuto 5, il calcolo dell'indirizzo effettivo aggiungeva 5 all'indirizzo di Digits, riportando la quinta voce della tabella, che è il carattere ASCII per 5. E così andrebbe per tutti i 16 possibili valori che possono essere espressi in un nybble a 4 bit. Fondamentalmente, il codice viene utilizzato per tradurre un numero nell'equivalente del carattere ASCII di quel numero. Ci sono solo 16 cifre esadecimali possibili, quindi la tabella di conversione in hexdump1gcc deve essere lunga solo 16 byte. Un byte contiene abbastanza bit per rappresentare 256 valori diversi, quindi se vogliamo tradurre valori di dimensioni in byte, avremo bisogno di una tabella con 256 voci. Tecnicamente, il set di caratteri ASCII utilizza solo i primi 128 valori, ma come ho descritto in precedenza in questo libro, i valori "alti" di 128 sono stati spesso assegnati a caratteri speciali come lettere non inglesi, caratteri "box-draw", simboli matematici e così via. Un uso comune della traduzione dei caratteri consiste nel convertire tutti i caratteri con valori superiori a 128 in qualcosa di inferiore a 128 per evitare il caos nei sistemi più vecchi che non sono in grado di gestire valori ASCII estesi. Una tabella di questo tipo è abbastanza facile da definire in un programma in linguaggio assembly:
+La prima istruzione carica un byte dal buffer di input nel registro AL a 8 bit. La seconda istruzione maschera tutto tranne il nybble basso di AL. La terza istruzione esegue un accesso alla memoria: utilizza il valore in AL per indicizzare la tabella Digits e restituisce qualsiasi valore si trovi nella voce corrispondente ad AL. (Questo deve essere fatto utilizzando RAX tra parentesi, perché AL non può prendere parte ai calcoli dell'effective address. Ricorda solo che AL è il byte meno significativo nel registro RAX.) Se AL contiene 0, il calcolo dell'effective address aggiunge 0 all'indirizzo di Digits, restituendo la voce 0 della tabella, che è il carattere ASCII per 0. Se AL contiene 5, il calcolo dell'effective address aggiunge 5 all'indirizzo di Digits, restituendo la quinta voce della tabella, che è il carattere ASCII per 5. E così via per tutti i 16 possibili valori che possono essere espressi in un nybble a 4 bit. Fondamentalmente, il codice viene utilizzato per tradurre un numero nell'equivalente carattere ASCII di quel numero. Ci sono solo 16 cifre esadecimali possibili, quindi la tabella di conversione in hexdump1gcc deve essere lunga solo 16 byte. Un byte contiene abbastanza bit per rappresentare 256 valori diversi, quindi se vogliamo tradurre valori della dimensione di un byte, avremo bisogno di una tabella con 256 voci. Tecnicamente, il set di caratteri ASCII utilizza solo i primi 128 valori, ma, come ho descritto in precedenza in questo libro, i valori "alti" da 128 a 255 sono stati spesso assegnati a caratteri speciali come lettere non inglesi, caratteri "box-draw", simboli matematici e così via. Un uso comune della traduzione dei caratteri consiste nel convertire tutti i caratteri con valori superiori a 128 in qualcosa di inferiore a 128, per evitare il caos nei sistemi più vecchi che non sono in grado di gestire valori ASCII estesi. Una tabella di questo tipo è abbastanza facile da definire in un programma in linguaggio assembly:
 </p>
 
 ```asm
@@ -9139,13 +9139,13 @@ UpCase:
 ```
 
 <p align=justify>
-La tabella UpCase è definita in 16 righe di 16 valori esadecimali separati. Il fatto che sia suddivisa in 16 righe nell'elenco del codice è puramente per leggibilità su schermo o pagina stampata e non influisce sulla tabella binaria che NASM genera nel file .o di output. Una volta in binario, si tratta di 256 valori a 8 bit in fila. Una rapida nota sintattica qui: quando si definiscono tabelle (o qualsiasi struttura dati contenente più valori predefiniti), le virgole vengono utilizzate per separare i valori all'interno di una singola definizione. Non è necessario usare virgole alla fine delle righe delle definizioni DB nella tabella precedente. Ogni definizione DB è separata e indipendente, ma poiché sono adiacenti in memoria, possiamo trattare le 16 definizioni DB come un'unica tabella di 256 byte. Qualsiasi tabella di traduzione può essere vista come espressione di una o più “regole” che governano cosa avviene durante il processo di traduzione. La tabella UpCase mostrata in precedenza esprime queste regole di traduzione:
+La tabella UpCase è definita in 16 righe di 16 valori esadecimali separati. Il fatto che sia suddivisa in 16 righe nell'elenco del codice serve solo alla leggibilità su schermo o su pagina stampata e non influisce sulla tabella binaria che NASM genera nel file .o di output. Una volta in binario, si tratta di 256 valori a 8 bit in fila. Una rapida nota sintattica: quando si definiscono tabelle (o qualsiasi struttura dati contenente più valori predefiniti), le virgole vengono utilizzate per separare i valori all'interno di una singola definizione. Non è necessario usare virgole alla fine delle righe delle definizioni DB nella tabella precedente. Ogni definizione DB è separata e indipendente, ma poiché sono adiacenti in memoria possiamo trattare le 16 definizioni DB come un'unica tabella di 256 byte. Qualsiasi tabella di traduzione può essere vista come espressione di una o più “regole” che governano cosa avviene durante il processo di traduzione. La tabella UpCase mostrata in precedenza esprime queste regole di traduzione:
 </p>
 
 <ul>
 	<li>
 		<p align=justify>
-		Tutti i caratteri ASCII minuscoli vengono tradotti in maiuscolo
+		Tutti i caratteri ASCII minuscoli vengono tradotti in maiuscolo.
 		</p>
 	</li>
  	<li>
@@ -9155,7 +9155,7 @@ La tabella UpCase è definita in 16 righe di 16 valori esadecimali separati. Il 
 	</li>
  	<li>
 		<p align=justify>
-		Tutti i valori dei caratteri "alti" da 127 a 255 vengono tradotti nel carattere di spazio ASCII (32, o 20h)
+		Tutti i valori dei caratteri "alti" da 127 a 255 vengono tradotti nel carattere di spazio ASCII (32, o 20h).
 		</p>
 	</li>
  	<li>
@@ -9171,13 +9171,13 @@ La tabella UpCase è definita in 16 righe di 16 valori esadecimali separati. Il 
 </ul>
 
 <p align=justify>
-Non male per un singolo dato, eh? (Immagina solo quanto lavoro sarebbe fare tutto quel fastidio solo con istruzioni di macchina!)
+Non male per un singolo dato, eh? (Immagina solo quanto lavoro servirebbe per fare tutto quel pasticcio solo con istruzioni macchina!)
 </p>
 
 ### Tradurre con MOV o XLAT
 
 <p align=justify>
-Quindi, come utilizziamo la tabella UpCase? Il modo ovvio sarebbe questo:
+Quindi, come utilizziamo la tabella UpCase? Il modo più ovvio sarebbe questo:
 </p>
 
 <ul>
@@ -9188,13 +9188,13 @@ Quindi, come utilizziamo la tabella UpCase? Il modo ovvio sarebbe questo:
 	</li>
  	<li>
 		<p align=justify>
-			Crea un riferimento di memoria utilizzando AL come termine base e UpCase come termine di spostamento, e sposta il byte al riferimento di memoria in AL, sostituendo il valore originale usato come termine base.
+			Crea un riferimento di memoria utilizzando AL come termine base e UpCase come termine di spostamento, quindi sposta in AL il byte presente al riferimento di memoria, sostituendo il valore originale usato come termine base.
 		</p>
 	</li>
 </ul>
 
 <p align=justify>
-L'istruzione MOV ipotetica apparirebbe così
+L'istruzione MOV ipotetica si presenterebbe così:
 </p>
 
 ```asm
@@ -9202,7 +9202,7 @@ L'istruzione MOV ipotetica apparirebbe così
 ```
 
 <p align=justify>
-C'è solo un problema: NASM non ti permette di fare questo. In modalità protetta a 32 bit e in modalità long x64, il registro AL non può partecipare ai calcoli dell'indirizzo efficace, né possono farlo gli altri registri a 8 bit. Entra in gioco XLAT. L'istruzione XLAT è codificata in modo rigido per utilizzare determinati registri in modi specifici. I suoi due operandi sono entrambi impliciti:
+C'è solo un problema: NASM non ti permette di farlo. In modalità protetta a 32 bit e in modalità long x64, il registro AL non può partecipare ai calcoli dell'effective address, né possono farlo gli altri registri a 8 bit. Entra in gioco XLAT. L'istruzione XLAT è codificata in modo rigido per utilizzare determinati registri in modi specifici. I suoi due operandi sono entrambi impliciti:
 </p>
 
 <ul>
@@ -9213,7 +9213,7 @@ C'è solo un problema: NASM non ti permette di fare questo. In modalità protett
 	</li>
  	<li>
 		<p align=justify>
-			Il carattere da tradurre deve essere in AL
+			Il carattere da tradurre deve essere in AL.
 		</p>
 	</li>
  	<li>
@@ -9224,7 +9224,7 @@ C'è solo un problema: NASM non ti permette di fare questo. In modalità protett
 </ul>
 
 <p align=justify>
-Con i registri configurati, l'istruzione XLAT non ha operandi ed è utilizzata tutta da sola:
+Con i registri configurati, l'istruzione XLAT non ha operandi e viene utilizzata da sola:
 </p>
 
 ```asm
@@ -9240,7 +9240,7 @@ Sarò onesto: XLAT è meno vantaggioso di quanto fosse in passato. In modalità 
 ```
 
 <p align=justify>
-Il registro a 64 bit RAX può sostituire il piccolo AL a 8 bit quando si calcola un indirizzo efficace del carattere usato per tradurre il carattere in AL. C'è solo un problema: devi rimuovere eventuali valori "residui" nei 56 bit superiori di RAX, altrimenti potresti indicizzare accidentalmente ben oltre i limiti della tabella di traduzione. Il problema non si presenta con XLAT poiché l'istruzione XLAT utilizza solo AL per l'indice, ignorando qualsiasi altra cosa possa trovarsi nei bit superiori di RAX. Azzerare RAX prima di caricare il valore da tradurre in AL viene fatto in uno di questi due modi comuni:
+Il registro a 64 bit RAX può sostituire il piccolo AL a 8 bit quando si calcola l'effective address del carattere usato per tradurre il carattere in AL. C'è solo un problema: devi rimuovere eventuali valori "residui" nei 56 bit superiori di RAX, altrimenti potresti indicizzare accidentalmente ben oltre i limiti della tabella di traduzione. Il problema non si presenta con XLAT, poiché l'istruzione XLAT utilizza solo AL per l'indice, ignorando qualsiasi altra cosa possa trovarsi nei bit superiori di RAX. Azzerare RAX prima di caricare il valore da tradurre in AL può essere fatto in uno di questi due modi comuni:
 </p>
 
 ```asm
@@ -9249,22 +9249,23 @@ Il registro a 64 bit RAX può sostituire il piccolo AL a 8 bit quando si calcola
 ```
 
 <p align=justify>
-In verità, dato il requisito di XLAT di utilizzare AL e RBX, è una cosa neutra, ma il tema più ampio della traduzione dei caratteri tramite tabelle è davvero ciò che sto cercando di presentare qui. Il codice di sotto mette tutto in azione. Il programma come mostrato fa esattamente quello che fa il programma uppercaser2: forza tutti i caratteri minuscoli in un file di input a essere maiuscoli e li scrive in un file di output. Non l'ho chiamato "uppercaser3" perché è un traduttore di caratteri per scopi generali. In questo particolare esempio, con la tabella UpCase, traduce i caratteri minuscoli in maiuscoli; tuttavia, quella è semplicemente una delle regole che esprime la tabella UpCase. Cambia la tabella e cambiano le regole. Puoi tradurre qualsiasi valore o tutti i 256 valori differenti in un byte in qualsiasi valore o valori a 8 bit. Ho aggiunto una seconda tabella al programma per farti sperimentare. La tabella Personalizzata esprime queste regole:
+In verità, dato il requisito di XLAT di utilizzare AL e RBX, la scelta è neutra, ma il tema più ampio della traduzione dei caratteri tramite tabelle è ciò che sto cercando di presentare qui. Il codice qui sotto mette tutto in azione. Il programma mostrato fa esattamente quello che fa il programma uppercaser2: forza tutti i caratteri minuscoli in un file di input a diventare maiuscoli e li scrive in un file di output. Non l'ho chiamato "uppercaser3" perché è un traduttore di caratteri per scopi generali. In questo particolare esempio, con la tabella UpCase, traduce i caratteri minuscoli in maiuscoli; tuttavia, questa è semplicemente una delle regole che esprime la tabella UpCase. Cambia la tabella e cambiano le regole. Puoi tradurre qualsiasi valore, o tutti i 256 valori differenti di un byte, in qualsiasi valore o insieme di valori a 8 bit. Ho aggiunto una seconda tabella al programma per farti sperimentare. La tabella Custom esprime queste regole:
 </p>
 
 <ul>
 	<li>
 		<p align=justify>
-		Tutti i caratteri ASCII stampabili inferiori a 127 vengono tradotti in se stessi. (Non vengono precisamente "lasciati in pace" ma vengono comunque tradotti, solo negli stessi caratteri.)   			</p>
-	</li>
- 	<li>
-		<p align=justify>
-		Tutti i valori dei caratteri "alti" da 127 a 255 vengono tradotti nel carattere di spazio ASCII (32, o 20h.)		
+		Tutti i caratteri ASCII stampabili inferiori a 127 vengono tradotti in se stessi. (Non vengono esattamente "lasciati in pace", ma vengono comunque tradotti, solo negli stessi caratteri.)
 		</p>
 	</li>
  	<li>
 		<p align=justify>
-		Tutti i caratteri ASCII non stampabili (fondamentalmente, i valori 0–31, più 127) vengono tradotti in spazi tranne i valori 9 e 10.		
+		Tutti i valori dei caratteri "alti" da 127 a 255 vengono tradotti nel carattere di spazio ASCII (32, o 20h).
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Tutti i caratteri ASCII non stampabili (fondamentalmente, i valori 0–31, più 127) vengono tradotti in spazi, tranne i valori 9 e 10.
 		</p>
 	</li>
 	 <li>
@@ -9275,7 +9276,7 @@ In verità, dato il requisito di XLAT di utilizzare AL e RBX, è una cosa neutra
 </ul>
 
 <p align=justify>
-Fondamentalmente, lascia inalterati tutti i caratteri stampabili (più tab e EOL) e converte tutti gli altri valori dei caratteri in 20h, il carattere spazio. Puoi sostituire l'etichetta Custom con UpCase nel programma, apportare modifiche alla tabella Custom e provarla. Converti quel fastidioso barre verticale in un punto esclamativo. Cambia tutti i caratteri “Z” in “Q.” Cambiare le regole è fatto modificando la tabella. Il codice non cambia affatto! Come nei programmi precedenti, xlat1gcc legge dall'input standard e scrive nell'output standard. Copia del testo negli appunti e incollalo nella finestra di input di SASM. Poi esegui il programma e guarda cosa scrive nella finestra di output.
+Fondamentalmente, lascia inalterati tutti i caratteri stampabili (più tab e EOL) e converte tutti gli altri valori dei caratteri in 20h, il carattere spazio. Puoi sostituire l'etichetta UpCase con Custom nel programma, apportare modifiche alla tabella Custom e provarla. Converti quella fastidiosa barra verticale in un punto esclamativo. Cambia tutti i caratteri “Z” in “Q”. Cambiare le regole significa modificare la tabella. Il codice non cambia affatto! Come nei programmi precedenti, xlat1gcc legge dall'input standard e scrive nell'output standard. Copia del testo negli appunti e incollalo nella finestra di input di SASM. Poi esegui il programma e guarda cosa scrive nella finestra di output.
 </p>
 
 ```asm
