@@ -228,7 +228,7 @@ Sorry, only the Italian version is available so far.
     + [PUSHAD e POPAD sono spariti](#pushad-e-popad-sono-spariti)
     + [Dati locali](#dati-locali)
     + [Inserire dati costanti nelle definizioni delle procedure](#inserire-dati-costanti-nelle-definizioni-delle-procedure)
-    + [Alcuni trucchi per le Tabelle](#alcuni-trucchi-per-le-tabelle)
+    + [Alcuni trucchi per le tabelle](#alcuni-trucchi-per-le-tabelle)
     + [Etichette locali e lunghezze dei salti](#etichette-locali-e-lunghezze-dei-salti)
     + [Accesso forzato all'etichetta locale](#accesso-forzato-all-etichetta-locale)
     + [Salti Corti, Vicini e Lontani](#salti-corti--vicini-e-lontani)
@@ -10067,10 +10067,10 @@ EOLs db 10,10,10,10,10,10,10,10,10,10,10,10,10,10,10
 La tabella EOLs contiene 15 caratteri EOL. Se ricordi, quando il carattere EOL viene inviato a stdout, la console lo interpreta come un a capo: la posizione del cursore della console viene spostata verso il basso di una riga. Il chiamante passa il numero desiderato di a capo in RDX. La procedura newlines verifica prima che il chiamante non abbia richiesto più a capo di quanti caratteri EOL ci siano nella tabella e poi passa l'indirizzo della tabella EOLs e il numero richiesto in una chiamata convenzionale a sys_write utilizzando SYSCALL. In sostanza, sys_write visualizza sulla console i primi RDX caratteri della tabella EOLs, che interpreta quei dati come RDX a capo. Avere i dati direttamente nella procedura significa che è facile copiare e incollare la definizione della procedura da un programma all'altro senza lasciare indietro la tabella essenziale dei caratteri EOL. Poiché l'unico codice che usa la tabella EOLs è la procedura newlines stessa, non c'è vantaggio a posizionare la tabella EOLs nella sezione .data, più visibile e centrale. E anche se la tabella EOLs non è locale nel senso tecnico dell'informatica (non è posizionata nello stack da un chiamante a newlines), "sembra" locale e mantiene più ordinate le sezioni .data e .bss, evitando di sovraccaricarle con dati che vengono referenziati solo all'interno di una singola procedura. C'è un file sorgente di programma completo chiamato newlinestest.asm pronto per essere assemblato nell'archivio dei listati di questo libro. (Costruiscilo con SASM.) Contiene la procedura newlines, che ti permetterà di sperimentare con essa.
 </p>
 
-### Alcuni trucchi per le Tabelle
+### Alcuni trucchi per le tabelle
 
 <p align=justify>
-Il programma hexdump2gcc funziona in modo molto simile al programma hexdump1gcc dell'elenco 9.1, ma ha qualche trucco in più nel suo sacco. Uno degno di nota risiede nella definizione della variabile di linea del dump esadecimale DumpLine:
+Il programma hexdump2gcc funziona in modo molto simile al programma hexdump1gcc dell'elenco 9.1, ma ha qualche trucco in più. Uno degno di nota risiede nella definizione della variabile di riga del dump esadecimale DumpLine:
 </p>
 
 ```asm
@@ -10082,7 +10082,7 @@ Il programma hexdump2gcc funziona in modo molto simile al programma hexdump1gcc 
 ```
 
 <p align=justify>
-Quello che abbiamo qui è una variabile dichiarata in due parti. Ogni parte può essere utilizzata separatamente, o (come di solito si fa) le due parti possono essere utilizzate insieme. La prima sezione di DumpLine è la stringa contenente 16 cifre esadecimali. La sua lunghezza è definita dall'equazione DUMPLEN. (Nota che la mia convenzione personale è di scrivere i nomi delle equazioni in maiuscolo. Le equazioni non sono la stessa specie di animali delle variabili, e trovo che rendere i programmi più leggibili impostando le equazioni in modo che possano essere distinte dalle variabili a colpo d'occhio sia utile. Questo non è un requisito NASM; puoi nominare le equazioni in minuscolo o in maiuscolo misto come preferisci.) La seconda sezione di DumpLine è la colonna ASCII, e ha il proprio etichetta, ASCLine. Un programma che avesse bisogno solo della colonna ASCII potrebbe utilizzare la variabile ASCLine da sola, insieme alla sua lunghezza associata, ASCLEN. Ora, poiché le due sezioni di DumpLine sono adiacenti in memoria, fare riferimento a DumpLine ti consente di fare riferimento a entrambe le sezioni come un'unità, ad esempio, quando desideri inviare una riga a stdout tramite SYSCALL. In questo caso, l'equazione che calcola la lunghezza dell'intera riga è FULLLEN. È utile avere un nome separato per le sezioni di due righe, perché i dati non vengono scritti né letti dalle due sezioni in modi simili. Dai un'occhiata alla procedura DumpChar da hexdump2gcc:
+Quello che abbiamo qui è una variabile dichiarata in due parti. Ogni parte può essere utilizzata separatamente, oppure (come di solito si fa) le due parti possono essere utilizzate insieme. La prima sezione di DumpLine è la stringa contenente 16 cifre esadecimali. La sua lunghezza è definita dall'equazione DUMPLEN. (Nota che la mia convenzione personale è scrivere i nomi delle equazioni in maiuscolo. Le equazioni non sono la stessa cosa delle variabili, e trovo utile rendere i programmi più leggibili impostando le equazioni in modo che possano essere distinte dalle variabili a colpo d'occhio. Questo non è un requisito NASM; puoi nominare le equazioni in minuscolo o in maiuscolo misto come preferisci.) La seconda sezione di DumpLine è la colonna ASCII, e ha la propria etichetta, ASCLine. Un programma che avesse bisogno solo della colonna ASCII potrebbe utilizzare la variabile ASCLine da sola, insieme alla sua lunghezza associata, ASCLEN. Ora, poiché le due sezioni di DumpLine sono adiacenti in memoria, fare riferimento a DumpLine ti consente di fare riferimento a entrambe le sezioni come a un'unità, ad esempio quando desideri inviare una riga a stdout tramite SYSCALL. In questo caso, l'equazione che calcola la lunghezza dell'intera riga è FULLLEN. È utile avere un nome separato per le due sezioni della riga, perché i dati non vengono scritti né letti nelle due sezioni allo stesso modo. Dai un'occhiata alla procedura DumpChar da hexdump2gcc:
 </p>
 
 ```asm
@@ -10105,7 +10105,7 @@ DumpChar:
     mov [DumpLine+rdi+2],al   ; Write the char equiv. to line string
  
 ; Look up high nybble character and insert it into the string:
-    and rbx,00000000000000F0h ; Mask out all the but 2nd lowest nybble
+    and rbx,00000000000000F0h ; Mask out all but the 2nd lowest nybble
     shr rbx,4                 ; Shift high 4 bits of byte into low 4 bits
     mov bl,[HexDigits+rbx]    ; Look up char equiv. of nybble
     mov [DumpLine+rdi+1],bl   ; Write the char equiv. to line string
@@ -10121,11 +10121,11 @@ Scrivere nella colonna ASCII è molto semplice, perché ogni carattere nella col
 </p>
 
 ```asm
- mov [ASCLin+rdx+1],bl   ; Write to ASCII portion
+ mov [ASCLine+rdx+1],bl   ; Write to ASCII portion
 ```
 
 <p align=justify>
-Tuttavia, ogni posizione nella parte del dump esadecimale della linea consiste di tre caratteri: uno spazio seguito da due cifre esadecimali. Considerato come una tabella, indirizzare un'entrata specifica in DumpLine richiede una scala di 3 nel calcolo dell'indirizzo effettivo:
+Tuttavia, ogni posizione nella parte del dump esadecimale della riga consiste di tre caratteri: uno spazio seguito da due cifre esadecimali. Considerata come una tabella, indirizzare una voce specifica in DumpLine richiede una scala di 3 nel calcolo dell'indirizzo effettivo:
 </p>
 
 ```asm
@@ -10133,7 +10133,7 @@ lea rdi,[rdx*2+rdx]   ; Calc offset into line string (RDX × 3)
 ```
 
 <p align=justify>
-Nota qui che RDX*2+RDX è equivalente a RDX × 3 come citato nel commento della riga. Le due parti della linea di dump esadecimale sono trattate in modo molto diverso dal punto di vista della manipolazione dei dati, e agiscono insieme solo quando vengono inviate a stdout. È quindi utile dare a ciascuna delle due sezioni la propria etichetta. Le strutture in C e i record in Pascal sono gestiti in modo molto simile "sotto il cofano". La tabella DotXlat di hexdump2gcc è un altro esempio di traduzione dei caratteri e, come per tutte le tabelle di traduzione, esprime le regole necessarie per visualizzare in modo coerente tutti i 256 valori ASCII diversi in una linea di testo.
+Nota qui che RDX*2+RDX è equivalente a RDX × 3, come indicato nel commento della riga. Le due parti della riga di dump esadecimale sono trattate in modo molto diverso dal punto di vista della manipolazione dei dati, e agiscono insieme solo quando vengono inviate a stdout. È quindi utile dare a ciascuna delle due sezioni la propria etichetta. Le strutture in C e i record in Pascal sono gestiti in modo molto simile "sotto il cofano". La tabella DotXlat di hexdump2gcc è un altro esempio di traduzione dei caratteri e, come per tutte le tabelle di traduzione, esprime le regole necessarie per visualizzare in modo coerente tutti i 256 diversi valori ASCII in una riga di testo.
 </p>
 
 <ul>
