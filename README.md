@@ -9419,7 +9419,7 @@ done:
 ### Tabelle al posto di calcoli
 
 <p align=justify>
-La standardizzazione tra i sistemi informatici ha reso la traduzione dei caratteri molto meno comune di quanto fosse in passato, ma le tabelle di traduzione possono essere estremamente utili in altre aree. Una di queste è per eseguire operazioni matematiche più veloci. Considera la seguente tabella:
+La standardizzazione tra i sistemi informatici ha reso la traduzione dei caratteri molto meno comune di quanto fosse in passato, ma le tabelle di traduzione possono essere estremamente utili in altre aree. Una di queste consiste nell'eseguire operazioni matematiche più velocemente. Considera la seguente tabella:
 </p>
 
 ```asm
@@ -9427,7 +9427,7 @@ La standardizzazione tra i sistemi informatici ha reso la traduzione dei caratte
 ```
 
 <p align=justify>
-Nessun mistero qui: Squares è una tabella dei quadrati dei numeri da 0 a 15. Se avessi bisogno del quadrato di 14 in un calcolo, potresti usare MUL, che è più lento della maggior parte delle istruzioni e richiede due registri GP. Oppure potresti semplicemente ottenere il risultato dalla tabella Squares:
+Nessun mistero qui: Squares è una tabella dei quadrati dei numeri da 0 a 15. Se avessi bisogno del quadrato di 14 in un calcolo, potresti usare MUL, che è più lenta della maggior parte delle istruzioni e richiede due registri GP. Oppure potresti semplicemente ottenere il risultato dalla tabella Squares:
 </p>
 
 ```asm
@@ -9436,7 +9436,7 @@ Nessun mistero qui: Squares è una tabella dei quadrati dei numeri da 0 a 15. Se
 ```
 
 <p align=justify>
-Ecco! RAX ora contiene il quadrato di 14. Puoi fare lo stesso trucco con XLAT, anche se richiede di utilizzare determinati registri. Ricorda anche che XLAT è limitato a quantità di 8 bit. La tabella dei quadrati mostrata qui è la tabella dei valori quadrati più grande che XLAT può utilizzare, poiché il successivo valore quadrato (di 16) è 256, che non può essere espresso in 8 bit e quindi una tabella di ricerca che lo contenga non può essere utilizzata da XLAT. Rendere le voci di una tabella di ricerca dei valori quadrati di dimensione 16 bit ti permetterà di includere i quadrati di tutti gli interi fino a 255. E se dai a ciascuna voce nella tabella 32 bit, puoi includere i quadrati di interi fino a 65.535, ma sarebbe una tabella molto sostanziale! Non ho spazio in questo libro per approfondire la matematica in virgola mobile, ma una volta si faceva molto frequentemente uso di tabelle per cercare valori per cose come le radici quadrate. I moderni CPU con sistemi matematici come AVX rendono tali tecniche molto meno allettanti. Tuttavia, quando si è di fronte a una sfida di calcolo matematico, dovresti sempre tenere a mente la possibilità di utilizzare tabelle di ricerca.
+Ecco! RAX ora contiene il quadrato di 14. Puoi usare lo stesso trucco con XLAT, anche se richiede l'uso di registri specifici. Ricorda anche che XLAT è limitato a quantità di 8 bit. La tabella dei quadrati mostrata qui è la tabella dei valori quadrati più grande che XLAT può utilizzare, poiché il valore quadrato successivo (quello di 16) è 256, che non può essere espresso in 8 bit; quindi una tabella di ricerca che lo contenga non può essere utilizzata da XLAT. Rendere le voci di una tabella di ricerca dei valori quadrati grandi 16 bit ti permetterà di includere i quadrati di tutti gli interi fino a 255. E se assegni a ciascuna voce della tabella 32 bit, puoi includere i quadrati degli interi fino a 65.535, ma sarebbe una tabella molto sostanziosa! Non ho spazio in questo libro per approfondire la matematica in virgola mobile, ma una volta si faceva molto spesso uso di tabelle per cercare valori come le radici quadrate. Le CPU moderne con sistemi matematici come AVX rendono tali tecniche molto meno allettanti. Tuttavia, quando ti trovi di fronte a una sfida di calcolo matematico, dovresti sempre tenere a mente la possibilità di utilizzare tabelle di ricerca.
 </p>
 
 ### Procedure
