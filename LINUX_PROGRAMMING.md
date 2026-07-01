@@ -273,9 +273,9 @@ int main ()
 
 ### `fork()` `exec()`
 
-La system call `fork()` crea un nuovo processo che è la copia identica del processo padre. La `exec()` permette di sostituire il processo padre con un nuovo programma nel processo appena creato con la `fork()`.
+La system call `fork()` crea un nuovo processo che è la copia del processo padre. La `exec()` permette di sostituire il processo figlio con un nuovo programma nel processo appena creato da `fork()`.
 
-Per distinguire il padre del figlio la funzione `fork()` restituisce un intero: in particolare restituisce zero  al processo figlio ed il **pid** del processo figlio al padre. 
+Per distinguere il padre dal figlio, la funzione `fork()` restituisce un intero: in particolare restituisce zero al processo figlio e il **PID** del processo figlio al processo padre.
 
 ```c
 /***********************************************************************
@@ -308,12 +308,12 @@ int main ()
 
 Nota che il codice all'interno del blocco `if` è eseguito solo dal processo padre, mentre il codice dentro il blocco `else` è eseguito dal processo figlio.
 
-La systam call `exec()` sostituisce il programma eseguito all'interno del processo con un nuovo programma. Quando un programma richiama la `exec()` il processo smette immediatamente di eseguire il programma e ed inizio l'esecuzione del nuovo programma richiamata dalla `exec()`.
+La system call `exec()` sostituisce il programma in esecuzione nel processo con un nuovo programma. Quando un programma richiama la `exec()`, il processo smette immediatamente di eseguire il programma precedente e inizia l'esecuzione del nuovo programma richiamato dalla `exec()`.
 Ci sono diverse versioni della `exec()`:
 
-* Funzioni che contengono la lettera `p` nel nome (`exexcvp`, `execlp`) accettano il nome del programma e lo cercano nel sistema; le funzioni che non contengono la `p` nel nome necessitano del percorso assoluto del programma da eseguire
-* Funzioni che contengono la lettera `v` nel nome (`execv`, `execvp`, `execve`) accettano una  lista di argomenti da passare in ingresso al nuovo programma come un array di puntatori a caratteri terminati da `NULL`. Le funzioni invece che contengono la lettra `l` (`execl` `execlp`, `execle`) accettano una lista di argomenti in ingresso secondo il meccanismo delle `vargargs` del lingugiaggio C
-* Funzioni che contengono la lettera `e` nel nome (`execve`, `execle`) accettano un argomento in più, un array di variabili d'ambiente. L'argomento dovrebbe essere un array di puntatori a caratteri terminato da `NULL`, ciascun stringa dovrebbe essere nella forma `VARIABILE=valore`
+* Le funzioni che contengono la lettera `p` nel nome (`execvp`, `execlp`) accettano il nome del programma e lo cercano nel sistema; le funzioni che non contengono la `p` nel nome necessitano del percorso assoluto del programma da eseguire.
+* Le funzioni che contengono la lettera `v` nel nome (`execv`, `execvp`, `execve`) accettano una lista di argomenti da passare in ingresso al nuovo programma come un array di puntatori a caratteri terminati da `NULL`. Le funzioni che contengono la lettera `l` (`execl`, `execlp`, `execle`) accettano una lista di argomenti in ingresso secondo il meccanismo delle variadic del linguaggio C.
+* Le funzioni che contengono la lettera `e` nel nome (`execve`, `execle`) accettano un argomento in più: un array di variabili d'ambiente. L'argomento dovrebbe essere un array di puntatori a caratteri terminato da `NULL`, e ciascuna stringa dovrebbe essere nella forma `VARIABILE=valore`.
 
 ```c
 /***********************************************************************
