@@ -252,7 +252,7 @@ Ci sono due modi per creare un processo: il primo è relativamente semplice ma i
 
 #### `system()`
 
-La funzione `system()` è fornita nella libreria standard del linguaggio C e permette di eseguire un comando all'interno di un programma come se fosse stato digitato direttamente in una shell. La funzione `system()` crea un sottoprocesso lanciando `/bin/sh`. Per esempio, il codice sottostante invoca il comando `ls` per mostrare il contenuto della root directory come se si fosse digitato `ls -l /` direttamente dalla shell.
+La funzione `system()` è fornita nella libreria standard del linguaggio C e permette di eseguire un comando all'interno di un programma come se fosse stato digitato direttamente in una shell. La funzione `system()` crea un sottoprocesso lanciando `/bin/sh`. Per esempio, il codice seguente invoca il comando `ls` per mostrare il contenuto della root directory come se si fosse digitato `ls -l /` direttamente dalla shell.
 
 ```c
 /***********************************************************************
@@ -515,7 +515,7 @@ vagrant@ubuntu2204:/lab2/0_processes$ bin/4_sigusr1
 **************************SIGUSR1 was raised 6 times
 ```
 
-Per inviare il segnale `SIGUSR1` basta usare il comando `kill` usando il **PID** del processo (che puoi recuperare con il comando `ps` come mostrato sotto)
+Per inviare il segnale `SIGUSR1` basta usare il comando `kill`, con il **PID** del processo recuperabile in questo esempio con il comando `ps`.
 
 ```bash
 vagrant@ubuntu2204:~$ ps -e|grep 4_sigusr1
@@ -636,7 +636,7 @@ int main ()
 }                                                                                          
 ```
 
-Come puoi vedere sotto, prima il terminale è occupato dell'output del processo figlio (`ls -l`) e successivamente il processo padre termina stampando a schermo (`done with the main program`).
+Come mostrato nell'esempio seguente, il terminale visualizza prima l'output del processo figlio (`ls -l`), mentre successivamente il processo padre termina stampando a schermo (`done with the main program`).
 
 ```bash
 vagrant@ubuntu2204:/lab2/0_processes$ bin/5_fork_exec_wait
@@ -1232,7 +1232,7 @@ punta a una variabile che riceverà lo stato di cancellazione precedente. Questa
 pthread_setcancelstate (PTHREAD_CANCEL_DISABLE, NULL);
 ```
 
-**L'utilizzo di `pthread_setcancelstate()` consente di implementare sezioni critiche**. Una **sezione critica** è una sequenza di codice che deve essere eseguita per intero o per niente; in altre parole, se un thread inizia a eseguire la sezione critica, deve continuare fino alla fine della sezione critica senza essere annullato. Ad esempio, supponiamo che tu stia scrivendo una routine per un programma bancario che trasferisce denaro da un conto a un altro. Per fare ciò, devi aggiungere valore al saldo di un conto e detrarre lo stesso valore dal saldo di un altro conto. Se il thread che esegue la tua routine venisse annullato proprio nel momento sbagliato tra queste due operazioni, il programma avrebbe aumentato in modo ingiusto i depositi totali della banca non riuscendo a completare la transazione. Per evitare questa possibilità, inserisci le due operazioni in una sezione critica. Potresti implementare il trasferimento con una funzione come `process_transaction()`, mostrata sotto. Questa funzione disabilita l'annullamento del thread per avviare una sezione critica prima che modifichi il saldo di uno dei due conti.
+**L'utilizzo di `pthread_setcancelstate()` consente di implementare sezioni critiche**. Una **sezione critica** è una sequenza di codice che deve essere eseguita per intero o per niente; in altre parole, se un thread inizia a eseguire la sezione critica, deve continuare fino alla fine della sezione critica senza essere annullato. Ad esempio, supponiamo che tu stia scrivendo una routine per un programma bancario che trasferisce denaro da un conto a un altro. Per fare ciò, devi aggiungere valore al saldo di un conto e detrarre lo stesso valore dal saldo di un altro conto. Se il thread che esegue la tua routine venisse annullato proprio nel momento sbagliato tra queste due operazioni, il programma avrebbe aumentato in modo ingiusto i depositi totali della banca non riuscendo a completare la transazione. Per evitare questa possibilità, inserisci le due operazioni in una sezione critica. Potresti implementare il trasferimento con una funzione come `process_transaction()`, riportata nel paragrafo seguente. Questa funzione disabilita l'annullamento del thread per avviare una sezione critica prima che modifichi il saldo di uno dei due conti.
 
 ```c
 /***********************************************************************
@@ -1451,7 +1451,7 @@ int main ()
 ```
 
 
-La funzione principale in questo programma di esempio crea una chiave per memorizzare il puntatore del file specifico del thread e quindi lo memorizza in **thread_log_key**. Poiché si tratta di una variabile globale, è condivisa da tutti i thread. Quando ogni thread inizia a eseguire la sua funzione thread, apre un file di registro e memorizza il puntatore del file sotto quella chiave. In seguito, uno qualsiasi di questi thread può chiamare **write_to_thread_log()** per scrivere un messaggio nel file di registro specifico del thread. Tale funzione recupera il puntatore del file per il file di registro del thread dai dati specifici del thread e scrive il messaggio.
+La funzione principale in questo programma di esempio crea una chiave per memorizzare il puntatore del file specifico del thread e quindi lo memorizza in **thread_log_key**. Poiché si tratta di una variabile globale, è condivisa da tutti i thread. Quando ogni thread inizia a eseguire la sua funzione thread, apre un file di registro e memorizza il relativo puntatore del file associato a quella chiave. In seguito, uno qualsiasi di questi thread può chiamare **write_to_thread_log()** per scrivere un messaggio nel file di registro specifico del thread. Tale funzione recupera il puntatore del file per il file di registro del thread dai dati specifici del thread e scrive il messaggio.
 
 Si noti che **thread_function()** non ha bisogno di chiudere il file di registro. Questo perché quando è stata creata la chiave del file di registro, **close_thread_log()** è stato specificato come funzione di pulizia per quella chiave. Ogni volta che un thread esce, GNU/Linux chiama quella funzione, passando il valore specifico del thread per la chiave del registro del thread. Questa funzione si occupa di chiudere il file di registro.
 
@@ -2062,7 +2062,7 @@ nostro esempio, la condizione è lo stato del flag del thread, quindi questi pas
 3. Segnalare o trasmettere la variabile di condizione, a seconda del comportamento desiderato.
 4. Sbloccare il mutex che accompagna la variabile di condizione.
 
-Il codice di sotto mostra di nuovo l'esempio precedente, che ora utilizza una variabile di condizione per proteggere il flag del thread. Notare che in thread_function, un blocco sul mutex viene mantenuto prima di controllare il valore di thread_flag. Tale blocco viene automaticamente rilasciato da pthread_cond_wait prima del blocco e viene automaticamente riacquisito in seguito. Notare inoltre che set_thread_flag blocca il mutex prima di impostare il valore di thread_flag e di segnalare il mutex
+Il codice seguente mostra di nuovo l'esempio precedente, che ora utilizza una variabile di condizione per proteggere il flag del thread. In `thread_function`, un blocco sul mutex viene mantenuto prima di controllare il valore di `thread_flag`. Tale blocco viene automaticamente rilasciato da `pthread_cond_wait` prima dell'attesa e riacquisito subito dopo. Notare inoltre che `set_thread_flag` blocca il mutex prima di impostare il valore di `thread_flag` e di segnalare il mutex.
 
 ```c
 
@@ -2138,7 +2138,7 @@ I deadlock possono verificarsi quando due (o più) thread sono bloccati, in atte
 
 ### Implementazione dei Thread in GNU/Linux
 
-L'implementazione dei thread POSIX su GNU/Linux differisce dall'implementazione dei thread su molti altri sistemi simili a UNIX in un modo importante: su GNU/Linux, **i thread sono implementati come processi**. Ogni volta che chiami pthread_create per creare un nuovo thread, Linux crea un nuovo processo che esegue quel thread. Tuttavia, questo processo non è lo stesso di un processo che creeresti con fork; in particolare, condivide lo stesso spazio di indirizzamento e le stesse risorse del processo originale invece di ricevere copie. Il programma mostrato sotto lo dimostra. Il programma crea un thread; sia il thread originale che quello nuovo chiamano la funzione getpid e stampano i rispettivi ID di processo e quindi ruotano all'infinito.
+L'implementazione dei thread POSIX su GNU/Linux differisce dall'implementazione dei thread su molti altri sistemi simili a UNIX in un modo importante: su GNU/Linux, **i thread sono implementati come processi**. Ogni volta che chiami `pthread_create` per creare un nuovo thread, Linux crea un nuovo processo che esegue quel thread. Tuttavia, questo processo non è lo stesso di un processo che creeresti con `fork`; in particolare, condivide lo stesso spazio di indirizzamento e le stesse risorse del processo originale invece di ricevere copie. Il codice seguente lo dimostra. Il programma crea un thread; sia il thread originale che quello nuovo chiamano la funzione `getpid` e stampano i rispettivi ID di processo e quindi restano in attesa all'infinito.
 
 ```c
 /***********************************************************************
