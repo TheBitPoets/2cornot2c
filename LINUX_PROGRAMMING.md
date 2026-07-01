@@ -673,8 +673,8 @@ done with main program
 
 #### Processi zombie
 
-Quando un processo figlio termina ed il processo padre ha chiamato la `wait()` le informazioni circa la terminazione della propria esecuzione sono passati attraverso la `wait()` al padre. Se il padre non chiama la `waiit()` queste informazioni vanno perse? No, perchè in questo caso il processo figlio diventa un processo **zombie**.
-Un processo **zombie** è un processo che ha terminato la propria esecuzione ma non è stato ancora pulito, è compito del processo padre ripulire il processo proprio processo figlio zombie. Il compito della `wait()` è appunto questo: una volta che il processo figlio termina questo diventa una zombio poi la `wait()` andrà ad estrarre lo status di uscita del figlio zombie e finalmente il processo figlio può essere eliminato. Se il processo padre non chiama la `wait()` il figlio resta nello stato di zombie, vediamo un esempio:
+Quando un processo figlio termina e il processo padre ha chiamato la `wait()`, le informazioni sulla sua terminazione passano al padre attraverso la `wait()`. Se il padre non chiama la `wait()`, queste informazioni vanno perse? In questo caso il processo figlio diventa un processo **zombie**.
+Un processo **zombie** è un processo che ha terminato la propria esecuzione ma non è stato ancora ripulito; è quindi compito del processo padre ripulire il figlio. Il compito della `wait()` è proprio questo: una volta che il processo figlio termina, questo diventa uno zombie e poi la `wait()` estrae lo stato di uscita del figlio, cosicché il processo figlio può essere eliminato. Se il processo padre non chiama la `wait()`, il figlio resta nello stato di zombie, vediamo un esempio:
 
 ```c
 /***********************************************************************
@@ -719,14 +719,14 @@ vagrant@ubuntu2204:~$ ps -e -o pid,ppid,stat,cmd|grep 6_zombie
    2325    2301 S+   grep --color=auto 6_zombie
 ```
 
-Il processo padre ha pid `2317` ed è in sleep `S+` il processo figlio è `<defunct>` ed è uno zombio `Z+`
-Quando il processo padre termina prima del figlio senza chiamare la `wait()`, chi si occupa di ripulire il processo figlio e portarlo dallo stato di zombie a terminato? Il processo **init** che è il padre di tutti i processi (init infatti ha PID=1) ed eredita tutti i figli rimasti orfani del proprio padre. Se rilanci `ps` dopo un po' di tempo vedrai che il processo figlio con pid `2318` non esiste più in quanto è stato ripulito da init. 
+Il processo padre ha pid `2317` ed è in stato `S+`; il processo figlio è `<defunct>` ed è uno zombie `Z+`.
+Quando il processo padre termina prima del figlio senza chiamare la `wait()`, chi si occupa di ripulire il processo figlio e portarlo dallo stato di zombie a terminato? Il processo **init**, che è il padre di tutti i processi (init infatti ha PID=1), eredita tutti i figli rimasti orfani del proprio padre. Se rilanci `ps` dopo un po' di tempo vedrai che il processo figlio con pid `2318` non esiste più perché è stato ripulito da init.
 
 
 
 ### Ripulire il figlio in modo asincrono
 
-La `wait()` ci permette di attendere (nel codice del padre) la terminazione del figlio. Il problema è che la chiamata alla `wait()` è bloccante quindi il codice del padre rimane (appeso) bloccata all'istruzione di wait fino a quando il figlio non termina. Se si vuole che il padre continui la propria elaborazione mentre si attende che il figlio completi è possibile controllare periodicamente la terminazione del figlio chiamando `wait3()` o `wait4()` (flag `WNOHANG`) in modo asincrono ogni tanto nel codice del padre. Una soluzione migliore è usare il segnale `SIGCHLD` che Linux invia al padre ogni volta che uno dei suoi figli termina. Vediamo un esempio:
+La `wait()` ci permette di attendere (nel codice del padre) la terminazione del figlio. Il problema è che la chiamata alla `wait()` è bloccante, quindi il codice del padre rimane (appeso) all'istruzione di `wait` fino a quando il figlio non termina. Se si vuole che il padre continui la propria elaborazione mentre si attende che il figlio completi, è possibile controllare periodicamente la terminazione del figlio chiamando `wait3()` o `wait4()` (flag `WNOHANG`) in modo asincrono nel codice del padre. Una soluzione migliore è usare il segnale `SIGCHLD`, che Linux invia al padre ogni volta che uno dei suoi figli termina. Vediamo un esempio:
 
 ```c
 /***********************************************************************
