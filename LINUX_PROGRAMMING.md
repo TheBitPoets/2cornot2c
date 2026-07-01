@@ -1128,7 +1128,7 @@ Gli attributi del thread forniscono un meccanismo per la messa a punto del compo
 1. Crea un oggetto `pthread_attr_t`. Il modo più semplice per farlo è dichiarare una variabile automatica di questo tipo.
 2. Chiama la funzione `pthread_attr_init()`, passando un puntatore a questo oggetto. Ciò inizializza gli attributi ai loro valori predefiniti.
 3. Modifica l'oggetto attributo per contenere i valori attributo desiderati.
-4. Passa un puntatore all'oggetto attributo che hai valorizzato al punto di sopra quando richiami la `pthread_create()`.
+4. Passa un puntatore all'oggetto attributo che hai valorizzato al punto precedente quando richiami la `pthread_create()`.
 5. Chiama la `pthread_attr_destroy()` per rilasciare l'oggetto attributo. La variabile `pthread_attr_t` non viene deallocata; può essere reinizializzata con `pthread_attr_init()`
   
 Un singolo oggetto attributo thread può essere utilizzato per inizializzare diversi thread. Non è necessario mantenere l'oggetto attributo thread dopo che i thread sono stati creati.
@@ -2222,3 +2222,4 @@ la memoria visibile a un altro thread. Un processo separato, d'altra parte, non 
 la memoria.
 * I thread dovrebbero essere utilizzati per i programmi che necessitano di un parallelismo a grana fine. Ad esempio, se un problema può essere suddiviso in più attività quasi identiche, i thread potrebbero essere una buona scelta. I processi dovrebbero essere utilizzati per i programmi che necessitano di un parallelismo più grossolano.
 * La condivisione dei dati tra thread è banale perché i thread condividono la stessa memoria. (Tuttavia, è necessario prestare molta attenzione per evitare race condition, come descritto in precedenza.) La condivisione dei dati tra processi richiede l'uso di meccanismi IPC. Ciò può essere più macchinoso, ma rende i processi multipli meno inclini a soffrire di bug di concorrenza
+
