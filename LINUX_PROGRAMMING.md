@@ -1,4 +1,4 @@
-## Indice
+﻿## Indice
 
 * [Controllo dei processi](#controllo-dei-processi)
 * [Linux Programming](#linux-programming)
@@ -244,7 +244,7 @@ vagrant@ubuntu2204:/lab2/0_processes$ ps -e -o pid,ppid,command
 
 ### Uccidere un processo
 
-È possibile uccidere un processo con il comando `kill`. Indica sulla riga di comando il PID del processo che deve essere terminato. Il comando `kill` invia al processo un segnale `SIGTERM`. La ricezione di questo segnale determina (a meno che il processo non gestisca il segnale o lo ignori) la sua terminazione.
+�^ possibile uccidere un processo con il comando `kill`. Indica sulla riga di comando il PID del processo che deve essere terminato. Il comando `kill` invia al processo un segnale `SIGTERM`. La ricezione di questo segnale determina (a meno che il processo non gestisca il segnale o lo ignori) la sua terminazione.
 
 ### Creare un processo
 
@@ -550,7 +550,7 @@ int kill(pid_t pid, int sig);
 Devi includere `<sys/types.h>` e `<signal.h>` per utilizzare la funzione `kill()`.
 
 > [!IMPORTANT]
-> Per convenzione, **exit code** è usato per indicare se il programma ha terminato la sua esecuzione correttamente o con degli errori. Un valore pari a zero indica una corretta esecuzione, mentre valori diversi da zero indicano che il processo ha terminato con qualche errore. È importante seguire questa convenzione se vuoi usare gli operatori logici della shell (`&&` `||`) per concatenare più programmi tra loro.
+> Per convenzione, **exit code** è usato per indicare se il programma ha terminato la sua esecuzione correttamente o con degli errori. Un valore pari a zero indica una corretta esecuzione, mentre valori diversi da zero indicano che il processo ha terminato con qualche errore. �^ importante seguire questa convenzione se vuoi usare gli operatori logici della shell (`&&` `||`) per concatenare più programmi tra loro.
 
 Puoi leggere l'**exit code** dell'ultimo programma lanciato sulla shell stampando il contenuto della variabile `$?` per esempio.
 
@@ -1185,7 +1185,7 @@ int pthread_detach(pthread_t thread);
 
 #### Cancellazione del thread
 
-In circostanze normali, un thread termina quando conclude la propria funzione o chiamando la `pthread_exit()`. Tuttavia, è possibile che un thread richieda la terminazione di un altro thread. Questo meccanismo si chiama cancellamento di un thread. Per cancellare un thread, chiama la `pthread_cancel()`, passando l'ID del thread da cancellare. È possibile richiamare la `pthread_join()` su un thread cancellato (di tipo joinable, non è possibile per un thread in stato detached) per liberarne le risorse. Il valore di ritorno di un thread cancellato è il valore speciale `PTHREAD_CANCELED`.
+In circostanze normali, un thread termina quando conclude la propria funzione o chiamando la `pthread_exit()`. Tuttavia, è possibile che un thread richieda la terminazione di un altro thread. Questo meccanismo si chiama cancellamento di un thread. Per cancellare un thread, chiama la `pthread_cancel()`, passando l'ID del thread da cancellare. �^ possibile richiamare la `pthread_join()` su un thread cancellato (di tipo joinable, non è possibile per un thread in stato detached) per liberarne le risorse. Il valore di ritorno di un thread cancellato è il valore speciale `PTHREAD_CANCELED`.
 
 Spesso un thread può eseguire codice in cui tutte le istruzioni devono essere trattate in modo atomico. Ad esempio, il thread può allocare alcune risorse, usarle e quindi deallocarle. Se il thread viene annullato nel mezzo di questo codice, potrebbe non avere l'opportunità di deallocare le risorse, e quindi le risorse saranno perse. Per contrastare questa possibilità, un thread può controllare se e quando può essere annullato. Un thread può trovarsi in uno dei tre stati per quanto riguarda la cancellazione del thread:
 
@@ -1812,7 +1812,7 @@ Per inviare a un semaforo, usa **sem_post()**.
 int sem_post(sem_t *sem);
 ```
 
-Viene fornita anche una funzione di attesa non bloccante, **sem_trywait()**. È simile a pthread_mutex_trylock: se l'attesa si fosse bloccata perché il valore del semaforo era zero, la funzione restituisce immediatamente, con il valore di errore `EAGAIN`, invece di
+Viene fornita anche una funzione di attesa non bloccante, **sem_trywait()**. �^ simile a pthread_mutex_trylock: se l'attesa si fosse bloccata perché il valore del semaforo era zero, la funzione restituisce immediatamente, con il valore di errore `EAGAIN`, invece di
 bloccare.
 
 ```c
@@ -2222,4 +2222,5 @@ la memoria visibile a un altro thread. Un processo separato, d'altra parte, non 
 la memoria.
 * I thread dovrebbero essere utilizzati per i programmi che necessitano di un parallelismo a grana fine. Ad esempio, se un problema può essere suddiviso in più attività quasi identiche, i thread potrebbero essere una buona scelta. I processi dovrebbero essere utilizzati per i programmi che necessitano di un parallelismo più grossolano.
 * La condivisione dei dati tra thread è banale perché i thread condividono la stessa memoria. (Tuttavia, è necessario prestare molta attenzione per evitare race condition, come descritto in precedenza.) La condivisione dei dati tra processi richiede l'uso di meccanismi IPC. Ciò può essere più macchinoso, ma rende i processi multipli meno inclini a soffrire di bug di concorrenza
+
 
