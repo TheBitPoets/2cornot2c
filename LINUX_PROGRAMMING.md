@@ -530,8 +530,9 @@ vagrant@ubuntu2204:~$ kill -SIGUSR1 1642
 ```
 #### Terminare un processo
 
-Un processo termina o attraverso la chiamata alla funzione `exit()` o quando termina la funzione `main()` del programma (attraverso `return` o perchè raggiunge l'ultima istruzione del blocco della funzione `main()`). Il valore intero ritornato attraverso `return` o come parametro in input alla `exit()` è detto **exit code**. Un processo può anche terminare in risposta ad un segnale (`SIGSEGV`, `SIGKILL` etc). Altri segnali per terminare un processo sono `SIGINT` inviato quando si preme la combinazione di tast `CTRL+C` nel terminale occupato del programma. Un altro segnale che termina un processo è `SIGABRT` che oltre che terminare il processo genera un core file, è possibile inviare questo segnale attraverso la chiamata `abort()`. Il modo più brutale per terminare un processo è quello di inviare il segnale `SIGKILL` che termina immediatamente il processo e non può essere ignorato o bloccato.
-Tutti questi segnale ed anche altri possono essere inviati con il comando `kill` specificando quale segnale inviare come parametro, per inviare un `SIGKILL` fai in questo modo:
+Un processo termina o attraverso la chiamata alla funzione `exit()` o quando termina la funzione `main()` del programma (attraverso `return` o perch� raggiunge l'ultima istruzione della funzione `main()`). Il valore intero ritornato attraverso `return` o come parametro in input alla `exit()` � detto **exit code**. Un processo pu� anche terminare in risposta a un segnale (`SIGSEGV`, `SIGKILL` ecc.). Altri segnali per terminare un processo sono `SIGINT`, inviato quando si preme la combinazione di tasti `CTRL+C` nel terminale attivo del programma. Un altro segnale che termina un processo � `SIGABRT`: oltre a terminare il processo genera un core file; � possibile inviare questo segnale attraverso la chiamata `abort()`. Il modo pi� rapido per terminare un processo � quello di inviare il segnale `SIGKILL`, che termina immediatamente il processo e non pu� essere ignorato o bloccato.
+
+Tutti questi segnali ed anche altri possono essere inviati con il comando `kill` specificando quale segnale inviare come parametro. Per inviare un `SIGKILL` fai in questo modo:
 
 ```bash
 kill -KILL pid
@@ -543,15 +544,15 @@ Esiste anche la funzione `kill()` per inviare un segnale dal codice ed ha questo
 int kill(pid_t pid, int sig);
 ```
 
-1. `pid_t pid`: il pid del processo
+1. `pid_t pid`: il PID del processo
 2. `int sig`: segnale da inviare
 
-Devi includere `<sys/types.h>` e `<signal.h` per utilizzare la funzione `kill()`.
+Devi includere `<sys/types.h>` e `<signal.h>` per utilizzare la funzione `kill()`.
 
 > [!IMPORTANT]
-> Per convenzione, **exit code** è usato per indicare se il programma ha terminato la sua esecuzione correttamente o con degli errir. Un valore pari a zero indica una corretta esecuzione mentre valori diversi da zero indicano che il processo ha terminato con qualche errore. E' importante seguire questa convezione se vuoi usare gli operatori logici della shell (`&&` `||`) per concatenare più programma tra loro.
+> Per convenzione, **exit code** � usato per indicare se il programma ha terminato la sua esecuzione correttamente o con degli errori. Un valore pari a zero indica una corretta esecuzione, mentre valori diversi da zero indicano che il processo ha terminato con qualche errore. � importante seguire questa convenzione se vuoi usare gli operatori logici della shell (`&&` `||`) per concatenare pi� programmi tra loro.
 
-Puoi leggere l'**exit code** dell'ultimo programma lanciato sulla shell stampando il contenuto della variabile `$?` per esempio
+Puoi leggere l'**exit code** dell'ultimo programma lanciato sulla shell stampando il contenuto della variabile `$?` per esempio.
 
 ```bash
 vagrant@ubuntu2204:/lab2/0_processes$ ls
@@ -562,11 +563,11 @@ vagrant@ubuntu2204:/lab2/0_processes$ echo $?
 
 #### Aspettare la terminazione di un processo
 
-Quando si esegue la coppia di chiamate `fork()` ed `exec()` per creare un processo figlio siamo in grado, all'interno dello stesso codice, di differenziare quali istruzioni saranno eseguite dal padre e quali dal processo figlio sfruttando l'intero di ritorno della chiamata `fork()`. Nulla però ci assicura che il padre terminerà prima del figlio, l'ordine di terminazione dipende dal numero di istruzioni dei due processi e soprattutto da come il sistema operativo andrà a schedulare i due processi nell'assegnazione dei tempi di CPU. Quando è necessario che per la correttezza del nostro programma il padre termini soltanto al termine dell'esecuzione del processo figlio è obbligo usare la funzione `wait()`.
+Quando si esegue la coppia di chiamate `fork()` ed `exec()` per creare un processo figlio siamo in grado, all'interno dello stesso codice, di differenziare quali istruzioni saranno eseguite dal padre e quali dal processo figlio sfruttando il valore di ritorno della chiamata `fork()`. Nulla per� ci assicura che il padre termini prima del figlio, l'ordine di terminazione dipende dal numero di istruzioni dei due processi e soprattutto da come il sistema operativo andr� a schedulare i due processi nell'assegnazione dei tempi di CPU. Quando � necessario che per la correttezza del nostro programma il padre termini soltanto al termine dell'esecuzione del processo figlio, � obbligatorio usare la funzione `wait()`.
 
 #### wait()
 
-La `wait()` l'esecuzione del processo padre finchè uno dei suoi figli ha terminato (anche con un errore, non importa). Inoltre la `wait()` ritorna uno status code (**exit code**) dal quale estrarre informazioni su come il processo figlio ha terminato l'esecuzione. Per esempio la macro `WEXITSTATUS` contiene l'**exit code** del processo figlio.
+La `wait()` sospende l'esecuzione del processo padre finch� uno dei suoi figli ha terminato (anche con un errore, non importa). Inoltre la `wait()` ritorna uno status code (**exit code**) dal quale estrarre informazioni su come il processo figlio ha terminato l'esecuzione. Per esempio la macro `WEXITSTATUS` contiene l'**exit code** del processo figlio.
 
 Vediamo un esempio:
 
@@ -632,10 +633,10 @@ int main ()
   printf("done with main program\n");
 
   return 0;
-}                                                                    
+}                                                                                          
 ```
 
-Come puoi vedere sotto, prima il terminale è occupato dell'output del processo figlio (`ls -l`) e successivamente il processo padre termina stampando a schermo (`done with the main program`).
+Come puoi vedere sotto, prima il terminale è occupato dell'output del processo figlio (ls -l) e successivamente il processo padre termina stampando a schermo (done with the main program).
 
 ```bash
 vagrant@ubuntu2204:/lab2/0_processes$ bin/5_fork_exec_wait
@@ -657,7 +658,7 @@ drwxr-xr-x   2 root    root          4096 Aug 10  2023 mnt
 drwxr-xr-x   2 root    root          4096 Aug 10  2023 opt
 dr-xr-xr-x 163 root    root             0 Aug 12 08:32 proc
 drwx------   5 root    root          4096 Jan 11  2024 root
-drwxr-xr-x  28 root    root           840 Aug 12 10:37 run
+drwxr-xr-x  28 root    root           840 Aug 12  10:37 run
 lrwxrwxrwx   1 root    root             8 Aug 10  2023 sbin -> usr/sbin
 drwxr-xr-x   6 root    root          4096 Jul  7 07:31 snap
 drwxr-xr-x   2 root    root          4096 Aug 10  2023 srv
@@ -2222,3 +2223,5 @@ la memoria visibile a un altro thread. Un processo errante, d'altra parte, non p
 la memoria.
 * I thread dovrebbero essere utilizzati per i programmi che necessitano di un parallelismo a grana fine. Ad esempio, se un problema può essere suddiviso in più attività quasi identiche, i thread potrebbero essere una buona scelta. I processi dovrebbero essere utilizzati per i programmi che necessitano di un parallelismo più grossolano.
 * La condivisione dei dati tra thread è banale perché i thread condividono la stessa memoria. (Tuttavia, è necessario prestare molta attenzione per evitare race condition, come descritto in precedenza.) La condivisione dei dati tra processi richiede l'uso di meccanismi IPC. Ciò può essere più macchinoso, ma rende i processi multipli meno inclini a soffrire di bug di concorrenza
+
+
