@@ -567,7 +567,7 @@ Quando si esegue la coppia di chiamate `fork()` ed `exec()` per creare un proces
 
 #### wait()
 
-La `wait()` sospende l'esecuzione del processo padre finché uno dei suoi figli ha terminato (anche con un errore, non importa). Inoltre la `wait()` ritorna uno status code (**exit code**) dal quale estrarre informazioni su come il processo figlio ha terminato l'esecuzione. Per esempio la macro `WEXITSTATUS` contiene l'**exit code** del processo figlio.
+La `wait()` sospende l'esecuzione del processo padre finché uno dei suoi figli è terminato (anche con un errore, non importa). Inoltre la `wait()` ritorna uno status code (codice di stato, **exit code**) dal quale estrarre informazioni su come il processo figlio ha terminato l'esecuzione. Ad esempio la macro `WEXITSTATUS` contiene l'**exit code** del processo figlio.
 
 Vediamo un esempio:
 
@@ -636,7 +636,7 @@ int main ()
 }                                                                                          
 ```
 
-Come puoi vedere sotto, prima il terminale è occupato dell'output del processo figlio (ls -l) e successivamente il processo padre termina stampando a schermo (done with the main program).
+Come puoi vedere sotto, prima il terminale è occupato dell'output del processo figlio (`ls -l`) e successivamente il processo padre termina stampando a schermo (`done with the main program`).
 
 ```bash
 vagrant@ubuntu2204:/lab2/0_processes$ bin/5_fork_exec_wait
@@ -720,7 +720,7 @@ vagrant@ubuntu2204:~$ ps -e -o pid,ppid,stat,cmd|grep 6_zombie
 ```
 
 Il processo padre ha pid `2317` ed è in stato `S+`; il processo figlio è `<defunct>` ed è uno zombie `Z+`.
-Quando il processo padre termina prima del figlio senza chiamare la `wait()`, chi si occupa di ripulire il processo figlio e portarlo dallo stato di zombie a terminato? Il processo **init**, che è il padre di tutti i processi (init infatti ha PID=1), eredita tutti i figli rimasti orfani del proprio padre. Se rilanci `ps` dopo un po' di tempo vedrai che il processo figlio con pid `2318` non esiste più perché è stato ripulito da init.
+Quando il processo padre termina prima del figlio senza chiamare la `wait()`, chi si occupa di ripulire il processo figlio e riportarlo dallo stato di zombie a terminato? Il processo **init**, che è il padre di tutti i processi (init infatti ha PID=1), eredita tutti i figli rimasti orfani del proprio padre. Se rilanci `ps` dopo un po' di tempo, vedrai che il processo figlio con pid `2318` non esiste più perché è stato ripulito da init.
 
 
 
