@@ -15161,7 +15161,7 @@ diskhelp:
     cmp rax,0           ; A returned null indicates error or EOF
     jle .done           ; If we get 0 in rax, close up & return
     mov rdi,HelpLine    ; Pass address of help line in rdi
-    xor rax,rax         ; Passs 0 to show there will be no fp registers    
+    xor rax,rax         ; Pass 0 to show there will be no fp registers    
     call printf         ; Call printf to display help line
     jmp .rdln
 
