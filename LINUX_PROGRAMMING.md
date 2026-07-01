@@ -410,13 +410,13 @@ drwxr-xr-x  13 root    root          4096 Aug 10  2023 var
 I segnali sono un meccanismo per comunicare e manipolare i processi in Linux. Un segnale è semplicemente un messaggio inviato a un processo. In Linux sono definiti in `/usr/include/bits/signum.h`, ma per usarli basta includere `<signal.h>` nel codice sorgente.
 
 Quando un processo riceve un segnale può comportarsi in modi differenti sulla base della disposizione di default, che stabilisce cosa accade se il programma non specifica un comportamento specifico per quel segnale. Per ciascun segnale, un programma può:
-1. Specificare un diverso comportamento dalla disposizione di default
+1. Specificare un comportamento diverso dalla disposizione di default
 2. Ignorare il segnale
 3. Chiamare una funzione, detta **signal-handler**, per rispondere in modo personalizzato al segnale
 
 Se una funzione **signal-handler** viene usata, l'esecuzione del programma è messa in pausa e il gestore viene eseguito immediatamente. Solo dopo che questa termina l'esecuzione del programma riprende nel punto in cui si era interrotta.
 
-Alcuni esempi di segnali sono 
+Alcuni esempi di segnali sono:
 
 | Segnale  | Significato | Disposizione |
 | ------------- | ------------- |------------- |
@@ -430,8 +430,8 @@ Alcuni esempi di segnali sono
 
 #### sigaction
 
-La **sigaction** può essere usata per settare la disposizione per un segnale (per modificare la disposizione di default).
-Questa riceve in ingresso tre parametri:
+La **sigaction** può essere usata per impostare il comportamento di default di un segnale.
+Essa riceve in ingresso tre parametri:
 
 1. `int`: il numero del segnale
 2. `const struct sigaction *`: la disposizione desiderata per il segnale
@@ -461,7 +461,7 @@ Il campo più importante in questa struttura è `sa_handler` che può assumere u
 * **SIG_IGN**
 * Un puntatore alla funzione **signal-handler**. La funzione dovrebbe accettare un parametro (il numero del segnale) e restituire `void`.
 
-Quando il segnale viene processato dal programma questo può essere in uno stato altamente instabile (quindi durante l'esecuzione di un **signal-handler**). All'interno di una funzione **signal-handler** bisogna svolgere solo i task strettamente necessari per gestire/rispondere il segnale ed evitare operazioni di I/O o richiamare librerie esterne o del linguaggio. Può accadere che un **signal-handler** sia interrotto a causa della ricezione di un altro segnale e questo è un problema molto complicato da diagnosticare e debuggare e per questo bisogna essere molto cauti su cosa fare dentro un **signal-handler**.
+Quando il segnale viene processato dal programma questo può essere in uno stato altamente instabile (quindi durante l'esecuzione di un **signal-handler**). All'interno di una funzione **signal-handler** bisogna svolgere solo i task strettamente necessari per gestire e rispondere al segnale ed evitare operazioni di I/O o richiamare librerie esterne o del linguaggio. Può accadere che un **signal-handler** sia interrotto a causa della ricezione di un altro segnale e questo è un problema molto complicato da diagnosticare e debuggare, quindi bisogna essere molto cauti su cosa fare dentro un **signal-handler**.
 
 Un altro aspetto da tenere in considerazione è rendere le proprie istruzioni (variabili globali) atomiche usando il tipo `sig_atomic_t`. Linux garantisce che l'assegnazione di variabili di questo tipo avvenga in modo atomico e non possa essere interrotta dall'arrivo di un nuovo segnale.
 
