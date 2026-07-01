@@ -461,7 +461,7 @@ Il campo più importante in questa struttura è `sa_handler` che può assumere u
 * **SIG_IGN**
 * Un puntatore alla funzione **signal-handler**. La funzione dovrebbe accettare un parametro (il numero del segnale) e restituire `void`.
 
-Quando il segnale viene processata dal programma questo può essere in uno stato altamente instabile (quindi durante l'esecuzione di un **signal-handler**). All'interno di una funzione **signal-handler** bisogna svolgere solo i task strettamente necessari per gestire/rispondere il segnale ed evitare operazioni di I/O o richiamare librerie esterne o del linguaggio. Può accadere che un **signal-handler** sia interrotto a causa della ricezione di un altro segnale e questo è un problema molto complicato da diagnosticare e debuggare e per questo bisogna essere molto cauti su cosa fare dentro un **signal-handler**.
+Quando il segnale viene processato dal programma questo può essere in uno stato altamente instabile (quindi durante l'esecuzione di un **signal-handler**). All'interno di una funzione **signal-handler** bisogna svolgere solo i task strettamente necessari per gestire/rispondere il segnale ed evitare operazioni di I/O o richiamare librerie esterne o del linguaggio. Può accadere che un **signal-handler** sia interrotto a causa della ricezione di un altro segnale e questo è un problema molto complicato da diagnosticare e debuggare e per questo bisogna essere molto cauti su cosa fare dentro un **signal-handler**.
 
 Un altro aspetto da tenere in considerazione è rendere le proprie istruzioni (variabili globali) atomiche usando il tipo `sig_atomic_t`. Linux garantisce che l'assegnazione di variabili di questo tipo avvenga in modo atomico e non possa essere interrotta dall'arrivo di un nuovo segnale.
 
