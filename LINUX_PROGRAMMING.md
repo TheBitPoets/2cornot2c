@@ -407,31 +407,31 @@ drwxr-xr-x  13 root    root          4096 Aug 10  2023 var
 
 #### Segnali
 
-I segnali sono un meccanismo per comunicare e manipolare i processi in Linux. Un segnale è semplicemente un messaggio inviato ad un processo. I segnali sono definiti il linux in `/usr/include/bits/signum.h` ma per usarli basta includere `<signal.h>` nel tuo sorgente.
+I segnali sono un meccanismo per comunicare e manipolare i processi in Linux. Un segnale è semplicemente un messaggio inviato a un processo. In Linux sono definiti in `/usr/include/bits/signum.h`, ma per usarli basta includere `<signal.h>` nel codice sorgente.
 
-Quando un processo riceve un segnale può comportarsi in modi differenti sulla base della disposizione di default che determina che cosa accade se il programma non specifica qualche altre comportamente specifico per il segnale. Per ciascun segnale, un programma può:
-1. Specificare un diverso comportamente dalla disposizione di default
-2. Ignora il segnale
-3. Chiamare una funzione, detta **signal-handler** per rispondere in modo personalizzato al segnale
+Quando un processo riceve un segnale può comportarsi in modi differenti sulla base della disposizione di default, che stabilisce cosa accade se il programma non specifica un comportamento specifico per quel segnale. Per ciascun segnale, un programma può:
+1. Specificare un diverso comportamento dalla disposizione di default
+2. Ignorare il segnale
+3. Chiamare una funzione, detta **signal-handler**, per rispondere in modo personalizzato al segnale
 
-Se una funzione **signal-handler** è usata, l'esecuzione del programma è messa in pausa e la funzione è immeditamente eseguita e solo dopo che questa termina l'esecuzione del programma riprende nel punto dove si era interrotta.
+Se una funzione **signal-handler** viene usata, l'esecuzione del programma è messa in pausa e il gestore viene eseguito immediatamente. Solo dopo che questa termina l'esecuzione del programma riprende nel punto in cui si era interrotta.
 
 Alcuni esempi di segnali sono 
 
-| First Header  | Significato | Disposizione
+| Segnale  | Significato | Disposizione |
 | ------------- | ------------- |------------- |
-| `SIGSEGV`  | segmentation fault  | termina il processo
-| `SIGTERM`  | chiede al processo di terminare, il processo potrebbe ignorare il segnale di terminazione  | termina il processo
-| `SIGKILL`  | termina il processo immediatamente, il processo non può ignorare questo segnale  | termina il processo 
+| `SIGSEGV`  | segmentation fault  | termina il processo |
+| `SIGTERM`  | chiede al processo di terminare, il processo potrebbe ignorare il segnale di terminazione  | termina il processo |
+| `SIGKILL`  | termina il processo immediatamente, il processo non può ignorare questo segnale  | termina il processo |
 | `SIGUSR1`  | Definito dall'utente  |
 | `SIGUSR2`  | Definito dall'utente  |
-| `SIGHUP`   | Risveglia un processo o lo mette in sleep o lo costringe e rileggere la sua configurazione |
+| `SIGHUP`   | Risveglia un processo o lo mette in sleep o lo costringe a rileggere la sua configurazione |
 
 
 #### sigaction
 
 La **sigaction** può essere usata per settare la disposizione per un segnale (per modificare la disposizione di default).
-Questa riceva in ingresso tre parametri:
+Questa riceve in ingresso tre parametri:
 
 1. `int`: il numero del segnale
 2. `const struct sigaction *`: la disposizione desiderata per il segnale
@@ -459,13 +459,13 @@ Il campo più importante in questa struttura è `sa_handler` che può assumere u
 
 * **SIG_DFL**
 * **SIG_IGN**
-* Un puntatore alla funzione **signal-handler**. La funzione dovrebbe accettare un paraemtre (il numero del segnale) e ritornare `void`.
+* Un puntatore alla funzione **signal-handler**. La funzione dovrebbe accettare un parametro (il numero del segnale) e restituire `void`.
 
-Quando il segnale viene processata dal programma questo può essere in uno stato altamente instabile (quindi durante l'esecuzione di un **signal-hadler**). Quindi all'interno di una funzione **signal-hanlder** bisogna svolgere solo i task strettamente necessari per gestire/rispondere il/al segnale ed evitare operazione di I/O o richiamare librerie esterne o del linguaggio. Può accadere che un **signal-handler** sia interrotto a causa della ricezione di un altro segnale e questo è un problema molto complicato da diagnosticare e debuggare e per questo bisogna essere molto cauti su cosa fare dentro un **signal-handler**.
+Quando il segnale viene processata dal programma questo può essere in uno stato altamente instabile (quindi durante l'esecuzione di un **signal-handler**). All'interno di una funzione **signal-handler** bisogna svolgere solo i task strettamente necessari per gestire/rispondere il segnale ed evitare operazioni di I/O o richiamare librerie esterne o del linguaggio. Può accadere che un **signal-handler** sia interrotto a causa della ricezione di un altro segnale e questo è un problema molto complicato da diagnosticare e debuggare e per questo bisogna essere molto cauti su cosa fare dentro un **signal-handler**.
 
-Un altro aspetto da tenere in considerazione è rendere le prorpie istruzioni (variabili globali) atomiche usando il tipo `sig_atomic_t`. Linux garantisce che l'assegnazione di variabili di questo tipo avvenga in modo atomico e non possa essere interrotto dall'arrivo di un nuovo segnale.
+Un altro aspetto da tenere in considerazione è rendere le proprie istruzioni (variabili globali) atomiche usando il tipo `sig_atomic_t`. Linux garantisce che l'assegnazione di variabili di questo tipo avvenga in modo atomico e non possa essere interrotta dall'arrivo di un nuovo segnale.
 
-Vediamo un esempio di **signal-handler** per la gestione del segnale **SIGUSR1** uno dei due segnale riservati all'uso da parte dei programmi applicativi.
+Vediamo un esempio di **signal-handler** per la gestione del segnale **SIGUSR1**, uno dei due segnali riservati all'uso da parte dei programmi applicativi.
 
 ```c
 /***********************************************************************
@@ -507,7 +507,7 @@ int main ()
 }
 ```
 
-In un primo terminale esegui il programma che resterà in esecuzione per 5 minuti, alla fine dell'esecuzione stamperà il numero di volte che il segnale `SIGUSR1` è stato ricevuto.
+In un primo terminale esegui il programma che resterà in esecuzione per 5 minuti; alla fine dell'esecuzione stamperà il numero di volte che il segnale `SIGUSR1` è stato ricevuto.
 
 ```bash
 vagrant@ubuntu2204:/lab2/0_processes$ bin/4_sigusr1
@@ -528,7 +528,6 @@ vagrant@ubuntu2204:~$ kill -SIGUSR1 1642
 vagrant@ubuntu2204:~$ kill -SIGUSR1 1642
 vagrant@ubuntu2204:~$ kill -SIGUSR1 1642
 ```
-
 #### Terminare un processo
 
 Un processo termina o attraverso la chiamata alla funzione `exit()` o quando termina la funzione `main()` del programma (attraverso `return` o perchè raggiunge l'ultima istruzione del blocco della funzione `main()`). Il valore intero ritornato attraverso `return` o come parametro in input alla `exit()` è detto **exit code**. Un processo può anche terminare in risposta ad un segnale (`SIGSEGV`, `SIGKILL` etc). Altri segnali per terminare un processo sono `SIGINT` inviato quando si preme la combinazione di tast `CTRL+C` nel terminale occupato del programma. Un altro segnale che termina un processo è `SIGABRT` che oltre che terminare il processo genera un core file, è possibile inviare questo segnale attraverso la chiamata `abort()`. Il modo più brutale per terminare un processo è quello di inviare il segnale `SIGKILL` che termina immediatamente il processo e non può essere ignorato o bloccato.
