@@ -16315,7 +16315,7 @@ pthread_t pthread_self(void);
 int pthread_equal(pthread_t t1, pthread_t t2);
 ```
 
-Queste due funzioni possonoe essere utlili per controllare se un certo ID corrisponde a quello del thread corrente per esempio prima di chiamare una `pthread_join()` in quanto aspettare la terminazione di se stessi è un grosso errore. Sotto un esempio:
+Queste due funzioni possono essere utili per controllare se un certo ID corrisponde a quello del thread corrente per esempio prima di chiamare una `pthread_join()` in quanto aspettare la terminazione di se stessi è un grosso errore. Sotto un esempio:
 
 ```c
 if (!pthread_equal (pthread_self (), other_thread))
@@ -16593,7 +16593,7 @@ Supponiamo, ad esempio, che l'applicazione divida un'attività tra più thread. 
 #include <pthread.h>
 #include <stdio.h>
 
-/* The key used to assocate a log file pointer with each thread.  */
+/* The key used to associate a log file pointer with each thread.  */
 static pthread_key_t thread_log_key;
 
 /* Write MESSAGE to the log file for the current thread.  */
