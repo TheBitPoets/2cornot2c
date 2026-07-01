@@ -21,9 +21,9 @@ Sorry, only the Italian version is available so far.
   * [Auto storage duration](#auto-storage-duration)
   * [Classi di memorizzazione](#classi-di-memorizzazione-1)
   * [Variabili automatiche (automatic class)](#variabili-automatiche--automatic-class-)
-  * [Variabili register (regiter class)](#variabili-register--regiter-class-)
-  * [Varabili statiche locali (static variables with block scope)](#varabili-statiche-locali--static-variables-with-block-scope-)
-  * [Differenza tra definzione e dichiarazione di variabile](#differenza-tra-definzione-e-dichiarazione-di-variabile)
+  * [Variabili register (register class)](#variabili-register--register-class-)
+  * [Variabili statiche locali (static variables with block scope)](#variabili-statiche-locali--static-variables-with-block-scope-)
+  * [Differenza tra definizione e dichiarazione di variabile](#differenza-tra-definizione-e-dichiarazione-di-variabile)
   * [Variabili globali con External Linkage (Static variables with External Linkage)](#variabili-globali-con-external-linkage--static-variables-with-external-linkage-)
   * [Variabili globali con Internal Linkage (Static variables with Internal Linkage)](#variabili-globali-con-internal-linkage--static-variables-with-internal-linkage-)
   * [Sintassi dichiarazione variabili](#sintassi-dichiarazione-variabili)
@@ -40,7 +40,7 @@ Sorry, only the Italian version is available so far.
     + [Big & Little endian](#big---little-endian)
     + [Codifica numeri decimali](#codifica-numeri-decimali)
       - [Codifica interi senza segno](#codifica-interi-senza-segno)
-      - [Condifica interi con segno (complemento a due)](#condifica-interi-con-segno--complemento-a-due-)
+      - [Codifica interi con segno (complemento a due)](#codifica-interi-con-segno--complemento-a-due-)
     + [Mapping signed - unsigned](#mapping-signed---unsigned)
     + [Estensione rappresentazione binaria di un numero intero](#estensione-rappresentazione-binaria-di-un-numero-intero)
     + [Troncamento rappresentazione binaria di un numero](#troncamento-rappresentazione-binaria-di-un-numero)
@@ -106,7 +106,7 @@ Sorry, only the Italian version is available so far.
     + [Sezioni di memoria di un programma C](#sezioni-di-memoria-di-un-programma-c)
     + [L'inizializzazioni delle variabili](#l-inizializzazioni-delle-variabili)
     + [Allocazione dinamica di matrici](#allocazione-dinamica-di-matrici)
-    + [Le strutrure](#le-strutrure)
+    + [Le strutture](#le-strutture)
       - [Passaggio di strutture a funzioni](#passaggio-di-strutture-a-funzioni)
   * [Sistema Operativo](#sistema-operativo)
     + [I modelli di memoria](#i-modelli-di-memoria)
@@ -126,8 +126,8 @@ Sorry, only the Italian version is available so far.
     + [Accesso diretto alle porte hardware](#accesso-diretto-alle-porte-hardware)
     + [Chiamate dirette al BIOS](#chiamate-dirette-al-bios)
     + [64bit Long Mode](#64bit-long-mode)
-  * [Il primo programmma assembly (eatsyscall.asm)](#il-primo-programmma-assembly--eatsyscallasm-)
-  * [Il primo programmma assembly in SASM (eatsyscallgcc.asm)](#il-primo-programmma-assembly-in-sasm--eatsyscallgccasm-)
+  * [Il primo programma assembly (eatsyscall.asm)](#il-primo-programma-assembly--eatsyscallasm-)
+  * [Il primo programma assembly in SASM (eatsyscallgcc.asm)](#il-primo-programma-assembly-in-sasm--eatsyscallgccasm-)
     + [Template per nasm](#template-per-nasm)
     + [Template per sasm](#template-per-sasm)
     + [Le Istruzione ed i loro operandi](#le-istruzione-ed-i-loro-operandi)
@@ -255,7 +255,7 @@ Sorry, only the Italian version is available so far.
     + [Etichette Locali all'interno di macro](#etichette-locali-all-interno-di-macro)
     + [Librerie Macro come File di Inclusione](#librerie-macro-come-file-di-inclusione)
     + [Macro contro Procedure: Pro e Contro](#macro-contro-procedure--pro-e-contro)
-    + [Le stringhe in lunguaggio Assembly](#le-stringhe-in-lunguaggio-assembly)
+    + [Le stringhe in linguaggio Assembly](#le-stringhe-in-linguaggio-assembly)
     + [Stringa Sorgente e stringa Destinazione](#stringa-sorgente-e-stringa-destinazione)
     + [Uno schermo virtuale di visualizzazione del testo](#uno-schermo-virtuale-di-visualizzazione-del-testo)
     + [REP STOSB, la mitragliatrice software](#rep-stosb--la-mitragliatrice-software)
@@ -11890,7 +11890,7 @@ D'altra parte, a meno che tu non stia veramente scrivendo qualcosa che dipende a
 Questo è l'intero programma principale. L'intera cosa è stata assorbita da invocazioni di macro. È questo un linguaggio assembly, o è—buon Dio!—un dialetto di BASIC? Ammetto che ho sostituito l'intero programma principale con invocazioni di macro qui per farlo notare, ma è certamente possibile creare così tante macro che i tuoi programmi assembly iniziano a sembrare un linguaggio di alto livello strano. In realtà, ho usato qualcosa di simile alla fine degli anni '70 quando ero programmatore per la Xerox. Avevano un linguaggio interno che era fondamentalmente un assemblatore 8080 con carichi di macro da utilizzare su microcomputer 8080 basati su longobarde (molto lenti; ci crederesti 1 megahertz?). Funzionava. Doveva farlo, con quella poca potenza computazionale per eseguire i suoi processi. La difficile verità è che le macro possono chiarire cosa sta facendo un programma, oppure, usate in modo eccessivo, possono oscurare completamente come funzionano le cose realmente "sotto la superficie". Nei miei progetti, uso le macro esclusivamente per ridurre il disordine di sequenze di istruzioni molto ripetitive, specialmente cose come l'impostazione dei registri prima di effettuare chiamate di sistema Linux. Del resto, l'intero obiettivo della programmazione assembly è promuovere una comprensione completa di ciò che sta accadendo dove il software incontra la CPU. Qualsiasi cosa che ostacola quella comprensione dovrebbe essere usata con cautela, abilità e (soprattutto) parsimonia—o potresti anche benissimo imparare il C.
 </p>
 
-### Le stringhe in lunguaggio Assembly
+### Le stringhe in linguaggio Assembly
 
 <p align=justify>
 A volte le parole ci tradiscono, raccogliendo significati con la stessa facilità con cui un magnete raccoglie trucioli di ferro. La parola "string" è uno dei principali colpevoli qui. Significa grossomodo la stessa cosa in tutta la programmazione informatica, ma ci sono una moltitudine di piccole variazioni su quel tema unico. Se hai imparato a conoscere le stringhe in Pascal (come ho fatto io), scoprirai che ciò che sai non è totalmente applicabile quando programmi in C/C++, Python, BASIC o (soprattutto) assembly. Quindi ecco la Vista Generale: Una stringa è qualsiasi gruppo contiguo di byte in memoria, contenente qualsiasi tipo di dati, di qualsiasi dimensione arbitraria che il tuo sistema operativo consente. (Per un moderno Linux, questo può essere molto.) Il concetto fondamentale di una stringa in un linguaggio assembly è che i suoi byte costituenti sono tutti in fila, senza interruzioni. Questo è piuttosto fondamentale. La maggior parte dei linguaggi di alto livello si basa sul concetto di stringa in diversi modi. Le implementazioni di Pascal che discendono da UCSD (e successivamente Turbo) Pascal trattano le stringhe come un tipo di dati separato, con un contatore di lunghezza all'inizio della stringa per indicare quanti byte ci sono nella stringa. In C, una stringa non ha un byte di lunghezza davanti a sé. Invece, si dice che una stringa C finisca quando viene incontrato un byte con un valore binario di 0. Questo sarà importante nel lavoro di assembly, molto del quale si relaziona intimamente con C e la libreria standard C, dove vive il meccanismo di gestione delle stringhe di C. In BASIC, le stringhe sono memorizzate in qualcosa chiamato string space, che ha molta codifica incorporata associata, per gestire lo spazio delle stringhe e gestire la manipolazione profonda dei dati delle stringhe. Quando inizi a lavorare in assembly, devi rinunciare a tutte quelle cose dei linguaggi di alto livello. Le stringhe in assembly sono semplicemente regioni contigue di memoria. Iniziano a un indirizzo specificato, avanzano per un certo numero di byte e si fermano. Non c'è un contatore di lunghezza per dirti quanti byte ci sono nella stringa, senza caratteri di confine standard come il numero binario 0 per indicare dove inizia o finisce una stringa. Puoi certamente scrivere routine in linguaggio assembly che allocano stringhe in stile Pascal o in stile C e le manipolano. Tuttavia, per evitare confusione, devi quindi pensare ai dati elaborati dalle tue routine come stringhe Pascal o C piuttosto che come stringhe di linguaggio assembly.
