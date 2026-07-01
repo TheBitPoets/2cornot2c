@@ -12219,7 +12219,7 @@ _start:
     mov rcx,COLS-1   ; Load ruler length to RCX
     call Ruler       ; Write the ruler to the buffer
 
-; Thow up an informative message centered on the last line
+; Throw up an informative message centered on the last line
     mov rsi,Message  ; Load the address of the message to RSI
     mov rcx,MSGLEN   ; and its length to RCX
     mov rbx,COLS     ; and the screen width to RBX
