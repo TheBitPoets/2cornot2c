@@ -1392,7 +1392,7 @@ Supponiamo, ad esempio, che l'applicazione divida un'attività tra più thread. 
 #include <pthread.h>
 #include <stdio.h>
 
-/* The key used to assocate a log file pointer with each thread.  */
+/* The key used to associate a log file pointer with each thread.  */
 static pthread_key_t thread_log_key;
 
 /* Write MESSAGE to the log file for the current thread.  */
