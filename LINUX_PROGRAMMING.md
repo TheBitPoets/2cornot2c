@@ -371,7 +371,7 @@ int main ()
 }
 ```
 
-Eseguendo il programma ti accorgerai che il processo padre termina immediatamente ("done with the main program") successivamente viene stampato il prompt e poco dopo l'output del processo figlio sporca il terminale perchè continua a scrivere sullo stdout. In generale non è possibile sapere quale processo tra il padre ed il figlio concluda per primo ma vedremo che è possibile sincronizzare l'esecuzione dei due processi facendo in modo che il processo padre attenda la terminazione dei suoi figli prima di concludere la propria esecuzione.
+Eseguendo il programma ti accorgerai che il processo padre termina immediatamente ("done with the main program") successivamente viene stampato il prompt e poco dopo l'output del processo figlio sporca il terminale perché continua a scrivere sullo stdout. In generale non è possibile sapere quale processo tra il padre ed il figlio concluda per primo ma vedremo che è possibile sincronizzare l'esecuzione dei due processi facendo in modo che il processo padre attenda la terminazione dei suoi figli prima di concludere la propria esecuzione.
 
 ```bash
 vagrant@ubuntu2204:/lab2/0_processes$ bin/3_fork_exec
@@ -461,7 +461,7 @@ Il campo più importante in questa struttura è `sa_handler` che può assumere u
 * **SIG_IGN**
 * Un puntatore alla funzione **signal-handler**. La funzione dovrebbe accettare un parametro (il numero del segnale) e restituire `void`.
 
-Quando il segnale viene processata dal programma questo può essere in uno stato altamente instabile (quindi durante l'esecuzione di un **signal-handler**). All'interno di una funzione **signal-handler** bisogna svolgere solo i task strettamente necessari per gestire/rispondere il segnale ed evitare operazioni di I/O o richiamare librerie esterne o del linguaggio. Può accadere che un **signal-handler** sia interrotto a causa della ricezione di un altro segnale e questo è un problema molto complicato da diagnosticare e debuggare e per questo bisogna essere molto cauti su cosa fare dentro un **signal-handler**.
+Quando il segnale viene processato dal programma questo può essere in uno stato altamente instabile (quindi durante l'esecuzione di un **signal-handler**). All'interno di una funzione **signal-handler** bisogna svolgere solo i task strettamente necessari per gestire/rispondere il segnale ed evitare operazioni di I/O o richiamare librerie esterne o del linguaggio. Può accadere che un **signal-handler** sia interrotto a causa della ricezione di un altro segnale e questo è un problema molto complicato da diagnosticare e debuggare e per questo bisogna essere molto cauti su cosa fare dentro un **signal-handler**.
 
 Un altro aspetto da tenere in considerazione è rendere le proprie istruzioni (variabili globali) atomiche usando il tipo `sig_atomic_t`. Linux garantisce che l'assegnazione di variabili di questo tipo avvenga in modo atomico e non possa essere interrotta dall'arrivo di un nuovo segnale.
 
@@ -530,7 +530,7 @@ vagrant@ubuntu2204:~$ kill -SIGUSR1 1642
 ```
 #### Terminare un processo
 
-Un processo termina o attraverso la chiamata alla funzione `exit()` o quando termina la funzione `main()` del programma (attraverso `return` o perch� raggiunge l'ultima istruzione della funzione `main()`). Il valore intero ritornato attraverso `return` o come parametro in input alla `exit()` � detto **exit code**. Un processo pu� anche terminare in risposta a un segnale (`SIGSEGV`, `SIGKILL` ecc.). Altri segnali per terminare un processo sono `SIGINT`, inviato quando si preme la combinazione di tasti `CTRL+C` nel terminale attivo del programma. Un altro segnale che termina un processo � `SIGABRT`: oltre a terminare il processo genera un core file; � possibile inviare questo segnale attraverso la chiamata `abort()`. Il modo pi� rapido per terminare un processo � quello di inviare il segnale `SIGKILL`, che termina immediatamente il processo e non pu� essere ignorato o bloccato.
+Un processo termina o attraverso la chiamata alla funzione `exit()` o quando termina la funzione `main()` del programma (attraverso `return` o perché raggiunge l'ultima istruzione della funzione `main()`). Il valore intero ritornato attraverso `return` o come parametro in input alla `exit()` è detto **exit code**. Un processo può anche terminare in risposta a un segnale (`SIGSEGV`, `SIGKILL` ecc.). Altri segnali per terminare un processo sono `SIGINT`, inviato quando si preme la combinazione di tasti `CTRL+C` nel terminale attivo del programma. Un altro segnale che termina un processo è `SIGABRT`: oltre a terminare il processo genera un core file; è possibile inviare questo segnale attraverso la chiamata `abort()`. Il modo più rapido per terminare un processo è quello di inviare il segnale `SIGKILL`, che termina immediatamente il processo e non può essere ignorato o bloccato.
 
 Tutti questi segnali ed anche altri possono essere inviati con il comando `kill` specificando quale segnale inviare come parametro. Per inviare un `SIGKILL` fai in questo modo:
 
@@ -550,7 +550,7 @@ int kill(pid_t pid, int sig);
 Devi includere `<sys/types.h>` e `<signal.h>` per utilizzare la funzione `kill()`.
 
 > [!IMPORTANT]
-> Per convenzione, **exit code** � usato per indicare se il programma ha terminato la sua esecuzione correttamente o con degli errori. Un valore pari a zero indica una corretta esecuzione, mentre valori diversi da zero indicano che il processo ha terminato con qualche errore. � importante seguire questa convenzione se vuoi usare gli operatori logici della shell (`&&` `||`) per concatenare pi� programmi tra loro.
+> Per convenzione, **exit code** è usato per indicare se il programma ha terminato la sua esecuzione correttamente o con degli errori. Un valore pari a zero indica una corretta esecuzione, mentre valori diversi da zero indicano che il processo ha terminato con qualche errore. È importante seguire questa convenzione se vuoi usare gli operatori logici della shell (`&&` `||`) per concatenare più programmi tra loro.
 
 Puoi leggere l'**exit code** dell'ultimo programma lanciato sulla shell stampando il contenuto della variabile `$?` per esempio.
 
@@ -563,11 +563,11 @@ vagrant@ubuntu2204:/lab2/0_processes$ echo $?
 
 #### Aspettare la terminazione di un processo
 
-Quando si esegue la coppia di chiamate `fork()` ed `exec()` per creare un processo figlio siamo in grado, all'interno dello stesso codice, di differenziare quali istruzioni saranno eseguite dal padre e quali dal processo figlio sfruttando il valore di ritorno della chiamata `fork()`. Nulla per� ci assicura che il padre termini prima del figlio, l'ordine di terminazione dipende dal numero di istruzioni dei due processi e soprattutto da come il sistema operativo andr� a schedulare i due processi nell'assegnazione dei tempi di CPU. Quando � necessario che per la correttezza del nostro programma il padre termini soltanto al termine dell'esecuzione del processo figlio, � obbligatorio usare la funzione `wait()`.
+Quando si esegue la coppia di chiamate `fork()` ed `exec()` per creare un processo figlio siamo in grado, all'interno dello stesso codice, di differenziare quali istruzioni saranno eseguite dal padre e quali dal processo figlio sfruttando il valore di ritorno della chiamata `fork()`. Nulla però ci assicura che il padre termini prima del figlio, l'ordine di terminazione dipende dal numero di istruzioni dei due processi e soprattutto da come il sistema operativo andrà a schedulare i due processi nell'assegnazione dei tempi di CPU. Quando è necessario che per la correttezza del nostro programma il padre termini soltanto al termine dell'esecuzione del processo figlio, è obbligatorio usare la funzione `wait()`.
 
 #### wait()
 
-La `wait()` sospende l'esecuzione del processo padre finch� uno dei suoi figli ha terminato (anche con un errore, non importa). Inoltre la `wait()` ritorna uno status code (**exit code**) dal quale estrarre informazioni su come il processo figlio ha terminato l'esecuzione. Per esempio la macro `WEXITSTATUS` contiene l'**exit code** del processo figlio.
+La `wait()` sospende l'esecuzione del processo padre finché uno dei suoi figli ha terminato (anche con un errore, non importa). Inoltre la `wait()` ritorna uno status code (**exit code**) dal quale estrarre informazioni su come il processo figlio ha terminato l'esecuzione. Per esempio la macro `WEXITSTATUS` contiene l'**exit code** del processo figlio.
 
 Vediamo un esempio:
 
@@ -834,8 +834,8 @@ Father's quitting
 
 ### I Thread
 
-I thread come i processi sono un meccanismo per permettere ad un programma di svolgere più compiti contemporaneamente. Come i processi anche i thread si contendono la CPU per l'esecuzione. Da un punto di vista teorico un thread esiste all'interno di un processo: quando un programma viene invocato, Linux crea un nuovo processo ed al suo interno crea anche un singolo thread che esegue il programma in modo sequenziale. Questo thread può creare altri thread che eseguono lo stesso programma nello stesso processo ma ciascun thread potrebbe eseguire una parte diversa del programma in un qualsiasi momento.
-Abbiamo visto come un processo può forkare un processo figlio. Il processo figlio inizialmente esegue il programma del padre come una copia della memoria virtuale del processo padre, i descrittori dei file e così via. Il processo figlio può modificare la sua memoria, chiudere i descrittori dei file etc senza alterare quelli del padre. Quando un thread crea un nuovo thread nulla è copiato. Il thread padre ed il thread figlio condividono la stessa memoria, i descrittori dei file e tutte le altre risorse. Se un thread cambia il valore di una variabile anche l'altro thread vedrà questa modifica; se un thread chiude un descrittore di un file gli altri thread potrebbero non poter più leggere o scrivere su quel descrittore. Siccome un processo e tutti i suoi thread possono eseguire un solo programma alla volta se un thread richiama la `exec()` tutti i thread saranno terminati.
+I thread, come i processi, sono un meccanismo per permettere a un programma di svolgere più compiti contemporaneamente. Come i processi, anche i thread si contendono la CPU per l'esecuzione. Da un punto di vista teorico un thread esiste all'interno di un processo: quando viene invocato un programma, Linux crea un nuovo processo e al suo interno crea anche un singolo thread che esegue il programma in modo sequenziale. Questo thread può creare altri thread che eseguono lo stesso programma nello stesso processo, ma ciascun thread potrebbe eseguire una parte diversa del programma in un qualsiasi momento.
+Abbiamo visto come un processo può forkare un processo figlio. Il processo figlio inizialmente esegue il programma del padre come una copia della memoria virtuale del processo padre, i descrittori dei file e così via. Il processo figlio può modificare la sua memoria, chiudere i descrittori dei file ecc., senza alterare quelli del padre. Quando un thread crea un nuovo thread nulla è copiato. Il thread padre e il thread figlio condividono la stessa memoria, i descrittori dei file e tutte le altre risorse. Se un thread cambia il valore di una variabile, anche l'altro thread vedrà questa modifica; se un thread chiude un descrittore di un file, gli altri thread potrebbero non poter più leggere o scrivere su quel descrittore. Siccome un processo e tutti i suoi thread possono eseguire un solo programma alla volta, se un thread richiama la `exec()` tutti i thread verranno terminati.
 Linux implementa le API POSIX per i thread (conosciuto come **pthread**). Tutte le funzioni per i thread sono definite nel file d'intestazione `<pthread.h>` che non è inclusa nella libreria standard fornita dal linguaggio C. La libreria è fornita in `libpthread.so` ed è necessario passare il parametro `-lpthread` a gcc per linkarla al momento della compilazione.
 
 #### Creazione di un thread
@@ -851,7 +851,7 @@ int pthread_create(pthread_t *restrict thread,
                           void *restrict arg);
 ```
 
-1. `pthread *t`: un puntatore al thread id
+1. `pthread_t thread`: un identificatore di thread
 2. `const pthread_attr_t *`: un puntatore all'oggetto contenente gli attributi del thread: questo oggetto controlla i dettagli di come il thread interagisce con il resto del programma. Se passi `NULL` come attributo del thread, il thread sarà creato con gli attributi di default.
 3. `void* (*) (void*)`: un puntatore alla funzione del thread, questo è un semplice puntatore a funzione
 4. `void *`: l'argomento in ingresso da passare alla funzione del thread di tipo `void *`
@@ -1392,7 +1392,7 @@ Supponiamo, ad esempio, che l'applicazione divida un'attività tra più thread. 
 #include <pthread.h>
 #include <stdio.h>
 
-/* The key used to assocate a log file pointer with each thread.  */
+/* The key used to associate a log file pointer with each thread.  */
 static pthread_key_t thread_log_key;
 
 /* Write MESSAGE to the log file for the current thread.  */
@@ -1610,7 +1610,7 @@ int main(void){
 
 ### Mutex
 
-La soluzione al problema della race condition della coda dei lavori è consentire a un solo thread alla volta di accedere alla coda dei lavori. Una volta che un thread inizia a guardare la coda, nessun altro thread dovrebbe essere in grado di accedervi finché il primo thread non ha deciso se elaborare un lavoro e, in tal caso, lo ha rimosso dall'elenco. L'implementazione richiede il supporto del sistema operativo. GNU/Linux fornisce i **mutex**, abbreviazione di blocchi MUTual EXclusion. Un mutex è un blocco speciale che solo un thread può bloccare alla volta. Se un thread blocca un mutex e poi un secondo thread tenta di bloccare lo stesso mutex, il secondo thread viene bloccato o messo in attesa. Solo quando il primo thread sblocca il mutex, il secondo thread viene sbloccato, ovvero può riprendere l'esecuzione. GNU/Linux garantisce che non si verifichino condizioni di gara tra thread che tentano di bloccare un mutex; solo un thread otterrà il blocco e tutti gli altri thread verranno bloccati. Pensa a un mutex come alla serratura di una porta del bagno. Chi arriva per primo entra nel bagno e chiude a chiave la porta. Se qualcun altro tenta di entrare nel bagno mentre è occupato, quella persona troverà la porta chiusa a chiave e sarà costretta ad aspettare fuori finché l'occupante non esce. Per creare un mutex, crea una variabile di tipo **pthread_mutex_t** e passa un puntatore a **pthread_mutex_init()**. Il secondo argomento di `pthread_mutex_init()` è un puntatore a un oggetto attributo mutex, che specifica gli attributi del mutex.
+La soluzione al problema della race condition della coda dei lavori consiste nel consentire a un solo thread alla volta di accedere alla coda dei lavori. Una volta che un thread inizia a guardare la coda, nessun altro thread dovrebbe essere in grado di accedervi finché il primo thread non ha deciso se elaborare un lavoro e, in tal caso, lo ha rimosso dall'elenco. L'implementazione richiede il supporto del sistema operativo. GNU/Linux fornisce i **mutex**, abbreviazione di blocchi MUTual EXclusion. Un mutex è un blocco speciale che solo un thread può bloccare alla volta. Se un thread blocca un mutex e poi un secondo thread tenta di bloccare lo stesso mutex, il secondo thread viene bloccato o messo in attesa. Solo quando il primo thread sblocca il mutex, il secondo thread viene sbloccato, ovvero può riprendere l'esecuzione. GNU/Linux garantisce che non si verifichino condizioni di gara tra thread che tentano di bloccare un mutex; solo un thread otterrà il blocco e tutti gli altri thread verranno bloccati. Pensa a un mutex come alla serratura di una porta del bagno. Chi arriva per primo entra nel bagno e chiude a chiave la porta. Se qualcun altro tenta di entrare nel bagno mentre è occupato, quella persona troverà la porta chiusa a chiave e sarà costretta ad aspettare fuori finché l'occupante non esce. Per creare un mutex, crea una variabile di tipo **pthread_mutex_t** e passa un puntatore a **pthread_mutex_init()**. Il secondo argomento di `pthread_mutex_init()` è un puntatore a un oggetto attributo mutex, che specifica gli attributi del mutex.
 
 ```c
 int pthread_mutex_init(pthread_mutex_t *restrict mutex, const pthread_mutexattr_t *restrict attr);
@@ -1779,7 +1779,7 @@ Come suggerito dal suffisso "np", i tipi di mutex ricorsivi e di controllo degli
 
 ### Test Mutex non bloccanti
 
-A volte, è utile verificare se un mutex è bloccato senza effettivamente bloccarlo. Ad esempio, un thread potrebbe dover verificare un mutex ma potrebbe avere altro lavoro da fare anzich� attendere, se il mutex è già bloccato. Poiché **pthread_mutex_lock()** non
+A volte, è utile verificare se un mutex è bloccato senza effettivamente bloccarlo. Ad esempio, un thread potrebbe dover verificare un mutex ma potrebbe avere altro lavoro da fare anziché attendere, se il mutex è già bloccato. Poiché **pthread_mutex_lock()** non
 tornerà finché il mutex non sarà sbloccato, è necessaria un'altra funzione. GNU/Linux fornisce **pthread_mutex_trylock()** per questo scopo. Se chiami pthread_mutex_trylock su un mutex sbloccato, bloccherai il mutex come se avessi chiamato pthread_mutex_lock e pthread_mutex_trylock restituirà zero. Tuttavia, se il mutex è già bloccato da un altro thread, pthread_mutex_trylock non bloccherà. Invece, tornerà immediatamente con il codice di errore `EBUSY`. Il mutex mantenuto dall'altro thread non è coinvolto. Puoi provare di nuovo più tardi a bloccare il mutex.
 
 ### Semafori
@@ -1790,7 +1790,7 @@ Nell'esempio precedente, in cui diversi thread elaborano i lavori da una coda, l
 * Un'operazione di post incrementa il valore del semaforo di 1. Se il semaforo era precedentemente zero e altri thread sono bloccati in un'operazione di attesa su quel semaforo, uno di quei thread viene sbloccato e la sua operazione di attesa viene completata (il che riporta il valore del semaforo a zero)
 
 Nota che GNU/Linux fornisce due implementazioni di semafori leggermente diverse. Quella che descriviamo qui è l'implementazione standard del semaforo POSIX. Usa questi semafori quando comunichi tra thread.
-L'altra implementazione, usata per la comunicazione tra processi, verr� descritta nel prossimo capitolo. Se usi i semafori, includi **<semaphore.h>**.
+L'altra implementazione, usata per la comunicazione tra processi, verrà descritta nel prossimo capitolo. Se usi i semafori, includi **<semaphore.h>**.
 Un semaforo è rappresentato da una variabile **sem_t**. Prima di usarla, devi inizializzarla usando la funzione **sem_init()**, passando un puntatore alla variabile sem_t. Il secondo parametro dovrebbe essere zero (Un valore diverso da zero indicherebbe un semaforo che può essere condiviso tra i processi, il che non è supportato da GNU/Linux per questo tipo di semaforo) e il terzo parametro è il valore iniziale del semaforo. 
 
 ```c
