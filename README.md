@@ -240,8 +240,8 @@ Sorry, only the Italian version is available so far.
     + [Assemblaggio e moduli separati](#assemblaggio-e-moduli-separati)
     + [Dichiarazioni Globali ed Esterne](#dichiarazioni-globali-ed-esterne)
 - [Il meccanismo dei Globals e Externals](#il-meccanismo-dei-globals-e-externals)
-    + [Linkare le librerie nei tuoi programmi](#linkare-le-librerie-nei-tuoi-programmi)
-    + [I pericoli di troppe procedure e tropte librerie](#i-pericoli-di-troppe-procedure-e-tropte-librerie)
+    + [Collegare le librerie nei tuoi programmi](#collegare-le-librerie-nei-tuoi-programmi)
+    + [I pericoli di troppe procedure e troppe librerie](#i-pericoli-di-troppe-procedure-e-troppe-librerie)
     + [L'arte di creare procedure](#l-arte-di-creare-procedure)
     + [Manutenibilità e Riutilizzo](#manutenibilit--e-riutilizzo)
     + [Decidere cosa dovrebbe essere una procedura](#decidere-cosa-dovrebbe-essere-una-procedura)
@@ -249,8 +249,8 @@ Sorry, only the Italian version is available so far.
     + [Controllo semplice del cursore nella console di Linux](#controllo-semplice-del-cursore-nella-console-di-linux)
     + [Avvertenze per il controllo della console](#avvertenze-per-il-controllo-della-console)
     + [Creare ed Usare Macro](#creare-ed-usare-macro)
-    + [Il Meccanisco della definizione di Macro](#il-meccanisco-della-definizione-di-macro)
-    + [Definire Macron con parametri](#definire-macron-con-parametri)
+    + [Il Meccanismo della definizione di Macro](#il-meccanismo-della-definizione-di-macro)
+    + [Definire Macro con parametri](#definire-macro-con-parametri)
     + [Il Meccanismo d'invocazione delle Macro](#il-meccanismo-d-invocazione-delle-macro)
     + [Etichette Locali all'interno di macro](#etichette-locali-all-interno-di-macro)
     + [Librerie Macro come File di Inclusione](#librerie-macro-come-file-di-inclusione)
@@ -10607,11 +10607,11 @@ Non sembra un grande problema, vero? Bene, c'è una complicazione: devi essere c
 Se hai intenzione di sviluppare una libreria di procedure in stile include con SASM da zero, ecco un processo collaudato da utilizzare.
 </p>
 
-1. Progetta le tue procedure. Creo semplicemente un documento di testo e scrivo le descrizioni di ciò che le procedure della biblioteca devono fare, affinando gradualmente le descrizioni fino a quando non sono effettivamente codificate.
+1. Progetta le tue procedure. Crea un documento di testo e scrivi le descrizioni di ciò che le procedure della libreria devono fare, migliorandole gradualmente finché non sono definitive.
 2. Apri il programma sandbox che ho descritto in precedenza e inserisci il codice sorgente delle tue procedure. Se le hai già scritte in altre parti di altri programmi, copia/incolla il relativo codice sorgente nel nuovo file.
-3. Crea un semplice codice "esercizio" nel corpo del programma sandbox che chiama le tue procedure e le mette alla prova. Eseguire il debug come sempre con il debugger SASM. Questo rivelerà errori relativamente semplici, come spingere e far scoppiare i registri nell'ordine sbagliato, sovrascrivere i registri del chiamante e così via.
+3. Crea un semplice codice "esercizio" nel corpo del programma sandbox che chiama le tue procedure e le mette alla prova. Esegui il debug come sempre con il debugger SASM. Verranno evidenziati anche errori relativamente semplici, come spingere i registri nell'ordine sbagliato, sovrascrivere i registri del chiamante e così via.
 4. Una volta terminato il debug semplice, inserisci il codice sorgente della libreria in un programma "reale" per testare più approfonditamente le procedure della libreria.
-5. Quando sei soddisfatto che tutte le procedure funzionino come previsto, raccoglile in un file senza il framework sandbox e rilascialo nella directory include files di SASM.
+5. Quando sei soddisfatto che tutte le procedure funzionino come previsto, raccoglilo in un file senza il framework sandbox e rilascialo nella directory include files di SASM.
 6. Conserva una copia della nuova libreria in un'altra posizione, da cui esegui regolarmente backup.
 7. Se in qualsiasi momento apporti modifiche al codice sorgente della libreria, testa accuratamente le modifiche e quindi rilascia il file modificato nella directory di inclusione di SASM, sostituendo la versione precedente già presente.
 
@@ -10622,7 +10622,7 @@ A questo punto metteremo da parte SASM per un po' e parleremo dell'utilizzo dell
 ### Assemblaggio e moduli separati
 
 <p align=justify>
-Dal punto di vista del processo di assemblaggio, ogni singolo file .asm è considerato un modulo, che contenga o meno un'etichetta _start: o main:, e quindi sia un programma o contenga semplicemente procedure. Ogni modulo contiene codice e possibilmente alcune definizioni di dati. Quando tutte le dichiarazioni sono fatte correttamente, tutti i moduli possono liberamente "parlare" tra loro tramite chiamate di procedura, e qualsiasi procedura può fare riferimento a qualsiasi definizione di dati presente in uno qualsiasi dei file che il linker combina. (Le etichette locali sono ancora visibili solo alle etichette globali che le possiedono.) Ogni file eseguibile può contenere solo un'etichetta _start: o main:, quindi tra i diversi moduli collegati in un file eseguibile, solo uno può contenere un'etichetta _start: o main: e quindi essere il programma vero e proprio. Questo sembra più difficile di quanto non sia. Il trucco è semplicemente ottenere tutte le dichiarazioni corrette.
+Dal punto di vista del processo di assemblaggio, ogni singolo file .asm è considerato un modulo, che contiene o meno un'etichetta _start: o main:, e quindi può essere un programma completo o contenere solo procedure. Ogni modulo contiene codice e possibilmente alcune definizioni di dati. Quando tutte le dichiarazioni sono fatte correttamente, tutti i moduli possono liberamente "parlare" tra loro tramite chiamate di procedura, e qualsiasi procedura può fare riferimento a qualsiasi definizione di dati presente in uno qualsiasi dei file che il linker combina. (Le etichette locali sono ancora visibili solo alle etichette globali che le possiedono.) Ogni file eseguibile può contenere solo un'etichetta _start: o main:, quindi tra i diversi moduli collegati in un file eseguibile, solo uno può contenere un'etichetta _start: o main: e quindi essere il programma vero e proprio. Questo sembra più difficile di quanto non sia. Il trucco è semplicemente ottenere tutte le dichiarazioni corrette.
 </p>
 
 ### Dichiarazioni Globali ed Esterne
@@ -10636,7 +10636,7 @@ Ed è molto meno complicato di quanto non fosse in passato. Ai vecchi tempi del 
 ```
 
 <p align=justify>
-Nella programmazione modulare, è frequente chiamare procedure che non esistono da nessuna parte nel file di codice sorgente su cui stai effettivamente lavorando. Come superare i controlli dell'assemblatore? La risposta è dichiarare una procedura esterna. Funziona molto come suona: all'assemblatore viene detto che un determinato'etichetta dovrà essere trovata altrove nel programma, in un altro modulo, in seguito. Una volta comunicato questo, NASM è felice di darti una deroga su un'etichetta non definita, per ora. Hai promesso a NASM che la fornirai in seguito, e NASM accetta la tua promessa. (Il linker ti costringerà a mantenere quella promessa durante il passaggio di collegamento.) NASM segnalerà il riferimento come esterno e continuerà senza contestare l'etichetta non definita. La promessa che fai a NASM appare così.
+Nella programmazione modulare, è frequente dichiarare procedure che non esistono da nessuna parte nel file di codice sorgente su cui stai effettivamente lavorando. Come superare i controlli dell'assemblatore? La risposta è dichiarare una procedura esterna. Funziona quasi come suona: all'assemblatore viene detto che un'etichetta dovrà essere trovata altrove nel programma, in un altro modulo, in seguito. Una volta comunicato questo, NASM ti permette di continuare con questa etichetta non definita. Hai promesso a NASM che la fornirai in seguito, e NASM accetta la tua promessa. (Il linker ti costringerà a rispettare quella promessa durante il passaggio di collegamento.) NASM segnalerà il riferimento come esterno e continuerà senza contestare l'etichetta non definita. La promessa che fai a NASM appare così.
 </p>
 
 ```asm
@@ -10644,7 +10644,7 @@ EXTERN MyProc
 ```
 
 <p align=justify>
-Qui hai detto all'assemblatore che l'etichetta MyProc rappresenta una procedura e che sarà trovata da qualche parte esterna al modulo attuale. Questo è tutto ciò che l'assemblatore deve sapere per trattenere il suo messaggio di errore. E dopo aver fatto ciò, la parte dell'assemblatore nell'accordo è finita. Lascia in place un socket vuoto nel tuo programma dove l'indirizzo della procedura esterna può essere inserito in seguito. A volte lo penso come un occhiello dove in seguito la procedura esterna si aggancerà. Nell'altro modulo dove la procedura MyProc è effettivamente definita, non è sufficiente solo definire la procedura. Un occhiello ha bisogno di un gancio. Devi avvisare l'assemblatore che MyProc sarà referenziato da fuori dal modulo. L'assemblatore ha bisogno di forgiare il gancio che si aggancerà all'occhiello. Forgi il gancio dichiarando la procedura globale, il che significa che altri moduli in qualsiasi parte del programma possono liberamente fare riferimento alla procedura. Dichiarare una procedura globale non è più complesso che dichiararla esterna:
+Qui hai detto all'assemblatore che l'etichetta MyProc rappresenta una procedura e che sarà trovata da qualche parte esterna al modulo attuale. Questo è tutto ciò che l'assemblatore deve sapere per passare oltre. La parte dell'assemblatore in questa fase è finita. Lascia nel tuo programma un segnaposto vuoto dove l'indirizzo della procedura esterna può essere inserito in seguito. A volte lo penso come un occhiello dove la procedura esterna si aggancerà. Nell'altro modulo dove la procedura MyProc è effettivamente definita, non basta definirla. L'occhiello ha bisogno di un gancio. Devi avvisare l'assemblatore che MyProc sarà referenziato da fuori dal modulo. L'assemblatore avrà quindi bisogno di un gancio che si aggancerà all'occhiello. Crea il gancio dichiarando la procedura globale, il che significa che altri moduli in qualsiasi parte del programma possono liberamente fare riferimento alla procedura. Dichiarare una procedura globale non è più complesso che dichiararla esterna:
 </p>
 
 ```asm
@@ -10652,10 +10652,10 @@ Qui hai detto all'assemblatore che l'etichetta MyProc rappresenta una procedura 
 ```
 
 <p align=justify>
-Una procedura dichiarata come GLOBAL dove è definita può essere riferita da qualsiasi parte in cui la sua etichetta è dichiarata come EXTERN. Con entrambi l'uncinetto e l'eyelet in posizione, chi li collega realmente? Il linker fa questo durante l'operazione di collegamento. Al momento del collegamento, il linker prende i due file .o generati dall'assemblatore, uno dal tuo programma e l'altro dal modulo contenente MyProc, e li combina in un unico file binario eseguibile. Il numero di file .o non è limitato a due; puoi avere quasi qualsiasi numero di moduli esterni assemblati separatamente in un unico programma. (Ancora una volta, solo uno di essi—il programma vero e proprio—può avere un'etichetta _start: o main:). Quando il file eseguibile creato dal linker viene caricato ed eseguito, il programma può chiamare MyProc in modo pulito e veloce come se entrambi fossero stati dichiarati nello stesso file di codice sorgente. Questo processo è riassunto graficamente nella figura di sotto
+Una procedura dichiarata come GLOBAL dove è definita può essere referenziata da qualsiasi parte in cui la sua etichetta è dichiarata come EXTERN. Con entrambi i riferimenti in posizione, chi li collega realmente? Il linker fa questo durante l'operazione di collegamento. Al momento del collegamento, il linker prende i due file .o generati dall'assemblatore, uno dal tuo programma e l'altro dal modulo contenente MyProc, e li combina in un unico file binario eseguibile. Il numero di file .o non è limitato a due; puoi avere quasi qualsiasi numero di moduli esterni assemblati separatamente in un unico programma. (Ancora una volta, solo uno di essi—il programma vero e proprio—può avere un'etichetta _start: o main:). Quando il file eseguibile creato dal linker viene caricato ed eseguito, il programma può chiamare MyProc in modo pulito e veloce come se entrambi fossero stati dichiarati nello stesso file di codice sorgente. Questo processo è riassunto graficamente nella figura di seguito.
 </p>
 
-<div aling=center>
+<div align=center>
 <img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/connecting_globals_and_externals.png">
 </div>
 
@@ -11069,7 +11069,7 @@ Qualsiasi procedura o elemento di dati che deve essere esportato (cioè reso dis
 Se vuoi che vengano esportate, dichiara le variabili GLOBAL. Nota che gli esempi mostrati non sono esportati da textlib.asm e servono solo a illustrare la tecnica.
 </p>
 
-### Linkare le librerie nei tuoi programmi
+### Collegare le librerie nei tuoi programmi
 
 <p align=justify>
 Per tutti i precedenti programmi di esempio presentati in questo libro, i makefile sono abbastanza semplici. Qui, ad esempio, c'è il makefile per il programma hexdump2:
@@ -11097,10 +11097,10 @@ L'invocazione del linker converte HEXDUMP2.O nel file eseguibile hexdump2, e que
 Il file textlib.o è semplicemente posizionato sulla riga di invocazione del linker dopo il file .o per il programma stesso. C'è una sottigliezza nel makefile precedente: il file della libreria si trova su un percorso relativo alla directory contenente il progetto hexdump3. Posizionare ../textlib/ davanti al nome del file textlib.o consente al linker di raggiungere "su, attraverso e giù" attraverso il file system Linux nella directory del progetto per la libreria. Altrimenti, dovresti posizionare textlib.o nella stessa directory di hexdump3.o, o copiarlo in una directory sotto usr/lib, che si trova nel percorso di ricerca predefinito. Una directory sotto usr/lib sarebbe effettivamente un ottimo posto per esso, una volta che è finito e ben testato—per grandi valori di “ben testato.” Mentre stai ancora lavorando attivamente a una libreria, è meglio tenerla in una directory di progetto a sé stante all'interno della stessa struttura di directory di tutte le tue altre directory di progetto, così puoi correggere bug e aggiungere funzionalità che non ti vengono in mente fino a quando non l'hai usata per un po' a costruire altri programmi.
 </p>
 
-### I pericoli di troppe procedure e tropte librerie
+### I pericoli di troppe procedure e troppe librerie
 
 <p align=justify>
-Nella programmazione assembly, come nella vita, si può avere troppo di una cosa buona. Ho visto librerie di codice costituite da centinaia di file, ciascun file contenente una singola procedura. Queste non sono neanche procedure autonome. Si chiamano l'una con l'altra a destra e a manca, in una fitta rete di esecuzione che è molto difficile da tracciare a livello di codice sorgente, specialmente se hai ereditato una tale libreria da qualcun altro e devi afferrare (spesso molto rapidamente) come funzionano effettivamente i meccanismi implementati dalla libreria. In assenza di una documentazione testuale molto dettagliata, non c'è una “vista dall'alto” che ti aiuti a capire cosa chiama cosa e da dove. Se la libreria proviene da un'altra parte ed è usata come una “scatola nera”, ciò potrebbe non essere una catastrofe, anche se mi piace comunque sapere come funzionano le librerie che utilizzo. C'è, ahimè, una ragione valida per creare librerie con singole procedure come questa: quando colleghi una libreria a un programma, l'intera libreria viene aggiunta al file eseguibile, comprese quelle procedure e definizioni di dati che non vengono mai referenziate dal programma principale. Se ogni procedura viene assemblata separatamente in un suo comodo file .o, il linker aggiungerà solo quelle procedure al tuo programma che verranno effettivamente chiamate da (e quindi eseguite da) esso. Molto dipende da dove finisce il tuo codice. Se il tuo obiettivo è il file eseguibile più piccolo possibile, questo è significativo, e ci sono alcuni continenti nel mondo del linguaggio assembly (soprattutto quelli relativi ai sistemi embedded) dove ogni byte conta e il “codice morto” che non viene mai eseguito aggiunge costi inutili all'hardware di fascia bassa su cui il codice deve girare. La dimensione del codice in linguaggio assembly non sarà un problema su normali PC Linux con 16 gigabyte di memoria e un terabyte di disco. Se è lì che il tuo codice girerà, potresti trovare più vantaggioso avere meno librerie e più codice sorgente comprensibile, anche se finisci con qualche migliaio di byte di codice nei tuoi file eseguibili che in realtà non incontrano mai la CPU faccia a faccia.
+Nella programmazione assembly, come nella vita, si può avere troppo di una cosa buona. Ho visto librerie di codice costituite da centinaia di file, ciascun file contenente una singola procedura. Queste non sono neanche procedure autonome. Si chiamano l'una con l'altra a destra e a manca, in una fitta rete di esecuzione che è molto difficile da tracciare a livello di codice sorgente, specialmente se hai ereditato una tale libreria da qualcun altro e devi afferrare (spesso molto rapidamente) come funzionano effettivamente i meccanismi implementati dalla libreria. In assenza di una documentazione testuale molto dettagliata, non c'è una “vista dall'alto” che ti aiuti a capire cosa chiama cosa e da dove. Se la libreria proviene da un'altra parte ed è usata come una “scatola nera”, ciò potrebbe non essere una catastrofe, anche se mi piace comunque sapere come funzionano le librerie che utilizzo. C'è, ahimè, una ragione valida per creare librerie con singole procedure come questa: quando colleghi una libreria a un programma, l'intera libreria viene aggiunta al file eseguibile, comprese quelle procedure e definizioni di dati che non vengono mai referenziate dal programma principale. Se ogni procedura viene assemblata separatamente in un suo comodo file .o, il linker aggiungerà solo quelle procedure al tuo programma che verranno effettivamente chiamate da (e quindi eseguite da) esso. Molto dipende da dove finisce il tuo codice. Se il tuo obiettivo è il file eseguibile più piccolo possibile, questo è significativo, e ci sono alcuni contesti nel mondo del linguaggio assembly (soprattutto quelli relativi ai sistemi embedded) dove ogni byte conta e il “codice morto” che non viene mai eseguito aggiunge costi inutili all'hardware di fascia bassa su cui il codice deve girare. La dimensione del codice in linguaggio assembly non sarà un problema su normali PC Linux con 16 gigabyte di memoria e un terabyte di disco. Se è lì che il tuo codice girerà, potresti trovare più vantaggioso avere meno librerie e più codice sorgente comprensibile, anche se finisci con qualche migliaio di byte di codice nei tuoi file eseguibili che in realtà non incontrano mai la CPU faccia a faccia.
 </p>
 
 ### L'arte di creare procedure
@@ -11505,7 +11505,7 @@ Ci sono più di un modo per suddividere un programma in linguaggio assembly in s
 <img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/how_macros_work.png">
 </div>
 
-### Il Meccanisco della definizione di Macro
+### Il Meccanismo della definizione di Macro
 
 <p align=justify>
 Una definizione di macro assomiglia un po' a una definizione di procedura, racchiusa tra una coppia di direttive speciali NASM: %MACRO e %ENDMACRO. Si noti che la direttiva %ENDMACRO si trova sulla riga dopo l'ultima riga della macro. Non commettere l'errore di trattare %ENDMACRO come un'etichetta che segna l'ultima riga della macro. Una piccola mancanza delle macro rispetto alle procedure è che le macro possono avere solo un punto di entrata. Una macro, in fin dei conti, è una sequenza di righe di codice che vengono inserite nel programma nel corso dell'esecuzione. Non si chiama una macro e non si ritorna da essa. La CPU la esegue proprio come esegue qualsiasi sequenza di istruzioni. Molte o la maggior parte delle procedure possono essere espresse come macro con un po' di attenzione. Nella codice di sotto, ho preso il programma precedente e ho convertito tutte le procedure in macro affinché tu possa vedere le differenze tra i due approcci.
@@ -11746,7 +11746,7 @@ ClrScr
 L'assemblatore si occuperà del resto
 </p>
 
-### Definire Macron con parametri
+### Definire Macro con parametri
 
 <p align=justify>
 Le macro sono per la maggior parte un semplice trucco di sostituzione del testo, ma la sostituzione del testo ha alcune caratteristiche interessanti e a volte utili. Una di queste è la possibilità di passare parametri a un macro quando il macro viene invocato. Ad esempio, in eatmacro c'è un'invocazione del macro WriteCtr con tre parametri.
@@ -13007,7 +13007,7 @@ Exit:
     ret
 ```
 
-<div aling=center>
+<div align=center>
 <img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/how_to_access_parameters_from_within_SASM.png">
 </div>
 
@@ -13450,11 +13450,11 @@ Nonostante ci siano più registri, lo stack è ancora estremamente importante ne
 Molte persone chiamano questo il prologo del programma, poiché deve essere incluso all'inizio di qualsiasi programma che rispetti le convenzioni di chiamata C. A meno che il prologo non sia presente, il debugger gdb e le sue interfacce come Insight non opereranno correttamente. Una volta che RBP è ancorato come un capo del tuo frame dello stack, il puntatore dello stack RSP è libero di muoversi su e giù nello stack come il tuo codice richiede per la memoria temporanea. Chiamare funzioni in glibc sotto x64 richiede meno push e pop rispetto a quanto non fosse nel vecchio mondo a 32 bit, ora che la maggior parte dei parametri viene passata alle funzioni in registri.
 </p>
 
-<div aling=center>
-<img src"https://github.com/TheBitPoets/2cornot2c/blob/main/images/stack_frame.png">
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/stack_frame.png">
 </div>
 
-### Distruggere lo Stack Frame (in the Epilog - epilogo)
+### Distruggere lo Stack Frame (in epilogo)
 
 <p align=justify>
 Prima che il tuo programma termini la sua esecuzione restituendo il controllo al codice di avvio/chiusura (fai riferimento alla penultima figura se questa relazione non è chiara), il suo frame dello stack deve essere distrutto. Questo sembra a molte persone come se stesse accadendo qualcosa di sbagliato, ma non è così: il frame dello stack deve essere distrutto, altrimenti il tuo programma andrà in crash. (“Riporre” potrebbe essere un termine migliore di “distruggere”... ma i programmatori preferiscono linguaggio colorito, come imparerai una volta che trascorrerai del tempo significativo tra loro.) Il tuo stack deve essere pulito prima di distruggere il frame dello stack e restituire il controllo al codice di chiusura. Questo significa semplicemente che eventuali registri salvati dal chiamato e valori temporanei che potresti aver inviato nello stack durante l'esecuzione del programma devono essere eliminati. Pop quello che pushi! Una volta fatto ciò, annulliamo la logica seguita nella creazione del frame dello stack: estraiamo il valore RBP del chiamante dallo stack e usciamo, tramite due istruzioni che insieme vengono spesso chiamate epilogo.
@@ -13895,7 +13895,7 @@ Da qualche parte nel profondo della libreria standard C, c'è un blocco di codic
 Il valore time_t è semplicemente un conteggio arbitrario dei secondi e di per sé non ti dice molto, anche se può essere utile per calcolare i tempi trascorsi in secondi. Un altro tipo di dato standard implementato dalla libreria standard C è molto più utile. Una struttura tm (che viene spesso chiamata struct, e tra le persone del Pascal un record) è un raggruppamento di nove valori numerici a 32 bit che esprimono l'ora e la data attuali in segmenti utili separatamente, come riassunto nella figura di sotto. Nota che, sebbene una struct (o record) sia nominalmente un raggruppamento di valori dissimili, nell'attuale implementazione x64 di Linux, un valore tm è più simile a un array o a una tabella dati, poiché tutti e nove gli elementi hanno la stessa dimensione, che è 32 bit, o 4 byte. L'ho descritto in questo modo nella figura di sotto, includendo un valore che rappresenta l'offset dall'inizio della struttura per ciascun elemento della struttura. Questo ti consente di utilizzare un puntatore all'inizio della struttura e un offset dall'inizio per creare l'indirizzo effettivo di un dato elemento della struttura. Nota che anche in un'istanza Linux a 64 bit, i campi tm sono di dimensioni 32 bit. Perché ancora 32 bit? Facile: nessuno degli elementi in tm ha bisogno di qualcosa vicino a 8 byte per essere espresso. Il valore più grande possibile è tm_yday, che contiene il numero ordinale del giorno corrente, ovvero un numero da 1 a 366, con 1 che è il primo giorno di gennaio. Naturalmente, tra alcuni secoli, il numero di anni dal 1900 supererà 366, ma ancora una volta, non aspettarti.
 </p>
 
-<div aling=center>
+<div align=center>
 <img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/values_contained_in_the_tm_structure.png">
 </div>
 
@@ -14715,7 +14715,7 @@ Dopo il prologo, il valore del conteggio argc è copiato in R14. L'indirizzo del
 Il termine base è R13, che è l'indirizzo dell'inizio della tabella. Ogni indirizzo nella tabella occupa 8 byte, quindi si tratta la posizione ordinaria delle voci della tabella (cioè l'elemento 0, 1, 2, 3, ecc.) come l'indice e lo si moltiplica per il fattore di scala, 8 poiché gli indirizzi in x64 sono tutti di 8 byte. Quando il calcolo è completato, l'indirizzo effettivo dell'elemento scelto nella tabella viene copiato in RDX. RDX quindi porta l'indirizzo dell'elemento argv da visualizzare in printf(). (Si noti che non c'è termine di spostamento in questo particolare calcolo dell'indirizzo effettivo.) Durante il ciclo .showit, R14 conta all'indietro il numero di argomenti, mentre R12 assegna a ciascun argomento il proprio numero ordinario. In altre parole, R14 conta quanti argomenti abbiamo ancora da visualizzare e per ogni argomento R12 gli assegna un numero ordinario che aumenta, da visualizzare con printf(). Tutto ciò dovrebbe essere chiaro dalla figura di sotto
 </p>
 
-<div aling=center>
+<div align=center>
 <img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/accessing_command_line_arguments_from_main.png">
 </div>
 
@@ -14807,7 +14807,7 @@ je OpenErr           ; Jump to error handling code if open failed
 Il processo di creazione di un file e poi di scrittura su di esso è identico, tranne per il fatto che devi usare il codice w invece del codice r. Vedremo come funziona questo nel programma textfile.asm.
 </p>
 
-<div aling=center>
+<div align=center>
 <img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/fopen_file_access_mode.png">
 </div>
 
