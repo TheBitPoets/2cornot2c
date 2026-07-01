@@ -122,10 +122,10 @@ vagrant@ubuntu2204:/lab2/0_processes$ ps
    1421 pts/0    00:00:00 ps
  ```
 
-Sembra ci siano due processi attivi sul sistema, il primo è **bash** ed il secondo è **ps** che abbiamo lanciato. La prima colonna mostra il **PID** dei processi attivi. Per maggiori dettagli possiamo digitare
+Sembra che ci siano due processi attivi sul sistema: il primo è **bash** e il secondo è **ps**, che abbiamo lanciato. La prima colonna mostra il **PID** dei processi attivi. Per maggiori dettagli possiamo digitare:
 
 ```bash
-ps -e -o pid,ppid, command
+ps -e -o pid,ppid,command
 ```
 
 | Opzione  | Significato |
