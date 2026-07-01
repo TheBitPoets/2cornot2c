@@ -1790,7 +1790,7 @@ Nell'esempio precedente, in cui diversi thread elaborano i lavori da una coda, l
 * Un'operazione di post incrementa il valore del semaforo di 1. Se il semaforo era precedentemente zero e altri thread sono bloccati in un'operazione di attesa su quel semaforo, uno di quei thread viene sbloccato e la sua operazione di attesa viene completata (il che riporta il valore del semaforo a zero)
 
 Nota che GNU/Linux fornisce due implementazioni di semafori leggermente diverse. Quella che descriviamo qui è l'implementazione standard del semaforo POSIX. Usa questi semafori quando comunichi tra thread.
-L'altra implementazione, usata per la comunicazione tra processi,  Se usi i semafori, includi **<semaphore.h>**.
+L'altra implementazione, usata per la comunicazione tra processi, verr� descritta nel prossimo capitolo. Se usi i semafori, includi **<semaphore.h>**.
 Un semaforo è rappresentato da una variabile **sem_t**. Prima di usarla, devi inizializzarla usando la funzione **sem_init()**, passando un puntatore alla variabile sem_t. Il secondo parametro dovrebbe essere zero (Un valore diverso da zero indicherebbe un semaforo che può essere condiviso tra i processi, il che non è supportato da GNU/Linux per questo tipo di semaforo) e il terzo parametro è il valore iniziale del semaforo. 
 
 ```c
