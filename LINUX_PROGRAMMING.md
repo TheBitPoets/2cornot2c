@@ -1779,8 +1779,8 @@ Come suggerito dal suffisso "np", i tipi di mutex ricorsivi e di controllo degli
 
 ### Test Mutex non bloccanti
 
-A volte, è utile verificare se un mutex è bloccato senza effettivamente bloccarlo. Ad esempio, un thread potrebbe dover bloccare un mutex ma potrebbe avere altro lavoro da fare invece di bloccare se il mutex è già bloccato. Poiché **pthread_mutex_lock()** non
-tornerà finché il mutex non sarà sbloccato, è necessaria un'altra funzione. GNU/Linux fornisce **pthread_mutex_trylock()** per questo scopo. Se chiami pthread_mutex_trylock su un mutex sbloccato, bloccherai il mutex come se avessi chiamato pthread_mutex_lock e pthread_mutex_trylock restituirà zero. Tuttavia, se il mutex è già bloccato da un altro thread, pthread_mutex_trylock non bloccherà. Invece, tornerà immediatamente con il codice di errore `EBUSY`. Il blocco del mutex mantenuto dall'altro thread non è interessato. Puoi provare di nuovo più tardi a bloccare il mutex.
+A volte, è utile verificare se un mutex è bloccato senza effettivamente bloccarlo. Ad esempio, un thread potrebbe dover verificare un mutex ma potrebbe avere altro lavoro da fare anzich� attendere, se il mutex è già bloccato. Poiché **pthread_mutex_lock()** non
+tornerà finché il mutex non sarà sbloccato, è necessaria un'altra funzione. GNU/Linux fornisce **pthread_mutex_trylock()** per questo scopo. Se chiami pthread_mutex_trylock su un mutex sbloccato, bloccherai il mutex come se avessi chiamato pthread_mutex_lock e pthread_mutex_trylock restituirà zero. Tuttavia, se il mutex è già bloccato da un altro thread, pthread_mutex_trylock non bloccherà. Invece, tornerà immediatamente con il codice di errore `EBUSY`. Il mutex mantenuto dall'altro thread non è coinvolto. Puoi provare di nuovo più tardi a bloccare il mutex.
 
 ### Semafori
 
@@ -2223,4 +2223,3 @@ la memoria visibile a un altro thread. Un processo errante, d'altra parte, non p
 la memoria.
 * I thread dovrebbero essere utilizzati per i programmi che necessitano di un parallelismo a grana fine. Ad esempio, se un problema può essere suddiviso in più attività quasi identiche, i thread potrebbero essere una buona scelta. I processi dovrebbero essere utilizzati per i programmi che necessitano di un parallelismo più grossolano.
 * La condivisione dei dati tra thread è banale perché i thread condividono la stessa memoria. (Tuttavia, è necessario prestare molta attenzione per evitare race condition, come descritto in precedenza.) La condivisione dei dati tra processi richiede l'uso di meccanismi IPC. Ciò può essere più macchinoso, ma rende i processi multipli meno inclini a soffrire di bug di concorrenza
-
