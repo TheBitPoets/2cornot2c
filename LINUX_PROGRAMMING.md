@@ -84,14 +84,14 @@
 
 ### Processi
 
-Un processo è un instanza di un programma; un programma (un file eseguibile presente sul disco) che è stato caricato in memoria.
-Quando dalla riga di comando invochiamo il nome di un programma o clicchiamo sull'icona presente sulla scrivania il file eseguibile viene caricato in memoria ed ha inizio la sua esecuzione in un nuovo processo. Un singolo programma può far uso di più processi contemporaneamente per fare più cose contemporaneamente. La maggior parte dell funzioni per la manipolazione dei processi richiedono l'inclusione del file header `<unistd.h>`
+Un processo è un'istanza di un programma: un file eseguibile presente sul disco che viene caricato in memoria.
+Quando dalla riga di comando invochiamo il nome di un programma o clicchiamo sull'icona presente sulla scrivania, il file eseguibile viene caricato in memoria ed ha inizio la sua esecuzione in un nuovo processo. Un singolo programma può fare uso di più processi contemporaneamente per svolgere più operazioni allo stesso tempo. La maggior parte delle funzioni per la manipolazione dei processi richiede l'inclusione del file header `<unistd.h>`.
 
 #### Process IDs
 
-Ciascun processo in Linux è identificato da un id univoco detto *process ID* anche detto **PID**. Un **PID** è lungo 16 bit ($s^16=65536$). Ciascun processo ha un processo padre (tranne il processo che viene creato per primo all'avvio del sistema operativo detto processo **init** che ha **PID** 1 e nessun padre).
-Il process ID del processo padre è anche detto **PPID**. I processi sui sistemi Linux sono quindi rappresentabili attraverso un albero dove la radice è il processo **init**.
-Quando in C si vuole rappresentare il **PID** di un processo si usa il tipo `pid_t` definito in `<sys/types.h`>. Per ottenere il proprio **PID** si richiamo la system call `getpid()`, allo stesso modo per ottenere il **PPID** si richiama la `getppid()`. Vediamo un esempio:
+Ciascun processo in Linux è identificato da un identificatore univoco detto *process ID* o **PID**. Un **PID** è rappresentato con 16 bit ($s^{16}=65536$). Ciascun processo ha un processo padre, tranne il processo che viene creato per primo all'avvio del sistema operativo, detto processo **init**, che ha **PID** 1 e nessun padre.
+Il process ID del processo padre è anche detto **PPID**. I processi nei sistemi Linux sono quindi rappresentabili attraverso un albero dove la radice è il processo **init**.
+Quando in C si vuole rappresentare il **PID** di un processo si usa il tipo `pid_t` definito in `<sys/types.h>`. Per ottenere il proprio **PID** si richiama la system call `getpid()`, allo stesso modo per ottenere il **PPID** si richiama la `getppid()`. Vediamo un esempio:
 
 ```c
 /***********************************************************************
@@ -134,7 +134,7 @@ ps -e -o pid,ppid, command
 | `-o`  | specifica quali informazioni mostrare per il singolo processo  |
 | `pid`  | mostra il **pid**  |
 | `ppid`  | mostra il **ppid**  |
-| `ppid`  | mostra il programma eseguito all'interno del processo |
+| `command`  | mostra il programma eseguito dal processo |
 
 ```bash
 vagrant@ubuntu2204:/lab2/0_processes$ ps -e -o pid,ppid,command
