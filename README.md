@@ -12785,7 +12785,7 @@ Ruler:
         
 ; RDI now contains the memory address in the buffer where the ruler
 ; is to begin. Now we display the ruler, starting at that position:
-    mov rdx,RulerString  ; Losd address of ruler string into RDX
+    mov rdx,RulerString  ; Load address of ruler string into RDX
 
 DoRule: 
     mov byte al,[rdx] ; Load first digit in the ruler to AL
