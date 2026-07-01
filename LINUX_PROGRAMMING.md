@@ -371,7 +371,7 @@ int main ()
 }
 ```
 
-Eseguendo il programma ti accorgerai che il processo padre termina immediatamente ("done with the main program") successivamente viene stampato il prompt e poco dopo l'output del processo figlio sporca il terminale perchè continua a scrivere sullo stdout. In generale non è possibile sapere quale processo tra il padre ed il figlio concluda per primo ma vedremo che è possibile sincronizzare l'esecuzione dei due processi facendo in modo che il processo padre attenda la terminazione dei suoi figli prima di concludere la propria esecuzione.
+Eseguendo il programma ti accorgerai che il processo padre termina immediatamente ("done with the main program") successivamente viene stampato il prompt e poco dopo l'output del processo figlio sporca il terminale perché continua a scrivere sullo stdout. In generale non è possibile sapere quale processo tra il padre ed il figlio concluda per primo ma vedremo che è possibile sincronizzare l'esecuzione dei due processi facendo in modo che il processo padre attenda la terminazione dei suoi figli prima di concludere la propria esecuzione.
 
 ```bash
 vagrant@ubuntu2204:/lab2/0_processes$ bin/3_fork_exec
@@ -530,7 +530,7 @@ vagrant@ubuntu2204:~$ kill -SIGUSR1 1642
 ```
 #### Terminare un processo
 
-Un processo termina o attraverso la chiamata alla funzione `exit()` o quando termina la funzione `main()` del programma (attraverso `return` o perch� raggiunge l'ultima istruzione della funzione `main()`). Il valore intero ritornato attraverso `return` o come parametro in input alla `exit()` � detto **exit code**. Un processo pu� anche terminare in risposta a un segnale (`SIGSEGV`, `SIGKILL` ecc.). Altri segnali per terminare un processo sono `SIGINT`, inviato quando si preme la combinazione di tasti `CTRL+C` nel terminale attivo del programma. Un altro segnale che termina un processo � `SIGABRT`: oltre a terminare il processo genera un core file; � possibile inviare questo segnale attraverso la chiamata `abort()`. Il modo pi� rapido per terminare un processo � quello di inviare il segnale `SIGKILL`, che termina immediatamente il processo e non pu� essere ignorato o bloccato.
+Un processo termina o attraverso la chiamata alla funzione `exit()` o quando termina la funzione `main()` del programma (attraverso `return` o perché raggiunge l'ultima istruzione della funzione `main()`). Il valore intero ritornato attraverso `return` o come parametro in input alla `exit()` è detto **exit code**. Un processo può anche terminare in risposta a un segnale (`SIGSEGV`, `SIGKILL` ecc.). Altri segnali per terminare un processo sono `SIGINT`, inviato quando si preme la combinazione di tasti `CTRL+C` nel terminale attivo del programma. Un altro segnale che termina un processo è `SIGABRT`: oltre a terminare il processo genera un core file; è possibile inviare questo segnale attraverso la chiamata `abort()`. Il modo più rapido per terminare un processo è quello di inviare il segnale `SIGKILL`, che termina immediatamente il processo e non può essere ignorato o bloccato.
 
 Tutti questi segnali ed anche altri possono essere inviati con il comando `kill` specificando quale segnale inviare come parametro. Per inviare un `SIGKILL` fai in questo modo:
 
@@ -550,7 +550,7 @@ int kill(pid_t pid, int sig);
 Devi includere `<sys/types.h>` e `<signal.h>` per utilizzare la funzione `kill()`.
 
 > [!IMPORTANT]
-> Per convenzione, **exit code** � usato per indicare se il programma ha terminato la sua esecuzione correttamente o con degli errori. Un valore pari a zero indica una corretta esecuzione, mentre valori diversi da zero indicano che il processo ha terminato con qualche errore. � importante seguire questa convenzione se vuoi usare gli operatori logici della shell (`&&` `||`) per concatenare pi� programmi tra loro.
+> Per convenzione, **exit code** è usato per indicare se il programma ha terminato la sua esecuzione correttamente o con degli errori. Un valore pari a zero indica una corretta esecuzione, mentre valori diversi da zero indicano che il processo ha terminato con qualche errore. È importante seguire questa convenzione se vuoi usare gli operatori logici della shell (`&&` `||`) per concatenare più programmi tra loro.
 
 Puoi leggere l'**exit code** dell'ultimo programma lanciato sulla shell stampando il contenuto della variabile `$?` per esempio.
 
@@ -563,11 +563,11 @@ vagrant@ubuntu2204:/lab2/0_processes$ echo $?
 
 #### Aspettare la terminazione di un processo
 
-Quando si esegue la coppia di chiamate `fork()` ed `exec()` per creare un processo figlio siamo in grado, all'interno dello stesso codice, di differenziare quali istruzioni saranno eseguite dal padre e quali dal processo figlio sfruttando il valore di ritorno della chiamata `fork()`. Nulla per� ci assicura che il padre termini prima del figlio, l'ordine di terminazione dipende dal numero di istruzioni dei due processi e soprattutto da come il sistema operativo andr� a schedulare i due processi nell'assegnazione dei tempi di CPU. Quando � necessario che per la correttezza del nostro programma il padre termini soltanto al termine dell'esecuzione del processo figlio, � obbligatorio usare la funzione `wait()`.
+Quando si esegue la coppia di chiamate `fork()` ed `exec()` per creare un processo figlio siamo in grado, all'interno dello stesso codice, di differenziare quali istruzioni saranno eseguite dal padre e quali dal processo figlio sfruttando il valore di ritorno della chiamata `fork()`. Nulla però ci assicura che il padre termini prima del figlio, l'ordine di terminazione dipende dal numero di istruzioni dei due processi e soprattutto da come il sistema operativo andrà a schedulare i due processi nell'assegnazione dei tempi di CPU. Quando è necessario che per la correttezza del nostro programma il padre termini soltanto al termine dell'esecuzione del processo figlio, è obbligatorio usare la funzione `wait()`.
 
 #### wait()
 
-La `wait()` sospende l'esecuzione del processo padre finch� uno dei suoi figli ha terminato (anche con un errore, non importa). Inoltre la `wait()` ritorna uno status code (**exit code**) dal quale estrarre informazioni su come il processo figlio ha terminato l'esecuzione. Per esempio la macro `WEXITSTATUS` contiene l'**exit code** del processo figlio.
+La `wait()` sospende l'esecuzione del processo padre finché uno dei suoi figli ha terminato (anche con un errore, non importa). Inoltre la `wait()` ritorna uno status code (**exit code**) dal quale estrarre informazioni su come il processo figlio ha terminato l'esecuzione. Per esempio la macro `WEXITSTATUS` contiene l'**exit code** del processo figlio.
 
 Vediamo un esempio:
 
@@ -1779,7 +1779,7 @@ Come suggerito dal suffisso "np", i tipi di mutex ricorsivi e di controllo degli
 
 ### Test Mutex non bloccanti
 
-A volte, è utile verificare se un mutex è bloccato senza effettivamente bloccarlo. Ad esempio, un thread potrebbe dover verificare un mutex ma potrebbe avere altro lavoro da fare anzich� attendere, se il mutex è già bloccato. Poiché **pthread_mutex_lock()** non
+A volte, è utile verificare se un mutex è bloccato senza effettivamente bloccarlo. Ad esempio, un thread potrebbe dover verificare un mutex ma potrebbe avere altro lavoro da fare anziché attendere, se il mutex è già bloccato. Poiché **pthread_mutex_lock()** non
 tornerà finché il mutex non sarà sbloccato, è necessaria un'altra funzione. GNU/Linux fornisce **pthread_mutex_trylock()** per questo scopo. Se chiami pthread_mutex_trylock su un mutex sbloccato, bloccherai il mutex come se avessi chiamato pthread_mutex_lock e pthread_mutex_trylock restituirà zero. Tuttavia, se il mutex è già bloccato da un altro thread, pthread_mutex_trylock non bloccherà. Invece, tornerà immediatamente con il codice di errore `EBUSY`. Il mutex mantenuto dall'altro thread non è coinvolto. Puoi provare di nuovo più tardi a bloccare il mutex.
 
 ### Semafori
@@ -1790,7 +1790,7 @@ Nell'esempio precedente, in cui diversi thread elaborano i lavori da una coda, l
 * Un'operazione di post incrementa il valore del semaforo di 1. Se il semaforo era precedentemente zero e altri thread sono bloccati in un'operazione di attesa su quel semaforo, uno di quei thread viene sbloccato e la sua operazione di attesa viene completata (il che riporta il valore del semaforo a zero)
 
 Nota che GNU/Linux fornisce due implementazioni di semafori leggermente diverse. Quella che descriviamo qui è l'implementazione standard del semaforo POSIX. Usa questi semafori quando comunichi tra thread.
-L'altra implementazione, usata per la comunicazione tra processi, verr� descritta nel prossimo capitolo. Se usi i semafori, includi **<semaphore.h>**.
+L'altra implementazione, usata per la comunicazione tra processi, verrà descritta nel prossimo capitolo. Se usi i semafori, includi **<semaphore.h>**.
 Un semaforo è rappresentato da una variabile **sem_t**. Prima di usarla, devi inizializzarla usando la funzione **sem_init()**, passando un puntatore alla variabile sem_t. Il secondo parametro dovrebbe essere zero (Un valore diverso da zero indicherebbe un semaforo che può essere condiviso tra i processi, il che non è supportato da GNU/Linux per questo tipo di semaforo) e il terzo parametro è il valore iniziale del semaforo. 
 
 ```c
