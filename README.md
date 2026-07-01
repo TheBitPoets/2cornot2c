@@ -11730,7 +11730,7 @@ _start:
 	WriteStr Prompt,PROMPTLEN	
 ; Wait for the user to press Enter:
 	WaitEnter
-; Aand we're done!
+; And we're done!
     ExitProg
 ```
 
