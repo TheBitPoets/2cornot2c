@@ -248,11 +248,11 @@ vagrant@ubuntu2204:/lab2/0_processes$ ps -e -o pid,ppid,command
 
 ### Creare un processo
 
-Ci sono due modi per crare un processo; il primo è relativamente semplice ma è inefficiente e rischioso da un punto di vista di sicurezza, il secondo è più complesso ma fornisce maggiore sicurezza e flessibilità.
+Ci sono due modi per creare un processo: il primo è relativamente semplice ma inefficiente e rischioso dal punto di vista della sicurezza; il secondo è più complesso ma fornisce maggiore sicurezza e flessibilità.
 
 #### `system()`
 
-La funzione `system()` è fornita nella libreria standard del linguaggio C e fornisce un modo semplice per eseguire un comando all'interno di un programma come se il comando fosse stato digitato all'interno di una shell. La funzione `system()` crea un sottoprocesso  lanciando `/bin/sh`. Per esempio il codice di sotto invoce il comando `ls` per mostrare il contenuto della root directory come se si fosse digitato `ls -l /` direttamente dalla shell
+La funzione `system()` è fornita nella libreria standard del linguaggio C e permette di eseguire un comando all'interno di un programma come se fosse stato digitato direttamente in una shell. La funzione `system()` crea un sottoprocesso lanciando `/bin/sh`. Per esempio, il codice sottostante invoca il comando `ls` per mostrare il contenuto della root directory come se si fosse digitato `ls -l /` direttamente dalla shell.
 
 ```c
 /***********************************************************************
