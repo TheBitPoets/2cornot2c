@@ -2029,8 +2029,8 @@ C'è un problema con questo: c'è una condizione di competizione tra il controll
 2. Se il flag è impostato, sblocca il mutex ed esegue la funzione di lavoro.
 3. Se il flag non è impostato, sblocca atomicamente il mutex e attende la variabile di condizione.
 
-La caratteristica critica qui è nel passaggio 3, in cui GNU/Linux consente di sbloccare il mutex e attendere la variabile di condizione atomicamente, senza la possibilità che un altro thread intervenga. Ciò elimina la possibilità che un altro thread possa
-modificare il valore del flag e segnalare la variabile di condizione tra il test del valore del flag e l'attesa della variabile di condizione di thread_function
+Il punto critico qui è nel passaggio 3, in cui GNU/Linux consente di sbloccare il mutex e attendere la variabile di condizione in modo atomico, senza la possibilità che un altro thread intervenga. Ciò elimina la possibilità che un altro thread possa
+modificare il valore del flag e segnalare la variabile di condizione tra il test del valore del flag e l'attesa della variabile di condizione di thread_function.
 
 Una variabile di condizione è rappresentata da un'istanza di **pthread_cond_t**. Ricorda che **ogni variabile di condizione deve essere accompagnata da un mutex**. Queste sono le funzioni che manipolano le variabili di condizione:
 
