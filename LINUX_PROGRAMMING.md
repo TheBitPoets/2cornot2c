@@ -834,15 +834,15 @@ Father's quitting
 
 ### I Thread
 
-I thread, come i processi, sono un meccanismo per permettere a un programma di svolgere più compiti contemporaneamente. Come i processi, anche i thread si contendono la CPU per l'esecuzione. Da un punto di vista teorico un thread esiste all'interno di un processo: quando viene invocato un programma, Linux crea un nuovo processo e al suo interno crea anche un singolo thread che esegue il programma in modo sequenziale. Questo thread può creare altri thread che eseguono lo stesso programma nello stesso processo, ma ciascun thread potrebbe eseguire una parte diversa del programma in un qualsiasi momento.
+I thread, come i processi, sono un meccanismo per permettere a un programma di svolgere più compiti contemporaneamente. Come i processi, anche i thread si contendono la CPU per l'esecuzione. Da un punto di vista teorico, un thread esiste all'interno di un processo: quando viene invocato un programma, Linux crea un nuovo processo e, al suo interno, anche un singolo thread che esegue il programma in modo sequenziale. Questo thread può creare altri thread che eseguono lo stesso programma nello stesso processo, ma ciascun thread può eseguire una parte diversa del programma in qualunque momento.
 Abbiamo visto come un processo può forkare un processo figlio. Il processo figlio inizialmente esegue il programma del padre come una copia della memoria virtuale del processo padre, i descrittori dei file e così via. Il processo figlio può modificare la sua memoria, chiudere i descrittori dei file ecc., senza alterare quelli del padre. Quando un thread crea un nuovo thread nulla è copiato. Il thread padre e il thread figlio condividono la stessa memoria, i descrittori dei file e tutte le altre risorse. Se un thread cambia il valore di una variabile, anche l'altro thread vedrà questa modifica; se un thread chiude un descrittore di un file, gli altri thread potrebbero non poter più leggere o scrivere su quel descrittore. Siccome un processo e tutti i suoi thread possono eseguire un solo programma alla volta, se un thread richiama la `exec()` tutti i thread verranno terminati.
 Linux implementa le API POSIX per i thread (conosciuto come **pthread**). Tutte le funzioni per i thread sono definite nel file d'intestazione `<pthread.h>` che non è inclusa nella libreria standard fornita dal linguaggio C. La libreria è fornita in `libpthread.so` ed è necessario passare il parametro `-lpthread` a gcc per linkarla al momento della compilazione.
 
 #### Creazione di un thread
 
 Ad ogni thread è associato un ID univoco di tipo `pthread_t`.
-Una volta creato un thread esegue una semplice funzione che contiene il codice che il thread dovrà eseguire, quando questa funzione termina anche il thread termina la propria esecuzione. Questa funzione riceve in ingresso un puntatore a void `void *` e ritorna sempre un altro puntatore a void `void *`.
-Per creare un nuovo thread bisogna usare la funzione `pthread_create()`, questo è il suo prototipo:
+Una volta creato, un thread esegue una semplice funzione che contiene il codice che il thread deve eseguire. Quando questa funzione termina, anche il thread termina la propria esecuzione. Questa funzione riceve in ingresso un puntatore a void `void *` e ritorna sempre un altro puntatore a void `void *`.
+Per creare un nuovo thread bisogna usare la funzione `pthread_create()`. Questo è il suo prototipo:
 
 ```c
 int pthread_create(pthread_t *restrict thread,
@@ -896,8 +896,8 @@ Il thread termina quando termina la funzione del thread `print_xs`, un thread pu
 
 #### Passare dati ad un thread
 
-Per passare argomenti ad un thread basta usare il quarto argomento della `pthread_create()`. Per farlo basta solo dichiarare una struttura o un array e passare il puntatore alla `pthread_create`.
-L'unica accortezza da tenere in considerazione è quella di castare il parametro in ingresso alla funzione del thread al tipo corretto.
+Per passare argomenti a un thread basta usare il quarto argomento della `pthread_create()`. Per farlo basta solo dichiarare una struttura o un array e passare il puntatore alla `pthread_create()`.
+L'unica accortezza da tenere in considerazione è quella di effettuare il cast corretto del parametro in ingresso alla funzione del thread.
 Vediamo un esempio:
 
 ```c
