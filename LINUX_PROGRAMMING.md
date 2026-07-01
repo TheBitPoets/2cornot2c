@@ -1185,13 +1185,13 @@ int pthread_detach(pthread_t thread);
 
 #### Cancellazione del thread
 
-In circostanze normali, un thread termina quando esce normalmente, sia tornando dalla sua funzione thread o chiamando la `pthread_exit()`. Tuttavia, è possibile che un thread richieda che un altro thread termini. Questo è chiamato cancellamento di un thread. Per cancellare un thread, chiama la `pthread_cancel()`, passando l'ID del thread da cancellare. È possibile richiamare la `pthread_join()` su un thread cancellato (di tipo joinable, non è possibile per un thread in stato detached) per liberarne le risorse, Il valore di ritorno di un thread cancellato è il valore speciale `PTHREAD_CANCELED`.
+In circostanze normali, un thread termina quando conclude la propria funzione o chiamando la `pthread_exit()`. Tuttavia, è possibile che un thread richieda la terminazione di un altro thread. Questo meccanismo si chiama cancellamento di un thread. Per cancellare un thread, chiama la `pthread_cancel()`, passando l'ID del thread da cancellare. È possibile richiamare la `pthread_join()` su un thread cancellato (di tipo joinable, non è possibile per un thread in stato detached) per liberarne le risorse. Il valore di ritorno di un thread cancellato è il valore speciale `PTHREAD_CANCELED`.
 
-Spesso un thread può essere in un codice che deve essere eseguito in modalità tutto o niente. Ad esempio, il thread può allocare alcune risorse, usarle e quindi deallocarle. Se il thread viene annullato nel mezzo di questo codice, potrebbe non avere l'opportunità di deallocare le risorse, e quindi le risorse saranno perse. Per contrastare questa possibilità, è possibile che un thread controlli se e quando può essere annullato. Un thread può trovarsi in uno dei tre stati per quanto riguarda la cancellazione del thread:
+Spesso un thread può eseguire codice in cui tutte le istruzioni devono essere trattate in modo atomico. Ad esempio, il thread può allocare alcune risorse, usarle e quindi deallocarle. Se il thread viene annullato nel mezzo di questo codice, potrebbe non avere l'opportunità di deallocare le risorse, e quindi le risorse saranno perse. Per contrastare questa possibilità, un thread può controllare se e quando può essere annullato. Un thread può trovarsi in uno dei tre stati per quanto riguarda la cancellazione del thread:
 
 * Il thread può essere **cancellabile in modo asincrono**. Il thread può essere annullato in qualsiasi momento della sua esecuzione.
 * Il thread può essere **cancellabile in modo sincrono**. Il thread può essere annullato, ma non in qualsiasi momento della sua esecuzione. Invece, le richieste di annullamento vengono messe in coda e il thread viene cancellato solo quando raggiunge punti specifici della sua esecuzione.
-* Un thread può essere **non cancellabile**. I tentativi di cancellare 	il thread vengono ignorati silenziosamente.
+* Un thread può essere **non cancellabile**. I tentativi di cancellare il thread vengono ignorati silenziosamente.
 
 **Quando viene creato inizialmente, un thread è cancellabile in modo sincrono**
 
