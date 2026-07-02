@@ -771,7 +771,7 @@ Volendo è possibile richiedere al compilatore di fermarsi a uno specifico step 
 <ol>
   <li>
     <p align="justify">
-    <strong>Preprocessamento</strong> (_Preprocessing_):
+    <strong>Preprocessamento</strong> (<em>Preprocessing</em>):
     </p>
   </li>
 </ol>
@@ -780,7 +780,7 @@ Volendo è possibile richiedere al compilatore di fermarsi a uno specifico step 
 <ol>
   <li>
     <p align="justify">
-    <strong>Compilazione</strong> (_Compilation_):
+    <strong>Compilazione</strong> (<em>Compilation</em>):
     </p>
   </li>
 </ol>
@@ -790,7 +790,7 @@ Volendo è possibile richiedere al compilatore di fermarsi a uno specifico step 
 <ol>
   <li>
     <p align="justify">
-    <strong>Assemblaggio</strong> (_Assembly_):
+    <strong>Assemblaggio</strong> (<em>Assembly</em>):
     </p>
   </li>
 </ol>
@@ -801,7 +801,7 @@ l'assemblatore <code>as</code> trasforma il codice assembly contenuto in <code>h
 <ol>
   <li>
     <p align="justify">
-    <strong>Linkaggio</strong> (_Linking_):
+    <strong>Linkaggio</strong> (<em>Linking</em>):
     </p>
   </li>
 </ol>
@@ -1783,10 +1783,10 @@ Scope, linkage e storage duration sono combinati assieme per definire le <strong
 | Class                 | Storage Duration | Scope | Linkage   | Come dichiarare |
 |----------------------:|------------------|-------|-----------|-----------------|
 |automatic              |Automatic         |Block  | No linkage| Dentro un blocco|
-|register               |Automatic         |Block  | No linkage| Dentro un blocco con _keyword_ **register**|
+|register               |Automatic         |Block  | No linkage| Dentro un blocco con <em>keyword</em> **register**|
 |static external linkage|Static            |File   | External  | Fuori dalle funzioni|
-|static internal linkage|Static            |File   | Internal  | Fuori dalle funzioni con _keyword_ **static**|
-|static no linkage      |Static            |Block  | No linkage| Dentro un blocco con _keyword_ **static**|
+|static internal linkage|Static            |File   | Internal  | Fuori dalle funzioni con <em>keyword</em> **static**|
+|static no linkage      |Static            |Block  | No linkage| Dentro un blocco con <em>keyword</em> **static**|
 
 </div>
 
@@ -2230,7 +2230,7 @@ Gli specificatori di dichiarazione sono raggruppabili in tre categorie:
 <ul>
   <li>
     <p align="justify">
-    classi di memorizzazione (storage classes): sono quattro <code>auto</code>, <code>static</code>, <code>extern</code> e <code>register</code>. Al massimo una di queste può presentarsi in una dichiarazione e, se presente, deve essere la prima _keyword_ nella dichiarazione
+    classi di memorizzazione (storage classes): sono quattro <code>auto</code>, <code>static</code>, <code>extern</code> e <code>register</code>. Al massimo una di queste può presentarsi in una dichiarazione e, se presente, deve essere la prima <em>keyword</em> nella dichiarazione
     </p>
   </li>
   <li>
@@ -2240,7 +2240,7 @@ Gli specificatori di dichiarazione sono raggruppabili in tre categorie:
   </li>
   <li>
     <p align="justify">
-    specificatori di tipo (type specifiers): <code>void</code>, <code>char</code>, <code>short</code>, <code>int</code>, <code>long</code>, <code>float</code>, <code>double</code>, <code>signed</code>, <code>unsigned</code>. Queste _keyword_ possono essere combinate assieme (<code>unsigned long int</code>); l'ordine con cui compaiono non ha importanza
+    specificatori di tipo (type specifiers): <code>void</code>, <code>char</code>, <code>short</code>, <code>int</code>, <code>long</code>, <code>float</code>, <code>double</code>, <code>signed</code>, <code>unsigned</code>. Queste <em>keyword</em> possono essere combinate assieme (<code>unsigned long int</code>); l'ordine con cui compaiono non ha importanza
     </p>
   </li>
 </ul>
@@ -2354,7 +2354,7 @@ La capacità di separare l'implementazione delle funzioni dai loro prototipi att
   </li>
   <li>
     <p align="justify">
-    non è possibile fare _information hiding_ rendendo nascosti i dettagli alle porzioni di codice che non hanno alcun ruolo in un certo compito
+    non è possibile fare <em>information hiding</em> rendendo nascosti i dettagli alle porzioni di codice che non hanno alcun ruolo in un certo compito
     </p>
   </li>
 </ul>
@@ -2388,12 +2388,12 @@ Abbiamo già detto che i file che compongono un programma sono:
 <ul>
   <li>
     <p align="justify">
-    file sorgenti: (_source files_) con estensione <code>.c</code>
+    file sorgenti: (<em>source files</em>) con estensione <code>.c</code>
     </p>
   </li>
   <li>
     <p align="justify">
-    file d'intestazione (_header files_) con estensione <code>.h</code>
+    file d'intestazione (<em>header files</em>) con estensione <code>.h</code>
     </p>
   </li>
 </ul>
@@ -3419,7 +3419,7 @@ int main(void){
 ```
 
 <p align="justify">
-Il linguaggio C riconosce differenti tipi di dato predefiniti. Fino ad ora abbiamo visto solo il tipo <code>int</code>, di seguito riportiamo tutte le _keyword_ riconosciute dal C per gli specificatori di tipo:
+Il linguaggio C riconosce differenti tipi di dato predefiniti. Fino ad ora abbiamo visto solo il tipo <code>int</code>, di seguito riportiamo tutte le <em>keyword</em> riconosciute dal C per gli specificatori di tipo:
 </p>
 
 | Keyword       |
@@ -3435,7 +3435,7 @@ Il linguaggio C riconosce differenti tipi di dato predefiniti. Fino ad ora abbia
 | `void`	|
 
 <p align="justify">
-<code>int</code> permette di rappresentare in memoria i tipi interi (senza parte decimale), le successive quattro _keyword_ in tabella: <code>long</code>, <code>short</code>, <code>unsigned</code> e <code>signed</code> sono usate per ottenere variazioni del tipo base (es: <code>unsigned short int</code> o <code>long long int</code>). <code>char</code> è usato per rappresentare i singoli caratteri, simboli d'interpunzione etc.; <code>char</code> può essere utilizzato anche per esprimere <code>int</code> di piccole dimensioni. <code>float</code>, <code>double</code> e <code>long double</code> sono usati per i numeri reali, numeri con parte decimale.
+<code>int</code> permette di rappresentare in memoria i tipi interi (senza parte decimale), le successive quattro <em>keyword</em> in tabella: <code>long</code>, <code>short</code>, <code>unsigned</code> e <code>signed</code> sono usate per ottenere variazioni del tipo base (es: <code>unsigned short int</code> o <code>long long int</code>). <code>char</code> è usato per rappresentare i singoli caratteri, simboli d'interpunzione etc.; <code>char</code> può essere utilizzato anche per esprimere <code>int</code> di piccole dimensioni. <code>float</code>, <code>double</code> e <code>long double</code> sono usati per i numeri reali, numeri con parte decimale.
 </p>
 
 ### `int`
@@ -3517,7 +3517,7 @@ int main(void){
 #### Altri tipi interi
 
 <p align="justify">
-Il linguaggio offre le _keyword_ <code>short</code> <code>long</code> <code>unsigned</code> per modificare il tipo <code>int</code> di default.
+Il linguaggio offre le <em>keyword</em> <code>short</code> <code>long</code> <code>unsigned</code> per modificare il tipo <code>int</code> di default.
 </p>
 
 
@@ -3750,7 +3750,7 @@ se sommiamo 1 otteniamo $10000$ ma la rappresentazione è a 4 bit ed il primo bi
 # Rappresentazione binaria `int`
 
 <p align="justify">
-La rappresentazione dei numeri interi con segno (<code>signed</code>, di default per la _keyword_ <code>int</code>) è in <strong>complemento a due</strong>, per gli interi senza segno (<code>unsigned int</code>) si usa una normale rappresentazione binaria del valore intero. Nel codice seguente proviamo a predire la sequenza binaria di un valore decimale scelto arbitrariamente. Per comprendere il codice è necessaria una conoscenza del processo di conversione da decimale a binario oltre che ovvia mente alle basi relative sia al sistema numerico posizionale binari che esadecimale. Trovi la teoria trattata a lezione <a href="https://github.com/kinderp/2cornot2c/tree/main/lab/lessons/UDA_1">qui</a>
+La rappresentazione dei numeri interi con segno (<code>signed</code>, di default per la <em>keyword</em> <code>int</code>) è in <strong>complemento a due</strong>, per gli interi senza segno (<code>unsigned int</code>) si usa una normale rappresentazione binaria del valore intero. Nel codice seguente proviamo a predire la sequenza binaria di un valore decimale scelto arbitrariamente. Per comprendere il codice è necessaria una conoscenza del processo di conversione da decimale a binario oltre che ovvia mente alle basi relative sia al sistema numerico posizionale binari che esadecimale. Trovi la teoria trattata a lezione <a href="https://github.com/kinderp/2cornot2c/tree/main/lab/lessons/UDA_1">qui</a>
 </p>
 
 ```c
