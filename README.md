@@ -6450,7 +6450,7 @@ Come puoi vedere nella figura precedente, anche se da un punto di vista di indic
     </p>
   </li>
 </ul>
-  ```c
+<pre><code class="language-c">
   	/*
 	 * mat è un puntatore doppio: contiene l'indirizzo di una variabile puntatore che contiene
 	 * a sua volta l'indirizzo del primo elemento del vettore contiguo di 42 elementi.
@@ -6463,7 +6463,7 @@ Come puoi vedere nella figura precedente, anche se da un punto di vista di indic
   	 *           *(*mat + ( (i*N_COLONNE) + j) ) )
   	 * e finalmente ottengo il valore del 21 elemento
   	 */
-  ```
+</code></pre>
 
 ```c
 #include<stdio.h>
