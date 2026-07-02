@@ -130,7 +130,7 @@ Un processo è un'istanza di un programma: un file eseguibile presente sul disco
 Ciascun processo in Linux è identificato da un identificatore univoco detto <em>process ID</em> o <strong>PID</strong>. Un <strong>PID</strong> è rappresentato con 16 bit ($s^{16}=65536$). Ciascun processo ha un processo padre, tranne il processo che viene creato per primo all'avvio del sistema operativo, detto processo <strong>init</strong>, che ha <strong>PID</strong> 1 e nessun padre. Il process ID del processo padre è anche detto <strong>PPID</strong>. I processi nei sistemi Linux sono quindi rappresentabili attraverso un albero dove la radice è il processo <strong>init</strong>. Quando in C si vuole rappresentare il <strong>PID</strong> di un processo si usa il tipo <code>pid_t</code> definito in <code>&lt;sys/types.h&gt;</code>. Per ottenere il proprio <strong>PID</strong> si richiama la system call <code>getpid()</code>, allo stesso modo per ottenere il <strong>PPID</strong> si richiama la <code>getppid()</code>. Vediamo un esempio:
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
@@ -154,7 +154,7 @@ int main ()
 Il comando <strong>ps</strong> mostra i processi attivi sul sistema.
 </p>
 
-<pre><code class="language-bash">
+<pre lang="bash"><code>
 vagrant@ubuntu2204:/lab2/0_processes$ ps
     PID TTY          TIME CMD
    1331 pts/0    00:00:00 bash
@@ -165,7 +165,7 @@ vagrant@ubuntu2204:/lab2/0_processes$ ps
 Sembra che ci siano due processi attivi sul sistema: il primo è <strong>bash</strong> e il secondo è <strong>ps</strong>, che abbiamo lanciato. La prima colonna mostra il <strong>PID</strong> dei processi attivi. Per maggiori dettagli possiamo digitare:
 </p>
 
-<pre><code class="language-bash">
+<pre lang="bash"><code>
 ps -e -o pid,ppid,command
 </code></pre>
 
@@ -200,7 +200,7 @@ ps -e -o pid,ppid,command
   </tbody>
 </table>
 
-<pre><code class="language-bash">
+<pre lang="bash"><code>
 vagrant@ubuntu2204:/lab2/0_processes$ ps -e -o pid,ppid,command
     PID    PPID COMMAND
       1       0 /sbin/init =
@@ -324,7 +324,7 @@ Ci sono due modi per creare un processo: il primo è relativamente semplice ma i
 La funzione <code>system()</code> è fornita nella libreria standard del linguaggio C e permette di eseguire un comando all'interno di un programma come se fosse stato digitato direttamente in una shell. La funzione <code>system()</code> crea un sottoprocesso lanciando <code>/bin/sh</code>. Per esempio, il codice seguente invoca il comando <code>ls</code> per mostrare il contenuto della root directory come se si fosse digitato <code>ls -l /</code> direttamente dalla shell.
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
@@ -351,7 +351,7 @@ La system call <code>fork()</code> crea un nuovo processo che è la copia del pr
 Per distinguere il padre dal figlio, la funzione <code>fork()</code> restituisce un intero: in particolare restituisce zero al processo figlio e il <strong>PID</strong> del processo figlio al processo padre.
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
@@ -406,7 +406,7 @@ La system call <code>exec()</code> sostituisce il programma in esecuzione nel pr
   </li>
 </ul>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
@@ -466,7 +466,7 @@ int main ()
 Eseguendo il programma ti accorgerai che il processo padre termina immediatamente ("done with the main program") successivamente viene stampato il prompt e poco dopo l'output del processo figlio sporca il terminale perché continua a scrivere sullo stdout. In generale non è possibile sapere quale processo tra il padre ed il figlio concluda per primo ma vedremo che è possibile sincronizzare l'esecuzione dei due processi facendo in modo che il processo padre attenda la terminazione dei suoi figli prima di concludere la propria esecuzione.
 </p>
 
-<pre><code class="language-bash">
+<pre lang="bash"><code>
 vagrant@ubuntu2204:/lab2/0_processes$ bin/3_fork_exec
 done with main program
 vagrant@ubuntu2204:/lab2/0_processes$ total 2097224
@@ -597,7 +597,7 @@ La <strong>sigaction</strong> può essere usata per impostare il comportamento d
   </li>
 </ol>
    
-<pre><code class="language-c">
+<pre lang="c"><code>
 int sigaction(int signum,
                      const struct sigaction *_Nullable restrict act,
                      struct sigaction *_Nullable restrict oldact);
@@ -607,7 +607,7 @@ int sigaction(int signum,
 La struct <code>sigaction</code> ha questa forma:
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 struct sigaction {
                void     (*sa_handler)(int);
                void     (*sa_sigaction)(int, siginfo_t *, void *);
@@ -651,7 +651,7 @@ Un altro aspetto da tenere in considerazione è rendere le proprie istruzioni (v
 Vediamo un esempio di <strong>signal-handler</strong> per la gestione del segnale <strong>SIGUSR1</strong>, uno dei due segnali riservati all'uso da parte dei programmi applicativi.
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
@@ -695,7 +695,7 @@ int main ()
 In un primo terminale esegui il programma che resterà in esecuzione per 5 minuti; alla fine dell'esecuzione stamperà il numero di volte che il segnale <code>SIGUSR1</code> è stato ricevuto.
 </p>
 
-<pre><code class="language-bash">
+<pre lang="bash"><code>
 vagrant@ubuntu2204:/lab2/0_processes$ bin/4_sigusr1
 ***************************************************
 **************************SIGUSR1 was raised 6 times
@@ -705,7 +705,7 @@ vagrant@ubuntu2204:/lab2/0_processes$ bin/4_sigusr1
 Per inviare il segnale <code>SIGUSR1</code> basta usare il comando <code>kill</code>, con il <strong>PID</strong> del processo recuperabile in questo esempio con il comando <code>ps</code>.
 </p>
 
-<pre><code class="language-bash">
+<pre lang="bash"><code>
 vagrant@ubuntu2204:~$ ps -e|grep 4_sigusr1
    1642 pts/0    00:01:17 4_sigusr1
 
@@ -726,7 +726,7 @@ Un processo termina o attraverso la chiamata alla funzione <code>exit()</code> o
 Tutti questi segnali ed anche altri possono essere inviati con il comando <code>kill</code> specificando quale segnale inviare come parametro. Per inviare un <code>SIGKILL</code> fai in questo modo:
 </p>
 
-<pre><code class="language-bash">
+<pre lang="bash"><code>
 kill -KILL pid
 </code></pre>
 
@@ -734,7 +734,7 @@ kill -KILL pid
 Esiste anche la funzione <code>kill()</code> per inviare un segnale dal codice ed ha questo prototipo:
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 int kill(pid_t pid, int sig);
 </code></pre>
 
@@ -767,7 +767,7 @@ Devi includere <code>&lt;sys/types.h&gt;</code> e <code>&lt;signal.h&gt;</code> 
 Puoi leggere l'<strong>exit code</strong> dell'ultimo programma lanciato sulla shell stampando il contenuto della variabile <code>$?</code> per esempio.
 </p>
 
-<pre><code class="language-bash">
+<pre lang="bash"><code>
 vagrant@ubuntu2204:/lab2/0_processes$ ls
 0_print_pid.c  1_system.c  2_fork.c  3_fork_exec.c  4_sigusr1.c  bin
 vagrant@ubuntu2204:/lab2/0_processes$ echo $?
@@ -790,7 +790,7 @@ La <code>wait()</code> sospende l'esecuzione del processo padre finché uno dei 
 Vediamo un esempio:
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
@@ -859,7 +859,7 @@ int main ()
 Come mostrato nell'esempio seguente, il terminale visualizza prima l'output del processo figlio (<code>ls -l</code>), mentre successivamente il processo padre termina stampando a schermo (<code>done with the main program</code>).
 </p>
 
-<pre><code class="language-bash">
+<pre lang="bash"><code>
 vagrant@ubuntu2204:/lab2/0_processes$ bin/5_fork_exec_wait
 total 2097224
 lrwxrwxrwx   1 root    root             7 Aug 10  2023 bin -&gt; usr/bin
@@ -898,7 +898,7 @@ done with main program
 Quando un processo figlio termina e il processo padre ha chiamato la <code>wait()</code>, le informazioni sulla sua terminazione passano al padre attraverso la <code>wait()</code>. Se il padre non chiama la <code>wait()</code>, queste informazioni vanno perse? In questo caso il processo figlio diventa un processo <strong>zombie</strong>. Un processo <strong>zombie</strong> è un processo che ha terminato la propria esecuzione ma non è stato ancora ripulito; è quindi compito del processo padre ripulire il figlio. Il compito della <code>wait()</code> è proprio questo: una volta che il processo figlio termina, questo diventa uno zombie e poi la <code>wait()</code> estrae lo stato di uscita del figlio, cosicché il processo figlio può essere eliminato. Se il processo padre non chiama la <code>wait()</code>, il figlio resta nello stato di zombie, vediamo un esempio:
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
@@ -931,14 +931,14 @@ int main ()
 Lancia il programma da un terminale in questo modo:
 </p>
 
-<pre><code class="language-bash">
+<pre lang="bash"><code>
 vagrant@ubuntu2204:/lab2/0_processes$ bin/6_zombie
 </code></pre>
 <p align="justify">
 Ed usa, su un altro terminale, il comando <code>ps</code> in questo modo:
 </p>
 
-<pre><code class="language-bash">
+<pre lang="bash"><code>
 vagrant@ubuntu2204:~$ ps -e -o pid,ppid,stat,cmd|grep 6_zombie
    2317    1331 S+   bin/6_zombie
    2318    2317 Z+   [6_zombie] &lt;defunct&gt;
@@ -957,7 +957,7 @@ Il processo padre ha pid <code>2317</code> ed è in stato <code>S+</code>; il pr
 La <code>wait()</code> ci permette di attendere (nel codice del padre) la terminazione del figlio. Il problema è che la chiamata alla <code>wait()</code> è bloccante, quindi il codice del padre rimane (appeso) all'istruzione di <code>wait</code> fino a quando il figlio non termina. Se si vuole che il padre continui la propria elaborazione mentre si attende che il figlio completi, è possibile controllare periodicamente la terminazione del figlio chiamando <code>wait3()</code> o <code>wait4()</code> (flag <code>WNOHANG</code>) in modo asincrono nel codice del padre. Una soluzione migliore è usare il segnale <code>SIGCHLD</code>, che Linux invia al padre ogni volta che uno dei suoi figli termina. Vediamo un esempio:
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
@@ -1036,7 +1036,7 @@ int main ()
 }
 </code></pre>
 
-<pre><code class="language-bash">
+<pre lang="bash"><code>
 vagrant@ubuntu2204:/lab2/0_processes$ bin/7_sigchld
 Child 3099 created
 Child 3100 created
@@ -1073,7 +1073,7 @@ I thread, come i processi, sono un meccanismo per permettere a un programma di s
 Ad ogni thread è associato un ID univoco di tipo <code>pthread_t</code>. Una volta creato, un thread esegue una semplice funzione che contiene il codice che il thread deve eseguire. Quando questa funzione termina, anche il thread termina la propria esecuzione. Questa funzione riceve in ingresso un puntatore a void <code>void *</code> e ritorna sempre un altro puntatore a void <code>void *</code>. Per creare un nuovo thread bisogna usare la funzione <code>pthread_create()</code>. Questo è il suo prototipo:
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 int pthread_create(pthread_t *restrict thread,
                           const pthread_attr_t *restrict attr,
                           void *(*start_routine)(void *),
@@ -1107,7 +1107,7 @@ int pthread_create(pthread_t *restrict thread,
 Vediamo un esempio di creazione di un thread:
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
@@ -1151,7 +1151,7 @@ Il thread termina quando termina la funzione del thread <code>print_xs</code>, u
 Per passare argomenti a un thread basta usare il quarto argomento della <code>pthread_create()</code>. Per farlo basta solo dichiarare una struttura o un array e passare il puntatore alla <code>pthread_create()</code>. L'unica accortezza da tenere in considerazione è quella di effettuare il cast corretto del parametro in ingresso alla funzione del thread. Vediamo un esempio:
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
@@ -1218,7 +1218,7 @@ Il problema in questo codice è che le due variabili locali (automatiche) <code>
 Per fare in modo che il <code>main()</code> attenda la terminazione dei thread è possibile usare la funzione <code>pthread_join()</code>. Questo è il suo prototipo:
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 int pthread_join(pthread_t thread, void **retval);
 </code></pre>
 
@@ -1239,7 +1239,7 @@ int pthread_join(pthread_t thread, void **retval);
 Vediamo come risolvere il bug dell'esempio precedente usando la <code>pthread_join()</code> per attendere il completamento dei thread creati nel <code>main()</code>
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
@@ -1308,7 +1308,7 @@ int main ()
 Se il secondo parametro in ingresso alla <code>pthread_join()</code> non è <code>NULL</code> allora il valore di ritorno del thread verrà salvato nella locazione di memoria puntata da quell'argomento. Il valore di ritorno del thread è di tipo puntatore a <code>void</code>: <code>void *</code>, quindi è necessario castare l'indirizzo della variabile intera <code>prime</code> a <code>void *</code> nella chiamata alla <code>pthread_join()</code>.
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
@@ -1364,7 +1364,7 @@ int main ()
 }
 </code></pre>
 
-<pre><code class="language-bash">
+<pre lang="bash"><code>
 vagrant@ubuntu2204:/lab2/1_threads$ bin/3_primes
 The 5000th prime number is 48611.
 </code></pre>
@@ -1375,7 +1375,7 @@ The 5000th prime number is 48611.
 <code>pthread_self()</code> ritorna il thread id del thread corrente che la sta eseguendo. Questo è il suo prototipo:
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 pthread_t pthread_self(void);
 </code></pre>
 
@@ -1383,7 +1383,7 @@ pthread_t pthread_self(void);
 <code>pthread_equal()</code> confronta due thread id(s): ritorna zero se i due ID sono uguali. Questo è il suo prototipo:
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 int pthread_equal(pthread_t t1, pthread_t t2);
 </code></pre>
 
@@ -1391,7 +1391,7 @@ int pthread_equal(pthread_t t1, pthread_t t2);
 Queste due funzioni possono essere utili per controllare se un certo ID corrisponde a quello del thread corrente per esempio prima di chiamare una <code>pthread_join()</code> in quanto aspettare la terminazione di se stessi è un grosso errore. Sotto un esempio:
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 if (!pthread_equal (pthread_self (), other_thread))
   pthread_join (other_thread, NULL);
 </code></pre>
@@ -1438,7 +1438,7 @@ Un singolo oggetto attributo thread può essere utilizzato per inizializzare div
 Per impostare lo stato detached in un oggetto attributo thread, basta utilizzare <code>pthread_attr_setdetachstate()</code>. Questo è il suo prototipo:
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate);
 </code></pre>
 
@@ -1446,7 +1446,7 @@ int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate);
 Il primo argomento è un puntatore all'oggetto attributo thread (<code>pthread_attr_t *</code>) e il secondo è lo stato detached desiderato. Poiché lo stato joinable è quello predefinito, è necessario chiamare questo solo per creare detached thread passando <code>PTHREAD_CREATE_DETACHED</code> come secondo argomento. Il codice seguente crea un detached thread impostando l'attributo thread a <code>PTHREAD_CREATE_DETACHED</code>.
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
@@ -1482,7 +1482,7 @@ int main ()
 Anche se un thread è stato creato con stato joinable può essere impostato in un secondo momento nello stato detached, per fare questo basta usare la funzione <code>pthread_detach()</code>. Questo è il suo prototipo:
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 int pthread_detach(pthread_t thread);
 </code></pre>
 
@@ -1524,7 +1524,7 @@ Spesso un thread può eseguire codice in cui tutte le istruzioni devono essere t
 Un thread cancellabile in modo asincrono può essere annullato in qualsiasi momento della sua esecuzione. Un thread cancellabile in modo sincrono, al contrario, può essere cancellato solo in determinati punti della sua esecuzione. Questi punti sono chiamati punti di annullamento. Il thread metterà in coda una richiesta di annullamento finché non raggiunge il punto di annullamento successivo. Per rendere un thread cancellabile in modo asincrono, utilizzare <code>pthread_setcanceltype()</code>. Questo è il suo prototipo:
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 int pthread_setcanceltype(int type, int *oldtype);
 </code></pre>
 
@@ -1532,7 +1532,7 @@ int pthread_setcanceltype(int type, int *oldtype);
 Il primo argomento dovrebbe essere <code>PTHREAD_CANCEL_ASYNCHRONOUS</code> per rendere il thread cancellabile in modo asincrono o <code>PTHREAD_CANCEL_DEFERRED</code> per riportarlo allo stato cancellabile in modo sincrono. Il secondo argomento, se non è nullo, è un puntatore a una variabile che riceverà il tipo di annullamento precedente per il thread. Questa chiamata, ad esempio, rende il thread chiamante cancellabile in modo asincrono.
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 pthread_setcanceltype (PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
 </code></pre>
 
@@ -1540,7 +1540,7 @@ pthread_setcanceltype (PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
 Cosa costituisce un punto di annullamento e dove dovrebbero essere posizionati? Il modo più diretto per creare un punto di annullamento è chiamare <code>pthread_testcancel()</code>.
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 void pthread_testcancel(void);
 </code></pre>
 <p align="justify">
@@ -1554,7 +1554,7 @@ Questa funzione non fa altro che elaborare un annullamento in sospeso in un thre
 Un thread può disabilitare del tutto la cancellazione di se stesso con la funzione <code>pthread_setcancelstate()</code>.
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 int pthread_setcancelstate(int state, int *oldstate);
 </code></pre>
 
@@ -1562,7 +1562,7 @@ int pthread_setcancelstate(int state, int *oldstate);
 Il primo argomento è <code>PTHREAD_CANCEL_DISABLE</code> per disabilitare la cancellazione o <code>PTHREAD_CANCEL_ENABLE</code> per riabilitare la cancellazione. Il secondo argomento, se non è nullo, punta a una variabile che riceverà lo stato di cancellazione precedente. Questa chiamata, ad esempio, disabilita l'annullamento del thread nel thread chiamante.
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 pthread_setcancelstate (PTHREAD_CANCEL_DISABLE, NULL);
 </code></pre>
 
@@ -1570,7 +1570,7 @@ pthread_setcancelstate (PTHREAD_CANCEL_DISABLE, NULL);
 <strong>L'utilizzo di <code>pthread_setcancelstate()</code> consente di implementare sezioni critiche</strong>. Una <strong>sezione critica</strong> è una sequenza di codice che deve essere eseguita per intero o per niente; in altre parole, se un thread inizia a eseguire la sezione critica, deve continuare fino alla fine della sezione critica senza essere annullato. Ad esempio, supponiamo che tu stia scrivendo una routine per un programma bancario che trasferisce denaro da un conto a un altro. Per fare ciò, devi aggiungere valore al saldo di un conto e detrarre lo stesso valore dal saldo di un altro conto. Se il thread che esegue la tua routine venisse annullato proprio nel momento sbagliato tra queste due operazioni, il programma avrebbe aumentato in modo ingiusto i depositi totali della banca non riuscendo a completare la transazione. Per evitare questa possibilità, inserisci le due operazioni in una sezione critica. Potresti implementare il trasferimento con una funzione come <code>process_transaction()</code>, riportata nel paragrafo seguente. Questa funzione disabilita l'annullamento del thread per avviare una sezione critica prima che modifichi il saldo di uno dei due conti.
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
@@ -1657,7 +1657,7 @@ int main() {
 }
 </code></pre>
 
-<pre><code class="language-bash">
+<pre lang="bash"><code>
 vagrant@ubuntu2204:/lab2/1_threads$ bin/5_critical_section
 [0] 100$
 [1] 67$
@@ -1703,7 +1703,7 @@ A differenza dei processi, <strong>tutti i thread in un singolo programma condiv
 Puoi creare tutti gli elementi dati specifici del thread che vuoi, ognuno di tipo <code>void *</code>. Ogni elemento è identificato da una chiave. Per creare una nuova chiave, e quindi un nuovo elemento dati per ogni thread, usa <strong>pthread_key_create()</strong>.
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 int pthread_key_create(pthread_key_t *key, void (*destructor)(void*));
 </code></pre>
 
@@ -1711,7 +1711,7 @@ int pthread_key_create(pthread_key_t *key, void (*destructor)(void*));
 Il primo argomento è un puntatore a una variabile di tipo <strong>pthread_key_t</strong>. Quel valore chiave può essere usato da ogni thread per accedere alla propria copia dell'elemento dati corrispondente. Il secondo argomento dopo <code>pthread_key_t</code> è una funzione di pulizia (cleanup function). Se passi un puntatore a funzione qui, GNU/Linux chiama automaticamente quella funzione quando il thread esce, passando il valore specifico del thread corrispondente a quella chiave. Ciò è particolarmente utile perché la funzione di pulizia viene chiamata anche se il thread viene annullato in un punto arbitrario della sua esecuzione. Se il valore specifico del thread è <code>NULL</code>, la funzione di pulizia del thread non viene chiamata. Se non hai bisogno di una funzione di pulizia, puoi passare <code>NULL</code> invece di un puntatore a funzione. <strong>Dopo aver creato una chiave</strong>, <strong>ogni thread può impostare il suo valore specifico del thread corrispondente a quella chiave</strong> chiamando <strong>pthread_setspecific()</strong>.
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 int pthread_setspecific(pthread_key_t key, const void *value);
 </code></pre>
 
@@ -1719,7 +1719,7 @@ int pthread_setspecific(pthread_key_t key, const void *value);
 Il primo argomento è la chiave e il secondo è il valore specifico del thread (di tipo void*) da memorizzare. Per recuperare un elemento dati specifico del thread, chiama <strong>pthread_getspecific()</strong>, passando la chiave come argomento.
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 void *pthread_getspecific(pthread_key_t key);
 </code></pre>
 
@@ -1728,7 +1728,7 @@ Supponiamo, ad esempio, che l'applicazione divida un'attività tra più thread. 
 </p>
 
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
@@ -1812,11 +1812,11 @@ Si noti che <strong>thread_function()</strong> non ha bisogno di chiudere il fil
 Le funzioni di pulizia per chiavi dati specifiche del thread possono essere molto utili per garantire che le risorse non vengano perse quando un thread esce o viene annullato. A volte, tuttavia, è utile poter specificare funzioni di pulizia senza creare un nuovo elemento dati specifico del thread duplicato per ogni thread. GNU/Linux fornisce gestori di pulizia a questo scopo. <strong>Un gestore di pulizia è semplicemente una funzione che dovrebbe essere chiamata quando un thread esce</strong>. Il gestore accetta un singolo parametro <code>void *</code> e il suo valore di argomento viene fornito quando il gestore viene registrato; questo semplifica l'utilizzo della stessa funzione di pulizia per gestire più istanze di risorse. <strong>Un gestore di pulizia è una misura temporanea</strong>, <strong>utilizzata per deallocare una risorsa solo se il thread esce o viene annullato</strong> anziché terminare l'esecuzione di una particolare regione di codice. <strong>In circostanze normali, quando il thread non esce e non viene annullato, la risorsa dovrebbe essere deallocata in modo esplicito</strong> e il gestore di pulizia dovrebbe essere rimosso. Per registrare un gestore di pulizia, chiama <strong>pthread_cleanup_push()</strong>, passando un puntatore alla funzione di pulizia e il valore del suo argomento <code>void *</code>. La chiamata a pthread_cleanup_push deve essere bilanciata da una chiamata corrispondente a pthread_cleanup_pop, che annulla la registrazione del gestore di pulizia.
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 void pthread_cleanup_push(void (*routine)(void *), void *arg);
 </code></pre>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 void pthread_cleanup_pop(int execute);
 </code></pre>
 
@@ -1824,7 +1824,7 @@ void pthread_cleanup_pop(int execute);
 Per comodità, <code>pthread_cleanup_pop()</code> accetta un argomento flag int; se il flag è diverso da zero, l'azione di pulizia viene effettivamente eseguita. Il frammento di programma seguente mostra come è possibile utilizzare un gestore di pulizia per assicurarsi che un buffer allocato dinamicamente venga ripulito se il thread termina.
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 ***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
@@ -1897,7 +1897,7 @@ Supponiamo che il tuo programma abbia una serie di lavori in coda che vengono el
 Ora supponiamo che due thread finiscano un lavoro più o meno nello stesso momento, ma che solo un lavoro rimanga nella coda. Il primo thread controlla se job_queue è nullo; scoprendo che non lo è, il thread entra nel ciclo e memorizza il puntatore all'oggetto lavoro in next_job. A questo punto, Linux interrompe il primo thread e pianifica il secondo. Anche il secondo thread controlla job_queue e, trovandolo non nullo, assegna lo stesso puntatore lavoro a next_job. Per una sfortunata coincidenza, ora abbiamo due thread che eseguono lo stesso lavoro. A peggiorare le cose, un thread scollegherà l'oggetto lavoro dalla coda, lasciando job_queue contenente <code>NULL</code>. Quando l'altro thread valuta job_queue->next, si verificherà un errore di segmentazione. Questo è un esempio di condizione di gara. In circostanze fortunate, questa particolare pianificazione dei due thread potrebbe non verificarsi mai e la condizione di gara potrebbe non manifestarsi mai. In circostanze diverse, magari quando si esegue su un sistema pesantemente caricato (o sul nuovo server multiprocessore di un cliente importante!), il bug può manifestarsi. Per eliminare le <strong>race conditions</strong>, è necessario un modo per <strong>rendere le operazioni atomiche</strong>. <strong>Un'operazione atomica è indivisibile e ininterrotta; una volta avviata, non verrà messa in pausa o interrotta fino al suo completamento e nel frattempo non verrà eseguita nessun'altra operazione</strong>. In questo particolare esempio, si desidera controllare job_queue: se non è vuoto, si rimuove il primo lavoro, il tutto come un'unica operazione atomica.
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
@@ -1977,7 +1977,7 @@ int main(void){
 La soluzione al problema della race condition della coda dei lavori consiste nel consentire a un solo thread alla volta di accedere alla coda dei lavori. Una volta che un thread inizia a guardare la coda, nessun altro thread dovrebbe essere in grado di accedervi finché il primo thread non ha deciso se elaborare un lavoro e, in tal caso, lo ha rimosso dall'elenco. L'implementazione richiede il supporto del sistema operativo. GNU/Linux fornisce i <strong>mutex</strong>, abbreviazione di blocchi MUTual EXclusion. Un mutex è un blocco speciale che solo un thread può bloccare alla volta. Se un thread blocca un mutex e poi un secondo thread tenta di bloccare lo stesso mutex, il secondo thread viene bloccato o messo in attesa. Solo quando il primo thread sblocca il mutex, il secondo thread viene sbloccato, ovvero può riprendere l'esecuzione. GNU/Linux garantisce che non si verifichino condizioni di gara tra thread che tentano di bloccare un mutex; solo un thread otterrà il blocco e tutti gli altri thread verranno bloccati. Pensa a un mutex come alla serratura di una porta del bagno. Chi arriva per primo entra nel bagno e chiude a chiave la porta. Se qualcun altro tenta di entrare nel bagno mentre è occupato, quella persona troverà la porta chiusa a chiave e sarà costretta ad aspettare fuori finché l'occupante non esce. Per creare un mutex, crea una variabile di tipo <strong>pthread_mutex_t</strong> e passa un puntatore a <strong>pthread_mutex_init()</strong>. Il secondo argomento di <code>pthread_mutex_init()</code> è un puntatore a un oggetto attributo mutex, che specifica gli attributi del mutex.
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 int pthread_mutex_init(pthread_mutex_t *restrict mutex, const pthread_mutexattr_t *restrict attr);
 </code></pre>
 
@@ -1985,7 +1985,7 @@ int pthread_mutex_init(pthread_mutex_t *restrict mutex, const pthread_mutexattr_
 Come con <code>pthread_create()</code>, se il puntatore dell'attributo è <code>NULL</code>, vengono assunti gli attributi predefiniti. La variabile mutex dovrebbe essere inizializzata solo una volta. Questo frammento di codice dimostra la dichiarazione e l'inizializzazione di una variabile mutex.
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 pthread_mutex_t mutex;
 pthread_mutex_init (&amp;mutex, NULL);
 </code></pre>
@@ -1994,7 +1994,7 @@ pthread_mutex_init (&amp;mutex, NULL);
 Un altro modo più semplice per creare un mutex con attributi predefiniti è inizializzarlo con il valore speciale <code>PTHREAD_MUTEX_INITIALIZER</code>. Non è necessaria alcuna chiamata aggiuntiva a pthread_mutex_init. Ciò è particolarmente comodo per le variabili globali (e, in C++, i membri dati statici). Il frammento di codice precedente avrebbe potuto essere scritto in modo equivalente così:
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 </code></pre>
 
@@ -2019,7 +2019,7 @@ Un thread può tentare di bloccare un mutex chiamando <strong>pthread_mutex_lock
 Più di un thread può essere bloccato su un mutex bloccato contemporaneamente. Quando il mutex viene sbloccato, solo uno dei thread bloccati (scelto in modo imprevedibile) viene sbloccato e gli viene consentito di bloccare il mutex; gli altri thread rimangono bloccati. Una chiamata a <strong>pthread_mutex_unlock()</strong> sblocca un mutex. Questa funzione dovrebbe essere sempre chiamata dallo stesso thread che ha bloccato il mutex. L'esempio seguente mostra un'altra versione dell'esempio di coda di lavoro. Ora la coda è protetta da un mutex. Prima di accedere alla coda (sia per lettura che per scrittura), ogni thread blocca prima un mutex. Solo quando l'intera sequenza di controllo della coda e rimozione di un lavoro è completa, il mutex viene sbloccato. Ciò impedisce la race condition descritta in precedenza.
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
@@ -2118,7 +2118,7 @@ Tutti gli accessi a job_queue (il puntatore dati condiviso) avvengono tra la chi
 </p>
 
 
-<pre><code class="language-c">
+<pre lang="c"><code>
  void enqueue_job (struct job* new_job)
  {
    pthread_mutex_lock (&amp;job_queue_mutex);
@@ -2161,7 +2161,7 @@ mai essere rilasciato.
 Per impostazione predefinita, un mutex GNU/Linux è del tipo veloce. Per creare un mutex di uno degli altri due tipi, crea prima un oggetto attributo mutex dichiarando una variabile <strong>pthread_mutexattr_t</strong> e chiamando <strong>pthread_mutexattr_init()</strong>. Poi imposta il tipo di mutex chiamando  <strong>pthread_mutexattr_setkind_np()</strong>.
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 int pthread_mutexattr_setkind_np(pthread_mutexattr_t *attr, int kind);
 </code></pre>
 
@@ -2169,7 +2169,7 @@ int pthread_mutexattr_setkind_np(pthread_mutexattr_t *attr, int kind);
 Il primo argomento è un puntatore all'oggetto attributo mutex, e il secondo è <code>PTHREAD_MUTEX_RECURSIVE_NP</code> per un mutex ricorsivo, o <code>PTHREAD_MUTEX_ERRORCHECK_NP</code> per uno di controllo degli errori. Passa un puntatore a questo oggetto attributo a <strong>pthread_mutex_init()</strong> per creare un mutex di questo tipo, quindi distruggi l'oggetto attributo con <strong>pthread_mutexattr_destroy()</strong>. Questa sequenza di codice illustra la creazione di un mutex di controllo degli errori, ad esempio:
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
  pthread_mutexattr_t attr;
  pthread_mutex_t mutex;
  pthread_mutexattr_init (&amp;attr);
@@ -2211,7 +2211,7 @@ Nell'esempio precedente, in cui diversi thread elaborano i lavori da una coda, l
 Nota che GNU/Linux fornisce due implementazioni di semafori leggermente diverse. Quella che descriviamo qui è l'implementazione standard del semaforo POSIX. Usa questi semafori quando comunichi tra thread. L'altra implementazione, usata per la comunicazione tra processi, verrà descritta nel prossimo capitolo. Se usi i semafori, includi <code>&lt;semaphore.h&gt;</code>. Un semaforo è rappresentato da una variabile <strong>sem_t</strong>. Prima di usarla, devi inizializzarla usando la funzione <strong>sem_init()</strong>, passando un puntatore alla variabile sem_t. Il secondo parametro dovrebbe essere zero (Un valore diverso da zero indicherebbe un semaforo che può essere condiviso tra i processi, il che non è supportato da GNU/Linux per questo tipo di semaforo) e il terzo parametro è il valore iniziale del semaforo.
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 int sem_init(sem_t *sem, int pshared, unsigned int value);
 </code></pre>
 
@@ -2224,7 +2224,7 @@ Se non hai più bisogno di un semaforo, è bene deallocarlo con <strong>sem_dest
 Per attendere un semaforo, usa <strong>sem_wait()</strong>.
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 int sem_wait(sem_t *sem);
 </code></pre>
 
@@ -2232,7 +2232,7 @@ int sem_wait(sem_t *sem);
 Per inviare a un semaforo, usa <strong>sem_post()</strong>.
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 int sem_post(sem_t *sem);
 </code></pre>
 
@@ -2240,7 +2240,7 @@ int sem_post(sem_t *sem);
 Viene fornita anche una funzione di attesa non bloccante, <strong>sem_trywait()</strong>. è simile a pthread_mutex_trylock: se l'attesa si fosse bloccata perché il valore del semaforo era zero, la funzione restituisce immediatamente, con il valore di errore <code>EAGAIN</code>, invece di bloccare.
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 int sem_trywait(sem_t *sem);
 </code></pre>
 
@@ -2248,7 +2248,7 @@ int sem_trywait(sem_t *sem);
 GNU/Linux fornisce anche una funzione per recuperare il valore corrente di un semaforo, <strong>sem_getvalue()</strong>, che inserisce il valore nella variabile int puntata dal suo secondo argomento.
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 int sem_getvalue(sem_t *sem, int *sval);
 </code></pre>
 
@@ -2256,7 +2256,7 @@ int sem_getvalue(sem_t *sem, int *sval);
 Tuttavia, non dovresti usare il valore del semaforo che ottieni da questa funzione per prendere una decisione se inviare o attendere il semaforo. Ciò potrebbe portare a una race condition: un altro thread potrebbe modificare il valore del semaforo tra la chiamata a sem_getvalue e la chiamata a un'altra funzione del semaforo. Utilizza invece le funzioni atomiche di post e attesa. Tornando al nostro esempio di coda di lavoro, possiamo usare un semaforo per contare il numero di lavori in attesa nella coda. L'esempio seguente controlla la coda con un semaforo. La funzione enqueue_job aggiunge un nuovo job alla coda.
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
@@ -2396,7 +2396,7 @@ Prima di prendere un lavoro dalla parte anteriore della coda, ogni thread attend
 Abbiamo mostrato come usare un mutex per proteggere una variabile dall'accesso simultaneo da due thread e come usare i semafori per implementare un contatore condiviso. Una <strong>variabile di condizione</strong> è un terzo dispositivo di sincronizzazione fornito da GNU/Linux; con essa, puoi implementare condizioni più complesse in base alle quali i thread vengono eseguiti. Supponiamo di scrivere una funzione thread che esegue un ciclo all'infinito, eseguendo un po' di lavoro a ogni iterazione. Il ciclo thread, tuttavia, deve essere controllato da un flag: il ciclo viene eseguito solo quando il flag è impostato; quando il flag non è impostato, il ciclo si interrompe. Durante ogni iterazione del ciclo, la funzione thread verifica che il flag sia impostato. Poiché il flag è accessibile da più thread, è protetto da un mutex. Questa implementazione potrebbe essere corretta, ma non è efficiente. La funzione thread impiegherà molta CPU ogni volta che il flag non è impostato, controllando e ricontrollando il flag, ogni volta bloccando e sbloccando il mutex. Ciò che si desidera realmente è un modo per mettere il thread in modalità sleep quando il flag non è impostato, finché non cambiano alcune circostanze che potrebbero causare l'impostazione del flag.
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
@@ -2504,7 +2504,7 @@ Una variabile di condizione è rappresentata da un'istanza di <strong>pthread_co
 <p align="justify">
 Il mutex deve essere inizializzato separatamente
 </p>
-<pre><code class="language-c">
+<pre lang="c"><code>
    int pthread_cond_init(pthread_cond_t *restrict cond, const pthread_condattr_t *restrict attr);
 </code></pre>
 <ul>
@@ -2518,11 +2518,11 @@ Il mutex deve essere inizializzato separatamente
 pthread_cond_t. Una chiamata simile, <strong>pthread_cond_broadcast()</strong>, sblocca tutti i thread bloccati sulla variabile di condizione, invece di uno solo.
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
   int pthread_cond_signal(pthread_cond_t *cond);
 </code></pre>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
   int pthread_cond_broadcast(pthread_cond_t *cond);
 </code></pre>
 <ul>
@@ -2532,7 +2532,7 @@ pthread_cond_t. Una chiamata simile, <strong>pthread_cond_broadcast()</strong>, 
     </p>
   </li>
 </ul>
-<pre><code class="language-c">
+<pre lang="c"><code>
   int pthread_cond_wait(pthread_cond_t *restrict cond, pthread_mutex_t *restrict mutex);
 </code></pre>
   
@@ -2567,7 +2567,7 @@ Ogni volta che il programma esegue un'azione che potrebbe cambiare il senso dell
 Il codice seguente mostra di nuovo l'esempio precedente, che ora utilizza una variabile di condizione per proteggere il flag del thread. In <code>thread_function</code>, un blocco sul mutex viene mantenuto prima di controllare il valore di <code>thread_flag</code>. Tale blocco viene automaticamente rilasciato da <code>pthread_cond_wait</code> prima dell'attesa e riacquisito subito dopo. Notare inoltre che <code>set_thread_flag</code> blocca il mutex prima di impostare il valore di <code>thread_flag</code> e di segnalare il mutex.
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
@@ -2649,7 +2649,7 @@ I deadlock possono verificarsi quando due (o più) thread sono bloccati, in atte
 L'implementazione dei thread POSIX su GNU/Linux differisce dall'implementazione dei thread su molti altri sistemi simili a UNIX in un modo importante: su GNU/Linux, <strong>i thread sono implementati come processi</strong>. Ogni volta che chiami <code>pthread_create</code> per creare un nuovo thread, Linux crea un nuovo processo che esegue quel thread. Tuttavia, questo processo non è lo stesso di un processo che creeresti con <code>fork</code>; in particolare, condivide lo stesso spazio di indirizzamento e le stesse risorse del processo originale invece di ricevere copie. Il codice seguente lo dimostra. Il programma crea un thread; sia il thread originale che quello nuovo chiamano la funzione <code>getpid</code> e stampano i rispettivi ID di processo e quindi restano in attesa all'infinito.
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
@@ -2683,7 +2683,7 @@ int main ()
 Esegui il programma in background, quindi richiama <code>ps x</code> per visualizzare i processi in esecuzione. Non dimenticare di terminare il programma thread-pid in seguito: consuma molta CPU senza fare nulla. Ecco come potrebbe apparire l'output:
 </p>
 
-<pre><code class="language-bash">
+<pre lang="bash"><code>
  % gcc -o thread-pid thread-pid.c -lpthread
 
  % ./thread-pid &amp;
@@ -2724,7 +2724,7 @@ Nota che ci sono tre processi che eseguono il programma thread-pid. Il primo di 
 Supponiamo che un programma multithread riceva un segnale. In quale thread viene invocato il gestore del segnale? Il comportamento dell'interazione tra segnali e thread varia da un sistema UNIX a un altro. In GNU/Linux, il comportamento è dettato dal fatto che i thread sono implementati come processi. Poiché ogni thread è un processo separato e poiché un segnale viene inviato a un processo particolare, non vi è ambiguità su quale thread riceva il segnale. In genere, i segnali inviati dall'esterno del programma vengono inviati al processo corrispondente al thread principale del programma. Ad esempio, se un programma si biforca e il processo figlio esegue un programma multithread, il processo padre conterrà l'ID processo del thread principale del programma del processo figlio e utilizzerà tale ID processo per inviare segnali al suo figlio. Questa è in genere una buona convenzione da seguire quando si inviano segnali a un programma multithread. Si noti che questo aspetto dell'implementazione di pthreads di GNU/Linux è in contrasto con lo standard di thread POSIX. Non fare affidamento su questo comportamento in programmi che sono pensati per essere portabili. All'interno di un programma multithread, è possibile che un thread invii un segnale specificamente a un altro thread. Utilizzare la funzione <strong>pthread_kill()</strong> per farlo. Il suo primo parametro è un ID thread e il suo secondo parametro è il numero del segnale
 </p>
 
-<pre><code class="language-c">
+<pre lang="c"><code>
 pthread_kill(pthread_t thread, int sig);
 </code></pre>
 
