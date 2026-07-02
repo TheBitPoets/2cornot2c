@@ -3503,8 +3503,9 @@ Usa <code>%o</code> per stampare una variabile di tipo <code>int</code> <strong>
 <p align="justify">
 Se vuoi stampare il prefisso per la base aggiungi il <code>#</code>: <code>%#o</code>, <code>%#x</code>
 </p>
+
 ```c
-include<stdio.h>
+#include<stdio.h>
 
 int main(void){
 	int x = 100;
@@ -3513,6 +3514,7 @@ int main(void){
 	printf("decimale = %d, ottale = %#o, esadecimale = %#x\n", x, x, x);
 }
 ```
+
 
 #### Altri tipi interi
 
