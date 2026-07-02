@@ -1,6 +1,7 @@
 ﻿# 2cornot2c
-This is a C 101 course for my students.
-Sorry, only the Italian version is available so far.
+<p align="justify">
+This is a C 101 course for my students. Sorry, only the Italian version is available so far.
+</p>
 
 ## Indice
   * [Introduzione](#introduzione)
@@ -346,31 +347,133 @@ Sorry, only the Italian version is available so far.
       - [wait()](#wait)
       - [Processi zombie](#processi-zombie)
     + [Ripulire il figlio in modo asincrono](#ripulire-il-figlio-in-modo-asincrono)
-    + [I Thread](#i-thread)
-      - [Creazione di un thread](#creazione-di-un-thread)
-      - [Passare dati a un thread](#passare-dati-ad-un-thread)
-      - [Attendere la terminazione dei thread](#attendere-la-terminazione-dei-thread)
-      - [Il valore di ritorno dei thread](#il-valore-di-ritorno-dei-thread)
-      - [`pthread_self()` e `pthread_equal()`](#pthread_self-e-pthread_equal)
-      - [Gli attributi dei thread](#gli-attributi-dei-thread)
-      - [Cancellazione del thread](#cancellazione-del-thread)
-      - [Thread sincroni ed asincroni](#thread-sincroni-ed-asincroni)
-      - [Sezioni critiche non cancellabili](#sezioni-critiche-non-cancellabili)
-      - [Quando usare la cancellazione del thread](#quando-usare-la-cancellazione-del-thread)
-    + [Dati specifici del thread](#dati-specifici-del-thread)
-    + [Gestori di pulizia (Cleanup Handler)](#gestori-di-pulizia-cleanup-handler)
-    + [Sincronizzazione e Sezioni Critiche](#sincronizzazione-e-sezioni-critiche)
-      - [Race Conditions](#race-conditions)
-    + [Mutex](#mutex)
-    + [Mutex Deadlocks](#mutex-deadlocks)
-    + [Test Mutex non bloccanti](#test-mutex-non-bloccanti)
-    + [Semafori](#semafori)
-    + [Variabili di condizione](#variabili-di-condizione)
-    + [Deadlocks con due o più Thread](#deadlocks-con-due-o-più-thread)
-    + [Implementazione dei Thread in GNU/Linux](#implementazione-dei-thread-in-gnulinux)
-    + [Signal Handling](#signal-handling)
-    + [La chiamata di sistema Clone()](#la-chiamata-di-sistema-clone)
-    + [Processi vs Thread](#processi-vs-thread)
+<ul>
+  <li>
+    <p align="justify">
+    <a href="#i-thread">I Thread</a>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <a href="#creazione-di-un-thread">Creazione di un thread</a>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <a href="#passare-dati-ad-un-thread">Passare dati a un thread</a>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <a href="#attendere-la-terminazione-dei-thread">Attendere la terminazione dei thread</a>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <a href="#il-valore-di-ritorno-dei-thread">Il valore di ritorno dei thread</a>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <a href="#pthread_self-e-pthread_equal"><code>pthread_self()</code> e <code>pthread_equal()</code></a>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <a href="#gli-attributi-dei-thread">Gli attributi dei thread</a>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <a href="#cancellazione-del-thread">Cancellazione del thread</a>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <a href="#thread-sincroni-ed-asincroni">Thread sincroni ed asincroni</a>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <a href="#sezioni-critiche-non-cancellabili">Sezioni critiche non cancellabili</a>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <a href="#quando-usare-la-cancellazione-del-thread">Quando usare la cancellazione del thread</a>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <a href="#dati-specifici-del-thread">Dati specifici del thread</a>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <a href="#gestori-di-pulizia-cleanup-handler">Gestori di pulizia (Cleanup Handler)</a>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <a href="#sincronizzazione-e-sezioni-critiche">Sincronizzazione e Sezioni Critiche</a>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <a href="#race-conditions">Race Conditions</a>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <a href="#mutex">Mutex</a>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <a href="#mutex-deadlocks">Mutex Deadlocks</a>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <a href="#test-mutex-non-bloccanti">Test Mutex non bloccanti</a>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <a href="#semafori">Semafori</a>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <a href="#variabili-di-condizione">Variabili di condizione</a>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <a href="#deadlocks-con-due-o-più-thread">Deadlocks con due o più Thread</a>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <a href="#implementazione-dei-thread-in-gnulinux">Implementazione dei Thread in GNU/Linux</a>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <a href="#signal-handling">Signal Handling</a>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <a href="#la-chiamata-di-sistema-clone">La chiamata di sistema Clone()</a>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <a href="#processi-vs-thread">Processi vs Thread</a>
+    </p>
+  </li>
+</ul>
 
 <small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
 
@@ -388,10 +491,28 @@ Il corso è fondamentalmente pratico, non è richiesto alcun prerequisito e null
 Prima di iniziare è giusto ricordare che per svolgere i laboratori richiesti è necessaria la conoscenza di alcuni strumenti, in particolare:
 </p>
 
-* [Git](https://git-scm.com/download/win)
-* [VirtualBox](https://www.virtualbox.org/wiki/Downloads) Installa la versione 7.0, che è la più recente compatibile con Vagrant. Leggi [qui](https://developer.hashicorp.com/vagrant/docs/providers/virtualbox) per maggiori informazioni
-  * [Microsoft Visual C++](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170) solo in caso ti venga richiesto durante l'installazione di VBox (dovrebbe andare in errore)
-* [Vagrant](https://developer.hashicorp.com/vagrant/install?ajs_aid=e022a39f-7694-4bed-a4cd-f721f515b885&product_intent=vagrant#windows)
+<ul>
+  <li>
+    <p align="justify">
+    <a href="https://git-scm.com/download/win">Git</a>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <a href="https://www.virtualbox.org/wiki/Downloads">VirtualBox</a> Installa la versione 7.0, che è la più recente compatibile con Vagrant. Leggi <a href="https://developer.hashicorp.com/vagrant/docs/providers/virtualbox">qui</a> per maggiori informazioni
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <a href="https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170">Microsoft Visual C++</a> solo in caso ti venga richiesto durante l'installazione di VBox (dovrebbe andare in errore)
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <a href="https://developer.hashicorp.com/vagrant/install?ajs_aid=e022a39f-7694-4bed-a4cd-f721f515b885&product_intent=vagrant#windows">Vagrant</a>
+    </p>
+  </li>
+</ul>
 
 <p align=justify>
 I link forniti sopra portano alle versioni dei software per architettura `amd64` in ambiente `Windows`; questo a causa dell'assenza di macchine Linux nei lab scolastici.
@@ -401,7 +522,9 @@ I link forniti sopra portano alle versioni dei software per architettura `amd64`
  <b>Git</b> e <b>Vagrant</b> ci serviranno per ottenere un ambiente di sviluppo identico per tutti e per un provisioning automatico; in altre parole, Git ci permetterà di condividere il codice dei laboratori e Vagrant di condividere la stessa macchina virtuale (<code>ubuntu-22.04</code>) con l'ambiente di sviluppo preinstallato.
 </p>
 
-A questo [link](https://drive.google.com/file/d/14UWaWALUwGvrCgxXmXmGykfPFDSZhM0K/view?usp=sharing) trovi un video con tutti i passaggi per installare i software sopra elencati.
+<p align="justify">
+A questo <a href="https://drive.google.com/file/d/14UWaWALUwGvrCgxXmXmGykfPFDSZhM0K/view?usp=sharing">link</a> trovi un video con tutti i passaggi per installare i software sopra elencati.
+</p>
 
  ## Installare l'ambiente di sviluppo
 
@@ -416,52 +539,102 @@ Questa cartella <code>2cornot2c\lab</code> è montata automaticamente sul file s
 Tutto quello che verrà modificato sulla macchina Linux in <code>/lab</code> (VM o macchina guest) verrà visto sulla macchina Windows (host) in <code>2cornot2c\lab</code>. 
 </p>
 
-1) Clona il repository con il codice e il Vagrantfile
+<ol>
+  <li>
+    <p align="justify">
+    Clona il repository con il codice e il Vagrantfile
+    </p>
+  </li>
+</ol>
 
  ```bash
 git clone https://github.com/kinderp/2cornot2c.git
 ```
 
-2) Entra nella directory root del repository (`2cornot2c`)
+<ol>
+  <li>
+    <p align="justify">
+    Entra nella directory root del repository (<code>2cornot2c</code>)
+    </p>
+  </li>
+</ol>
    
 ```bash
 cd 2cornot2c
 ```
 
-3) Avvia la macchina virtuale (devi essere nella cartella `2cornot2c` altrimenti il comando seguente non funziona)
+<ol>
+  <li>
+    <p align="justify">
+    Avvia la macchina virtuale (devi essere nella cartella <code>2cornot2c</code> altrimenti il comando seguente non funziona)
+    </p>
+  </li>
+</ol>
 
 ```bash
 vagrant up
 ```
 
-4) Aspetta che il comando al punto 3 termini e successivamente, sempre nella cartella `2cornot2c`, installa il plugin `vagrant-vbguest`:
+<ol>
+  <li>
+    <p align="justify">
+    Aspetta che il comando al punto 3 termini e successivamente, sempre nella cartella <code>2cornot2c</code>, installa il plugin <code>vagrant-vbguest</code>:
+    </p>
+  </li>
+</ol>
 
 ```
      vagrant plugin install vagrant-vbguest
 ```
 
-5) Installa le Guest Additions
+<ol>
+  <li>
+    <p align="justify">
+    Installa le Guest Additions
+    </p>
+  </li>
+</ol>
 
 ```
 vagrant vbguest
 ```
 
-6) Ricarica le impostazioni della macchina
+<ol>
+  <li>
+    <p align="justify">
+    Ricarica le impostazioni della macchina
+    </p>
+  </li>
+</ol>
 
 ```
 vagrant reload
 ```
 
-7) Apri una sessione SSH sulla macchina appena avviata
+<ol>
+  <li>
+    <p align="justify">
+    Apri una sessione SSH sulla macchina appena avviata
+    </p>
+  </li>
+</ol>
 
 ```bash
 vagrant ssh
 ```
 
 ### Guest Additions
+<p align="justify">
 Questo paragrafo ti fornisce informazioni aggiuntive sul plugin per installare le Guest Additions in caso ne avessi necessità.
+</p>
 
-1. Installa il plugin `vagrant-vbguest`:
+<ol>
+  <li>
+    <p align="justify">
+    Installa il plugin <code>vagrant-vbguest</code>:
+    </p>
+  </li>
+</ol>
 
 <p align="justify">	
 Apri il terminale o il prompt dei comandi, vai alla directory del progetto Vagrant ed esegui il seguente comando.
@@ -471,7 +644,13 @@ Apri il terminale o il prompt dei comandi, vai alla directory del progetto Vagra
      vagrant plugin install vagrant-vbguest
 ```
 
-2. Configura le Guest Additions nel tuo Vagrantfile:
+<ol>
+  <li>
+    <p align="justify">
+    Configura le Guest Additions nel tuo Vagrantfile:
+    </p>
+  </li>
+</ol>
 
 <p align="justify">	
 Apri il tuo Vagrantfile.<br>
@@ -496,22 +675,52 @@ La riga precedente disabilita gli aggiornamenti automatici delle Guest Additions
 Questo assicura che l'impostazione sia applicata solamente se il plugin è installato.
 </p>
 
-3. Gestisci le Guest Additions (opzionale):
+<ol>
+  <li>
+    <p align="justify">
+    Gestisci le Guest Additions (opzionale):
+    </p>
+  </li>
+</ol>
 
 <p align=justify>
 Se vuoi un maggiore controllo sull'installazione delle Guest Additions, puoi usare i seguenti comandi:
 </p>
 
-* `vagrant vbguest`: Questo comando controlla lo stato delle Guest Additions e tenta di installarle o aggiornarle se necessario.
-* `vagrant vbguest --do install`: Questo forza l'installazione delle Guest Additions.
-* `vagrant vbguest --do rebuild`: Questo ricostruisce i moduli del kernel delle Guest Additions, il che può essere utile se hai aggiornato il tuo kernel.
-* `vagrant vbguest --status`: Questo mostra lo stato attuale delle aggiunte degli ospiti.
+<ul>
+  <li>
+    <p align="justify">
+    <code>vagrant vbguest</code>: Questo comando controlla lo stato delle Guest Additions e tenta di installarle o aggiornarle se necessario.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>vagrant vbguest --do install</code>: Questo forza l'installazione delle Guest Additions.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>vagrant vbguest --do rebuild</code>: Questo ricostruisce i moduli del kernel delle Guest Additions, il che può essere utile se hai aggiornato il tuo kernel.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>vagrant vbguest --status</code>: Questo mostra lo stato attuale delle aggiunte degli ospiti.
+    </p>
+  </li>
+</ul>
 
 <p align=justify>
 Puoi anche scaricare il file ISO delle Guest Additions e montarlo manualmente all'interno della VM se necessario.
 </p>
 
-4. Avvia o ricarica la tua macchina: 
+<ol>
+  <li>
+    <p align="justify">
+    Avvia o ricarica la tua macchina:
+    </p>
+  </li>
+</ol>
 
 <p align="justify">	
 Dopo aver apportato modifiche al tuo Vagrantfile, esegui <code>vagrant up</code> per avviare la macchina o <code>vagrant reload</code> per applicare le modifiche. Il plugin <code>vagrant-vbguest</code> gestirà l'installazione o l'aggiornamento delle Guest Additions in base alla tua configurazione. Seguendo questi passaggi, puoi gestire efficacemente l'installazione e l'aggiornamento delle Guest Additions di VirtualBox all'interno del tuo ambiente Vagrant.
@@ -542,7 +751,9 @@ int main(void){
 }
 ```
 
-Salva il contenuto premendo la combinazione: `Esc` + `:wq`.
+<p align="justify">
+Salva il contenuto premendo la combinazione: <code>Esc</code> + <code>:wq</code>.
+</p>
 
 <p align="justify">
 Compila il sorgente <code>hello.c</code> lanciando il seguente comando: <code>gcc -o hello hello.c</code>; GCC è il compilatore che useremo in questo corso, lo trovi già installato sulla VM. In questo caso l'opzione <code>-o</code> specifica il nome del file oggetto (il file binario eseguibile) che vogliamo creare; ovviamente dobbiamo specificare successivamente il sorgente da cui partire per la generazione dell'eseguibile (<code>hello.c</code>). Se tutto ha funzionato puoi lanciare il programma appena compilato in questo modo: <code>./hello</code>. Come avrai avuto modo di constatare, il programma ha stampato a schermo la frase <code>Hello World</code>; per fare ciò il programmatore si è servito di un pezzo di codice già pronto (in sostanza, la funzione <code>printf()</code>). Per informare il compilatore circa il corretto uso di questo pezzo di codice (la funzione <code>printf()</code>) è stata inserita nella prima riga del programma la direttiva al preprocessore <code>#include <stdio.h></code>. Vedremo in dettaglio cosa vuol dire usare una funzione esterna e come includere con le direttive il suo prototipo; per adesso ci basta sapere che per stampare è stata usata una funzione già pronta ed è stato necessario informare il compilatore di questo.
@@ -557,19 +768,43 @@ Nella figura sopra è mostrato l'intero processo di compilazione, che è compost
 Volendo è possibile richiedere al compilatore di fermarsi a uno specifico step senza produrre l'output finale. Le quattro fasi del processo di compilazione sono rispettivamente:
 </p>
 
-1. **Preprocessamento** (_Preprocessing_):
+<ol>
+  <li>
+    <p align="justify">
+    <strong>Preprocessamento</strong> (<em>Preprocessing</em>):
+    </p>
+  </li>
+</ol>
 <p align="justify">il preprocessore (<code>cpp</code>) esegue sostituzioni di testo, disabilita/abilita condizionalmente parti di codice in fase di compilazione. Il risultato della sua elaborazione è un file con estensione <code>.i</code>: nel nostro caso quindi <code>hello.i</code>. Per bloccare il processo di compilazione alla fase di preprocessamento puoi eseguire questo comando: <code>gcc -E hello.c > hello.i</code>. Il file <code>hello.i</code> conterrà tutte le sostituzioni effettuate dal preprocessore e, come puoi vedere da solo, ha molto più contenuto del file di partenza <code>hello.c</code>; spiegheremo le chiamate al preprocessore nei prossimi paragrafi.</p>
 
-2. **Compilazione** (_Compilation_):
+<ol>
+  <li>
+    <p align="justify">
+    <strong>Compilazione</strong> (<em>Compilation</em>):
+    </p>
+  </li>
+</ol>
 <p align="justify">il compilatore (<code>cc</code>) trasforma il contenuto testuale del file <code>hello.i</code> (che è scritto in codice C) nel corrispondente codice assembly (<code>hello.s</code>) specifico per l'architettura del processore target. Puoi bloccare il processo alla fase di compilazione producendo il corrispondente codice assembly in questo modo: <code>gcc -S -masm=intel hello.c</code>.
 </p>
 
-3. **Assemblaggio** (_Assembly_):
+<ol>
+  <li>
+    <p align="justify">
+    <strong>Assemblaggio</strong> (<em>Assembly</em>):
+    </p>
+  </li>
+</ol>
 <p align="justify">
 l'assemblatore <code>as</code> trasforma il codice assembly contenuto in <code>hello.s</code> nelle istruzioni macchina dell'architettura della CPU; il risultato è il file oggetto rilocabile <code>hello.o</code>. Puoi bloccare il processo in questa fase con il comando: <code>gcc -c hello.c</code>.
 </p>
 
-4. **Linkaggio** (_Linking_):
+<ol>
+  <li>
+    <p align="justify">
+    <strong>Linkaggio</strong> (<em>Linking</em>):
+    </p>
+  </li>
+</ol>
 <p align="justify">
 il linker (<code>ld</code>) ha il compito di aggregare in un unico file oggetto (il file eseguibile) eventuali altri file oggetto di librerie esterne o del linguaggio. Nel nostro esempio il programmatore ha fatto uso di una funzione del linguaggio (<code>printf()</code>), quindi il linker aggregherà nel file eseguibile (<code>hello</code>) il file oggetto <code>hello.o</code> e il file oggetto relativo al codice della funzione <code>printf()</code>: <code>printf.o</code>. Puoi generare il file eseguibile in questo modo: <code>gcc -o hello hello.c</code>.
 </p>
@@ -797,7 +1032,9 @@ Alla riga 2 il prototipo di <code>printf()</code>.
 Infine, terminata la propria computazione, il nostro programma ritorna 0 per informare il sistema operativo che ha terminato la propria esecuzione senza errori.
 </p>
 
+<p align="justify">
 Riassumendo:
+</p>
 
 <details>
 <summary>/lab/0_intro/0_hello.c</summary>
@@ -840,7 +1077,9 @@ Il prototipo della funzione <code>differenza</code> è dunque il seguente:
 int differenza(int minuendo, int sottraendo);
 ```
 
+<p align="justify">
 Volendo è possibile omettere il nome dei parametri in ingresso lasciando solo il tipo, in questo modo:
+</p>
 
 ```c
 int differenza(int, int);
@@ -998,21 +1237,27 @@ Il programma di seguito fa uso di variabili globali e locali; semplicemente sono
 int primo, secondo; /* variabili globali */
 ```
 
-Il risultato dell'operazione e il tipo di operazione da svolgere sono definiti come variabili locali (dentro la funzione `main()`).
+<p align="justify">
+Il risultato dell'operazione e il tipo di operazione da svolgere sono definiti come variabili locali (dentro la funzione <code>main()</code>).
+</p>
 
 ```c
 int risultato; 	 // variabile locale
 char operazione; // variabile locale
 ```
 
-Queste due variabili sono visibili solo all'interno della funzione `main()` (dove sono effettivamente dichiarate come variabili locali) e non dalle altre funzioni.
+<p align="justify">
+Queste due variabili sono visibili solo all'interno della funzione <code>main()</code> (dove sono effettivamente dichiarate come variabili locali) e non dalle altre funzioni.
+</p>
 
 <p align="justify">
 Inoltre, siccome facciamo uso delle funzioni <code>printf()</code> e <code>scanf()</code>, dobbiamo includere attraverso la direttiva al preprocessore (<code>#include<stdio.h></code>) i rispettivi prototipi contenuti nel file header: <code>stdio.h</code>.
 Mentre <code>printf()</code> serve per stampare a schermo il contenuto di una variabile, <code>scanf()</code> viene usata per leggere un valore da tastiera e memorizzarlo in una variabile.
 </p>
 
-Le definizioni delle funzioni `somma()`, `differenza()` e `moltiplicazione()` sono fornite dopo la loro effettiva chiamata nel `main()` e quindi, per permettere al compilatore di controllare l'uso corretto di queste funzioni da parte del programmatore, è stato necessario fornire i prototipi prima del `main()`.
+<p align="justify">
+Le definizioni delle funzioni <code>somma()</code>, <code>differenza()</code> e <code>moltiplicazione()</code> sono fornite dopo la loro effettiva chiamata nel <code>main()</code> e quindi, per permettere al compilatore di controllare l'uso corretto di queste funzioni da parte del programmatore, è stato necessario fornire i prototipi prima del <code>main()</code>.
+</p>
 
 <details>
 <summary>/lab/0_intro/2_variabili.c</summary>
@@ -1069,15 +1314,21 @@ Vedremo in dettaglio la sintassi più avanti, ora forniamo solo una breve spiega
 Il costrutto <code>if</code> serve per realizzare l'istruzione di salto condizionale ed assume questa forma:
 </p>
 
-`if (espr) istr`
+<p align="justify">
+<code>if (espr) istr</code>
+</p>
 
 <p align="justify">
 Se la condizione specificata dall'espressione <code>espr</code> è vera (cioè diversa da zero), viene eseguito il blocco di istruzioni <code>istr</code>; altrimenti si prosegue con l'elaborazione.
 </p>
 
-Il costrutto `if` ammette l'enunciato opzionale `else`. Il costrutto `if-else` assume questa forma:
+<p align="justify">
+Il costrutto <code>if</code> ammette l'enunciato opzionale <code>else</code>. Il costrutto <code>if-else</code> assume questa forma:
+</p>
 
-`if (espr) istr1 else istr2`
+<p align="justify">
+<code>if (espr) istr1 else istr2</code>
+</p>
 
 <p align="justify">
 I blocchi di istruzioni <code>istr1</code> e <code>istr2</code> vengono eseguiti a seconda che l'espressione <code>espr</code> sia vera o falsa. Se è vera si esegue <code>istr1</code>, se è falsa <code>istr2</code>.
@@ -1102,17 +1353,51 @@ La funzione <code>scanf()</code> legge un carattere da tastiera e inserisce il v
 Se <code>operazione</code> contiene il carattere <code>s</code>, allora si eseguirà la funzione <code>somma()</code> (solo quella e nessun'altra); altrimenti, se il carattere è <code>d</code>, si esegue la funzione <code>differenza()</code> e così via. Se il carattere contenuto in <code>operazione</code> non è tra i tre attesi <code>s</code>, <code>d</code>, <code>m</code>, allora (ultimo <code>else</code>) si stampa un messaggio che informa l'utente che l'operazione non è stata riconosciuta.
 </p>
 
+<p align="justify">
 Tornando alle variabili, possiamo riassumere quanto segue:
+</p>
 
-**Variabili globali**: 
-* visibili in tutto il file da ogni funzione
-* se non inizializzate a un valore, sono settate a zero automaticamente
-* il loro ciclo di vita coincide con quello del programma, la memoria è allocata prima dell'esecuzione e deallocata al termine dell'esecuzione
+<p align="justify">
+<strong>Variabili globali</strong>:
+</p>
+<ul>
+  <li>
+    <p align="justify">
+    visibili in tutto il file da ogni funzione
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    se non inizializzate a un valore, sono settate a zero automaticamente
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    il loro ciclo di vita coincide con quello del programma, la memoria è allocata prima dell'esecuzione e deallocata al termine dell'esecuzione
+    </p>
+  </li>
+</ul>
   
-**Variabili locali**:
-* visibili solo nel blocco dove sono state dichiarate
-* se non inizializzate, sono settate a un valore assolutamente casuale
-* il loro ciclo di vita è limitato all'esecuzione del blocco dove sono dichiarate
+<p align="justify">
+<strong>Variabili locali</strong>:
+</p>
+<ul>
+  <li>
+    <p align="justify">
+    visibili solo nel blocco dove sono state dichiarate
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    se non inizializzate, sono settate a un valore assolutamente casuale
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    il loro ciclo di vita è limitato all'esecuzione del blocco dove sono dichiarate
+    </p>
+  </li>
+</ul>
 
 <p align="justify">
 L'uso di variabili globali per comunicare con le funzioni è scorretto ed è stato mostrato solo come esempio per introdurre le variabili globali. Meno uso facciamo delle variabili globali, meglio è.
@@ -1188,41 +1473,111 @@ char operazione;
 
 ## Classi di memorizzazione
 
-Conoscere la differenza tra variabili globali e locali è un buon punto di partenza; le cose sono però più complesse.
-Agli identificatori è associato uno **scope** (**visibilità**), alle variabili invece uno **storage duration** (**tempo di vita**) e il **linkage** (**collegamento**).
+<p align="justify">
+Conoscere la differenza tra variabili globali e locali è un buon punto di partenza; le cose sono però più complesse. Agli identificatori è associato uno <strong>scope</strong> (<strong>visibilità</strong>), alle variabili invece uno <strong>storage duration</strong> (<strong>tempo di vita</strong>) e il <strong>linkage</strong> (<strong>collegamento</strong>).
+</p>
 
-Lo **scope** può essere di quattro tipi:
+<p align="justify">
+Lo <strong>scope</strong> può essere di quattro tipi:
+</p>
 
-* **block scope**
-* **file scope**
-* **function scope**
-* **function prototype scope**
+<ul>
+  <li>
+    <p align="justify">
+    <strong>block scope</strong>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <strong>file scope</strong>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <strong>function scope</strong>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <strong>function prototype scope</strong>
+    </p>
+  </li>
+</ul>
 
-Ricordiamo che lo **scope** di un identificatore è la regione di codice in cui l'identificatore è visibile (quindi la variabile accessibile da parte del programmatore).
+<p align="justify">
+Ricordiamo che lo <strong>scope</strong> di un identificatore è la regione di codice in cui l'identificatore è visibile (quindi la variabile accessibile da parte del programmatore).
+</p>
 
-Lo **storage duration** può essere di quattro tipi:
+<p align="justify">
+Lo <strong>storage duration</strong> può essere di quattro tipi:
+</p>
 
-* **static**
-* **thread**
-* **auto**
-* **allocated**
+<ul>
+  <li>
+    <p align="justify">
+    <strong>static</strong>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <strong>thread</strong>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <strong>auto</strong>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <strong>allocated</strong>
+    </p>
+  </li>
+</ul>
 
-Ricordiamo che lo **storage duration** rappresenta il tempo di vita della variabile, ovvero per quanto tempo questa rimane allocata in memoria.
+<p align="justify">
+Ricordiamo che lo <strong>storage duration</strong> rappresenta il tempo di vita della variabile, ovvero per quanto tempo questa rimane allocata in memoria.
+</p>
 
-Il **linkage** può essere di tre tipi:
+<p align="justify">
+Il <strong>linkage</strong> può essere di tre tipi:
+</p>
 
-* **no linkage**
-* **internal**
-* **external**
+<ul>
+  <li>
+    <p align="justify">
+    <strong>no linkage</strong>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <strong>internal</strong>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <strong>external</strong>
+    </p>
+  </li>
+</ul>
 
-Il **linkage** definisce se una variabile può essere condivisa dal codice dello stesso file o di file diversi. 
+<p align="justify">
+Il <strong>linkage</strong> definisce se una variabile può essere condivisa dal codice dello stesso file o di file diversi.
+</p>
 
 ## Block scope
 
-Un blocco è un insieme di istruzioni comprese tra `{` e `}`.
-Esempi di blocchi (alcuni li abbiamo già incontrati) sono:
+<p align="justify">
+Un blocco è un insieme di istruzioni comprese tra <code>{</code> e <code>}</code>. Esempi di blocchi (alcuni li abbiamo già incontrati) sono:
+</p>
 
-* il corpo nella definizione di una funzione
+<ul>
+  <li>
+    <p align="justify">
+    il corpo nella definizione di una funzione
+    </p>
+  </li>
+</ul>
 
   ```c
   int differenza(int minuendo, int sottraendo){
@@ -1230,7 +1585,13 @@ Esempi di blocchi (alcuni li abbiamo già incontrati) sono:
   }
   ```
 
-* il corpo nei costrutti di controllo del flusso `if-else`, `for`, `while` etc.
+<ul>
+  <li>
+    <p align="justify">
+    il corpo nei costrutti di controllo del flusso <code>if-else</code>, <code>for</code>, <code>while</code> etc.
+    </p>
+  </li>
+</ul>
 
   ```c
   if(operazione == 's'){
@@ -1239,7 +1600,13 @@ Esempi di blocchi (alcuni li abbiamo già incontrati) sono:
 
   }
   ```
-* un blocco innestato:
+<ul>
+  <li>
+    <p align="justify">
+    un blocco innestato:
+    </p>
+  </li>
+</ul>
   ```c
   for(int i=0; i<N; i++){
 	{
@@ -1248,8 +1615,9 @@ Esempi di blocchi (alcuni li abbiamo già incontrati) sono:
   }
   ```
 
-  Una variabile all'interno di un blocco ha un **block scope** ed è quindi visibile (**scope**) dal punto in cui è definita fino alla fine del blocco che contiene la sua definizione.
-  Le variabili locali sono di tipo **block scope**.
+<p align="justify">
+Una variabile all'interno di un blocco ha un <strong>block scope</strong> ed è quindi visibile (<strong>scope</strong>) dal punto in cui è definita fino alla fine del blocco che contiene la sua definizione. Le variabili locali sono di tipo <strong>block scope</strong>.
+</p>
 
 <table align="center">
 		<td>&#9888; <b>Importante</b>
@@ -1273,8 +1641,9 @@ Questo è utile soprattutto per le variabili indice di un ciclo o per documentar
  
 ## File scope
 
-Una variabile definita al di fuori di qualsiasi funzione in un file `.c` o `.h` ha un **file scope** ed è visibile dal punto in cui è definita fino alla fine del file che la contiene.
-Questo è il caso delle variabili globali che abbiamo trattato: esse infatti hanno un **file scope**.
+<p align="justify">
+Una variabile definita al di fuori di qualsiasi funzione in un file <code>.c</code> o <code>.h</code> ha un <strong>file scope</strong> ed è visibile dal punto in cui è definita fino alla fine del file che la contiene. Questo è il caso delle variabili globali che abbiamo trattato: esse infatti hanno un <strong>file scope</strong>.
+</p>
 
 ```c
 #include<stdio.h>
@@ -1294,9 +1663,13 @@ int uno(){
 
 ## Linkage
 
-Il **linkage** definisce se una variabile è visibile in più file diversi o solo nel file in cui è definita.
+<p align="justify">
+Il <strong>linkage</strong> definisce se una variabile è visibile in più file diversi o solo nel file in cui è definita.
+</p>
 
-Esistono tre tipi di **linkage**: `no linkage`, `external linkage` e `internal linkage`.
+<p align="justify">
+Esistono tre tipi di <strong>linkage</strong>: <code>no linkage</code>, <code>external linkage</code> e <code>internal linkage</code>.
+</p>
 
 <p align=justify>
 Le variabili con un <b>block scope</b> (quelle locali) hanno <b>no linkage</b>: cioè non sono visibili nell'intero file in cui sono definite, ma la loro visibilità è limitata al blocco che le ospita.
@@ -1340,13 +1713,19 @@ La parola chiave <b>static</b> non ha nulla a che vedere con lo <b>storage durat
 
 ## Storage duration
 
-Esistono quattro tipi diversi di **storage duration**: `static`, `thread`, `auto` e `allocated`.
+<p align="justify">
+Esistono quattro tipi diversi di <strong>storage duration</strong>: <code>static</code>, <code>thread</code>, <code>auto</code> e <code>allocated</code>.
+</p>
 
-Per il momento affrontiamo solamente i tipi `static` e `auto`.
+<p align="justify">
+Per il momento affrontiamo solamente i tipi <code>static</code> e <code>auto</code>.
+</p>
 
 ## Static storage duration
 
-Variabili che esistono in memoria per l'intero tempo di esecuzione del programma: sono le variabili con **file scope** (variabili globali sia di tipo `external` sia di tipo `internal` **linkage**).
+<p align="justify">
+Variabili che esistono in memoria per l'intero tempo di esecuzione del programma: sono le variabili con <strong>file scope</strong> (variabili globali sia di tipo <code>external</code> sia di tipo <code>internal</code> <strong>linkage</strong>).
+</p>
 
 ```c
 int file_scope_external_linkage;        /* variabile globale con file scope ed external linkage */
@@ -1395,30 +1774,49 @@ int uno(void){
 
 ## Classi di memorizzazione
 
-Scope, linkage e storage duration sono combinati assieme per definire le **classi di memorizzazione**.
+<p align="justify">
+Scope, linkage e storage duration sono combinati assieme per definire le <strong>classi di memorizzazione</strong>.
+</p>
 
 <div align=center>
 	
 | Class                 | Storage Duration | Scope | Linkage   | Come dichiarare |
 |----------------------:|------------------|-------|-----------|-----------------|
 |automatic              |Automatic         |Block  | No linkage| Dentro un blocco|
-|register               |Automatic         |Block  | No linkage| Dentro un blocco con _keyword_ **register**|
+|register               |Automatic         |Block  | No linkage| Dentro un blocco con <em>keyword</em> <strong>register</strong>|
 |static external linkage|Static            |File   | External  | Fuori dalle funzioni|
-|static internal linkage|Static            |File   | Internal  | Fuori dalle funzioni con _keyword_ **static**|
-|static no linkage      |Static            |Block  | No linkage| Dentro un blocco con _keyword_ **static**|
+|static internal linkage|Static            |File   | Internal  | Fuori dalle funzioni con <em>keyword</em> <strong>static</strong>|
+|static no linkage      |Static            |Block  | No linkage| Dentro un blocco con <em>keyword</em> <strong>static</strong>|
 
 </div>
 
 ## Variabili automatiche (automatic class)
 
-Una variabile appartenente alla **classe di memorizzazione automatica** (`auto`) ha:
+<p align="justify">
+Una variabile appartenente alla <strong>classe di memorizzazione automatica</strong> (<code>auto</code>) ha:
+</p>
 
-* automatic storage duration
-* block scope
-* no linkage
+<ul>
+  <li>
+    <p align="justify">
+    automatic storage duration
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    block scope
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    no linkage
+    </p>
+  </li>
+</ul>
 
-Qualsiasi variabile dichiarata all'interno di un blocco (`{` e `}`) è di tipo `auto`: in pratica, è la classe di memorizzazione per tutte le variabili locali.
-Le variabili di classe `auto` non sono inizializzate automaticamente: questo è il motivo per cui le variabili locali devono essere inizializzate esplicitamente, altrimenti ospitano un valore assolutamente casuale, sporco.
+<p align="justify">
+Qualsiasi variabile dichiarata all'interno di un blocco (<code>{</code> e <code>}</code>) è di tipo <code>auto</code>: in pratica, è la classe di memorizzazione per tutte le variabili locali. Le variabili di classe <code>auto</code> non sono inizializzate automaticamente: questo è il motivo per cui le variabili locali devono essere inizializzate esplicitamente, altrimenti ospitano un valore assolutamente casuale, sporco.
+</p>
 
 ```c
 int main(void){
@@ -1482,7 +1880,9 @@ int uno(register int a);
 Una variabile con block scope ha visibilità limitata all'interno del blocco in cui è dichiarata e ovviamente nessun linkage (non è visibile alle altre funzioni nel file corrente e negli altri file). Lo storage duration è limitato al tempo di esecuzione del blocco in cui è dichiarata; la variabile è allocata in memoria appena si entra nel blocco e deallocata all'uscita. Queste variabili sono le variabili locali. Rendere statica una variabile locale significa modificare il suo storage duration in modo da farlo coincidere con il tempo di esecuzione del programma e non più con il tempo di esecuzione del blocco; in altre parole, la variabile sarà allocata quando il programma verrà eseguito e deallocata alla sua terminazione. Ovviamente lo scope resta di tipo block, quindi, anche se la variabile non viene deallocata all'uscita del blocco, il suo identificatore non è più visibile e quindi non è possibile accedere alla locazione di memoria. Quando il flusso di esecuzione rientrerà nel blocco, il valore precedentemente conservato sarà disponibile attraverso l'identificatore. Per dichiarare statica una variabile locale si usa la <i>keyword</i> <b>static</b>. Vediamo un esempio:
 </p>
 
-La funzione `example_static_var` dichiara due variabili: `a` di tipo automatico e `b` statica (con block scope). Vediamo le differenze pratiche:
+<p align="justify">
+La funzione <code>example_static_var</code> dichiara due variabili: <code>a</code> di tipo automatico e <code>b</code> statica (con block scope). Vediamo le differenze pratiche:
+</p>
 
 ```c
 #include<stdio.h>
@@ -1528,7 +1928,9 @@ void example_static_var(void){
 }
 ```
 
+<p align="justify">
 Come puoi vedere dall'output del programma compilato:
+</p>
 
 ```bash
 vagrant@ubuntu2204:~$ ./static_variable
@@ -1539,7 +1941,9 @@ a=1, b=4
 a=1, b=5
 ```
 
+<p align="justify">
 Infine, i parametri formali di una funzione non possono essere dichiarati static, quindi non puoi fare questo:
+</p>
 
 ```c
 int no_possible_static_parameter(static int a); /* ERRORE */
@@ -1676,7 +2080,9 @@ const int NUM_ITERATIONS = 2;
 </ul>
 </p>
 
+<p align="justify">
 Ecco un esempio di ciclo che stampa i numeri da 0 a 9:
+</p>
 
 ```c
 #include <stdio.h>
@@ -1694,20 +2100,30 @@ int main(void){
 }
 ```
 
-Quando il blocco del ciclo è composto da una sola istruzione è possibile omettere la coppia di parentesi graffe (`{` `}`) come nel nostro caso e riscrivere il ciclo in questo modo:
+<p align="justify">
+Quando il blocco del ciclo è composto da una sola istruzione è possibile omettere la coppia di parentesi graffe (<code>{</code> <code>}</code>) come nel nostro caso e riscrivere il ciclo in questo modo:
+</p>
 
 ```c
 for (int i=0; i<10; i++)
 	printf("%d", i);
 ```
 
-*  Aggiungiamo l'operazione di divisione che mancava nella versione precedente
+<ul>
+  <li>
+    <p align="justify">
+    Aggiungiamo l'operazione di divisione che mancava nella versione precedente
+    </p>
+  </li>
+</ul>
 
 <p align="justify">
 Il codice del file header <code>4_variabili.h</code> e il sorgente <code>4_variabili.c</code> sono mostrati di seguito. La cosa da far notare è la variabile esterna <code>NUM_ITERATIONS</code>, che è DICHIARATA nel <code>.h</code>: il file d'intestazione verrà incluso nel <code>.c</code> dal preprocessore attraverso la direttiva include e sarà poi effettivamente parte integrante del file <code>.i</code>. Per esplicitare che si sta usando una variabile DEFINITA in un altro file, nel <code>.c</code> si effettua una DICHIARAZIONE della variabile usando la <i>keyword</i> <code>extern</code>.
 </p>
 
-[/lab/0_intro/4_variabili.h](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/4_variabili.h)
+<p align="justify">
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/4_variabili.h">/lab/0_intro/4_variabili.h</a>
+</p>
 
 ```c
 const int NUM_ITERATIONS = 2; 
@@ -1718,7 +2134,9 @@ int moltiplicazione(int, int);
 int divisione(int, int);
 ```
 
-[/lab/0_intro/4_variabili.c](https://github.com/TheBitPoets/2cornot2c/commit/8fcadf5f8a958f9b6194c4dac724d5a21ecef717)
+<p align="justify">
+<a href="https://github.com/TheBitPoets/2cornot2c/commit/8fcadf5f8a958f9b6194c4dac724d5a21ecef717">/lab/0_intro/4_variabili.c</a>
+</p>
 
 ```c
 #include <stdio.h>
@@ -1793,21 +2211,43 @@ int main(void){
 
 ## Sintassi dichiarazione variabili
 
+<p align="justify">
 Una dichiarazione di variabile ha questa forma:
+</p>
 
 ```
 specificatori-dichiarazione dichiaratori
 ```
 
+<p align="justify">
 Gli specificatori di dichiarazione descrivono le proprietà della variabile o della funzione oggetto della dichiarazione.
+</p>
 
+<p align="justify">
 Gli specificatori di dichiarazione sono raggruppabili in tre categorie:
+</p>
 
-* classi di memorizzazione (storage classes): sono quattro `auto`, `static`, `extern` e `register`. Al massimo una di queste può presentarsi in una dichiarazione e, se presente, deve essere la prima _keyword_ nella dichiarazione
-* qualificatori di tipo (type qualifiers): sono tre `const`, `volatile` e `restrict`. Una dichiarazione può contenere zero, uno o più qualificatori di tipo
-* specificatori di tipo (type specifiers): `void`, `char`, `short`, `int`, `long`, `float`, `double`, `signed`, `unsigned`. Queste _keyword_ possono essere combinate assieme (`unsigned long int`); l'ordine con cui compaiono non ha importanza
+<ul>
+  <li>
+    <p align="justify">
+    classi di memorizzazione (storage classes): sono quattro <code>auto</code>, <code>static</code>, <code>extern</code> e <code>register</code>. Al massimo una di queste può presentarsi in una dichiarazione e, se presente, deve essere la prima <em>keyword</em> nella dichiarazione
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    qualificatori di tipo (type qualifiers): sono tre <code>const</code>, <code>volatile</code> e <code>restrict</code>. Una dichiarazione può contenere zero, uno o più qualificatori di tipo
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    specificatori di tipo (type specifiers): <code>void</code>, <code>char</code>, <code>short</code>, <code>int</code>, <code>long</code>, <code>float</code>, <code>double</code>, <code>signed</code>, <code>unsigned</code>. Queste <em>keyword</em> possono essere combinate assieme (<code>unsigned long int</code>); l'ordine con cui compaiono non ha importanza
+    </p>
+  </li>
+</ul>
 
+<p align="justify">
 Vediamo alcuni esempi:
+</p>
 
 ```c
    +--------------classe di memorizzazione
@@ -1875,14 +2315,14 @@ void f(int d, register int e){
 | Name  | Storage Duration | Scope     | Linkage  |
 | :---: |     :---:        | :---:     | :---:    |
 | a     | static           | file      | external |
-| b     | static           | file      |**Nota**  |
+| b     | static           | file      |<strong>Nota</strong>  |
 | c     | static           | file      | internal |
 | d     | automatic        | block     | none     |
 | e     | automatic        | block     | none     |
 | g     | automatic        | block     | none     |
 | h     | automatic        | block     | none     |
 | i     | static           | block     | none     |
-| j     | static           | block     |**Nota**  |
+| j     | static           | block     |<strong>Nota</strong>  |
 | k     | automatic        | block     | none     |
 
 </div>
@@ -1901,20 +2341,62 @@ La definizione di <code>b</code> e di <code>j</code> non è mostrata, quindi non
 La capacità di separare l'implementazione delle funzioni dai loro prototipi attraverso l'uso dei file header e la possibilità di condividere variabili tra file diversi del programma ci permettono ora di fare un ulteriore passo nel miglioramento della nostra calcolatrice. Vogliamo riorganizzare il codice in modo da ottenere dei moduli separati: ora vedremo cosa significa e quali sono i vantaggi nel fare ciò. Pensare di realizzare programmi di grandi dimensioni usando un unico grande file sorgente è una cattiva idea per tante ragioni; le principali sono:
 </p>
 
-* una modifica anche piccola al codice richiede la ricompilazione dell'intero file sorgente, che, essendo molto esteso, può richiedere tanto tempo
-* in un unico file sorgente può risultare difficile trovare la porzione di codice su cui dobbiamo lavorare o da correggere, al contrario usando un approccio modulare la ricerca di una certa funzionalità richiede di analizzare solo il file sorgente e d'intestazione corrispondente
-* non è possibile fare _information hiding_ rendendo nascosti i dettagli alle porzioni di codice che non hanno alcun ruolo in un certo compito
+<ul>
+  <li>
+    <p align="justify">
+    una modifica anche piccola al codice richiede la ricompilazione dell'intero file sorgente, che, essendo molto esteso, può richiedere tanto tempo
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    in un unico file sorgente può risultare difficile trovare la porzione di codice su cui dobbiamo lavorare o da correggere, al contrario usando un approccio modulare la ricerca di una certa funzionalità richiede di analizzare solo il file sorgente e d'intestazione corrispondente
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    non è possibile fare <em>information hiding</em> rendendo nascosti i dettagli alle porzioni di codice che non hanno alcun ruolo in un certo compito
+    </p>
+  </li>
+</ul>
 
+<p align="justify">
 I vantaggi di un approccio modulare sono:
+</p>
 
-* in progetti di grosse dimensioni, i programmatori possono lavorare su moduli diversi
-* i moduli di un programma possono essere riutilizzati in altri progetti
-* ogni modulo contiene il codice relativo a una singola funzionalità, isolando al suo interno tutto il codice necessario
+<ul>
+  <li>
+    <p align="justify">
+    in progetti di grosse dimensioni, i programmatori possono lavorare su moduli diversi
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    i moduli di un programma possono essere riutilizzati in altri progetti
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    ogni modulo contiene il codice relativo a una singola funzionalità, isolando al suo interno tutto il codice necessario
+    </p>
+  </li>
+</ul>
   
+<p align="justify">
 Abbiamo già detto che i file che compongono un programma sono:
+</p>
 
-* file sorgenti: (_source files_) con estensione `.c`
-* file d'intestazione (_header files_) con estensione `.h`
+<ul>
+  <li>
+    <p align="justify">
+    file sorgenti: (<em>source files</em>) con estensione <code>.c</code>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    file d'intestazione (<em>header files</em>) con estensione <code>.h</code>
+    </p>
+  </li>
+</ul>
 
 <p align="justify">
 Di solito si raggruppano tutte le funzioni e i dati relativi a una certa funzionalità in un unico file sorgente (<code>.c</code>) e si crea un corrispondente file header <code>.h</code> (con lo stesso nome del file sorgente a cui si riferisce, ma con estensione diversa) che contiene i prototipi delle funzioni (implementate nel file sorgente) e la definizione dei tipi di dato usati dal modulo (se è richiesto).
@@ -1999,9 +2481,23 @@ Il preprocessore elabora il contenuto di un file sorgente <b>prima della compila
 Il preprocessamento è il primo step del processo che porta alla generazione del file eseguibile. Il preprocessore può svolgere differenti sostituzioni, tutte le chiamate al preprocessore sono dette <b>direttive al preprocessore</b>, le più famose sono:
 </p>
 
-* `#define`
-* `#include`
-* `#if` `#ifdef`
+<ul>
+  <li>
+    <p align="justify">
+    <code>#define</code>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>#include</code>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>#if</code> <code>#ifdef</code>
+    </p>
+  </li>
+</ul>
 
 <table align="center">
 		<td>&#9888; <b>Importante</b>
@@ -2011,11 +2507,27 @@ Tutte le righe nel codice che iniziano con il carattere `#` sono direttive al pr
 	</td>
 </table>
 
+<p align="justify">
 Queste direttive permettono di:
+</p>
 
-* includere il contenuto di altri file all'interno del sorgente
-* ridefinire il significato degli identificatori
-* disabilitare condizionalmente parti di codice in fase di compilazione, eliminando il testo prima che il compilatore lo elabori
+<ul>
+  <li>
+    <p align="justify">
+    includere il contenuto di altri file all'interno del sorgente
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    ridefinire il significato degli identificatori
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    disabilitare condizionalmente parti di codice in fase di compilazione, eliminando il testo prima che il compilatore lo elabori
+    </p>
+  </li>
+</ul>
 
 <table align="center">
 	<td>:pill: <b>Nota</b>
@@ -2041,7 +2553,9 @@ A seguito della riga sopra, tutte le successive occorrenze dell'identificatore <
 Il testo da sostituire può estendersi su più di una riga se l'ultimo carattere della linea è <code>\</code> che fa ignorare il carattere di nuova riga <code>\n</code> al preprocessore.
 </p>
 
-Ecco alcuni esempi di uso di `#define`:
+<p align="justify">
+Ecco alcuni esempi di uso di <code>#define</code>:
+</p>
 
 
 ```c
@@ -2057,7 +2571,9 @@ for(int i=0; i < NUM_ITERATIONS; i++)
 int array[DIM_BUFFER];
 ```
 
-Le **macro** possono ricevere parametri in ingresso e vengono realizzate per creare piccole pseudo-funzioni:
+<p align="justify">
+Le <strong>macro</strong> possono ricevere parametri in ingresso e vengono realizzate per creare piccole pseudo-funzioni:
+</p>
 
 ```c
 #define QUADRATO(x) x*x
@@ -2068,7 +2584,9 @@ int main(void){
 }
 ```
 
-La **macro** `QUADRATO` determina la sostituzione del testo `QUADRATO(lunghezza_lato)` con il testo `lunghezza_lato*lunghezza_lato` prima della compilazione, quindi il codice visto dal compilatore è:
+<p align="justify">
+La <strong>macro</strong> <code>QUADRATO</code> determina la sostituzione del testo <code>QUADRATO(lunghezza_lato)</code> con il testo <code>lunghezza_lato*lunghezza_lato</code> prima della compilazione, quindi il codice visto dal compilatore è:
+</p>
 
 ```c
 int main(void){
@@ -2077,7 +2595,9 @@ int main(void){
 }
 ```
 
-Si usa dire che la **macro** è stata espansa.
+<p align="justify">
+Si usa dire che la <strong>macro</strong> è stata espansa.
+</p>
 
 <p align="justify">
 Le <b>macro</b> sono molto più veloci delle funzioni, ma usandole è più facile inserire nel codice errori difficilmente identificabili. Inoltre, i moderni compilatori sono in grado di effettuare ottimizzazioni sul codice e capire autonomamente quando evitare una chiamata a funzione espandendo il codice in essa contenuto. In generale, quindi, l'uso eccessivo di <b>macro</b> o l'utilizzo di <b>macro complesse</b> non porta a miglioramenti delle prestazioni, ma può comportare l'insorgere di bug difficili da risolvere. Vediamo un esempio:
@@ -2091,7 +2611,9 @@ int main(void){
 }
 ```
 
+<p align="justify">
 Il codice precedente viene espanso in questo modo:
+</p>
 
 ```c
 #define QUADRATO(x) x*x
@@ -2101,7 +2623,9 @@ int main(void){
 }
 ```
 
-Per evitare errori sarebbe stato giusto definire la **macro** in questo modo:
+<p align="justify">
+Per evitare errori sarebbe stato giusto definire la <strong>macro</strong> in questo modo:
+</p>
 
 ```c
 #define QUADRATO(x) ((x)*(x))
@@ -2117,11 +2641,17 @@ L'uso di macro con parametri senza l'uso di parentesi tonde porta a errori diffi
 
 #### La direttiva #include
 
-Abbiamo accennato a questa direttiva nei paragrafi introduttivi spiegando che serviva a includere, nel file sorgente, il file header `stdio.h` che conteneva il prototipo della funzione `printf()`.
+<p align="justify">
+Abbiamo accennato a questa direttiva nei paragrafi introduttivi spiegando che serviva a includere, nel file sorgente, il file header <code>stdio.h</code> che conteneva il prototipo della funzione <code>printf()</code>.
+</p>
 
-La direttiva `#include` sostituisce il contenuto di un intero file nella riga di codice dove è inserita.
+<p align="justify">
+La direttiva <code>#include</code> sostituisce il contenuto di un intero file nella riga di codice dove è inserita.
+</p>
 
+<p align="justify">
 Esiste in due forme: con parentesi angolari o con doppi apici:
+</p>
 
 ```c
 #include <stdio.h>
@@ -2131,13 +2661,19 @@ Esiste in due forme: con parentesi angolari o con doppi apici:
 #include "file.h"
 ```
 
-La prima forma (parentesi angolari `<` `>`) è usata per includere il contenuto di file d'intestazione del linguaggio; la seconda forma, invece, permette di includere i file header definiti dal programmatore.
+<p align="justify">
+La prima forma (parentesi angolari <code>&lt;</code> <code>&gt;</code>) è usata per includere il contenuto di file d'intestazione del linguaggio; la seconda forma, invece, permette di includere i file header definiti dal programmatore.
+</p>
 
 #### Le direttive #if #ifdef #ifndef
 
+<p align="justify">
 Con queste direttive si possono escludere porzioni di codice in base al verificarsi o meno di certe condizioni.
+</p>
 
-La direttiva `#if` valuta **un'espressione intera costante** il cui **valore deve essere noto all'atto della compilazione**.
+<p align="justify">
+La direttiva <code>#if</code> valuta <strong>un'espressione intera costante</strong> il cui <strong>valore deve essere noto all'atto della compilazione</strong>.
+</p>
 
 ```c
 #if espressione-intera-costante
@@ -2150,9 +2686,13 @@ La direttiva `#if` valuta **un'espressione intera costante** il cui **valore dev
 #endif
 ```
 
-Tutte le righe comprese tra `#if` e `#endif` vengono incluse nel file header solo se l'espressione è diversa da 0; altrimenti vengono rimosse.
+<p align="justify">
+Tutte le righe comprese tra <code>#if</code> e <code>#endif</code> vengono incluse nel file header solo se l'espressione è diversa da 0; altrimenti vengono rimosse.
+</p>
 
-La direttiva `#ifdef` è molto simile: non valuta un'espressione costante, ma la definizione o meno di una macro. Vedi il codice seguente:
+<p align="justify">
+La direttiva <code>#ifdef</code> è molto simile: non valuta un'espressione costante, ma la definizione o meno di una macro. Vedi il codice seguente:
+</p>
 
 ```c
 #ifdef macro
@@ -2163,9 +2703,13 @@ La direttiva `#ifdef` è molto simile: non valuta un'espressione costante, ma la
 #endif
 ```
 
-`#ifdef` include il codice tra se stessa e la direttiva `#endif` solo se la macro è definita.
+<p align="justify">
+<code>#ifdef</code> include il codice tra se stessa e la direttiva <code>#endif</code> solo se la macro è definita.
+</p>
 
-è possibile ottenere il comportamento opposto con `#ifndef`, come segue:
+<p align="justify">
+è possibile ottenere il comportamento opposto con <code>#ifndef</code>, come segue:
+</p>
 
 ```c
 #ifndef macro
@@ -2195,7 +2739,9 @@ In fase di debugging può essere utile eliminare temporaneamente porzioni di cod
 #endif
 ```
 
+<p align="justify">
 Una volta eliminati i problemi, si può ripristinare il codice rimuovendo le righe contenenti <code>#if</code> <code>#endif</code>, oppure cambiando il valore zero con il valore uno, come mostrato nel codice seguente:
+</p>
 
 ```c
 #if 1
@@ -2203,7 +2749,9 @@ Una volta eliminati i problemi, si può ripristinare il codice rimuovendo le rig
 #endif
 ```
 
-oppure, più elegantemente, usando `#define` e `#if` assieme:
+<p align="justify">
+oppure, più elegantemente, usando <code>#define</code> e <code>#if</code> assieme:
+</p>
 
 ```c
 #define SWITCH 0
@@ -2216,7 +2764,9 @@ oppure, più elegantemente, usando `#define` e `#if` assieme:
 #endif
 ```
 
-Si può ottenere lo stesso risultato con la direttiva `#ifdef` in questo modo:
+<p align="justify">
+Si può ottenere lo stesso risultato con la direttiva <code>#ifdef</code> in questo modo:
+</p>
 
 ```c
 #ifdef UNDEF
@@ -2256,7 +2806,9 @@ Per non considerare il codice basta rimuovere la prima riga <code>#define DEBUG<
 #endif
 ```
 
-Ovviamente con `#ifndef` otteniamo il comportamento opposto. Vediamo un esempio che usa `#ifdef` e `#ifndef` per includere e/o escludere porzioni di codice a seconda che DEBUG sia attivato o meno:
+<p align="justify">
+Ovviamente con <code>#ifndef</code> otteniamo il comportamento opposto. Vediamo un esempio che usa <code>#ifdef</code> e <code>#ifndef</code> per includere e/o escludere porzioni di codice a seconda che DEBUG sia attivato o meno:
+</p>
 
 ```c
 #undef DEBUG /* We are in production */
@@ -2270,7 +2822,9 @@ Ovviamente con `#ifndef` otteniamo il comportamento opposto. Vediamo un esempio 
 #endif
 ```
 
-Esiste anche la possibilità di usare `#else` in questo modo:
+<p align="justify">
+Esiste anche la possibilità di usare <code>#else</code> in questo modo:
+</p>
 
 ```c
 #define DEBUG /* We are in staging */
@@ -2282,7 +2836,9 @@ Esiste anche la possibilità di usare `#else` in questo modo:
 #endif
 ```
 
-Esiste anche la possibilità di usare `#if` `#elif` `#else` per condizioni più complesse:
+<p align="justify">
+Esiste anche la possibilità di usare <code>#if</code> <code>#elif</code> <code>#else</code> per condizioni più complesse:
+</p>
 
 ```c
 #include<stdio.h>
@@ -2305,7 +2861,9 @@ vagrant@ubuntu2204:~$ ./test
 CPU_FILE = arm.h
  ```
 
-La cosa interessante di questo approccio è il fatto che è possibile definire simboli passando direttamente un'opzione al compilatore. Se ho, ad esempio, il file `conditional_compilation.c` con questo contenuto:
+<p align="justify">
+La cosa interessante di questo approccio è il fatto che è possibile definire simboli passando direttamente un'opzione al compilatore. Se ho, ad esempio, il file <code>conditional_compilation.c</code> con questo contenuto:
+</p>
 
 ```bash
 #include<stdio.h>
@@ -2320,19 +2878,25 @@ int main(void){
 }
 ```
 
-Posso definire il simbolo `DEBUG` da riga di comando a tempo di compilazione passando a `gcc` l'opzione `-D` in questo modo:
+<p align="justify">
+Posso definire il simbolo <code>DEBUG</code> da riga di comando a tempo di compilazione passando a <code>gcc</code> l'opzione <code>-D</code> in questo modo:
+</p>
 
 ```bash
 gcc -DDEBUG -o conditional_compilation conditional_compilation.c
 ```
-Anche se nel file non è presente alcuna riga `#define DEBUG`, il simbolo è stato definito a tempo di compilazione, quindi siamo in staging e l'output del programma sarà:
+<p align="justify">
+Anche se nel file non è presente alcuna riga <code>#define DEBUG</code>, il simbolo è stato definito a tempo di compilazione, quindi siamo in staging e l'output del programma sarà:
+</p>
 
 ```bash
 vagrant@ubuntu2204:~$ ./conditional_compilation
 Staging code, debugging is enabled
 ```
 
-Ovviamente è possibile all'interno del codice annullare la dichiarazione del simbolo con `#undef DEBUG` in questo modo:
+<p align="justify">
+Ovviamente è possibile all'interno del codice annullare la dichiarazione del simbolo con <code>#undef DEBUG</code> in questo modo:
+</p>
 
 ```c
 #include<stdio.h>
@@ -2348,7 +2912,9 @@ int main(void){
 }
 ```
 
-Anche definendo il simbolo attraverso `gcc`, a tempo di compilazione, questo verrà annullato dalla direttiva `#undef` e l'output del programma sarà:
+<p align="justify">
+Anche definendo il simbolo attraverso <code>gcc</code>, a tempo di compilazione, questo verrà annullato dalla direttiva <code>#undef</code> e l'output del programma sarà:
+</p>
 
 ```bash
 vagrant@ubuntu2204:~$ gcc -o conditional_compilation -DDEBUG conditional_compilation.c
@@ -2397,7 +2963,9 @@ int main(void){
 }
 ```
 
-Mostrando l'output prodotto dal preprocessore, vediamo che effettivamente `file3.h` è stato incluso due volte in `prog.c`.
+<p align="justify">
+Mostrando l'output prodotto dal preprocessore, vediamo che effettivamente <code>file3.h</code> è stato incluso due volte in <code>prog.c</code>.
+</p>
 
 ```bash
 vagrant@ubuntu2204:~$ gcc -E prog.c
@@ -2427,7 +2995,9 @@ int main(void){
 }
 ```
 
-Per risolvere il problema basta fare uso della direttiva `#ifndef` in questo modo all'interno di `file3.h`:
+<p align="justify">
+Per risolvere il problema basta fare uso della direttiva <code>#ifndef</code> in questo modo all'interno di <code>file3.h</code>:
+</p>
 
 ```c
 #ifndef __FILE3_H__
@@ -2484,21 +3054,25 @@ Il bit è l'unità atomica, l'elemento minimo, per rappresentare informazioni. I
 <img src="https://github.com/kinderp/2cornot2c/blob/main/images/sequenza_binaria.jpg">
 </p>
 
+<p align="justify">
 Queste sequenze di bit possono essere difficili da interpretare e lunghe da stampare su schermo; per questo si fa uso della loro rappresentazione in esadecimale, di seguito riportata.
+</p>
 
 <p align="center">
 <img src="https://github.com/kinderp/2cornot2c/blob/main/images/tabella_binario_esadecimale_decimale.png">
 </p>
 
-In esadecimale usiamo 16 simboli da 0 a F per rappresentare tutti i possibili valori. 
-Ogni simbolo esadecimale (da 0 a F) può rappresentare 4 bit ($2^4=16$).
-La seguente sequenza di bit: 
+<p align="justify">
+In esadecimale usiamo 16 simboli da 0 a F per rappresentare tutti i possibili valori. Ogni simbolo esadecimale (da 0 a F) può rappresentare 4 bit ($2^4=16$). La seguente sequenza di bit:
+</p>
 
 <p align="center">
 $0001 0111 0011 1010 0100 1100$
 </p>
 
+<p align="justify">
 diventa in esadecimale:
+</p>
 
 <p align="center">
 $1 7 3 A 4 C$
@@ -2519,14 +3093,30 @@ Visto che le informazioni sono lunghe più di un byte (più di una cella) bisogn
 <  MSB >                   <  LSB >
 ```
 
+<p align="justify">
 L'indirizzo di partenza dell'informazione è sempre quello del primo byte (della prima cella).
+</p>
 
+<p align="justify">
 Abbiamo due possibilità per sistemare i byte nelle celle:
+</p>
 
-* **big endian**: MSB nell'indirizzo più basso
-* **little endian**: LSB nell'indirizzo più basso
+<ul>
+  <li>
+    <p align="justify">
+    <strong>big endian</strong>: MSB nell'indirizzo più basso
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <strong>little endian</strong>: LSB nell'indirizzo più basso
+    </p>
+  </li>
+</ul>
 
+<p align="justify">
 Per esempio: la seguente sequenza di bit $0x01234567$ scritta in esadecimale (ogni due cifre abbiamo un byte) verrà memorizzata in memoria a partire dall'indirizzo $0x100$
+</p>
 
 <p align="center">
 <img src="https://github.com/kinderp/2cornot2c/blob/main/images/big_little_endian.png">
@@ -2534,11 +3124,27 @@ Per esempio: la seguente sequenza di bit $0x01234567$ scritta in esadecimale (og
 
 ### Codifica numeri decimali
 
+<p align="justify">
 Esistono tre diversi modi per codificare i numeri:
+</p>
 
-* **Binaria tradizionale** per i **numeri interi senza segno**
-* **Complemento a due** per i **numeri interi con segno**
-* **Floating point**  per i **numeri interi con parte decimale**
+<ul>
+  <li>
+    <p align="justify">
+    <strong>Binaria tradizionale</strong> per i <strong>numeri interi senza segno</strong>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <strong>Complemento a due</strong> per i <strong>numeri interi con segno</strong>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <strong>Floating point</strong>  per i <strong>numeri interi con parte decimale</strong>
+    </p>
+  </li>
+</ul>
 
 #### Codifica interi senza segno
 
@@ -2550,17 +3156,21 @@ $0$ è  l'estremo negativo $U_{min}$ , $2^W-1$ è l'estremo positivo: $U_{max}$
 Il valore decimale corrispondente alla sequenza di bit ad esso associata è ricavabile attraverso la seguente formula:
 </p>
 
-$$
-\sum_{i=0}^{W-1} x_i*2^i
-$$
+<p align="justify">
+$$ \sum_{i=0}^{W-1} x_i*2^i $$
+</p>
 
+<p align="justify">
 dove $x_i$ è il simbolo in posizione $i$ all'interno della sequenza
+</p>
 
 <p align=justify>
 La proprietà di questa codifica ($W$ bit per la codifica) è che ciascun valore rappresentato nel range $[0, 2^W-1]$ ha un'unica codifica a esso associata: non abbiamo due sequenze associate a uno stesso valore.
 </p>
 
+<p align="justify">
 Alcuni esempi:
+</p>
 
 
 ```math
@@ -2591,9 +3201,13 @@ Data una sequenza di $W$ bit codificata in complemento a due, il valore associat
 -x_{W-1}*2^{W-1} + \sum_{i=0}^{W-2} x_i*2^i
 ```
 
-dove $x_i$ è il simbolo in posizione $i$ all'interno della sequenza e $x^W-1$ (bit MSB) è detto **bit di segno**
+<p align="justify">
+dove $x_i$ è il simbolo in posizione $i$ all'interno della sequenza e $x^W-1$ (bit MSB) è detto <strong>bit di segno</strong>
+</p>
 
+<p align="justify">
 Alcuni esempi:
+</p>
 
 ```math
 0001 = -0*2^3 + 0*2^2 + 0*2^1 + 1*2^0 = 1
@@ -2617,7 +3231,7 @@ Se noti abbiamo usato le stesse quattro sequenze degli esempi per la codifica de
 
 <p align=justify>
 Anche in questo caso ogni valore ha associata una sola sequenza di bit, non ci sono due sequenze o più associate allo stesso valore. Il range di valori rappresentabili con $W$ bit è $[-2^{W-1}:-1, 0:2^{W-1}-1]$
-In quanto con $W$ bit ho $2^W$ sequenze possibili da distribuire metà ai numeri positivi $\frac{2^{W}}{2} = 2^W*2^{-1} = 2^{W-1}$ e metà ai negativi $2^{W-1}$, ma nei numeri positivi abbiamo lo zero a cui associare una sequenza delle $2^{W-1}$, quindi il valore massimo (estremo superiore) per i numeri positivi sarà appunto $2^{W-1}-1$ (-1 perché appunto devo considerare lo zero che non ho invece nei numeri negativi). **Il range dei numeri rappresentabili è dunque asimmetrico**, maggiore per i negativi di uno.
+In quanto con $W$ bit ho $2^W$ sequenze possibili da distribuire metà ai numeri positivi $\frac{2^{W}}{2} = 2^W*2^{-1} = 2^{W-1}$ e metà ai negativi $2^{W-1}$, ma nei numeri positivi abbiamo lo zero a cui associare una sequenza delle $2^{W-1}$, quindi il valore massimo (estremo superiore) per i numeri positivi sarà appunto $2^{W-1}-1$ (-1 perché appunto devo considerare lo zero che non ho invece nei numeri negativi). <strong>Il range dei numeri rappresentabili è dunque asimmetrico</strong>, maggiore per i negativi di uno.
 </p>
 
 <p align=justify>
@@ -2640,12 +3254,13 @@ Nella figura seguente sono invece riportati i range reali per i vari tipi che le
 
 ### Mapping signed - unsigned
 
-$UMax$ : Estremo superiore intervallo codifica senza segno
-$TMax$ : Estremo superiore intervallo codifica   con segno
-$TMin$ : Estremo inferiore intervallo codifica   con segno
+<p align="justify">
+$UMax$ : Estremo superiore intervallo codifica senza segno $TMax$ : Estremo superiore intervallo codifica   con segno $TMin$ : Estremo inferiore intervallo codifica   con segno
+</p>
 
-U = Unsigned
-T = Two's complement
+<p align="justify">
+U = Unsigned T = Two's complement
+</p>
 
 <div align=center>
 
@@ -2673,19 +3288,25 @@ Per esempio con $W=4$ $UMax+1=2^W=16$ data la sequenza $1110$ nella codifica sen
 1110 = 1*2^3 + 1*2^2 + 1*2^1 + 0*2^0 = 8 + 4 + 2 = 14
 ```
 
+<p align="justify">
 Per ottenere il valore della stessa sequenza nella codifica in complemento (con segno) basta sommare a 14 il valore 16 ($UMax+1$ o anche $2^W$)
+</p>
 
 ```math
 1110 = 14 - 16 = -2
 ```
 
+<p align="justify">
 Allo stesso modo se calcolassimo il valore della sequenza nella codifica in complemento:
+</p>
 
 ```math
 1110 = -1*2^3 + 1*2^2 + 1*2^1 + 0*2^0 = -8 + 4 + 2 = -2
 ```
 
+<p align="justify">
 Per ottenere il valore nella rappresentazione senza segno dovremmo sommare a 2 il valore 16 ($UMax+1$ o anche $2^W$)
+</p>
 
 ```math
 1110 = -2 + 14
@@ -2713,7 +3334,9 @@ La figura seguente ti aiuterà a capire meglio
 <img src=https://github.com/kinderp/2cornot2c/blob/main/images/estensione_segno_unsigned.png>
 </p>
 
+<p align="justify">
 Per esempio:
+</p>
 
 <p align=center>
 <img src=https://github.com/kinderp/2cornot2c/blob/main/images/esempio_estensione_segno.png>
@@ -2759,7 +3382,9 @@ X^1 = X_{unsigned} mod 2^k
 Detto in altri termini, troncare k bit da una sequenza di $W+k$ bit comporta la creazione di una nuova sequenza di $W$ bit il cui valore intero è pari al valore <b>senza segno</b> intero della prima rappresentazione modulo $2^k$
 </p>
 
+<p align="justify">
 Per esempio:
+</p>
 
 <p align=center>
 <img src=https://github.com/kinderp/2cornot2c/blob/main/images/esempio_troncamento.png>
@@ -2793,7 +3418,9 @@ int main(void){
 }
 ```
 
-Il linguaggio C riconosce differenti tipi di dato predefiniti. Fino ad ora abbiamo visto solo il tipo `int`, di seguito riportiamo tutte le _keyword_ riconosciute dal C per gli specificatori di tipo:
+<p align="justify">
+Il linguaggio C riconosce differenti tipi di dato predefiniti. Fino ad ora abbiamo visto solo il tipo <code>int</code>, di seguito riportiamo tutte le <em>keyword</em> riconosciute dal C per gli specificatori di tipo:
+</p>
 
 | Keyword       |
 | ------------- |
@@ -2807,24 +3434,39 @@ Il linguaggio C riconosce differenti tipi di dato predefiniti. Fino ad ora abbia
 | `double`	|
 | `void`	|
 
-`int` permette di rappresentare in memoria i tipi interi (senza parte decimale), le successive quattro _keyword_ in tabella: `long`, `short`, `unsigned` e `signed` sono usate per ottenere variazioni del tipo base (es: `unsigned short int` o `long long int`). `char` è usato per rappresentare i singoli caratteri, simboli d'interpunzione etc.; `char` può essere utilizzato anche per esprimere `int` di piccole dimensioni. `float`, `double` e `long double` sono usati per i numeri reali, numeri con parte decimale.
+<p align="justify">
+<code>int</code> permette di rappresentare in memoria i tipi interi (senza parte decimale), le successive quattro <em>keyword</em> in tabella: <code>long</code>, <code>short</code>, <code>unsigned</code> e <code>signed</code> sono usate per ottenere variazioni del tipo base (es: <code>unsigned short int</code> o <code>long long int</code>). <code>char</code> è usato per rappresentare i singoli caratteri, simboli d'interpunzione etc.; <code>char</code> può essere utilizzato anche per esprimere <code>int</code> di piccole dimensioni. <code>float</code>, <code>double</code> e <code>long double</code> sono usati per i numeri reali, numeri con parte decimale.
+</p>
 
 ### `int`
 
-Il tipo `int` è `signed`: questo vuol dire che possiamo esprimere sia numeri positivi (segno +) sia numeri negativi (segno -). La dimensione in bit usata per rappresentare un `int` (e quindi anche il valore intero massimo esprimibile) dipende dall'architettura. Tipicamente un `int` utilizza una word nell'architettura target: quindi nei sistemi con word a 16 bit (IBM compatibile) `int` occuperà 16 bit. Quale sarà il valore massimo e minimo rappresentabili con un `int` a 16 bit? Semplice:
+<p align="justify">
+Il tipo <code>int</code> è <code>signed</code>: questo vuol dire che possiamo esprimere sia numeri positivi (segno +) sia numeri negativi (segno -). La dimensione in bit usata per rappresentare un <code>int</code> (e quindi anche il valore intero massimo esprimibile) dipende dall'architettura. Tipicamente un <code>int</code> utilizza una word nell'architettura target: quindi nei sistemi con word a 16 bit (IBM compatibile) <code>int</code> occuperà 16 bit. Quale sarà il valore massimo e minimo rappresentabili con un <code>int</code> a 16 bit? Semplice:
+</p>
 
+<p align="justify">
 Con 16 bit possiamo esprimere 65536 diverse combinazioni di bit (65536 diversi valori):
+</p>
 
+<p align="justify">
 $2^{16} = 65536$
+</p>
 
+<p align="justify">
 Questi 65536 valori devono essere assegnati metà ai numeri negativi e metà ai positivi
+</p>
 
+<p align="justify">
 $\frac{65536}{2} = 32768$
+</p>
 
+<p align="justify">
 Per i numeri positivi le diverse 32768 combinazioni devono essere assegnate a partire dallo zero, quindi i numeri positivi andranno da 0 fino a 32767. Per i numeri negativi (non avendo lo zero) i valori andranno da -1 a -32768.
+</p>
 
-Le stesse considerazioni valgono per macchine con word a 32 o 64 bit. In questi sistemi `int` sarà rispettivamente a 32 e 64 bit.
-Quindi, **lo spazio occupato in memoria da un `int` dipende dalla dimensione della word della macchina** che può essere 16, 32 o 64 bit a seconda del tipo di architettura. **Lo standard ISO C specifica solo la dimensione minima di `int`: 16 bit** con range [-32767, +32767]
+<p align="justify">
+Le stesse considerazioni valgono per macchine con word a 32 o 64 bit. In questi sistemi <code>int</code> sarà rispettivamente a 32 e 64 bit. Quindi, <strong>lo spazio occupato in memoria da un <code>int</code> dipende dalla dimensione della word della macchina</strong> che può essere 16, 32 o 64 bit a seconda del tipo di architettura. <strong>Lo standard ISO C specifica solo la dimensione minima di <code>int</code>: 16 bit</strong> con range [-32767, +32767]
+</p>
 
 ```c
 int a; /* dichiarazione di intero, non inizializzato */
@@ -2839,7 +3481,9 @@ int q, w = 200 /* q non è inizializzata, w è inizializzata. scarso stile di  p
 
 #### Stampare `int`
 
-Usa `%d` (decimal int) per stampare una variabile di tipo `int` **in base 10**.
+<p align="justify">
+Usa <code>%d</code> (decimal int) per stampare una variabile di tipo <code>int</code> <strong>in base 10</strong>.
+</p>
 
 ```c
 #include<stdio.h>
@@ -2852,12 +3496,16 @@ int main(void){
 }
 ```
 
-Usa `%o` per stampare una variabile di tipo `int` **in base 8**.
-Usa `%x` per stampare una variabile di tipo `int` **in base 16**
+<p align="justify">
+Usa <code>%o</code> per stampare una variabile di tipo <code>int</code> <strong>in base 8</strong>. Usa <code>%x</code> per stampare una variabile di tipo <code>int</code> <strong>in base 16</strong>
+</p>
 
-Se vuoi stampare il prefisso per la base aggiungi il `#`: `%#o`, `%#x`
+<p align="justify">
+Se vuoi stampare il prefisso per la base aggiungi il <code>#</code>: <code>%#o</code>, <code>%#x</code>
+</p>
+
 ```c
-include<stdio.h>
+#include<stdio.h>
 
 int main(void){
 	int x = 100;
@@ -2867,28 +3515,51 @@ int main(void){
 }
 ```
 
+
 #### Altri tipi interi
 
-Il linguaggio offre le _keyword_ `short` `long` `unsigned` per modificare il tipo `int` di default.
+<p align="justify">
+Il linguaggio offre le <em>keyword</em> <code>short</code> <code>long</code> <code>unsigned</code> per modificare il tipo <code>int</code> di default.
+</p>
 
 
 | Tipo                                            | Descrizione   |
 | ----------------------------------------------  | ------------- |
-| `int`						  | **Deve essere almeno di 16 bit**. E' `signed` |
-| `short int` o `short`                           | **non può essere più grande di `int`**, potrebbe usare meno memoria di `int` salvando spazio quando si rappresentano interi piccoli. Come `int` è `signed` di default |
-| `long int`  o `long`                            | **non può essere più piccolo di `int`**, potrebbe usare più memoria di `int`, utile per rappresentare interi molto grandi. Come `int` è `signed` di default |
-| `long long int` o `long long`                   | **Deve essere almeno di 64 bit**. Potrebbe usare più memoria di `long`. Come `int` è `signed` di default |
+| `int`						  | <strong>Deve essere almeno di 16 bit</strong>. E' `signed` |
+| `short int` o `short`                           | <strong>non può essere più grande di `int`</strong>, potrebbe usare meno memoria di `int` salvando spazio quando si rappresentano interi piccoli. Come `int` è `signed` di default |
+| `long int`  o `long`                            | <strong>non può essere più piccolo di `int`</strong>, potrebbe usare più memoria di `int`, utile per rappresentare interi molto grandi. Come `int` è `signed` di default |
+| `long long int` o `long long`                   | <strong>Deve essere almeno di 64 bit</strong>. Potrebbe usare più memoria di `long`. Come `int` è `signed` di default |
 | `unsigned int` o `unsigned`                     | Usato per valori solo positivi. Il tipo shifta a destra il range di rappresentazione, esempio con 16 bit avendo 65536 possibili rappresentazioni ed escludendo i valori negativi il range passa da [-32768, 32767] a [0, 65535] |
 | `unsigned long int` o `unsigned long`           | Previsto da C90 |
 | `unsigned long int` o `unsigned long`           | Previsto da C90 |
 | `unsigned long long int` o `unsigned long long` | Previsto da C99 |
 
+<p align="justify">
 Lo standard quindi non specifica la dimensione precisa dei diversi interi, l'idea è che il tipo si adatterà alla dimensione della word dell'architettura di riferimento. Lo standard richiede solamente che:
+</p>
 
-* `int` deve essere almeno 16 bit
-* `short` non può essere più grande di `int`
-* `long` non può essere più piccolo di `int`
-* `long long` deve essere almeno 64 bit
+<ul>
+  <li>
+    <p align="justify">
+    <code>int</code> deve essere almeno 16 bit
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>short</code> non può essere più grande di <code>int</code>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>long</code> non può essere più piccolo di <code>int</code>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>long long</code> deve essere almeno 64 bit
+    </p>
+  </li>
+</ul>
 
 | 16 bit        | 32 bit        | 64 bit        |
 | ------------- | ------------- | ------------- |
@@ -2897,12 +3568,32 @@ Lo standard quindi non specifica la dimensione precisa dei diversi interi, l'ide
 | `long`  32    | `long`  32    | `long` 32     |
 | `long long`   | `long long`   | `long long` 64|
 
+<p align="justify">
 Quando allora usare i diversi tipi di interi? Dipende dalla situazione.
+</p>
 
-* `unsigned` è usato per contare perché non rappresenta i numeri negativi e, shiftando a destra il range rappresentabile, può raggiungere valori maggiori di un `signed`
-* `long` è usato per rappresentare valori che `int` non riesce a rappresentare. Tieni conto che nei sistemi in cui `long` è maggiore di `int` usare `long` rallenta i calcoli, quindi usalo solo se necessario. Altre considerazioni possono essere fatte sulla portabilità: se hai bisogno di interi a 32 bit e stai scrivendo codice su una macchina dove `int` e `long` sono a 32 bit dovresti scegliere `long`, in modo tale che se il programma viene portato su macchine a 16 bit dove `int` è 16 bit il tuo intero sarà sempre a 32 bit perché `long` su sistema a 16 bit è lungo 32 bit
-* `long long` è usato solo quando gli interi devono essere lunghi 64 bit
-* `short` è usato per risparmiare spazio, nel senso se i tuoi interi possono essere lunghi solo 16 bit usare `int` potrebbe renderli lunghi 32 bit (in macchine a 32 bit e superiori).
+<ul>
+  <li>
+    <p align="justify">
+    <code>unsigned</code> è usato per contare perché non rappresenta i numeri negativi e, shiftando a destra il range rappresentabile, può raggiungere valori maggiori di un <code>signed</code>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>long</code> è usato per rappresentare valori che <code>int</code> non riesce a rappresentare. Tieni conto che nei sistemi in cui <code>long</code> è maggiore di <code>int</code> usare <code>long</code> rallenta i calcoli, quindi usalo solo se necessario. Altre considerazioni possono essere fatte sulla portabilità: se hai bisogno di interi a 32 bit e stai scrivendo codice su una macchina dove <code>int</code> e <code>long</code> sono a 32 bit dovresti scegliere <code>long</code>, in modo tale che se il programma viene portato su macchine a 16 bit dove <code>int</code> è 16 bit il tuo intero sarà sempre a 32 bit perché <code>long</code> su sistema a 16 bit è lungo 32 bit
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>long long</code> è usato solo quando gli interi devono essere lunghi 64 bit
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>short</code> è usato per risparmiare spazio, nel senso se i tuoi interi possono essere lunghi solo 16 bit usare <code>int</code> potrebbe renderli lunghi 32 bit (in macchine a 32 bit e superiori).
+    </p>
+  </li>
+</ul>
 
 #### Stampare altri tipi di interi
 
@@ -2944,12 +3635,17 @@ verybig = 12345678908642 and not 12345678908642
 
 #### Overflow `int`
 
-Cosa accade quando si cerca di rappresentare un numero intero più grande del massimo valore rappresentabile: quando si esce fuori dal range massimo. Vediamo in questo esempio.
-Consideriamo un sistema a 32 bit quindi `int` 32.
+<p align="justify">
+Cosa accade quando si cerca di rappresentare un numero intero più grande del massimo valore rappresentabile: quando si esce fuori dal range massimo. Vediamo in questo esempio. Consideriamo un sistema a 32 bit quindi <code>int</code> 32.
+</p>
 
+<p align="justify">
 $2^{32} = 4.294.967.296$
+</p>
 
+<p align="justify">
 $\frac{4.294.967.296}{2} = 2.147.483.648$
+</p>
 
 ```
 Per gli `unsigned` avremo un range:
@@ -2980,42 +3676,97 @@ Signed: 2147483647 -2147483648 -2147483647
 Unsigned: 4294967295 0 1
 ```
 
+<p align="justify">
 La rappresentazione dei numeri interi si comporta come un odometro (vedi figura seguente).
+</p>
 
+<p align="justify">
 Ricordiamo che dati $W$ bit per la rappresentazione i range rappresentabili sono
-* con segno: $[-2^{W-1}:-1, 0:2^{W-1}-1]$
-* senza segno: $[0, 2^{W}-1]$
+</p>
+<ul>
+  <li>
+    <p align="justify">
+    con segno: $[-2^{W-1}:-1, 0:2^{W-1}-1]$
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    senza segno: $[0, 2^{W}-1]$
+    </p>
+  </li>
+</ul>
   
+<p align="justify">
 Per i numeri con segno, abbiamo due casi.
-* **un intero positivo, raggiunto il valore massimo** ($+2^{W-1}-1$), **se incrementato** di un'altra unità **assume il valore minimo negativo** rappresentabile ($-2^{W-1}$). In figura $W=4$, il valore massimo positivo è $2^3-1=+7$ che ha codifica $0111$ se sommiamo 1 otteniamo un effetto a cascata del riporto $1000$ che in complemento a due (siamo con numeri con segno) vale:
+</p>
+<ul>
+  <li>
+    <p align="justify">
+    <strong>un intero positivo, raggiunto il valore massimo</strong> ($+2^{W-1}-1$), <strong>se incrementato</strong> di un'altra unità <strong>assume il valore minimo negativo</strong> rappresentabile ($-2^{W-1}$). In figura $W=4$, il valore massimo positivo è $2^3-1=+7$ che ha codifica $0111$ se sommiamo 1 otteniamo un effetto a cascata del riporto $1000$ che in complemento a due (siamo con numeri con segno) vale:
+    </p>
+  </li>
+</ul>
+
 ```math
 -1*2^3+0*2^2+0*2^1+0*2^0=-8
 ```
+
+<p align="justify">
 che è appunto il valore minimo rappresentabile
-* **un intero negativo, raggiunto il valore massimo** ($-1$), **se incrementato** di un'altra unità **assume il valore minimo positivo** rappresentabile ($0$). In figura In figura $W=4$, il valore massimo negativo è $-1$ che ha codifica in complemento a due $1111$
+</p>
+<ul>
+  <li>
+    <p align="justify">
+    <strong>un intero negativo, raggiunto il valore massimo</strong> ($-1$), <strong>se incrementato</strong> di un'altra unità <strong>assume il valore minimo positivo</strong> rappresentabile ($0$). In figura In figura $W=4$, il valore massimo negativo è $-1$ che ha codifica in complemento a due $1111$
+    </p>
+  </li>
+</ul>
+
 ```math
 -1*2^3+1*2^2+1*2^0=-8+4+2+1=-1
 ```
-se sommiamo 1 otteniamo $10000$ ma la rappresentazione è a 4 bit ed il primo bit ad uno deve essere scartato con risultato $0000$ che è appunto il valore minimo positivo rappresentabile.
 
+<p align="justify">
+se sommiamo 1 otteniamo $10000$ ma la rappresentazione è a 4 bit ed il primo bit ad uno deve essere scartato con risultato $0000$ che è appunto il valore minimo positivo rappresentabile.
+</p>
+
+<p align="justify">
 Per i numeri senza segno abbiamo:
-* **un intero senza segno, raggiunto il valore massimo** ($2^{W}-1$), **se incrementato** di un'altra unità **assume il valore minimo** rappresentabile($0$). Per esempio sempre con $W=4$ il valore massimo rappresentabile è $2^4-1=15$ che ha una codifica $1111$
+</p>
+<ul>
+  <li>
+    <p align="justify">
+    <strong>un intero senza segno, raggiunto il valore massimo</strong> ($2^{W}-1$), <strong>se incrementato</strong> di un'altra unità <strong>assume il valore minimo</strong> rappresentabile($0$). Per esempio sempre con $W=4$ il valore massimo rappresentabile è $2^4-1=15$ che ha una codifica $1111$
+    </p>
+  </li>
+</ul>
+
 ```math
 1*2^3+1*2^2+1*2^1+1*2^0=8+4+2+1=15
 ```
+
+<p align="justify">
 se sommiamo 1 otteniamo $10000$ ma la rappresentazione è a 4 bit ed il primo bit ad uno deve essere scartato con risultato $0000$ che è appunto il valore minimo rappresentabile.
+</p>
 
-![](https://github.com/kinderp/2cornot2c/blob/main/images/odometro_con_segno.png)
+<div align="center">
+  <img src="https://github.com/kinderp/2cornot2c/blob/main/images/odometro_con_segno.png" alt="Odometro con segno">
+</div>
 
 
-> [!IMPORTANT]
-> Una qualunque operazione aritmetica su interi si dice in **overflow** quando l'intero risultante dall'operazione ha una dimensione in bit superiore alla dimensione massima (in bit) del tipo di dato. I bit eccedenti sono semplicemente scartati.
+<table align="center">
+	<td>:exclamation: <b>Importante</b>
+	<p align=justify>
+ Una qualunque operazione aritmetica su interi si dice in <strong>overflow</strong> quando l'intero risultante dall'operazione ha una dimensione in bit superiore alla dimensione massima (in bit) del tipo di dato. I bit eccedenti sono semplicemente scartati.
+	</p>
+	</td>
+</table>
 
 # Rappresentazione binaria `int`
 
-La rappresentazione dei numeri interi con segno (`signed`, di default per la _keyword_ `int`) è in **complemento a due**, per gli interi senza segno (`unsigned int`) si usa una normale rappresentazione binaria del valore intero.
-Nel codice seguente proviamo a predire la sequenza binaria di un valore decimale scelto arbitrariamente. Per comprendere il codice è necessaria una conoscenza del processo di conversione da decimale a binario oltre che ovvia
-mente alle basi relative sia al sistema numerico posizionale binari che esadecimale. Trovi la teoria trattata a lezione [qui](https://github.com/kinderp/2cornot2c/tree/main/lab/lessons/UDA_1) 
+<p align="justify">
+La rappresentazione dei numeri interi con segno (<code>signed</code>, di default per la <em>keyword</em> <code>int</code>) è in <strong>complemento a due</strong>, per gli interi senza segno (<code>unsigned int</code>) si usa una normale rappresentazione binaria del valore intero. Nel codice seguente proviamo a predire la sequenza binaria di un valore decimale scelto arbitrariamente. Per comprendere il codice è necessaria una conoscenza del processo di conversione da decimale a binario oltre che ovvia mente alle basi relative sia al sistema numerico posizionale binari che esadecimale. Trovi la teoria trattata a lezione <a href="https://github.com/kinderp/2cornot2c/tree/main/lab/lessons/UDA_1">qui</a>
+</p>
 
 ```c
 #include<stdio.h>
@@ -3095,20 +3846,33 @@ signed negative: 0xffffffe5
 
 ### Cast
 
-Il cast è una conversione esplicita di tipo e prevede un proprio operatore. Esistono altri tipi di **conversioni di tipo**: conversione automatica e conversione per assegnamento.
+<p align="justify">
+Il cast è una conversione esplicita di tipo e prevede un proprio operatore. Esistono altri tipi di <strong>conversioni di tipo</strong>: conversione automatica e conversione per assegnamento.
+</p>
 
-> [!IMPORTANT]
-> **Conversione automatica**
-> Le conversioni automatiche prevedono che nelle espressioni che coinvolgono costanti o variabili di tipo diverso il tipo del risultato sia pari a quello dell'operando più capiente in termini di bit
+<table align="center">
+	<td>:exclamation: <b>Importante</b>
+	<p align=justify>
+ <strong>Conversione automatica</strong>
+	</p>
+	<p align=justify>
+ Le conversioni automatiche prevedono che nelle espressioni che coinvolgono costanti o variabili di tipo diverso il tipo del risultato sia pari a quello dell'operando più capiente in termini di bit
+	</p>
+	</td>
+</table>
 
+<p align="justify">
 Nel codice seguente il valore che viene stampato è 1, la divisione è tra due interi quindi il risultato anche se è un numero reale (con parte decimale) sarà di tipo intero e la parte decimale verrà troncata.
+</p>
 
 ```c
 int x = 8, y=5;
 printf("%i\n", x/y);
 ```
 
-Nel secondo caso (codice seguente) invece la divisione coinvolge un intero (`int`) e un numero reale (`double`) e il risultato sarà dunque un `double`. Il tipo del risultato è uguale a quello dell'operando con maggiore capacità in termini di bit.
+<p align="justify">
+Nel secondo caso (codice seguente) invece la divisione coinvolge un intero (<code>int</code>) e un numero reale (<code>double</code>) e il risultato sarà dunque un <code>double</code>. Il tipo del risultato è uguale a quello dell'operando con maggiore capacità in termini di bit.
+</p>
 
 ```c
 int x = 8;
@@ -3116,9 +3880,16 @@ double y = 5;
 printf("%lf\n", x/y);
 ```
 
-> [!IMPORTANT]
-> **Conversione per assegnamento**
-> il valore assegnato viene convertito nel tipo dell'espressione a sinistra dell'operatore di assegnamento (detto **lvalue**)
+<table align="center">
+	<td>:exclamation: <b>Importante</b>
+	<p align=justify>
+ <strong>Conversione per assegnamento</strong>
+	</p>
+	<p align=justify>
+ il valore assegnato viene convertito nel tipo dell'espressione a sinistra dell'operatore di assegnamento (detto <strong>lvalue</strong>)
+	</p>
+	</td>
+</table>
 
 ```c
 int n1, n2;
@@ -3127,8 +3898,9 @@ n1 = a;
 n2 = b;
 ```
 
-Nell'esempio precedente vengono assegnati dei valori `double` a degli `int`, il risultato è che a seguito del troncamento della parte decimale ad `n1` viene assegnato il valore 1 ed a `n2` -1
-Nel caso seguente, si ha un assegnamento da un tipo più capiente (`int`) ad uno meno (`char`). Il valore che viene assegnato ad `n` è 3. La rappresentazinoe binaria di 259 è:
+<p align="justify">
+Nell'esempio precedente vengono assegnati dei valori <code>double</code> a degli <code>int</code>, il risultato è che a seguito del troncamento della parte decimale ad <code>n1</code> viene assegnato il valore 1 ed a <code>n2</code> -1 Nel caso seguente, si ha un assegnamento da un tipo più capiente (<code>int</code>) ad uno meno (<code>char</code>). Il valore che viene assegnato ad <code>n</code> è 3. La rappresentazinoe binaria di 259 è:
+</p>
 
 ```
 259 | 2 | 1
@@ -3146,13 +3918,17 @@ int è a 32 bit quindi:
 00000000 00000000 0000001 00000011
 ```
 
-assegnando questa configurazione di bit a un char che occupata solo 8 bit i primi 3 ottetti andranno persi e la configurazione binaria copiata nella variabile `n` sarà
+<p align="justify">
+assegnando questa configurazione di bit a un char che occupata solo 8 bit i primi 3 ottetti andranno persi e la configurazione binaria copiata nella variabile <code>n</code> sarà
+</p>
 
 ```
 00000011
 ```
 
+<p align="justify">
 che corrisponde al valore 3 in deciimale
+</p>
 
 ```c
 unsigned char n;
@@ -3160,9 +3936,16 @@ int a = 259;
 n = a;
 ```
 
-> [!IMPORTANT]
-> **Conversione esplicita: CAST**
-> Le conversioni esplicite vengono effettuate usando l'operatore di cast. L'operatore di cast è costituito dalla parentesi tonde `(` `)` e questa è la sua sintassi
+<table align="center">
+	<td>:exclamation: <b>Importante</b>
+	<p align=justify>
+ <strong>Conversione esplicita: CAST</strong>
+	</p>
+	<p align=justify>
+ Le conversioni esplicite vengono effettuate usando l'operatore di cast. L'operatore di cast è costituito dalla parentesi tonde <code>(</code> <code>)</code> e questa è la sua sintassi
+	</p>
+	</td>
+</table>
 
 ```(nome_del_tipo) espr_da_castare```
 
@@ -3173,23 +3956,32 @@ int x = 8, y = 5;
 printf("%lf\n", x / (double) y);
 ```
 
-Il codice precedente stampa 1.6 in quanto prima di effettuare la divisione il valore di `y` viene convertito in `double` e quindi viene svolta una divisione tra `int` e `double`, per le regole della conversione automatica il valore della divisione sarà quello del tipo più capiente: `double`.
-Se invece il cast venisse fatto  in questo modo:
+<p align="justify">
+Il codice precedente stampa 1.6 in quanto prima di effettuare la divisione il valore di <code>y</code> viene convertito in <code>double</code> e quindi viene svolta una divisione tra <code>int</code> e <code>double</code>, per le regole della conversione automatica il valore della divisione sarà quello del tipo più capiente: <code>double</code>. Se invece il cast venisse fatto  in questo modo:
+</p>
 
 ```c
 printf("%lf\n", (double)(x/y));
 ```
 
-il valore stampato sarebbe 1.0 perché prima viene effettuata la divisione tra `int` e il risultato è un `int` pari a 1, poi questo intero viene trasformato in `double`.
+<p align="justify">
+il valore stampato sarebbe 1.0 perché prima viene effettuata la divisione tra <code>int</code> e il risultato è un <code>int</code> pari a 1, poi questo intero viene trasformato in <code>double</code>.
+</p>
 
-> [!NOTE]
-> Quando si effettua il cast di una variabile i bit memorizzati non vengono alterati in alcun modo
+<table align="center">
+	<td>:pill: <b>Nota</b>
+	<p align=justify>
+ Quando si effettua il cast di una variabile i bit memorizzati non vengono alterati in alcun modo
+	</p>
+	</td>
+</table>
 
 
 #### Cast tra `signed` e `unsigned`
 
-In C, il cast in entrambi i versi: da signed ad unsigned e viceversa, non cambia mai la configurazione dei bit ma soltanto l'interpretazione che viene data alla sequenza di bit.
-Vediamo un esempio:
+<p align="justify">
+In C, il cast in entrambi i versi: da signed ad unsigned e viceversa, non cambia mai la configurazione dei bit ma soltanto l'interpretazione che viene data alla sequenza di bit. Vediamo un esempio:
+</p>
 
 ```c
 #include<stdio.h>
@@ -3236,7 +4028,9 @@ int main(void){
 }
 ```
 
+<p align="justify">
 Lo stesso discorso vale nel caso di cast nel verso opposto:
+</p>
 
 ```c
 #include<stdio.h>
@@ -3266,7 +4060,9 @@ u = 65535, tu=-1
 u = 0xffff, tu=0xffffffff
 ```
 
+<p align="justify">
 Il cast può avvenire sia esplicitamente con l'operatore di cast sia implicitamente in un assegnamento:
+</p>
 
 ```c
 #include<stdio.h>
@@ -3309,25 +4105,46 @@ int main(void){
 }
 ```
 
-> [!CAUTION]
-> **Gestione delle espressioni contenenti combinazioni di valori signed ed unsigned**: quando un'operazione è calcolata e un operando è signed e l'altro unsigned, C implicitamente casta il valore signed ad unsigned e solo dopo calcola l'operazione
+<table align="center">
+	<td>&#9888; <b>Attenzione</b>
+	<p align=justify>
+ <strong>Gestione delle espressioni contenenti combinazioni di valori signed ed unsigned</strong>: quando un'operazione è calcolata e un operando è signed e l'altro unsigned, C implicitamente casta il valore signed ad unsigned e solo dopo calcola l'operazione
+	</p>
+	</td>
+</table>
 
-Le costanti unsigned si specificano la lettera U, nell'esempio seguente i due operandi dell'espressioni sono diversi (signed ed unsigned): prima -1 (valore signed) viene trasformato in signed ($-1{unsigned} = -1 + (UMax + 1) = -1 + (4294967295 + 1) = 4294967295 = UMax$  
+<p align="justify">
+Le costanti unsigned si specificano la lettera U, nell'esempio seguente i due operandi dell'espressioni sono diversi (signed ed unsigned): prima -1 (valore signed) viene trasformato in signed ($-1{unsigned} = -1 + (UMax + 1) = -1 + (4294967295 + 1) = 4294967295 = UMax$
+</p>
 
 ```c
 -1 < 0U
 ```
 
-Sotto altri esempi 
+<p align="justify">
+Sotto altri esempi
+</p>
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/cast_implicito_valutazione_espressioni.png)
 
 ### Estensione della rappresentazione binaria di un numero
 
+<p align="justify">
 Come anticipato nella teoria quando si estende la rappresentazione binaria di un numero abbiamo due casi:
+</p>
 
-* Se il numero è unsigned si effettua **zero extension**: si copia nei nuovi bit il valore 0
-* Se il numero è signed si effettua **sign extension**: si copia il valore contenuto nel bit più significativo (MSB) della vecchia rappresentazione nei nuovi bit della nuova rappresentazione
+<ul>
+  <li>
+    <p align="justify">
+    Se il numero è unsigned si effettua <strong>zero extension</strong>: si copia nei nuovi bit il valore 0
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Se il numero è signed si effettua <strong>sign extension</strong>: si copia il valore contenuto nel bit più significativo (MSB) della vecchia rappresentazione nei nuovi bit della nuova rappresentazione
+    </p>
+  </li>
+</ul>
   
 ```c
 #include<stdio.h>
@@ -3373,9 +4190,13 @@ x   = -12345     0xffffcfc7
 ux  = 53191      0xcfc7
 ```
 
-Come puoi notare `sx` e `usx` sono entrambi `short`, il primo con segno e il secondo senza segno, ma hanno la stessa rappresentazione binaria (il cast non cambia la configurazione dei bit ma solo l'interpretazione). Invece `x` e `ux` sono a 32 bit, rispettivamente con segno e senza segno, e hanno sequenze di bit diverse (`x` `0xffffcfc7`, `ux` `0xcfc7`): questo perché `x` è con segno e quindi si effettua **sign extension**, cioè MSB di `sx` è 1 e quindi vengono copiati nei nuovi 16 MSB tutti valori posti a 1. Invece `ux` è unsigned e, anche se `usx` ha MSB alto (c esadecimale in binario è 1100), viene effettuata una **zero extension**
+<p align="justify">
+Come puoi notare <code>sx</code> e <code>usx</code> sono entrambi <code>short</code>, il primo con segno e il secondo senza segno, ma hanno la stessa rappresentazione binaria (il cast non cambia la configurazione dei bit ma solo l'interpretazione). Invece <code>x</code> e <code>ux</code> sono a 32 bit, rispettivamente con segno e senza segno, e hanno sequenze di bit diverse (<code>x</code> <code>0xffffcfc7</code>, <code>ux</code> <code>0xcfc7</code>): questo perché <code>x</code> è con segno e quindi si effettua <strong>sign extension</strong>, cioè MSB di <code>sx</code> è 1 e quindi vengono copiati nei nuovi 16 MSB tutti valori posti a 1. Invece <code>ux</code> è unsigned e, anche se <code>usx</code> ha MSB alto (c esadecimale in binario è 1100), viene effettuata una <strong>zero extension</strong>
+</p>
 
+<p align="justify">
 In una situazione in cui si effettua un cast da un tipo meno capiente con segno a uno più capiente senza segno il C deve svolgere due operazioni: l'estensione dei bit e il cast (cioè interpretare la sequenza di bit secondo il nuovo tipo). Non è difficile comprendere che il risultato finale (il valore) dipende dall'ordine di esecuzione di queste due operazioni, vediamo un esempio:
+</p>
 
 ```c
 #include<stdio.h>
@@ -3389,8 +4210,9 @@ int main(void){
 }
 ```
 
-`sx` vale `0xcfc7` MSB = 1 (c = 1100) se viene effettuato prima il cast la sequenza di bit viene considerata unsigned e si effettua **zero extension** ed `uy` vale `0x0000cfc7`; se poi si effettua il cast ad unsigned, la sequenza ottenuta vale +12345
-Se invece viene effettuato prima l'estensione dei bit `sx` è ancora signed e viene eseguita una **sign extension** in questo modo `0xffffcfc7`; successivamente si effettua il cast ad unsigned e la sequenza varrà $uy{unsigned} = sx + (UMax + 1) = -12345 + 4294967296 = 4294954951$
+<p align="justify">
+<code>sx</code> vale <code>0xcfc7</code> MSB = 1 (c = 1100) se viene effettuato prima il cast la sequenza di bit viene considerata unsigned e si effettua <strong>zero extension</strong> ed <code>uy</code> vale <code>0x0000cfc7</code>; se poi si effettua il cast ad unsigned, la sequenza ottenuta vale +12345 Se invece viene effettuato prima l'estensione dei bit <code>sx</code> è ancora signed e viene eseguita una <strong>sign extension</strong> in questo modo <code>0xffffcfc7</code>; successivamente si effettua il cast ad unsigned e la sequenza varrà $uy{unsigned} = sx + (UMax + 1) = -12345 + 4294967296 = 4294954951$
+</p>
 
 ```bash
 vagrant@ubuntu2204:/lab/3_datatype$ bin/mistero
@@ -3424,32 +4246,42 @@ y  = -12345      ffffcfc7
 
 ### `char`
 
-Il tipo `char` è usato per memorizzare caratteri, la dichiarazione di una variabile di tipo `char` è fatta in questo modo:
+<p align="justify">
+Il tipo <code>char</code> è usato per memorizzare caratteri, la dichiarazione di una variabile di tipo <code>char</code> è fatta in questo modo:
+</p>
 
 ```c
 char letter;
 char one, two;
 ```
 
-Per inizializzare una variabile di tipo `char` a uno specifico carattere è necessario usare il singolo apice: `'` in questo modo:
+<p align="justify">
+Per inizializzare una variabile di tipo <code>char</code> a uno specifico carattere è necessario usare il singolo apice: <code>'</code> in questo modo:
+</p>
 
 ```c
 char lettera_a = 'A';
 char lettera_b = 'B';
 ```
 
-Inizializzare le variabili `char` come nel codice seguente è un grave errore:
+<p align="justify">
+Inizializzare le variabili <code>char</code> come nel codice seguente è un grave errore:
+</p>
 
 ```c
 char errore = "T"; /* i doppi apici sono usati per le stringhe, non per i caratteri */
 char altro_errore = T /* T senza apici singoli è interpretata come una variabile */
 ```
 
-Il tipo `char` è lungo 1 byte (8 bit) e in verità è un tipo intero: nel senso che il carattere viene memorizzato come un intero senza segno e poi, attraverso una tabella di codifica/decodifica (ASCII), il valore numerico viene convertito nel carattere corrispondente.
+<p align="justify">
+Il tipo <code>char</code> è lungo 1 byte (8 bit) e in verità è un tipo intero: nel senso che il carattere viene memorizzato come un intero senza segno e poi, attraverso una tabella di codifica/decodifica (ASCII), il valore numerico viene convertito nel carattere corrispondente.
+</p>
 
 ### Stampare un `char`
 
-Per stampare su schermo il contenuto di una variabile di tipo `char` si usa `%c`
+<p align="justify">
+Per stampare su schermo il contenuto di una variabile di tipo <code>char</code> si usa <code>%c</code>
+</p>
 
 ```c
 #include<stdio.h>
@@ -3483,33 +4315,48 @@ $1 = 0001
 0X41 = 0100 0001 = 1*2 + 1*2^0 = 64 + 1 = 65
 ```
 
-Il valore decimale per rappresentare il carattere `A` è 65; in memoria vengono salvati valori binari che poi, attraverso il sistema di codifica **ASCII**, vengono convertiti in caratteri.
+<p align="justify">
+Il valore decimale per rappresentare il carattere <code>A</code> è 65; in memoria vengono salvati valori binari che poi, attraverso il sistema di codifica <strong>ASCII</strong>, vengono convertiti in caratteri.
+</p>
 
 
 ### Costanti
 
-**TODO**
+<p align="justify">
+<strong>TODO</strong>
+</p>
 
 ### Operatori
 
+<p align="justify">
 Gli operatori sono usati nelle operazioni aritmetiche.
+</p>
 
 #### Operatore di assegnamento: =
 
-Il simbolo di uguale `=` come abbiamo già visto viene usato per assegnare il valore a una variabile e non rappresenta l'uguaglianza come invece siamo abituati a pensarlo.
+<p align="justify">
+Il simbolo di uguale <code>=</code> come abbiamo già visto viene usato per assegnare il valore a una variabile e non rappresenta l'uguaglianza come invece siamo abituati a pensarlo.
+</p>
 
-Il codice seguente usa l'operatore `=` per assegnare il valore `1234` alla variabile `mio_intero`
+<p align="justify">
+Il codice seguente usa l'operatore <code>=</code> per assegnare il valore <code>1234</code> alla variabile <code>mio_intero</code>
+</p>
 
 ```c
 mio_intero = 1234;
 ```
 
-`mio_intero` è l'identificatore attraverso cui il programmatore può accedere alla locazione di memoria corrispondente. 
-`mio_intero` è anche detto **lvalue** mentre `1234` è detto **rvalue**
+<p align="justify">
+<code>mio_intero</code> è l'identificatore attraverso cui il programmatore può accedere alla locazione di memoria corrispondente. <code>mio_intero</code> è anche detto <strong>lvalue</strong> mentre <code>1234</code> è detto <strong>rvalue</strong>
+</p>
 
-Un **lvalue** identifica appunto una locazione di memoria (referenzia un indirizzo di memoria) e può essere usato a sinistra di un operatore di assegnamento (`l` in `lvalue` sta per **left** in inglese). Per la verità `mio_intero` è detto **modifiable lvalue** perché è modificabile (non è una costante).
+<p align="justify">
+Un <strong>lvalue</strong> identifica appunto una locazione di memoria (referenzia un indirizzo di memoria) e può essere usato a sinistra di un operatore di assegnamento (<code>l</code> in <code>lvalue</code> sta per <strong>left</strong> in inglese). Per la verità <code>mio_intero</code> è detto <strong>modifiable lvalue</strong> perché è modificabile (non è una costante).
+</p>
 
-Un **rvalue** può essere usato a destra di un operatore di assegnamento (quantità che possono essere assegnate a un **modifiable lvalue**); questo può essere: una costante, una variabile o un'espressione che ritorna un valore (es. una chiamata a funzione).
+<p align="justify">
+Un <strong>rvalue</strong> può essere usato a destra di un operatore di assegnamento (quantità che possono essere assegnate a un <strong>modifiable lvalue</strong>); questo può essere: una costante, una variabile o un'espressione che ritorna un valore (es. una chiamata a funzione).
+</p>
 
 
 ```c
@@ -3530,7 +4377,9 @@ int main(void){
 
 ### Operatore somma: +
 
-L'operatore di somma `+` somma tra loro il valore dei suoi operandi
+<p align="justify">
+L'operatore di somma <code>+</code> somma tra loro il valore dei suoi operandi
+</p>
 
 
 ```c
@@ -3543,12 +4392,15 @@ int main(void){
 
 ### Operatore differenza: -
 
-L'operatore differenza `-` sottrae il valore dell'operando di destra al valore dell'operando di sinistra
+<p align="justify">
+L'operatore differenza <code>-</code> sottrae il valore dell'operando di destra al valore dell'operando di sinistra
+</p>
 
 ### Operatore segno: - e +
 
-L'operatore segno permette di specificare o alterare il segno di un valore.
-Questo è un **operatore unario** perché agisce su un singolo operando, al contrario degli operatori che abbiamo visto fino ad ora.
+<p align="justify">
+L'operatore segno permette di specificare o alterare il segno di un valore. Questo è un <strong>operatore unario</strong> perché agisce su un singolo operando, al contrario degli operatori che abbiamo visto fino ad ora.
+</p>
 
 ```c
 int main(void){
@@ -3559,7 +4411,9 @@ int main(void){
 
 ### Operatore moltiplicazione: *
 
+<p align="justify">
 Questo operatore effettua il prodotto del valore dei due operandi
+</p>
 
 ```c
 int main(void){
@@ -3569,7 +4423,9 @@ int main(void){
 
 ### Operatore divisione: /
 
-L'operatore `/` effettua la divisione del valore dei due operandi. Il risultato dipende dal tipo degli operandi come si vede nel codice seguente.
+<p align="justify">
+L'operatore <code>/</code> effettua la divisione del valore dei due operandi. Il risultato dipende dal tipo degli operandi come si vede nel codice seguente.
+</p>
 
 ```c
 #include<stdio.h>
@@ -3587,10 +4443,17 @@ int main(void){
 
 ### Operatore `sizeof`
 
-L'operatore ritorna il numero di byte occupati dal suo operando. L'operatore può essere sia una variabile sia il nome di un tipo. Il valore tornato da `sizeof` è di tipo `size_t` che è semplicemente un `unsigned int` o un `unsigned long` che è stato ridefinito con `typedef`.
+<p align="justify">
+L'operatore ritorna il numero di byte occupati dal suo operando. L'operatore può essere sia una variabile sia il nome di un tipo. Il valore tornato da <code>sizeof</code> è di tipo <code>size_t</code> che è semplicemente un <code>unsigned int</code> o un <code>unsigned long</code> che è stato ridefinito con <code>typedef</code>.
+</p>
 
-> [!NOTE]
-> **typedef** permette di definire un alias per un tipo di dato, per esempio `typedef unsigned int positivo` associa l'alias `positivo` al tipo `unsigned int` in modo da poter dichiarare variabili intere positive in entrambi i seguenti modi: `unsigned int a`, `positivo a`.
+<table align="center">
+	<td>:pill: <b>Nota</b>
+	<p align=justify>
+ <strong>typedef</strong> permette di definire un alias per un tipo di dato, per esempio <code>typedef unsigned int positivo</code> associa l'alias <code>positivo</code> al tipo <code>unsigned int</code> in modo da poter dichiarare variabili intere positive in entrambi i seguenti modi: <code>unsigned int a</code>, <code>positivo a</code>.
+	</p>
+	</td>
+</table>
 
 
 ```c
@@ -3607,11 +4470,15 @@ int main(void){
 }
 ```
 
-Come avrai notato `sizeof` può essere usato con o senza parentesi tonde. L'uso delle parentesi è obbligatorio solo quando l'operando è un tipo ma è meglio usarle sempre. Per stampare un tipo `size_t` puoi usare `%zd` o in alternativa `%u` o `%lu`.
+<p align="justify">
+Come avrai notato <code>sizeof</code> può essere usato con o senza parentesi tonde. L'uso delle parentesi è obbligatorio solo quando l'operando è un tipo ma è meglio usarle sempre. Per stampare un tipo <code>size_t</code> puoi usare <code>%zd</code> o in alternativa <code>%u</code> o <code>%lu</code>.
+</p>
 
 ### Operatore %
 
+<p align="justify">
 L'operatore modulo ritorna il resto della divisione dei suoi due operandi
+</p>
 
 ```c
 #include<stdio.h>
@@ -3632,8 +4499,9 @@ int main(void){
 
 ### Operatore incremento/decremento ++ --
 
-Questi operatori incrementano o decrementano il proprio operando di un'unità.
-Possono essere usati in due versioni prima dell'operando o dopo l'operando in questo modo:
+<p align="justify">
+Questi operatori incrementano o decrementano il proprio operando di un'unità. Possono essere usati in due versioni prima dell'operando o dopo l'operando in questo modo:
+</p>
 
 ```c
 int i = 0;
@@ -3644,14 +4512,18 @@ i--; /* dopo l'operando i */
 --i; /* prima dell'operando i */
 ```
 
+<p align="justify">
 Il risultato è equivalente a un normale incremento e decremento
+</p>
 
 ```c
 i = i + 1;
 i = i - 1;
 ```
 
+<p align="justify">
 Perché due versioni dello stesso operatore?
+</p>
 
 ```c
 #include<stdio.h>
@@ -3686,7 +4558,9 @@ vagrant@ubuntu2204:/lab/4_operators$ bin/op_incremento_decremento
 i=4, j=4, z=4
 ```
 
+<p align="justify">
 Sembra che il risultato sia lo stesso ma esiste una sottile differenza tra l'uso dell'operatore nella versione pre e post. Quando l'operatore precede l'operando (versione pre) prima viene incrementato il valore dell'operando di un'unità e poi viene valutato l'operando; diversamente, quando l'operatore segue l'operando (versione post), prima viene valutato il valore dell'operando e successivamente lo si incrementa di uno.
+</p>
 
 ```c
 #include<stdio.h>
@@ -3712,13 +4586,17 @@ int main(void){
 }
 ```
 
+<p align="justify">
 Quindi quando l'operatore è usato singolarmente non c'è differenza nell'usare la versione pre o post ma quando questo si trova all'interno di un'espressione (assegnamento, test di un loop) allora dobbiamo tenere in considerazione questa lieve differenza tra i due.
+</p>
 
 
 
 ### Controllo del flusso
 
+<p align="justify">
 Operatori Logici
+</p>
 
 | Operatore  | Significato |
 | ---------- | ------------- |
@@ -3726,7 +4604,9 @@ Operatori Logici
 | `\|\|`  |  or  |
 | `!`   | not  |
 
+<p align="justify">
 Operatori Relazionali
+</p>
 
 | Operatore  | Significato |
 |----- | ------------- |
@@ -3739,24 +4619,37 @@ Operatori Relazionali
 
 #### if o if-else
 
-Il costrutto `if` serve per realizzare l'istruzione di salta condizionale ed ha questa forma:
+<p align="justify">
+Il costrutto <code>if</code> serve per realizzare l'istruzione di salta condizionale ed ha questa forma:
+</p>
 
 ```c
 if ( espr ) istr
 ```
 
-Se la condizione è vera (cioè diversa da zero) viene eseguito il blocco di istruzioni `istr`, altrimenti si prosegue con l'elaborazione.
+<p align="justify">
+Se la condizione è vera (cioè diversa da zero) viene eseguito il blocco di istruzioni <code>istr</code>, altrimenti si prosegue con l'elaborazione.
+</p>
 
-> [!NOTE]
-> Come tutti gli altri costrutti, il blocco `istr` può rappresentare una singola istruzione, un altro costrutto di controllo, oppure un blocco di istruzioni racchiuse tra parentesi graffe
+<table align="center">
+	<td>:pill: <b>Nota</b>
+	<p align=justify>
+ Come tutti gli altri costrutti, il blocco <code>istr</code> può rappresentare una singola istruzione, un altro costrutto di controllo, oppure un blocco di istruzioni racchiuse tra parentesi graffe
+	</p>
+	</td>
+</table>
 
-il costrutto `if` ammette l'enunciato opzionale `else` in questa forma:
+<p align="justify">
+il costrutto <code>if</code> ammette l'enunciato opzionale <code>else</code> in questa forma:
+</p>
 
 ```c
 if ( espr ) istr1 else istr2
 ```
 
-I blocchi di istruzioni `istr1` e `istr2` vengono eseguiti a seconda che l'espressione `espr` sia rispettivamente vera o falsa.
+<p align="justify">
+I blocchi di istruzioni <code>istr1</code> e <code>istr2</code> vengono eseguiti a seconda che l'espressione <code>espr</code> sia rispettivamente vera o falsa.
+</p>
 
 
 ```c
@@ -3820,13 +4713,17 @@ int main(void){
 
 #### for
 
-Il costrutto `for` serve per realizzare un ciclo (**loop**) permette di eseguire un'istruzione (o un insieme di istruzioni) per un certo numero di volte consecutivamente. Ha questa forma:
+<p align="justify">
+Il costrutto <code>for</code> serve per realizzare un ciclo (<strong>loop</strong>) permette di eseguire un'istruzione (o un insieme di istruzioni) per un certo numero di volte consecutivamente. Ha questa forma:
+</p>
 
 ```c
 for ( espr1; espr2; espr3 ) istr 
 ```
 
-Prima di iniziare il ciclo viene valutata **una volta sola** `espr1` che viene tipicamente utilizzata  per inizializzare le variabili  che controllano il ciclo, poi viene valutata l'espressoine `espr2`. Se `espr2` è vera (diversa da zero) venogono eseguite le istruzioni del corpo del ciclo rappresentate da `istr`. Quando `espr2` è falsa (uguale a zero) il ciclo termina. Prima di valutare `espr2` una seconda volta viene prima eseguita `espr3` che viene usata per incrementare o decrementare la variabile che controlla il ciclo
+<p align="justify">
+Prima di iniziare il ciclo viene valutata <strong>una volta sola</strong> <code>espr1</code> che viene tipicamente utilizzata  per inizializzare le variabili  che controllano il ciclo, poi viene valutata l'espressoine <code>espr2</code>. Se <code>espr2</code> è vera (diversa da zero) venogono eseguite le istruzioni del corpo del ciclo rappresentate da <code>istr</code>. Quando <code>espr2</code> è falsa (uguale a zero) il ciclo termina. Prima di valutare <code>espr2</code> una seconda volta viene prima eseguita <code>espr3</code> che viene usata per incrementare o decrementare la variabile che controlla il ciclo
+</p>
 
 ```c
 #include<stdio.h>
@@ -3842,13 +4739,17 @@ int main(void){
 
 #### while
 
-Il costrutto `while` serve (come il `for`) per realizzare un ciclo. Ha questa forma:
+<p align="justify">
+Il costrutto <code>while</code> serve (come il <code>for</code>) per realizzare un ciclo. Ha questa forma:
+</p>
 
 ```c
 while ( espr ) istr
 ```
 
-Il ciclo `while` continua ad eseguire il ciclo finzh+ la condizione indicata da `espr` risulta vera. Il ciclo termina quando la condizione è falsa. Se la condizione è inizialmente falsa il blocco non viene mai eseguito. I costrutti `while` e `for` sono equivalenti: ogni `for` può essere eseguito con un `while` e viceversa.
+<p align="justify">
+Il ciclo <code>while</code> continua ad eseguire il ciclo finzh+ la condizione indicata da <code>espr</code> risulta vera. Il ciclo termina quando la condizione è falsa. Se la condizione è inizialmente falsa il blocco non viene mai eseguito. I costrutti <code>while</code> e <code>for</code> sono equivalenti: ogni <code>for</code> può essere eseguito con un <code>while</code> e viceversa.
+</p>
 
 ```c
 #include<stdio.h>
@@ -3866,13 +4767,17 @@ int main(void){
 
 #### do-while
 
-Il costrutto `do-while` serve per realizzare un ciclo ed assume questa forma:
+<p align="justify">
+Il costrutto <code>do-while</code> serve per realizzare un ciclo ed assume questa forma:
+</p>
 
 ```c
 do instr while ( espr )
 ```
 
-A differenza del costrutto `while`, il blocco  di istruzioni nel ciclo viene eseguito almeno una volta infatti la condizione che controlla l'esecuzione del ciclo viene valutata alla fine del ciclo.
+<p align="justify">
+A differenza del costrutto <code>while</code>, il blocco  di istruzioni nel ciclo viene eseguito almeno una volta infatti la condizione che controlla l'esecuzione del ciclo viene valutata alla fine del ciclo.
+</p>
 
 ```c
 #include<stdio.h>
@@ -3893,7 +4798,9 @@ int main(void){
 
 #### switch
 
- Lo `switch` è assolutamente equivalente a un `if-esle` e serve a scegliere tra diversi blocchi di istruzioni in base al valore di una espressione intera. La sintassi è la seguente:
+<p align="justify">
+Lo <code>switch</code> è assolutamente equivalente a un <code>if-esle</code> e serve a scegliere tra diversi blocchi di istruzioni in base al valore di una espressione intera. La sintassi è la seguente:
+</p>
 
 ```c
 switch ( espressione-intera ) {
@@ -3912,16 +4819,40 @@ switch ( espressione-intera ) {
 } 
 ```
 
-Le parentesi quadre `[`, `]` indicano parti del costrutto opzionali. Le **parentesi graffe sono obbligatorie**, `case` e `default` sono parole chiave.
-Il costrutto permette di eseguire un'istruzione o una serie di istruzioni sulla base del valore di `espressione-intera`, l'esecuzione salta al case corrispondente al valore di `espressione-intera`. Se nessun `case` corrisponde ad `espressione-intera` viene eseguita la clausola `default` (se presente).
+<p align="justify">
+Le parentesi quadre <code>[</code>, <code>]</code> indicano parti del costrutto opzionali. Le <strong>parentesi graffe sono obbligatorie</strong>, <code>case</code> e <code>default</code> sono parole chiave. Il costrutto permette di eseguire un'istruzione o una serie di istruzioni sulla base del valore di <code>espressione-intera</code>, l'esecuzione salta al case corrispondente al valore di <code>espressione-intera</code>. Se nessun <code>case</code> corrisponde ad <code>espressione-intera</code> viene eseguita la clausola <code>default</code> (se presente).
+</p>
 
-> [!NOTE]
-> Le espressioni di ogni `case` devono essere **espressioni intere e costanti**
+<table align="center">
+	<td>:pill: <b>Nota</b>
+	<p align=justify>
+ Le espressioni di ogni <code>case</code> devono essere <strong>espressioni intere e costanti</strong>
+	</p>
+	</td>
+</table>
 
-* La presenza di istruzioni dopo il `case` è facoltativa per permettere di raggruppare lo stesso codice in relazione a diversi casi
-* la presenza di `break` alla fine di un `case` è facoltativa e quindi la mancanza di `break` determina il proseguimento dell'esecuzione del codice associato al `case` successivo
-* `default` è facoltativo
-* non è obbligatorio che `default` sia l'ultimo caso del costrutto
+<ul>
+  <li>
+    <p align="justify">
+    La presenza di istruzioni dopo il <code>case</code> è facoltativa per permettere di raggruppare lo stesso codice in relazione a diversi casi
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    la presenza di <code>break</code> alla fine di un <code>case</code> è facoltativa e quindi la mancanza di <code>break</code> determina il proseguimento dell'esecuzione del codice associato al <code>case</code> successivo
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>default</code> è facoltativo
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    non è obbligatorio che <code>default</code> sia l'ultimo caso del costrutto
+    </p>
+  </li>
+</ul>
 
 ```c
 #include<stdio.h>
@@ -3959,10 +4890,22 @@ int main(void){
 
 #### break e continue
 
-Le istruzioni `break` e `continue` sono utilizzate per controllare il flusso di esecuzione nei cicli `while`, `do-while` e `for` in particolare:
+<p align="justify">
+Le istruzioni <code>break</code> e <code>continue</code> sono utilizzate per controllare il flusso di esecuzione nei cicli <code>while</code>, <code>do-while</code> e <code>for</code> in particolare:
+</p>
 
-* `break` termina immediatamente il ciclo più interno nel quale è contenuta
-* `continue` passa immediatamente all'interazione successiva
+<ul>
+  <li>
+    <p align="justify">
+    <code>break</code> termina immediatamente il ciclo più interno nel quale è contenuta
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>continue</code> passa immediatamente all'interazione successiva
+    </p>
+  </li>
+</ul>
 
 ```c
 #include<stdio.h>
@@ -3998,27 +4941,39 @@ int main(void){
 
 ## I puntatori
 
+<p align="justify">
 Un puntatore è una variabile che contiene un indirizzo di memoria (di un'altra cella di memoria).
+</p>
 
-Un puntatore è un intero positivo (`unsigned int`). Di solito nelle macchine UNIX è di tipo `unsigned long` dato che deve contenere indirizzi da 64 bit.
+<p align="justify">
+Un puntatore è un intero positivo (<code>unsigned int</code>). Di solito nelle macchine UNIX è di tipo <code>unsigned long</code> dato che deve contenere indirizzi da 64 bit.
+</p>
 
-Per dichiarare un puntatore è necessario specificare il tipo della locazione di memoria a cui esso dovrà puntare. Un puntatore che ospita l'indirizzo di una variabile `int` è di tipo diverso rispetto a un puntatore che ospita l'indirizzo di una variabile di tipo `char`. Per dichiarare il tipo del puntatore si utilizza il simbolo `*` insieme al tipo della variabile a cui esso dovrà puntare. Per esempio, nel codice seguente dichiariamo una variabile intera `thing` che viene inizializzata al valore 6; nella riga seguente dichiariamo un puntatore (variabile `thing_ptr`) di tipo (`int *`) che conterrà l'indirizzo di memoria della variabile `int` di nome `thing`.
+<p align="justify">
+Per dichiarare un puntatore è necessario specificare il tipo della locazione di memoria a cui esso dovrà puntare. Un puntatore che ospita l'indirizzo di una variabile <code>int</code> è di tipo diverso rispetto a un puntatore che ospita l'indirizzo di una variabile di tipo <code>char</code>. Per dichiarare il tipo del puntatore si utilizza il simbolo <code>*</code> insieme al tipo della variabile a cui esso dovrà puntare. Per esempio, nel codice seguente dichiariamo una variabile intera <code>thing</code> che viene inizializzata al valore 6; nella riga seguente dichiariamo un puntatore (variabile <code>thing_ptr</code>) di tipo (<code>int *</code>) che conterrà l'indirizzo di memoria della variabile <code>int</code> di nome <code>thing</code>.
+</p>
 
 ```c
 int thing = 6;
 int *thing_ptr;
 ```
 
-per un `char` avremmo fatto
+<p align="justify">
+per un <code>char</code> avremmo fatto
+</p>
 
 ```
 char thing = 'A';
 char *thing_prt;
 ```
 
-Quando un puntatore è dichiarato il suo contenuto (come ogni variabile locale automatica) contiene un valore sporco assolutamente casuale. Come per tutte le altre variabili, è necessario quindi inizializzare una variabile puntatore a un indirizzo di memoria valido; per fare questo si usa l'operatore unario `&` (**operatore di indirizzamento**) che permette di ottenere l'indirizzo di memoria di una qualsiasi variabile.
+<p align="justify">
+Quando un puntatore è dichiarato il suo contenuto (come ogni variabile locale automatica) contiene un valore sporco assolutamente casuale. Come per tutte le altre variabili, è necessario quindi inizializzare una variabile puntatore a un indirizzo di memoria valido; per fare questo si usa l'operatore unario <code>&amp;</code> (<strong>operatore di indirizzamento</strong>) che permette di ottenere l'indirizzo di memoria di una qualsiasi variabile.
+</p>
 
-Tornando al nostro esempio, se volessimo inizializzare il puntatore a intero `thing_ptr` all'indirizzo di memoria della variabile intera `thing` dovremmo usare l'operatore `&` in questo modo:
+<p align="justify">
+Tornando al nostro esempio, se volessimo inizializzare il puntatore a intero <code>thing_ptr</code> all'indirizzo di memoria della variabile intera <code>thing</code> dovremmo usare l'operatore <code>&amp;</code> in questo modo:
+</p>
 
 ```c
 int thing = 6;  /* ipotizziamo che l'indirizzo della variabile thing sia 0x1000 */
@@ -4034,12 +4989,21 @@ thing_ptr = &thing; /* ora  nella  locazione di  memoria rappresentata da thing_
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/puntatore.png)
 
-Una volta che abbiamo inizializzato `thing_ptr` all'indirizzo di memoria di `thing` possiamo accedere al contenuto di `thing` (leggerlo e modificarlo) attraverso `thing_ptr`, usando l'operatore `*` (**operatore di dereferenziazione**).
+<p align="justify">
+Una volta che abbiamo inizializzato <code>thing_ptr</code> all'indirizzo di memoria di <code>thing</code> possiamo accedere al contenuto di <code>thing</code> (leggerlo e modificarlo) attraverso <code>thing_ptr</code>, usando l'operatore <code>*</code> (<strong>operatore di dereferenziazione</strong>).
+</p>
 
-> [!NOTE]
-> L'operazione di accesso alla locazione di memoria di una variabile attraverso un puntatore è detta **dereferenziazione**; per questo motivo `*` è detto **operatore di dereferenziazione**.
+<table align="center">
+	<td>:pill: <b>Nota</b>
+	<p align=justify>
+ L'operazione di accesso alla locazione di memoria di una variabile attraverso un puntatore è detta <strong>dereferenziazione</strong>; per questo motivo <code>*</code> è detto <strong>operatore di dereferenziazione</strong>.
+	</p>
+	</td>
+</table>
 
+<p align="justify">
 Una variabile puntatore può essere pensata come una freccia che punta a una cella di memoria (a un'altra variabile).
+</p>
 
 ```c
 int thing = 5;  /* ipotizziamo che l'indirizzo della variabile thing sia 0x1000 */
@@ -4127,7 +5091,9 @@ int main(void){
 
 ### Puntatori non inizializzati
 
-Abbiamo detto che **prima di essere usati** (dereferenziazione) per accedere alla memoria **i puntatori devono essere inizializzati** a un indirizzo valido, altrimenti il programma potrebbe crashare o avere comportamenti imprevisti e difficili da individuare. Vediamo un esempio.
+<p align="justify">
+Abbiamo detto che <strong>prima di essere usati</strong> (dereferenziazione) per accedere alla memoria <strong>i puntatori devono essere inizializzati</strong> a un indirizzo valido, altrimenti il programma potrebbe crashare o avere comportamenti imprevisti e difficili da individuare. Vediamo un esempio.
+</p>
 
 ```c
 #include<stdio.h>
@@ -4155,15 +5121,17 @@ int main(void){
 
 ### Il puntatore nullo (NULL)
 
-Il puntatore nullo vale zero e non è un puntatore valido, non può essere utilizzato per un'operazione di dereferenziazione.
-Il valore `NULL` è definito tramite macro al preprocessore (`#define`) in questo modo:
+<p align="justify">
+Il puntatore nullo vale zero e non è un puntatore valido, non può essere utilizzato per un'operazione di dereferenziazione. Il valore <code>NULL</code> è definito tramite macro al preprocessore (<code>#define</code>) in questo modo:
+</p>
 
 ```c
 #define NULL 0
 ```
 
-Sfruttando il valore `NULL` è possibile identificare un puntatore nullo, `NULL` è confrontabile con qualsiasi puntatore.
-è buona norma inizializzare una variabile puntatore a `NULL` se la sua inizializzazione valida avverrà successivamente nel codice e controllare se il puntatore è nullo prima di effettuare operazioni di dereferenziazione. Vediamo un esempio.
+<p align="justify">
+Sfruttando il valore <code>NULL</code> è possibile identificare un puntatore nullo, <code>NULL</code> è confrontabile con qualsiasi puntatore. è buona norma inizializzare una variabile puntatore a <code>NULL</code> se la sua inizializzazione valida avverrà successivamente nel codice e controllare se il puntatore è nullo prima di effettuare operazioni di dereferenziazione. Vediamo un esempio.
+</p>
 
 ```c
 #include<stdio.h>
@@ -4182,11 +5150,9 @@ int main(void){
 
 #### Aritmetica puntatori
 
-I puntatori sono variabili che hanno tutte la stessa lunghezza (`unsigned long` di solito nelle architetture a 64 bit) fissata dall'architettura (32, 64 bit). Però abbiamo detto che quando dichiariamo una variabile puntatore dobbiamo specificare anche il suo tipo che rappresenta il tipo della variabile puntata.
-Questo serve al compilatore per effettuare i calcoli quando si usa **l'aritmetica dei puntatori**. L'aritmetica dei puntatori ci permette di spostarci, usando l'operatore `+`, nelle celle di memoria adiacenti a quella puntata dal puntatore.
-Vediamo un esempio: se ho tre variabili intere (`a`, `b`, `c`) contigue in memoria (`int` occupa 4 byte) e ho un puntatore (`ptr_a`) che punta alla prima variabile (`a`), posso accedere ai due interi successivi (`b`, `c`) rispettivamente con `ptr_a + 1` (accedo a `b`) e `ptr_a + 2` (accedo a `c`).
-La sintassi `ptr_a + 1` o `ptr_a + 2` indica che ci vogliamo spostare dall'indirizzo puntato da `ptr_a` di un numero di byte pari alla dimensione di un intero (`ptr_a + 1`) o di due interi (`ptr_a + 2`) quindi nel nostro caso di interi a 4 byte il compilatore calcola per noi i byte dello scostamento in questo modo $ptr_a + 1*(4)$ e $ptr_a + 2*(4)$
-Ecco perché è necessario specificare il tipo del puntatore (il tipo della variabile puntata).
+<p align="justify">
+I puntatori sono variabili che hanno tutte la stessa lunghezza (<code>unsigned long</code> di solito nelle architetture a 64 bit) fissata dall'architettura (32, 64 bit). Però abbiamo detto che quando dichiariamo una variabile puntatore dobbiamo specificare anche il suo tipo che rappresenta il tipo della variabile puntata. Questo serve al compilatore per effettuare i calcoli quando si usa <strong>l'aritmetica dei puntatori</strong>. L'aritmetica dei puntatori ci permette di spostarci, usando l'operatore <code>+</code>, nelle celle di memoria adiacenti a quella puntata dal puntatore. Vediamo un esempio: se ho tre variabili intere (<code>a</code>, <code>b</code>, <code>c</code>) contigue in memoria (<code>int</code> occupa 4 byte) e ho un puntatore (<code>ptr_a</code>) che punta alla prima variabile (<code>a</code>), posso accedere ai due interi successivi (<code>b</code>, <code>c</code>) rispettivamente con <code>ptr_a + 1</code> (accedo a <code>b</code>) e <code>ptr_a + 2</code> (accedo a <code>c</code>). La sintassi <code>ptr_a + 1</code> o <code>ptr_a + 2</code> indica che ci vogliamo spostare dall'indirizzo puntato da <code>ptr_a</code> di un numero di byte pari alla dimensione di un intero (<code>ptr_a + 1</code>) o di due interi (<code>ptr_a + 2</code>) quindi nel nostro caso di interi a 4 byte il compilatore calcola per noi i byte dello scostamento in questo modo $ptr_a + 1*(4)$ e $ptr_a + 2*(4)$ Ecco perché è necessario specificare il tipo del puntatore (il tipo della variabile puntata).
+</p>
 
 ```c
 #include<stdio.h>
@@ -4206,7 +5172,9 @@ int main(void){
 }
 ```
 
-Come puoi vedere dall'output del programma, usando l'aritmetica dei puntatori riusciamo ad accedere agli interi (`b` e `c`) adiacenti alla variabile puntata da `ptr_a` (variabile `a`).
+<p align="justify">
+Come puoi vedere dall'output del programma, usando l'aritmetica dei puntatori riusciamo ad accedere agli interi (<code>b</code> e <code>c</code>) adiacenti alla variabile puntata da <code>ptr_a</code> (variabile <code>a</code>).
+</p>
 
 ```bash
 vagrant@ubuntu2204:/lab/6_pointers$ bin/33_pointers
@@ -4215,21 +5183,25 @@ b = 2
 a = 3
 ```
 
-L'aritmetica dei puntatori è potentissima, ipotizziamo ora di avere un intero il cui valore sia posto a $16909060$ (variabile `magic`).
-Il numero decimale $16909060$ ha una codifica binaria (32 bit, 4 byte) pari a:
+<p align="justify">
+L'aritmetica dei puntatori è potentissima, ipotizziamo ora di avere un intero il cui valore sia posto a $16909060$ (variabile <code>magic</code>). Il numero decimale $16909060$ ha una codifica binaria (32 bit, 4 byte) pari a:
+</p>
 
 ```math
 00000001 00000010 00000011 00000100
 ```
 
+<p align="justify">
 Lo stesso valore in esadecimale vale
+</p>
 
 ```math
 0x 01 02 03 04
 ```
 
-Il primo byte vale 01, il secondo 02, il terzo 03, il quarto 04.
-Ora, se recupero l'indirizzo di questa variabile e lo assegno a un puntatore a intero, cosa accade se faccio un cast da puntatore a intero a puntatore a carattere? Nulla, il valore dell'indirizzo non cambia, ma quando uso l'aritmetica dei puntatori per spostarmi con `+1` `+2` non aumento di 4 byte (dimensione di un intero), ma di 1 byte (dimensione di un carattere), perché il tipo del puntatore è cambiato (da `int *` a `char *`). Questo mi permette di spostarmi attraverso i quattro byte del mio intero e di stamparne il valore, come mostrato nel codice seguente.
+<p align="justify">
+Il primo byte vale 01, il secondo 02, il terzo 03, il quarto 04. Ora, se recupero l'indirizzo di questa variabile e lo assegno a un puntatore a intero, cosa accade se faccio un cast da puntatore a intero a puntatore a carattere? Nulla, il valore dell'indirizzo non cambia, ma quando uso l'aritmetica dei puntatori per spostarmi con <code>+1</code> <code>+2</code> non aumento di 4 byte (dimensione di un intero), ma di 1 byte (dimensione di un carattere), perché il tipo del puntatore è cambiato (da <code>int *</code> a <code>char *</code>). Questo mi permette di spostarmi attraverso i quattro byte del mio intero e di stamparne il valore, come mostrato nel codice seguente.
+</p>
 
 ```c
 #include<stdio.h>
@@ -4257,7 +5229,9 @@ int main(void){
 }
 ```
 
-Nell'output del programma, mostrato sotto, è interessante notare come siamo in configurazione **big endian** perché l'indirizzo più alto (`ptr_a + 4`) è assegnato al byte MSB (quello più a sinistra, che contiene il valore 01).
+<p align="justify">
+Nell'output del programma, mostrato sotto, è interessante notare come siamo in configurazione <strong>big endian</strong> perché l'indirizzo più alto (<code>ptr_a + 4</code>) è assegnato al byte MSB (quello più a sinistra, che contiene il valore 01).
+</p>
 
 ```bash
 vagrant@ubuntu2204:/lab/6_pointers$ bin/4_pointers
@@ -4271,29 +5245,49 @@ ptr_byte3    = 2
 ptr_byte4    = 1
 ```
 
+<p align="justify">
 L'aritmetica dei puntatori ci sarà molto utile quando lavoreremo con i vettori (array).
+</p>
 
 ### Vettori
 
-I vettori (o array) permettono di allocare un insieme di elementi **dello stesso tipo** in una zona contigua di memoria.
-La sintassi per dichiarare un array è la seguente:
+<p align="justify">
+I vettori (o array) permettono di allocare un insieme di elementi <strong>dello stesso tipo</strong> in una zona contigua di memoria. La sintassi per dichiarare un array è la seguente:
+</p>
 
 ```c
 nome-tipo identificatore[cardinalità];
 ```
 
-* `nome-tipo` è un tipo di dato predefinito o derivato
-* `identificatore` è il nome del vettore con cui si accede ai suoi elementi
-* `cardinalità` è **una costante** che indica il numero degli elementi
+<ul>
+  <li>
+    <p align="justify">
+    <code>nome-tipo</code> è un tipo di dato predefinito o derivato
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>identificatore</code> è il nome del vettore con cui si accede ai suoi elementi
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>cardinalità</code> è <strong>una costante</strong> che indica il numero degli elementi
+    </p>
+  </li>
+</ul>
   
+<p align="justify">
 Per esempio, per dichiarare un vettore di interi di dieci elementi:
+</p>
 
 ```c
 int vettore[10];
 ```
 
-Per accedere ai singoli elementi di un vettore (operazione di **indicizzazione**) basta indicare tra le parentesi quadre (`[` `]`) l'indice del vettore a cui si vuole accedere.
-**Il primo elemento di un vettore ha indice zero** quindi nel nostro esempio avremo:
+<p align="justify">
+Per accedere ai singoli elementi di un vettore (operazione di <strong>indicizzazione</strong>) basta indicare tra le parentesi quadre (<code>[</code> <code>]</code>) l'indice del vettore a cui si vuole accedere. <strong>Il primo elemento di un vettore ha indice zero</strong> quindi nel nostro esempio avremo:
+</p>
 
 ```c
 vettore[0] = 1 // il primo elemento di un vettore ha indice 0, lo inizializzo al valore 1
@@ -4302,13 +5296,27 @@ vettore[2] = 3
 vettore[9] = 10 // ultimo elemento del vettore, assume valore 10
 ```
 
-> [!IMPORTANT]
-> **Limiti indicizzazione di un vettore**
-> Dato un vettore di cardinalità N (N elementi contigui in memoria) il primo elemento avrà indice **0**, l'ultimo elemento avrà indice **N - 1**. Se si accede oltre il limite massimo il comportamento del programma è indefinito quindi non bisogna mai accedere a una cella di memoria oltre il limite dell'indice massimo.
+<table align="center">
+	<td>:exclamation: <b>Importante</b>
+	<p align=justify>
+ <strong>Limiti indicizzazione di un vettore</strong>
+	</p>
+	<p align=justify>
+ Dato un vettore di cardinalità N (N elementi contigui in memoria) il primo elemento avrà indice <strong>0</strong>, l'ultimo elemento avrà indice <strong>N - 1</strong>. Se si accede oltre il limite massimo il comportamento del programma è indefinito quindi non bisogna mai accedere a una cella di memoria oltre il limite dell'indice massimo.
+	</p>
+	</td>
+</table>
 
-> [!IMPORTANT]
-> **Nome del vettore**
-> Il nome (identificatore) di un vettore contiene l'indirizzo del primo elemento del vettore, in particolare è un **puntatore costante** al **primo elemento del vettore**. Questo vuol dire che per accedere all'elemento i-esimo entrambe le sintassi seguenti sono lecite
+<table align="center">
+	<td>:exclamation: <b>Importante</b>
+	<p align=justify>
+ <strong>Nome del vettore</strong>
+	</p>
+	<p align=justify>
+ Il nome (identificatore) di un vettore contiene l'indirizzo del primo elemento del vettore, in particolare è un <strong>puntatore costante</strong> al <strong>primo elemento del vettore</strong>. Questo vuol dire che per accedere all'elemento i-esimo entrambe le sintassi seguenti sono lecite
+	</p>
+	</td>
+</table>
 
 ```c
 #include<stdio.h>
@@ -4335,7 +5343,9 @@ int main(void){
 
 #### Inizializzare un vettore
 
+<p align="justify">
 Possiamo inizializzare esplicitamente tutti gli elementi di un vettore in questo modo:
+</p>
 
 ```c
 #include<stdio.h>
@@ -4356,7 +5366,9 @@ int main(void){
 }
 ```
 
+<p align="justify">
 Possiamo anche non esplicitare la cardinalità (parentesi quadre vuote) nella dichiarazione, che verrà allora dedotta dal numero dei valori specificati nell'inizializzazione.
+</p>
 
 ```c
 #include<stdio.h>
@@ -4372,7 +5384,9 @@ int main(void){
 }
 ```
 
+<p align="justify">
 Se vogliamo inizializzare tutti gli elementi del vettore allo stesso valore possiamo usare questa sintassi:
+</p>
 
 ```c
 #include<stdio.h>
@@ -4388,8 +5402,9 @@ int main(void){
 }
 ```
 
-Spesso nella dichiarazione di un vettore si usa la direttiva `#define` per specificare la cardinalità del vettore come mostrato nel codice seguente.
-Come puoi vedere, se dovessi cambiare la cardinalità non dovrei modificare la riga della dichiarazione e quella del ciclo, ma solamente la riga con la direttiva `#define`.
+<p align="justify">
+Spesso nella dichiarazione di un vettore si usa la direttiva <code>#define</code> per specificare la cardinalità del vettore come mostrato nel codice seguente. Come puoi vedere, se dovessi cambiare la cardinalità non dovrei modificare la riga della dichiarazione e quella del ciclo, ma solamente la riga con la direttiva <code>#define</code>.
+</p>
 
 ```c
 #include<stdio.h>
@@ -4407,7 +5422,9 @@ int main(void){
 }
 ```
 
+<p align="justify">
 Verifichiamo che gli elementi di un vettore siano effettivamente contigui stampando gli indirizzi dei singoli elementi. Per farlo sfruttiamo il fatto che il nome (identificatore) del vettore rappresenta l'indirizzo del primo elemento del vettore.
+</p>
 
 ```c
 #include<stdio.h>
@@ -4429,7 +5446,9 @@ int main(void){
 }
 ```
 
+<p align="justify">
 Questo è l'output prodotto dal codice precedente:
+</p>
 
 ```bash
 vagrant@ubuntu2204:/lab/7_array$ bin/4_array
@@ -4437,7 +5456,9 @@ vagrant@ubuntu2204:/lab/7_array$ bin/4_array
 0x7fff64c62430          0x7fff64c62434          0x7fff64c62438          0x7fff64c6243c          0x7fff64c62440
 ```
 
-Un intero occupa quattro byte sulla mia macchina (ricorda che puoi sempre usare `sizeof(int)`).
+<p align="justify">
+Un intero occupa quattro byte sulla mia macchina (ricorda che puoi sempre usare <code>sizeof(int)</code>).
+</p>
 
 ```math
 vettore + 0 = 0x7fff64c62430
@@ -4461,7 +5482,9 @@ vettore + 4 = 0x7fff64c6243c + 4 = 0x7fff64c62440
 
 #### Dimensione vettore (`sizeof`)
 
-Abbiamo visto come l'operatore `sizeof` ci permetta di conoscere il numero di byte occupati da una variabile o da un tipo di dato. Possiamo sfruttare questo operatore per conoscere il numero di elementi di un vettore a tempo di esecuzione svolgendo semplicemente la divisione tra il numero di byte totali occupati dal vettore e il numero di byte occupati dal singolo elemento del vettore (ricordiamo che gli elementi di un vettore sono tutti dello stesso tipo e allocati in celle contigue in memoria).
+<p align="justify">
+Abbiamo visto come l'operatore <code>sizeof</code> ci permetta di conoscere il numero di byte occupati da una variabile o da un tipo di dato. Possiamo sfruttare questo operatore per conoscere il numero di elementi di un vettore a tempo di esecuzione svolgendo semplicemente la divisione tra il numero di byte totali occupati dal vettore e il numero di byte occupati dal singolo elemento del vettore (ricordiamo che gli elementi di un vettore sono tutti dello stesso tipo e allocati in celle contigue in memoria).
+</p>
 
 ```c
 #include<stdio.h>
@@ -4488,7 +5511,9 @@ Un singolo intero occupa 4 byte
 Il vettore ha 400(byte)/4(byte) = 100 elementi
 ```
 
-Volendo è possibile definire una macro da usare ogni volta che è necessario calcolare il numero di elementi di un array, sfruttando il fatto che il nome del vettore è un **puntatore costante** al primo elemento del vettore:
+<p align="justify">
+Volendo è possibile definire una macro da usare ogni volta che è necessario calcolare il numero di elementi di un array, sfruttando il fatto che il nome del vettore è un <strong>puntatore costante</strong> al primo elemento del vettore:
+</p>
 
 ```c
 #define ARRAY_SIZE(x) sizeof(x)/sizeof(*x)
@@ -4517,9 +5542,9 @@ int main(void){
 
 ### Relazione tra array e puntatori
 
-Abbiamo detto che il nome di un array è un puntatore costante al primo elemento del vettore.
-Quello che non abbiamo detto è che i puntatori, come gli array, possono essere indicizzati con le parentesi `[` `]` esattamente come i vettori.
-La differenza tra nome di un array e puntatori è che il primo è un puntatore costante quindi non è possibile fare le operazioni seguenti:
+<p align="justify">
+Abbiamo detto che il nome di un array è un puntatore costante al primo elemento del vettore. Quello che non abbiamo detto è che i puntatori, come gli array, possono essere indicizzati con le parentesi <code>[</code> <code>]</code> esattamente come i vettori. La differenza tra nome di un array e puntatori è che il primo è un puntatore costante quindi non è possibile fare le operazioni seguenti:
+</p>
 
 ```c
 #define N 300
@@ -4649,17 +5674,25 @@ vagrant@ubuntu2204:/lab/6_pointers$ bin/8_pointers
 
 ### Le stringhe
 
-Il linguaggio C non ha un tipo predefinito per le stringhe, queste vengono implementate come array di caratteri.
-Una stringa in C deve essere racchiusa tra **doppi apici**: `"` in questo modo
+<p align="justify">
+Il linguaggio C non ha un tipo predefinito per le stringhe, queste vengono implementate come array di caratteri. Una stringa in C deve essere racchiusa tra <strong>doppi apici</strong>: <code>"</code> in questo modo
+</p>
 
 ```c
 "Questa è una stringa"
 ```
 
-**Una costante stringa come quella precedente è trattata dal compilatore come un puntatore a carattere** quindi per assegnare una costante stringa a una variabile abbiamo due possibilità. La prima è dichiarare un array di caratteri sufficientemente capiente per contenere tutti i caratteri della stringa. Tutte le stringhe vengono terminate (ultimo elemento della stringa) dal carattere `\0` detto di fine stringa, che ovviamente non è stampabile ma serve per delimitare la fine della stringa. Nel calcolo della dimensione del vettore di caratteri che conterrà la stringa dobbiamo quindi tenere conto del `\0` e aumentare la dimensione di 1; per esempio: la stringa "ciao" è composta da quattro caratteri, dobbiamo dichiarare un array di 5 caratteri per ospitare anche il carattere `\0`, in questo modo:
+<p align="justify">
+<strong>Una costante stringa come quella precedente è trattata dal compilatore come un puntatore a carattere</strong> quindi per assegnare una costante stringa a una variabile abbiamo due possibilità. La prima è dichiarare un array di caratteri sufficientemente capiente per contenere tutti i caratteri della stringa. Tutte le stringhe vengono terminate (ultimo elemento della stringa) dal carattere <code>\0</code> detto di fine stringa, che ovviamente non è stampabile ma serve per delimitare la fine della stringa. Nel calcolo della dimensione del vettore di caratteri che conterrà la stringa dobbiamo quindi tenere conto del <code>\0</code> e aumentare la dimensione di 1; per esempio: la stringa "ciao" è composta da quattro caratteri, dobbiamo dichiarare un array di 5 caratteri per ospitare anche il carattere <code>\0</code>, in questo modo:
+</p>
 
-> [!NOTE]
-> Il carattere di fine stringa `\0` è diverso dal carattere '0' (il valore in ASCII del carattere '0' è 48). `\0` in ASCII ha valore 0.
+<table align="center">
+	<td>:pill: <b>Nota</b>
+	<p align=justify>
+ Il carattere di fine stringa <code>\0</code> è diverso dal carattere '0' (il valore in ASCII del carattere '0' è 48). <code>\0</code> in ASCII ha valore 0.
+	</p>
+	</td>
+</table>
 
 ```c
 #include<stdio.h>
@@ -4683,10 +5716,17 @@ c       i       a       o
 99      105     97      111     0
 ```
 
-> [!CAUTION]
-> I doppi apici `"` devono essere utilizzati per le stringhe, i singoli apici `'` per i caratteri. Fai attenzione a non scambiare i simboli tra loro.
+<table align="center">
+	<td>&#9888; <b>Attenzione</b>
+	<p align=justify>
+ I doppi apici <code>"</code> devono essere utilizzati per le stringhe, i singoli apici <code>'</code> per i caratteri. Fai attenzione a non scambiare i simboli tra loro.
+	</p>
+	</td>
+</table>
 
-Un'altra possibilità per assegnare una costante stringa a una variabile è quella di utilizzare una variabile di tipo puntatore a carattere `char *` in questo modo:
+<p align="justify">
+Un'altra possibilità per assegnare una costante stringa a una variabile è quella di utilizzare una variabile di tipo puntatore a carattere <code>char *</code> in questo modo:
+</p>
 
 ```c
 #include<stdio.h>
@@ -4709,9 +5749,13 @@ vagrant@ubuntu2204:/lab/8_strings$ bin/1_strings
 c       i       a       o
 99      105     97      111     0
 ```
-In questo modo non ci dobbiamo preoccupare di tenere conto del carattere di fine stringa `\0`.
+<p align="justify">
+In questo modo non ci dobbiamo preoccupare di tenere conto del carattere di fine stringa <code>\0</code>.
+</p>
 
+<p align="justify">
 Abbiamo visto che c'è una relazione tra array e puntatori, il compilatore infatti ci permette di dichiarare una stringa anche usando un array con le parentesi quadre vuote in questo modo:
+</p>
 
 ```c
 #include<stdio.h>
@@ -4734,12 +5778,15 @@ vagrant@ubuntu2204:/lab/8_strings$ bin/2_strings
 c       i       a       o
 99      105     97      111     0
 ```
-Anche in questo caso possiamo scordarci di `\0`.
+<p align="justify">
+Anche in questo caso possiamo scordarci di <code>\0</code>.
+</p>
 
 ### Dettagli sull'inizializzazione
 
-Anche se esistono due modi diversi per dichiarare una stringa (il primo pensandola come un array di caratteri e il secondo pensandola come un literal puntato da un puntatore a carattere), esistono delle differenze sottili tra i due metodi che vanno oltre il non doversi preoccupare di allocare spazio per '\0'.
-Vediamole in questo esempio:
+<p align="justify">
+Anche se esistono due modi diversi per dichiarare una stringa (il primo pensandola come un array di caratteri e il secondo pensandola come un literal puntato da un puntatore a carattere), esistono delle differenze sottili tra i due metodi che vanno oltre il non doversi preoccupare di allocare spazio per <code>\0</code>. Vediamole in questo esempio:
+</p>
 
 ```c
 #include<stdio.h>
@@ -4796,7 +5843,9 @@ Segmentation fault (core dumped)
 
 ### Stampare una stringa
 
-Fare un ciclo `for` per stampare carattere dopo carattere tutti gli elementi della stringa (come fatto sopra) non è una grande idea, per stampare una stringa basta usare `%s` con la funzione `printf()` passando l'indirizzo base della stringa (l'indirizzo del primo carattere).
+<p align="justify">
+Fare un ciclo <code>for</code> per stampare carattere dopo carattere tutti gli elementi della stringa (come fatto sopra) non è una grande idea, per stampare una stringa basta usare <code>%s</code> con la funzione <code>printf()</code> passando l'indirizzo base della stringa (l'indirizzo del primo carattere).
+</p>
 
 
 ```c
@@ -4825,9 +5874,9 @@ ciao
 
 ### Funzioni
 
-Quando un certo numero di istruzioni viene usato più volte nel codice, piuttosto che copiarle e incollarle in tutte le parti dove ne abbiamo bisogno, è preferibile raggrupparle in una funzione.
-Una funzione è una porzione di codice che può essere richiamata in qualsiasi parte del programma e di solito raggruppa le istruzioni che cooperano per svolgere un certo compito. Ogni funzione ritorna uno e un solo valore (di solito un intero che informa circa il successo o meno delle operazioni svolte oppure direttamente il risultato dell'operazione) e riceve una serie di parametri in ingresso (può anche non accettare alcun parametro in ingresso se non ne ha bisogno).
-Una funzione ha questa forma:
+<p align="justify">
+Quando un certo numero di istruzioni viene usato più volte nel codice, piuttosto che copiarle e incollarle in tutte le parti dove ne abbiamo bisogno, è preferibile raggrupparle in una funzione. Una funzione è una porzione di codice che può essere richiamata in qualsiasi parte del programma e di solito raggruppa le istruzioni che cooperano per svolgere un certo compito. Ogni funzione ritorna uno e un solo valore (di solito un intero che informa circa il successo o meno delle operazioni svolte oppure direttamente il risultato dell'operazione) e riceve una serie di parametri in ingresso (può anche non accettare alcun parametro in ingresso se non ne ha bisogno). Una funzione ha questa forma:
+</p>
 
 ```c
 tipo-valore-ritorno nome-funzione(tipo-parametro-1 nome-parametro-1, ..., tipo-parametro-N nome-parametro-N){
@@ -4837,24 +5886,37 @@ tipo-valore-ritorno nome-funzione(tipo-parametro-1 nome-parametro-1, ..., tipo-p
 }
 ```
 
-La prima riga esclusa la parentesi graffa aperta `{` è detta **prototipo** della funzione
+<p align="justify">
+La prima riga esclusa la parentesi graffa aperta <code>{</code> è detta <strong>prototipo</strong> della funzione
+</p>
 
 ```c
 tipo-valore-ritorno nome-funzione(tipo-parametro-1 nome-parametro-1, ..., tipo-parametro-N nome-parametro-N)
 ```
 
+<p align="justify">
 In realtà il nome dei parametri in ingresso è opzionale, quindi il prototipo seguente (più compatto) è comunque corretto.
+</p>
 
 ```c
 tipo-valore-ritorno nome-funzione(tipo-parametro-1, ..., tipo-parametro-N)
 ```
 
+<p align="justify">
 Specificare i nomi dei parametri aiuta chi legge il codice a comprendere il tipo di operazioni che la funzione svolge, è cosa buona e giusta aggiungerli nella dichiarazione della funzione (nel prototipo).
+</p>
 
-> [!IMPORTANT]
-> **Prototipo** di funzione: consiste nel tipo di ritorno, nel nome della funzione e nella lista dei tipi dei parametri in ingresso (se presenti)
+<table align="center">
+	<td>:exclamation: <b>Importante</b>
+	<p align=justify>
+ <strong>Prototipo</strong> di funzione: consiste nel tipo di ritorno, nel nome della funzione e nella lista dei tipi dei parametri in ingresso (se presenti)
+	</p>
+	</td>
+</table>
 
-Tutto il codice compreso tra le parentesi graffe `{` `}` è il **corpo** (body) della funzione:
+<p align="justify">
+Tutto il codice compreso tra le parentesi graffe <code>{</code> <code>}</code> è il <strong>corpo</strong> (body) della funzione:
+</p>
 
 ```c
 {
@@ -4864,7 +5926,9 @@ Tutto il codice compreso tra le parentesi graffe `{` `}` è il **corpo** (body) 
 }
 ```
 
+<p align="justify">
 Quindi se ho questa funzione
+</p>
 
 ```c
 int differenza(int minuendo, int sottraendo)
@@ -4873,19 +5937,25 @@ int differenza(int minuendo, int sottraendo)
 }
 ```
 
+<p align="justify">
 questo è il suo prototipo
+</p>
 
 ```c
 int differenza(int minuendo, int sottraendo)
 ```
 
+<p align="justify">
 o in forma compatta
+</p>
 
 ```c
 int differenza(int, int)
 ```
 
+<p align="justify">
 questo è il suo corpo
+</p>
 
 ```c
 {
@@ -4893,16 +5963,24 @@ questo è il suo corpo
 }
 ```
 
+<p align="justify">
 Le funzioni possono essere dichiarate e definite.
+</p>
 
 ### Dichiarazione di funzione
-**La dichiarazione è opzionale** e non prevede che si specifichino le istruzioni che compongono la funzione ma **solo il suo prototipo**. La dichiarazione serve solo per informare il compilatore circa l'esistenza di una certa funzione da qualche altra parte nel codice sorgente. In questo modo, quando il compilatore incontrerà una chiamata alla funzione, avrà (grazie alla dichiarazione che precede la chiamata) le informazioni necessarie per verificare la correttezza della chiamata (i parametri sono dei tipi attesi, nel numero corretto, il valore di ritorno coincide con quello nel prototipo, etc). Ovviamente **la dichiarazione della funzione deve sempre precedere la prima invocazione della funzione stessa**. La definizione (che vedremo sotto) può essere inserita in qualunque punto del codice sorgente. **La dichiarazione è il prototipo della funzione**.
+<p align="justify">
+<strong>La dichiarazione è opzionale</strong> e non prevede che si specifichino le istruzioni che compongono la funzione ma <strong>solo il suo prototipo</strong>. La dichiarazione serve solo per informare il compilatore circa l'esistenza di una certa funzione da qualche altra parte nel codice sorgente. In questo modo, quando il compilatore incontrerà una chiamata alla funzione, avrà (grazie alla dichiarazione che precede la chiamata) le informazioni necessarie per verificare la correttezza della chiamata (i parametri sono dei tipi attesi, nel numero corretto, il valore di ritorno coincide con quello nel prototipo, etc). Ovviamente <strong>la dichiarazione della funzione deve sempre precedere la prima invocazione della funzione stessa</strong>. La definizione (che vedremo sotto) può essere inserita in qualunque punto del codice sorgente. <strong>La dichiarazione è il prototipo della funzione</strong>.
+</p>
 
 ### Uso di void nelle funzioni
 
-Le funzioni possono non accettare alcun parametro in ingresso o non restituire alcun valore di ritorno. Per informare di questo il compilatore si usa il tipo `void`. Per esempio:
+<p align="justify">
+Le funzioni possono non accettare alcun parametro in ingresso o non restituire alcun valore di ritorno. Per informare di questo il compilatore si usa il tipo <code>void</code>. Per esempio:
+</p>
 
+<p align="justify">
 Questa funzione non ritorna nulla:
+</p>
 
 ```c
 void stampa(char *stringa){
@@ -4910,7 +5988,9 @@ void stampa(char *stringa){
 }
 ```
 
+<p align="justify">
 Questa non accetta alcun parametro in ingresso
+</p>
 
 ```c
 char *saluta(void){
@@ -4920,8 +6000,9 @@ char *saluta(void){
 
 ### Definizione di funzione
 
-La definizione di funzione include il prototipo e le istruzioni che formano il corpo della funzione. Una definizione di funzione può comparire solo una volta nel codice sorgente. La definizione di funzione termina quando viene eseguita l'ultima istruzione o quando viene incontrata l'istruzione `return`. Quando l'istruzione termina, il programma prosegue dall'istruzione successiva alla chiamata della funzione appena terminata. Lo scopo dell'istruzione `return` è quello di specificare il valore di ritorno della funzione.
-Una funzione può anche avere un corpo vuoto:
+<p align="justify">
+La definizione di funzione include il prototipo e le istruzioni che formano il corpo della funzione. Una definizione di funzione può comparire solo una volta nel codice sorgente. La definizione di funzione termina quando viene eseguita l'ultima istruzione o quando viene incontrata l'istruzione <code>return</code>. Quando l'istruzione termina, il programma prosegue dall'istruzione successiva alla chiamata della funzione appena terminata. Lo scopo dell'istruzione <code>return</code> è quello di specificare il valore di ritorno della funzione. Una funzione può anche avere un corpo vuoto:
+</p>
 
 ```c
 void do_nothing(void){
@@ -4929,13 +6010,19 @@ void do_nothing(void){
 }
 ```
 
-> [!CAUTION]
-> Un programma in linguaggio C deve almeno contenere la definizione della funzione main(), da cui inizia l'esecuzione del programma.
+<table align="center">
+	<td>&#9888; <b>Attenzione</b>
+	<p align=justify>
+ Un programma in linguaggio C deve almeno contenere la definizione della funzione main(), da cui inizia l'esecuzione del programma.
+	</p>
+	</td>
+</table>
 
 ### Chiamata di funzione
 
-La chiamata di una funzione (invocazione di funzione) è l'operazione con la quale si richiama l'esecuzione della funzione stessa. è possibile richiamare 0 o N volte una funzione in un qualunque punto del programma. Ogni volta che la funzione viene invocata, l'esecuzione del programma si sposta dal punto di invocazione alla prima istruzione del corpo della funzione. Quando una funzione termina la propria esecuzione, il flusso di esecuzione ritorna al punto in cui la funzione era stata invocata e continua a eseguire l'istruzione successiva.
-Vediamo un esempio:
+<p align="justify">
+La chiamata di una funzione (invocazione di funzione) è l'operazione con la quale si richiama l'esecuzione della funzione stessa. è possibile richiamare 0 o N volte una funzione in un qualunque punto del programma. Ogni volta che la funzione viene invocata, l'esecuzione del programma si sposta dal punto di invocazione alla prima istruzione del corpo della funzione. Quando una funzione termina la propria esecuzione, il flusso di esecuzione ritorna al punto in cui la funzione era stata invocata e continua a eseguire l'istruzione successiva. Vediamo un esempio:
+</p>
 
 ```c
 #include<stdio.h>
@@ -4986,12 +6073,21 @@ vagrant@ubuntu2204:/lab/9_functions$ bin/0_functions
 
 ### Passaggio di parametri per valore
 
-I parametri di ingresso di una funzione sono **passati sempre per valore**: la funzione utilizza **una nuova variabile** (nello stack della funzione) per immagazzinare **una copia del valore** contenuto nella variabile passata come parametro in ingresso alla funzione dal chiamante. Anche se dentro la funzione il valore passato in ingresso viene alterato (incremento/decremento etc), siccome questo valore è stato copiato in una variabile diversa rispetto a quella passata in ingresso dal chiamante, il valore nella variabile del chiamante rimane inalterato; sarà modificato il valore nella variabile (nuova) allocata nello stack della funzione quando questa è stata invocata.
+<p align="justify">
+I parametri di ingresso di una funzione sono <strong>passati sempre per valore</strong>: la funzione utilizza <strong>una nuova variabile</strong> (nello stack della funzione) per immagazzinare <strong>una copia del valore</strong> contenuto nella variabile passata come parametro in ingresso alla funzione dal chiamante. Anche se dentro la funzione il valore passato in ingresso viene alterato (incremento/decremento etc), siccome questo valore è stato copiato in una variabile diversa rispetto a quella passata in ingresso dal chiamante, il valore nella variabile del chiamante rimane inalterato; sarà modificato il valore nella variabile (nuova) allocata nello stack della funzione quando questa è stata invocata.
+</p>
 
-> [!IMPORTANT]
-> Le variabili allocate all'interno di una funzione sono **locali** alla funzione. La memoria per queste variabili viene allocata solo al momento dell'invocazione della funzione e questa memoria è accessibile solo all'interno della funzione. Quando la funzione termina la memoria viene completamente deallocata. Questa porzione di memoria usata per variabili locali delle funzioni è detta **stack**. Lo **stack** cresce verso il basso: l'allocazione della memoria sullo stack avviene partendo dagli indirizzi più alti verso gli indirizzi più bassi. La deallocazione della memoria sullo stack avviene partendo dall'ultimo elemento allocato fino al primo procedendo quindi in ordine inverso rispetto all'ordine di allocazione. Lo stack viene utilizzato per memorizzare l'indirizzo di ritorno della funzione (l'indirizzo dell'istruzione successiva del chiamante), il valore dei parametri di ritorno e dei parametri in ingresso alla funzione e per allocare la memoria per tutte le variabili locali della funzione stessa. Lo spazio sullo stack per la funzione viene allocato al momento dell'invocazione della funzione e deallocato al termine della sua esecuzione (ultima istruzione della funzione o chiamata a `return`).
+<table align="center">
+	<td>:exclamation: <b>Importante</b>
+	<p align=justify>
+ Le variabili allocate all'interno di una funzione sono <strong>locali</strong> alla funzione. La memoria per queste variabili viene allocata solo al momento dell'invocazione della funzione e questa memoria è accessibile solo all'interno della funzione. Quando la funzione termina la memoria viene completamente deallocata. Questa porzione di memoria usata per variabili locali delle funzioni è detta <strong>stack</strong>. Lo <strong>stack</strong> cresce verso il basso: l'allocazione della memoria sullo stack avviene partendo dagli indirizzi più alti verso gli indirizzi più bassi. La deallocazione della memoria sullo stack avviene partendo dall'ultimo elemento allocato fino al primo procedendo quindi in ordine inverso rispetto all'ordine di allocazione. Lo stack viene utilizzato per memorizzare l'indirizzo di ritorno della funzione (l'indirizzo dell'istruzione successiva del chiamante), il valore dei parametri di ritorno e dei parametri in ingresso alla funzione e per allocare la memoria per tutte le variabili locali della funzione stessa. Lo spazio sullo stack per la funzione viene allocato al momento dell'invocazione della funzione e deallocato al termine della sua esecuzione (ultima istruzione della funzione o chiamata a <code>return</code>).
+	</p>
+	</td>
+</table>
 		
+<p align="justify">
 Cerchiamo di capire con un esempio:
+</p>
 
 ```c
 #include<stdio.h>
@@ -5044,9 +6140,9 @@ risultato                    : 103
 
 ### Passaggio di parametri per indirizzo
 
-Se si vuole modificare il valore della variabile del chiamante, bisogna passare alla funzione l'indirizzo della variabile (usando una variabile puntatore) del chiamante da modificare. Ovviamente il passaggio dell'indirizzo dal chiamante alla funzione è fatto per copia: cioè l'indirizzo della variabile del chiamante è copiato all'interno di una nuova variabile di tipo puntatore, ma avendo a disposizione l'indirizzo della variabile del chiamante la funzione potrà (attraverso la dereferenziazione) accedere al reale valore della variabile originale.
-Per ottenere un passaggio per indirizzo nel codice precedente dobbiamo trasformare il primo parametro della funzione (variabile `valore_f`) da `int` a `int *`, rendendola un puntatore pronto a ospitare l'indirizzo della variabile `valore` (la variabile del chiamante da modificare). Per modificare all'interno della funzione il valore della variabile `valore` basterà usare la dereferenziazione sul puntatore `valore_f` in questo modo `*valore_f`, di fatto accedendo alla locazione di memoria riservata alla variabile `valore`.
-Sotto il codice modificato:
+<p align="justify">
+Se si vuole modificare il valore della variabile del chiamante, bisogna passare alla funzione l'indirizzo della variabile (usando una variabile puntatore) del chiamante da modificare. Ovviamente il passaggio dell'indirizzo dal chiamante alla funzione è fatto per copia: cioè l'indirizzo della variabile del chiamante è copiato all'interno di una nuova variabile di tipo puntatore, ma avendo a disposizione l'indirizzo della variabile del chiamante la funzione potrà (attraverso la dereferenziazione) accedere al reale valore della variabile originale. Per ottenere un passaggio per indirizzo nel codice precedente dobbiamo trasformare il primo parametro della funzione (variabile <code>valore_f</code>) da <code>int</code> a <code>int *</code>, rendendola un puntatore pronto a ospitare l'indirizzo della variabile <code>valore</code> (la variabile del chiamante da modificare). Per modificare all'interno della funzione il valore della variabile <code>valore</code> basterà usare la dereferenziazione sul puntatore <code>valore_f</code> in questo modo <code>*valore_f</code>, di fatto accedendo alla locazione di memoria riservata alla variabile <code>valore</code>. Sotto il codice modificato:
+</p>
 
 ```c
 #include<stdio.h>
@@ -5097,15 +6193,32 @@ valore dopo     l'invocazione: 103
 risultato                    : 103
 ```
 
-> [!IMPORTANT]
-> L'utilizzo della tecnica del passaggio di parametri per indirizzo permette al programmatore di:
-* ritornare più di un valore da una funzione
-* evitare di perdere tempo nella copia di dati di grandi dimensioni passando solo l'indirizzo e non il dato completo
+<table align="center">
+	<td>:exclamation: <b>Importante</b>
+	<p align=justify>
+ L'utilizzo della tecnica del passaggio di parametri per indirizzo permette al programmatore di:
+	</p>
+	</td>
+</table>
+<ul>
+  <li>
+    <p align="justify">
+    ritornare più di un valore da una funzione
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    evitare di perdere tempo nella copia di dati di grandi dimensioni passando solo l'indirizzo e non il dato completo
+    </p>
+  </li>
+</ul>
 
 
 ### Passaggio di puntatori const
 
-Quando è necessario passare dati di grandi dimensioni a una funzione è quindi cosa buona e giusta passare solo il puntatore al dato (tramite variabile puntatore: passaggio per indirizzo). Abbiamo visto che passando il puntatore di una variabile a una funzione applichiamo un passaggio per indirizzo e il dato originale nel chiamante è di fatto modificabile dalla funzione che lo riceve. Se non vogliamo che la funzione sia in grado di modificare il dato passato per indirizzo attraverso la dereferenziazione del puntatore possiamo dichiarare il puntatore `const` nel prototipo della funzione rendendo di fatto il dato a sola lettura dentro la funzione. Vediamo un esempio:
+<p align="justify">
+Quando è necessario passare dati di grandi dimensioni a una funzione è quindi cosa buona e giusta passare solo il puntatore al dato (tramite variabile puntatore: passaggio per indirizzo). Abbiamo visto che passando il puntatore di una variabile a una funzione applichiamo un passaggio per indirizzo e il dato originale nel chiamante è di fatto modificabile dalla funzione che lo riceve. Se non vogliamo che la funzione sia in grado di modificare il dato passato per indirizzo attraverso la dereferenziazione del puntatore possiamo dichiarare il puntatore <code>const</code> nel prototipo della funzione rendendo di fatto il dato a sola lettura dentro la funzione. Vediamo un esempio:
+</p>
 
 ```c
 #include<stdio.h>
@@ -5138,7 +6251,9 @@ xxx voglio essere modificata
 
 ### Array come parametri a funzioni
 
+<p align="justify">
 In una definizione di funzione, un parametro in ingresso dichiarato come array è in realtà un puntatore. Quindi, quando un array viene passato a una funzione, viene fatto un passaggio per valore dell'indirizzo del primo elemento dell'array; gli elementi degli array non vengono mai copiati. Per convenienza notazionale, il compilatore permette l'utilizzo della notazione con le parentesi quadre (vuote) degli array per dichiarare parametri di tipo puntatore. Vediamo un esempio:
+</p>
 
 ```c
 #include<stdio.h>
@@ -5180,21 +6295,34 @@ vagrant@ubuntu2204:/lab/9_functions$ bin/3_functions
 
 ### Allocazione dinamica della memoria
 
-Quando si dichiara una variabile, il compilatore alloca automaticamente lo spazio in memoria necessario per memorizzare la variabile. La quantità di spazio allocato dipende dal tipo della variabile. Quando si dichiara un puntatore a un determinato tipo, viene allocato spazio in memoria per il puntatore soltanto (che è sempre lo stesso `unsigned long`, 8 byte) indipendentemente dalla dimensione del tipo puntato. Il puntatore potrà successivamente essere assegnato per contenere l'indirizzo di una variabile dello stesso tipo del puntatore e da quel momento si potrà utilizzare il puntatore per accedere al contenuto della variabile passando per il suo indirizzo (usando l'operazione di dereferenziazione dei puntatori che abbiamo studiato).
-Questo tipo di allocazione della memoria avviene a tempo di compilazione ed è spesso detta **allocazione statica della memoria**. L'allocazione statica può risultare inutile soprattutto nel caso dei vettori se la dimensione (il numero di elementi del vettore) non è nota a tempo di compilazione ma solo durante l'esecuzione del programma (ad esempio il numero degli elementi è scelto dall'utente a ogni nuova esecuzione). Il linguaggio C permette di effettuare l'allocazione di memoria a tempo di esecuzione; questo tipo di allocazione è detta: **allocazione dinamica della memoria**.
-Esistono diverse funzioni offerte dalla libreria standard del C per allocare dinamicamente la memoria a tempo di esecuzione. Per adesso vediamo la più comune: la funzione **malloc()**.
-Questo è il suo prototipo:
+<p align="justify">
+Quando si dichiara una variabile, il compilatore alloca automaticamente lo spazio in memoria necessario per memorizzare la variabile. La quantità di spazio allocato dipende dal tipo della variabile. Quando si dichiara un puntatore a un determinato tipo, viene allocato spazio in memoria per il puntatore soltanto (che è sempre lo stesso <code>unsigned long</code>, 8 byte) indipendentemente dalla dimensione del tipo puntato. Il puntatore potrà successivamente essere assegnato per contenere l'indirizzo di una variabile dello stesso tipo del puntatore e da quel momento si potrà utilizzare il puntatore per accedere al contenuto della variabile passando per il suo indirizzo (usando l'operazione di dereferenziazione dei puntatori che abbiamo studiato). Questo tipo di allocazione della memoria avviene a tempo di compilazione ed è spesso detta <strong>allocazione statica della memoria</strong>. L'allocazione statica può risultare inutile soprattutto nel caso dei vettori se la dimensione (il numero di elementi del vettore) non è nota a tempo di compilazione ma solo durante l'esecuzione del programma (ad esempio il numero degli elementi è scelto dall'utente a ogni nuova esecuzione). Il linguaggio C permette di effettuare l'allocazione di memoria a tempo di esecuzione; questo tipo di allocazione è detta: <strong>allocazione dinamica della memoria</strong>. Esistono diverse funzioni offerte dalla libreria standard del C per allocare dinamicamente la memoria a tempo di esecuzione. Per adesso vediamo la più comune: la funzione <strong>malloc()</strong>. Questo è il suo prototipo:
+</p>
 
 ```c
 void * malloc(size_t n);
 ```
 
-La funzione `malloc()` alloca n byte contigui in memoria e ritorna, in caso di successo, il puntatore al primo elemento della memoria allocata o, in caso di errore, `NULL`.
+<p align="justify">
+La funzione <code>malloc()</code> alloca n byte contigui in memoria e ritorna, in caso di successo, il puntatore al primo elemento della memoria allocata o, in caso di errore, <code>NULL</code>.
+</p>
 
-* `size_t n`: n è il numero di byte da allocare contigui in memoria
-* `void *`: ritorna un puntatore a void (che può essere trasformato in un puntatore di qualsiasi tipo) che punta al primo elemento della memoria contigua allocata
+<ul>
+  <li>
+    <p align="justify">
+    <code>size_t n</code>: n è il numero di byte da allocare contigui in memoria
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>void *</code>: ritorna un puntatore a void (che può essere trasformato in un puntatore di qualsiasi tipo) che punta al primo elemento della memoria contigua allocata
+    </p>
+  </li>
+</ul>
 
-Ritornando `NULL` in caso di errore, è cosa buona e giusta, prima di usare la memoria allocata, effettuare un controllo sul puntatore tornato da `malloc()` in questo modo:
+<p align="justify">
+Ritornando <code>NULL</code> in caso di errore, è cosa buona e giusta, prima di usare la memoria allocata, effettuare un controllo sul puntatore tornato da <code>malloc()</code> in questo modo:
+</p>
 
 ```c
 	int *ptr = (int *)malloc(sizeof(int));
@@ -5203,7 +6331,9 @@ Ritornando `NULL` in caso di errore, è cosa buona e giusta, prima di usare la m
 	}
 ```
 
+<p align="justify">
 o anche esplicitamente
+</p>
 
 ```c
 	int *ptr = (int *)malloc(sizeof(int));
@@ -5213,9 +6343,16 @@ o anche esplicitamente
 
 ```
 
-> [!CAUTION]
-> Tutta la memoria allocata dinamicamente deve essere rilasciata quando non più necessaria. A questo scopo si richiama la funzione free() che accetta come parametro un puntatore contenente la memoria da deallocare.
-> Chiamare free() su un puntatore non allocato o precedentemente deallocato può portare a comportamenti del programma imprevedibili. Chiamare free() su un puntatore nullo (`NULL`) non ha alcun effetto.
+<table align="center">
+	<td>&#9888; <b>Attenzione</b>
+	<p align=justify>
+ Tutta la memoria allocata dinamicamente deve essere rilasciata quando non più necessaria. A questo scopo si richiama la funzione free() che accetta come parametro un puntatore contenente la memoria da deallocare.
+	</p>
+	<p align=justify>
+ Chiamare free() su un puntatore non allocato o precedentemente deallocato può portare a comportamenti del programma imprevedibili. Chiamare free() su un puntatore nullo (<code>NULL</code>) non ha alcun effetto.
+	</p>
+	</td>
+</table>
 
 ```c
 #include<stdio.h>
@@ -5274,14 +6411,17 @@ dinamico: 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14
 
 ### Array bidimensionali
 
-Gli array sono memorizzati in modo contiguo (linearmente) in memoria ma spesso è utile pensare a vettori a due dimensioni (detti anche matrici) in cui un elemento del vettore a due dimensioni è identificato da due indici: **indice di riga** e **indice di colonna**.
-La dichiarazione di una matrice prevede quindi due cardinalità per il numero delle righe e per il numero delle colonne.
+<p align="justify">
+Gli array sono memorizzati in modo contiguo (linearmente) in memoria ma spesso è utile pensare a vettori a due dimensioni (detti anche matrici) in cui un elemento del vettore a due dimensioni è identificato da due indici: <strong>indice di riga</strong> e <strong>indice di colonna</strong>. La dichiarazione di una matrice prevede quindi due cardinalità per il numero delle righe e per il numero delle colonne.
+</p>
 
 ```c
 nome-tipo identificatore [ cardinalita-riga] [cardinalita-colonna]
 ```
 
+<p align="justify">
 Per esempio per allocare spazio per una matrice con 6 righe e 7 colonne dovremmo fare:
+</p>
 
 ```c
 int mat[6][7];
@@ -5289,16 +6429,28 @@ int mat[6][7];
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/matrici.png)
 
-Come puoi vedere nella figura precedente, anche se da un punto di vista di indicizzazione `mat` ha due indici quindi è bidimensionale, in memoria lo spazio allocato è lineare e contiguo (la RAM ha una struttura monodimensionale): viene allocato spazio contiguo per 42 interi.
-Rimane la relazione tra array e puntatori: il nome della matrice è un puntatore doppio (punta a un puntatore), cioè se faccio la dereferenziazione `*mat` non ottengo il valore del primo elemento del vettore contiguo di 42 elementi ma l'indirizzo del primo elemento del vettore contiguo in RAM; usando l'aritmetica dei puntatori a partire da questo indirizzo mi sposto tra i vari elementi.
-Per esempio data una matrice di `N_RIGHE=6` e `N_COLONNE=7`: `mat[6][7]`, sia `i` l'indice di riga e `j` l'indice colonna, per accedere al 21° elemento (ultimo elemento della terza riga), quindi `i=2` (gli indici partono sempre da zero, i=0 prima riga, i=2 terza riga) `j=6` (settima e ultima colonna), possiamo usare:
+<p align="justify">
+Come puoi vedere nella figura precedente, anche se da un punto di vista di indicizzazione <code>mat</code> ha due indici quindi è bidimensionale, in memoria lo spazio allocato è lineare e contiguo (la RAM ha una struttura monodimensionale): viene allocato spazio contiguo per 42 interi. Rimane la relazione tra array e puntatori: il nome della matrice è un puntatore doppio (punta a un puntatore), cioè se faccio la dereferenziazione <code>*mat</code> non ottengo il valore del primo elemento del vettore contiguo di 42 elementi ma l'indirizzo del primo elemento del vettore contiguo in RAM; usando l'aritmetica dei puntatori a partire da questo indirizzo mi sposto tra i vari elementi. Per esempio data una matrice di <code>N_RIGHE=6</code> e <code>N_COLONNE=7</code>: <code>mat[6][7]</code>, sia <code>i</code> l'indice di riga e <code>j</code> l'indice colonna, per accedere al 21° elemento (ultimo elemento della terza riga), quindi <code>i=2</code> (gli indici partono sempre da zero, <code>i=0</code> prima riga, <code>i=2</code> terza riga) <code>j=6</code> (settima e ultima colonna), possiamo usare:
+</p>
 
-* l'accesso ad indice degli array
-  ```c
-	mat[i][j]
-  ```
-* l'aritmetica dei puntatori
-  ```c
+<ul>
+  <li>
+    <p align="justify">
+    l'accesso ad indice degli array
+    </p>
+  </li>
+</ul>
+<p align="justify">
+<code>mat[i][j]</code>
+</p>
+<ul>
+  <li>
+    <p align="justify">
+    l'aritmetica dei puntatori
+    </p>
+  </li>
+</ul>
+<pre><code class="language-c">
   	/*
 	 * mat è un puntatore doppio: contiene l'indirizzo di una variabile puntatore che contiene
 	 * a sua volta l'indirizzo del primo elemento del vettore contiguo di 42 elementi.
@@ -5311,7 +6463,7 @@ Per esempio data una matrice di `N_RIGHE=6` e `N_COLONNE=7`: `mat[6][7]`, sia `i
   	 *           *(*mat + ( (i*N_COLONNE) + j) ) )
   	 * e finalmente ottengo il valore del 21 elemento
   	 */
-  ```
+</code></pre>
 
 ```c
 #include<stdio.h>
@@ -5369,7 +6521,9 @@ vagrant@ubuntu2204:/lab/7_array$ bin/7_array
 
 ### Array di puntatori
 
+<p align="justify">
 I puntatori sono variabili come tutte le altre e quindi è possibile dichiarare un vettore di puntatori.
+</p>
 
 ```c
 #include<stdio.h>
@@ -5396,8 +6550,9 @@ Inserisci un numero da 1 a 12
 
 ### Differenza tra array bidimensionali e array di puntatori
 
-Benché simili, i vettori bidimensionali (matrici) e gli array di puntatori sono diversi.
-Riprendendo l'esempio dei mesi dell'anno, le due variabili `array_di_puntatori` e `matrice` svolgono lo stesso identico ruolo: contenere la lista ordinata dei mesi dell'anno.
+<p align="justify">
+Benché simili, i vettori bidimensionali (matrici) e gli array di puntatori sono diversi. Riprendendo l'esempio dei mesi dell'anno, le due variabili <code>array_di_puntatori</code> e <code>matrice</code> svolgono lo stesso identico ruolo: contenere la lista ordinata dei mesi dell'anno.
+</p>
 
 ```c
 #include<stdio.h>
@@ -5427,14 +6582,13 @@ Inserisci un numero da 1 a 12
 6 -> Giugno
 ```
 
-e l'accesso indicizzato `array_di_puntatori[5][0]` o `matrici[5][0]` è equivalente e permette di leggere la lettera `G` (il primo carattere del mese di giugno, primo elemento dell'array in sesta posizione).
-Da un punto di vista di allocazione di memoria ci sono delle sottili differenze.
-Nel caso di vettore bidimensionale abbiamo allocato una quantità di memoria fissa pari a 12*10=120 byte (12 ovviamente sono i mesi, il 10 è dato dalla lunghezza della stringa più lunga: Settembre che misura 9 caratteri più il carattere di fine stringa `\0`) quindi abbiamo 12 righe tutte con una lunghezza di 10 colonne. C'è un certo spreco di memoria perché non tutti i mesi sono lunghi 9 caratteri e i byte resteranno non utilizzati.
-Nel caso di vettori di puntatori invece abbiamo una quantità di memoria allocata pari a 12 puntatori a carattere quindi 12*8=96 byte, un puntatore doppio che punta al primo elemento del vettore di puntatori quindi 8 byte e più la memoria allocata per ogni singola stringa rappresentante i mesi dell'anno. Questa volta però le stringhe occupano lo spazio strettamente necessario a contenere i loro caratteri senza spreco di spazio e qualche elemento del vettore di puntatori potrebbe anche non contenere alcun indirizzo, quindi non puntare a nulla se fosse necessario.
-La differenza sostanziale però tra i due metodi è che nel caso delle matrici gli elementi sono allocati in modo contiguo in memoria mentre in un array di puntatori solo le variabili di tipo puntatore sono contigue in memoria mentre le variabili puntate sono sparse in memoria; questo secondo approccio si traduce in un grosso vantaggio quando si devono svolgere operazioni di ordinamento e/o spostamento tra i vari elementi se questi ultimi occupano grandi quantità di memoria.
-Il vantaggio di un array di puntatori non è tanto il risparmio di memoria nella rappresentazione degli elementi ma piuttosto il fatto che ordinamenti e spostamenti degli elementi del vettore sono molto più facili e veloci da fare perché lo scambio di posizione tra due elementi del vettore si traduce nello scrivere dei nuovi indirizzi nelle variabili puntatori mentre nel caso delle matrici dobbiamo spostare tutti gli elementi compresi tra i due elementi interessati.
+<p align="justify">
+e l'accesso indicizzato <code>array_di_puntatori[5][0]</code> o <code>matrici[5][0]</code> è equivalente e permette di leggere la lettera <code>G</code> (il primo carattere del mese di giugno, primo elemento dell'array in sesta posizione). Da un punto di vista di allocazione di memoria ci sono delle sottili differenze. Nel caso di vettore bidimensionale abbiamo allocato una quantità di memoria fissa pari a 12*10=120 byte (12 ovviamente sono i mesi, il 10 è dato dalla lunghezza della stringa più lunga: Settembre che misura 9 caratteri più il carattere di fine stringa <code>\0</code>) quindi abbiamo 12 righe tutte con una lunghezza di 10 colonne. C'è un certo spreco di memoria perché non tutti i mesi sono lunghi 9 caratteri e i byte resteranno non utilizzati. Nel caso di vettori di puntatori invece abbiamo una quantità di memoria allocata pari a 12 puntatori a carattere quindi 12*8=96 byte, un puntatore doppio che punta al primo elemento del vettore di puntatori quindi 8 byte e più la memoria allocata per ogni singola stringa rappresentante i mesi dell'anno. Questa volta però le stringhe occupano lo spazio strettamente necessario a contenere i loro caratteri senza spreco di spazio e qualche elemento del vettore di puntatori potrebbe anche non contenere alcun indirizzo, quindi non puntare a nulla se fosse necessario. La differenza sostanziale però tra i due metodi è che nel caso delle matrici gli elementi sono allocati in modo contiguo in memoria mentre in un array di puntatori solo le variabili di tipo puntatore sono contigue in memoria mentre le variabili puntate sono sparse in memoria; questo secondo approccio si traduce in un grosso vantaggio quando si devono svolgere operazioni di ordinamento e/o spostamento tra i vari elementi se questi ultimi occupano grandi quantità di memoria. Il vantaggio di un array di puntatori non è tanto il risparmio di memoria nella rappresentazione degli elementi ma piuttosto il fatto che ordinamenti e spostamenti degli elementi del vettore sono molto più facili e veloci da fare perché lo scambio di posizione tra due elementi del vettore si traduce nello scrivere dei nuovi indirizzi nelle variabili puntatori mentre nel caso delle matrici dobbiamo spostare tutti gli elementi compresi tra i due elementi interessati.
+</p>
 
-Nulla vieta di provare ad allocare un array bidimensionale dinamicamente con la funzione `malloc()`; anche in questo caso avremmo la possibilità di scegliere esattamente la dimensione dei byte da allocare per ogni singolo elemento come nel caso degli array di vettori, ma non è questo il caso d'uso dell'allocazione dinamica. Vediamo un esempio:
+<p align="justify">
+Nulla vieta di provare ad allocare un array bidimensionale dinamicamente con la funzione <code>malloc()</code>; anche in questo caso avremmo la possibilità di scegliere esattamente la dimensione dei byte da allocare per ogni singolo elemento come nel caso degli array di vettori, ma non è questo il caso d'uso dell'allocazione dinamica. Vediamo un esempio:
+</p>
 
 ```c
 #include<stdio.h>  // printf()
@@ -5533,33 +6687,98 @@ Inserisci un numero da 1 a 12
 
 ### Sezioni di memoria di un programma C
 
-Quando un programma viene caricato in memoria per la sua esecuzione, al programma vengono assegnate delle porzioni di memoria dette **sezioni** o **segmenti**, ciascuna delle quali è deputata a una funzione specifica. La memoria di un programma C consiste nelle seguenti sezioni:
+<p align="justify">
+Quando un programma viene caricato in memoria per la sua esecuzione, al programma vengono assegnate delle porzioni di memoria dette <strong>sezioni</strong> o <strong>segmenti</strong>, ciascuna delle quali è deputata a una funzione specifica. La memoria di un programma C consiste nelle seguenti sezioni:
+</p>
 
-* **text segment** (anche detto **code segment**)
-* **data segment** (che si divide in tre zone: data, BSS e heap)
-* **stack segment**
+<ul>
+  <li>
+    <p align="justify">
+    <strong>text segment</strong> (anche detto <strong>code segment</strong>)
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <strong>data segment</strong> (che si divide in tre zone: data, BSS e heap)
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <strong>stack segment</strong>
+    </p>
+  </li>
+</ul>
 
-Il **text segment** (o anche **code segment**) è la parte della memoria che contiene le **istruzioni eseguibili** del programma. Per questioni di sicurezza (accidentali o malefiche modifiche del codice del programma), questa zona di memoria è in **sola lettura** (read-only)
-Il **data segment** è la parte di memoria che contiene: **variabili globali**, **variabili statiche**. Esso si divide in tre zone: **data**, **BSS** e **heap**
-* Il segmento **data** contiene
-  * le variabili inizializzate dal programmatore nella dichiarazione (es: `static int i = 10`)
-* Il segmento **BSS** (*Block Started by Symbol) contiene
-  * le variabili non inizializzate dal programmatore (es: `int vet[100]`), queste variabili vengono inizializzate dal sistema operativo al valore 0 prima dell'esecuzione del programma
-* Il segmento **heap** è destinato a ospitare la memoria allocata dinamicamente tramite funzioni come `malloc()`. Quando il programmatore alloca o dealloca memoria dinamicamente la dimensione di questo segmento cresce o diminuisce. Questo segmento inizia dopo il **BSS** e cresce verso l'alto occupando indirizzi crescenti
-* Il segmento **stack** gestisce la chiamata a funzione e ospita le variabili automatiche della funzione chiamata (variabili locali, classe memorizzazione `auto`), i parametri passati in ingresso alla funzione, l'indirizzo di ritorno al chiamante da cui riprendere l'esecuzione al termine dell'esecuzione della funzione e il contenuto di alcuni registri della CPU. Lo stack cresce verso il basso dagli indirizzi più alti verso indirizzi più bassi e confina con il segmento **heap**
+<p align="justify">
+Il <strong>text segment</strong> (o anche <strong>code segment</strong>) è la parte della memoria che contiene le <strong>istruzioni eseguibili</strong> del programma. Per questioni di sicurezza (accidentali o malefiche modifiche del codice del programma), questa zona di memoria è in <strong>sola lettura</strong> (read-only) Il <strong>data segment</strong> è la parte di memoria che contiene: <strong>variabili globali</strong>, <strong>variabili statiche</strong>. Esso si divide in tre zone: <strong>data</strong>, <strong>BSS</strong> e <strong>heap</strong>
+</p>
+<ul>
+  <li>
+    <p align="justify">
+    Il segmento <strong>data</strong> contiene
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    le variabili inizializzate dal programmatore nella dichiarazione (es: <code>static int i = 10</code>)
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Il segmento <strong>BSS</strong> (*Block Started by Symbol) contiene
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    le variabili non inizializzate dal programmatore (es: <code>int vet[100]</code>), queste variabili vengono inizializzate dal sistema operativo al valore 0 prima dell'esecuzione del programma
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Il segmento <strong>heap</strong> è destinato a ospitare la memoria allocata dinamicamente tramite funzioni come <code>malloc()</code>. Quando il programmatore alloca o dealloca memoria dinamicamente la dimensione di questo segmento cresce o diminuisce. Questo segmento inizia dopo il <strong>BSS</strong> e cresce verso l'alto occupando indirizzi crescenti
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Il segmento <strong>stack</strong> gestisce la chiamata a funzione e ospita le variabili automatiche della funzione chiamata (variabili locali, classe memorizzazione <code>auto</code>), i parametri passati in ingresso alla funzione, l'indirizzo di ritorno al chiamante da cui riprendere l'esecuzione al termine dell'esecuzione della funzione e il contenuto di alcuni registri della CPU. Lo stack cresce verso il basso dagli indirizzi più alti verso indirizzi più bassi e confina con il segmento <strong>heap</strong>
+    </p>
+  </li>
+</ul>
 
-Lo **stack** è un'area di memoria contigua all'heap e cresce in direzione opposta a quest'ultimo; quando il puntatore allo stack incontra il puntatore all'heap, lo spazio di memoria libera per il programma è esaurito.
+<p align="justify">
+Lo <strong>stack</strong> è un'area di memoria contigua all'heap e cresce in direzione opposta a quest'ultimo; quando il puntatore allo stack incontra il puntatore all'heap, lo spazio di memoria libera per il programma è esaurito.
+</p>
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/memoria_programma_c.png)
 
 ### L'inizializzazione delle variabili
 
-**In assenza di inizializzazioni esplicite**, l'inizializzazione di una variabile segue alcune regole che dipendono dalla classe di memorizzazione alla quale la variabile appartiene. In particolare:
+<p align="justify">
+<strong>In assenza di inizializzazioni esplicite</strong>, l'inizializzazione di una variabile segue alcune regole che dipendono dalla classe di memorizzazione alla quale la variabile appartiene. In particolare:
+</p>
 
-* le **variabili globali** vengono **inizializzate a zero** (si trovano nel **BSS**, se fossero state inizializzate esplicitamente sarebbero state nella sezione **data** del **data segment**)
-* le **variabili statiche** vengono **inizializzate a zero** (si trovano nel **BSS**, se fossero state inizializzate esplicitamente sarebbero state nella sezione **data** del **data segment**)
-* le **variabili statiche e globali** possono essere **inizializzate solo tramite espressioni costanti** (quindi non con valori di altre variabili non statiche o globali o valori restituiti da funzioni)
-* le **variabili locali** possono essere inizializzate anche con valori di altre variabili o restituiti da funzione e se non inizializzate esplicitamente **non vengono poste a zero ma contengono un valore casuale e non prevedibile** a priori.
+<ul>
+  <li>
+    <p align="justify">
+    le <strong>variabili globali</strong> vengono <strong>inizializzate a zero</strong> (si trovano nel <strong>BSS</strong>, se fossero state inizializzate esplicitamente sarebbero state nella sezione <strong>data</strong> del <strong>data segment</strong>)
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    le <strong>variabili statiche</strong> vengono <strong>inizializzate a zero</strong> (si trovano nel <strong>BSS</strong>, se fossero state inizializzate esplicitamente sarebbero state nella sezione <strong>data</strong> del <strong>data segment</strong>)
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    le <strong>variabili statiche e globali</strong> possono essere <strong>inizializzate solo tramite espressioni costanti</strong> (quindi non con valori di altre variabili non statiche o globali o valori restituiti da funzioni)
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    le <strong>variabili locali</strong> possono essere inizializzate anche con valori di altre variabili o restituiti da funzione e se non inizializzate esplicitamente <strong>non vengono poste a zero ma contengono un valore casuale e non prevedibile</strong> a priori.
+    </p>
+  </li>
+</ul>
 
 ### Allocazione dinamica di matrici
 
@@ -5758,9 +6977,9 @@ Pluto
 
 ### Le strutture
 
-Una struttura o **struct** è un tipo di dato derivato che permette di raggruppare un insieme di elementi di tipo diverso con una qualche forte correlazione tra loro, detti **campi** della struttura, in un'area contigua in memoria.  
-I campi della struttura possono essere semplici (predefiniti dal linguaggio) o derivati (anche altre strutture stesse) e come detto possono essere di tipo diverso tra loro (al contrario degli array).
-La sintassi per dichiarare una struttura è la seguente:
+<p align="justify">
+Una struttura o <strong>struct</strong> è un tipo di dato derivato che permette di raggruppare un insieme di elementi di tipo diverso con una qualche forte correlazione tra loro, detti <strong>campi</strong> della struttura, in un'area contigua in memoria. I campi della struttura possono essere semplici (predefiniti dal linguaggio) o derivati (anche altre strutture stesse) e come detto possono essere di tipo diverso tra loro (al contrario degli array). La sintassi per dichiarare una struttura è la seguente:
+</p>
 
 ```c
 struct nome-struttura {
@@ -5770,7 +6989,9 @@ struct nome-struttura {
 } ;
 ```
 
+<p align="justify">
 Per esempio per dichiarare un tipo che rappresenti un punto nello spazio bidimensionale:
+</p>
 
 ```c
 /* dichiaro il nuovo tipo che si chiama: struct punto_2d */
@@ -5780,7 +7001,9 @@ struct punto_2d {
 };
 ```
 
+<p align="justify">
 Una volta che il nuovo tipo è stato dichiarato è possibile dichiarare variabili o puntatori del nuovo tipo, in questo modo:
+</p>
 
 ```c
 /* dichiaro una variabile ed un puntatore del tipo struct punto_2d
@@ -5791,7 +7014,9 @@ struct punto_2d i;
 struct punto_2d *ptr
 ```
 
-Per accedere ai singoli campi di una struttura attraverso una variabile basta usare il `.` in questo modo: `nome_variabile.nome_campo`, se si accede ai campi attraverso un puntatore si usa `->` in questo modo `nome_variabile_puntatore->nome_campo`. Per esempio:
+<p align="justify">
+Per accedere ai singoli campi di una struttura attraverso una variabile basta usare il <code>.</code> in questo modo: <code>nome_variabile.nome_campo</code>, se si accede ai campi attraverso un puntatore si usa <code>-&gt;</code> in questo modo <code>nome_variabile_puntatore-&gt;nome_campo</code>. Per esempio:
+</p>
 
 ```c
 #include<stdio.h>
@@ -5832,7 +7057,9 @@ int main(void){
 
 #### Passaggio di strutture a funzioni
 
+<p align="justify">
 Una variabile di un tipo struct può essere passata normalmente a una funzione; come abbiamo studiato, il passaggio dei parametri in C avviene sempre per valore e questo può essere un problema in termini di prestazioni e spreco di risorse se la struct ha numerosi campi. Per questo motivo le struct sono quasi sempre passate per riferimento, cioè passando in ingresso alla funzione un puntatore a struttura. Vediamo quindi esclusivamente il caso di passaggio per riferimento.
+</p>
 
 ```c
 #include<stdio.h>
@@ -5910,11 +7137,30 @@ Luigi Bianchi di eta' 31 ha una media di 19.700001
 
 <p align=justify>
 Uno dei concetti più complessi dei sistemi e della programmazione a basso livello (in linguaggio assembly del processore) è l'indirizzamento della memoria, ovvero come la CPU indirizza la memoria, cioè in che modo questa permette l'accesso alle celle di memoria; questo è molto importante perché influenza il modo con cui il programmatore vede la RAM. Anche se la RAM fisicamente è una sequenza ordinata di celle di 8 byte, l'indirizzamento della CPU può influenzare come il programmatore vede e usa questa sequenza di byte. In questa sede faremo riferimento all'architettura <code>x86</code> dei processori Intel/AMD. L'indirizzamento della memoria da parte del processore è argomento complesso in quanto, nella nostra architettura di riferimento, esistono diversi modi con cui i processori <code>x86</code> indirizzano la memoria. Nello specifico esistono quattro <b>modelli di memoria</b> che gli attuali processori della famiglia <code>x86</code> supportano:
+</p>
 
-1. **real mode flat model** (modello piatto in modalità reale)
-2. **real mode segmented model** (modello segmentato in modalità reale)
-3. **32-bit protected mode flat model** (modello piatto in modalità protetta)
-4. **64-bit long mode flat model** (modello piatto in modalità lunga)
+<ol>
+  <li>
+    <p align="justify">
+    <strong>real mode flat model</strong> (modello piatto in modalità reale)
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <strong>real mode segmented model</strong> (modello segmentato in modalità reale)
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <strong>32-bit protected mode flat model</strong> (modello piatto in modalità protetta)
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <strong>64-bit long mode flat model</strong> (modello piatto in modalità lunga)
+    </p>
+  </li>
+</ol>
 
 <p align=justify>
 Nella programmazione per Linux moderno a 64 bit, sei praticamente limitato a un solo modello di memoria (modello piatto in modalità protetta), e una volta che comprenderai meglio l'indirizzamento della memoria, ne sarai molto contento.
@@ -6148,7 +7394,9 @@ Sin dalla CPU 80486DX a 32 bit, c'è stato un coprocessore matematico sullo stes
 
 ### I quattro principali modelli di programmazione per x86
 
+<p align="justify">
 Ci sono quattro modelli di programmazione principali disponibili per l'uso sulle CPU Intel a 64 bit, sebbene due di essi siano ora considerati arcaici. Le differenze tra di essi risiedono (per lo più) nell'uso dei registri per indirizzare la memoria. (E le altre differenze, specialmente nella fascia alta, sono per la maggior parte nascoste da te dal sistema operativo.) In questa sezione, riassumerò i quattro modelli per riferimento storico. Solo uno di essi, la modalità lunga x64, verrà trattato in dettaglio successivamente.
+</p>
 
 
 ## Real Mode Flat Model (modello piatto in modalità reale)
@@ -6180,11 +7428,33 @@ Il modello segmentato in modalità reale era il modello di programmazione princi
 Ma tale moltiplicazione non è qualcosa che devi fare. La CPU gestisce internamente la combinazione dei segmenti e degli offset in un indirizzo completo a 20 bit. Il tuo compito è dire alla CPU dove si trovano i due diversi componenti di quell'indirizzo a 20 bit. La notazione consueta è separare il registro del segmento dal registro dell'offset con due punti, come mostrato nel seguente esempio:
 </p>
 
-* `SS:SP`
-* `SS:BP`
-* `ES:DI`
-* `DS:SI`
-* `CS:BX`
+<ul>
+  <li>
+    <p align="justify">
+    <code>SS:SP</code>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>SS:BP</code>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>ES:DI</code>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>DS:SI</code>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>CS:BX</code>
+    </p>
+  </li>
+</ul>
 
 <p align=justify>
 Ognuna di queste cinque combinazioni di registri specifica un indirizzo completo a 20 bit. ES:DI, ad esempio, specifica l'indirizzo come la distanza in DI dall'inizio del segmento indicato in ES.
@@ -6823,11 +8093,33 @@ Il programma definisce una variabile e poi la modifica. Quindi, come possiamo ve
 </p>
 
 
-1. Entra nella modalità di debug.
-2. Nel campo Variabile O Espressione, inserisci Snippet.
-3. Nel campo Tipo, seleziona Smart dal menu a discesa più a sinistra.
-4. Nel campo successivo, seleziona b dal menu a discesa.
-5. Nel campo successivo, digita la lunghezza della variabile che desideri visualizzare, in byte. Per questo esempio, poiché il contenuto di Snippet è lungo otto caratteri, inserisci 8.
+<ol>
+  <li>
+    <p align="justify">
+    Entra nella modalità di debug.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Nel campo Variabile O Espressione, inserisci Snippet.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Nel campo Tipo, seleziona Smart dal menu a discesa più a sinistra.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Nel campo successivo, seleziona b dal menu a discesa.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Nel campo successivo, digita la lunghezza della variabile che desideri visualizzare, in byte. Per questo esempio, poiché il contenuto di Snippet è lungo otto caratteri, inserisci 8.
+    </p>
+  </li>
+</ol>
 
 <p align=justify>
 Una volta fatto ciò, vedrai "KANGAROO" nel campo Valore. è ciò che c'è in Snippet. Una volta fatto, esegui il programma con Snippet visualizzato. Dopo otto passaggi nel ciclo, "KANGAROO" è diventato "kangaroo": come? Guarda l'istruzione <code>ADD</code> situata all'etichetta DoMore. In precedenza nel programma, avevamo copiato l'indirizzo di memoria di Snippet nel registro RBX. L'istruzione <code>ADD</code> aggiunge il valore letterale 32 a qualsiasi numero si trovi all'indirizzo memorizzato in RBX. Se guardi le tabelle ASCII, noterai che la differenza tra il valore delle lettere maiuscole ASCII e le lettere minuscole ASCII è 32. Una K maiuscola ha il valore 4Bh, e una k minuscola ha il valore 6Bh. 6Bh-4Bh è 20h, che in decimale è 32. Quindi, se consideriamo le lettere ASCII come numeri, possiamo aggiungere 32 a una lettera maiuscola e trasformarla in una lettera minuscola.
@@ -7028,7 +8320,9 @@ La programmazione in linguaggio assembly riguarda i dettagli. Ci sono ampie somi
 Nel 1975, un documento completo e utile che riassumeva l'insieme delle istruzioni poteva essere stampato su entrambi i lati di una carta piegata in tre parti, che poteva essere riposta nella tasca della camicia. Carte di questo tipo erano comuni, e si potevano ottenere per quasi qualsiasi microprocessore. Per motivi non chiari, erano chiamate "carte blu", anche se la maggior parte era stampata su normale cartoncino bianco. All'inizio e a metà degli anni '80, ciò che un tempo era una singola carta era ormai un opuscolo di 89 pagine, dimensionato per entrare in tasca. La Guida di Riferimento per Programmatori di Intel per la famiglia di CPU 8086 veniva spedita con il Macro Assembler di Microsoft. Si adattava davvero alla tasca della camicia, a patto che nulla di più largo di una lista della spesa cercasse di condividere lo spazio. La potenza e la complessità dell'architettura x86 esplosero a metà degli anni '80, e un riassunto completo di tutte le istruzioni in tutte le loro forme, più tutte le spiegazioni necessarie, divenne materiale di dimensioni da libro e, con il passare degli anni, richiese non uno ma diversi libri per essere coperto completamente. Intel fornisce versioni PDF della propria documentazione sui processori come download gratuiti, e puoi trovarle nel link sottostante.
 </p>
 
-[Intel® 64 and IA-32 Architectures Software Developer Manuals](https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html)
+<p align="justify">
+<a href="https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html">Intel® 64 and IA-32 Architectures Software Developer Manuals</a>
+</p>
 
 <p align=justify>
 Vale la pena averli - ma dimentica di infilarli in tasca. Solo il riferimento del set di istruzioni rappresenta oltre 2.300 pagine in un singolo PDF, e ci sono diversi altri libri correlati per completare il set. Quello di cui hai bisogno è il Volume 2. La buona notizia è che puoi scaricare i file PDF gratuitamente e sfogliarli sul tuo PC o stampare solo le sezioni che potresti trovare utili per un progetto particolare. (I libri stampati sono disponibili su lulu.com, ma sono costosi.) Suggerisco decisamente di familiarizzare almeno in modo ragionevole con le istruzioni x64 comuni prima di affrontare il riferimento esaustivo (e sfinente!) di Intel. Trenta anni fa c'erano eccellenti guide di riferimento delle dimensioni di un libro per la famiglia di CPU x86, la migliore delle quali era il PC Magazine Technical Reference: The Processor and Coprocessor di Robert L. Hummel (Ziff-Davis Press, 1992). Anche se lo vedo regolarmente sui siti di libri usati, ti porterà solo fino al 486. Lo considero ancora una buona cosa da avere sulla tua libreria se lo avvisti da qualche parte e riesci a prenderlo a buon prezzo.
@@ -9007,9 +10301,23 @@ add rdx,rcx     ; Complete the multiplication X3
 Il calcolo per moltiplicare un valore in RDX per 3 viene effettuato con una combinazione di un'istruzione SHL per moltiplicare per 2, seguita da un'istruzione ADD che aggiunge una terza copia del valore dell'indice al valore dell'indice spostato, moltiplicando di fatto il valore originale per 3. Lo scaling per altri valori di indice può essere effettuato allo stesso modo. Lo scaling per 5 sarebbe eseguito spostando il valore dell'indice a sinistra di 2 bit, moltiplicandolo così per 4, e poi aggiungendo un'altra copia del valore dell'indice per completare la moltiplicazione per 5. In termini generali, per scalare un valore di indice per X:
 </p>
 
-1. Trova la potenza di 2 più grande di X.
-2. Sposta il valore dell'indice a sinistra di quella potenza di 2.
-3. Aggiungi una copia del valore dell'indice originale alla copia spostata tante volte quanto è necessario per completare la moltiplicazione per X.
+<ol>
+  <li>
+    <p align="justify">
+    Trova la potenza di 2 più grande di X.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Sposta il valore dell'indice a sinistra di quella potenza di 2.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Aggiungi una copia del valore dell'indice originale alla copia spostata tante volte quanto è necessario per completare la moltiplicazione per X.
+    </p>
+  </li>
+</ol>
 
 <p align=justify>
 Ad esempio, se X è 11, il calcolo della scala verrebbe fatto in questo modo:
@@ -9994,9 +11302,13 @@ Questo è l'equivalente funzionale di un'istruzione SYSCALL che inserisce RCX e 
 La definizione delle chiamate di sistema SYSCALL include le specifiche. Questa definizione fa parte dell'ABI System V x86-64. Se il corpo più ampio del tuo codice utilizza un registro che viene sovrascritto durante una chiamata di sistema, devi scegliere un altro registro da utilizzare nel corpo del programma o salvarlo nello stack con un'istruzione PUSH prima di impostare i parametri ed eseguire SYSCALL. Dopo la chiamata di sistema, devi ripristinarlo tramite un'istruzione POP. Usare lo stack in questo modo può causare problemi con l'allineamento dello stack, a meno che tu non comprenda cosa rende lo stack allineato e come mantenerlo tale. C'è anche la questione dei registri volatili rispetto a quelli non volatili. Il processo per effettuare una chiamata di sistema tramite SYSCALL non è complesso. Tuttavia, l'ultima volta che ho controllato, ce n'erano 335. Ogni chiamata di sistema richiede che certe informazioni vengano passate in registri specifici. è molto da ricordare. Per lo più dovrai cercare i dettagli su come effettuare chiamate di sistema in un riferimento stampato o online. Alcuni riferimenti sono elencati sotto.
 </p>
 
-[x86-64-linux-syscalls](https://hackeradam.com/x86-64-linux-syscalls/)
+<p align="justify">
+<a href="https://hackeradam.com/x86-64-linux-syscalls/">x86-64-linux-syscalls</a>
+</p>
 
-[Linux_System_Call_Table_for_x86_64](https://blog.rchapman.org/posts/Linux_System_Call_Table_for_x86_64/)
+<p align="justify">
+<a href="https://blog.rchapman.org/posts/Linux_System_Call_Table_for_x86_64/">Linux_System_Call_Table_for_x86_64</a>
+</p>
 
 <p align=justify>
 Entrambe sono tabelle molto grandi che assomigliano a fogli di calcolo, con colonne per l'uso dei registri e i valori richiesti per ogni numero di chiamata di sistema. Ora, le pagine web vanno e vengono e, se stai utilizzando questo libro alcuni anni dopo la sua pubblicazione nel 2023, le pagine web citate potrebbero semplicemente non esistere più. Fai una ricerca sul web su "tabella delle chiamate di sistema x64" e ne troverai diverse. Assicurati che la tabella che usi sia per le chiamate di sistema e non per le chiamate nello spazio utente. Le chiamate nello spazio utente sono chiamate alla libreria di codice glibc utilizzata nella programmazione C, che è una questione completamente diversa. Chiamare glibc dall'assembly è possibile e spesso molto utile. Un'avvertenza seria se hai già fatto del lavoro in assembly Linux in modalità protetta a 32 bit: i parametri delle chiamate di sistema x64 non sono gli stessi di quelli in x86 a 32 bit. Nella maggior parte dei casi, non sono nemmeno simili. In Linux x64 c'è un sistema per l'uso dei registri: il numero della chiamata di sistema (in altre parole, quale chiamata di sistema stai chiamando) è sempre in RAX. Una chiamata di sistema accetta fino a sei parametri. I registri usati per passare i parametri sono in questo ordine: RDI, RSI, RDX, R10, R8 e R9. In altre parole, il primo parametro viene passato in RDI, il secondo in RSI, e così via. Nessuna chiamata di sistema richiede che i parametri le vengano passati tramite lo stack. Nota: anche se un registro (come R9, per esempio) viene usato per passare un parametro a una chiamata di sistema, quel registro non viene preservato. Solo sette registri sono preservati da Linux durante una chiamata di sistema: R12, R13, R14, R15, RBX, RSP e RBP. Dopo una SYSCALL, RAX conterrà un valore restituito. Se RAX è negativo, indica che si è verificato un errore durante la chiamata. Per la maggior parte delle chiamate di sistema, un valore di 0 indica successo.
@@ -10586,8 +11898,18 @@ Exit:
 Uno dei problemi in qualsiasi linguaggio di programmazione che supporta i file di inclusione riguarda dove l'assemblatore o il compilatore cercherà quei file di inclusione. Con SASM hai due opzioni:
 </p>
 
-1. Puoi creare e utilizzare librerie di file di inclusione nella directory di lavoro attuale, cioè la directory in cui si trova il tuo file sorgente principale. Questo è ciò che dovresti fare quando stai sviluppando la libreria che sarà utilizzata successivamente come file di inclusione.
-2. Puoi utilizzare librerie di file di inclusione che si trovano in una directory creata da SASM a tale scopo quando SASM è installato.
+<ol>
+  <li>
+    <p align="justify">
+    Puoi creare e utilizzare librerie di file di inclusione nella directory di lavoro attuale, cioè la directory in cui si trova il tuo file sorgente principale. Questo è ciò che dovresti fare quando stai sviluppando la libreria che sarà utilizzata successivamente come file di inclusione.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Puoi utilizzare librerie di file di inclusione che si trovano in una directory creata da SASM a tale scopo quando SASM è installato.
+    </p>
+  </li>
+</ol>
 
 <p align=justify>  
 Ecco la directory:
@@ -10607,13 +11929,43 @@ Non sembra un grande problema, vero? Bene, c'è una complicazione: devi essere c
 Se hai intenzione di sviluppare una libreria di procedure in stile include con SASM da zero, ecco un processo collaudato da utilizzare.
 </p>
 
-1. Progetta le tue procedure. Crea un documento di testo e scrivi le descrizioni di ciò che le procedure della libreria devono fare, migliorandole gradualmente finché non sono definitive.
-2. Apri il programma sandbox che ho descritto in precedenza e inserisci il codice sorgente delle tue procedure. Se le hai già scritte in altre parti di altri programmi, copia/incolla il relativo codice sorgente nel nuovo file.
-3. Crea un semplice codice "esercizio" nel corpo del programma sandbox che chiama le tue procedure e le mette alla prova. Esegui il debug come sempre con il debugger SASM. Verranno evidenziati anche errori relativamente semplici, come spingere i registri nell'ordine sbagliato, sovrascrivere i registri del chiamante e così via.
-4. Una volta terminato il debug semplice, inserisci il codice sorgente della libreria in un programma "reale" per testare più approfonditamente le procedure della libreria.
-5. Quando sei soddisfatto che tutte le procedure funzionino come previsto, raccoglilo in un file senza il framework sandbox e rilascialo nella directory include files di SASM.
-6. Conserva una copia della nuova libreria in un'altra posizione, da cui esegui regolarmente backup.
-7. Se in qualsiasi momento apporti modifiche al codice sorgente della libreria, testa accuratamente le modifiche e quindi rilascia il file modificato nella directory di inclusione di SASM, sostituendo la versione precedente già presente.
+<ol>
+  <li>
+    <p align="justify">
+    Progetta le tue procedure. Crea un documento di testo e scrivi le descrizioni di ciò che le procedure della libreria devono fare, migliorandole gradualmente finché non sono definitive.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Apri il programma sandbox che ho descritto in precedenza e inserisci il codice sorgente delle tue procedure. Se le hai già scritte in altre parti di altri programmi, copia/incolla il relativo codice sorgente nel nuovo file.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Crea un semplice codice "esercizio" nel corpo del programma sandbox che chiama le tue procedure e le mette alla prova. Esegui il debug come sempre con il debugger SASM. Verranno evidenziati anche errori relativamente semplici, come spingere i registri nell'ordine sbagliato, sovrascrivere i registri del chiamante e così via.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Una volta terminato il debug semplice, inserisci il codice sorgente della libreria in un programma "reale" per testare più approfonditamente le procedure della libreria.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Quando sei soddisfatto che tutte le procedure funzionino come previsto, raccoglilo in un file senza il framework sandbox e rilascialo nella directory include files di SASM.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Conserva una copia della nuova libreria in un'altra posizione, da cui esegui regolarmente backup.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Se in qualsiasi momento apporti modifiche al codice sorgente della libreria, testa accuratamente le modifiche e quindi rilascia il file modificato nella directory di inclusione di SASM, sostituendo la versione precedente già presente.
+    </p>
+  </li>
+</ol>
 
 <p align=justify>
 A questo punto metteremo da parte SASM per un po' e parleremo dell'utilizzo dell'assemblaggio separato per collegare i file di codice oggetto .o preassemblati in un singolo file eseguibile. è facile diventare "viziati" usando SASM, perché inserisce così tanti strumenti utili all'interno di un IDE, un IDE creato appositamente per i primi passi di uno studente nella programmazione in linguaggio assembly. Continuerò a presentare il codice di esempio per l'uso all'interno di SASM in questo libro, che è un'introduzione ai concetti di informatica e al linguaggio assembly. Ma avrai bisogno di sapere come funziona l'assemblaggio separato, una volta che sarai "passato" da SASM a IDE più complessi e tecniche di programmazione sofisticate.
@@ -11145,7 +12497,9 @@ Questo ultimo punto è sottile ma importante. Quando stai facendo debugging, ci�
 
 ### Decidere cosa dovrebbe essere una procedura
 
+<p align="justify">
 Quindi, quando dovrebbe essere estratto un blocco di istruzioni e trasformato in una procedura? Non ci sono regole rigide, ma ci sono alcune euristiche utili che vale la pena discutere:
+</p>
 
 <ul>
 	<li>
@@ -11202,19 +12556,73 @@ Questo corpo di programma (immaginario) è pulito e leggibile e fornisce una nec
 Col passare del tempo, ti renderai conto di creare dozzine o addirittura centinaia di procedure per gestire la complessità. Le librerie di procedure "opronte" che la maggior parte dei fornitori di linguaggi di alto livello fornisce con i propri compilatori non esistono affatto con NASM. Per lo più, quando hai bisogno di una funzione o di un'altra, dovrai scriverla tu stesso. Mantenere un elenco di routine ordinato non è un compito facile quando le hai scritte tutte tu. Devi documentare i fatti essenziali su ciascuna procedura individuale o le dimenticherai, oppure le ricorderai in modo errato e agirai su informazioni sbagliate. (I bug risultanti sono spesso diavolosamente difficili da trovare perché sei sicuro di ricordare tutto ciò che c'è da sapere su quella procedura! Dopotutto, l'hai scritta tu!) Raccomando vivamente di aggiungere un'intestazione di commento a ogni procedura che scrivi, non importa quanto semplice. Tale intestazione dovrebbe contenere almeno le seguenti informazioni:
 </p>
 
-* Il nome della procedura
-* La data dell'ultima modifica
-* Il nome di ciascun punto di entrata, se la procedura ha più punti di entrata
-* Cosa fa la procedura
-* Quali elementi di dati il chiamante deve passarle per farla funzionare correttamente
-* Quali dati (se presenti) vengono restituiti dalla procedura e dove vengono restituiti (ad esempio, nel registro RCX)
-* Quali registri o elementi di dati la procedura modifica
-* Quali altre procedure, se presenti, vengono chiamate dalla procedura
-* Eventuali "gotchas" che devono essere tenuti a mente mentre si scrive codice che utilizza la procedura
-* Oltre a ciò, altre informazioni possono essere utili nei commenti di intestazione:
-	* La versione della procedura, se si utilizza il versioning
- 	* La data di creazione
-  	* Il nome della persona che ha scritto la procedura, se si sta trattando di codice condiviso all'interno di un team
+<ul>
+  <li>
+    <p align="justify">
+    Il nome della procedura
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    La data dell'ultima modifica
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Il nome di ciascun punto di entrata, se la procedura ha più punti di entrata
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Cosa fa la procedura
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Quali elementi di dati il chiamante deve passarle per farla funzionare correttamente
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Quali dati (se presenti) vengono restituiti dalla procedura e dove vengono restituiti (ad esempio, nel registro RCX)
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Quali registri o elementi di dati la procedura modifica
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Quali altre procedure, se presenti, vengono chiamate dalla procedura
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Eventuali "gotchas" che devono essere tenuti a mente mentre si scrive codice che utilizza la procedura
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Oltre a ciò, altre informazioni possono essere utili nei commenti di intestazione:
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    La versione della procedura, se si utilizza il versioning
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    La data di creazione
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Il nome della persona che ha scritto la procedura, se si sta trattando di codice condiviso all'interno di un team
+    </p>
+  </li>
+</ul>
 
  ```asm
 --------
@@ -12323,8 +13731,18 @@ Davvero. No, sul serio. L'istruzione STOSB è la più semplice delle istruzioni 
 Una volta che hai impostato questi tre registri, puoi eseguire in sicurezza un'istruzione STOSB. Quando lo fai, ecco cosa succede: 
 </p>
 
-1. Il valore byte in AL viene copiato nell'indirizzo di memoria memorizzato in RDI.
-2. RDI viene incrementato di 1, in modo che ora punti al byte successivo in memoria dopo quello appena scritto.
+<ol>
+  <li>
+    <p align="justify">
+    Il valore byte in AL viene copiato nell'indirizzo di memoria memorizzato in RDI.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    RDI viene incrementato di 1, in modo che ora punti al byte successivo in memoria dopo quello appena scritto.
+    </p>
+  </li>
+</ol>
 
 <p align=justify>
 Nota che non stiamo sparando a raffica qui"non ancora, almeno. Una copia di AL viene copiata in una posizione di memoria. Il registro RDI viene regolato affinché sia pronto per la prossima volta che viene eseguita STOSB. Un punto molto importante da ricordare è che RCX non viene decrimentato da STOSB. RCX viene decrimentato automaticamente solo se metti il prefisso REP davanti a STOSB. Senza il prefisso REP, devi fare tu stesso il decrimento, sia esplicitamente tramite DEC o tramite l'istruzione LOOP, come spiegherò un po' più avanti in questo capitolo. Quindi, non puoi far funzionare STOSB automaticamente senza REP. Tuttavia, se vuoi, puoi eseguire altre istruzioni prima di eseguire un altro STOSB. Finché non disturbi RDI o RCX, puoi fare quello che vuoi. Poi, quando esegui di nuovo STOSB, un'altra copia di AL andrà alla posizione puntata da RDI, e RDI sarà adeguatamente aggiornato di nuovo. (Devi ricordarti di decrimentare RCX in qualche modo.) Nota che puoi cambiare il valore in AL se vuoi, ma il valore cambiato verrà copiato nella memoria. Potresti volerlo fare"non c'è legge che dice che devi riempire una stringa con solo un singolo valore. Tuttavia, questo è come la differenza tra un'arma semiautomatica (che spara un colpo ogni volta che premi e rilasci il grilletto) e un'arma completamente automatica, che spara colpi continuamente finché tieni premuto il grilletto. Per rendere STOSB completamente automatica, basta mettere il prefisso REP davanti ad essa. Ciò che fa REP è splendidamente semplice: imposta il ciclo più serrato di tutti i cicli completamente all'interno della CPU e spara copie di AL nella memoria ripetutamente (il motivo del suo nome), incrementando RDI di 1 ogni volta e decrimentando RCX di 1, fino a quando RCX non viene decrimentato a 0. Poi si ferma, e quando il fumo si dirada, vedrai che l'intera stringa di destinazione, per quanto grande, è stata riempita con copie di AL. Amico, ora questo è programmare!
@@ -13294,10 +14712,28 @@ Qui, il conteggio degli argomenti si trova all'indirizzo contenuto in RBP più o
 I termini dell'indirizzo efficace qui sono mostrati in un ordine diverso nel codice per renderlo un po' più facile da capire come funziona questo particolare riferimento alla memoria. Leggilo in questo modo:
 </p>
 
-1. Inizi con l'indirizzo "base" per il riferimento allo stack, in RBP.
-2. Aggiungi 8 alla base per "superare" RBP in cima allo stack. Questo è il termine di "spostamento" dell'indirizzo efficace.
-3. Moltiplichi il numero ordinale a partire da 1 dell'indirizzo a cui si accede per 8, che è la dimensione (in byte) di tutti gli indirizzi in x64. In altre parole, per il secondo elemento nella lista degli argomenti, moltiplicheresti il numero ordinale memorizzato in RBX per 8, la dimensione degli indirizzi in x64. Il valore più piccolo aggiunto è almeno 8, che ti porta oltre il conteggio degli argomenti.
-4. Aggiungi il prodotto di RBX e 8 alla base più lo spostamento, e avrai l'indirizzo del primo argomento nella tabella. Questo indirizzo è copiato in RDI, per essere utilizzato con l'istruzione REPNE SCASB.
+<ol>
+  <li>
+    <p align="justify">
+    Inizi con l'indirizzo "base" per il riferimento allo stack, in RBP.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Aggiungi 8 alla base per "superare" RBP in cima allo stack. Questo è il termine di "spostamento" dell'indirizzo efficace.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Moltiplichi il numero ordinale a partire da 1 dell'indirizzo a cui si accede per 8, che è la dimensione (in byte) di tutti gli indirizzi in x64. In altre parole, per il secondo elemento nella lista degli argomenti, moltiplicheresti il numero ordinale memorizzato in RBX per 8, la dimensione degli indirizzi in x64. Il valore più piccolo aggiunto è almeno 8, che ti porta oltre il conteggio degli argomenti.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Aggiungi il prodotto di RBX e 8 alla base più lo spostamento, e avrai l'indirizzo del primo argomento nella tabella. Questo indirizzo è copiato in RDI, per essere utilizzato con l'istruzione REPNE SCASB.
+    </p>
+  </li>
+</ol>
 
 <p align=justify>
 Se questo non ti è completamente chiaro, torna indietro e leggilo di nuovo. L'indirizzamento della memoria è il concetto più importante nel lavoro con il linguaggio assembly. Se non comprendi l'indirizzamento della memoria, conoscere le istruzioni della macchina e i registri ti aiuterà poco, se non del tutto.
@@ -13412,12 +14848,38 @@ La libreria glibc non tratta in modo speciale i programmi in linguaggio assembly
 Se hai mai studiato la programmazione assembly per Linux a 32 bit, hai appreso che passare parametri a funzioni in stile C avveniva spingendo i parametri nello stack prima di effettuare la chiamata. Tutto scomparso. (Ok, quasi tutto scomparso. Ci tornerò.) La maggiore differenza singola tra le convenzioni di chiamata a 32 bit e quelle a 64 bit risiede nel modo in cui si passano i parametri alle funzioni. Passare i primi sei parametri a una funzione x64 avviene tramite registri piuttosto che nello stack. Se una funzione ha più di sei parametri (cosa poco comune e spesso una cattiva progettazione) i parametri rimanenti vengono passati nello stack. Questo è stato fatto perché abbiamo molti più registri ora di quanti ne avessimo nell'era a 32 bit. Spingere e sollevare dallo stack tocca la memoria e quindi è lento. Scrivere e leggere dai registri rimane all'interno della CPU e quindi è molto più veloce. La tecnologia moderna della cache della CPU rende l'uso dello stack più veloce rispetto ai tempi antichi, è vero, ma anche l'accesso alla cache della memoria è più lento rispetto all'accesso ai registri. Potresti ricordare che nei capitoli precedenti i programmi passavano parametri alle chiamate di funzione di Linux utilizzando l'istruzione x64 SYSCALL. Tutti i parametri del genere (almeno nei semplici programmi con cui abbiamo lavorato) vengono passati nei registri. Inoltre, c'è un sistema in questo: i primi sei parametri vengono passati in registri specifici in un ordine molto specifico. Questo ordine è il seguente:
 </p>
 
-1. RDI
-2. RSI
-3. RDX
-4. RCX
-5. R8
-6. R9
+<ol>
+  <li>
+    <p align="justify">
+    RDI
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    RSI
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    RDX
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    RCX
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    R8
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    R9
+    </p>
+  </li>
+</ol>
 
 <p align=justify>
 Il primo parametro passato a una funzione è sempre passato in RDI. Se ci sono due parametri da passare a una funzione, il primo è passato in RDI e il secondo in RSI, e così via. Questo è vero per le chiamate tramite SYSCALL, ed è anche vero per la chiamata delle funzioni della libreria C. L'ordine dei parametri nei registri è semplice. La parte successiva è sottile: quali registri può utilizzare internamente una funzione e quindi modificare, e quali registri devono rimanere invariati dopo l'esecuzione della funzione? Per dirlo in gergo da programmatore: quali registri possiamo sovrascrivere? Ancora una volta, c'è un sistema. Questi sette registri non possono essere sovrascritti da una funzione: RSP, RBP, RBX, R12, R13, R14 e R15. Questo gruppo di registri è chiamato registri non volatili, il che significa fondamentalmente registri che devono essere preservati (o lasciati non utilizzati) dall'ebitente. Aspetta"cosa? Maggiore gergo. Le funzioni possono chiamare altre funzioni. Una funzione che chiama un'altra funzione è il chiamante. La funzione che viene chiamata è l'ebitente. C'è una sorta di rapporto di fiducia tra il chiamante e l'ebitente: l'ebitente promette al chiamante che i valori di RSP, RBP, RBX, R12, R13, R14 e R15 saranno gli stessi quando l'ebitente termina l'esecuzione rispetto a quando l'ebitente inizia l'esecuzione. L'ebitente può utilizzare i registri non volatili, ma quelli che utilizza devono prima essere salvati (spinti nello stack) e ripristinati (estratti dallo stack) prima che l'ebitente torni al chiamante. Gli altri registri sono chiamati volatili, il che significa che l'ebitente può usarli e modificarli senza problemi. Questi sono RAX, RCX, RDX, RSI, RDI, R8, R9, R10 e R11. Se sei sveglio, noterai che tutti e sei i registri utilizzati nella convenzione di chiamata C sono registri volatili. Questo ha senso poiché il chiamante li sta già utilizzando per passare valori all'ebitente. Ma cosa succede se il chiamante sta già utilizzando alcuni dei registri volatili? Se il chiamante desidera che uno dei registri volatili sopravviva a un viaggio attraverso l'ebitente, il chiamante deve salvarli prima di chiamare la funzione dell'ebitente. Dopo che l'ebitente è tornato al chiamante, il chiamante ripristina quindi i registri volatili che aveva salvato nello stack estraendo i valori salvati nei registri.
@@ -13615,7 +15077,9 @@ Il codice di formattazione %d indica semplicemente a printf() di convertire un v
 Un codice di formattazione ha in realtà una buona quantità di struttura, e il meccanismo printf() nel suo insieme ha più complessità di quante ne possa descrivere in dettaglio in questo libro. Qualsiasi buona guida C spiegherà tutto in dettaglio. Il trattamento su Wikipedia è eccellente.
 </p>
 
-[https://en.wikipedia.org/wiki/Printf](https://en.wikipedia.org/wiki/Printf)
+<p align="justify">
+<a href="https://en.wikipedia.org/wiki/Printf">https://en.wikipedia.org/wiki/Printf</a>
+</p>
 
 <p align=justify>
 Il miglioramento più significativo che puoi apportare ai codici di formattazione è inserire un valore intero tra il simbolo % e la lettera del codice:
@@ -13707,12 +15171,38 @@ Leggere i caratteri dalla tastiera Linux utilizzando l'istruzione SYSCALL e la c
 Il vantaggio nell'uso di fgets() è che ci consente di specificare un numero massimo di caratteri che la routine può accettare dalla tastiera. Qualsiasi altra cosa che l'utente digita sarà troncata e scartata. Se questo valore massimo non è maggiore del buffer di stringa che definisci per contenere i caratteri inseriti dall'utente, non c'è possibilità che l'uso di fgets() faccia crashare il tuo programma. Collegare fgets() all'input standard è facile. Come ho spiegato in precedenza in questo libro, Linux predefinisce tre gestori di file standard, e questi gestori sono collegati automaticamente al tuo programma. I tre sono stdin (input standard), stdout (output standard) e stderr (errore standard). Per accettare input dalla tastiera attraverso fgets(), vogliamo usare l'identificatore stdin. è già lì; devi semplicemente dichiararlo come EXTERN per riferirlo all'interno dei tuoi programmi in linguaggio assembly. Quindi, ecco come utilizzare la funzione fgets().
 </p>
 
-1. Assicurati di aver dichiarato EXTERN fgets e EXTERN stdin insieme alle tue altre dichiarazioni esterne nella parte superiore della sezione .text del tuo programma.
-2. Dichiara una variabile buffer abbastanza grande da contenere i dati della stringa che vuoi che l'utente inserisca. Usa la direttiva RESB nella sezione .bss del tuo programma.
-3. Carica l'indirizzo del buffer in RDI.
-4. Successivamente, carica il valore che indica il numero massimo di caratteri che vuoi che fgets() accetti in RSI. Assicurati che non sia maggiore della variabile buffer che dichiari in .bss!
-5. Carica il valore di stdin in RDX. Nota bene: Non passare l'indirizzo del valore esterno stdin. Passa il valore reale che l'elemento esterno stdin contiene, usando le parentesi: [stdin]
-6. Chiama fgets.
+<ol>
+  <li>
+    <p align="justify">
+    Assicurati di aver dichiarato EXTERN fgets e EXTERN stdin insieme alle tue altre dichiarazioni esterne nella parte superiore della sezione .text del tuo programma.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Dichiara una variabile buffer abbastanza grande da contenere i dati della stringa che vuoi che l'utente inserisca. Usa la direttiva RESB nella sezione .bss del tuo programma.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Carica l'indirizzo del buffer in RDI.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Successivamente, carica il valore che indica il numero massimo di caratteri che vuoi che fgets() accetti in RSI. Assicurati che non sia maggiore della variabile buffer che dichiari in .bss!
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Carica il valore di stdin in RDX. Nota bene: Non passare l'indirizzo del valore esterno stdin. Passa il valore reale che l'elemento esterno stdin contiene, usando le parentesi: [stdin]
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Chiama fgets.
+    </p>
+  </li>
+</ol>
 
 <p align=justify>
 Come sempre, i parametri che passi a fgets() vengono inseriti nei registri nell'ordine specificato nella convenzione di chiamata x64. Questo è molto più comodo rispetto a spingerli nello stack, come avveniva nel mondo a 32 bit. Il codice sotto è un semplice programma che dimostra come ottenere testo dall'input standard tramite fgets(). Di nuovo, per brevità ho omesso l'intestazione dei commenti.
@@ -13786,18 +15276,46 @@ Il programma fgetstest dimostra come incorporare un codice stringa %s nella stri
 In un modo peculiare, la funzione scanf() della libreria C è printf() che funziona all'indietro: invece di produrre dati formattati in un flusso di caratteri, scanf() prende un flusso di dati carattere dalla tastiera e lo converte in dati numerici memorizzati in una variabile numerica. La funzione scanf() funziona molto bene e comprende molti formati che non sarò in grado di spiegare qui, specialmente per l'inserimento di numeri in virgola mobile. (I valori in virgola mobile rappresentano un problema speciale nel lavoro in assembly e non li tratterò in questo libro.) La voce di Wikipedia è molto buona.
 </p>
 
-[https://en.wikipedia.org/wiki/Scanf_format_string](https://en.wikipedia.org/wiki/Scanf_format_string)
+<p align="justify">
+<a href="https://en.wikipedia.org/wiki/Scanf_format_string">https://en.wikipedia.org/wiki/Scanf_format_string</a>
+</p>
 
 <p align="justify">
 Per la maggior parte dei programmi semplici che potresti scrivere mentre prendi confidenza con l'assembly, inserirai numeri interi semplici, e scanf() è molto utile per questo. Passi a scanf() il nome di una variabile numerica in cui memorizzare il valore inserito e un codice di formato che indica quale forma avrà quel valore all'ingresso dei dati. La funzione scanf() prenderà i caratteri digitati dall'utente e li convertirà nel valore intero che i caratteri rappresentano. Cioè, scanf() prenderà i due caratteri ASCII "4" e "2" inseriti consecutivamente e li convertirà nel valore numerico in base 10 42 dopo che l'utente preme Invio. E per quanto riguarda una stringa di richiesta, che istruisce l'utente su cosa digitare? Bene, molti nuovi arrivati hanno l'idea che puoi combinare la richiesta con il codice di formato in un'unica stringa passata a scanf(), ma purtroppo, questo non funzionerà. Sembra che dovrebbe funzionare"dopo tutto, puoi combinare i codici di formato con la stringa base da visualizzare usando printf(). E in scanf(), teoricamente puoi usare una stringa base contenente codici di formato ... ma poi l'utente dovrebbe digitare sia la richiesta che i dati numerici! Quindi, in termini pratici, l'unica stringa utilizzata da scanf() è una stringa contenente i codici di formato. Se vuoi una richiesta, devi visualizzarla usando printf() prima di chiamare scanf(). Per mantenere la richiesta e l'inserimento dei dati sulla stessa riga, assicurati di non avere un carattere EOL alla fine della tua stringa di richiesta! La funzione scanf() acquisisce automaticamente input di caratteri da input standard. Non devi passarle il gestore di file stdin, come fai con fgets(). Esiste una funzione glibc separata chiamata fscanf() a cui devi passare un gestore di file, ma per l'inserimento di dati interi non c'è rischio nell'usare scanf(). Ecco come utilizzare la routine scanf(): 
 </p>
 
-1. Assicurati di aver dichiarato EXTERN scanf insieme alle tue altre dichiarazioni esterne nella parte superiore della sezione .TEXT.
-2. Dichiarare una variabile di memoria del tipo appropriato per contenere i dati numerici letti e convertiti da scanf(). I miei esempi qui saranno per dati interi, quindi dovresti creare tale variabile con la direttiva DQ o la direttiva RESQ. Ovviamente, se intendi mantenere diversi valori separati, dovrai dichiarare una variabile per ogni valore inserito.
-3. Per chiamare scanf() per l'inserimento di un singolo valore, prima copia l'indirizzo della stringa di formato che specifica in quale formato arriveranno i dati in RDI. Per i valori interi, questa è tipicamente la stringa %d.
-4. Copia l'indirizzo della variabile di memoria che conterrà il valore in RSI. (Vedi la seguente discussione sull'inserimento di più valori in una sola chiamata.)
-5. Azzerare RAX, dicendo a scanf() che nessun parametro di registro vettoriale viene passato nella chiamata di funzione.
-6. Chiama scanf().
+<ol>
+  <li>
+    <p align="justify">
+    Assicurati di aver dichiarato EXTERN scanf insieme alle tue altre dichiarazioni esterne nella parte superiore della sezione .TEXT.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Dichiarare una variabile di memoria del tipo appropriato per contenere i dati numerici letti e convertiti da scanf(). I miei esempi qui saranno per dati interi, quindi dovresti creare tale variabile con la direttiva DQ o la direttiva RESQ. Ovviamente, se intendi mantenere diversi valori separati, dovrai dichiarare una variabile per ogni valore inserito.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Per chiamare scanf() per l'inserimento di un singolo valore, prima copia l'indirizzo della stringa di formato che specifica in quale formato arriveranno i dati in RDI. Per i valori interi, questa è tipicamente la stringa %d.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Copia l'indirizzo della variabile di memoria che conterrà il valore in RSI. (Vedi la seguente discussione sull'inserimento di più valori in una sola chiamata.)
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Azzerare RAX, dicendo a scanf() che nessun parametro di registro vettoriale viene passato nella chiamata di funzione.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Chiama scanf().
+    </p>
+  </li>
+</ol>
 
 <p align="justify">
 è possibile presentare a scanf() una stringa contenente più codici di formattazione in modo che l'utente possa inserire più valori numerici con una sola chiamata a scanf(). L'ho provato e risulta in un'interfaccia utente piuttosto peculiare. Questa funzionalità è meglio utilizzata se stai scrivendo un programma per leggere un file di testo contenente righe di valori interi espressi come testo e convertirli in variabili intere reali in memoria. Per ottenere semplicemente valori numerici dall'utente tramite la tastiera, è meglio accettare solo un valore per ogni chiamata a scanf(). Il programma charsin.asm (mostrato di seguito) mostra come impostare messaggi insieme a un campo di inserimento dati per accettare sia dati stringa che dati numerici dall'utente attraverso la tastiera. Dopo aver accettato i dati, il programma visualizza ciò che è stato inserito, utilizzando printf()
@@ -14743,10 +16261,28 @@ Quando digiti un numero nella riga di comando mentre invochi un programma, puoi 
 La funzione sscanf() accetta tre parametri, che è necessario caricare nei registri dei parametri standard, nel seguente ordine:
 </p>
 
-1. Il primo parametro è l'indirizzo della stringa di testo da convertire nel valore numerico che rappresenta. In textfile.asm, carichiamo RDI con l'indirizzo di arg(1), che è il primo argomento della riga di comando che digiti quando invochi il programma.
-2. Successivamente carichiamo RSI con l'indirizzo di una stringa di codice di formattazione che indica a sscanf() quale formato numerico desideri che il testo di input venga convertito. Qui la stringa di codice è %d, che, come potresti ricordare dalla nostra discussione su printf(), è il codice per gli interi.
-3. Il terzo parametro è l'indirizzo di una variabile numerica che conterrà il valore numerico generato da sscanf(). Questo va in RDX. Qui stiamo generando un intero a 64 bit. Quindi, in textfile.asm, passiamo l'indirizzo della variabile IntBuffer, che è dichiarata come intero a 64 bit.
-4. Come con printf() e scanf(), azzera RAX a 0 immediatamente prima di effettuare la chiamata a sscanf().
+<ol>
+  <li>
+    <p align="justify">
+    Il primo parametro è l'indirizzo della stringa di testo da convertire nel valore numerico che rappresenta. In textfile.asm, carichiamo RDI con l'indirizzo di arg(1), che è il primo argomento della riga di comando che digiti quando invochi il programma.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Successivamente carichiamo RSI con l'indirizzo di una stringa di codice di formattazione che indica a sscanf() quale formato numerico desideri che il testo di input venga convertito. Qui la stringa di codice è %d, che, come potresti ricordare dalla nostra discussione su printf(), è il codice per gli interi.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Il terzo parametro è l'indirizzo di una variabile numerica che conterrà il valore numerico generato da sscanf(). Questo va in RDX. Qui stiamo generando un intero a 64 bit. Quindi, in textfile.asm, passiamo l'indirizzo della variabile IntBuffer, che è dichiarata come intero a 64 bit.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Come con printf() e scanf(), azzera RAX a 0 immediatamente prima di effettuare la chiamata a sscanf().
+    </p>
+  </li>
+</ol>
 
 <p align="justify">
 Una volta che questi tre elementi sono stati caricati nei registri appropriati e RAX è stato azzerato, chiama sscanf(). Restituisce il valore convertito nella variabile numerica il cui indirizzo hai passato come terzo parametro. Restituisce anche un codice in RAX per indicare se la conversione è stata riuscita. Se il valore restituito in RAX è 0, allora si è verificato un errore e non dovresti presumere di avere qualcosa di significativo nella tua variabile numerica. Se la conversione è andata a buon fine, vedrai il valore 1 in RAX. Questo è il modo più semplice per utilizzare sscanf(). Può convertire interi array di numeri contemporaneamente, ma questo è un uso più specializzato di cui probabilmente non hai bisogno quando stai appena iniziando. Fare queste cose specializzate richiede spesso registri vettoriali, che non sto trattando in questo libro. Tuttavia, è importante azzerare RAX a 0 prima di chiamare sscanf() nel programma di esempio per dire alla funzione che non verranno utilizzati registri vettoriali. La stringa passata a sscanf() come secondo parametro può contenere più codici di formattazione e in tal caso la stringa il cui indirizzo passi come primo parametro dovrebbe avere del testo che descrive i valori numerici per ciascun codice di formattazione presente nella stringa di formato. Nel codice seguente, il testo di formato specifica solo un valore, utilizzando il codice di formato %d. L'intero processo appare così:
@@ -14782,8 +16318,18 @@ A questo punto dovresti essere abbastanza a tuo agio con il meccanismo generale 
 Di solito, quando apri un file per la scrittura non puoi leggerci, ma ci sono modalità speciali che consentono sia la lettura che la scrittura su un file. Per i file di testo in particolare (di cui stiamo parlando qui) questo introduce alcune complicazioni, quindi per la maggior parte, i file di testo vengono aperti o per la lettura o per la scrittura, ma non per entrambi contemporaneamente. Nel sistema di file Unix, se apri un file per la scrittura o per l'aggiunta e il file non esiste già, il file viene creato. Se non sai se un file esiste e devi scoprirlo, prova ad aprirlo per la lettura e non per la scrittura, altrimenti otterrai un file che sia realmente esistito prima o meno! Per usare fopen(), devi impostare i seguenti parametri nei registri prima della chiamata:
 </p>
 
-1. Inserire l'indirizzo della stringa di caratteri contenente il nome del file da aprire in RDI.
-2. Inserire l'indirizzo di un codice che indica in quale modalità il file deve essere aperto in RSI. Le varie modalità disponibili per Linux sono elencate nella figura seguente. Quelli che userai tipicamente per i file di testo sono r, w e a. Questi dovrebbero essere definiti come brevi stringhe di caratteri, seguite da un null:
+<ol>
+  <li>
+    <p align="justify">
+    Inserire l'indirizzo della stringa di caratteri contenente il nome del file da aprire in RDI.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Inserire l'indirizzo di un codice che indica in quale modalità il file deve essere aperto in RSI. Le varie modalità disponibili per Linux sono elencate nella figura seguente. Quelli che userai tipicamente per i file di testo sono r, w e a. Questi dovrebbero essere definiti come brevi stringhe di caratteri, seguite da un null:
+    </p>
+  </li>
+</ol>
 
 ```asm
  WriteCode  db 'w',0
@@ -14821,9 +16367,23 @@ Quando fopen() crea o apre con successo un file per te, restituisce un handle de
 Per questo motivo, devi anche passare un valore limite a fgets(). Quando fgets() inizia a leggere una riga, tiene traccia di quanti caratteri ha estratto dal file e quando arriva a uno meno del valore limite, smette di leggere i caratteri. Aggiunge quindi un carattere EOL al buffer per l'ultimo carattere e restituisce. Configura le chiamate a fgets() in questo modo:
 </p>
 
-1. Prima, carica RDI con l'indirizzo del buffer di caratteri in cui fgets() memorizzerà i caratteri letti dal file.
-2. Successivamente, carica RSI con il valore limite del conteggio dei caratteri. Questo deve essere il valore intero effettivo, e non un puntatore al valore!
-3. Infine, carica RDX con il gestore del file restituito da fopen() quando il file è stato aperto.
+<ol>
+  <li>
+    <p align="justify">
+    Prima, carica RDI con l'indirizzo del buffer di caratteri in cui fgets() memorizzerà i caratteri letti dal file.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Successivamente, carica RSI con il valore limite del conteggio dei caratteri. Questo deve essere il valore intero effettivo, e non un puntatore al valore!
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Infine, carica RDX con il gestore del file restituito da fopen() quando il file è stato aperto.
+    </p>
+  </li>
+</ol>
 
 <p align="justify">
 Con tutto ciò fatto, chiama fgets(). Se fgets() restituisce 0 in RAX, significa che hai raggiunto la fine del file oppure si è verificato un errore di lettura durante il caricamento. In entrambi i casi, non ci sono ulteriori dati provenienti dal file. Ma senza un 0 restituito in RAX, puoi presumere che ci sia testo valido presente nel buffer all'indirizzo che hai passato a fgets() in RDI. Ho usato fgets() per creare un sistema di aiuto molto semplice basato su disco per textfile.asm. Quando l'utente non inserisce affatto argomenti da riga di comando, il programma textfile legge un breve file di testo dal disco e lo visualizza in uscita standard. Se il file di aiuto basato su disco non può essere aperto, textfile visualizza un breve messaggio a tal riguardo. Questo è un modo comune e cortese di fare con i programmi da riga di comando, e consiglio che tutte le utility che costruisci per l'uso quotidiano funzionino in questo modo. Il codice per il sistema di aiuto è relativamente semplice e dimostra sia fopen() che fgets():
@@ -14872,10 +16432,28 @@ Prima che venga chiamata la procedura diskhelp, il chiamante passa un puntatore 
 In precedenza in questo capitolo, ho spiegato come scrivere testo formattato sul display tramite l'output standard, utilizzando la funzione printf(). La libreria standard C fornisce una funzione che scrive lo stesso testo formattato su qualsiasi file di testo aperto. La funzione fprintf() fa esattamente ciò che fa printf(), ma richiede un parametro aggiuntivo nello stack: il gestore del file di un file di testo aperto. Lo stesso flusso di testo che printf() invierebbe all'output standard viene inviato da fprintf() a quel file aperto. Quindi non mi prenderò la briga di riesplorare come formattare il testo per printf() utilizzando codici di formattazione e stringhe di base. Si fa nello stesso modo, con gli stessi identici codici. Invece, semplicemente riassumerò come impostare una chiamata a fprintf():
 </p>
 
-1. Prima (e qui è dove fprintf() si differenzia da printf()), copia il gestore del file del file a cui il testo dovrebbe essere scritto in RDI.
-2. Successivamente, copia l'indirizzo della stringa base contenente i codici di formattazione in RSI. Ancora una volta, proprio come per printf().
-3. Infine, passa i puntatori ai valori controllati dalla stringa base nei registri, secondo l'ordine specificato nella convenzione di chiamata C. Non c'è differenza rispetto al modo in cui viene fatto per una chiamata a printf(). Come con printf(), possono esserci più di uno. Nel file textfile.asm, il primo è il numero della riga (passato in RDX), e il secondo è la riga di testo inserita dall'utente, passata in RCX.
-4. Come con printf(), azzera RAX a 0 prima di chiamare fprintf().
+<ol>
+  <li>
+    <p align="justify">
+    Prima (e qui è dove fprintf() si differenzia da printf()), copia il gestore del file del file a cui il testo dovrebbe essere scritto in RDI.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Successivamente, copia l'indirizzo della stringa base contenente i codici di formattazione in RSI. Ancora una volta, proprio come per printf().
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Infine, passa i puntatori ai valori controllati dalla stringa base nei registri, secondo l'ordine specificato nella convenzione di chiamata C. Non c'è differenza rispetto al modo in cui viene fatto per una chiamata a printf(). Come con printf(), possono esserci più di uno. Nel file textfile.asm, il primo è il numero della riga (passato in RDX), e il secondo è la riga di testo inserita dall'utente, passata in RCX.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Come con printf(), azzera RAX a 0 prima di chiamare fprintf().
+    </p>
+  </li>
+</ol>
 
 <p align="justify">
 Quindi chiama fprintf(). Il tuo testo verrà scritto nel file aperto. Nota che per utilizzare fprintf(), il file di destinazione deve essere stato aperto per scrittura o appending. Se tenti di utilizzare fprintf() su un file aperto per lettura, genererai un errore e fprintf() restituirà senza scrivere alcun dato. In tal caso, verrà restituito un codice di errore in RAX. Tuttavia, a differenza delle altre funzioni di cui abbiamo parlato finora, il codice di errore è un numero negativo, non 0! Quindi, sebbene tu debba confrontare il valore restituito con 0, in realtà devi saltare su un valore inferiore a 0"anziché 0 stesso. Tipicamente, per saltare su una condizione di errore di fprintf(), utilizzeresti l'istruzione JL (Jump if Less), che salterà su un valore inferiore a 0.
@@ -15282,7 +16860,9 @@ int main ()
 
 ### Vedere i processi attivi
 
-Il comando **ps** mostra i processi attivi sul sistema.
+<p align="justify">
+Il comando <strong>ps</strong> mostra i processi attivi sul sistema.
+</p>
 
 ```bash
 vagrant@ubuntu2204:/lab2/0_processes$ ps
@@ -15498,11 +17078,27 @@ Nota che il codice all'interno del blocco <code>if</code> è eseguito solo dal p
 La system call <code>exec()</code> sostituisce il programma eseguito all'interno del processo con un nuovo programma. Quando un programma richiama la <code>exec()</code> il processo smette immediatamente di eseguire il programma ed ha inizio l'esecuzione del nuovo programma richiamato dalla <code>exec()</code>.
 </p>
 
+<p align="justify">
 Ci sono diverse versioni della <code>exec()</code>:
+</p>
 
-* Funzioni che contengono la lettera `p` nel nome (`exexcvp`, `execlp`) accettano il nome del programma e lo cercano nel sistema; le funzioni che non contengono la `p` nel nome necessitano del percorso assoluto del programma da eseguire
-* Funzioni che contengono la lettera `v` nel nome (`execv`, `execvp`, `execve`) accettano una  lista di argomenti da passare in ingresso al nuovo programma come un array di puntatori a caratteri terminati da `NULL`. Le funzioni invece che contengono la lettra `l` (`execl` `execlp`, `execle`) accettano una lista di argomenti in ingresso secondo il meccanismo delle `vargargs` del lingugiaggio C
-* Funzioni che contengono la lettera `e` nel nome (`execve`, `execle`) accettano un argomento in più, un array di variabili d'ambiente. L'argomento dovrebbe essere un array di puntatori a caratteri terminato da `NULL`, ciascun stringa dovrebbe essere nella forma `VARIABILE=valore`
+<ul>
+  <li>
+    <p align="justify">
+    Funzioni che contengono la lettera <code>p</code> nel nome (<code>exexcvp</code>, <code>execlp</code>) accettano il nome del programma e lo cercano nel sistema; le funzioni che non contengono la <code>p</code> nel nome necessitano del percorso assoluto del programma da eseguire
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Funzioni che contengono la lettera <code>v</code> nel nome (<code>execv</code>, <code>execvp</code>, <code>execve</code>) accettano una  lista di argomenti da passare in ingresso al nuovo programma come un array di puntatori a caratteri terminati da <code>NULL</code>. Le funzioni invece che contengono la lettra <code>l</code> (<code>execl</code> <code>execlp</code>, <code>execle</code>) accettano una lista di argomenti in ingresso secondo il meccanismo delle <code>vargargs</code> del lingugiaggio C
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Funzioni che contengono la lettera <code>e</code> nel nome (<code>execve</code>, <code>execle</code>) accettano un argomento in più, un array di variabili d'ambiente. L'argomento dovrebbe essere un array di puntatori a caratteri terminato da <code>NULL</code>, ciascun stringa dovrebbe essere nella forma <code>VARIABILE=valore</code>
+    </p>
+  </li>
+</ul>
 
 ```c
 /***********************************************************************
@@ -15606,15 +17202,31 @@ I segnali sono un meccanismo per comunicare e manipolare i processi in Linux. Un
 Quando un processo riceve un segnale, può comportarsi in modi differenti in base alla disposizione di default: se il programma non definisce un comportamento specifico, questa stabilisce cosa fare. Per ciascun segnale, un programma può:
 </p>
 
-1. Specificare un diverso comportamento dalla disposizione di default
-2. Ignorare il segnale
-3. Chiamare una funzione, detta **signal-handler**, per rispondere in modo personalizzato al segnale
+<ol>
+  <li>
+    <p align="justify">
+    Specificare un diverso comportamento dalla disposizione di default
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Ignorare il segnale
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Chiamare una funzione, detta <strong>signal-handler</strong>, per rispondere in modo personalizzato al segnale
+    </p>
+  </li>
+</ol>
 
 <p align=justify>
 Se una funzione <b>signal-handler</b> è usata, l'esecuzione del programma è messa in pausa e la funzione è immeditamente eseguita e solo dopo che questa termina l'esecuzione del programma riprende nel punto dove si era interrotta.
 </p>
 
-Alcuni esempi di segnali sono 
+<p align="justify">
+Alcuni esempi di segnali sono
+</p>
 
 <div align=center>
 	
@@ -15631,12 +17243,27 @@ Alcuni esempi di segnali sono
 
 #### sigaction
 
-La **sigaction** può essere usata per impostare il comportamento di default di un segnale.
-Riceve in ingresso tre parametri:
+<p align="justify">
+La <strong>sigaction</strong> può essere usata per impostare il comportamento di default di un segnale. Riceve in ingresso tre parametri:
+</p>
 
-1. `int`: il numero del segnale
-2. `const struct sigaction *`: la disposizione desiderata per il segnale
-3. `struct sigaction *`: la precedente disposizione per il segnale
+<ol>
+  <li>
+    <p align="justify">
+    <code>int</code>: il numero del segnale
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>const struct sigaction *</code>: la disposizione desiderata per il segnale
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>struct sigaction *</code>: la precedente disposizione per il segnale
+    </p>
+  </li>
+</ol>
    
 ```c
 int sigaction(int signum,
@@ -15644,7 +17271,9 @@ int sigaction(int signum,
                      struct sigaction *_Nullable restrict oldact);
 ```
 
-La struct `sigaction` ha questa forma:
+<p align="justify">
+La struct <code>sigaction</code> ha questa forma:
+</p>
 
 ```c
 struct sigaction {
@@ -15656,17 +17285,39 @@ struct sigaction {
            };
 ```
 
-Il campo più importante in questa struttura è `sa_handler`, che può assumere uno di questi tre valori:
+<p align="justify">
+Il campo più importante in questa struttura è <code>sa_handler</code>, che può assumere uno di questi tre valori:
+</p>
 
-* **SIG_DFL**
-* **SIG_IGN**
-* Un puntatore alla funzione **signal-handler**. La funzione dovrebbe accettare un parametro (il numero del segnale) e restituire `void`.
+<ul>
+  <li>
+    <p align="justify">
+    <strong>SIG_DFL</strong>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <strong>SIG_IGN</strong>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Un puntatore alla funzione <strong>signal-handler</strong>. La funzione dovrebbe accettare un parametro (il numero del segnale) e restituire <code>void</code>.
+    </p>
+  </li>
+</ul>
 
-Quando il segnale viene processato dal programma, può accadere in un momento critico (quindi durante l'esecuzione di un **signal-handler**). All'interno del gestore vanno svolti solo i task strettamente necessari per gestire e rispondere al segnale, evitando I/O, librerie esterne o operazioni del linguaggio potenzialmente bloccanti. Può accadere che un **signal-handler** sia interrotto dalla ricezione di un altro segnale: è un problema molto complesso da diagnosticare, quindi conviene essere cauti su cosa fare dentro un **signal-handler**.
+<p align="justify">
+Quando il segnale viene processato dal programma, può accadere in un momento critico (quindi durante l'esecuzione di un <strong>signal-handler</strong>). All'interno del gestore vanno svolti solo i task strettamente necessari per gestire e rispondere al segnale, evitando I/O, librerie esterne o operazioni del linguaggio potenzialmente bloccanti. Può accadere che un <strong>signal-handler</strong> sia interrotto dalla ricezione di un altro segnale: è un problema molto complesso da diagnosticare, quindi conviene essere cauti su cosa fare dentro un <strong>signal-handler</strong>.
+</p>
 
-Un altro aspetto da tenere in considerazione è rendere le proprie istruzioni (variabili globali) atomiche usando il tipo `sig_atomic_t`. Linux garantisce che l'assegnazione di variabili di questo tipo avvenga in modo atomico e non possa essere interrotto dall'arrivo di un nuovo segnale.
+<p align="justify">
+Un altro aspetto da tenere in considerazione è rendere le proprie istruzioni (variabili globali) atomiche usando il tipo <code>sig_atomic_t</code>. Linux garantisce che l'assegnazione di variabili di questo tipo avvenga in modo atomico e non possa essere interrotto dall'arrivo di un nuovo segnale.
+</p>
 
-Vediamo un esempio di **signal-handler** per la gestione del segnale **SIGUSR1**, uno dei due segnali riservati all'uso da parte dei programmi applicativi.
+<p align="justify">
+Vediamo un esempio di <strong>signal-handler</strong> per la gestione del segnale <strong>SIGUSR1</strong>, uno dei due segnali riservati all'uso da parte dei programmi applicativi.
+</p>
 
 ```c
 /***********************************************************************
@@ -15708,7 +17359,9 @@ int main ()
 }
 ```
 
-In un primo terminale esegui il programma che resterà in esecuzione per 5 minuti, alla fine dell'esecuzione stamperà il numero di volte che il segnale `SIGUSR1` è stato ricevuto.
+<p align="justify">
+In un primo terminale esegui il programma che resterà in esecuzione per 5 minuti, alla fine dell'esecuzione stamperà il numero di volte che il segnale <code>SIGUSR1</code> è stato ricevuto.
+</p>
 
 ```bash
 vagrant@ubuntu2204:/lab2/0_processes$ bin/4_sigusr1
@@ -15716,7 +17369,9 @@ vagrant@ubuntu2204:/lab2/0_processes$ bin/4_sigusr1
 **************************SIGUSR1 was raised 6 times
 ```
 
-Per inviare il segnale `SIGUSR1` basta usare il comando `kill` usando il **PID** del processo (che puoi recuperare con il comando `ps` come mostrato nel codice seguente)
+<p align="justify">
+Per inviare il segnale <code>SIGUSR1</code> basta usare il comando <code>kill</code> usando il <strong>PID</strong> del processo (che puoi recuperare con il comando <code>ps</code> come mostrato nel codice seguente)
+</p>
 
 ```bash
 vagrant@ubuntu2204:~$ ps -e|grep 4_sigusr1
@@ -15732,28 +17387,50 @@ vagrant@ubuntu2204:~$ kill -SIGUSR1 1642
 
 #### Terminare un processo
 
-Un processo termina o attraverso la chiamata alla funzione `exit()` o quando termina la funzione `main()` del programma (attraverso `return` o perché raggiunge l'ultima istruzione del blocco della funzione `main()`). Il valore intero ritornato attraverso `return` o come parametro in input alla `exit()` è detto **exit code**. Un processo può anche terminare in risposta a un segnale (`SIGSEGV`, `SIGKILL` etc). Altri segnali per terminare un processo sono `SIGINT` inviato quando si preme la combinazione di tasti `CTRL+C` nel terminale occupato del programma. Un altro segnale che termina un processo è `SIGABRT` che oltre a terminare il processo genera un core file, è possibile inviare questo segnale attraverso la chiamata `abort()`. Il modo più brutale per terminare un processo è quello di inviare il segnale `SIGKILL` che termina immediatamente il processo e non può essere ignorato o bloccato.
-Tutti questi segnale ed anche altri possono essere inviati con il comando `kill` specificando quale segnale inviare come parametro, per inviare un `SIGKILL` fai in questo modo:
+<p align="justify">
+Un processo termina o attraverso la chiamata alla funzione <code>exit()</code> o quando termina la funzione <code>main()</code> del programma (attraverso <code>return</code> o perché raggiunge l'ultima istruzione del blocco della funzione <code>main()</code>). Il valore intero ritornato attraverso <code>return</code> o come parametro in input alla <code>exit()</code> è detto <strong>exit code</strong>. Un processo può anche terminare in risposta a un segnale (<code>SIGSEGV</code>, <code>SIGKILL</code> etc). Altri segnali per terminare un processo sono <code>SIGINT</code> inviato quando si preme la combinazione di tasti <code>CTRL+C</code> nel terminale occupato del programma. Un altro segnale che termina un processo è <code>SIGABRT</code> che oltre a terminare il processo genera un core file, è possibile inviare questo segnale attraverso la chiamata <code>abort()</code>. Il modo più brutale per terminare un processo è quello di inviare il segnale <code>SIGKILL</code> che termina immediatamente il processo e non può essere ignorato o bloccato. Tutti questi segnale ed anche altri possono essere inviati con il comando <code>kill</code> specificando quale segnale inviare come parametro, per inviare un <code>SIGKILL</code> fai in questo modo:
+</p>
 
 ```bash
 kill -KILL pid
 ```
 
-Esiste anche la funzione `kill()` per inviare un segnale dal codice ed ha questo prototipo:
+<p align="justify">
+Esiste anche la funzione <code>kill()</code> per inviare un segnale dal codice ed ha questo prototipo:
+</p>
 
 ```c
 int kill(pid_t pid, int sig);
 ```
 
-1. `pid_t pid`: il pid del processo
-2. `int sig`: segnale da inviare
+<ol>
+  <li>
+    <p align="justify">
+    <code>pid_t pid</code>: il pid del processo
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>int sig</code>: segnale da inviare
+    </p>
+  </li>
+</ol>
 
-Devi includere `<sys/types.h>` e `<signal.h` per utilizzare la funzione `kill()`.
+<p align="justify">
+Devi includere <code>&lt;sys/types.h&gt;</code> e <code>&lt;signal.h</code> per utilizzare la funzione <code>kill()</code>.
+</p>
 
-> [!IMPORTANT]
-> Per convenzione, **exit code** è usato per indicare se il programma ha terminato la sua esecuzione correttamente o con degli errori. Un valore pari a zero indica una corretta esecuzione mentre valori diversi da zero indicano che il processo ha terminato con qualche errore. E' importante seguire questa convenzione se vuoi usare gli operatori logici della shell (`&&` `||`) per concatenare più programmi tra loro.
+<table align="center">
+	<td>:exclamation: <b>Importante</b>
+	<p align=justify>
+ Per convenzione, <strong>exit code</strong> è usato per indicare se il programma ha terminato la sua esecuzione correttamente o con degli errori. Un valore pari a zero indica una corretta esecuzione mentre valori diversi da zero indicano che il processo ha terminato con qualche errore. E' importante seguire questa convenzione se vuoi usare gli operatori logici della shell (<code>&amp;&amp;</code> <code>||</code>) per concatenare più programmi tra loro.
+	</p>
+	</td>
+</table>
 
-Puoi leggere l'**exit code** dell'ultimo programma lanciato sulla shell stampando il contenuto della variabile `$?` per esempio
+<p align="justify">
+Puoi leggere l'<strong>exit code</strong> dell'ultimo programma lanciato sulla shell stampando il contenuto della variabile <code>$?</code> per esempio
+</p>
 
 ```bash
 vagrant@ubuntu2204:/lab2/0_processes$ ls
@@ -15764,13 +17441,19 @@ vagrant@ubuntu2204:/lab2/0_processes$ echo $?
 
 #### Aspettare la terminazione di un processo
 
-Quando si esegue la coppia di chiamate `fork()` ed `exec()` per creare un processo figlio siamo in grado, all'interno dello stesso codice, di differenziare quali istruzioni saranno eseguite dal padre e quali dal processo figlio sfruttando l'intero di ritorno della chiamata `fork()`. Nulla però ci assicura che il padre terminerà prima del figlio, l'ordine di terminazione dipende dal numero di istruzioni dei due processi e soprattutto da come il sistema operativo andrà a schedulare i due processi nell'assegnazione dei tempi di CPU. Quando è necessario che per la correttezza del nostro programma il padre termini soltanto al termine dell'esecuzione del processo figlio è obbligo usare la funzione `wait()`.
+<p align="justify">
+Quando si esegue la coppia di chiamate <code>fork()</code> ed <code>exec()</code> per creare un processo figlio siamo in grado, all'interno dello stesso codice, di differenziare quali istruzioni saranno eseguite dal padre e quali dal processo figlio sfruttando l'intero di ritorno della chiamata <code>fork()</code>. Nulla però ci assicura che il padre terminerà prima del figlio, l'ordine di terminazione dipende dal numero di istruzioni dei due processi e soprattutto da come il sistema operativo andrà a schedulare i due processi nell'assegnazione dei tempi di CPU. Quando è necessario che per la correttezza del nostro programma il padre termini soltanto al termine dell'esecuzione del processo figlio è obbligo usare la funzione <code>wait()</code>.
+</p>
 
 #### wait()
 
-La `wait()` l'esecuzione del processo padre finchè uno dei suoi figli ha terminato (anche con un errore, non importa). Inoltre la `wait()` ritorna uno status code (**exit code**) dal quale estrarre informazioni su come il processo figlio ha terminato l'esecuzione. Per esempio la macro `WEXITSTATUS` contiene l'**exit code** del processo figlio.
+<p align="justify">
+La <code>wait()</code> l'esecuzione del processo padre finchè uno dei suoi figli ha terminato (anche con un errore, non importa). Inoltre la <code>wait()</code> ritorna uno status code (<strong>exit code</strong>) dal quale estrarre informazioni su come il processo figlio ha terminato l'esecuzione. Per esempio la macro <code>WEXITSTATUS</code> contiene l'<strong>exit code</strong> del processo figlio.
+</p>
 
+<p align="justify">
 Vediamo un esempio:
+</p>
 
 ```c
 /***********************************************************************
@@ -15837,7 +17520,9 @@ int main ()
 }                                                                    
 ```
 
-Come puoi vedere sotto, prima il terminale è occupato dell'output del processo figlio (`ls -l`) e successivamente il processo padre termina stampando a schermo (`done with the main program`).
+<p align="justify">
+Come puoi vedere sotto, prima il terminale è occupato dell'output del processo figlio (<code>ls -l</code>) e successivamente il processo padre termina stampando a schermo (<code>done with the main program</code>).
+</p>
 
 ```bash
 vagrant@ubuntu2204:/lab2/0_processes$ bin/5_fork_exec_wait
@@ -15874,8 +17559,9 @@ done with main program
 
 #### Processi zombie
 
-Quando un processo figlio termina ed il processo padre ha chiamato la `wait()` le informazioni circa la terminazione della propria esecuzione sono passate attraverso la `wait()` al padre. Se il padre non chiama la `wait()` queste informazioni vanno perse? No, perché in questo caso il processo figlio diventa un processo **zombie**.
-Un processo **zombie** è un processo che ha terminato la propria esecuzione ma non è stato ancora pulito; è compito del processo padre ripulire il suo processo figlio zombie. Il compito della `wait()` è appunto questo: una volta che il processo figlio termina questo diventa un zombie e la `wait()` estrarrà lo stato di uscita del figlio zombie, così il processo figlio può essere eliminato. Se il processo padre non chiama la `wait()`, il figlio resta nello stato di zombie, vediamo un esempio:
+<p align="justify">
+Quando un processo figlio termina ed il processo padre ha chiamato la <code>wait()</code> le informazioni circa la terminazione della propria esecuzione sono passate attraverso la <code>wait()</code> al padre. Se il padre non chiama la <code>wait()</code> queste informazioni vanno perse? No, perché in questo caso il processo figlio diventa un processo <strong>zombie</strong>. Un processo <strong>zombie</strong> è un processo che ha terminato la propria esecuzione ma non è stato ancora pulito; è compito del processo padre ripulire il suo processo figlio zombie. Il compito della <code>wait()</code> è appunto questo: una volta che il processo figlio termina questo diventa un zombie e la <code>wait()</code> estrarrà lo stato di uscita del figlio zombie, così il processo figlio può essere eliminato. Se il processo padre non chiama la <code>wait()</code>, il figlio resta nello stato di zombie, vediamo un esempio:
+</p>
 
 ```c
 /***********************************************************************
@@ -15906,12 +17592,16 @@ int main ()
 }
 ```
 
+<p align="justify">
 Lancia il programma da un terminale in questo modo:
+</p>
 
 ```bash
 vagrant@ubuntu2204:/lab2/0_processes$ bin/6_zombie
 ```
-Ed usa, su un altro terminale, il comando `ps` in questo modo:
+<p align="justify">
+Ed usa, su un altro terminale, il comando <code>ps</code> in questo modo:
+</p>
 
 ```bash
 vagrant@ubuntu2204:~$ ps -e -o pid,ppid,stat,cmd|grep 6_zombie
@@ -15920,14 +17610,17 @@ vagrant@ubuntu2204:~$ ps -e -o pid,ppid,stat,cmd|grep 6_zombie
    2325    2301 S+   grep --color=auto 6_zombie
 ```
 
-Il processo padre ha pid `2317` ed è in sleep `S+` il processo figlio è `<defunct>` ed è uno zombie `Z+`
-Quando il processo padre termina prima del figlio senza chiamare la `wait()`, chi si occupa di ripulire il processo figlio e portarlo dallo stato di zombie a terminato? Il processo **init** che è il padre di tutti i processi (init infatti ha PID=1) ed eredita tutti i figli rimasti orfani del proprio padre. Se rilanci `ps` dopo un po' di tempo vedrai che il processo figlio con pid `2318` non esiste più in quanto è stato ripulito da init. 
+<p align="justify">
+Il processo padre ha pid <code>2317</code> ed è in sleep <code>S+</code> il processo figlio è <code>&lt;defunct&gt;</code> ed è uno zombie <code>Z+</code> Quando il processo padre termina prima del figlio senza chiamare la <code>wait()</code>, chi si occupa di ripulire il processo figlio e portarlo dallo stato di zombie a terminato? Il processo <strong>init</strong> che è il padre di tutti i processi (init infatti ha PID=1) ed eredita tutti i figli rimasti orfani del proprio padre. Se rilanci <code>ps</code> dopo un po' di tempo vedrai che il processo figlio con pid <code>2318</code> non esiste più in quanto è stato ripulito da init.
+</p>
 
 
 
 ### Ripulire il figlio in modo asincrono
 
-La `wait()` ci permette di attendere (nel codice del padre) la terminazione del figlio. Il problema è che la chiamata alla `wait()` è bloccante quindi il codice del padre rimane (appeso) bloccata all'istruzione di wait fino a quando il figlio non termina. Se si vuole che il padre continui la propria elaborazione mentre si attende che il figlio completi è possibile controllare periodicamente la terminazione del figlio chiamando `wait3()` o `wait4()` (flag `WNOHANG`) in modo asincrono ogni tanto nel codice del padre. Una soluzione migliore è usare il segnale `SIGCHLD` che Linux invia al padre ogni volta che uno dei suoi figli termina. Vediamo un esempio:
+<p align="justify">
+La <code>wait()</code> ci permette di attendere (nel codice del padre) la terminazione del figlio. Il problema è che la chiamata alla <code>wait()</code> è bloccante quindi il codice del padre rimane (appeso) bloccata all'istruzione di wait fino a quando il figlio non termina. Se si vuole che il padre continui la propria elaborazione mentre si attende che il figlio completi è possibile controllare periodicamente la terminazione del figlio chiamando <code>wait3()</code> o <code>wait4()</code> (flag <code>WNOHANG</code>) in modo asincrono ogni tanto nel codice del padre. Una soluzione migliore è usare il segnale <code>SIGCHLD</code> che Linux invia al padre ogni volta che uno dei suoi figli termina. Vediamo un esempio:
+</p>
 
 ```c
 /***********************************************************************
@@ -16035,15 +17728,15 @@ Father's quitting
 
 ### I Thread
 
-I thread come i processi sono un meccanismo per permettere a un programma di svolgere più compiti contemporaneamente. Come i processi anche i thread si contendono la CPU per l'esecuzione. Da un punto di vista teorico un thread esiste all'interno di un processo:, quando un programma viene invocato, Linux crea un nuovo processo e, al suo interno, crea anche un singolo thread che esegue il programma in modo sequenziale. Questo thread può creare altri thread che eseguono lo stesso programma nello stesso processo ma ciascun thread potrebbe eseguire una parte diversa del programma in un qualsiasi momento.
-Abbiamo visto come un processo può forkare un processo figlio. Il processo figlio inizialmente esegue il programma del padre come una copia della memoria virtuale del processo padre, i descrittori dei file e così via. Il processo figlio può modificare la sua memoria, chiudere i descrittori dei file etc senza alterare quelli del padre. Quando un thread crea un nuovo thread nulla è copiato. Il thread padre ed il thread figlio condividono la stessa memoria, i descrittori dei file e tutte le altre risorse. Se un thread cambia il valore di una variabile anche l'altro thread vedrà questa modifica; se un thread chiude un descrittore di un file gli altri thread potrebbero non poter più leggere o scrivere su quel descrittore. Siccome un processo e tutti i suoi thread possono eseguire un solo programma alla volta se un thread richiama la `exec()` tutti i thread saranno terminati.
-Linux implementa le API POSIX per i thread (conosciuto come **pthread**). Tutte le funzioni per i thread sono definite nel file d'intestazione `<pthread.h>` che non è inclusa nella libreria standard fornita dal linguaggio C. La libreria è fornita in `libpthread.so` ed è necessario passare il parametro `-lpthread` a gcc per linkarla al momento della compilazione.
+<p align="justify">
+I thread come i processi sono un meccanismo per permettere a un programma di svolgere più compiti contemporaneamente. Come i processi anche i thread si contendono la CPU per l'esecuzione. Da un punto di vista teorico un thread esiste all'interno di un processo:, quando un programma viene invocato, Linux crea un nuovo processo e, al suo interno, crea anche un singolo thread che esegue il programma in modo sequenziale. Questo thread può creare altri thread che eseguono lo stesso programma nello stesso processo ma ciascun thread potrebbe eseguire una parte diversa del programma in un qualsiasi momento. Abbiamo visto come un processo può forkare un processo figlio. Il processo figlio inizialmente esegue il programma del padre come una copia della memoria virtuale del processo padre, i descrittori dei file e così via. Il processo figlio può modificare la sua memoria, chiudere i descrittori dei file etc senza alterare quelli del padre. Quando un thread crea un nuovo thread nulla è copiato. Il thread padre ed il thread figlio condividono la stessa memoria, i descrittori dei file e tutte le altre risorse. Se un thread cambia il valore di una variabile anche l'altro thread vedrà questa modifica; se un thread chiude un descrittore di un file gli altri thread potrebbero non poter più leggere o scrivere su quel descrittore. Siccome un processo e tutti i suoi thread possono eseguire un solo programma alla volta se un thread richiama la <code>exec()</code> tutti i thread saranno terminati. Linux implementa le API POSIX per i thread (conosciuto come <strong>pthread</strong>). Tutte le funzioni per i thread sono definite nel file d'intestazione <code>&lt;pthread.h&gt;</code> che non è inclusa nella libreria standard fornita dal linguaggio C. La libreria è fornita in <code>libpthread.so</code> ed è necessario passare il parametro <code>-lpthread</code> a gcc per linkarla al momento della compilazione.
+</p>
 
 #### Creazione di un thread
 
-Ad ogni thread è associato un id univoco di tipo `pthread_t`.
-Una volta creato un thread esegue una semplice funzione che contiene il codice che il thread dovrà eseguire, quando questa funzione termina anche il thread termina la propria esecuzione. Questa funzione riceva in ingresso un puntatore a void `void *` e ritorna sempre un altro puntatore a void `void *`.
-Per creare un nuovo thread bisogna usare la funzione `pthread_create()`, questo è il suo prototipo:
+<p align="justify">
+Ad ogni thread è associato un id univoco di tipo <code>pthread_t</code>. Una volta creato un thread esegue una semplice funzione che contiene il codice che il thread dovrà eseguire, quando questa funzione termina anche il thread termina la propria esecuzione. Questa funzione riceva in ingresso un puntatore a void <code>void *</code> e ritorna sempre un altro puntatore a void <code>void *</code>. Per creare un nuovo thread bisogna usare la funzione <code>pthread_create()</code>, questo è il suo prototipo:
+</p>
 
 ```c
 int pthread_create(pthread_t *restrict thread,
@@ -16052,12 +17745,32 @@ int pthread_create(pthread_t *restrict thread,
                           void *restrict arg);
 ```
 
-1. `pthread *t`: un puntatore al thread id
-2. `const pthread_attr_t *`: un puntatore all'oggetto contenente gli attributi del thread: questo oggetto controlla i dettagli di come il thread interagisce con il resto del programma. Se passi `NULL` come attributo del thread, il thread sarà creato con gli attributi di default.
-3. `void* (*) (void*)`: un puntatore alla funzione del thread, questo è un semplice puntatore a funzione
-4. `void *`: l'argomento in ingresso da passare alla funzione del thread di tipo `void *`
+<ol>
+  <li>
+    <p align="justify">
+    <code>pthread *t</code>: un puntatore al thread id
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>const pthread_attr_t *</code>: un puntatore all'oggetto contenente gli attributi del thread: questo oggetto controlla i dettagli di come il thread interagisce con il resto del programma. Se passi <code>NULL</code> come attributo del thread, il thread sarà creato con gli attributi di default.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>void* (*) (void*)</code>: un puntatore alla funzione del thread, questo è un semplice puntatore a funzione
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>void *</code>: l'argomento in ingresso da passare alla funzione del thread di tipo <code>void *</code>
+    </p>
+  </li>
+</ol>
 
+<p align="justify">
 Vediamo un esempio di creazione di un thread:
+</p>
 
 ```c
 /***********************************************************************
@@ -16093,13 +17806,15 @@ int main ()
 }
 ```
 
-Il thread termina quando termina la funzione del thread `print_xs`, un thread può ritornare anche richiamando la funzione `pthread_exit()`
+<p align="justify">
+Il thread termina quando termina la funzione del thread <code>print_xs</code>, un thread può ritornare anche richiamando la funzione <code>pthread_exit()</code>
+</p>
 
 #### Passare dati a un thread
 
-Per passare argomenti a un thread basta usare il quarto argomento della `pthread_create()`. Per farlo basta solo dichiarare una struttura o un array e passare il puntatore alla `pthread_create`.
-L'unica accortezza da tenere in considerazione è quella di castare il parametro in ingresso alla funzione del thread al tipo corretto.
-Vediamo un esempio:
+<p align="justify">
+Per passare argomenti a un thread basta usare il quarto argomento della <code>pthread_create()</code>. Per farlo basta solo dichiarare una struttura o un array e passare il puntatore alla <code>pthread_create</code>. L'unica accortezza da tenere in considerazione è quella di castare il parametro in ingresso alla funzione del thread al tipo corretto. Vediamo un esempio:
+</p>
 
 ```c
 /***********************************************************************
@@ -16158,20 +17873,36 @@ int main ()
 }
 ```
 
-Il problema in questo codice è che le due variabili locali (automatiche) `thread1_args` e `thread1_args` che contengono i parametri da passare ai due thread sono dichiarate nel processo padre, il processo padre termina immediatamente e tutte le sue variabili verranno deallocata comprese quelle passate come argomenti alle funzoni dei thread che accederanno quindi a locazioni di memoria non valide. Per risolvere questo problema dovremmo fare in modo che il processo padre attenda la terminazione dei thread nello stesso modo con cui attraverso la `wait()` attendeva la terminazione del processo figlio.
+<p align="justify">
+Il problema in questo codice è che le due variabili locali (automatiche) <code>thread1_args</code> e <code>thread1_args</code> che contengono i parametri da passare ai due thread sono dichiarate nel processo padre, il processo padre termina immediatamente e tutte le sue variabili verranno deallocata comprese quelle passate come argomenti alle funzoni dei thread che accederanno quindi a locazioni di memoria non valide. Per risolvere questo problema dovremmo fare in modo che il processo padre attenda la terminazione dei thread nello stesso modo con cui attraverso la <code>wait()</code> attendeva la terminazione del processo figlio.
+</p>
 
 #### Attendere la terminazione dei thread
 
-Per fare in modo che il `main()` attenda la terminazione dei thread è possibile usare la funzione `pthread_join()`. Questo è il suo prototipo:
+<p align="justify">
+Per fare in modo che il <code>main()</code> attenda la terminazione dei thread è possibile usare la funzione <code>pthread_join()</code>. Questo è il suo prototipo:
+</p>
 
 ```c
 int pthread_join(pthread_t thread, void **retval);
 ```
 
-1. `pthread_t`: id del thread di cui si vuole attendere il completamento
-2. `void *`: puntatore a void per il valore di ritorno del thread. Se non sei interessato al valore di ritorno passa `NULL` a questo parametro.
+<ol>
+  <li>
+    <p align="justify">
+    <code>pthread_t</code>: id del thread di cui si vuole attendere il completamento
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>void *</code>: puntatore a void per il valore di ritorno del thread. Se non sei interessato al valore di ritorno passa <code>NULL</code> a questo parametro.
+    </p>
+  </li>
+</ol>
 
-Vediamo come risolvere il bug dell'esempio predente usando la `pthread_join()` per attendere il completamento dei thread creati nel `main()`
+<p align="justify">
+Vediamo come risolvere il bug dell'esempio predente usando la <code>pthread_join()</code> per attendere il completamento dei thread creati nel <code>main()</code>
+</p>
 
 ```c
 /***********************************************************************
@@ -16238,7 +17969,9 @@ int main ()
 
 #### Il valore di ritorno dei thread
 
-Se il secondo parametro in ingresso alla `pthread_join()` non è `NULL` allora il valore di ritorno del thread verrà salvato nella locazione di memoria puntata da quell'argomento. Il valore di ritorno del thread è di tipo puntatore a void: `void *` quindi è necessario castare l'indirizzo della variabile intera `prime` ad `void *` nella chiamata alla `pthread_join()`.
+<p align="justify">
+Se il secondo parametro in ingresso alla <code>pthread_join()</code> non è <code>NULL</code> allora il valore di ritorno del thread verrà salvato nella locazione di memoria puntata da quell'argomento. Il valore di ritorno del thread è di tipo puntatore a void: <code>void *</code> quindi è necessario castare l'indirizzo della variabile intera <code>prime</code> ad <code>void *</code> nella chiamata alla <code>pthread_join()</code>.
+</p>
 
 ```c
 /***********************************************************************
@@ -16303,19 +18036,25 @@ The 5000th prime number is 48611.
 
 #### `pthread_self()` e `pthread_equal()`
 
-`pthread_self()` ritorna il thread id del thread corrente che la sta eseguendo. Questo è il suo prototipo:
+<p align="justify">
+<code>pthread_self()</code> ritorna il thread id del thread corrente che la sta eseguendo. Questo è il suo prototipo:
+</p>
 
 ```c
 pthread_t pthread_self(void);
 ```
 
-`pthread_equal()` confronta due thread id(s): ritorna zero se i due ID sono uguali. Questo è il suo prototipo:
+<p align="justify">
+<code>pthread_equal()</code> confronta due thread id(s): ritorna zero se i due ID sono uguali. Questo è il suo prototipo:
+</p>
 
 ```c
 int pthread_equal(pthread_t t1, pthread_t t2);
 ```
 
-Queste due funzioni possono essere utili per controllare se un certo ID corrisponde a quello del thread corrente per esempio prima di chiamare una `pthread_join()` in quanto aspettare la terminazione di se stessi è un grosso errore. Sotto un esempio:
+<p align="justify">
+Queste due funzioni possono essere utili per controllare se un certo ID corrisponde a quello del thread corrente per esempio prima di chiamare una <code>pthread_join()</code> in quanto aspettare la terminazione di se stessi è un grosso errore. Sotto un esempio:
+</p>
 
 ```c
 if (!pthread_equal (pthread_self (), other_thread))
@@ -16324,27 +18063,53 @@ if (!pthread_equal (pthread_self (), other_thread))
 
 #### Gli attributi dei thread
 
-Gli attributi del thread forniscono un meccanismo per la messa a punto del comportamento dei singoli thread. Abbiamo visto come la `pthread_create()` accetta un argomento che è un puntatore a un oggetto attributo del thread. Se passi un puntatore nullo a questo argomento, gli attributi predefiniti vengono utilizzati per configurare il nuovo thread. Tuttavia, puoi creare e personalizzare un oggetto attributo thread per specificare altri valori per gli attributi. Per specificare attributi thread personalizzati, devi seguire questi passaggi: 
+<p align="justify">
+Gli attributi del thread forniscono un meccanismo per la messa a punto del comportamento dei singoli thread. Abbiamo visto come la <code>pthread_create()</code> accetta un argomento che è un puntatore a un oggetto attributo del thread. Se passi un puntatore nullo a questo argomento, gli attributi predefiniti vengono utilizzati per configurare il nuovo thread. Tuttavia, puoi creare e personalizzare un oggetto attributo thread per specificare altri valori per gli attributi. Per specificare attributi thread personalizzati, devi seguire questi passaggi:
+</p>
 
-1. Crea un oggetto `pthread_attr_t`. Il modo più semplice per farlo èdichiarare una variabile automatica di questo tipo.
-2. Chiama la funzione `pthread_attr_init()`, passando un puntatore a questo oggetto. Ciò inizializza gli attributi ai loro valori predefiniti.
-3. Modifica l'oggetto attributo per contenere i valori attributo desiderati.
-4. Passa un puntatore all'oggetto attributo che hai valorizzato al punto precedente quando richiami la `pthread_create()`.
-5. Chiama la `pthread_attr_destroy()` per rilasciare l'oggetto attributo. La variabile `pthread_attr_t` non viene deallocata; può essere reinizializzata con `pthread_attr_init()`
+<ol>
+  <li>
+    <p align="justify">
+    Crea un oggetto <code>pthread_attr_t</code>. Il modo più semplice per farlo èdichiarare una variabile automatica di questo tipo.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Chiama la funzione <code>pthread_attr_init()</code>, passando un puntatore a questo oggetto. Ciò inizializza gli attributi ai loro valori predefiniti.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Modifica l'oggetto attributo per contenere i valori attributo desiderati.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Passa un puntatore all'oggetto attributo che hai valorizzato al punto precedente quando richiami la <code>pthread_create()</code>.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Chiama la <code>pthread_attr_destroy()</code> per rilasciare l'oggetto attributo. La variabile <code>pthread_attr_t</code> non viene deallocata; può essere reinizializzata con <code>pthread_attr_init()</code>
+    </p>
+  </li>
+</ol>
   
-Un singolo oggetto attributo thread può essere utilizzato per inizializzare diversi thread. Non è necessario mantenere l'oggetto attributo thread dopo che i thread sono stati creati.
-Per la maggior parte delle attività di programmazione delle applicazioni GNU/Linux, un solo attributo thread è in genere di interesse (gli altri attributi disponibili sono principalmente per la programmazione in tempo reale).
-Questo attributo è il **detach state** del thread. Un thread può essere creato come un thread **joinable** (l'impostazione predefinita) o come un **detached** thread. Un joinable thread, come un processo, non viene automaticamente ripulito da GNU/Linux quando termina e lo stato di uscita del thread rimane sospeso nel sistema (un po' come un processo zombie) finché un altro thread non richiama la `pthread_join()` per ottenere il suo valore di ritorno. **Solo allora le sue risorse vengono rilasciate**. Un **detached** thread, al contrario, viene ripulito automaticamente quando termina. Poiché un detached thread viene immediatamente ripulito, un altro thread potrebbe non sincronizzarsi al suo completamento tramite `pthread_join()` o ottenere il suo valore di ritorno.
+<p align="justify">
+Un singolo oggetto attributo thread può essere utilizzato per inizializzare diversi thread. Non è necessario mantenere l'oggetto attributo thread dopo che i thread sono stati creati. Per la maggior parte delle attività di programmazione delle applicazioni GNU/Linux, un solo attributo thread è in genere di interesse (gli altri attributi disponibili sono principalmente per la programmazione in tempo reale). Questo attributo è il <strong>detach state</strong> del thread. Un thread può essere creato come un thread <strong>joinable</strong> (l'impostazione predefinita) o come un <strong>detached</strong> thread. Un joinable thread, come un processo, non viene automaticamente ripulito da GNU/Linux quando termina e lo stato di uscita del thread rimane sospeso nel sistema (un po' come un processo zombie) finché un altro thread non richiama la <code>pthread_join()</code> per ottenere il suo valore di ritorno. <strong>Solo allora le sue risorse vengono rilasciate</strong>. Un <strong>detached</strong> thread, al contrario, viene ripulito automaticamente quando termina. Poiché un detached thread viene immediatamente ripulito, un altro thread potrebbe non sincronizzarsi al suo completamento tramite <code>pthread_join()</code> o ottenere il suo valore di ritorno.
+</p>
 
-Per impostare lo stato detached in un oggetto attributo thread, basta utilizzare `pthread_attr_setdetachstate()`.
-Questo è il suo prototipo:
+<p align="justify">
+Per impostare lo stato detached in un oggetto attributo thread, basta utilizzare <code>pthread_attr_setdetachstate()</code>. Questo è il suo prototipo:
+</p>
 
 ```c
 int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate);
 ```
 
-Il primo argomento è un puntatore all'oggetto attributo thread (`pthread_attr_t *`) e il secondo è lo stato detached desiderato. Poiché lo stato joinable è quello predefinito, è necessario chiamare questo solo per creare detached thread passando `PTHREAD_CREATE_DETACHED` come secondo argomento.
-Il codice seguente crea un detached thread impostando l'attributo thread a `PTHREAD_CREATE_DETACHED`.
+<p align="justify">
+Il primo argomento è un puntatore all'oggetto attributo thread (<code>pthread_attr_t *</code>) e il secondo è lo stato detached desiderato. Poiché lo stato joinable è quello predefinito, è necessario chiamare questo solo per creare detached thread passando <code>PTHREAD_CREATE_DETACHED</code> come secondo argomento. Il codice seguente crea un detached thread impostando l'attributo thread a <code>PTHREAD_CREATE_DETACHED</code>.
+</p>
 
 ```c
 /***********************************************************************
@@ -16378,7 +18143,9 @@ int main ()
 }
 ```
 
-Anche se un thread è stato creato con stato joinable può essere impostato in un secondo momento nello stato detached, per fare questo basta usare la funzione `pthread_detach()`. Questo è il suo prototipo:
+<p align="justify">
+Anche se un thread è stato creato con stato joinable può essere impostato in un secondo momento nello stato detached, per fare questo basta usare la funzione <code>pthread_detach()</code>. Questo è il suo prototipo:
+</p>
 
 ```c
 int pthread_detach(pthread_t thread);
@@ -16386,54 +18153,87 @@ int pthread_detach(pthread_t thread);
 
 #### Cancellazione del thread
 
-In circostanze normali, un thread termina quando esce normalmente, sia tornando dalla sua funzione thread o chiamando la `pthread_exit()`. Tuttavia, è possibile che un thread richieda che un altro thread termini. Questo è chiamato cancellamento di un thread. Per cancellare un thread, chiama la `pthread_cancel()`, passando l'ID del thread da cancellare. E' possibile richiamre la pthread_join() su un thread cancellato (di tipo joinable, non è possibile per un thread in stato detached) per liberarne le risorse, Il valore di ritorno di un thread cancellato è il valore speciale `PTHREAD_CANCELED`.
+<p align="justify">
+In circostanze normali, un thread termina quando esce normalmente, sia tornando dalla sua funzione thread o chiamando la <code>pthread_exit()</code>. Tuttavia, è possibile che un thread richieda che un altro thread termini. Questo è chiamato cancellamento di un thread. Per cancellare un thread, chiama la <code>pthread_cancel()</code>, passando l'ID del thread da cancellare. E' possibile richiamre la pthread_join() su un thread cancellato (di tipo joinable, non è possibile per un thread in stato detached) per liberarne le risorse, Il valore di ritorno di un thread cancellato è il valore speciale <code>PTHREAD_CANCELED</code>.
+</p>
 
+<p align="justify">
 Spesso un thread può essere in un codice che deve essere eseguito in modalità tutto o niente. Ad esempio, il thread può allocare alcune risorse, usarle e quindi deallocarle. Se il thread viene annullato nel mezzo di questo codice, potrebbe non avere l'opportunità di deallocare le risorse, e quindi le risorse saranno perse. Per contrastare questa possibilità, è possibile che un thread controlli se e quando può essere annullato. Un thread può trovarsi in uno dei tre stati per quanto riguarda la cancellazione del thread:
+</p>
 
-* Il thread può essere **cancellabile in modo asincrono**. Il thread può essere annullato in qualsiasi momento della sua esecuzione.
-* Il thread può essere **cancellabile in modo sincrono**. Il thread può essere annullato, ma non in qualsiasi momento della sua esecuzione. Invece, le richieste di annullamento vengono messe in coda e il thread viene cancellato solo quando raggiunge punti specifici della sua esecuzione.
-* Un thread può essere **non cancellabile**. I tentativi di cancellare 	il thread vengono ignorati silenziosamente.
+<ul>
+  <li>
+    <p align="justify">
+    Il thread può essere <strong>cancellabile in modo asincrono</strong>. Il thread può essere annullato in qualsiasi momento della sua esecuzione.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Il thread può essere <strong>cancellabile in modo sincrono</strong>. Il thread può essere annullato, ma non in qualsiasi momento della sua esecuzione. Invece, le richieste di annullamento vengono messe in coda e il thread viene cancellato solo quando raggiunge punti specifici della sua esecuzione.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Un thread può essere <strong>non cancellabile</strong>. I tentativi di cancellare 	il thread vengono ignorati silenziosamente.
+    </p>
+  </li>
+</ul>
 
-**Quando viene creato inizialmente, un thread è cancellabile in modo sincrono**
+<p align="justify">
+<strong>Quando viene creato inizialmente, un thread è cancellabile in modo sincrono</strong>
+</p>
 
 #### Thread sincroni ed asincroni
 
-Un thread cancellabile in modo asincrono può essere annullato in qualsiasi momento della sua esecuzione. Un thread cancellabile in modo sincrono, al contrario, può essere cancellato solo in determinati punti della sua esecuzione. Questi punti sono chiamati punti di annullamento. Il thread metterà in coda una richiesta di annullamento finché non raggiunge il punto di annullamento successivo. Per rendere un thread cancellabile in modo asincrono, utilizzare `pthread_setcanceltype()`. Questo è il suo prototipo:
+<p align="justify">
+Un thread cancellabile in modo asincrono può essere annullato in qualsiasi momento della sua esecuzione. Un thread cancellabile in modo sincrono, al contrario, può essere cancellato solo in determinati punti della sua esecuzione. Questi punti sono chiamati punti di annullamento. Il thread metterà in coda una richiesta di annullamento finché non raggiunge il punto di annullamento successivo. Per rendere un thread cancellabile in modo asincrono, utilizzare <code>pthread_setcanceltype()</code>. Questo è il suo prototipo:
+</p>
 
 ```c
 int pthread_setcanceltype(int type, int *oldtype);
 ```
 
-Il primo argomento dovrebbe essere `PTHREAD_CANCEL_ASYNCHRONOUS` per rendere il thread cancellabile in modo asincrono o `PTHREAD_CANCEL_DEFERRED` per riportarlo allo stato cancellabile in modo sincrono. Il secondo argomento, se non è nullo, è un puntatore a una variabile che riceverà il tipo di annullamento precedente per il thread. Questa chiamata, ad esempio, rende il thread chiamante cancellabile in modo asincrono.
+<p align="justify">
+Il primo argomento dovrebbe essere <code>PTHREAD_CANCEL_ASYNCHRONOUS</code> per rendere il thread cancellabile in modo asincrono o <code>PTHREAD_CANCEL_DEFERRED</code> per riportarlo allo stato cancellabile in modo sincrono. Il secondo argomento, se non è nullo, è un puntatore a una variabile che riceverà il tipo di annullamento precedente per il thread. Questa chiamata, ad esempio, rende il thread chiamante cancellabile in modo asincrono.
+</p>
 
 ```c
 pthread_setcanceltype (PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
 ```
 
-Cosa costituisce un punto di annullamento e dove dovrebbero essere posizionati? Il modo più diretto per creare un punto di annullamento è chiamare `pthread_testcancel()`. 
+<p align="justify">
+Cosa costituisce un punto di annullamento e dove dovrebbero essere posizionati? Il modo più diretto per creare un punto di annullamento è chiamare <code>pthread_testcancel()</code>.
+</p>
 
 ```c
 void pthread_testcancel(void);
 ```
-Questa funzione non fa altro che elaborare un annullamento in sospeso in un thread cancellabile in modo sincrono. Dovresti chiamare `pthread_testcancel()` periodicamente durante i calcoli lunghi in una funzione thread, nei punti in cui il thread può essere annullato senza perdere risorse o produrre altri effetti negativi. Anche alcune altre funzioni sono implicitamente punti di annullamento. Sono elencate nella pagina man di `pthread_cancel()`. Nota che altre funzioni possono utilizzare queste funzioni internamente e quindi saranno indirettamente punti di annullamento.		
+<p align="justify">
+Questa funzione non fa altro che elaborare un annullamento in sospeso in un thread cancellabile in modo sincrono. Dovresti chiamare <code>pthread_testcancel()</code> periodicamente durante i calcoli lunghi in una funzione thread, nei punti in cui il thread può essere annullato senza perdere risorse o produrre altri effetti negativi. Anche alcune altre funzioni sono implicitamente punti di annullamento. Sono elencate nella pagina man di <code>pthread_cancel()</code>. Nota che altre funzioni possono utilizzare queste funzioni internamente e quindi saranno indirettamente punti di annullamento.
+</p>
 
 
 #### Sezioni critiche non cancellabili
 
-Un thread può disabilitare del tutto la cancellazione di se stesso con la funzione `pthread_setcancelstate()`. 
+<p align="justify">
+Un thread può disabilitare del tutto la cancellazione di se stesso con la funzione <code>pthread_setcancelstate()</code>.
+</p>
 
 ```c
 int pthread_setcancelstate(int state, int *oldstate);
 ```
 
-Il primo argomento è `PTHREAD_CANCEL_DISABLE` per disabilitare la cancellazione o `PTHREAD_CANCEL_ENABLE` per riabilitare la cancellazione. Il secondo argomento, se non è nullo,
-punta a una variabile che riceverà lo stato di cancellazione precedente. Questa chiamata, ad esempio, disabilita l'annullamento del thread nel thread chiamante.
+<p align="justify">
+Il primo argomento è <code>PTHREAD_CANCEL_DISABLE</code> per disabilitare la cancellazione o <code>PTHREAD_CANCEL_ENABLE</code> per riabilitare la cancellazione. Il secondo argomento, se non è nullo, punta a una variabile che riceverà lo stato di cancellazione precedente. Questa chiamata, ad esempio, disabilita l'annullamento del thread nel thread chiamante.
+</p>
 
 ```c
 pthread_setcancelstate (PTHREAD_CANCEL_DISABLE, NULL);
 ```
 
-**L'utilizzo di `pthread_setcancelstate()` consente di implementare sezioni critiche**. Una **sezione critica** è una sequenza di codice che deve essere eseguita per intero o per niente; in altre parole, se un thread inizia a eseguire la sezione critica, deve continuare fino alla fine della sezione critica senza essere annullato. Ad esempio, supponiamo che tu stia scrivendo una routine per un programma bancario che trasferisce denaro da un conto a un altro. Per fare ciò, devi aggiungere valore al saldo di un conto e detrarre lo stesso valore dal saldo di un altro conto. Se il thread che esegue la tua routine venisse annullato proprio nel momento sbagliato tra queste due operazioni, il programma avrebbe aumentato in modo ingiusto i depositi totali della banca non riuscendo a completare la transazione. Per evitare questa possibilità, inserisci le due operazioni in una sezione critica. Potresti implementare il trasferimento con una funzione come `process_transaction()`, mostrata nel codice seguente. Questa funzione disabilita l'annullamento del thread per avviare una sezione critica prima che modifichi il saldo di uno dei due conti.
+<p align="justify">
+<strong>L'utilizzo di <code>pthread_setcancelstate()</code> consente di implementare sezioni critiche</strong>. Una <strong>sezione critica</strong> è una sequenza di codice che deve essere eseguita per intero o per niente; in altre parole, se un thread inizia a eseguire la sezione critica, deve continuare fino alla fine della sezione critica senza essere annullato. Ad esempio, supponiamo che tu stia scrivendo una routine per un programma bancario che trasferisce denaro da un conto a un altro. Per fare ciò, devi aggiungere valore al saldo di un conto e detrarre lo stesso valore dal saldo di un altro conto. Se il thread che esegue la tua routine venisse annullato proprio nel momento sbagliato tra queste due operazioni, il programma avrebbe aumentato in modo ingiusto i depositi totali della banca non riuscendo a completare la transazione. Per evitare questa possibilità, inserisci le due operazioni in una sezione critica. Potresti implementare il trasferimento con una funzione come <code>process_transaction()</code>, mostrata nel codice seguente. Questa funzione disabilita l'annullamento del thread per avviare una sezione critica prima che modifichi il saldo di uno dei due conti.
+</p>
 
 ```c
 /***********************************************************************
@@ -16547,39 +18347,50 @@ vagrant@ubuntu2204:/lab2/1_threads$ bin/5_critical_section
 [9] 13$
 ```
 
-Si noti che è importante ripristinare il vecchio stato di annullamento alla fine della sezione critica piuttosto che impostarlo incondizionatamente su `PTHREAD_CANCEL_ENABLE`. Ciò consente di chiamare la funzione `process_transaction()` in modo sicuro da un'altra sezione critica, in quel caso la funzione setterà lo stato di annullamento nello stesso modo in cui lo ha trovato.
+<p align="justify">
+Si noti che è importante ripristinare il vecchio stato di annullamento alla fine della sezione critica piuttosto che impostarlo incondizionatamente su <code>PTHREAD_CANCEL_ENABLE</code>. Ciò consente di chiamare la funzione <code>process_transaction()</code> in modo sicuro da un'altra sezione critica, in quel caso la funzione setterà lo stato di annullamento nello stesso modo in cui lo ha trovato.
+</p>
 
 
 #### Quando usare la cancellazione del thread
 
+<p align="justify">
 In generale, è una buona idea non usare la cancellazione del thread per terminare l'esecuzione di un thread, tranne in circostanze insolite. Durante il normale funzionamento, una strategia migliore è quella di indicare al thread che dovrebbe uscire e quindi attendere che il thread esca da solo in modo ordinato. Per far questo è necessario conoscere le tecniche di IPC (Interprocess Communication).
+</p>
 
 ### Dati specifici del thread
 
-A differenza dei processi, **tutti i thread in un singolo programma condividono lo stesso spazio di indirizzamento**. Ciò significa che se un thread modifica una posizione nella memoria (ad esempio, una variabile globale), la modifica è visibile a tutti gli altri thread. Ciò consente a più thread di operare sugli stessi dati senza utilizzare meccanismi di comunicazione tra processi. Tuttavia, ogni thread ha il proprio stack di chiamate. Ciò consente a ogni thread di eseguire codice diverso e di chiamare e restituire da subroutine nel modo consueto. Come in un programma a thread singolo, ogni invocazione di una subroutine in ogni thread ha il proprio set di variabili locali, che vengono memorizzate nello stack per quel thread. A volte, tuttavia, è desiderabile duplicare una determinata variabile in modo che ogni thread abbia una copia separata. GNU/Linux supporta ciò **fornendo a ogni thread un'area dati specifica per il thread**. Le variabili memorizzate in quest'area vengono duplicate per ogni thread e ogni thread può modificare la propria copia di una variabile senza influenzare gli altri thread. Poiché tutti i thread condividono lo stesso spazio di memoria, **i dati specifici del thread potrebbero non essere accessibili tramite normali riferimenti alle variabili**. GNU/Linux fornisce funzioni speciali per impostare e recuperare valori dall'area dati specifica del thread.
+<p align="justify">
+A differenza dei processi, <strong>tutti i thread in un singolo programma condividono lo stesso spazio di indirizzamento</strong>. Ciò significa che se un thread modifica una posizione nella memoria (ad esempio, una variabile globale), la modifica è visibile a tutti gli altri thread. Ciò consente a più thread di operare sugli stessi dati senza utilizzare meccanismi di comunicazione tra processi. Tuttavia, ogni thread ha il proprio stack di chiamate. Ciò consente a ogni thread di eseguire codice diverso e di chiamare e restituire da subroutine nel modo consueto. Come in un programma a thread singolo, ogni invocazione di una subroutine in ogni thread ha il proprio set di variabili locali, che vengono memorizzate nello stack per quel thread. A volte, tuttavia, è desiderabile duplicare una determinata variabile in modo che ogni thread abbia una copia separata. GNU/Linux supporta ciò <strong>fornendo a ogni thread un'area dati specifica per il thread</strong>. Le variabili memorizzate in quest'area vengono duplicate per ogni thread e ogni thread può modificare la propria copia di una variabile senza influenzare gli altri thread. Poiché tutti i thread condividono lo stesso spazio di memoria, <strong>i dati specifici del thread potrebbero non essere accessibili tramite normali riferimenti alle variabili</strong>. GNU/Linux fornisce funzioni speciali per impostare e recuperare valori dall'area dati specifica del thread.
+</p>
 
-Puoi creare tutti gli elementi dati specifici del thread che vuoi, ognuno di tipo void*.
-Ogni elemento è referenziato da una chiave. Per creare una nuova chiave, e quindi un nuovo elemento dati per ogni thread, usa **pthread_key_create()**. 
+<p align="justify">
+Puoi creare tutti gli elementi dati specifici del thread che vuoi, ognuno di tipo void*. Ogni elemento è referenziato da una chiave. Per creare una nuova chiave, e quindi un nuovo elemento dati per ogni thread, usa <strong>pthread_key_create()</strong>.
+</p>
 
 ```c
 int pthread_key_create(pthread_key_t *key, void (*destructor)(void*));
 ```
 
-Il primo argomento è un puntatore a una variabile di tipo **pthread_key_t**. Quel valore chiave può essere usato da ogni thread per accedere alla propria copia dell'elemento dati corrispondente. 
-Il secondo argomento dopo pthread_key_t è una funzione di pulizia (cleanup function). Se passi un puntatore a funzione qui, GNU/Linux chiama automaticamente quella funzione quando il thread esce, passando il valore specifico del thread corrispondente
-a quella chiave. Ciò è particolarmente utile perché la funzione di pulizia viene chiamata anche se il thread viene annullato in un punto arbitrario della sua esecuzione. Se il valore specifico del thread è null, la funzione di pulizia del thread non viene chiamata. Se non hai bisogno di una funzione di pulizia, puoi passare null invece di un puntatore a funzione. **Dopo aver creato una chiave**, **ogni thread può impostare il suo valore specifico del thread corrispondente a quella chiave** chiamando **pthread_setspecific()**.
+<p align="justify">
+Il primo argomento è un puntatore a una variabile di tipo <strong>pthread_key_t</strong>. Quel valore chiave può essere usato da ogni thread per accedere alla propria copia dell'elemento dati corrispondente. Il secondo argomento dopo pthread_key_t è una funzione di pulizia (cleanup function). Se passi un puntatore a funzione qui, GNU/Linux chiama automaticamente quella funzione quando il thread esce, passando il valore specifico del thread corrispondente a quella chiave. Ciò è particolarmente utile perché la funzione di pulizia viene chiamata anche se il thread viene annullato in un punto arbitrario della sua esecuzione. Se il valore specifico del thread è null, la funzione di pulizia del thread non viene chiamata. Se non hai bisogno di una funzione di pulizia, puoi passare null invece di un puntatore a funzione. <strong>Dopo aver creato una chiave</strong>, <strong>ogni thread può impostare il suo valore specifico del thread corrispondente a quella chiave</strong> chiamando <strong>pthread_setspecific()</strong>.
+</p>
 
 ```c
 int pthread_setspecific(pthread_key_t key, const void *value);
 ```
 
-Il primo argomento è la chiave e il secondo è il valore specifico del thread (di tipo void*) da memorizzare. Per recuperare un elemento dati specifico del thread, chiama **pthread_getspecific()**, passando la chiave come argomento. 
+<p align="justify">
+Il primo argomento è la chiave e il secondo è il valore specifico del thread (di tipo void*) da memorizzare. Per recuperare un elemento dati specifico del thread, chiama <strong>pthread_getspecific()</strong>, passando la chiave come argomento.
+</p>
 
 ```c
 void *pthread_getspecific(pthread_key_t key);
 ```
 
-Supponiamo, ad esempio, che l'applicazione divida un'attività tra più thread. Ogni thread deve avere un file di registro separato, in cui vengono registrati i messaggi di avanzamento per le attività di quel thread. L'area dati specifica del thread è un posto comodo in cui memorizzare il puntatore del file per il file di registro per ogni singolo thread. 
+<p align="justify">
+Supponiamo, ad esempio, che l'applicazione divida un'attività tra più thread. Ogni thread deve avere un file di registro separato, in cui vengono registrati i messaggi di avanzamento per le attività di quel thread. L'area dati specifica del thread è un posto comodo in cui memorizzare il puntatore del file per il file di registro per ogni singolo thread.
+</p>
 
 
 ```c
@@ -16652,13 +18463,19 @@ int main ()
 ```
 
 
-La funzione principale in questo programma di esempio crea una chiave per memorizzare il puntatore del file specifico del thread e quindi lo memorizza in **thread_log_key**. Poiché si tratta di una variabile globale, è condivisa da tutti i thread. Quando ogni thread inizia a eseguire la sua funzione thread, apre un file di registro e memorizza il puntatore del file sotto quella chiave. In seguito, uno qualsiasi di questi thread può chiamare **write_to_thread_log()** per scrivere un messaggio nel file di registro specifico del thread. Tale funzione recupera il puntatore del file per il file di registro del thread dai dati specifici del thread e scrive il messaggio.
+<p align="justify">
+La funzione principale in questo programma di esempio crea una chiave per memorizzare il puntatore del file specifico del thread e quindi lo memorizza in <strong>thread_log_key</strong>. Poiché si tratta di una variabile globale, è condivisa da tutti i thread. Quando ogni thread inizia a eseguire la sua funzione thread, apre un file di registro e memorizza il puntatore del file sotto quella chiave. In seguito, uno qualsiasi di questi thread può chiamare <strong>write_to_thread_log()</strong> per scrivere un messaggio nel file di registro specifico del thread. Tale funzione recupera il puntatore del file per il file di registro del thread dai dati specifici del thread e scrive il messaggio.
+</p>
 
-Si noti che **thread_function()** non ha bisogno di chiudere il file di registro. Questo perché quando è stata creata la chiave del file di registro, **close_thread_log()** è stato specificato come funzione di pulizia per quella chiave. Ogni volta che un thread esce, GNU/Linux chiama quella funzione, passando il valore specifico del thread per la chiave del registro del thread. Questa funzione si occupa di chiudere il file di registro.
+<p align="justify">
+Si noti che <strong>thread_function()</strong> non ha bisogno di chiudere il file di registro. Questo perché quando è stata creata la chiave del file di registro, <strong>close_thread_log()</strong> è stato specificato come funzione di pulizia per quella chiave. Ogni volta che un thread esce, GNU/Linux chiama quella funzione, passando il valore specifico del thread per la chiave del registro del thread. Questa funzione si occupa di chiudere il file di registro.
+</p>
 
 ### Gestori di pulizia (Cleanup Handler)
 
-Le funzioni di pulizia per chiavi dati specifiche del thread possono essere molto utili per garantire che le risorse non vengano perse quando un thread esce o viene annullato. A volte, tuttavia, è utile poter specificare funzioni di pulizia senza creare un nuovo elemento dati specifico del thread duplicato per ogni thread. GNU/Linux fornisce gestori di pulizia a questo scopo. **Un gestore di pulizia è semplicemente una funzione che dovrebbe essere chiamata quando un thread esce**. Il gestore accetta un singolo parametro void* e il suo valore di argomento viene fornito quando il gestore viene registrato, il che semplifica l'utilizzo della stessa funzione del gestore per gestire più istanze di risorse. **Un gestore di pulizia è una misura temporanea**, **utilizzata per deallocare una risorsa solo se il thread esce o viene annullato** anziché terminare l'esecuzione di una particolare regione di codice. **In circostanze normali, quando il thread non esce e non viene annullato, la risorsa dovrebbe essere deallocata in modo esplicito** e il gestore di pulizia dovrebbe essere rimosso. Per registrare un gestore di pulizia, chiama **pthread_cleanup_push()**, passando un puntatore alla funzione di pulizia e il valore del suo argomento void*. La chiamata a pthread_cleanup_push deve essere bilanciata da una chiamata corrispondente a pthread_cleanup_pop, che annulla la registrazione del gestore di pulizia. 
+<p align="justify">
+Le funzioni di pulizia per chiavi dati specifiche del thread possono essere molto utili per garantire che le risorse non vengano perse quando un thread esce o viene annullato. A volte, tuttavia, è utile poter specificare funzioni di pulizia senza creare un nuovo elemento dati specifico del thread duplicato per ogni thread. GNU/Linux fornisce gestori di pulizia a questo scopo. <strong>Un gestore di pulizia è semplicemente una funzione che dovrebbe essere chiamata quando un thread esce</strong>. Il gestore accetta un singolo parametro void* e il suo valore di argomento viene fornito quando il gestore viene registrato, il che semplifica l'utilizzo della stessa funzione del gestore per gestire più istanze di risorse. <strong>Un gestore di pulizia è una misura temporanea</strong>, <strong>utilizzata per deallocare una risorsa solo se il thread esce o viene annullato</strong> anziché terminare l'esecuzione di una particolare regione di codice. <strong>In circostanze normali, quando il thread non esce e non viene annullato, la risorsa dovrebbe essere deallocata in modo esplicito</strong> e il gestore di pulizia dovrebbe essere rimosso. Per registrare un gestore di pulizia, chiama <strong>pthread_cleanup_push()</strong>, passando un puntatore alla funzione di pulizia e il valore del suo argomento void*. La chiamata a pthread_cleanup_push deve essere bilanciata da una chiamata corrispondente a pthread_cleanup_pop, che annulla la registrazione del gestore di pulizia.
+</p>
 
 ```c
 void pthread_cleanup_push(void (*routine)(void *), void *arg);
@@ -16668,7 +18485,9 @@ void pthread_cleanup_push(void (*routine)(void *), void *arg);
 void pthread_cleanup_pop(int execute);
 ```
 
+<p align="justify">
 Per comodità, pthread_cleanup_pop accetta un argomento flag int; se il flag è diverso da zero, l'azione di pulizia viene effettivamente eseguita in quanto annullata. Il frammento di programma seguente mostra come è possibile utilizzare un gestore di pulizia per assicurarsi che un buffer allocato dinamicamente venga ripulito se il thread termina.
+</p>
 
 ```c
 ***********************************************************************
@@ -16725,15 +18544,23 @@ int main(void){
 
 ### Sincronizzazione e Sezioni Critiche
 
+<p align="justify">
 La programmazione con i thread è molto complicata perché la maggior parte dei programmi con thread sono programmi concorrenti. In particolare, non c'è modo di sapere quando il sistema pianificherà l'esecuzione di un thread e quando ne eseguirà un altro. Un thread potrebbe essere eseguito per un tempo molto lungo o il sistema potrebbe passare da un thread all'altro molto rapidamente. Su un sistema con più processori, il sistema potrebbe persino pianificare l'esecuzione di più thread letteralmente nello stesso momento. Il debug di un programma con thread è difficile perché non è sempre possibile riprodurre facilmente il comportamento che ha causato il problema. Potresti eseguire il programma una volta e far funzionare tutto correttamente; la volta successiva che lo esegui, potrebbe bloccarsi. Non c'è modo di far pianificare i thread esattamente nello stesso modo in cui lo faceva prima.
+</p>
 
-La causa ultima della maggior parte dei bug che coinvolgono i thread è che **i thread accedono agli stessi dati**. Come accennato in precedenza, questo è uno degli aspetti più potenti dei thread, ma può anche essere pericoloso. Se un thread è solo a metà dell'aggiornamento di una struttura dati quando un altro thread accede alla stessa struttura dati, è probabile che si verifichi il caos. Spesso, i programmi con thread buggati contengono un codice che funzionerà solo se un thread viene pianificato più spesso, o prima, di un altro thread. Questi bug sono chiamati **race conditions**; i thread sono in competizione tra loro per modificare la stessa struttura dati.
+<p align="justify">
+La causa ultima della maggior parte dei bug che coinvolgono i thread è che <strong>i thread accedono agli stessi dati</strong>. Come accennato in precedenza, questo è uno degli aspetti più potenti dei thread, ma può anche essere pericoloso. Se un thread è solo a metà dell'aggiornamento di una struttura dati quando un altro thread accede alla stessa struttura dati, è probabile che si verifichi il caos. Spesso, i programmi con thread buggati contengono un codice che funzionerà solo se un thread viene pianificato più spesso, o prima, di un altro thread. Questi bug sono chiamati <strong>race conditions</strong>; i thread sono in competizione tra loro per modificare la stessa struttura dati.
+</p>
 
 #### Race Conditions
 
+<p align="justify">
 Supponiamo che il tuo programma abbia una serie di lavori in coda che vengono elaborati da diversi thread simultanei. La coda dei lavori è rappresentata da una lista di oggetti struct job. Dopo che ogni thread termina un'operazione, controlla la coda per vedere se è disponibile un lavoro aggiuntivo. Se job_queue è diverso da null, il thread rimuove la testa dell'elenco collegato e imposta job_queue sul lavoro successivo nell'elenco.
+</p>
 
-Ora supponiamo che due thread finiscano un lavoro più o meno nello stesso momento, ma che solo un lavoro rimanga nella coda. Il primo thread controlla se job_queue è nullo; scoprendo che non lo è, il thread entra nel ciclo e memorizza il puntatore all'oggetto lavoro in next_job. A questo punto, Linux interrompe il primo thread e pianifica il secondo. Anche il secondo thread controlla job_queue e, trovandolo non nullo, assegna lo stesso puntatore lavoro a next_job. Per una sfortunata coincidenza, ora abbiamo due thread che eseguono lo stesso lavoro. A peggiorare le cose, un thread scollegherà l'oggetto lavoro dalla coda, lasciando job_queue contenente null. Quando l'altro thread valuta job_queue->next, si verificherà un errore di segmentazione. Questo è un esempio di condizione di gara. In circostanze "fortunate", questa particolare pianificazione dei due thread potrebbe non verificarsi mai e la condizione di gara potrebbe non manifestarsi mai. Solo in circostanze diverse, magari quando si esegue su un sistema pesantemente caricato (o sul nuovo server multiprocessore di un cliente importante!) il bug può manifestarsi. Per eliminare le **race conditions**, è necessario un modo per **rendere le operazioni atomiche**. **Un'operazione atomica è indivisibile e ininterrotta; una volta avviata, non verrà messa in pausa o interrotta fino al suo completamento e nel frattempo non verrà eseguita nessun'altra operazione**. In questo particolare esempio, si desidera controllare job_queue; se non è vuoto, rimuovere il primo lavoro, il tutto come un'unica operazione atomica.
+<p align="justify">
+Ora supponiamo che due thread finiscano un lavoro più o meno nello stesso momento, ma che solo un lavoro rimanga nella coda. Il primo thread controlla se job_queue è nullo; scoprendo che non lo è, il thread entra nel ciclo e memorizza il puntatore all'oggetto lavoro in next_job. A questo punto, Linux interrompe il primo thread e pianifica il secondo. Anche il secondo thread controlla job_queue e, trovandolo non nullo, assegna lo stesso puntatore lavoro a next_job. Per una sfortunata coincidenza, ora abbiamo due thread che eseguono lo stesso lavoro. A peggiorare le cose, un thread scollegherà l'oggetto lavoro dalla coda, lasciando job_queue contenente null. Quando l'altro thread valuta job_queue->next, si verificherà un errore di segmentazione. Questo è un esempio di condizione di gara. In circostanze "fortunate", questa particolare pianificazione dei due thread potrebbe non verificarsi mai e la condizione di gara potrebbe non manifestarsi mai. Solo in circostanze diverse, magari quando si esegue su un sistema pesantemente caricato (o sul nuovo server multiprocessore di un cliente importante!) il bug può manifestarsi. Per eliminare le <strong>race conditions</strong>, è necessario un modo per <strong>rendere le operazioni atomiche</strong>. <strong>Un'operazione atomica è indivisibile e ininterrotta; una volta avviata, non verrà messa in pausa o interrotta fino al suo completamento e nel frattempo non verrà eseguita nessun'altra operazione</strong>. In questo particolare esempio, si desidera controllare job_queue; se non è vuoto, rimuovere il primo lavoro, il tutto come un'unica operazione atomica.
+</p>
 
 ```c
 /***********************************************************************
@@ -16811,35 +18638,51 @@ int main(void){
 
 ### Mutex
 
-La soluzione al problema della race condition della coda dei lavori è consentire a un solo thread alla volta di accedere alla coda dei lavori. Una volta che un thread inizia a guardare la coda, nessun altro thread dovrebbe essere in grado di accedervi finché il primo thread non ha deciso se elaborare un lavoro e, in tal caso, lo ha rimosso dall'elenco. L'implementazione richiede il supporto del sistema operativo. GNU/Linux fornisce i **mutex**, abbreviazione di blocchi MUTual EXclusion. Un mutex è un blocco speciale che solo un thread può bloccare alla volta. Se un thread blocca un mutex e poi un secondo thread tenta di bloccare lo stesso mutex, il secondo thread viene bloccato o messo in attesa. Solo quando il primo thread sblocca il mutex, il secondo thread viene sbloccato, ovvero può riprendere l'esecuzione. GNU/Linux garantisce che non si verifichino condizioni di gara tra thread che tentano di bloccare un mutex; solo un thread otterrà il blocco e tutti gli altri thread verranno bloccati. Pensa a un mutex come alla serratura di una porta del bagno. Chi arriva per primo entra nel bagno e chiude a chiave la porta. Se qualcun altro tenta di entrare nel bagno mentre è occupato, quella persona troverà la porta chiusa a chiave e sarà costretta ad aspettare fuori finché l'occupante non esce. Per creare un mutex, crea una variabile di tipo **pthread_mutex_t** e passa un puntatore a **pthread_mutex_init()**. Il secondo argomento di pthread_mutex_init è un puntatore a un oggetto attributo mutex, che specifica gli attributi del mutex.
+<p align="justify">
+La soluzione al problema della race condition della coda dei lavori è consentire a un solo thread alla volta di accedere alla coda dei lavori. Una volta che un thread inizia a guardare la coda, nessun altro thread dovrebbe essere in grado di accedervi finché il primo thread non ha deciso se elaborare un lavoro e, in tal caso, lo ha rimosso dall'elenco. L'implementazione richiede il supporto del sistema operativo. GNU/Linux fornisce i <strong>mutex</strong>, abbreviazione di blocchi MUTual EXclusion. Un mutex è un blocco speciale che solo un thread può bloccare alla volta. Se un thread blocca un mutex e poi un secondo thread tenta di bloccare lo stesso mutex, il secondo thread viene bloccato o messo in attesa. Solo quando il primo thread sblocca il mutex, il secondo thread viene sbloccato, ovvero può riprendere l'esecuzione. GNU/Linux garantisce che non si verifichino condizioni di gara tra thread che tentano di bloccare un mutex; solo un thread otterrà il blocco e tutti gli altri thread verranno bloccati. Pensa a un mutex come alla serratura di una porta del bagno. Chi arriva per primo entra nel bagno e chiude a chiave la porta. Se qualcun altro tenta di entrare nel bagno mentre è occupato, quella persona troverà la porta chiusa a chiave e sarà costretta ad aspettare fuori finché l'occupante non esce. Per creare un mutex, crea una variabile di tipo <strong>pthread_mutex_t</strong> e passa un puntatore a <strong>pthread_mutex_init()</strong>. Il secondo argomento di pthread_mutex_init è un puntatore a un oggetto attributo mutex, che specifica gli attributi del mutex.
+</p>
 
 ```c
 int pthread_mutex_init(pthread_mutex_t *restrict mutex, const pthread_mutexattr_t *restrict attr);
 ```
 
+<p align="justify">
 Come con pthread_create, se il puntatore dell'attributo è nullo, vengono assunti gli attributi predefiniti. La variabile mutex dovrebbe essere inizializzata solo una volta. Questo frammento di codice dimostra la dichiarazione e l'inizializzazione di una variabile mutex.
+</p>
 
 ```c
 pthread_mutex_t mutex;
 pthread_mutex_init (&mutex, NULL);
 ```
 
-Un altro modo più semplice per creare un mutex con attributi predefiniti è inizializzarlo con il valore speciale `PTHREAD_MUTEX_INITIALIZER`. Non è necessaria alcuna chiamata aggiuntiva a pthread_mutex_init. Ciò è particolarmente comodo per le variabili globali
-(e, in C++, i membri dati statici). Il frammento di codice precedente avrebbe potuto essere scritto in modo equivalente così:
+<p align="justify">
+Un altro modo più semplice per creare un mutex con attributi predefiniti è inizializzarlo con il valore speciale <code>PTHREAD_MUTEX_INITIALIZER</code>. Non è necessaria alcuna chiamata aggiuntiva a pthread_mutex_init. Ciò è particolarmente comodo per le variabili globali (e, in C++, i membri dati statici). Il frammento di codice precedente avrebbe potuto essere scritto in modo equivalente così:
+</p>
 
 ```c
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 ```
 
-Un thread può tentare di bloccare un mutex chiamando **pthread_mutex_lock()** su di esso. 
+<p align="justify">
+Un thread può tentare di bloccare un mutex chiamando <strong>pthread_mutex_lock()</strong> su di esso.
+</p>
 
-* **Se il mutex è in stato sbloccato, diventa bloccato e la funzione ritorna immediatamente**
-* **Se il mutex è in stato bloccato da un altro thread, pthread_mutex_lock blocca l'esecuzione e restituisce solo alla fine quando il mutex viene sbloccato dall'altro thread**.
+<ul>
+  <li>
+    <p align="justify">
+    <strong>Se il mutex è in stato sbloccato, diventa bloccato e la funzione ritorna immediatamente</strong>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <strong>Se il mutex è in stato bloccato da un altro thread, pthread_mutex_lock blocca l'esecuzione e restituisce solo alla fine quando il mutex viene sbloccato dall'altro thread</strong>.
+    </p>
+  </li>
+</ul>
 
-Più di un thread può essere bloccato su un mutex bloccato contemporaneamente. Quando il mutex viene sbloccato, solo uno dei thread bloccati (scelto in modo imprevedibile) viene sbloccato e gli viene consentito di bloccare il mutex; gli altri thread rimangono bloccati.
-Una chiamata a **pthread_mutex_unlock()** sblocca un mutex. Questa funzione dovrebbe essere sempre chiamata dallo stesso thread che ha bloccato il mutex.
-L'esempio seguente mostra un'altra versione dell'esempio di coda di lavoro. Ora la coda è protetta da un mutex. Prima di accedere alla coda (sia per lettura che per scrittura), ogni thread blocca prima un mutex. Solo quando l'intera sequenza di controllo della coda e
-rimozione di un lavoro è completa, il mutex viene sbloccato. Ciò impedisce la race condition descritta in precedenza.
+<p align="justify">
+Più di un thread può essere bloccato su un mutex bloccato contemporaneamente. Quando il mutex viene sbloccato, solo uno dei thread bloccati (scelto in modo imprevedibile) viene sbloccato e gli viene consentito di bloccare il mutex; gli altri thread rimangono bloccati. Una chiamata a <strong>pthread_mutex_unlock()</strong> sblocca un mutex. Questa funzione dovrebbe essere sempre chiamata dallo stesso thread che ha bloccato il mutex. L'esempio seguente mostra un'altra versione dell'esempio di coda di lavoro. Ora la coda è protetta da un mutex. Prima di accedere alla coda (sia per lettura che per scrittura), ogni thread blocca prima un mutex. Solo quando l'intera sequenza di controllo della coda e rimozione di un lavoro è completa, il mutex viene sbloccato. Ciò impedisce la race condition descritta in precedenza.
+</p>
 
 ```c
 /***********************************************************************
@@ -16935,7 +18778,9 @@ int main(void){
 }
 ```
 
+<p align="justify">
 Tutti gli accessi a job_queue (il puntatore dati condiviso) avvengono tra la chiamata a pthread_mutex_lock e la chiamata a pthread_mutex_unlock. Un oggetto job, memorizzato in next_job, è accessibile al di fuori di questa regione solo dopo che l'oggetto è stato rimosso dalla coda ed è quindi inaccessibile ad altri thread. Nota che se la coda è vuota (ovvero, job_queue è null), non usciamo immediatamente dal ciclo perché ciò lascerebbe il mutex bloccato in modo permanente e impedirebbe a qualsiasi altro thread di accedere di nuovo alla coda job. Invece, ricordiamo questo fatto impostando next_job su null ed usciamo solo dopo aver sbloccato il mutex. L'uso del mutex per bloccare job_queue non è automatico; spetta a te aggiungere codice per bloccare il mutex prima di accedere a quella variabile e quindi sbloccarlo in seguito. Ad esempio, una funzione per aggiungere un job alla coda job potrebbe apparire così:
+</p>
 
 
 ```c
@@ -16950,22 +18795,44 @@ Tutti gli accessi a job_queue (il puntatore dati condiviso) avvengono tra la chi
 
 ### Mutex Deadlocks
 
-I mutex forniscono un meccanismo per consentire a un thread di bloccare l'esecuzione di un altro. Ciò apre la possibilità di **una nuova classe di bug**, chiamati **deadlock**. **Un deadlock si verifica quando uno o più thread sono bloccati in attesa di qualcosa che non si verificherà mai. Un semplice tipo di deadlock può verificarsi quando lo stesso thread tenta di bloccare un mutex due volte di seguito. Il comportamento in questo caso dipende dal tipo di mutex utilizzato. Esistono tre tipi di mutex:
+<p align="justify">
+I mutex forniscono un meccanismo per consentire a un thread di bloccare l'esecuzione di un altro. Ciò apre la possibilità di <strong>una nuova classe di bug</strong>, chiamati <strong>deadlock</strong>. **Un deadlock si verifica quando uno o più thread sono bloccati in attesa di qualcosa che non si verificherà mai. Un semplice tipo di deadlock può verificarsi quando lo stesso thread tenta di bloccare un mutex due volte di seguito. Il comportamento in questo caso dipende dal tipo di mutex utilizzato. Esistono tre tipi di mutex:
+</p>
 
-* Il blocco di un mutex veloce (il tipo predefinito) causerà il verificarsi di un deadlock. Un tentativo di bloccare il mutex si blocca finché il mutex non viene sbloccato. Ma poiché il thread che ha bloccato il mutex è bloccato sullo stesso mutex, il blocco non può
+<ul>
+  <li>
+    <p align="justify">
+    Il blocco di un mutex veloce (il tipo predefinito) causerà il verificarsi di un deadlock. Un tentativo di bloccare il mutex si blocca finché il mutex non viene sbloccato. Ma poiché il thread che ha bloccato il mutex è bloccato sullo stesso mutex, il blocco non può
+    </p>
+  </li>
+</ul>
+<p align="justify">
 mai essere rilasciato.
-* Il blocco di un mutex ricorsivo non causa un deadlock. Un mutex ricorsivo può essere bloccato in modo sicuro più volte dallo stesso thread. Il mutex ricorda quante volte pthread_mutex_lock è stato chiamato su di esso dal thread che detiene il blocco; quel thread deve effettuare lo stesso numero di chiamate a pthread_mutex_unlock prima che il mutex venga effettivamente sbloccato e un altro thread possa bloccarlo.
-* GNU/Linux rileverà e contrassegnerà un doppio blocco su un mutex di controllo degli errori che altrimenti causerebbe un deadlock. La seconda chiamata consecutiva a pthread_mutex_lock restituisce il codice di errore `EDEADLK`.
+</p>
+<ul>
+  <li>
+    <p align="justify">
+    Il blocco di un mutex ricorsivo non causa un deadlock. Un mutex ricorsivo può essere bloccato in modo sicuro più volte dallo stesso thread. Il mutex ricorda quante volte pthread_mutex_lock è stato chiamato su di esso dal thread che detiene il blocco; quel thread deve effettuare lo stesso numero di chiamate a pthread_mutex_unlock prima che il mutex venga effettivamente sbloccato e un altro thread possa bloccarlo.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    GNU/Linux rileverà e contrassegnerà un doppio blocco su un mutex di controllo degli errori che altrimenti causerebbe un deadlock. La seconda chiamata consecutiva a pthread_mutex_lock restituisce il codice di errore <code>EDEADLK</code>.
+    </p>
+  </li>
+</ul>
 
-Per impostazione predefinita, un mutex GNU/Linux è del tipo veloce. Per creare un mutex di uno degli altri due tipi, crea prima un oggetto attributo mutex dichiarando una variabile **pthread_mutexattr_t** e chiamando **pthread_mutexattr_init()**.
-Poi setta il tipo di mutex chiamando  **pthread_mutexattr_setkind_np()**.
+<p align="justify">
+Per impostazione predefinita, un mutex GNU/Linux è del tipo veloce. Per creare un mutex di uno degli altri due tipi, crea prima un oggetto attributo mutex dichiarando una variabile <strong>pthread_mutexattr_t</strong> e chiamando <strong>pthread_mutexattr_init()</strong>. Poi setta il tipo di mutex chiamando  <strong>pthread_mutexattr_setkind_np()</strong>.
+</p>
 
 ```c
 int pthread_mutexattr_setkind_np(pthread_mutexattr_t *attr, int kind);
 ```
 
-Il primo argomento è un puntatore all'oggetto attributo mutex, e il secondo è `PTHREAD_MUTEX_RECURSIVE_NP` per un mutex ricorsivo, o `PTHREAD_MUTEX_ERRORCHECK_NP` per un mutex di controllo degli errori. Passa un puntatore a questo oggetto attributo a
-**pthread_mutex_init()** per creare un mutex di questo tipo, quindi distruggi l'oggetto attributo con **pthread_mutexattr_destroy()**. Questa sequenza di codice illustra la creazione di un mutex di controllo degli errori, ad esempio:
+<p align="justify">
+Il primo argomento è un puntatore all'oggetto attributo mutex, e il secondo è <code>PTHREAD_MUTEX_RECURSIVE_NP</code> per un mutex ricorsivo, o <code>PTHREAD_MUTEX_ERRORCHECK_NP</code> per un mutex di controllo degli errori. Passa un puntatore a questo oggetto attributo a <strong>pthread_mutex_init()</strong> per creare un mutex di questo tipo, quindi distruggi l'oggetto attributo con <strong>pthread_mutexattr_destroy()</strong>. Questa sequenza di codice illustra la creazione di un mutex di controllo degli errori, ad esempio:
+</p>
 
 ```c
  pthread_mutexattr_t attr;
@@ -16976,59 +18843,83 @@ Il primo argomento è un puntatore all'oggetto attributo mutex, e il secondo è 
  pthread_mutexattr_destroy (&attr);
 ```
 
+<p align="justify">
 Come suggerito dal suffisso "np", i tipi di mutex ricorsivi e di controllo degli errori sono specifici di GNU/Linux e non sono portabili. Pertanto, in genere non è consigliabile utilizzarli nei programmi. (Tuttavia, i mutex di controllo degli errori possono essere utili durante il debug.)
+</p>
 
 ### Test Mutex non bloccanti
 
-A volte, è utile verificare se un mutex è bloccato senza effettivamente bloccarlo. Ad esempio, un thread potrebbe dover bloccare un mutex ma potrebbe avere altro lavoro da fare invece di bloccare se il mutex è già bloccato. Poiché **pthread_mutex_lock()** non
-tornerà finché il mutex non sarà sbloccato, è necessaria un'altra funzione. GNU/Linux fornisce **pthread_mutex_trylock()** per questo scopo. Se chiami pthread_mutex_trylock su un mutex sbloccato, bloccherai il mutex come se avessi chiamato pthread_mutex_lock e pthread_mutex_trylock restituirà zero. Tuttavia, se il mutex è già bloccato da un altro thread, pthread_mutex_trylock non bloccherà. Invece, tornerà immediatamente con il codice di errore `EBUSY`. Il blocco del mutex mantenuto dall'altro thread non è interessato. Puoi provare di nuovo più tardi a bloccare il mutex.
+<p align="justify">
+A volte, è utile verificare se un mutex è bloccato senza effettivamente bloccarlo. Ad esempio, un thread potrebbe dover bloccare un mutex ma potrebbe avere altro lavoro da fare invece di bloccare se il mutex è già bloccato. Poiché <strong>pthread_mutex_lock()</strong> non tornerà finché il mutex non sarà sbloccato, è necessaria un'altra funzione. GNU/Linux fornisce <strong>pthread_mutex_trylock()</strong> per questo scopo. Se chiami pthread_mutex_trylock su un mutex sbloccato, bloccherai il mutex come se avessi chiamato pthread_mutex_lock e pthread_mutex_trylock restituirà zero. Tuttavia, se il mutex è già bloccato da un altro thread, pthread_mutex_trylock non bloccherà. Invece, tornerà immediatamente con il codice di errore <code>EBUSY</code>. Il blocco del mutex mantenuto dall'altro thread non è interessato. Puoi provare di nuovo più tardi a bloccare il mutex.
+</p>
 
 ### Semafori
 
-Nell'esempio precedente, in cui diversi thread elaborano i lavori da una coda, la funzione thread principale dei thread esegue il lavoro successivo finché non ci sono più lavori e quindi esce dal thread. Questo schema funziona se tutti i lavori vengono messi in coda in anticipo o se i nuovi lavori vengono messi in coda almeno con la stessa rapidità con cui i thread li elaborano. Tuttavia, se i thread lavorano troppo velocemente, la coda dei lavori si svuoterà e i thread usciranno. Se in seguito vengono messi in coda nuovi lavori, non ci saranno più thread che li elaborino. Ciò che potremmo invece desiderare è un meccanismo per bloccare i thread quando la coda si svuota finché non diventano disponibili nuovi lavori. Un semaforo fornisce un metodo conveniente per farlo. **Un semaforo è un contatore** che può essere **utilizzato per sincronizzare più thread**. Come con un mutex, GNU/Linux garantisce che il controllo o la modifica del valore di un semaforo può essere eseguito in modo sicuro, senza creare una condizione di competizione. **Ogni semaforo ha un valore contatore**, che è **un intero non negativo**. Un semaforo supporta due operazioni di base:
+<p align="justify">
+Nell'esempio precedente, in cui diversi thread elaborano i lavori da una coda, la funzione thread principale dei thread esegue il lavoro successivo finché non ci sono più lavori e quindi esce dal thread. Questo schema funziona se tutti i lavori vengono messi in coda in anticipo o se i nuovi lavori vengono messi in coda almeno con la stessa rapidità con cui i thread li elaborano. Tuttavia, se i thread lavorano troppo velocemente, la coda dei lavori si svuoterà e i thread usciranno. Se in seguito vengono messi in coda nuovi lavori, non ci saranno più thread che li elaborino. Ciò che potremmo invece desiderare è un meccanismo per bloccare i thread quando la coda si svuota finché non diventano disponibili nuovi lavori. Un semaforo fornisce un metodo conveniente per farlo. <strong>Un semaforo è un contatore</strong> che può essere <strong>utilizzato per sincronizzare più thread</strong>. Come con un mutex, GNU/Linux garantisce che il controllo o la modifica del valore di un semaforo può essere eseguito in modo sicuro, senza creare una condizione di competizione. <strong>Ogni semaforo ha un valore contatore</strong>, che è <strong>un intero non negativo</strong>. Un semaforo supporta due operazioni di base:
+</p>
 
-* Un'operazione di attesa decrementa il valore del semaforo di 1. Se il valore è già zero, l'operazione si blocca finché il valore del semaforo non diventa positivo (a causa dell'azione di un altro thread). Quando il valore del semaforo diventa positivo, viene decrementato di 1 e l'operazione di attesa ritorna.
-* Un'operazione di post incrementa il valore del semaforo di 1. Se il semaforo era precedentemente zero e altri thread sono bloccati in un'operazione di attesa su quel semaforo, uno di quei thread viene sbloccato e la sua operazione di attesa viene completata (il che riporta il valore del semaforo a zero)
+<ul>
+  <li>
+    <p align="justify">
+    Un'operazione di attesa decrementa il valore del semaforo di 1. Se il valore è già zero, l'operazione si blocca finché il valore del semaforo non diventa positivo (a causa dell'azione di un altro thread). Quando il valore del semaforo diventa positivo, viene decrementato di 1 e l'operazione di attesa ritorna.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Un'operazione di post incrementa il valore del semaforo di 1. Se il semaforo era precedentemente zero e altri thread sono bloccati in un'operazione di attesa su quel semaforo, uno di quei thread viene sbloccato e la sua operazione di attesa viene completata (il che riporta il valore del semaforo a zero)
+    </p>
+  </li>
+</ul>
 
-Nota che GNU/Linux fornisce due implementazioni di semafori leggermente diverse. Quella che descriviamo qui è l'implementazione standard del semaforo POSIX. Usa questi semafori quando comunichi tra thread.
-L'altra implementazione, usata per la comunicazione tra processi, viene gestita includendo **<semaphore.h>**.
-Un semaforo è rappresentato da una variabile **sem_t**. Prima di usarla, devi inizializzarla usando la funzione **sem_init()**, passando un puntatore alla variabile sem_t. Il secondo parametro dovrebbe essere zero (Un valore diverso da zero indicherebbe un semaforo che può essere condiviso tra i processi, il che non è supportato da GNU/Linux per questo tipo di semaforo) e il terzo parametro è il valore iniziale del semaforo. 
+<p align="justify">
+Nota che GNU/Linux fornisce due implementazioni di semafori leggermente diverse. Quella che descriviamo qui è l'implementazione standard del semaforo POSIX. Usa questi semafori quando comunichi tra thread. L'altra implementazione, usata per la comunicazione tra processi, viene gestita includendo <strong><semaphore.h></strong>. Un semaforo è rappresentato da una variabile <strong>sem_t</strong>. Prima di usarla, devi inizializzarla usando la funzione <strong>sem_init()</strong>, passando un puntatore alla variabile sem_t. Il secondo parametro dovrebbe essere zero (Un valore diverso da zero indicherebbe un semaforo che può essere condiviso tra i processi, il che non è supportato da GNU/Linux per questo tipo di semaforo) e il terzo parametro è il valore iniziale del semaforo.
+</p>
 
 ```c
 int sem_init(sem_t *sem, int pshared, unsigned int value);
 ```
 
-Se non hai più bisogno di un semaforo, è bene deallocarlo con **sem_destroy()**.
+<p align="justify">
+Se non hai più bisogno di un semaforo, è bene deallocarlo con <strong>sem_destroy()</strong>.
+</p>
 
 
-Per attendere un semaforo, usa **sem_wait()**. 
+<p align="justify">
+Per attendere un semaforo, usa <strong>sem_wait()</strong>.
+</p>
 
 ```c
 int sem_wait(sem_t *sem);
 ```
 
-Per incrementare un semaforo, usa **sem_post()**.
+<p align="justify">
+Per incrementare un semaforo, usa <strong>sem_post()</strong>.
+</p>
 
 ```c
 int sem_post(sem_t *sem);
 ```
 
-Viene fornita anche una funzione di attesa non bloccante, **sem_trywait()**. È simile a pthread_mutex_trylock: se l'attesa sarebbe bloccata perché il valore del semaforo era zero, la funzione restituisce subito il valore di errore `EAGAIN`, invece di
-bloccare.
+<p align="justify">
+Viene fornita anche una funzione di attesa non bloccante, <strong>sem_trywait()</strong>. È simile a pthread_mutex_trylock: se l'attesa sarebbe bloccata perché il valore del semaforo era zero, la funzione restituisce subito il valore di errore <code>EAGAIN</code>, invece di bloccare.
+</p>
 
 ```c
 int sem_trywait(sem_t *sem);
 ```
 
-GNU/Linux fornisce anche una funzione per recuperare il valore corrente di un semaforo, **sem_getvalue()**, che inserisce il valore nella variabile int puntata dal suo secondo argomento. 
+<p align="justify">
+GNU/Linux fornisce anche una funzione per recuperare il valore corrente di un semaforo, <strong>sem_getvalue()</strong>, che inserisce il valore nella variabile int puntata dal suo secondo argomento.
+</p>
 
 ```c
 int sem_getvalue(sem_t *sem, int *sval);
 ```
 
-Tuttavia, non dovresti usare il valore del semaforo che ottieni da questa funzione per prendere una decisione se inviare o attendere il semaforo. Ciò potrebbe portare
-a una race condition: un altro thread potrebbe modificare il valore del semaforo tra la chiamata a sem_getvalue e la chiamata a un'altra funzione del semaforo. Utilizza invece le funzioni atomiche di post e attesa.
-Tornando al nostro esempio di coda di lavoro, possiamo usare un semaforo per contare il numero di lavori in attesa nella coda. L'esempio seguente controlla la coda con un semaforo. La funzione enqueue_job aggiunge un nuovo job alla coda.
+<p align="justify">
+Tuttavia, non dovresti usare il valore del semaforo che ottieni da questa funzione per prendere una decisione se inviare o attendere il semaforo. Ciò potrebbe portare a una race condition: un altro thread potrebbe modificare il valore del semaforo tra la chiamata a sem_getvalue e la chiamata a un'altra funzione del semaforo. Utilizza invece le funzioni atomiche di post e attesa. Tornando al nostro esempio di coda di lavoro, possiamo usare un semaforo per contare il numero di lavori in attesa nella coda. L'esempio seguente controlla la coda con un semaforo. La funzione enqueue_job aggiunge un nuovo job alla coda.
+</p>
 
 ```c
 /***********************************************************************
@@ -17160,13 +19051,15 @@ int main(void){
 }
 ```
 
+<p align="justify">
 Prima di prendere un lavoro dalla parte anteriore della coda, ogni thread attenderà prima sul semaforo. Se il valore del semaforo è zero, indicando che la coda è vuota, il thread si bloccherà semplicemente finché il valore del semaforo non diventerà positivo, indicando che un lavoro è stato aggiunto alla coda. La funzione enqueue_job aggiunge un lavoro alla coda. Proprio come thread_function, deve bloccare il mutex della coda prima di modificare la coda. Dopo aver aggiunto un lavoro alla coda, invia un post al semaforo, indicando che un nuovo lavoro è disponibile. In questa implementazione i thread che elaborano i lavori non escono mai; se nessun lavoro è disponibile per un po', tutti i thread si bloccano semplicemente in sem_wait.
+</p>
 
 ### Variabili di condizione
 
-Abbiamo mostrato come usare un mutex per proteggere una variabile dall'accesso simultaneo da due thread e come usare i semafori per implementare un contatore condiviso. Una **variabile di condizione** è un terzo dispositivo di sincronizzazione fornito da GNU/Linux; con essa, puoi implementare condizioni più complesse in base alle quali i thread vengono eseguiti. Supponiamo di scrivere una funzione thread che esegue un ciclo all'infinito, eseguendo un po' di lavoro a ogni iterazione. Il ciclo thread, tuttavia, deve essere controllato da un flag: il ciclo viene eseguito solo quando il flag è impostato; quando il flag non è impostato, il ciclo si interrompe.
-Durante ogni iterazione del ciclo, la funzione thread verifica che il flag sia impostato. Poiché il flag è accessibile da più thread, è protetto da un mutex. Questa implementazione potrebbe essere corretta, ma non è efficiente. La funzione thread impiegherà molta CPU
-ogni volta che il flag non è impostato, controllando e ricontrollando il flag, ogni volta bloccando e sbloccando il mutex. Ciò che si desidera realmente è un modo per mettere il thread in modalità sleep quando il flag non è impostato, finché non cambiano alcune circostanze che potrebbero causare l'impostazione del flag.
+<p align="justify">
+Abbiamo mostrato come usare un mutex per proteggere una variabile dall'accesso simultaneo da due thread e come usare i semafori per implementare un contatore condiviso. Una <strong>variabile di condizione</strong> è un terzo dispositivo di sincronizzazione fornito da GNU/Linux; con essa, puoi implementare condizioni più complesse in base alle quali i thread vengono eseguiti. Supponiamo di scrivere una funzione thread che esegue un ciclo all'infinito, eseguendo un po' di lavoro a ogni iterazione. Il ciclo thread, tuttavia, deve essere controllato da un flag: il ciclo viene eseguito solo quando il flag è impostato; quando il flag non è impostato, il ciclo si interrompe. Durante ogni iterazione del ciclo, la funzione thread verifica che il flag sia impostato. Poiché il flag è accessibile da più thread, è protetto da un mutex. Questa implementazione potrebbe essere corretta, ma non è efficiente. La funzione thread impiegherà molta CPU ogni volta che il flag non è impostato, controllando e ricontrollando il flag, ogni volta bloccando e sbloccando il mutex. Ciò che si desidera realmente è un modo per mettere il thread in modalità sleep quando il flag non è impostato, finché non cambiano alcune circostanze che potrebbero causare l'impostazione del flag.
+</p>
 
 ```c
 /***********************************************************************
@@ -17219,29 +19112,76 @@ void set_thread_flag (int flag_value)
 }
 ```
 
+<p align="justify">
 Una variabile di condizione consente di implementare una condizione in base alla quale un thread viene eseguito e, inversamente, la condizione in base alla quale il thread viene bloccato. Finché ogni thread che potenzialmente modifica il senso della condizione utilizza la variabile di condizione correttamente, Linux garantisce che i thread bloccati sulla condizione verranno sbloccati quando la condizione cambia. Come con un semaforo, un thread può attendere una variabile di condizione. Se il thread A attende una variabile di condizione, viene bloccato finché un altro thread, il thread B, segnala la stessa variabile di condizione. A differenza di un semaforo, una variabile di condizione non ha un contatore o una memoria; il thread A deve attendere la variabile di condizione prima che il thread B la segnali. Se il thread B segnala la variabile di condizione prima che il thread A la attenda, il segnale viene perso e il thread A si blocca finché un altro thread non segnala di nuovo la variabile di condizione. Ecco come utilizzeresti una variabile di condizione per rendere più efficiente l'esempio precedente:
+</p>
 
-* Il ciclo in **thread_function** controlla il flag. Se il flag non è impostato, il thread attende la variabile di condizione.
-* La funzione **set_thread_flag** segnala la variabile di condizione dopo aver modificato il valore del flag. In questo modo, se thread_function è bloccato sulla variabile di condizione, verrà sbloccato e controllerà di nuovo la condizione.
+<ul>
+  <li>
+    <p align="justify">
+    Il ciclo in <strong>thread_function</strong> controlla il flag. Se il flag non è impostato, il thread attende la variabile di condizione.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    La funzione <strong>set_thread_flag</strong> segnala la variabile di condizione dopo aver modificato il valore del flag. In questo modo, se thread_function è bloccato sulla variabile di condizione, verrà sbloccato e controllerà di nuovo la condizione.
+    </p>
+  </li>
+</ul>
 
+<p align="justify">
 C'è un problema con questo: c'è una condizione di competizione tra il controllo del valore del flag e la segnalazione o l'attesa della variabile di condizione. Supponiamo che thread_function abbia controllato il flag e abbia scoperto che non era impostato. In quel momento, lo scheduler di Linux ha messo in pausa quel thread e ha ripreso quello principale. Per una coincidenza, il thread principale è in set_thread_flag. Imposta il flag e quindi segnala la variabile di condizione. Poiché nessun thread è in attesa della variabile di condizione in quel momento (ricorda che thread_function è stato messo in pausa prima di poter attendere la variabile di condizione), il segnale viene perso. Ora, quando Linux riprogramma l'altro thread, inizia ad attendere la variabile di condizione e potrebbe finire bloccato per sempre. Per risolvere questo problema, abbiamo bisogno di un modo per bloccare il flag e la variabile di condizione insieme con un singolo mutex. Fortunatamente, GNU/Linux fornisce esattamente questo meccanismo. Ogni variabile di condizione deve essere utilizzata insieme a un mutex, per impedire questo tipo di race condition. Utilizzando questo schema, la funzione thread segue questi passaggi:
+</p>
 
-1. Il ciclo in thread_function blocca il mutex e legge il valore del flag.
-2. Se il flag è impostato, sblocca il mutex ed esegue la funzione di lavoro.
-3. Se il flag non è impostato, sblocca atomicamente il mutex e attende la variabile di condizione.
+<ol>
+  <li>
+    <p align="justify">
+    Il ciclo in thread_function blocca il mutex e legge il valore del flag.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Se il flag è impostato, sblocca il mutex ed esegue la funzione di lavoro.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Se il flag non è impostato, sblocca atomicamente il mutex e attende la variabile di condizione.
+    </p>
+  </li>
+</ol>
 
-La caratteristica critica qui è nel passaggio 3, in cui GNU/Linux consente di sbloccare il mutex e attendere la variabile di condizione atomicamente, senza la possibilità che un altro thread intervenga. Ciò elimina la possibilità che un altro thread possa
-modificare il valore del flag e segnalare la variabile di condizione tra il test del valore del flag e l'attesa della variabile di condizione di thread_function
+<p align="justify">
+La caratteristica critica qui è nel passaggio 3, in cui GNU/Linux consente di sbloccare il mutex e attendere la variabile di condizione atomicamente, senza la possibilità che un altro thread intervenga. Ciò elimina la possibilità che un altro thread possa modificare il valore del flag e segnalare la variabile di condizione tra il test del valore del flag e l'attesa della variabile di condizione di thread_function
+</p>
 
-Una variabile di condizione è rappresentata da un'istanza di **pthread_cond_t**. Ricorda che **ogni variabile di condizione deve essere accompagnata da un mutex**. Queste sono le funzioni che manipolano le variabili di condizione:
+<p align="justify">
+Una variabile di condizione è rappresentata da un'istanza di <strong>pthread_cond_t</strong>. Ricorda che <strong>ogni variabile di condizione deve essere accompagnata da un mutex</strong>. Queste sono le funzioni che manipolano le variabili di condizione:
+</p>
 
-* **pthread_cond_init()** inizializza una variabile di condizione. Il primo argomento è un puntatore a un'istanza di pthread_cond_t. Il secondo argomento, un puntatore a un oggetto attributo di variabile di condizione, viene ignorato in GNU/Linux.
-   Il mutex deve essere inizializzato separatamente
+<ul>
+  <li>
+    <p align="justify">
+    <strong>pthread_cond_init()</strong> inizializza una variabile di condizione. Il primo argomento è un puntatore a un'istanza di pthread_cond_t. Il secondo argomento, un puntatore a un oggetto attributo di variabile di condizione, viene ignorato in GNU/Linux.
+    </p>
+  </li>
+</ul>
+<p align="justify">
+Il mutex deve essere inizializzato separatamente
+</p>
    ```c
    int pthread_cond_init(pthread_cond_t *restrict cond, const pthread_condattr_t *restrict attr);
    ```
-* **pthread_cond_signal()** segnala una variabile di condizione. Un singolo thread bloccato sulla variabile di condizione verrà sbloccato. Se nessun altro thread è bloccato sulla variabile di condizione, il segnale viene ignorato. L'argomento è un puntatore all'istanza di
-  pthread_cond_t. Una chiamata simile, **pthread_cond_broadcast()**, sblocca tutti i thread bloccati sulla variabile di condizione, invece di uno solo.
+<ul>
+  <li>
+    <p align="justify">
+    <strong>pthread_cond_signal()</strong> segnala una variabile di condizione. Un singolo thread bloccato sulla variabile di condizione verrà sbloccato. Se nessun altro thread è bloccato sulla variabile di condizione, il segnale viene ignorato. L'argomento è un puntatore all'istanza di
+    </p>
+  </li>
+</ul>
+<p align="justify">
+pthread_cond_t. Una chiamata simile, <strong>pthread_cond_broadcast()</strong>, sblocca tutti i thread bloccati sulla variabile di condizione, invece di uno solo.
+</p>
 
   ```c
   int pthread_cond_signal(pthread_cond_t *cond);
@@ -17250,20 +19190,47 @@ Una variabile di condizione è rappresentata da un'istanza di **pthread_cond_t**
   ```c
   int pthread_cond_broadcast(pthread_cond_t *cond);
   ```
-* **pthread_cond_wait()** blocca il thread chiamante finché la variabile di condizione non viene segnalata. L'argomento è un puntatore all'istanza pthread_cond_t. Il secondo argomento è un puntatore all'istanza del mutex pthread_mutex_t. Quando viene chiamata pthread_cond_wait, il mutex deve essere già bloccato dal thread chiamante. Quella funzione sblocca atomicamente il mutex e blocca la variabile di condizione. Quando la variabile di condizione viene segnalata e il thread chiamante si sblocca, pthread_cond_wait riacquisisce automaticamente un blocco sul mutex.
+<ul>
+  <li>
+    <p align="justify">
+    <strong>pthread_cond_wait()</strong> blocca il thread chiamante finché la variabile di condizione non viene segnalata. L'argomento è un puntatore all'istanza pthread_cond_t. Il secondo argomento è un puntatore all'istanza del mutex pthread_mutex_t. Quando viene chiamata pthread_cond_wait, il mutex deve essere già bloccato dal thread chiamante. Quella funzione sblocca atomicamente il mutex e blocca la variabile di condizione. Quando la variabile di condizione viene segnalata e il thread chiamante si sblocca, pthread_cond_wait riacquisisce automaticamente un blocco sul mutex.
+    </p>
+  </li>
+</ul>
   ```c
   int pthread_cond_wait(pthread_cond_t *restrict cond, pthread_mutex_t *restrict mutex);
   ```
   
-Ogni volta che il programma esegue un'azione che potrebbe cambiare il senso della condizione che stai proteggendo con la variabile di condizione, dovrebbe eseguire questi passaggi. (Nel
-nostro esempio, la condizione è lo stato del flag del thread, quindi questi passaggi devono essere eseguiti ogni volta che il flag viene modificato.)
+<p align="justify">
+Ogni volta che il programma esegue un'azione che potrebbe cambiare il senso della condizione che stai proteggendo con la variabile di condizione, dovrebbe eseguire questi passaggi. (Nel nostro esempio, la condizione è lo stato del flag del thread, quindi questi passaggi devono essere eseguiti ogni volta che il flag viene modificato.)
+</p>
 
-1. Bloccare il mutex che accompagna la variabile di condizione.
-2. Eseguire l'azione che potrebbe modificare il senso della condizione (nel nostro esempio, impostare il flag).
-3. Segnalare o trasmettere la variabile di condizione, a seconda del comportamento desiderato.
-4. Sbloccare il mutex che accompagna la variabile di condizione.
+<ol>
+  <li>
+    <p align="justify">
+    Bloccare il mutex che accompagna la variabile di condizione.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Eseguire l'azione che potrebbe modificare il senso della condizione (nel nostro esempio, impostare il flag).
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Segnalare o trasmettere la variabile di condizione, a seconda del comportamento desiderato.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Sbloccare il mutex che accompagna la variabile di condizione.
+    </p>
+  </li>
+</ol>
 
+<p align="justify">
 Il codice seguente mostra di nuovo l'esempio precedente, che ora utilizza una variabile di condizione per proteggere il flag del thread. Notare che in thread_function, un blocco sul mutex viene mantenuto prima di controllare il valore di thread_flag. Tale blocco viene automaticamente rilasciato da pthread_cond_wait prima del blocco e viene automaticamente riacquisito in seguito. Notare inoltre che set_thread_flag blocca il mutex prima di impostare il valore di thread_flag e di segnalare il mutex
+</p>
 
 ```c
 
@@ -17331,15 +19298,21 @@ void set_thread_flag (int flag_value)
 }
 ```
 
+<p align="justify">
 La condizione protetta da una variabile di condizione può essere arbitrariamente complessa. Tuttavia, prima di eseguire qualsiasi operazione che possa modificare il senso della condizione, dovrebbe essere richiesto un blocco mutex e la variabile di condizione dovrebbe essere segnalata in seguito. Una variabile di condizione può anche essere utilizzata senza una condizione, semplicemente come meccanismo per bloccare un thread finché un altro thread non lo "sveglia". Anche un semaforo può essere utilizzato a tale scopo. La differenza principale è che un semaforo "ricorda" la chiamata di sveglia anche se nessun thread è stato bloccato su di esso in quel momento, mentre una variabile di condizione scarta la chiamata di sveglia a meno che un thread non sia effettivamente bloccato su di essa in quel momento. Inoltre, un semaforo fornisce solo una singola sveglia per post; con pthread_cond_broadcast, un numero arbitrario e sconosciuto di thread bloccati può essere risvegliato contemporaneamente.
+</p>
 
 ### Deadlocks con due o più Thread
 
-I deadlock possono verificarsi quando due (o più) thread sono bloccati, in attesa che si verifichi una condizione che solo l'altro può causare. Ad esempio, se il thread A è bloccato su una variabile di condizione in attesa che il thread B lo segnali, e il thread B è bloccato su una variabile di condizione in attesa che il thread A lo segnali, si è verificato un deadlock perché nessuno dei due thread segnalerà mai l'altro. Dovresti fare attenzione a evitare la possibilità di tali situazioni perché sono piuttosto difficili da rilevare. Un errore comune che può causare un deadlock riguarda un problema in cui più thread stanno tentando di bloccare lo stesso set di oggetti. Ad esempio, considera un programma in cui due thread diversi, che eseguono due funzioni di thread diverse, devono bloccare gli stessi due mutex. Supponiamo che il thread A blocchi il mutex 1 e poi il mutex 2, e che il thread B blocchi il mutex 2 prima del mutex 1. In uno scenario di pianificazione sufficientemente sfortunato, Linux potrebbe pianificare il thread A abbastanza a lungo da bloccare il mutex 1, e quindi pianificare il thread B, che blocca prontamente il mutex 2. Ora nessuno dei due thread può procedere perché ognuno è bloccato su un mutex che l'altro thread tiene bloccato. Questo è un esempio di un problema di deadlock più generale, che può coinvolgere non solo oggetti di sincronizzazione come i mutex, ma anche altre risorse, come blocchi su file o dispositivi. Il problema si verifica quando più thread tentano di bloccare lo stesso set di risorse in ordini diversi. **La soluzione è assicurarsi che tutti i thread che bloccano più risorse le blocchino nello stesso ordine**.
+<p align="justify">
+I deadlock possono verificarsi quando due (o più) thread sono bloccati, in attesa che si verifichi una condizione che solo l'altro può causare. Ad esempio, se il thread A è bloccato su una variabile di condizione in attesa che il thread B lo segnali, e il thread B è bloccato su una variabile di condizione in attesa che il thread A lo segnali, si è verificato un deadlock perché nessuno dei due thread segnalerà mai l'altro. Dovresti fare attenzione a evitare la possibilità di tali situazioni perché sono piuttosto difficili da rilevare. Un errore comune che può causare un deadlock riguarda un problema in cui più thread stanno tentando di bloccare lo stesso set di oggetti. Ad esempio, considera un programma in cui due thread diversi, che eseguono due funzioni di thread diverse, devono bloccare gli stessi due mutex. Supponiamo che il thread A blocchi il mutex 1 e poi il mutex 2, e che il thread B blocchi il mutex 2 prima del mutex 1. In uno scenario di pianificazione sufficientemente sfortunato, Linux potrebbe pianificare il thread A abbastanza a lungo da bloccare il mutex 1, e quindi pianificare il thread B, che blocca prontamente il mutex 2. Ora nessuno dei due thread può procedere perché ognuno è bloccato su un mutex che l'altro thread tiene bloccato. Questo è un esempio di un problema di deadlock più generale, che può coinvolgere non solo oggetti di sincronizzazione come i mutex, ma anche altre risorse, come blocchi su file o dispositivi. Il problema si verifica quando più thread tentano di bloccare lo stesso set di risorse in ordini diversi. <strong>La soluzione è assicurarsi che tutti i thread che bloccano più risorse le blocchino nello stesso ordine</strong>.
+</p>
 
 ### Implementazione dei Thread in GNU/Linux
 
-L'implementazione dei thread POSIX su GNU/Linux differisce dall'implementazione dei thread su molti altri sistemi simili a UNIX in un modo importante: su GNU/Linux, **i thread sono implementati come processi**. Ogni volta che chiami pthread_create per creare un nuovo thread, Linux crea un nuovo processo che esegue quel thread. Tuttavia, questo processo non è lo stesso di un processo che creeresti con fork; in particolare, condivide lo stesso spazio di indirizzamento e le stesse risorse del processo originale anziché ricevere copie. Il programma seguente lo dimostra. Il programma crea un thread; sia il thread originale che quello nuovo chiamano la funzione getpid e stampano i rispettivi ID di processo e quindi ruotano all'infinito.
+<p align="justify">
+L'implementazione dei thread POSIX su GNU/Linux differisce dall'implementazione dei thread su molti altri sistemi simili a UNIX in un modo importante: su GNU/Linux, <strong>i thread sono implementati come processi</strong>. Ogni volta che chiami pthread_create per creare un nuovo thread, Linux crea un nuovo processo che esegue quel thread. Tuttavia, questo processo non è lo stesso di un processo che creeresti con fork; in particolare, condivide lo stesso spazio di indirizzamento e le stesse risorse del processo originale anziché ricevere copie. Il programma seguente lo dimostra. Il programma crea un thread; sia il thread originale che quello nuovo chiamano la funzione getpid e stampano i rispettivi ID di processo e quindi ruotano all'infinito.
+</p>
 
 ```c
 /***********************************************************************
@@ -17371,7 +19344,9 @@ int main ()
 }
 ```
 
-Esegui il programma in background, quindi richiama `ps x` per visualizzare i processi in esecuzione. Non dimenticare di terminare il programma thread-pid in seguito: consuma molta CPU senza fare nulla. Ecco come potrebbe apparire l'output:
+<p align="justify">
+Esegui il programma in background, quindi richiama <code>ps x</code> per visualizzare i processi in esecuzione. Non dimenticare di terminare il programma thread-pid in seguito: consuma molta CPU senza fare nulla. Ecco come potrebbe apparire l'output:
+</p>
 
 ```bash
  % gcc -o thread-pid thread-pid.c -lpthread
@@ -17393,17 +19368,26 @@ Esegui il programma in background, quindi richiama `ps x` per visualizzare i pro
  [1]+  Terminated              ./thread-pid
 ```
 
-> [!NOTE]
-> Notifica del controllo del job nella shell
-> Le righe che iniziano con [1] provengono dalla shell. Quando esegui un programma in background, la shell gli assegna un numero di job, in questo caso 1, e stampa il pid del programma. Se un job in background termina, la shell segnala tale fatto la volta successiva che invochi un comando
+<table align="center">
+	<td>:pill: <b>Nota</b>
+	<p align=justify>
+ Notifica del controllo del job nella shell
+	</p>
+	<p align=justify>
+ Le righe che iniziano con [1] provengono dalla shell. Quando esegui un programma in background, la shell gli assegna un numero di job, in questo caso 1, e stampa il pid del programma. Se un job in background termina, la shell segnala tale fatto la volta successiva che invochi un comando
+	</p>
+	</td>
+</table>
 
+<p align="justify">
 Nota che ci sono tre processi che eseguono il programma thread-pid. Il primo di questi, con pid 14608, è il thread principale nel programma; il terzo, con pid 14610, è il thread che abbiamo creato per eseguire thread_function. E il secondo thread, con pid 14609? Questo è il "thread del gestore", che fa parte dell'implementazione interna dei thread GNU/Linux. Il thread del gestore viene creato la prima volta che un programma chiama pthread_create per creare un nuovo thread.
+</p>
 
 ### Signal Handling
 
-Supponiamo che un programma multithread riceva un segnale. In quale thread viene invocato il gestore del segnale? Il comportamento dell'interazione tra segnali e thread varia da un sistema UNIX a un altro. In GNU/Linux, il comportamento è dettato dal fatto che i thread sono implementati come processi. Poiché ogni thread è un processo separato e poiché un segnale viene inviato a un processo particolare, non vi è ambiguità su quale thread riceva il segnale. In genere, i segnali inviati dall'esterno del programma vengono inviati al processo corrispondente al thread principale del programma. Ad esempio, se un programma si biforca e il processo figlio esegue un programma multithread, il processo padre conterrà l'ID processo del thread principale del programma del processo figlio e utilizzerà tale ID processo per inviare segnali al suo figlio. Questa è in genere una buona convenzione da seguire quando si inviano segnali a un programma multithread. Si noti che questo aspetto dell'implementazione di pthreads di GNU/Linux è in contrasto
-con lo standard di thread POSIX. Non fare affidamento su questo comportamento in programmi che sono
-pensati per essere portabili. All'interno di un programma multithread, è possibile che un thread invii un segnale specificamente a un altro thread. Utilizzare la funzione **pthread_kill()** per farlo. Il suo primo parametro è un ID thread e il suo secondo parametro è un numero di segnale
+<p align="justify">
+Supponiamo che un programma multithread riceva un segnale. In quale thread viene invocato il gestore del segnale? Il comportamento dell'interazione tra segnali e thread varia da un sistema UNIX a un altro. In GNU/Linux, il comportamento è dettato dal fatto che i thread sono implementati come processi. Poiché ogni thread è un processo separato e poiché un segnale viene inviato a un processo particolare, non vi è ambiguità su quale thread riceva il segnale. In genere, i segnali inviati dall'esterno del programma vengono inviati al processo corrispondente al thread principale del programma. Ad esempio, se un programma si biforca e il processo figlio esegue un programma multithread, il processo padre conterrà l'ID processo del thread principale del programma del processo figlio e utilizzerà tale ID processo per inviare segnali al suo figlio. Questa è in genere una buona convenzione da seguire quando si inviano segnali a un programma multithread. Si noti che questo aspetto dell'implementazione di pthreads di GNU/Linux è in contrasto con lo standard di thread POSIX. Non fare affidamento su questo comportamento in programmi che sono pensati per essere portabili. All'interno di un programma multithread, è possibile che un thread invii un segnale specificamente a un altro thread. Utilizzare la funzione <strong>pthread_kill()</strong> per farlo. Il suo primo parametro è un ID thread e il suo secondo parametro è un numero di segnale
+</p>
 
 ```c
 pthread_kill(pthread_t thread, int sig);
@@ -17411,19 +19395,52 @@ pthread_kill(pthread_t thread, int sig);
 
 ### La chiamata di sistema Clone()
 
+<p align="justify">
 Sebbene i thread GNU/Linux creati nello stesso programma siano implementati come processi separati, condividono il loro spazio di memoria virtuale e altre risorse. Un processo figlio creato con fork, tuttavia, ottiene copie di questi elementi. Come viene creato il primo tipo di processo? La chiamata di sistema clone di Linux è una forma generalizzata di fork e pthread_create che consente al chiamante di specificare quali risorse sono condivise tra il processo chiamante e il processo appena creato. Inoltre, clone richiede di specificare la regione di memoria per lo stack di esecuzione che il nuovo processo utilizzerà. Sebbene menzioniamo clone qui per soddisfare la curiosità del lettore, quella chiamata di sistema non dovrebbe essere normalmente utilizzata nei programmi. Utilizzare fork per creare nuovi processi o pthread_create per creare thread.
+</p>
 
 ### Processi vs Thread
 
+<p align="justify">
 Per alcuni programmi che traggono vantaggio dalla concorrenza, la decisione se utilizzare processi o thread può essere difficile. Ecco alcune linee guida per aiutarti a decidere quale modello di concorrenza si adatta meglio al tuo programma:
+</p>
 
+<p align="justify">
 *Tutti i thread in un programma devono eseguire lo stesso eseguibile. Un processo figlio, d'altra parte, può eseguire un eseguibile diverso chiamando una funzione exec.
-* Un thread difettoso può danneggiare altri thread nello stesso processo perché i thread condividono lo stesso spazio di memoria virtuale e altre risorse. Ad esempio, una scrittura di memoria selvaggia tramite un puntatore non inizializzato in un thread può danneggiare
+</p>
+<ul>
+  <li>
+    <p align="justify">
+    Un thread difettoso può danneggiare altri thread nello stesso processo perché i thread condividono lo stesso spazio di memoria virtuale e altre risorse. Ad esempio, una scrittura di memoria selvaggia tramite un puntatore non inizializzato in un thread può danneggiare
+    </p>
+  </li>
+</ul>
+<p align="justify">
 la memoria visibile a un altro thread. Un processo separato, d'altra parte, non può farlo perché ogni processo ha una copia dello spazio di memoria del programma.
-* La copia della memoria per un nuovo processo aggiunge un ulteriore sovraccarico di prestazioni rispetto alla creazione di un nuovo thread. Tuttavia, la copia viene eseguita solo quando la memoria viene modificata, quindi la penalità è minima se il processo figlio legge solo
+</p>
+<ul>
+  <li>
+    <p align="justify">
+    La copia della memoria per un nuovo processo aggiunge un ulteriore sovraccarico di prestazioni rispetto alla creazione di un nuovo thread. Tuttavia, la copia viene eseguita solo quando la memoria viene modificata, quindi la penalità è minima se il processo figlio legge solo
+    </p>
+  </li>
+</ul>
+<p align="justify">
 la memoria.
-* I thread dovrebbero essere utilizzati per i programmi che necessitano di un parallelismo a grana fine. Ad esempio, se un problema può essere suddiviso in più attività quasi identiche, i thread potrebbero essere una buona scelta. I processi dovrebbero essere utilizzati per i programmi che necessitano di un parallelismo più grossolano.
-* La condivisione dei dati tra thread è banale perché i thread condividono la stessa memoria. (Tuttavia, è necessario prestare molta attenzione per evitare race condition, come descritto in precedenza.) La condivisione dei dati tra processi richiede l'uso di meccanismi IPC. Ciò può essere più macchinoso, ma rende i processi multipli meno inclini a soffrire di bug di concorrenza
+</p>
+<ul>
+  <li>
+    <p align="justify">
+    I thread dovrebbero essere utilizzati per i programmi che necessitano di un parallelismo a grana fine. Ad esempio, se un problema può essere suddiviso in più attività quasi identiche, i thread potrebbero essere una buona scelta. I processi dovrebbero essere utilizzati per i programmi che necessitano di un parallelismo più grossolano.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    La condivisione dei dati tra thread è banale perché i thread condividono la stessa memoria. (Tuttavia, è necessario prestare molta attenzione per evitare race condition, come descritto in precedenza.) La condivisione dei dati tra processi richiede l'uso di meccanismi IPC. Ciò può essere più macchinoso, ma rende i processi multipli meno inclini a soffrire di bug di concorrenza
+    </p>
+  </li>
+</ul>
+
 
 
 
