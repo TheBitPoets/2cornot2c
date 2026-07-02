@@ -1,4 +1,4 @@
-## Indice
+﻿## Indice
 
 * [Controllo dei processi](#controllo-dei-processi)
 * [Linux Programming](#linux-programming)
@@ -1879,25 +1879,33 @@ int main(void){
 
 ### Sincronizzazione e Sezioni Critiche
 
+<p align="justify">
 La programmazione con i thread è molto complicata perché la maggior parte dei programmi con thread è composta da programmi concorrenti. In particolare, non c'è modo di sapere quando il sistema pianificherà l'esecuzione di un thread e quando ne eseguirà un altro. Un thread potrebbe essere eseguito per un tempo molto lungo o il sistema potrebbe passare da un thread all'altro molto rapidamente. Su un sistema con più processori, il sistema potrebbe persino pianificare l'esecuzione di più thread letteralmente nello stesso momento. Il debug di un programma con thread è difficile perché non è sempre possibile riprodurre facilmente il comportamento che ha causato il problema. Potresti eseguire il programma una volta e far funzionare tutto correttamente; la volta successiva che lo esegui, potrebbe bloccarsi. Non c'è modo di far pianificare i thread esattamente nello stesso modo in cui lo faceva prima.
+</p>
 
-La causa ultima della maggior parte dei bug che coinvolgono i thread è che **i thread accedono agli stessi dati**. Come accennato in precedenza, questo è uno degli aspetti più potenti dei thread, ma può anche essere pericoloso. Se un thread è solo a metà dell'aggiornamento di una struttura dati quando un altro thread accede alla stessa struttura dati, è probabile che si verifichi il caos. Spesso, i programmi con thread buggati contengono un codice che funzionerà solo se un thread viene pianificato più spesso, o prima, di un altro thread. Questi bug sono chiamati **race conditions**; i thread sono in competizione tra loro per modificare la stessa struttura dati.
+<p align="justify">
+La causa ultima della maggior parte dei bug che coinvolgono i thread è che <strong>i thread accedono agli stessi dati</strong>. Come accennato in precedenza, questo è uno degli aspetti più potenti dei thread, ma può anche essere pericoloso. Se un thread è solo a metà dell'aggiornamento di una struttura dati quando un altro thread accede alla stessa struttura dati, è probabile che si verifichi il caos. Spesso, i programmi con thread buggati contengono un codice che funzionerà solo se un thread viene pianificato più spesso, o prima, di un altro thread. Questi bug sono chiamati <strong>race conditions</strong>; i thread sono in competizione tra loro per modificare la stessa struttura dati.
+</p>
 
 #### Race Conditions
 
-Supponiamo che il tuo programma abbia una serie di lavori in coda che vengono elaborati da diversi thread simultanei. La coda dei lavori è rappresentata da una lista di oggetti struct job. Dopo che ogni thread termina un'operazione, controlla la coda per vedere se è disponibile un lavoro aggiuntivo. Se job_queue è diverso da `NULL`, il thread rimuove la testa dell'elenco collegato e imposta job_queue sul lavoro successivo nell'elenco.
+<p align="justify">
+Supponiamo che il tuo programma abbia una serie di lavori in coda che vengono elaborati da diversi thread simultanei. La coda dei lavori è rappresentata da una lista di oggetti struct job. Dopo che ogni thread termina un'operazione, controlla la coda per vedere se è disponibile un lavoro aggiuntivo. Se job_queue è diverso da <code>NULL</code>, il thread rimuove la testa dell'elenco collegato e imposta job_queue sul lavoro successivo nell'elenco.
+</p>
 
-Ora supponiamo che due thread finiscano un lavoro più o meno nello stesso momento, ma che solo un lavoro rimanga nella coda. Il primo thread controlla se job_queue è nullo; scoprendo che non lo è, il thread entra nel ciclo e memorizza il puntatore all'oggetto lavoro in next_job. A questo punto, Linux interrompe il primo thread e pianifica il secondo. Anche il secondo thread controlla job_queue e, trovandolo non nullo, assegna lo stesso puntatore lavoro a next_job. Per una sfortunata coincidenza, ora abbiamo due thread che eseguono lo stesso lavoro. A peggiorare le cose, un thread scollegherà l'oggetto lavoro dalla coda, lasciando job_queue contenente `NULL`. Quando l'altro thread valuta job_queue->next, si verificherà un errore di segmentazione. Questo è un esempio di condizione di gara. In circostanze fortunate, questa particolare pianificazione dei due thread potrebbe non verificarsi mai e la condizione di gara potrebbe non manifestarsi mai. In circostanze diverse, magari quando si esegue su un sistema pesantemente caricato (o sul nuovo server multiprocessore di un cliente importante!), il bug può manifestarsi. Per eliminare le **race conditions**, è necessario un modo per **rendere le operazioni atomiche**. **Un'operazione atomica è indivisibile e ininterrotta; una volta avviata, non verrà messa in pausa o interrotta fino al suo completamento e nel frattempo non verrà eseguita nessun'altra operazione**. In questo particolare esempio, si desidera controllare job_queue: se non è vuoto, si rimuove il primo lavoro, il tutto come un'unica operazione atomica.
+<p align="justify">
+Ora supponiamo che due thread finiscano un lavoro più o meno nello stesso momento, ma che solo un lavoro rimanga nella coda. Il primo thread controlla se job_queue è nullo; scoprendo che non lo è, il thread entra nel ciclo e memorizza il puntatore all'oggetto lavoro in next_job. A questo punto, Linux interrompe il primo thread e pianifica il secondo. Anche il secondo thread controlla job_queue e, trovandolo non nullo, assegna lo stesso puntatore lavoro a next_job. Per una sfortunata coincidenza, ora abbiamo due thread che eseguono lo stesso lavoro. A peggiorare le cose, un thread scollegherà l'oggetto lavoro dalla coda, lasciando job_queue contenente <code>NULL</code>. Quando l'altro thread valuta job_queue->next, si verificherà un errore di segmentazione. Questo è un esempio di condizione di gara. In circostanze fortunate, questa particolare pianificazione dei due thread potrebbe non verificarsi mai e la condizione di gara potrebbe non manifestarsi mai. In circostanze diverse, magari quando si esegue su un sistema pesantemente caricato (o sul nuovo server multiprocessore di un cliente importante!), il bug può manifestarsi. Per eliminare le <strong>race conditions</strong>, è necessario un modo per <strong>rendere le operazioni atomiche</strong>. <strong>Un'operazione atomica è indivisibile e ininterrotta; una volta avviata, non verrà messa in pausa o interrotta fino al suo completamento e nel frattempo non verrà eseguita nessun'altra operazione</strong>. In questo particolare esempio, si desidera controllare job_queue: se non è vuoto, si rimuove il primo lavoro, il tutto come un'unica operazione atomica.
+</p>
 
-```c
+<pre><code class="language-c">
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
 * See COPYRIGHT for license information.                               *
 ***********************************************************************/
 
-#include <malloc.h>
-#include <pthread.h>
+#include &lt;malloc.h&gt;
+#include &lt;pthread.h&gt;
 
 struct job {
   /* Link field for linked list.  */
@@ -1911,7 +1919,7 @@ struct job* job_queue;
 
 void process_job (struct job* tmp){
   char print_me[20];
-  printf("Thread %ld completed job %s \n", pthread_self(), tmp->message);
+  printf("Thread %ld completed job %s \n", pthread_self(), tmp-&gt;message);
 }
 
 /* Process queued jobs until the queue is empty.  */
@@ -1922,7 +1930,7 @@ void* thread_function (void* arg)
     /* Get the next available job.  */
     struct job* next_job = job_queue;
     /* Remove this job from the list.  */
-    job_queue = job_queue->next;
+    job_queue = job_queue-&gt;next;
     /* Carry out the work.  */
     process_job (next_job);
     /* Clean up.  */
@@ -1936,74 +1944,90 @@ int main(void){
   struct job *two   = (struct job *) malloc(sizeof(struct job));
   struct job *three = (struct job *) malloc(sizeof(struct job));
 
-  one->message   = "1";
-  two->message   = "2";
-  three->message = "3";
+  one-&gt;message   = "1";
+  two-&gt;message   = "2";
+  three-&gt;message = "3";
 
   job_queue = (struct job *) malloc(sizeof(struct job));
-  job_queue->message = "4";
-  job_queue->next = three;
+  job_queue-&gt;message = "4";
+  job_queue-&gt;next = three;
 
-  three->next = two;
-  two->next = one;
-  one->next = NULL;
+  three-&gt;next = two;
+  two-&gt;next = one;
+  one-&gt;next = NULL;
 
 
   pthread_t first;
   pthread_t second;
 
-  pthread_create(&first, NULL, thread_function, NULL);
-  pthread_create(&second, NULL, thread_function, NULL);
+  pthread_create(&amp;first, NULL, thread_function, NULL);
+  pthread_create(&amp;second, NULL, thread_function, NULL);
 
   pthread_join(first, NULL);
   pthread_join(second, NULL);
 
   return 0;
 }
-```
+</code></pre>
 
 
 ### Mutex
 
-La soluzione al problema della race condition della coda dei lavori consiste nel consentire a un solo thread alla volta di accedere alla coda dei lavori. Una volta che un thread inizia a guardare la coda, nessun altro thread dovrebbe essere in grado di accedervi finché il primo thread non ha deciso se elaborare un lavoro e, in tal caso, lo ha rimosso dall'elenco. L'implementazione richiede il supporto del sistema operativo. GNU/Linux fornisce i **mutex**, abbreviazione di blocchi MUTual EXclusion. Un mutex è un blocco speciale che solo un thread può bloccare alla volta. Se un thread blocca un mutex e poi un secondo thread tenta di bloccare lo stesso mutex, il secondo thread viene bloccato o messo in attesa. Solo quando il primo thread sblocca il mutex, il secondo thread viene sbloccato, ovvero può riprendere l'esecuzione. GNU/Linux garantisce che non si verifichino condizioni di gara tra thread che tentano di bloccare un mutex; solo un thread otterrà il blocco e tutti gli altri thread verranno bloccati. Pensa a un mutex come alla serratura di una porta del bagno. Chi arriva per primo entra nel bagno e chiude a chiave la porta. Se qualcun altro tenta di entrare nel bagno mentre è occupato, quella persona troverà la porta chiusa a chiave e sarà costretta ad aspettare fuori finché l'occupante non esce. Per creare un mutex, crea una variabile di tipo **pthread_mutex_t** e passa un puntatore a **pthread_mutex_init()**. Il secondo argomento di `pthread_mutex_init()` è un puntatore a un oggetto attributo mutex, che specifica gli attributi del mutex.
+<p align="justify">
+La soluzione al problema della race condition della coda dei lavori consiste nel consentire a un solo thread alla volta di accedere alla coda dei lavori. Una volta che un thread inizia a guardare la coda, nessun altro thread dovrebbe essere in grado di accedervi finché il primo thread non ha deciso se elaborare un lavoro e, in tal caso, lo ha rimosso dall'elenco. L'implementazione richiede il supporto del sistema operativo. GNU/Linux fornisce i <strong>mutex</strong>, abbreviazione di blocchi MUTual EXclusion. Un mutex è un blocco speciale che solo un thread può bloccare alla volta. Se un thread blocca un mutex e poi un secondo thread tenta di bloccare lo stesso mutex, il secondo thread viene bloccato o messo in attesa. Solo quando il primo thread sblocca il mutex, il secondo thread viene sbloccato, ovvero può riprendere l'esecuzione. GNU/Linux garantisce che non si verifichino condizioni di gara tra thread che tentano di bloccare un mutex; solo un thread otterrà il blocco e tutti gli altri thread verranno bloccati. Pensa a un mutex come alla serratura di una porta del bagno. Chi arriva per primo entra nel bagno e chiude a chiave la porta. Se qualcun altro tenta di entrare nel bagno mentre è occupato, quella persona troverà la porta chiusa a chiave e sarà costretta ad aspettare fuori finché l'occupante non esce. Per creare un mutex, crea una variabile di tipo <strong>pthread_mutex_t</strong> e passa un puntatore a <strong>pthread_mutex_init()</strong>. Il secondo argomento di <code>pthread_mutex_init()</code> è un puntatore a un oggetto attributo mutex, che specifica gli attributi del mutex.
+</p>
 
-```c
+<pre><code class="language-c">
 int pthread_mutex_init(pthread_mutex_t *restrict mutex, const pthread_mutexattr_t *restrict attr);
-```
+</code></pre>
 
-Come con `pthread_create()`, se il puntatore dell'attributo è `NULL`, vengono assunti gli attributi predefiniti. La variabile mutex dovrebbe essere inizializzata solo una volta. Questo frammento di codice dimostra la dichiarazione e l'inizializzazione di una variabile mutex.
+<p align="justify">
+Come con <code>pthread_create()</code>, se il puntatore dell'attributo è <code>NULL</code>, vengono assunti gli attributi predefiniti. La variabile mutex dovrebbe essere inizializzata solo una volta. Questo frammento di codice dimostra la dichiarazione e l'inizializzazione di una variabile mutex.
+</p>
 
-```c
+<pre><code class="language-c">
 pthread_mutex_t mutex;
-pthread_mutex_init (&mutex, NULL);
-```
+pthread_mutex_init (&amp;mutex, NULL);
+</code></pre>
 
-Un altro modo più semplice per creare un mutex con attributi predefiniti è inizializzarlo con il valore speciale `PTHREAD_MUTEX_INITIALIZER`. Non è necessaria alcuna chiamata aggiuntiva a pthread_mutex_init. Ciò è particolarmente comodo per le variabili globali
-(e, in C++, i membri dati statici). Il frammento di codice precedente avrebbe potuto essere scritto in modo equivalente così:
+<p align="justify">
+Un altro modo più semplice per creare un mutex con attributi predefiniti è inizializzarlo con il valore speciale <code>PTHREAD_MUTEX_INITIALIZER</code>. Non è necessaria alcuna chiamata aggiuntiva a pthread_mutex_init. Ciò è particolarmente comodo per le variabili globali (e, in C++, i membri dati statici). Il frammento di codice precedente avrebbe potuto essere scritto in modo equivalente così:
+</p>
 
-```c
+<pre><code class="language-c">
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-```
+</code></pre>
 
-Un thread può tentare di bloccare un mutex chiamando **pthread_mutex_lock()** su di esso. 
+<p align="justify">
+Un thread può tentare di bloccare un mutex chiamando <strong>pthread_mutex_lock()</strong> su di esso.
+</p>
 
-* **Se il mutex è in stato sbloccato, diventa bloccato e la funzione ritorna immediatamente**
-* **Se il mutex è in stato bloccato da un altro thread, pthread_mutex_lock blocca l'esecuzione e restituisce solo alla fine quando il mutex viene sbloccato dall'altro thread**.
+<ul>
+  <li>
+    <p align="justify">
+    <strong>Se il mutex è in stato sbloccato, diventa bloccato e la funzione ritorna immediatamente</strong>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <strong>Se il mutex è in stato bloccato da un altro thread, pthread_mutex_lock blocca l'esecuzione e restituisce solo alla fine quando il mutex viene sbloccato dall'altro thread</strong>.
+    </p>
+  </li>
+</ul>
 
-Più di un thread può essere bloccato su un mutex bloccato contemporaneamente. Quando il mutex viene sbloccato, solo uno dei thread bloccati (scelto in modo imprevedibile) viene sbloccato e gli viene consentito di bloccare il mutex; gli altri thread rimangono bloccati.
-Una chiamata a **pthread_mutex_unlock()** sblocca un mutex. Questa funzione dovrebbe essere sempre chiamata dallo stesso thread che ha bloccato il mutex.
-L'esempio seguente mostra un'altra versione dell'esempio di coda di lavoro. Ora la coda è protetta da un mutex. Prima di accedere alla coda (sia per lettura che per scrittura), ogni thread blocca prima un mutex. Solo quando l'intera sequenza di controllo della coda e
-rimozione di un lavoro è completa, il mutex viene sbloccato. Ciò impedisce la race condition descritta in precedenza.
+<p align="justify">
+Più di un thread può essere bloccato su un mutex bloccato contemporaneamente. Quando il mutex viene sbloccato, solo uno dei thread bloccati (scelto in modo imprevedibile) viene sbloccato e gli viene consentito di bloccare il mutex; gli altri thread rimangono bloccati. Una chiamata a <strong>pthread_mutex_unlock()</strong> sblocca un mutex. Questa funzione dovrebbe essere sempre chiamata dallo stesso thread che ha bloccato il mutex. L'esempio seguente mostra un'altra versione dell'esempio di coda di lavoro. Ora la coda è protetta da un mutex. Prima di accedere alla coda (sia per lettura che per scrittura), ogni thread blocca prima un mutex. Solo quando l'intera sequenza di controllo della coda e rimozione di un lavoro è completa, il mutex viene sbloccato. Ciò impedisce la race condition descritta in precedenza.
+</p>
 
-```c
+<pre><code class="language-c">
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
 * See COPYRIGHT for license information.                               *
 ***********************************************************************/
 
-#include <malloc.h>
-#include <pthread.h>
+#include &lt;malloc.h&gt;
+#include &lt;pthread.h&gt;
 
 struct job {
   /* Link field for linked list.  */
@@ -2017,7 +2041,7 @@ struct job* job_queue;
 
 void process_job (struct job* tmp){
   char print_me[20];
-  printf("Thread %ld completed job %s \n", pthread_self(), tmp->message);
+  printf("Thread %ld completed job %s \n", pthread_self(), tmp-&gt;message);
 }
 
 /* A mutex protecting job_queue.  */
@@ -2031,7 +2055,7 @@ void* thread_function (void* arg)
     struct job* next_job;
 
     /* Lock the mutex on the job queue.  */
-    pthread_mutex_lock (&job_queue_mutex);
+    pthread_mutex_lock (&amp;job_queue_mutex);
     /* Now it's safe to check if the queue is empty.  */
     if (job_queue == NULL)
       next_job = NULL;
@@ -2039,11 +2063,11 @@ void* thread_function (void* arg)
       /* Get the next available job.  */
       next_job = job_queue;
       /* Remove this job from the list.  */
-      job_queue = job_queue->next;
+      job_queue = job_queue-&gt;next;
     }
     /* Unlock the mutex on the job queue, since we're done with the
        queue for now.  */
-    pthread_mutex_unlock (&job_queue_mutex);
+    pthread_mutex_unlock (&amp;job_queue_mutex);
 
     /* Was the queue empty?  If so, end the thread.  */
     if (next_job == NULL)
@@ -2063,138 +2087,186 @@ int main(void){
   struct job *two   = (struct job *) malloc(sizeof(struct job));
   struct job *three = (struct job *) malloc(sizeof(struct job));
 
-  one->message   = "1";
-  two->message   = "2";
-  three->message = "3";
+  one-&gt;message   = "1";
+  two-&gt;message   = "2";
+  three-&gt;message = "3";
 
   job_queue = (struct job *) malloc(sizeof(struct job));
-  job_queue->message = "4";
-  job_queue->next = three;
+  job_queue-&gt;message = "4";
+  job_queue-&gt;next = three;
 
-  three->next = two;
-  two->next = one;
-  one->next = NULL;
+  three-&gt;next = two;
+  two-&gt;next = one;
+  one-&gt;next = NULL;
 
 
   pthread_t first;
   pthread_t second;
 
-  pthread_create(&first, NULL, thread_function, NULL);
-  pthread_create(&second, NULL, thread_function, NULL);
+  pthread_create(&amp;first, NULL, thread_function, NULL);
+  pthread_create(&amp;second, NULL, thread_function, NULL);
 
   pthread_join(first, NULL);
   pthread_join(second, NULL);
 
   return 0;
 }
-```
+</code></pre>
 
+<p align="justify">
 Tutti gli accessi a job_queue (il puntatore dati condiviso) avvengono tra la chiamata a pthread_mutex_lock e la chiamata a pthread_mutex_unlock. Un oggetto job, memorizzato in next_job, è accessibile al di fuori di questa regione solo dopo che l'oggetto è stato rimosso dalla coda ed è quindi inaccessibile ad altri thread. Nota che se la coda è vuota (ovvero, job_queue è null), non usciamo immediatamente dal ciclo perché ciò lascerebbe il mutex bloccato in modo permanente e impedirebbe a qualsiasi altro thread di accedere di nuovo alla coda job. Invece, ricordiamo questo fatto impostando next_job su null ed usciamo solo dopo aver sbloccato il mutex. L'uso del mutex per bloccare job_queue non è automatico; spetta a te aggiungere codice per bloccare il mutex prima di accedere a quella variabile e quindi sbloccarlo in seguito. Ad esempio, una funzione per aggiungere un job alla coda job potrebbe apparire così:
+</p>
 
 
-```c
+<pre><code class="language-c">
  void enqueue_job (struct job* new_job)
  {
-   pthread_mutex_lock (&job_queue_mutex);
-   new_job->next = job_queue;
+   pthread_mutex_lock (&amp;job_queue_mutex);
+   new_job-&gt;next = job_queue;
    job_queue = new_job;
-   pthread_mutex_unlock (&job_queue_mutex);
+   pthread_mutex_unlock (&amp;job_queue_mutex);
 }
-```
+</code></pre>
 
 ### Mutex Deadlocks
 
-I mutex forniscono un meccanismo per consentire a un thread di bloccare l'esecuzione di un altro. Ciò apre la possibilità di **una nuova classe di bug**, chiamata **deadlock**. **Un deadlock si verifica quando uno o più thread sono bloccati in attesa di qualcosa che non si verificherà mai. Un semplice deadlock può verificarsi quando lo stesso thread tenta di bloccare un mutex due volte di seguito. Il comportamento in questo caso dipende dal tipo di mutex utilizzato. Esistono tre tipi di mutex:
+<p align="justify">
+I mutex forniscono un meccanismo per consentire a un thread di bloccare l'esecuzione di un altro. Ciò apre la possibilità di <strong>una nuova classe di bug</strong>, chiamata <strong>deadlock</strong>. **Un deadlock si verifica quando uno o più thread sono bloccati in attesa di qualcosa che non si verificherà mai. Un semplice deadlock può verificarsi quando lo stesso thread tenta di bloccare un mutex due volte di seguito. Il comportamento in questo caso dipende dal tipo di mutex utilizzato. Esistono tre tipi di mutex:
+</p>
 
-* Il blocco di un mutex veloce (il tipo predefinito) causerà il verificarsi di un deadlock. Il tentativo di bloccare il mutex resta in attesa finché il mutex non viene sbloccato. Ma poiché il thread che ha bloccato il mutex è bloccato sullo stesso mutex, il blocco non può
+<ul>
+  <li>
+    <p align="justify">
+    Il blocco di un mutex veloce (il tipo predefinito) causerà il verificarsi di un deadlock. Il tentativo di bloccare il mutex resta in attesa finché il mutex non viene sbloccato. Ma poiché il thread che ha bloccato il mutex è bloccato sullo stesso mutex, il blocco non può
+    </p>
+  </li>
+</ul>
+<p align="justify">
 mai essere rilasciato.
-* Il blocco di un mutex ricorsivo non causa un deadlock. Un mutex ricorsivo può essere bloccato in modo sicuro più volte dallo stesso thread. Il mutex ricorda quante volte pthread_mutex_lock è stato chiamato su di esso dal thread che detiene il blocco; quel thread deve effettuare lo stesso numero di chiamate a pthread_mutex_unlock prima che il mutex venga effettivamente sbloccato e un altro thread possa bloccarlo.
-* GNU/Linux rileverà e contrassegnerà un doppio blocco su un mutex di controllo degli errori che altrimenti causerebbe un deadlock. La seconda chiamata consecutiva a pthread_mutex_lock restituisce il codice di errore `EDEADLK`.
+</p>
+<ul>
+  <li>
+    <p align="justify">
+    Il blocco di un mutex ricorsivo non causa un deadlock. Un mutex ricorsivo può essere bloccato in modo sicuro più volte dallo stesso thread. Il mutex ricorda quante volte pthread_mutex_lock è stato chiamato su di esso dal thread che detiene il blocco; quel thread deve effettuare lo stesso numero di chiamate a pthread_mutex_unlock prima che il mutex venga effettivamente sbloccato e un altro thread possa bloccarlo.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    GNU/Linux rileverà e contrassegnerà un doppio blocco su un mutex di controllo degli errori che altrimenti causerebbe un deadlock. La seconda chiamata consecutiva a pthread_mutex_lock restituisce il codice di errore <code>EDEADLK</code>.
+    </p>
+  </li>
+</ul>
 
-Per impostazione predefinita, un mutex GNU/Linux è del tipo veloce. Per creare un mutex di uno degli altri due tipi, crea prima un oggetto attributo mutex dichiarando una variabile **pthread_mutexattr_t** e chiamando **pthread_mutexattr_init()**.
-Poi imposta il tipo di mutex chiamando  **pthread_mutexattr_setkind_np()**.
+<p align="justify">
+Per impostazione predefinita, un mutex GNU/Linux è del tipo veloce. Per creare un mutex di uno degli altri due tipi, crea prima un oggetto attributo mutex dichiarando una variabile <strong>pthread_mutexattr_t</strong> e chiamando <strong>pthread_mutexattr_init()</strong>. Poi imposta il tipo di mutex chiamando  <strong>pthread_mutexattr_setkind_np()</strong>.
+</p>
 
-```c
+<pre><code class="language-c">
 int pthread_mutexattr_setkind_np(pthread_mutexattr_t *attr, int kind);
-```
+</code></pre>
 
-Il primo argomento è un puntatore all'oggetto attributo mutex, e il secondo è `PTHREAD_MUTEX_RECURSIVE_NP` per un mutex ricorsivo, o `PTHREAD_MUTEX_ERRORCHECK_NP` per uno di controllo degli errori. Passa un puntatore a questo oggetto attributo a
-**pthread_mutex_init()** per creare un mutex di questo tipo, quindi distruggi l'oggetto attributo con **pthread_mutexattr_destroy()**. Questa sequenza di codice illustra la creazione di un mutex di controllo degli errori, ad esempio:
+<p align="justify">
+Il primo argomento è un puntatore all'oggetto attributo mutex, e il secondo è <code>PTHREAD_MUTEX_RECURSIVE_NP</code> per un mutex ricorsivo, o <code>PTHREAD_MUTEX_ERRORCHECK_NP</code> per uno di controllo degli errori. Passa un puntatore a questo oggetto attributo a <strong>pthread_mutex_init()</strong> per creare un mutex di questo tipo, quindi distruggi l'oggetto attributo con <strong>pthread_mutexattr_destroy()</strong>. Questa sequenza di codice illustra la creazione di un mutex di controllo degli errori, ad esempio:
+</p>
 
-```c
+<pre><code class="language-c">
  pthread_mutexattr_t attr;
  pthread_mutex_t mutex;
- pthread_mutexattr_init (&attr);
- pthread_mutexattr_setkind_np (&attr, PTHREAD_MUTEX_ERRORCHECK_NP);
- pthread_mutex_init (&mutex, &attr);
- pthread_mutexattr_destroy (&attr);
-```
+ pthread_mutexattr_init (&amp;attr);
+ pthread_mutexattr_setkind_np (&amp;attr, PTHREAD_MUTEX_ERRORCHECK_NP);
+ pthread_mutex_init (&amp;mutex, &amp;attr);
+ pthread_mutexattr_destroy (&amp;attr);
+</code></pre>
 
+<p align="justify">
 Come suggerito dal suffisso "np", i tipi di mutex ricorsivi e di controllo degli errori sono specifici di GNU/Linux e non sono portabili. Pertanto, in genere non è consigliabile utilizzarli nei programmi. (Tuttavia, i mutex di controllo degli errori possono essere utili durante il debug.)
+</p>
 
 ### Test Mutex non bloccanti
 
-A volte, è utile verificare se un mutex è bloccato senza effettivamente bloccarlo. Ad esempio, un thread potrebbe dover verificare un mutex ma potrebbe avere altro lavoro da fare anziché attendere, se il mutex è già bloccato. Poiché **pthread_mutex_lock()** non
-tornerà finché il mutex non sarà sbloccato, è necessaria un'altra funzione. GNU/Linux fornisce **pthread_mutex_trylock()** per questo scopo. Se chiami pthread_mutex_trylock su un mutex sbloccato, bloccherai il mutex come se avessi chiamato pthread_mutex_lock e pthread_mutex_trylock restituirà zero. Tuttavia, se il mutex è già bloccato da un altro thread, pthread_mutex_trylock non bloccherà. Invece, tornerà immediatamente con il codice di errore `EBUSY`. Il mutex mantenuto dall'altro thread non è coinvolto. Puoi provare di nuovo più tardi a bloccare il mutex.
+<p align="justify">
+A volte, è utile verificare se un mutex è bloccato senza effettivamente bloccarlo. Ad esempio, un thread potrebbe dover verificare un mutex ma potrebbe avere altro lavoro da fare anziché attendere, se il mutex è già bloccato. Poiché <strong>pthread_mutex_lock()</strong> non tornerà finché il mutex non sarà sbloccato, è necessaria un'altra funzione. GNU/Linux fornisce <strong>pthread_mutex_trylock()</strong> per questo scopo. Se chiami pthread_mutex_trylock su un mutex sbloccato, bloccherai il mutex come se avessi chiamato pthread_mutex_lock e pthread_mutex_trylock restituirà zero. Tuttavia, se il mutex è già bloccato da un altro thread, pthread_mutex_trylock non bloccherà. Invece, tornerà immediatamente con il codice di errore <code>EBUSY</code>. Il mutex mantenuto dall'altro thread non è coinvolto. Puoi provare di nuovo più tardi a bloccare il mutex.
+</p>
 
 ### Semafori
 
-Nell'esempio precedente, in cui diversi thread elaborano i lavori da una coda, la funzione thread principale dei thread esegue il lavoro successivo finché non ci sono più lavori e quindi esce dal thread. Questo schema funziona se tutti i lavori vengono messi in coda in anticipo o se i nuovi lavori vengono messi in coda almeno con la stessa rapidità con cui i thread li elaborano. Tuttavia, se i thread lavorano troppo velocemente, la coda dei lavori si svuoterà e i thread usciranno. Se in seguito vengono messi in coda nuovi lavori, non ci saranno più thread che li elaborino. Ciò che potremmo invece desiderare è un meccanismo per bloccare i thread quando la coda si svuota finché non diventano disponibili nuovi lavori. Un semaforo fornisce un metodo conveniente per farlo. **Un semaforo è un contatore** che può essere **utilizzato per sincronizzare più thread**. Come con un mutex, GNU/Linux garantisce che il controllo o la modifica del valore di un semaforo può essere eseguito in modo sicuro, senza creare una condizione di competizione. **Ogni semaforo ha un valore contatore**, che è **un intero non negativo**. Un semaforo supporta due operazioni di base:
+<p align="justify">
+Nell'esempio precedente, in cui diversi thread elaborano i lavori da una coda, la funzione thread principale dei thread esegue il lavoro successivo finché non ci sono più lavori e quindi esce dal thread. Questo schema funziona se tutti i lavori vengono messi in coda in anticipo o se i nuovi lavori vengono messi in coda almeno con la stessa rapidità con cui i thread li elaborano. Tuttavia, se i thread lavorano troppo velocemente, la coda dei lavori si svuoterà e i thread usciranno. Se in seguito vengono messi in coda nuovi lavori, non ci saranno più thread che li elaborino. Ciò che potremmo invece desiderare è un meccanismo per bloccare i thread quando la coda si svuota finché non diventano disponibili nuovi lavori. Un semaforo fornisce un metodo conveniente per farlo. <strong>Un semaforo è un contatore</strong> che può essere <strong>utilizzato per sincronizzare più thread</strong>. Come con un mutex, GNU/Linux garantisce che il controllo o la modifica del valore di un semaforo può essere eseguito in modo sicuro, senza creare una condizione di competizione. <strong>Ogni semaforo ha un valore contatore</strong>, che è <strong>un intero non negativo</strong>. Un semaforo supporta due operazioni di base:
+</p>
 
-* Un'operazione di attesa decrementa il valore del semaforo di 1. Se il valore è già zero, l'operazione si blocca finché il valore del semaforo non diventa positivo (a causa dell'azione di un altro thread). Quando il valore del semaforo diventa positivo, viene decrementato di 1 e l'operazione di attesa ritorna.
-* Un'operazione di post incrementa il valore del semaforo di 1. Se il semaforo era precedentemente zero e altri thread sono bloccati in un'operazione di attesa su quel semaforo, uno di quei thread viene sbloccato e la sua operazione di attesa viene completata (il che riporta il valore del semaforo a zero)
+<ul>
+  <li>
+    <p align="justify">
+    Un'operazione di attesa decrementa il valore del semaforo di 1. Se il valore è già zero, l'operazione si blocca finché il valore del semaforo non diventa positivo (a causa dell'azione di un altro thread). Quando il valore del semaforo diventa positivo, viene decrementato di 1 e l'operazione di attesa ritorna.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Un'operazione di post incrementa il valore del semaforo di 1. Se il semaforo era precedentemente zero e altri thread sono bloccati in un'operazione di attesa su quel semaforo, uno di quei thread viene sbloccato e la sua operazione di attesa viene completata (il che riporta il valore del semaforo a zero)
+    </p>
+  </li>
+</ul>
 
-Nota che GNU/Linux fornisce due implementazioni di semafori leggermente diverse. Quella che descriviamo qui è l'implementazione standard del semaforo POSIX. Usa questi semafori quando comunichi tra thread.
-L'altra implementazione, usata per la comunicazione tra processi, verrà descritta nel prossimo capitolo. Se usi i semafori, includi **<semaphore.h>**.
-Un semaforo è rappresentato da una variabile **sem_t**. Prima di usarla, devi inizializzarla usando la funzione **sem_init()**, passando un puntatore alla variabile sem_t. Il secondo parametro dovrebbe essere zero (Un valore diverso da zero indicherebbe un semaforo che può essere condiviso tra i processi, il che non è supportato da GNU/Linux per questo tipo di semaforo) e il terzo parametro è il valore iniziale del semaforo. 
+<p align="justify">
+Nota che GNU/Linux fornisce due implementazioni di semafori leggermente diverse. Quella che descriviamo qui è l'implementazione standard del semaforo POSIX. Usa questi semafori quando comunichi tra thread. L'altra implementazione, usata per la comunicazione tra processi, verrà descritta nel prossimo capitolo. Se usi i semafori, includi <code>&lt;semaphore.h&gt;</code>. Un semaforo è rappresentato da una variabile <strong>sem_t</strong>. Prima di usarla, devi inizializzarla usando la funzione <strong>sem_init()</strong>, passando un puntatore alla variabile sem_t. Il secondo parametro dovrebbe essere zero (Un valore diverso da zero indicherebbe un semaforo che può essere condiviso tra i processi, il che non è supportato da GNU/Linux per questo tipo di semaforo) e il terzo parametro è il valore iniziale del semaforo.
+</p>
 
-```c
+<pre><code class="language-c">
 int sem_init(sem_t *sem, int pshared, unsigned int value);
-```
+</code></pre>
 
-Se non hai più bisogno di un semaforo, è bene deallocarlo con **sem_destroy()**.
+<p align="justify">
+Se non hai più bisogno di un semaforo, è bene deallocarlo con <strong>sem_destroy()</strong>.
+</p>
 
 
-Per attendere un semaforo, usa **sem_wait()**. 
+<p align="justify">
+Per attendere un semaforo, usa <strong>sem_wait()</strong>.
+</p>
 
-```c
+<pre><code class="language-c">
 int sem_wait(sem_t *sem);
-```
+</code></pre>
 
-Per inviare a un semaforo, usa **sem_post()**.
+<p align="justify">
+Per inviare a un semaforo, usa <strong>sem_post()</strong>.
+</p>
 
-```c
+<pre><code class="language-c">
 int sem_post(sem_t *sem);
-```
+</code></pre>
 
-Viene fornita anche una funzione di attesa non bloccante, **sem_trywait()**. è simile a pthread_mutex_trylock: se l'attesa si fosse bloccata perché il valore del semaforo era zero, la funzione restituisce immediatamente, con il valore di errore `EAGAIN`, invece di
-bloccare.
+<p align="justify">
+Viene fornita anche una funzione di attesa non bloccante, <strong>sem_trywait()</strong>. è simile a pthread_mutex_trylock: se l'attesa si fosse bloccata perché il valore del semaforo era zero, la funzione restituisce immediatamente, con il valore di errore <code>EAGAIN</code>, invece di bloccare.
+</p>
 
-```c
+<pre><code class="language-c">
 int sem_trywait(sem_t *sem);
-```
+</code></pre>
 
-GNU/Linux fornisce anche una funzione per recuperare il valore corrente di un semaforo, **sem_getvalue()**, che inserisce il valore nella variabile int puntata dal suo secondo argomento. 
+<p align="justify">
+GNU/Linux fornisce anche una funzione per recuperare il valore corrente di un semaforo, <strong>sem_getvalue()</strong>, che inserisce il valore nella variabile int puntata dal suo secondo argomento.
+</p>
 
-```c
+<pre><code class="language-c">
 int sem_getvalue(sem_t *sem, int *sval);
-```
+</code></pre>
 
-Tuttavia, non dovresti usare il valore del semaforo che ottieni da questa funzione per prendere una decisione se inviare o attendere il semaforo. Ciò potrebbe portare
-a una race condition: un altro thread potrebbe modificare il valore del semaforo tra la chiamata a sem_getvalue e la chiamata a un'altra funzione del semaforo. Utilizza invece le funzioni atomiche di post e attesa.
-Tornando al nostro esempio di coda di lavoro, possiamo usare un semaforo per contare il numero di lavori in attesa nella coda. L'esempio seguente controlla la coda con un semaforo. La funzione enqueue_job aggiunge un nuovo job alla coda.
+<p align="justify">
+Tuttavia, non dovresti usare il valore del semaforo che ottieni da questa funzione per prendere una decisione se inviare o attendere il semaforo. Ciò potrebbe portare a una race condition: un altro thread potrebbe modificare il valore del semaforo tra la chiamata a sem_getvalue e la chiamata a un'altra funzione del semaforo. Utilizza invece le funzioni atomiche di post e attesa. Tornando al nostro esempio di coda di lavoro, possiamo usare un semaforo per contare il numero di lavori in attesa nella coda. L'esempio seguente controlla la coda con un semaforo. La funzione enqueue_job aggiunge un nuovo job alla coda.
+</p>
 
-```c
+<pre><code class="language-c">
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
 * See COPYRIGHT for license information.                               *
 ***********************************************************************/
 
-#include <malloc.h>
-#include <pthread.h>
-#include <semaphore.h>
-#include <unistd.h> // sleep
+#include &lt;malloc.h&gt;
+#include &lt;pthread.h&gt;
+#include &lt;semaphore.h&gt;
+#include &lt;unistd.h&gt; // sleep
 
 struct job {
   /* Link field for linked list.  */
@@ -2208,7 +2280,7 @@ struct job* job_queue;
 
 void process_job (struct job* tmp){
   char print_me[20];
-  printf("Thread %ld completed job %s \n", pthread_self(), tmp->message);
+  printf("Thread %ld completed job %s \n", pthread_self(), tmp-&gt;message);
 }
 
 /* A mutex protecting job_queue.  */
@@ -2225,7 +2297,7 @@ void initialize_job_queue ()
   job_queue = NULL;
   /* Initialize the semaphore which counts jobs in the queue.  Its
      initial value should be zero.  */
-  sem_init (&job_queue_count, 0, 0);
+  sem_init (&amp;job_queue_count, 0, 0);
 }
 
 /* Process queued jobs until the queue is empty.  */
@@ -2238,18 +2310,18 @@ void* thread_function (void* arg)
     /* Wait on the job queue semaphore.  If its value is positive,
        indicating that the queue is not empty, decrement the count by
        one.  If the queue is empty, block until a new job is enqueued.  */
-    sem_wait (&job_queue_count);
+    sem_wait (&amp;job_queue_count);
 
     /* Lock the mutex on the job queue.  */
-    pthread_mutex_lock (&job_queue_mutex);
+    pthread_mutex_lock (&amp;job_queue_mutex);
     /* Because of the semaphore, we know the queue is not empty.  Get
        the next available job.  */
     next_job = job_queue;
     /* Remove this job from the list.  */
-    job_queue = job_queue->next;
+    job_queue = job_queue-&gt;next;
     /* Unlock the mutex on the job queue, since we're done with the
        queue for now.  */
-    pthread_mutex_unlock (&job_queue_mutex);
+    pthread_mutex_unlock (&amp;job_queue_mutex);
 
     /* Carry out the work.  */
     process_job (next_job);
@@ -2268,21 +2340,21 @@ void enqueue_job (char *message)
   /* Allocate a new job object.  */
   new_job = (struct job*) malloc (sizeof (struct job));
   /* Set the other fields of the job struct here...  */
-  new_job->message = message;
+  new_job-&gt;message = message;
 
   /* Lock the mutex on the job queue before accessing it.  */
-  pthread_mutex_lock (&job_queue_mutex);
+  pthread_mutex_lock (&amp;job_queue_mutex);
   /* Place the new job at the head of the queue.  */
-  new_job->next = job_queue;
+  new_job-&gt;next = job_queue;
   job_queue = new_job;
 
   /* Post to the semaphore to indicate another job is available.  If
      threads are blocked, waiting on the semaphore, one will become
      unblocked so it can process the job.  */
-  sem_post (&job_queue_count);
+  sem_post (&amp;job_queue_count);
 
   /* Unlock the job queue mutex.  */
-  pthread_mutex_unlock (&job_queue_mutex);
+  pthread_mutex_unlock (&amp;job_queue_mutex);
 }
 
 
@@ -2296,8 +2368,8 @@ int main(void){
   pthread_t first;
   pthread_t second;
 
-  pthread_create(&first, NULL, thread_function, NULL);
-  pthread_create(&second, NULL, thread_function, NULL);
+  pthread_create(&amp;first, NULL, thread_function, NULL);
+  pthread_create(&amp;second, NULL, thread_function, NULL);
 
   sleep(60);
 
@@ -2312,24 +2384,26 @@ int main(void){
 
   return 0;
 }
-```
+</code></pre>
 
+<p align="justify">
 Prima di prendere un lavoro dalla parte anteriore della coda, ogni thread attenderà prima sul semaforo. Se il valore del semaforo è zero, indicando che la coda è vuota, il thread si bloccherà semplicemente finché il valore del semaforo non diventerà positivo, indicando che un lavoro è stato aggiunto alla coda. La funzione enqueue_job aggiunge un lavoro alla coda. Proprio come thread_function, deve bloccare il mutex della coda prima di modificare la coda. Dopo aver aggiunto un lavoro alla coda, invia un post al semaforo, indicando che un nuovo lavoro è disponibile. In questa implementazione i thread che elaborano i lavori non escono mai; se nessun lavoro è disponibile per un po', tutti i thread si bloccano semplicemente in sem_wait.
+</p>
 
 ### Variabili di condizione
 
-Abbiamo mostrato come usare un mutex per proteggere una variabile dall'accesso simultaneo da due thread e come usare i semafori per implementare un contatore condiviso. Una **variabile di condizione** è un terzo dispositivo di sincronizzazione fornito da GNU/Linux; con essa, puoi implementare condizioni più complesse in base alle quali i thread vengono eseguiti. Supponiamo di scrivere una funzione thread che esegue un ciclo all'infinito, eseguendo un po' di lavoro a ogni iterazione. Il ciclo thread, tuttavia, deve essere controllato da un flag: il ciclo viene eseguito solo quando il flag è impostato; quando il flag non è impostato, il ciclo si interrompe.
-Durante ogni iterazione del ciclo, la funzione thread verifica che il flag sia impostato. Poiché il flag è accessibile da più thread, è protetto da un mutex. Questa implementazione potrebbe essere corretta, ma non è efficiente. La funzione thread impiegherà molta CPU
-ogni volta che il flag non è impostato, controllando e ricontrollando il flag, ogni volta bloccando e sbloccando il mutex. Ciò che si desidera realmente è un modo per mettere il thread in modalità sleep quando il flag non è impostato, finché non cambiano alcune circostanze che potrebbero causare l'impostazione del flag.
+<p align="justify">
+Abbiamo mostrato come usare un mutex per proteggere una variabile dall'accesso simultaneo da due thread e come usare i semafori per implementare un contatore condiviso. Una <strong>variabile di condizione</strong> è un terzo dispositivo di sincronizzazione fornito da GNU/Linux; con essa, puoi implementare condizioni più complesse in base alle quali i thread vengono eseguiti. Supponiamo di scrivere una funzione thread che esegue un ciclo all'infinito, eseguendo un po' di lavoro a ogni iterazione. Il ciclo thread, tuttavia, deve essere controllato da un flag: il ciclo viene eseguito solo quando il flag è impostato; quando il flag non è impostato, il ciclo si interrompe. Durante ogni iterazione del ciclo, la funzione thread verifica che il flag sia impostato. Poiché il flag è accessibile da più thread, è protetto da un mutex. Questa implementazione potrebbe essere corretta, ma non è efficiente. La funzione thread impiegherà molta CPU ogni volta che il flag non è impostato, controllando e ricontrollando il flag, ogni volta bloccando e sbloccando il mutex. Ciò che si desidera realmente è un modo per mettere il thread in modalità sleep quando il flag non è impostato, finché non cambiano alcune circostanze che potrebbero causare l'impostazione del flag.
+</p>
 
-```c
+<pre><code class="language-c">
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
 * See COPYRIGHT for license information.                               *
 ***********************************************************************/
 
-#include <pthread.h>
+#include &lt;pthread.h&gt;
 
 extern void do_work ();
 
@@ -2338,7 +2412,7 @@ pthread_mutex_t thread_flag_mutex;
 
 void initialize_flag ()
 {
-  pthread_mutex_init (&thread_flag_mutex, NULL);
+  pthread_mutex_init (&amp;thread_flag_mutex, NULL);
   thread_flag = 0;
 }
 
@@ -2351,9 +2425,9 @@ void* thread_function (void* thread_arg)
     int flag_is_set;
 
     /* Protect the flag with a mutex lock.  */
-    pthread_mutex_lock (&thread_flag_mutex);
+    pthread_mutex_lock (&amp;thread_flag_mutex);
     flag_is_set = thread_flag;
-    pthread_mutex_unlock (&thread_flag_mutex);
+    pthread_mutex_unlock (&amp;thread_flag_mutex);
 
     if (flag_is_set)
       do_work ();
@@ -2367,59 +2441,133 @@ void* thread_function (void* thread_arg)
 void set_thread_flag (int flag_value)
 {
   /* Protect the flag with a mutex lock.  */
-  pthread_mutex_lock (&thread_flag_mutex);
+  pthread_mutex_lock (&amp;thread_flag_mutex);
   thread_flag = flag_value;
-  pthread_mutex_unlock (&thread_flag_mutex);
+  pthread_mutex_unlock (&amp;thread_flag_mutex);
 }
-```
+</code></pre>
 
+<p align="justify">
 Una variabile di condizione consente di implementare una condizione in base alla quale un thread viene eseguito e, inversamente, la condizione in base alla quale il thread viene bloccato. Finché ogni thread che potenzialmente modifica il senso della condizione utilizza la variabile di condizione correttamente, Linux garantisce che i thread bloccati sulla condizione verranno sbloccati quando la condizione cambia. Come con un semaforo, un thread può attendere una variabile di condizione. Se il thread A attende una variabile di condizione, viene bloccato finché un altro thread, il thread B, segnala la stessa variabile di condizione. A differenza di un semaforo, una variabile di condizione non ha un contatore o una memoria; il thread A deve attendere la variabile di condizione prima che il thread B la segnali. Se il thread B segnala la variabile di condizione prima che il thread A la attenda, il segnale viene perso e il thread A si blocca finché un altro thread non segnala di nuovo la variabile di condizione. Ecco come utilizzeresti una variabile di condizione per rendere più efficiente l'esempio precedente:
+</p>
 
-* Il ciclo in **thread_function** controlla il flag. Se il flag non è impostato, il thread attende la variabile di condizione.
-* La funzione **set_thread_flag** segnala la variabile di condizione dopo aver modificato il valore del flag. In questo modo, se thread_function è bloccato sulla variabile di condizione, verrà sbloccato e controllerà di nuovo la condizione.
+<ul>
+  <li>
+    <p align="justify">
+    Il ciclo in <strong>thread_function</strong> controlla il flag. Se il flag non è impostato, il thread attende la variabile di condizione.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    La funzione <strong>set_thread_flag</strong> segnala la variabile di condizione dopo aver modificato il valore del flag. In questo modo, se thread_function è bloccato sulla variabile di condizione, verrà sbloccato e controllerà di nuovo la condizione.
+    </p>
+  </li>
+</ul>
 
+<p align="justify">
 C'è un problema con questo: c'è una condizione di competizione tra il controllo del valore del flag e la segnalazione o l'attesa della variabile di condizione. Supponiamo che thread_function abbia controllato il flag e abbia scoperto che non era impostato. In quel momento, lo scheduler di Linux ha messo in pausa quel thread e ha ripreso quello principale. Per una coincidenza, il thread principale è in set_thread_flag. Imposta il flag e quindi segnala la variabile di condizione. Poiché nessun thread è in attesa della variabile di condizione in quel momento (ricorda che thread_function è stato messo in pausa prima di poter attendere la variabile di condizione), il segnale viene perso. Ora, quando Linux riprogramma l'altro thread, inizia ad attendere la variabile di condizione e potrebbe finire bloccato per sempre. Per risolvere questo problema, abbiamo bisogno di un modo per bloccare il flag e la variabile di condizione insieme con un singolo mutex. Fortunatamente, GNU/Linux fornisce esattamente questo meccanismo. Ogni variabile di condizione deve essere utilizzata insieme a un mutex, per impedire questo tipo di race condition. Utilizzando questo schema, la funzione thread segue questi passaggi:
+</p>
 
-1. Il ciclo in thread_function blocca il mutex e legge il valore del flag.
-2. Se il flag è impostato, sblocca il mutex ed esegue la funzione di lavoro.
-3. Se il flag non è impostato, sblocca atomicamente il mutex e attende la variabile di condizione.
+<ol>
+  <li>
+    <p align="justify">
+    Il ciclo in thread_function blocca il mutex e legge il valore del flag.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Se il flag è impostato, sblocca il mutex ed esegue la funzione di lavoro.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Se il flag non è impostato, sblocca atomicamente il mutex e attende la variabile di condizione.
+    </p>
+  </li>
+</ol>
 
-Il punto critico qui è nel passaggio 3, in cui GNU/Linux consente di sbloccare il mutex e attendere la variabile di condizione in modo atomico, senza la possibilità che un altro thread intervenga. Ciò elimina la possibilità che un altro thread possa
-modificare il valore del flag e segnalare la variabile di condizione tra il test del valore del flag e l'attesa della variabile di condizione di thread_function.
+<p align="justify">
+Il punto critico qui è nel passaggio 3, in cui GNU/Linux consente di sbloccare il mutex e attendere la variabile di condizione in modo atomico, senza la possibilità che un altro thread intervenga. Ciò elimina la possibilità che un altro thread possa modificare il valore del flag e segnalare la variabile di condizione tra il test del valore del flag e l'attesa della variabile di condizione di thread_function.
+</p>
 
-Una variabile di condizione è rappresentata da un'istanza di **pthread_cond_t**. Ricorda che **ogni variabile di condizione deve essere accompagnata da un mutex**. Queste sono le funzioni che manipolano le variabili di condizione:
+<p align="justify">
+Una variabile di condizione è rappresentata da un'istanza di <strong>pthread_cond_t</strong>. Ricorda che <strong>ogni variabile di condizione deve essere accompagnata da un mutex</strong>. Queste sono le funzioni che manipolano le variabili di condizione:
+</p>
 
-* **pthread_cond_init()** inizializza una variabile di condizione. Il primo argomento è un puntatore a un'istanza di pthread_cond_t. Il secondo argomento, un puntatore a un oggetto attributo di variabile di condizione, viene ignorato in GNU/Linux.
-   Il mutex deve essere inizializzato separatamente
-   ```c
+<ul>
+  <li>
+    <p align="justify">
+    <strong>pthread_cond_init()</strong> inizializza una variabile di condizione. Il primo argomento è un puntatore a un'istanza di pthread_cond_t. Il secondo argomento, un puntatore a un oggetto attributo di variabile di condizione, viene ignorato in GNU/Linux.
+    </p>
+  </li>
+</ul>
+<p align="justify">
+Il mutex deve essere inizializzato separatamente
+</p>
+<pre><code class="language-c">
    int pthread_cond_init(pthread_cond_t *restrict cond, const pthread_condattr_t *restrict attr);
-   ```
-* **pthread_cond_signal()** segnala una variabile di condizione. Un singolo thread bloccato sulla variabile di condizione verrà sbloccato. Se nessun altro thread è bloccato sulla variabile di condizione, il segnale viene ignorato. L'argomento è un puntatore all'istanza di
-  pthread_cond_t. Una chiamata simile, **pthread_cond_broadcast()**, sblocca tutti i thread bloccati sulla variabile di condizione, invece di uno solo.
+</code></pre>
+<ul>
+  <li>
+    <p align="justify">
+    <strong>pthread_cond_signal()</strong> segnala una variabile di condizione. Un singolo thread bloccato sulla variabile di condizione verrà sbloccato. Se nessun altro thread è bloccato sulla variabile di condizione, il segnale viene ignorato. L'argomento è un puntatore all'istanza di
+    </p>
+  </li>
+</ul>
+<p align="justify">
+pthread_cond_t. Una chiamata simile, <strong>pthread_cond_broadcast()</strong>, sblocca tutti i thread bloccati sulla variabile di condizione, invece di uno solo.
+</p>
 
-  ```c
+<pre><code class="language-c">
   int pthread_cond_signal(pthread_cond_t *cond);
-  ```
+</code></pre>
 
-  ```c
+<pre><code class="language-c">
   int pthread_cond_broadcast(pthread_cond_t *cond);
-  ```
-* **pthread_cond_wait()** blocca il thread chiamante finché la variabile di condizione non viene segnalata. L'argomento è un puntatore all'istanza pthread_cond_t. Il secondo argomento è un puntatore all'istanza del mutex pthread_mutex_t. Quando viene chiamata pthread_cond_wait, il mutex deve essere già bloccato dal thread chiamante. Quella funzione sblocca atomicamente il mutex e blocca la variabile di condizione. Quando la variabile di condizione viene segnalata e il thread chiamante si sblocca, pthread_cond_wait riacquisisce automaticamente un blocco sul mutex.
-  ```c
+</code></pre>
+<ul>
+  <li>
+    <p align="justify">
+    <strong>pthread_cond_wait()</strong> blocca il thread chiamante finché la variabile di condizione non viene segnalata. L'argomento è un puntatore all'istanza pthread_cond_t. Il secondo argomento è un puntatore all'istanza del mutex pthread_mutex_t. Quando viene chiamata pthread_cond_wait, il mutex deve essere già bloccato dal thread chiamante. Quella funzione sblocca atomicamente il mutex e blocca la variabile di condizione. Quando la variabile di condizione viene segnalata e il thread chiamante si sblocca, pthread_cond_wait riacquisisce automaticamente un blocco sul mutex.
+    </p>
+  </li>
+</ul>
+<pre><code class="language-c">
   int pthread_cond_wait(pthread_cond_t *restrict cond, pthread_mutex_t *restrict mutex);
-  ```
+</code></pre>
   
-Ogni volta che il programma esegue un'azione che potrebbe cambiare il senso della condizione che stai proteggendo con la variabile di condizione, dovrebbe eseguire questi passaggi. (Nel
-nostro esempio, la condizione è lo stato del flag del thread, quindi questi passaggi devono essere eseguiti ogni volta che il flag viene modificato.)
+<p align="justify">
+Ogni volta che il programma esegue un'azione che potrebbe cambiare il senso della condizione che stai proteggendo con la variabile di condizione, dovrebbe eseguire questi passaggi. (Nel nostro esempio, la condizione è lo stato del flag del thread, quindi questi passaggi devono essere eseguiti ogni volta che il flag viene modificato.)
+</p>
 
-1. Bloccare il mutex che accompagna la variabile di condizione.
-2. Eseguire l'azione che potrebbe modificare il senso della condizione (nel nostro esempio, impostare il flag).
-3. Segnalare o trasmettere la variabile di condizione, a seconda del comportamento desiderato.
-4. Sbloccare il mutex che accompagna la variabile di condizione.
+<ol>
+  <li>
+    <p align="justify">
+    Bloccare il mutex che accompagna la variabile di condizione.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Eseguire l'azione che potrebbe modificare il senso della condizione (nel nostro esempio, impostare il flag).
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Segnalare o trasmettere la variabile di condizione, a seconda del comportamento desiderato.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Sbloccare il mutex che accompagna la variabile di condizione.
+    </p>
+  </li>
+</ol>
 
-Il codice seguente mostra di nuovo l'esempio precedente, che ora utilizza una variabile di condizione per proteggere il flag del thread. In `thread_function`, un blocco sul mutex viene mantenuto prima di controllare il valore di `thread_flag`. Tale blocco viene automaticamente rilasciato da `pthread_cond_wait` prima dell'attesa e riacquisito subito dopo. Notare inoltre che `set_thread_flag` blocca il mutex prima di impostare il valore di `thread_flag` e di segnalare il mutex.
+<p align="justify">
+Il codice seguente mostra di nuovo l'esempio precedente, che ora utilizza una variabile di condizione per proteggere il flag del thread. In <code>thread_function</code>, un blocco sul mutex viene mantenuto prima di controllare il valore di <code>thread_flag</code>. Tale blocco viene automaticamente rilasciato da <code>pthread_cond_wait</code> prima dell'attesa e riacquisito subito dopo. Notare inoltre che <code>set_thread_flag</code> blocca il mutex prima di impostare il valore di <code>thread_flag</code> e di segnalare il mutex.
+</p>
 
-```c
+<pre><code class="language-c">
 
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
@@ -2427,7 +2575,7 @@ Il codice seguente mostra di nuovo l'esempio precedente, che ora utilizza una va
 * See COPYRIGHT for license information.                               *
 ***********************************************************************/
 
-#include <pthread.h>
+#include &lt;pthread.h&gt;
 
 extern void do_work ();
 
@@ -2438,8 +2586,8 @@ pthread_mutex_t thread_flag_mutex;
 void initialize_flag ()
 {
   /* Initialize the mutex and condition variable.  */
-  pthread_mutex_init (&thread_flag_mutex, NULL);
-  pthread_cond_init (&thread_flag_cv, NULL);
+  pthread_mutex_init (&amp;thread_flag_mutex, NULL);
+  pthread_cond_init (&amp;thread_flag_cv, NULL);
   /* Initialize the flag value.  */
   thread_flag = 0;
 }
@@ -2452,16 +2600,16 @@ void* thread_function (void* thread_arg)
   /* Loop infinitely.  */
   while (1) {
     /* Lock the mutex before accessing the flag value.  */
-    pthread_mutex_lock (&thread_flag_mutex);
+    pthread_mutex_lock (&amp;thread_flag_mutex);
     while (!thread_flag) 
       /* The flag is clear.  Wait for a signal on the condition
 	 variable, indicating the flag value has changed.  When the
 	 signal arrives and this thread unblocks, loop and check the
 	 flag again.  */
-      pthread_cond_wait (&thread_flag_cv, &thread_flag_mutex);
+      pthread_cond_wait (&amp;thread_flag_cv, &amp;thread_flag_mutex);
     /* When we've gotten here, we know the flag must be set.  Unlock
        the mutex.  */
-    pthread_mutex_unlock (&thread_flag_mutex);
+    pthread_mutex_unlock (&amp;thread_flag_mutex);
     /* Do some work.  */
     do_work ();
   }
@@ -2473,38 +2621,44 @@ void* thread_function (void* thread_arg)
 void set_thread_flag (int flag_value)
 {
   /* Lock the mutex before accessing the flag value.  */
-  pthread_mutex_lock (&thread_flag_mutex);
+  pthread_mutex_lock (&amp;thread_flag_mutex);
   /* Set the flag value, and then signal in case thread_function is
      blocked, waiting for the flag to become set.  However,
      thread_function can't actually check the flag until the mutex is
      unlocked.  */
   thread_flag = flag_value;
-  pthread_cond_signal (&thread_flag_cv);
+  pthread_cond_signal (&amp;thread_flag_cv);
   /* Unlock the mutex.  */
-  pthread_mutex_unlock (&thread_flag_mutex);
+  pthread_mutex_unlock (&amp;thread_flag_mutex);
 }
-```
+</code></pre>
 
+<p align="justify">
 La condizione protetta da una variabile di condizione può essere arbitrariamente complessa. Tuttavia, prima di eseguire qualsiasi operazione che possa modificare il senso della condizione, dovrebbe essere richiesto un blocco mutex e la variabile di condizione dovrebbe essere segnalata in seguito. Una variabile di condizione può anche essere utilizzata senza una condizione, semplicemente come meccanismo per bloccare un thread finché un altro thread non lo "sveglia". Anche un semaforo può essere utilizzato a tale scopo. La differenza principale è che un semaforo "ricorda" la chiamata di sveglia anche se nessun thread è stato bloccato su di esso in quel momento, mentre una variabile di condizione scarta la chiamata di sveglia a meno che un thread non sia effettivamente bloccato su di essa in quel momento. Inoltre, un semaforo fornisce solo una singola sveglia per post; con pthread_cond_broadcast, un numero arbitrario e sconosciuto di thread bloccati può essere risvegliato contemporaneamente.
+</p>
 
 ### Deadlocks con due o più Thread
 
-I deadlock possono verificarsi quando due (o più) thread sono bloccati, in attesa che si verifichi una condizione che solo l'altro può causare. Ad esempio, se il thread A è bloccato su una variabile di condizione in attesa che il thread B lo segnali, e il thread B è bloccato su una variabile di condizione in attesa che il thread A lo segnali, si è verificato un deadlock perché nessuno dei due thread segnalerà mai l'altro. Dovresti fare attenzione a evitare la possibilità di tali situazioni perché sono piuttosto difficili da rilevare. Un errore comune che può causare un deadlock riguarda un problema in cui più thread stanno tentando di bloccare lo stesso set di oggetti. Ad esempio, considera un programma in cui due thread diversi, che eseguono due funzioni di thread diverse, devono bloccare gli stessi due mutex. Supponiamo che il thread A blocchi il mutex 1 e poi il mutex 2, e che il thread B blocchi il mutex 2 prima del mutex 1. In uno scenario di pianificazione sufficientemente sfortunato, Linux potrebbe pianificare il thread A abbastanza a lungo da bloccare il mutex 1, e quindi pianificare il thread B, che blocca prontamente il mutex 2. Ora nessuno dei due thread può procedere perché ognuno è bloccato su un mutex che l'altro thread tiene bloccato. Questo è un esempio di un problema di deadlock più generale, che può coinvolgere non solo oggetti di sincronizzazione come i mutex, ma anche altre risorse, come blocchi su file o dispositivi. Il problema si verifica quando più thread tentano di bloccare lo stesso set di risorse in ordini diversi. **La soluzione è assicurarsi che tutti i thread che bloccano più risorse le blocchino nello stesso ordine**.
+<p align="justify">
+I deadlock possono verificarsi quando due (o più) thread sono bloccati, in attesa che si verifichi una condizione che solo l'altro può causare. Ad esempio, se il thread A è bloccato su una variabile di condizione in attesa che il thread B lo segnali, e il thread B è bloccato su una variabile di condizione in attesa che il thread A lo segnali, si è verificato un deadlock perché nessuno dei due thread segnalerà mai l'altro. Dovresti fare attenzione a evitare la possibilità di tali situazioni perché sono piuttosto difficili da rilevare. Un errore comune che può causare un deadlock riguarda un problema in cui più thread stanno tentando di bloccare lo stesso set di oggetti. Ad esempio, considera un programma in cui due thread diversi, che eseguono due funzioni di thread diverse, devono bloccare gli stessi due mutex. Supponiamo che il thread A blocchi il mutex 1 e poi il mutex 2, e che il thread B blocchi il mutex 2 prima del mutex 1. In uno scenario di pianificazione sufficientemente sfortunato, Linux potrebbe pianificare il thread A abbastanza a lungo da bloccare il mutex 1, e quindi pianificare il thread B, che blocca prontamente il mutex 2. Ora nessuno dei due thread può procedere perché ognuno è bloccato su un mutex che l'altro thread tiene bloccato. Questo è un esempio di un problema di deadlock più generale, che può coinvolgere non solo oggetti di sincronizzazione come i mutex, ma anche altre risorse, come blocchi su file o dispositivi. Il problema si verifica quando più thread tentano di bloccare lo stesso set di risorse in ordini diversi. <strong>La soluzione è assicurarsi che tutti i thread che bloccano più risorse le blocchino nello stesso ordine</strong>.
+</p>
 
 ### Implementazione dei Thread in GNU/Linux
 
-L'implementazione dei thread POSIX su GNU/Linux differisce dall'implementazione dei thread su molti altri sistemi simili a UNIX in un modo importante: su GNU/Linux, **i thread sono implementati come processi**. Ogni volta che chiami `pthread_create` per creare un nuovo thread, Linux crea un nuovo processo che esegue quel thread. Tuttavia, questo processo non è lo stesso di un processo che creeresti con `fork`; in particolare, condivide lo stesso spazio di indirizzamento e le stesse risorse del processo originale invece di ricevere copie. Il codice seguente lo dimostra. Il programma crea un thread; sia il thread originale che quello nuovo chiamano la funzione `getpid` e stampano i rispettivi ID di processo e quindi restano in attesa all'infinito.
+<p align="justify">
+L'implementazione dei thread POSIX su GNU/Linux differisce dall'implementazione dei thread su molti altri sistemi simili a UNIX in un modo importante: su GNU/Linux, <strong>i thread sono implementati come processi</strong>. Ogni volta che chiami <code>pthread_create</code> per creare un nuovo thread, Linux crea un nuovo processo che esegue quel thread. Tuttavia, questo processo non è lo stesso di un processo che creeresti con <code>fork</code>; in particolare, condivide lo stesso spazio di indirizzamento e le stesse risorse del processo originale invece di ricevere copie. Il codice seguente lo dimostra. Il programma crea un thread; sia il thread originale che quello nuovo chiamano la funzione <code>getpid</code> e stampano i rispettivi ID di processo e quindi restano in attesa all'infinito.
+</p>
 
-```c
+<pre><code class="language-c">
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
 * See COPYRIGHT for license information.                               *
 ***********************************************************************/
 
-#include <pthread.h>
-#include <stdio.h>
-#include <unistd.h>
+#include &lt;pthread.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;unistd.h&gt;
 
 void* thread_function (void* arg)
 {
@@ -2518,19 +2672,21 @@ int main ()
 {
   pthread_t thread;
   fprintf (stderr, "main thread pid is %d\n", (int) getpid ());
-  pthread_create (&thread, NULL, &thread_function, NULL);
+  pthread_create (&amp;thread, NULL, &amp;thread_function, NULL);
   /* Spin forever.  */
   while (1);
   return 0;
 }
-```
+</code></pre>
 
-Esegui il programma in background, quindi richiama `ps x` per visualizzare i processi in esecuzione. Non dimenticare di terminare il programma thread-pid in seguito: consuma molta CPU senza fare nulla. Ecco come potrebbe apparire l'output:
+<p align="justify">
+Esegui il programma in background, quindi richiama <code>ps x</code> per visualizzare i processi in esecuzione. Non dimenticare di terminare il programma thread-pid in seguito: consuma molta CPU senza fare nulla. Ecco come potrebbe apparire l'output:
+</p>
 
-```bash
+<pre><code class="language-bash">
  % gcc -o thread-pid thread-pid.c -lpthread
 
- % ./thread-pid &
+ % ./thread-pid &amp;
  [1] 14608
  main thread pid is 14608
  child thread pid is 14610
@@ -2545,37 +2701,80 @@ Esegui il programma in background, quindi richiama `ps x` per visualizzare i pro
 
  % kill 14608
  [1]+  Terminated              ./thread-pid
-```
+</code></pre>
 
-> [!NOTE]
-> Notifica del controllo del job nella shell
-> Le righe che iniziano con [1] provengono dalla shell. Quando esegui un programma in background, la shell gli assegna un numero di job, in questo caso 1, e stampa il pid del programma. Se un job in background termina, la shell segnala tale fatto la volta successiva che invochi un comando
+<table align="center">
+	<td>:pill: <b>Nota</b>
+`t<p align=justify>
+ Notifica del controllo del job nella shell
+`t</p>
+`t<p align=justify>
+ Le righe che iniziano con [1] provengono dalla shell. Quando esegui un programma in background, la shell gli assegna un numero di job, in questo caso 1, e stampa il pid del programma. Se un job in background termina, la shell segnala tale fatto la volta successiva che invochi un comando
+`t</p>
+`t</td>
+</table>
 
+<p align="justify">
 Nota che ci sono tre processi che eseguono il programma thread-pid. Il primo di questi, con pid 14608, è il thread principale nel programma; il terzo, con pid 14610, è il thread che abbiamo creato per eseguire thread_function. E il secondo thread, con pid 14609? Questo è il "thread del gestore", che fa parte dell'implementazione interna dei thread GNU/Linux. Il thread del gestore viene creato la prima volta che un programma chiama pthread_create per creare un nuovo thread.
+</p>
 
 ### Signal Handling
 
-Supponiamo che un programma multithread riceva un segnale. In quale thread viene invocato il gestore del segnale? Il comportamento dell'interazione tra segnali e thread varia da un sistema UNIX a un altro. In GNU/Linux, il comportamento è dettato dal fatto che i thread sono implementati come processi. Poiché ogni thread è un processo separato e poiché un segnale viene inviato a un processo particolare, non vi è ambiguità su quale thread riceva il segnale. In genere, i segnali inviati dall'esterno del programma vengono inviati al processo corrispondente al thread principale del programma. Ad esempio, se un programma si biforca e il processo figlio esegue un programma multithread, il processo padre conterrà l'ID processo del thread principale del programma del processo figlio e utilizzerà tale ID processo per inviare segnali al suo figlio. Questa è in genere una buona convenzione da seguire quando si inviano segnali a un programma multithread. Si noti che questo aspetto dell'implementazione di pthreads di GNU/Linux è in contrasto
-con lo standard di thread POSIX. Non fare affidamento su questo comportamento in programmi che sono
-pensati per essere portabili. All'interno di un programma multithread, è possibile che un thread invii un segnale specificamente a un altro thread. Utilizzare la funzione **pthread_kill()** per farlo. Il suo primo parametro è un ID thread e il suo secondo parametro è il numero del segnale
+<p align="justify">
+Supponiamo che un programma multithread riceva un segnale. In quale thread viene invocato il gestore del segnale? Il comportamento dell'interazione tra segnali e thread varia da un sistema UNIX a un altro. In GNU/Linux, il comportamento è dettato dal fatto che i thread sono implementati come processi. Poiché ogni thread è un processo separato e poiché un segnale viene inviato a un processo particolare, non vi è ambiguità su quale thread riceva il segnale. In genere, i segnali inviati dall'esterno del programma vengono inviati al processo corrispondente al thread principale del programma. Ad esempio, se un programma si biforca e il processo figlio esegue un programma multithread, il processo padre conterrà l'ID processo del thread principale del programma del processo figlio e utilizzerà tale ID processo per inviare segnali al suo figlio. Questa è in genere una buona convenzione da seguire quando si inviano segnali a un programma multithread. Si noti che questo aspetto dell'implementazione di pthreads di GNU/Linux è in contrasto con lo standard di thread POSIX. Non fare affidamento su questo comportamento in programmi che sono pensati per essere portabili. All'interno di un programma multithread, è possibile che un thread invii un segnale specificamente a un altro thread. Utilizzare la funzione <strong>pthread_kill()</strong> per farlo. Il suo primo parametro è un ID thread e il suo secondo parametro è il numero del segnale
+</p>
 
-```c
+<pre><code class="language-c">
 pthread_kill(pthread_t thread, int sig);
-```
+</code></pre>
 
 ### La chiamata di sistema Clone()
-Sebbene i thread GNU/Linux creati nello stesso programma siano implementati come processi separati, condividono il loro spazio di memoria virtuale e altre risorse. Un processo figlio creato con `fork()`, tuttavia, ottiene copie di questi elementi. Come viene creato il primo tipo di processo? La chiamata di sistema `clone()` di Linux è una forma generalizzata di `fork()` e `pthread_create()` che consente al chiamante di specificare quali risorse sono condivise tra il processo chiamante e il processo appena creato. Inoltre, `clone()` richiede di specificare la regione di memoria per lo stack di esecuzione che il nuovo processo utilizzerà. Sebbene menzioniamo `clone()` qui per soddisfare la curiosità del lettore, quella chiamata di sistema non dovrebbe essere normalmente utilizzata nei programmi. Utilizzare `fork()` per creare nuovi processi o `pthread_create()` per creare thread.
+<p align="justify">
+Sebbene i thread GNU/Linux creati nello stesso programma siano implementati come processi separati, condividono il loro spazio di memoria virtuale e altre risorse. Un processo figlio creato con <code>fork()</code>, tuttavia, ottiene copie di questi elementi. Come viene creato il primo tipo di processo? La chiamata di sistema <code>clone()</code> di Linux è una forma generalizzata di <code>fork()</code> e <code>pthread_create()</code> che consente al chiamante di specificare quali risorse sono condivise tra il processo chiamante e il processo appena creato. Inoltre, <code>clone()</code> richiede di specificare la regione di memoria per lo stack di esecuzione che il nuovo processo utilizzerà. Sebbene menzioniamo <code>clone()</code> qui per soddisfare la curiosità del lettore, quella chiamata di sistema non dovrebbe essere normalmente utilizzata nei programmi. Utilizzare <code>fork()</code> per creare nuovi processi o <code>pthread_create()</code> per creare thread.
+</p>
 
 ### Processi vs Thread
 
+<p align="justify">
 Per alcuni programmi che traggono vantaggio dalla concorrenza, la decisione se utilizzare processi o thread può essere difficile. Ecco alcune linee guida per aiutarti a decidere quale modello di concorrenza si adatta meglio al tuo programma:
+</p>
 
-* Tutti i thread in un programma devono eseguire lo stesso eseguibile. Un processo figlio, d'altra parte, può eseguire un eseguibile diverso chiamando una funzione exec.
-* Un thread difettoso può danneggiare altri thread nello stesso processo perché i thread condividono lo stesso spazio di memoria virtuale e altre risorse. Ad esempio, una scrittura di memoria selvaggia tramite un puntatore non inizializzato in un thread può danneggiare
+<ul>
+  <li>
+    <p align="justify">
+    Tutti i thread in un programma devono eseguire lo stesso eseguibile. Un processo figlio, d'altra parte, può eseguire un eseguibile diverso chiamando una funzione exec.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Un thread difettoso può danneggiare altri thread nello stesso processo perché i thread condividono lo stesso spazio di memoria virtuale e altre risorse. Ad esempio, una scrittura di memoria selvaggia tramite un puntatore non inizializzato in un thread può danneggiare
+    </p>
+  </li>
+</ul>
+<p align="justify">
 la memoria visibile a un altro thread. Un processo separato, d'altra parte, non può farlo perché ogni processo ha una copia dello spazio di memoria del programma.
-* La copia della memoria per un nuovo processo aggiunge un ulteriore sovraccarico di prestazioni rispetto alla creazione di un nuovo thread. Tuttavia, la copia viene eseguita solo quando la memoria viene modificata, quindi la penalità è minima se il processo figlio legge solo
+</p>
+<ul>
+  <li>
+    <p align="justify">
+    La copia della memoria per un nuovo processo aggiunge un ulteriore sovraccarico di prestazioni rispetto alla creazione di un nuovo thread. Tuttavia, la copia viene eseguita solo quando la memoria viene modificata, quindi la penalità è minima se il processo figlio legge solo
+    </p>
+  </li>
+</ul>
+<p align="justify">
 la memoria.
-* I thread dovrebbero essere utilizzati per i programmi che necessitano di un parallelismo a grana fine. Ad esempio, se un problema può essere suddiviso in più attività quasi identiche, i thread potrebbero essere una buona scelta. I processi dovrebbero essere utilizzati per i programmi che necessitano di un parallelismo più grossolano.
-* La condivisione dei dati tra thread è banale perché i thread condividono la stessa memoria. (Tuttavia, è necessario prestare molta attenzione per evitare race condition, come descritto in precedenza.) La condivisione dei dati tra processi richiede l'uso di meccanismi IPC. Ciò può essere più macchinoso, ma rende i processi multipli meno inclini a soffrire di bug di concorrenza
+</p>
+<ul>
+  <li>
+    <p align="justify">
+    I thread dovrebbero essere utilizzati per i programmi che necessitano di un parallelismo a grana fine. Ad esempio, se un problema può essere suddiviso in più attività quasi identiche, i thread potrebbero essere una buona scelta. I processi dovrebbero essere utilizzati per i programmi che necessitano di un parallelismo più grossolano.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    La condivisione dei dati tra thread è banale perché i thread condividono la stessa memoria. (Tuttavia, è necessario prestare molta attenzione per evitare race condition, come descritto in precedenza.) La condivisione dei dati tra processi richiede l'uso di meccanismi IPC. Ciò può essere più macchinoso, ma rende i processi multipli meno inclini a soffrire di bug di concorrenza
+    </p>
+  </li>
+</ul>
 
 
