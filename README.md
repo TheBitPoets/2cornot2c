@@ -6440,9 +6440,9 @@ Come puoi vedere nella figura precedente, anche se da un punto di vista di indic
     </p>
   </li>
 </ul>
-  ```c
-	mat[i][j]
-  ```
+<p align="justify">
+<code>mat[i][j]</code>
+</p>
 <ul>
   <li>
     <p align="justify">
