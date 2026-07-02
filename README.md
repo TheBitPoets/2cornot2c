@@ -1783,10 +1783,10 @@ Scope, linkage e storage duration sono combinati assieme per definire le <strong
 | Class                 | Storage Duration | Scope | Linkage   | Come dichiarare |
 |----------------------:|------------------|-------|-----------|-----------------|
 |automatic              |Automatic         |Block  | No linkage| Dentro un blocco|
-|register               |Automatic         |Block  | No linkage| Dentro un blocco con <em>keyword</em> **register**|
+|register               |Automatic         |Block  | No linkage| Dentro un blocco con <em>keyword</em> <strong>register</strong>|
 |static external linkage|Static            |File   | External  | Fuori dalle funzioni|
-|static internal linkage|Static            |File   | Internal  | Fuori dalle funzioni con <em>keyword</em> **static**|
-|static no linkage      |Static            |Block  | No linkage| Dentro un blocco con <em>keyword</em> **static**|
+|static internal linkage|Static            |File   | Internal  | Fuori dalle funzioni con <em>keyword</em> <strong>static</strong>|
+|static no linkage      |Static            |Block  | No linkage| Dentro un blocco con <em>keyword</em> <strong>static</strong>|
 
 </div>
 
@@ -2315,14 +2315,14 @@ void f(int d, register int e){
 | Name  | Storage Duration | Scope     | Linkage  |
 | :---: |     :---:        | :---:     | :---:    |
 | a     | static           | file      | external |
-| b     | static           | file      |**Nota**  |
+| b     | static           | file      |<strong>Nota</strong>  |
 | c     | static           | file      | internal |
 | d     | automatic        | block     | none     |
 | e     | automatic        | block     | none     |
 | g     | automatic        | block     | none     |
 | h     | automatic        | block     | none     |
 | i     | static           | block     | none     |
-| j     | static           | block     |**Nota**  |
+| j     | static           | block     |<strong>Nota</strong>  |
 | k     | automatic        | block     | none     |
 
 </div>
@@ -3231,7 +3231,7 @@ Se noti abbiamo usato le stesse quattro sequenze degli esempi per la codifica de
 
 <p align=justify>
 Anche in questo caso ogni valore ha associata una sola sequenza di bit, non ci sono due sequenze o più associate allo stesso valore. Il range di valori rappresentabili con $W$ bit è $[-2^{W-1}:-1, 0:2^{W-1}-1]$
-In quanto con $W$ bit ho $2^W$ sequenze possibili da distribuire metà ai numeri positivi $\frac{2^{W}}{2} = 2^W*2^{-1} = 2^{W-1}$ e metà ai negativi $2^{W-1}$, ma nei numeri positivi abbiamo lo zero a cui associare una sequenza delle $2^{W-1}$, quindi il valore massimo (estremo superiore) per i numeri positivi sarà appunto $2^{W-1}-1$ (-1 perché appunto devo considerare lo zero che non ho invece nei numeri negativi). **Il range dei numeri rappresentabili è dunque asimmetrico**, maggiore per i negativi di uno.
+In quanto con $W$ bit ho $2^W$ sequenze possibili da distribuire metà ai numeri positivi $\frac{2^{W}}{2} = 2^W*2^{-1} = 2^{W-1}$ e metà ai negativi $2^{W-1}$, ma nei numeri positivi abbiamo lo zero a cui associare una sequenza delle $2^{W-1}$, quindi il valore massimo (estremo superiore) per i numeri positivi sarà appunto $2^{W-1}-1$ (-1 perché appunto devo considerare lo zero che non ho invece nei numeri negativi). <strong>Il range dei numeri rappresentabili è dunque asimmetrico</strong>, maggiore per i negativi di uno.
 </p>
 
 <p align=justify>
@@ -3525,10 +3525,10 @@ Il linguaggio offre le <em>keyword</em> <code>short</code> <code>long</code> <co
 
 | Tipo                                            | Descrizione   |
 | ----------------------------------------------  | ------------- |
-| `int`						  | **Deve essere almeno di 16 bit**. E' `signed` |
-| `short int` o `short`                           | **non può essere più grande di `int`**, potrebbe usare meno memoria di `int` salvando spazio quando si rappresentano interi piccoli. Come `int` è `signed` di default |
-| `long int`  o `long`                            | **non può essere più piccolo di `int`**, potrebbe usare più memoria di `int`, utile per rappresentare interi molto grandi. Come `int` è `signed` di default |
-| `long long int` o `long long`                   | **Deve essere almeno di 64 bit**. Potrebbe usare più memoria di `long`. Come `int` è `signed` di default |
+| `int`						  | <strong>Deve essere almeno di 16 bit</strong>. E' `signed` |
+| `short int` o `short`                           | <strong>non può essere più grande di `int`</strong>, potrebbe usare meno memoria di `int` salvando spazio quando si rappresentano interi piccoli. Come `int` è `signed` di default |
+| `long int`  o `long`                            | <strong>non può essere più piccolo di `int`</strong>, potrebbe usare più memoria di `int`, utile per rappresentare interi molto grandi. Come `int` è `signed` di default |
+| `long long int` o `long long`                   | <strong>Deve essere almeno di 64 bit</strong>. Potrebbe usare più memoria di `long`. Come `int` è `signed` di default |
 | `unsigned int` o `unsigned`                     | Usato per valori solo positivi. Il tipo shifta a destra il range di rappresentazione, esempio con 16 bit avendo 65536 possibili rappresentazioni ed escludendo i valori negativi il range passa da [-32768, 32767] a [0, 65535] |
 | `unsigned long int` o `unsigned long`           | Previsto da C90 |
 | `unsigned long int` o `unsigned long`           | Previsto da C90 |
@@ -3755,7 +3755,7 @@ se sommiamo 1 otteniamo $10000$ ma la rappresentazione è a 4 bit ed il primo bi
 
 
 > [!IMPORTANT]
-> Una qualunque operazione aritmetica su interi si dice in **overflow** quando l'intero risultante dall'operazione ha una dimensione in bit superiore alla dimensione massima (in bit) del tipo di dato. I bit eccedenti sono semplicemente scartati.
+> Una qualunque operazione aritmetica su interi si dice in <strong>overflow</strong> quando l'intero risultante dall'operazione ha una dimensione in bit superiore alla dimensione massima (in bit) del tipo di dato. I bit eccedenti sono semplicemente scartati.
 
 # Rappresentazione binaria `int`
 
@@ -3846,7 +3846,7 @@ Il cast è una conversione esplicita di tipo e prevede un proprio operatore. Esi
 </p>
 
 > [!IMPORTANT]
-> **Conversione automatica**
+> <strong>Conversione automatica</strong>
 > Le conversioni automatiche prevedono che nelle espressioni che coinvolgono costanti o variabili di tipo diverso il tipo del risultato sia pari a quello dell'operando più capiente in termini di bit
 
 <p align="justify">
@@ -3869,8 +3869,8 @@ printf("%lf\n", x/y);
 ```
 
 > [!IMPORTANT]
-> **Conversione per assegnamento**
-> il valore assegnato viene convertito nel tipo dell'espressione a sinistra dell'operatore di assegnamento (detto **lvalue**)
+> <strong>Conversione per assegnamento</strong>
+> il valore assegnato viene convertito nel tipo dell'espressione a sinistra dell'operatore di assegnamento (detto <strong>lvalue</strong>)
 
 ```c
 int n1, n2;
@@ -3918,7 +3918,7 @@ n = a;
 ```
 
 > [!IMPORTANT]
-> **Conversione esplicita: CAST**
+> <strong>Conversione esplicita: CAST</strong>
 > Le conversioni esplicite vengono effettuate usando l'operatore di cast. L'operatore di cast è costituito dalla parentesi tonde `(` `)` e questa è la sua sintassi
 
 ```(nome_del_tipo) espr_da_castare```
