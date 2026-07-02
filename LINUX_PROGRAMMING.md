@@ -150,30 +150,57 @@ int main ()
 
 ### Vedere i processi attivi
 
-Il comando **ps** mostra i processi attivi sul sistema.
+<p align="justify">
+Il comando <strong>ps</strong> mostra i processi attivi sul sistema.
+</p>
 
-```bash
+<pre><code class="language-bash">
 vagrant@ubuntu2204:/lab2/0_processes$ ps
     PID TTY          TIME CMD
    1331 pts/0    00:00:00 bash
    1421 pts/0    00:00:00 ps
- ```
+</code></pre>
 
-Sembra che ci siano due processi attivi sul sistema: il primo è **bash** e il secondo è **ps**, che abbiamo lanciato. La prima colonna mostra il **PID** dei processi attivi. Per maggiori dettagli possiamo digitare:
+<p align="justify">
+Sembra che ci siano due processi attivi sul sistema: il primo è <strong>bash</strong> e il secondo è <strong>ps</strong>, che abbiamo lanciato. La prima colonna mostra il <strong>PID</strong> dei processi attivi. Per maggiori dettagli possiamo digitare:
+</p>
 
-```bash
+<pre><code class="language-bash">
 ps -e -o pid,ppid,command
-```
+</code></pre>
 
-| Opzione  | Significato |
-| ------------- | ------------- |
-| `-e`  | mostra tutti i processi attivi sul sistema non solo quelli dell'utente corrente  |
-| `-o`  | specifica quali informazioni mostrare per il singolo processo  |
-| `pid`  | mostra il **pid**  |
-| `ppid`  | mostra il **ppid**  |
-| `command`  | mostra il programma eseguito dal processo |
+<table align="center">
+  <thead>
+    <tr>
+      <th>Opzione</th>
+      <th>Significato</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>-e</code></td>
+      <td>mostra tutti i processi attivi sul sistema non solo quelli dell'utente corrente</td>
+    </tr>
+    <tr>
+      <td><code>-o</code></td>
+      <td>specifica quali informazioni mostrare per il singolo processo</td>
+    </tr>
+    <tr>
+      <td><code>pid</code></td>
+      <td>mostra il <strong>pid</strong></td>
+    </tr>
+    <tr>
+      <td><code>ppid</code></td>
+      <td>mostra il <strong>ppid</strong></td>
+    </tr>
+    <tr>
+      <td><code>command</code></td>
+      <td>mostra il programma eseguito dal processo</td>
+    </tr>
+  </tbody>
+</table>
 
-```bash
+<pre><code class="language-bash">
 vagrant@ubuntu2204:/lab2/0_processes$ ps -e -o pid,ppid,command
     PID    PPID COMMAND
       1       0 /sbin/init =
@@ -277,28 +304,34 @@ vagrant@ubuntu2204:/lab2/0_processes$ ps -e -o pid,ppid,command
    1429       2 [kworker/1:3-events]
    1453       2 [kworker/u4:0-events_unbound]
    1455    1331 ps -e -o pid,ppid,command
-```
+</code></pre>
 
 ### Uccidere un processo
 
-è possibile uccidere un processo con il comando `kill`. Indica sulla riga di comando il PID del processo che deve essere terminato. Il comando `kill` invia al processo un segnale `SIGTERM`. La ricezione di questo segnale determina (a meno che il processo non gestisca il segnale o lo ignori) la sua terminazione.
+<p align="justify">
+è possibile uccidere un processo con il comando <code>kill</code>. Indica sulla riga di comando il PID del processo che deve essere terminato. Il comando <code>kill</code> invia al processo un segnale <code>SIGTERM</code>. La ricezione di questo segnale determina (a meno che il processo non gestisca il segnale o lo ignori) la sua terminazione.
+</p>
 
 ### Creare un processo
 
+<p align="justify">
 Ci sono due modi per creare un processo: il primo è relativamente semplice ma inefficiente e rischioso dal punto di vista della sicurezza; il secondo è più complesso ma fornisce maggiore sicurezza e flessibilità.
+</p>
 
 #### `system()`
 
-La funzione `system()` è fornita nella libreria standard del linguaggio C e permette di eseguire un comando all'interno di un programma come se fosse stato digitato direttamente in una shell. La funzione `system()` crea un sottoprocesso lanciando `/bin/sh`. Per esempio, il codice seguente invoca il comando `ls` per mostrare il contenuto della root directory come se si fosse digitato `ls -l /` direttamente dalla shell.
+<p align="justify">
+La funzione <code>system()</code> è fornita nella libreria standard del linguaggio C e permette di eseguire un comando all'interno di un programma come se fosse stato digitato direttamente in una shell. La funzione <code>system()</code> crea un sottoprocesso lanciando <code>/bin/sh</code>. Per esempio, il codice seguente invoca il comando <code>ls</code> per mostrare il contenuto della root directory come se si fosse digitato <code>ls -l /</code> direttamente dalla shell.
+</p>
 
-```c
+<pre><code class="language-c">
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
 * See COPYRIGHT for license information.                               *
 ***********************************************************************/
 
-#include <stdlib.h>
+#include &lt;stdlib.h&gt;
 
 int main ()
 {
@@ -306,24 +339,28 @@ int main ()
   return_value = system ("ls -l /");
   return return_value;
 }
-```
+</code></pre>
 
 ### `fork()` `exec()`
 
-La system call `fork()` crea un nuovo processo che è la copia del processo padre. La `exec()` permette di sostituire il processo figlio con un nuovo programma nel processo appena creato da `fork()`.
+<p align="justify">
+La system call <code>fork()</code> crea un nuovo processo che è la copia del processo padre. La <code>exec()</code> permette di sostituire il processo figlio con un nuovo programma nel processo appena creato da <code>fork()</code>.
+</p>
 
-Per distinguere il padre dal figlio, la funzione `fork()` restituisce un intero: in particolare restituisce zero al processo figlio e il **PID** del processo figlio al processo padre.
+<p align="justify">
+Per distinguere il padre dal figlio, la funzione <code>fork()</code> restituisce un intero: in particolare restituisce zero al processo figlio e il <strong>PID</strong> del processo figlio al processo padre.
+</p>
 
-```c
+<pre><code class="language-c">
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
 * See COPYRIGHT for license information.                               *
 ***********************************************************************/
 
-#include <stdio.h>
-#include <sys/types.h>
-#include <unistd.h>
+#include &lt;stdio.h&gt;
+#include &lt;sys/types.h&gt;
+#include &lt;unistd.h&gt;
 
 int main ()
 {
@@ -341,28 +378,45 @@ int main ()
 
   return 0;
 }
-```
+</code></pre>
 
-Nota che il codice all'interno del blocco `if` è eseguito solo dal processo padre, mentre il codice dentro il blocco `else` è eseguito dal processo figlio.
+<p align="justify">
+Nota che il codice all'interno del blocco <code>if</code> è eseguito solo dal processo padre, mentre il codice dentro il blocco <code>else</code> è eseguito dal processo figlio.
+</p>
 
-La system call `exec()` sostituisce il programma in esecuzione nel processo con un nuovo programma. Quando un programma richiama la `exec()`, il processo smette immediatamente di eseguire il programma precedente e inizia l'esecuzione del nuovo programma richiamato dalla `exec()`.
-Ci sono diverse versioni della `exec()`:
+<p align="justify">
+La system call <code>exec()</code> sostituisce il programma in esecuzione nel processo con un nuovo programma. Quando un programma richiama la <code>exec()</code>, il processo smette immediatamente di eseguire il programma precedente e inizia l'esecuzione del nuovo programma richiamato dalla <code>exec()</code>. Ci sono diverse versioni della <code>exec()</code>:
+</p>
 
-* Le funzioni che contengono la lettera `p` nel nome (`execvp`, `execlp`) accettano il nome del programma e lo cercano nel sistema; le funzioni che non contengono la `p` nel nome necessitano del percorso assoluto del programma da eseguire.
-* Le funzioni che contengono la lettera `v` nel nome (`execv`, `execvp`, `execve`) accettano una lista di argomenti da passare in ingresso al nuovo programma come un array di puntatori a caratteri terminati da `NULL`. Le funzioni che contengono la lettera `l` (`execl`, `execlp`, `execle`) accettano una lista di argomenti in ingresso secondo il meccanismo delle variadic del linguaggio C.
-* Le funzioni che contengono la lettera `e` nel nome (`execve`, `execle`) accettano un argomento in più: un array di variabili d'ambiente. L'argomento dovrebbe essere un array di puntatori a caratteri terminato da `NULL`, e ciascuna stringa dovrebbe essere nella forma `VARIABILE=valore`.
+<ul>
+  <li>
+    <p align="justify">
+    Le funzioni che contengono la lettera <code>p</code> nel nome (<code>execvp</code>, <code>execlp</code>) accettano il nome del programma e lo cercano nel sistema; le funzioni che non contengono la <code>p</code> nel nome necessitano del percorso assoluto del programma da eseguire.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Le funzioni che contengono la lettera <code>v</code> nel nome (<code>execv</code>, <code>execvp</code>, <code>execve</code>) accettano una lista di argomenti da passare in ingresso al nuovo programma come un array di puntatori a caratteri terminati da <code>NULL</code>. Le funzioni che contengono la lettera <code>l</code> (<code>execl</code>, <code>execlp</code>, <code>execle</code>) accettano una lista di argomenti in ingresso secondo il meccanismo delle variadic del linguaggio C.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Le funzioni che contengono la lettera <code>e</code> nel nome (<code>execve</code>, <code>execle</code>) accettano un argomento in più: un array di variabili d'ambiente. L'argomento dovrebbe essere un array di puntatori a caratteri terminato da <code>NULL</code>, e ciascuna stringa dovrebbe essere nella forma <code>VARIABILE=valore</code>.
+    </p>
+  </li>
+</ul>
 
-```c
+<pre><code class="language-c">
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
 * See COPYRIGHT for license information.                               *
 ***********************************************************************/
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <unistd.h>
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;sys/types.h&gt;
+#include &lt;unistd.h&gt;
 
 /* Spawn a child process running a new program.  PROGRAM is the name
    of the program to run; the path will be searched for this program.
@@ -406,25 +460,27 @@ int main ()
 
   return 0;
 }
-```
+</code></pre>
 
+<p align="justify">
 Eseguendo il programma ti accorgerai che il processo padre termina immediatamente ("done with the main program") successivamente viene stampato il prompt e poco dopo l'output del processo figlio sporca il terminale perché continua a scrivere sullo stdout. In generale non è possibile sapere quale processo tra il padre ed il figlio concluda per primo ma vedremo che è possibile sincronizzare l'esecuzione dei due processi facendo in modo che il processo padre attenda la terminazione dei suoi figli prima di concludere la propria esecuzione.
+</p>
 
-```bash
+<pre><code class="language-bash">
 vagrant@ubuntu2204:/lab2/0_processes$ bin/3_fork_exec
 done with main program
 vagrant@ubuntu2204:/lab2/0_processes$ total 2097224
-lrwxrwxrwx   1 root    root             7 Aug 10  2023 bin -> usr/bin
+lrwxrwxrwx   1 root    root             7 Aug 10  2023 bin -&gt; usr/bin
 drwxr-xr-x   4 root    root          4096 Jan 11  2024 boot
 drwxr-xr-x  19 root    root          3980 Aug 12 08:33 dev
 drwxr-xr-x 104 root    root          4096 Aug 12 08:33 etc
 drwxr-xr-x   3 root    root          4096 Jan 10  2024 home
 drwxrwxrwx   1 vagrant vagrant       4096 Aug  9 07:23 lab
 drwxrwxrwx   1 vagrant vagrant          0 Aug 12 08:30 lab2
-lrwxrwxrwx   1 root    root             7 Aug 10  2023 lib -> usr/lib
-lrwxrwxrwx   1 root    root             9 Aug 10  2023 lib32 -> usr/lib32
-lrwxrwxrwx   1 root    root             9 Aug 10  2023 lib64 -> usr/lib64
-lrwxrwxrwx   1 root    root            10 Aug 10  2023 libx32 -> usr/libx32
+lrwxrwxrwx   1 root    root             7 Aug 10  2023 lib -&gt; usr/lib
+lrwxrwxrwx   1 root    root             9 Aug 10  2023 lib32 -&gt; usr/lib32
+lrwxrwxrwx   1 root    root             9 Aug 10  2023 lib64 -&gt; usr/lib64
+lrwxrwxrwx   1 root    root            10 Aug 10  2023 libx32 -&gt; usr/libx32
 drwx------   2 root    root         16384 Jan 10  2024 lost+found
 drwxr-xr-x   2 root    root          4096 Aug 10  2023 media
 drwxr-xr-x   2 root    root          4096 Aug 10  2023 mnt
@@ -432,7 +488,7 @@ drwxr-xr-x   2 root    root          4096 Aug 10  2023 opt
 dr-xr-xr-x 162 root    root             0 Aug 12 08:32 proc
 drwx------   5 root    root          4096 Jan 11  2024 root
 drwxr-xr-x  28 root    root           840 Aug 12 10:37 run
-lrwxrwxrwx   1 root    root             8 Aug 10  2023 sbin -> usr/sbin
+lrwxrwxrwx   1 root    root             8 Aug 10  2023 sbin -&gt; usr/sbin
 drwxr-xr-x   6 root    root          4096 Jul  7 07:31 snap
 drwxr-xr-x   2 root    root          4096 Aug 10  2023 srv
 -rw-------   1 root    root    2147483648 Jan 10  2024 swap.img
@@ -440,49 +496,118 @@ dr-xr-xr-x  13 root    root             0 Aug 12 08:32 sys
 drwxrwxrwt  12 root    root          4096 Aug 12 16:36 tmp
 drwxr-xr-x  14 root    root          4096 Aug 10  2023 usr
 drwxr-xr-x  13 root    root          4096 Aug 10  2023 var
-```
+</code></pre>
 
 #### Segnali
 
-I segnali sono un meccanismo per comunicare e manipolare i processi in Linux. Un segnale è semplicemente un messaggio inviato a un processo. In Linux sono definiti in `/usr/include/bits/signum.h`, ma per usarli basta includere `<signal.h>` nel codice sorgente.
+<p align="justify">
+I segnali sono un meccanismo per comunicare e manipolare i processi in Linux. Un segnale è semplicemente un messaggio inviato a un processo. In Linux sono definiti in <code>/usr/include/bits/signum.h</code>, ma per usarli basta includere <code>&lt;signal.h&gt;</code> nel codice sorgente.
+</p>
 
+<p align="justify">
 Quando un processo riceve un segnale può comportarsi in modi differenti sulla base della disposizione di default, che stabilisce cosa accade se il programma non specifica un comportamento specifico per quel segnale. Per ciascun segnale, un programma può:
-1. Specificare un comportamento diverso dalla disposizione di default
-2. Ignorare il segnale
-3. Chiamare una funzione, detta **signal-handler**, per rispondere in modo personalizzato al segnale
+</p>
+<ol>
+  <li>
+    <p align="justify">
+    Specificare un comportamento diverso dalla disposizione di default
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Ignorare il segnale
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Chiamare una funzione, detta <strong>signal-handler</strong>, per rispondere in modo personalizzato al segnale
+    </p>
+  </li>
+</ol>
 
-Se una funzione **signal-handler** viene usata, l'esecuzione del programma è messa in pausa e il gestore viene eseguito immediatamente. Solo dopo che questa termina l'esecuzione del programma riprende nel punto in cui si era interrotta.
+<p align="justify">
+Se una funzione <strong>signal-handler</strong> viene usata, l'esecuzione del programma è messa in pausa e il gestore viene eseguito immediatamente. Solo dopo che questa termina l'esecuzione del programma riprende nel punto in cui si era interrotta.
+</p>
 
+<p align="justify">
 Alcuni esempi di segnali sono:
+</p>
 
-| Segnale  | Significato | Disposizione |
-| ------------- | ------------- |------------- |
-| `SIGSEGV`  | segmentation fault  | termina il processo |
-| `SIGTERM`  | chiede al processo di terminare, il processo potrebbe ignorare il segnale di terminazione  | termina il processo |
-| `SIGKILL`  | termina il processo immediatamente, il processo non può ignorare questo segnale  | termina il processo |
-| `SIGUSR1`  | Definito dall'utente  |
-| `SIGUSR2`  | Definito dall'utente  |
-| `SIGHUP`   | Risveglia un processo o lo mette in sleep o lo costringe a rileggere la sua configurazione |
+<table align="center">
+  <thead>
+    <tr>
+      <th>Segnale</th>
+      <th>Significato</th>
+      <th>Disposizione</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>SIGSEGV</code></td>
+      <td>segmentation fault</td>
+      <td>termina il processo</td>
+    </tr>
+    <tr>
+      <td><code>SIGTERM</code></td>
+      <td>chiede al processo di terminare, il processo potrebbe ignorare il segnale di terminazione</td>
+      <td>termina il processo</td>
+    </tr>
+    <tr>
+      <td><code>SIGKILL</code></td>
+      <td>termina il processo immediatamente, il processo non può ignorare questo segnale</td>
+      <td>termina il processo</td>
+    </tr>
+    <tr>
+      <td><code>SIGUSR1</code></td>
+      <td>Definito dall'utente</td>
+    </tr>
+    <tr>
+      <td><code>SIGUSR2</code></td>
+      <td>Definito dall'utente</td>
+    </tr>
+    <tr>
+      <td><code>SIGHUP</code></td>
+      <td>Risveglia un processo o lo mette in sleep o lo costringe a rileggere la sua configurazione</td>
+    </tr>
+  </tbody>
+</table>
 
 
 #### sigaction
 
-La **sigaction** può essere usata per impostare il comportamento di default di un segnale.
-Essa riceve in ingresso tre parametri:
+<p align="justify">
+La <strong>sigaction</strong> può essere usata per impostare il comportamento di default di un segnale. Essa riceve in ingresso tre parametri:
+</p>
 
-1. `int`: il numero del segnale
-2. `const struct sigaction *`: la disposizione desiderata per il segnale
-3. `struct sigaction *`: la precedente disposizione per il segnale
+<ol>
+  <li>
+    <p align="justify">
+    <code>int</code>: il numero del segnale
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>const struct sigaction *</code>: la disposizione desiderata per il segnale
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>struct sigaction *</code>: la precedente disposizione per il segnale
+    </p>
+  </li>
+</ol>
    
-```c
+<pre><code class="language-c">
 int sigaction(int signum,
                      const struct sigaction *_Nullable restrict act,
                      struct sigaction *_Nullable restrict oldact);
-```
+</code></pre>
 
-La struct `sigaction` ha questa forma:
+<p align="justify">
+La struct <code>sigaction</code> ha questa forma:
+</p>
 
-```c
+<pre><code class="language-c">
 struct sigaction {
                void     (*sa_handler)(int);
                void     (*sa_sigaction)(int, siginfo_t *, void *);
@@ -490,33 +615,55 @@ struct sigaction {
                int        sa_flags;
                void     (*sa_restorer)(void);
            };
-```
+</code></pre>
 
-Il campo più importante in questa struttura è `sa_handler` che può assumere uno di questi tre valori:
+<p align="justify">
+Il campo più importante in questa struttura è <code>sa_handler</code> che può assumere uno di questi tre valori:
+</p>
 
-* **SIG_DFL**
-* **SIG_IGN**
-* Un puntatore alla funzione **signal-handler**. La funzione dovrebbe accettare un parametro (il numero del segnale) e restituire `void`.
+<ul>
+  <li>
+    <p align="justify">
+    <strong>SIG_DFL</strong>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <strong>SIG_IGN</strong>
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Un puntatore alla funzione <strong>signal-handler</strong>. La funzione dovrebbe accettare un parametro (il numero del segnale) e restituire <code>void</code>.
+    </p>
+  </li>
+</ul>
 
-Quando il segnale viene processato dal programma questo può essere in uno stato altamente instabile (quindi durante l'esecuzione di un **signal-handler**). All'interno di una funzione **signal-handler** bisogna svolgere solo i task strettamente necessari per gestire e rispondere al segnale ed evitare operazioni di I/O o richiamare librerie esterne o del linguaggio. Può accadere che un **signal-handler** sia interrotto a causa della ricezione di un altro segnale e questo è un problema molto complicato da diagnosticare e debuggare, quindi bisogna essere molto cauti su cosa fare dentro un **signal-handler**.
+<p align="justify">
+Quando il segnale viene processato dal programma questo può essere in uno stato altamente instabile (quindi durante l'esecuzione di un <strong>signal-handler</strong>). All'interno di una funzione <strong>signal-handler</strong> bisogna svolgere solo i task strettamente necessari per gestire e rispondere al segnale ed evitare operazioni di I/O o richiamare librerie esterne o del linguaggio. Può accadere che un <strong>signal-handler</strong> sia interrotto a causa della ricezione di un altro segnale e questo è un problema molto complicato da diagnosticare e debuggare, quindi bisogna essere molto cauti su cosa fare dentro un <strong>signal-handler</strong>.
+</p>
 
-Un altro aspetto da tenere in considerazione è rendere le proprie istruzioni (variabili globali) atomiche usando il tipo `sig_atomic_t`. Linux garantisce che l'assegnazione di variabili di questo tipo avvenga in modo atomico e non possa essere interrotta dall'arrivo di un nuovo segnale.
+<p align="justify">
+Un altro aspetto da tenere in considerazione è rendere le proprie istruzioni (variabili globali) atomiche usando il tipo <code>sig_atomic_t</code>. Linux garantisce che l'assegnazione di variabili di questo tipo avvenga in modo atomico e non possa essere interrotta dall'arrivo di un nuovo segnale.
+</p>
 
-Vediamo un esempio di **signal-handler** per la gestione del segnale **SIGUSR1**, uno dei due segnali riservati all'uso da parte dei programmi applicativi.
+<p align="justify">
+Vediamo un esempio di <strong>signal-handler</strong> per la gestione del segnale <strong>SIGUSR1</strong>, uno dei due segnali riservati all'uso da parte dei programmi applicativi.
+</p>
 
-```c
+<pre><code class="language-c">
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
 * See COPYRIGHT for license information.                               *
 ***********************************************************************/
 
-#include <signal.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <time.h>
+#include &lt;signal.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+#include &lt;sys/types.h&gt;
+#include &lt;unistd.h&gt;
+#include &lt;time.h&gt;
 
 #define SOME_MINUTES 5
 #define SECONDS_PER_MINUTE 60
@@ -531,30 +678,34 @@ void handler (int signal_number)
 int main ()
 {
   struct sigaction sa;
-  memset (&sa, 0, sizeof (sa));
-  sa.sa_handler = &handler;
-  sigaction (SIGUSR1, &sa, NULL);
+  memset (&amp;sa, 0, sizeof (sa));
+  sa.sa_handler = &amp;handler;
+  sigaction (SIGUSR1, &amp;sa, NULL);
 
   time_t start = time(NULL);
-  while (time(NULL) - start < (time_t) (SOME_MINUTES * SECONDS_PER_MINUTE)) {
+  while (time(NULL) - start &lt; (time_t) (SOME_MINUTES * SECONDS_PER_MINUTE)) {
     printf("*");
   }
   printf ("SIGUSR1 was raised %d times\n", sigusr1_count);
   return 0;
 }
-```
+</code></pre>
 
-In un primo terminale esegui il programma che resterà in esecuzione per 5 minuti; alla fine dell'esecuzione stamperà il numero di volte che il segnale `SIGUSR1` è stato ricevuto.
+<p align="justify">
+In un primo terminale esegui il programma che resterà in esecuzione per 5 minuti; alla fine dell'esecuzione stamperà il numero di volte che il segnale <code>SIGUSR1</code> è stato ricevuto.
+</p>
 
-```bash
+<pre><code class="language-bash">
 vagrant@ubuntu2204:/lab2/0_processes$ bin/4_sigusr1
 ***************************************************
 **************************SIGUSR1 was raised 6 times
-```
+</code></pre>
 
-Per inviare il segnale `SIGUSR1` basta usare il comando `kill`, con il **PID** del processo recuperabile in questo esempio con il comando `ps`.
+<p align="justify">
+Per inviare il segnale <code>SIGUSR1</code> basta usare il comando <code>kill</code>, con il <strong>PID</strong> del processo recuperabile in questo esempio con il comando <code>ps</code>.
+</p>
 
-```bash
+<pre><code class="language-bash">
 vagrant@ubuntu2204:~$ ps -e|grep 4_sigusr1
    1642 pts/0    00:01:17 4_sigusr1
 
@@ -564,62 +715,93 @@ vagrant@ubuntu2204:~$ kill -SIGUSR1 1642
 vagrant@ubuntu2204:~$ kill -SIGUSR1 1642
 vagrant@ubuntu2204:~$ kill -SIGUSR1 1642
 vagrant@ubuntu2204:~$ kill -SIGUSR1 1642
-```
+</code></pre>
 #### Terminare un processo
 
-Un processo termina o attraverso la chiamata alla funzione `exit()` o quando termina la funzione `main()` del programma (attraverso `return` o perché raggiunge l'ultima istruzione della funzione `main()`). Il valore intero ritornato attraverso `return` o come parametro in input alla `exit()` è detto **exit code**. Un processo può anche terminare in risposta a un segnale (`SIGSEGV`, `SIGKILL` ecc.). Altri segnali per terminare un processo sono `SIGINT`, inviato quando si preme la combinazione di tasti `CTRL+C` nel terminale attivo del programma. Un altro segnale che termina un processo è `SIGABRT`: oltre a terminare il processo genera un core file; è possibile inviare questo segnale attraverso la chiamata `abort()`. Il modo più rapido per terminare un processo è quello di inviare il segnale `SIGKILL`, che termina immediatamente il processo e non può essere ignorato o bloccato.
+<p align="justify">
+Un processo termina o attraverso la chiamata alla funzione <code>exit()</code> o quando termina la funzione <code>main()</code> del programma (attraverso <code>return</code> o perché raggiunge l'ultima istruzione della funzione <code>main()</code>). Il valore intero ritornato attraverso <code>return</code> o come parametro in input alla <code>exit()</code> è detto <strong>exit code</strong>. Un processo può anche terminare in risposta a un segnale (<code>SIGSEGV</code>, <code>SIGKILL</code> ecc.). Altri segnali per terminare un processo sono <code>SIGINT</code>, inviato quando si preme la combinazione di tasti <code>CTRL+C</code> nel terminale attivo del programma. Un altro segnale che termina un processo è <code>SIGABRT</code>: oltre a terminare il processo genera un core file; è possibile inviare questo segnale attraverso la chiamata <code>abort()</code>. Il modo più rapido per terminare un processo è quello di inviare il segnale <code>SIGKILL</code>, che termina immediatamente il processo e non può essere ignorato o bloccato.
+</p>
 
-Tutti questi segnali ed anche altri possono essere inviati con il comando `kill` specificando quale segnale inviare come parametro. Per inviare un `SIGKILL` fai in questo modo:
+<p align="justify">
+Tutti questi segnali ed anche altri possono essere inviati con il comando <code>kill</code> specificando quale segnale inviare come parametro. Per inviare un <code>SIGKILL</code> fai in questo modo:
+</p>
 
-```bash
+<pre><code class="language-bash">
 kill -KILL pid
-```
+</code></pre>
 
-Esiste anche la funzione `kill()` per inviare un segnale dal codice ed ha questo prototipo:
+<p align="justify">
+Esiste anche la funzione <code>kill()</code> per inviare un segnale dal codice ed ha questo prototipo:
+</p>
 
-```c
+<pre><code class="language-c">
 int kill(pid_t pid, int sig);
-```
+</code></pre>
 
-1. `pid_t pid`: il PID del processo
-2. `int sig`: segnale da inviare
+<ol>
+  <li>
+    <p align="justify">
+    <code>pid_t pid</code>: il PID del processo
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>int sig</code>: segnale da inviare
+    </p>
+  </li>
+</ol>
 
-Devi includere `<sys/types.h>` e `<signal.h>` per utilizzare la funzione `kill()`.
+<p align="justify">
+Devi includere <code>&lt;sys/types.h&gt;</code> e <code>&lt;signal.h&gt;</code> per utilizzare la funzione <code>kill()</code>.
+</p>
 
-> [!IMPORTANT]
-> Per convenzione, **exit code** è usato per indicare se il programma ha terminato la sua esecuzione correttamente o con degli errori. Un valore pari a zero indica una corretta esecuzione, mentre valori diversi da zero indicano che il processo ha terminato con qualche errore. è importante seguire questa convenzione se vuoi usare gli operatori logici della shell (`&&` `||`) per concatenare più programmi tra loro.
+<table align="center">
+	<td>:exclamation: <b>Importante</b>
+`t<p align=justify>
+ Per convenzione, <strong>exit code</strong> è usato per indicare se il programma ha terminato la sua esecuzione correttamente o con degli errori. Un valore pari a zero indica una corretta esecuzione, mentre valori diversi da zero indicano che il processo ha terminato con qualche errore. è importante seguire questa convenzione se vuoi usare gli operatori logici della shell (<code>&amp;&amp;</code> <code>||</code>) per concatenare più programmi tra loro.
+`t</p>
+`t</td>
+</table>
 
-Puoi leggere l'**exit code** dell'ultimo programma lanciato sulla shell stampando il contenuto della variabile `$?` per esempio.
+<p align="justify">
+Puoi leggere l'<strong>exit code</strong> dell'ultimo programma lanciato sulla shell stampando il contenuto della variabile <code>$?</code> per esempio.
+</p>
 
-```bash
+<pre><code class="language-bash">
 vagrant@ubuntu2204:/lab2/0_processes$ ls
 0_print_pid.c  1_system.c  2_fork.c  3_fork_exec.c  4_sigusr1.c  bin
 vagrant@ubuntu2204:/lab2/0_processes$ echo $?
 0
-```
+</code></pre>
 
 #### Aspettare la terminazione di un processo
 
-Quando si esegue la coppia di chiamate `fork()` ed `exec()` per creare un processo figlio siamo in grado, all'interno dello stesso codice, di differenziare quali istruzioni saranno eseguite dal padre e quali dal processo figlio sfruttando il valore di ritorno della chiamata `fork()`. Nulla però ci assicura che il padre termini prima del figlio, l'ordine di terminazione dipende dal numero di istruzioni dei due processi e soprattutto da come il sistema operativo andrà a schedulare i due processi nell'assegnazione dei tempi di CPU. Quando è necessario che per la correttezza del nostro programma il padre termini soltanto al termine dell'esecuzione del processo figlio, è obbligatorio usare la funzione `wait()`.
+<p align="justify">
+Quando si esegue la coppia di chiamate <code>fork()</code> ed <code>exec()</code> per creare un processo figlio siamo in grado, all'interno dello stesso codice, di differenziare quali istruzioni saranno eseguite dal padre e quali dal processo figlio sfruttando il valore di ritorno della chiamata <code>fork()</code>. Nulla però ci assicura che il padre termini prima del figlio, l'ordine di terminazione dipende dal numero di istruzioni dei due processi e soprattutto da come il sistema operativo andrà a schedulare i due processi nell'assegnazione dei tempi di CPU. Quando è necessario che per la correttezza del nostro programma il padre termini soltanto al termine dell'esecuzione del processo figlio, è obbligatorio usare la funzione <code>wait()</code>.
+</p>
 
 #### wait()
 
-La `wait()` sospende l'esecuzione del processo padre finché uno dei suoi figli è terminato (anche con un errore, non importa). Inoltre la `wait()` ritorna uno status code (codice di stato, **exit code**) dal quale estrarre informazioni su come il processo figlio ha terminato l'esecuzione. Ad esempio la macro `WEXITSTATUS` contiene l'**exit code** del processo figlio.
+<p align="justify">
+La <code>wait()</code> sospende l'esecuzione del processo padre finché uno dei suoi figli è terminato (anche con un errore, non importa). Inoltre la <code>wait()</code> ritorna uno status code (codice di stato, <strong>exit code</strong>) dal quale estrarre informazioni su come il processo figlio ha terminato l'esecuzione. Ad esempio la macro <code>WEXITSTATUS</code> contiene l'<strong>exit code</strong> del processo figlio.
+</p>
 
+<p align="justify">
 Vediamo un esempio:
+</p>
 
-```c
+<pre><code class="language-c">
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
 * See COPYRIGHT for license information.                               *
 ***********************************************************************/
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <unistd.h>
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;sys/types.h&gt;
+#include &lt;sys/wait.h&gt;
+#include &lt;unistd.h&gt;
 
 /* Spawn a child process running a new program.  PROGRAM is the name
    of the program to run; the path will be searched for this program.
@@ -661,7 +843,7 @@ int main ()
   spawn ("ls", arg_list);
 
   /* Wait for the child process to complete. */
-  wait(&child_status);
+  wait(&amp;child_status);
   if (WIFEXITED(child_status))
    printf("the child process exited normally, with exit code %d\n", WEXITSTATUS(child_status));
   else
@@ -671,24 +853,26 @@ int main ()
 
   return 0;
 }                                                                                          
-```
+</code></pre>
 
-Come mostrato nell'esempio seguente, il terminale visualizza prima l'output del processo figlio (`ls -l`), mentre successivamente il processo padre termina stampando a schermo (`done with the main program`).
+<p align="justify">
+Come mostrato nell'esempio seguente, il terminale visualizza prima l'output del processo figlio (<code>ls -l</code>), mentre successivamente il processo padre termina stampando a schermo (<code>done with the main program</code>).
+</p>
 
-```bash
+<pre><code class="language-bash">
 vagrant@ubuntu2204:/lab2/0_processes$ bin/5_fork_exec_wait
 total 2097224
-lrwxrwxrwx   1 root    root             7 Aug 10  2023 bin -> usr/bin
+lrwxrwxrwx   1 root    root             7 Aug 10  2023 bin -&gt; usr/bin
 drwxr-xr-x   4 root    root          4096 Jan 11  2024 boot
 drwxr-xr-x  19 root    root          3980 Aug 12 08:33 dev
 drwxr-xr-x 104 root    root          4096 Aug 12 08:33 etc
 drwxr-xr-x   3 root    root          4096 Jan 10  2024 home
 drwxrwxrwx   1 vagrant vagrant       4096 Aug  9 07:23 lab
 drwxrwxrwx   1 vagrant vagrant          0 Aug 12 08:30 lab2
-lrwxrwxrwx   1 root    root             7 Aug 10  2023 lib -> usr/lib
-lrwxrwxrwx   1 root    root             9 Aug 10  2023 lib32 -> usr/lib32
-lrwxrwxrwx   1 root    root             9 Aug 10  2023 lib64 -> usr/lib64
-lrwxrwxrwx   1 root    root            10 Aug 10  2023 libx32 -> usr/libx32
+lrwxrwxrwx   1 root    root             7 Aug 10  2023 lib -&gt; usr/lib
+lrwxrwxrwx   1 root    root             9 Aug 10  2023 lib32 -&gt; usr/lib32
+lrwxrwxrwx   1 root    root             9 Aug 10  2023 lib64 -&gt; usr/lib64
+lrwxrwxrwx   1 root    root            10 Aug 10  2023 libx32 -&gt; usr/libx32
 drwx------   2 root    root         16384 Jan 10  2024 lost+found
 drwxr-xr-x   2 root    root          4096 Aug 10  2023 media
 drwxr-xr-x   2 root    root          4096 Aug 10  2023 mnt
@@ -696,7 +880,7 @@ drwxr-xr-x   2 root    root          4096 Aug 10  2023 opt
 dr-xr-xr-x 163 root    root             0 Aug 12 08:32 proc
 drwx------   5 root    root          4096 Jan 11  2024 root
 drwxr-xr-x  28 root    root           840 Aug 12  10:37 run
-lrwxrwxrwx   1 root    root             8 Aug 10  2023 sbin -> usr/sbin
+lrwxrwxrwx   1 root    root             8 Aug 10  2023 sbin -&gt; usr/sbin
 drwxr-xr-x   6 root    root          4096 Jul  7 07:31 snap
 drwxr-xr-x   2 root    root          4096 Aug 10  2023 srv
 -rw-------   1 root    root    2147483648 Jan 10  2024 swap.img
@@ -706,23 +890,24 @@ drwxr-xr-x  14 root    root          4096 Aug 10  2023 usr
 drwxr-xr-x  13 root    root          4096 Aug 10  2023 var
 the child process exited normally, with exit code 0
 done with main program
-```
+</code></pre>
 
 #### Processi zombie
 
-Quando un processo figlio termina e il processo padre ha chiamato la `wait()`, le informazioni sulla sua terminazione passano al padre attraverso la `wait()`. Se il padre non chiama la `wait()`, queste informazioni vanno perse? In questo caso il processo figlio diventa un processo **zombie**.
-Un processo **zombie** è un processo che ha terminato la propria esecuzione ma non è stato ancora ripulito; è quindi compito del processo padre ripulire il figlio. Il compito della `wait()` è proprio questo: una volta che il processo figlio termina, questo diventa uno zombie e poi la `wait()` estrae lo stato di uscita del figlio, cosicché il processo figlio può essere eliminato. Se il processo padre non chiama la `wait()`, il figlio resta nello stato di zombie, vediamo un esempio:
+<p align="justify">
+Quando un processo figlio termina e il processo padre ha chiamato la <code>wait()</code>, le informazioni sulla sua terminazione passano al padre attraverso la <code>wait()</code>. Se il padre non chiama la <code>wait()</code>, queste informazioni vanno perse? In questo caso il processo figlio diventa un processo <strong>zombie</strong>. Un processo <strong>zombie</strong> è un processo che ha terminato la propria esecuzione ma non è stato ancora ripulito; è quindi compito del processo padre ripulire il figlio. Il compito della <code>wait()</code> è proprio questo: una volta che il processo figlio termina, questo diventa uno zombie e poi la <code>wait()</code> estrae lo stato di uscita del figlio, cosicché il processo figlio può essere eliminato. Se il processo padre non chiama la <code>wait()</code>, il figlio resta nello stato di zombie, vediamo un esempio:
+</p>
 
-```c
+<pre><code class="language-c">
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
 * See COPYRIGHT for license information.                               *
 ***********************************************************************/
 
-#include <stdlib.h>
-#include <sys/types.h>
-#include <unistd.h>
+#include &lt;stdlib.h&gt;
+#include &lt;sys/types.h&gt;
+#include &lt;unistd.h&gt;
 
 int main ()
 {
@@ -730,7 +915,7 @@ int main ()
 
   /* Create a child process.  */
   child_pid = fork ();
-  if (child_pid > 0) {
+  if (child_pid &gt; 0) {
     /* This is the parent process.  Sleep for a minute.  */
     sleep (60);
   }
@@ -740,46 +925,53 @@ int main ()
   }
   return 0;
 }
-```
+</code></pre>
 
+<p align="justify">
 Lancia il programma da un terminale in questo modo:
+</p>
 
-```bash
+<pre><code class="language-bash">
 vagrant@ubuntu2204:/lab2/0_processes$ bin/6_zombie
-```
-Ed usa, su un altro terminale, il comando `ps` in questo modo:
+</code></pre>
+<p align="justify">
+Ed usa, su un altro terminale, il comando <code>ps</code> in questo modo:
+</p>
 
-```bash
+<pre><code class="language-bash">
 vagrant@ubuntu2204:~$ ps -e -o pid,ppid,stat,cmd|grep 6_zombie
    2317    1331 S+   bin/6_zombie
-   2318    2317 Z+   [6_zombie] <defunct>
+   2318    2317 Z+   [6_zombie] &lt;defunct&gt;
    2325    2301 S+   grep --color=auto 6_zombie
-```
+</code></pre>
 
-Il processo padre ha pid `2317` ed è in stato `S+`; il processo figlio è `<defunct>` ed è uno zombie `Z+`.
-Quando il processo padre termina prima del figlio senza chiamare la `wait()`, chi si occupa di ripulire il processo figlio e riportarlo dallo stato di zombie a terminato? Il processo **init**, che è il padre di tutti i processi (init infatti ha PID=1), eredita tutti i figli rimasti orfani del proprio padre. Se rilanci `ps` dopo un po' di tempo, vedrai che il processo figlio con pid `2318` non esiste più perché è stato ripulito da init.
+<p align="justify">
+Il processo padre ha pid <code>2317</code> ed è in stato <code>S+</code>; il processo figlio è <code>&lt;defunct&gt;</code> ed è uno zombie <code>Z+</code>. Quando il processo padre termina prima del figlio senza chiamare la <code>wait()</code>, chi si occupa di ripulire il processo figlio e riportarlo dallo stato di zombie a terminato? Il processo <strong>init</strong>, che è il padre di tutti i processi (init infatti ha PID=1), eredita tutti i figli rimasti orfani del proprio padre. Se rilanci <code>ps</code> dopo un po' di tempo, vedrai che il processo figlio con pid <code>2318</code> non esiste più perché è stato ripulito da init.
+</p>
 
 
 
 ### Ripulire il figlio in modo asincrono
 
-La `wait()` ci permette di attendere (nel codice del padre) la terminazione del figlio. Il problema è che la chiamata alla `wait()` è bloccante, quindi il codice del padre rimane (appeso) all'istruzione di `wait` fino a quando il figlio non termina. Se si vuole che il padre continui la propria elaborazione mentre si attende che il figlio completi, è possibile controllare periodicamente la terminazione del figlio chiamando `wait3()` o `wait4()` (flag `WNOHANG`) in modo asincrono nel codice del padre. Una soluzione migliore è usare il segnale `SIGCHLD`, che Linux invia al padre ogni volta che uno dei suoi figli termina. Vediamo un esempio:
+<p align="justify">
+La <code>wait()</code> ci permette di attendere (nel codice del padre) la terminazione del figlio. Il problema è che la chiamata alla <code>wait()</code> è bloccante, quindi il codice del padre rimane (appeso) all'istruzione di <code>wait</code> fino a quando il figlio non termina. Se si vuole che il padre continui la propria elaborazione mentre si attende che il figlio completi, è possibile controllare periodicamente la terminazione del figlio chiamando <code>wait3()</code> o <code>wait4()</code> (flag <code>WNOHANG</code>) in modo asincrono nel codice del padre. Una soluzione migliore è usare il segnale <code>SIGCHLD</code>, che Linux invia al padre ogni volta che uno dei suoi figli termina. Vediamo un esempio:
+</p>
 
-```c
+<pre><code class="language-c">
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
 * See COPYRIGHT for license information.                               *
 ***********************************************************************/
 
-#include <signal.h>     // sigaction
-#include <string.h>     // memset()
-#include <stdio.h>      // fprintf()
-#include <stdlib.h>     // abort()
-#include <sys/types.h>  // pid_t
-#include <sys/wait.h>   // wait()
-#include <unistd.h>     // fork() exec()
-#include <time.h>       // time()
+#include &lt;signal.h&gt;     // sigaction
+#include &lt;string.h&gt;     // memset()
+#include &lt;stdio.h&gt;      // fprintf()
+#include &lt;stdlib.h&gt;     // abort()
+#include &lt;sys/types.h&gt;  // pid_t
+#include &lt;sys/wait.h&gt;   // wait()
+#include &lt;unistd.h&gt;     // fork() exec()
+#include &lt;time.h&gt;       // time()
 
 #define N_CHILDS 10
 
@@ -792,7 +984,7 @@ void clean_up_child_process (int signal_number)
 {
   /* Clean up the child process.  */
   int status;
-  wait (&status);
+  wait (&amp;status);
   /* Store its exit status in a global variable.  */
   child_exit_status = status;
   fprintf (stdout, "Child exit with %d status\n", status);
@@ -821,9 +1013,9 @@ int main ()
 {
   /* Handle SIGCHLD by calling clean_up_child_process.  */
   struct sigaction sigchld_action;
-  memset (&sigchld_action, 0, sizeof (sigchld_action));
-  sigchld_action.sa_handler = &clean_up_child_process;
-  sigaction (SIGCHLD, &sigchld_action, NULL);
+  memset (&amp;sigchld_action, 0, sizeof (sigchld_action));
+  sigchld_action.sa_handler = &amp;clean_up_child_process;
+  sigaction (SIGCHLD, &amp;sigchld_action, NULL);
 
   /* Now do things, including forking a child process.  */
   /* The argument list to pass to the "ls" command.  */
@@ -833,18 +1025,18 @@ int main ()
     NULL      /* The argument list must end with a NULL.  */
   };
 
-  for(int i=0; i<N_CHILDS; i++)
+  for(int i=0; i&lt;N_CHILDS; i++)
      spawn ("sleep", arg_list);
 
   time_t start = time(NULL);
-  while (time(NULL) - start < (time_t) (SOME_MINUTES * SECONDS_PER_MINUTE));
+  while (time(NULL) - start &lt; (time_t) (SOME_MINUTES * SECONDS_PER_MINUTE));
   fprintf (stdout, "Father's quitting\n");
 
   return 0;
 }
-```
+</code></pre>
 
-```bash
+<pre><code class="language-bash">
 vagrant@ubuntu2204:/lab2/0_processes$ bin/7_sigchld
 Child 3099 created
 Child 3100 created
@@ -867,7 +1059,7 @@ Child exit with 0 status
 Child exit with 0 status
 
 Father's quitting
-```
+</code></pre>
 
 ### I Thread
 
