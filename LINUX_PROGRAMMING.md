@@ -1063,39 +1063,59 @@ Father's quitting
 
 ### I Thread
 
-I thread, come i processi, sono un meccanismo per permettere a un programma di svolgere più compiti contemporaneamente. Come i processi, anche i thread si contendono la CPU per l'esecuzione. Da un punto di vista teorico, un thread esiste all'interno di un processo: quando viene invocato un programma, Linux crea un nuovo processo e, al suo interno, anche un singolo thread che esegue il programma in modo sequenziale. Questo thread può creare altri thread che eseguono lo stesso programma nello stesso processo, ma ciascun thread può eseguire una parte diversa del programma in qualunque momento.
-Abbiamo visto come un processo può forkare un processo figlio. Il processo figlio inizialmente esegue il programma del padre come una copia della memoria virtuale del processo padre, i descrittori dei file e così via. Il processo figlio può modificare la sua memoria, chiudere i descrittori dei file ecc., senza alterare quelli del padre. Quando un thread crea un nuovo thread nulla è copiato. Il thread padre e il thread figlio condividono la stessa memoria, i descrittori dei file e tutte le altre risorse. Se un thread cambia il valore di una variabile, anche l'altro thread vedrà questa modifica; se un thread chiude un descrittore di un file, gli altri thread potrebbero non poter più leggere o scrivere su quel descrittore. Siccome un processo e tutti i suoi thread possono eseguire un solo programma alla volta, se un thread richiama la `exec()` tutti i thread verranno terminati.
-Linux implementa le API POSIX per i thread (conosciuto come **pthread**). Tutte le funzioni per i thread sono definite nel file d'intestazione `<pthread.h>` che non è inclusa nella libreria standard fornita dal linguaggio C. La libreria è fornita in `libpthread.so` ed è necessario passare il parametro `-lpthread` a gcc per linkarla al momento della compilazione.
+<p align="justify">
+I thread, come i processi, sono un meccanismo per permettere a un programma di svolgere più compiti contemporaneamente. Come i processi, anche i thread si contendono la CPU per l'esecuzione. Da un punto di vista teorico, un thread esiste all'interno di un processo: quando viene invocato un programma, Linux crea un nuovo processo e, al suo interno, anche un singolo thread che esegue il programma in modo sequenziale. Questo thread può creare altri thread che eseguono lo stesso programma nello stesso processo, ma ciascun thread può eseguire una parte diversa del programma in qualunque momento. Abbiamo visto come un processo può forkare un processo figlio. Il processo figlio inizialmente esegue il programma del padre come una copia della memoria virtuale del processo padre, i descrittori dei file e così via. Il processo figlio può modificare la sua memoria, chiudere i descrittori dei file ecc., senza alterare quelli del padre. Quando un thread crea un nuovo thread nulla è copiato. Il thread padre e il thread figlio condividono la stessa memoria, i descrittori dei file e tutte le altre risorse. Se un thread cambia il valore di una variabile, anche l'altro thread vedrà questa modifica; se un thread chiude un descrittore di un file, gli altri thread potrebbero non poter più leggere o scrivere su quel descrittore. Siccome un processo e tutti i suoi thread possono eseguire un solo programma alla volta, se un thread richiama la <code>exec()</code> tutti i thread verranno terminati. Linux implementa le API POSIX per i thread (conosciuto come <strong>pthread</strong>). Tutte le funzioni per i thread sono definite nel file d'intestazione <code>&lt;pthread.h&gt;</code> che non è inclusa nella libreria standard fornita dal linguaggio C. La libreria è fornita in <code>libpthread.so</code> ed è necessario passare il parametro <code>-lpthread</code> a gcc per linkarla al momento della compilazione.
+</p>
 
 #### Creazione di un thread
 
-Ad ogni thread è associato un ID univoco di tipo `pthread_t`.
-Una volta creato, un thread esegue una semplice funzione che contiene il codice che il thread deve eseguire. Quando questa funzione termina, anche il thread termina la propria esecuzione. Questa funzione riceve in ingresso un puntatore a void `void *` e ritorna sempre un altro puntatore a void `void *`.
-Per creare un nuovo thread bisogna usare la funzione `pthread_create()`. Questo è il suo prototipo:
+<p align="justify">
+Ad ogni thread è associato un ID univoco di tipo <code>pthread_t</code>. Una volta creato, un thread esegue una semplice funzione che contiene il codice che il thread deve eseguire. Quando questa funzione termina, anche il thread termina la propria esecuzione. Questa funzione riceve in ingresso un puntatore a void <code>void *</code> e ritorna sempre un altro puntatore a void <code>void *</code>. Per creare un nuovo thread bisogna usare la funzione <code>pthread_create()</code>. Questo è il suo prototipo:
+</p>
 
-```c
+<pre><code class="language-c">
 int pthread_create(pthread_t *restrict thread,
                           const pthread_attr_t *restrict attr,
                           void *(*start_routine)(void *),
                           void *restrict arg);
-```
+</code></pre>
 
-1. `pthread_t thread`: un identificatore di thread
-2. `const pthread_attr_t *`: un puntatore all'oggetto contenente gli attributi del thread: questo oggetto controlla i dettagli di come il thread interagisce con il resto del programma. Se passi `NULL` come attributo del thread, il thread sarà creato con gli attributi di default.
-3. `void* (*) (void*)`: un puntatore alla funzione del thread, questo è un semplice puntatore a funzione
-4. `void *`: l'argomento in ingresso da passare alla funzione del thread di tipo `void *`
+<ol>
+  <li>
+    <p align="justify">
+    <code>pthread_t thread</code>: un identificatore di thread
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>const pthread_attr_t *</code>: un puntatore all'oggetto contenente gli attributi del thread: questo oggetto controlla i dettagli di come il thread interagisce con il resto del programma. Se passi <code>NULL</code> come attributo del thread, il thread sarà creato con gli attributi di default.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>void* (*) (void*)</code>: un puntatore alla funzione del thread, questo è un semplice puntatore a funzione
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>void *</code>: l'argomento in ingresso da passare alla funzione del thread di tipo <code>void *</code>
+    </p>
+  </li>
+</ol>
 
+<p align="justify">
 Vediamo un esempio di creazione di un thread:
+</p>
 
-```c
+<pre><code class="language-c">
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
 * See COPYRIGHT for license information.                               *
 ***********************************************************************/
 
-#include <pthread.h>
-#include <stdio.h>
+#include &lt;pthread.h&gt;
+#include &lt;stdio.h&gt;
 
 /* Prints x's to stderr.  The parameter is unused.  Does not return.  */
 
@@ -1113,31 +1133,33 @@ int main ()
   pthread_t thread_id;
   /* Create a new thread.  The new thread will run the print_xs
      function.  */
-  pthread_create (&thread_id, NULL, &print_xs, NULL);
+  pthread_create (&amp;thread_id, NULL, &amp;print_xs, NULL);
   /* Print o's continuously to stderr.  */
   while (1)
     fputc ('o', stderr);
   return 0;
 }
-```
+</code></pre>
 
-Il thread termina quando termina la funzione del thread `print_xs`, un thread può ritornare anche richiamando la funzione `pthread_exit()`.
+<p align="justify">
+Il thread termina quando termina la funzione del thread <code>print_xs</code>, un thread può ritornare anche richiamando la funzione <code>pthread_exit()</code>.
+</p>
 
 #### Passare dati a un thread
 
-Per passare argomenti a un thread basta usare il quarto argomento della `pthread_create()`. Per farlo basta solo dichiarare una struttura o un array e passare il puntatore alla `pthread_create()`.
-L'unica accortezza da tenere in considerazione è quella di effettuare il cast corretto del parametro in ingresso alla funzione del thread.
-Vediamo un esempio:
+<p align="justify">
+Per passare argomenti a un thread basta usare il quarto argomento della <code>pthread_create()</code>. Per farlo basta solo dichiarare una struttura o un array e passare il puntatore alla <code>pthread_create()</code>. L'unica accortezza da tenere in considerazione è quella di effettuare il cast corretto del parametro in ingresso alla funzione del thread. Vediamo un esempio:
+</p>
 
-```c
+<pre><code class="language-c">
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
 * See COPYRIGHT for license information.                               *
 ***********************************************************************/
 
-#include <pthread.h>
-#include <stdio.h>
+#include &lt;pthread.h&gt;
+#include &lt;stdio.h&gt;
 
 /* Parameters to print_function.  */
 
@@ -1158,8 +1180,8 @@ void* char_print (void* parameters)
   struct char_print_parms* p = (struct char_print_parms*) parameters;
   int i;
 
-  for (i = 0; i < p->count; ++i)
-    fputc (p->character, stderr);
+  for (i = 0; i &lt; p-&gt;count; ++i)
+    fputc (p-&gt;character, stderr);
   return NULL;
 }
 
@@ -1175,41 +1197,57 @@ int main ()
   /* Create a new thread to print 30000 x's.  */
   thread1_args.character = 'x';
   thread1_args.count = 30000;
-  pthread_create (&thread1_id, NULL, &char_print, &thread1_args);
+  pthread_create (&amp;thread1_id, NULL, &amp;char_print, &amp;thread1_args);
 
   /* Create a new thread to print 20000 o's.  */
   thread2_args.character = 'o';
   thread2_args.count = 20000;
-  pthread_create (&thread2_id, NULL, &char_print, &thread2_args);
+  pthread_create (&amp;thread2_id, NULL, &amp;char_print, &amp;thread2_args);
 
   return 0;
 }
-```
+</code></pre>
 
-Il problema in questo codice è che le due variabili locali (automatiche) `thread1_args` e `thread2_args` che contengono i parametri da passare ai due thread sono dichiarate nel processo padre, il processo padre termina immediatamente e tutte le sue variabili verranno deallocate, comprese quelle passate come argomenti ai thread che accederanno quindi a locazioni di memoria non valide. Per risolvere questo problema dovremmo fare in modo che il processo padre attenda la terminazione dei thread nello stesso modo con cui attraverso la `wait()` attendeva la terminazione del processo figlio.
+<p align="justify">
+Il problema in questo codice è che le due variabili locali (automatiche) <code>thread1_args</code> e <code>thread2_args</code> che contengono i parametri da passare ai due thread sono dichiarate nel processo padre, il processo padre termina immediatamente e tutte le sue variabili verranno deallocate, comprese quelle passate come argomenti ai thread che accederanno quindi a locazioni di memoria non valide. Per risolvere questo problema dovremmo fare in modo che il processo padre attenda la terminazione dei thread nello stesso modo con cui attraverso la <code>wait()</code> attendeva la terminazione del processo figlio.
+</p>
 
 #### Attendere la terminazione dei thread
 
-Per fare in modo che il `main()` attenda la terminazione dei thread è possibile usare la funzione `pthread_join()`. Questo è il suo prototipo:
+<p align="justify">
+Per fare in modo che il <code>main()</code> attenda la terminazione dei thread è possibile usare la funzione <code>pthread_join()</code>. Questo è il suo prototipo:
+</p>
 
-```c
+<pre><code class="language-c">
 int pthread_join(pthread_t thread, void **retval);
-```
+</code></pre>
 
-1. `pthread_t`: id del thread di cui si vuole attendere il completamento
-2. `void *`: puntatore a void per il valore di ritorno del thread. Se non sei interessato al valore di ritorno passa `NULL` a questo parametro.
+<ol>
+  <li>
+    <p align="justify">
+    <code>pthread_t</code>: id del thread di cui si vuole attendere il completamento
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <code>void *</code>: puntatore a void per il valore di ritorno del thread. Se non sei interessato al valore di ritorno passa <code>NULL</code> a questo parametro.
+    </p>
+  </li>
+</ol>
 
-Vediamo come risolvere il bug dell'esempio precedente usando la `pthread_join()` per attendere il completamento dei thread creati nel `main()`
+<p align="justify">
+Vediamo come risolvere il bug dell'esempio precedente usando la <code>pthread_join()</code> per attendere il completamento dei thread creati nel <code>main()</code>
+</p>
 
-```c
+<pre><code class="language-c">
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
 * See COPYRIGHT for license information.                               *
 ***********************************************************************/
 
-#include <pthread.h>
-#include <stdio.h>
+#include &lt;pthread.h&gt;
+#include &lt;stdio.h&gt;
 
 /* Parameters to print_function.  */
 
@@ -1230,8 +1268,8 @@ void* char_print (void* parameters)
   struct char_print_parms* p = (struct char_print_parms*) parameters;
   int i;
 
-  for (i = 0; i < p->count; ++i)
-    fputc (p->character, stderr);
+  for (i = 0; i &lt; p-&gt;count; ++i)
+    fputc (p-&gt;character, stderr);
   return NULL;
 }
 
@@ -1247,12 +1285,12 @@ int main ()
   /* Create a new thread to print 30000 x's.  */
   thread1_args.character = 'x';
   thread1_args.count = 30000;
-  pthread_create (&thread1_id, NULL, &char_print, &thread1_args);
+  pthread_create (&amp;thread1_id, NULL, &amp;char_print, &amp;thread1_args);
 
   /* Create a new thread to print 20000 o's.  */
   thread2_args.character = 'o';
   thread2_args.count = 20000;
-  pthread_create (&thread2_id, NULL, &char_print, &thread2_args);
+  pthread_create (&amp;thread2_id, NULL, &amp;char_print, &amp;thread2_args);
 
   /* Make sure the first thread has finished.  */
   pthread_join (thread1_id, NULL);
@@ -1262,21 +1300,23 @@ int main ()
   /* Now we can safely return.  */
   return 0;
 }
-```
+</code></pre>
 
 #### Il valore di ritorno dei thread
 
-Se il secondo parametro in ingresso alla `pthread_join()` non è `NULL` allora il valore di ritorno del thread verrà salvato nella locazione di memoria puntata da quell'argomento. Il valore di ritorno del thread è di tipo puntatore a `void`: `void *`, quindi è necessario castare l'indirizzo della variabile intera `prime` a `void *` nella chiamata alla `pthread_join()`.
+<p align="justify">
+Se il secondo parametro in ingresso alla <code>pthread_join()</code> non è <code>NULL</code> allora il valore di ritorno del thread verrà salvato nella locazione di memoria puntata da quell'argomento. Il valore di ritorno del thread è di tipo puntatore a <code>void</code>: <code>void *</code>, quindi è necessario castare l'indirizzo della variabile intera <code>prime</code> a <code>void *</code> nella chiamata alla <code>pthread_join()</code>.
+</p>
 
-```c
+<pre><code class="language-c">
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
 * See COPYRIGHT for license information.                               *
 ***********************************************************************/
 
-#include <pthread.h>
-#include <stdio.h>
+#include &lt;pthread.h&gt;
+#include &lt;stdio.h&gt;
 
 /* Compute successive prime numbers (very inefficiently).  Return the
    Nth prime number, where N is the value pointed to by *ARG.  */
@@ -1291,7 +1331,7 @@ void* compute_prime (void* arg)
     int is_prime = 1;
 
     /* Test primality by successive division.  */
-    for (factor = 2; factor < candidate; ++factor)
+    for (factor = 2; factor &lt; candidate; ++factor)
       if (candidate % factor == 0) {
         is_prime = 0;
         break;
@@ -1314,74 +1354,106 @@ int main ()
   int prime;
 
   /* Start the computing thread, up to the 5000th prime number.  */
-  pthread_create (&thread, NULL, &compute_prime, &which_prime);
+  pthread_create (&amp;thread, NULL, &amp;compute_prime, &amp;which_prime);
   /* Do some other work here...  */
   /* Wait for the prime number thread to complete, and get the result.  */
-  pthread_join (thread, (void*) &prime);
+  pthread_join (thread, (void*) &amp;prime);
   /* Print the largest prime it computed.  */
   printf("The %dth prime number is %d.\n", which_prime, prime);
   return 0;
 }
-```
+</code></pre>
 
-```bash
+<pre><code class="language-bash">
 vagrant@ubuntu2204:/lab2/1_threads$ bin/3_primes
 The 5000th prime number is 48611.
-```
+</code></pre>
 
 #### `pthread_self()` e `pthread_equal()`
 
-`pthread_self()` ritorna il thread id del thread corrente che la sta eseguendo. Questo è il suo prototipo:
+<p align="justify">
+<code>pthread_self()</code> ritorna il thread id del thread corrente che la sta eseguendo. Questo è il suo prototipo:
+</p>
 
-```c
+<pre><code class="language-c">
 pthread_t pthread_self(void);
-```
+</code></pre>
 
-`pthread_equal()` confronta due thread id(s): ritorna zero se i due ID sono uguali. Questo è il suo prototipo:
+<p align="justify">
+<code>pthread_equal()</code> confronta due thread id(s): ritorna zero se i due ID sono uguali. Questo è il suo prototipo:
+</p>
 
-```c
+<pre><code class="language-c">
 int pthread_equal(pthread_t t1, pthread_t t2);
-```
+</code></pre>
 
-Queste due funzioni possono essere utili per controllare se un certo ID corrisponde a quello del thread corrente per esempio prima di chiamare una `pthread_join()` in quanto aspettare la terminazione di se stessi è un grosso errore. Sotto un esempio:
+<p align="justify">
+Queste due funzioni possono essere utili per controllare se un certo ID corrisponde a quello del thread corrente per esempio prima di chiamare una <code>pthread_join()</code> in quanto aspettare la terminazione di se stessi è un grosso errore. Sotto un esempio:
+</p>
 
-```c
+<pre><code class="language-c">
 if (!pthread_equal (pthread_self (), other_thread))
   pthread_join (other_thread, NULL);
-```
+</code></pre>
 
 #### Gli attributi dei thread
 
-Gli attributi del thread forniscono un meccanismo per la messa a punto del comportamento dei singoli thread. Abbiamo visto come la `pthread_create()` accetta un argomento che è un puntatore a un oggetto attributo del thread. Se passi un puntatore nullo a questo argomento, gli attributi predefiniti vengono utilizzati per configurare il nuovo thread. Tuttavia, puoi creare e personalizzare un oggetto attributo thread per specificare altri valori per gli attributi. Per specificare attributi thread personalizzati, devi seguire questi passaggi: 
+<p align="justify">
+Gli attributi del thread forniscono un meccanismo per la messa a punto del comportamento dei singoli thread. Abbiamo visto come la <code>pthread_create()</code> accetta un argomento che è un puntatore a un oggetto attributo del thread. Se passi un puntatore nullo a questo argomento, gli attributi predefiniti vengono utilizzati per configurare il nuovo thread. Tuttavia, puoi creare e personalizzare un oggetto attributo thread per specificare altri valori per gli attributi. Per specificare attributi thread personalizzati, devi seguire questi passaggi:
+</p>
 
-1. Crea un oggetto `pthread_attr_t`. Il modo più semplice per farlo è dichiarare una variabile automatica di questo tipo.
-2. Chiama la funzione `pthread_attr_init()`, passando un puntatore a questo oggetto. Ciò inizializza gli attributi ai loro valori predefiniti.
-3. Modifica l'oggetto attributo per contenere i valori attributo desiderati.
-4. Passa un puntatore all'oggetto attributo che hai valorizzato al punto precedente quando richiami la `pthread_create()`.
-5. Chiama la `pthread_attr_destroy()` per rilasciare l'oggetto attributo. La variabile `pthread_attr_t` non viene deallocata; può essere reinizializzata con `pthread_attr_init()`
+<ol>
+  <li>
+    <p align="justify">
+    Crea un oggetto <code>pthread_attr_t</code>. Il modo più semplice per farlo è dichiarare una variabile automatica di questo tipo.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Chiama la funzione <code>pthread_attr_init()</code>, passando un puntatore a questo oggetto. Ciò inizializza gli attributi ai loro valori predefiniti.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Modifica l'oggetto attributo per contenere i valori attributo desiderati.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Passa un puntatore all'oggetto attributo che hai valorizzato al punto precedente quando richiami la <code>pthread_create()</code>.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Chiama la <code>pthread_attr_destroy()</code> per rilasciare l'oggetto attributo. La variabile <code>pthread_attr_t</code> non viene deallocata; può essere reinizializzata con <code>pthread_attr_init()</code>
+    </p>
+  </li>
+</ol>
   
-Un singolo oggetto attributo thread può essere utilizzato per inizializzare diversi thread. Non è necessario mantenere l'oggetto attributo thread dopo che i thread sono stati creati.
-Per la maggior parte delle attività di programmazione delle applicazioni GNU/Linux, un solo attributo thread è in genere di interesse (gli altri attributi disponibili sono principalmente per la programmazione in tempo reale).
-Questo attributo è il **detach state** del thread. Un thread può essere creato come un thread **joinable** (l'impostazione predefinita) o come un **detached** thread. Un joinable thread, come un processo, non viene automaticamente ripulito da GNU/Linux quando termina e lo stato di uscita del thread rimane sospeso nel sistema (un po' come un processo zombie) finché un altro thread non richiama la `pthread_join()` per ottenere il suo valore di ritorno. **Solo allora le sue risorse vengono rilasciate**. Un **detached** thread, al contrario, viene ripulito automaticamente quando termina. Poiché un detached thread viene immediatamente ripulito, un altro thread potrebbe non sincronizzarsi al suo completamento tramite `pthread_join()` o ottenere il suo valore di ritorno.
+<p align="justify">
+Un singolo oggetto attributo thread può essere utilizzato per inizializzare diversi thread. Non è necessario mantenere l'oggetto attributo thread dopo che i thread sono stati creati. Per la maggior parte delle attività di programmazione delle applicazioni GNU/Linux, un solo attributo thread è in genere di interesse (gli altri attributi disponibili sono principalmente per la programmazione in tempo reale). Questo attributo è il <strong>detach state</strong> del thread. Un thread può essere creato come un thread <strong>joinable</strong> (l'impostazione predefinita) o come un <strong>detached</strong> thread. Un joinable thread, come un processo, non viene automaticamente ripulito da GNU/Linux quando termina e lo stato di uscita del thread rimane sospeso nel sistema (un po' come un processo zombie) finché un altro thread non richiama la <code>pthread_join()</code> per ottenere il suo valore di ritorno. <strong>Solo allora le sue risorse vengono rilasciate</strong>. Un <strong>detached</strong> thread, al contrario, viene ripulito automaticamente quando termina. Poiché un detached thread viene immediatamente ripulito, un altro thread potrebbe non sincronizzarsi al suo completamento tramite <code>pthread_join()</code> o ottenere il suo valore di ritorno.
+</p>
 
-Per impostare lo stato detached in un oggetto attributo thread, basta utilizzare `pthread_attr_setdetachstate()`.
-Questo è il suo prototipo:
+<p align="justify">
+Per impostare lo stato detached in un oggetto attributo thread, basta utilizzare <code>pthread_attr_setdetachstate()</code>. Questo è il suo prototipo:
+</p>
 
-```c
+<pre><code class="language-c">
 int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate);
-```
+</code></pre>
 
-Il primo argomento è un puntatore all'oggetto attributo thread (`pthread_attr_t *`) e il secondo è lo stato detached desiderato. Poiché lo stato joinable è quello predefinito, è necessario chiamare questo solo per creare detached thread passando `PTHREAD_CREATE_DETACHED` come secondo argomento.
-Il codice seguente crea un detached thread impostando l'attributo thread a `PTHREAD_CREATE_DETACHED`.
+<p align="justify">
+Il primo argomento è un puntatore all'oggetto attributo thread (<code>pthread_attr_t *</code>) e il secondo è lo stato detached desiderato. Poiché lo stato joinable è quello predefinito, è necessario chiamare questo solo per creare detached thread passando <code>PTHREAD_CREATE_DETACHED</code> come secondo argomento. Il codice seguente crea un detached thread impostando l'attributo thread a <code>PTHREAD_CREATE_DETACHED</code>.
+</p>
 
-```c
+<pre><code class="language-c">
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
 * See COPYRIGHT for license information.                               *
 ***********************************************************************/
 
-#include <pthread.h>
+#include &lt;pthread.h&gt;
 
 void* thread_function (void* thread_arg)
 {
@@ -1394,86 +1466,121 @@ int main ()
   pthread_attr_t attr;
   pthread_t thread;
 
-  pthread_attr_init (&attr);
-  pthread_attr_setdetachstate (&attr, PTHREAD_CREATE_DETACHED);
-  pthread_create (&thread, &attr, &thread_function, NULL);
-  pthread_attr_destroy (&attr);
+  pthread_attr_init (&amp;attr);
+  pthread_attr_setdetachstate (&amp;attr, PTHREAD_CREATE_DETACHED);
+  pthread_create (&amp;thread, &amp;attr, &amp;thread_function, NULL);
+  pthread_attr_destroy (&amp;attr);
 
   /* Do work here...  */
 
   /* No need to join the second thread.  */
   return 0;
 }
-```
+</code></pre>
 
-Anche se un thread è stato creato con stato joinable può essere impostato in un secondo momento nello stato detached, per fare questo basta usare la funzione `pthread_detach()`. Questo è il suo prototipo:
+<p align="justify">
+Anche se un thread è stato creato con stato joinable può essere impostato in un secondo momento nello stato detached, per fare questo basta usare la funzione <code>pthread_detach()</code>. Questo è il suo prototipo:
+</p>
 
-```c
+<pre><code class="language-c">
 int pthread_detach(pthread_t thread);
-```
+</code></pre>
 
 #### Cancellazione del thread
 
-In circostanze normali, un thread termina quando conclude la propria funzione o chiamando la `pthread_exit()`. Tuttavia, è possibile che un thread richieda la terminazione di un altro thread. Questo meccanismo si chiama cancellamento di un thread. Per cancellare un thread, chiama la `pthread_cancel()`, passando l'ID del thread da cancellare. è possibile richiamare la `pthread_join()` su un thread cancellato (di tipo joinable, non è possibile per un thread in stato detached) per liberarne le risorse. Il valore di ritorno di un thread cancellato è il valore speciale `PTHREAD_CANCELED`.
+<p align="justify">
+In circostanze normali, un thread termina quando conclude la propria funzione o chiamando la <code>pthread_exit()</code>. Tuttavia, è possibile che un thread richieda la terminazione di un altro thread. Questo meccanismo si chiama cancellamento di un thread. Per cancellare un thread, chiama la <code>pthread_cancel()</code>, passando l'ID del thread da cancellare. è possibile richiamare la <code>pthread_join()</code> su un thread cancellato (di tipo joinable, non è possibile per un thread in stato detached) per liberarne le risorse. Il valore di ritorno di un thread cancellato è il valore speciale <code>PTHREAD_CANCELED</code>.
+</p>
 
+<p align="justify">
 Spesso un thread può eseguire codice in cui tutte le istruzioni devono essere trattate in modo atomico. Ad esempio, il thread può allocare alcune risorse, usarle e quindi deallocarle. Se il thread viene annullato nel mezzo di questo codice, potrebbe non avere l'opportunità di deallocare le risorse, e quindi le risorse saranno perse. Per contrastare questa possibilità, un thread può controllare se e quando può essere annullato. Un thread può trovarsi in uno dei tre stati per quanto riguarda la cancellazione del thread:
+</p>
 
-* Il thread può essere **cancellabile in modo asincrono**. Il thread può essere annullato in qualsiasi momento della sua esecuzione.
-* Il thread può essere **cancellabile in modo sincrono**. Il thread può essere annullato, ma non in qualsiasi momento della sua esecuzione. Invece, le richieste di annullamento vengono messe in coda e il thread viene cancellato solo quando raggiunge punti specifici della sua esecuzione.
-* Un thread può essere **non cancellabile**. I tentativi di cancellare il thread vengono ignorati silenziosamente.
+<ul>
+  <li>
+    <p align="justify">
+    Il thread può essere <strong>cancellabile in modo asincrono</strong>. Il thread può essere annullato in qualsiasi momento della sua esecuzione.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Il thread può essere <strong>cancellabile in modo sincrono</strong>. Il thread può essere annullato, ma non in qualsiasi momento della sua esecuzione. Invece, le richieste di annullamento vengono messe in coda e il thread viene cancellato solo quando raggiunge punti specifici della sua esecuzione.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Un thread può essere <strong>non cancellabile</strong>. I tentativi di cancellare il thread vengono ignorati silenziosamente.
+    </p>
+  </li>
+</ul>
 
-**Quando viene creato inizialmente, un thread è cancellabile in modo sincrono**
+<p align="justify">
+<strong>Quando viene creato inizialmente, un thread è cancellabile in modo sincrono</strong>
+</p>
 
 #### Thread sincroni ed asincroni
 
-Un thread cancellabile in modo asincrono può essere annullato in qualsiasi momento della sua esecuzione. Un thread cancellabile in modo sincrono, al contrario, può essere cancellato solo in determinati punti della sua esecuzione. Questi punti sono chiamati punti di annullamento. Il thread metterà in coda una richiesta di annullamento finché non raggiunge il punto di annullamento successivo. Per rendere un thread cancellabile in modo asincrono, utilizzare `pthread_setcanceltype()`. Questo è il suo prototipo:
+<p align="justify">
+Un thread cancellabile in modo asincrono può essere annullato in qualsiasi momento della sua esecuzione. Un thread cancellabile in modo sincrono, al contrario, può essere cancellato solo in determinati punti della sua esecuzione. Questi punti sono chiamati punti di annullamento. Il thread metterà in coda una richiesta di annullamento finché non raggiunge il punto di annullamento successivo. Per rendere un thread cancellabile in modo asincrono, utilizzare <code>pthread_setcanceltype()</code>. Questo è il suo prototipo:
+</p>
 
-```c
+<pre><code class="language-c">
 int pthread_setcanceltype(int type, int *oldtype);
-```
+</code></pre>
 
-Il primo argomento dovrebbe essere `PTHREAD_CANCEL_ASYNCHRONOUS` per rendere il thread cancellabile in modo asincrono o `PTHREAD_CANCEL_DEFERRED` per riportarlo allo stato cancellabile in modo sincrono. Il secondo argomento, se non è nullo, è un puntatore a una variabile che riceverà il tipo di annullamento precedente per il thread. Questa chiamata, ad esempio, rende il thread chiamante cancellabile in modo asincrono.
+<p align="justify">
+Il primo argomento dovrebbe essere <code>PTHREAD_CANCEL_ASYNCHRONOUS</code> per rendere il thread cancellabile in modo asincrono o <code>PTHREAD_CANCEL_DEFERRED</code> per riportarlo allo stato cancellabile in modo sincrono. Il secondo argomento, se non è nullo, è un puntatore a una variabile che riceverà il tipo di annullamento precedente per il thread. Questa chiamata, ad esempio, rende il thread chiamante cancellabile in modo asincrono.
+</p>
 
-```c
+<pre><code class="language-c">
 pthread_setcanceltype (PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
-```
+</code></pre>
 
-Cosa costituisce un punto di annullamento e dove dovrebbero essere posizionati? Il modo più diretto per creare un punto di annullamento è chiamare `pthread_testcancel()`. 
+<p align="justify">
+Cosa costituisce un punto di annullamento e dove dovrebbero essere posizionati? Il modo più diretto per creare un punto di annullamento è chiamare <code>pthread_testcancel()</code>.
+</p>
 
-```c
+<pre><code class="language-c">
 void pthread_testcancel(void);
-```
-Questa funzione non fa altro che elaborare un annullamento in sospeso in un thread cancellabile in modo sincrono. Dovresti chiamare `pthread_testcancel()` periodicamente durante i calcoli lunghi in una funzione thread, nei punti in cui il thread può essere annullato senza perdere risorse o produrre altri effetti negativi. Anche alcune altre funzioni sono implicitamente punti di annullamento. Sono elencate nella pagina man di `pthread_cancel()`. Nota che altre funzioni possono utilizzare queste funzioni internamente e quindi saranno indirettamente punti di annullamento.		
+</code></pre>
+<p align="justify">
+Questa funzione non fa altro che elaborare un annullamento in sospeso in un thread cancellabile in modo sincrono. Dovresti chiamare <code>pthread_testcancel()</code> periodicamente durante i calcoli lunghi in una funzione thread, nei punti in cui il thread può essere annullato senza perdere risorse o produrre altri effetti negativi. Anche alcune altre funzioni sono implicitamente punti di annullamento. Sono elencate nella pagina man di <code>pthread_cancel()</code>. Nota che altre funzioni possono utilizzare queste funzioni internamente e quindi saranno indirettamente punti di annullamento.
+</p>
 
 
 #### Sezioni critiche non cancellabili
 
-Un thread può disabilitare del tutto la cancellazione di se stesso con la funzione `pthread_setcancelstate()`. 
+<p align="justify">
+Un thread può disabilitare del tutto la cancellazione di se stesso con la funzione <code>pthread_setcancelstate()</code>.
+</p>
 
-```c
+<pre><code class="language-c">
 int pthread_setcancelstate(int state, int *oldstate);
-```
+</code></pre>
 
-Il primo argomento è `PTHREAD_CANCEL_DISABLE` per disabilitare la cancellazione o `PTHREAD_CANCEL_ENABLE` per riabilitare la cancellazione. Il secondo argomento, se non è nullo,
-punta a una variabile che riceverà lo stato di cancellazione precedente. Questa chiamata, ad esempio, disabilita l'annullamento del thread nel thread chiamante.
+<p align="justify">
+Il primo argomento è <code>PTHREAD_CANCEL_DISABLE</code> per disabilitare la cancellazione o <code>PTHREAD_CANCEL_ENABLE</code> per riabilitare la cancellazione. Il secondo argomento, se non è nullo, punta a una variabile che riceverà lo stato di cancellazione precedente. Questa chiamata, ad esempio, disabilita l'annullamento del thread nel thread chiamante.
+</p>
 
-```c
+<pre><code class="language-c">
 pthread_setcancelstate (PTHREAD_CANCEL_DISABLE, NULL);
-```
+</code></pre>
 
-**L'utilizzo di `pthread_setcancelstate()` consente di implementare sezioni critiche**. Una **sezione critica** è una sequenza di codice che deve essere eseguita per intero o per niente; in altre parole, se un thread inizia a eseguire la sezione critica, deve continuare fino alla fine della sezione critica senza essere annullato. Ad esempio, supponiamo che tu stia scrivendo una routine per un programma bancario che trasferisce denaro da un conto a un altro. Per fare ciò, devi aggiungere valore al saldo di un conto e detrarre lo stesso valore dal saldo di un altro conto. Se il thread che esegue la tua routine venisse annullato proprio nel momento sbagliato tra queste due operazioni, il programma avrebbe aumentato in modo ingiusto i depositi totali della banca non riuscendo a completare la transazione. Per evitare questa possibilità, inserisci le due operazioni in una sezione critica. Potresti implementare il trasferimento con una funzione come `process_transaction()`, riportata nel paragrafo seguente. Questa funzione disabilita l'annullamento del thread per avviare una sezione critica prima che modifichi il saldo di uno dei due conti.
+<p align="justify">
+<strong>L'utilizzo di <code>pthread_setcancelstate()</code> consente di implementare sezioni critiche</strong>. Una <strong>sezione critica</strong> è una sequenza di codice che deve essere eseguita per intero o per niente; in altre parole, se un thread inizia a eseguire la sezione critica, deve continuare fino alla fine della sezione critica senza essere annullato. Ad esempio, supponiamo che tu stia scrivendo una routine per un programma bancario che trasferisce denaro da un conto a un altro. Per fare ciò, devi aggiungere valore al saldo di un conto e detrarre lo stesso valore dal saldo di un altro conto. Se il thread che esegue la tua routine venisse annullato proprio nel momento sbagliato tra queste due operazioni, il programma avrebbe aumentato in modo ingiusto i depositi totali della banca non riuscendo a completare la transazione. Per evitare questa possibilità, inserisci le due operazioni in una sezione critica. Potresti implementare il trasferimento con una funzione come <code>process_transaction()</code>, riportata nel paragrafo seguente. Questa funzione disabilita l'annullamento del thread per avviare una sezione critica prima che modifichi il saldo di uno dei due conti.
+</p>
 
-```c
+<pre><code class="language-c">
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
 * See COPYRIGHT for license information.                               *
 ***********************************************************************/
 
-#include <pthread.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
+#include &lt;pthread.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+#include &lt;stdlib.h&gt;
 
 /* Parameters to process_transaction function.  */
 
@@ -1494,18 +1601,18 @@ float* account_balances;
 void* process_transaction (void *args)
 {
   struct thread_params *p= (struct thread_params *)args;
-  int from_acct = p->from;
-  int to_acct = p->to;
-  float dollars = p->dollars;
+  int from_acct = p-&gt;from;
+  int to_acct = p-&gt;to;
+  float dollars = p-&gt;dollars;
 
   int old_cancel_state;
 
   /* Check the balance in FROM_ACCT.  */
-  if (account_balances[from_acct] < dollars)
+  if (account_balances[from_acct] &lt; dollars)
     return (void *)1;
 
   /* Begin critical section.  */
-  pthread_setcancelstate (PTHREAD_CANCEL_DISABLE, &old_cancel_state);
+  pthread_setcancelstate (PTHREAD_CANCEL_DISABLE, &amp;old_cancel_state);
   /* Move the money.  */
   account_balances[to_acct] += dollars;
   account_balances[from_acct] -= dollars;
@@ -1536,21 +1643,21 @@ int main() {
   account_balances[8] = 34;
   account_balances[9] = 13;
 
-  for(int i=0; i< 10; i++)
+  for(int i=0; i&lt; 10; i++)
     printf("[%d] %1.f$\n", i, account_balances[i]);
 
-  pthread_create (&thread_id, NULL, &process_transaction, &p);
-  pthread_join (thread_id, (void *) &thread_return_value);
+  pthread_create (&amp;thread_id, NULL, &amp;process_transaction, &amp;p);
+  pthread_join (thread_id, (void *) &amp;thread_return_value);
 
   printf("\n");
-  for(int i=0; i< 10; i++)
+  for(int i=0; i&lt; 10; i++)
     printf("[%d] %1.f$\n", i, account_balances[i]);
 
   return 0;
 }
-```
+</code></pre>
 
-```bash
+<pre><code class="language-bash">
 vagrant@ubuntu2204:/lab2/1_threads$ bin/5_critical_section
 [0] 100$
 [1] 67$
@@ -1573,53 +1680,64 @@ vagrant@ubuntu2204:/lab2/1_threads$ bin/5_critical_section
 [7] 90$
 [8] 34$
 [9] 13$
-```
+</code></pre>
 
-Si noti che è importante ripristinare il vecchio stato di annullamento alla fine della sezione critica piuttosto che impostarlo incondizionatamente su `PTHREAD_CANCEL_ENABLE`. Ciò consente di chiamare la funzione `process_transaction()` in modo sicuro da un'altra sezione critica, in quel caso la funzione setterà lo stato di annullamento nello stesso modo in cui lo ha trovato.
+<p align="justify">
+Si noti che è importante ripristinare il vecchio stato di annullamento alla fine della sezione critica piuttosto che impostarlo incondizionatamente su <code>PTHREAD_CANCEL_ENABLE</code>. Ciò consente di chiamare la funzione <code>process_transaction()</code> in modo sicuro da un'altra sezione critica, in quel caso la funzione setterà lo stato di annullamento nello stesso modo in cui lo ha trovato.
+</p>
 
 
 #### Quando usare la cancellazione del thread
 
+<p align="justify">
 In generale, è una buona idea non usare la cancellazione del thread per terminare l'esecuzione di un thread, tranne in circostanze insolite. Durante il normale funzionamento, una strategia migliore è quella di indicare al thread che dovrebbe uscire e quindi attendere che il thread esca da solo in modo ordinato. Per far questo è necessario conoscere le tecniche di IPC (Interprocess Communication).
+</p>
 
 ### Dati specifici del thread
 
-A differenza dei processi, **tutti i thread in un singolo programma condividono lo stesso spazio di indirizzamento**. Ciò significa che se un thread modifica una posizione nella memoria (ad esempio, una variabile globale), la modifica è visibile a tutti gli altri thread. Ciò consente a più thread di operare sugli stessi dati senza utilizzare meccanismi di comunicazione tra processi. Tuttavia, ogni thread ha il proprio stack di chiamate. Ciò consente a ogni thread di eseguire codice diverso e di chiamare e restituire da subroutine nel modo consueto. Come in un programma a thread singolo, ogni invocazione di una subroutine in ogni thread ha il proprio set di variabili locali, che vengono memorizzate nello stack per quel thread. A volte, tuttavia, è desiderabile duplicare una determinata variabile in modo che ogni thread abbia una copia separata. GNU/Linux supporta ciò **fornendo a ogni thread un'area dati specifica per il thread**. Le variabili memorizzate in quest'area vengono duplicate per ogni thread e ogni thread può modificare la propria copia di una variabile senza influenzare gli altri thread. Poiché tutti i thread condividono lo stesso spazio di memoria, **i dati specifici del thread potrebbero non essere accessibili tramite normali riferimenti alle variabili**. GNU/Linux fornisce funzioni speciali per impostare e recuperare valori dall'area dati specifica del thread.
+<p align="justify">
+A differenza dei processi, <strong>tutti i thread in un singolo programma condividono lo stesso spazio di indirizzamento</strong>. Ciò significa che se un thread modifica una posizione nella memoria (ad esempio, una variabile globale), la modifica è visibile a tutti gli altri thread. Ciò consente a più thread di operare sugli stessi dati senza utilizzare meccanismi di comunicazione tra processi. Tuttavia, ogni thread ha il proprio stack di chiamate. Ciò consente a ogni thread di eseguire codice diverso e di chiamare e restituire da subroutine nel modo consueto. Come in un programma a thread singolo, ogni invocazione di una subroutine in ogni thread ha il proprio set di variabili locali, che vengono memorizzate nello stack per quel thread. A volte, tuttavia, è desiderabile duplicare una determinata variabile in modo che ogni thread abbia una copia separata. GNU/Linux supporta ciò <strong>fornendo a ogni thread un'area dati specifica per il thread</strong>. Le variabili memorizzate in quest'area vengono duplicate per ogni thread e ogni thread può modificare la propria copia di una variabile senza influenzare gli altri thread. Poiché tutti i thread condividono lo stesso spazio di memoria, <strong>i dati specifici del thread potrebbero non essere accessibili tramite normali riferimenti alle variabili</strong>. GNU/Linux fornisce funzioni speciali per impostare e recuperare valori dall'area dati specifica del thread.
+</p>
 
-Puoi creare tutti gli elementi dati specifici del thread che vuoi, ognuno di tipo `void *`.
-Ogni elemento è identificato da una chiave. Per creare una nuova chiave, e quindi un nuovo elemento dati per ogni thread, usa **pthread_key_create()**. 
+<p align="justify">
+Puoi creare tutti gli elementi dati specifici del thread che vuoi, ognuno di tipo <code>void *</code>. Ogni elemento è identificato da una chiave. Per creare una nuova chiave, e quindi un nuovo elemento dati per ogni thread, usa <strong>pthread_key_create()</strong>.
+</p>
 
-```c
+<pre><code class="language-c">
 int pthread_key_create(pthread_key_t *key, void (*destructor)(void*));
-```
+</code></pre>
 
-Il primo argomento è un puntatore a una variabile di tipo **pthread_key_t**. Quel valore chiave può essere usato da ogni thread per accedere alla propria copia dell'elemento dati corrispondente.
-Il secondo argomento dopo `pthread_key_t` è una funzione di pulizia (cleanup function). Se passi un puntatore a funzione qui, GNU/Linux chiama automaticamente quella funzione quando il thread esce, passando il valore specifico del thread corrispondente
-a quella chiave. Ciò è particolarmente utile perché la funzione di pulizia viene chiamata anche se il thread viene annullato in un punto arbitrario della sua esecuzione. Se il valore specifico del thread è `NULL`, la funzione di pulizia del thread non viene chiamata. Se non hai bisogno di una funzione di pulizia, puoi passare `NULL` invece di un puntatore a funzione. **Dopo aver creato una chiave**, **ogni thread può impostare il suo valore specifico del thread corrispondente a quella chiave** chiamando **pthread_setspecific()**.
+<p align="justify">
+Il primo argomento è un puntatore a una variabile di tipo <strong>pthread_key_t</strong>. Quel valore chiave può essere usato da ogni thread per accedere alla propria copia dell'elemento dati corrispondente. Il secondo argomento dopo <code>pthread_key_t</code> è una funzione di pulizia (cleanup function). Se passi un puntatore a funzione qui, GNU/Linux chiama automaticamente quella funzione quando il thread esce, passando il valore specifico del thread corrispondente a quella chiave. Ciò è particolarmente utile perché la funzione di pulizia viene chiamata anche se il thread viene annullato in un punto arbitrario della sua esecuzione. Se il valore specifico del thread è <code>NULL</code>, la funzione di pulizia del thread non viene chiamata. Se non hai bisogno di una funzione di pulizia, puoi passare <code>NULL</code> invece di un puntatore a funzione. <strong>Dopo aver creato una chiave</strong>, <strong>ogni thread può impostare il suo valore specifico del thread corrispondente a quella chiave</strong> chiamando <strong>pthread_setspecific()</strong>.
+</p>
 
-```c
+<pre><code class="language-c">
 int pthread_setspecific(pthread_key_t key, const void *value);
-```
+</code></pre>
 
-Il primo argomento è la chiave e il secondo è il valore specifico del thread (di tipo void*) da memorizzare. Per recuperare un elemento dati specifico del thread, chiama **pthread_getspecific()**, passando la chiave come argomento. 
+<p align="justify">
+Il primo argomento è la chiave e il secondo è il valore specifico del thread (di tipo void*) da memorizzare. Per recuperare un elemento dati specifico del thread, chiama <strong>pthread_getspecific()</strong>, passando la chiave come argomento.
+</p>
 
-```c
+<pre><code class="language-c">
 void *pthread_getspecific(pthread_key_t key);
-```
+</code></pre>
 
-Supponiamo, ad esempio, che l'applicazione divida un'attività tra più thread. Ogni thread deve avere un file di registro separato, in cui vengono registrati i messaggi di avanzamento per le attività di quel thread. L'area dati specifica del thread è un posto comodo per memorizzare il puntatore al file di registro di ogni singolo thread. 
+<p align="justify">
+Supponiamo, ad esempio, che l'applicazione divida un'attività tra più thread. Ogni thread deve avere un file di registro separato, in cui vengono registrati i messaggi di avanzamento per le attività di quel thread. L'area dati specifica del thread è un posto comodo per memorizzare il puntatore al file di registro di ogni singolo thread.
+</p>
 
 
-```c
+<pre><code class="language-c">
 /***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
 * See COPYRIGHT for license information.                               *
 ***********************************************************************/
 
-#include <malloc.h>
-#include <pthread.h>
-#include <stdio.h>
+#include &lt;malloc.h&gt;
+#include &lt;pthread.h&gt;
+#include &lt;stdio.h&gt;
 
 /* The key used to associate a log file pointer with each thread.  */
 static pthread_key_t thread_log_key;
@@ -1668,45 +1786,53 @@ int main ()
   /* Create a key to associate thread log file pointers in
      thread-specific data.  Use close_thread_log to clean up the file
      pointers.  */
-  pthread_key_create (&thread_log_key, close_thread_log);
+  pthread_key_create (&amp;thread_log_key, close_thread_log);
   /* Create threads to do the work.  */
-  for (i = 0; i < 5; ++i)
-    pthread_create (&(threads[i]), NULL, thread_function, NULL);
+  for (i = 0; i &lt; 5; ++i)
+    pthread_create (&amp;(threads[i]), NULL, thread_function, NULL);
   /* Wait for all threads to finish.  */
-  for (i = 0; i < 5; ++i)
+  for (i = 0; i &lt; 5; ++i)
     pthread_join (threads[i], NULL);
   return 0;
 }
-```
+</code></pre>
 
 
-La funzione principale in questo programma di esempio crea una chiave per memorizzare il puntatore del file specifico del thread e quindi lo memorizza in **thread_log_key**. Poiché si tratta di una variabile globale, è condivisa da tutti i thread. Quando ogni thread inizia a eseguire la sua funzione thread, apre un file di registro e memorizza il relativo puntatore del file associato a quella chiave. In seguito, uno qualsiasi di questi thread può chiamare **write_to_thread_log()** per scrivere un messaggio nel file di registro specifico del thread. Tale funzione recupera il puntatore del file per il file di registro del thread dai dati specifici del thread e scrive il messaggio.
+<p align="justify">
+La funzione principale in questo programma di esempio crea una chiave per memorizzare il puntatore del file specifico del thread e quindi lo memorizza in <strong>thread_log_key</strong>. Poiché si tratta di una variabile globale, è condivisa da tutti i thread. Quando ogni thread inizia a eseguire la sua funzione thread, apre un file di registro e memorizza il relativo puntatore del file associato a quella chiave. In seguito, uno qualsiasi di questi thread può chiamare <strong>write_to_thread_log()</strong> per scrivere un messaggio nel file di registro specifico del thread. Tale funzione recupera il puntatore del file per il file di registro del thread dai dati specifici del thread e scrive il messaggio.
+</p>
 
-Si noti che **thread_function()** non ha bisogno di chiudere il file di registro. Questo perché quando è stata creata la chiave del file di registro, **close_thread_log()** è stato specificato come funzione di pulizia per quella chiave. Ogni volta che un thread esce, GNU/Linux chiama quella funzione, passando il valore specifico del thread per la chiave del registro del thread. Questa funzione si occupa di chiudere il file di registro.
+<p align="justify">
+Si noti che <strong>thread_function()</strong> non ha bisogno di chiudere il file di registro. Questo perché quando è stata creata la chiave del file di registro, <strong>close_thread_log()</strong> è stato specificato come funzione di pulizia per quella chiave. Ogni volta che un thread esce, GNU/Linux chiama quella funzione, passando il valore specifico del thread per la chiave del registro del thread. Questa funzione si occupa di chiudere il file di registro.
+</p>
 
 ### Gestori di pulizia (Cleanup Handler)
 
-Le funzioni di pulizia per chiavi dati specifiche del thread possono essere molto utili per garantire che le risorse non vengano perse quando un thread esce o viene annullato. A volte, tuttavia, è utile poter specificare funzioni di pulizia senza creare un nuovo elemento dati specifico del thread duplicato per ogni thread. GNU/Linux fornisce gestori di pulizia a questo scopo. **Un gestore di pulizia è semplicemente una funzione che dovrebbe essere chiamata quando un thread esce**. Il gestore accetta un singolo parametro `void *` e il suo valore di argomento viene fornito quando il gestore viene registrato; questo semplifica l'utilizzo della stessa funzione di pulizia per gestire più istanze di risorse. **Un gestore di pulizia è una misura temporanea**, **utilizzata per deallocare una risorsa solo se il thread esce o viene annullato** anziché terminare l'esecuzione di una particolare regione di codice. **In circostanze normali, quando il thread non esce e non viene annullato, la risorsa dovrebbe essere deallocata in modo esplicito** e il gestore di pulizia dovrebbe essere rimosso. Per registrare un gestore di pulizia, chiama **pthread_cleanup_push()**, passando un puntatore alla funzione di pulizia e il valore del suo argomento `void *`. La chiamata a pthread_cleanup_push deve essere bilanciata da una chiamata corrispondente a pthread_cleanup_pop, che annulla la registrazione del gestore di pulizia. 
+<p align="justify">
+Le funzioni di pulizia per chiavi dati specifiche del thread possono essere molto utili per garantire che le risorse non vengano perse quando un thread esce o viene annullato. A volte, tuttavia, è utile poter specificare funzioni di pulizia senza creare un nuovo elemento dati specifico del thread duplicato per ogni thread. GNU/Linux fornisce gestori di pulizia a questo scopo. <strong>Un gestore di pulizia è semplicemente una funzione che dovrebbe essere chiamata quando un thread esce</strong>. Il gestore accetta un singolo parametro <code>void *</code> e il suo valore di argomento viene fornito quando il gestore viene registrato; questo semplifica l'utilizzo della stessa funzione di pulizia per gestire più istanze di risorse. <strong>Un gestore di pulizia è una misura temporanea</strong>, <strong>utilizzata per deallocare una risorsa solo se il thread esce o viene annullato</strong> anziché terminare l'esecuzione di una particolare regione di codice. <strong>In circostanze normali, quando il thread non esce e non viene annullato, la risorsa dovrebbe essere deallocata in modo esplicito</strong> e il gestore di pulizia dovrebbe essere rimosso. Per registrare un gestore di pulizia, chiama <strong>pthread_cleanup_push()</strong>, passando un puntatore alla funzione di pulizia e il valore del suo argomento <code>void *</code>. La chiamata a pthread_cleanup_push deve essere bilanciata da una chiamata corrispondente a pthread_cleanup_pop, che annulla la registrazione del gestore di pulizia.
+</p>
 
-```c
+<pre><code class="language-c">
 void pthread_cleanup_push(void (*routine)(void *), void *arg);
-```
+</code></pre>
 
-```c
+<pre><code class="language-c">
 void pthread_cleanup_pop(int execute);
-```
+</code></pre>
 
-Per comodità, `pthread_cleanup_pop()` accetta un argomento flag int; se il flag è diverso da zero, l'azione di pulizia viene effettivamente eseguita. Il frammento di programma seguente mostra come è possibile utilizzare un gestore di pulizia per assicurarsi che un buffer allocato dinamicamente venga ripulito se il thread termina.
+<p align="justify">
+Per comodità, <code>pthread_cleanup_pop()</code> accetta un argomento flag int; se il flag è diverso da zero, l'azione di pulizia viene effettivamente eseguita. Il frammento di programma seguente mostra come è possibile utilizzare un gestore di pulizia per assicurarsi che un buffer allocato dinamicamente venga ripulito se il thread termina.
+</p>
 
-```c
+<pre><code class="language-c">
 ***********************************************************************
 * Code listing from "Advanced Linux Programming," by CodeSourcery LLC  *
 * Copyright (C) 2001 by New Riders Publishing                          *
 * See COPYRIGHT for license information.                               *
 ***********************************************************************/
-#include <stdio.h>
-#include <malloc.h>
-#include <pthread.h>
+#include &lt;stdio.h&gt;
+#include &lt;malloc.h&gt;
+#include &lt;pthread.h&gt;
 
 /* Allocate a temporary buffer.  */
 
@@ -1744,12 +1870,12 @@ void* do_some_work ()
 
 int main(void){
   pthread_t allocator_thread;
-  pthread_create(&allocator_thread, NULL, do_some_work, NULL);
+  pthread_create(&amp;allocator_thread, NULL, do_some_work, NULL);
   pthread_join(allocator_thread, NULL);
   return 0;
 
 }
-```
+</code></pre>
 
 ### Sincronizzazione e Sezioni Critiche
 
