@@ -5785,7 +5785,7 @@ Anche in questo caso possiamo scordarci di <code>\0</code>.
 ### Dettagli sull'inizializzazione
 
 <p align="justify">
-Anche se esistono due modi diversi per dichiarare una stringa (il primo pensandola come un array di caratteri e il secondo pensandola come un literal puntato da un puntatore a carattere), esistono delle differenze sottili tra i due metodi che vanno oltre il non doversi preoccupare di allocare spazio per '\0'. Vediamole in questo esempio:
+Anche se esistono due modi diversi per dichiarare una stringa (il primo pensandola come un array di caratteri e il secondo pensandola come un literal puntato da un puntatore a carattere), esistono delle differenze sottili tra i due metodi che vanno oltre il non doversi preoccupare di allocare spazio per <code>\0</code>. Vediamole in questo esempio:
 </p>
 
 ```c
