@@ -3754,8 +3754,13 @@ se sommiamo 1 otteniamo $10000$ ma la rappresentazione è a 4 bit ed il primo bi
 </div>
 
 
-> [!IMPORTANT]
-> Una qualunque operazione aritmetica su interi si dice in <strong>overflow</strong> quando l'intero risultante dall'operazione ha una dimensione in bit superiore alla dimensione massima (in bit) del tipo di dato. I bit eccedenti sono semplicemente scartati.
+<table align="center">
+	<td>:exclamation: <b>Importante</b>
+	<p align=justify>
+ Una qualunque operazione aritmetica su interi si dice in <strong>overflow</strong> quando l'intero risultante dall'operazione ha una dimensione in bit superiore alla dimensione massima (in bit) del tipo di dato. I bit eccedenti sono semplicemente scartati.
+	</p>
+	</td>
+</table>
 
 # Rappresentazione binaria `int`
 
@@ -3845,9 +3850,16 @@ signed negative: 0xffffffe5
 Il cast è una conversione esplicita di tipo e prevede un proprio operatore. Esistono altri tipi di <strong>conversioni di tipo</strong>: conversione automatica e conversione per assegnamento.
 </p>
 
-> [!IMPORTANT]
-> <strong>Conversione automatica</strong>
-> Le conversioni automatiche prevedono che nelle espressioni che coinvolgono costanti o variabili di tipo diverso il tipo del risultato sia pari a quello dell'operando più capiente in termini di bit
+<table align="center">
+	<td>:exclamation: <b>Importante</b>
+	<p align=justify>
+ <strong>Conversione automatica</strong>
+	</p>
+	<p align=justify>
+ Le conversioni automatiche prevedono che nelle espressioni che coinvolgono costanti o variabili di tipo diverso il tipo del risultato sia pari a quello dell'operando più capiente in termini di bit
+	</p>
+	</td>
+</table>
 
 <p align="justify">
 Nel codice seguente il valore che viene stampato è 1, la divisione è tra due interi quindi il risultato anche se è un numero reale (con parte decimale) sarà di tipo intero e la parte decimale verrà troncata.
@@ -3868,9 +3880,16 @@ double y = 5;
 printf("%lf\n", x/y);
 ```
 
-> [!IMPORTANT]
-> <strong>Conversione per assegnamento</strong>
-> il valore assegnato viene convertito nel tipo dell'espressione a sinistra dell'operatore di assegnamento (detto <strong>lvalue</strong>)
+<table align="center">
+	<td>:exclamation: <b>Importante</b>
+	<p align=justify>
+ <strong>Conversione per assegnamento</strong>
+	</p>
+	<p align=justify>
+ il valore assegnato viene convertito nel tipo dell'espressione a sinistra dell'operatore di assegnamento (detto <strong>lvalue</strong>)
+	</p>
+	</td>
+</table>
 
 ```c
 int n1, n2;
@@ -3917,9 +3936,16 @@ int a = 259;
 n = a;
 ```
 
-> [!IMPORTANT]
-> <strong>Conversione esplicita: CAST</strong>
-> Le conversioni esplicite vengono effettuate usando l'operatore di cast. L'operatore di cast è costituito dalla parentesi tonde `(` `)` e questa è la sua sintassi
+<table align="center">
+	<td>:exclamation: <b>Importante</b>
+	<p align=justify>
+ <strong>Conversione esplicita: CAST</strong>
+	</p>
+	<p align=justify>
+ Le conversioni esplicite vengono effettuate usando l'operatore di cast. L'operatore di cast è costituito dalla parentesi tonde <code>(</code> <code>)</code> e questa è la sua sintassi
+	</p>
+	</td>
+</table>
 
 ```(nome_del_tipo) espr_da_castare```
 
@@ -3942,8 +3968,13 @@ printf("%lf\n", (double)(x/y));
 il valore stampato sarebbe 1.0 perché prima viene effettuata la divisione tra <code>int</code> e il risultato è un <code>int</code> pari a 1, poi questo intero viene trasformato in <code>double</code>.
 </p>
 
-> [!NOTE]
-> Quando si effettua il cast di una variabile i bit memorizzati non vengono alterati in alcun modo
+<table align="center">
+	<td>:pill: <b>Nota</b>
+	<p align=justify>
+ Quando si effettua il cast di una variabile i bit memorizzati non vengono alterati in alcun modo
+	</p>
+	</td>
+</table>
 
 
 #### Cast tra `signed` e `unsigned`
@@ -4074,8 +4105,13 @@ int main(void){
 }
 ```
 
-> [!CAUTION]
-> **Gestione delle espressioni contenenti combinazioni di valori signed ed unsigned**: quando un'operazione è calcolata e un operando è signed e l'altro unsigned, C implicitamente casta il valore signed ad unsigned e solo dopo calcola l'operazione
+<table align="center">
+	<td>&#9888; <b>Attenzione</b>
+	<p align=justify>
+ <strong>Gestione delle espressioni contenenti combinazioni di valori signed ed unsigned</strong>: quando un'operazione è calcolata e un operando è signed e l'altro unsigned, C implicitamente casta il valore signed ad unsigned e solo dopo calcola l'operazione
+	</p>
+	</td>
+</table>
 
 <p align="justify">
 Le costanti unsigned si specificano la lettera U, nell'esempio seguente i due operandi dell'espressioni sono diversi (signed ed unsigned): prima -1 (valore signed) viene trasformato in signed ($-1{unsigned} = -1 + (UMax + 1) = -1 + (4294967295 + 1) = 4294967295 = UMax$
@@ -4411,8 +4447,13 @@ int main(void){
 L'operatore ritorna il numero di byte occupati dal suo operando. L'operatore può essere sia una variabile sia il nome di un tipo. Il valore tornato da <code>sizeof</code> è di tipo <code>size_t</code> che è semplicemente un <code>unsigned int</code> o un <code>unsigned long</code> che è stato ridefinito con <code>typedef</code>.
 </p>
 
-> [!NOTE]
-> **typedef** permette di definire un alias per un tipo di dato, per esempio `typedef unsigned int positivo` associa l'alias `positivo` al tipo `unsigned int` in modo da poter dichiarare variabili intere positive in entrambi i seguenti modi: `unsigned int a`, `positivo a`.
+<table align="center">
+	<td>:pill: <b>Nota</b>
+	<p align=justify>
+ <strong>typedef</strong> permette di definire un alias per un tipo di dato, per esempio <code>typedef unsigned int positivo</code> associa l'alias <code>positivo</code> al tipo <code>unsigned int</code> in modo da poter dichiarare variabili intere positive in entrambi i seguenti modi: <code>unsigned int a</code>, <code>positivo a</code>.
+	</p>
+	</td>
+</table>
 
 
 ```c
@@ -4590,8 +4631,13 @@ if ( espr ) istr
 Se la condizione è vera (cioè diversa da zero) viene eseguito il blocco di istruzioni <code>istr</code>, altrimenti si prosegue con l'elaborazione.
 </p>
 
-> [!NOTE]
-> Come tutti gli altri costrutti, il blocco `istr` può rappresentare una singola istruzione, un altro costrutto di controllo, oppure un blocco di istruzioni racchiuse tra parentesi graffe
+<table align="center">
+	<td>:pill: <b>Nota</b>
+	<p align=justify>
+ Come tutti gli altri costrutti, il blocco <code>istr</code> può rappresentare una singola istruzione, un altro costrutto di controllo, oppure un blocco di istruzioni racchiuse tra parentesi graffe
+	</p>
+	</td>
+</table>
 
 <p align="justify">
 il costrutto <code>if</code> ammette l'enunciato opzionale <code>else</code> in questa forma:
@@ -4777,8 +4823,13 @@ switch ( espressione-intera ) {
 Le parentesi quadre <code>[</code>, <code>]</code> indicano parti del costrutto opzionali. Le <strong>parentesi graffe sono obbligatorie</strong>, <code>case</code> e <code>default</code> sono parole chiave. Il costrutto permette di eseguire un'istruzione o una serie di istruzioni sulla base del valore di <code>espressione-intera</code>, l'esecuzione salta al case corrispondente al valore di <code>espressione-intera</code>. Se nessun <code>case</code> corrisponde ad <code>espressione-intera</code> viene eseguita la clausola <code>default</code> (se presente).
 </p>
 
-> [!NOTE]
-> Le espressioni di ogni `case` devono essere **espressioni intere e costanti**
+<table align="center">
+	<td>:pill: <b>Nota</b>
+	<p align=justify>
+ Le espressioni di ogni <code>case</code> devono essere <strong>espressioni intere e costanti</strong>
+	</p>
+	</td>
+</table>
 
 <ul>
   <li>
@@ -4942,8 +4993,13 @@ thing_ptr = &thing; /* ora  nella  locazione di  memoria rappresentata da thing_
 Una volta che abbiamo inizializzato <code>thing_ptr</code> all'indirizzo di memoria di <code>thing</code> possiamo accedere al contenuto di <code>thing</code> (leggerlo e modificarlo) attraverso <code>thing_ptr</code>, usando l'operatore <code>*</code> (<strong>operatore di dereferenziazione</strong>).
 </p>
 
-> [!NOTE]
-> L'operazione di accesso alla locazione di memoria di una variabile attraverso un puntatore è detta **dereferenziazione**; per questo motivo `*` è detto **operatore di dereferenziazione**.
+<table align="center">
+	<td>:pill: <b>Nota</b>
+	<p align=justify>
+ L'operazione di accesso alla locazione di memoria di una variabile attraverso un puntatore è detta <strong>dereferenziazione</strong>; per questo motivo <code>*</code> è detto <strong>operatore di dereferenziazione</strong>.
+	</p>
+	</td>
+</table>
 
 <p align="justify">
 Una variabile puntatore può essere pensata come una freccia che punta a una cella di memoria (a un'altra variabile).
@@ -5240,13 +5296,27 @@ vettore[2] = 3
 vettore[9] = 10 // ultimo elemento del vettore, assume valore 10
 ```
 
-> [!IMPORTANT]
-> **Limiti indicizzazione di un vettore**
-> Dato un vettore di cardinalità N (N elementi contigui in memoria) il primo elemento avrà indice **0**, l'ultimo elemento avrà indice **N - 1**. Se si accede oltre il limite massimo il comportamento del programma è indefinito quindi non bisogna mai accedere a una cella di memoria oltre il limite dell'indice massimo.
+<table align="center">
+	<td>:exclamation: <b>Importante</b>
+	<p align=justify>
+ <strong>Limiti indicizzazione di un vettore</strong>
+	</p>
+	<p align=justify>
+ Dato un vettore di cardinalità N (N elementi contigui in memoria) il primo elemento avrà indice <strong>0</strong>, l'ultimo elemento avrà indice <strong>N - 1</strong>. Se si accede oltre il limite massimo il comportamento del programma è indefinito quindi non bisogna mai accedere a una cella di memoria oltre il limite dell'indice massimo.
+	</p>
+	</td>
+</table>
 
-> [!IMPORTANT]
-> **Nome del vettore**
-> Il nome (identificatore) di un vettore contiene l'indirizzo del primo elemento del vettore, in particolare è un **puntatore costante** al **primo elemento del vettore**. Questo vuol dire che per accedere all'elemento i-esimo entrambe le sintassi seguenti sono lecite
+<table align="center">
+	<td>:exclamation: <b>Importante</b>
+	<p align=justify>
+ <strong>Nome del vettore</strong>
+	</p>
+	<p align=justify>
+ Il nome (identificatore) di un vettore contiene l'indirizzo del primo elemento del vettore, in particolare è un <strong>puntatore costante</strong> al <strong>primo elemento del vettore</strong>. Questo vuol dire che per accedere all'elemento i-esimo entrambe le sintassi seguenti sono lecite
+	</p>
+	</td>
+</table>
 
 ```c
 #include<stdio.h>
@@ -5616,8 +5686,13 @@ Il linguaggio C non ha un tipo predefinito per le stringhe, queste vengono imple
 <strong>Una costante stringa come quella precedente è trattata dal compilatore come un puntatore a carattere</strong> quindi per assegnare una costante stringa a una variabile abbiamo due possibilità. La prima è dichiarare un array di caratteri sufficientemente capiente per contenere tutti i caratteri della stringa. Tutte le stringhe vengono terminate (ultimo elemento della stringa) dal carattere <code>\0</code> detto di fine stringa, che ovviamente non è stampabile ma serve per delimitare la fine della stringa. Nel calcolo della dimensione del vettore di caratteri che conterrà la stringa dobbiamo quindi tenere conto del <code>\0</code> e aumentare la dimensione di 1; per esempio: la stringa "ciao" è composta da quattro caratteri, dobbiamo dichiarare un array di 5 caratteri per ospitare anche il carattere <code>\0</code>, in questo modo:
 </p>
 
-> [!NOTE]
-> Il carattere di fine stringa `\0` è diverso dal carattere '0' (il valore in ASCII del carattere '0' è 48). `\0` in ASCII ha valore 0.
+<table align="center">
+	<td>:pill: <b>Nota</b>
+	<p align=justify>
+ Il carattere di fine stringa <code>\0</code> è diverso dal carattere '0' (il valore in ASCII del carattere '0' è 48). <code>\0</code> in ASCII ha valore 0.
+	</p>
+	</td>
+</table>
 
 ```c
 #include<stdio.h>
@@ -5641,8 +5716,13 @@ c       i       a       o
 99      105     97      111     0
 ```
 
-> [!CAUTION]
-> I doppi apici `"` devono essere utilizzati per le stringhe, i singoli apici `'` per i caratteri. Fai attenzione a non scambiare i simboli tra loro.
+<table align="center">
+	<td>&#9888; <b>Attenzione</b>
+	<p align=justify>
+ I doppi apici <code>"</code> devono essere utilizzati per le stringhe, i singoli apici <code>'</code> per i caratteri. Fai attenzione a non scambiare i simboli tra loro.
+	</p>
+	</td>
+</table>
 
 <p align="justify">
 Un'altra possibilità per assegnare una costante stringa a una variabile è quella di utilizzare una variabile di tipo puntatore a carattere <code>char *</code> in questo modo:
@@ -5826,8 +5906,13 @@ tipo-valore-ritorno nome-funzione(tipo-parametro-1, ..., tipo-parametro-N)
 Specificare i nomi dei parametri aiuta chi legge il codice a comprendere il tipo di operazioni che la funzione svolge, è cosa buona e giusta aggiungerli nella dichiarazione della funzione (nel prototipo).
 </p>
 
-> [!IMPORTANT]
-> **Prototipo** di funzione: consiste nel tipo di ritorno, nel nome della funzione e nella lista dei tipi dei parametri in ingresso (se presenti)
+<table align="center">
+	<td>:exclamation: <b>Importante</b>
+	<p align=justify>
+ <strong>Prototipo</strong> di funzione: consiste nel tipo di ritorno, nel nome della funzione e nella lista dei tipi dei parametri in ingresso (se presenti)
+	</p>
+	</td>
+</table>
 
 <p align="justify">
 Tutto il codice compreso tra le parentesi graffe <code>{</code> <code>}</code> è il <strong>corpo</strong> (body) della funzione:
@@ -5925,8 +6010,13 @@ void do_nothing(void){
 }
 ```
 
-> [!CAUTION]
-> Un programma in linguaggio C deve almeno contenere la definizione della funzione main(), da cui inizia l'esecuzione del programma.
+<table align="center">
+	<td>&#9888; <b>Attenzione</b>
+	<p align=justify>
+ Un programma in linguaggio C deve almeno contenere la definizione della funzione main(), da cui inizia l'esecuzione del programma.
+	</p>
+	</td>
+</table>
 
 ### Chiamata di funzione
 
@@ -5987,8 +6077,13 @@ vagrant@ubuntu2204:/lab/9_functions$ bin/0_functions
 I parametri di ingresso di una funzione sono <strong>passati sempre per valore</strong>: la funzione utilizza <strong>una nuova variabile</strong> (nello stack della funzione) per immagazzinare <strong>una copia del valore</strong> contenuto nella variabile passata come parametro in ingresso alla funzione dal chiamante. Anche se dentro la funzione il valore passato in ingresso viene alterato (incremento/decremento etc), siccome questo valore è stato copiato in una variabile diversa rispetto a quella passata in ingresso dal chiamante, il valore nella variabile del chiamante rimane inalterato; sarà modificato il valore nella variabile (nuova) allocata nello stack della funzione quando questa è stata invocata.
 </p>
 
-> [!IMPORTANT]
-> Le variabili allocate all'interno di una funzione sono **locali** alla funzione. La memoria per queste variabili viene allocata solo al momento dell'invocazione della funzione e questa memoria è accessibile solo all'interno della funzione. Quando la funzione termina la memoria viene completamente deallocata. Questa porzione di memoria usata per variabili locali delle funzioni è detta **stack**. Lo **stack** cresce verso il basso: l'allocazione della memoria sullo stack avviene partendo dagli indirizzi più alti verso gli indirizzi più bassi. La deallocazione della memoria sullo stack avviene partendo dall'ultimo elemento allocato fino al primo procedendo quindi in ordine inverso rispetto all'ordine di allocazione. Lo stack viene utilizzato per memorizzare l'indirizzo di ritorno della funzione (l'indirizzo dell'istruzione successiva del chiamante), il valore dei parametri di ritorno e dei parametri in ingresso alla funzione e per allocare la memoria per tutte le variabili locali della funzione stessa. Lo spazio sullo stack per la funzione viene allocato al momento dell'invocazione della funzione e deallocato al termine della sua esecuzione (ultima istruzione della funzione o chiamata a `return`).
+<table align="center">
+	<td>:exclamation: <b>Importante</b>
+	<p align=justify>
+ Le variabili allocate all'interno di una funzione sono <strong>locali</strong> alla funzione. La memoria per queste variabili viene allocata solo al momento dell'invocazione della funzione e questa memoria è accessibile solo all'interno della funzione. Quando la funzione termina la memoria viene completamente deallocata. Questa porzione di memoria usata per variabili locali delle funzioni è detta <strong>stack</strong>. Lo <strong>stack</strong> cresce verso il basso: l'allocazione della memoria sullo stack avviene partendo dagli indirizzi più alti verso gli indirizzi più bassi. La deallocazione della memoria sullo stack avviene partendo dall'ultimo elemento allocato fino al primo procedendo quindi in ordine inverso rispetto all'ordine di allocazione. Lo stack viene utilizzato per memorizzare l'indirizzo di ritorno della funzione (l'indirizzo dell'istruzione successiva del chiamante), il valore dei parametri di ritorno e dei parametri in ingresso alla funzione e per allocare la memoria per tutte le variabili locali della funzione stessa. Lo spazio sullo stack per la funzione viene allocato al momento dell'invocazione della funzione e deallocato al termine della sua esecuzione (ultima istruzione della funzione o chiamata a <code>return</code>).
+	</p>
+	</td>
+</table>
 		
 <p align="justify">
 Cerchiamo di capire con un esempio:
@@ -6098,8 +6193,13 @@ valore dopo     l'invocazione: 103
 risultato                    : 103
 ```
 
-> [!IMPORTANT]
-> L'utilizzo della tecnica del passaggio di parametri per indirizzo permette al programmatore di:
+<table align="center">
+	<td>:exclamation: <b>Importante</b>
+	<p align=justify>
+ L'utilizzo della tecnica del passaggio di parametri per indirizzo permette al programmatore di:
+	</p>
+	</td>
+</table>
 <ul>
   <li>
     <p align="justify">
@@ -6243,9 +6343,16 @@ o anche esplicitamente
 
 ```
 
-> [!CAUTION]
-> Tutta la memoria allocata dinamicamente deve essere rilasciata quando non più necessaria. A questo scopo si richiama la funzione free() che accetta come parametro un puntatore contenente la memoria da deallocare.
-> Chiamare free() su un puntatore non allocato o precedentemente deallocato può portare a comportamenti del programma imprevedibili. Chiamare free() su un puntatore nullo (`NULL`) non ha alcun effetto.
+<table align="center">
+	<td>&#9888; <b>Attenzione</b>
+	<p align=justify>
+ Tutta la memoria allocata dinamicamente deve essere rilasciata quando non più necessaria. A questo scopo si richiama la funzione free() che accetta come parametro un puntatore contenente la memoria da deallocare.
+	</p>
+	<p align=justify>
+ Chiamare free() su un puntatore non allocato o precedentemente deallocato può portare a comportamenti del programma imprevedibili. Chiamare free() su un puntatore nullo (<code>NULL</code>) non ha alcun effetto.
+	</p>
+	</td>
+</table>
 
 ```c
 #include<stdio.h>
@@ -17313,8 +17420,13 @@ int kill(pid_t pid, int sig);
 Devi includere <code>&lt;sys/types.h&gt;</code> e <code>&lt;signal.h</code> per utilizzare la funzione <code>kill()</code>.
 </p>
 
-> [!IMPORTANT]
-> Per convenzione, **exit code** è usato per indicare se il programma ha terminato la sua esecuzione correttamente o con degli errori. Un valore pari a zero indica una corretta esecuzione mentre valori diversi da zero indicano che il processo ha terminato con qualche errore. E' importante seguire questa convenzione se vuoi usare gli operatori logici della shell (`&&` `||`) per concatenare più programmi tra loro.
+<table align="center">
+	<td>:exclamation: <b>Importante</b>
+	<p align=justify>
+ Per convenzione, <strong>exit code</strong> è usato per indicare se il programma ha terminato la sua esecuzione correttamente o con degli errori. Un valore pari a zero indica una corretta esecuzione mentre valori diversi da zero indicano che il processo ha terminato con qualche errore. E' importante seguire questa convenzione se vuoi usare gli operatori logici della shell (<code>&amp;&amp;</code> <code>||</code>) per concatenare più programmi tra loro.
+	</p>
+	</td>
+</table>
 
 <p align="justify">
 Puoi leggere l'<strong>exit code</strong> dell'ultimo programma lanciato sulla shell stampando il contenuto della variabile <code>$?</code> per esempio
@@ -19256,9 +19368,16 @@ Esegui il programma in background, quindi richiama <code>ps x</code> per visuali
  [1]+  Terminated              ./thread-pid
 ```
 
-> [!NOTE]
-> Notifica del controllo del job nella shell
-> Le righe che iniziano con [1] provengono dalla shell. Quando esegui un programma in background, la shell gli assegna un numero di job, in questo caso 1, e stampa il pid del programma. Se un job in background termina, la shell segnala tale fatto la volta successiva che invochi un comando
+<table align="center">
+	<td>:pill: <b>Nota</b>
+	<p align=justify>
+ Notifica del controllo del job nella shell
+	</p>
+	<p align=justify>
+ Le righe che iniziano con [1] provengono dalla shell. Quando esegui un programma in background, la shell gli assegna un numero di job, in questo caso 1, e stampa il pid del programma. Se un job in background termina, la shell segnala tale fatto la volta successiva che invochi un comando
+	</p>
+	</td>
+</table>
 
 <p align="justify">
 Nota che ci sono tre processi che eseguono il programma thread-pid. Il primo di questi, con pid 14608, è il thread principale nel programma; il terzo, con pid 14610, è il thread che abbiamo creato per eseguire thread_function. E il secondo thread, con pid 14609? Questo è il "thread del gestore", che fa parte dell'implementazione interna dei thread GNU/Linux. Il thread del gestore viene creato la prima volta che un programma chiama pthread_create per creare un nuovo thread.
@@ -19321,6 +19440,7 @@ la memoria.
     </p>
   </li>
 </ul>
+
 
 
 
