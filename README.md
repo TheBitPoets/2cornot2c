@@ -3749,7 +3749,9 @@ Per i numeri senza segno abbiamo:
 se sommiamo 1 otteniamo $10000$ ma la rappresentazione è a 4 bit ed il primo bit ad uno deve essere scartato con risultato $0000$ che è appunto il valore minimo rappresentabile.
 </p>
 
-![](https://github.com/kinderp/2cornot2c/blob/main/images/odometro_con_segno.png)
+<div align="center">
+  <img src="https://github.com/kinderp/2cornot2c/blob/main/images/odometro_con_segno.png" alt="Odometro con segno">
+</div>
 
 
 > [!IMPORTANT]
