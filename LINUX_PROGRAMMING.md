@@ -1,4 +1,4 @@
-﻿## Indice
+## Indice
 
 * [Controllo dei processi](#controllo-dei-processi)
 * [Linux Programming](#linux-programming)
@@ -18,7 +18,7 @@
   * [Ripulire il figlio in modo asincrono](#ripulire-il-figlio-in-modo-asincrono)
   * [I Thread](#i-thread)
     * [Creazione di un thread](#creazione-di-un-thread)
-    * [Passare dati ad un thread](#passare-dati-ad-un-thread)
+    * [Passare dati a un thread](#passare-dati-ad-un-thread)
     * [Attendere la terminazione dei thread](#attendere-la-terminazione-dei-thread)
     * [Il valore di ritorno dei thread](#il-valore-di-ritorno-dei-thread)
     * [`pthread_self()` e `pthread_equal()`](#pthread_self-e-pthread_equal)
@@ -244,7 +244,7 @@ vagrant@ubuntu2204:/lab2/0_processes$ ps -e -o pid,ppid,command
 
 ### Uccidere un processo
 
-�^ possibile uccidere un processo con il comando `kill`. Indica sulla riga di comando il PID del processo che deve essere terminato. Il comando `kill` invia al processo un segnale `SIGTERM`. La ricezione di questo segnale determina (a meno che il processo non gestisca il segnale o lo ignori) la sua terminazione.
+è possibile uccidere un processo con il comando `kill`. Indica sulla riga di comando il PID del processo che deve essere terminato. Il comando `kill` invia al processo un segnale `SIGTERM`. La ricezione di questo segnale determina (a meno che il processo non gestisca il segnale o lo ignori) la sua terminazione.
 
 ### Creare un processo
 
@@ -550,7 +550,7 @@ int kill(pid_t pid, int sig);
 Devi includere `<sys/types.h>` e `<signal.h>` per utilizzare la funzione `kill()`.
 
 > [!IMPORTANT]
-> Per convenzione, **exit code** è usato per indicare se il programma ha terminato la sua esecuzione correttamente o con degli errori. Un valore pari a zero indica una corretta esecuzione, mentre valori diversi da zero indicano che il processo ha terminato con qualche errore. �^ importante seguire questa convenzione se vuoi usare gli operatori logici della shell (`&&` `||`) per concatenare più programmi tra loro.
+> Per convenzione, **exit code** è usato per indicare se il programma ha terminato la sua esecuzione correttamente o con degli errori. Un valore pari a zero indica una corretta esecuzione, mentre valori diversi da zero indicano che il processo ha terminato con qualche errore. è importante seguire questa convenzione se vuoi usare gli operatori logici della shell (`&&` `||`) per concatenare più programmi tra loro.
 
 Puoi leggere l'**exit code** dell'ultimo programma lanciato sulla shell stampando il contenuto della variabile `$?` per esempio.
 
@@ -894,7 +894,7 @@ int main ()
 
 Il thread termina quando termina la funzione del thread `print_xs`, un thread può ritornare anche richiamando la funzione `pthread_exit()`.
 
-#### Passare dati ad un thread
+#### Passare dati a un thread
 
 Per passare argomenti a un thread basta usare il quarto argomento della `pthread_create()`. Per farlo basta solo dichiarare una struttura o un array e passare il puntatore alla `pthread_create()`.
 L'unica accortezza da tenere in considerazione è quella di effettuare il cast corretto del parametro in ingresso alla funzione del thread.
@@ -1185,7 +1185,7 @@ int pthread_detach(pthread_t thread);
 
 #### Cancellazione del thread
 
-In circostanze normali, un thread termina quando conclude la propria funzione o chiamando la `pthread_exit()`. Tuttavia, è possibile che un thread richieda la terminazione di un altro thread. Questo meccanismo si chiama cancellamento di un thread. Per cancellare un thread, chiama la `pthread_cancel()`, passando l'ID del thread da cancellare. �^ possibile richiamare la `pthread_join()` su un thread cancellato (di tipo joinable, non è possibile per un thread in stato detached) per liberarne le risorse. Il valore di ritorno di un thread cancellato è il valore speciale `PTHREAD_CANCELED`.
+In circostanze normali, un thread termina quando conclude la propria funzione o chiamando la `pthread_exit()`. Tuttavia, è possibile che un thread richieda la terminazione di un altro thread. Questo meccanismo si chiama cancellamento di un thread. Per cancellare un thread, chiama la `pthread_cancel()`, passando l'ID del thread da cancellare. è possibile richiamare la `pthread_join()` su un thread cancellato (di tipo joinable, non è possibile per un thread in stato detached) per liberarne le risorse. Il valore di ritorno di un thread cancellato è il valore speciale `PTHREAD_CANCELED`.
 
 Spesso un thread può eseguire codice in cui tutte le istruzioni devono essere trattate in modo atomico. Ad esempio, il thread può allocare alcune risorse, usarle e quindi deallocarle. Se il thread viene annullato nel mezzo di questo codice, potrebbe non avere l'opportunità di deallocare le risorse, e quindi le risorse saranno perse. Per contrastare questa possibilità, un thread può controllare se e quando può essere annullato. Un thread può trovarsi in uno dei tre stati per quanto riguarda la cancellazione del thread:
 
@@ -1812,7 +1812,7 @@ Per inviare a un semaforo, usa **sem_post()**.
 int sem_post(sem_t *sem);
 ```
 
-Viene fornita anche una funzione di attesa non bloccante, **sem_trywait()**. �^ simile a pthread_mutex_trylock: se l'attesa si fosse bloccata perché il valore del semaforo era zero, la funzione restituisce immediatamente, con il valore di errore `EAGAIN`, invece di
+Viene fornita anche una funzione di attesa non bloccante, **sem_trywait()**. è simile a pthread_mutex_trylock: se l'attesa si fosse bloccata perché il valore del semaforo era zero, la funzione restituisce immediatamente, con il valore di errore `EAGAIN`, invece di
 bloccare.
 
 ```c
