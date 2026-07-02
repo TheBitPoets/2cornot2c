@@ -3706,7 +3706,11 @@ Per i numeri con segno, abbiamo due casi.
     </p>
   </li>
 </ul>
-<pre><code class="language-math">-1*2^3+0*2^2+0*2^1+0*2^0=-8</code></pre>
+
+```math
+-1*2^3+0*2^2+0*2^1+0*2^0=-8
+```
+
 <p align="justify">
 che è appunto il valore minimo rappresentabile
 </p>
@@ -3717,7 +3721,11 @@ che è appunto il valore minimo rappresentabile
     </p>
   </li>
 </ul>
-<pre><code class="language-math">-1*2^3+1*2^2+1*2^0=-8+4+2+1=-1</code></pre>
+
+```math
+-1*2^3+1*2^2+1*2^0=-8+4+2+1=-1
+```
+
 <p align="justify">
 se sommiamo 1 otteniamo $10000$ ma la rappresentazione è a 4 bit ed il primo bit ad uno deve essere scartato con risultato $0000$ che è appunto il valore minimo positivo rappresentabile.
 </p>
@@ -3732,7 +3740,11 @@ Per i numeri senza segno abbiamo:
     </p>
   </li>
 </ul>
-<pre><code class="language-math">1*2^3+1*2^2+1*2^1+1*2^0=8+4+2+1=15</code></pre>
+
+```math
+1*2^3+1*2^2+1*2^1+1*2^0=8+4+2+1=15
+```
+
 <p align="justify">
 se sommiamo 1 otteniamo $10000$ ma la rappresentazione è a 4 bit ed il primo bit ad uno deve essere scartato con risultato $0000$ che è appunto il valore minimo rappresentabile.
 </p>
