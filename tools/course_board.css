@@ -113,29 +113,29 @@ input, select { width: 100%; padding: .72rem .9rem; }
 .headingList {
   height: calc(100vh - 18.5rem);
   overflow: auto;
-  padding: .8rem;
+  padding: .65rem;
 }
 
 .headingCard, .item {
   border: 1px solid rgba(15, 118, 110, .22);
   border-radius: 18px;
   background: #fffdf8;
-  padding: .78rem .85rem;
-  margin-bottom: .55rem;
+  padding: .62rem .72rem;
+  margin-bottom: .4rem;
 }
 
 .headingCard {
   position: relative;
   cursor: grab;
-  margin-left: calc(var(--depth, 0) * .82rem);
+  margin-left: calc(var(--depth, 0) * 1.15rem);
 }
 
 .headingCard::before {
   content: "";
   position: absolute;
-  left: calc(var(--depth, 0) * -.82rem + .2rem);
-  top: -.6rem;
-  bottom: -.6rem;
+  left: calc(var(--depth, 0) * -1.15rem + .28rem);
+  top: -.45rem;
+  bottom: -.45rem;
   width: 1px;
   background: rgba(180, 83, 9, .18);
 }
@@ -166,8 +166,18 @@ input, select { width: 100%; padding: .72rem .9rem; }
 
 .headingCard:active { cursor: grabbing; }
 
-.headingTitle { font-weight: 700; }
-.headingMeta { margin-top: .35rem; color: var(--muted); font: .76rem/1.4 Verdana, sans-serif; }
+.headingCard.assigned {
+  opacity: .48;
+  filter: grayscale(.7);
+}
+
+.headingCard.assigned .headingTitle {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.headingTitle { font-size: .92rem; font-weight: 700; line-height: 1.18; }
+.headingMeta { margin-top: .24rem; color: var(--muted); font: .68rem/1.35 Verdana, sans-serif; }
 
 .courseTree {
   height: calc(100vh - 14rem);

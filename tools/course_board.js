@@ -58,12 +58,14 @@ function populateFilters() {
   els.sourceFilter.value = selected;
 }
 
-function assignedIds() {
-  const ids = new Set();
+function assignedYearsById() {
+  const ids = new Map();
   for (const year of state.design.years || []) {
     for (const uda of year.udas || []) {
       for (const item of uda.items || []) {
-        if (item.id) ids.add(item.id);
+        if (!item.id) continue;
+        if (!ids.has(item.id)) ids.set(item.id, new Set());
+        ids.get(item.id).add(year.id);
       }
     }
   }
@@ -74,7 +76,7 @@ function renderHeadings() {
   const source = els.sourceFilter.value;
   const level = els.levelFilter.value;
   const query = els.searchInput.value.trim().toLowerCase();
-  const used = assignedIds();
+  const used = assignedYearsById();
   els.headingList.innerHTML = "";
 
   const headings = state.headings.filter((heading) => {
@@ -88,10 +90,15 @@ function renderHeadings() {
     const node = els.headingTemplate.content.firstElementChild.cloneNode(true);
     node.dataset.id = heading.id;
     const depth = Math.max(0, heading.level - 1);
+    const usedInYears = used.get(heading.id) || new Set();
     node.classList.add(`level-${heading.level}`);
+    if (usedInYears.size) {
+      node.classList.add("assigned");
+    }
     node.style.setProperty("--depth", depth);
     node.querySelector(".headingTitle").textContent = heading.title;
-    node.querySelector(".headingMeta").textContent = `${heading.source}:${heading.line} · H${heading.level}${used.has(heading.id) ? " · gia assegnato" : ""}`;
+    const usedLabel = usedInYears.size ? ` · inserito in ${[...usedInYears].join(", ")}` : "";
+    node.querySelector(".headingMeta").textContent = `${heading.source}:${heading.line} · H${heading.level}${usedLabel}`;
     node.addEventListener("dragstart", () => {
       state.draggedHeading = heading;
     });
@@ -143,13 +150,13 @@ function renderCourse() {
     `;
 
     for (const uda of year.udas || []) {
-      yearNode.append(renderUda(uda));
+      yearNode.append(renderUda(year, uda));
     }
     els.courseTree.append(yearNode);
   }
 }
 
-function renderUda(uda) {
+function renderUda(year, uda) {
   const details = document.createElement("details");
   details.className = "uda";
   details.open = true;
@@ -167,6 +174,11 @@ function renderUda(uda) {
     event.preventDefault();
     dropzone.classList.remove("dragOver");
     if (!state.draggedHeading) return;
+    if (isAssignedToYear(state.draggedHeading.id, year.id)) {
+      setStatus(`"${state.draggedHeading.title}" e gia presente in ${year.title}.`);
+      state.draggedHeading = null;
+      return;
+    }
     uda.items ||= [];
     uda.items.push(itemFromHeading(state.draggedHeading));
     state.draggedHeading = null;
@@ -182,6 +194,12 @@ function renderUda(uda) {
   }
   details.append(dropzone);
   return details;
+}
+
+function isAssignedToYear(itemId, yearId) {
+  const year = (state.design.years || []).find((candidate) => candidate.id === yearId);
+  if (!year) return false;
+  return (year.udas || []).some((uda) => (uda.items || []).some((item) => item.id === itemId));
 }
 
 function renderItem(uda, item, index) {
