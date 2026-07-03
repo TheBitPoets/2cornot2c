@@ -438,7 +438,6 @@ Quando `stdin` e presente, il file `output/*.txt` mostra prima gli input simulat
 4
 2
 s
-
 Risultato del programma...
 ```
 

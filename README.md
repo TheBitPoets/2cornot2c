@@ -1242,7 +1242,6 @@ int moltiplicazione(){
 4
 2
 s
-
 Inserisci il primo operando
 Inserisci il secondo operando
 s)Somma d)Differenza m)Moltiplicazine
@@ -1341,7 +1340,6 @@ int moltiplicazione(int primo_fattore, int secondo_fattore){
 4
 2
 s
-
 Inserisci il primo operando
 Insesci il secondo operando
 s)Somma d)Differenza m)Moltiplicazione
@@ -2617,7 +2615,6 @@ int main(void){
 3
 5
 0
-
 Get me an integer &gt; 0 (0 to quit)
 You call me 1 times 
 Subtotal = 3
@@ -3193,7 +3190,6 @@ s
 8
 2
 D
-
 Inserisci il primo operando
 Inserisci il secondo operando
 s)Somma d)Differenza m)Moltiplicazione D)Divisione
@@ -3325,7 +3321,6 @@ s
 8
 2
 D
-
 Inserisci il primo operando
 Inserisci il secondo operando
 s)Somma d)Differenza m)Moltiplicazione D)Divisione
@@ -3722,7 +3717,6 @@ int main(void){
 4
 2
 s
-
 Inserisci il primo operando
 Inserisci il secondo operando
 s)Somma d)Differenza m)Moltiplicazione D)Divisione
@@ -7156,7 +7150,6 @@ int main(void){
 <!-- lab-output:start path="lab/4_operators/output/op_modulo.txt" -->
 <pre lang="text"><code>[stdin]
 4
-
 Inserisci un numero tra 1 e 10
 4 e' pari
 </code></pre>
@@ -7532,7 +7525,6 @@ int main(void){
 <!-- lab-output:start path="lab/5_control_statements/output/if.txt" -->
 <pre lang="text"><code>[stdin]
 4
-
 Inserisci un numero tra 1 e 10
 4 e' pari
 </code></pre>
@@ -7684,7 +7676,6 @@ int main(void){
 <pre lang="text"><code>[stdin]
 35
 S
-
 Inserisci la tua eta'
 Hai la laurea?
 [S]ì 	 [N]o
@@ -8107,7 +8098,6 @@ int main(void){
 <!-- lab-output:start path="lab/5_control_statements/output/switch.txt" -->
 <pre lang="text"><code>[stdin]
 a
-
 a=&lt;indefinito&gt; 	 b=&lt;indefinito&gt; 	 c=&lt;indefinito&gt; 	 other=&lt;indefinito&gt;
 Quale variabile vuoi incrementare?
 [a-A]	[b-B]	[c-C]
@@ -8413,7 +8403,6 @@ int main(void){
 <!-- lab-output:start path="lab/6_pointers/output/0_pointers.txt" -->
 <pre lang="text"><code>[stdin]
 &lt;INVIO&gt;
-
 i = 42, &amp;i = &lt;addr_i&gt;
 j = 107, &amp;j = &lt;addr_j&gt;
 *p = 42, p = &lt;addr_i&gt;
@@ -8484,7 +8473,6 @@ int main(void){
 <!-- lab-output:start path="lab/6_pointers/output/1_pointers.txt" -->
 <pre lang="text"><code>[stdin]
 &lt;INVIO&gt;
-
 i = 42, &amp;i = &lt;addr_i&gt;
 j = 107, &amp;j = &lt;addr_j&gt;
 *p = 42, p = &lt;addr_i&gt;
@@ -11828,7 +11816,6 @@ int main(void){
 <!-- lab-output:start path="lab/10_dynamic_memory/output/0_malloc.txt" -->
 <pre lang="text"><code>[stdin]
 15
-
 Quanti elementi per il vettore?
 statico : 0 1 2 3 4 5 6 7 8 9 
 dinamico: 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14
@@ -12230,7 +12217,6 @@ int main(void){
 <!-- lab-output:start path="lab/6_pointers/output/9_pointers.txt" -->
 <pre lang="text"><code>[stdin]
 7
-
 Inserisci un numero da 1 a 12
 7 -&gt; Luglio
 </code></pre>
@@ -12361,7 +12347,6 @@ int main(void){
 <!-- lab-output:start path="lab/6_pointers/output/11_pointers.txt" -->
 <pre lang="text"><code>[stdin]
 7
-
 Inserisci un numero da 1 a 12
 7 -&gt; Luglio
 7 -&gt; Luglio
@@ -12470,7 +12455,6 @@ int main(void){
 <!-- lab-output:start path="lab/6_pointers/output/10_pointers.txt" -->
 <pre lang="text"><code>[stdin]
 7
-
 Inserisci un numero da 1 a 12
 7 -&gt; Luglio
 7 -&gt; Luglio

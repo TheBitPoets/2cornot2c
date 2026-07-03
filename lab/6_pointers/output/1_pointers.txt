@@ -1,6 +1,5 @@
 [stdin]
 <INVIO>
-
 i = 42, &i = <addr_i>
 j = 107, &j = <addr_j>
 *p = 42, p = <addr_i>

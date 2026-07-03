@@ -5,7 +5,6 @@ s
 8
 2
 D
-
 Inserisci il primo operando
 Inserisci il secondo operando
 s)Somma d)Differenza m)Moltiplicazione D)Divisione
