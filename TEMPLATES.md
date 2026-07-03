@@ -1,7 +1,7 @@
 ## Lab
 
 <details>
-<summary>💻 <code>/lab/0_intro/0_hello.c</code></summary>
+<summary>&#128187; <code>/lab/0_intro/0_hello.c</code></summary>
 
 <table align="center">
   <tr>
