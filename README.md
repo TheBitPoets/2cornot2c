@@ -766,7 +766,13 @@ Il preprocessore viene richiamato dal compilatore come primo step nel processo d
 
 <!-- lab-exercises:start heading="Il primo programma in C" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -983,7 +989,13 @@ Righe 16-19: definizione della funzione main().
 
 <!-- lab-exercises:start heading="Funzioni" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -1135,7 +1147,13 @@ Come spiegato ampiamente in precedenza, facciamo uso anche della funzione printf
 
 <!-- lab-exercises:start heading="Variabili" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -1806,7 +1824,13 @@ Questo è utile soprattutto per le variabili indice di un ciclo o per documentar
 
 <!-- lab-exercises:start heading="File scope" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -2045,7 +2069,13 @@ Scope, linkage e storage duration sono combinati assieme per definire le <strong
 
 <!-- lab-exercises:start heading="Variabili automatiche (automatic class)" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -2203,7 +2233,13 @@ int uno(register int a);
 
 <!-- lab-exercises:start heading="Variabili statiche locali (static variables with block scope)" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -2444,7 +2480,13 @@ int main(void){
 
 <!-- lab-exercises:start heading="Variabili globali con External Linkage (Static variables with External Linkage)" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -2745,7 +2787,13 @@ int divisione(int dividendo, int divisore){
 
 <!-- lab-exercises:start heading="Variabili globali con Internal Linkage (Static variables with Internal Linkage)" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -2961,7 +3009,13 @@ La definizione di b e di j non è mostrata, quindi non è possibile determinare 
 
 <!-- lab-exercises:start heading="Suddivisione in moduli di un programma" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -3480,7 +3534,13 @@ Queste direttive permettono di:
 
 <!-- lab-exercises:start heading="La direttiva #define" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -3693,7 +3753,13 @@ La prima forma (parentesi angolari &lt; &gt;) è usata per includere il contenut
 
 <!-- lab-exercises:start heading="Le direttive #if #ifdef #ifndef" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -3958,7 +4024,13 @@ La definizione del simbolo macro deve essere effettuata con la direttiva #define
 
 <!-- lab-exercises:start heading="Eliminazione temporanea di codice" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -4608,7 +4680,13 @@ Per ottenere il valore nella rappresentazione senza segno dovremmo sommare a 2 i
 
 <!-- lab-exercises:start heading="Estensione rappresentazione binaria di un numero intero" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -4854,7 +4932,13 @@ int q, w = 200 /* q non è inizializzata, w è inizializzata. scarso stile di  p
 
 <!-- lab-exercises:start heading="Stampare int" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -5084,7 +5168,13 @@ Quando allora usare i diversi tipi di interi? Dipende dalla situazione.
 
 <!-- lab-exercises:start heading="Stampare altri tipi di interi" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -5396,7 +5486,13 @@ signed negative: 0xffffffe5
 
 <!-- lab-exercises:start heading="Cast" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -5664,7 +5760,13 @@ il valore stampato sarebbe 1.0 perché prima viene effettuata la divisione tra i
 
 <!-- lab-exercises:start heading="Cast tra signed e unsigned" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -6056,7 +6158,13 @@ uy = 4294954951          ffffcfc7
 
 <!-- lab-exercises:start heading="Troncamento rappresentazione binaria" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -6140,7 +6248,13 @@ y  = -12345      ffffcfc7
 
 <!-- lab-exercises:start heading="char" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -6230,7 +6344,13 @@ Il tipo char è lungo 1 byte (8 bit) e in verità è un tipo intero: nel senso c
 
 <!-- lab-exercises:start heading="Stampare un char" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -6342,7 +6462,13 @@ Gli operatori sono usati nelle operazioni aritmetiche.
 
 <!-- lab-exercises:start heading="Operatore di assegnamento: =" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -6492,7 +6618,13 @@ int main(void){
 
 <!-- lab-exercises:start heading="Operatore divisione: /" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -6571,7 +6703,13 @@ int main(void){
 
 <!-- lab-exercises:start heading="Operatore sizeof" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -6663,7 +6801,13 @@ Come avrai notato sizeof può essere usato con o senza parentesi tonde. L'uso de
 
 <!-- lab-exercises:start heading="Operatore %" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -6748,7 +6892,13 @@ int main(void){
 
 <!-- lab-exercises:start heading="Operatore incremento/decremento ++ --" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -7004,7 +7154,13 @@ Operatori Relazionali
 
 <!-- lab-exercises:start heading="if o if-else" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -7133,7 +7289,13 @@ int main(void){
 
 <!-- lab-exercises:start heading="Condizioni complesse con l'uso di operatori logici e condizionali" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -7247,7 +7409,13 @@ int main(void){
 
 <!-- lab-exercises:start heading="for" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -7331,7 +7499,13 @@ int main(void){
 
 <!-- lab-exercises:start heading="while" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -7419,7 +7593,13 @@ int main(void){
 
 <!-- lab-exercises:start heading="do-while" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -7513,7 +7693,13 @@ int main(void){
 
 <!-- lab-exercises:start heading="switch" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -7685,7 +7871,13 @@ int main(void){
 
 <!-- lab-exercises:start heading="break e continue" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -7814,7 +8006,13 @@ int main(void){
 
 <!-- lab-exercises:start heading="I puntatori" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -8140,7 +8338,13 @@ int main(void){
 
 <!-- lab-exercises:start heading="Puntatori non inizializzati" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -8235,7 +8439,13 @@ int main(void){
 
 <!-- lab-exercises:start heading="Il puntatore nullo (NULL)" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -8320,7 +8530,13 @@ int main(void){
 
 <!-- lab-exercises:start heading="Aritmetica puntatori" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -8492,7 +8708,13 @@ L'aritmetica dei puntatori ci sarà molto utile quando lavoreremo con i vettori 
 
 <!-- lab-exercises:start heading="Vettori" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -8762,7 +8984,13 @@ int main(void){
 
 <!-- lab-exercises:start heading="Inizializzare un vettore" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -9070,7 +9298,13 @@ vettore + 4 = 0x7fff64c6243c + 4 = 0x7fff64c62440
 
 <!-- lab-exercises:start heading="Dimensione vettore (sizeof)" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -9253,7 +9487,13 @@ int main(void){
 
 <!-- lab-exercises:start heading="Relazione tra array e puntatori" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -9483,7 +9723,13 @@ vagrant@ubuntu2204:/lab/6_pointers$ bin/7_pointers
 
 <!-- lab-exercises:start heading="Differenza tra puntatori" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -9614,7 +9860,13 @@ vagrant@ubuntu2204:/lab/6_pointers$ bin/8_pointers
 
 <!-- lab-exercises:start heading="Le stringhe" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -9839,7 +10091,13 @@ Anche in questo caso possiamo scordarci di \0.
 
 <!-- lab-exercises:start heading="Dettagli sull'inizializzazione" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -10219,7 +10477,13 @@ Le funzioni possono essere dichiarate e definite.
 
 <!-- lab-exercises:start heading="Dichiarazione di funzione" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -10395,7 +10659,13 @@ vagrant@ubuntu2204:/lab/9_functions$ bin/0_functions
 
 <!-- lab-exercises:start heading="Passaggio di parametri per valore" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -10541,7 +10811,13 @@ risultato                    : 103
 
 <!-- lab-exercises:start heading="Passaggio di parametri per indirizzo" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -10696,7 +10972,13 @@ risultato                    : 103
 
 <!-- lab-exercises:start heading="Passaggio di puntatori const" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -10800,7 +11082,13 @@ xxx voglio essere modificata
 
 <!-- lab-exercises:start heading="Array come parametri a funzioni" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -10921,7 +11209,13 @@ vagrant@ubuntu2204:/lab/9_functions$ bin/3_functions
 
 <!-- lab-exercises:start heading="Allocazione dinamica della memoria" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -11129,7 +11423,13 @@ dinamico: 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14
 
 <!-- lab-exercises:start heading="Array bidimensionali" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -11324,7 +11624,13 @@ vagrant@ubuntu2204:/lab/7_array$ bin/7_array
 
 <!-- lab-exercises:start heading="Array di puntatori" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -11537,7 +11843,13 @@ Inserisci un numero da 1 a 12
 
 <!-- lab-exercises:start heading="Differenza tra array bidimensionali e array di puntatori" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -11834,7 +12146,13 @@ Lo <strong>stack</strong> è un'area di memoria contigua all'heap e cresce in di
 
 <!-- lab-exercises:start heading="Allocazione dinamica di matrici" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -12199,7 +12517,13 @@ Pluto
 
 <!-- lab-exercises:start heading="Le strutture" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
@@ -12361,7 +12685,13 @@ int main(void){
 
 <!-- lab-exercises:start heading="Passaggio di strutture a funzioni" -->
 
-<p align="justify"><strong>Esercizi collegati:</strong></p>
+<table align="center">
+<tr>
+<td align="center">
+<strong>Esercizi collegati</strong>
+</td>
+</tr>
+</table>
 
 <table align="center">
 <tr>
