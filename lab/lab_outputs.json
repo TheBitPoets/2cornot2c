@@ -875,7 +875,7 @@
           "replacement": "&d = <addr_d>"
         },
         {
-          "pattern": "(?m)^-?\\d+\n-?\\d+\n$",
+          "pattern": "(?<=&d = <addr_d>\\n)-?\\d+\\n-?\\d+\\n\\Z",
           "replacement": "<delta_elementi>\n<delta_byte>\n"
         }
       ]

@@ -12625,7 +12625,6 @@ Saturn
 Uranus
 Neptune
 Pluto
-
 </code></pre>
 <!-- lab-output:end -->
 </details>
