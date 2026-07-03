@@ -53,9 +53,20 @@ def render_snippet(relative_path: str) -> str:
     code = source_path.read_text(encoding="utf-8")
     escaped = html.escape(code, quote=False)
     lang = language_for(source_path)
+    line_count = max(1, len(code.splitlines()))
+    line_numbers = "\n".join(str(index) for index in range(1, line_count + 1))
     return (
         f'<!-- lab-snippet:start path="{relative_path}" -->\n'
+        '<table>\n'
+        '<tr>\n'
+        '<td valign="top" align="right">\n'
+        f'<pre><code>{line_numbers}</code></pre>\n'
+        '</td>\n'
+        '<td valign="top">\n'
         f'<pre lang="{lang}"><code>{escaped}</code></pre>\n'
+        '</td>\n'
+        '</tr>\n'
+        '</table>\n'
         '<!-- lab-snippet:end -->'
     )
 

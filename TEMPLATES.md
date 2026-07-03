@@ -36,6 +36,30 @@ bin/0_hello</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/0_intro/0_hello.c" -->
+<table>
+<tr>
+<td valign="top" align="right">
+<pre><code>1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19</code></pre>
+</td>
+<td valign="top">
 <pre lang="c"><code>/*
  * 0_intro -- Primo esempio di programma in c
  *
@@ -56,6 +80,9 @@ int main(void){
 	return 0;
 }
 </code></pre>
+</td>
+</tr>
+</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
