@@ -1,3 +1,71 @@
+## Cornice didattica
+
+<table align="center">
+<tr>
+<td>
+<p align="justify">
+<strong>Contesto:</strong>
+Qui spiega in due o tre frasi da quale punto del percorso arriva lo studente. Il testo deve aiutare la lettura sequenziale: "finora abbiamo visto...", "adesso facciamo un passo in piu...", "questo argomento serve per...".
+</p>
+
+<p align="justify">
+<strong>Prerequisiti:</strong>
+<a href="#sezione-precedente">Nome sezione precedente</a>,
+<a href="#altra-sezione">Nome altra sezione</a>.
+</p>
+
+<p align="justify">
+<strong>Obiettivi:</strong>
+Alla fine di questa sezione saprai descrivere il concetto principale, riconoscere gli errori piu comuni e applicare il meccanismo in un piccolo programma.
+</p>
+
+<p align="justify">
+<strong>Prossimo passo:</strong>
+Qui spiega dove porta naturalmente la sezione successiva. Il testo deve mantenere il filo narrativo per chi legge la dispensa dall'inizio alla fine.
+</p>
+</td>
+</tr>
+</table>
+
+## Richiamo
+
+<table align="center">
+<tr>
+<td>
+<p align="justify">
+<strong>Richiamo:</strong>
+Questo concetto e stato introdotto nella sezione <a href="#sezione-gia-vista">Nome sezione gia vista</a>. Qui lo riprendiamo solo per usarlo nel nuovo contesto.
+</p>
+</td>
+</tr>
+</table>
+
+## Anticipazione
+
+<table align="center">
+<tr>
+<td>
+<p align="justify">
+<strong>Anticipazione:</strong>
+Qui compare il concetto di <code>concetto futuro</code>. Per ora ti basta sapere che ... Lo studieremo in dettaglio nella sezione <a href="#sezione-futura">Nome sezione futura</a>.
+</p>
+</td>
+</tr>
+</table>
+
+## Rimando
+
+<table align="center">
+<tr>
+<td>
+<p align="justify">
+<strong>Rimando:</strong>
+Questo dettaglio sara ripreso piu avanti nella sezione <a href="#sezione-futura">Nome sezione futura</a>. Per ora puoi ignorarlo senza perdere il filo principale.
+</p>
+</td>
+</tr>
+</table>
+
 ## Lab
 
 <table align="center">

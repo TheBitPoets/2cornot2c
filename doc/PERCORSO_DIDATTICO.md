@@ -18,6 +18,36 @@ La struttura didattica del corso segue tre livelli:
 | UDA | Unita didattica autonoma, con prerequisiti, obiettivi, lezioni, lab ed esercizi. |
 | Lezione | Singolo blocco settimanale di lavoro, organizzato sulle 3 ore disponibili. |
 
+## Lettura sequenziale e lettura modulare
+
+Le dispense sono nate per una lettura sequenziale, ma la schedule permette anche di arrivare direttamente a un paragrafo specifico. Per ridurre l'accoppiamento implicito tra paragrafi senza perdere il filo narrativo, ogni sezione importante dovrebbe funzionare in due modi:
+
+| Modalita | Obiettivo |
+|---|---|
+| Lettura sequenziale | Il testo continua a raccontare un percorso progressivo: da dove veniamo, cosa impariamo ora, dove andremo dopo. |
+| Lettura modulare | Chi arriva da una UDA o da una tabella capisce subito prerequisiti, obiettivi, concetti anticipati e link utili. |
+
+Per ottenere questo equilibrio, ogni sezione importante dovrebbe iniziare con una cornice didattica leggera. Il template operativo si trova in `TEMPLATES.md`, nella sezione `Cornice didattica`.
+
+La cornice didattica contiene:
+
+| Campo | Funzione |
+|---|---|
+| Contesto | Mantiene il filo della lettura sequenziale. |
+| Prerequisiti | Esplicita cosa serve sapere prima di leggere la sezione. |
+| Obiettivi | Chiarisce cosa lo studente deve saper fare alla fine. |
+| Prossimo passo | Collega la sezione alla progressione successiva. |
+
+Nel corpo dei paragrafi useremo tre tipi di raccordo:
+
+| Tipo | Quando usarlo | Effetto didattico |
+|---|---|---|
+| Richiamo | Quando un concetto e gia stato spiegato. | Riduce ripetizioni e offre un link rapido. |
+| Anticipazione | Quando un concetto futuro e necessario per capire il minimo indispensabile. | Permette di procedere senza aprire una digressione lunga. |
+| Rimando | Quando un concetto futuro compare ma non serve capirlo subito. | Abbassa il carico cognitivo: lo studente sa che puo ignorarlo per ora. |
+
+Se una sezione della schedule non ha ancora un paragrafo adatto nel README o in un documento dedicato, il materiale resta marcato come `TODO`. Questo serve a distinguere cio che esiste gia da cio che va ancora scritto.
+
 Ogni settimana prevede 3 ore di TPSI. La divisione naturale e 2 ore di teoria e 1 ora di laboratorio, ma i portatili permettono di trasformare anche parte della teoria in attivita pratica breve. Per questo la scansione sotto distingue:
 
 | Blocco | Uso consigliato |
