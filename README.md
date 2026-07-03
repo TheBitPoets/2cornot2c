@@ -10286,6 +10286,16 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/8_strings/output/0_strings.txt" -->
+<pre lang="text"><code>c 	i 	a 	o 	&lt;NUL&gt; 	
+99 	105 	97 	111 	0
+</code></pre>
+<!-- lab-output:end -->
 </details>
 
 <details>
@@ -10334,6 +10344,16 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/8_strings/output/1_strings.txt" -->
+<pre lang="text"><code>c 	i 	a 	o 	&lt;NUL&gt; 	
+99 	105 	97 	111 	0
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -10505,6 +10525,16 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/8_strings/output/2_strings.txt" -->
+<pre lang="text"><code>c 	i 	a 	o 	&lt;NUL&gt; 	
+99 	105 	97 	111 	0
+</code></pre>
+<!-- lab-output:end -->
 </details>
 
 <details>
@@ -10554,6 +10584,18 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/8_strings/output/4_strings.txt" -->
+<pre lang="text"><code>ciao
+ciao
+ciao
+ciao
+</code></pre>
+<!-- lab-output:end -->
 </details>
 
 <details>

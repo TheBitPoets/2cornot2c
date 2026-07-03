@@ -1097,6 +1097,88 @@
       ],
       "output": "lab/7_array/output/7_array.txt",
       "timeout_seconds": 5
+    },
+    {
+      "name": "0_strings",
+      "path": "lab/8_strings/0_strings.c",
+      "workdir": "lab/8_strings",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/0_strings",
+        "0_strings.c"
+      ],
+      "run": [
+        "bin/0_strings"
+      ],
+      "output": "lab/8_strings/output/0_strings.txt",
+      "timeout_seconds": 5,
+      "normalize": [
+        {
+          "pattern": "\\x00",
+          "replacement": "<NUL>"
+        }
+      ]
+    },
+    {
+      "name": "1_strings",
+      "path": "lab/8_strings/1_strings.c",
+      "workdir": "lab/8_strings",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/1_strings",
+        "1_strings.c"
+      ],
+      "run": [
+        "bin/1_strings"
+      ],
+      "output": "lab/8_strings/output/1_strings.txt",
+      "timeout_seconds": 5,
+      "normalize": [
+        {
+          "pattern": "\\x00",
+          "replacement": "<NUL>"
+        }
+      ]
+    },
+    {
+      "name": "2_strings",
+      "path": "lab/8_strings/2_strings.c",
+      "workdir": "lab/8_strings",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/2_strings",
+        "2_strings.c"
+      ],
+      "run": [
+        "bin/2_strings"
+      ],
+      "output": "lab/8_strings/output/2_strings.txt",
+      "timeout_seconds": 5,
+      "normalize": [
+        {
+          "pattern": "\\x00",
+          "replacement": "<NUL>"
+        }
+      ]
+    },
+    {
+      "name": "4_strings",
+      "path": "lab/8_strings/4_strings.c",
+      "workdir": "lab/8_strings",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/4_strings",
+        "4_strings.c"
+      ],
+      "run": [
+        "bin/4_strings"
+      ],
+      "output": "lab/8_strings/output/4_strings.txt",
+      "timeout_seconds": 5
     }
   ]
 }
