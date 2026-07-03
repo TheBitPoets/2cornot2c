@@ -1,0 +1,3 @@
+Il vettore di interi occupa 400 byte
+Un singolo intero occupa 4 byte
+Il vettore ha 400(byte)/4(byte) = 100 elementi
