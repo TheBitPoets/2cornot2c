@@ -377,7 +377,7 @@ I link forniti sopra portano alle versioni dei software per architettura `amd64`
 </p>
 
 <p align="justify">
- <b>Git</b> e <b>Vagrant</b> ci serviranno per ottenere un ambiente di sviluppo identico per tutti e per un provisioning automatico; in altre parole, Git ci permetterà di condividere il codice dei laboratori e Vagrant di condividere la stessa macchina virtuale (<code>ubuntu-22.04</code>) con l'ambiente di sviluppo preinstallato.
+ <b>Git</b> e <b>Vagrant</b> ci serviranno per ottenere un ambiente di sviluppo identico per tutti e per un provisioning automatico; in altre parole, Git ci permetterà di condividere il codice dei laboratori e Vagrant di condividere la stessa macchina virtuale (ubuntu-22.04) con l'ambiente di sviluppo preinstallato.
 </p>
 
 <p align="justify">
@@ -392,9 +392,9 @@ Guarda il <a href="https://drive.google.com/file/d/1WkLleojruhYkJ31kiY00jUknGVAG
 
 <p align="justify">
 I passi seguenti permettono di duplicare sulla tua macchina locale l'ambiente di sviluppo (codice e VM).
-Nella directory radice del progetto (<code>2cornot2c</code> che otterrai clonando il repository nei passi seguenti) troverai una directory <code>lab</code> con il codice C per tutti i laboratori. 
-Questa cartella <code>2cornot2c\lab</code> è montata automaticamente sul file system della macchina virtuale nella cartella <code>/lab</code>. 
-Tutto quello che verrà modificato sulla macchina Linux in <code>/lab</code> (VM o macchina guest) verrà visto sulla macchina Windows (host) in <code>2cornot2c\lab</code>. 
+Nella directory radice del progetto (2cornot2c che otterrai clonando il repository nei passi seguenti) troverai una directory lab con il codice C per tutti i laboratori. 
+Questa cartella 2cornot2c\lab è montata automaticamente sul file system della macchina virtuale nella cartella /lab. 
+Tutto quello che verrà modificato sulla macchina Linux in /lab (VM o macchina guest) verrà visto sulla macchina Windows (host) in 2cornot2c\lab. 
 </p>
 
 <ol>
@@ -412,7 +412,7 @@ git clone https://github.com/kinderp/2cornot2c.git
 <ol>
   <li>
     <p align="justify">
-    Entra nella directory root del repository (<code>2cornot2c</code>)
+    Entra nella directory root del repository (2cornot2c)
     </p>
   </li>
 </ol>
@@ -424,7 +424,7 @@ cd 2cornot2c
 <ol>
   <li>
     <p align="justify">
-    Avvia la macchina virtuale (devi essere nella cartella <code>2cornot2c</code> altrimenti il comando seguente non funziona)
+    Avvia la macchina virtuale (devi essere nella cartella 2cornot2c altrimenti il comando seguente non funziona)
     </p>
   </li>
 </ol>
@@ -436,7 +436,7 @@ vagrant up
 <ol>
   <li>
     <p align="justify">
-    Aspetta che il comando al punto 3 termini e successivamente, sempre nella cartella <code>2cornot2c</code>, installa il plugin <code>vagrant-vbguest</code>:
+    Aspetta che il comando al punto 3 termini e successivamente, sempre nella cartella 2cornot2c, installa il plugin vagrant-vbguest:
     </p>
   </li>
 </ol>
@@ -489,7 +489,7 @@ Questo paragrafo ti fornisce informazioni aggiuntive sul plugin per installare l
 <ol>
   <li>
     <p align="justify">
-    Installa il plugin <code>vagrant-vbguest</code>:
+    Installa il plugin vagrant-vbguest:
     </p>
   </li>
 </ol>
@@ -548,22 +548,22 @@ Se vuoi un maggiore controllo sull'installazione delle Guest Additions, puoi usa
 <ul>
   <li>
     <p align="justify">
-    <code>vagrant vbguest</code>: Questo comando controlla lo stato delle Guest Additions e tenta di installarle o aggiornarle se necessario.
+    vagrant vbguest: Questo comando controlla lo stato delle Guest Additions e tenta di installarle o aggiornarle se necessario.
     </p>
   </li>
   <li>
     <p align="justify">
-    <code>vagrant vbguest --do install</code>: Questo forza l'installazione delle Guest Additions.
+    vagrant vbguest --do install: Questo forza l'installazione delle Guest Additions.
     </p>
   </li>
   <li>
     <p align="justify">
-    <code>vagrant vbguest --do rebuild</code>: Questo ricostruisce i moduli del kernel delle Guest Additions, il che può essere utile se hai aggiornato il tuo kernel.
+    vagrant vbguest --do rebuild: Questo ricostruisce i moduli del kernel delle Guest Additions, il che può essere utile se hai aggiornato il tuo kernel.
     </p>
   </li>
   <li>
     <p align="justify">
-    <code>vagrant vbguest --status</code>: Questo mostra lo stato attuale delle aggiunte degli ospiti.
+    vagrant vbguest --status: Questo mostra lo stato attuale delle aggiunte degli ospiti.
     </p>
   </li>
 </ul>
@@ -581,24 +581,24 @@ Puoi anche scaricare il file ISO delle Guest Additions e montarlo manualmente al
 </ol>
 
 <p align="justify">	
-Dopo aver apportato modifiche al tuo Vagrantfile, esegui <code>vagrant up</code> per avviare la macchina o <code>vagrant reload</code> per applicare le modifiche. Il plugin <code>vagrant-vbguest</code> gestirà l'installazione o l'aggiornamento delle Guest Additions in base alla tua configurazione. Seguendo questi passaggi, puoi gestire efficacemente l'installazione e l'aggiornamento delle Guest Additions di VirtualBox all'interno del tuo ambiente Vagrant.
+Dopo aver apportato modifiche al tuo Vagrantfile, esegui vagrant up per avviare la macchina o vagrant reload per applicare le modifiche. Il plugin vagrant-vbguest gestirà l'installazione o l'aggiornamento delle Guest Additions in base alla tua configurazione. Seguendo questi passaggi, puoi gestire efficacemente l'installazione e l'aggiornamento delle Guest Additions di VirtualBox all'interno del tuo ambiente Vagrant.
 </p>
 
 ## Laboratori
 
 <div align="justify">	
-All'interno della cartella <code>/lab</code> nella macchina Linux troverai il codice su cui lavorare.
-Ogni lab ha un numero e un nome associati; ad esempio, al primo laboratorio sono assegnati il numero <code>0</code> e il nome <code>intro</code>. Questo significa che per questo lab esisterà una cartella <code>lab/0_intro</code> che conterrà tutto il codice del lab. All'interno della cartella del laboratorio troverai dei file sorgente con estensione <code>.c</code> o <code>.h</code>, anche questi con un numero e un nome; ad esempio il primo sorgente del lab <code>0_intro</code> è <code>0_hello.c</code>.
-Ogni lab contiene al suo interno una cartella <code>bin</code> destinata a ospitare i file eseguibili ottenuti al termine del processo di compilazione.
+All'interno della cartella /lab nella macchina Linux troverai il codice su cui lavorare.
+Ogni lab ha un numero e un nome associati; ad esempio, al primo laboratorio sono assegnati il numero 0 e il nome intro. Questo significa che per questo lab esisterà una cartella lab/0_intro che conterrà tutto il codice del lab. All'interno della cartella del laboratorio troverai dei file sorgente con estensione .c o .h, anche questi con un numero e un nome; ad esempio il primo sorgente del lab 0_intro è 0_hello.c.
+Ogni lab contiene al suo interno una cartella bin destinata a ospitare i file eseguibili ottenuti al termine del processo di compilazione.
 </div>
 
 ## Il processo di compilazione
 
 <p align="justify">
-I programmi sono scritti in un qualche linguaggio di programmazione; il programmatore scrive il codice sorgente. Nel caso del linguaggio C, i file sorgente hanno estensione <code>.c</code> o <code>.h</code>. Il codice sorgente contiene tutte le istruzioni che il programma dovrà eseguire. Le istruzioni all'interno del codice sorgente, scritte in un qualsiasi linguaggio di programmazione, devono essere tradotte in una sequenza di bit (in altri termini, nel linguaggio macchina) perché la CPU è in grado di comprendere solo il linguaggio macchina, esclusivamente sequenze di bit e nient'altro. In sintesi si dice che il programma sorgente deve essere trasformato in un file eseguibile (file binario) che contiene le istruzioni (sequenze di bit) per la specifica architettura del nostro processore.
+I programmi sono scritti in un qualche linguaggio di programmazione; il programmatore scrive il codice sorgente. Nel caso del linguaggio C, i file sorgente hanno estensione .c o .h. Il codice sorgente contiene tutte le istruzioni che il programma dovrà eseguire. Le istruzioni all'interno del codice sorgente, scritte in un qualsiasi linguaggio di programmazione, devono essere tradotte in una sequenza di bit (in altri termini, nel linguaggio macchina) perché la CPU è in grado di comprendere solo il linguaggio macchina, esclusivamente sequenze di bit e nient'altro. In sintesi si dice che il programma sorgente deve essere trasformato in un file eseguibile (file binario) che contiene le istruzioni (sequenze di bit) per la specifica architettura del nostro processore.
 Questo processo di trasformazione del sorgente in binario è detto processo di compilazione ed è svolto dal compilatore. In realtà questo processo è articolato in vari step e non coinvolge solo il compilatore. Vediamo brevemente di studiarne le fasi.
-Se non lo hai già fatto, avvia la macchina virtuale con <code>vagrant up</code> e, al termine del boot, avvia una sessione SSH con il comando <code>vagrant ssh</code>.
-Una volta dentro, nella tua home directory (utente vagrant), usa Vim per creare un nuovo file in questo modo: <code>vim hello.c</code> e copia il codice seguente:
+Se non lo hai già fatto, avvia la macchina virtuale con vagrant up e, al termine del boot, avvia una sessione SSH con il comando vagrant ssh.
+Una volta dentro, nella tua home directory (utente vagrant), usa Vim per creare un nuovo file in questo modo: vim hello.c e copia il codice seguente:
 </p>
 
 ```c
@@ -610,11 +610,11 @@ int main(void){
 ```
 
 <p align="justify">
-Salva il contenuto premendo la combinazione: <code>Esc</code> + <code>:wq</code>.
+Salva il contenuto premendo la combinazione: Esc + :wq.
 </p>
 
 <p align="justify">
-Compila il sorgente <code>hello.c</code> lanciando il seguente comando: <code>gcc -o hello hello.c</code>; GCC è il compilatore che useremo in questo corso, lo trovi già installato sulla VM. In questo caso l'opzione <code>-o</code> specifica il nome del file oggetto (il file binario eseguibile) che vogliamo creare; ovviamente dobbiamo specificare successivamente il sorgente da cui partire per la generazione dell'eseguibile (<code>hello.c</code>). Se tutto ha funzionato puoi lanciare il programma appena compilato in questo modo: <code>./hello</code>. Come avrai avuto modo di constatare, il programma ha stampato a schermo la frase <code>Hello World</code>; per fare ciò il programmatore si è servito di un pezzo di codice già pronto (in sostanza, la funzione <code>printf()</code>). Per informare il compilatore circa il corretto uso di questo pezzo di codice (la funzione <code>printf()</code>) è stata inserita nella prima riga del programma la direttiva al preprocessore <code>#include <stdio.h></code>. Vedremo in dettaglio cosa vuol dire usare una funzione esterna e come includere con le direttive il suo prototipo; per adesso ci basta sapere che per stampare è stata usata una funzione già pronta ed è stato necessario informare il compilatore di questo.
+Compila il sorgente hello.c lanciando il seguente comando: gcc -o hello hello.c; GCC è il compilatore che useremo in questo corso, lo trovi già installato sulla VM. In questo caso l'opzione -o specifica il nome del file oggetto (il file binario eseguibile) che vogliamo creare; ovviamente dobbiamo specificare successivamente il sorgente da cui partire per la generazione dell'eseguibile (hello.c). Se tutto ha funzionato puoi lanciare il programma appena compilato in questo modo: ./hello. Come avrai avuto modo di constatare, il programma ha stampato a schermo la frase Hello World; per fare ciò il programmatore si è servito di un pezzo di codice già pronto (in sostanza, la funzione printf()). Per informare il compilatore circa il corretto uso di questo pezzo di codice (la funzione printf()) è stata inserita nella prima riga del programma la direttiva al preprocessore #include <stdio.h>. Vedremo in dettaglio cosa vuol dire usare una funzione esterna e come includere con le direttive il suo prototipo; per adesso ci basta sapere che per stampare è stata usata una funzione già pronta ed è stato necessario informare il compilatore di questo.
 </p>
 
 <p align="center">
@@ -622,7 +622,7 @@ Compila il sorgente <code>hello.c</code> lanciando il seguente comando: <code>gc
 </p>
 
 <p align="justify">
-Nella figura sopra è mostrato l'intero processo di compilazione, che è composto da almeno quattro fasi; come puoi vedere, i due parametri passati al compilatore con <code>gcc -o hello hello.c</code> sono rispettivamente il nome del file di input del processo (<code>hello.c</code>), cioè il sorgente di partenza, e il file di output (<code>hello</code>), cioè l'eseguibile che vogliamo generare al termine del processo.
+Nella figura sopra è mostrato l'intero processo di compilazione, che è composto da almeno quattro fasi; come puoi vedere, i due parametri passati al compilatore con gcc -o hello hello.c sono rispettivamente il nome del file di input del processo (hello.c), cioè il sorgente di partenza, e il file di output (hello), cioè l'eseguibile che vogliamo generare al termine del processo.
 Volendo è possibile richiedere al compilatore di fermarsi a uno specifico step senza produrre l'output finale. Le quattro fasi del processo di compilazione sono rispettivamente:
 </p>
 
@@ -633,7 +633,7 @@ Volendo è possibile richiedere al compilatore di fermarsi a uno specifico step 
     </p>
   </li>
 </ol>
-<p align="justify">il preprocessore (<code>cpp</code>) esegue sostituzioni di testo, disabilita/abilita condizionalmente parti di codice in fase di compilazione. Il risultato della sua elaborazione è un file con estensione <code>.i</code>: nel nostro caso quindi <code>hello.i</code>. Per bloccare il processo di compilazione alla fase di preprocessamento puoi eseguire questo comando: <code>gcc -E hello.c > hello.i</code>. Il file <code>hello.i</code> conterrà tutte le sostituzioni effettuate dal preprocessore e, come puoi vedere da solo, ha molto più contenuto del file di partenza <code>hello.c</code>; spiegheremo le chiamate al preprocessore nei prossimi paragrafi.</p>
+<p align="justify">il preprocessore (cpp) esegue sostituzioni di testo, disabilita/abilita condizionalmente parti di codice in fase di compilazione. Il risultato della sua elaborazione è un file con estensione .i: nel nostro caso quindi hello.i. Per bloccare il processo di compilazione alla fase di preprocessamento puoi eseguire questo comando: gcc -E hello.c > hello.i. Il file hello.i conterrà tutte le sostituzioni effettuate dal preprocessore e, come puoi vedere da solo, ha molto più contenuto del file di partenza hello.c; spiegheremo le chiamate al preprocessore nei prossimi paragrafi.</p>
 
 <ol>
   <li>
@@ -642,7 +642,7 @@ Volendo è possibile richiedere al compilatore di fermarsi a uno specifico step 
     </p>
   </li>
 </ol>
-<p align="justify">il compilatore (<code>cc</code>) trasforma il contenuto testuale del file <code>hello.i</code> (che è scritto in codice C) nel corrispondente codice assembly (<code>hello.s</code>) specifico per l'architettura del processore target. Puoi bloccare il processo alla fase di compilazione producendo il corrispondente codice assembly in questo modo: <code>gcc -S -masm=intel hello.c</code>.
+<p align="justify">il compilatore (cc) trasforma il contenuto testuale del file hello.i (che è scritto in codice C) nel corrispondente codice assembly (hello.s) specifico per l'architettura del processore target. Puoi bloccare il processo alla fase di compilazione producendo il corrispondente codice assembly in questo modo: gcc -S -masm=intel hello.c.
 </p>
 
 <ol>
@@ -653,7 +653,7 @@ Volendo è possibile richiedere al compilatore di fermarsi a uno specifico step 
   </li>
 </ol>
 <p align="justify">
-l'assemblatore <code>as</code> trasforma il codice assembly contenuto in <code>hello.s</code> nelle istruzioni macchina dell'architettura della CPU; il risultato è il file oggetto rilocabile <code>hello.o</code>. Puoi bloccare il processo in questa fase con il comando: <code>gcc -c hello.c</code>.
+l'assemblatore as trasforma il codice assembly contenuto in hello.s nelle istruzioni macchina dell'architettura della CPU; il risultato è il file oggetto rilocabile hello.o. Puoi bloccare il processo in questa fase con il comando: gcc -c hello.c.
 </p>
 
 <ol>
@@ -664,16 +664,16 @@ l'assemblatore <code>as</code> trasforma il codice assembly contenuto in <code>h
   </li>
 </ol>
 <p align="justify">
-il linker (<code>ld</code>) ha il compito di aggregare in un unico file oggetto (il file eseguibile) eventuali altri file oggetto di librerie esterne o del linguaggio. Nel nostro esempio il programmatore ha fatto uso di una funzione del linguaggio (<code>printf()</code>), quindi il linker aggregherà nel file eseguibile (<code>hello</code>) il file oggetto <code>hello.o</code> e il file oggetto relativo al codice della funzione <code>printf()</code>: <code>printf.o</code>. Puoi generare il file eseguibile in questo modo: <code>gcc -o hello hello.c</code>.
+il linker (ld) ha il compito di aggregare in un unico file oggetto (il file eseguibile) eventuali altri file oggetto di librerie esterne o del linguaggio. Nel nostro esempio il programmatore ha fatto uso di una funzione del linguaggio (printf()), quindi il linker aggregherà nel file eseguibile (hello) il file oggetto hello.o e il file oggetto relativo al codice della funzione printf(): printf.o. Puoi generare il file eseguibile in questo modo: gcc -o hello hello.c.
 </p>
 
 <details>
 <summary> /lab/0_intro/0_hello.c</summary>
 <a href="https://github.com/kinderp/2cornot2c/blob/18b60e866c1e0e22c59835fe953cbe3c534e7422/lab/0_intro/0_hello.c">/lab/0_intro/0_hello.c</a>
 	<ul>
-		<li>Entra nella macchina Linux con <code>vagrant ssh</code></li>
-		<li>Spostati nella cartella <code>lab/0_intro</code></li>
-		<li>Compila il file <code>0_hello.c</code>. L'eseguibile finale deve avere nome <code>bin/0_hello</code></li>
+		<li>Entra nella macchina Linux con vagrant ssh</li>
+		<li>Spostati nella cartella lab/0_intro</li>
+		<li>Compila il file 0_hello.c. L'eseguibile finale deve avere nome bin/0_hello</li>
 	</ul>
 </details>
 
@@ -744,8 +744,8 @@ const double pi = 3.14; // costante pi greco
 </table>
 
 <p align="justify">
-Una funzione ha un nome (<code>differenza</code> nel codice seguente), un valore di ritorno, dei parametri di input (<code>minuendo</code> e <code>sottraendo</code> nel codice d'esempio) e un corpo che è delimitato da una parentesi graffa aperta <code>{</code> e una chiusa <code>}</code>.
-I parametri d'ingresso, detti anche parametri formali, sono racchiusi tra una coppia di parentesi tonde: <code>(</code>, <code>)</code>.
+Una funzione ha un nome (differenza nel codice seguente), un valore di ritorno, dei parametri di input (minuendo e sottraendo nel codice d'esempio) e un corpo che è delimitato da una parentesi graffa aperta { e una chiusa }.
+I parametri d'ingresso, detti anche parametri formali, sono racchiusi tra una coppia di parentesi tonde: (, ).
 </p>
 
 ```c
@@ -764,9 +764,76 @@ Il preprocessore viene richiamato dal compilatore come primo step nel processo d
 
 ## Il primo programma in C
 
+<!-- lab-exercises:start heading="Il primo programma in C" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/0_intro/0_hello.c</summary>
+
 <p align="justify">
-Come da tradizione, il primo esempio di codice è il classico <code>Hello World</code>.
-Il programma di seguito stampa a schermo una semplice frase: <code>Ciao Mondo</code>, in inglese.
+<strong>Descrizione breve:</strong>
+<code>printf</code>, <code>#include &lt;stdio.h&gt;</code>, funzione <code>main</code>, compilazione ed esecuzione del primo binario.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Introduce il percorso minimo che porta da un sorgente C a un programma eseguibile: inclusione di un header standard, definizione di main, chiamata a printf, compilazione con gcc ed esecuzione del binario prodotto.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/0_hello.c">/lab/0_intro/0_hello.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/0_intro
+gcc -o bin/0_hello 0_hello.c
+bin/0_hello</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/0_intro/0_hello.c" -->
+<pre lang="c"><code>/*
+ * 0_intro -- Primo esempio di programma in c
+ *
+ * Cosa imparerai:
+ *	*) Cosa sono gli header files
+ *      *) Concetto di funzione e chiamata di funzione
+ *	*) Processo di creazione di un file eseguibile (binario)
+ *
+ * Utilizzo:
+ *      gcc -o bin/0_hello 0_hello.c
+ *      bin/0_hello	      
+ */
+
+#include &lt;stdio.h&gt;
+
+int main(void){
+	printf("Hello World\n");
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
+<p align="justify">
+Come da tradizione, il primo esempio di codice è il classico Hello World.
+Il programma di seguito stampa a schermo una semplice frase: Ciao Mondo, in inglese.
 </p>
 
 <details>
@@ -784,9 +851,9 @@ int main(void){
 ```
 
 <p align="justify">
-Compila il sorgente con: <code>gcc -o 0_hello bin/0_hello</code> e poi esegui il programma con: <code>bin/0_hello</code>.
-Riconosciamo subito una funzione: <code>main()</code>. Questa è una funzione speciale: tutti i programmi C devono averne una, in quanto rappresenta il punto di partenza per l'esecuzione di ogni programma. Sei libero di chiamare tutte le altre funzioni a tuo piacimento, ma la funzione da cui parte l'esecuzione si deve chiamare <code>main()</code>. Come qualsiasi funzione, <code>main()</code> ha un tipo di ritorno <code>int</code> e dei parametri in ingresso opzionali; in questo caso la funzione <code>main()</code> non si aspetta alcun parametro in ingresso dal chiamante (il sistema operativo) e, per esprimere che questa non accetta alcun valore in ingresso, si usa la parola riservata <code>void</code>.
-Ti potrebbe capitare di vedere la funzione <code>main()</code> in queste versioni:
+Compila il sorgente con: gcc -o 0_hello bin/0_hello e poi esegui il programma con: bin/0_hello.
+Riconosciamo subito una funzione: main(). Questa è una funzione speciale: tutti i programmi C devono averne una, in quanto rappresenta il punto di partenza per l'esecuzione di ogni programma. Sei libero di chiamare tutte le altre funzioni a tuo piacimento, ma la funzione da cui parte l'esecuzione si deve chiamare main(). Come qualsiasi funzione, main() ha un tipo di ritorno int e dei parametri in ingresso opzionali; in questo caso la funzione main() non si aspetta alcun parametro in ingresso dal chiamante (il sistema operativo) e, per esprimere che questa non accetta alcun valore in ingresso, si usa la parola riservata void.
+Ti potrebbe capitare di vedere la funzione main() in queste versioni:
 </p>
 
 ```c
@@ -812,13 +879,13 @@ La prima forma è tollerata da vecchie versioni del C (C90) o pre-ANSI C, ma non
 <table align="center">
 		<td>&#9888; <b>Importante</b>
 	<p align=justify>
-<b>Definizione di funzione</b>: quando si fornisce l'implementazione della funzione (il corpo, cioè le istruzioni contenute tra la coppia di graffe <code>{</code> <code>}</code>), allora si dice che la funzione è definita. La definizione implica anche la dichiarazione.
+<b>Definizione di funzione</b>: quando si fornisce l'implementazione della funzione (il corpo, cioè le istruzioni contenute tra la coppia di graffe { }), allora si dice che la funzione è definita. La definizione implica anche la dichiarazione.
 	</p>
 	</td>
 </table>
 
 <p align=justify>
-Riprendendo la funzione <code>differenza</code> usata precedentemente, avremo rispettivamente la definizione in basso:
+Riprendendo la funzione differenza usata precedentemente, avremo rispettivamente la definizione in basso:
 </p>
 
 ```c
@@ -852,8 +919,8 @@ Il compilatore, quando incontra una chiamata a funzione, deve conoscerne almeno 
 </table>
 
 <p align="justify">
-La funzione <code>main()</code> fa uso di un'altra funzione: <code>printf()</code>, che viene usata per stampare su schermo. Questa funzione è fornita (la sua implementazione) dal linguaggio C stesso, quindi non viene definita nel nostro file (non se ne fornisce l'implementazione). L'implementazione della <code>printf()</code> sarà fornita sotto forma di file oggetto <code>.o</code>, che verrà assemblato dal linker assieme al nostro <code>.o</code>: <code>hello.o</code>, all'interno del file eseguibile finale. Il compilatore, come anticipato, ha però bisogno di conoscere almeno il prototipo della funzione <code>printf()</code> per verificarne l'uso corretto. Il prototipo della funzione <code>printf()</code> è fornito all'interno del file <code>stdio.h</code>; risulta necessario copiare il contenuto di questo file nel nostro esempio, nelle righe precedenti a quella dove la funzione <code>printf()</code> è effettivamente usata (chiamata a funzione). Non c'è bisogno di copiare e incollare il file <code>stdio.h</code>, ma è possibile usare una direttiva del preprocessore <code>#include<stdio.h></code> che sostituisce il contenuto del file <code>stdio.h</code> a partire dalla riga di codice dove è inserita.
-Per verificare l'effettiva aggiunta del prototipo di <code>printf()</code> da parte del preprocessore puoi lanciare:
+La funzione main() fa uso di un'altra funzione: printf(), che viene usata per stampare su schermo. Questa funzione è fornita (la sua implementazione) dal linguaggio C stesso, quindi non viene definita nel nostro file (non se ne fornisce l'implementazione). L'implementazione della printf() sarà fornita sotto forma di file oggetto .o, che verrà assemblato dal linker assieme al nostro .o: hello.o, all'interno del file eseguibile finale. Il compilatore, come anticipato, ha però bisogno di conoscere almeno il prototipo della funzione printf() per verificarne l'uso corretto. Il prototipo della funzione printf() è fornito all'interno del file stdio.h; risulta necessario copiare il contenuto di questo file nel nostro esempio, nelle righe precedenti a quella dove la funzione printf() è effettivamente usata (chiamata a funzione). Non c'è bisogno di copiare e incollare il file stdio.h, ma è possibile usare una direttiva del preprocessore #include<stdio.h> che sostituisce il contenuto del file stdio.h a partire dalla riga di codice dove è inserita.
+Per verificare l'effettiva aggiunta del prototipo di printf() da parte del preprocessore puoi lanciare:
 </p>
 
 ```bash
@@ -883,7 +950,7 @@ Questo è l'output sulla mia macchina:
 ```
 
 <p align="justify">
-Alla riga 2 il prototipo di <code>printf()</code>.
+Alla riga 2 il prototipo di printf().
 </p>
 
 <p align="justify">
@@ -902,21 +969,83 @@ Riassumendo:
 <ul>
 	<li>
 		<p align="justify">
-Riga 14: inclusione del file d'intestazione <code>stdio.h</code> contenente il prototipo della funzione <code>printf()</code>. Il prototipo serve al compilatore per verificare che il programmatore utilizzi correttamente la funzione, in questo caso la <code>printf()</code>.
+Riga 14: inclusione del file d'intestazione stdio.h contenente il prototipo della funzione printf(). Il prototipo serve al compilatore per verificare che il programmatore utilizzi correttamente la funzione, in questo caso la printf().
   		</p>
 	</li>
  	<li>
 		<p align="justify">
-Righe 16-19: definizione della funzione <code>main()</code>.
+Righe 16-19: definizione della funzione main().
   		</p>
 	</li>
 </ul>
 
 ## Funzioni
 
+<!-- lab-exercises:start heading="Funzioni" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/0_intro/1_funzioni.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Definizione e chiamata di funzioni semplici, esempio <code>sottrazione</code>.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Funzioni con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Definizione e chiamata di funzioni semplici, esempio <code>sottrazione</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/1_funzioni.c">/lab/0_intro/1_funzioni.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/0_intro
+gcc -o bin/1_funzioni 1_funzioni.c
+bin/1_funzioni</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/0_intro/1_funzioni.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int sottrazione(int, int);
+
+int main(void){
+	int minuendo = 10;
+	int sottraendo = 3;
+	int risultato = sottrazione(minuendo, sottraendo);
+	printf("%d - %d = %d", minuendo, sottraendo, risultato);
+}
+
+int sottrazione(int minuendo, int sottraendo){
+	return minuendo - sottraendo;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 Le funzioni sono un blocco di codice, un insieme di istruzioni che vengono raggruppate e possono essere richiamate in qualsiasi momento all'interno di un programma. Per intenderci, se nel nostro programma calcoliamo più volte la media pesata dei nostri voti, è consigliabile racchiudere tutte le istruzioni all'interno di una funzione e richiamarla ogni volta che ne abbiamo bisogno, piuttosto che riscrivere più volte lo stesso identico codice in punti diversi. Le funzioni possono ritornare un valore come risultato della loro elaborazione (possono anche non ritornare nulla al chiamante) e possono ricevere in ingresso un certo numero di parametri.
-Una funzione ha un'intestazione e un corpo; usando sempre la solita funzione <code>differenza</code> vista in precedenza avremo:
+Una funzione ha un'intestazione e un corpo; usando sempre la solita funzione differenza vista in precedenza avremo:
 </p>
 
 ```c
@@ -926,9 +1055,9 @@ int differenza(int minuendo, int sottraendo){
 ```
 
 <p align="justify">
-La prima riga rappresenta l'intestazione della funzione (esclusa la parentesi graffa); tutto il codice compreso tra <code>{</code> e <code>}</code> è il corpo. Il corpo di una funzione è dunque rappresentato da tutte le istruzioni comprese nella coppia di graffe, tutto ciò che precede è l'intestazione.
+La prima riga rappresenta l'intestazione della funzione (esclusa la parentesi graffa); tutto il codice compreso tra { e } è il corpo. Il corpo di una funzione è dunque rappresentato da tutte le istruzioni comprese nella coppia di graffe, tutto ciò che precede è l'intestazione.
 Come anticipato, quando vengono forniti sia l'intestazione che il corpo (l'implementazione), si parla di <b>definizione di funzione</b>; se viene fornita solo l'intestazione (anche detta <b>prototipo</b>), si parla di <b>dichiarazione di funzione</b>.
-Il prototipo della funzione <code>differenza</code> è dunque il seguente:
+Il prototipo della funzione differenza è dunque il seguente:
 </p>
 
 ```c
@@ -945,7 +1074,7 @@ int differenza(int, int);
 
 <p align="justify">
 Per il compilatore non cambia nulla ma può aiutare un altro programmatore a comprendere il significato e l'uso dei parametri in ingresso.
-Di seguito è riportato un esempio completo che fa uso della funzione <code>sottrazione</code>; come è possibile vedere, questa è richiamata all'interno del <code>main()</code> alla riga 8 fornendo in ingresso i due parametri previsti durante la definizione. Se avessimo fornito un numero diverso di parametri (sia inferiore che superiore) o parametri di tipo diverso rispetto al tipo intero, il compilatore ci avrebbe dato errore (o forse nel secondo caso no...?).
+Di seguito è riportato un esempio completo che fa uso della funzione sottrazione; come è possibile vedere, questa è richiamata all'interno del main() alla riga 8 fornendo in ingresso i due parametri previsti durante la definizione. Se avessimo fornito un numero diverso di parametri (sia inferiore che superiore) o parametri di tipo diverso rispetto al tipo intero, il compilatore ci avrebbe dato errore (o forse nel secondo caso no...?).
 </p>
 
 <details>
@@ -971,30 +1100,30 @@ int sottrazione(int minuendo, int sottraendo){
 ```
 
 <p align="justify">
-Poiché la definizione della funzione <code>sottrazione</code> è stata fornita successivamente (righe 12-14) al punto in cui questa è richiamata (riga 8), per permettere al compilatore di controllarne il corretto uso da parte del programmatore è stato necessario fornire prima della riga 8 il prototipo della funzione (riga 3). Commentando la riga 3 il compilatore darebbe errore o almeno rileverebbe un warning circa una dichiarazione implicita che non è in grado di verificare.
-Come spiegato ampiamente in precedenza, facciamo uso anche della funzione <code>printf()</code> e in questo caso, per fornirne il prototipo, sfruttiamo la direttiva al preprocessore <code>#include <stdio.h></code>.
+Poiché la definizione della funzione sottrazione è stata fornita successivamente (righe 12-14) al punto in cui questa è richiamata (riga 8), per permettere al compilatore di controllarne il corretto uso da parte del programmatore è stato necessario fornire prima della riga 8 il prototipo della funzione (riga 3). Commentando la riga 3 il compilatore darebbe errore o almeno rileverebbe un warning circa una dichiarazione implicita che non è in grado di verificare.
+Come spiegato ampiamente in precedenza, facciamo uso anche della funzione printf() e in questo caso, per fornirne il prototipo, sfruttiamo la direttiva al preprocessore #include <stdio.h>.
 </p>
 
 <details>
 <summary> /lab/0_intro/1_funzioni.c</summary>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/1_funzioni.c">/lab/0_intro/1_funzioni.c</a>
 	<ul>
-		<li>Entra nella macchina Linux con <code>vagrant ssh</code></li>
-		<li>Spostati nella cartella <code>lab/0_intro</code></li>
+		<li>Entra nella macchina Linux con vagrant ssh</li>
+		<li>Spostati nella cartella lab/0_intro</li>
 		<li>
 		<p align="justify">
-			Aiutandoti con il file <code>1_funzioni.c</code>, crea un file <code>addizione.c</code> con queste caratteristiche:
+			Aiutandoti con il file 1_funzioni.c, crea un file addizione.c con queste caratteristiche:
 		</p>
 		</li>
 		<ol>
 			<li>
 				<p align="justify">
-				Dichiara e definisci la funzione <code>int addizione(int, int)</code>.
+				Dichiara e definisci la funzione int addizione(int, int).
 				</p>
 			</li>
 			<li>
 				<p align="justify">
-				Richiama la funzione <code>addizione()</code> nel <code>main()</code> passando due variabili intere <code>a</code> e <code>b</code> contenenti dei valori a tuo piacimento.
+				Richiama la funzione addizione() nel main() passando due variabili intere a e b contenenti dei valori a tuo piacimento.
 				</p>
 			</li>
 		</ol>
@@ -1004,11 +1133,187 @@ Come spiegato ampiamente in precedenza, facciamo uso anche della funzione <code>
 
 ## Variabili
 
+<!-- lab-exercises:start heading="Variabili" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/0_intro/2_variabili.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Calcolatrice minima con variabili globali, funzioni <code>somma</code>, <code>differenza</code>, <code>moltiplicazione</code>.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Variabili con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Calcolatrice minima con variabili globali, funzioni <code>somma</code>, <code>differenza</code>, <code>moltiplicazione</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/2_variabili.c">/lab/0_intro/2_variabili.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/0_intro
+gcc -o bin/2_variabili 2_variabili.c
+bin/2_variabili</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/0_intro/2_variabili.c" -->
+<pre lang="c"><code>#include &lt;stdio.h&gt;
+
+int primo, secondo; /* variabili globali */
+
+int somma();
+int differenza();
+int moltiplicazione();
+
+int main(void){	
+	int risultato; 	 // variabile locale
+	char operazione; // variabile locale
+	printf("Inserisci il primo operando\n");
+	scanf("%d", &amp;primo);
+	printf("Inserisci il secondo operando\n");
+	scanf("%d", &amp;secondo);
+	printf("s)Somma d)Differenza m)Moltiplicazine\n");
+	scanf(" %c", &amp;operazione);
+	if (operazione == 's'){
+		risultato = somma();
+	} else if(operazione == 'd') {
+		risultato = differenza();
+	} else if(operazione == 'm') {
+		risultato = moltiplicazione();
+	} else {
+		printf("Operazione non riconosciuta");
+	}
+	printf("Il risultato e': %d\n", risultato);
+	return 0;
+}
+
+int somma(){
+	return primo + secondo;
+}
+
+int differenza(){
+	return primo - secondo;
+}
+
+int moltiplicazione(){
+	return primo * secondo;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#128187; /lab/0_intro/3_variabili.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Variante della calcolatrice con funzioni e parametri piu espliciti.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Variabili con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Variante della calcolatrice con funzioni e parametri piu espliciti e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/3_variabili.c">/lab/0_intro/3_variabili.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/0_intro
+gcc -o bin/3_variabili 3_variabili.c
+bin/3_variabili</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/0_intro/3_variabili.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int somma(int, int);
+int differenza(int, int);
+int moltiplicazione(int, int);
+
+int main(void){
+	int risultato = 0;
+	int primo, secondo;
+	char operazione;
+
+	printf("Inserisci il primo operando\n");
+	scanf("%d", &amp;primo);
+	printf("Insesci il secondo operando\n");
+	scanf("%d", &amp;secondo);
+	printf("s)Somma d)Differenza m)Moltiplicazione\n");
+	getchar();
+	operazione = getchar();
+	switch(operazione){
+		case 's':
+			risultato = somma(primo, secondo);
+			break;
+		case 'd':
+			risultato = differenza(primo, secondo);
+			break;
+		case 'm':
+			risultato = moltiplicazione(primo, secondo);
+			break;
+		default:
+			printf("Operazione non riconosciuta\n");
+
+	}
+	printf("Il risultato e': %d\n", risultato);	
+	return 0;
+}
+
+int somma(int primo_addendo, int secondo_addendo){
+	return primo_addendo + secondo_addendo;
+}
+
+int differenza(int minuendo, int sottraendo){
+	return minuendo - sottraendo;
+}
+
+int moltiplicazione(int primo_fattore, int secondo_fattore){
+	return primo_fattore * secondo_fattore;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 Abbiamo precedentemente detto che una variabile è semplicemente una locazione di memoria a cui sono associati un identificatore e un tipo.
 L'identificatore è un nome mnemonico che ci permette, all'interno del codice, di accedere al valore contenuto nella locazione di memoria corrispondente. Il tipo definisce lo spazio (in termini di byte) che la locazione di memoria può contenere.
 <b>Una variabile prima di essere usata deve essere sempre dichiarata</b>. Come anticipato, <b>l'operazione di dichiarazione consiste nell'allocare spazio di memoria per la variabile e nell'associarle l'identificatore</b>; lo spazio riservato viene dedotto dal tipo della variabile.
-I diversi tipi previsti dal C hanno un numero di byte prefissato dipendente dall'architettura; per esempio <code>int</code> di solito occupa 32 o 64 bit, <code>char</code> 8 bit etc.
+I diversi tipi previsti dal C hanno un numero di byte prefissato dipendente dall'architettura; per esempio int di solito occupa 32 o 64 bit, char 8 bit etc.
 Se ti può aiutare, puoi pensare a una variabile come a una scatola: vedi immagine seguente.
 </p>
 
@@ -1051,7 +1356,7 @@ int question, answer;
 ```
 
 <p align="justify">
-Oltre al tipo e all'identificatore, una variabile è caratterizzata dalla <b>visibilità</b> (<code>scope</code> in inglese) e dal <b>tempo di vita</b> (<code>lifetime</code> o <code>storage duration</code>).
+Oltre al tipo e all'identificatore, una variabile è caratterizzata dalla <b>visibilità</b> (scope in inglese) e dal <b>tempo di vita</b> (lifetime o storage duration).
 </p>
 
 <table align="center">
@@ -1075,11 +1380,11 @@ Sulla base del tempo di vita e della visibilità possiamo classificare le variab
 </p>
 
 <p align="justify">
-<b>Le variabili locali</b> sono definite all'interno delle funzioni e hanno una visibilità limitata: dal punto in cui sono dichiarate fino al termine del corpo della funzione (ti ricordo che il corpo è compreso tra <code>{</code> e <code>}</code>); anche il loro tempo di vita è limitato: la locazione di memoria a esse associata è allocata quando la funzione viene invocata ed è liberata quando l'esecuzione dell'intero corpo della funzione termina.
+<b>Le variabili locali</b> sono definite all'interno delle funzioni e hanno una visibilità limitata: dal punto in cui sono dichiarate fino al termine del corpo della funzione (ti ricordo che il corpo è compreso tra { e }); anche il loro tempo di vita è limitato: la locazione di memoria a esse associata è allocata quando la funzione viene invocata ed è liberata quando l'esecuzione dell'intero corpo della funzione termina.
 </p>
 
 <p align="justify">
-<b>Le variabili globali</b> sono definite fuori dalle funzioni, di solito dopo le direttive <code>#include</code> nelle righe iniziali. 
+<b>Le variabili globali</b> sono definite fuori dalle funzioni, di solito dopo le direttive #include nelle righe iniziali. 
 Hanno visibilità globale, cioè sono visibili a tutte le funzioni nel file in cui sono dichiarate (e potenzialmente anche alle funzioni in altri file del programma, ma questo lo vedremo in seguito); il loro tempo di vita coincide con quello globale di esecuzione del programma.
 </p>
 
@@ -1088,7 +1393,7 @@ Hanno visibilità globale, cioè sono visibili a tutte le funzioni nel file in c
 </p>
 
 <p align="justify">
-Il programma di seguito fa uso di variabili globali e locali; semplicemente sono definite tre funzioni: <code>somma()</code>, <code>differenza()</code> e <code>moltiplicazione()</code>. I due operandi su cui le funzioni devono lavorare (<code>primo</code> e <code>secondo</code>) vengono definiti come variabili globali; essendo globali, queste variabili sono visibili da tutte le funzioni nel file. 
+Il programma di seguito fa uso di variabili globali e locali; semplicemente sono definite tre funzioni: somma(), differenza() e moltiplicazione(). I due operandi su cui le funzioni devono lavorare (primo e secondo) vengono definiti come variabili globali; essendo globali, queste variabili sono visibili da tutte le funzioni nel file. 
 </p>
 
 ```c
@@ -1096,7 +1401,7 @@ int primo, secondo; /* variabili globali */
 ```
 
 <p align="justify">
-Il risultato dell'operazione e il tipo di operazione da svolgere sono definiti come variabili locali (dentro la funzione <code>main()</code>).
+Il risultato dell'operazione e il tipo di operazione da svolgere sono definiti come variabili locali (dentro la funzione main()).
 </p>
 
 ```c
@@ -1105,16 +1410,16 @@ char operazione; // variabile locale
 ```
 
 <p align="justify">
-Queste due variabili sono visibili solo all'interno della funzione <code>main()</code> (dove sono effettivamente dichiarate come variabili locali) e non dalle altre funzioni.
+Queste due variabili sono visibili solo all'interno della funzione main() (dove sono effettivamente dichiarate come variabili locali) e non dalle altre funzioni.
 </p>
 
 <p align="justify">
-Inoltre, siccome facciamo uso delle funzioni <code>printf()</code> e <code>scanf()</code>, dobbiamo includere attraverso la direttiva al preprocessore (<code>#include<stdio.h></code>) i rispettivi prototipi contenuti nel file header: <code>stdio.h</code>.
-Mentre <code>printf()</code> serve per stampare a schermo il contenuto di una variabile, <code>scanf()</code> viene usata per leggere un valore da tastiera e memorizzarlo in una variabile.
+Inoltre, siccome facciamo uso delle funzioni printf() e scanf(), dobbiamo includere attraverso la direttiva al preprocessore (#include<stdio.h>) i rispettivi prototipi contenuti nel file header: stdio.h.
+Mentre printf() serve per stampare a schermo il contenuto di una variabile, scanf() viene usata per leggere un valore da tastiera e memorizzarlo in una variabile.
 </p>
 
 <p align="justify">
-Le definizioni delle funzioni <code>somma()</code>, <code>differenza()</code> e <code>moltiplicazione()</code> sono fornite dopo la loro effettiva chiamata nel <code>main()</code> e quindi, per permettere al compilatore di controllare l'uso corretto di queste funzioni da parte del programmatore, è stato necessario fornire i prototipi prima del <code>main()</code>.
+Le definizioni delle funzioni somma(), differenza() e moltiplicazione() sono fornite dopo la loro effettiva chiamata nel main() e quindi, per permettere al compilatore di controllare l'uso corretto di queste funzioni da parte del programmatore, è stato necessario fornire i prototipi prima del main().
 </p>
 
 <details>
@@ -1167,29 +1472,29 @@ int moltiplicazione(){
 ```
 
 <p align="justify">
-Inoltre, nel codice incontriamo il primo costrutto per il controllo del flusso, precisamente <code>if-else</code>.
+Inoltre, nel codice incontriamo il primo costrutto per il controllo del flusso, precisamente if-else.
 Vedremo in dettaglio la sintassi più avanti, ora forniamo solo una breve spiegazione.
-Il costrutto <code>if</code> serve per realizzare l'istruzione di salto condizionale ed assume questa forma:
+Il costrutto if serve per realizzare l'istruzione di salto condizionale ed assume questa forma:
 </p>
 
 <p align="justify">
-<code>if (espr) istr</code>
+if (espr) istr
 </p>
 
 <p align="justify">
-Se la condizione specificata dall'espressione <code>espr</code> è vera (cioè diversa da zero), viene eseguito il blocco di istruzioni <code>istr</code>; altrimenti si prosegue con l'elaborazione.
+Se la condizione specificata dall'espressione espr è vera (cioè diversa da zero), viene eseguito il blocco di istruzioni istr; altrimenti si prosegue con l'elaborazione.
 </p>
 
 <p align="justify">
-Il costrutto <code>if</code> ammette l'enunciato opzionale <code>else</code>. Il costrutto <code>if-else</code> assume questa forma:
+Il costrutto if ammette l'enunciato opzionale else. Il costrutto if-else assume questa forma:
 </p>
 
 <p align="justify">
-<code>if (espr) istr1 else istr2</code>
+if (espr) istr1 else istr2
 </p>
 
 <p align="justify">
-I blocchi di istruzioni <code>istr1</code> e <code>istr2</code> vengono eseguiti a seconda che l'espressione <code>espr</code> sia vera o falsa. Se è vera si esegue <code>istr1</code>, se è falsa <code>istr2</code>.
+I blocchi di istruzioni istr1 e istr2 vengono eseguiti a seconda che l'espressione espr sia vera o falsa. Se è vera si esegue istr1, se è falsa istr2.
 Nel nostro codice abbiamo qualcosa di un po' più complesso, analizziamolo assieme:
 </p>
 
@@ -1207,8 +1512,8 @@ if (operazione == 's'){
 ```
 
 <p align="justify">
-La funzione <code>scanf()</code> legge un carattere da tastiera e inserisce il valore all'interno della variabile <code>operazione</code>; il costrutto <code>if-else</code> ci serve per eseguire la funzione corrispondente all'operazione richiesta dall'utente attraverso la digitazione di un carattere della tastiera.
-Se <code>operazione</code> contiene il carattere <code>s</code>, allora si eseguirà la funzione <code>somma()</code> (solo quella e nessun'altra); altrimenti, se il carattere è <code>d</code>, si esegue la funzione <code>differenza()</code> e così via. Se il carattere contenuto in <code>operazione</code> non è tra i tre attesi <code>s</code>, <code>d</code>, <code>m</code>, allora (ultimo <code>else</code>) si stampa un messaggio che informa l'utente che l'operazione non è stata riconosciuta.
+La funzione scanf() legge un carattere da tastiera e inserisce il valore all'interno della variabile operazione; il costrutto if-else ci serve per eseguire la funzione corrispondente all'operazione richiesta dall'utente attraverso la digitazione di un carattere della tastiera.
+Se operazione contiene il carattere s, allora si eseguirà la funzione somma() (solo quella e nessun'altra); altrimenti, se il carattere è d, si esegue la funzione differenza() e così via. Se il carattere contenuto in operazione non è tra i tre attesi s, d, m, allora (ultimo else) si stampa un messaggio che informa l'utente che l'operazione non è stata riconosciuta.
 </p>
 
 <p align="justify">
@@ -1320,7 +1625,7 @@ int moltiplicazione(int primo_fattore, int secondo_fattore){
 ```
 
 <p align="justify">
-Come puoi vedere, le variabili <code>primo</code> e <code>secondo</code> sono state dichiarate dentro la funzione <code>main()</code> e quindi sono locali (sono visibili solo all'interno di questa funzione), esattamente come <code>risultato</code> e <code>operazione</code>. Solo <code>risultato</code> è inizializzato a zero; le altre variabili conterranno all'inizio un valore casuale (le variabili locali non sono inizializzate automaticamente).
+Come puoi vedere, le variabili primo e secondo sono state dichiarate dentro la funzione main() e quindi sono locali (sono visibili solo all'interno di questa funzione), esattamente come risultato e operazione. Solo risultato è inizializzato a zero; le altre variabili conterranno all'inizio un valore casuale (le variabili locali non sono inizializzate automaticamente).
 </p>
 
 ```c
@@ -1426,7 +1731,7 @@ Il <strong>linkage</strong> definisce se una variabile può essere condivisa dal
 ## Block scope
 
 <p align="justify">
-Un blocco è un insieme di istruzioni comprese tra <code>{</code> e <code>}</code>. Esempi di blocchi (alcuni li abbiamo già incontrati) sono:
+Un blocco è un insieme di istruzioni comprese tra { e }. Esempi di blocchi (alcuni li abbiamo già incontrati) sono:
 </p>
 
 <ul>
@@ -1446,7 +1751,7 @@ Un blocco è un insieme di istruzioni comprese tra <code>{</code> e <code>}</cod
 <ul>
   <li>
     <p align="justify">
-    il corpo nei costrutti di controllo del flusso <code>if-else</code>, <code>for</code>, <code>while</code> etc.
+    il corpo nei costrutti di controllo del flusso if-else, for, while etc.
     </p>
   </li>
 </ul>
@@ -1499,8 +1804,96 @@ Questo è utile soprattutto per le variabili indice di un ciclo o per documentar
  
 ## File scope
 
+<!-- lab-exercises:start heading="File scope" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/1_variables/2_global.c</summary>
+
 <p align="justify">
-Una variabile definita al di fuori di qualsiasi funzione in un file <code>.c</code> o <code>.h</code> ha un <strong>file scope</strong> ed è visibile dal punto in cui è definita fino alla fine del file che la contiene. Questo è il caso delle variabili globali che abbiamo trattato: esse infatti hanno un <strong>file scope</strong>.
+<strong>Descrizione breve:</strong>
+Variabile globale visibile da piu funzioni nello stesso file.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo File scope con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Variabile globale visibile da piu funzioni nello stesso file e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/1_variables/2_global.c">/lab/1_variables/2_global.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/1_variables
+gcc -o bin/2_global 2_global.c
+bin/2_global</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/1_variables/2_global.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;  // printf()
+
+/* prototipi  funzioni che saranno 
+ * successivamente definitea, dopo
+ * il main()
+ */
+void one(void);
+void two(void);
+void three(void);
+
+int global;	/* variabile globale: file scope, external  linkage
+		 * static storage duration. E' visibile in tutto il
+		 * file  da tutte le funzioni e  poenzialente negli
+		 * altri file del programma. Automaticamente inizia
+		 * lizzata a zero dal compilatore.
+		 */
+
+int main(void){
+	printf("global=%d\n", global);
+	one();
+	two();
+	three();
+	return 0;
+
+}
+
+void one(void){
+	global = global + 1;
+	printf("global=%d\n", global);
+}
+
+void two(void){
+	global = global + 1;
+	printf("global=%d\n", global);
+}
+
+void three(void){
+	global = global + 1;
+	printf("global=%d\n", global);
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
+<p align="justify">
+Una variabile definita al di fuori di qualsiasi funzione in un file .c o .h ha un <strong>file scope</strong> ed è visibile dal punto in cui è definita fino alla fine del file che la contiene. Questo è il caso delle variabili globali che abbiamo trattato: esse infatti hanno un <strong>file scope</strong>.
 </p>
 
 ```c
@@ -1526,7 +1919,7 @@ Il <strong>linkage</strong> definisce se una variabile è visibile in più file 
 </p>
 
 <p align="justify">
-Esistono tre tipi di <strong>linkage</strong>: <code>no linkage</code>, <code>external linkage</code> e <code>internal linkage</code>.
+Esistono tre tipi di <strong>linkage</strong>: no linkage, external linkage e internal linkage.
 </p>
 
 <p align=justify>
@@ -1534,8 +1927,8 @@ Le variabili con un <b>block scope</b> (quelle locali) hanno <b>no linkage</b>: 
 </p>
 
 <p align="justify">
-Le variabili con un <b>file scope</b> (quelle globali) hanno o <b>external linkage</b> o <b>internal linkage</b>: se hanno <code>external</code>, possono essere viste anche in altri file del programma.
-Se hanno <code>internal</code>, sono visibili in tutto il file in cui sono state definite (quindi a tutte le funzioni del file), ma non in altri file del programma.
+Le variabili con un <b>file scope</b> (quelle globali) hanno o <b>external linkage</b> o <b>internal linkage</b>: se hanno external, possono essere viste anche in altri file del programma.
+Se hanno internal, sono visibili in tutto il file in cui sono state definite (quindi a tutte le funzioni del file), ma non in altri file del programma.
 </p>
 
 <p align="justify">
@@ -1572,17 +1965,17 @@ La parola chiave <b>static</b> non ha nulla a che vedere con lo <b>storage durat
 ## Storage duration
 
 <p align="justify">
-Esistono quattro tipi diversi di <strong>storage duration</strong>: <code>static</code>, <code>thread</code>, <code>auto</code> e <code>allocated</code>.
+Esistono quattro tipi diversi di <strong>storage duration</strong>: static, thread, auto e allocated.
 </p>
 
 <p align="justify">
-Per il momento affrontiamo solamente i tipi <code>static</code> e <code>auto</code>.
+Per il momento affrontiamo solamente i tipi static e auto.
 </p>
 
 ## Static storage duration
 
 <p align="justify">
-Variabili che esistono in memoria per l'intero tempo di esecuzione del programma: sono le variabili con <strong>file scope</strong> (variabili globali sia di tipo <code>external</code> sia di tipo <code>internal</code> <strong>linkage</strong>).
+Variabili che esistono in memoria per l'intero tempo di esecuzione del programma: sono le variabili con <strong>file scope</strong> (variabili globali sia di tipo external sia di tipo internal <strong>linkage</strong>).
 </p>
 
 ```c
@@ -1650,8 +2043,82 @@ Scope, linkage e storage duration sono combinati assieme per definire le <strong
 
 ## Variabili automatiche (automatic class)
 
+<!-- lab-exercises:start heading="Variabili automatiche (automatic class)" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/1_variables/0_local.c</summary>
+
 <p align="justify">
-Una variabile appartenente alla <strong>classe di memorizzazione automatica</strong> (<code>auto</code>) ha:
+<strong>Descrizione breve:</strong>
+Variabile locale non inizializzata e valore indefinito.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Variabili automatiche (automatic class) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Variabile locale non inizializzata e valore indefinito e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/1_variables/0_local.c">/lab/1_variables/0_local.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/1_variables
+gcc -o bin/0_local 0_local.c
+bin/0_local</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/1_variables/0_local.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+void print_var(void);
+
+int main(void){
+	
+	print_var();
+	print_var();
+	print_var();
+}
+
+void print_var(void){
+	int local_var; /* variabile locale (class auto: block scope, auto
+			* storage duration, no linkage) non inizializzata
+			* conterrà un vaore casuale, indefinito. Le varia
+			* bili locali devono essere inizializzate esplici
+			* tamente.
+			*/
+
+	int initialized_local_var = 0;
+
+	printf("local_var=%d \t\t &amp;local_var=%p\n", local_var, &amp;local_var);
+	printf("init_local_var=%d \t &amp;init_local_var=%p\n", initialized_local_var, &amp;initialized_local_var);
+	printf("\n");
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
+<p align="justify">
+Una variabile appartenente alla <strong>classe di memorizzazione automatica</strong> (auto) ha:
 </p>
 
 <ul>
@@ -1673,7 +2140,7 @@ Una variabile appartenente alla <strong>classe di memorizzazione automatica</str
 </ul>
 
 <p align="justify">
-Qualsiasi variabile dichiarata all'interno di un blocco (<code>{</code> e <code>}</code>) è di tipo <code>auto</code>: in pratica, è la classe di memorizzazione per tutte le variabili locali. Le variabili di classe <code>auto</code> non sono inizializzate automaticamente: questo è il motivo per cui le variabili locali devono essere inizializzate esplicitamente, altrimenti ospitano un valore assolutamente casuale, sporco.
+Qualsiasi variabile dichiarata all'interno di un blocco ({ e }) è di tipo auto: in pratica, è la classe di memorizzazione per tutte le variabili locali. Le variabili di classe auto non sono inizializzate automaticamente: questo è il motivo per cui le variabili locali devono essere inizializzate esplicitamente, altrimenti ospitano un valore assolutamente casuale, sporco.
 </p>
 
 ```c
@@ -1717,9 +2184,9 @@ Ricordati quindi che all'uscita del blocco il valore contenuto nella variabile v
 ## Variabili register (register class)
 
 <p align="justify">
-Le variabili <code>register</code> sono variabili di tipo <code>auto</code> (block scope, no linkage, automatic storage duration). Dichiarando una variabile di classe <code>register</code>, il programmatore richiede al compilatore di memorizzarla nella memoria più veloce a disposizione, che dovrebbe essere rappresentata dai registri della CPU; questi, come noto, sono molto più veloci della normale RAM.
-Questa è una richiesta che può anche non essere soddisfatta dal compilatore se i registri sono occupati o se la dimensione del dato è troppo grande rispetto alla capacità dei registri della CPU. Si dichiarano <code>register</code> le variabili a cui si deve accedere spesso e con grande velocità: ad esempio, gli indici dei cicli. L'uso di variabili <code>register</code> ha perso la sua importanza, in quanto i moderni compilatori sono in grado di effettuare queste considerazioni per l'ottimizzazione del codice da soli, anche se usare variabili <code>register</code> potrebbe aiutare a capire quali variabili richiedono velocità di accesso.
-Da ricordare è che, una volta che una variabile è dichiarata <code>register</code>, non è possibile recuperare l'indirizzo della variabile. Si possono dichiarare di classe <code>register</code> anche i parametri formali delle funzioni.
+Le variabili register sono variabili di tipo auto (block scope, no linkage, automatic storage duration). Dichiarando una variabile di classe register, il programmatore richiede al compilatore di memorizzarla nella memoria più veloce a disposizione, che dovrebbe essere rappresentata dai registri della CPU; questi, come noto, sono molto più veloci della normale RAM.
+Questa è una richiesta che può anche non essere soddisfatta dal compilatore se i registri sono occupati o se la dimensione del dato è troppo grande rispetto alla capacità dei registri della CPU. Si dichiarano register le variabili a cui si deve accedere spesso e con grande velocità: ad esempio, gli indici dei cicli. L'uso di variabili register ha perso la sua importanza, in quanto i moderni compilatori sono in grado di effettuare queste considerazioni per l'ottimizzazione del codice da soli, anche se usare variabili register potrebbe aiutare a capire quali variabili richiedono velocità di accesso.
+Da ricordare è che, una volta che una variabile è dichiarata register, non è possibile recuperare l'indirizzo della variabile. Si possono dichiarare di classe register anche i parametri formali delle funzioni.
 </p>
 
 ```c
@@ -1734,12 +2201,106 @@ int uno(register int a);
 
 ## Variabili statiche locali (static variables with block scope)
 
+<!-- lab-exercises:start heading="Variabili statiche locali (static variables with block scope)" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/1_variables/1_static_local.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Differenza tra variabile locale automatica e <code>static</code> locale che conserva il valore tra chiamate.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Variabili statiche locali (static variables with block scope) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza tra variabile locale automatica e <code>static</code> locale che conserva il valore tra chiamate e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/1_variables/1_static_local.c">/lab/1_variables/1_static_local.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/1_variables
+gcc -o bin/1_static_local 1_static_local.c
+bin/1_static_local</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/1_variables/1_static_local.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+void call_me(void); /* prototipo di funzione  necessario perchè la
+		     * chiamata alla funzione call_me() è eseguita
+		     * prima della sua definizione.
+		     */
+
+int main(void){
+	/*  call_me() incrementa di uno una variabile automatica statica
+	 *  (count) ed una variabile automatica (bad_count). Entrambe so
+	 *  no variabili locali al corpo dellla funzione ma  count viene
+	 *  allocata all'inizio del progrmma e deallocata alla fine (sta
+	 *  tic storage duration)  quindi conserva il  valore precedente 
+	 *  tra una chiamata e la successiva della funzione call_me();la
+	 *  variabile count raggiunge un valore pari al  numero di volte
+	 *  che il chiamante richiamerà la funzione call_me().
+	 *  La variabile non statica  bad_count viene ogni  volta che si 
+	 *  entra nel blocco della funzione allocata e poi deallocata al
+	 *  al termine del blocco ed infatti varrà al massimo uno.
+	 */
+	call_me();
+	call_me();
+	call_me();
+	call_me();
+	call_me();
+
+}
+
+void call_me(void){
+	static int count; /* variabile automatica statica: automatic scope,
+			   * no linkage, static storage duration. Le varia
+			   * bili statiche sono inizializzata a zero impli
+			   * citamente e hanno un tempo di vita pari a quel
+			   * lo del programma
+			   */
+	int bad_count = 0;
+
+	count = count + 1;
+	bad_count = bad_count + 1;
+
+	printf("count=%d \t &amp;count=%p\n", count, &amp;count);
+	printf("bad_count=%d \t &amp;bad_coubt=%p\n", bad_count, &amp;bad_count);
+
+	printf("You call me %d times\n", count);
+	printf("\n");
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 Una variabile con block scope ha visibilità limitata all'interno del blocco in cui è dichiarata e ovviamente nessun linkage (non è visibile alle altre funzioni nel file corrente e negli altri file). Lo storage duration è limitato al tempo di esecuzione del blocco in cui è dichiarata; la variabile è allocata in memoria appena si entra nel blocco e deallocata all'uscita. Queste variabili sono le variabili locali. Rendere statica una variabile locale significa modificare il suo storage duration in modo da farlo coincidere con il tempo di esecuzione del programma e non più con il tempo di esecuzione del blocco; in altre parole, la variabile sarà allocata quando il programma verrà eseguito e deallocata alla sua terminazione. Ovviamente lo scope resta di tipo block, quindi, anche se la variabile non viene deallocata all'uscita del blocco, il suo identificatore non è più visibile e quindi non è possibile accedere alla locazione di memoria. Quando il flusso di esecuzione rientrerà nel blocco, il valore precedentemente conservato sarà disponibile attraverso l'identificatore. Per dichiarare statica una variabile locale si usa la <i>keyword</i> <b>static</b>. Vediamo un esempio:
 </p>
 
 <p align="justify">
-La funzione <code>example_static_var</code> dichiara due variabili: <code>a</code> di tipo automatico e <code>b</code> statica (con block scope). Vediamo le differenze pratiche:
+La funzione example_static_var dichiara due variabili: a di tipo automatico e b statica (con block scope). Vediamo le differenze pratiche:
 </p>
 
 ```c
@@ -1812,7 +2373,7 @@ int no_possible_static_parameter(static int a); /* ERRORE */
 <p align=justify>
 Fino a questo punto abbiamo usato i termini dichiarazione e definizione in modo intercambiabile come se fossero la stessa cosa. In realtà esiste una differenza ed è arrivato il momento di affrontarla.
 La definizione di una variabile coincide con l'istruzione in cui avviene l'allocazione di spazio in memoria per la variabile. La dichiarazione, invece, consiste nel dichiarare al compilatore che si farà uso di una variabile già allocata nel file corrente o in un altro file.
-Per le variabili locali (<code>auto</code>) la definizione coincide con la dichiarazione; per le variabili globali ha senso conoscere questa leggera differenza.
+Per le variabili locali (auto) la definizione coincide con la dichiarazione; per le variabili globali ha senso conoscere questa leggera differenza.
 Una variabile globale ha file scope ed external linkage, per questo viene anche detta variabile esterna (visibile anche all'esterno del file, negli altri file del programma).
 Ricordiamo che una variabile esterna (globale) è <b>DEFINITA</b> fuori dalle funzioni all'inizio del file, in questo modo:
 </p>
@@ -1847,14 +2408,14 @@ int main(void){
 ```
 
 <p align="justify">
-è possibile, dopo aver DEFINITO la variabile esterna, DICHIARARLA a scopo di documentazione all'interno delle funzioni che la useranno attraverso la <i>keyword</i> <code>extern</code>, come fatto sopra nel <code>main()</code>.
-Infine, per rendere visibile in un file una variabile esterna (globale) che è stata DEFINITA in un altro file, è OBBLIGATORIA la DICHIARAZIONE con <i>keyword</i> <code>extern</code> nel secondo file, come è stato fatto sopra per la variabile <code>global_var_somewhere_in_other_file</code>.
+è possibile, dopo aver DEFINITO la variabile esterna, DICHIARARLA a scopo di documentazione all'interno delle funzioni che la useranno attraverso la <i>keyword</i> extern, come fatto sopra nel main().
+Infine, per rendere visibile in un file una variabile esterna (globale) che è stata DEFINITA in un altro file, è OBBLIGATORIA la DICHIARAZIONE con <i>keyword</i> extern nel secondo file, come è stato fatto sopra per la variabile global_var_somewhere_in_other_file.
 </p>
 
 <table align="center">
 	<td>&#9888; <b>Attenzione</b>
 	<p align=justify>
-Se togliessimo la <i>keyword</i> <code>extern</code> nella DICHIARAZIONE della variabile <code>global_var_somewhere_in_other_file</code>, questa si trasformerebbe in una DEFINIZIONE
+Se togliessimo la <i>keyword</i> extern nella DICHIARAZIONE della variabile global_var_somewhere_in_other_file, questa si trasformerebbe in una DEFINIZIONE
 di nuova variabile e causerebbe un errore, in quanto (in qualche altro file) già esiste una variabile globale esterna con questo nome e ovviamente non possono esistere due variabili (due locazioni di memoria diverse) con lo stesso nome nel medesimo spazio di nomi.
 	</p>
 	</td>
@@ -1881,8 +2442,137 @@ int main(void){
 
 ## Variabili globali con External Linkage (Static variables with External Linkage)
 
+<!-- lab-exercises:start heading="Variabili globali con External Linkage (Static variables with External Linkage)" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/1_variables/4_global_external_internal_a.c</summary>
+
 <p align="justify">
-Le variabili globali sono DEFINITE all'esterno delle funzioni, di solito all'inizio del file sorgente dopo le direttive al preprocessore (<code>#include</code>). Come anticipato, queste variabili hanno: file scope (sono visibili a tutte le funzioni del file che contiene la loro definizione), static storage duration (tempo di vita in memoria coincidente con l'esecuzione del programma) ed external linkage (sono potenzialmente visibili anche in tutti i file sorgente del programma). Quindi le variabili globali sono variabili statiche con external linkage. Nella definizione non si usa la <i>keyword</i> <code>extern</code>; invece, questa può essere usata (opzionalmente) nella dichiarazione della variabile all'interno delle funzioni che la useranno. L'uso di <code>extern</code> è invece obbligatorio quando si vuole usare una variabile globale definita in un altro file del programma: in questo caso è necessario dichiarare esplicitamente la variabile usando la <i>keyword</i> <code>extern</code> nel file che vuole usare la variabile definita in un altro file. In soldoni, <code>extern</code> non viene usata nella DEFINIZIONE (quando si crea per la prima volta la variabile globale e viene allocata la memoria), bensì nelle DICHIARAZIONI, per informare il compilatore che la variabile è definita da qualche altra parte e che nel file si vuole solo fare uso della variabile esterna già allocata.
+<strong>Descrizione breve:</strong>
+File principale che usa una funzione e una variabile condivisa con un altro file.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Variabili globali con External Linkage (Static variables with External Linkage) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente File principale che usa una funzione e una variabile condivisa con un altro file e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/1_variables/4_global_external_internal_a.c">/lab/1_variables/4_global_external_internal_a.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/1_variables
+gcc -o bin/4_global_external_internal 4_global_external_internal_a.c 4_global_external_internal_b.c
+bin/4_global_external_internal</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/1_variables/4_global_external_internal_a.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;  // printf()
+
+int accumulate(int); /* prototipo di funzione definita in
+		      * 4_global_external_internal_b.c
+		      */
+
+int count;  // variabile globale external linkage
+	    // visibile in 4_global_external_internal_b.c
+
+int main(void){
+	int number;    // variabile locale non inizializzata
+	int total = 0; // variabile locale inizializzata
+	while(1){
+		printf("Get me an integer &gt; 0 (0 to quit)\n");
+		scanf("%d", &amp;number);
+		++count;
+		if(number == 0)
+			break;
+		total = accumulate(number);
+	}
+	printf("total=%d\n", total);
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#128187; /lab/1_variables/4_global_external_internal_b.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Uso di <code>extern</code> e variabile locale <code>static</code> in una funzione accumulatrice.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Variabili globali con External Linkage (Static variables with External Linkage) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Uso di <code>extern</code> e variabile locale <code>static</code> in una funzione accumulatrice e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/1_variables/4_global_external_internal_b.c">/lab/1_variables/4_global_external_internal_b.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/1_variables
+gcc -o bin/4_global_external_internal 4_global_external_internal_a.c 4_global_external_internal_b.c
+bin/4_global_external_internal</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/1_variables/4_global_external_internal_b.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+extern int count; /* dichiarazione di variabile esterna
+		   * definita in 4_global_external_internal_a.c
+		   * per  vedere la variabile in questo file la
+		   * dichiarazione è necessaria.
+		   */
+
+int accumulate(int number){
+	printf("You call me %d times \n", count);
+	static int subtotal; /* variabile locale statica, ricorda il valore
+			      * tra una chiamata e la successiva della funz
+			      * ione accumulate()
+			      */
+	subtotal +=number;
+	printf("Subtotal = %d\n", subtotal);
+	return subtotal;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
+<p align="justify">
+Le variabili globali sono DEFINITE all'esterno delle funzioni, di solito all'inizio del file sorgente dopo le direttive al preprocessore (#include). Come anticipato, queste variabili hanno: file scope (sono visibili a tutte le funzioni del file che contiene la loro definizione), static storage duration (tempo di vita in memoria coincidente con l'esecuzione del programma) ed external linkage (sono potenzialmente visibili anche in tutti i file sorgente del programma). Quindi le variabili globali sono variabili statiche con external linkage. Nella definizione non si usa la <i>keyword</i> extern; invece, questa può essere usata (opzionalmente) nella dichiarazione della variabile all'interno delle funzioni che la useranno. L'uso di extern è invece obbligatorio quando si vuole usare una variabile globale definita in un altro file del programma: in questo caso è necessario dichiarare esplicitamente la variabile usando la <i>keyword</i> extern nel file che vuole usare la variabile definita in un altro file. In soldoni, extern non viene usata nella DEFINIZIONE (quando si crea per la prima volta la variabile globale e viene allocata la memoria), bensì nelle DICHIARAZIONI, per informare il compilatore che la variabile è definita da qualche altra parte e che nel file si vuole solo fare uso della variabile esterna già allocata.
 Infine, è importante ricordare che <b>le variabili esterne possono essere inizializzate solo una volta</b> e <b>nella DEFINIZIONE</b>: inizializzare una variabile esterna nella DICHIARAZIONE è un ERRORE.
 </p>
 
@@ -1898,8 +2588,8 @@ extern int esterna = 2; // DICHIARAZIONE ERRORE
 ```
 
 <p align="justify">
-Alla luce di queste nuove conoscenze, modifichiamo il programma visto in <code>3_variabili.c</code> spostando i prototipi delle funzioni e la DEFINIZIONE delle variabili globali in un file <code>header</code> (estensione <code>.h</code>). Abbiamo già incontrato questi file quando abbiamo introdotto la funzione <code>printf()</code> e avevamo detto che era necessario includere il file header <code>stdio.h</code>, che conteneva il prototipo della <code>printf()</code>. I file header, o d'intestazione, contengono sia i prototipi delle funzioni sia le strutture dati (quindi anche le variabili globali) che saranno utili nel corrispondente file sorgente (estensione <code>.c</code>).
-I file d'intestazione possono essere di sistema (cioè forniti dal linguaggio stesso) e, come detto, vengono inclusi con la direttiva <code>#include</code> usando le parentesi angolari <code><</code> <code>></code>, in questo modo:
+Alla luce di queste nuove conoscenze, modifichiamo il programma visto in 3_variabili.c spostando i prototipi delle funzioni e la DEFINIZIONE delle variabili globali in un file header (estensione .h). Abbiamo già incontrato questi file quando abbiamo introdotto la funzione printf() e avevamo detto che era necessario includere il file header stdio.h, che conteneva il prototipo della printf(). I file header, o d'intestazione, contengono sia i prototipi delle funzioni sia le strutture dati (quindi anche le variabili globali) che saranno utili nel corrispondente file sorgente (estensione .c).
+I file d'intestazione possono essere di sistema (cioè forniti dal linguaggio stesso) e, come detto, vengono inclusi con la direttiva #include usando le parentesi angolari < >, in questo modo:
 </p>
 
 ```c
@@ -1907,7 +2597,7 @@ I file d'intestazione possono essere di sistema (cioè forniti dal linguaggio st
 ```
 
 <p align="justify">
-I file d'intestazione definiti dal programmatore vengono inclusi usando i doppi apici <code>"</code>, in questo modo:
+I file d'intestazione definiti dal programmatore vengono inclusi usando i doppi apici ", in questo modo:
 </p>
 
 ```c
@@ -1915,12 +2605,12 @@ I file d'intestazione definiti dal programmatore vengono inclusi usando i doppi 
 ```
 
 <p align="justify">
-Il nostro compito è allora spostare tutti i prototipi e le variabili globali di <code>3_variabili.c</code> in un file d'intestazione (<code>4_variabili.h</code>) e includere il file header nel corrispondente file sorgente (<code>4_variabili.c</code>).
+Il nostro compito è allora spostare tutti i prototipi e le variabili globali di 3_variabili.c in un file d'intestazione (4_variabili.h) e includere il file header nel corrispondente file sorgente (4_variabili.c).
 Ovviamente faremo anche qualche piccola modifica e miglioramento al programma precedente, nello specifico:
 
 <ul>
 	<li>
-	Nel file <code>4_variabili.h</code> oltre che dichiarare i prototipi delle funzioni, definiamo una nuova variabile esterna (costante) <code>NUM_ITERATIONS</code> che rappresenta il numero di volte che il programma richiederà all'utente di eseguire un'operazione prima di terminare autonomamente.
+	Nel file 4_variabili.h oltre che dichiarare i prototipi delle funzioni, definiamo una nuova variabile esterna (costante) NUM_ITERATIONS che rappresenta il numero di volte che il programma richiederà all'utente di eseguire un'operazione prima di terminare autonomamente.
 	</li>	
 </ul>
 </p>
@@ -1933,7 +2623,7 @@ const int NUM_ITERATIONS = 2;
 <p>
 <ul>
 	<li align="justify">
-		Per iterare più volte il processo di calcolo (richiesta di inserimento operandi e operazione), usiamo un nuovo costrutto di controllo del flusso: il <code>for</code>. Anche questo verrà trattato in dettaglio in un altro paragrafo, ma brevemente possiamo anticipare che il costrutto <code>for</code> serve per realizzare un ciclo (o loop) e permette di eseguire un insieme di istruzioni un certo numero di volte. Ha questa forma: <code>for ( espr1 ; espr2 ; espr3 ) istr</code>. Prima di iniziare il ciclo viene valutata <b>una volta sola</b> <code>espr1</code>, che viene tipicamente usata per inizializzare le variabili che controllano il ciclo (dette indici del ciclo). Poi viene valutata l'espressione <code>espr2</code> che, se vera, determina l'esecuzione del corpo del ciclo costituito dal blocco di istruzioni <code>istr</code>; in caso contrario (<code>espr2</code> è falsa), il ciclo termina. Prima di valutare nuovamente (passo successivo) <code>espr2</code>, viene valutata l'espressione <code>espr3</code>, che tipicamente viene usata per incrementare o decrementare la variabile (indice) che controlla il ciclo (in <code>espr2</code>).
+		Per iterare più volte il processo di calcolo (richiesta di inserimento operandi e operazione), usiamo un nuovo costrutto di controllo del flusso: il for. Anche questo verrà trattato in dettaglio in un altro paragrafo, ma brevemente possiamo anticipare che il costrutto for serve per realizzare un ciclo (o loop) e permette di eseguire un insieme di istruzioni un certo numero di volte. Ha questa forma: for ( espr1 ; espr2 ; espr3 ) istr. Prima di iniziare il ciclo viene valutata <b>una volta sola</b> espr1, che viene tipicamente usata per inizializzare le variabili che controllano il ciclo (dette indici del ciclo). Poi viene valutata l'espressione espr2 che, se vera, determina l'esecuzione del corpo del ciclo costituito dal blocco di istruzioni istr; in caso contrario (espr2 è falsa), il ciclo termina. Prima di valutare nuovamente (passo successivo) espr2, viene valutata l'espressione espr3, che tipicamente viene usata per incrementare o decrementare la variabile (indice) che controlla il ciclo (in espr2).
 	</li>
 </ul>
 </p>
@@ -1959,7 +2649,7 @@ int main(void){
 ```
 
 <p align="justify">
-Quando il blocco del ciclo è composto da una sola istruzione è possibile omettere la coppia di parentesi graffe (<code>{</code> <code>}</code>) come nel nostro caso e riscrivere il ciclo in questo modo:
+Quando il blocco del ciclo è composto da una sola istruzione è possibile omettere la coppia di parentesi graffe ({ }) come nel nostro caso e riscrivere il ciclo in questo modo:
 </p>
 
 ```c
@@ -1976,7 +2666,7 @@ for (int i=0; i<10; i++)
 </ul>
 
 <p align="justify">
-Il codice del file header <code>4_variabili.h</code> e il sorgente <code>4_variabili.c</code> sono mostrati di seguito. La cosa da far notare è la variabile esterna <code>NUM_ITERATIONS</code>, che è DICHIARATA nel <code>.h</code>: il file d'intestazione verrà incluso nel <code>.c</code> dal preprocessore attraverso la direttiva include e sarà poi effettivamente parte integrante del file <code>.i</code>. Per esplicitare che si sta usando una variabile DEFINITA in un altro file, nel <code>.c</code> si effettua una DICHIARAZIONE della variabile usando la <i>keyword</i> <code>extern</code>.
+Il codice del file header 4_variabili.h e il sorgente 4_variabili.c sono mostrati di seguito. La cosa da far notare è la variabile esterna NUM_ITERATIONS, che è DICHIARATA nel .h: il file d'intestazione verrà incluso nel .c dal preprocessore attraverso la direttiva include e sarà poi effettivamente parte integrante del file .i. Per esplicitare che si sta usando una variabile DEFINITA in un altro file, nel .c si effettua una DICHIARAZIONE della variabile usando la <i>keyword</i> extern.
 </p>
 
 <p align="justify">
@@ -2053,6 +2743,80 @@ int divisione(int dividendo, int divisore){
 
 ## Variabili globali con Internal Linkage (Static variables with Internal Linkage)
 
+<!-- lab-exercises:start heading="Variabili globali con Internal Linkage (Static variables with Internal Linkage)" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/1_variables/3_global_internal.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Variabile globale <code>static</code> visibile solo nel file corrente.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Variabili globali con Internal Linkage (Static variables with Internal Linkage) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Variabile globale <code>static</code> visibile solo nel file corrente e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/1_variables/3_global_internal.c">/lab/1_variables/3_global_internal.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/1_variables
+gcc -o bin/3_global_internal 3_global_internal.c
+bin/3_global_internal</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/1_variables/3_global_internal.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+void one(void);
+void two(void);
+
+static int global_internal; /* variabile globale ma con internal linkage
+			     * cioè è visibile solo a tutte le funzioni
+			     * del file corrente e non in altri file se
+			     * ci fossero.
+			     */
+
+int main(void){
+	printf("global_internal=%d\n", global_internal);
+	one();
+	two();
+}
+
+void one(void){
+	global_internal++;
+	printf("global_internal=%d\n", global_internal);
+}
+
+void two(void){
+	global_internal++;
+	printf("global_internal=%d\n", global_internal);
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 Queste variabili sono globali e hanno file scope, static storage duration, ma internal linkage: questo vuol dire che la loro visibilità è limitata al file che le contiene. La loro DEFINIZIONE, come quella di tutte le variabili globali, è effettuata fuori da tutte le funzioni, di solito all'inizio del file, con l'aggiunta della parola chiave <b>static</b>.
 </p>
@@ -2088,17 +2852,17 @@ Gli specificatori di dichiarazione sono raggruppabili in tre categorie:
 <ul>
   <li>
     <p align="justify">
-    classi di memorizzazione (storage classes): sono quattro <code>auto</code>, <code>static</code>, <code>extern</code> e <code>register</code>. Al massimo una di queste può presentarsi in una dichiarazione e, se presente, deve essere la prima <em>keyword</em> nella dichiarazione
+    classi di memorizzazione (storage classes): sono quattro auto, static, extern e register. Al massimo una di queste può presentarsi in una dichiarazione e, se presente, deve essere la prima <em>keyword</em> nella dichiarazione
     </p>
   </li>
   <li>
     <p align="justify">
-    qualificatori di tipo (type qualifiers): sono tre <code>const</code>, <code>volatile</code> e <code>restrict</code>. Una dichiarazione può contenere zero, uno o più qualificatori di tipo
+    qualificatori di tipo (type qualifiers): sono tre const, volatile e restrict. Una dichiarazione può contenere zero, uno o più qualificatori di tipo
     </p>
   </li>
   <li>
     <p align="justify">
-    specificatori di tipo (type specifiers): <code>void</code>, <code>char</code>, <code>short</code>, <code>int</code>, <code>long</code>, <code>float</code>, <code>double</code>, <code>signed</code>, <code>unsigned</code>. Queste <em>keyword</em> possono essere combinate assieme (<code>unsigned long int</code>); l'ordine con cui compaiono non ha importanza
+    specificatori di tipo (type specifiers): void, char, short, int, long, float, double, signed, unsigned. Queste <em>keyword</em> possono essere combinate assieme (unsigned long int); l'ordine con cui compaiono non ha importanza
     </p>
   </li>
 </ul>
@@ -2143,7 +2907,7 @@ extern const unsigned long int a[10];
 ### Classi di memorizzazione per le funzioni
 
 <p align="justify">
-La definizione (e dichiarazione) di funzione, come per le variabili, può contenere una classe di memorizzazione. Per le funzioni abbiamo solo due classi di memorizzazione: <code>extern</code> e <code>static</code>. La <i>keyword</i> <code>extern</code> all'inizio della dichiarazione o definizione di funzione specifica che la funzione ha <b>external linkage</b>: può essere chiamata da funzioni in altri file del programma. La parola chiave <code>static</code>, invece, indica <b>internal linkage</b> e quindi limita l'uso della funzione all'interno del file in cui è definita. <b>Se non viene specificata una classe di memorizzazione per la funzione, questa assume la classe <code>extern</code></b>.
+La definizione (e dichiarazione) di funzione, come per le variabili, può contenere una classe di memorizzazione. Per le funzioni abbiamo solo due classi di memorizzazione: extern e static. La <i>keyword</i> extern all'inizio della dichiarazione o definizione di funzione specifica che la funzione ha <b>external linkage</b>: può essere chiamata da funzioni in altri file del programma. La parola chiave static, invece, indica <b>internal linkage</b> e quindi limita l'uso della funzione all'interno del file in cui è definita. <b>Se non viene specificata una classe di memorizzazione per la funzione, questa assume la classe extern</b>.
 </p>
 
 ```c
@@ -2188,12 +2952,329 @@ void f(int d, register int e){
 <table align="center">
 	<td>:pill: <b>Nota</b>
 	<p align=justify>
-La definizione di <code>b</code> e di <code>j</code> non è mostrata, quindi non è possibile determinare il <code>linkage</code> di queste variabili. Nella maggior parte dei casi le variabili saranno definite in un altro file e avranno quindi <b>external linkage</b>.
+La definizione di b e di j non è mostrata, quindi non è possibile determinare il linkage di queste variabili. Nella maggior parte dei casi le variabili saranno definite in un altro file e avranno quindi <b>external linkage</b>.
 	</p>
 	</td>
 </table>
 
 ### Suddivisione in moduli di un programma
+
+<!-- lab-exercises:start heading="Suddivisione in moduli di un programma" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/0_intro/4_variabili.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Separazione tra sorgente e header, uso di <code>4_variabili.h</code>.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Suddivisione in moduli di un programma con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Separazione tra sorgente e header, uso di <code>4_variabili.h</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/4_variabili.c">/lab/0_intro/4_variabili.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/0_intro
+gcc -o bin/4_variabili 4_variabili.c
+bin/4_variabili</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/0_intro/4_variabili.c" -->
+<pre lang="c"><code>#include &lt;stdio.h&gt;
+#include "4_variabili.h"
+
+extern const int NUM_ITERATIONS;
+
+int main(void){
+	int risultato = 0;
+	int primo, secondo;
+	char operazione;
+	for(int i = 0; i &lt; NUM_ITERATIONS; i++){
+		printf("Inserisci il primo operando\n");
+		scanf("%d", &amp;primo);
+		printf("Inserisci il secondo operando\n");
+		scanf("%d", &amp;secondo);
+		printf("s)Somma d)Differenza m)Moltiplicazione D)Divisione\n");
+		scanf(" %c", &amp;operazione);
+		switch(operazione){
+			case 's':
+				risultato = somma(primo, secondo);
+				break;
+			case 'd':
+				risultato = differenza(primo, secondo);
+				break;
+			case 'm':
+				risultato = moltiplicazione(primo, secondo);
+				break;
+			case 'D':
+				risultato = divisione(primo, secondo);
+				break;
+			default:
+				printf("Operazione non riconosciuta\n");
+		
+		}
+		printf("Il risultato e': %d\n", risultato);
+	}	
+}
+
+int somma(int primo_operando, int secondo_operando){
+	return primo_operando + secondo_operando;
+}
+
+int differenza(int minuendo, int sottraendo){
+	return minuendo - sottraendo;
+}
+
+int moltiplicazione(int primo_fattore, int secondo_fattore){
+	return primo_fattore * secondo_fattore;
+}
+
+int divisione(int dividendo, int divisore){
+	return dividendo / divisore;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#128187; /lab/0_intro/4_variabili.h</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Prototipi delle funzioni usate da <code>4_variabili.c</code>.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Mostra il ruolo del file di intestazione come contratto condiviso: raccoglie i prototipi delle funzioni usate dal sorgente corrispondente e permette al compilatore di controllare le chiamate tra moduli.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/4_variabili.h">/lab/0_intro/4_variabili.h</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash">File di supporto: viene incluso da 4_variabili.c.</pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/0_intro/4_variabili.h" -->
+<pre lang="c"><code>const int NUM_ITERATIONS = 2; 
+
+int somma(int, int);
+int differenza(int, int);
+int moltiplicazione(int, int);
+int divisione(int, int);
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#128187; /lab/0_intro/5_variabili_main.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+<code>main</code> separato dalle funzioni operative.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Suddivisione in moduli di un programma con un esempio eseguibile e mirato. Il codice permette di osservare concretamente <code>main</code> separato dalle funzioni operative e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/5_variabili_main.c">/lab/0_intro/5_variabili_main.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/0_intro
+gcc -o bin/5_variabili 5_variabili_main.c 5_variabili.c
+bin/5_variabili</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/0_intro/5_variabili_main.c" -->
+<pre lang="c"><code>#include &lt;stdio.h&gt;
+#include "5_variabili.h"
+
+int main(void){
+        int risultato = 0;
+        int primo, secondo;
+        char operazione;
+        for(int i = 0; i &lt; NUM_ITERATIONS; i++){
+                printf("Inserisci il primo operando\n");
+                scanf("%d", &amp;primo);
+                printf("Inserisci il secondo operando\n");
+                scanf("%d", &amp;secondo);
+                printf("s)Somma d)Differenza m)Moltiplicazione D)Divisione\n");
+                scanf(" %c", &amp;operazione);
+                switch(operazione){
+                        case 's':
+                                risultato = somma(primo, secondo);
+                                break;
+                        case 'd':
+                                risultato = differenza(primo, secondo);
+                                break;
+                        case 'm':
+                                risultato = moltiplicazione(primo, secondo);
+                                break;
+                        case 'D':
+                                risultato = divisione(primo, secondo);
+                                break;
+                        default:
+                                printf("Operazione non riconosciuta\n");
+
+                }
+                printf("Il risultato e': %d\n", risultato);
+        }
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#128187; /lab/0_intro/5_variabili.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Implementazione delle funzioni aritmetiche separate dal <code>main</code>.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Suddivisione in moduli di un programma con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Implementazione delle funzioni aritmetiche separate dal <code>main</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/5_variabili.c">/lab/0_intro/5_variabili.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/0_intro
+gcc -o bin/5_variabili 5_variabili_main.c 5_variabili.c
+bin/5_variabili</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/0_intro/5_variabili.c" -->
+<pre lang="c"><code>int somma(int primo_operando, int secondo_operando){
+	return primo_operando + secondo_operando;
+}
+
+int differenza(int minuendo, int sottraendo){
+	return minuendo - sottraendo;
+}
+
+int moltiplicazione(int primo_fattore, int secondo_fattore){
+	return primo_fattore * secondo_fattore;
+}
+
+int divisione(int dividendo, int divisore){
+	return dividendo / divisore;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#128187; /lab/0_intro/5_variabili.h</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Dichiarazioni/prototipi condivisi.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Completa l'esempio multi-file dichiarando le funzioni implementate nel modulo separato, cosi il main puo usarle senza conoscerne direttamente il corpo.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/5_variabili.h">/lab/0_intro/5_variabili.h</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash">File di supporto: viene incluso da 5_variabili_main.c.</pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/0_intro/5_variabili.h" -->
+<pre lang="c"><code>const int NUM_ITERATIONS = 2; 
+
+int somma(int, int);
+int differenza(int, int);
+int moltiplicazione(int, int);
+int divisione(int, int);
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
 
 <p align="justify">
 La capacità di separare l'implementazione delle funzioni dai loro prototipi attraverso l'uso dei file header e la possibilità di condividere variabili tra file diversi del programma ci permettono ora di fare un ulteriore passo nel miglioramento della nostra calcolatrice. Vogliamo riorganizzare il codice in modo da ottenere dei moduli separati: ora vedremo cosa significa e quali sono i vantaggi nel fare ciò. Pensare di realizzare programmi di grandi dimensioni usando un unico grande file sorgente è una cattiva idea per tante ragioni; le principali sono:
@@ -2246,47 +3327,47 @@ Abbiamo già detto che i file che compongono un programma sono:
 <ul>
   <li>
     <p align="justify">
-    file sorgenti: (<em>source files</em>) con estensione <code>.c</code>
+    file sorgenti: (<em>source files</em>) con estensione .c
     </p>
   </li>
   <li>
     <p align="justify">
-    file d'intestazione (<em>header files</em>) con estensione <code>.h</code>
+    file d'intestazione (<em>header files</em>) con estensione .h
     </p>
   </li>
 </ul>
 
 <p align="justify">
-Di solito si raggruppano tutte le funzioni e i dati relativi a una certa funzionalità in un unico file sorgente (<code>.c</code>) e si crea un corrispondente file header <code>.h</code> (con lo stesso nome del file sorgente a cui si riferisce, ma con estensione diversa) che contiene i prototipi delle funzioni (implementate nel file sorgente) e la definizione dei tipi di dato usati dal modulo (se è richiesto).
+Di solito si raggruppano tutte le funzioni e i dati relativi a una certa funzionalità in un unico file sorgente (.c) e si crea un corrispondente file header .h (con lo stesso nome del file sorgente a cui si riferisce, ma con estensione diversa) che contiene i prototipi delle funzioni (implementate nel file sorgente) e la definizione dei tipi di dato usati dal modulo (se è richiesto).
 </p>
 
 <table align="center">
 	<td>&#9888; <b>Attenzione</b>
-Nei file header <code>.h</code> devono essere inserite solo le definizioni dei tipi e i prototipi (le dichiarazioni) delle funzioni. L'implementazione delle funzioni risiede nel file sorgente <code>.c</code>.
+Nei file header .h devono essere inserite solo le definizioni dei tipi e i prototipi (le dichiarazioni) delle funzioni. L'implementazione delle funzioni risiede nel file sorgente .c.
 	</p>
 	</td>
 </table>
 
 <p align="justify">
-Brevemente, in <code>5_variabili_main.c</code> inseriamo la logica di interazione con l'utente; l'implementazione delle funzioni matematiche viene spostata in un file sorgente separato: <code>5_variabili.c</code>, e i prototipi nel corrispondente file header <code>5_variabili.h</code>.
+Brevemente, in 5_variabili_main.c inseriamo la logica di interazione con l'utente; l'implementazione delle funzioni matematiche viene spostata in un file sorgente separato: 5_variabili.c, e i prototipi nel corrispondente file header 5_variabili.h.
 </p>
 
 <table align="center">
 	<td>:pill: <b>Nota</b>
 	<p align=justify>
-Il file sorgente che contiene le funzioni matematiche e il suo corrispettivo file d'intestazione hanno lo stesso nome, ma estensioni differenti: <code>5_variabili.c</code> e <code>5_variabili.h</code>.
+Il file sorgente che contiene le funzioni matematiche e il suo corrispettivo file d'intestazione hanno lo stesso nome, ma estensioni differenti: 5_variabili.c e 5_variabili.h.
 	</p>
 	</td>
 </table>
 
 <p align="justify">
-Nel file <code>5_variabili_main.c</code> facciamo uso delle funzioni matematiche, quindi, prima del loro utilizzo all'interno dello <code>switch</code>, importiamo il file header contenente i prototipi; ovviamente facciamo lo stesso anche per la funzione <code>printf()</code>.
+Nel file 5_variabili_main.c facciamo uso delle funzioni matematiche, quindi, prima del loro utilizzo all'interno dello switch, importiamo il file header contenente i prototipi; ovviamente facciamo lo stesso anche per la funzione printf().
 </p>
 
 <table align="center">
 	<td>&#9888; <b>Attenzione</b>
 	<p align=justify>
-Fai attenzione: per includere il file header per la funzione <code>printf()</code> si usano le parentesi angolari <code><</code> <code>></code> in quanto si tratta di funzioni del linguaggio; per includere file d'intestazione definiti dal programmatore si usano i doppi apici <code>"</code>.
+Fai attenzione: per includere il file header per la funzione printf() si usano le parentesi angolari < > in quanto si tratta di funzioni del linguaggio; per includere file d'intestazione definiti dal programmatore si usano i doppi apici ".
 	</p>
 	</td>
 </table>
@@ -2297,7 +3378,7 @@ Fai attenzione: per includere il file header per la funzione <code>printf()</cod
 ```
 
 <p align="justify">
-In aggiunta, sostituiamo il costrutto <code>if-else</code> con lo <code>switch</code>. Lo <code>switch</code> è assolutamente equivalente a un <code>if-else</code> e serve a scegliere tra diversi blocchi di istruzioni in base al valore di un'espressione intera. La sintassi è la seguente:
+In aggiunta, sostituiamo il costrutto if-else con lo switch. Lo switch è assolutamente equivalente a un if-else e serve a scegliere tra diversi blocchi di istruzioni in base al valore di un'espressione intera. La sintassi è la seguente:
 </p>
 
 ```c
@@ -2342,17 +3423,17 @@ Il preprocessamento è il primo step del processo che porta alla generazione del
 <ul>
   <li>
     <p align="justify">
-    <code>#define</code>
+    #define
     </p>
   </li>
   <li>
     <p align="justify">
-    <code>#include</code>
+    #include
     </p>
   </li>
   <li>
     <p align="justify">
-    <code>#if</code> <code>#ifdef</code>
+    #if #ifdef
     </p>
   </li>
 </ul>
@@ -2397,8 +3478,93 @@ Queste direttive permettono di:
 
 #### La direttiva #define 
 
+<!-- lab-exercises:start heading="La direttiva #define" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/2_preprocessor/macro.c</summary>
+
 <p align="justify">
-La direttiva <code>#define</code> viene usata per creare le <b>macro</b>. Le <b>macro</b> sono utilizzate per effettuare sostituzioni tipografiche nel codice sorgente prima della compilazione. 
+<strong>Descrizione breve:</strong>
+Macro aritmetiche con parametri per somma, differenza, moltiplicazione, divisione.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo La direttiva #define con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Macro aritmetiche con parametri per somma, differenza, moltiplicazione, divisione e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/2_preprocessor/macro.c">/lab/2_preprocessor/macro.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/2_preprocessor
+gcc -o bin/macro macro.c
+bin/macro</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/2_preprocessor/macro.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+#define SOMMA(x,y) ((x)+(y))
+#define DIFFERENZA(x,y) ((x)-(y))
+#define MOLTIPLICAZIONE(x,y) ((x)*(y))
+#define DIVISIONE(x,y) ((x)/(y))
+
+
+int main(void){
+        int risultato = 0;
+        int primo, secondo;
+        char operazione;
+        printf("Inserisci il primo operando\n");
+        scanf("%d", &amp;primo);
+        printf("Inserisci il secondo operando\n");
+        scanf("%d", &amp;secondo);
+        printf("s)Somma d)Differenza m)Moltiplicazione D)Divisione\n");
+        scanf(" %c", &amp;operazione);
+        switch(operazione){
+                        case 's':
+                                risultato = SOMMA(primo, secondo);
+                                break;
+                        case 'd':
+                                risultato = DIFFERENZA(primo, secondo);
+                                break;
+                        case 'm':
+                                risultato = MOLTIPLICAZIONE(primo, secondo);
+                                break;
+                        case 'D':
+                                risultato = DIVISIONE(primo, secondo);
+                                break;
+                        default:
+                                printf("Operazione non riconosciuta\n");
+
+        }
+        printf("Il risultato e': %d\n", risultato);
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
+<p align="justify">
+La direttiva #define viene usata per creare le <b>macro</b>. Le <b>macro</b> sono utilizzate per effettuare sostituzioni tipografiche nel codice sorgente prima della compilazione. 
 Ha questa forma:
 </p>
 
@@ -2407,12 +3573,12 @@ Ha questa forma:
 ```
 
 <p align="justify">
-A seguito della riga sopra, tutte le successive occorrenze dell'identificatore <code>nome</code> presenti nel codice saranno sostituite con <code>nuovo-nome</code> (non viene considerato lo spazio tra <code>nome</code> e <code>nuovo-nome</code>).
-Il testo da sostituire può estendersi su più di una riga se l'ultimo carattere della linea è <code>\</code> che fa ignorare il carattere di nuova riga <code>\n</code> al preprocessore.
+A seguito della riga sopra, tutte le successive occorrenze dell'identificatore nome presenti nel codice saranno sostituite con nuovo-nome (non viene considerato lo spazio tra nome e nuovo-nome).
+Il testo da sostituire può estendersi su più di una riga se l'ultimo carattere della linea è \ che fa ignorare il carattere di nuova riga \n al preprocessore.
 </p>
 
 <p align="justify">
-Ecco alcuni esempi di uso di <code>#define</code>:
+Ecco alcuni esempi di uso di #define:
 </p>
 
 
@@ -2443,7 +3609,7 @@ int main(void){
 ```
 
 <p align="justify">
-La <strong>macro</strong> <code>QUADRATO</code> determina la sostituzione del testo <code>QUADRATO(lunghezza_lato)</code> con il testo <code>lunghezza_lato*lunghezza_lato</code> prima della compilazione, quindi il codice visto dal compilatore è:
+La <strong>macro</strong> QUADRATO determina la sostituzione del testo QUADRATO(lunghezza_lato) con il testo lunghezza_lato*lunghezza_lato prima della compilazione, quindi il codice visto dal compilatore è:
 </p>
 
 ```c
@@ -2500,11 +3666,11 @@ L'uso di macro con parametri senza l'uso di parentesi tonde porta a errori diffi
 #### La direttiva #include
 
 <p align="justify">
-Abbiamo accennato a questa direttiva nei paragrafi introduttivi spiegando che serviva a includere, nel file sorgente, il file header <code>stdio.h</code> che conteneva il prototipo della funzione <code>printf()</code>.
+Abbiamo accennato a questa direttiva nei paragrafi introduttivi spiegando che serviva a includere, nel file sorgente, il file header stdio.h che conteneva il prototipo della funzione printf().
 </p>
 
 <p align="justify">
-La direttiva <code>#include</code> sostituisce il contenuto di un intero file nella riga di codice dove è inserita.
+La direttiva #include sostituisce il contenuto di un intero file nella riga di codice dove è inserita.
 </p>
 
 <p align="justify">
@@ -2520,17 +3686,220 @@ Esiste in due forme: con parentesi angolari o con doppi apici:
 ```
 
 <p align="justify">
-La prima forma (parentesi angolari <code>&lt;</code> <code>&gt;</code>) è usata per includere il contenuto di file d'intestazione del linguaggio; la seconda forma, invece, permette di includere i file header definiti dal programmatore.
+La prima forma (parentesi angolari &lt; &gt;) è usata per includere il contenuto di file d'intestazione del linguaggio; la seconda forma, invece, permette di includere i file header definiti dal programmatore.
 </p>
 
 #### Le direttive #if #ifdef #ifndef
+
+<!-- lab-exercises:start heading="Le direttive #if #ifdef #ifndef" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/2_preprocessor/direttiva_if.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Uso di <code>#if DEBUG</code>, simbolo passato da codice o da <code>gcc -D</code>.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Le direttive #if #ifdef #ifndef con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Uso di <code>#if DEBUG</code>, simbolo passato da codice o da <code>gcc -D</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/2_preprocessor/direttiva_if.c">/lab/2_preprocessor/direttiva_if.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/2_preprocessor
+gcc -o bin/direttiva_if direttiva_if.c
+bin/direttiva_if</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/2_preprocessor/direttiva_if.c" -->
+<pre lang="c"><code>/* 
+ *  Puoi attivare il simbolo DEBUG in due modi:
+ *  - 1 - Nel codice tramite direttiva #define
+ *        #define DEBUG 1
+ *  - 2 - A tempo di compilazione con -D a gcc
+ *        gcc -DDEBUG=1 -o direttiva_if direttiva_if.c 
+ *	  Nota: se hai già dichiarato il simbo
+ *	        lo DEBUG nel codice tramite di
+ *		rettiva #define non puoi usare
+ *		il secondo metodo (-D con gcc)
+ *		in quanto il compilarore dareb
+ *		be errore di ridefinizione del
+ *		simbolo DEBUG. 
+ */
+
+//#define DEBUG 0
+#include&lt;stdio.h&gt;
+
+int main(void){
+	#if DEBUG
+		printf("DEBUG is ON\n");
+	#else
+		printf("DEBUG is OFF\n");
+	#endif /* DEBUG */
+	return 0;
+}
+	
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#128187; /lab/2_preprocessor/direttiva_ifdef.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Verifica se <code>DEBUG</code> e definito, uso di <code>#undef</code>.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Le direttive #if #ifdef #ifndef con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Verifica se <code>DEBUG</code> e definito, uso di <code>#undef</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/2_preprocessor/direttiva_ifdef.c">/lab/2_preprocessor/direttiva_ifdef.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/2_preprocessor
+gcc -o bin/direttiva_ifdef direttiva_ifdef.c
+bin/direttiva_ifdef</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/2_preprocessor/direttiva_ifdef.c" -->
+<pre lang="c"><code>/*
+ * Puoi definire DEBUG in due modi
+ * - 1 - Nel codice: #define DEBUG
+ * - 2 - con gcc   : gcc -DDEBUG -o direttiva_ifdef direttiva_ifdef.c
+ * Nota: puoi anche eliminare la 
+ *       definizione del simbolo
+ *	 DEBUG nel codice usando
+ *	 #undef DEBUG
+ *	 Questo annullerra DEBUG
+ *	 anche se hai usato il 2
+ *	 metodo
+ */
+
+//#undef DEBUG
+#include&lt;stdio.h&gt;
+
+int main(void){
+	#ifdef DEBUG
+		printf("DEBUG is defined\n");
+	#else
+		printf("DEBUG is not defined\n");
+	#endif /* DEBUG */
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#128187; /lab/2_preprocessor/direttiva_ifndef.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Logica inversa di <code>#ifdef</code>, controllo se un simbolo non e definito.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Le direttive #if #ifdef #ifndef con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Logica inversa di <code>#ifdef</code>, controllo se un simbolo non e definito e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/2_preprocessor/direttiva_ifndef.c">/lab/2_preprocessor/direttiva_ifndef.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/2_preprocessor
+gcc -o bin/direttiva_ifndef direttiva_ifndef.c
+bin/direttiva_ifndef</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/2_preprocessor/direttiva_ifndef.c" -->
+<pre lang="c"><code>/*
+ * Puoi definire DEBUG in due modi
+ * - 1 - Nel codice: #define DEBUG
+ * - 2 - con gcc   : gcc -DDEBUG -o direttiva_ifndef direttiva_ifndef.c
+ * Nota: puoi anche eliminare la
+ *       definizione del simbolo
+ *       DEBUG nel codice usando
+ *       #undef DEBUG
+ *       Questo annullerra DEBUG
+ *       anche se hai usato il 2
+ *       metodo
+ */
+
+//#undef DEBUG
+#include&lt;stdio.h&gt;
+
+int main(void){
+        #ifndef DEBUG
+                printf("DEBUG is not defined\n");
+        #else
+                printf("DEBUG is defined\n");
+        #endif /* DEBUG */
+        return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
 
 <p align="justify">
 Con queste direttive si possono escludere porzioni di codice in base al verificarsi o meno di certe condizioni.
 </p>
 
 <p align="justify">
-La direttiva <code>#if</code> valuta <strong>un'espressione intera costante</strong> il cui <strong>valore deve essere noto all'atto della compilazione</strong>.
+La direttiva #if valuta <strong>un'espressione intera costante</strong> il cui <strong>valore deve essere noto all'atto della compilazione</strong>.
 </p>
 
 ```c
@@ -2545,11 +3914,11 @@ La direttiva <code>#if</code> valuta <strong>un'espressione intera costante</str
 ```
 
 <p align="justify">
-Tutte le righe comprese tra <code>#if</code> e <code>#endif</code> vengono incluse nel file header solo se l'espressione è diversa da 0; altrimenti vengono rimosse.
+Tutte le righe comprese tra #if e #endif vengono incluse nel file header solo se l'espressione è diversa da 0; altrimenti vengono rimosse.
 </p>
 
 <p align="justify">
-La direttiva <code>#ifdef</code> è molto simile: non valuta un'espressione costante, ma la definizione o meno di una macro. Vedi il codice seguente:
+La direttiva #ifdef è molto simile: non valuta un'espressione costante, ma la definizione o meno di una macro. Vedi il codice seguente:
 </p>
 
 ```c
@@ -2562,11 +3931,11 @@ La direttiva <code>#ifdef</code> è molto simile: non valuta un'espressione cost
 ```
 
 <p align="justify">
-<code>#ifdef</code> include il codice tra se stessa e la direttiva <code>#endif</code> solo se la macro è definita.
+#ifdef include il codice tra se stessa e la direttiva #endif solo se la macro è definita.
 </p>
 
 <p align="justify">
-è possibile ottenere il comportamento opposto con <code>#ifndef</code>, come segue:
+è possibile ottenere il comportamento opposto con #ifndef, come segue:
 </p>
 
 ```c
@@ -2580,15 +3949,78 @@ La direttiva <code>#ifdef</code> è molto simile: non valuta un'espressione cost
 <table align="center">
 		<td>&#9888; <b>Importante</b>
 	<p align=justify>
-La definizione del simbolo macro deve essere effettuata con la direttiva <code>#define</code>.
+La definizione del simbolo macro deve essere effettuata con la direttiva #define.
 	</p>
 	</td>
 </table>
 
 ### Eliminazione temporanea di codice
 
+<!-- lab-exercises:start heading="Eliminazione temporanea di codice" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/2_preprocessor/eliminazione_temporanea_codice.c</summary>
+
 <p align="justify">
-In fase di debugging può essere utile eliminare temporaneamente porzioni di codice senza cancellarle, oppure, al contrario, far eseguire certi pezzi di codice (<code>printf()</code> di variabili per valutarne il valore) solo in fase di debug/testing. A questi scopi possiamo usare le direttive mostrate sopra. Vediamo come:
+<strong>Descrizione breve:</strong>
+Macro <code>TRACE</code> e inclusione/esclusione temporanea di codice.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Eliminazione temporanea di codice con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Macro <code>TRACE</code> e inclusione/esclusione temporanea di codice e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/2_preprocessor/eliminazione_temporanea_codice.c">/lab/2_preprocessor/eliminazione_temporanea_codice.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/2_preprocessor
+gcc -o bin/eliminazione_temporanea_codice eliminazione_temporanea_codice.c
+bin/eliminazione_temporanea_codice</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/2_preprocessor/eliminazione_temporanea_codice.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+#define TRACE(var, val) printf("[%s (%d): %s]\t%s=%d\n", \
+	__FILE__, __LINE__, __func__, var, val)
+
+int main(void){
+	int i;
+	#ifdef DEBUG
+		TRACE("i", i);
+		printf("int i = %d\n", i);
+	#else
+		printf("int i = %d\n", i);
+	#endif /* DEBUG */
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
+<p align="justify">
+In fase di debugging può essere utile eliminare temporaneamente porzioni di codice senza cancellarle, oppure, al contrario, far eseguire certi pezzi di codice (printf() di variabili per valutarne il valore) solo in fase di debug/testing. A questi scopi possiamo usare le direttive mostrate sopra. Vediamo come:
 </p>
 
 ```c
@@ -2598,7 +4030,7 @@ In fase di debugging può essere utile eliminare temporaneamente porzioni di cod
 ```
 
 <p align="justify">
-Una volta eliminati i problemi, si può ripristinare il codice rimuovendo le righe contenenti <code>#if</code> <code>#endif</code>, oppure cambiando il valore zero con il valore uno, come mostrato nel codice seguente:
+Una volta eliminati i problemi, si può ripristinare il codice rimuovendo le righe contenenti #if #endif, oppure cambiando il valore zero con il valore uno, come mostrato nel codice seguente:
 </p>
 
 ```c
@@ -2608,7 +4040,7 @@ Una volta eliminati i problemi, si può ripristinare il codice rimuovendo le rig
 ```
 
 <p align="justify">
-oppure, più elegantemente, usando <code>#define</code> e <code>#if</code> assieme:
+oppure, più elegantemente, usando #define e #if assieme:
 </p>
 
 ```c
@@ -2623,7 +4055,7 @@ oppure, più elegantemente, usando <code>#define</code> e <code>#if</code> assie
 ```
 
 <p align="justify">
-Si può ottenere lo stesso risultato con la direttiva <code>#ifdef</code> in questo modo:
+Si può ottenere lo stesso risultato con la direttiva #ifdef in questo modo:
 </p>
 
 ```c
@@ -2633,7 +4065,7 @@ Si può ottenere lo stesso risultato con la direttiva <code>#ifdef</code> in que
 ```
 
 <p align="justify">
-Questa seconda soluzione, più elegante, può essere utilizzata anche per includere dei pezzi di codice in fase di testing/debugging (per esempio una serie di stampe su schermo dei valori delle variabili). Per farlo basta definire una macro <code>DEBUG</code> con la direttiva <code>#define</code> e usare <code>#ifdef</code> o <code>#ifndef</code> per includere il codice di test in questo modo:
+Questa seconda soluzione, più elegante, può essere utilizzata anche per includere dei pezzi di codice in fase di testing/debugging (per esempio una serie di stampe su schermo dei valori delle variabili). Per farlo basta definire una macro DEBUG con la direttiva #define e usare #ifdef o #ifndef per includere il codice di test in questo modo:
 </p>
 
 ```c
@@ -2650,7 +4082,7 @@ Questa seconda soluzione, più elegante, può essere utilizzata anche per includ
 ```
 
 <p align="justify">
-Per non considerare il codice basta rimuovere la prima riga <code>#define DEBUG</code> ma, per rendere esplicito che DEBUG è usato per una compilazione condizionale del codice attraverso il preprocessore e che questo è stato disattivato, è meglio usare la direttiva <code>#undef</code> in questo modo:
+Per non considerare il codice basta rimuovere la prima riga #define DEBUG ma, per rendere esplicito che DEBUG è usato per una compilazione condizionale del codice attraverso il preprocessore e che questo è stato disattivato, è meglio usare la direttiva #undef in questo modo:
 </p>
 
 ```c
@@ -2665,7 +4097,7 @@ Per non considerare il codice basta rimuovere la prima riga <code>#define DEBUG<
 ```
 
 <p align="justify">
-Ovviamente con <code>#ifndef</code> otteniamo il comportamento opposto. Vediamo un esempio che usa <code>#ifdef</code> e <code>#ifndef</code> per includere e/o escludere porzioni di codice a seconda che DEBUG sia attivato o meno:
+Ovviamente con #ifndef otteniamo il comportamento opposto. Vediamo un esempio che usa #ifdef e #ifndef per includere e/o escludere porzioni di codice a seconda che DEBUG sia attivato o meno:
 </p>
 
 ```c
@@ -2681,7 +4113,7 @@ Ovviamente con <code>#ifndef</code> otteniamo il comportamento opposto. Vediamo 
 ```
 
 <p align="justify">
-Esiste anche la possibilità di usare <code>#else</code> in questo modo:
+Esiste anche la possibilità di usare #else in questo modo:
 </p>
 
 ```c
@@ -2695,7 +4127,7 @@ Esiste anche la possibilità di usare <code>#else</code> in questo modo:
 ```
 
 <p align="justify">
-Esiste anche la possibilità di usare <code>#if</code> <code>#elif</code> <code>#else</code> per condizioni più complesse:
+Esiste anche la possibilità di usare #if #elif #else per condizioni più complesse:
 </p>
 
 ```c
@@ -2720,7 +4152,7 @@ CPU_FILE = arm.h
  ```
 
 <p align="justify">
-La cosa interessante di questo approccio è il fatto che è possibile definire simboli passando direttamente un'opzione al compilatore. Se ho, ad esempio, il file <code>conditional_compilation.c</code> con questo contenuto:
+La cosa interessante di questo approccio è il fatto che è possibile definire simboli passando direttamente un'opzione al compilatore. Se ho, ad esempio, il file conditional_compilation.c con questo contenuto:
 </p>
 
 ```bash
@@ -2737,14 +4169,14 @@ int main(void){
 ```
 
 <p align="justify">
-Posso definire il simbolo <code>DEBUG</code> da riga di comando a tempo di compilazione passando a <code>gcc</code> l'opzione <code>-D</code> in questo modo:
+Posso definire il simbolo DEBUG da riga di comando a tempo di compilazione passando a gcc l'opzione -D in questo modo:
 </p>
 
 ```bash
 gcc -DDEBUG -o conditional_compilation conditional_compilation.c
 ```
 <p align="justify">
-Anche se nel file non è presente alcuna riga <code>#define DEBUG</code>, il simbolo è stato definito a tempo di compilazione, quindi siamo in staging e l'output del programma sarà:
+Anche se nel file non è presente alcuna riga #define DEBUG, il simbolo è stato definito a tempo di compilazione, quindi siamo in staging e l'output del programma sarà:
 </p>
 
 ```bash
@@ -2753,7 +4185,7 @@ Staging code, debugging is enabled
 ```
 
 <p align="justify">
-Ovviamente è possibile all'interno del codice annullare la dichiarazione del simbolo con <code>#undef DEBUG</code> in questo modo:
+Ovviamente è possibile all'interno del codice annullare la dichiarazione del simbolo con #undef DEBUG in questo modo:
 </p>
 
 ```c
@@ -2771,7 +4203,7 @@ int main(void){
 ```
 
 <p align="justify">
-Anche definendo il simbolo attraverso <code>gcc</code>, a tempo di compilazione, questo verrà annullato dalla direttiva <code>#undef</code> e l'output del programma sarà:
+Anche definendo il simbolo attraverso gcc, a tempo di compilazione, questo verrà annullato dalla direttiva #undef e l'output del programma sarà:
 </p>
 
 ```bash
@@ -2784,8 +4216,8 @@ Production code, no debugging enabled
 
 <p align="justify">
 I file d'intestazione contengono dichiarazioni sia di funzioni (prototipi) sia di dati (strutture, definizioni di tipo, variabili e costanti); questi file possono essere inclusi in più sorgenti, correndo il rischio di avere una situazione in cui lo stesso file d'intestazione è incluso due volte nello stesso sorgente. In queste situazioni il preprocessore copierà due volte il contenuto del file d'intestazione.
-Non è un grosso problema, all'interno di un file <code>.c</code>, avere due o più dichiarazioni (prototipi) della stessa funzione; il compilatore, invece, darà errore se trova due dichiarazioni di tipo identiche. Dobbiamo quindi trovare un modo per evitare inclusioni multiple dello stesso file d'intestazione in un file sorgente.
-Per capire meglio facciamo un esempio: supponiamo di avere tre file header, <code>file1.h</code>, <code>file2.h</code>, <code>file3.h</code>, e un file sorgente <code>prog.c</code>. La situazione, mostrata nella figura seguente, è la seguente: sia <code>file1.h</code> sia <code>file2.h</code> includono <code>file3.h</code>, mentre <code>prog.c</code> include <code>file1.h</code> e <code>file2.h</code>. In <code>prog.c</code>, <code>file3.h</code> verrà incluso due volte: la prima volta a seguito dell'inclusione di <code>file1.h</code> e la seconda per l'inclusione di <code>file2.h</code>.
+Non è un grosso problema, all'interno di un file .c, avere due o più dichiarazioni (prototipi) della stessa funzione; il compilatore, invece, darà errore se trova due dichiarazioni di tipo identiche. Dobbiamo quindi trovare un modo per evitare inclusioni multiple dello stesso file d'intestazione in un file sorgente.
+Per capire meglio facciamo un esempio: supponiamo di avere tre file header, file1.h, file2.h, file3.h, e un file sorgente prog.c. La situazione, mostrata nella figura seguente, è la seguente: sia file1.h sia file2.h includono file3.h, mentre prog.c include file1.h e file2.h. In prog.c, file3.h verrà incluso due volte: la prima volta a seguito dell'inclusione di file1.h e la seconda per l'inclusione di file2.h.
 </p>
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/inclusione_multipla.png)
@@ -2822,7 +4254,7 @@ int main(void){
 ```
 
 <p align="justify">
-Mostrando l'output prodotto dal preprocessore, vediamo che effettivamente <code>file3.h</code> è stato incluso due volte in <code>prog.c</code>.
+Mostrando l'output prodotto dal preprocessore, vediamo che effettivamente file3.h è stato incluso due volte in prog.c.
 </p>
 
 ```bash
@@ -2854,7 +4286,7 @@ int main(void){
 ```
 
 <p align="justify">
-Per risolvere il problema basta fare uso della direttiva <code>#ifndef</code> in questo modo all'interno di <code>file3.h</code>:
+Per risolvere il problema basta fare uso della direttiva #ifndef in questo modo all'interno di file3.h:
 </p>
 
 ```c
@@ -2869,7 +4301,7 @@ typedef int Bool;
 ```
 
 <p align="justify">
-Al momento dell'inclusione, se il simbolo <code>__FILE3_H__</code> non è stato ancora definito, questo verrà definito e verrà anche incluso il contenuto del file d'intestazione. Altrimenti, se <code>file3.h</code> è stato già incluso una prima volta, il simbolo <code>__FILE3_H__</code> sarà già definito e il contenuto del file d'intestazione fino a <code>#endif</code> verrà ignorato, evitando così una seconda inutile inclusione. Verifichiamo di aver risolto rilanciando lo step di preprocessamento:
+Al momento dell'inclusione, se il simbolo __FILE3_H__ non è stato ancora definito, questo verrà definito e verrà anche incluso il contenuto del file d'intestazione. Altrimenti, se file3.h è stato già incluso una prima volta, il simbolo __FILE3_H__ sarà già definito e il contenuto del file d'intestazione fino a #endif verrà ignorato, evitando così una seconda inutile inclusione. Verifichiamo di aver risolto rilanciando lo step di preprocessamento:
 </p>
 
 ```bash
@@ -2905,7 +4337,7 @@ int main(void){
 
 <p align="justify">
 Il computer rappresenta le informazioni attraverso sequenze di bit. Qualsiasi tipo di dato, sia esso un documento, un video, audio etc., viene memorizzato come una lunga successione di bit.
-Il bit è l'unità atomica, l'elemento minimo, per rappresentare informazioni. Il bit può assumere solamente due valori: <code>0</code> (falso/basso) e <code>1</code> (vero/alto). Dati $N$ bit, è possibile costruire $2^N$ diverse combinazioni di queste sequenze. Per intenderci, facciamo un esempio: con $N = 4$ abbiamo $2^4=16$ diverse sequenze di bit (sotto riportate).
+Il bit è l'unità atomica, l'elemento minimo, per rappresentare informazioni. Il bit può assumere solamente due valori: 0 (falso/basso) e 1 (vero/alto). Dati $N$ bit, è possibile costruire $2^N$ diverse combinazioni di queste sequenze. Per intenderci, facciamo un esempio: con $N = 4$ abbiamo $2^4=16$ diverse sequenze di bit (sotto riportate).
 </p>
 
 <p align="center">
@@ -3101,7 +4533,7 @@ In quanto con $W$ bit ho $2^W$ sequenze possibili da distribuire metà ai numeri
 </p>
 
 <p align=justify>
-Il file d'intestazione <code>limits.h</code> contiene informazioni circa gli intervalli (costanti per estremo superiore ed inferiore: <code>INT_MAX</code>, <code>INT_MIN</code>, <code>U_INT_MAX</code>) per i diversi tipi di interi relativi all'architettura di default del compilatore.
+Il file d'intestazione limits.h contiene informazioni circa gli intervalli (costanti per estremo superiore ed inferiore: INT_MAX, INT_MIN, U_INT_MAX) per i diversi tipi di interi relativi all'architettura di default del compilatore.
 
 Nella figura seguente sono invece riportati i range reali per i vari tipi che le implementazioni del C hanno rispettivamente per macchine a 32 e 64 bit
 </p>
@@ -3173,6 +4605,87 @@ Per ottenere il valore nella rappresentazione senza segno dovremmo sommare a 2 i
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/conversione_signed_unsigned.png)
 
 ### Estensione rappresentazione binaria di un numero intero
+
+<!-- lab-exercises:start heading="Estensione rappresentazione binaria di un numero intero" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/3_datatype/estensione_della_rappresentazione_binaria.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Sign extension e zero extension passando da 16 a 32 bit.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Estensione rappresentazione binaria di un numero intero con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Sign extension e zero extension passando da 16 a 32 bit e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/estensione_della_rappresentazione_binaria.c">/lab/3_datatype/estensione_della_rappresentazione_binaria.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/3_datatype
+gcc -o bin/estensione_della_rappresentazione_binaria estensione_della_rappresentazione_binaria.c
+bin/estensione_della_rappresentazione_binaria</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/3_datatype/estensione_della_rappresentazione_binaria.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	short sx = -12345;
+	unsigned short usx = sx; /* short: 16 bit,    UMax = 2^16 -1 = 65535
+				  * per passare da valore signed ad unsigned 
+				  * basta sommare Umax + 1 quindi:
+				  * usx = -12345 + 65536 = 53191 
+				  */
+	
+	int x = sx;		 /* int: 32 bit, verranno aggiunti 16 bit al
+				  * la sequenza di 16 bit che rappresenta sx
+				  * siccoma int è signed sarà effettuata una
+				  * sign extension e non  una zero extension
+				  * nei  sedici bit MSB aggiunti verrà copia
+				  * to 1 e non 0 perchè sx era negativo ed è
+				  * rappresentato  in complemento a due dove
+				  * MSB è il bit di segno (0=+, 1=-)
+				  * x = -12345 (ma con 32 e non 16 bi)
+				  */
+
+	unsigned ux = usx;	 /* usx è unsigned short,  aumentando  i bit 
+				  * della sequenza da 16 a 32 (  con il cast 
+				  * da  (unsigned short)  a  (unsigned) sarà
+				  * effettuata una zero extension.
+				  * ux = 53191 (ma con 32 e non 16 bit)
+				  */
+	printf("sx  = %d \t %#hx\n", sx, sx);
+	printf("usx = %u \t %#hx\n", usx, usx);
+	printf("x   = %d \t %#x\n", x, x);
+	printf("ux  = %u \t %#x\n", ux, ux);
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
 
 <p align=justify>
 Può capitare di dover convertire una rappresentazione binaria (una sequenza binaria) di un numero intero in un'altra con capacità (numero di bit per rappresentare i diversi valori) maggiore.
@@ -3277,7 +4790,7 @@ int main(void){
 ```
 
 <p align="justify">
-Il linguaggio C riconosce differenti tipi di dato predefiniti. Fino ad ora abbiamo visto solo il tipo <code>int</code>, di seguito riportiamo tutte le <em>keyword</em> riconosciute dal C per gli specificatori di tipo:
+Il linguaggio C riconosce differenti tipi di dato predefiniti. Fino ad ora abbiamo visto solo il tipo int, di seguito riportiamo tutte le <em>keyword</em> riconosciute dal C per gli specificatori di tipo:
 </p>
 
 | Keyword       |
@@ -3293,13 +4806,13 @@ Il linguaggio C riconosce differenti tipi di dato predefiniti. Fino ad ora abbia
 | `void`	|
 
 <p align="justify">
-<code>int</code> permette di rappresentare in memoria i tipi interi (senza parte decimale), le successive quattro <em>keyword</em> in tabella: <code>long</code>, <code>short</code>, <code>unsigned</code> e <code>signed</code> sono usate per ottenere variazioni del tipo base (es: <code>unsigned short int</code> o <code>long long int</code>). <code>char</code> è usato per rappresentare i singoli caratteri, simboli d'interpunzione etc.; <code>char</code> può essere utilizzato anche per esprimere <code>int</code> di piccole dimensioni. <code>float</code>, <code>double</code> e <code>long double</code> sono usati per i numeri reali, numeri con parte decimale.
+int permette di rappresentare in memoria i tipi interi (senza parte decimale), le successive quattro <em>keyword</em> in tabella: long, short, unsigned e signed sono usate per ottenere variazioni del tipo base (es: unsigned short int o long long int). char è usato per rappresentare i singoli caratteri, simboli d'interpunzione etc.; char può essere utilizzato anche per esprimere int di piccole dimensioni. float, double e long double sono usati per i numeri reali, numeri con parte decimale.
 </p>
 
 ### `int`
 
 <p align="justify">
-Il tipo <code>int</code> è <code>signed</code>: questo vuol dire che possiamo esprimere sia numeri positivi (segno +) sia numeri negativi (segno -). La dimensione in bit usata per rappresentare un <code>int</code> (e quindi anche il valore intero massimo esprimibile) dipende dall'architettura. Tipicamente un <code>int</code> utilizza una word nell'architettura target: quindi nei sistemi con word a 16 bit (IBM compatibile) <code>int</code> occuperà 16 bit. Quale sarà il valore massimo e minimo rappresentabili con un <code>int</code> a 16 bit? Semplice:
+Il tipo int è signed: questo vuol dire che possiamo esprimere sia numeri positivi (segno +) sia numeri negativi (segno -). La dimensione in bit usata per rappresentare un int (e quindi anche il valore intero massimo esprimibile) dipende dall'architettura. Tipicamente un int utilizza una word nell'architettura target: quindi nei sistemi con word a 16 bit (IBM compatibile) int occuperà 16 bit. Quale sarà il valore massimo e minimo rappresentabili con un int a 16 bit? Semplice:
 </p>
 
 <p align="justify">
@@ -3323,7 +4836,7 @@ Per i numeri positivi le diverse 32768 combinazioni devono essere assegnate a pa
 </p>
 
 <p align="justify">
-Le stesse considerazioni valgono per macchine con word a 32 o 64 bit. In questi sistemi <code>int</code> sarà rispettivamente a 32 e 64 bit. Quindi, <strong>lo spazio occupato in memoria da un <code>int</code> dipende dalla dimensione della word della macchina</strong> che può essere 16, 32 o 64 bit a seconda del tipo di architettura. <strong>Lo standard ISO C specifica solo la dimensione minima di <code>int</code>: 16 bit</strong> con range [-32767, +32767]
+Le stesse considerazioni valgono per macchine con word a 32 o 64 bit. In questi sistemi int sarà rispettivamente a 32 e 64 bit. Quindi, <strong>lo spazio occupato in memoria da un int dipende dalla dimensione della word della macchina</strong> che può essere 16, 32 o 64 bit a seconda del tipo di architettura. <strong>Lo standard ISO C specifica solo la dimensione minima di int: 16 bit</strong> con range [-32767, +32767]
 </p>
 
 ```c
@@ -3339,8 +4852,122 @@ int q, w = 200 /* q non è inizializzata, w è inizializzata. scarso stile di  p
 
 #### Stampare `int`
 
+<!-- lab-exercises:start heading="Stampare int" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/3_datatype/print_int.c</summary>
+
 <p align="justify">
-Usa <code>%d</code> (decimal int) per stampare una variabile di tipo <code>int</code> <strong>in base 10</strong>.
+<strong>Descrizione breve:</strong>
+Stampa esadecimale di interi signed/unsigned e complemento a due.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Stampare int con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Stampa esadecimale di interi signed/unsigned e complemento a due e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/print_int.c">/lab/3_datatype/print_int.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/3_datatype
+gcc -o bin/print_int print_int.c
+bin/print_int</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/3_datatype/print_int.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+/*
+ * Calcoliamo la rappresentazione binaria del valore 27:
+ *
+ *  valore	 resto
+ *	27 | 2 | 1
+ *	13 | 2 | 1
+ *	 6 | 2 | 0
+ *	 3 | 2 | 1
+ *	 1 | 2 | 1
+ *	 0 | 
+ *
+ *    7   6   5   4   3   2   1   0
+ *  +---+---+---+---+---+---+---+---+
+ *  | 0 | 0 | 0 | 1 | 1 | 0 | 1 | 1 |
+ *  +---+---+---+---+---+---+---+---+
+ *  		 16 + 8 +   + 2 + 1 = 27
+ *
+ *  Calcoliamo la rappresentazione esadecimale del valore 27:
+ *  0001 1011
+ *  \  / \  /
+ *    1    B
+ *
+ * Gli interi unsigned sono rappresentati in questo modo. Stam 
+ * pando il valore 27 (unsigned int) in esacimale con printf()
+ * dobbiamo ottenere la sequenza: 0x1B
+ *
+ * Per gli interi con segno si usa la rappresentazione in comp
+ * lemento a due, per trovare la sequenza di bit del valore ne
+ * gativo dobbbiamo calcolare il complemento a 2 del valore po
+ * sitivo ( nega tutti i bit ed aggiungi uno)
+ *
+ * unsigned: 00011011
+ * negato  : 11100100
+ * negato+1: 11100101
+ *
+ * 1110 0101
+ * \  / \  /
+ *   E    5
+ *
+ * Gli interi su questa architettura sono a 32  bit ( 4 byte )
+ * Per gli altri byte estendiamo il bit di segno (MSB) del pri
+ * mo byte
+ *
+ * 00000000 00000000 00000000 00011011
+ * 11111111 11111111 11111111 11100101
+ *
+ */
+
+int main(void){
+	int positive = 27;
+	int negative = -27;
+	unsigned u_positive = 27;
+
+	/* 
+	 * stamperemo gli interi in esadecimale (base 16) per
+	 * verificare la diversa rappresentazione degli interi
+	 * di tipo signed ed unsigned
+	 */
+	printf("signed positive: %#x\n", positive);    /* mi aspetto 0x00-00-00-1B */
+	printf("signed negative: %#x\n", negative);    /* mi aspetto 0xff-ff-ff-E5 */
+	printf("       unsigned: %#x\n", u_positive);
+
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
+<p align="justify">
+Usa %d (decimal int) per stampare una variabile di tipo int <strong>in base 10</strong>.
 </p>
 
 ```c
@@ -3355,11 +4982,11 @@ int main(void){
 ```
 
 <p align="justify">
-Usa <code>%o</code> per stampare una variabile di tipo <code>int</code> <strong>in base 8</strong>. Usa <code>%x</code> per stampare una variabile di tipo <code>int</code> <strong>in base 16</strong>
+Usa %o per stampare una variabile di tipo int <strong>in base 8</strong>. Usa %x per stampare una variabile di tipo int <strong>in base 16</strong>
 </p>
 
 <p align="justify">
-Se vuoi stampare il prefisso per la base aggiungi il <code>#</code>: <code>%#o</code>, <code>%#x</code>
+Se vuoi stampare il prefisso per la base aggiungi il #: %#o, %#x
 </p>
 
 ```c
@@ -3377,7 +5004,7 @@ int main(void){
 #### Altri tipi interi
 
 <p align="justify">
-Il linguaggio offre le <em>keyword</em> <code>short</code> <code>long</code> <code>unsigned</code> per modificare il tipo <code>int</code> di default.
+Il linguaggio offre le <em>keyword</em> short long unsigned per modificare il tipo int di default.
 </p>
 
 
@@ -3399,22 +5026,22 @@ Lo standard quindi non specifica la dimensione precisa dei diversi interi, l'ide
 <ul>
   <li>
     <p align="justify">
-    <code>int</code> deve essere almeno 16 bit
+    int deve essere almeno 16 bit
     </p>
   </li>
   <li>
     <p align="justify">
-    <code>short</code> non può essere più grande di <code>int</code>
+    short non può essere più grande di int
     </p>
   </li>
   <li>
     <p align="justify">
-    <code>long</code> non può essere più piccolo di <code>int</code>
+    long non può essere più piccolo di int
     </p>
   </li>
   <li>
     <p align="justify">
-    <code>long long</code> deve essere almeno 64 bit
+    long long deve essere almeno 64 bit
     </p>
   </li>
 </ul>
@@ -3433,27 +5060,90 @@ Quando allora usare i diversi tipi di interi? Dipende dalla situazione.
 <ul>
   <li>
     <p align="justify">
-    <code>unsigned</code> è usato per contare perché non rappresenta i numeri negativi e, shiftando a destra il range rappresentabile, può raggiungere valori maggiori di un <code>signed</code>
+    unsigned è usato per contare perché non rappresenta i numeri negativi e, shiftando a destra il range rappresentabile, può raggiungere valori maggiori di un signed
     </p>
   </li>
   <li>
     <p align="justify">
-    <code>long</code> è usato per rappresentare valori che <code>int</code> non riesce a rappresentare. Tieni conto che nei sistemi in cui <code>long</code> è maggiore di <code>int</code> usare <code>long</code> rallenta i calcoli, quindi usalo solo se necessario. Altre considerazioni possono essere fatte sulla portabilità: se hai bisogno di interi a 32 bit e stai scrivendo codice su una macchina dove <code>int</code> e <code>long</code> sono a 32 bit dovresti scegliere <code>long</code>, in modo tale che se il programma viene portato su macchine a 16 bit dove <code>int</code> è 16 bit il tuo intero sarà sempre a 32 bit perché <code>long</code> su sistema a 16 bit è lungo 32 bit
+    long è usato per rappresentare valori che int non riesce a rappresentare. Tieni conto che nei sistemi in cui long è maggiore di int usare long rallenta i calcoli, quindi usalo solo se necessario. Altre considerazioni possono essere fatte sulla portabilità: se hai bisogno di interi a 32 bit e stai scrivendo codice su una macchina dove int e long sono a 32 bit dovresti scegliere long, in modo tale che se il programma viene portato su macchine a 16 bit dove int è 16 bit il tuo intero sarà sempre a 32 bit perché long su sistema a 16 bit è lungo 32 bit
     </p>
   </li>
   <li>
     <p align="justify">
-    <code>long long</code> è usato solo quando gli interi devono essere lunghi 64 bit
+    long long è usato solo quando gli interi devono essere lunghi 64 bit
     </p>
   </li>
   <li>
     <p align="justify">
-    <code>short</code> è usato per risparmiare spazio, nel senso se i tuoi interi possono essere lunghi solo 16 bit usare <code>int</code> potrebbe renderli lunghi 32 bit (in macchine a 32 bit e superiori).
+    short è usato per risparmiare spazio, nel senso se i tuoi interi possono essere lunghi solo 16 bit usare int potrebbe renderli lunghi 32 bit (in macchine a 32 bit e superiori).
     </p>
   </li>
 </ul>
 
 #### Stampare altri tipi di interi
+
+<!-- lab-exercises:start heading="Stampare altri tipi di interi" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/3_datatype/print_others_ints.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Segnaposto <code>printf</code> per tipi interi diversi e comportamento inatteso con placeholder errati.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Stampare altri tipi di interi con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Segnaposto <code>printf</code> per tipi interi diversi e comportamento inatteso con placeholder errati e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/print_others_ints.c">/lab/3_datatype/print_others_ints.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/3_datatype
+gcc -o bin/print_others_ints print_others_ints.c
+bin/print_others_ints</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/3_datatype/print_others_ints.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	unsigned int un = 300000000;
+	short end = 200;
+	long big = 65537;
+	long long verybig = 12345678908642;
+	/* Udasa un segnaposto errara nella printf() porta a
+         * risultati strani */	
+	printf("un  = %u  and not %d\n", un, un);
+	printf("end = %hd and not %d\n", end, end);
+	printf("big = %ld and not %hd\n", big, big);
+	printf("verybig = %lld and not %ld\n", verybig, verybig);
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
 
 | Tipo        		| 10	| 16	| 8	
 | ----------		| ------|------ |-------	
@@ -3494,7 +5184,7 @@ verybig = 12345678908642 and not 12345678908642
 #### Overflow `int`
 
 <p align="justify">
-Cosa accade quando si cerca di rappresentare un numero intero più grande del massimo valore rappresentabile: quando si esce fuori dal range massimo. Vediamo in questo esempio. Consideriamo un sistema a 32 bit quindi <code>int</code> 32.
+Cosa accade quando si cerca di rappresentare un numero intero più grande del massimo valore rappresentabile: quando si esce fuori dal range massimo. Vediamo in questo esempio. Consideriamo un sistema a 32 bit quindi int 32.
 </p>
 
 <p align="justify">
@@ -3623,7 +5313,7 @@ se sommiamo 1 otteniamo $10000$ ma la rappresentazione è a 4 bit ed il primo bi
 # Rappresentazione binaria `int`
 
 <p align="justify">
-La rappresentazione dei numeri interi con segno (<code>signed</code>, di default per la <em>keyword</em> <code>int</code>) è in <strong>complemento a due</strong>, per gli interi senza segno (<code>unsigned int</code>) si usa una normale rappresentazione binaria del valore intero. Nel codice seguente proviamo a predire la sequenza binaria di un valore decimale scelto arbitrariamente. Per comprendere il codice è necessaria una conoscenza del processo di conversione da decimale a binario oltre che ovvia mente alle basi relative sia al sistema numerico posizionale binari che esadecimale. Trovi la teoria trattata a lezione <a href="https://github.com/kinderp/2cornot2c/tree/main/lab/lessons/UDA_1">qui</a>
+La rappresentazione dei numeri interi con segno (signed, di default per la <em>keyword</em> int) è in <strong>complemento a due</strong>, per gli interi senza segno (unsigned int) si usa una normale rappresentazione binaria del valore intero. Nel codice seguente proviamo a predire la sequenza binaria di un valore decimale scelto arbitrariamente. Per comprendere il codice è necessaria una conoscenza del processo di conversione da decimale a binario oltre che ovvia mente alle basi relative sia al sistema numerico posizionale binari che esadecimale. Trovi la teoria trattata a lezione <a href="https://github.com/kinderp/2cornot2c/tree/main/lab/lessons/UDA_1">qui</a>
 </p>
 
 ```c
@@ -3704,6 +5394,141 @@ signed negative: 0xffffffe5
 
 ### Cast
 
+<!-- lab-exercises:start heading="Cast" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/3_datatype/cast_esplicito_implicito.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Differenza tra cast esplicito e implicito e quando cambia il valore.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Cast con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza tra cast esplicito e implicito e quando cambia il valore e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/cast_esplicito_implicito.c">/lab/3_datatype/cast_esplicito_implicito.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/3_datatype
+gcc -o bin/cast_esplicito_implicito cast_esplicito_implicito.c
+bin/cast_esplicito_implicito</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/3_datatype/cast_esplicito_implicito.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int tx, ty;
+	unsigned ux, uy;
+	ux = 4294967295; /* il cast cambia il valore */
+	ty = 2147483647; /* il cast non cambia il valore */
+	int tx_, ty_;
+	unsigned ux_, uy_;
+
+	ux_ = ux;
+	ty_ = ty;
+	/* cast esplicito */
+	tx = (int) ux;
+	uy = (unsigned) ty;
+
+	/* cast implicito */
+	tx_ = ux_;
+	uy_ = ty_;
+
+	printf("unsigned = %ld byte\n", sizeof(unsigned int));
+	printf("     int = %ld byte\n", sizeof(int));
+	printf("\n");
+
+	printf("ux = %u, tx = %d\n", ux, tx);
+	printf("ux_ = %u, tx_ = %d\n", ux_, tx_);
+	printf("\n");
+
+	printf("uy = %u, ty = %d\n", uy, ty);
+	printf("uy_ = %u, ty_ = %d\n", uy_, ty_);
+	printf("\n");
+
+	/* se prendo un valore intero negativo allora cambia il valore castando verso unsigned */
+	int cast_me = -2147483648; /* TMin */
+	int u_cast_me = (unsigned) cast_me; /* Tmax+1 = (unsigned) TMin */
+	printf("cast_me = %d, u_cast_me = %u\n", cast_me, u_cast_me);
+
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#128187; /lab/3_datatype/mistero.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Esercizio esplorativo sui risultati inattesi della rappresentazione dei dati.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Funziona come esercizio di previsione: obbliga a ragionare sul risultato prima di eseguire il programma, collegando rappresentazione binaria, conversioni e interpretazione del valore stampato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/mistero.c">/lab/3_datatype/mistero.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/3_datatype
+gcc -o bin/mistero mistero.c
+bin/mistero</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/3_datatype/mistero.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	short sx = -12345;
+	unsigned uy = sx;
+
+	printf("sx = %hd \t\t %hx\n", sx, sx);
+	printf("uy = %u  \t %x\n", uy, uy);
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 Il cast è una conversione esplicita di tipo e prevede un proprio operatore. Esistono altri tipi di <strong>conversioni di tipo</strong>: conversione automatica e conversione per assegnamento.
 </p>
@@ -3729,7 +5554,7 @@ printf("%i\n", x/y);
 ```
 
 <p align="justify">
-Nel secondo caso (codice seguente) invece la divisione coinvolge un intero (<code>int</code>) e un numero reale (<code>double</code>) e il risultato sarà dunque un <code>double</code>. Il tipo del risultato è uguale a quello dell'operando con maggiore capacità in termini di bit.
+Nel secondo caso (codice seguente) invece la divisione coinvolge un intero (int) e un numero reale (double) e il risultato sarà dunque un double. Il tipo del risultato è uguale a quello dell'operando con maggiore capacità in termini di bit.
 </p>
 
 ```c
@@ -3757,7 +5582,7 @@ n2 = b;
 ```
 
 <p align="justify">
-Nell'esempio precedente vengono assegnati dei valori <code>double</code> a degli <code>int</code>, il risultato è che a seguito del troncamento della parte decimale ad <code>n1</code> viene assegnato il valore 1 ed a <code>n2</code> -1 Nel caso seguente, si ha un assegnamento da un tipo più capiente (<code>int</code>) ad uno meno (<code>char</code>). Il valore che viene assegnato ad <code>n</code> è 3. La rappresentazinoe binaria di 259 è:
+Nell'esempio precedente vengono assegnati dei valori double a degli int, il risultato è che a seguito del troncamento della parte decimale ad n1 viene assegnato il valore 1 ed a n2 -1 Nel caso seguente, si ha un assegnamento da un tipo più capiente (int) ad uno meno (char). Il valore che viene assegnato ad n è 3. La rappresentazinoe binaria di 259 è:
 </p>
 
 ```
@@ -3777,7 +5602,7 @@ int è a 32 bit quindi:
 ```
 
 <p align="justify">
-assegnando questa configurazione di bit a un char che occupata solo 8 bit i primi 3 ottetti andranno persi e la configurazione binaria copiata nella variabile <code>n</code> sarà
+assegnando questa configurazione di bit a un char che occupata solo 8 bit i primi 3 ottetti andranno persi e la configurazione binaria copiata nella variabile n sarà
 </p>
 
 ```
@@ -3800,7 +5625,7 @@ n = a;
  <strong>Conversione esplicita: CAST</strong>
 	</p>
 	<p align=justify>
- Le conversioni esplicite vengono effettuate usando l'operatore di cast. L'operatore di cast è costituito dalla parentesi tonde <code>(</code> <code>)</code> e questa è la sua sintassi
+ Le conversioni esplicite vengono effettuate usando l'operatore di cast. L'operatore di cast è costituito dalla parentesi tonde ( ) e questa è la sua sintassi
 	</p>
 	</td>
 </table>
@@ -3815,7 +5640,7 @@ printf("%lf\n", x / (double) y);
 ```
 
 <p align="justify">
-Il codice precedente stampa 1.6 in quanto prima di effettuare la divisione il valore di <code>y</code> viene convertito in <code>double</code> e quindi viene svolta una divisione tra <code>int</code> e <code>double</code>, per le regole della conversione automatica il valore della divisione sarà quello del tipo più capiente: <code>double</code>. Se invece il cast venisse fatto  in questo modo:
+Il codice precedente stampa 1.6 in quanto prima di effettuare la divisione il valore di y viene convertito in double e quindi viene svolta una divisione tra int e double, per le regole della conversione automatica il valore della divisione sarà quello del tipo più capiente: double. Se invece il cast venisse fatto  in questo modo:
 </p>
 
 ```c
@@ -3823,7 +5648,7 @@ printf("%lf\n", (double)(x/y));
 ```
 
 <p align="justify">
-il valore stampato sarebbe 1.0 perché prima viene effettuata la divisione tra <code>int</code> e il risultato è un <code>int</code> pari a 1, poi questo intero viene trasformato in <code>double</code>.
+il valore stampato sarebbe 1.0 perché prima viene effettuata la divisione tra int e il risultato è un int pari a 1, poi questo intero viene trasformato in double.
 </p>
 
 <table align="center">
@@ -3836,6 +5661,155 @@ il valore stampato sarebbe 1.0 perché prima viene effettuata la divisione tra <
 
 
 #### Cast tra `signed` e `unsigned`
+
+<!-- lab-exercises:start heading="Cast tra signed e unsigned" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/3_datatype/cast_tra_signed_unsigned.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Stessa sequenza di bit reinterpretata come valore senza segno.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Cast tra signed e unsigned con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Stessa sequenza di bit reinterpretata come valore senza segno e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/cast_tra_signed_unsigned.c">/lab/3_datatype/cast_tra_signed_unsigned.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/3_datatype
+gcc -o bin/cast_tra_signed_unsigned cast_tra_signed_unsigned.c
+bin/cast_tra_signed_unsigned</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/3_datatype/cast_tra_signed_unsigned.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+/*
+ * Usiamo la rappresentazione in complemento a due del valore 27
+ * che abbiamo calcolato nell'esercizio precedente e che è: 0xE5
+ * 
+ * shoirt int v = -27
+ * è un numero con segno (complemento a 2) ma short (16 bit) la
+ * rappresentazione in esadecimale (complemento a 2) è: 0xff-ff
+ * ff-E5 
+ * 
+ * Cosa accade se facciamo un cast da signed a unsigned? Per se
+ * mplicita stiamo consideriamo short int per avere solo 16 bit.
+ *
+ *  0XFF-FF-FF-E5 in binario è:
+ *  +---+---+---+---+---+---+---+---+
+ *  | 1 | 1 | 1 | 0 | 0 | 1 | 0 | 1 |
+ *  +---+---+---+---+---+---+---+---+
+ *
+ * Castando il tipo (short int) al tipo (unsigned int) la rap-
+ * presentazione (la seuqenza di bit)  rimarrà la stessa ma l'
+ * interpretazione  che il  sistema darà  ai bit sarà diversa.
+ * Nel caso di (short int) sarà interpretato in complemento a
+ * due, nel caso di  (unsigned int) come una sequenza binaria
+ * il cui valore è:
+ *
+ *  +---+---+---+---+---+---+---+---+
+ *  | 1 | 1 | 1 | 0 | 0 | 1 | 0 | 1 |
+ *  +---+---+---+---+---+---+---+---+
+ *  128 + 64+ 32+         4     + 1 = 229
+ *
+ *  Gli altri 8 bit  (dal 15-esimo all'ottavo) sono tutti a uno
+ *  otto bit ad uno (0xff) 255 shiftati di otto 255*(2^8)=65280
+ *  65280+229 = 65509
+ *  Mi aspetto che il sistema a seguito del cast stamperà 65509
+ */
+int main(void){
+	short int v = -27;
+	unsigned int u_v = (unsigned short) v;
+	printf("v = %d,  u_v = %u\n", v, u_v);   /* mi aspetto 0xFF-E5 */
+	printf("v = %#x, u_v = %#x\n", v, u_v);  /* mi aspetto sempre 0xff-e5 ma valore decimale 65509 */
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#128187; /lab/3_datatype/cast_tra_unsigned_signed.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Conversione dall'estremo unsigned al corrispondente valore signed.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Cast tra signed e unsigned con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Conversione dall'estremo unsigned al corrispondente valore signed e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/cast_tra_unsigned_signed.c">/lab/3_datatype/cast_tra_unsigned_signed.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/3_datatype
+gcc -o bin/cast_tra_unsigned_signed cast_tra_unsigned_signed.c
+bin/cast_tra_unsigned_signed</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/3_datatype/cast_tra_unsigned_signed.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+/*
+ * Anche nel  caso di cast  da unsigned a signed
+ * la sequenza di bit rimane invariata ma cambia
+ * solo l'interpretazione data alla sequenza.
+ * Scegliendo  come valore senza segno l'estremo
+ * superiore  della  rappresentazione (UMax) che
+ * nel caso di  (unsigned short) e' 65536 (2^16)
+ * per conoscere  il valore  con segno basta sot
+ * trarre (UMax + 1) o 2^W 
+ */
+
+int main(void){
+	unsigned short u = 65535; /* UMax */
+	short int tu = (short int) u;
+	printf("u = %u, tu=%d\n", u, tu);
+	printf("u = %#x, tu=%#x\n", u, tu);
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
 
 <p align="justify">
 In C, il cast in entrambi i versi: da signed ad unsigned e viceversa, non cambia mai la configurazione dei bit ma soltanto l'interpretazione che viene data alla sequenza di bit. Vediamo un esempio:
@@ -4049,7 +6023,7 @@ ux  = 53191      0xcfc7
 ```
 
 <p align="justify">
-Come puoi notare <code>sx</code> e <code>usx</code> sono entrambi <code>short</code>, il primo con segno e il secondo senza segno, ma hanno la stessa rappresentazione binaria (il cast non cambia la configurazione dei bit ma solo l'interpretazione). Invece <code>x</code> e <code>ux</code> sono a 32 bit, rispettivamente con segno e senza segno, e hanno sequenze di bit diverse (<code>x</code> <code>0xffffcfc7</code>, <code>ux</code> <code>0xcfc7</code>): questo perché <code>x</code> è con segno e quindi si effettua <strong>sign extension</strong>, cioè MSB di <code>sx</code> è 1 e quindi vengono copiati nei nuovi 16 MSB tutti valori posti a 1. Invece <code>ux</code> è unsigned e, anche se <code>usx</code> ha MSB alto (c esadecimale in binario è 1100), viene effettuata una <strong>zero extension</strong>
+Come puoi notare sx e usx sono entrambi short, il primo con segno e il secondo senza segno, ma hanno la stessa rappresentazione binaria (il cast non cambia la configurazione dei bit ma solo l'interpretazione). Invece x e ux sono a 32 bit, rispettivamente con segno e senza segno, e hanno sequenze di bit diverse (x 0xffffcfc7, ux 0xcfc7): questo perché x è con segno e quindi si effettua <strong>sign extension</strong>, cioè MSB di sx è 1 e quindi vengono copiati nei nuovi 16 MSB tutti valori posti a 1. Invece ux è unsigned e, anche se usx ha MSB alto (c esadecimale in binario è 1100), viene effettuata una <strong>zero extension</strong>
 </p>
 
 <p align="justify">
@@ -4069,7 +6043,7 @@ int main(void){
 ```
 
 <p align="justify">
-<code>sx</code> vale <code>0xcfc7</code> MSB = 1 (c = 1100) se viene effettuato prima il cast la sequenza di bit viene considerata unsigned e si effettua <strong>zero extension</strong> ed <code>uy</code> vale <code>0x0000cfc7</code>; se poi si effettua il cast ad unsigned, la sequenza ottenuta vale +12345 Se invece viene effettuato prima l'estensione dei bit <code>sx</code> è ancora signed e viene eseguita una <strong>sign extension</strong> in questo modo <code>0xffffcfc7</code>; successivamente si effettua il cast ad unsigned e la sequenza varrà $uy{unsigned} = sx + (UMax + 1) = -12345 + 4294967296 = 4294954951$
+sx vale 0xcfc7 MSB = 1 (c = 1100) se viene effettuato prima il cast la sequenza di bit viene considerata unsigned e si effettua <strong>zero extension</strong> ed uy vale 0x0000cfc7; se poi si effettua il cast ad unsigned, la sequenza ottenuta vale +12345 Se invece viene effettuato prima l'estensione dei bit sx è ancora signed e viene eseguita una <strong>sign extension</strong> in questo modo 0xffffcfc7; successivamente si effettua il cast ad unsigned e la sequenza varrà $uy{unsigned} = sx + (UMax + 1) = -12345 + 4294967296 = 4294954951$
 </p>
 
 ```bash
@@ -4079,6 +6053,66 @@ uy = 4294954951          ffffcfc7
 ```
 
 ### Troncamento rappresentazione binaria
+
+<!-- lab-exercises:start heading="Troncamento rappresentazione binaria" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/3_datatype/troncamento_bit.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Perdita dei bit piu significativi nel cast da <code>int</code> a <code>short</code>.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Troncamento rappresentazione binaria con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Perdita dei bit piu significativi nel cast da <code>int</code> a <code>short</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/troncamento_bit.c">/lab/3_datatype/troncamento_bit.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/3_datatype
+gcc -o bin/troncamento_bit troncamento_bit.c
+bin/troncamento_bit</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/3_datatype/troncamento_bit.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int x = 53191;
+	/* castando int x a short avremo il trocamento dei 16 bit (MSB) */
+	short sx = (short) x; /* -12345 */
+	int y = sx;	      /* -12345 signed short 2 signed con sign extension */
+	printf("x  = %d \t %x\n", x, x);
+	printf("sx = %hd \t %hx\n", sx, sx);  
+	printf("y  = %d \t %x\n", y, y);
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
 
 ```c
 #include<stdio.h>
@@ -4104,8 +6138,65 @@ y  = -12345      ffffcfc7
 
 ### `char`
 
+<!-- lab-exercises:start heading="char" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/3_datatype/ascii.c</summary>
+
 <p align="justify">
-Il tipo <code>char</code> è usato per memorizzare caratteri, la dichiarazione di una variabile di tipo <code>char</code> è fatta in questo modo:
+<strong>Descrizione breve:</strong>
+Esercizio su tabella/codici ASCII.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo char con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Esercizio su tabella/codici ASCII e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/ascii.c">/lab/3_datatype/ascii.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/3_datatype
+gcc -o bin/ascii ascii.c
+bin/ascii</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/3_datatype/ascii.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	for(int i=33; i&lt;128; i++)
+	{
+		printf("%d\t%c\n", i, i);
+	}
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
+<p align="justify">
+Il tipo char è usato per memorizzare caratteri, la dichiarazione di una variabile di tipo char è fatta in questo modo:
 </p>
 
 ```c
@@ -4114,7 +6205,7 @@ char one, two;
 ```
 
 <p align="justify">
-Per inizializzare una variabile di tipo <code>char</code> a uno specifico carattere è necessario usare il singolo apice: <code>'</code> in questo modo:
+Per inizializzare una variabile di tipo char a uno specifico carattere è necessario usare il singolo apice: ' in questo modo:
 </p>
 
 ```c
@@ -4123,7 +6214,7 @@ char lettera_b = 'B';
 ```
 
 <p align="justify">
-Inizializzare le variabili <code>char</code> come nel codice seguente è un grave errore:
+Inizializzare le variabili char come nel codice seguente è un grave errore:
 </p>
 
 ```c
@@ -4132,13 +6223,70 @@ char altro_errore = T /* T senza apici singoli è interpretata come una variabil
 ```
 
 <p align="justify">
-Il tipo <code>char</code> è lungo 1 byte (8 bit) e in verità è un tipo intero: nel senso che il carattere viene memorizzato come un intero senza segno e poi, attraverso una tabella di codifica/decodifica (ASCII), il valore numerico viene convertito nel carattere corrispondente.
+Il tipo char è lungo 1 byte (8 bit) e in verità è un tipo intero: nel senso che il carattere viene memorizzato come un intero senza segno e poi, attraverso una tabella di codifica/decodifica (ASCII), il valore numerico viene convertito nel carattere corrispondente.
 </p>
 
 ### Stampare un `char`
 
+<!-- lab-exercises:start heading="Stampare un char" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/3_datatype/print_char.c</summary>
+
 <p align="justify">
-Per stampare su schermo il contenuto di una variabile di tipo <code>char</code> si usa <code>%c</code>
+<strong>Descrizione breve:</strong>
+Stampa dello stesso carattere come char, intero, unsigned, esadecimale.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Stampare un char con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Stampa dello stesso carattere come char, intero, unsigned, esadecimale e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/print_char.c">/lab/3_datatype/print_char.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/3_datatype
+gcc -o bin/print_char print_char.c
+bin/print_char</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/3_datatype/print_char.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	char lettera_a = 'A';
+	printf("%c\n", lettera_a);  /* stampa il carattere A */
+	printf("%d\n", lettera_a);  /* stampa il valore intero usato per codificare il carattere A */ 
+	printf("%u\n", lettera_a);  /* stampa il valore senza segno, dovrebbe essere lo stesso */
+	printf("%#x\n", lettera_a); /* stampa la rappresentazione esadecimale */
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
+<p align="justify">
+Per stampare su schermo il contenuto di una variabile di tipo char si usa %c
 </p>
 
 ```c
@@ -4174,7 +6322,7 @@ $1 = 0001
 ```
 
 <p align="justify">
-Il valore decimale per rappresentare il carattere <code>A</code> è 65; in memoria vengono salvati valori binari che poi, attraverso il sistema di codifica <strong>ASCII</strong>, vengono convertiti in caratteri.
+Il valore decimale per rappresentare il carattere A è 65; in memoria vengono salvati valori binari che poi, attraverso il sistema di codifica <strong>ASCII</strong>, vengono convertiti in caratteri.
 </p>
 
 
@@ -4192,12 +6340,73 @@ Gli operatori sono usati nelle operazioni aritmetiche.
 
 #### Operatore di assegnamento: =
 
+<!-- lab-exercises:start heading="Operatore di assegnamento: =" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/4_operators/op_assegnamento.c</summary>
+
 <p align="justify">
-Il simbolo di uguale <code>=</code> come abbiamo già visto viene usato per assegnare il valore a una variabile e non rappresenta l'uguaglianza come invece siamo abituati a pensarlo.
+<strong>Descrizione breve:</strong>
+Differenza tra lvalue modificabile e costante non assegnabile.
 </p>
 
 <p align="justify">
-Il codice seguente usa l'operatore <code>=</code> per assegnare il valore <code>1234</code> alla variabile <code>mio_intero</code>
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Operatore di assegnamento: = con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza tra lvalue modificabile e costante non assegnabile e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/4_operators/op_assegnamento.c">/lab/4_operators/op_assegnamento.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/4_operators
+gcc -o bin/op_assegnamento op_assegnamento.c
+bin/op_assegnamento</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/4_operators/op_assegnamento.c" -->
+<pre lang="c"><code>int main(void){
+	int uno;
+	int due;
+	const int tre = 3;
+
+	uno = 1;
+	due = (uno + 1);
+	tre = due + 1;	/* ERRORE!
+			 * tre è una costante (non è modificabile) non può essere usato come lvalue 
+			 * di un opeatore di assegnamento.
+			 */
+	due = tre - 1;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
+<p align="justify">
+Il simbolo di uguale = come abbiamo già visto viene usato per assegnare il valore a una variabile e non rappresenta l'uguaglianza come invece siamo abituati a pensarlo.
+</p>
+
+<p align="justify">
+Il codice seguente usa l'operatore = per assegnare il valore 1234 alla variabile mio_intero
 </p>
 
 ```c
@@ -4205,11 +6414,11 @@ mio_intero = 1234;
 ```
 
 <p align="justify">
-<code>mio_intero</code> è l'identificatore attraverso cui il programmatore può accedere alla locazione di memoria corrispondente. <code>mio_intero</code> è anche detto <strong>lvalue</strong> mentre <code>1234</code> è detto <strong>rvalue</strong>
+mio_intero è l'identificatore attraverso cui il programmatore può accedere alla locazione di memoria corrispondente. mio_intero è anche detto <strong>lvalue</strong> mentre 1234 è detto <strong>rvalue</strong>
 </p>
 
 <p align="justify">
-Un <strong>lvalue</strong> identifica appunto una locazione di memoria (referenzia un indirizzo di memoria) e può essere usato a sinistra di un operatore di assegnamento (<code>l</code> in <code>lvalue</code> sta per <strong>left</strong> in inglese). Per la verità <code>mio_intero</code> è detto <strong>modifiable lvalue</strong> perché è modificabile (non è una costante).
+Un <strong>lvalue</strong> identifica appunto una locazione di memoria (referenzia un indirizzo di memoria) e può essere usato a sinistra di un operatore di assegnamento (l in lvalue sta per <strong>left</strong> in inglese). Per la verità mio_intero è detto <strong>modifiable lvalue</strong> perché è modificabile (non è una costante).
 </p>
 
 <p align="justify">
@@ -4236,7 +6445,7 @@ int main(void){
 ### Operatore somma: +
 
 <p align="justify">
-L'operatore di somma <code>+</code> somma tra loro il valore dei suoi operandi
+L'operatore di somma + somma tra loro il valore dei suoi operandi
 </p>
 
 
@@ -4251,7 +6460,7 @@ int main(void){
 ### Operatore differenza: -
 
 <p align="justify">
-L'operatore differenza <code>-</code> sottrae il valore dell'operando di destra al valore dell'operando di sinistra
+L'operatore differenza - sottrae il valore dell'operando di destra al valore dell'operando di sinistra
 </p>
 
 ### Operatore segno: - e +
@@ -4281,8 +6490,67 @@ int main(void){
 
 ### Operatore divisione: /
 
+<!-- lab-exercises:start heading="Operatore divisione: /" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/4_operators/op_divisione.c</summary>
+
 <p align="justify">
-L'operatore <code>/</code> effettua la divisione del valore dei due operandi. Il risultato dipende dal tipo degli operandi come si vede nel codice seguente.
+<strong>Descrizione breve:</strong>
+Divisione intera/reale e comportamento dell'operatore <code>/</code>.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Operatore divisione: / con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Divisione intera/reale e comportamento dell'operatore <code>/</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/4_operators/op_divisione.c">/lab/4_operators/op_divisione.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/4_operators
+gcc -o bin/op_divisione op_divisione.c
+bin/op_divisione</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/4_operators/op_divisione.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	printf("5/4=%d\n",5/4);
+	printf("6/3=%d\n",6/3);
+	printf("5.0/4.0=%1.2f\n",5.0/4.0);
+	printf("6.0/3.0=%1.2f\n",6.0/3.0);
+	
+	printf("5.0/4=%1.2f\n",5.0/4);
+	printf("6/3.0=%1.2f\n",6/3.0);
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
+<p align="justify">
+L'operatore / effettua la divisione del valore dei due operandi. Il risultato dipende dal tipo degli operandi come si vede nel codice seguente.
 </p>
 
 ```c
@@ -4301,14 +6569,73 @@ int main(void){
 
 ### Operatore `sizeof`
 
+<!-- lab-exercises:start heading="Operatore sizeof" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/4_operators/sizeof.c</summary>
+
 <p align="justify">
-L'operatore ritorna il numero di byte occupati dal suo operando. L'operatore può essere sia una variabile sia il nome di un tipo. Il valore tornato da <code>sizeof</code> è di tipo <code>size_t</code> che è semplicemente un <code>unsigned int</code> o un <code>unsigned long</code> che è stato ridefinito con <code>typedef</code>.
+<strong>Descrizione breve:</strong>
+Dimensione dei tipi o delle variabili in byte.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Operatore sizeof con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Dimensione dei tipi o delle variabili in byte e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/4_operators/sizeof.c">/lab/4_operators/sizeof.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/4_operators
+gcc -o bin/sizeof sizeof.c
+bin/sizeof</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/4_operators/sizeof.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int n = 0;
+	size_t int_in_byte;
+
+	int_in_byte = sizeof(int);
+	printf("n = %d, n occupa %zd bytes\n", n, sizeof n);
+	printf("Gli interi occupano %zd bytes\n", int_in_byte);
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
+<p align="justify">
+L'operatore ritorna il numero di byte occupati dal suo operando. L'operatore può essere sia una variabile sia il nome di un tipo. Il valore tornato da sizeof è di tipo size_t che è semplicemente un unsigned int o un unsigned long che è stato ridefinito con typedef.
 </p>
 
 <table align="center">
 	<td>:pill: <b>Nota</b>
 	<p align=justify>
- <strong>typedef</strong> permette di definire un alias per un tipo di dato, per esempio <code>typedef unsigned int positivo</code> associa l'alias <code>positivo</code> al tipo <code>unsigned int</code> in modo da poter dichiarare variabili intere positive in entrambi i seguenti modi: <code>unsigned int a</code>, <code>positivo a</code>.
+ <strong>typedef</strong> permette di definire un alias per un tipo di dato, per esempio typedef unsigned int positivo associa l'alias positivo al tipo unsigned int in modo da poter dichiarare variabili intere positive in entrambi i seguenti modi: unsigned int a, positivo a.
 	</p>
 	</td>
 </table>
@@ -4329,10 +6656,72 @@ int main(void){
 ```
 
 <p align="justify">
-Come avrai notato <code>sizeof</code> può essere usato con o senza parentesi tonde. L'uso delle parentesi è obbligatorio solo quando l'operando è un tipo ma è meglio usarle sempre. Per stampare un tipo <code>size_t</code> puoi usare <code>%zd</code> o in alternativa <code>%u</code> o <code>%lu</code>.
+Come avrai notato sizeof può essere usato con o senza parentesi tonde. L'uso delle parentesi è obbligatorio solo quando l'operando è un tipo ma è meglio usarle sempre. Per stampare un tipo size_t puoi usare %zd o in alternativa %u o %lu.
 </p>
 
 ### Operatore %
+
+<!-- lab-exercises:start heading="Operatore %" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/4_operators/op_modulo.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Uso dell'operatore <code>%</code> e resto della divisione intera.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Operatore % con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Uso dell'operatore <code>%</code> e resto della divisione intera e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/4_operators/op_modulo.c">/lab/4_operators/op_modulo.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/4_operators
+gcc -o bin/op_modulo op_modulo.c
+bin/op_modulo</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/4_operators/op_modulo.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int n;
+	printf("Inserisci un numero tra 1 e 10\n");
+	scanf("%d", &amp;n);
+	int pari_o_dispari = n % 2;
+	if(pari_o_dispari == 0){
+		printf("%d e' pari\n", n);
+	} else{
+		printf("%d e' dispari\n", n);
+	}
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
 
 <p align="justify">
 L'operatore modulo ritorna il resto della divisione dei suoi due operandi
@@ -4356,6 +6745,142 @@ int main(void){
 ```
 
 ### Operatore incremento/decremento ++ --
+
+<!-- lab-exercises:start heading="Operatore incremento/decremento ++ --" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/4_operators/op_incremento_decremento.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Uso base di <code>++</code> e <code>--</code>.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Operatore incremento/decremento ++ -- con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Uso base di <code>++</code> e <code>--</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/4_operators/op_incremento_decremento.c">/lab/4_operators/op_incremento_decremento.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/4_operators
+gcc -o bin/op_incremento_decremento op_incremento_decremento.c
+bin/op_incremento_decremento</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/4_operators/op_incremento_decremento.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int i = 0;
+	int j = 0;
+	int z = 0;
+	i++;
+	++j;
+	z = z + 1;
+
+	i++;
+	++j;
+	z = z + 1;
+
+	i++;
+	++j;
+	z = z + 1;
+
+	i++;
+	++j;
+	z = z + 1;
+
+	printf("i=%d, j=%d, z=%d\n", i, j, z);
+	return 0;	
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#128187; /lab/4_operators/pre_post_incremento.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Differenza tra <code>i++</code> e <code>++i</code> in valutazione e assegnamento.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Operatore incremento/decremento ++ -- con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza tra <code>i++</code> e <code>++i</code> in valutazione e assegnamento e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/4_operators/pre_post_incremento.c">/lab/4_operators/pre_post_incremento.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/4_operators
+gcc -o bin/pre_post_incremento pre_post_incremento.c
+bin/pre_post_incremento</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/4_operators/pre_post_incremento.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+
+	int i = 0;
+	int j = 0;
+
+	int ii = i++; /* prima viene valutato i ( assegnato il suo valore ad ii )
+		       * successivamente i viene incrementato di uno ma ii rimane
+		       * al valore precedente di i, cioè 0
+		       */
+
+	int jj = ++j; /* prima j viene incrementato di uno e poi viene valutato il
+		       * il suo valore (assegnato alla variabile jj). In questo ca
+		       * jj vale 1
+		       */
+
+	printf("i=%d, ii=%d\n", i, ii);
+	printf("j=%d, jj=%d\n", j, jj);
+	return 0;	
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
 
 <p align="justify">
 Questi operatori incrementano o decrementano il proprio operando di un'unità. Possono essere usati in due versioni prima dell'operando o dopo l'operando in questo modo:
@@ -4477,8 +7002,78 @@ Operatori Relazionali
 
 #### if o if-else
 
+<!-- lab-exercises:start heading="if o if-else" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/5_control_statements/if.c</summary>
+
 <p align="justify">
-Il costrutto <code>if</code> serve per realizzare l'istruzione di salta condizionale ed ha questa forma:
+<strong>Descrizione breve:</strong>
+Controllo pari/dispari con ramo vero/falso.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo if o if-else con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Controllo pari/dispari con ramo vero/falso e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/if.c">/lab/5_control_statements/if.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/5_control_statements
+gcc -o bin/if if.c
+bin/if</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/5_control_statements/if.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+        int n;
+        printf("Inserisci un numero tra 1 e 10\n");
+        scanf("%d", &amp;n);
+        int pari_o_dispari = n % 2;
+        if(pari_o_dispari == 0){  /* Se la condizione  e' vera (diversa da zero)
+				   * il  flusso   entra in questo blocco, stampa
+				   * "n e' pari" ed il blocco else viene saltato
+				   */
+                printf("%d e' pari\n", n);
+        } else{			  /* Se la condizione e' falsa ( uguale a zero )
+				   * il blocco if viene saltato e si  entra  nel
+				   * blocco else e  viene  stampata  la  stringa
+				   * "n è dispari" 
+				   */
+                printf("%d e' dispari\n", n);
+        }
+        return 0;
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
+<p align="justify">
+Il costrutto if serve per realizzare l'istruzione di salta condizionale ed ha questa forma:
 </p>
 
 ```c
@@ -4486,19 +7081,19 @@ if ( espr ) istr
 ```
 
 <p align="justify">
-Se la condizione è vera (cioè diversa da zero) viene eseguito il blocco di istruzioni <code>istr</code>, altrimenti si prosegue con l'elaborazione.
+Se la condizione è vera (cioè diversa da zero) viene eseguito il blocco di istruzioni istr, altrimenti si prosegue con l'elaborazione.
 </p>
 
 <table align="center">
 	<td>:pill: <b>Nota</b>
 	<p align=justify>
- Come tutti gli altri costrutti, il blocco <code>istr</code> può rappresentare una singola istruzione, un altro costrutto di controllo, oppure un blocco di istruzioni racchiuse tra parentesi graffe
+ Come tutti gli altri costrutti, il blocco istr può rappresentare una singola istruzione, un altro costrutto di controllo, oppure un blocco di istruzioni racchiuse tra parentesi graffe
 	</p>
 	</td>
 </table>
 
 <p align="justify">
-il costrutto <code>if</code> ammette l'enunciato opzionale <code>else</code> in questa forma:
+il costrutto if ammette l'enunciato opzionale else in questa forma:
 </p>
 
 ```c
@@ -4506,7 +7101,7 @@ if ( espr ) istr1 else istr2
 ```
 
 <p align="justify">
-I blocchi di istruzioni <code>istr1</code> e <code>istr2</code> vengono eseguiti a seconda che l'espressione <code>espr</code> sia rispettivamente vera o falsa.
+I blocchi di istruzioni istr1 e istr2 vengono eseguiti a seconda che l'espressione espr sia rispettivamente vera o falsa.
 </p>
 
 
@@ -4535,6 +7130,85 @@ int main(void){
 ```
 
 #### Condizioni complesse con l'uso di operatori logici e condizionali
+
+<!-- lab-exercises:start heading="Condizioni complesse con l'uso di operatori logici e condizionali" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/5_control_statements/logical_relational_operators.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Condizioni composte con operatori logici e di confronto.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Condizioni complesse con l'uso di operatori logici e condizionali con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Condizioni composte con operatori logici e di confronto e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/logical_relational_operators.c">/lab/5_control_statements/logical_relational_operators.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/5_control_statements
+gcc -o bin/logical_relational_operators logical_relational_operators.c
+bin/logical_relational_operators</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/5_control_statements/logical_relational_operators.c" -->
+<pre lang="c"><code>
+#include&lt;stdio.h&gt;
+
+int main(void){
+	int stipendio_base = 1000;
+	int stipendio_medio = 3000;
+	int stipendio_alto = 5000;
+
+	int eta;
+	char laurea = 0;
+	printf("Inserisci la tua eta'\n");
+	scanf("%d", &amp;eta);
+	printf("Hai la laurea?\n");
+	printf("[S]ì \t [N]o\n");
+	scanf(" %c", &amp;laurea);
+	if(laurea == 'S' || laurea == 'N') {
+		if(eta &lt; 30){
+			printf("Sei giovane, il tuo stipendio e' %d\n", stipendio_base);
+		} else if (eta &gt; 30 &amp;&amp; eta &lt; 50 &amp;&amp; laurea == 'N'){
+			printf("Non hai la laurea, il tuo stipendio e' %d\n", stipendio_base);
+		} else if (eta &gt; 30 &amp;&amp; eta &lt; 50 &amp;&amp; laurea == 'S'){
+			printf("Hai la laurea, il tuo stipendio e' %d\n", stipendio_medio);
+		} else {
+			printf("Hai esperienza, il tuo stipendio e' %d\n", stipendio_alto);
+		}
+	} else {
+		printf("Digita S per sì o N per no\n");
+		return 1;
+	}
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
 
 ```c
 #include<stdio.h>
@@ -4571,8 +7245,66 @@ int main(void){
 
 #### for
 
+<!-- lab-exercises:start heading="for" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/5_control_statements/for.c</summary>
+
 <p align="justify">
-Il costrutto <code>for</code> serve per realizzare un ciclo (<strong>loop</strong>) permette di eseguire un'istruzione (o un insieme di istruzioni) per un certo numero di volte consecutivamente. Ha questa forma:
+<strong>Descrizione breve:</strong>
+Iterazione con inizializzazione, condizione e incremento.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo for con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Iterazione con inizializzazione, condizione e incremento e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/for.c">/lab/5_control_statements/for.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/5_control_statements
+gcc -o bin/for for.c
+bin/for</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/5_control_statements/for.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	for(int i = 0; i &lt; 10; i++){
+		printf("%d ", i);
+	}
+	printf("\n");
+	return 0;
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
+<p align="justify">
+Il costrutto for serve per realizzare un ciclo (<strong>loop</strong>) permette di eseguire un'istruzione (o un insieme di istruzioni) per un certo numero di volte consecutivamente. Ha questa forma:
 </p>
 
 ```c
@@ -4580,7 +7312,7 @@ for ( espr1; espr2; espr3 ) istr
 ```
 
 <p align="justify">
-Prima di iniziare il ciclo viene valutata <strong>una volta sola</strong> <code>espr1</code> che viene tipicamente utilizzata  per inizializzare le variabili  che controllano il ciclo, poi viene valutata l'espressoine <code>espr2</code>. Se <code>espr2</code> è vera (diversa da zero) venogono eseguite le istruzioni del corpo del ciclo rappresentate da <code>istr</code>. Quando <code>espr2</code> è falsa (uguale a zero) il ciclo termina. Prima di valutare <code>espr2</code> una seconda volta viene prima eseguita <code>espr3</code> che viene usata per incrementare o decrementare la variabile che controlla il ciclo
+Prima di iniziare il ciclo viene valutata <strong>una volta sola</strong> espr1 che viene tipicamente utilizzata  per inizializzare le variabili  che controllano il ciclo, poi viene valutata l'espressoine espr2. Se espr2 è vera (diversa da zero) venogono eseguite le istruzioni del corpo del ciclo rappresentate da istr. Quando espr2 è falsa (uguale a zero) il ciclo termina. Prima di valutare espr2 una seconda volta viene prima eseguita espr3 che viene usata per incrementare o decrementare la variabile che controlla il ciclo
 </p>
 
 ```c
@@ -4597,8 +7329,68 @@ int main(void){
 
 #### while
 
+<!-- lab-exercises:start heading="while" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/5_control_statements/while.c</summary>
+
 <p align="justify">
-Il costrutto <code>while</code> serve (come il <code>for</code>) per realizzare un ciclo. Ha questa forma:
+<strong>Descrizione breve:</strong>
+Iterazione controllata prima del corpo.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo while con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Iterazione controllata prima del corpo e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/while.c">/lab/5_control_statements/while.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/5_control_statements
+gcc -o bin/while while.c
+bin/while</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/5_control_statements/while.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int i = 0;
+        while(i &lt; 10){
+                printf("%d ", i);
+		i++;
+        }
+        printf("\n");
+        return 0;
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
+<p align="justify">
+Il costrutto while serve (come il for) per realizzare un ciclo. Ha questa forma:
 </p>
 
 ```c
@@ -4606,7 +7398,7 @@ while ( espr ) istr
 ```
 
 <p align="justify">
-Il ciclo <code>while</code> continua ad eseguire il ciclo finzh+ la condizione indicata da <code>espr</code> risulta vera. Il ciclo termina quando la condizione è falsa. Se la condizione è inizialmente falsa il blocco non viene mai eseguito. I costrutti <code>while</code> e <code>for</code> sono equivalenti: ogni <code>for</code> può essere eseguito con un <code>while</code> e viceversa.
+Il ciclo while continua ad eseguire il ciclo finzh+ la condizione indicata da espr risulta vera. Il ciclo termina quando la condizione è falsa. Se la condizione è inizialmente falsa il blocco non viene mai eseguito. I costrutti while e for sono equivalenti: ogni for può essere eseguito con un while e viceversa.
 </p>
 
 ```c
@@ -4625,8 +7417,71 @@ int main(void){
 
 #### do-while
 
+<!-- lab-exercises:start heading="do-while" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/5_control_statements/do_while.c</summary>
+
 <p align="justify">
-Il costrutto <code>do-while</code> serve per realizzare un ciclo ed assume questa forma:
+<strong>Descrizione breve:</strong>
+Corpo eseguito almeno una volta, confronto con pre/post incremento.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo do-while con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Corpo eseguito almeno una volta, confronto con pre/post incremento e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/do_while.c">/lab/5_control_statements/do_while.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/5_control_statements
+gcc -o bin/do_while do_while.c
+bin/do_while</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/5_control_statements/do_while.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+        int i = 0;
+	/* i++ prima viene valutato il  valore di i  (si stampa il suo valore)
+	 * dopo i viene incrementata  di 1 ,  poi  si controlla  che  sia &lt; 10 
+         * cosa accade se uso ++i?Invece di stampare da 0 a 9 stampo da 1 a 10
+	 */
+        do {
+                printf("%d ", i++);
+        } while(i &lt; 10);
+        printf("\n");
+        return 0;
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
+<p align="justify">
+Il costrutto do-while serve per realizzare un ciclo ed assume questa forma:
 </p>
 
 ```c
@@ -4634,7 +7489,7 @@ do instr while ( espr )
 ```
 
 <p align="justify">
-A differenza del costrutto <code>while</code>, il blocco  di istruzioni nel ciclo viene eseguito almeno una volta infatti la condizione che controlla l'esecuzione del ciclo viene valutata alla fine del ciclo.
+A differenza del costrutto while, il blocco  di istruzioni nel ciclo viene eseguito almeno una volta infatti la condizione che controlla l'esecuzione del ciclo viene valutata alla fine del ciclo.
 </p>
 
 ```c
@@ -4656,8 +7511,88 @@ int main(void){
 
 #### switch
 
+<!-- lab-exercises:start heading="switch" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/5_control_statements/switch.c</summary>
+
 <p align="justify">
-Lo <code>switch</code> è assolutamente equivalente a un <code>if-esle</code> e serve a scegliere tra diversi blocchi di istruzioni in base al valore di una espressione intera. La sintassi è la seguente:
+<strong>Descrizione breve:</strong>
+Selezione multipla e uso/fall-through del <code>break</code>.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo switch con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Selezione multipla e uso/fall-through del <code>break</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/switch.c">/lab/5_control_statements/switch.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/5_control_statements
+gcc -o bin/switch switch.c
+bin/switch</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/5_control_statements/switch.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	char scelta;
+	int a, b, c, other;
+	printf("a=%d \t b=%d \t c=%d \t other=%d\n", a, b, c, other);
+	printf("Quale variabile vuoi incrementare?\n");
+	printf("[a-A]\t[b-B]\t[c-C]\n");
+	scanf(" %c", &amp;scelta);
+	switch(scelta){
+		case 'a':
+		case 'A':
+			a++;
+			break;
+		case 'b':
+		case 'B':
+			b++;
+			break;
+		case 'c':
+		case 'C':
+			c++;
+			break;
+		default:
+			other++;
+			/* non ho bisogno del break perchè è l'ultimo case se lo avessi messo sopra dovevo mettere il break altrimenti
+			 * l'esecuzione  del  flusso  sarebbe  passata  al  codice  relativo  al  case sottostante la clausola default
+			 */
+	}
+	printf("a=%d \t b=%d \t c=%d \t other=%d\n", a, b, c, other);
+	return 0;
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
+<p align="justify">
+Lo switch è assolutamente equivalente a un if-esle e serve a scegliere tra diversi blocchi di istruzioni in base al valore di una espressione intera. La sintassi è la seguente:
 </p>
 
 ```c
@@ -4678,13 +7613,13 @@ switch ( espressione-intera ) {
 ```
 
 <p align="justify">
-Le parentesi quadre <code>[</code>, <code>]</code> indicano parti del costrutto opzionali. Le <strong>parentesi graffe sono obbligatorie</strong>, <code>case</code> e <code>default</code> sono parole chiave. Il costrutto permette di eseguire un'istruzione o una serie di istruzioni sulla base del valore di <code>espressione-intera</code>, l'esecuzione salta al case corrispondente al valore di <code>espressione-intera</code>. Se nessun <code>case</code> corrisponde ad <code>espressione-intera</code> viene eseguita la clausola <code>default</code> (se presente).
+Le parentesi quadre [, ] indicano parti del costrutto opzionali. Le <strong>parentesi graffe sono obbligatorie</strong>, case e default sono parole chiave. Il costrutto permette di eseguire un'istruzione o una serie di istruzioni sulla base del valore di espressione-intera, l'esecuzione salta al case corrispondente al valore di espressione-intera. Se nessun case corrisponde ad espressione-intera viene eseguita la clausola default (se presente).
 </p>
 
 <table align="center">
 	<td>:pill: <b>Nota</b>
 	<p align=justify>
- Le espressioni di ogni <code>case</code> devono essere <strong>espressioni intere e costanti</strong>
+ Le espressioni di ogni case devono essere <strong>espressioni intere e costanti</strong>
 	</p>
 	</td>
 </table>
@@ -4692,22 +7627,22 @@ Le parentesi quadre <code>[</code>, <code>]</code> indicano parti del costrutto 
 <ul>
   <li>
     <p align="justify">
-    La presenza di istruzioni dopo il <code>case</code> è facoltativa per permettere di raggruppare lo stesso codice in relazione a diversi casi
+    La presenza di istruzioni dopo il case è facoltativa per permettere di raggruppare lo stesso codice in relazione a diversi casi
     </p>
   </li>
   <li>
     <p align="justify">
-    la presenza di <code>break</code> alla fine di un <code>case</code> è facoltativa e quindi la mancanza di <code>break</code> determina il proseguimento dell'esecuzione del codice associato al <code>case</code> successivo
+    la presenza di break alla fine di un case è facoltativa e quindi la mancanza di break determina il proseguimento dell'esecuzione del codice associato al case successivo
     </p>
   </li>
   <li>
     <p align="justify">
-    <code>default</code> è facoltativo
+    default è facoltativo
     </p>
   </li>
   <li>
     <p align="justify">
-    non è obbligatorio che <code>default</code> sia l'ultimo caso del costrutto
+    non è obbligatorio che default sia l'ultimo caso del costrutto
     </p>
   </li>
 </ul>
@@ -4748,19 +7683,97 @@ int main(void){
 
 #### break e continue
 
+<!-- lab-exercises:start heading="break e continue" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/5_control_statements/break_continue.c</summary>
+
 <p align="justify">
-Le istruzioni <code>break</code> e <code>continue</code> sono utilizzate per controllare il flusso di esecuzione nei cicli <code>while</code>, <code>do-while</code> e <code>for</code> in particolare:
+<strong>Descrizione breve:</strong>
+Interruzione o salto dell'iterazione nei cicli.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo break e continue con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Interruzione o salto dell'iterazione nei cicli e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/break_continue.c">/lab/5_control_statements/break_continue.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/5_control_statements
+gcc -o bin/break_continue break_continue.c
+bin/break_continue</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/5_control_statements/break_continue.c" -->
+<pre lang="c"><code>
+#include&lt;stdio.h&gt;
+
+int main(void){
+	int i = 0;
+	while(1){
+		if(i == 10){
+			printf("\n");
+			break;
+		}
+		if(i % 2 == 0){
+			++i;
+			continue;
+		}
+		printf("%d ", i);
+		i++;
+	}
+
+
+	for(int j=0; ; j++){
+		if(j == 10){
+			printf("\n");
+			break;
+		}
+		if(j % 2 == 0)
+			continue;
+		printf("%d ", j);
+	}
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
+<p align="justify">
+Le istruzioni break e continue sono utilizzate per controllare il flusso di esecuzione nei cicli while, do-while e for in particolare:
 </p>
 
 <ul>
   <li>
     <p align="justify">
-    <code>break</code> termina immediatamente il ciclo più interno nel quale è contenuta
+    break termina immediatamente il ciclo più interno nel quale è contenuta
     </p>
   </li>
   <li>
     <p align="justify">
-    <code>continue</code> passa immediatamente all'interazione successiva
+    continue passa immediatamente all'interazione successiva
     </p>
   </li>
 </ul>
@@ -4799,16 +7812,192 @@ int main(void){
 
 ## I puntatori
 
+<!-- lab-exercises:start heading="I puntatori" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/6_pointers/0_pointers.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Dichiarazione, indirizzi e dereferenziazione.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo I puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Dichiarazione, indirizzi e dereferenziazione e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/0_pointers.c">/lab/6_pointers/0_pointers.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/6_pointers
+gcc -o bin/0_pointers 0_pointers.c
+bin/0_pointers</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/6_pointers/0_pointers.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int i = 42, j = 107;
+	printf("i = %d, &amp;i = %p\n", i, &amp;i);
+	printf("j = %d, &amp;j = %p\n", j, &amp;j);
+	getchar();
+	int *p = &amp;i;
+	int *q = &amp;j;
+	printf("*p = %d, p = %p\n", *p, p);
+	printf("*q = %d, p = %p\n", *q, q);
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#128187; /lab/6_pointers/1_pointers.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Differenza tra assegnare puntatori, valori puntati e tipi incompatibili.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo I puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza tra assegnare puntatori, valori puntati e tipi incompatibili e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/1_pointers.c">/lab/6_pointers/1_pointers.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/6_pointers
+gcc -o bin/1_pointers 1_pointers.c
+bin/1_pointers</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/6_pointers/1_pointers.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int i = 42, j = 107;
+	printf("i = %d, &amp;i = %p\n", i, &amp;i);
+	printf("j = %d, &amp;j = %p\n", j, &amp;j);
+	
+	getchar();
+	
+	int *p = &amp;i;
+	int *q = &amp;j;
+	
+	printf("*p = %d, p = %p\n", *p, p);
+	printf("*q = %d, p = %p\n", *q, q);
+
+	// p = q;	// (1)
+	// *p = *q;// (2)
+	// *p = q; // (3)
+	// p = *q; // (4)
+	
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#128187; /lab/6_pointers/33_pointers.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Esercizio intermedio sui puntatori, gia richiamato dagli output.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Rafforza il lessico operativo dei puntatori: indirizzo, valore puntato, dereferenziazione e lettura degli output diventano strumenti per evitare confusione tra variabile e locazione di memoria.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/33_pointers.c">/lab/6_pointers/33_pointers.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/6_pointers
+gcc -o bin/33_pointers 33_pointers.c
+bin/33_pointers</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/6_pointers/33_pointers.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int a = 1;
+	int b = 2;
+	int c = 3;
+
+	int *ptr_a = &amp;a;
+
+	printf("a = %d\n", *ptr_a);
+	printf("b = %d\n", *(ptr_a + 1));
+	printf("a = %d\n", *(ptr_a + 2));
+
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 Un puntatore è una variabile che contiene un indirizzo di memoria (di un'altra cella di memoria).
 </p>
 
 <p align="justify">
-Un puntatore è un intero positivo (<code>unsigned int</code>). Di solito nelle macchine UNIX è di tipo <code>unsigned long</code> dato che deve contenere indirizzi da 64 bit.
+Un puntatore è un intero positivo (unsigned int). Di solito nelle macchine UNIX è di tipo unsigned long dato che deve contenere indirizzi da 64 bit.
 </p>
 
 <p align="justify">
-Per dichiarare un puntatore è necessario specificare il tipo della locazione di memoria a cui esso dovrà puntare. Un puntatore che ospita l'indirizzo di una variabile <code>int</code> è di tipo diverso rispetto a un puntatore che ospita l'indirizzo di una variabile di tipo <code>char</code>. Per dichiarare il tipo del puntatore si utilizza il simbolo <code>*</code> insieme al tipo della variabile a cui esso dovrà puntare. Per esempio, nel codice seguente dichiariamo una variabile intera <code>thing</code> che viene inizializzata al valore 6; nella riga seguente dichiariamo un puntatore (variabile <code>thing_ptr</code>) di tipo (<code>int *</code>) che conterrà l'indirizzo di memoria della variabile <code>int</code> di nome <code>thing</code>.
+Per dichiarare un puntatore è necessario specificare il tipo della locazione di memoria a cui esso dovrà puntare. Un puntatore che ospita l'indirizzo di una variabile int è di tipo diverso rispetto a un puntatore che ospita l'indirizzo di una variabile di tipo char. Per dichiarare il tipo del puntatore si utilizza il simbolo * insieme al tipo della variabile a cui esso dovrà puntare. Per esempio, nel codice seguente dichiariamo una variabile intera thing che viene inizializzata al valore 6; nella riga seguente dichiariamo un puntatore (variabile thing_ptr) di tipo (int *) che conterrà l'indirizzo di memoria della variabile int di nome thing.
 </p>
 
 ```c
@@ -4817,7 +8006,7 @@ int *thing_ptr;
 ```
 
 <p align="justify">
-per un <code>char</code> avremmo fatto
+per un char avremmo fatto
 </p>
 
 ```
@@ -4826,11 +8015,11 @@ char *thing_prt;
 ```
 
 <p align="justify">
-Quando un puntatore è dichiarato il suo contenuto (come ogni variabile locale automatica) contiene un valore sporco assolutamente casuale. Come per tutte le altre variabili, è necessario quindi inizializzare una variabile puntatore a un indirizzo di memoria valido; per fare questo si usa l'operatore unario <code>&amp;</code> (<strong>operatore di indirizzamento</strong>) che permette di ottenere l'indirizzo di memoria di una qualsiasi variabile.
+Quando un puntatore è dichiarato il suo contenuto (come ogni variabile locale automatica) contiene un valore sporco assolutamente casuale. Come per tutte le altre variabili, è necessario quindi inizializzare una variabile puntatore a un indirizzo di memoria valido; per fare questo si usa l'operatore unario &amp; (<strong>operatore di indirizzamento</strong>) che permette di ottenere l'indirizzo di memoria di una qualsiasi variabile.
 </p>
 
 <p align="justify">
-Tornando al nostro esempio, se volessimo inizializzare il puntatore a intero <code>thing_ptr</code> all'indirizzo di memoria della variabile intera <code>thing</code> dovremmo usare l'operatore <code>&amp;</code> in questo modo:
+Tornando al nostro esempio, se volessimo inizializzare il puntatore a intero thing_ptr all'indirizzo di memoria della variabile intera thing dovremmo usare l'operatore &amp; in questo modo:
 </p>
 
 ```c
@@ -4848,13 +8037,13 @@ thing_ptr = &thing; /* ora  nella  locazione di  memoria rappresentata da thing_
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/puntatore.png)
 
 <p align="justify">
-Una volta che abbiamo inizializzato <code>thing_ptr</code> all'indirizzo di memoria di <code>thing</code> possiamo accedere al contenuto di <code>thing</code> (leggerlo e modificarlo) attraverso <code>thing_ptr</code>, usando l'operatore <code>*</code> (<strong>operatore di dereferenziazione</strong>).
+Una volta che abbiamo inizializzato thing_ptr all'indirizzo di memoria di thing possiamo accedere al contenuto di thing (leggerlo e modificarlo) attraverso thing_ptr, usando l'operatore * (<strong>operatore di dereferenziazione</strong>).
 </p>
 
 <table align="center">
 	<td>:pill: <b>Nota</b>
 	<p align=justify>
- L'operazione di accesso alla locazione di memoria di una variabile attraverso un puntatore è detta <strong>dereferenziazione</strong>; per questo motivo <code>*</code> è detto <strong>operatore di dereferenziazione</strong>.
+ L'operazione di accesso alla locazione di memoria di una variabile attraverso un puntatore è detta <strong>dereferenziazione</strong>; per questo motivo * è detto <strong>operatore di dereferenziazione</strong>.
 	</p>
 	</td>
 </table>
@@ -4949,6 +8138,71 @@ int main(void){
 
 ### Puntatori non inizializzati
 
+<!-- lab-exercises:start heading="Puntatori non inizializzati" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/6_pointers/2_pointers.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Pericolo di dereferenziare puntatori casuali.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Puntatori non inizializzati con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Pericolo di dereferenziare puntatori casuali e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/2_pointers.c">/lab/6_pointers/2_pointers.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/6_pointers
+gcc -o bin/2_pointers 2_pointers.c
+bin/2_pointers</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/6_pointers/2_pointers.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int i;	/* i non è inizializzata, è locale quindi avrà un valore sporco (casuale) */
+	int *p;	/* anche  p  non è inizializzato,  punta ad una cella a caso, deve essere 
+		 * inizializzato prima di essere usato con l'operatore di deferenziazione
+		 * *p
+		 */
+
+	printf("i  = %d\n", i); /* non possiamo prevedere che valore stamperà */
+	printf("&amp;i = %p\n", &amp;i);
+	printf("p  = %p\n", p); /* cella  di memoria casuale forse appartenete
+				 * ad un altro processo a cui non possiamo mai
+				 * accedere
+				 */
+	printf("*p = %d\n", *p); /* accediamo ad una cella di memoria sconosciuta */
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 Abbiamo detto che <strong>prima di essere usati</strong> (dereferenziazione) per accedere alla memoria <strong>i puntatori devono essere inizializzati</strong> a un indirizzo valido, altrimenti il programma potrebbe crashare o avere comportamenti imprevisti e difficili da individuare. Vediamo un esempio.
 </p>
@@ -4979,8 +8233,64 @@ int main(void){
 
 ### Il puntatore nullo (NULL)
 
+<!-- lab-exercises:start heading="Il puntatore nullo (NULL)" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/6_pointers/3_pointers.c</summary>
+
 <p align="justify">
-Il puntatore nullo vale zero e non è un puntatore valido, non può essere utilizzato per un'operazione di dereferenziazione. Il valore <code>NULL</code> è definito tramite macro al preprocessore (<code>#define</code>) in questo modo:
+<strong>Descrizione breve:</strong>
+Inizializzazione a <code>NULL</code> e controllo prima della dereferenziazione.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Il puntatore nullo (NULL) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Inizializzazione a <code>NULL</code> e controllo prima della dereferenziazione e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/3_pointers.c">/lab/6_pointers/3_pointers.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/6_pointers
+gcc -o bin/3_pointers 3_pointers.c
+bin/3_pointers</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/6_pointers/3_pointers.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int *p = NULL; /* inizializzo il puntatore p a NULL */
+	if (p != NULL)	/* prima di deferenziare controllo se p è diverso da NULL */
+		printf("*p = %d", *p);
+
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
+<p align="justify">
+Il puntatore nullo vale zero e non è un puntatore valido, non può essere utilizzato per un'operazione di dereferenziazione. Il valore NULL è definito tramite macro al preprocessore (#define) in questo modo:
 </p>
 
 ```c
@@ -4988,7 +8298,7 @@ Il puntatore nullo vale zero e non è un puntatore valido, non può essere utili
 ```
 
 <p align="justify">
-Sfruttando il valore <code>NULL</code> è possibile identificare un puntatore nullo, <code>NULL</code> è confrontabile con qualsiasi puntatore. è buona norma inizializzare una variabile puntatore a <code>NULL</code> se la sua inizializzazione valida avverrà successivamente nel codice e controllare se il puntatore è nullo prima di effettuare operazioni di dereferenziazione. Vediamo un esempio.
+Sfruttando il valore NULL è possibile identificare un puntatore nullo, NULL è confrontabile con qualsiasi puntatore. è buona norma inizializzare una variabile puntatore a NULL se la sua inizializzazione valida avverrà successivamente nel codice e controllare se il puntatore è nullo prima di effettuare operazioni di dereferenziazione. Vediamo un esempio.
 </p>
 
 ```c
@@ -5008,8 +8318,79 @@ int main(void){
 
 #### Aritmetica puntatori
 
+<!-- lab-exercises:start heading="Aritmetica puntatori" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/6_pointers/4_pointers.c</summary>
+
 <p align="justify">
-I puntatori sono variabili che hanno tutte la stessa lunghezza (<code>unsigned long</code> di solito nelle architetture a 64 bit) fissata dall'architettura (32, 64 bit). Però abbiamo detto che quando dichiariamo una variabile puntatore dobbiamo specificare anche il suo tipo che rappresenta il tipo della variabile puntata. Questo serve al compilatore per effettuare i calcoli quando si usa <strong>l'aritmetica dei puntatori</strong>. L'aritmetica dei puntatori ci permette di spostarci, usando l'operatore <code>+</code>, nelle celle di memoria adiacenti a quella puntata dal puntatore. Vediamo un esempio: se ho tre variabili intere (<code>a</code>, <code>b</code>, <code>c</code>) contigue in memoria (<code>int</code> occupa 4 byte) e ho un puntatore (<code>ptr_a</code>) che punta alla prima variabile (<code>a</code>), posso accedere ai due interi successivi (<code>b</code>, <code>c</code>) rispettivamente con <code>ptr_a + 1</code> (accedo a <code>b</code>) e <code>ptr_a + 2</code> (accedo a <code>c</code>). La sintassi <code>ptr_a + 1</code> o <code>ptr_a + 2</code> indica che ci vogliamo spostare dall'indirizzo puntato da <code>ptr_a</code> di un numero di byte pari alla dimensione di un intero (<code>ptr_a + 1</code>) o di due interi (<code>ptr_a + 2</code>) quindi nel nostro caso di interi a 4 byte il compilatore calcola per noi i byte dello scostamento in questo modo $ptr_a + 1*(4)$ e $ptr_a + 2*(4)$ Ecco perché è necessario specificare il tipo del puntatore (il tipo della variabile puntata).
+<strong>Descrizione breve:</strong>
+Spostamento tra elementi via puntatore.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Aritmetica puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Spostamento tra elementi via puntatore e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/4_pointers.c">/lab/6_pointers/4_pointers.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/6_pointers
+gcc -o bin/4_pointers 4_pointers.c
+bin/4_pointers</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/6_pointers/4_pointers.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int magic = 16909060;
+	int after_magic = 123456789;
+	printf("magic        = %#x\n", magic);
+	printf("after_magic  = %#x\n", after_magic);
+
+	int *ptr_magic = &amp;magic;
+	printf("&amp;magic       = %p\n", ptr_magic);
+	printf("&amp;after_magic = %p\n", &amp;after_magic);
+	
+	char *ptr_byte1 = (char *)ptr_magic;
+	char *ptr_byte2 = ptr_byte1 + 1;
+	char *ptr_byte3 = ptr_byte1 + 2;
+	char *ptr_byte4 = ptr_byte1 + 3;
+
+	printf("ptr_byte1    = %d\n", *ptr_byte1);
+	printf("ptr_byte2    = %d\n", *ptr_byte2);
+	printf("ptr_byte3    = %d\n", *ptr_byte3);
+	printf("ptr_byte4    = %d\n", *ptr_byte4);
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
+<p align="justify">
+I puntatori sono variabili che hanno tutte la stessa lunghezza (unsigned long di solito nelle architetture a 64 bit) fissata dall'architettura (32, 64 bit). Però abbiamo detto che quando dichiariamo una variabile puntatore dobbiamo specificare anche il suo tipo che rappresenta il tipo della variabile puntata. Questo serve al compilatore per effettuare i calcoli quando si usa <strong>l'aritmetica dei puntatori</strong>. L'aritmetica dei puntatori ci permette di spostarci, usando l'operatore +, nelle celle di memoria adiacenti a quella puntata dal puntatore. Vediamo un esempio: se ho tre variabili intere (a, b, c) contigue in memoria (int occupa 4 byte) e ho un puntatore (ptr_a) che punta alla prima variabile (a), posso accedere ai due interi successivi (b, c) rispettivamente con ptr_a + 1 (accedo a b) e ptr_a + 2 (accedo a c). La sintassi ptr_a + 1 o ptr_a + 2 indica che ci vogliamo spostare dall'indirizzo puntato da ptr_a di un numero di byte pari alla dimensione di un intero (ptr_a + 1) o di due interi (ptr_a + 2) quindi nel nostro caso di interi a 4 byte il compilatore calcola per noi i byte dello scostamento in questo modo $ptr_a + 1*(4)$ e $ptr_a + 2*(4)$ Ecco perché è necessario specificare il tipo del puntatore (il tipo della variabile puntata).
 </p>
 
 ```c
@@ -5031,7 +8412,7 @@ int main(void){
 ```
 
 <p align="justify">
-Come puoi vedere dall'output del programma, usando l'aritmetica dei puntatori riusciamo ad accedere agli interi (<code>b</code> e <code>c</code>) adiacenti alla variabile puntata da <code>ptr_a</code> (variabile <code>a</code>).
+Come puoi vedere dall'output del programma, usando l'aritmetica dei puntatori riusciamo ad accedere agli interi (b e c) adiacenti alla variabile puntata da ptr_a (variabile a).
 </p>
 
 ```bash
@@ -5042,7 +8423,7 @@ a = 3
 ```
 
 <p align="justify">
-L'aritmetica dei puntatori è potentissima, ipotizziamo ora di avere un intero il cui valore sia posto a $16909060$ (variabile <code>magic</code>). Il numero decimale $16909060$ ha una codifica binaria (32 bit, 4 byte) pari a:
+L'aritmetica dei puntatori è potentissima, ipotizziamo ora di avere un intero il cui valore sia posto a $16909060$ (variabile magic). Il numero decimale $16909060$ ha una codifica binaria (32 bit, 4 byte) pari a:
 </p>
 
 ```math
@@ -5058,7 +8439,7 @@ Lo stesso valore in esadecimale vale
 ```
 
 <p align="justify">
-Il primo byte vale 01, il secondo 02, il terzo 03, il quarto 04. Ora, se recupero l'indirizzo di questa variabile e lo assegno a un puntatore a intero, cosa accade se faccio un cast da puntatore a intero a puntatore a carattere? Nulla, il valore dell'indirizzo non cambia, ma quando uso l'aritmetica dei puntatori per spostarmi con <code>+1</code> <code>+2</code> non aumento di 4 byte (dimensione di un intero), ma di 1 byte (dimensione di un carattere), perché il tipo del puntatore è cambiato (da <code>int *</code> a <code>char *</code>). Questo mi permette di spostarmi attraverso i quattro byte del mio intero e di stamparne il valore, come mostrato nel codice seguente.
+Il primo byte vale 01, il secondo 02, il terzo 03, il quarto 04. Ora, se recupero l'indirizzo di questa variabile e lo assegno a un puntatore a intero, cosa accade se faccio un cast da puntatore a intero a puntatore a carattere? Nulla, il valore dell'indirizzo non cambia, ma quando uso l'aritmetica dei puntatori per spostarmi con +1 +2 non aumento di 4 byte (dimensione di un intero), ma di 1 byte (dimensione di un carattere), perché il tipo del puntatore è cambiato (da int * a char *). Questo mi permette di spostarmi attraverso i quattro byte del mio intero e di stamparne il valore, come mostrato nel codice seguente.
 </p>
 
 ```c
@@ -5088,7 +8469,7 @@ int main(void){
 ```
 
 <p align="justify">
-Nell'output del programma, mostrato sotto, è interessante notare come siamo in configurazione <strong>big endian</strong> perché l'indirizzo più alto (<code>ptr_a + 4</code>) è assegnato al byte MSB (quello più a sinistra, che contiene il valore 01).
+Nell'output del programma, mostrato sotto, è interessante notare come siamo in configurazione <strong>big endian</strong> perché l'indirizzo più alto (ptr_a + 4) è assegnato al byte MSB (quello più a sinistra, che contiene il valore 01).
 </p>
 
 ```bash
@@ -5109,6 +8490,184 @@ L'aritmetica dei puntatori ci sarà molto utile quando lavoreremo con i vettori 
 
 ### Vettori
 
+<!-- lab-exercises:start heading="Vettori" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/7_array/00_array.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Inizializzazione elementi con ciclo, accesso con <code>[]</code> e aritmetica puntatori.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Vettori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Inizializzazione elementi con ciclo, accesso con <code>[]</code> e aritmetica puntatori e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/00_array.c">/lab/7_array/00_array.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/7_array
+gcc -o bin/00_array 00_array.c
+bin/00_array</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/7_array/00_array.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int vettore[5];
+
+	/* inizializzo gli elementi del vettore con un ciclo */	
+        for(int i=0; i &lt; 5; i++)
+                vettore[i] = i;
+
+	/* accedo agli elementi del vettore tramite [] */
+        for(int i=0; i &lt; 5; i++)
+                printf("%d ", vettore[i]);
+	printf("\n");
+
+	/* accedo agli elementi del vettore tramite aritemetica puntatori */
+        for(int j=0; j &lt; 5; j++)
+                printf("%d ", *(vettore + j));
+	printf("\n");
+	
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#128187; /lab/7_array/0_array.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Primo esempio di array.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Vettori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Primo esempio di array e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/0_array.c">/lab/7_array/0_array.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/7_array
+gcc -o bin/0_array 0_array.c
+bin/0_array</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/7_array/0_array.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int vettore[5];
+	vettore[0] = 1;
+	vettore[1] = 2;
+	vettore[2] = 3;
+	vettore[3] = 4;
+	vettore[4] = 5;
+
+	for(int i=0; i &lt; 5; i++)
+		printf("%d ", vettore[i]);
+
+	printf("\n");
+	return 0;
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#128187; /lab/7_array/1_array.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Esercizio progressivo su dichiarazione/accesso a elementi.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Vettori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Esercizio progressivo su dichiarazione/accesso a elementi e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/1_array.c">/lab/7_array/1_array.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/7_array
+gcc -o bin/1_array 1_array.c
+bin/1_array</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/7_array/1_array.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int vettore[] = {1, 2, 3, 4, 5};
+
+	for(int i=0; i &lt; 5; i++)
+		printf("%d ", vettore[i]);
+
+	printf("\n");
+	return 0;
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 I vettori (o array) permettono di allocare un insieme di elementi <strong>dello stesso tipo</strong> in una zona contigua di memoria. La sintassi per dichiarare un array è la seguente:
 </p>
@@ -5120,17 +8679,17 @@ nome-tipo identificatore[cardinalità];
 <ul>
   <li>
     <p align="justify">
-    <code>nome-tipo</code> è un tipo di dato predefinito o derivato
+    nome-tipo è un tipo di dato predefinito o derivato
     </p>
   </li>
   <li>
     <p align="justify">
-    <code>identificatore</code> è il nome del vettore con cui si accede ai suoi elementi
+    identificatore è il nome del vettore con cui si accede ai suoi elementi
     </p>
   </li>
   <li>
     <p align="justify">
-    <code>cardinalità</code> è <strong>una costante</strong> che indica il numero degli elementi
+    cardinalità è <strong>una costante</strong> che indica il numero degli elementi
     </p>
   </li>
 </ul>
@@ -5144,7 +8703,7 @@ int vettore[10];
 ```
 
 <p align="justify">
-Per accedere ai singoli elementi di un vettore (operazione di <strong>indicizzazione</strong>) basta indicare tra le parentesi quadre (<code>[</code> <code>]</code>) l'indice del vettore a cui si vuole accedere. <strong>Il primo elemento di un vettore ha indice zero</strong> quindi nel nostro esempio avremo:
+Per accedere ai singoli elementi di un vettore (operazione di <strong>indicizzazione</strong>) basta indicare tra le parentesi quadre ([ ]) l'indice del vettore a cui si vuole accedere. <strong>Il primo elemento di un vettore ha indice zero</strong> quindi nel nostro esempio avremo:
 </p>
 
 ```c
@@ -5200,6 +8759,175 @@ int main(void){
 ```
 
 #### Inizializzare un vettore
+
+<!-- lab-exercises:start heading="Inizializzare un vettore" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/7_array/2_array.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Esercizio progressivo su inizializzazione/accesso agli elementi.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Inizializzare un vettore con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Esercizio progressivo su inizializzazione/accesso agli elementi e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/2_array.c">/lab/7_array/2_array.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/7_array
+gcc -o bin/2_array 2_array.c
+bin/2_array</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/7_array/2_array.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int vettore[5] = {0};
+
+        for(int i=0; i &lt; 5; i++)
+                printf("%d ", vettore[i]);
+
+        printf("\n");
+        return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#128187; /lab/7_array/3_array.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Uso di dimensione simbolica e ciclo.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Inizializzare un vettore con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Uso di dimensione simbolica e ciclo e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/3_array.c">/lab/7_array/3_array.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/7_array
+gcc -o bin/3_array 3_array.c
+bin/3_array</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/7_array/3_array.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+#define N 5
+
+int main(void){
+	int vettore[N] = {0};
+
+        for(int i=0; i &lt; N; i++)
+                printf("%d ", vettore[i]);
+
+        printf("\n");
+        return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#128187; /lab/7_array/4_array.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Esercizio su vettore con dimensione <code>N</code>, citato dagli output.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Inizializzare un vettore con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Esercizio su vettore con dimensione <code>N</code>, citato dagli output e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/4_array.c">/lab/7_array/4_array.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/7_array
+gcc -o bin/4_array 4_array.c
+bin/4_array</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/7_array/4_array.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+#define N 5
+
+int main(void){
+	int vettore[N] = {0, 1, 2, 3, 4};
+
+        for(int i=0; i &lt; N; i++)
+                printf("%d\t\t\t", vettore[i]);
+        printf("\n");
+
+	for(int j=0; j &lt; N; j++)
+		printf("%p\t\t", vettore + j);
+        printf("\n");
+
+        return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
 
 <p align="justify">
 Possiamo inizializzare esplicitamente tutti gli elementi di un vettore in questo modo:
@@ -5261,7 +8989,7 @@ int main(void){
 ```
 
 <p align="justify">
-Spesso nella dichiarazione di un vettore si usa la direttiva <code>#define</code> per specificare la cardinalità del vettore come mostrato nel codice seguente. Come puoi vedere, se dovessi cambiare la cardinalità non dovrei modificare la riga della dichiarazione e quella del ciclo, ma solamente la riga con la direttiva <code>#define</code>.
+Spesso nella dichiarazione di un vettore si usa la direttiva #define per specificare la cardinalità del vettore come mostrato nel codice seguente. Come puoi vedere, se dovessi cambiare la cardinalità non dovrei modificare la riga della dichiarazione e quella del ciclo, ma solamente la riga con la direttiva #define.
 </p>
 
 ```c
@@ -5315,7 +9043,7 @@ vagrant@ubuntu2204:/lab/7_array$ bin/4_array
 ```
 
 <p align="justify">
-Un intero occupa quattro byte sulla mia macchina (ricorda che puoi sempre usare <code>sizeof(int)</code>).
+Un intero occupa quattro byte sulla mia macchina (ricorda che puoi sempre usare sizeof(int)).
 </p>
 
 ```math
@@ -5340,8 +9068,131 @@ vettore + 4 = 0x7fff64c6243c + 4 = 0x7fff64c62440
 
 #### Dimensione vettore (`sizeof`)
 
+<!-- lab-exercises:start heading="Dimensione vettore (sizeof)" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/7_array/5_array.c</summary>
+
 <p align="justify">
-Abbiamo visto come l'operatore <code>sizeof</code> ci permetta di conoscere il numero di byte occupati da una variabile o da un tipo di dato. Possiamo sfruttare questo operatore per conoscere il numero di elementi di un vettore a tempo di esecuzione svolgendo semplicemente la divisione tra il numero di byte totali occupati dal vettore e il numero di byte occupati dal singolo elemento del vettore (ricordiamo che gli elementi di un vettore sono tutti dello stesso tipo e allocati in celle contigue in memoria).
+<strong>Descrizione breve:</strong>
+Numero di byte dell'intero array vs singolo elemento.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Dimensione vettore (sizeof) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Numero di byte dell'intero array vs singolo elemento e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/5_array.c">/lab/7_array/5_array.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/7_array
+gcc -o bin/5_array 5_array.c
+bin/5_array</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/7_array/5_array.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+#define NUM_ELEM 100
+int main(void){
+	int array[NUM_ELEM] = {0};
+
+	unsigned int num_byte_array = sizeof(array); /* n. di byte occupati dall'intero verrore (100*4) */
+	unsigned int num_byte_int   = sizeof(int);   /* n. di byte occupati da un intero in questa arch */
+
+	unsigned int n_elem = num_byte_array / num_byte_int;
+	printf("Il vettore di interi occupa %d byte\n", num_byte_array);
+	printf("Un singolo intero occupa %d byte\n", num_byte_int);
+	printf("Il vettore ha %d(byte)/%d(byte) = %d elementi\n", num_byte_array, num_byte_int, num_byte_array/num_byte_int);
+	return 0;
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#128187; /lab/7_array/6_array.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Macro <code>ARRAY_SIZE(x)</code> per calcolare numero di elementi.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Dimensione vettore (sizeof) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Macro <code>ARRAY_SIZE(x)</code> per calcolare numero di elementi e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/6_array.c">/lab/7_array/6_array.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/7_array
+gcc -o bin/6_array 6_array.c
+bin/6_array</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/7_array/6_array.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+#define NUM_ELEM 100
+
+#define ARRAY_SIZE(x) sizeof(x)/sizeof(*x)
+
+int main(void){
+	int array[NUM_ELEM] = {0};
+
+	unsigned int num_byte_array = sizeof(array); /* n. di byte occupati dall'intero verrore (100*4) */
+	unsigned int num_byte_int   = sizeof(int);   /* n. di byte occupati da un intero in questa arch */
+
+	unsigned int n_elem = ARRAY_SIZE(array);
+	printf("Il vettore di interi occupa %d byte\n", num_byte_array);
+	printf("Un singolo intero occupa %d byte\n", num_byte_int);
+	printf("Il vettore ha %d(byte)/%d(byte) = %d elementi\n", num_byte_array, num_byte_int, num_byte_array/num_byte_int);
+	return 0;
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
+<p align="justify">
+Abbiamo visto come l'operatore sizeof ci permetta di conoscere il numero di byte occupati da una variabile o da un tipo di dato. Possiamo sfruttare questo operatore per conoscere il numero di elementi di un vettore a tempo di esecuzione svolgendo semplicemente la divisione tra il numero di byte totali occupati dal vettore e il numero di byte occupati dal singolo elemento del vettore (ricordiamo che gli elementi di un vettore sono tutti dello stesso tipo e allocati in celle contigue in memoria).
 </p>
 
 ```c
@@ -5400,8 +9251,158 @@ int main(void){
 
 ### Relazione tra array e puntatori
 
+<!-- lab-exercises:start heading="Relazione tra array e puntatori" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/6_pointers/6_pointers.c</summary>
+
 <p align="justify">
-Abbiamo detto che il nome di un array è un puntatore costante al primo elemento del vettore. Quello che non abbiamo detto è che i puntatori, come gli array, possono essere indicizzati con le parentesi <code>[</code> <code>]</code> esattamente come i vettori. La differenza tra nome di un array e puntatori è che il primo è un puntatore costante quindi non è possibile fare le operazioni seguenti:
+<strong>Descrizione breve:</strong>
+Nome dell'array come puntatore costante e operazioni non ammesse.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Relazione tra array e puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Nome dell'array come puntatore costante e operazioni non ammesse e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/6_pointers.c">/lab/6_pointers/6_pointers.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/6_pointers
+gcc -o bin/6_pointers 6_pointers.c
+bin/6_pointers</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/6_pointers/6_pointers.c" -->
+<pre lang="c"><code>#define N 300
+
+int main(void){
+	int a[N] = {1};
+	int *p;
+
+	a = p;   // errore: a è un puntaore costante, non lo posso cambiare assegnando un altro indirizzo	
+	p = a++; // errore: a è un puntaore costante, non lo posso incrementare con operatore ++ ma (a+1) ok
+	p = &amp;a;  // errore: a è un puntaore costante, non posso accedere al suo indirizzo
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#128187; /lab/6_pointers/7_pointers.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Somma degli elementi con indicizzazione e aritmetica puntatori equivalenti.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Relazione tra array e puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Somma degli elementi con indicizzazione e aritmetica puntatori equivalenti e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/7_pointers.c">/lab/6_pointers/7_pointers.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/6_pointers
+gcc -o bin/7_pointers 7_pointers.c
+bin/7_pointers</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/6_pointers/7_pointers.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+#define N 300
+
+int main(void){
+	int a[N];
+	for(int j=0; j &lt; N; j++)
+		a[j] = 1;
+	int *p = NULL;
+	int i = 0;
+	p = a; // equivalente a: p = &amp;a[0]
+
+	/*
+	 * array e puntatori sono simili:
+	 * - posso usare aritmetica puntatori con nome array
+	 * - posso usare indicizzazione array con puntatori
+	 * quindi le espressioni di sotto sono tutte lecite
+	 *   *(a + 1) // aritmetica puntatori con nome array
+	 *   a[i]     // indicizzazione array con nome array
+	 *   p[i]     // indicizzazione array con  puntatore
+	 *   *(p +1)  // aritemetica puntatori con puntatore
+	 */
+
+	int risultato = 0;
+	/* ciclo il vettore usando l'indicizzazione dei vettore sul nome del vettore */
+	for(i = 0; i &lt; N; i++)
+		risultato += a[i];
+	printf("%d\n", risultato);
+
+	/* ciclo il vettore uando l'artmetica dei puntatori sul puntatore*/
+	risultato = 0;
+	for(p = a; p &lt; &amp;a[N]; p++)
+		risultato += *p;
+	printf("%d\n", risultato);
+
+	/* ciclo il vettore usando l'aritmetica dei puntatori sul nome del vettore */
+	risultato = 0;
+	for(i=0; i &lt; N; i++)
+		risultato += *(a + i);		
+	printf("%d\n", risultato);
+
+	/* ciclo il vettore usando l'indicizzazione dei vettori sul puntatore */
+	risultato = 0;
+	p = a;
+	for(i=0; i &lt; N; i++)
+		risultato += p[i];
+	printf("%d\n", risultato);
+
+	return 0;
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
+<p align="justify">
+Abbiamo detto che il nome di un array è un puntatore costante al primo elemento del vettore. Quello che non abbiamo detto è che i puntatori, come gli array, possono essere indicizzati con le parentesi [ ] esattamente come i vettori. La differenza tra nome di un array e puntatori è che il primo è un puntatore costante quindi non è possibile fare le operazioni seguenti:
 </p>
 
 ```c
@@ -5480,6 +9481,85 @@ vagrant@ubuntu2204:/lab/6_pointers$ bin/7_pointers
 
 ### Differenza tra puntatori
 
+<!-- lab-exercises:start heading="Differenza tra puntatori" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/6_pointers/8_pointers.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Differenza in elementi vs differenza in byte tramite cast.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Differenza tra puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza in elementi vs differenza in byte tramite cast e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/8_pointers.c">/lab/6_pointers/8_pointers.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/6_pointers
+gcc -o bin/8_pointers 8_pointers.c
+bin/8_pointers</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/6_pointers/8_pointers.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int a[2], *p, *q;
+	printf("(int  ) %ld bytes\n", sizeof(int));
+	printf("(long ) %ld bytes\n", sizeof(long));
+	printf("(int *) %ld bytes\n", sizeof(int *));
+	printf("\n");
+
+	/* La differenza  tra due puntatori ritorna  il numero di elementi
+         * che li separa e NON il numero di byte  come ci si  aspetterebbe 
+         * devi fare  un  cast  per  ottenere  il risultato atteso
+	 */
+	p = a;
+	q = a + 1; // equivalente a: q = p + 1, q = &amp;a[1]
+	printf("%ld\n", q - p); // %ld -&gt; long int, un puntatore è di tipo long int (arch a 64 bit)
+	printf("%ld\n", (long)q - (long)p);
+	printf("\n");
+
+	/* questi vale anche se le variabili puntate non sono elementi di un array */
+	int b = 2;
+	int c = 1;
+	int d = 3;
+	q = &amp;d;
+	p = &amp;b;
+	printf("&amp;b = %p\n", p);
+	printf("&amp;c = %p\n", &amp;c);
+	printf("&amp;d = %p\n", q);
+	printf("%ld\n", q - p); // distanza in elementi in memoria
+	printf("%ld\n", (long)q - (long)p); // distanza in termini di byte
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
 ```c
 #include<stdio.h>
 
@@ -5532,8 +9612,123 @@ vagrant@ubuntu2204:/lab/6_pointers$ bin/8_pointers
 
 ### Le stringhe
 
+<!-- lab-exercises:start heading="Le stringhe" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/8_strings/0_strings.c</summary>
+
 <p align="justify">
-Il linguaggio C non ha un tipo predefinito per le stringhe, queste vengono implementate come array di caratteri. Una stringa in C deve essere racchiusa tra <strong>doppi apici</strong>: <code>"</code> in questo modo
+<strong>Descrizione breve:</strong>
+Prima rappresentazione di stringhe C.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Le stringhe con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Prima rappresentazione di stringhe C e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/8_strings/0_strings.c">/lab/8_strings/0_strings.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/8_strings
+gcc -o bin/0_strings 0_strings.c
+bin/0_strings</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/8_strings/0_strings.c" -->
+<pre lang="c"><code>
+#include&lt;stdio.h&gt;
+
+int main(void){
+	char ciao[5] = "ciao";
+	for(int i=0; i &lt; 5; i++)
+		printf("%c \t", ciao[i]);
+	printf("\n");
+
+	for(int i=0; i &lt; 5; i++)
+		printf("%d \t", ciao[i]);
+	printf("\n");
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#128187; /lab/8_strings/1_strings.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Esercizio progressivo su terminatore nullo o stampa.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Le stringhe con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Esercizio progressivo su terminatore nullo o stampa e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/8_strings/1_strings.c">/lab/8_strings/1_strings.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/8_strings
+gcc -o bin/1_strings 1_strings.c
+bin/1_strings</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/8_strings/1_strings.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+        char *ciao = "ciao";
+        for(int i=0; i &lt; 5; i++)
+                printf("%c \t", ciao[i]);
+        printf("\n");
+
+        for(int i=0; i &lt; 5; i++)
+                printf("%d \t", ciao[i]);
+        printf("\n");
+        return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
+<p align="justify">
+Il linguaggio C non ha un tipo predefinito per le stringhe, queste vengono implementate come array di caratteri. Una stringa in C deve essere racchiusa tra <strong>doppi apici</strong>: " in questo modo
 </p>
 
 ```c
@@ -5541,13 +9736,13 @@ Il linguaggio C non ha un tipo predefinito per le stringhe, queste vengono imple
 ```
 
 <p align="justify">
-<strong>Una costante stringa come quella precedente è trattata dal compilatore come un puntatore a carattere</strong> quindi per assegnare una costante stringa a una variabile abbiamo due possibilità. La prima è dichiarare un array di caratteri sufficientemente capiente per contenere tutti i caratteri della stringa. Tutte le stringhe vengono terminate (ultimo elemento della stringa) dal carattere <code>\0</code> detto di fine stringa, che ovviamente non è stampabile ma serve per delimitare la fine della stringa. Nel calcolo della dimensione del vettore di caratteri che conterrà la stringa dobbiamo quindi tenere conto del <code>\0</code> e aumentare la dimensione di 1; per esempio: la stringa "ciao" è composta da quattro caratteri, dobbiamo dichiarare un array di 5 caratteri per ospitare anche il carattere <code>\0</code>, in questo modo:
+<strong>Una costante stringa come quella precedente è trattata dal compilatore come un puntatore a carattere</strong> quindi per assegnare una costante stringa a una variabile abbiamo due possibilità. La prima è dichiarare un array di caratteri sufficientemente capiente per contenere tutti i caratteri della stringa. Tutte le stringhe vengono terminate (ultimo elemento della stringa) dal carattere \0 detto di fine stringa, che ovviamente non è stampabile ma serve per delimitare la fine della stringa. Nel calcolo della dimensione del vettore di caratteri che conterrà la stringa dobbiamo quindi tenere conto del \0 e aumentare la dimensione di 1; per esempio: la stringa "ciao" è composta da quattro caratteri, dobbiamo dichiarare un array di 5 caratteri per ospitare anche il carattere \0, in questo modo:
 </p>
 
 <table align="center">
 	<td>:pill: <b>Nota</b>
 	<p align=justify>
- Il carattere di fine stringa <code>\0</code> è diverso dal carattere '0' (il valore in ASCII del carattere '0' è 48). <code>\0</code> in ASCII ha valore 0.
+ Il carattere di fine stringa \0 è diverso dal carattere '0' (il valore in ASCII del carattere '0' è 48). \0 in ASCII ha valore 0.
 	</p>
 	</td>
 </table>
@@ -5577,13 +9772,13 @@ c       i       a       o
 <table align="center">
 	<td>&#9888; <b>Attenzione</b>
 	<p align=justify>
- I doppi apici <code>"</code> devono essere utilizzati per le stringhe, i singoli apici <code>'</code> per i caratteri. Fai attenzione a non scambiare i simboli tra loro.
+ I doppi apici " devono essere utilizzati per le stringhe, i singoli apici ' per i caratteri. Fai attenzione a non scambiare i simboli tra loro.
 	</p>
 	</td>
 </table>
 
 <p align="justify">
-Un'altra possibilità per assegnare una costante stringa a una variabile è quella di utilizzare una variabile di tipo puntatore a carattere <code>char *</code> in questo modo:
+Un'altra possibilità per assegnare una costante stringa a una variabile è quella di utilizzare una variabile di tipo puntatore a carattere char * in questo modo:
 </p>
 
 ```c
@@ -5608,7 +9803,7 @@ c       i       a       o
 99      105     97      111     0
 ```
 <p align="justify">
-In questo modo non ci dobbiamo preoccupare di tenere conto del carattere di fine stringa <code>\0</code>.
+In questo modo non ci dobbiamo preoccupare di tenere conto del carattere di fine stringa \0.
 </p>
 
 <p align="justify">
@@ -5637,13 +9832,208 @@ c       i       a       o
 99      105     97      111     0
 ```
 <p align="justify">
-Anche in questo caso possiamo scordarci di <code>\0</code>.
+Anche in questo caso possiamo scordarci di \0.
 </p>
 
 ### Dettagli sull'inizializzazione
 
+<!-- lab-exercises:start heading="Dettagli sull'inizializzazione" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/8_strings/2_strings.c</summary>
+
 <p align="justify">
-Anche se esistono due modi diversi per dichiarare una stringa (il primo pensandola come un array di caratteri e il secondo pensandola come un literal puntato da un puntatore a carattere), esistono delle differenze sottili tra i due metodi che vanno oltre il non doversi preoccupare di allocare spazio per <code>\0</code>. Vediamole in questo esempio:
+<strong>Descrizione breve:</strong>
+Esercizio progressivo su inizializzazione/accesso ai caratteri.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Dettagli sull'inizializzazione con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Esercizio progressivo su inizializzazione/accesso ai caratteri e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/8_strings/2_strings.c">/lab/8_strings/2_strings.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/8_strings
+gcc -o bin/2_strings 2_strings.c
+bin/2_strings</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/8_strings/2_strings.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+        char ciao[] = "ciao";
+        for(int i=0; i &lt; 5; i++)
+                printf("%c \t", ciao[i]);
+        printf("\n");
+
+        for(int i=0; i &lt; 5; i++)
+                printf("%d \t", ciao[i]);
+        printf("\n");
+        return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#128187; /lab/8_strings/4_strings.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Array dimensionato, puntatore a literal, array con dimensione dedotta.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Dettagli sull'inizializzazione con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Array dimensionato, puntatore a literal, array con dimensione dedotta e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/8_strings/4_strings.c">/lab/8_strings/4_strings.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/8_strings
+gcc -o bin/4_strings 4_strings.c
+bin/4_strings</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/8_strings/4_strings.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	char ciao_v1[5] = "ciao"; // vettore dimensione fissa (+1 per '\0')
+        char *ciao_v2 = "ciao";   // puntatore a carattere
+	char ciao_v3[] = "ciao";  // vettore dimensine dedotta dal numero di caratteri
+	
+	printf("%s\n", ciao_v1);
+	printf("%s\n", ciao_v2);
+	printf("%s\n", ciao_v3);
+	printf("%s\n", "ciao");
+	return 0;
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#128187; /lab/8_strings/5_strings.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Differenza tra array modificabile e puntatore a string literal read-only.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Dettagli sull'inizializzazione con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza tra array modificabile e puntatore a string literal read-only e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/8_strings/5_strings.c">/lab/8_strings/5_strings.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/8_strings
+gcc -o bin/5_strings 5_strings.c
+bin/5_strings</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/8_strings/5_strings.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+#include&lt;string.h&gt;
+
+int main(void){
+	char ciao[] = "ciao";
+	/*  Il nome di un array e' un putatore costante al primo elemento del vettore
+	 *  non posso farlo puntatore ad un'altro indirizzo, si ottiene un errore:
+	 *  error: assignment to expression with array type
+	 */
+	//ciao = "miao";/* errore: ciao e' puntaore costante */
+	
+	/* Il puntatore non può essere modificato ma i caratteri ovviamente si come 
+	 * singoli elementi del vettore oppure usando la strcpy()
+	 */
+	ciao[0] = 'm'; // corretto
+	printf("%s\n", ciao); // (1) miao
+	strcpy(ciao, "ciao"); 
+	printf("%s\n", ciao); // (2) ciao
+
+	printf("\n");
+
+	/* Se assegno la stringa ad un puntatore a carattere posso far puntare ciao_
+	 * ad un' altra  cella di memoria senza problemi perche' il puntatore non e' 
+	 * const
+	 */
+	char *ciao_ = "ciao";
+	printf("%s\n", ciao_); // (3) ciao
+	ciao_ = "miao";
+	printf("%s\n", ciao_); // (4) miao
+	/* In questo caso *ciao_ punta alla stringa "ciao" e di solito il compilatore 
+	 * inserisce le stringhe in un'area di memoria a sola lettura quindi probabil
+	 * mente tentare di modificare la stringa con indicizzazione  o strcpy  porta 
+	 * al crash del programma (segmentation fault)
+	 */
+	strcpy(ciao_, "ciao");
+	printf("%s\n", ciao_); // (5) ciao
+	ciao_[0] = 's';
+	printf("%s\n", ciao_); // (6) siao
+	
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
+<p align="justify">
+Anche se esistono due modi diversi per dichiarare una stringa (il primo pensandola come un array di caratteri e il secondo pensandola come un literal puntato da un puntatore a carattere), esistono delle differenze sottili tra i due metodi che vanno oltre il non doversi preoccupare di allocare spazio per \0. Vediamole in questo esempio:
 </p>
 
 ```c
@@ -5702,7 +10092,7 @@ Segmentation fault (core dumped)
 ### Stampare una stringa
 
 <p align="justify">
-Fare un ciclo <code>for</code> per stampare carattere dopo carattere tutti gli elementi della stringa (come fatto sopra) non è una grande idea, per stampare una stringa basta usare <code>%s</code> con la funzione <code>printf()</code> passando l'indirizzo base della stringa (l'indirizzo del primo carattere).
+Fare un ciclo for per stampare carattere dopo carattere tutti gli elementi della stringa (come fatto sopra) non è una grande idea, per stampare una stringa basta usare %s con la funzione printf() passando l'indirizzo base della stringa (l'indirizzo del primo carattere).
 </p>
 
 
@@ -5745,7 +10135,7 @@ tipo-valore-ritorno nome-funzione(tipo-parametro-1 nome-parametro-1, ..., tipo-p
 ```
 
 <p align="justify">
-La prima riga esclusa la parentesi graffa aperta <code>{</code> è detta <strong>prototipo</strong> della funzione
+La prima riga esclusa la parentesi graffa aperta { è detta <strong>prototipo</strong> della funzione
 </p>
 
 ```c
@@ -5773,7 +10163,7 @@ Specificare i nomi dei parametri aiuta chi legge il codice a comprendere il tipo
 </table>
 
 <p align="justify">
-Tutto il codice compreso tra le parentesi graffe <code>{</code> <code>}</code> è il <strong>corpo</strong> (body) della funzione:
+Tutto il codice compreso tra le parentesi graffe { } è il <strong>corpo</strong> (body) della funzione:
 </p>
 
 ```c
@@ -5826,6 +10216,78 @@ Le funzioni possono essere dichiarate e definite.
 </p>
 
 ### Dichiarazione di funzione
+
+<!-- lab-exercises:start heading="Dichiarazione di funzione" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/9_functions/0_functions.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Prototipo, invocazione e definizione di <code>potenza_di_due</code>.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Dichiarazione di funzione con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Prototipo, invocazione e definizione di <code>potenza_di_due</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/9_functions/0_functions.c">/lab/9_functions/0_functions.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/9_functions
+gcc -o bin/0_functions 0_functions.c
+bin/0_functions</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/9_functions/0_functions.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+#define ESPONENTE 16
+
+int potenza_di_due(int esponente); /* prototipo o dichiarazione di funzione */
+
+int main(void){
+	/* stampo potenze del 2 con esponente da 0 a 16 */
+	for(int i=0; i &lt; ESPONENTE + 1; i++){
+		int risultato = potenza_di_due(i); /* invocazione funzione */
+		printf("2^(%d)\t = %d\n", i, risultato);
+	}
+	return 0;
+
+}
+
+/* definizione di funzione */
+int potenza_di_due(int esponente){
+	int risultato = 1;
+	for(int i=1; i &lt;= esponente; i++)
+		risultato *= 2;
+	return risultato;
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
 <p align="justify">
 <strong>La dichiarazione è opzionale</strong> e non prevede che si specifichino le istruzioni che compongono la funzione ma <strong>solo il suo prototipo</strong>. La dichiarazione serve solo per informare il compilatore circa l'esistenza di una certa funzione da qualche altra parte nel codice sorgente. In questo modo, quando il compilatore incontrerà una chiamata alla funzione, avrà (grazie alla dichiarazione che precede la chiamata) le informazioni necessarie per verificare la correttezza della chiamata (i parametri sono dei tipi attesi, nel numero corretto, il valore di ritorno coincide con quello nel prototipo, etc). Ovviamente <strong>la dichiarazione della funzione deve sempre precedere la prima invocazione della funzione stessa</strong>. La definizione (che vedremo sotto) può essere inserita in qualunque punto del codice sorgente. <strong>La dichiarazione è il prototipo della funzione</strong>.
 </p>
@@ -5833,7 +10295,7 @@ Le funzioni possono essere dichiarate e definite.
 ### Uso di void nelle funzioni
 
 <p align="justify">
-Le funzioni possono non accettare alcun parametro in ingresso o non restituire alcun valore di ritorno. Per informare di questo il compilatore si usa il tipo <code>void</code>. Per esempio:
+Le funzioni possono non accettare alcun parametro in ingresso o non restituire alcun valore di ritorno. Per informare di questo il compilatore si usa il tipo void. Per esempio:
 </p>
 
 <p align="justify">
@@ -5859,7 +10321,7 @@ char *saluta(void){
 ### Definizione di funzione
 
 <p align="justify">
-La definizione di funzione include il prototipo e le istruzioni che formano il corpo della funzione. Una definizione di funzione può comparire solo una volta nel codice sorgente. La definizione di funzione termina quando viene eseguita l'ultima istruzione o quando viene incontrata l'istruzione <code>return</code>. Quando l'istruzione termina, il programma prosegue dall'istruzione successiva alla chiamata della funzione appena terminata. Lo scopo dell'istruzione <code>return</code> è quello di specificare il valore di ritorno della funzione. Una funzione può anche avere un corpo vuoto:
+La definizione di funzione include il prototipo e le istruzioni che formano il corpo della funzione. Una definizione di funzione può comparire solo una volta nel codice sorgente. La definizione di funzione termina quando viene eseguita l'ultima istruzione o quando viene incontrata l'istruzione return. Quando l'istruzione termina, il programma prosegue dall'istruzione successiva alla chiamata della funzione appena terminata. Lo scopo dell'istruzione return è quello di specificare il valore di ritorno della funzione. Una funzione può anche avere un corpo vuoto:
 </p>
 
 ```c
@@ -5931,6 +10393,85 @@ vagrant@ubuntu2204:/lab/9_functions$ bin/0_functions
 
 ### Passaggio di parametri per valore
 
+<!-- lab-exercises:start heading="Passaggio di parametri per valore" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/9_functions/1_functions.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Incremento su copia locale del parametro.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Passaggio di parametri per valore con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Incremento su copia locale del parametro e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/9_functions/1_functions.c">/lab/9_functions/1_functions.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/9_functions
+gcc -o bin/1_functions 1_functions.c
+bin/1_functions</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/9_functions/1_functions.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int incrementa(int, int); /* prototipo */
+
+int main(void){
+	int valore = 100;   /* valore iniziale di partenza */
+	printf("valore = %d, &amp;valore = %p\n\n", valore, &amp;valore);
+
+	printf("valore prima dell'invocazione: %d\n\n", valore);
+	/* quando la funzoine incremanta() viene invocata, il contenuto della variabile di nome valore
+	 * viene copiato all'interno della variabile valore_f ( primo parametro in input nel prototipo
+	 * della funzione). Il valore contenuto in questa nuova variabile puo' essere modificato ma è
+	 * una copia del valore della variabile orginale nel chiamante. Quest'ultimo dunque non subisce
+         * alcuna variazione perchè si trova in un'altra variabile in memoria.
+	 */
+	int risultato = incrementa(valore, 3); /* incremento il valore di iniziale di 3 */
+	printf("\n");
+	printf("valore dopo     l'invocazione: %d\n", valore);
+	printf("risultato                    : %d\n", risultato);
+}
+
+int incrementa(int valore_f, int iterazioni){
+	printf("************incrementa****************\n");
+	for(int i=0; i&lt;iterazioni; i++){
+		valore_f++;
+		printf("i=%d valore_f = %d, &amp;valore_f = %p\n", i, valore_f, &amp;valore_f);
+	}
+	printf("************incrementa****************\n");
+	return valore_f;
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 I parametri di ingresso di una funzione sono <strong>passati sempre per valore</strong>: la funzione utilizza <strong>una nuova variabile</strong> (nello stack della funzione) per immagazzinare <strong>una copia del valore</strong> contenuto nella variabile passata come parametro in ingresso alla funzione dal chiamante. Anche se dentro la funzione il valore passato in ingresso viene alterato (incremento/decremento etc), siccome questo valore è stato copiato in una variabile diversa rispetto a quella passata in ingresso dal chiamante, il valore nella variabile del chiamante rimane inalterato; sarà modificato il valore nella variabile (nuova) allocata nello stack della funzione quando questa è stata invocata.
 </p>
@@ -5938,7 +10479,7 @@ I parametri di ingresso di una funzione sono <strong>passati sempre per valore</
 <table align="center">
 	<td>:exclamation: <b>Importante</b>
 	<p align=justify>
- Le variabili allocate all'interno di una funzione sono <strong>locali</strong> alla funzione. La memoria per queste variabili viene allocata solo al momento dell'invocazione della funzione e questa memoria è accessibile solo all'interno della funzione. Quando la funzione termina la memoria viene completamente deallocata. Questa porzione di memoria usata per variabili locali delle funzioni è detta <strong>stack</strong>. Lo <strong>stack</strong> cresce verso il basso: l'allocazione della memoria sullo stack avviene partendo dagli indirizzi più alti verso gli indirizzi più bassi. La deallocazione della memoria sullo stack avviene partendo dall'ultimo elemento allocato fino al primo procedendo quindi in ordine inverso rispetto all'ordine di allocazione. Lo stack viene utilizzato per memorizzare l'indirizzo di ritorno della funzione (l'indirizzo dell'istruzione successiva del chiamante), il valore dei parametri di ritorno e dei parametri in ingresso alla funzione e per allocare la memoria per tutte le variabili locali della funzione stessa. Lo spazio sullo stack per la funzione viene allocato al momento dell'invocazione della funzione e deallocato al termine della sua esecuzione (ultima istruzione della funzione o chiamata a <code>return</code>).
+ Le variabili allocate all'interno di una funzione sono <strong>locali</strong> alla funzione. La memoria per queste variabili viene allocata solo al momento dell'invocazione della funzione e questa memoria è accessibile solo all'interno della funzione. Quando la funzione termina la memoria viene completamente deallocata. Questa porzione di memoria usata per variabili locali delle funzioni è detta <strong>stack</strong>. Lo <strong>stack</strong> cresce verso il basso: l'allocazione della memoria sullo stack avviene partendo dagli indirizzi più alti verso gli indirizzi più bassi. La deallocazione della memoria sullo stack avviene partendo dall'ultimo elemento allocato fino al primo procedendo quindi in ordine inverso rispetto all'ordine di allocazione. Lo stack viene utilizzato per memorizzare l'indirizzo di ritorno della funzione (l'indirizzo dell'istruzione successiva del chiamante), il valore dei parametri di ritorno e dei parametri in ingresso alla funzione e per allocare la memoria per tutte le variabili locali della funzione stessa. Lo spazio sullo stack per la funzione viene allocato al momento dell'invocazione della funzione e deallocato al termine della sua esecuzione (ultima istruzione della funzione o chiamata a return).
 	</p>
 	</td>
 </table>
@@ -5998,8 +10539,87 @@ risultato                    : 103
 
 ### Passaggio di parametri per indirizzo
 
+<!-- lab-exercises:start heading="Passaggio di parametri per indirizzo" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/9_functions/2_functions.c</summary>
+
 <p align="justify">
-Se si vuole modificare il valore della variabile del chiamante, bisogna passare alla funzione l'indirizzo della variabile (usando una variabile puntatore) del chiamante da modificare. Ovviamente il passaggio dell'indirizzo dal chiamante alla funzione è fatto per copia: cioè l'indirizzo della variabile del chiamante è copiato all'interno di una nuova variabile di tipo puntatore, ma avendo a disposizione l'indirizzo della variabile del chiamante la funzione potrà (attraverso la dereferenziazione) accedere al reale valore della variabile originale. Per ottenere un passaggio per indirizzo nel codice precedente dobbiamo trasformare il primo parametro della funzione (variabile <code>valore_f</code>) da <code>int</code> a <code>int *</code>, rendendola un puntatore pronto a ospitare l'indirizzo della variabile <code>valore</code> (la variabile del chiamante da modificare). Per modificare all'interno della funzione il valore della variabile <code>valore</code> basterà usare la dereferenziazione sul puntatore <code>valore_f</code> in questo modo <code>*valore_f</code>, di fatto accedendo alla locazione di memoria riservata alla variabile <code>valore</code>. Sotto il codice modificato:
+<strong>Descrizione breve:</strong>
+Modifica della variabile del chiamante tramite puntatore.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Passaggio di parametri per indirizzo con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Modifica della variabile del chiamante tramite puntatore e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/9_functions/2_functions.c">/lab/9_functions/2_functions.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/9_functions
+gcc -o bin/2_functions 2_functions.c
+bin/2_functions</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/9_functions/2_functions.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int incrementa(int *, int); /* prototipo */
+
+int main(void){
+	int valore = 100;   /* valore iniziale di partenza */
+	printf("valore = %d, &amp;valore = %p\n\n", valore, &amp;valore);
+
+	printf("valore prima dell'invocazione: %d\n\n", valore);
+	/* In questo passiamo l'indirizzo della variabile valore  e lo capiamo dentro
+	 * una  variabile puntatore ad intero locale alla funzione  ( primo parametro
+	 * in  ingresso della funzione incrementa). Dentro la funzione dereferenziamo
+	 * il puntatore accedendo effettivamente alla locazione di memoria della vari
+	 * abile valore del chiamante modificando di fatto il valore originale.  
+	 */
+	int risultato = incrementa(&amp;valore, 3); /* incremento il valore di iniziale di 3 */
+	printf("\n");
+	printf("valore dopo     l'invocazione: %d\n", valore);
+	printf("risultato                    : %d\n", risultato);
+}
+
+int incrementa(int *valore_f, int iterazioni){
+	printf("************incrementa****************\n");
+	for(int i=0; i&lt;iterazioni; i++){
+		(*valore_f)++;
+		printf("i=%d valore_f = %d, &amp;valore_f = %p\n", i, *valore_f, valore_f);
+	}
+	printf("************incrementa****************\n");
+	return *valore_f; /* superfluo */
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
+<p align="justify">
+Se si vuole modificare il valore della variabile del chiamante, bisogna passare alla funzione l'indirizzo della variabile (usando una variabile puntatore) del chiamante da modificare. Ovviamente il passaggio dell'indirizzo dal chiamante alla funzione è fatto per copia: cioè l'indirizzo della variabile del chiamante è copiato all'interno di una nuova variabile di tipo puntatore, ma avendo a disposizione l'indirizzo della variabile del chiamante la funzione potrà (attraverso la dereferenziazione) accedere al reale valore della variabile originale. Per ottenere un passaggio per indirizzo nel codice precedente dobbiamo trasformare il primo parametro della funzione (variabile valore_f) da int a int *, rendendola un puntatore pronto a ospitare l'indirizzo della variabile valore (la variabile del chiamante da modificare). Per modificare all'interno della funzione il valore della variabile valore basterà usare la dereferenziazione sul puntatore valore_f in questo modo *valore_f, di fatto accedendo alla locazione di memoria riservata alla variabile valore. Sotto il codice modificato:
 </p>
 
 ```c
@@ -6074,8 +10694,77 @@ risultato                    : 103
 
 ### Passaggio di puntatori const
 
+<!-- lab-exercises:start heading="Passaggio di puntatori const" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/6_pointers/5_pointers.c</summary>
+
 <p align="justify">
-Quando è necessario passare dati di grandi dimensioni a una funzione è quindi cosa buona e giusta passare solo il puntatore al dato (tramite variabile puntatore: passaggio per indirizzo). Abbiamo visto che passando il puntatore di una variabile a una funzione applichiamo un passaggio per indirizzo e il dato originale nel chiamante è di fatto modificabile dalla funzione che lo riceve. Se non vogliamo che la funzione sia in grado di modificare il dato passato per indirizzo attraverso la dereferenziazione del puntatore possiamo dichiarare il puntatore <code>const</code> nel prototipo della funzione rendendo di fatto il dato a sola lettura dentro la funzione. Vediamo un esempio:
+<strong>Descrizione breve:</strong>
+Tentativo di modifica di memoria read-only e differenza tra array e literal.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Passaggio di puntatori const con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Tentativo di modifica di memoria read-only e differenza tra array e literal e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/5_pointers.c">/lab/6_pointers/5_pointers.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/6_pointers
+gcc -o bin/5_pointers 5_pointers.c
+bin/5_pointers</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/6_pointers/5_pointers.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+void leggi(const char *);
+
+int main(void){
+	char qualcosa[30] = "Non voglio essere modificata";
+	qualcosa[0] = 'x';
+	qualcosa[1] = 'x';
+	qualcosa[2] = 'x'; 
+	leggi(qualcosa);
+}
+
+void leggi(const char *qualcosa){
+	// qualcosa[0] = '\0'; 
+	/* Se decommenti la riga sopra e provi a ricompilare ottineni errore 
+	 * error: assignment of read-only location *qualcosa
+	 * perchè stai provando a modificare una locazione di memoria in sola
+	 * lettura (puntatore costante)
+	 */ 			
+	printf("%s\n",qualcosa);
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
+<p align="justify">
+Quando è necessario passare dati di grandi dimensioni a una funzione è quindi cosa buona e giusta passare solo il puntatore al dato (tramite variabile puntatore: passaggio per indirizzo). Abbiamo visto che passando il puntatore di una variabile a una funzione applichiamo un passaggio per indirizzo e il dato originale nel chiamante è di fatto modificabile dalla funzione che lo riceve. Se non vogliamo che la funzione sia in grado di modificare il dato passato per indirizzo attraverso la dereferenziazione del puntatore possiamo dichiarare il puntatore const nel prototipo della funzione rendendo di fatto il dato a sola lettura dentro la funzione. Vediamo un esempio:
 </p>
 
 ```c
@@ -6108,6 +10797,83 @@ xxx voglio essere modificata
 ```
 
 ### Array come parametri a funzioni
+
+<!-- lab-exercises:start heading="Array come parametri a funzioni" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/9_functions/3_functions.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Somma di elementi passando array e dimensione a funzione.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Array come parametri a funzioni con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Somma di elementi passando array e dimensione a funzione e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/9_functions/3_functions.c">/lab/9_functions/3_functions.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/9_functions
+gcc -o bin/3_functions 3_functions.c
+bin/3_functions</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/9_functions/3_functions.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+#define N 100
+
+int sum(int a[], int dim);
+int somma(int *, int dim);
+
+int main(void){
+	int vettore[N];
+	for(int i=0; i &lt; N; i++)
+		vettore[i] = 1;
+
+	printf("%d\n", sum(vettore, N));
+	printf("%d\n", somma(vettore, N));
+	return 0;	
+}
+
+int sum(int a[], int dim){
+	int risultato = 0;
+	for(int i=0; i &lt; dim; i++)
+		risultato += a[i];
+	return risultato;
+}
+
+int somma(int *a, int dim){
+	int risultato = 0;
+	for(int i=0; i &lt; dim; i++)
+		risultato += a[i];
+	return risultato;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
 
 <p align="justify">
 In una definizione di funzione, un parametro in ingresso dichiarato come array è in realtà un puntatore. Quindi, quando un array viene passato a una funzione, viene fatto un passaggio per valore dell'indirizzo del primo elemento dell'array; gli elementi degli array non vengono mai copiati. Per convenienza notazionale, il compilatore permette l'utilizzo della notazione con le parentesi quadre (vuote) degli array per dichiarare parametri di tipo puntatore. Vediamo un esempio:
@@ -6153,8 +10919,100 @@ vagrant@ubuntu2204:/lab/9_functions$ bin/3_functions
 
 ### Allocazione dinamica della memoria
 
+<!-- lab-exercises:start heading="Allocazione dinamica della memoria" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/10_dynamic_memory/0_malloc.c</summary>
+
 <p align="justify">
-Quando si dichiara una variabile, il compilatore alloca automaticamente lo spazio in memoria necessario per memorizzare la variabile. La quantità di spazio allocato dipende dal tipo della variabile. Quando si dichiara un puntatore a un determinato tipo, viene allocato spazio in memoria per il puntatore soltanto (che è sempre lo stesso <code>unsigned long</code>, 8 byte) indipendentemente dalla dimensione del tipo puntato. Il puntatore potrà successivamente essere assegnato per contenere l'indirizzo di una variabile dello stesso tipo del puntatore e da quel momento si potrà utilizzare il puntatore per accedere al contenuto della variabile passando per il suo indirizzo (usando l'operazione di dereferenziazione dei puntatori che abbiamo studiato). Questo tipo di allocazione della memoria avviene a tempo di compilazione ed è spesso detta <strong>allocazione statica della memoria</strong>. L'allocazione statica può risultare inutile soprattutto nel caso dei vettori se la dimensione (il numero di elementi del vettore) non è nota a tempo di compilazione ma solo durante l'esecuzione del programma (ad esempio il numero degli elementi è scelto dall'utente a ogni nuova esecuzione). Il linguaggio C permette di effettuare l'allocazione di memoria a tempo di esecuzione; questo tipo di allocazione è detta: <strong>allocazione dinamica della memoria</strong>. Esistono diverse funzioni offerte dalla libreria standard del C per allocare dinamicamente la memoria a tempo di esecuzione. Per adesso vediamo la più comune: la funzione <strong>malloc()</strong>. Questo è il suo prototipo:
+<strong>Descrizione breve:</strong>
+Confronto tra allocazione statica e <code>malloc</code>, uso di puntatore indicizzato come array.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Allocazione dinamica della memoria con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Confronto tra allocazione statica e <code>malloc</code>, uso di puntatore indicizzato come array e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/10_dynamic_memory/0_malloc.c">/lab/10_dynamic_memory/0_malloc.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/10_dynamic_memory
+gcc -o bin/0_malloc 0_malloc.c
+bin/0_malloc</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/10_dynamic_memory/0_malloc.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+#include&lt;stdlib.h&gt;
+
+#define N 10
+
+int main(void){
+	/* allocazione statica a tempo di compilazione, la dimensione del vettore
+	 * deve essere nota a tempo di compilazione e non puo' essere modificata
+	 * successivamente durante l'esecuzione del programma.
+	 */
+	int statico[N];
+	for(int i=0; i&lt;N; i++)
+		statico[i] = i;
+
+	/* allocazione dinamica a tempo di esecuzione, possiamo definire la dimen
+	 * sione del vettore a durante l'esecuzione del programma ad esempio chie
+	 * dendo all'utente il numero di elementi del vettore
+	 */
+	int M = 0;
+	printf("Quanti elementi per il vettore?\n");
+	scanf("%d", &amp;M);
+	/* malloc alloca n byte contigui in memoria e ritorna l'indirizzo del primo
+	 * byte relativo allo spazio allocato.Nota come la variabile dinamico e' un
+	 * puntaore ma nel ciclo posso usare l'indicizzazione come fosse un vettore
+	 */
+	int *dinamico = (int *) malloc(M * sizeof(int));
+	/* dinamico e' un puntatore*/
+	for(int j=0; j&lt;M; j++)
+		dinamico[j] = j;
+
+	int k;
+	printf("statico : ");
+	for(k=0; k&lt;N; k++)
+		printf("%d ", statico[k]);
+	printf("\n");
+
+	printf("dinamico: ");
+	for(k=0; k&lt;M; k++)
+		printf("%d ", dinamico[k]);
+	printf("\n");
+	/* dealloco la memoria con free() */
+	free(dinamico);
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
+<p align="justify">
+Quando si dichiara una variabile, il compilatore alloca automaticamente lo spazio in memoria necessario per memorizzare la variabile. La quantità di spazio allocato dipende dal tipo della variabile. Quando si dichiara un puntatore a un determinato tipo, viene allocato spazio in memoria per il puntatore soltanto (che è sempre lo stesso unsigned long, 8 byte) indipendentemente dalla dimensione del tipo puntato. Il puntatore potrà successivamente essere assegnato per contenere l'indirizzo di una variabile dello stesso tipo del puntatore e da quel momento si potrà utilizzare il puntatore per accedere al contenuto della variabile passando per il suo indirizzo (usando l'operazione di dereferenziazione dei puntatori che abbiamo studiato). Questo tipo di allocazione della memoria avviene a tempo di compilazione ed è spesso detta <strong>allocazione statica della memoria</strong>. L'allocazione statica può risultare inutile soprattutto nel caso dei vettori se la dimensione (il numero di elementi del vettore) non è nota a tempo di compilazione ma solo durante l'esecuzione del programma (ad esempio il numero degli elementi è scelto dall'utente a ogni nuova esecuzione). Il linguaggio C permette di effettuare l'allocazione di memoria a tempo di esecuzione; questo tipo di allocazione è detta: <strong>allocazione dinamica della memoria</strong>. Esistono diverse funzioni offerte dalla libreria standard del C per allocare dinamicamente la memoria a tempo di esecuzione. Per adesso vediamo la più comune: la funzione <strong>malloc()</strong>. Questo è il suo prototipo:
 </p>
 
 ```c
@@ -6162,24 +11020,24 @@ void * malloc(size_t n);
 ```
 
 <p align="justify">
-La funzione <code>malloc()</code> alloca n byte contigui in memoria e ritorna, in caso di successo, il puntatore al primo elemento della memoria allocata o, in caso di errore, <code>NULL</code>.
+La funzione malloc() alloca n byte contigui in memoria e ritorna, in caso di successo, il puntatore al primo elemento della memoria allocata o, in caso di errore, NULL.
 </p>
 
 <ul>
   <li>
     <p align="justify">
-    <code>size_t n</code>: n è il numero di byte da allocare contigui in memoria
+    size_t n: n è il numero di byte da allocare contigui in memoria
     </p>
   </li>
   <li>
     <p align="justify">
-    <code>void *</code>: ritorna un puntatore a void (che può essere trasformato in un puntatore di qualsiasi tipo) che punta al primo elemento della memoria contigua allocata
+    void *: ritorna un puntatore a void (che può essere trasformato in un puntatore di qualsiasi tipo) che punta al primo elemento della memoria contigua allocata
     </p>
   </li>
 </ul>
 
 <p align="justify">
-Ritornando <code>NULL</code> in caso di errore, è cosa buona e giusta, prima di usare la memoria allocata, effettuare un controllo sul puntatore tornato da <code>malloc()</code> in questo modo:
+Ritornando NULL in caso di errore, è cosa buona e giusta, prima di usare la memoria allocata, effettuare un controllo sul puntatore tornato da malloc() in questo modo:
 </p>
 
 ```c
@@ -6207,7 +11065,7 @@ o anche esplicitamente
  Tutta la memoria allocata dinamicamente deve essere rilasciata quando non più necessaria. A questo scopo si richiama la funzione free() che accetta come parametro un puntatore contenente la memoria da deallocare.
 	</p>
 	<p align=justify>
- Chiamare free() su un puntatore non allocato o precedentemente deallocato può portare a comportamenti del programma imprevedibili. Chiamare free() su un puntatore nullo (<code>NULL</code>) non ha alcun effetto.
+ Chiamare free() su un puntatore non allocato o precedentemente deallocato può portare a comportamenti del programma imprevedibili. Chiamare free() su un puntatore nullo (NULL) non ha alcun effetto.
 	</p>
 	</td>
 </table>
@@ -6269,6 +11127,91 @@ dinamico: 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14
 
 ### Array bidimensionali
 
+<!-- lab-exercises:start heading="Array bidimensionali" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/7_array/7_array.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Matrice 2D contigua, formula <code>i*N_COLONNE + j</code>, accesso con aritmetica puntatori.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Array bidimensionali con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Matrice 2D contigua, formula <code>i*N_COLONNE + j</code>, accesso con aritmetica puntatori e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/7_array.c">/lab/7_array/7_array.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/7_array
+gcc -o bin/7_array 7_array.c
+bin/7_array</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/7_array/7_array.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+#define N_RIGHE 6
+#define N_COLONNE 7
+
+int main(void){
+	int mat[N_RIGHE][N_COLONNE];
+
+	int i; // indice riga
+	int j; // indice colonna
+	for(i=0; i&lt;N_RIGHE; i++)
+		for(j=0; j&lt;N_COLONNE; j++)
+			mat[i][j] = (i*N_COLONNE) + j;
+	
+	for(i=0; i&lt;N_RIGHE; i++){
+		for(j=0; j&lt;N_COLONNE; j++)
+			printf("%2d ", mat[i][j]);
+		printf("\n");
+	}
+
+	printf("\n");
+	/* Gli elementi della matrice sono  contigui in memoria e 
+	 * posso accedervi senza la notazione  ad indici del vett
+	 * ore ma usando l' artimetica dei  puntatori, se i e' l'
+	 * indice di riga  e j l' indice  colonna per accedere al
+	 * k-esimo elemento contigue in  memoria  basta  usare la
+	 * formula k = (i*N_COLONNE) + j 
+	 * Per accedere ad esempio all' ultimo  elemento della 3°
+	 * riga: k = 20, i=2 (3° riga), j=6 (7° colonna) (ricorda
+	 * che gli indici partono da 0) k=2*7+6=20 
+	 */
+	for(i=0; i&lt;N_RIGHE; i++)
+		for(j=0; j&lt;N_COLONNE; j++)
+			printf("%d ", *(*mat + ( (i*N_COLONNE) + j) ) );
+	printf("\n");
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 Gli array sono memorizzati in modo contiguo (linearmente) in memoria ma spesso è utile pensare a vettori a due dimensioni (detti anche matrici) in cui un elemento del vettore a due dimensioni è identificato da due indici: <strong>indice di riga</strong> e <strong>indice di colonna</strong>. La dichiarazione di una matrice prevede quindi due cardinalità per il numero delle righe e per il numero delle colonne.
 </p>
@@ -6288,7 +11231,7 @@ int mat[6][7];
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/matrici.png)
 
 <p align="justify">
-Come puoi vedere nella figura precedente, anche se da un punto di vista di indicizzazione <code>mat</code> ha due indici quindi è bidimensionale, in memoria lo spazio allocato è lineare e contiguo (la RAM ha una struttura monodimensionale): viene allocato spazio contiguo per 42 interi. Rimane la relazione tra array e puntatori: il nome della matrice è un puntatore doppio (punta a un puntatore), cioè se faccio la dereferenziazione <code>*mat</code> non ottengo il valore del primo elemento del vettore contiguo di 42 elementi ma l'indirizzo del primo elemento del vettore contiguo in RAM; usando l'aritmetica dei puntatori a partire da questo indirizzo mi sposto tra i vari elementi. Per esempio data una matrice di <code>N_RIGHE=6</code> e <code>N_COLONNE=7</code>: <code>mat[6][7]</code>, sia <code>i</code> l'indice di riga e <code>j</code> l'indice colonna, per accedere al 21° elemento (ultimo elemento della terza riga), quindi <code>i=2</code> (gli indici partono sempre da zero, <code>i=0</code> prima riga, <code>i=2</code> terza riga) <code>j=6</code> (settima e ultima colonna), possiamo usare:
+Come puoi vedere nella figura precedente, anche se da un punto di vista di indicizzazione mat ha due indici quindi è bidimensionale, in memoria lo spazio allocato è lineare e contiguo (la RAM ha una struttura monodimensionale): viene allocato spazio contiguo per 42 interi. Rimane la relazione tra array e puntatori: il nome della matrice è un puntatore doppio (punta a un puntatore), cioè se faccio la dereferenziazione *mat non ottengo il valore del primo elemento del vettore contiguo di 42 elementi ma l'indirizzo del primo elemento del vettore contiguo in RAM; usando l'aritmetica dei puntatori a partire da questo indirizzo mi sposto tra i vari elementi. Per esempio data una matrice di N_RIGHE=6 e N_COLONNE=7: mat[6][7], sia i l'indice di riga e j l'indice colonna, per accedere al 21° elemento (ultimo elemento della terza riga), quindi i=2 (gli indici partono sempre da zero, i=0 prima riga, i=2 terza riga) j=6 (settima e ultima colonna), possiamo usare:
 </p>
 
 <ul>
@@ -6299,7 +11242,7 @@ Come puoi vedere nella figura precedente, anche se da un punto di vista di indic
   </li>
 </ul>
 <p align="justify">
-<code>mat[i][j]</code>
+mat[i][j]
 </p>
 <ul>
   <li>
@@ -6379,6 +11322,190 @@ vagrant@ubuntu2204:/lab/7_array$ bin/7_array
 
 ### Array di puntatori
 
+<!-- lab-exercises:start heading="Array di puntatori" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/6_pointers/9_pointers.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Introduzione a vettori di puntatori o stringhe indicizzate.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Array di puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Introduzione a vettori di puntatori o stringhe indicizzate e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/9_pointers.c">/lab/6_pointers/9_pointers.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/6_pointers
+gcc -o bin/9_pointers 9_pointers.c
+bin/9_pointers</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/6_pointers/9_pointers.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	char *mesi_anno[12] = {"Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio",
+			      "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"};
+
+	int mese;
+	printf("Inserisci un numero da 1 a 12\n");
+	scanf("%d", &amp;mese);
+
+	printf("%d -&gt; %s\n", mese, mesi_anno[mese-1]);
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#128187; /lab/6_pointers/11_pointers.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Confronto tra array di puntatori, matrice statica e matrice dinamica; uso di <code>malloc</code>, <code>strcpy</code>, <code>free</code>.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Array di puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Confronto tra array di puntatori, matrice statica e matrice dinamica; uso di <code>malloc</code>, <code>strcpy</code>, <code>free</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/11_pointers.c">/lab/6_pointers/11_pointers.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/6_pointers
+gcc -o bin/11_pointers 11_pointers.c
+bin/11_pointers</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/6_pointers/11_pointers.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;  // printf()
+#include&lt;stdlib.h&gt; // malloc(), free()
+#include&lt;string.h&gt; // strcpy()
+
+int main(void){
+        char *array_di_puntatori[12] = {"Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio",
+                              		"Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"};
+
+	char matrice[12][10] =  {"Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio",
+                              	 "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"};
+
+	/* array di puntatore a char allocato dinamicamente */
+	char **matrice_dinamica = (char **) malloc(12*sizeof(char*)); // alloca spazio contiguo per 12 puntatori a char
+        for(int k=0; k&lt;12; k++)
+		matrice_dinamica[k] = (char *)malloc(10*sizeof(char));   // alloca spazio contiguoper 10 caretteri
+
+	/* Ho allocato spazio per 10 caratteri per tutti i mesi e sto sprecando spazio ma nulla mi impedisce di allocare
+	 * il numero di caratteri strettamente necessario per ogni singolo mese, non avevo voglia di perdere tempo ma e'
+	 * una cosa fattibile ovviamente ed avremmo avuto lo stesso risultato degli array di puntatori solo che l'alloca
+	 * zione in questo caso è dinamica cioe' e' avvenuto a tempo di esecuzione e non statico cioe' a tempo di compil
+	 * azione. Usa l'allocazione dinamica solo quando la dimensine del vettore o della matrice non e' nota se non du
+	 * rante l'esecuzione; in questo caso e' inutile usare l'allocazione dinamica perche' sia la dimensione delle ri
+	 * ghe che delle colonne e' nota prima dell'esecuzione.
+	 */
+
+	/* Questo metodo per inizializzare i vettori di caratteri non va bene se
+	 * e' prevista la deallocazione con free() in quanto gli string literals
+	 * sono allocati nel DATA segment che e' a sola lettura quindi non potra
+	 * nno e non dovranno mai essere deallocate, provare a fare una free() su
+	 * queste variabili e' inutile (non stanno nello stack) e porta ad un seg
+	 * mentation fault in quanto free() provera' ad scrivere in memoria a so
+	 * la lettura
+	 */
+
+	/* decommanta le righe di sotto e commaenta le righe con strcpy() per pro
+	 * vare l'errore di segmentation fault spiegato sopra
+	 */
+
+	/*
+	matrice_dinamica[0]  = "Gennaio";
+	matrice_dinamica[1]  = "Febbraio";
+	matrice_dinamica[2]  = "Marzo";
+	matrice_dinamica[3]  = "Aprile";
+	matrice_dinamica[4]  = "Maggio";
+	matrice_dinamica[5]  = "Giugno";
+	matrice_dinamica[6]  = "Luglio";
+	matrice_dinamica[7]  = "Agosto";
+	matrice_dinamica[8]  = "Settembre";
+	matrice_dinamica[9]  = "Ottobre";
+	matrice_dinamica[10] = "Novembre";
+	matrice_dinamica[11] = "Dicembre";
+	*/
+		
+	strcpy(matrice_dinamica[0] , "Gennaio");
+	strcpy(matrice_dinamica[1] , "Febbraio");
+	strcpy(matrice_dinamica[2] , "Marzo");
+	strcpy(matrice_dinamica[3] , "Aprile");
+	strcpy(matrice_dinamica[4] , "Maggio");
+	strcpy(matrice_dinamica[5] , "Giugno");
+	strcpy(matrice_dinamica[6] , "Luglio");
+	strcpy(matrice_dinamica[7] , "Agosto");
+	strcpy(matrice_dinamica[8] , "Settembre");
+	strcpy(matrice_dinamica[9] , "Ottobre");
+	strcpy(matrice_dinamica[10], "Novembre");
+	strcpy(matrice_dinamica[11], "Dicembre");
+
+	int mese;
+        printf("Inserisci un numero da 1 a 12\n");
+        scanf("%d", &amp;mese);
+
+        printf("%d -&gt; %s\n", mese, array_di_puntatori[mese-1]);
+        printf("%d -&gt; %s\n", mese, matrice[mese-1]);
+        printf("%d -&gt; %s\n", mese, matrice_dinamica[mese-1]);
+	
+	/* con l'allocazione dinamica e' compito del programmatore deallocare la memoria quando non serve piu'*/
+		
+	/* prima dealloco i 12 array di caratteri di lunghezza 10 contenenti i mesi */
+	for(int k=0; k&lt;12; k++)
+		free(matrice_dinamica[k]);
+	/* infine dealloco i 12 puntatori a caratteri che puntavano ai 12 vettori di caratteri prima deallocati */
+	free(matrice_dinamica);
+        return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 I puntatori sono variabili come tutte le altre e quindi è possibile dichiarare un vettore di puntatori.
 </p>
@@ -6408,8 +11535,73 @@ Inserisci un numero da 1 a 12
 
 ### Differenza tra array bidimensionali e array di puntatori
 
+<!-- lab-exercises:start heading="Differenza tra array bidimensionali e array di puntatori" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/6_pointers/10_pointers.c</summary>
+
 <p align="justify">
-Benché simili, i vettori bidimensionali (matrici) e gli array di puntatori sono diversi. Riprendendo l'esempio dei mesi dell'anno, le due variabili <code>array_di_puntatori</code> e <code>matrice</code> svolgono lo stesso identico ruolo: contenere la lista ordinata dei mesi dell'anno.
+<strong>Descrizione breve:</strong>
+Confronto tra matrici e puntatori.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Differenza tra array bidimensionali e array di puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Confronto tra matrici e puntatori e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/10_pointers.c">/lab/6_pointers/10_pointers.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/6_pointers
+gcc -o bin/10_pointers 10_pointers.c
+bin/10_pointers</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/6_pointers/10_pointers.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+        char *array_di_puntatori[12] = {"Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio",
+                              		"Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"};
+
+	char matrice[12][10] =  {"Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio",
+                              	 "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"};
+
+        int mese;
+        printf("Inserisci un numero da 1 a 12\n");
+        scanf("%d", &amp;mese);
+
+        printf("%d -&gt; %s\n", mese, array_di_puntatori[mese-1]);
+        printf("%d -&gt; %s\n", mese, matrice[mese-1]);
+        return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
+<p align="justify">
+Benché simili, i vettori bidimensionali (matrici) e gli array di puntatori sono diversi. Riprendendo l'esempio dei mesi dell'anno, le due variabili array_di_puntatori e matrice svolgono lo stesso identico ruolo: contenere la lista ordinata dei mesi dell'anno.
 </p>
 
 ```c
@@ -6441,11 +11633,11 @@ Inserisci un numero da 1 a 12
 ```
 
 <p align="justify">
-e l'accesso indicizzato <code>array_di_puntatori[5][0]</code> o <code>matrici[5][0]</code> è equivalente e permette di leggere la lettera <code>G</code> (il primo carattere del mese di giugno, primo elemento dell'array in sesta posizione). Da un punto di vista di allocazione di memoria ci sono delle sottili differenze. Nel caso di vettore bidimensionale abbiamo allocato una quantità di memoria fissa pari a 12*10=120 byte (12 ovviamente sono i mesi, il 10 è dato dalla lunghezza della stringa più lunga: Settembre che misura 9 caratteri più il carattere di fine stringa <code>\0</code>) quindi abbiamo 12 righe tutte con una lunghezza di 10 colonne. C'è un certo spreco di memoria perché non tutti i mesi sono lunghi 9 caratteri e i byte resteranno non utilizzati. Nel caso di vettori di puntatori invece abbiamo una quantità di memoria allocata pari a 12 puntatori a carattere quindi 12*8=96 byte, un puntatore doppio che punta al primo elemento del vettore di puntatori quindi 8 byte e più la memoria allocata per ogni singola stringa rappresentante i mesi dell'anno. Questa volta però le stringhe occupano lo spazio strettamente necessario a contenere i loro caratteri senza spreco di spazio e qualche elemento del vettore di puntatori potrebbe anche non contenere alcun indirizzo, quindi non puntare a nulla se fosse necessario. La differenza sostanziale però tra i due metodi è che nel caso delle matrici gli elementi sono allocati in modo contiguo in memoria mentre in un array di puntatori solo le variabili di tipo puntatore sono contigue in memoria mentre le variabili puntate sono sparse in memoria; questo secondo approccio si traduce in un grosso vantaggio quando si devono svolgere operazioni di ordinamento e/o spostamento tra i vari elementi se questi ultimi occupano grandi quantità di memoria. Il vantaggio di un array di puntatori non è tanto il risparmio di memoria nella rappresentazione degli elementi ma piuttosto il fatto che ordinamenti e spostamenti degli elementi del vettore sono molto più facili e veloci da fare perché lo scambio di posizione tra due elementi del vettore si traduce nello scrivere dei nuovi indirizzi nelle variabili puntatori mentre nel caso delle matrici dobbiamo spostare tutti gli elementi compresi tra i due elementi interessati.
+e l'accesso indicizzato array_di_puntatori[5][0] o matrici[5][0] è equivalente e permette di leggere la lettera G (il primo carattere del mese di giugno, primo elemento dell'array in sesta posizione). Da un punto di vista di allocazione di memoria ci sono delle sottili differenze. Nel caso di vettore bidimensionale abbiamo allocato una quantità di memoria fissa pari a 12*10=120 byte (12 ovviamente sono i mesi, il 10 è dato dalla lunghezza della stringa più lunga: Settembre che misura 9 caratteri più il carattere di fine stringa \0) quindi abbiamo 12 righe tutte con una lunghezza di 10 colonne. C'è un certo spreco di memoria perché non tutti i mesi sono lunghi 9 caratteri e i byte resteranno non utilizzati. Nel caso di vettori di puntatori invece abbiamo una quantità di memoria allocata pari a 12 puntatori a carattere quindi 12*8=96 byte, un puntatore doppio che punta al primo elemento del vettore di puntatori quindi 8 byte e più la memoria allocata per ogni singola stringa rappresentante i mesi dell'anno. Questa volta però le stringhe occupano lo spazio strettamente necessario a contenere i loro caratteri senza spreco di spazio e qualche elemento del vettore di puntatori potrebbe anche non contenere alcun indirizzo, quindi non puntare a nulla se fosse necessario. La differenza sostanziale però tra i due metodi è che nel caso delle matrici gli elementi sono allocati in modo contiguo in memoria mentre in un array di puntatori solo le variabili di tipo puntatore sono contigue in memoria mentre le variabili puntate sono sparse in memoria; questo secondo approccio si traduce in un grosso vantaggio quando si devono svolgere operazioni di ordinamento e/o spostamento tra i vari elementi se questi ultimi occupano grandi quantità di memoria. Il vantaggio di un array di puntatori non è tanto il risparmio di memoria nella rappresentazione degli elementi ma piuttosto il fatto che ordinamenti e spostamenti degli elementi del vettore sono molto più facili e veloci da fare perché lo scambio di posizione tra due elementi del vettore si traduce nello scrivere dei nuovi indirizzi nelle variabili puntatori mentre nel caso delle matrici dobbiamo spostare tutti gli elementi compresi tra i due elementi interessati.
 </p>
 
 <p align="justify">
-Nulla vieta di provare ad allocare un array bidimensionale dinamicamente con la funzione <code>malloc()</code>; anche in questo caso avremmo la possibilità di scegliere esattamente la dimensione dei byte da allocare per ogni singolo elemento come nel caso degli array di vettori, ma non è questo il caso d'uso dell'allocazione dinamica. Vediamo un esempio:
+Nulla vieta di provare ad allocare un array bidimensionale dinamicamente con la funzione malloc(); anche in questo caso avremmo la possibilità di scegliere esattamente la dimensione dei byte da allocare per ogni singolo elemento come nel caso degli array di vettori, ma non è questo il caso d'uso dell'allocazione dinamica. Vediamo un esempio:
 </p>
 
 ```c
@@ -6578,7 +11770,7 @@ Il <strong>text segment</strong> (o anche <strong>code segment</strong>) è la p
   </li>
   <li>
     <p align="justify">
-    le variabili inizializzate dal programmatore nella dichiarazione (es: <code>static int i = 10</code>)
+    le variabili inizializzate dal programmatore nella dichiarazione (es: static int i = 10)
     </p>
   </li>
   <li>
@@ -6588,17 +11780,17 @@ Il <strong>text segment</strong> (o anche <strong>code segment</strong>) è la p
   </li>
   <li>
     <p align="justify">
-    le variabili non inizializzate dal programmatore (es: <code>int vet[100]</code>), queste variabili vengono inizializzate dal sistema operativo al valore 0 prima dell'esecuzione del programma
+    le variabili non inizializzate dal programmatore (es: int vet[100]), queste variabili vengono inizializzate dal sistema operativo al valore 0 prima dell'esecuzione del programma
     </p>
   </li>
   <li>
     <p align="justify">
-    Il segmento <strong>heap</strong> è destinato a ospitare la memoria allocata dinamicamente tramite funzioni come <code>malloc()</code>. Quando il programmatore alloca o dealloca memoria dinamicamente la dimensione di questo segmento cresce o diminuisce. Questo segmento inizia dopo il <strong>BSS</strong> e cresce verso l'alto occupando indirizzi crescenti
+    Il segmento <strong>heap</strong> è destinato a ospitare la memoria allocata dinamicamente tramite funzioni come malloc(). Quando il programmatore alloca o dealloca memoria dinamicamente la dimensione di questo segmento cresce o diminuisce. Questo segmento inizia dopo il <strong>BSS</strong> e cresce verso l'alto occupando indirizzi crescenti
     </p>
   </li>
   <li>
     <p align="justify">
-    Il segmento <strong>stack</strong> gestisce la chiamata a funzione e ospita le variabili automatiche della funzione chiamata (variabili locali, classe memorizzazione <code>auto</code>), i parametri passati in ingresso alla funzione, l'indirizzo di ritorno al chiamante da cui riprendere l'esecuzione al termine dell'esecuzione della funzione e il contenuto di alcuni registri della CPU. Lo stack cresce verso il basso dagli indirizzi più alti verso indirizzi più bassi e confina con il segmento <strong>heap</strong>
+    Il segmento <strong>stack</strong> gestisce la chiamata a funzione e ospita le variabili automatiche della funzione chiamata (variabili locali, classe memorizzazione auto), i parametri passati in ingresso alla funzione, l'indirizzo di ritorno al chiamante da cui riprendere l'esecuzione al termine dell'esecuzione della funzione e il contenuto di alcuni registri della CPU. Lo stack cresce verso il basso dagli indirizzi più alti verso indirizzi più bassi e confina con il segmento <strong>heap</strong>
     </p>
   </li>
 </ul>
@@ -6639,6 +11831,176 @@ Lo <strong>stack</strong> è un'area di memoria contigua all'heap e cresce in di
 </ul>
 
 ### Allocazione dinamica di matrici
+
+<!-- lab-exercises:start heading="Allocazione dinamica di matrici" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/6_pointers/12_pointers.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Allocazione/deallocazione di matrice dinamica, inizializzazione e stampa tramite funzioni.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Allocazione dinamica di matrici con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Allocazione/deallocazione di matrice dinamica, inizializzazione e stampa tramite funzioni e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/12_pointers.c">/lab/6_pointers/12_pointers.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/6_pointers
+gcc -o bin/12_pointers 12_pointers.c
+bin/12_pointers</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/6_pointers/12_pointers.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;  // printf()
+#include&lt;stdlib.h&gt; // malloc(), free()
+#include&lt;string.h&gt; // strcpy()
+
+#define N_ROWS 9
+#define N_COLS 8
+
+char **alloc_planets_mat_dyn(int n_rows, int n_cols);
+void initialize_planets_mat_dyn(char **matrix);
+void print_all_chars(char **array_of_pointers, char static_matrix[][N_COLS], char **dynamic_matrix);
+void print_just_strings(char **array_of_pointers, char static_matrix[][N_COLS], char **dynamic_matrix);
+void dealloc_planets_mat_dyn(char **matrix, int n_rows);
+	
+int main(void){
+	char *planets[] = {"Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto"};
+	char planets_mat[N_ROWS][N_COLS] = {"Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto"};
+	char **planets_mat_dyn = alloc_planets_mat_dyn(N_ROWS, N_COLS);
+	initialize_planets_mat_dyn(planets_mat_dyn);
+
+	print_all_chars(planets, planets_mat, planets_mat_dyn);
+
+	printf("\n\n");
+	print_just_strings(planets, planets_mat, planets_mat_dyn);
+
+	dealloc_planets_mat_dyn(planets_mat_dyn, N_ROWS);
+	return 0;
+}
+
+char **alloc_planets_mat_dyn(int n_rows, int n_cols){
+	char **matrix = (char **)malloc(n_rows*sizeof(char *)); /* alloco un vettore di puntatori a char (le righe) */
+	for(int i=0; i&lt;n_rows; i++)
+		matrix[i] = (char *)malloc(n_cols*sizeof(char)); /* alloco un vettore di caratteri (le collonne di una riga) */
+	return matrix;
+}
+
+
+void dealloc_planets_mat_dyn(char **matrix, int n_rows){
+	/* prima dealloco le righe */
+	for(int i=0; i&lt;n_rows; i++)
+		free(matrix[i]);
+	/* poi il vettore di puntatori a char */
+	free(matrix);
+}	
+void initialize_planets_mat_dyn(char **matrix){
+	
+	/*
+	matrix[0] = "Mercury";
+	matrix[1] = "Venus";
+	matrix[2] = "Earth";
+	matrix[3] = "Mars";
+	matrix[4] = "Jupiter";
+	matrix[5] = "Saturn";
+	matrix[6] = "Uranus";
+	matrix[7] = "Neptune";
+	matrix[8] = "Pluto";
+	*/
+	
+	strcpy(matrix[0], "Mercury");
+	strcpy(matrix[1], "Venus");
+	strcpy(matrix[2], "Earth");
+	strcpy(matrix[3], "Mars");
+	strcpy(matrix[4], "Jupiter");
+	strcpy(matrix[5], "Saturn");
+	strcpy(matrix[6], "Uranus");
+	strcpy(matrix[7], "Neptune");
+	strcpy(matrix[8],"Pluto");
+
+}
+
+void print_all_chars(char **array_of_pointers, char static_matrix[][N_COLS], char **dynamic_matrix){
+	for(int i=0; i&lt;N_ROWS; i++){
+		for(int j=0; j&lt;N_COLS; j++){
+			printf("%c ", array_of_pointers[i][j]);
+			if(array_of_pointers[i][j] == '\0') break;
+		}
+		printf("\n");
+	}
+
+	printf("\n");
+
+
+	for(int i=0; i&lt;N_ROWS; i++){
+		for(int j=0; j&lt;N_COLS; j++){
+			printf("%c ", static_matrix[i][j]);
+			if(static_matrix[i][j] == '\0') break;
+		}
+		printf("\n");
+	}
+
+	printf("\n");
+
+
+	for(int i=0; i&lt;N_ROWS; i++){
+		for(int j=0; j&lt;N_COLS; j++){
+			printf("%c ", dynamic_matrix[i][j]);
+			if(dynamic_matrix[i][j] == '\0') break;
+		}
+		printf("\n");
+	}
+
+	printf("\n");
+}
+
+
+void print_just_strings(char **array_of_pointers, char static_matrix[][N_COLS], char **dynamic_matrix){
+	for(int i=0; i&lt;N_ROWS; i++)
+		printf("%s\n", array_of_pointers[i]);
+
+	printf("\n");
+
+
+	for(int i=0; i&lt;N_ROWS; i++)
+		printf("%s\n", static_matrix[i]);
+
+	printf("\n");
+
+	for(int i=0; i&lt;N_ROWS; i++)
+		printf("%s\n", dynamic_matrix[i]);
+
+	printf("\n");
+
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
 
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/pianeti_matrice.png)
@@ -6835,6 +12197,88 @@ Pluto
 
 ### Le strutture
 
+<!-- lab-exercises:start heading="Le strutture" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/11_structs/0_structs.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Definizione di <code>struct punto_2d</code>, variabile struttura, puntatore a struttura.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Le strutture con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Definizione di <code>struct punto_2d</code>, variabile struttura, puntatore a struttura e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/11_structs/0_structs.c">/lab/11_structs/0_structs.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/11_structs
+gcc -o bin/0_structs 0_structs.c
+bin/0_structs</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/11_structs/0_structs.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+/* dichiaro il nuovo tipo che si chiama: struct punto_2d */
+struct punto_2d {
+	int x;
+	int y;
+};
+
+int main(void){
+	/* dichiaro una variabile ed un puntatore del tipo struct punto_2d
+	 * fai attenzione che il nuovo tipo è "struct punto_2s" e non sola
+	 * mente "punto_2d", non ti scordare "struct" nel nome del tipo.
+	 */
+	struct punto_2d i;
+	struct punto_2d *ptr = NULL; /* alloco spazio per il puntatore */
+	
+	/* il puntaore deve essere inizializzato all'indirizzo della struttura
+	 * altrimenti non punta ad una locazione di memoria valida per noi
+	 */
+	ptr = &amp;i;
+	/* inizializzo la struttura accedendo ai campi con la notazione puntata
+	  * attraverso una variabile di tipo "struct punto_2d"
+	  */
+	i.x = 0;
+	i.y = 0;
+	printf("(%d, %d)\n", i.x, i.y);
+	
+	/* accedo ai campi della struttura attraverso il puntatore usando -&gt; */
+	ptr-&gt;x = 1;
+	ptr-&gt;y = 1;
+	printf("(%d, %d)\n", ptr-&gt;x, ptr-&gt;y);
+
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 Una struttura o <strong>struct</strong> è un tipo di dato derivato che permette di raggruppare un insieme di elementi di tipo diverso con una qualche forte correlazione tra loro, detti <strong>campi</strong> della struttura, in un'area contigua in memoria. I campi della struttura possono essere semplici (predefiniti dal linguaggio) o derivati (anche altre strutture stesse) e come detto possono essere di tipo diverso tra loro (al contrario degli array). La sintassi per dichiarare una struttura è la seguente:
 </p>
@@ -6873,7 +12317,7 @@ struct punto_2d *ptr
 ```
 
 <p align="justify">
-Per accedere ai singoli campi di una struttura attraverso una variabile basta usare il <code>.</code> in questo modo: <code>nome_variabile.nome_campo</code>, se si accede ai campi attraverso un puntatore si usa <code>-&gt;</code> in questo modo <code>nome_variabile_puntatore-&gt;nome_campo</code>. Per esempio:
+Per accedere ai singoli campi di una struttura attraverso una variabile basta usare il . in questo modo: nome_variabile.nome_campo, se si accede ai campi attraverso un puntatore si usa -&gt; in questo modo nome_variabile_puntatore-&gt;nome_campo. Per esempio:
 </p>
 
 ```c
@@ -6914,6 +12358,115 @@ int main(void){
 ```
 
 #### Passaggio di strutture a funzioni
+
+<!-- lab-exercises:start heading="Passaggio di strutture a funzioni" -->
+
+<table align="center">
+<tr>
+<td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
+<details>
+<summary>&#128187; /lab/11_structs/1_structs.c</summary>
+
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Passaggio di strutture a funzioni e calcolo di una media.
+</p>
+
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Approfondisce il paragrafo Passaggio di strutture a funzioni con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Passaggio di strutture a funzioni e calcolo di una media e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/11_structs/1_structs.c">/lab/11_structs/1_structs.c</a>
+</p>
+
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
+
+<pre lang="bash"><code>cd /lab/11_structs
+gcc -o bin/1_structs 1_structs.c
+bin/1_structs</code></pre>
+
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/11_structs/1_structs.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+#include&lt;string.h&gt;
+
+struct studente {
+	char *nome;
+	char *cognome;
+	char *matricola;
+	int *voti;
+	int eta;
+	float media;
+};
+
+void calcola_media(struct studente *i);
+ 
+int main(void){
+	struct studente ottimo;
+	struct studente medio;
+	struct studente scarso;
+
+	ottimo.nome = "Mario";
+	ottimo.cognome = "Rossi";
+	ottimo.matricola ="1234qwert";
+	ottimo.eta = 21;
+	ottimo.media = 0;
+	int tmp1[10] = {28, 30, 30, 30, 29,27,28, 30, 30, 30};
+	ottimo.voti = tmp1;
+
+	medio.nome = "Andrea";
+	medio.cognome = "Verdi";
+	medio.matricola ="9876zxcvb";
+	medio.eta = 24;
+	medio.media = 0;
+	int tmp2[10] = {26, 27, 24, 25, 26, 27, 23, 25, 24, 25};
+	medio.voti = tmp2;	
+
+	scarso.nome = "Luigi";
+	scarso.cognome = "Bianchi";
+	scarso.matricola ="5678lkjhg";
+	scarso.eta = 31;
+	scarso.media = 0;
+	int tmp3[10] = {18, 20, 23, 18, 19, 22, 18, 20, 20, 19};
+	scarso.voti = tmp3;	
+
+	calcola_media(&amp;ottimo);
+	calcola_media(&amp;medio);
+	calcola_media(&amp;scarso);
+
+	printf("%s %s di eta' %d ha una media di %f\n", ottimo.nome, ottimo.cognome, ottimo.eta, ottimo.media);
+	printf("%s %s di eta' %d ha una media di %f\n", medio.nome, medio.cognome, medio.eta, medio.media);
+	printf("%s %s di eta' %d ha una media di %f\n", scarso.nome, scarso.cognome, scarso.eta, scarso.media);
+
+	return 0;
+}
+
+void calcola_media(struct studente *i){
+	float media = 0.0;
+	for(int j=0; j&lt;10; j++)
+		i-&gt;media += i-&gt;voti[j];
+	i-&gt;media = i-&gt;media / 10;  
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+</details>
+</td>
+</tr>
+</table>
+
+<!-- lab-exercises:end -->
+
 
 <p align="justify">
 Una variabile di un tipo struct può essere passata normalmente a una funzione; come abbiamo studiato, il passaggio dei parametri in C avviene sempre per valore e questo può essere un problema in termini di prestazioni e spreco di risorse se la struct ha numerosi campi. Per questo motivo le struct sono quasi sempre passate per riferimento, cioè passando in ingresso alla funzione un puntatore a struttura. Vediamo quindi esclusivamente il caso di passaggio per riferimento.
@@ -6994,7 +12547,7 @@ Luigi Bianchi di eta' 31 ha una media di 19.700001
 ### I modelli di memoria
 
 <p align=justify>
-Uno dei concetti più complessi dei sistemi e della programmazione a basso livello (in linguaggio assembly del processore) è l'indirizzamento della memoria, ovvero come la CPU indirizza la memoria, cioè in che modo questa permette l'accesso alle celle di memoria; questo è molto importante perché influenza il modo con cui il programmatore vede la RAM. Anche se la RAM fisicamente è una sequenza ordinata di celle di 8 byte, l'indirizzamento della CPU può influenzare come il programmatore vede e usa questa sequenza di byte. In questa sede faremo riferimento all'architettura <code>x86</code> dei processori Intel/AMD. L'indirizzamento della memoria da parte del processore è argomento complesso in quanto, nella nostra architettura di riferimento, esistono diversi modi con cui i processori <code>x86</code> indirizzano la memoria. Nello specifico esistono quattro <b>modelli di memoria</b> che gli attuali processori della famiglia <code>x86</code> supportano:
+Uno dei concetti più complessi dei sistemi e della programmazione a basso livello (in linguaggio assembly del processore) è l'indirizzamento della memoria, ovvero come la CPU indirizza la memoria, cioè in che modo questa permette l'accesso alle celle di memoria; questo è molto importante perché influenza il modo con cui il programmatore vede la RAM. Anche se la RAM fisicamente è una sequenza ordinata di celle di 8 byte, l'indirizzamento della CPU può influenzare come il programmatore vede e usa questa sequenza di byte. In questa sede faremo riferimento all'architettura x86 dei processori Intel/AMD. L'indirizzamento della memoria da parte del processore è argomento complesso in quanto, nella nostra architettura di riferimento, esistono diversi modi con cui i processori x86 indirizzano la memoria. Nello specifico esistono quattro <b>modelli di memoria</b> che gli attuali processori della famiglia x86 supportano:
 </p>
 
 <ol>
@@ -7036,7 +12589,7 @@ Lo schema d'indirizzamento dell'8080 era molto semplice: il processore inseriva 
 <p align=justify>
 Il sistema operativo più utilizzato con l'8080 era il CP/M-80. Questo sistema operativo risiedeva nella zona alta della memoria installata in modo da lasciare spazio e avere un punto di partenza coerente per i programmi transitori, cioè quelli che a differenza del sistema operativo venivano caricati in memoria ed eseguiti solo quando necessario. Quando il CP/M-80 leggeva un programma dal disco per eseguirlo, lo caricava in memoria bassa all'indirizzo $0100H$, cioè 256 byte dopo la cella più bassa di memoria.
 Ti ricordo che ogni cifra esadecimale rappresenta 4 bit, infatti per rappresentare sedici cifre (0,1,2,3,4,5,6,7,8,9,A,B,C,D,E,F) ho bisogno di 4 bit: $2^4=16$, quindi il numero esadecimale $0100H$ in binario diventa $0000-0001-0000-0000$, il cui valore decimale è $2^8=256$.
-I primi 256 byte di memoria erano chiamati <i>program segment prefix</i> (PSP) ed erano usati per i buffer di I/O dei programmi. Il codice eseguibile del programma caricato in memoria iniziava solamente dopo l'indirizzo <code>0100H</code>.
+I primi 256 byte di memoria erano chiamati <i>program segment prefix</i> (PSP) ed erano usati per i buffer di I/O dei programmi. Il codice eseguibile del programma caricato in memoria iniziava solamente dopo l'indirizzo 0100H.
 </p>
 
 
@@ -7114,7 +12667,7 @@ I registri svolgono molte funzioni, ma forse il loro compito più importante è 
 </p>
 
 <p align=justify>
-Come si inserisce un indirizzo di memoria a 20 bit in un registro a 16 bit? Non lo si fa. Si inserisce un indirizzo a 20 bit in due registri a 16 bit. Ecco cosa succede: <b>tutte le posizioni (indirizzi) di memoria</b> nella memoria di un megabyte <b>sono composte da due parti</b>: <b>l'indirizzo di segmento</b> e <b>l'offset</b> all'interno di quel segmento del byte a cui vogliamo fare riferimento. Ogni byte in memoria si presume si trovi in un segmento. <b>L'indirizzo completo di un byte, quindi, consiste nell'indirizzo del suo segmento, insieme alla distanza del byte dall'inizio di quel segmento (detto offset)</b>. Ricorda che l'indirizzo del segmento è l'indirizzo del byte dove inizia il segmento che deve comunque trovarsi al limite di un paragrafo (alla fine di un blocco di 16 byte di memoria) quindi deve essere comunque un indirizzo il cui valore sia divisibile per 16. <b>La distanza del byte dall'inizio del segmento è l'indirizzo offset del byte</b>. Entrambi gli indirizzi devono essere specificati per descrivere completamente la posizione di un singolo byte all'interno del megabyte completo di memoria in modalità reale. Quando vengono scritti, l'indirizzo del segmento viene prima, seguito dall'indirizzo offset. I due sono separati da due punti. Gli indirizzi <b>segmento:offset</b> sono sempre scritti in esadecimale. Guarda la figura seguente per chiarire meglio questo concetto. Un byte di dati che chiameremo <code>MyByte</code> esiste in memoria presso la posizione contrassegnata in nero. Il suo indirizzo è dato come <code>0001:0019</code>. Questo significa che MyByte si trova all'interno del segmento <code>0001H</code> ed è situato <code>0019H</code> byte dall'inizio di quel segmento. è una convenzione nella programmazione x86 che quando due numeri vengono utilizzati per specificare un indirizzo con un due punti tra di essi, non si termina ciascuno dei due numeri con una H per esadecimale. Gli indirizzi scritti nella forma segmento:offset si presume siano in esadecimale. L'universo è perverso e degli occhi acuti percepiranno che MyByte può avere altri due indirizzi legali perfettamente validi: <code>0000:0029</code> e <code>0002:0009</code>. Come mai? Tieni presente che un segmento può iniziare ogni 16 byte in tutta la memoria reale di un megabyte. Un segmento, una volta iniziato, abbraccia tutti i byte dalla sua origine fino a 65.535 byte più in alto in memoria. Non c'è nulla di sbagliato con i segmenti che si sovrappongono, e nella figura in basso abbiamo tre segmenti sovrapposti. MyByte è a 2DH byte nel primo segmento, che inizia all'indirizzo segmento 0000H. MyByte è a 1DH byte nel secondo segmento, che inizia all'indirizzo segmento 0001H. Non è che MyByte si trovi in due o tre posti contemporaneamente. Si trova in un solo posto, ma quel posto può essere descritto in uno qualsiasi dei tre modi.
+Come si inserisce un indirizzo di memoria a 20 bit in un registro a 16 bit? Non lo si fa. Si inserisce un indirizzo a 20 bit in due registri a 16 bit. Ecco cosa succede: <b>tutte le posizioni (indirizzi) di memoria</b> nella memoria di un megabyte <b>sono composte da due parti</b>: <b>l'indirizzo di segmento</b> e <b>l'offset</b> all'interno di quel segmento del byte a cui vogliamo fare riferimento. Ogni byte in memoria si presume si trovi in un segmento. <b>L'indirizzo completo di un byte, quindi, consiste nell'indirizzo del suo segmento, insieme alla distanza del byte dall'inizio di quel segmento (detto offset)</b>. Ricorda che l'indirizzo del segmento è l'indirizzo del byte dove inizia il segmento che deve comunque trovarsi al limite di un paragrafo (alla fine di un blocco di 16 byte di memoria) quindi deve essere comunque un indirizzo il cui valore sia divisibile per 16. <b>La distanza del byte dall'inizio del segmento è l'indirizzo offset del byte</b>. Entrambi gli indirizzi devono essere specificati per descrivere completamente la posizione di un singolo byte all'interno del megabyte completo di memoria in modalità reale. Quando vengono scritti, l'indirizzo del segmento viene prima, seguito dall'indirizzo offset. I due sono separati da due punti. Gli indirizzi <b>segmento:offset</b> sono sempre scritti in esadecimale. Guarda la figura seguente per chiarire meglio questo concetto. Un byte di dati che chiameremo MyByte esiste in memoria presso la posizione contrassegnata in nero. Il suo indirizzo è dato come 0001:0019. Questo significa che MyByte si trova all'interno del segmento 0001H ed è situato 0019H byte dall'inizio di quel segmento. è una convenzione nella programmazione x86 che quando due numeri vengono utilizzati per specificare un indirizzo con un due punti tra di essi, non si termina ciascuno dei due numeri con una H per esadecimale. Gli indirizzi scritti nella forma segmento:offset si presume siano in esadecimale. L'universo è perverso e degli occhi acuti percepiranno che MyByte può avere altri due indirizzi legali perfettamente validi: 0000:0029 e 0002:0009. Come mai? Tieni presente che un segmento può iniziare ogni 16 byte in tutta la memoria reale di un megabyte. Un segmento, una volta iniziato, abbraccia tutti i byte dalla sua origine fino a 65.535 byte più in alto in memoria. Non c'è nulla di sbagliato con i segmenti che si sovrappongono, e nella figura in basso abbiamo tre segmenti sovrapposti. MyByte è a 2DH byte nel primo segmento, che inizia all'indirizzo segmento 0000H. MyByte è a 1DH byte nel secondo segmento, che inizia all'indirizzo segmento 0001H. Non è che MyByte si trovi in due o tre posti contemporaneamente. Si trova in un solo posto, ma quel posto può essere descritto in uno qualsiasi dei tre modi.
 </p>
 
 <p align=center>
@@ -7209,7 +12762,7 @@ Ciò discusso sopra per i registri ESI, EDI, EBP, ESP vale anche per gli altri q
 </p>
 
  <p align=justify>
-Come accennato in precedenza, una peculiarità di questo sistema è che non esiste un nome per la porzione alta a 16 bit dei registri a 32 bit. In altre parole, puoi leggere i 16 bit inferiori di EAX specificando AX in un'istruzione del linguaggio assembly, ma non c'è modo di specificare i 16 bit superiori da soli. Questo mantiene le convenzioni di denominazione per i registri un po' più semplici e la mancanza non è avvertita così spesso come potresti pensare. Una cosa da sapere sui registri a 8 bit è che puoi leggere e modificare una metà di un numero a 16 bit senza disturbare l'altra metà. Questo significa che se inserisci il valore esadecimale <code>76E9H</code> nel registro AX, puoi leggere il valore di un byte <code>76H</code> dal registro AH e <code>E9H</code> dal registro AL. Ancora meglio, se poi memorizzi il valore <code>0AH</code> nel registro AL e poi leggi di nuovo il registro AX, scoprirai che il valore originale di <code>76E9H</code> è stato cambiato in <code>760AH</code>. Essere in grado di trattare i registri AX, BX, CX e DX come metà a 8 bit può essere estremamente utile in situazioni in cui stai manipolando molte quantità a 8 bit. Ogni metà del registro può essere considerata un registro separato, offrendoti il doppio dei posti per mettere le cose mentre il tuo programma lavora.
+Come accennato in precedenza, una peculiarità di questo sistema è che non esiste un nome per la porzione alta a 16 bit dei registri a 32 bit. In altre parole, puoi leggere i 16 bit inferiori di EAX specificando AX in un'istruzione del linguaggio assembly, ma non c'è modo di specificare i 16 bit superiori da soli. Questo mantiene le convenzioni di denominazione per i registri un po' più semplici e la mancanza non è avvertita così spesso come potresti pensare. Una cosa da sapere sui registri a 8 bit è che puoi leggere e modificare una metà di un numero a 16 bit senza disturbare l'altra metà. Questo significa che se inserisci il valore esadecimale 76E9H nel registro AX, puoi leggere il valore di un byte 76H dal registro AH e E9H dal registro AL. Ancora meglio, se poi memorizzi il valore 0AH nel registro AL e poi leggi di nuovo il registro AX, scoprirai che il valore originale di 76E9H è stato cambiato in 760AH. Essere in grado di trattare i registri AX, BX, CX e DX come metà a 8 bit può essere estremamente utile in situazioni in cui stai manipolando molte quantità a 8 bit. Ogni metà del registro può essere considerata un registro separato, offrendoti il doppio dei posti per mettere le cose mentre il tuo programma lavora.
 </p>
 
 <p align=justify>
@@ -7289,27 +12842,27 @@ Ma tale moltiplicazione non è qualcosa che devi fare. La CPU gestisce intername
 <ul>
   <li>
     <p align="justify">
-    <code>SS:SP</code>
+    SS:SP
     </p>
   </li>
   <li>
     <p align="justify">
-    <code>SS:BP</code>
+    SS:BP
     </p>
   </li>
   <li>
     <p align="justify">
-    <code>ES:DI</code>
+    ES:DI
     </p>
   </li>
   <li>
     <p align="justify">
-    <code>DS:SI</code>
+    DS:SI
     </p>
   </li>
   <li>
     <p align="justify">
-    <code>CS:BX</code>
+    CS:BX
     </p>
   </li>
 </ul>
@@ -7536,11 +13089,11 @@ main:
 ```
 
 <p align=justify>
-Ciò di cui abbiamo bisogno è un punto di partenza contrassegnato come globale: qui, l'etichetta `main`. (<b>L'uso di main è un requisito di SASM, non di NASM.</b> Vedi il template di NASM sopra.) Dobbiamo anche definire una sezione dati e una sezione testo come mostrato. La sezione dati (<code>.data</code>) contiene i dati a cui devono essere assegnati valori iniziali quando il programma viene eseguito. Il vecchio messaggio pubblicitario "Eat at Joe's" era un elemento dati nominato nella sezione dati. La sezione testo (<code>.text</code>) contiene il codice del programma. <b>Entrambe queste sezioni (<code>.data</code> e <code>.text</code>) sono necessarie per creare un eseguibile, anche se una o entrambe sono vuote</b>. <b>La sezione contrassegnata <code>.bss</code> non è strettamente essenziale</b>, ma è utile averla se prevedi di sperimentare. <b>La sezione <code>.bss</code> contiene dati non inizializzati</b>, cioè spazio riservato per elementi dati a cui non vengono assegnati valori iniziali quando il programma inizia a essere eseguito. Questi sono fondamentalmente buffer vuoti, per dati che saranno generati o letti da qualche parte mentre il programma è in esecuzione. Per consuetudine, la sezione <code>.bss</code> si trova dopo la sezione <code>.text</code>.
+Ciò di cui abbiamo bisogno è un punto di partenza contrassegnato come globale: qui, l'etichetta `main`. (<b>L'uso di main è un requisito di SASM, non di NASM.</b> Vedi il template di NASM sopra.) Dobbiamo anche definire una sezione dati e una sezione testo come mostrato. La sezione dati (.data) contiene i dati a cui devono essere assegnati valori iniziali quando il programma viene eseguito. Il vecchio messaggio pubblicitario "Eat at Joe's" era un elemento dati nominato nella sezione dati. La sezione testo (.text) contiene il codice del programma. <b>Entrambe queste sezioni (.data e .text) sono necessarie per creare un eseguibile, anche se una o entrambe sono vuote</b>. <b>La sezione contrassegnata .bss non è strettamente essenziale</b>, ma è utile averla se prevedi di sperimentare. <b>La sezione .bss contiene dati non inizializzati</b>, cioè spazio riservato per elementi dati a cui non vengono assegnati valori iniziali quando il programma inizia a essere eseguito. Questi sono fondamentalmente buffer vuoti, per dati che saranno generati o letti da qualche parte mentre il programma è in esecuzione. Per consuetudine, la sezione .bss si trova dopo la sezione .text.
 </p>
 
 <p align=justify>
-Nei template sono presenti due istruzioni NOP. Ricorda che le istruzioni NOP non fanno altro che richiedere un po' di tempo. Sono lì per rendere più facile osservare il programma nel debugger SASM. Per giocare con le istruzioni macchina, inserisci le istruzioni di tua scelta tra i due commenti. Compila il programma, fai clic sul pulsante Debug e divertiti! Imposta un punto di interruzione in corrispondenza della prima istruzione inserita tra i commenti e fai clic su Debug. L'esecuzione inizierà e si fermerà in corrispondenza del punto di interruzione. Per osservare gli effetti di tale istruzione, fai clic sul pulsante Esegui passaggio. Ecco perché c'è la seconda istruzione NOP: quando si esegue un'istruzione a passo singolo, ci deve essere un'istruzione dopo quell'istruzione su cui l'esecuzione possa fermarsi. Se la prima istruzione nella sandbox è l'ultima istruzione, l'esecuzione andrà "oltre il limite" nel primo passaggio singolo e il programma terminerà. Quando ciò accade, i riquadri Registri e Memoria di SASM diventeranno vuoti e non sarai in grado di vedere gli effetti di quell'unica istruzione! L'idea di uscire dai limiti del programma è interessante. Se fai clic sul pulsante Debug o premi il tasto di scelta rapida F5, vedrai cosa succede quando non chiudi correttamente il programma: Linux restituirà un errore di segmentazione, che può avere una serie di cause. Tuttavia, ciò che è accaduto in questo caso è che il programma ha tentato di eseguire una posizione oltre la fine della sezione <code>.text</code>. Linux sa quanto è lungo il tuo programma e non ti permetterà di eseguire istruzioni che non erano presenti nel tuo programma quando è stato caricato. Non c'è alcun danno duraturo in questo, ovviamente. Linux è molto bravo a gestire programmi che si comportano male e malformati (specialmente quelli semplici), e nulla di ciò che probabilmente farai per caso avrà alcun effetto sull'integrità di Linux stesso. è possibile evitare di generare l'errore di segmentazione facendo clic sul pulsante rosso Stop prima di inviare l'esecuzione alla fine del piccolo programma sperimentale. SASM passerà dalla modalità di debug alla modalità di modifica. Tieni presente che se esci dalla modalità di debug, non sarà più possibile visualizzare i registri o gli elementi di memoria. Naturalmente, se desideri semplicemente far eseguire un programma, puoi aggiungere alcune righe che effettuano una SYSCALL alla routine di uscita x64 alla fine della sandbox. In questo modo, se l'esecuzione prosegue oltre la parte inferiore degli esperimenti, la chiamata SYSCALL interromperà automaticamente l'esecuzione. Di seguito è riportato il codice per l'uscita SYSCALL. Posiziona questo codice dopo il secondo NOP, e sei a posto.
+Nei template sono presenti due istruzioni NOP. Ricorda che le istruzioni NOP non fanno altro che richiedere un po' di tempo. Sono lì per rendere più facile osservare il programma nel debugger SASM. Per giocare con le istruzioni macchina, inserisci le istruzioni di tua scelta tra i due commenti. Compila il programma, fai clic sul pulsante Debug e divertiti! Imposta un punto di interruzione in corrispondenza della prima istruzione inserita tra i commenti e fai clic su Debug. L'esecuzione inizierà e si fermerà in corrispondenza del punto di interruzione. Per osservare gli effetti di tale istruzione, fai clic sul pulsante Esegui passaggio. Ecco perché c'è la seconda istruzione NOP: quando si esegue un'istruzione a passo singolo, ci deve essere un'istruzione dopo quell'istruzione su cui l'esecuzione possa fermarsi. Se la prima istruzione nella sandbox è l'ultima istruzione, l'esecuzione andrà "oltre il limite" nel primo passaggio singolo e il programma terminerà. Quando ciò accade, i riquadri Registri e Memoria di SASM diventeranno vuoti e non sarai in grado di vedere gli effetti di quell'unica istruzione! L'idea di uscire dai limiti del programma è interessante. Se fai clic sul pulsante Debug o premi il tasto di scelta rapida F5, vedrai cosa succede quando non chiudi correttamente il programma: Linux restituirà un errore di segmentazione, che può avere una serie di cause. Tuttavia, ciò che è accaduto in questo caso è che il programma ha tentato di eseguire una posizione oltre la fine della sezione .text. Linux sa quanto è lungo il tuo programma e non ti permetterà di eseguire istruzioni che non erano presenti nel tuo programma quando è stato caricato. Non c'è alcun danno duraturo in questo, ovviamente. Linux è molto bravo a gestire programmi che si comportano male e malformati (specialmente quelli semplici), e nulla di ciò che probabilmente farai per caso avrà alcun effetto sull'integrità di Linux stesso. è possibile evitare di generare l'errore di segmentazione facendo clic sul pulsante rosso Stop prima di inviare l'esecuzione alla fine del piccolo programma sperimentale. SASM passerà dalla modalità di debug alla modalità di modifica. Tieni presente che se esci dalla modalità di debug, non sarà più possibile visualizzare i registri o gli elementi di memoria. Naturalmente, se desideri semplicemente far eseguire un programma, puoi aggiungere alcune righe che effettuano una SYSCALL alla routine di uscita x64 alla fine della sandbox. In questo modo, se l'esecuzione prosegue oltre la parte inferiore degli esperimenti, la chiamata SYSCALL interromperà automaticamente l'esecuzione. Di seguito è riportato il codice per l'uscita SYSCALL. Posiziona questo codice dopo il secondo NOP, e sei a posto.
 </p>
 
 ```asm
@@ -7552,13 +13105,13 @@ syscall		; Make kernel call
 ### Le istruzioni e i loro operandi
 
 <p align=justify>
-L'attività più comune nel lavoro con il linguaggio assembly è spostare dati da un luogo all'altro. Ci sono diversi modi specializzati per farlo, ma solo un modo veramente generale: l'istruzione <code>MOV</code>. <code>MOV</code> può spostare un byte, una parola (16 bit), una doppia parola (32 bit) o una quadrupla parola (64 bit) di dati da un registro a un altro, da un registro alla memoria, o dalla memoria a un registro. <b>Ciò che <code>MOV</code> non può fare è spostare dati direttamente da un indirizzo in memoria a un altro indirizzo in memoria</b>. (Per farlo, sono necessarie due istruzioni MOV separate: prima dalla memoria a un registro e poi da quel registro di nuovo in un altro luogo nella memoria.) Il nome <code>MOV</code> è un po' fuorviante, poiché ciò che accade effettivamente è che i dati vengono copiati da una sorgente a una destinazione. Una volta copiati nella destinazione, tuttavia, i dati non scompaiono dalla sorgente, ma continuano a esistere in entrambi i luoghi. Questo confligge un po' con la nostra nozione intuitiva di spostare qualcosa, che di solito significa che qualcosa scompare da un luogo sorgente e riappare in un luogo di destinazione.
+L'attività più comune nel lavoro con il linguaggio assembly è spostare dati da un luogo all'altro. Ci sono diversi modi specializzati per farlo, ma solo un modo veramente generale: l'istruzione MOV. MOV può spostare un byte, una parola (16 bit), una doppia parola (32 bit) o una quadrupla parola (64 bit) di dati da un registro a un altro, da un registro alla memoria, o dalla memoria a un registro. <b>Ciò che MOV non può fare è spostare dati direttamente da un indirizzo in memoria a un altro indirizzo in memoria</b>. (Per farlo, sono necessarie due istruzioni MOV separate: prima dalla memoria a un registro e poi da quel registro di nuovo in un altro luogo nella memoria.) Il nome MOV è un po' fuorviante, poiché ciò che accade effettivamente è che i dati vengono copiati da una sorgente a una destinazione. Una volta copiati nella destinazione, tuttavia, i dati non scompaiono dalla sorgente, ma continuano a esistere in entrambi i luoghi. Questo confligge un po' con la nostra nozione intuitiva di spostare qualcosa, che di solito significa che qualcosa scompare da un luogo sorgente e riappare in un luogo di destinazione.
 </p>
 
 ### Operandi Sorgente e Destinazione
 
 <p align=justify>
-La maggior parte delle istruzioni macchina, inclusa <code>MOV</code>, ha uno o più operandi. (Alcune istruzioni non hanno operandi o operano implicitamente su registri o memoria. Quando questo è il caso, lo menzionerò nel testo.) Considera questa istruzione macchina:
+La maggior parte delle istruzioni macchina, inclusa MOV, ha uno o più operandi. (Alcune istruzioni non hanno operandi o operano implicitamente su registri o memoria. Quando questo è il caso, lo menzionerò nel testo.) Considera questa istruzione macchina:
 </p>	
 
 ```asm
@@ -7566,7 +13119,7 @@ La maggior parte delle istruzioni macchina, inclusa <code>MOV</code>, ha uno o p
 ``` 
  
 <p align=justify>
-Ci sono due operandi nell'istruzione precedente. Il primo è RAX e il secondo è il numero 1. <b>Per convenzione nel linguaggio assembly, il primo operando (quello più a sinistra) appartenente a un'istruzione macchina è l'operando di destinazione</b>. <b>Il secondo operando da sinistra è l'operando sorgente</b>. Con l'istruzione <code>MOV</code>, il significato dei due operandi è piuttosto letterale: l'operando sorgente viene copiato nell'operando di destinazione. Nell'istruzione precedente, l'operando sorgente (il valore letterale 1) viene copiato nell'operando di destinazione RAX. Il significato di sorgente e destinazione non è affatto così letterale in altre istruzioni, ma una regola generale è questa: ogni volta che un'istruzione macchina causa la generazione di un nuovo valore, quel nuovo valore viene posto nell'operando di destinazione. <b>Ci sono tre diversi tipi di dati che possono essere utilizzati come operandi</b>. Questi sono: <b>dati di memoria</b>, <b>dati di registro</b> e <b>dati immediati</b>. Ho esposto alcune istruzioni <code>MOV</code> di esempio nella tabella seguente per darti un'idea di come i diversi tipi di dati sono specificati come operandi per l'istruzione <code>MOV</code>.
+Ci sono due operandi nell'istruzione precedente. Il primo è RAX e il secondo è il numero 1. <b>Per convenzione nel linguaggio assembly, il primo operando (quello più a sinistra) appartenente a un'istruzione macchina è l'operando di destinazione</b>. <b>Il secondo operando da sinistra è l'operando sorgente</b>. Con l'istruzione MOV, il significato dei due operandi è piuttosto letterale: l'operando sorgente viene copiato nell'operando di destinazione. Nell'istruzione precedente, l'operando sorgente (il valore letterale 1) viene copiato nell'operando di destinazione RAX. Il significato di sorgente e destinazione non è affatto così letterale in altre istruzioni, ma una regola generale è questa: ogni volta che un'istruzione macchina causa la generazione di un nuovo valore, quel nuovo valore viene posto nell'operando di destinazione. <b>Ci sono tre diversi tipi di dati che possono essere utilizzati come operandi</b>. Questi sono: <b>dati di memoria</b>, <b>dati di registro</b> e <b>dati immediati</b>. Ho esposto alcune istruzioni MOV di esempio nella tabella seguente per darti un'idea di come i diversi tipi di dati sono specificati come operandi per l'istruzione MOV.
 </p>
 
 <div align=center>
@@ -7576,7 +13129,7 @@ Ci sono due operandi nell'istruzione precedente. Il primo è RAX e il secondo è
 ### Dati Immediati
 
 <p align=justify>
-L'istruzione <code>MOV RAX,42h</code> è un buon esempio dell'uso di quello che si chiama <i>dato immediato</i>, a cui si accede attraverso una modalità di indirizzamento chiamata <b>indirizzamento immediato</b>. L'indirizzamento immediato prende il suo nome dal fatto che <b>l'elemento indirizzato è un dato incorporato direttamente nell'istruzione macchina stessa</b>. La CPU non deve cercare altrove per trovare i dati immediati. Non si trovano in un registro, né sono memorizzati in un elemento dati da qualche parte nella memoria. I dati immediati si trovano sempre all'interno dell'istruzione che viene recuperata ed eseguita.
+L'istruzione MOV RAX,42h è un buon esempio dell'uso di quello che si chiama <i>dato immediato</i>, a cui si accede attraverso una modalità di indirizzamento chiamata <b>indirizzamento immediato</b>. L'indirizzamento immediato prende il suo nome dal fatto che <b>l'elemento indirizzato è un dato incorporato direttamente nell'istruzione macchina stessa</b>. La CPU non deve cercare altrove per trovare i dati immediati. Non si trovano in un registro, né sono memorizzati in un elemento dati da qualche parte nella memoria. I dati immediati si trovano sempre all'interno dell'istruzione che viene recuperata ed eseguita.
 </p>
 
 <p align=justify>
@@ -7588,7 +13141,7 @@ I dati immediati devono avere una dimensione appropriata per l'operando. Ad esem
  ```
 
 <p align=justify>
-CL è un registro a 8 bit e <code>067EFh</code> è una quantità a 16 bit. Non funziona! Poiché sono incorporati direttamente in un'istruzione macchina, potresti pensare che l'accesso ai dati immediati sia rapido. Questo è vero solo fino a un certo punto: recuperare qualcosa dalla memoria richiede più tempo rispetto a recuperare qualcosa da un registro e le istruzioni sono, dopo tutto, memorizzate in memoria. Quindi, mentre indirizzare i dati immediati è un po' più veloce rispetto a indirizzare dati normali memorizzati in memoria, nessuno dei due è così veloce come semplicemente estrarre un valore da un registro della CPU. Tieni anche presente che solo l'operando sorgente può essere un dato immediato. L'operando di destinazione è il luogo dove i dati arrivano, non quello da cui provengono. Poiché i dati immediati consistono in costanti letterali (numeri come 1, 0, 42 o 07F2Bh), cercare di copiare qualcosa nei dati immediati piuttosto che da essi non ha alcun significato ed è sempre un errore. NASM consente alcune interessanti forme di dati immediati. Ad esempio, la seguente è perfettamente legale, anche se non necessariamente utile come sembra a prima vista:
+CL è un registro a 8 bit e 067EFh è una quantità a 16 bit. Non funziona! Poiché sono incorporati direttamente in un'istruzione macchina, potresti pensare che l'accesso ai dati immediati sia rapido. Questo è vero solo fino a un certo punto: recuperare qualcosa dalla memoria richiede più tempo rispetto a recuperare qualcosa da un registro e le istruzioni sono, dopo tutto, memorizzate in memoria. Quindi, mentre indirizzare i dati immediati è un po' più veloce rispetto a indirizzare dati normali memorizzati in memoria, nessuno dei due è così veloce come semplicemente estrarre un valore da un registro della CPU. Tieni anche presente che solo l'operando sorgente può essere un dato immediato. L'operando di destinazione è il luogo dove i dati arrivano, non quello da cui provengono. Poiché i dati immediati consistono in costanti letterali (numeri come 1, 0, 42 o 07F2Bh), cercare di copiare qualcosa nei dati immediati piuttosto che da essi non ha alcun significato ed è sempre un errore. NASM consente alcune interessanti forme di dati immediati. Ad esempio, la seguente è perfettamente legale, anche se non necessariamente utile come sembra a prima vista:
 </p>
 
 ```asm
@@ -7618,7 +13171,7 @@ I dati memorizzati all'interno di un registro della CPU sono noti come <i>dati d
 ```
 
 <p align=justify>
-Non stiamo parlando solo dell'istruzione <code>MOV</code> qui. L'istruzione <code>ADD</code> fa esattamente ciò che ci si può aspettare e aggiunge gli operandi sorgente e destinazione. La somma sostituisce qualunque cosa fosse presente nell'operando di destinazione. Indipendentemente dall'istruzione, l'indirizzamento dei registri avviene ogni volta che i dati in un registro vengono utilizzati direttamente. Certe operazioni non sono legali: ad esempio, spostare una sorgente di 8 byte in una destinazione di 2 byte. E mentre spostare una sorgente di 2 byte in una destinazione di 8 byte potrebbe sembrare possibile e talvolta persino ragionevole, la CPU non lo supporta e non può essere fatto direttamente. Se ci provi, NASM ti darà questo errore.
+Non stiamo parlando solo dell'istruzione MOV qui. L'istruzione ADD fa esattamente ciò che ci si può aspettare e aggiunge gli operandi sorgente e destinazione. La somma sostituisce qualunque cosa fosse presente nell'operando di destinazione. Indipendentemente dall'istruzione, l'indirizzamento dei registri avviene ogni volta che i dati in un registro vengono utilizzati direttamente. Certe operazioni non sono legali: ad esempio, spostare una sorgente di 8 byte in una destinazione di 2 byte. E mentre spostare una sorgente di 2 byte in una destinazione di 8 byte potrebbe sembrare possibile e talvolta persino ragionevole, la CPU non lo supporta e non può essere fatto direttamente. Se ci provi, NASM ti darà questo errore.
 </p>
 
 ```
@@ -7639,7 +13192,7 @@ In altre parole, <b>se stai spostando dati da un registro a un altro, i registri
 ```
 
 <p align=justify>
-Imposta un punto di interruzione sulla prima delle istruzioni, quindi clicca su Esegui. Procedi passo dopo passo attraverso le istruzioni, prestando attenzione a quello che accade a RAX, RBX e RCX. Tieni presente che la finestra dei Registri di SASM non mostra le sezioni dei registri a 8 bit, 16 bit o 32 bit separatamente e individualmente. EAX fa parte di RAX, AX fa parte di EAX e CL fa parte di ECX, ecc. Qualsiasi cosa tu metta in RAX è già presente in EAX, AX e AL. Una volta terminato il passo dopo passo, clicca sull'icona rossa Stop per terminare il programma. Ricorda che se selezioni Debug -> Continua o cerchi di avanzare oltre la fine del programma, Linux ti darà un errore di segmentazione per non aver terminato il programma correttamente. Nulla sarà danneggiato dall'errore; ricorda che il sandbox non è previsto per essere un programma Linux completo e corretto. è buona prassi "terminare" il programma tramite Stop piuttosto che generare l'errore, tuttavia. Nota le prime due istruzioni. <b>Quando vuoi mettere il valore 0 in un registro, il modo più veloce è usare l'istruzione <code>XOR</code></b>, che esegue un'operazione XOR bitwise sugli operandi sorgente e destinazione. Sì, potresti usare
+Imposta un punto di interruzione sulla prima delle istruzioni, quindi clicca su Esegui. Procedi passo dopo passo attraverso le istruzioni, prestando attenzione a quello che accade a RAX, RBX e RCX. Tieni presente che la finestra dei Registri di SASM non mostra le sezioni dei registri a 8 bit, 16 bit o 32 bit separatamente e individualmente. EAX fa parte di RAX, AX fa parte di EAX e CL fa parte di ECX, ecc. Qualsiasi cosa tu metta in RAX è già presente in EAX, AX e AL. Una volta terminato il passo dopo passo, clicca sull'icona rossa Stop per terminare il programma. Ricorda che se selezioni Debug -> Continua o cerchi di avanzare oltre la fine del programma, Linux ti darà un errore di segmentazione per non aver terminato il programma correttamente. Nulla sarà danneggiato dall'errore; ricorda che il sandbox non è previsto per essere un programma Linux completo e corretto. è buona prassi "terminare" il programma tramite Stop piuttosto che generare l'errore, tuttavia. Nota le prime due istruzioni. <b>Quando vuoi mettere il valore 0 in un registro, il modo più veloce è usare l'istruzione XOR</b>, che esegue un'operazione XOR bitwise sugli operandi sorgente e destinazione. Sì, potresti usare
 </p>
 
 ```asm
@@ -7647,7 +13200,7 @@ Imposta un punto di interruzione sulla prima delle istruzioni, quindi clicca su 
 ```
 
 <p align=justify>
-ma in questo modo si deve andare in memoria per caricare il valore immediato 0. L'operazione <code>XOR</code> tra un registro e se stesso non va in memoria né per l'operando sorgente né per l'operando di destinazione e pertanto è leggermente più veloce. Una volta azzerati RBX e RCX, ecco cosa succede: la prima istruzione (<code>mov rax,067FEh</code>) <code>MOV</code> è un esempio di indirizzamento immediato utilizzando registri a 64 bit. Il valore esadecimale a 16 bit <code>067FEH</code> viene spostato nel registro RAX. (Nota qui che puoi <code>MOV</code> un valore immediato di 16 bit o di qualsiasi altra dimensione che possa adattarsi al registro di destinazione.) La seconda istruzione (<code>mov rbx,rax</code>) utilizza l'indirizzamento del registro per copiare i dati del registro da EAX a EBX. La terza e la quarta istruzione <code>MOV</code> spostano entrambe i dati tra segmenti di registri a 8 bit piuttosto che a 16, 32 o 64 bit. Queste due istruzioni realizzano qualcosa di interessante. Guarda l'ultima visualizzazione del registro e confronta i valori di RBX e RCX. Spostando il valore da BX a CX un byte alla volta, è possibile invertire l'ordine dei due byte che costituiscono BX. La metà alta di BX (quello che a volte chiamiamo il byte più significativo, o MSB, di BX) è stata spostata nella metà bassa di CX. Poi la metà bassa di BX (quello che a volte chiamiamo il byte meno significativo, o LSB, di BX) è stata spostata nella metà alta di CX. Questo è solo un esempio dei tipi di trucchi che puoi fare con i registri a uso generale. Solo per disabituarti all'idea che l'istruzione <code>MOV</code> debba essere utilizzata per scambiare le due metà di un registro a 16 bit, lasciami suggerire di fare quanto segue: torna a SASM e aggiungi questa istruzione alla fine della tua sandbox:
+ma in questo modo si deve andare in memoria per caricare il valore immediato 0. L'operazione XOR tra un registro e se stesso non va in memoria né per l'operando sorgente né per l'operando di destinazione e pertanto è leggermente più veloce. Una volta azzerati RBX e RCX, ecco cosa succede: la prima istruzione (mov rax,067FEh) MOV è un esempio di indirizzamento immediato utilizzando registri a 64 bit. Il valore esadecimale a 16 bit 067FEH viene spostato nel registro RAX. (Nota qui che puoi MOV un valore immediato di 16 bit o di qualsiasi altra dimensione che possa adattarsi al registro di destinazione.) La seconda istruzione (mov rbx,rax) utilizza l'indirizzamento del registro per copiare i dati del registro da EAX a EBX. La terza e la quarta istruzione MOV spostano entrambe i dati tra segmenti di registri a 8 bit piuttosto che a 16, 32 o 64 bit. Queste due istruzioni realizzano qualcosa di interessante. Guarda l'ultima visualizzazione del registro e confronta i valori di RBX e RCX. Spostando il valore da BX a CX un byte alla volta, è possibile invertire l'ordine dei due byte che costituiscono BX. La metà alta di BX (quello che a volte chiamiamo il byte più significativo, o MSB, di BX) è stata spostata nella metà bassa di CX. Poi la metà bassa di BX (quello che a volte chiamiamo il byte meno significativo, o LSB, di BX) è stata spostata nella metà alta di CX. Questo è solo un esempio dei tipi di trucchi che puoi fare con i registri a uso generale. Solo per disabituarti all'idea che l'istruzione MOV debba essere utilizzata per scambiare le due metà di un registro a 16 bit, lasciami suggerire di fare quanto segue: torna a SASM e aggiungi questa istruzione alla fine della tua sandbox:
 </p>
 
 ```asm
@@ -7655,7 +13208,7 @@ ma in questo modo si deve andare in memoria per caricare il valore immediato 0. 
 ```
 
 <p align=justify>
-Ricostruisci la sandbox e torna al debugger per vedere cosa succede. L'istruzione <code>XCHG</code> scambia i valori contenuti nei suoi due operandi. Ciò che è stato scambiato in precedenza viene scambiato di nuovo e il valore in RCX corrisponderà ai valori già presenti in RAX e RBX. Una buona idea durante la scrittura dei primi programmi in linguaggio assembly è quella di ricontrollare periodicamente il set di istruzioni per vedere se ciò che si è messo insieme con quattro o cinque istruzioni non sia possibile utilizzando una singola istruzione. Il set di istruzioni Intel è molto bravo a ingannarti in questo senso. C'è un'avvertenza qui: a volte un "caso speciale" è più veloce in termini di tempo di esecuzione della macchina rispetto a un caso più generale. La divisione per una potenza di 2 può essere eseguita utilizzando l'istruzione <code>DIV</code>, ma può anche essere eseguita utilizzando l'istruzione <code>SHR</code> (Shift Right). <code>DIV</code> è più generale (puoi usarlo per dividere per qualsiasi intero senza segno, non semplicemente potenze di 2), ma è molto più lento. La velocità delle singole istruzioni conta molto meno ora di quanto non lo fosse 30 anni fa. Detto questo, per i programmi con funzioni ripetitive complesse che vengono eseguite migliaia o centinaia di migliaia di volte in un ciclo, la velocità delle istruzioni può fare la differenza.
+Ricostruisci la sandbox e torna al debugger per vedere cosa succede. L'istruzione XCHG scambia i valori contenuti nei suoi due operandi. Ciò che è stato scambiato in precedenza viene scambiato di nuovo e il valore in RCX corrisponderà ai valori già presenti in RAX e RBX. Una buona idea durante la scrittura dei primi programmi in linguaggio assembly è quella di ricontrollare periodicamente il set di istruzioni per vedere se ciò che si è messo insieme con quattro o cinque istruzioni non sia possibile utilizzando una singola istruzione. Il set di istruzioni Intel è molto bravo a ingannarti in questo senso. C'è un'avvertenza qui: a volte un "caso speciale" è più veloce in termini di tempo di esecuzione della macchina rispetto a un caso più generale. La divisione per una potenza di 2 può essere eseguita utilizzando l'istruzione DIV, ma può anche essere eseguita utilizzando l'istruzione SHR (Shift Right). DIV è più generale (puoi usarlo per dividere per qualsiasi intero senza segno, non semplicemente potenze di 2), ma è molto più lento. La velocità delle singole istruzioni conta molto meno ora di quanto non lo fosse 30 anni fa. Detto questo, per i programmi con funzioni ripetitive complesse che vengono eseguite migliaia o centinaia di migliaia di volte in un ciclo, la velocità delle istruzioni può fare la differenza.
 </p>
 
 ### Dati di Memoria ed Effective Addresses
@@ -7713,7 +13266,7 @@ Questo suona banale, ma fidati, è una cosa abbastanza facile da fare. Torniamo 
 ```
 
 <p align=justify>
-Se hai avuto qualche esperienza con linguaggi di alto livello, il tuo primo istinto potrebbe essere quello di assumere che qualsiasi dato conservato in EatMsg verrà copiato in RSI. L'assembly non funziona in questo modo. Quella istruzione <code>MOV</code> copia effettivamente l'indirizzo di EatMsg, non ciò che è memorizzato in EatMsg. <b>Nel linguaggio assembly, i nomi delle variabili rappresentano indirizzi, non dati!</b> Quindi, come si fa a "raggiungere" i dati rappresentati da una variabile come EatMsg? Ancora una volta, si fa con le parentesi quadre.
+Se hai avuto qualche esperienza con linguaggi di alto livello, il tuo primo istinto potrebbe essere quello di assumere che qualsiasi dato conservato in EatMsg verrà copiato in RSI. L'assembly non funziona in questo modo. Quella istruzione MOV copia effettivamente l'indirizzo di EatMsg, non ciò che è memorizzato in EatMsg. <b>Nel linguaggio assembly, i nomi delle variabili rappresentano indirizzi, non dati!</b> Quindi, come si fa a "raggiungere" i dati rappresentati da una variabile come EatMsg? Ancora una volta, si fa con le parentesi quadre.
 </p>	
 
 ```asm
@@ -7835,7 +13388,7 @@ Il registro RFlags è un registro, proprio come RAX, e quando si è in modalità
 ### Aggiungere e sottrarre 1 con INC e DEC
 
 <p align=justify>
-Una semplice lezione sul comportamento dei flag coinvolge le due istruzioni <code>INC</code> e <code>DEC</code>. Diverse istruzioni macchina x86 arrivano in coppie, tra cui <code>INC</code> e <code>DEC</code>. Esse incrementano e decrementano un operando di uno, rispettivamente. Aggiungere uno a qualcosa o sottrarre uno da qualcosa sono azioni che si verificano spesso nella programmazione informatica. Se stai contando il numero di volte in cui un programma esegue un ciclo, contando i byte in una tabella, o facendo qualcosa che avanza o retrocede di uno alla volta, <code>INC</code> e <code>DEC</code> possono essere modi molto rapidi per eseguire l'aggiunta o la sottrazione. Sia <code>INC</code> che <code>DEC</code> richiedono solo un operando. Un errore verrà segnalato dall'assemblatore se provi a utilizzare <code>INC</code> o <code>DEC</code> con due operandi o senza alcun operando. Nessuno dei due funzionerà sui dati immediati. Prova entrambi aggiungendo le seguenti istruzioni nella tua sandbox. Costruisci la sandbox come al solito, entra in modalità debug ed eseguila passo per passo:
+Una semplice lezione sul comportamento dei flag coinvolge le due istruzioni INC e DEC. Diverse istruzioni macchina x86 arrivano in coppie, tra cui INC e DEC. Esse incrementano e decrementano un operando di uno, rispettivamente. Aggiungere uno a qualcosa o sottrarre uno da qualcosa sono azioni che si verificano spesso nella programmazione informatica. Se stai contando il numero di volte in cui un programma esegue un ciclo, contando i byte in una tabella, o facendo qualcosa che avanza o retrocede di uno alla volta, INC e DEC possono essere modi molto rapidi per eseguire l'aggiunta o la sottrazione. Sia INC che DEC richiedono solo un operando. Un errore verrà segnalato dall'assemblatore se provi a utilizzare INC o DEC con due operandi o senza alcun operando. Nessuno dei due funzionerà sui dati immediati. Prova entrambi aggiungendo le seguenti istruzioni nella tua sandbox. Costruisci la sandbox come al solito, entra in modalità debug ed eseguila passo per passo:
 </p>
 
 ```asm
@@ -7907,7 +13460,7 @@ L'istruzione DEC non influisce sul flag IF, che è rimasto attivo. Infatti, quas
 ### Come i flag cambiano l'esecuzione del programma
 
 <p align=justify>
-Osservare i flag cambiare valore dopo l'esecuzione delle istruzioni è un buon modo per imparare il comportamento dei flag. Tuttavia, lo scopo e il vero valore dei flag non risiedono nei loro valori, di per sé, ma in come influenzano il flusso delle istruzioni macchina nei tuoi programmi. Esiste un'intera categoria di istruzioni macchina che "saltano" a una posizione diversa nel tuo programma in base al valore corrente di uno o più flag. Queste istruzioni sono chiamate <b>istruzioni di salto condizionale</b>, e la maggior parte dei flag in RFLAGS ha una o più istruzioni di salto condizionale associate. La maggior parte delle istruzioni macchina sono passi effettuati in un elenco che generalmente scorre dall'alto verso il basso. Le istruzioni di salto condizionale sono test. Esse verificano la condizione di uno dei flag e continuano o saltano a una posizione diversa nel tuo programma. L'esempio più semplice di un'istruzione di salto condizionale, e quella che probabilmente utilizzerai di più, è <code>JNZ</code>, Salta Se Non Zero. L'istruzione <code>JNZ</code> verifica il valore del flag Zero. Se ZF è impostato (cioè, uguale a 1), non succede nulla, e la CPU passa a eseguire la prossima istruzione in sequenza. Tuttavia, se ZF non è impostato (cioè, se è azzerato e uguale a 0), allora l'esecuzione si sposta a una nuova destinazione nel tuo programma. Questo sembra peggio di quanto non sia. Non devi preoccuparti di aggiungere o sottrarre nulla. In quasi tutti i casi, la <b>destinazione è fornita come un'etichetta</b>. <b>Le etichette sono nomi descrittivi dati a posizioni nei tuoi programmi</b>. In NASM, un'etichetta è una stringa di caratteri seguita da due punti, generalmente posta su una riga contenente un'istruzione. Come molte cose nel linguaggio assembly, questo diventerà più chiaro con un semplice esempio. Apri un nuovo ambiente di lavoro e digita le seguenti istruzioni.
+Osservare i flag cambiare valore dopo l'esecuzione delle istruzioni è un buon modo per imparare il comportamento dei flag. Tuttavia, lo scopo e il vero valore dei flag non risiedono nei loro valori, di per sé, ma in come influenzano il flusso delle istruzioni macchina nei tuoi programmi. Esiste un'intera categoria di istruzioni macchina che "saltano" a una posizione diversa nel tuo programma in base al valore corrente di uno o più flag. Queste istruzioni sono chiamate <b>istruzioni di salto condizionale</b>, e la maggior parte dei flag in RFLAGS ha una o più istruzioni di salto condizionale associate. La maggior parte delle istruzioni macchina sono passi effettuati in un elenco che generalmente scorre dall'alto verso il basso. Le istruzioni di salto condizionale sono test. Esse verificano la condizione di uno dei flag e continuano o saltano a una posizione diversa nel tuo programma. L'esempio più semplice di un'istruzione di salto condizionale, e quella che probabilmente utilizzerai di più, è JNZ, Salta Se Non Zero. L'istruzione JNZ verifica il valore del flag Zero. Se ZF è impostato (cioè, uguale a 1), non succede nulla, e la CPU passa a eseguire la prossima istruzione in sequenza. Tuttavia, se ZF non è impostato (cioè, se è azzerato e uguale a 0), allora l'esecuzione si sposta a una nuova destinazione nel tuo programma. Questo sembra peggio di quanto non sia. Non devi preoccuparti di aggiungere o sottrarre nulla. In quasi tutti i casi, la <b>destinazione è fornita come un'etichetta</b>. <b>Le etichette sono nomi descrittivi dati a posizioni nei tuoi programmi</b>. In NASM, un'etichetta è una stringa di caratteri seguita da due punti, generalmente posta su una riga contenente un'istruzione. Come molte cose nel linguaggio assembly, questo diventerà più chiaro con un semplice esempio. Apri un nuovo ambiente di lavoro e digita le seguenti istruzioni.
 </p>
 
 ```asm
@@ -7919,7 +13472,7 @@ Osservare i flag cambiare valore dopo l'esecuzione delle istruzioni è un buon m
 ```
 
 <p align=justify>
-Costruisci il codice e passa in modalità di debug. Osserva il valore di RAX nella vista Registri mentre esegui queste istruzioni. In particolare, osserva cosa succede nella finestra del codice sorgente quando esegui l'istruzione <code>JNZ</code>. <code>JNZ</code> salta all'etichetta indicata come suo operando se ZF è 0. Se ZF = 1, "cade" sull'istruzione successiva. L'istruzione <code>DEC</code> decrementa il valore nel suo operando; qui, RAX. Finché il valore in RAX non cambia a 0, il flag Zero rimane azzerato. E finché il flag Zero è azzerato, JNZ salta di nuovo all'etichetta DoMore. Quindi, per cinque passaggi, DEC riduce il valore in RAX e JNZ salta di nuovo a DoMore. Ma non appena DEC riduce RAX a 0, il flag Zero si attiva, e JNZ "cade" sull'istruzione NOP alla fine del codice. Strutture come questa si chiamano <b>cicli</b> e sono comuni in tutti i programmi, non solo nel linguaggio assembly. Il ciclo mostrato in precedenza non è utile, ma <b>dimostra come puoi ripetere un'istruzione quante volte ti serve, caricando un valore di conteggio iniziale in un registro e decrementando quel valore una volta per ogni passaggio nel ciclo</b>. L'istruzione <code>JNZ</code> testa ZF ogni volta che passa e sa di dover uscire dal ciclo quando il registro di conteggio arriva a 0. Possiamo rendere il ciclo un po' più utile senza aggiungere troppa complessità. Ciò che dobbiamo aggiungere è un elemento dati su cui il ciclo deve lavorare.
+Costruisci il codice e passa in modalità di debug. Osserva il valore di RAX nella vista Registri mentre esegui queste istruzioni. In particolare, osserva cosa succede nella finestra del codice sorgente quando esegui l'istruzione JNZ. JNZ salta all'etichetta indicata come suo operando se ZF è 0. Se ZF = 1, "cade" sull'istruzione successiva. L'istruzione DEC decrementa il valore nel suo operando; qui, RAX. Finché il valore in RAX non cambia a 0, il flag Zero rimane azzerato. E finché il flag Zero è azzerato, JNZ salta di nuovo all'etichetta DoMore. Quindi, per cinque passaggi, DEC riduce il valore in RAX e JNZ salta di nuovo a DoMore. Ma non appena DEC riduce RAX a 0, il flag Zero si attiva, e JNZ "cade" sull'istruzione NOP alla fine del codice. Strutture come questa si chiamano <b>cicli</b> e sono comuni in tutti i programmi, non solo nel linguaggio assembly. Il ciclo mostrato in precedenza non è utile, ma <b>dimostra come puoi ripetere un'istruzione quante volte ti serve, caricando un valore di conteggio iniziale in un registro e decrementando quel valore una volta per ogni passaggio nel ciclo</b>. L'istruzione JNZ testa ZF ogni volta che passa e sa di dover uscire dal ciclo quando il registro di conteggio arriva a 0. Possiamo rendere il ciclo un po' più utile senza aggiungere troppa complessità. Ciò che dobbiamo aggiungere è un elemento dati su cui il ciclo deve lavorare.
 </p>
 
 ```asm
@@ -7980,11 +13533,11 @@ Il programma definisce una variabile e poi la modifica. Quindi, come possiamo ve
 </ol>
 
 <p align=justify>
-Una volta fatto ciò, vedrai "KANGAROO" nel campo Valore. è ciò che c'è in Snippet. Una volta fatto, esegui il programma con Snippet visualizzato. Dopo otto passaggi nel ciclo, "KANGAROO" è diventato "kangaroo": come? Guarda l'istruzione <code>ADD</code> situata all'etichetta DoMore. In precedenza nel programma, avevamo copiato l'indirizzo di memoria di Snippet nel registro RBX. L'istruzione <code>ADD</code> aggiunge il valore letterale 32 a qualsiasi numero si trovi all'indirizzo memorizzato in RBX. Se guardi le tabelle ASCII, noterai che la differenza tra il valore delle lettere maiuscole ASCII e le lettere minuscole ASCII è 32. Una K maiuscola ha il valore 4Bh, e una k minuscola ha il valore 6Bh. 6Bh-4Bh è 20h, che in decimale è 32. Quindi, se consideriamo le lettere ASCII come numeri, possiamo aggiungere 32 a una lettera maiuscola e trasformarla in una lettera minuscola.
+Una volta fatto ciò, vedrai "KANGAROO" nel campo Valore. è ciò che c'è in Snippet. Una volta fatto, esegui il programma con Snippet visualizzato. Dopo otto passaggi nel ciclo, "KANGAROO" è diventato "kangaroo": come? Guarda l'istruzione ADD situata all'etichetta DoMore. In precedenza nel programma, avevamo copiato l'indirizzo di memoria di Snippet nel registro RBX. L'istruzione ADD aggiunge il valore letterale 32 a qualsiasi numero si trovi all'indirizzo memorizzato in RBX. Se guardi le tabelle ASCII, noterai che la differenza tra il valore delle lettere maiuscole ASCII e le lettere minuscole ASCII è 32. Una K maiuscola ha il valore 4Bh, e una k minuscola ha il valore 6Bh. 6Bh-4Bh è 20h, che in decimale è 32. Quindi, se consideriamo le lettere ASCII come numeri, possiamo aggiungere 32 a una lettera maiuscola e trasformarla in una lettera minuscola.
 </p>
 
 <p align=justify>
-Ciò che il ciclo fa è effettuare otto passaggi, uno per ogni lettera in "KANGAROO". Dopo ogni <code>ADD</code>, il programma incrementa l'indirizzo in RBX, il che mette il prossimo carattere di "KANGAROO" nel mirino. Decrementa anche RAX, che era stato caricato con il numero di caratteri nella variabile Snippet prima che il ciclo iniziasse. Quindi, all'interno dello stesso ciclo, il programma conta verso l'alto lungo la lunghezza di Snippet in RBX, mentre conta verso il basso la quantità di lettere rimaste in RAX. Quando RAX arriva a zero, significa che abbiamo esaminato tutti i caratteri in Snippet e abbiamo finito. Gli operandi dell'istruzione <code>ADD</code> meritano un'ulteriore analisi. <b>Mettere RBX tra parentesi quadre fa riferimento al contenuto di Snippet</b>, piuttosto che al suo indirizzo. Ma ciò che è più importante, lo specificatore di dimensione BYTE dice a NASM che stiamo scrivendo solo un singolo byte all'indirizzo di memoria in RBX. NASM non ha modo di saperlo altrimenti. è possibile scrivere un byte, due byte, quattro byte, o otto byte in memoria contemporaneamente, a seconda di ciò che dobbiamo realizzare. Tuttavia, dobbiamo dire a NASM quanti byte vogliamo che utilizzi, con uno specificatore di dimensione.
+Ciò che il ciclo fa è effettuare otto passaggi, uno per ogni lettera in "KANGAROO". Dopo ogni ADD, il programma incrementa l'indirizzo in RBX, il che mette il prossimo carattere di "KANGAROO" nel mirino. Decrementa anche RAX, che era stato caricato con il numero di caratteri nella variabile Snippet prima che il ciclo iniziasse. Quindi, all'interno dello stesso ciclo, il programma conta verso l'alto lungo la lunghezza di Snippet in RBX, mentre conta verso il basso la quantità di lettere rimaste in RAX. Quando RAX arriva a zero, significa che abbiamo esaminato tutti i caratteri in Snippet e abbiamo finito. Gli operandi dell'istruzione ADD meritano un'ulteriore analisi. <b>Mettere RBX tra parentesi quadre fa riferimento al contenuto di Snippet</b>, piuttosto che al suo indirizzo. Ma ciò che è più importante, lo specificatore di dimensione BYTE dice a NASM che stiamo scrivendo solo un singolo byte all'indirizzo di memoria in RBX. NASM non ha modo di saperlo altrimenti. è possibile scrivere un byte, due byte, quattro byte, o otto byte in memoria contemporaneamente, a seconda di ciò che dobbiamo realizzare. Tuttavia, dobbiamo dire a NASM quanti byte vogliamo che utilizzi, con uno specificatore di dimensione.
 </p>
 
 ### Valori signed e unsigned
@@ -8006,7 +13559,7 @@ Un errore che i principianti commettono a volte è assumere che si possa rendere
 ```
 
 <p align=justify>
-(Sto usando il registro EAX a 32 bit qui perché un registro "completo" a 64 bit è complicato da visualizzare sulla pagina stampata. Il concetto è lo stesso.) Costruisci la sandbox come al solito ed entra in modalità di debug. Nota che abbiamo aggiunto una nuova istruzione qui: <code>JMP</code>, ed è un po' pericolosa: l'istruzione <code>JMP</code> non guarda i flag. Quando viene eseguita, salta sempre al suo operando; quindi, l'esecuzione tornerà all'etichetta DoMore ogni singola volta che JMP viene eseguita. Se sei astuto, noterai che non c'è modo di uscire da questa particolare sequenza di istruzioni, e sì, questo è il leggendario "ciclo infinito" in cui ti imbatterai di tanto in tanto. Quindi, assicurati di impostare un punto di interruzione sull'istruzione MOV iniziale. Se clicchi sul quadrato rosso, SASM fermerà il programma. Sotto DOS, saresti rimasto bloccato e avresti dovuto riavviare il PC. Linux è una piattaforma di programmazione molto più robusta, una che non va in crisi al tuo più piccolo errore. Inizia a eseguire la sandbox passo dopo passo, e guarda EAX nella vista Registri. Il valore iniziale di 5 scenderà a 4, poi 3, poi 2, poi 1, poi 0, e poi... 0FFFFFFFFh! Questa è l'espressione a 32 bit del valore semplice -1. Se continui a decrementare EAX, avrai un'idea di cosa succede.
+(Sto usando il registro EAX a 32 bit qui perché un registro "completo" a 64 bit è complicato da visualizzare sulla pagina stampata. Il concetto è lo stesso.) Costruisci la sandbox come al solito ed entra in modalità di debug. Nota che abbiamo aggiunto una nuova istruzione qui: JMP, ed è un po' pericolosa: l'istruzione JMP non guarda i flag. Quando viene eseguita, salta sempre al suo operando; quindi, l'esecuzione tornerà all'etichetta DoMore ogni singola volta che JMP viene eseguita. Se sei astuto, noterai che non c'è modo di uscire da questa particolare sequenza di istruzioni, e sì, questo è il leggendario "ciclo infinito" in cui ti imbatterai di tanto in tanto. Quindi, assicurati di impostare un punto di interruzione sull'istruzione MOV iniziale. Se clicchi sul quadrato rosso, SASM fermerà il programma. Sotto DOS, saresti rimasto bloccato e avresti dovuto riavviare il PC. Linux è una piattaforma di programmazione molto più robusta, una che non va in crisi al tuo più piccolo errore. Inizia a eseguire la sandbox passo dopo passo, e guarda EAX nella vista Registri. Il valore iniziale di 5 scenderà a 4, poi 3, poi 2, poi 1, poi 0, e poi... 0FFFFFFFFh! Questa è l'espressione a 32 bit del valore semplice -1. Se continui a decrementare EAX, avrai un'idea di cosa succede.
 </p>
 
 ```asm
@@ -8020,7 +13573,7 @@ Un errore che i principianti commettono a volte è assumere che si possa rendere
 ```
 
 <p align=justify>
-...e così via. Quando i numeri negativi vengono gestiti in questo modo, li chiamiamo <b>complemento a due</b>. Nel linguaggio assembly Intel, <b>i numeri negativi sono memorizzati come la forma in complemento a due del loro valore assoluto</b>, che, se ti ricordi dalla matematica delle scuole medie, è la distanza di un numero da 0, sia nella direzione positiva che negativa. La magia di esprimere numeri negativi in forma di complemento a due è che la CPU non ha realmente bisogno di sottrarre a livello di transistor. Genera semplicemente il complemento a due del sottraendo e lo aggiunge al minuendo. Questo è relativamente facile per la CPU, e tutto avviene in modo trasparente per i tuoi programmi, dove la sottrazione viene eseguita come ti aspetteresti. La buona notizia è che quasi mai devi calcolare manualmente un valore in complemento a due. C'è un'istruzione macchina che lo farà per te: <code>NEG</code>. L'istruzione <code>NEG</code> prenderà un valore positivo come operando e negherà quel valore, ovvero lo renderà negativo. Lo fa generando la forma in complemento a due del valore positivo. Carica le seguenti istruzioni in un'area sicura ed eseguile un passo alla volta. Guarda EAX nella vista Registri.
+...e così via. Quando i numeri negativi vengono gestiti in questo modo, li chiamiamo <b>complemento a due</b>. Nel linguaggio assembly Intel, <b>i numeri negativi sono memorizzati come la forma in complemento a due del loro valore assoluto</b>, che, se ti ricordi dalla matematica delle scuole medie, è la distanza di un numero da 0, sia nella direzione positiva che negativa. La magia di esprimere numeri negativi in forma di complemento a due è che la CPU non ha realmente bisogno di sottrarre a livello di transistor. Genera semplicemente il complemento a due del sottraendo e lo aggiunge al minuendo. Questo è relativamente facile per la CPU, e tutto avviene in modo trasparente per i tuoi programmi, dove la sottrazione viene eseguita come ti aspetteresti. La buona notizia è che quasi mai devi calcolare manualmente un valore in complemento a due. C'è un'istruzione macchina che lo farà per te: NEG. L'istruzione NEG prenderà un valore positivo come operando e negherà quel valore, ovvero lo renderà negativo. Lo fa generando la forma in complemento a due del valore positivo. Carica le seguenti istruzioni in un'area sicura ed eseguile un passo alla volta. Guarda EAX nella vista Registri.
 </p>
 
 ```asm
@@ -8052,7 +13605,7 @@ Se sei abile e sai contare in esadecimale, potresti notare qualcosa qui dalla ta
 ### Estensione del segno e MOVSX
 
 <p align=justify>
-C'è un sottile problema da evitare quando si lavora con valori con segno di dimensioni diverse. Il bit di segno è il bit alto in un byte, parola o doppia parola con segno. Ma cosa succede quando devi trasferire un valore con segno in un registro o in una posizione di memoria più grande? Cosa succede, ad esempio, se devi spostare un valore con segno a 16 bit in un registro a 32 bit? Se usi l'istruzione <code>MOV</code>, niente di buono. Prova questo.
+C'è un sottile problema da evitare quando si lavora con valori con segno di dimensioni diverse. Il bit di segno è il bit alto in un byte, parola o doppia parola con segno. Ma cosa succede quando devi trasferire un valore con segno in un registro o in una posizione di memoria più grande? Cosa succede, ad esempio, se devi spostare un valore con segno a 16 bit in un registro a 32 bit? Se usi l'istruzione MOV, niente di buono. Prova questo.
 </p>
 
 ```asm
@@ -8061,7 +13614,7 @@ C'è un sottile problema da evitare quando si lavora con valori con segno di dim
 ```
 
 <p align=justify>
-La forma esadecimale di -42 è 0FFD6h. Se hai quel valore in un registro a 16 bit come AX e usi <code>MOV</code> per spostare il valore in un registro più grande come EBX o RBX, il bit di segno non sarà più il bit di segno. In altre parole, una volta che -42 passa da un contenitore a 16 bit a un contenitore a 32 bit, cambia da -42 a 65494. Il bit di segno è ancora lì. Non è stato azzerato. Tuttavia, in un registro più grande, il vecchio bit di segno è ora solo un altro bit in un valore binario, senza significato speciale. Questo esempio è un po' fuorviante. Prima di tutto, non possiamo letteralmente spostare un valore da AX a EBX. <b>L'istruzione <code>MOV</code> gestirà solo operandi di registro della stessa dimensione</b>. Tuttavia, ricorda che AX è semplicemente costituito dai due byte inferiori di EAX. Possiamo spostare AX in EBX spostando EAX in EBX, ed è quello che abbiamo fatto nell'esempio precedente. Purtroppo, SASM non è in grado di mostrarci valori con segno a 8 bit, 16 bit o 32 bit. Il suo debugger può visualizzare solo RAX, e possiamo vedere AL, AH, AX o EAX solo vedendoli all'interno di RAX. Ecco perché, nell'esempio precedente, SASM mostra il valore che pensavamo fosse -42 come 65494. La visualizzazione dei Registri di SASM non ha il concetto di bit di segno tranne che nel bit più alto di un valore a 64 bit. Le moderne CPU Intel ci forniscono una via d'uscita da questa trappola, sotto forma dell'istruzione <code>MOVSX</code>. <code>MOVSX</code> significa "Sposta con Estensione del Segno", ed è una delle molte istruzioni che non erano presenti nelle CPU originali 8086/8088. <code>MOVSX</code> è stata introdotta con la famiglia di CPU 386, e poiché Linux non può girare su nulla di più vecchio di una 386, puoi presumere che qualsiasi PC Linux supporti l'istruzione <code>MOVSX</code>. Carica questo in un ambiente di test e prova.
+La forma esadecimale di -42 è 0FFD6h. Se hai quel valore in un registro a 16 bit come AX e usi MOV per spostare il valore in un registro più grande come EBX o RBX, il bit di segno non sarà più il bit di segno. In altre parole, una volta che -42 passa da un contenitore a 16 bit a un contenitore a 32 bit, cambia da -42 a 65494. Il bit di segno è ancora lì. Non è stato azzerato. Tuttavia, in un registro più grande, il vecchio bit di segno è ora solo un altro bit in un valore binario, senza significato speciale. Questo esempio è un po' fuorviante. Prima di tutto, non possiamo letteralmente spostare un valore da AX a EBX. <b>L'istruzione MOV gestirà solo operandi di registro della stessa dimensione</b>. Tuttavia, ricorda che AX è semplicemente costituito dai due byte inferiori di EAX. Possiamo spostare AX in EBX spostando EAX in EBX, ed è quello che abbiamo fatto nell'esempio precedente. Purtroppo, SASM non è in grado di mostrarci valori con segno a 8 bit, 16 bit o 32 bit. Il suo debugger può visualizzare solo RAX, e possiamo vedere AL, AH, AX o EAX solo vedendoli all'interno di RAX. Ecco perché, nell'esempio precedente, SASM mostra il valore che pensavamo fosse -42 come 65494. La visualizzazione dei Registri di SASM non ha il concetto di bit di segno tranne che nel bit più alto di un valore a 64 bit. Le moderne CPU Intel ci forniscono una via d'uscita da questa trappola, sotto forma dell'istruzione MOVSX. MOVSX significa "Sposta con Estensione del Segno", ed è una delle molte istruzioni che non erano presenti nelle CPU originali 8086/8088. MOVSX è stata introdotta con la famiglia di CPU 386, e poiché Linux non può girare su nulla di più vecchio di una 386, puoi presumere che qualsiasi PC Linux supporti l'istruzione MOVSX. Carica questo in un ambiente di test e prova.
 </p>
 
 ```asm
@@ -8071,7 +13624,7 @@ La forma esadecimale di -42 è 0FFD6h. Se hai quel valore in un registro a 16 bi
 ```
 
 <p align=justify>
-La prima riga serve semplicemente ad azzerare RAX per garantire che non ci siano "avanzi" memorizzati in esso da codice eseguito in precedenza. Ricorda che SASM non può visualizzare AX singolarmente, quindi mostrerà RAX come contenente 65494. Tuttavia, quando trasferisci AX in RBX con <code>MOVSX</code>, il valore di RBX verrà mostrato come -42. Ciò che è successo è che l'istruzione <code>MOVSX</code> ha eseguito l'estensione del segno sui suoi operandi, prendendo il bit di segno dalla quantità a 16 bit in AX e rendendolo il bit di segno della quantità a 64 bit in RBX. <code>MOVSX</code> è significativamente diverso da <code>MOV</code> in quanto <b>i suoi operandi possono essere di dimensioni diverse</b>. <code>MOVSX</code> ha diverse possibili variazioni, che ho riassunto nella figura seguente.
+La prima riga serve semplicemente ad azzerare RAX per garantire che non ci siano "avanzi" memorizzati in esso da codice eseguito in precedenza. Ricorda che SASM non può visualizzare AX singolarmente, quindi mostrerà RAX come contenente 65494. Tuttavia, quando trasferisci AX in RBX con MOVSX, il valore di RBX verrà mostrato come -42. Ciò che è successo è che l'istruzione MOVSX ha eseguito l'estensione del segno sui suoi operandi, prendendo il bit di segno dalla quantità a 16 bit in AX e rendendolo il bit di segno della quantità a 64 bit in RBX. MOVSX è significativamente diverso da MOV in quanto <b>i suoi operandi possono essere di dimensioni diverse</b>. MOVSX ha diverse possibili variazioni, che ho riassunto nella figura seguente.
 </p>
 
 <div align=center>
@@ -8085,11 +13638,11 @@ Nota che l'operando di destinazione può essere solo un registro. La notazione q
 ### Operandi impliciti e MUL
 
 <p align=justify>
-Per la maggior parte del tempo, passi i valori alle istruzioni macchina tramite uno o due operandi posti proprio lì sulla riga accanto al mnemonico. Questo è positivo, perché quando dici <code>MOV RAX,RBX</code>, sai precisamente cosa si sta muovendo, da dove proviene e dove sta andando. Purtroppo, non è sempre così. Alcune istruzioni agiscono su registri o persino su posizioni di memoria che non sono dichiarate in un elenco di operandi. Queste istruzioni hanno infatti operandi, ma rappresentano assunzioni fatte dall'istruzione. Tali operandi sono chiamati <b>operandi impliciti</b> e non cambiano e non possono essere cambiati. Ad aumentare la confusione, la maggior parte delle istruzioni che hanno operandi impliciti ha anche operandi espliciti. I migliori esempi di operandi impliciti nel set di istruzioni x64 sono le istruzioni di moltiplicazione e divisione. Il set di istruzioni x64 ha due insiemi di istruzioni per moltiplicare e dividere. Un insieme, <code>MUL</code> e <code>DIV</code>, gestisce calcoli senza segno. L'altro, <code>IMUL</code> e <code>IDIV</code>, gestisce calcoli con segno. <code>MUL</code> e <code>DIV</code> sono usati molto più frequentemente delle loro alternative per la matematica con segno, e sono quelli di cui parlerò in questa sezione. L'istruzione <code>MUL</code> fa ciò che ti aspetteresti: moltiplica due valori e restituisce un prodotto. Tra le operazioni matematiche di base, tuttavia, la moltiplicazione ha un problema speciale: genera valori di output che sono spesso enormemente più grandi dei valori di input. Questo rende impossibile seguire il modello convenzionale negli operandi delle istruzioni Intel, dove il valore generato da un'istruzione va nell'operando di destinazione.
+Per la maggior parte del tempo, passi i valori alle istruzioni macchina tramite uno o due operandi posti proprio lì sulla riga accanto al mnemonico. Questo è positivo, perché quando dici MOV RAX,RBX, sai precisamente cosa si sta muovendo, da dove proviene e dove sta andando. Purtroppo, non è sempre così. Alcune istruzioni agiscono su registri o persino su posizioni di memoria che non sono dichiarate in un elenco di operandi. Queste istruzioni hanno infatti operandi, ma rappresentano assunzioni fatte dall'istruzione. Tali operandi sono chiamati <b>operandi impliciti</b> e non cambiano e non possono essere cambiati. Ad aumentare la confusione, la maggior parte delle istruzioni che hanno operandi impliciti ha anche operandi espliciti. I migliori esempi di operandi impliciti nel set di istruzioni x64 sono le istruzioni di moltiplicazione e divisione. Il set di istruzioni x64 ha due insiemi di istruzioni per moltiplicare e dividere. Un insieme, MUL e DIV, gestisce calcoli senza segno. L'altro, IMUL e IDIV, gestisce calcoli con segno. MUL e DIV sono usati molto più frequentemente delle loro alternative per la matematica con segno, e sono quelli di cui parlerò in questa sezione. L'istruzione MUL fa ciò che ti aspetteresti: moltiplica due valori e restituisce un prodotto. Tra le operazioni matematiche di base, tuttavia, la moltiplicazione ha un problema speciale: genera valori di output che sono spesso enormemente più grandi dei valori di input. Questo rende impossibile seguire il modello convenzionale negli operandi delle istruzioni Intel, dove il valore generato da un'istruzione va nell'operando di destinazione.
 </p>
 
 <p align=justify>
-Considera un'operazione di moltiplicazione a 32 bit. Il valore più grande senza segno che può essere contenuto in un registro a 32 bit è 4.294.967.295. Moltiplicalo anche solo per due e ottieni un prodotto a 33 bit, che non potrà più essere contenuto in alcun registro a 32 bit. Questo problema ha afflitto le architetture Intel (tutte le architetture, in effetti) sin dall'inizio. Quando l'x86 era un'architettura a 16 bit, il problema era dove collocare il prodotto di due valori a 16 bit, che può facilmente superare un registro a 16 bit. I progettisti di Intel hanno risolto il problema nell'unico modo possibile: <b>utilizzando due registri per contenere il prodotto</b>. Non è immediatamente ovvio per chi non è matematico, ma è vero (provalo su una calcolatrice!) che il prodotto più grande di due numeri binari può essere espresso in non più del doppio dei bit richiesti dal fattore più grande. In parole povere, qualsiasi prodotto di due valori a 16 bit può essere contenuto in 32 bit, e qualsiasi prodotto di due valori a 32 bit può essere contenuto in 64 bit. Quindi, anche se potrebbero essere necessari due registri per contenere il prodotto, non saranno mai necessari più di due registri. Questo ci porta all'istruzione <code>MUL</code>. <code>MUL</code> è un'istruzione curiosa dal punto di vista degli operandi: prende solo un operando, che contiene uno dei fattori da moltiplicare. L'altro fattore è implicito, così come la coppia di registri che riceve il prodotto del calcolo. <code>MUL</code> appare quindi ingannevolmente semplice.
+Considera un'operazione di moltiplicazione a 32 bit. Il valore più grande senza segno che può essere contenuto in un registro a 32 bit è 4.294.967.295. Moltiplicalo anche solo per due e ottieni un prodotto a 33 bit, che non potrà più essere contenuto in alcun registro a 32 bit. Questo problema ha afflitto le architetture Intel (tutte le architetture, in effetti) sin dall'inizio. Quando l'x86 era un'architettura a 16 bit, il problema era dove collocare il prodotto di due valori a 16 bit, che può facilmente superare un registro a 16 bit. I progettisti di Intel hanno risolto il problema nell'unico modo possibile: <b>utilizzando due registri per contenere il prodotto</b>. Non è immediatamente ovvio per chi non è matematico, ma è vero (provalo su una calcolatrice!) che il prodotto più grande di due numeri binari può essere espresso in non più del doppio dei bit richiesti dal fattore più grande. In parole povere, qualsiasi prodotto di due valori a 16 bit può essere contenuto in 32 bit, e qualsiasi prodotto di due valori a 32 bit può essere contenuto in 64 bit. Quindi, anche se potrebbero essere necessari due registri per contenere il prodotto, non saranno mai necessari più di due registri. Questo ci porta all'istruzione MUL. MUL è un'istruzione curiosa dal punto di vista degli operandi: prende solo un operando, che contiene uno dei fattori da moltiplicare. L'altro fattore è implicito, così come la coppia di registri che riceve il prodotto del calcolo. MUL appare quindi ingannevolmente semplice.
 </p>
 
 ```asm
@@ -8105,7 +13658,7 @@ Ovviamente, se si sta eseguendo una moltiplicazione, qui è coinvolto qualcosa d
 </div>
 
 <p align=justify>
-Il primo fattore è dato nel singolo operando esplicito, che può essere un valore in un registro o in una posizione di memoria. Il secondo fattore è implicito e sempre nel registro generico "A" appropriato alla dimensione del primo fattore. Se il primo fattore è un valore a 8 bit, il secondo fattore è sempre nel registro AL a 8 bit. Se il primo fattore è un valore a 16 bit, il secondo fattore si trova sempre nel registro AX a 16 bit e così via. Una volta che il prodotto richiede più di 16 bit, i registri DX vengono usati per contenere la parte di ordine superiore del prodotto. Per "di ordine superiore" qui intendo la parte del prodotto che non rientra nel registro "A". Ad esempio, se si moltiplicano due valori a 16 bit e il prodotto è 02A456Fh, il registro AX conterrà 0456Fh e il registro DX conterrà 02Ah. Si noti che quando un prodotto è abbastanza piccolo da entrare interamente nel primo dei due registri che contengono il prodotto, il registro di ordine superiore (sia esso AH, DX, EDX o RDX) viene azzerato. I registri spesso scarseggiano nel lavoro di assembly, ma anche se si è sicuri che le moltiplicazioni coinvolgano sempre prodotti di piccole dimensioni, non è possibile utilizzare il registro di ordine superiore per nient'altro mentre viene eseguita un'istruzione <code>MUL</code>. Si noti inoltre che i valori immediati non possono essere utilizzati come operandi per <code>MUL</code>; cioè, non puoi farlo, per quanto sarebbe spesso utile indicare il primo fattore come un valore immediato.
+Il primo fattore è dato nel singolo operando esplicito, che può essere un valore in un registro o in una posizione di memoria. Il secondo fattore è implicito e sempre nel registro generico "A" appropriato alla dimensione del primo fattore. Se il primo fattore è un valore a 8 bit, il secondo fattore è sempre nel registro AL a 8 bit. Se il primo fattore è un valore a 16 bit, il secondo fattore si trova sempre nel registro AX a 16 bit e così via. Una volta che il prodotto richiede più di 16 bit, i registri DX vengono usati per contenere la parte di ordine superiore del prodotto. Per "di ordine superiore" qui intendo la parte del prodotto che non rientra nel registro "A". Ad esempio, se si moltiplicano due valori a 16 bit e il prodotto è 02A456Fh, il registro AX conterrà 0456Fh e il registro DX conterrà 02Ah. Si noti che quando un prodotto è abbastanza piccolo da entrare interamente nel primo dei due registri che contengono il prodotto, il registro di ordine superiore (sia esso AH, DX, EDX o RDX) viene azzerato. I registri spesso scarseggiano nel lavoro di assembly, ma anche se si è sicuri che le moltiplicazioni coinvolgano sempre prodotti di piccole dimensioni, non è possibile utilizzare il registro di ordine superiore per nient'altro mentre viene eseguita un'istruzione MUL. Si noti inoltre che i valori immediati non possono essere utilizzati come operandi per MUL; cioè, non puoi farlo, per quanto sarebbe spesso utile indicare il primo fattore come un valore immediato.
 </p>
 
 ```asm
@@ -8115,7 +13668,7 @@ Il primo fattore è dato nel singolo operando esplicito, che può essere un valo
 ### MUL e il Carry Flag
 
 <p align=justify>
-Non tutte le moltiplicazioni generano prodotti sufficientemente grandi da richiedere due registri. Per la maggior parte del tempo scoprirai che 64 bit sono più che sufficienti. Quindi, come puoi capire se ci sono cifre significative nel registro di ordine superiore? <code>MUL</code> imposta molto utilmente il flag di riporto CF quando il valore del prodotto oltrepassa il registro di ordine inferiore. Se, dopo una <code>MUL</code>, trovi CF impostato su 0, puoi ignorare il registro di ordine superiore, sapendo che l'intero prodotto si trova nel registro di ordine inferiore dei due registri. Vale la pena fare una rapida dimostrazione. Prima, prova una moltiplicazione "piccola" in cui il prodotto si adatterà facilmente a un singolo registro a 32 bit.
+Non tutte le moltiplicazioni generano prodotti sufficientemente grandi da richiedere due registri. Per la maggior parte del tempo scoprirai che 64 bit sono più che sufficienti. Quindi, come puoi capire se ci sono cifre significative nel registro di ordine superiore? MUL imposta molto utilmente il flag di riporto CF quando il valore del prodotto oltrepassa il registro di ordine inferiore. Se, dopo una MUL, trovi CF impostato su 0, puoi ignorare il registro di ordine superiore, sapendo che l'intero prodotto si trova nel registro di ordine inferiore dei due registri. Vale la pena fare una rapida dimostrazione. Prima, prova una moltiplicazione "piccola" in cui il prodotto si adatterà facilmente a un singolo registro a 32 bit.
 </p>
 
 ```asm
@@ -8135,13 +13688,13 @@ Ricorda che stiamo moltiplicando EAX per EBX qui. Procedi attraverso le tre istr
 ```
 
 <p align=justify>
-Procedi come al solito, osservando il contenuto di EAX, EDX ed EBX nella vista Registri. Dopo l'istruzione <code>MUL</code>, guarda i flag nella vista Registri. Il flag di carry CF sarà impostato su 1 (e saranno impostati anche il flag di overflow OF, il flag di segno SF, il flag di abilitazione dell'interrupt IF e il flag di parità PF, ma questi non sono generalmente utili in aritmetica senza segno). Ciò che CF ti dice fondamentalmente qui è che ci sono cifre significative nella parte alta del prodotto, e queste sono memorizzate in EDX per le moltiplicazioni a 32 bit, RDX per le moltiplicazioni a 64 bit, e così via.
+Procedi come al solito, osservando il contenuto di EAX, EDX ed EBX nella vista Registri. Dopo l'istruzione MUL, guarda i flag nella vista Registri. Il flag di carry CF sarà impostato su 1 (e saranno impostati anche il flag di overflow OF, il flag di segno SF, il flag di abilitazione dell'interrupt IF e il flag di parità PF, ma questi non sono generalmente utili in aritmetica senza segno). Ciò che CF ti dice fondamentalmente qui è che ci sono cifre significative nella parte alta del prodotto, e queste sono memorizzate in EDX per le moltiplicazioni a 32 bit, RDX per le moltiplicazioni a 64 bit, e così via.
 </p>
 
 ### Divisione senza segno con DIV
 
 <p align=justify>
-C'è una forte somiglianza tra l'istruzione di moltiplicazione senza segno <code>MUL</code> e l'istruzione di divisione senza segno <code>DIV</code>. <code>DIV</code> fa ciò che ti aspetteresti: divide un valore per un altro e ti dà un quoziente e un resto. Ricorda, qui stiamo facendo aritmetica intera e non decimale, quindi non c'è modo di esprimere un quoziente decimale come 17.76 o 3.14159. Questi richiedono la meccanica "in virgola mobile" dell'architettura della CPU, che è un argomento vasto e sottile che non affronterò. Nella divisione, non hai il problema che ha la moltiplicazione, cioè generare grandi valori di output per alcuni valori di input. Se dividi un valore a 16 bit per un altro valore a 16 bit, non otterrai mai un quoziente che non possa essere contenuto in un registro a 16 bit. D'altra parte, sarebbe utile poter dividere numeri molto grandi, e così gli ingegneri di Intel hanno creato qualcosa di molto simile a un'immagine speculare di <code>MUL</code>: per la divisione a 64 bit, posizioni un valore dividendo in RDX e RAX, il che significa che può avere fino a 128 bit di dimensione. Il divisore è memorizzato nell'unico operando esplicito di DIV, che può essere un registro o una posizione di memoria. (Come con <code>MUL</code>, non puoi utilizzare un valore immediato come operando.) Il quoziente viene restituito in RAX e il resto in RDX. Questa è la situazione per una divisione completa a 64 bit. Come per <code>MUL</code>, gli operandi impliciti di <code>DIV</code> dipendono dalla dimensione dell'unico operando esplicito, qui inteso come il divisore. Ci sono quattro "dimensioni" delle operazioni <code>DIV</code>, a seconda delle dimensioni dell'operando esplicito, il divisore. Questo è riassunto nella figura seguente.
+C'è una forte somiglianza tra l'istruzione di moltiplicazione senza segno MUL e l'istruzione di divisione senza segno DIV. DIV fa ciò che ti aspetteresti: divide un valore per un altro e ti dà un quoziente e un resto. Ricorda, qui stiamo facendo aritmetica intera e non decimale, quindi non c'è modo di esprimere un quoziente decimale come 17.76 o 3.14159. Questi richiedono la meccanica "in virgola mobile" dell'architettura della CPU, che è un argomento vasto e sottile che non affronterò. Nella divisione, non hai il problema che ha la moltiplicazione, cioè generare grandi valori di output per alcuni valori di input. Se dividi un valore a 16 bit per un altro valore a 16 bit, non otterrai mai un quoziente che non possa essere contenuto in un registro a 16 bit. D'altra parte, sarebbe utile poter dividere numeri molto grandi, e così gli ingegneri di Intel hanno creato qualcosa di molto simile a un'immagine speculare di MUL: per la divisione a 64 bit, posizioni un valore dividendo in RDX e RAX, il che significa che può avere fino a 128 bit di dimensione. Il divisore è memorizzato nell'unico operando esplicito di DIV, che può essere un registro o una posizione di memoria. (Come con MUL, non puoi utilizzare un valore immediato come operando.) Il quoziente viene restituito in RAX e il resto in RDX. Questa è la situazione per una divisione completa a 64 bit. Come per MUL, gli operandi impliciti di DIV dipendono dalla dimensione dell'unico operando esplicito, qui inteso come il divisore. Ci sono quattro "dimensioni" delle operazioni DIV, a seconda delle dimensioni dell'operando esplicito, il divisore. Questo è riassunto nella figura seguente.
 </p>
 
 <div align=center>
@@ -8149,7 +13702,7 @@ C'è una forte somiglianza tra l'istruzione di moltiplicazione senza segno <code
 </div>
 
 <p align=justify>
-Non proverò nemmeno a stampare quale numero intero puoi memorizzare in 128 bit utilizzando due registri da 64 bit. In notazione scientifica, è 3,4  -  10³8. Considerando che 64 bit possono contenere 1,8  -  10¹? e che questo è appena al di sotto del numero stimato di stelle nell'universo osservabile, suggerisco di trattare il numero come un'astrazione non visualizzata. Diamo un'occhiata a <code>DIV</code>. Metti il seguente codice in una nuova sandbox:
+Non proverò nemmeno a stampare quale numero intero puoi memorizzare in 128 bit utilizzando due registri da 64 bit. In notazione scientifica, è 3,4  -  10³8. Considerando che 64 bit possono contenere 1,8  -  10¹? e che questo è appena al di sotto del numero stimato di stelle nell'universo osservabile, suggerisco di trattare il numero come un'astrazione non visualizzata. Diamo un'occhiata a DIV. Metti il seguente codice in una nuova sandbox:
 </p>
 
 ```asm
@@ -8159,13 +13712,13 @@ Non proverò nemmeno a stampare quale numero intero puoi memorizzare in 128 bit 
 ```
 
 <p align=justify>
-L'operando esplicito è il divisore, memorizzato in RBX. Il dividendo è in RAX. Procedi con l'esecuzione passo per passo. Dopo l'esecuzione di <code>DIV</code>, il quoziente sarà posizionato in RAX, sostituendo il dividendo. Non c'è resto, quindi RDX è zero. Inserisci un nuovo dividendo e un divisore che non si dividono uniformemente; 247 e 17 funzioneranno. Una volta eseguita l'istruzione <code>DIV</code> con i nuovi operandi, guarda RDX. Dovrebbe contenere 9. Questo è il tuo resto. L'istruzione <code>DIV</code> non posiziona dati utili in nessuno dei flag. Infatti, DIV lascerà OF, SF, ZF, AF, PF e CF in stati indefiniti. Non provare a testare nessuno di quei flag in un'istruzione di salto dopo <code>DIV</code>. Come puoi aspettarti, dividere per zero attiverà un errore che terminerà il tuo programma: un'eccezione aritmetica. <b>è una buona idea testare i valori del tuo divisore per assicurarti che non ci siano zeri nel divisore</b>. Ora, dividere zero per un numero diverso da zero non attiva un errore; semplicemente posizionerà valori zero nei registri del quoziente e del resto. Solo per divertimento, prova entrambi i casi nella tua sandbox per vedere cosa succede.
+L'operando esplicito è il divisore, memorizzato in RBX. Il dividendo è in RAX. Procedi con l'esecuzione passo per passo. Dopo l'esecuzione di DIV, il quoziente sarà posizionato in RAX, sostituendo il dividendo. Non c'è resto, quindi RDX è zero. Inserisci un nuovo dividendo e un divisore che non si dividono uniformemente; 247 e 17 funzioneranno. Una volta eseguita l'istruzione DIV con i nuovi operandi, guarda RDX. Dovrebbe contenere 9. Questo è il tuo resto. L'istruzione DIV non posiziona dati utili in nessuno dei flag. Infatti, DIV lascerà OF, SF, ZF, AF, PF e CF in stati indefiniti. Non provare a testare nessuno di quei flag in un'istruzione di salto dopo DIV. Come puoi aspettarti, dividere per zero attiverà un errore che terminerà il tuo programma: un'eccezione aritmetica. <b>è una buona idea testare i valori del tuo divisore per assicurarti che non ci siano zeri nel divisore</b>. Ora, dividere zero per un numero diverso da zero non attiva un errore; semplicemente posizionerà valori zero nei registri del quoziente e del resto. Solo per divertimento, prova entrambi i casi nella tua sandbox per vedere cosa succede.
 </p>
 
 ### MUL e DIV sono dei ritardatari
 
 <p align=justify>
-Una comune domanda da principiante su <code>MUL</code> e <code>DIV</code> riguarda le due versioni "più piccole" di entrambe le istruzioni. (Vedi le figure precedente.) Se una moltiplicazione o divisione a 64 bit può gestire qualsiasi cosa l'architettura x64 possa mettere nei registri, perché le versioni più piccole sono necessarie? è solo una questione di compatibilità con le vecchie CPU a 16 bit? Non del tutto. In molti casi, si tratta di velocità. Le istruzioni <code>MUL</code> e <code>DIV</code> sono vicine a essere le istruzioni più lente dell'intero insieme di istruzioni x64. Certamente non sono lente come una volta, ma rispetto ad altre istruzioni come <code>MOV</code> o <code>ADD</code> sono lente. Inoltre, sia le versioni a 32 bit che a 64 bit di entrambe le istruzioni sono più lente della versione a 16 bit, e la versione a 8 bit è la più veloce di tutte. <code>DIV</code> è più lenta di <code>MUL</code>, ma entrambe sono lente. Ora, l'ottimizzazione della velocità è un affare molto scivoloso nel mondo x86/x64, e non è qualcosa di cui i principianti dovrebbero preoccuparsi. Avere le istruzioni nella cache della CPU rispetto al doverle prelevare dalla memoria è una differenza di velocità che sovrasta la maggior parte delle differenze di velocità tra le istruzioni stesse. Altri fattori entrano in gioco nelle CPU più recenti e rendono le generalizzazioni sulla velocità delle istruzioni quasi impossibili, e certamente impossibili da affermare con qualsiasi precisione. Se stai eseguendo solo poche moltiplicazioni o divisioni isolate, non lasciare che tutto ciò ti disturbi. <b>Dove la velocità delle istruzioni può diventare importante è all'interno dei cicli in cui stai eseguendo molte operazioni continuamente</b>, come nella crittografia dei dati o nelle simulazioni fisiche. La mia euristica personale è di utilizzare la versione più piccola di <code>MUL</code> e <code>DIV</code> che i valori di input consentono, temperata dall'euristica ancora più forte che la maggior parte delle volte la velocità delle istruzioni non importa. Quando sarai abbastanza esperto in assembly da prendere decisioni sulle prestazioni a livello di istruzione, lo saprai. Fino ad allora, concentrati sul rendere i tuoi programmi privi di bug e lascia stare la velocità alla CPU.
+Una comune domanda da principiante su MUL e DIV riguarda le due versioni "più piccole" di entrambe le istruzioni. (Vedi le figure precedente.) Se una moltiplicazione o divisione a 64 bit può gestire qualsiasi cosa l'architettura x64 possa mettere nei registri, perché le versioni più piccole sono necessarie? è solo una questione di compatibilità con le vecchie CPU a 16 bit? Non del tutto. In molti casi, si tratta di velocità. Le istruzioni MUL e DIV sono vicine a essere le istruzioni più lente dell'intero insieme di istruzioni x64. Certamente non sono lente come una volta, ma rispetto ad altre istruzioni come MOV o ADD sono lente. Inoltre, sia le versioni a 32 bit che a 64 bit di entrambe le istruzioni sono più lente della versione a 16 bit, e la versione a 8 bit è la più veloce di tutte. DIV è più lenta di MUL, ma entrambe sono lente. Ora, l'ottimizzazione della velocità è un affare molto scivoloso nel mondo x86/x64, e non è qualcosa di cui i principianti dovrebbero preoccuparsi. Avere le istruzioni nella cache della CPU rispetto al doverle prelevare dalla memoria è una differenza di velocità che sovrasta la maggior parte delle differenze di velocità tra le istruzioni stesse. Altri fattori entrano in gioco nelle CPU più recenti e rendono le generalizzazioni sulla velocità delle istruzioni quasi impossibili, e certamente impossibili da affermare con qualsiasi precisione. Se stai eseguendo solo poche moltiplicazioni o divisioni isolate, non lasciare che tutto ciò ti disturbi. <b>Dove la velocità delle istruzioni può diventare importante è all'interno dei cicli in cui stai eseguendo molte operazioni continuamente</b>, come nella crittografia dei dati o nelle simulazioni fisiche. La mia euristica personale è di utilizzare la versione più piccola di MUL e DIV che i valori di input consentono, temperata dall'euristica ancora più forte che la maggior parte delle volte la velocità delle istruzioni non importa. Quando sarai abbastanza esperto in assembly da prendere decisioni sulle prestazioni a livello di istruzione, lo saprai. Fino ad allora, concentrati sul rendere i tuoi programmi privi di bug e lascia stare la velocità alla CPU.
 </p>
 
 ### Leggere e usare una guida all'assembly
@@ -8191,7 +13744,7 @@ Il problema con i riferimenti al linguaggio assembly è che, per essere completi
 </p>
 
 <p align=justify>
-Immediatamente sotto il mnemonico c'è un minigrafico dei flag della CPU nel registro RFlags. Come ho descritto in precedenza, il registro RFlags è una raccolta di valori a 1 bit che mantengono alcune informazioni essenziali sullo stato della macchina per brevi periodi di tempo. Molte (ma non tutte) istruzioni x64 modificano i valori di uno o più flag. I flag possono quindi essere testati singolarmente da una delle istruzioni Jump On Condition, che cambiano il corso del programma a seconda degli stati dei flag. Ognuno dei flag ha un nome e ciascun flag ha un simbolo nel minigrafico dei flag. Con il tempo imparerai a conoscere i flag attraverso i loro simboli di due caratteri, ma fino ad allora i nomi completi dei flag sono mostrati a destra del minigrafico. La maggior parte dei flag non viene utilizzata spesso (se non mai) nei lavori iniziali in linguaggio assembly. I flag a cui presterai più attenzione sono il Flag Zero (ZF) e il Flag di Riporto (CF). Ci sarà un asterisco (*) sotto il simbolo di qualsiasi flag influenzato dall'istruzione. Il modo in cui il flag è influenzato dipende da cosa fa l'istruzione. Dovrai dedurlo dalla sezione Note. Quando un'istruzione non influenza affatto i flag, la parola <code>none</code> apparirà nel minigrafico dei flag. Nella pagina di esempio qui, il minigrafico indica che l'istruzione NEG influisce sul Flag Overflow, sul Flag di Segno, sul Flag Zero, sul Flag di Riporto Ausiliario, sul Flag di Parità e sul Flag di Riporto. I modi in cui i flag sono influenzati dipendono dai risultati dell'operazione di negazione sull'operando specificato. Questi modi sono riassunti nel secondo paragrafo della sezione Note.
+Immediatamente sotto il mnemonico c'è un minigrafico dei flag della CPU nel registro RFlags. Come ho descritto in precedenza, il registro RFlags è una raccolta di valori a 1 bit che mantengono alcune informazioni essenziali sullo stato della macchina per brevi periodi di tempo. Molte (ma non tutte) istruzioni x64 modificano i valori di uno o più flag. I flag possono quindi essere testati singolarmente da una delle istruzioni Jump On Condition, che cambiano il corso del programma a seconda degli stati dei flag. Ognuno dei flag ha un nome e ciascun flag ha un simbolo nel minigrafico dei flag. Con il tempo imparerai a conoscere i flag attraverso i loro simboli di due caratteri, ma fino ad allora i nomi completi dei flag sono mostrati a destra del minigrafico. La maggior parte dei flag non viene utilizzata spesso (se non mai) nei lavori iniziali in linguaggio assembly. I flag a cui presterai più attenzione sono il Flag Zero (ZF) e il Flag di Riporto (CF). Ci sarà un asterisco (*) sotto il simbolo di qualsiasi flag influenzato dall'istruzione. Il modo in cui il flag è influenzato dipende da cosa fa l'istruzione. Dovrai dedurlo dalla sezione Note. Quando un'istruzione non influenza affatto i flag, la parola none apparirà nel minigrafico dei flag. Nella pagina di esempio qui, il minigrafico indica che l'istruzione NEG influisce sul Flag Overflow, sul Flag di Segno, sul Flag Zero, sul Flag di Riporto Ausiliario, sul Flag di Parità e sul Flag di Riporto. I modi in cui i flag sono influenzati dipendono dai risultati dell'operazione di negazione sull'operando specificato. Questi modi sono riassunti nel secondo paragrafo della sezione Note.
 </p>
 
 <div align=center>
@@ -8201,7 +13754,7 @@ Immediatamente sotto il mnemonico c'è un minigrafico dei flag della CPU nel reg
 ### Legal Forms
 
 <p align=justify>
-Le istruzioni possono includere più di una forma legale. La forma di un'istruzione varia in base al tipo e all'ordine degli operandi che le vengono passati. Ciò che le singole forme rappresentano effettivamente sono diversi codici operativi binari (<i>opcodes</i>). Ad esempio, sotto la superficie, l'istruzione <code>POP RAX</code> è il numero 058h, mentre l'istruzione <code>POP RSI</code> è il numero 05Eh. La maggior parte dei codici operativi x64 non sono singoli valori a 8 bit, e la maggior parte è lunga almeno due byte, spesso quattro o più. Quando vuoi utilizzare un'istruzione con un certo insieme di operandi, assicurati di controllare la sezione delle Forme Legali della guida di riferimento per quell'istruzione per assicurarti che la combinazione sia legale. Ora ci sono più forme legali rispetto ai vecchi tempi del DOS, e molte delle restrizioni residue riguardano i registri di segmento, che comunque non potrai usare quando scrivi normali applicazioni utente in modalità long a 64 bit. Nella pagina di riferimento dell'istruzione <code>NEG</code>, vedi che un registro di segmento non può essere un operando per NEG. (Se potesse, ci sarebbe un elemento NEG sr nell'elenco delle Forme Legali.)
+Le istruzioni possono includere più di una forma legale. La forma di un'istruzione varia in base al tipo e all'ordine degli operandi che le vengono passati. Ciò che le singole forme rappresentano effettivamente sono diversi codici operativi binari (<i>opcodes</i>). Ad esempio, sotto la superficie, l'istruzione POP RAX è il numero 058h, mentre l'istruzione POP RSI è il numero 05Eh. La maggior parte dei codici operativi x64 non sono singoli valori a 8 bit, e la maggior parte è lunga almeno due byte, spesso quattro o più. Quando vuoi utilizzare un'istruzione con un certo insieme di operandi, assicurati di controllare la sezione delle Forme Legali della guida di riferimento per quell'istruzione per assicurarti che la combinazione sia legale. Ora ci sono più forme legali rispetto ai vecchi tempi del DOS, e molte delle restrizioni residue riguardano i registri di segmento, che comunque non potrai usare quando scrivi normali applicazioni utente in modalità long a 64 bit. Nella pagina di riferimento dell'istruzione NEG, vedi che un registro di segmento non può essere un operando per NEG. (Se potesse, ci sarebbe un elemento NEG sr nell'elenco delle Forme Legali.)
 </p>
 
 ### Operand Symbols
@@ -8367,7 +13920,7 @@ _start:
 ```
 
 <p align=justify>
-Come hai visto quando l'hai eseguito, il programma <code>EATSYSCALL.ASM</code> visualizza una (breve) riga di testo sullo schermo: "Eat at Joe's!" Per questo, hai dovuto fornire 35 righe di testo all'assemblatore! Molte di quelle 35 righe sono commenti e non sono necessarie nel senso più stretto, ma fungono da documentazione interna per permetterti di capire cosa sta facendo il programma (o, cosa più importante, come lo sta facendo) sei mesi o un anno da adesso.
+Come hai visto quando l'hai eseguito, il programma EATSYSCALL.ASM visualizza una (breve) riga di testo sullo schermo: "Eat at Joe's!" Per questo, hai dovuto fornire 35 righe di testo all'assemblatore! Molte di quelle 35 righe sono commenti e non sono necessarie nel senso più stretto, ma fungono da documentazione interna per permetterti di capire cosa sta facendo il programma (o, cosa più importante, come lo sta facendo) sei mesi o un anno da adesso.
 </p>
 
 <p align=justify>
@@ -8449,7 +14002,7 @@ Un'etichetta è una sorta di segnalibro, che descrive un punto nel codice del pr
 
 <ul>
 	<li>
-		<p align=justify>Le etichette devono iniziare con una lettera, con un trattino basso, un punto o un punto interrogativo. Questi ultimi tre (<code>_</code>, <code>.</code>, <code>?</code>) hanno significati speciali per l'assemblatore, quindi non usarli finché non sai come l'assemblatore li interpreta.</p>
+		<p align=justify>Le etichette devono iniziare con una lettera, con un trattino basso, un punto o un punto interrogativo. Questi ultimi tre (_, ., ?) hanno significati speciali per l'assemblatore, quindi non usarli finché non sai come l'assemblatore li interpreta.</p>
 	</li>
 	<li>
 		<p align=justify>Le etichette devono essere seguite da due punti quando vengono definite. Questo è fondamentalmente ciò che dice a NASM che l'identificatore che si sta definendo è un'etichetta. NASM ignorerà la riga se non ci sono due punti e non segnalerà un errore, ma i due punti fissano la questione e impediscono che un mnemonico di istruzione digitato in modo errato venga scambiato per un'etichetta. Quindi usa i due punti!</p>
@@ -8468,13 +14021,13 @@ jmp GoHome
 ```
 
 <p align=justify>
-Nota che i due punti non vengono utilizzati qui. I due punti vengono posti solo dove l'etichetta è definita, non dove viene riferita. Pensa in questo modo: usa i due punti quando stai contrassegnando una posizione, non quando ci stai andando. C'è solo un'etichetta in <code>eatsyscall.asm</code>, e questa è un po' speciale. <b>L'etichetta <code>_start</code> indica dove inizia il programma</b>. (è sensibile alle maiuscole, quindi non provare a usare _START o _Start.) <b>Questa etichetta deve essere contrassegnata come globale nella parte superiore della sezione <code>.text</code></b>. Ora, se invece di utilizzare NASM (che è l'assemblatore a riga di comando) stai usando SASM, un assemblatore con interfaccia grafica (GUI), le cose cambiano un po'. Quando compili un programma in linguaggio assembly in SASM, l'etichetta _start diventa main. SASM usa il compilatore GNU C gcc per fungere da intermediario tra NASM e il linker Linux, ld. Quello che fa SASM, in un certo senso, è creare un programma C senza alcun codice C al suo interno. Tutti i programmi C devono avere un punto di partenza, e in un programma C quel punto di partenza è sempre main. Ci sono motivi per fare ciò che coinvolgono il collegamento di funzioni scritte in C al tuo programma assembly, come spiegherò più avanti. Ricorda questo: quando assembli da un makefile, usa _start. Quando assembli da dentro SASM, usa main.
+Nota che i due punti non vengono utilizzati qui. I due punti vengono posti solo dove l'etichetta è definita, non dove viene riferita. Pensa in questo modo: usa i due punti quando stai contrassegnando una posizione, non quando ci stai andando. C'è solo un'etichetta in eatsyscall.asm, e questa è un po' speciale. <b>L'etichetta _start indica dove inizia il programma</b>. (è sensibile alle maiuscole, quindi non provare a usare _START o _Start.) <b>Questa etichetta deve essere contrassegnata come globale nella parte superiore della sezione .text</b>. Ora, se invece di utilizzare NASM (che è l'assemblatore a riga di comando) stai usando SASM, un assemblatore con interfaccia grafica (GUI), le cose cambiano un po'. Quando compili un programma in linguaggio assembly in SASM, l'etichetta _start diventa main. SASM usa il compilatore GNU C gcc per fungere da intermediario tra NASM e il linker Linux, ld. Quello che fa SASM, in un certo senso, è creare un programma C senza alcun codice C al suo interno. Tutti i programmi C devono avere un punto di partenza, e in un programma C quel punto di partenza è sempre main. Ci sono motivi per fare ciò che coinvolgono il collegamento di funzioni scritte in C al tuo programma assembly, come spiegherò più avanti. Ricorda questo: quando assembli da un makefile, usa _start. Quando assembli da dentro SASM, usa main.
 </p>
 
 ### Variabili per i dati inizializzati
 
 <p align=justify>
-L'identificatore <code>EatMsg</code> nella sezione <code>.data</code> definisce una variabile. Specificamente, <b>EatMsg è una variabile di tipo stringa</b> (di cui parleremo tra poco), ma comunque, <b>come tutte le variabili, fa parte di una classe di elementi che chiamiamo dati inizializzati</b>: qualcosa che arriva con un valore e non solo una scatola vuota nella quale possiamo inserire un valore in un momento futuro. <b>Una variabile è definita associando un identificatore a una direttiva di definizione dei dati</b>. Le direttive di definizione dei dati appaiono in questo modo:
+L'identificatore EatMsg nella sezione .data definisce una variabile. Specificamente, <b>EatMsg è una variabile di tipo stringa</b> (di cui parleremo tra poco), ma comunque, <b>come tutte le variabili, fa parte di una classe di elementi che chiamiamo dati inizializzati</b>: qualcosa che arriva con un valore e non solo una scatola vuota nella quale possiamo inserire un valore in un momento futuro. <b>Una variabile è definita associando un identificatore a una direttiva di definizione dei dati</b>. Le direttive di definizione dei dati appaiono in questo modo:
 </p>
 
 ```asm
@@ -8485,13 +14038,13 @@ L'identificatore <code>EatMsg</code> nella sezione <code>.data</code> definisce 
 ```
 
 <p align=justify>
-Pensa alla direttiva <code>DB</code> come "Definisci Byte". <code>DB</code> riserva un byte di memoria per la memorizzazione dei dati. Pensa alla direttiva <code>DW</code> come "Definisci Parola". <code>DW</code> riserva una parola (16 bit, o due byte) di memoria per la memorizzazione dei dati. Pensa alla direttiva <code>DD</code> come "Definisci Doppio". <code>DD</code> riserva una doppia word in memoria per la memorizzazione. <code>DQ</code> significa "Definisci Quad", cioè una quad word, che ha una dimensione di 64 bit.
+Pensa alla direttiva DB come "Definisci Byte". DB riserva un byte di memoria per la memorizzazione dei dati. Pensa alla direttiva DW come "Definisci Parola". DW riserva una parola (16 bit, o due byte) di memoria per la memorizzazione dei dati. Pensa alla direttiva DD come "Definisci Doppio". DD riserva una doppia word in memoria per la memorizzazione. DQ significa "Definisci Quad", cioè una quad word, che ha una dimensione di 64 bit.
 </p>
 
 ### Variabili Stringa
 
 <p align=justify>
-Le variabili stringa sono un caso speciale interessante. Una stringa è proprio questo: <b>una sequenza di caratteri</b>, tutti in fila in memoria. Una variabile stringa è definita in <code>eatsyscall.asm</code>:
+Le variabili stringa sono un caso speciale interessante. Una stringa è proprio questo: <b>una sequenza di caratteri</b>, tutti in fila in memoria. Una variabile stringa è definita in eatsyscall.asm:
 </p>
 
 ```asm
@@ -8499,7 +14052,7 @@ Le variabili stringa sono un caso speciale interessante. Una stringa è proprio 
  ```
 
 <p align=justify>
-Le stringhe sono un'eccezione alla regola generale secondo cui una direttiva di definizione dei dati riserva una particolare quantità di memoria. <b>La direttiva DB di solito riserva solo un byte. Tuttavia, una stringa può essere di qualsiasi lunghezza tu desideri</b>. Poiché non esiste una direttiva di dati che riservi 17 byte o 42, le stringhe sono definite semplicemente associando un'etichetta al punto in cui la stringa inizia. L'etichetta EatMsg e la sua direttiva DB specificano un byte in memoria come punto di partenza della stringa. Il numero di caratteri nella stringa è ciò che dice all'assemblatore quanti byte di memoria riservare per quella stringa. Possono essere utilizzati caratteri di singola virgoletta ("~) o di doppia virgoletta (") per delimitare una stringa, e la scelta spetta a te, a meno che tu non stia definendo un valore di stringa che contiene uno o più caratteri di virgoletta. Nota che in <code>eatsyscall.asm</code> la variabile di stringa EatMsg contiene un carattere di singola virgoletta usato come apostrofo. Poiché la stringa contiene un carattere di singola virgoletta, devi delimitarla con doppi apici. Vale anche il contrario: se definisci una stringa che contiene uno o più caratteri di doppia virgoletta, devi delimitarla usando caratteri di singola virgoletta:
+Le stringhe sono un'eccezione alla regola generale secondo cui una direttiva di definizione dei dati riserva una particolare quantità di memoria. <b>La direttiva DB di solito riserva solo un byte. Tuttavia, una stringa può essere di qualsiasi lunghezza tu desideri</b>. Poiché non esiste una direttiva di dati che riservi 17 byte o 42, le stringhe sono definite semplicemente associando un'etichetta al punto in cui la stringa inizia. L'etichetta EatMsg e la sua direttiva DB specificano un byte in memoria come punto di partenza della stringa. Il numero di caratteri nella stringa è ciò che dice all'assemblatore quanti byte di memoria riservare per quella stringa. Possono essere utilizzati caratteri di singola virgoletta ("~) o di doppia virgoletta (") per delimitare una stringa, e la scelta spetta a te, a meno che tu non stia definendo un valore di stringa che contiene uno o più caratteri di virgoletta. Nota che in eatsyscall.asm la variabile di stringa EatMsg contiene un carattere di singola virgoletta usato come apostrofo. Poiché la stringa contiene un carattere di singola virgoletta, devi delimitarla con doppi apici. Vale anche il contrario: se definisci una stringa che contiene uno o più caratteri di doppia virgoletta, devi delimitarla usando caratteri di singola virgoletta:
 </p>
 
 ```asm
@@ -8520,7 +14073,7 @@ Ma a che serve il numero letterale 10 usato nei precedenti esempi di stringa? In
 </p>
 
 <p align=justify>
-Nel lavoro di assemblaggio ordinario, quasi tutte le variabili di stringa sono definite utilizzando la direttiva <code>DB</code> e possono essere considerate stringhe di byte. (Un carattere ASCII è grande un byte.) Puoi definire variabili di stringa utilizzando <code>DW</code>, <code>DD</code> o <code>DQ</code>, ma vengono gestite in modo leggermente diverso rispetto a quelle definite con <code>DB</code>. Considera queste variabili:
+Nel lavoro di assemblaggio ordinario, quasi tutte le variabili di stringa sono definite utilizzando la direttiva DB e possono essere considerate stringhe di byte. (Un carattere ASCII è grande un byte.) Puoi definire variabili di stringa utilizzando DW, DD o DQ, ma vengono gestite in modo leggermente diverso rispetto a quelle definite con DB. Considera queste variabili:
 </p>
 
  ```asm
@@ -8530,7 +14083,7 @@ Nel lavoro di assemblaggio ordinario, quasi tutte le variabili di stringa sono d
  ```
 
  <p align=justify>
-La direttiva <code>DW</code> definisce una variabile a lunghezza parola (word): una parola (16 bit) può contenere due caratteri a 8 bit. Allo stesso modo, la direttiva <code>DD</code> definisce una variabile a doppia parola (32 bit, double word), che può contenere quattro caratteri a 8 bit. La direttiva <code>DQ</code> definisce una variabile a quadrupla parola, che può contenere otto caratteri a 8 bit. La gestione differente si verifica quando carichi queste stringhe nominate nei registri. Considera queste tre istruzioni:
+La direttiva DW definisce una variabile a lunghezza parola (word): una parola (16 bit) può contenere due caratteri a 8 bit. Allo stesso modo, la direttiva DD definisce una variabile a doppia parola (32 bit, double word), che può contenere quattro caratteri a 8 bit. La direttiva DQ definisce una variabile a quadrupla parola, che può contenere otto caratteri a 8 bit. La gestione differente si verifica quando carichi queste stringhe nominate nei registri. Considera queste tre istruzioni:
  </p>
 
  ```asm
@@ -8540,13 +14093,13 @@ La direttiva <code>DW</code> definisce una variabile a lunghezza parola (word): 
 ```
 
 <p align=justify>
-<b>Ricorda qui che per spostare i dati da una variabile in un registro, devi inserire il nome della variabile (che è il suo indirizzo) tra parentesi quadre</b>. Senza le parentesi quadre, ciò che sposti nel registro è l'indirizzo della variabile in memoria, non i dati che esistono a quell'indirizzo. Nella prima istruzione <code>MOV</code>, i caratteri <code>CQ</code> vengono posizionati nel registro <code>AX</code>, con il carattere <code>C</code> nel registro <code>AL</code> e il carattere <code>Q</code> in <code>AH</code>. Nella seconda istruzione <code>MOV</code>, i caratteri <code>Stop</code> vengono caricati in <code>EDX</code> <b>in ordine little-endian</b>, con il carattere <code>S</code> nel byte di ordine più basso di <code>EDX</code>, il carattere <code>t</code> nel secondo byte più basso, e così via. Se guardi la stringa <code>QuadString</code> caricata in <code>RAX</code> da SASM, vedrai che contiene "oOORAGNAK" scritto al contrario. Caricare stringhe in un singolo registro in questo modo (supponendo che ci stiano!) è molto meno comune (e meno utile) rispetto a usare <code>DB</code> per definire stringhe di caratteri, e non ti capiterà spesso di farlo. Poiché <code>eatsyscall.asm</code> non definisce dati non inizializzati nella sua sezione <code>.bss</code>, rimanderò la discussione di tali definizioni finché non esamineremo il prossimo programma di esempio.
+<b>Ricorda qui che per spostare i dati da una variabile in un registro, devi inserire il nome della variabile (che è il suo indirizzo) tra parentesi quadre</b>. Senza le parentesi quadre, ciò che sposti nel registro è l'indirizzo della variabile in memoria, non i dati che esistono a quell'indirizzo. Nella prima istruzione MOV, i caratteri CQ vengono posizionati nel registro AX, con il carattere C nel registro AL e il carattere Q in AH. Nella seconda istruzione MOV, i caratteri Stop vengono caricati in EDX <b>in ordine little-endian</b>, con il carattere S nel byte di ordine più basso di EDX, il carattere t nel secondo byte più basso, e così via. Se guardi la stringa QuadString caricata in RAX da SASM, vedrai che contiene "oOORAGNAK" scritto al contrario. Caricare stringhe in un singolo registro in questo modo (supponendo che ci stiano!) è molto meno comune (e meno utile) rispetto a usare DB per definire stringhe di caratteri, e non ti capiterà spesso di farlo. Poiché eatsyscall.asm non definisce dati non inizializzati nella sua sezione .bss, rimanderò la discussione di tali definizioni finché non esamineremo il prossimo programma di esempio.
 </p>
 
 ### Derivare la lunghezza della stringa con EQU e $
 
 <p align=justify>
-Sotto la definizione di <code>EatMsg</code> nel file <code>eatsyscall.asm</code> c'è un costrutto interessante.
+Sotto la definizione di EatMsg nel file eatsyscall.asm c'è un costrutto interessante.
 </p>
 
 ```asm
@@ -8554,7 +14107,7 @@ Sotto la definizione di <code>EatMsg</code> nel file <code>eatsyscall.asm</code>
 ```
 
 <p align=justify>
-Questo è un esempio di una classe più ampia di cose chiamate calcoli a tempo di assemblaggio. Quello che stiamo facendo qui è calcolare la lunghezza della variabile stringa <code>EatMsg</code> e rendere quel valore di lunghezza accessibile al codice del programma attraverso l'etichetta <code>EatLen</code>. In qualsiasi punto del tuo programma, se hai bisogno di usare la lunghezza di <code>EatMsg</code>, puoi usare l'etichetta <code>EatLen</code>. Una dichiarazione contenente la direttiva <code>EQU</code> è chiamata <b>un'uguaglianza o simbolo</b> (<i>equate</i>). <b>Un simbolo è un modo per associare un valore a un'etichetta</b>. Tale etichetta viene quindi trattata in modo molto simile a una costante C. Ogni volta che l'assemblatore incontra un'equazione durante l'assemblaggio, sostituirà il nome dell'equazione con il suo valore. Ecco un esempio:
+Questo è un esempio di una classe più ampia di cose chiamate calcoli a tempo di assemblaggio. Quello che stiamo facendo qui è calcolare la lunghezza della variabile stringa EatMsg e rendere quel valore di lunghezza accessibile al codice del programma attraverso l'etichetta EatLen. In qualsiasi punto del tuo programma, se hai bisogno di usare la lunghezza di EatMsg, puoi usare l'etichetta EatLen. Una dichiarazione contenente la direttiva EQU è chiamata <b>un'uguaglianza o simbolo</b> (<i>equate</i>). <b>Un simbolo è un modo per associare un valore a un'etichetta</b>. Tale etichetta viene quindi trattata in modo molto simile a una costante C. Ogni volta che l'assemblatore incontra un'equazione durante l'assemblaggio, sostituirà il nome dell'equazione con il suo valore. Ecco un esempio:
 </p>
 
 ```asm
@@ -8562,7 +14115,7 @@ Questo è un esempio di una classe più ampia di cose chiamate calcoli a tempo d
 ```
 
 <p align=justify>
-Qui, stiamo dicendo all'assemblatore che l'etichetta <code>FieldWidth</code> rappresenta il valore numerico 10. Una volta definito il simbolo, le seguenti due istruzioni macchina di seguito fanno esattamente la stessa cosa:
+Qui, stiamo dicendo all'assemblatore che l'etichetta FieldWidth rappresenta il valore numerico 10. Una volta definito il simbolo, le seguenti due istruzioni macchina di seguito fanno esattamente la stessa cosa:
 </p>
 
 ```asm
@@ -8615,7 +14168,7 @@ Quali sono le probabilità che tu ti scordi di aggiornare l'equivalente di EatLe
 ```
 
 <p align=justify>
-Tutto dipende dal token magico "qui", espresso dall'umile simbolo del dollaro. Durante la fase di assemblaggio, l'assemblatore analizza i tuoi file di codice sorgente e costruisce un file intermedio con estensione <code>.o</code> (il file oggetto). Il token <code>$</code> segna il punto in cui l'assemblatore si trova nella costruzione del file intermedio (non del file di codice sorgente!). L'etichetta EatMsg segna l'inizio della stringa dello slogan pubblicitario. Immediatamente dopo l'ultimo carattere di EatMsg c'è l'etichetta EatLen. Ricorda, le etichette non sono dati, ma posizioni e, nel caso del linguaggio assembly, indirizzi. Quando l'assemblatore raggiunge l'etichetta EatLen, il valore di <code>$</code> è la posizione immediatamente dopo l'ultimo carattere di EatMsg. Il calcolo durante l'assemblaggio consiste nel prendere la posizione rappresentata dal token <code>$</code> (che, quando il calcolo è completato, contiene la posizione appena dopo la fine della stringa EatMsg) e sottrarre da essa la posizione dell'inizio della stringa EatMsg. <code>Fine = Inizio + Lunghezza</code>. Questo calcolo viene eseguito ogni volta che assembli il file, quindi ogni volta che modifichi il contenuto di EatMsg, il valore di EatLen sarà ricalcolato automaticamente. Puoi cambiare il testo all'interno della stringa come preferisci e non dover mai preoccuparti di cambiare un valore di lunghezza da nessuna parte nel programma. Il calcolo durante l'assemblaggio ha altri usi, ma questo è il più comune e l'unico che probabilmente userai come principiante.
+Tutto dipende dal token magico "qui", espresso dall'umile simbolo del dollaro. Durante la fase di assemblaggio, l'assemblatore analizza i tuoi file di codice sorgente e costruisce un file intermedio con estensione .o (il file oggetto). Il token $ segna il punto in cui l'assemblatore si trova nella costruzione del file intermedio (non del file di codice sorgente!). L'etichetta EatMsg segna l'inizio della stringa dello slogan pubblicitario. Immediatamente dopo l'ultimo carattere di EatMsg c'è l'etichetta EatLen. Ricorda, le etichette non sono dati, ma posizioni e, nel caso del linguaggio assembly, indirizzi. Quando l'assemblatore raggiunge l'etichetta EatLen, il valore di $ è la posizione immediatamente dopo l'ultimo carattere di EatMsg. Il calcolo durante l'assemblaggio consiste nel prendere la posizione rappresentata dal token $ (che, quando il calcolo è completato, contiene la posizione appena dopo la fine della stringa EatMsg) e sottrarre da essa la posizione dell'inizio della stringa EatMsg. Fine = Inizio + Lunghezza. Questo calcolo viene eseguito ogni volta che assembli il file, quindi ogni volta che modifichi il contenuto di EatMsg, il valore di EatLen sarà ricalcolato automaticamente. Puoi cambiare il testo all'interno della stringa come preferisci e non dover mai preoccuparti di cambiare un valore di lunghezza da nessuna parte nel programma. Il calcolo durante l'assemblaggio ha altri usi, ma questo è il più comune e l'unico che probabilmente userai come principiante.
 </p>
 
 
@@ -8639,7 +14192,7 @@ Nell'architettura x64, la parte superiore dello stack è contrassegnata da un re
 </p>
 
 <p align=justify>
-A rendere le cose un po' più difficili da visualizzare è il fatto che <b>lo stack Intel è fondamentalmente capovolto</b>. Se immagini un'area di memoria con l'indirizzo più basso nella parte inferiore e l'indirizzo più alto nella parte superiore, lo stack inizia verso l'alto, dal soffitto, e, man mano che gli elementi vengono spinti sullo stack, cresce verso il basso, verso la memoria bassa. La figura di seguito mostra in termini generali come Linux organizza la memoria che fornisce al programma quando quest'ultimo viene eseguito. Nella parte inferiore della memoria ci sono le tre sezioni che definisci nel tuo programma: <code>.text</code> agli indirizzi più bassi, seguita da <code>.data</code>, seguita da <code>.bss</code>. Lo stack si trova all'estremità opposta del blocco di memoria del programma. Tra la fine della sezione <code>.bss</code> e la parte superiore dello stack c'è fondamentalmente memoria vuota. I programmi C utilizzano abitualmente questo spazio di memoria libero per allocare variabili "al volo" in una regione chiamata <b>heap</b>. Anche i programmi assembly possono farlo, anche se non è così facile come sembra. Ho disegnato l'heap nella figura perché è importante sapere dove si trova nella mappa di memoria dello spazio utente. Analogamente allo stack, l'heap aumenta o si riduce man mano che le strutture di dati vengono create (allocando memoria) o distrutte (rilasciando memoria). La cosa importante da ricordare (soprattutto se hai avuto precedenti esperienze di scrittura di assembly per DOS) è che non siamo più in modalità reale. Quando l'app inizia l'esecuzione, Linux riserva un intervallo contiguo di memoria virtuale per lo stack che, per impostazione predefinita, è di circa 8 gigabyte. (L'esatta quantità di memoria virtuale dipende da come Linux è configurato e può variare.) Di questi, solo poche pagine vengono effettivamente mappate nella parte superiore dello spazio degli indirizzi virtuali. Quando lo stack cresce verso il basso ed esaurisce la memoria fisica, si verifica un errore di pagina e il sistema operativo mappa una quantità maggiore di memoria fisica nello spazio degli indirizzi virtuali, che quindi diventa disponibile per l'uso dello stack. Questo continua fino a quando l'intero spazio virtuale non è esaurito, cosa che in pratica non accade mai, a meno che il programma non stia consumando voracemente lo spazio dello stack a causa di un bug. La memoria virtuale è una cosa meravigliosa ma complicata. Il punto è che lo stack della tua app può avere praticamente tutta la memoria di cui ha bisogno grazie alla memoria virtuale e non devi più preoccuparti di rimanere senza. L'unica cautela da avere guardando la figura di seguito è che le dimensioni relative delle sezioni del programma rispetto allo stack non dovrebbero essere viste come letterali. Si possono avere migliaia di byte di codice di programma e decine di migliaia di byte di dati in un programma assembly mediocre, ma rispetto a questo, lo stack è ancora piuttosto piccolo: poche centinaia di byte al massimo e generalmente meno.
+A rendere le cose un po' più difficili da visualizzare è il fatto che <b>lo stack Intel è fondamentalmente capovolto</b>. Se immagini un'area di memoria con l'indirizzo più basso nella parte inferiore e l'indirizzo più alto nella parte superiore, lo stack inizia verso l'alto, dal soffitto, e, man mano che gli elementi vengono spinti sullo stack, cresce verso il basso, verso la memoria bassa. La figura di seguito mostra in termini generali come Linux organizza la memoria che fornisce al programma quando quest'ultimo viene eseguito. Nella parte inferiore della memoria ci sono le tre sezioni che definisci nel tuo programma: .text agli indirizzi più bassi, seguita da .data, seguita da .bss. Lo stack si trova all'estremità opposta del blocco di memoria del programma. Tra la fine della sezione .bss e la parte superiore dello stack c'è fondamentalmente memoria vuota. I programmi C utilizzano abitualmente questo spazio di memoria libero per allocare variabili "al volo" in una regione chiamata <b>heap</b>. Anche i programmi assembly possono farlo, anche se non è così facile come sembra. Ho disegnato l'heap nella figura perché è importante sapere dove si trova nella mappa di memoria dello spazio utente. Analogamente allo stack, l'heap aumenta o si riduce man mano che le strutture di dati vengono create (allocando memoria) o distrutte (rilasciando memoria). La cosa importante da ricordare (soprattutto se hai avuto precedenti esperienze di scrittura di assembly per DOS) è che non siamo più in modalità reale. Quando l'app inizia l'esecuzione, Linux riserva un intervallo contiguo di memoria virtuale per lo stack che, per impostazione predefinita, è di circa 8 gigabyte. (L'esatta quantità di memoria virtuale dipende da come Linux è configurato e può variare.) Di questi, solo poche pagine vengono effettivamente mappate nella parte superiore dello spazio degli indirizzi virtuali. Quando lo stack cresce verso il basso ed esaurisce la memoria fisica, si verifica un errore di pagina e il sistema operativo mappa una quantità maggiore di memoria fisica nello spazio degli indirizzi virtuali, che quindi diventa disponibile per l'uso dello stack. Questo continua fino a quando l'intero spazio virtuale non è esaurito, cosa che in pratica non accade mai, a meno che il programma non stia consumando voracemente lo spazio dello stack a causa di un bug. La memoria virtuale è una cosa meravigliosa ma complicata. Il punto è che lo stack della tua app può avere praticamente tutta la memoria di cui ha bisogno grazie alla memoria virtuale e non devi più preoccuparti di rimanere senza. L'unica cautela da avere guardando la figura di seguito è che le dimensioni relative delle sezioni del programma rispetto allo stack non dovrebbero essere viste come letterali. Si possono avere migliaia di byte di codice di programma e decine di migliaia di byte di dati in un programma assembly mediocre, ma rispetto a questo, lo stack è ancora piuttosto piccolo: poche centinaia di byte al massimo e generalmente meno.
 </p>
 
 <div align=center>
@@ -8655,12 +14208,12 @@ Puoi inserire i dati nello stack in diversi modi, ma il modo più semplice compo
 <ul>
 	<li>
 		<p align=justify>
-			<code>PUSH</code> inserisce nello stack (spinge, <i>push</i>) un registro a 16 bit o 64 bit o un valore di memoria specificato da te nel tuo codice sorgente. Nota che <b>non puoi spingere un valore a 8 bit o a 32 bit nello stack!</b> Riceverai un errore se ci provi.
+			PUSH inserisce nello stack (spinge, <i>push</i>) un registro a 16 bit o 64 bit o un valore di memoria specificato da te nel tuo codice sorgente. Nota che <b>non puoi spingere un valore a 8 bit o a 32 bit nello stack!</b> Riceverai un errore se ci provi.
 		</p>
 	</li>
 	<li>
 		<p align=justify>
-			<code>PUSHFQ</code> spinge l'intero registro RFlags a 64 bit nello stack. (La Q significa "quadword" qui.) Questo nonostante più della metà dei flag in RFlags siano riservati e non abbiano alcun uso. Non utilizzerai spesso PUSHFQ, ma è disponibile se ne hai bisogno.
+			PUSHFQ spinge l'intero registro RFlags a 64 bit nello stack. (La Q significa "quadword" qui.) Questo nonostante più della metà dei flag in RFlags siano riservati e non abbiano alcun uso. Non utilizzerai spesso PUSHFQ, ma è disponibile se ne hai bisogno.
 		</p>
 	</li>
 </ul>
@@ -8677,11 +14230,11 @@ Ecco alcuni esempi delle istruzioni della famiglia PUSH in uso:
 ```
 
 <p align=justify>
-Nota che <code>PUSHFQ</code> non richiede operandi. Genererai un errore di assemblatore se provi a dare operandi a PUSHFQ; l'istruzione spinge il registro RFlags a 64 bit nello stack, e questo è tutto ciò che è in grado di fare.
+Nota che PUSHFQ non richiede operandi. Genererai un errore di assemblatore se provi a dare operandi a PUSHFQ; l'istruzione spinge il registro RFlags a 64 bit nello stack, e questo è tutto ciò che è in grado di fare.
 </p>
 
 <p align=justify>
-<code>PUSH</code> funziona in questo modo, per operandi a 64 bit: prima RSP viene decrementato di 64 bit (otto byte), in modo che punti a un'area vuota di memoria nello stack lunga otto byte. Poi ciò che deve essere spinto nello stack viene scritto in memoria all'indirizzo in RSP. Voilà! I dati sono al sicuro nello stack, e RSP è sceso di otto byte verso il fondo della memoria. <code>PUSH</code> può anche spingere valori a 16 bit nello stack e, quando lo fa, l'unica differenza è che RSP si sposta di due byte invece che otto. Tutta la memoria tra la posizione iniziale di RSP e la sua posizione attuale (la cima dello stack) contiene dati reali che sono stati esplicitamente spinti nello stack e presumibilmente verranno estratti dallo stack in seguito. Alcuni di questi dati sono stati spinti nello stack dal sistema operativo prima di eseguire il tuo programma.
+PUSH funziona in questo modo, per operandi a 64 bit: prima RSP viene decrementato di 64 bit (otto byte), in modo che punti a un'area vuota di memoria nello stack lunga otto byte. Poi ciò che deve essere spinto nello stack viene scritto in memoria all'indirizzo in RSP. Voilà! I dati sono al sicuro nello stack, e RSP è sceso di otto byte verso il fondo della memoria. PUSH può anche spingere valori a 16 bit nello stack e, quando lo fa, l'unica differenza è che RSP si sposta di due byte invece che otto. Tutta la memoria tra la posizione iniziale di RSP e la sua posizione attuale (la cima dello stack) contiene dati reali che sono stati esplicitamente spinti nello stack e presumibilmente verranno estratti dallo stack in seguito. Alcuni di questi dati sono stati spinti nello stack dal sistema operativo prima di eseguire il tuo programma.
 </p>
 
 <p align=justify>
@@ -8691,7 +14244,7 @@ Cosa può e non può essere spinto nello stack in modalità <b>long x64</b> è r
 ### Istruzione Pop
 
 <p align=justify>
-In generale, ciò che viene spinto deve essere rimosso, altrimenti si può incorrere in diversi tipi di problemi. Rimuovere un elemento di dati dallo stack si fa più facilmente con un'altra coppia di istruzioni, <code>POP</code> e <code>POPFQ</code>. Come ci si potrebbe aspettare, <code>POP</code> è l'istruzione generale per rimuovere un elemento alla volta, mentre <code>POPFQ</code> è dedicata alla rimozione dei flag del registro RFlags.
+In generale, ciò che viene spinto deve essere rimosso, altrimenti si può incorrere in diversi tipi di problemi. Rimuovere un elemento di dati dallo stack si fa più facilmente con un'altra coppia di istruzioni, POP e POPFQ. Come ci si potrebbe aspettare, POP è l'istruzione generale per rimuovere un elemento alla volta, mentre POPFQ è dedicata alla rimozione dei flag del registro RFlags.
 </p>
 
 ```asm
@@ -8702,13 +14255,13 @@ In generale, ciò che viene spinto deve essere rimosso, altrimenti si può incor
 ```
 
 <p align=justify>
-Come per <code>PUSH</code>, <code>POP</code> opera solo su operandi a 16 bit o 64 bit. Non cercare di estrarre dati dallo stack in un registro a 8 bit o 32 bit come AH o ECX. <code>POP</code> funziona praticamente allo stesso modo di <code>PUSH</code>, ma al contrario. Come con <code>PUSH</code>, <b>quanto viene estratto dallo stack dipende dalla dimensione dell'operando</b>. Estrarre dallo stack in un registro a 16 bit preleva i due byte superiori dallo stack. Estrarre dallo stack in un registro a 64 bit preleva gli otto byte superiori dallo stack. Nota che niente nella CPU né in Linux ricorda le dimensioni degli elementi dati che posizioni nello stack. Spetta a te conoscere la dimensione dell'ultimo elemento inserito nello stack. Se l'ultimo elemento che hai inserito nello stack era un registro a 16 bit, estrarre dallo stack in un registro a 64 bit porterà via sei byte in più dallo stack rispetto a quelli che hai inserito. Questo è chiamato <b>disallineamento dello stack</b> e non è altro che un problema, uno dei motivi per cui dovresti lavorare con registri a 64 bit e valori di memoria ogni volta che puoi ed evitare di usare lo stack con valori a 16 bit. Quando un'istruzione <code>POP</code> viene eseguita, le cose funzionano in quest'ordine: prima, i dati all'indirizzo attualmente memorizzato in RSP vengono copiati dallo stack e collocati nell'operando di <code>POP</code>, qualunque tu abbia specificato. Dopo di che, RSP viene incrementato (anziché decrementato) della dimensione dell'operando, di 16 o 64 bit, in modo che di fatto RSP si muova rispettivamente di due o otto byte verso l'alto nello stack, lontano dalla memoria bassa. è significativo che RSP venga decrementato prima di posizionare una parola nello stack al momento di <code>PUSH</code>, ma incrementato dopo aver rimosso una parola dallo stack al momento di <code>POP</code>. Alcune altre CPU al di fuori dell'universo x86 operano in modo opposto, il che va bene: basta non confonderle. Per x86/x64, questo è sempre vero: a meno che lo stack non sia completamente vuoto, RSP punta a dati reali, non a spazio vuoto. Di solito, non devi ricordare questo fatto, poiché <code>PUSH</code> e <code>POP</code> lo gestiscono tutto per te e non devi tenere traccia manualmente di ciò a cui RSP punta.
+Come per PUSH, POP opera solo su operandi a 16 bit o 64 bit. Non cercare di estrarre dati dallo stack in un registro a 8 bit o 32 bit come AH o ECX. POP funziona praticamente allo stesso modo di PUSH, ma al contrario. Come con PUSH, <b>quanto viene estratto dallo stack dipende dalla dimensione dell'operando</b>. Estrarre dallo stack in un registro a 16 bit preleva i due byte superiori dallo stack. Estrarre dallo stack in un registro a 64 bit preleva gli otto byte superiori dallo stack. Nota che niente nella CPU né in Linux ricorda le dimensioni degli elementi dati che posizioni nello stack. Spetta a te conoscere la dimensione dell'ultimo elemento inserito nello stack. Se l'ultimo elemento che hai inserito nello stack era un registro a 16 bit, estrarre dallo stack in un registro a 64 bit porterà via sei byte in più dallo stack rispetto a quelli che hai inserito. Questo è chiamato <b>disallineamento dello stack</b> e non è altro che un problema, uno dei motivi per cui dovresti lavorare con registri a 64 bit e valori di memoria ogni volta che puoi ed evitare di usare lo stack con valori a 16 bit. Quando un'istruzione POP viene eseguita, le cose funzionano in quest'ordine: prima, i dati all'indirizzo attualmente memorizzato in RSP vengono copiati dallo stack e collocati nell'operando di POP, qualunque tu abbia specificato. Dopo di che, RSP viene incrementato (anziché decrementato) della dimensione dell'operando, di 16 o 64 bit, in modo che di fatto RSP si muova rispettivamente di due o otto byte verso l'alto nello stack, lontano dalla memoria bassa. è significativo che RSP venga decrementato prima di posizionare una parola nello stack al momento di PUSH, ma incrementato dopo aver rimosso una parola dallo stack al momento di POP. Alcune altre CPU al di fuori dell'universo x86 operano in modo opposto, il che va bene: basta non confonderle. Per x86/x64, questo è sempre vero: a meno che lo stack non sia completamente vuoto, RSP punta a dati reali, non a spazio vuoto. Di solito, non devi ricordare questo fatto, poiché PUSH e POP lo gestiscono tutto per te e non devi tenere traccia manualmente di ciò a cui RSP punta.
 </p>
 
 ### PUSHA E POPA sono stati rimossi
 
 <p align=justify>
-Quasi tutto ciò che avevi nell'assembly a 32 bit è ancora presente nell'assembly x64. Alcune cose sono cambiate, ma molto poco è stato rimosso quando x86 è diventato x64. Sono stati fatti dei sacrifici. Quattro istruzioni sono completamente scomparse: <code>PUSHA</code>, <code>PUSHAD</code>, <code>POPA</code> e <code>POPAD</code>. Nelle architetture precedenti, <b>queste istruzioni venivano utilizzate per inserire o estrarre tutti i registri a scopo generale contemporaneamente</b>. Quindi, perché sono scomparse? Non ho mai trovato una spiegazione autorevole, ma ho una teoria: ci sono molti più registri a scopo generale in x64. Spingere 15 registri a 64 bit nello stack invece di 7 registri a 32 bit occupa molto spazio nello stack. (Il puntatore dello stack ESP non era influenzato da PUSHA/POPA per ovvi motivi, dato che ESP definisce lo stack!) Se vuoi preservare i registri a scopo generale nello stack per qualche motivo, dovrai inserirli ed estrarli singolarmente.
+Quasi tutto ciò che avevi nell'assembly a 32 bit è ancora presente nell'assembly x64. Alcune cose sono cambiate, ma molto poco è stato rimosso quando x86 è diventato x64. Sono stati fatti dei sacrifici. Quattro istruzioni sono completamente scomparse: PUSHA, PUSHAD, POPA e POPAD. Nelle architetture precedenti, <b>queste istruzioni venivano utilizzate per inserire o estrarre tutti i registri a scopo generale contemporaneamente</b>. Quindi, perché sono scomparse? Non ho mai trovato una spiegazione autorevole, ma ho una teoria: ci sono molti più registri a scopo generale in x64. Spingere 15 registri a 64 bit nello stack invece di 7 registri a 32 bit occupa molto spazio nello stack. (Il puntatore dello stack ESP non era influenzato da PUSHA/POPA per ovvi motivi, dato che ESP definisce lo stack!) Se vuoi preservare i registri a scopo generale nello stack per qualche motivo, dovrai inserirli ed estrarli singolarmente.
 </p>
 
 ### Push e Pop in dettaglio
@@ -8743,7 +14296,7 @@ Ogni volta che uno dei registri a 16 bit viene inserito nello stack, RSP viene d
 ```
 
 <p align=justify>
-Vai in modalità debug ed esegui passo-passo queste istruzioni, osservando sia il puntatore dello stack RSP sia i quattro registri a 16 bit dopo ogni passo. Puoi seguire l'azione anche nella figura qui sopra. Sì, è un modo indiretto piuttosto complesso per copiare il valore di CX in DX. <code>MOV DX,CX</code> è molto più veloce e diretto. Tuttavia, a volte è necessario spostare i valori dei registri tramite lo stack. Ricorda che <b>l'istruzione MOV non opererà sul registro RFlags</b>. Se vuoi caricare una copia di RFlags in un registro a 64 bit, devi prima spingere RFlags nello stack con PUSHFQ e poi estrarre il valore dei flag dallo stack nel registro di tua scelta con POP. Quindi, per ottenere RFlags in RBX, si utilizza il seguente codice. Puoi vederlo funzionare mettendo queste righe in un sandbox e procedendo passo-passo attraverso di esse.
+Vai in modalità debug ed esegui passo-passo queste istruzioni, osservando sia il puntatore dello stack RSP sia i quattro registri a 16 bit dopo ogni passo. Puoi seguire l'azione anche nella figura qui sopra. Sì, è un modo indiretto piuttosto complesso per copiare il valore di CX in DX. MOV DX,CX è molto più veloce e diretto. Tuttavia, a volte è necessario spostare i valori dei registri tramite lo stack. Ricorda che <b>l'istruzione MOV non opererà sul registro RFlags</b>. Se vuoi caricare una copia di RFlags in un registro a 64 bit, devi prima spingere RFlags nello stack con PUSHFQ e poi estrarre il valore dei flag dallo stack nel registro di tua scelta con POP. Quindi, per ottenere RFlags in RBX, si utilizza il seguente codice. Puoi vederlo funzionare mettendo queste righe in un sandbox e procedendo passo-passo attraverso di esse.
 </p>
 
 ```asm
@@ -8753,7 +14306,7 @@ Vai in modalità debug ed esegui passo-passo queste istruzioni, osservando sia i
 ```
 
 <p align=justify>
-Sebbene tu possa ripristinare i valori dei flag in RFlags utilizzando <code>POPFQ</code>, non tutti i bit di RFlags possono essere modificati estraendoli dallo stack in RFlags. I bit VM e RF non sono influenzati da POPFQ. Piccole insidie come questa suggeriscono che non dovresti cercare di salvare e ripristinare i flag finché non sai con precisione cosa stai facendo.
+Sebbene tu possa ripristinare i valori dei flag in RFlags utilizzando POPFQ, non tutti i bit di RFlags possono essere modificati estraendoli dallo stack in RFlags. I bit VM e RF non sono influenzati da POPFQ. Piccole insidie come questa suggeriscono che non dovresti cercare di salvare e ripristinare i flag finché non sai con precisione cosa stai facendo.
 </p>
 
 ### Syscall del kernel
@@ -8763,11 +14316,11 @@ Lo stack dovrebbe essere considerato un luogo dove riporre temporaneamente le co
 </p>
 
 <p align=justify>
-Tutto il resto in <code>eatsyscall.asm</code> è preparazione per l'unica istruzione che esegue il vero lavoro del programma: visualizzare una riga di testo nella console di Linux. Al cuore del programma c'è una chiamata al sistema operativo Linux. Una seconda chiamata a Linux è alla fine, quando il programma si conclude e deve informare Linux che ha finito. Ci sono diverse centinaia di servizi del kernel Linux disponibili. Uno dei servizi che Linux fornisce è un semplice accesso in modalità testo al display del tuo PC. Per le esigenze di <code>eatsyscall.asm</code>, che è solo una lezione per scrivere e far funzionare il tuo primo programma in linguaggio assembly, servizi semplici sono sufficienti. Quindi, come utilizziamo i servizi di Linux? Se hai guardato da vicino <code>eatsyscall.asm</code>, dovresti ricordare due istanze dell'istruzione macchina <code>SYSCALL</code>. Nelle istanze x64 di Linux, l'istruzione <code>SYSCALL</code> è il modo in cui accedi ai servizi del kernel Linux.
+Tutto il resto in eatsyscall.asm è preparazione per l'unica istruzione che esegue il vero lavoro del programma: visualizzare una riga di testo nella console di Linux. Al cuore del programma c'è una chiamata al sistema operativo Linux. Una seconda chiamata a Linux è alla fine, quando il programma si conclude e deve informare Linux che ha finito. Ci sono diverse centinaia di servizi del kernel Linux disponibili. Uno dei servizi che Linux fornisce è un semplice accesso in modalità testo al display del tuo PC. Per le esigenze di eatsyscall.asm, che è solo una lezione per scrivere e far funzionare il tuo primo programma in linguaggio assembly, servizi semplici sono sufficienti. Quindi, come utilizziamo i servizi di Linux? Se hai guardato da vicino eatsyscall.asm, dovresti ricordare due istanze dell'istruzione macchina SYSCALL. Nelle istanze x64 di Linux, l'istruzione SYSCALL è il modo in cui accedi ai servizi del kernel Linux.
 </p>
 
 <p align=justify>
-Nelle versioni a 32 bit di Linux, l'interruzione software <code>INT 80h</code> era il modo per raggiungere il dispatcher dei servizi del kernel. <code>INT 80h</code> non viene più utilizzato. L'architettura x64 ci offre qualcosa di molto meglio: l'istruzione <code>SYSCALL</code>. La sfida nell'accesso ai servizi del kernel è la seguente: passare l'esecuzione a una libreria di codice senza avere idea di dove si trovi quella libreria. L'istruzione <code>SYSCALL</code> guarda in un registro della CPU a cui i programmi in user-space non possono accedere. Quando il kernel di Linux si avvia, inserisce l'indirizzo del suo dispatcher dei servizi in questo registro. Una delle prime cose che fa l'istruzione <code>SYSCALL</code> è elevare il suo livello di privilegio dal livello 3 (utente) al livello 0 (kernel). Poi legge l'indirizzo nel registro di dispatch dei servizi e salta a quell'indirizzo per invocare il dispatcher. La maggior parte delle chiamate di sistema x64 che utilizzano <code>SYSCALL</code> ha parametri, che vengono passati nei registri della CPU. Quali registri? Non è casuale. Infatti, c'è qualcosa chiamata <b>System V Application Binary Interface</b> (<b>ABI</b>) per Linux, che definisce un intero sistema per passare parametri a Linux tramite SYSCALL. Fa anche di più, ma ciò che ci interessa qui è il meccanismo che ti consente di chiamare i servizi del kernel utilizzando <code>SYSCALL</code>.
+Nelle versioni a 32 bit di Linux, l'interruzione software INT 80h era il modo per raggiungere il dispatcher dei servizi del kernel. INT 80h non viene più utilizzato. L'architettura x64 ci offre qualcosa di molto meglio: l'istruzione SYSCALL. La sfida nell'accesso ai servizi del kernel è la seguente: passare l'esecuzione a una libreria di codice senza avere idea di dove si trovi quella libreria. L'istruzione SYSCALL guarda in un registro della CPU a cui i programmi in user-space non possono accedere. Quando il kernel di Linux si avvia, inserisce l'indirizzo del suo dispatcher dei servizi in questo registro. Una delle prime cose che fa l'istruzione SYSCALL è elevare il suo livello di privilegio dal livello 3 (utente) al livello 0 (kernel). Poi legge l'indirizzo nel registro di dispatch dei servizi e salta a quell'indirizzo per invocare il dispatcher. La maggior parte delle chiamate di sistema x64 che utilizzano SYSCALL ha parametri, che vengono passati nei registri della CPU. Quali registri? Non è casuale. Infatti, c'è qualcosa chiamata <b>System V Application Binary Interface</b> (<b>ABI</b>) per Linux, che definisce un intero sistema per passare parametri a Linux tramite SYSCALL. Fa anche di più, ma ciò che ci interessa qui è il meccanismo che ti consente di chiamare i servizi del kernel utilizzando SYSCALL.
 </p>
 
 ### ABI (Application Binary Interface)
@@ -8779,7 +14332,7 @@ Questo è un buon punto per una breve digressione. Se hai esperienza di programm
 ### Lo schema dei parametri del registro ABI
 
 <p align=justify>
-Esaminiamo più da vicino il programma <code>eatsyscall.asm</code>. Il codice seguente scrive un messaggio testuale nella console di Linux:
+Esaminiamo più da vicino il programma eatsyscall.asm. Il codice seguente scrive un messaggio testuale nella console di Linux:
 </p>
 
 ```asm
@@ -8793,7 +14346,7 @@ Esaminiamo più da vicino il programma <code>eatsyscall.asm</code>. Il codice se
 ```
 
 <p align=justify>
-In poche parole, questo codice colloca determinati valori in determinati registri e poi esegue l'istruzione <code>SYSCALL</code>. Il dispatcher dei servizi di Linux raccoglie i valori posti in quei registri e poi chiama la funzione specificata in RAX. C'è un sistema per specificare quali registri vengono utilizzati per quale servizio e quali parametri (se presenti) servono a quel servizio. Il modo migliore per spiegarlo è mostrarti le prime due righe della tabella delle chiamate di sistema dell'ABI System V, nella tabella di seguito.
+In poche parole, questo codice colloca determinati valori in determinati registri e poi esegue l'istruzione SYSCALL. Il dispatcher dei servizi di Linux raccoglie i valori posti in quei registri e poi chiama la funzione specificata in RAX. C'è un sistema per specificare quali registri vengono utilizzati per quale servizio e quali parametri (se presenti) servono a quel servizio. Il modo migliore per spiegarlo è mostrarti le prime due righe della tabella delle chiamate di sistema dell'ABI System V, nella tabella di seguito.
 </p>
 
 <div align=center>
@@ -8801,15 +14354,15 @@ In poche parole, questo codice colloca determinati valori in determinati registr
 </div>
 
 <p align=justify>
-Tutte le colonne tranne System Call sono registri. System Call è il nome leggibile dall'uomo della chiamata di sistema, che è il nome utilizzato da linguaggi di alto livello come Pascal e C per effettuare chiamate di sistema tramite l'istruzione SYSCALL. Il registro RAX è dedicato al codice numerico che specifica la chiamata di sistema da effettuare. Il nome della chiamata di sistema 1 è <code>sys_write</code>. I registri dopo il nome della chiamata di sistema (RDI, RSI) contengono i parametri. L'ABI specifica sei registri da utilizzare per i parametri. Non tutte le chiamate di sistema richiedono sei parametri. La chiamata <code>sys_write</code> utilizzata in <code>eatsyscall.asm</code> ne ha solo tre. L'elenco dei parametri inizia sempre con RDI e utilizza i registri nell'ordine dato nella tabella.
+Tutte le colonne tranne System Call sono registri. System Call è il nome leggibile dall'uomo della chiamata di sistema, che è il nome utilizzato da linguaggi di alto livello come Pascal e C per effettuare chiamate di sistema tramite l'istruzione SYSCALL. Il registro RAX è dedicato al codice numerico che specifica la chiamata di sistema da effettuare. Il nome della chiamata di sistema 1 è sys_write. I registri dopo il nome della chiamata di sistema (RDI, RSI) contengono i parametri. L'ABI specifica sei registri da utilizzare per i parametri. Non tutte le chiamate di sistema richiedono sei parametri. La chiamata sys_write utilizzata in eatsyscall.asm ne ha solo tre. L'elenco dei parametri inizia sempre con RDI e utilizza i registri nell'ordine dato nella tabella.
 <br>	RDI, RSI, RDX, R10, R8, R9.<br>
-Dopo che i parametri di una chiamata di sistema sono stati tutti assegnati ai registri, eventuali registri rimasti inutilizzati per la chiamata di sistema non si applicano alla chiamata di sistema e vengono lasciati vuoti. I parametri per <code>sys_write</code> sono questi.
+Dopo che i parametri di una chiamata di sistema sono stati tutti assegnati ai registri, eventuali registri rimasti inutilizzati per la chiamata di sistema non si applicano alla chiamata di sistema e vengono lasciati vuoti. I parametri per sys_write sono questi.
 </p>
 
 <ul>
 	<li>
 		<p align=justify>
-			<b>RDI</b>: il descrittore di file su cui verrà scritto il testo. In Linux (e in tutte le varianti di Unix) il descrittore di file per <code>sys_write</code> è 1.
+			<b>RDI</b>: il descrittore di file su cui verrà scritto il testo. In Linux (e in tutte le varianti di Unix) il descrittore di file per sys_write è 1.
 		</p>
 	</li>
 	<li>
@@ -8831,7 +14384,7 @@ Se una chiamata di sistema deve restituire un valore numerico, quel valore viene
 ### Terminare un programma via SYSCALL
 
 <p align=justify>
-C'è un secondo comando SYSCALL in <code>eatsyscall.asm</code>, e ha un compito umile ma cruciale: chiudere il programma e restituire il controllo a Linux. Questo sembra più semplice di quanto sia, e una volta che comprendi un po' meglio gli interni di Linux, inizierai ad apprezzare il lavoro che deve essere fatto sia per avviare un processo sia per chiuderlo. Tuttavia, dal punto di vista del tuo stesso programma, è estremamente semplice: inserisci il numero del servizio sys_exit in RAX, inserisci un codice di ritorno in RDI e poi esegui SYSCALL:
+C'è un secondo comando SYSCALL in eatsyscall.asm, e ha un compito umile ma cruciale: chiudere il programma e restituire il controllo a Linux. Questo sembra più semplice di quanto sia, e una volta che comprendi un po' meglio gli interni di Linux, inizierai ad apprezzare il lavoro che deve essere fatto sia per avviare un processo sia per chiuderlo. Tuttavia, dal punto di vista del tuo stesso programma, è estremamente semplice: inserisci il numero del servizio sys_exit in RAX, inserisci un codice di ritorno in RDI e poi esegui SYSCALL:
 </p>
 
 ```asm
@@ -8841,13 +14394,13 @@ C'è un secondo comando SYSCALL in <code>eatsyscall.asm</code>, e ha un compito 
 ```
 
 <p align=justify>
-Il codice di ritorno è un valore numerico che puoi definire come preferisci. Tecnicamente, non ci sono restrizioni su cosa sia (a parte il fatto che deve adattarsi a un registro a 64 bit), ma per convenzione, un valore di ritorno pari a 0 significa "tutto ha funzionato correttamente; arresto normale." Valori di ritorno diversi da 0 indicano tipicamente un errore di qualche tipo. Tieni presente che nei programmi più grandi devi fare attenzione alle cose che non funzionano come previsto: un file su disco non può essere trovato, un'unità disco è piena e così via. Se un programma non riesce a svolgere il proprio compito e deve terminare prematuramente, dovrebbe avere un modo per dirti (o in alcuni casi, per dire a un altro programma) cosa è andato storto. Il codice di ritorno è un buon modo per farlo. Uscire in questo modo non è solo una cortesia. Ogni programma x64 che scrivi deve uscire effettuando una chiamata a <code>sys_exit</code> tramite il dispatcher dei servizi del kernel. Se un programma semplicemente "scivola via" dal limite, in realtà si fermerà, ma Linux solleverà un errore di segmentazione e non avrai idea di cosa sia successo. Questa è la ragione per cui i tuoi programmi "sandbox" sono utilizzati solo per il debugging all'interno di SASM. Sono frammenti di programma e genereranno un errore di segmentazione se li lasci semplicemente funzionare. I programmi scritti in SASM utilizzano elementi della Standard C Library, che fornisce ai programmi una sezione "codice di arresto" che effettivamente effettua la chiamata di sistema per l'uscita. Tali programmi terminano eseguendo un'istruzione RET, come spiegherò in seguito.
+Il codice di ritorno è un valore numerico che puoi definire come preferisci. Tecnicamente, non ci sono restrizioni su cosa sia (a parte il fatto che deve adattarsi a un registro a 64 bit), ma per convenzione, un valore di ritorno pari a 0 significa "tutto ha funzionato correttamente; arresto normale." Valori di ritorno diversi da 0 indicano tipicamente un errore di qualche tipo. Tieni presente che nei programmi più grandi devi fare attenzione alle cose che non funzionano come previsto: un file su disco non può essere trovato, un'unità disco è piena e così via. Se un programma non riesce a svolgere il proprio compito e deve terminare prematuramente, dovrebbe avere un modo per dirti (o in alcuni casi, per dire a un altro programma) cosa è andato storto. Il codice di ritorno è un buon modo per farlo. Uscire in questo modo non è solo una cortesia. Ogni programma x64 che scrivi deve uscire effettuando una chiamata a sys_exit tramite il dispatcher dei servizi del kernel. Se un programma semplicemente "scivola via" dal limite, in realtà si fermerà, ma Linux solleverà un errore di segmentazione e non avrai idea di cosa sia successo. Questa è la ragione per cui i tuoi programmi "sandbox" sono utilizzati solo per il debugging all'interno di SASM. Sono frammenti di programma e genereranno un errore di segmentazione se li lasci semplicemente funzionare. I programmi scritti in SASM utilizzano elementi della Standard C Library, che fornisce ai programmi una sezione "codice di arresto" che effettivamente effettua la chiamata di sistema per l'uscita. Tali programmi terminano eseguendo un'istruzione RET, come spiegherò in seguito.
 </p>
 
 ### Registri sporcati da una SYSCALL
 
 <p align=justify>
-Anche se x64 ti offre il doppio del numero di registri a uso generale rispetto a x86, non tutti quei registri "a uso generale" sono liberi per essere utilizzati ovunque e in qualsiasi momento. Da uno a sei di quei registri sono richiesti per effettuare una chiamata di sistema Linux con SYSCALL. Quei sei sono indicati nella tabella qui sopra. Il numero di registri utilizzati varia in base alla chiamata di sistema, e dovrai consultarli in una tabella delle chiamate di sistema per vedere quanti ne servono. Se una chiamata di sistema non ha bisogno di tutti e sei i registri dei parametri SYSCALL (<code>sys_read</code> e <code>sys_write</code> ne utilizzano solo tre), puoi utilizzare quelli che non sono richiesti per quella chiamata di sistema nel tuo codice. <b>L'istruzione SYSCALL stessa utilizza internamente RAX, RCX e R11</b>. <b>Dopo che la SYSCALL restituisce, non puoi presumere che RAX, RCX o R11 avranno gli stessi valori che avevano prima della SYSCALL</b>.
+Anche se x64 ti offre il doppio del numero di registri a uso generale rispetto a x86, non tutti quei registri "a uso generale" sono liberi per essere utilizzati ovunque e in qualsiasi momento. Da uno a sei di quei registri sono richiesti per effettuare una chiamata di sistema Linux con SYSCALL. Quei sei sono indicati nella tabella qui sopra. Il numero di registri utilizzati varia in base alla chiamata di sistema, e dovrai consultarli in una tabella delle chiamate di sistema per vedere quanti ne servono. Se una chiamata di sistema non ha bisogno di tutti e sei i registri dei parametri SYSCALL (sys_read e sys_write ne utilizzano solo tre), puoi utilizzare quelli che non sono richiesti per quella chiamata di sistema nel tuo codice. <b>L'istruzione SYSCALL stessa utilizza internamente RAX, RCX e R11</b>. <b>Dopo che la SYSCALL restituisce, non puoi presumere che RAX, RCX o R11 avranno gli stessi valori che avevano prima della SYSCALL</b>.
 </p>
 
 ### Progettare un programma
@@ -9024,32 +14577,32 @@ Sembra complicato, ma consiste quasi interamente in istruzioni e concetti di cui
 <ul>
 	<li>
 		<p align=justify>
-			<code>Buff</code> è una variabile non inizializzata e quindi si trova nella sezione <code>.bss</code> del programma. è uno spazio riservato con un indirizzo. <code>Buff</code> non ha un valore iniziale e non contiene nulla fino a quando non leggiamo un carattere da stdin e lo memorizziamo lì.
+			Buff è una variabile non inizializzata e quindi si trova nella sezione .bss del programma. è uno spazio riservato con un indirizzo. Buff non ha un valore iniziale e non contiene nulla fino a quando non leggiamo un carattere da stdin e lo memorizziamo lì.
 		</p>
 	</li>
  	<li>
 		<p align=justify>
-			Quando una chiamata a <code>sys_read</code> restituisce 0, <code>sys_read</code> ha raggiunto la fine del file da cui sta leggendo. Se restituisce un valore positivo, questo valore è il numero di caratteri che ha letto dal file. In questo caso, poiché abbiamo richiesto solo un carattere, <code>sys_read</code> restituirà un conteggio di 1 o 0 per indicare che non ci sono più caratteri.
+			Quando una chiamata a sys_read restituisce 0, sys_read ha raggiunto la fine del file da cui sta leggendo. Se restituisce un valore positivo, questo valore è il numero di caratteri che ha letto dal file. In questo caso, poiché abbiamo richiesto solo un carattere, sys_read restituirà un conteggio di 1 o 0 per indicare che non ci sono più caratteri.
 		</p>
 	</li>
  	<li>
 		<p align=justify>
-			L'istruzione <code>CMP</code> confronta i suoi due operandi e imposta i flag di conseguenza. L'istruzione di salto condizionale che segue ogni istruzione <code>CMP</code> agisce in base allo stato dei flag.
+			L'istruzione CMP confronta i suoi due operandi e imposta i flag di conseguenza. L'istruzione di salto condizionale che segue ogni istruzione CMP agisce in base allo stato dei flag.
 		</p>
 	</li>
  	<li>
 		<p align=justify>
-			L'istruzione <code>JB</code> (Jump If Below) salta se l'operando sinistro del <code>CMP</code> precedente è inferiore in valore rispetto al suo operando destro.
+			L'istruzione JB (Jump If Below) salta se l'operando sinistro del CMP precedente è inferiore in valore rispetto al suo operando destro.
 		</p>
 	</li>
  	<li>
 		<p align=justify>
-			L'istruzione <code>JA</code> (Salta se Maggiore) salta se l'operando sinistro del <code>CMP</code> precedente è superiore in valore rispetto all'operando destro.
+			L'istruzione JA (Salta se Maggiore) salta se l'operando sinistro del CMP precedente è superiore in valore rispetto all'operando destro.
 		</p>
 	</li>
  	<li>
 		<p align=justify>
-			Poiché un indirizzo di memoria (come <code>Buff</code>) punta semplicemente a una posizione in memoria di dimensioni non specificate, devi inserire il qualificatore BYTE tra CMP e il suo operando di memoria per dire all'assemblatore che vuoi confrontare due valori a 8 bit. In questo caso, i due valori a 8 bit sono un carattere ASCII come w e un valore esadecimale come 7Ah.
+			Poiché un indirizzo di memoria (come Buff) punta semplicemente a una posizione in memoria di dimensioni non specificate, devi inserire il qualificatore BYTE tra CMP e il suo operando di memoria per dire all'assemblatore che vuoi confrontare due valori a 8 bit. In questo caso, i due valori a 8 bit sono un carattere ASCII come w e un valore esadecimale come 7Ah.
 		</p>
 	</li>
  	<li>
@@ -9277,7 +14830,7 @@ C'è un difetto in SASM su cui potresti inciampare, se stai testando programmi c
 ### Operazioni sui Bit
 
 <p align=justify>
-Il linguaggio assembly si basa molto sui bit. I bit, dopotutto, sono ciò di cui sono composti i byte, e una competenza essenziale del linguaggio assembly è costruire byte e smontarli di nuovo. Una tecnica chiamata bit mapping è ampiamente utilizzata nel linguaggio assembly. Il bit mapping assegna significati speciali ai singoli bit all'interno di un byte per risparmiare spazio e spremere l'ultimo piccolo bit di utilità da una certa quantità di memoria. C'è una famiglia di istruzioni nel set di istruzioni x64 che ti consente di manipolare i bit all'interno dei byte applicando operazioni logiche booleane tra byte su base bit per bit. Queste sono le istruzioni logiche bitwise: <code>AND</code>, <code>OR</code>, <code>XOR</code> e <code>NOT</code>. Un'altra famiglia di istruzioni ti consente di spostare i bit avanti e indietro all'interno di un singolo byte o parola. Queste sono le istruzioni di shift/rotate più utilizzate: <code>ROL</code>, <code>ROR</code>, <code>RCL</code>, <code>RCR</code>, <code>SHL</code> e <code>SHR</code>.
+Il linguaggio assembly si basa molto sui bit. I bit, dopotutto, sono ciò di cui sono composti i byte, e una competenza essenziale del linguaggio assembly è costruire byte e smontarli di nuovo. Una tecnica chiamata bit mapping è ampiamente utilizzata nel linguaggio assembly. Il bit mapping assegna significati speciali ai singoli bit all'interno di un byte per risparmiare spazio e spremere l'ultimo piccolo bit di utilità da una certa quantità di memoria. C'è una famiglia di istruzioni nel set di istruzioni x64 che ti consente di manipolare i bit all'interno dei byte applicando operazioni logiche booleane tra byte su base bit per bit. Queste sono le istruzioni logiche bitwise: AND, OR, XOR e NOT. Un'altra famiglia di istruzioni ti consente di spostare i bit avanti e indietro all'interno di un singolo byte o parola. Queste sono le istruzioni di shift/rotate più utilizzate: ROL, ROR, RCL, RCR, SHL e SHR.
 </p>
 
 ### Numerazione dei bit
@@ -9297,7 +14850,7 @@ Quando conti i bit, inizia con il bit all'estremità destra e numerali verso sin
 ### Operazioni Binarie
 
 <p align=justify>
-Il termine logica booleana suona arcano e minaccioso, ma sorprendentemente riflette le realtà del pensiero e dell'azione ordinari. L'operatore booleano <code>AND</code>, ad esempio, si presenta in molte delle decisioni che prendi ogni giorno della tua vita. Per esempio, per scrivere un assegno che non venga rifiutato, devi avere denaro nel tuo conto corrente <code>AND</code> assegni nel tuo libretto degli assegni. Nessuno dei due da solo svolgerà il lavoro. Non puoi scrivere un assegno che non hai, e un assegno senza denaro dietro di esso verrà rifiutato. Le persone che vivono con i loro libretti degli assegni utilizzano spesso l'operatore <code>AND</code>. Quando i matematici parlano di logica booleana, manipolano valori astratti chiamati Vero e Falso. L'operatore <code>AND</code> funziona in questo modo: <i>Condizione1 <code>AND</code> Condizione2</i> sarà considerato Vero se Condizione1 e Condizione2 sono entrambe Vere. Se una delle condizioni è Falsa, il risultato sarà Falso. Ci sono infatti quattro diverse combinazioni dei due valori di input, quindi le operazioni logiche tra due valori sono solitamente riassunte in una forma chiamata tabella di verità. La tabella di verità per l'operatore logico <code>AND</code> (non ancora l'istruzione <code>AND</code>; ci arriveremo a breve) è mostrata nella figura di seguito.
+Il termine logica booleana suona arcano e minaccioso, ma sorprendentemente riflette le realtà del pensiero e dell'azione ordinari. L'operatore booleano AND, ad esempio, si presenta in molte delle decisioni che prendi ogni giorno della tua vita. Per esempio, per scrivere un assegno che non venga rifiutato, devi avere denaro nel tuo conto corrente AND assegni nel tuo libretto degli assegni. Nessuno dei due da solo svolgerà il lavoro. Non puoi scrivere un assegno che non hai, e un assegno senza denaro dietro di esso verrà rifiutato. Le persone che vivono con i loro libretti degli assegni utilizzano spesso l'operatore AND. Quando i matematici parlano di logica booleana, manipolano valori astratti chiamati Vero e Falso. L'operatore AND funziona in questo modo: <i>Condizione1 AND Condizione2</i> sarà considerato Vero se Condizione1 e Condizione2 sono entrambe Vere. Se una delle condizioni è Falsa, il risultato sarà Falso. Ci sono infatti quattro diverse combinazioni dei due valori di input, quindi le operazioni logiche tra due valori sono solitamente riassunte in una forma chiamata tabella di verità. La tabella di verità per l'operatore logico AND (non ancora l'istruzione AND; ci arriveremo a breve) è mostrata nella figura di seguito.
 </p>
 
 <div align=center>
@@ -9399,7 +14952,7 @@ Non accederai direttamente ai registri di segmento fino a quando non ti immerger
 ### Shiftare i bit
 
 <p align=justify>
-L'altro modo di manipolare i bit all'interno di un byte è un po' più diretto: li sposti verso un lato o l'altro. Ci sono alcuni dettagli nel processo, ma le istruzioni di spostamento più semplici sono piuttosto ovvie: <code>SHL</code> sposta il suo operando a sinistra, mentre <code>SHR</code> sposta il suo operando a destra. Tutte le istruzioni di spostamento (comprese quelle leggermente più complesse che descriverò tra poco) hanno la stessa forma generale, illustrata qui dall'istruzione <code>SHL</code>:
+L'altro modo di manipolare i bit all'interno di un byte è un po' più diretto: li sposti verso un lato o l'altro. Ci sono alcuni dettagli nel processo, ma le istruzioni di spostamento più semplici sono piuttosto ovvie: SHL sposta il suo operando a sinistra, mentre SHR sposta il suo operando a destra. Tutte le istruzioni di spostamento (comprese quelle leggermente più complesse che descriverò tra poco) hanno la stessa forma generale, illustrata qui dall'istruzione SHL:
 </p>
 
 ```asm
@@ -9411,7 +14964,7 @@ Il primo operando è l'obiettivo dell'operazione di spostamento, cioè il valore
 </p>
 
 <p align=justify>
-Questo operando <code>&lt;count&gt;</code> ha una storia peculiare. Sugli antichi 8086 e 8088, poteva essere una delle due cose: il numero immediato 1, o il registro CL. (Non CX!) Se specificavi il conteggio come 1, allora lo spostamento sarebbe stato di un bit. Se volevi spostare più di un bit alla volta, dovevi prima caricare il conteggio dello spostamento nel registro CL. Nei tempi precedenti a quando i registri generali x86 divennero davvero generali, contare le cose era l'"agenda nascosta" di CX (e quindi di CL). Contava gli spostamenti, i passaggi nei cicli, gli elementi di stringa e alcune altre cose. è per questo che a volte viene chiamato registro conteggio e può essere ricordato dalla C in conteggio. A partire dal 286 e per tutte le CPU x86/x64 più recenti, l'operando <code>&lt;count&gt;</code> può essere qualsiasi valore immediato da 0 a 255. Il conteggio degli spostamenti può anche essere passato in CL se lo preferisci. Nota che non puoi specificare RCX per il conteggio, anche se "ocontiene" CL. <b>Anche in x64, le istruzioni di spostamento richiedono davvero un valore immediato da 0 a 255 o CL</b>. <b>Qualsiasi altro registro specificato per il valore di conteggio attiverà un errore dell'assemblatore</b>. Ovviamente, spostare di 0 bit è inutile, ma è possibile e non è considerato un errore. Fai attenzione alla tua digitazione. Ora, c'è un asterisco importante nel paragrafo precedente: non puoi spostare più posizioni di quante ne abbia il registro di destinazione. In modalità lunga a 64 bit, non puoi spostare (o ruotare; vedi la sezione successiva) più di 63 conteggi. Tentare di farlo non attiverà un errore. Semplicemente non funzionerà.
+Questo operando &lt;count&gt; ha una storia peculiare. Sugli antichi 8086 e 8088, poteva essere una delle due cose: il numero immediato 1, o il registro CL. (Non CX!) Se specificavi il conteggio come 1, allora lo spostamento sarebbe stato di un bit. Se volevi spostare più di un bit alla volta, dovevi prima caricare il conteggio dello spostamento nel registro CL. Nei tempi precedenti a quando i registri generali x86 divennero davvero generali, contare le cose era l'"agenda nascosta" di CX (e quindi di CL). Contava gli spostamenti, i passaggi nei cicli, gli elementi di stringa e alcune altre cose. è per questo che a volte viene chiamato registro conteggio e può essere ricordato dalla C in conteggio. A partire dal 286 e per tutte le CPU x86/x64 più recenti, l'operando &lt;count&gt; può essere qualsiasi valore immediato da 0 a 255. Il conteggio degli spostamenti può anche essere passato in CL se lo preferisci. Nota che non puoi specificare RCX per il conteggio, anche se "ocontiene" CL. <b>Anche in x64, le istruzioni di spostamento richiedono davvero un valore immediato da 0 a 255 o CL</b>. <b>Qualsiasi altro registro specificato per il valore di conteggio attiverà un errore dell'assemblatore</b>. Ovviamente, spostare di 0 bit è inutile, ma è possibile e non è considerato un errore. Fai attenzione alla tua digitazione. Ora, c'è un asterisco importante nel paragrafo precedente: non puoi spostare più posizioni di quante ne abbia il registro di destinazione. In modalità lunga a 64 bit, non puoi spostare (o ruotare; vedi la sezione successiva) più di 63 conteggi. Tentare di farlo non attiverà un errore. Semplicemente non funzionerà.
 </p>
 
 ### Come funziona lo shifting dei bit
@@ -9425,7 +14978,7 @@ Comprendere le istruzioni di spostamento richiede di pensare ai numeri spostati 
 ```
 
 <p align=justify>
-Tieni presente che ogni cifra in un numero binario è un bit. Se esegui un'istruzione <code>SHL AX,1</code>, ciò che troveresti in AX dopo lo spostamento è il seguente:
+Tieni presente che ogni cifra in un numero binario è un bit. Se esegui un'istruzione SHL AX,1, ciò che troveresti in AX dopo lo spostamento è il seguente:
 </p>
 
 ```
@@ -9454,7 +15007,7 @@ Spostare un bit a sinistra in un valore binario non significa esattamente mandar
 ### L'istruzione Rotate
 
 <p align=justify>
-Detto questo, se il destino di un bit non è quello di perdersi nel nulla cosmico, è necessario utilizzare le istruzioni di rotazione RCL, RCR, ROL e ROR. Le istruzioni di rotazione sono quasi identiche alle istruzioni di spostamento, ma con una differenza cruciale: il bit spinto fuori da un'estremità dell'operando riappare all'estremità opposta dell'operando. Quando si ruota un operando di più di un bit, i bit marciano costantemente in una direzione, cadendo dall'estremità e riapparendo immediatamente all'estremità opposta. I bit quindi "ruotano" attraverso l'operando mentre viene eseguita l'istruzione di rotazione. Come tante cose, questo si vede meglio graficamente che a parole. Dai un'occhiata alla figura di seguito. L'esempio mostrato qui è l'istruzione <code>ROL</code> (Rotate Left), ma l'istruzione <code>ROR</code> funziona allo stesso modo, con i bit che si muovono nella direzione opposta. Un valore binario iniziale di <code>10110010</code> (0B2h) viene inserito in AL. Quando viene eseguita un'istruzione <code>ROL AL,1</code>, tutti i bit in AL marciano verso sinistra di una posizione. Il bit a 1 in posizione 7 esce dal registro AL a sinistra, ma gira e riappare immediatamente a destra in posizione 0. Anche in questo caso, <code>ROR</code> funziona esattamente allo stesso modo, ma il movimento dei bit è da sinistra a destra invece che (come con <code>ROL</code>) da destra a sinistra. Il numero di bit in base ai quali viene ruotato un operando può essere un valore immediato o un valore in CL.
+Detto questo, se il destino di un bit non è quello di perdersi nel nulla cosmico, è necessario utilizzare le istruzioni di rotazione RCL, RCR, ROL e ROR. Le istruzioni di rotazione sono quasi identiche alle istruzioni di spostamento, ma con una differenza cruciale: il bit spinto fuori da un'estremità dell'operando riappare all'estremità opposta dell'operando. Quando si ruota un operando di più di un bit, i bit marciano costantemente in una direzione, cadendo dall'estremità e riapparendo immediatamente all'estremità opposta. I bit quindi "ruotano" attraverso l'operando mentre viene eseguita l'istruzione di rotazione. Come tante cose, questo si vede meglio graficamente che a parole. Dai un'occhiata alla figura di seguito. L'esempio mostrato qui è l'istruzione ROL (Rotate Left), ma l'istruzione ROR funziona allo stesso modo, con i bit che si muovono nella direzione opposta. Un valore binario iniziale di 10110010 (0B2h) viene inserito in AL. Quando viene eseguita un'istruzione ROL AL,1, tutti i bit in AL marciano verso sinistra di una posizione. Il bit a 1 in posizione 7 esce dal registro AL a sinistra, ma gira e riappare immediatamente a destra in posizione 0. Anche in questo caso, ROR funziona esattamente allo stesso modo, ma il movimento dei bit è da sinistra a destra invece che (come con ROL) da destra a sinistra. Il numero di bit in base ai quali viene ruotato un operando può essere un valore immediato o un valore in CL.
 </p>
 
 <div align=center>
@@ -9464,7 +15017,7 @@ Detto questo, se il destino di un bit non è quello di perdersi nel nulla cosmic
 ### Ruotare i bit attraverso il Carry Flag
 
 <p align=justify>
-C'è un secondo paio di istruzioni di rotazione nel set di istruzioni x86/x64: <code>RCR</code> (Ruota Carry a destra, Rotate Carry Right) e <code>RCL</code> (Ruota Carry a sinistra, Rotate Carry Left). Queste operano come ROL e ROR, ma con una differenza: i bit che vengono spostati fuori dalla fine di un operando e rientrano nell'operando all'inizio viaggiano attraverso il flag Carry. Il percorso che un singolo bit percorre in una rotazione tramite CF è quindi di un bit più lungo rispetto a quello che sarebbe in ROL e ROR. L'ho mostrato graficamente nella figura di seguito.
+C'è un secondo paio di istruzioni di rotazione nel set di istruzioni x86/x64: RCR (Ruota Carry a destra, Rotate Carry Right) e RCL (Ruota Carry a sinistra, Rotate Carry Left). Queste operano come ROL e ROR, ma con una differenza: i bit che vengono spostati fuori dalla fine di un operando e rientrano nell'operando all'inizio viaggiano attraverso il flag Carry. Il percorso che un singolo bit percorre in una rotazione tramite CF è quindi di un bit più lungo rispetto a quello che sarebbe in ROL e ROR. L'ho mostrato graficamente nella figura di seguito.
 </p>
 
 <div align=center>
@@ -9474,7 +15027,7 @@ C'è un secondo paio di istruzioni di rotazione nel set di istruzioni x86/x64: <
 ### Settare un valore noto nel Carry Flag
 
 <p align=justify>
-è anche utile ricordare che le istruzioni precedenti possono lasciare valori nel CF, e quei valori verranno ruotati in un operando durante un'istruzione RCL o RCR. Alcune persone hanno la comprensione errata che il CF venga forzato a 0 prima di un'istruzione di shift o rotate, e questo non è affatto vero. Se un'altra istruzione lascia un bit 1 nel CF immediatamente prima di un'istruzione RCR o RCL, quel bit 1 entrerà obbedientemente nell'operando di destinazione, che tu lo voglia o meno. Se è importante iniziare una rotazione con un valore noto nel CF, c'è una coppia di istruzioni x86 che faranno il lavoro per te: <code>CLC</code> e <code>STC</code>. <code>CLC</code> azzera il flag di carry a 0. <code>STC</code> imposta il flag di carry a 1. Nessuna delle due istruzioni prende operandi e nessuna ha altri effetti.
+è anche utile ricordare che le istruzioni precedenti possono lasciare valori nel CF, e quei valori verranno ruotati in un operando durante un'istruzione RCL o RCR. Alcune persone hanno la comprensione errata che il CF venga forzato a 0 prima di un'istruzione di shift o rotate, e questo non è affatto vero. Se un'altra istruzione lascia un bit 1 nel CF immediatamente prima di un'istruzione RCR o RCL, quel bit 1 entrerà obbedientemente nell'operando di destinazione, che tu lo voglia o meno. Se è importante iniziare una rotazione con un valore noto nel CF, c'è una coppia di istruzioni x86 che faranno il lavoro per te: CLC e STC. CLC azzera il flag di carry a 0. STC imposta il flag di carry a 1. Nessuna delle due istruzioni prende operandi e nessuna ha altri effetti.
 </p>
 
 ### Bit-Bashing
@@ -9579,13 +15132,13 @@ Done:
 ```
 
 <p align=justify>
-Il programma hexdump1 è fondamentalmente un programma di filtro e ha lo stesso meccanismo generale di filtro utilizzato nel programma uppercaser. Le parti importanti del programma per questa discussione sono quelle che leggono 16 byte dal buffer di input e li convertono in una stringa di caratteri da visualizzare sulla console Linux. Questo è il codice tra l'etichetta <code>Scan</code> e l'istruzione <code>RET</code>. Farò riferimento a quel blocco di codice nella discussione che segue.
+Il programma hexdump1 è fondamentalmente un programma di filtro e ha lo stesso meccanismo generale di filtro utilizzato nel programma uppercaser. Le parti importanti del programma per questa discussione sono quelle che leggono 16 byte dal buffer di input e li convertono in una stringa di caratteri da visualizzare sulla console Linux. Questo è il codice tra l'etichetta Scan e l'istruzione RET. Farò riferimento a quel blocco di codice nella discussione che segue.
 </p>
 
 ### Dividere un byte in due nibble
 
 <p align=justify>
-Ricorda che i valori letti da Linux da un file vengono letti in memoria come valori binari. L'esadecimale è un modo per visualizzare i valori binari, e per visualizzare i valori binari come cifre esadecimali ASCII visibili, devi fare alcune conversioni. Visualizzare un singolo valore binario a 8 bit richiede due cifre esadecimali. I quattro bit inferiori in un byte sono rappresentati da una cifra (la cifra meno significativa o la cifra più a destra), e i quattro bit superiori del byte sono rappresentati da un'altra cifra (la cifra più significativa o la cifra più a sinistra). Il valore binario <code>11100110</code>, per esempio, è equivalente a <code>E6</code> in esadecimale. Convertire un valore a 8 bit in due cifre a 4 bit deve essere fatto una cifra alla volta, il che significa che dobbiamo separare il singolo byte in due quantità a 4 bit, che sono spesso chiamate <b>nibble</b>, specialmente nel lavoro di assemblaggio. Nel programma <code>hexdump1</code>, un byte viene letto da Buff e viene collocato in due registri, RAX e RBX. Questo viene fatto perché separare il nibble alto da quello basso in un byte è distruttivo, in quanto di fatto annulliamo il nibble che non vogliamo. Per isolare il nibble basso in un byte, dobbiamo mascherare il nibble alto indesiderato. Questo viene fatto con un'istruzione AND:
+Ricorda che i valori letti da Linux da un file vengono letti in memoria come valori binari. L'esadecimale è un modo per visualizzare i valori binari, e per visualizzare i valori binari come cifre esadecimali ASCII visibili, devi fare alcune conversioni. Visualizzare un singolo valore binario a 8 bit richiede due cifre esadecimali. I quattro bit inferiori in un byte sono rappresentati da una cifra (la cifra meno significativa o la cifra più a destra), e i quattro bit superiori del byte sono rappresentati da un'altra cifra (la cifra più significativa o la cifra più a sinistra). Il valore binario 11100110, per esempio, è equivalente a E6 in esadecimale. Convertire un valore a 8 bit in due cifre a 4 bit deve essere fatto una cifra alla volta, il che significa che dobbiamo separare il singolo byte in due quantità a 4 bit, che sono spesso chiamate <b>nibble</b>, specialmente nel lavoro di assemblaggio. Nel programma hexdump1, un byte viene letto da Buff e viene collocato in due registri, RAX e RBX. Questo viene fatto perché separare il nibble alto da quello basso in un byte è distruttivo, in quanto di fatto annulliamo il nibble che non vogliamo. Per isolare il nibble basso in un byte, dobbiamo mascherare il nibble alto indesiderato. Questo viene fatto con un'istruzione AND:
 </p>
 
 ```asm
@@ -9599,7 +15152,7 @@ La costante immediata 0Fh espressa in binario è 00001111. Se segui l'operazione
 ### Shiftare il nibble alto nel nibble basso
 
 <p align=justify>
-Mascherare l'high nybble dal byte di input in AL lo distrugge. Abbiamo bisogno di quell'high nybble, ma abbiamo una seconda copia in RBX, ed è da quella copia che estrarremo l'high nybble. Come per il low nybble, lavoreremo effettivamente con gli otto bit meno significativi di RBX, detti BL. Ricorda che BL è solo un modo diverso di riferirsi agli otto bit più bassi di RBX. Non è un registro diverso. Se un valore è caricato in RBX, i suoi otto bit meno significativi sono in BL. Potremmo mascherare il low nybble in BL con un'istruzione AND, lasciando indietro l'high nybble, ma c'è un problema: mascherare i quattro bit bassi di un byte non rende i quattro bit alti un nybble. Dobbiamo in qualche modo spostare i quattro bit alti del byte di input nei quattro bit bassi. Il modo più veloce per farlo è spostare semplicemente BL a destra di quattro bit. Questo è ciò che fa l'istruzione <code>SHR BL,4</code>. Il low nybble viene semplicemente spostato fuori dal bordo di BL, nel flag di carry, e poi nel nulla cosmico. Dopo lo shift, ciò che era l'high nybble in BL è ora il low nybble. A questo punto, abbiamo il low nybble del byte di input in AL e l'high nybble del byte di input in BL. La prossima sfida è convertire il numero binario a quattro bit in un nybble (ad esempio, 1110) nel suo carattere esadecimale ASCII visualizzabile; in questo esempio, è il carattere "oE".
+Mascherare l'high nybble dal byte di input in AL lo distrugge. Abbiamo bisogno di quell'high nybble, ma abbiamo una seconda copia in RBX, ed è da quella copia che estrarremo l'high nybble. Come per il low nybble, lavoreremo effettivamente con gli otto bit meno significativi di RBX, detti BL. Ricorda che BL è solo un modo diverso di riferirsi agli otto bit più bassi di RBX. Non è un registro diverso. Se un valore è caricato in RBX, i suoi otto bit meno significativi sono in BL. Potremmo mascherare il low nybble in BL con un'istruzione AND, lasciando indietro l'high nybble, ma c'è un problema: mascherare i quattro bit bassi di un byte non rende i quattro bit alti un nybble. Dobbiamo in qualche modo spostare i quattro bit alti del byte di input nei quattro bit bassi. Il modo più veloce per farlo è spostare semplicemente BL a destra di quattro bit. Questo è ciò che fa l'istruzione SHR BL,4. Il low nybble viene semplicemente spostato fuori dal bordo di BL, nel flag di carry, e poi nel nulla cosmico. Dopo lo shift, ciò che era l'high nybble in BL è ora il low nybble. A questo punto, abbiamo il low nybble del byte di input in AL e l'high nybble del byte di input in BL. La prossima sfida è convertire il numero binario a quattro bit in un nybble (ad esempio, 1110) nel suo carattere esadecimale ASCII visualizzabile; in questo esempio, è il carattere "oE".
 </p>
 
 ### Usare una Lookup Table
@@ -9742,7 +15295,7 @@ Un salto è proprio questo: un cambiamento brusco nel flusso di esecuzione delle
 ```
 
 <p align=justify>
-Quando questa istruzione viene eseguita, la sequenza di esecuzione passa all'istruzione situata all'etichetta specificata da <code>label</code>. è così semplice.
+Quando questa istruzione viene eseguita, la sequenza di esecuzione passa all'istruzione situata all'etichetta specificata da label. è così semplice.
 </p>
 	
 ### Salti condizionati
@@ -14559,7 +20112,7 @@ Il "dove" inizia da quello che chiamiamo la cima dello stack, che è l'indirizzo
 ```
 
 <p align=justify>
-Qui, il conteggio degli argomenti si trova all'indirizzo contenuto in RBP più otto byte, perché RBP è stato inserito nello stack dal prologo e deve essere "superato" per raggiungere il conteggio degli argomenti. Il fatto che RBP contenga l'indirizzo informa l'assemblatore che il valore rappresentato da MAXARGS deve essere trattato come una parola quad di 64 bit, anche se il suo valore è solo 10. Ricorda che le equazioni sono valori, non posizioni in memoria. Se il conteggio degli argomenti è superiore a 10, il programma si interrompe con un breve messaggio di errore. La scansione di ciascuno degli argomenti per localizzare il suo carattere zero di terminazione è effettuata utilizzando il calcolo dell'indirizzo efficace più complesso possibile in x64: <code>Base + (Indice x Scala) + Dislocamento</code>. (Vedi la discussione sugli effective address, specialmente le figure)
+Qui, il conteggio degli argomenti si trova all'indirizzo contenuto in RBP più otto byte, perché RBP è stato inserito nello stack dal prologo e deve essere "superato" per raggiungere il conteggio degli argomenti. Il fatto che RBP contenga l'indirizzo informa l'assemblatore che il valore rappresentato da MAXARGS deve essere trattato come una parola quad di 64 bit, anche se il suo valore è solo 10. Ricorda che le equazioni sono valori, non posizioni in memoria. Se il conteggio degli argomenti è superiore a 10, il programma si interrompe con un breve messaggio di errore. La scansione di ciascuno degli argomenti per localizzare il suo carattere zero di terminazione è effettuata utilizzando il calcolo dell'indirizzo efficace più complesso possibile in x64: Base + (Indice x Scala) + Dislocamento. (Vedi la discussione sugli effective address, specialmente le figure)
 </p>
 
 ```asm

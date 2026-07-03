@@ -1,41 +1,39 @@
 ## Lab
 
-<details>
-<summary>💻 <code>/lab/0_intro/0_hello.c</code></summary>
-
 <table align="center">
-  <tr>
-    <td>
-      <p align="justify">
-        <strong>Descrizione breve:</strong>
-        Primo programma C: stampa un messaggio a schermo e introduce la struttura minima di un programma.
-      </p>
+<tr>
+<td>
+<details>
+<summary>&#128187; /lab/0_intro/0_hello.c</summary>
 
-      <p align="justify">
-        <strong>Descrizione lunga:</strong>
-        Questo laboratorio mostra come includere un header standard, definire la funzione <code>main()</code>,
-        chiamare <code>printf()</code>, compilare il sorgente con <code>gcc</code> ed eseguire il binario prodotto.
-        È il punto di partenza per collegare codice sorgente, compilazione ed esecuzione.
-      </p>
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Primo programma C: stampa un messaggio a schermo e introduce la struttura minima di un programma.
+</p>
 
-      <p align="justify">
-        <strong>Sorgente:</strong>
-        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/0_hello.c">
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Questo laboratorio mostra come includere un header standard, definire la funzione <code>main()</code>, chiamare <code>printf()</code>, compilare il sorgente con <code>gcc</code> ed eseguire il binario prodotto. È il punto di partenza per collegare codice sorgente, compilazione ed esecuzione.
+</p>
+
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/0_hello.c">
           /lab/0_intro/0_hello.c
         </a>
-      </p>
+</p>
 
-      <p align="justify">
-        <strong>Compilazione ed esecuzione:</strong>
-      </p>
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
 
 <pre lang="bash"><code>cd /lab/0_intro
 gcc -o bin/0_hello 0_hello.c
 bin/0_hello</code></pre>
 
-      <p align="justify">
-        <strong>Codice:</strong>
-      </p>
+<p align="justify">
+<strong>Codice:</strong>
+</p>
 
 <!-- lab-snippet:start path="lab/0_intro/0_hello.c" -->
 <pre lang="c"><code>/*
@@ -59,11 +57,10 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-    </td>
-  </tr>
-</table>
-
 </details>
+</td>
+</tr>
+</table>
 
 ## Lab
 
@@ -71,9 +68,9 @@ int main(void){
 <summary>/lab/0_intro/0_hello.c</summary>
 <a href="https://github.com/kinderp/2cornot2c/blob/18b60e866c1e0e22c59835fe953cbe3c534e7422/lab/0_intro/0_hello.c">/lab/0_intro/0_hello.c</a>
 	<ul>
-		<li>Entra nella macchina Linux con <code>vagrant ssh</code></li>
-		<li>Spostati nella cartella <code>lab/0_intro</code></li>
-		<li>Compila il file <code>0_hello.c</code>. L'eseguibile finale deve avere nome <code>bin/0_hello</code></li>
+		<li>Entra nella macchina Linux con vagrant ssh</li>
+		<li>Spostati nella cartella lab/0_intro</li>
+		<li>Compila il file 0_hello.c. L'eseguibile finale deve avere nome bin/0_hello</li>
 	</ul>
 </details>
 
