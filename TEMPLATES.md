@@ -3,6 +3,8 @@
 <details>
 <summary>&#128187; <code>/lab/0_intro/0_hello.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Primo programma C: stampa un messaggio a schermo e introduce la struttura minima di un programma.
 
 **Descrizione lunga:** Questo laboratorio mostra come includere un header standard, definire la funzione <code>main()</code>, chiamare <code>printf()</code>, compilare il sorgente con <code>gcc</code> ed eseguire il binario prodotto. È il punto di partenza per collegare codice sorgente, compilazione ed esecuzione.
@@ -43,6 +45,8 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 

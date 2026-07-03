@@ -771,6 +771,8 @@ Il preprocessore viene richiamato dal compilatore come primo step nel processo d
 <details>
 <summary>&#128187; <code>/lab/0_intro/0_hello.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** `printf`, `#include <stdio.h>`, funzione `main`, compilazione ed esecuzione del primo binario.
 
 **Descrizione lunga:** Introduce il percorso minimo che porta da un sorgente C a un programma eseguibile: inclusione di un header standard, definizione di main, chiamata a printf, compilazione con gcc ed esecuzione del binario prodotto.
@@ -809,6 +811,8 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -972,6 +976,8 @@ Righe 16-19: definizione della funzione <code>main()</code>.
 <details>
 <summary>&#128187; <code>/lab/0_intro/1_funzioni.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Definizione e chiamata di funzioni semplici, esempio `sottrazione`.
 
 **Descrizione lunga:** Approfondisce il paragrafo Funzioni con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Definizione e chiamata di funzioni semplici, esempio `sottrazione` e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -1005,6 +1011,8 @@ int sottrazione(int minuendo, int sottraendo){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -1108,6 +1116,8 @@ Come spiegato ampiamente in precedenza, facciamo uso anche della funzione <code>
 <details>
 <summary>&#128187; <code>/lab/0_intro/2_variabili.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Calcolatrice minima con variabili globali, funzioni `somma`, `differenza`, `moltiplicazione`.
 
 **Descrizione lunga:** Approfondisce il paragrafo Variabili con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Calcolatrice minima con variabili globali, funzioni `somma`, `differenza`, `moltiplicazione` e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -1169,9 +1179,13 @@ int moltiplicazione(){
 </code></pre>
 <!-- lab-snippet:end -->
 
+</div>
+
 </details>
 <details>
 <summary>&#128187; <code>/lab/0_intro/3_variabili.c</code></summary>
+
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
 
 **Descrizione breve:** Variante della calcolatrice con funzioni e parametri piu espliciti.
 
@@ -1239,6 +1253,8 @@ int moltiplicazione(int primo_fattore, int secondo_fattore){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -1747,6 +1763,8 @@ Questo è utile soprattutto per le variabili indice di un ciclo o per documentar
 <details>
 <summary>&#128187; <code>/lab/1_variables/2_global.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Variabile globale visibile da piu funzioni nello stesso file.
 
 **Descrizione lunga:** Approfondisce il paragrafo File scope con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Variabile globale visibile da piu funzioni nello stesso file e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -1806,6 +1824,8 @@ void three(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -1970,6 +1990,8 @@ Scope, linkage e storage duration sono combinati assieme per definire le <strong
 <details>
 <summary>&#128187; <code>/lab/1_variables/0_local.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Variabile locale non inizializzata e valore indefinito.
 
 **Descrizione lunga:** Approfondisce il paragrafo Variabili automatiche (automatic class) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Variabile locale non inizializzata e valore indefinito e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -2015,6 +2037,8 @@ void print_var(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -2112,6 +2136,8 @@ int uno(register int a);
 <details>
 <summary>&#128187; <code>/lab/1_variables/1_static_local.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Differenza tra variabile locale automatica e `static` locale che conserva il valore tra chiamate.
 
 **Descrizione lunga:** Approfondisce il paragrafo Variabili statiche locali (static variables with block scope) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza tra variabile locale automatica e `static` locale che conserva il valore tra chiamate e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -2177,6 +2203,8 @@ void call_me(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -2337,6 +2365,8 @@ int main(void){
 <details>
 <summary>&#128187; <code>/lab/1_variables/4_global_external_internal_a.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** File principale che usa una funzione e una variabile condivisa con un altro file.
 
 **Descrizione lunga:** Approfondisce il paragrafo Variabili globali con External Linkage (Static variables with External Linkage) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente File principale che usa una funzione e una variabile condivisa con un altro file e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -2380,9 +2410,13 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 
+</div>
+
 </details>
 <details>
 <summary>&#128187; <code>/lab/1_variables/4_global_external_internal_b.c</code></summary>
+
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
 
 **Descrizione breve:** Uso di `extern` e variabile locale `static` in una funzione accumulatrice.
 
@@ -2421,6 +2455,8 @@ int accumulate(int number){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -2606,6 +2642,8 @@ int divisione(int dividendo, int divisore){
 <details>
 <summary>&#128187; <code>/lab/1_variables/3_global_internal.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Variabile globale `static` visibile solo nel file corrente.
 
 **Descrizione lunga:** Approfondisce il paragrafo Variabili globali con Internal Linkage (Static variables with Internal Linkage) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Variabile globale `static` visibile solo nel file corrente e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -2651,6 +2689,8 @@ void two(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -2806,6 +2846,8 @@ La definizione di <code>b</code> e di <code>j</code> non è mostrata, quindi non
 <details>
 <summary>&#128187; <code>/lab/0_intro/4_variabili.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Separazione tra sorgente e header, uso di `4_variabili.h`.
 
 **Descrizione lunga:** Approfondisce il paragrafo Suddivisione in moduli di un programma con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Separazione tra sorgente e header, uso di `4_variabili.h` e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -2878,9 +2920,13 @@ int divisione(int dividendo, int divisore){
 </code></pre>
 <!-- lab-snippet:end -->
 
+</div>
+
 </details>
 <details>
 <summary>&#128187; <code>/lab/0_intro/4_variabili.h</code></summary>
+
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
 
 **Descrizione breve:** Prototipi delle funzioni usate da `4_variabili.c`.
 
@@ -2906,9 +2952,13 @@ int divisione(int, int);
 </code></pre>
 <!-- lab-snippet:end -->
 
+</div>
+
 </details>
 <details>
 <summary>&#128187; <code>/lab/0_intro/5_variabili_main.c</code></summary>
+
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
 
 **Descrizione breve:** `main` separato dalle funzioni operative.
 
@@ -2964,9 +3014,13 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 
+</div>
+
 </details>
 <details>
 <summary>&#128187; <code>/lab/0_intro/5_variabili.c</code></summary>
+
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
 
 **Descrizione breve:** Implementazione delle funzioni aritmetiche separate dal `main`.
 
@@ -3003,9 +3057,13 @@ int divisione(int dividendo, int divisore){
 </code></pre>
 <!-- lab-snippet:end -->
 
+</div>
+
 </details>
 <details>
 <summary>&#128187; <code>/lab/0_intro/5_variabili.h</code></summary>
+
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
 
 **Descrizione breve:** Dichiarazioni/prototipi condivisi.
 
@@ -3030,6 +3088,8 @@ int moltiplicazione(int, int);
 int divisione(int, int);
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -3245,6 +3305,8 @@ Queste direttive permettono di:
 <details>
 <summary>&#128187; <code>/lab/2_preprocessor/macro.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Macro aritmetiche con parametri per somma, differenza, moltiplicazione, divisione.
 
 **Descrizione lunga:** Approfondisce il paragrafo La direttiva #define con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Macro aritmetiche con parametri per somma, differenza, moltiplicazione, divisione e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -3301,6 +3363,8 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -3442,6 +3506,8 @@ La prima forma (parentesi angolari <code>&lt;</code> <code>&gt;</code>) è usata
 <details>
 <summary>&#128187; <code>/lab/2_preprocessor/direttiva_if.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Uso di `#if DEBUG`, simbolo passato da codice o da `gcc -D`.
 
 **Descrizione lunga:** Approfondisce il paragrafo Le direttive #if #ifdef #ifndef con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Uso di `#if DEBUG`, simbolo passato da codice o da `gcc -D` e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -3489,9 +3555,13 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 
+</div>
+
 </details>
 <details>
 <summary>&#128187; <code>/lab/2_preprocessor/direttiva_ifdef.c</code></summary>
+
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
 
 **Descrizione breve:** Verifica se `DEBUG` e definito, uso di `#undef`.
 
@@ -3537,9 +3607,13 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 
+</div>
+
 </details>
 <details>
 <summary>&#128187; <code>/lab/2_preprocessor/direttiva_ifndef.c</code></summary>
+
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
 
 **Descrizione breve:** Logica inversa di `#ifdef`, controllo se un simbolo non e definito.
 
@@ -3584,6 +3658,8 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -3659,6 +3735,8 @@ La definizione del simbolo macro deve essere effettuata con la direttiva <code>#
 <details>
 <summary>&#128187; <code>/lab/2_preprocessor/eliminazione_temporanea_codice.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Macro `TRACE` e inclusione/esclusione temporanea di codice.
 
 **Descrizione lunga:** Approfondisce il paragrafo Eliminazione temporanea di codice con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Macro `TRACE` e inclusione/esclusione temporanea di codice e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -3693,6 +3771,8 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -4293,6 +4373,8 @@ Per ottenere il valore nella rappresentazione senza segno dovremmo sommare a 2 i
 <details>
 <summary>&#128187; <code>/lab/3_datatype/estensione_della_rappresentazione_binaria.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Sign extension e zero extension passando da 16 a 32 bit.
 
 **Descrizione lunga:** Approfondisce il paragrafo Estensione rappresentazione binaria di un numero intero con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Sign extension e zero extension passando da 16 a 32 bit e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -4345,6 +4427,8 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -4523,6 +4607,8 @@ int q, w = 200 /* q non è inizializzata, w è inizializzata. scarso stile di  p
 <details>
 <summary>&#128187; <code>/lab/3_datatype/print_int.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Stampa esadecimale di interi signed/unsigned e complemento a due.
 
 **Descrizione lunga:** Approfondisce il paragrafo Stampare int con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Stampa esadecimale di interi signed/unsigned e complemento a due e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -4608,6 +4694,8 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -4737,6 +4825,8 @@ Quando allora usare i diversi tipi di interi? Dipende dalla situazione.
 <details>
 <summary>&#128187; <code>/lab/3_datatype/print_others_ints.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Segnaposto `printf` per tipi interi diversi e comportamento inatteso con placeholder errati.
 
 **Descrizione lunga:** Approfondisce il paragrafo Stampare altri tipi di interi con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Segnaposto `printf` per tipi interi diversi e comportamento inatteso con placeholder errati e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -4771,6 +4861,8 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -5033,6 +5125,8 @@ signed negative: 0xffffffe5
 <details>
 <summary>&#128187; <code>/lab/3_datatype/cast_esplicito_implicito.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Differenza tra cast esplicito e implicito e quando cambia il valore.
 
 **Descrizione lunga:** Approfondisce il paragrafo Cast con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza tra cast esplicito e implicito e quando cambia il valore e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -5091,9 +5185,13 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 
+</div>
+
 </details>
 <details>
 <summary>&#128187; <code>/lab/3_datatype/mistero.c</code></summary>
+
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
 
 **Descrizione breve:** Esercizio esplorativo sui risultati inattesi della rappresentazione dei dati.
 
@@ -5123,6 +5221,8 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -5269,6 +5369,8 @@ il valore stampato sarebbe 1.0 perché prima viene effettuata la divisione tra <
 <details>
 <summary>&#128187; <code>/lab/3_datatype/cast_tra_signed_unsigned.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Stessa sequenza di bit reinterpretata come valore senza segno.
 
 **Descrizione lunga:** Approfondisce il paragrafo Cast tra signed e unsigned con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Stessa sequenza di bit reinterpretata come valore senza segno e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -5331,9 +5433,13 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 
+</div>
+
 </details>
 <details>
 <summary>&#128187; <code>/lab/3_datatype/cast_tra_unsigned_signed.c</code></summary>
+
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
 
 **Descrizione breve:** Conversione dall'estremo unsigned al corrispondente valore signed.
 
@@ -5373,6 +5479,8 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -5629,6 +5737,8 @@ uy = 4294954951          ffffcfc7
 <details>
 <summary>&#128187; <code>/lab/3_datatype/troncamento_bit.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Perdita dei bit piu significativi nel cast da `int` a `short`.
 
 **Descrizione lunga:** Approfondisce il paragrafo Troncamento rappresentazione binaria con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Perdita dei bit piu significativi nel cast da `int` a `short` e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -5660,6 +5770,8 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -5697,6 +5809,8 @@ y  = -12345      ffffcfc7
 <details>
 <summary>&#128187; <code>/lab/3_datatype/ascii.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Esercizio su tabella/codici ASCII.
 
 **Descrizione lunga:** Approfondisce il paragrafo char con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Esercizio su tabella/codici ASCII e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -5725,6 +5839,8 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -5771,6 +5887,8 @@ Il tipo <code>char</code> è lungo 1 byte (8 bit) e in verità è un tipo intero
 <details>
 <summary>&#128187; <code>/lab/3_datatype/print_char.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Stampa dello stesso carattere come char, intero, unsigned, esadecimale.
 
 **Descrizione lunga:** Approfondisce il paragrafo Stampare un char con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Stampa dello stesso carattere come char, intero, unsigned, esadecimale e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -5799,6 +5917,8 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -5867,6 +5987,8 @@ Gli operatori sono usati nelle operazioni aritmetiche.
 <details>
 <summary>&#128187; <code>/lab/4_operators/op_assegnamento.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Differenza tra lvalue modificabile e costante non assegnabile.
 
 **Descrizione lunga:** Approfondisce il paragrafo Operatore di assegnamento: = con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza tra lvalue modificabile e costante non assegnabile e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -5899,6 +6021,8 @@ bin/op_assegnamento
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -6001,6 +6125,8 @@ int main(void){
 <details>
 <summary>&#128187; <code>/lab/4_operators/op_divisione.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Divisione intera/reale e comportamento dell'operatore `/`.
 
 **Descrizione lunga:** Approfondisce il paragrafo Operatore divisione: / con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Divisione intera/reale e comportamento dell'operatore `/` e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -6031,6 +6157,8 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -6064,6 +6192,8 @@ int main(void){
 <details>
 <summary>&#128187; <code>/lab/4_operators/sizeof.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Dimensione dei tipi o delle variabili in byte.
 
 **Descrizione lunga:** Approfondisce il paragrafo Operatore sizeof con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Dimensione dei tipi o delle variabili in byte e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -6094,6 +6224,8 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -6140,6 +6272,8 @@ Come avrai notato <code>sizeof</code> può essere usato con o senza parentesi to
 <details>
 <summary>&#128187; <code>/lab/4_operators/op_modulo.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Uso dell'operatore `%` e resto della divisione intera.
 
 **Descrizione lunga:** Approfondisce il paragrafo Operatore % con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Uso dell'operatore `%` e resto della divisione intera e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -6173,6 +6307,8 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -6208,6 +6344,8 @@ int main(void){
 
 <details>
 <summary>&#128187; <code>/lab/4_operators/op_incremento_decremento.c</code></summary>
+
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
 
 **Descrizione breve:** Uso base di `++` e `--`.
 
@@ -6255,9 +6393,13 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 
+</div>
+
 </details>
 <details>
 <summary>&#128187; <code>/lab/4_operators/pre_post_incremento.c</code></summary>
+
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
 
 **Descrizione breve:** Differenza tra `i++` e `++i` in valutazione e assegnamento.
 
@@ -6300,6 +6442,8 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -6433,6 +6577,8 @@ Operatori Relazionali
 <details>
 <summary>&#128187; <code>/lab/5_control_statements/if.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Controllo pari/dispari con ramo vero/falso.
 
 **Descrizione lunga:** Approfondisce il paragrafo if o if-else con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Controllo pari/dispari con ramo vero/falso e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -6474,6 +6620,8 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -6546,6 +6694,8 @@ int main(void){
 <details>
 <summary>&#128187; <code>/lab/5_control_statements/logical_relational_operators.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Condizioni composte con operatori logici e di confronto.
 
 **Descrizione lunga:** Approfondisce il paragrafo Condizioni complesse con l'uso di operatori logici e condizionali con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Condizioni composte con operatori logici e di confronto e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -6597,6 +6747,8 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 
+</div>
+
 </details>
 
 <!-- lab-exercises:end -->
@@ -6644,6 +6796,8 @@ int main(void){
 <details>
 <summary>&#128187; <code>/lab/5_control_statements/for.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Iterazione con inizializzazione, condizione e incremento.
 
 **Descrizione lunga:** Approfondisce il paragrafo for con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Iterazione con inizializzazione, condizione e incremento e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -6673,6 +6827,8 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -6712,6 +6868,8 @@ int main(void){
 <details>
 <summary>&#128187; <code>/lab/5_control_statements/while.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Iterazione controllata prima del corpo.
 
 **Descrizione lunga:** Approfondisce il paragrafo while con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Iterazione controllata prima del corpo e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -6743,6 +6901,8 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -6784,6 +6944,8 @@ int main(void){
 <details>
 <summary>&#128187; <code>/lab/5_control_statements/do_while.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Corpo eseguito almeno una volta, confronto con pre/post incremento.
 
 **Descrizione lunga:** Approfondisce il paragrafo do-while con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Corpo eseguito almeno una volta, confronto con pre/post incremento e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -6818,6 +6980,8 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -6861,6 +7025,8 @@ int main(void){
 
 <details>
 <summary>&#128187; <code>/lab/5_control_statements/switch.c</code></summary>
+
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
 
 **Descrizione breve:** Selezione multipla e uso/fall-through del `break`.
 
@@ -6913,6 +7079,8 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -7018,6 +7186,8 @@ int main(void){
 <details>
 <summary>&#128187; <code>/lab/5_control_statements/break_continue.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Interruzione o salto dell'iterazione nei cicli.
 
 **Descrizione lunga:** Approfondisce il paragrafo break e continue con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Interruzione o salto dell'iterazione nei cicli e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -7067,6 +7237,8 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -7131,6 +7303,8 @@ int main(void){
 <details>
 <summary>&#128187; <code>/lab/6_pointers/0_pointers.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Dichiarazione, indirizzi e dereferenziazione.
 
 **Descrizione lunga:** Approfondisce il paragrafo I puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Dichiarazione, indirizzi e dereferenziazione e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -7163,9 +7337,13 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 
+</div>
+
 </details>
 <details>
 <summary>&#128187; <code>/lab/6_pointers/1_pointers.c</code></summary>
+
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
 
 **Descrizione breve:** Differenza tra assegnare puntatori, valori puntati e tipi incompatibili.
 
@@ -7208,9 +7386,13 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 
+</div>
+
 </details>
 <details>
 <summary>&#128187; <code>/lab/6_pointers/33_pointers.c</code></summary>
+
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
 
 **Descrizione breve:** Esercizio intermedio sui puntatori, gia richiamato dagli output.
 
@@ -7246,6 +7428,8 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -7409,6 +7593,8 @@ int main(void){
 <details>
 <summary>&#128187; <code>/lab/6_pointers/2_pointers.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Pericolo di dereferenziare puntatori casuali.
 
 **Descrizione lunga:** Approfondisce il paragrafo Puntatori non inizializzati con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Pericolo di dereferenziare puntatori casuali e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -7445,6 +7631,8 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -7488,6 +7676,8 @@ int main(void){
 <details>
 <summary>&#128187; <code>/lab/6_pointers/3_pointers.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Inizializzazione a `NULL` e controllo prima della dereferenziazione.
 
 **Descrizione lunga:** Approfondisce il paragrafo Il puntatore nullo (NULL) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Inizializzazione a `NULL` e controllo prima della dereferenziazione e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -7515,6 +7705,8 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -7556,6 +7748,8 @@ int main(void){
 
 <details>
 <summary>&#128187; <code>/lab/6_pointers/4_pointers.c</code></summary>
+
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
 
 **Descrizione breve:** Spostamento tra elementi via puntatore.
 
@@ -7599,6 +7793,8 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -7713,6 +7909,8 @@ L'aritmetica dei puntatori ci sarà molto utile quando lavoreremo con i vettori 
 <details>
 <summary>&#128187; <code>/lab/7_array/00_array.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Inizializzazione elementi con ciclo, accesso con `[]` e aritmetica puntatori.
 
 **Descrizione lunga:** Approfondisce il paragrafo Vettori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Inizializzazione elementi con ciclo, accesso con `[]` e aritmetica puntatori e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -7754,9 +7952,13 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 
+</div>
+
 </details>
 <details>
 <summary>&#128187; <code>/lab/7_array/0_array.c</code></summary>
+
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
 
 **Descrizione breve:** Primo esempio di array.
 
@@ -7795,9 +7997,13 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 
+</div>
+
 </details>
 <details>
 <summary>&#128187; <code>/lab/7_array/1_array.c</code></summary>
+
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
 
 **Descrizione breve:** Esercizio progressivo su dichiarazione/accesso a elementi.
 
@@ -7830,6 +8036,8 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -7935,6 +8143,8 @@ int main(void){
 <details>
 <summary>&#128187; <code>/lab/7_array/2_array.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Esercizio progressivo su inizializzazione/accesso agli elementi.
 
 **Descrizione lunga:** Approfondisce il paragrafo Inizializzare un vettore con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Esercizio progressivo su inizializzazione/accesso agli elementi e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -7966,9 +8176,13 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 
+</div>
+
 </details>
 <details>
 <summary>&#128187; <code>/lab/7_array/3_array.c</code></summary>
+
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
 
 **Descrizione breve:** Uso di dimensione simbolica e ciclo.
 
@@ -8003,9 +8217,13 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 
+</div>
+
 </details>
 <details>
 <summary>&#128187; <code>/lab/7_array/4_array.c</code></summary>
+
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
 
 **Descrizione breve:** Esercizio su vettore con dimensione `N`, citato dagli output.
 
@@ -8043,6 +8261,8 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -8195,6 +8415,8 @@ vettore + 4 = 0x7fff64c6243c + 4 = 0x7fff64c62440
 <details>
 <summary>&#128187; <code>/lab/7_array/5_array.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Numero di byte dell'intero array vs singolo elemento.
 
 **Descrizione lunga:** Approfondisce il paragrafo Dimensione vettore (sizeof) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Numero di byte dell'intero array vs singolo elemento e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -8231,9 +8453,13 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 
+</div>
+
 </details>
 <details>
 <summary>&#128187; <code>/lab/7_array/6_array.c</code></summary>
+
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
 
 **Descrizione breve:** Macro `ARRAY_SIZE(x)` per calcolare numero di elementi.
 
@@ -8273,6 +8499,8 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -8346,6 +8574,8 @@ int main(void){
 <details>
 <summary>&#128187; <code>/lab/6_pointers/6_pointers.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Nome dell'array come puntatore costante e operazioni non ammesse.
 
 **Descrizione lunga:** Approfondisce il paragrafo Relazione tra array e puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Nome dell'array come puntatore costante e operazioni non ammesse e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -8377,9 +8607,13 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 
+</div>
+
 </details>
 <details>
 <summary>&#128187; <code>/lab/6_pointers/7_pointers.c</code></summary>
+
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
 
 **Descrizione breve:** Somma degli elementi con indicizzazione e aritmetica puntatori equivalenti.
 
@@ -8451,6 +8685,8 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -8544,6 +8780,8 @@ vagrant@ubuntu2204:/lab/6_pointers$ bin/7_pointers
 <details>
 <summary>&#128187; <code>/lab/6_pointers/8_pointers.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Differenza in elementi vs differenza in byte tramite cast.
 
 **Descrizione lunga:** Approfondisce il paragrafo Differenza tra puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza in elementi vs differenza in byte tramite cast e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -8594,6 +8832,8 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -8659,6 +8899,8 @@ vagrant@ubuntu2204:/lab/6_pointers$ bin/8_pointers
 <details>
 <summary>&#128187; <code>/lab/8_strings/0_strings.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Prima rappresentazione di stringhe C.
 
 **Descrizione lunga:** Approfondisce il paragrafo Le stringhe con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Prima rappresentazione di stringhe C e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -8693,9 +8935,13 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 
+</div>
+
 </details>
 <details>
 <summary>&#128187; <code>/lab/8_strings/1_strings.c</code></summary>
+
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
 
 **Descrizione breve:** Esercizio progressivo su terminatore nullo o stampa.
 
@@ -8729,6 +8975,8 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -8852,6 +9100,8 @@ Anche in questo caso possiamo scordarci di <code>\0</code>.
 <details>
 <summary>&#128187; <code>/lab/8_strings/2_strings.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Esercizio progressivo su inizializzazione/accesso ai caratteri.
 
 **Descrizione lunga:** Approfondisce il paragrafo Dettagli sull'inizializzazione con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Esercizio progressivo su inizializzazione/accesso ai caratteri e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -8885,9 +9135,13 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 
+</div>
+
 </details>
 <details>
 <summary>&#128187; <code>/lab/8_strings/4_strings.c</code></summary>
+
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
 
 **Descrizione breve:** Array dimensionato, puntatore a literal, array con dimensione dedotta.
 
@@ -8923,9 +9177,13 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 
+</div>
+
 </details>
 <details>
 <summary>&#128187; <code>/lab/8_strings/5_strings.c</code></summary>
+
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
 
 **Descrizione breve:** Differenza tra array modificabile e puntatore a string literal read-only.
 
@@ -8986,6 +9244,8 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -9184,6 +9444,8 @@ Le funzioni possono essere dichiarate e definite.
 <details>
 <summary>&#128187; <code>/lab/9_functions/0_functions.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Prototipo, invocazione e definizione di `potenza_di_due`.
 
 **Descrizione lunga:** Approfondisce il paragrafo Dichiarazione di funzione con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Prototipo, invocazione e definizione di `potenza_di_due` e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -9227,6 +9489,8 @@ int potenza_di_due(int esponente){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -9344,6 +9608,8 @@ vagrant@ubuntu2204:/lab/9_functions$ bin/0_functions
 <details>
 <summary>&#128187; <code>/lab/9_functions/1_functions.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Incremento su copia locale del parametro.
 
 **Descrizione lunga:** Approfondisce il paragrafo Passaggio di parametri per valore con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Incremento su copia locale del parametro e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -9394,6 +9660,8 @@ int incrementa(int valore_f, int iterazioni){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -9474,6 +9742,8 @@ risultato                    : 103
 <details>
 <summary>&#128187; <code>/lab/9_functions/2_functions.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Modifica della variabile del chiamante tramite puntatore.
 
 **Descrizione lunga:** Approfondisce il paragrafo Passaggio di parametri per indirizzo con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Modifica della variabile del chiamante tramite puntatore e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -9524,6 +9794,8 @@ int incrementa(int *valore_f, int iterazioni){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -9613,6 +9885,8 @@ risultato                    : 103
 <details>
 <summary>&#128187; <code>/lab/6_pointers/5_pointers.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Tentativo di modifica di memoria read-only e differenza tra array e literal.
 
 **Descrizione lunga:** Approfondisce il paragrafo Passaggio di puntatori const con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Tentativo di modifica di memoria read-only e differenza tra array e literal e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -9653,6 +9927,8 @@ void leggi(const char *qualcosa){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -9700,6 +9976,8 @@ xxx voglio essere modificata
 
 <details>
 <summary>&#128187; <code>/lab/9_functions/3_functions.c</code></summary>
+
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
 
 **Descrizione breve:** Somma di elementi passando array e dimensione a funzione.
 
@@ -9749,6 +10027,8 @@ int somma(int *a, int dim){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -9805,6 +10085,8 @@ vagrant@ubuntu2204:/lab/9_functions$ bin/3_functions
 
 <details>
 <summary>&#128187; <code>/lab/10_dynamic_memory/0_malloc.c</code></summary>
+
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
 
 **Descrizione breve:** Confronto tra allocazione statica e `malloc`, uso di puntatore indicizzato come array.
 
@@ -9869,6 +10151,8 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -9998,6 +10282,8 @@ dinamico: 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14
 <details>
 <summary>&#128187; <code>/lab/7_array/7_array.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Matrice 2D contigua, formula `i*N_COLONNE + j`, accesso con aritmetica puntatori.
 
 **Descrizione lunga:** Approfondisce il paragrafo Array bidimensionali con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Matrice 2D contigua, formula `i*N_COLONNE + j`, accesso con aritmetica puntatori e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -10054,6 +10340,8 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -10177,6 +10465,8 @@ vagrant@ubuntu2204:/lab/7_array$ bin/7_array
 <details>
 <summary>&#128187; <code>/lab/6_pointers/9_pointers.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Introduzione a vettori di puntatori o stringhe indicizzate.
 
 **Descrizione lunga:** Approfondisce il paragrafo Array di puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Introduzione a vettori di puntatori o stringhe indicizzate e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -10210,9 +10500,13 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 
+</div>
+
 </details>
 <details>
 <summary>&#128187; <code>/lab/6_pointers/11_pointers.c</code></summary>
+
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
 
 **Descrizione breve:** Confronto tra array di puntatori, matrice statica e matrice dinamica; uso di `malloc`, `strcpy`, `free`.
 
@@ -10317,6 +10611,8 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 
+</div>
+
 </details>
 
 <!-- lab-exercises:end -->
@@ -10358,6 +10654,8 @@ Inserisci un numero da 1 a 12
 <details>
 <summary>&#128187; <code>/lab/6_pointers/10_pointers.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Confronto tra matrici e puntatori.
 
 **Descrizione lunga:** Approfondisce il paragrafo Differenza tra array bidimensionali e array di puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Confronto tra matrici e puntatori e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -10394,6 +10692,8 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -10639,6 +10939,8 @@ Lo <strong>stack</strong> è un'area di memoria contigua all'heap e cresce in di
 <details>
 <summary>&#128187; <code>/lab/6_pointers/12_pointers.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Allocazione/deallocazione di matrice dinamica, inizializzazione e stampa tramite funzioni.
 
 **Descrizione lunga:** Approfondisce il paragrafo Allocazione dinamica di matrici con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Allocazione/deallocazione di matrice dinamica, inizializzazione e stampa tramite funzioni e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -10780,6 +11082,8 @@ void print_just_strings(char **array_of_pointers, char static_matrix[][N_COLS], 
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -10988,6 +11292,8 @@ Pluto
 <details>
 <summary>&#128187; <code>/lab/11_structs/0_structs.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Definizione di `struct punto_2d`, variabile struttura, puntatore a struttura.
 
 **Descrizione lunga:** Approfondisce il paragrafo Le strutture con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Definizione di `struct punto_2d`, variabile struttura, puntatore a struttura e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -11041,6 +11347,8 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
@@ -11134,6 +11442,8 @@ int main(void){
 <details>
 <summary>&#128187; <code>/lab/11_structs/1_structs.c</code></summary>
 
+<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+
 **Descrizione breve:** Passaggio di strutture a funzioni e calcolo di una media.
 
 **Descrizione lunga:** Approfondisce il paragrafo Passaggio di strutture a funzioni con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Passaggio di strutture a funzioni e calcolo di una media e di collegare la spiegazione teorica al comportamento reale del programma compilato.
@@ -11214,6 +11524,8 @@ void calcola_media(struct studente *i){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+</div>
 
 </details>
 
