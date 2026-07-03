@@ -1,0 +1,34 @@
+name: Check lab snippets
+
+on:
+  pull_request:
+    paths:
+      - "README.md"
+      - "TEMPLATES.md"
+      - "lab/**"
+      - "scripts/update_lab_snippets.py"
+      - ".github/workflows/lab-snippets.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "README.md"
+      - "TEMPLATES.md"
+      - "lab/**"
+      - "scripts/update_lab_snippets.py"
+      - ".github/workflows/lab-snippets.yml"
+
+jobs:
+  check-lab-snippets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Verify generated lab snippets
+        run: python scripts/update_lab_snippets.py --check
