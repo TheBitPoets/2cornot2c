@@ -1,0 +1,43 @@
+﻿{
+  "version": 1,
+  "source_files": [
+    "README.md",
+    "LINUX_PROGRAMMING.md"
+  ],
+  "years": [
+    {
+      "id": "terzo-anno",
+      "title": "Terzo anno",
+      "description": "C base e intermedio",
+      "weekly_hours": 3,
+      "weeks": 33,
+      "udas": [
+        { "id": "uda-1", "title": "Strumenti, primo programma e rappresentazione", "path": "Base", "weeks": "1-3", "items": [] },
+        { "id": "uda-2", "title": "Operatori, condizioni e selezione", "path": "Base", "weeks": "4-6", "items": [] },
+        { "id": "uda-3", "title": "Cicli e funzioni", "path": "Base", "weeks": "7-10", "items": [] },
+        { "id": "uda-4", "title": "Array e stringhe semplici", "path": "Base", "weeks": "11-14", "items": [] },
+        { "id": "uda-5", "title": "Struct e consolidamento", "path": "Base", "weeks": "15-17", "items": [] },
+        { "id": "uda-6", "title": "Puntatori, array e indirizzi", "path": "Intermedio", "weeks": "18-21", "items": [] },
+        { "id": "uda-7", "title": "Memoria automatica, statica e dinamica", "path": "Intermedio", "weeks": "22-25", "items": [] },
+        { "id": "uda-8", "title": "Preprocessore, header e compilazione separata", "path": "Intermedio", "weeks": "26-28", "items": [] },
+        { "id": "uda-9", "title": "File, Makefile, debugging e progetto", "path": "Intermedio", "weeks": "29-33", "items": [] }
+      ]
+    },
+    {
+      "id": "quarto-anno",
+      "title": "Quarto anno",
+      "description": "Linux programming, processi e thread",
+      "weekly_hours": 3,
+      "weeks": 33,
+      "udas": [
+        { "id": "uda-10", "title": "Ripartenza C/Linux, API e qualita", "path": "Avanzato", "weeks": "1-5", "items": [] },
+        { "id": "uda-11", "title": "Processi", "path": "Avanzato", "weeks": "6-12", "items": [] },
+        { "id": "uda-12", "title": "Segnali e progetto processi", "path": "Avanzato", "weeks": "13-15", "items": [] },
+        { "id": "uda-13", "title": "Thread", "path": "Avanzato", "weeks": "16-20", "items": [] },
+        { "id": "uda-14", "title": "Sincronizzazione", "path": "Avanzato", "weeks": "21-25", "items": [] },
+        { "id": "uda-15", "title": "I/O, processi e socket intro", "path": "Avanzato", "weeks": "26-28", "items": [] },
+        { "id": "uda-16", "title": "Sicurezza, CI, manutenzione e progetto finale", "path": "Avanzato", "weeks": "29-33", "items": [] }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+﻿<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Course Design Board</title>
+  <link rel="stylesheet" href="course_board.css">
+</head>
+<body>
+  <header class="hero">
+    <div>
+      <p class="eyebrow">2cornot2c</p>
+      <h1>Course Design Board</h1>
+      <p class="subtitle">Costruisci percorsi, UDA e settimane partendo dai paragrafi reali delle dispense.</p>
+    </div>
+    <div class="actions">
+      <button id="reloadBtn" type="button">Ricarica</button>
+      <button id="saveBtn" type="button" class="primary">Salva JSON</button>
+    </div>
+  </header>
+
+  <main class="board">
+    <section class="panel library">
+      <div class="panelHead">
+        <h2>Paragrafi disponibili</h2>
+        <input id="searchInput" type="search" placeholder="Cerca: puntatori, malloc, fork...">
+      </div>
+      <div class="filters">
+        <select id="sourceFilter" aria-label="Filtro sorgente"></select>
+        <select id="levelFilter" aria-label="Filtro livello">
+          <option value="">Tutti i livelli</option>
+          <option value="2">H2</option>
+          <option value="3">H3</option>
+          <option value="4">H4</option>
+        </select>
+      </div>
+      <div id="headingList" class="headingList"></div>
+    </section>
+
+    <section class="panel planner">
+      <div class="panelHead">
+        <h2>Percorso didattico</h2>
+        <p id="status" class="status">Pronto.</p>
+      </div>
+      <div id="courseTree" class="courseTree"></div>
+    </section>
+  </main>
+
+  <template id="headingTemplate">
+    <article class="headingCard" draggable="true">
+      <div class="headingTitle"></div>
+      <div class="headingMeta"></div>
+    </article>
+  </template>
+
+  <script src="course_board.js"></script>
+</body>
+</html>
