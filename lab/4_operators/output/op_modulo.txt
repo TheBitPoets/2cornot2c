@@ -1,0 +1,2 @@
+Inserisci un numero tra 1 e 10
+4 e' pari

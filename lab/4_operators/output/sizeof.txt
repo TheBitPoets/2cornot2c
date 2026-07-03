@@ -1,0 +1,2 @@
+n = 0, n occupa 4 bytes
+Gli interi occupano 4 bytes

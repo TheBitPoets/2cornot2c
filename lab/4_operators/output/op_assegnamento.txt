@@ -1,0 +1,2 @@
+[compile stderr]
+<errore di compilazione: assegnamento a variabile const>

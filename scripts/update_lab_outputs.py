@@ -189,11 +189,22 @@ def process_lab(entry: dict[str, Any], check: bool) -> bool:
 
     ensure_compile_output_dir(compile_cmd, cwd)
     compile_result = run_command(compile_cmd, cwd=cwd, timeout=timeout)
-    if compile_result.returncode != 0 and not allow_failure:
-        sys.stderr.write(f"Compilation failed for {name}\n")
-        sys.stderr.write(compile_result.stdout)
-        sys.stderr.write(compile_result.stderr)
-        return False
+    if compile_result.returncode != 0:
+        if not allow_failure:
+            sys.stderr.write(f"Compilation failed for {name}\n")
+            sys.stderr.write(compile_result.stdout)
+            sys.stderr.write(compile_result.stderr)
+            return False
+        generated = apply_normalizations(format_output(compile_result, subprocess.CompletedProcess(run_cmd, 0, "", "")), entry)
+        if check:
+            current = output_path.read_text(encoding="utf-8") if output_path.exists() else None
+            if current != generated:
+                sys.stderr.write(f"Output is not up to date for {name}: {output_path.relative_to(ROOT)}\n")
+                return False
+        else:
+            output_path.write_text(generated, encoding="utf-8", newline="\n")
+            print(f"updated {output_path.relative_to(ROOT)}")
+        return True
 
     run_result = run_command(run_cmd, cwd=cwd, timeout=timeout, stdin=stdin)
     if run_result.returncode != 0 and not allow_failure:

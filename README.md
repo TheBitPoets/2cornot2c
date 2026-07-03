@@ -6756,6 +6756,16 @@ bin/op_assegnamento</code></pre>
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/4_operators/output/op_assegnamento.txt" -->
+<pre lang="text"><code>[compile stderr]
+&lt;errore di compilazione: assegnamento a variabile const&gt;
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -6904,6 +6914,20 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/4_operators/output/op_divisione.txt" -->
+<pre lang="text"><code>5/4=1
+6/3=2
+5.0/4.0=1.25
+6.0/3.0=2.00
+5.0/4=1.25
+6/3.0=2.00
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -6983,6 +7007,16 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/4_operators/output/sizeof.txt" -->
+<pre lang="text"><code>n = 0, n occupa 4 bytes
+Gli interi occupano 4 bytes
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -7078,6 +7112,16 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/4_operators/output/op_modulo.txt" -->
+<pre lang="text"><code>Inserisci un numero tra 1 e 10
+4 e' pari
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -7175,6 +7219,15 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/4_operators/output/op_incremento_decremento.txt" -->
+<pre lang="text"><code>i=4, j=4, z=4
+</code></pre>
+<!-- lab-output:end -->
 </details>
 
 <details>
@@ -7232,6 +7285,16 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/4_operators/output/pre_post_incremento.txt" -->
+<pre lang="text"><code>i=1, ii=0
+j=1, jj=1
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
