@@ -33,18 +33,18 @@ La cornice didattica contiene:
 
 | Campo | Funzione |
 |---|---|
-| Contesto | Mantiene il filo della lettura sequenziale. |
-| Prerequisiti | Esplicita cosa serve sapere prima di leggere la sezione. |
-| Obiettivi | Chiarisce cosa lo studente deve saper fare alla fine. |
-| Prossimo passo | Collega la sezione alla progressione successiva. |
+| &#128506; Contesto | Mantiene il filo della lettura sequenziale. |
+| &#128736; Prerequisiti | Esplicita cosa serve sapere prima di leggere la sezione. |
+| &#127919; Obiettivi | Chiarisce cosa lo studente deve saper fare alla fine. |
+| &#10145; Prossimo passo | Collega la sezione alla progressione successiva. |
 
 Nel corpo dei paragrafi useremo tre tipi di raccordo:
 
 | Tipo | Quando usarlo | Effetto didattico |
 |---|---|---|
-| Richiamo | Quando un concetto e gia stato spiegato. | Riduce ripetizioni e offre un link rapido. |
-| Anticipazione | Quando un concetto futuro e necessario per capire il minimo indispensabile. | Permette di procedere senza aprire una digressione lunga. |
-| Rimando | Quando un concetto futuro compare ma non serve capirlo subito. | Abbassa il carico cognitivo: lo studente sa che puo ignorarlo per ora. |
+| &#128257; Richiamo | Quando un concetto e gia stato spiegato. | Riduce ripetizioni e offre un link rapido. |
+| &#128064; Anticipazione | Quando un concetto futuro e necessario per capire il minimo indispensabile. | Permette di procedere senza aprire una digressione lunga. |
+| &#128279; Rimando | Quando un concetto futuro compare ma non serve capirlo subito. | Abbassa il carico cognitivo: lo studente sa che puo ignorarlo per ora. |
 
 Se una sezione della schedule non ha ancora un paragrafo adatto nel README o in un documento dedicato, il materiale resta marcato come `TODO`. Questo serve a distinguere cio che esiste gia da cio che va ancora scritto.
 

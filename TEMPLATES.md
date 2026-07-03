@@ -4,23 +4,23 @@
 <tr>
 <td>
 <p align="justify">
-<strong>Contesto:</strong>
+<strong>&#128506; Contesto:</strong>
 Qui spiega in due o tre frasi da quale punto del percorso arriva lo studente. Il testo deve aiutare la lettura sequenziale: "finora abbiamo visto...", "adesso facciamo un passo in piu...", "questo argomento serve per...".
 </p>
 
 <p align="justify">
-<strong>Prerequisiti:</strong>
+<strong>&#128736; Prerequisiti:</strong>
 <a href="#sezione-precedente">Nome sezione precedente</a>,
 <a href="#altra-sezione">Nome altra sezione</a>.
 </p>
 
 <p align="justify">
-<strong>Obiettivi:</strong>
+<strong>&#127919; Obiettivi:</strong>
 Alla fine di questa sezione saprai descrivere il concetto principale, riconoscere gli errori piu comuni e applicare il meccanismo in un piccolo programma.
 </p>
 
 <p align="justify">
-<strong>Prossimo passo:</strong>
+<strong>&#10145; Prossimo passo:</strong>
 Qui spiega dove porta naturalmente la sezione successiva. Il testo deve mantenere il filo narrativo per chi legge la dispensa dall'inizio alla fine.
 </p>
 </td>
@@ -33,7 +33,7 @@ Qui spiega dove porta naturalmente la sezione successiva. Il testo deve mantener
 <tr>
 <td>
 <p align="justify">
-<strong>Richiamo:</strong>
+<strong>&#128257; Richiamo:</strong>
 Questo concetto e stato introdotto nella sezione <a href="#sezione-gia-vista">Nome sezione gia vista</a>. Qui lo riprendiamo solo per usarlo nel nuovo contesto.
 </p>
 </td>
@@ -46,7 +46,7 @@ Questo concetto e stato introdotto nella sezione <a href="#sezione-gia-vista">No
 <tr>
 <td>
 <p align="justify">
-<strong>Anticipazione:</strong>
+<strong>&#128064; Anticipazione:</strong>
 Qui compare il concetto di <code>concetto futuro</code>. Per ora ti basta sapere che ... Lo studieremo in dettaglio nella sezione <a href="#sezione-futura">Nome sezione futura</a>.
 </p>
 </td>
@@ -59,7 +59,7 @@ Qui compare il concetto di <code>concetto futuro</code>. Per ora ti basta sapere
 <tr>
 <td>
 <p align="justify">
-<strong>Rimando:</strong>
+<strong>&#128279; Rimando:</strong>
 Questo dettaglio sara ripreso piu avanti nella sezione <a href="#sezione-futura">Nome sezione futura</a>. Per ora puoi ignorarlo senza perdere il filo principale.
 </p>
 </td>
