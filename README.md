@@ -3681,6 +3681,18 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/2_preprocessor/output/macro.txt" -->
+<pre lang="text"><code>Inserisci il primo operando
+Inserisci il secondo operando
+s)Somma d)Differenza m)Moltiplicazione D)Divisione
+Il risultato e': 6
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -3884,6 +3896,15 @@ int main(void){
 	
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/2_preprocessor/output/direttiva_if.txt" -->
+<pre lang="text"><code>DEBUG is OFF
+</code></pre>
+<!-- lab-output:end -->
 </details>
 
 <details>
@@ -3943,6 +3964,15 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/2_preprocessor/output/direttiva_ifdef.txt" -->
+<pre lang="text"><code>DEBUG is not defined
+</code></pre>
+<!-- lab-output:end -->
 </details>
 
 <details>
@@ -4002,6 +4032,15 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/2_preprocessor/output/direttiva_ifndef.txt" -->
+<pre lang="text"><code>DEBUG is not defined
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -4127,6 +4166,15 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/2_preprocessor/output/eliminazione_temporanea_codice.txt" -->
+<pre lang="text"><code>int i = &lt;indefinito&gt;
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>

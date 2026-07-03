@@ -200,6 +200,93 @@
       "stdin": "3\n5\n0\n",
       "output": "lab/1_variables/output/4_global_external_internal.txt",
       "timeout_seconds": 5
+    },
+    {
+      "name": "macro",
+      "path": "lab/2_preprocessor/macro.c",
+      "workdir": "lab/2_preprocessor",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/macro",
+        "macro.c"
+      ],
+      "run": [
+        "bin/macro"
+      ],
+      "stdin": "4\n2\ns\n",
+      "output": "lab/2_preprocessor/output/macro.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "direttiva_if",
+      "path": "lab/2_preprocessor/direttiva_if.c",
+      "workdir": "lab/2_preprocessor",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/direttiva_if",
+        "direttiva_if.c"
+      ],
+      "run": [
+        "bin/direttiva_if"
+      ],
+      "output": "lab/2_preprocessor/output/direttiva_if.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "direttiva_ifdef",
+      "path": "lab/2_preprocessor/direttiva_ifdef.c",
+      "workdir": "lab/2_preprocessor",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/direttiva_ifdef",
+        "direttiva_ifdef.c"
+      ],
+      "run": [
+        "bin/direttiva_ifdef"
+      ],
+      "output": "lab/2_preprocessor/output/direttiva_ifdef.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "direttiva_ifndef",
+      "path": "lab/2_preprocessor/direttiva_ifndef.c",
+      "workdir": "lab/2_preprocessor",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/direttiva_ifndef",
+        "direttiva_ifndef.c"
+      ],
+      "run": [
+        "bin/direttiva_ifndef"
+      ],
+      "output": "lab/2_preprocessor/output/direttiva_ifndef.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "eliminazione_temporanea_codice",
+      "path": "lab/2_preprocessor/eliminazione_temporanea_codice.c",
+      "workdir": "lab/2_preprocessor",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/eliminazione_temporanea_codice",
+        "eliminazione_temporanea_codice.c"
+      ],
+      "run": [
+        "bin/eliminazione_temporanea_codice"
+      ],
+      "output": "lab/2_preprocessor/output/eliminazione_temporanea_codice.txt",
+      "timeout_seconds": 5,
+      "normalize": [
+        {
+          "pattern": "(?m)^int i = -?\\d+",
+          "replacement": "int i = <indefinito>"
+        }
+      ]
     }
   ]
 }
