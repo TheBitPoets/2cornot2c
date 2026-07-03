@@ -3,6 +3,8 @@
 <table align="center">
 <tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/0_intro/0_hello.c</summary>
 
