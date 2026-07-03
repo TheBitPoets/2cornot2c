@@ -1215,12 +1215,7 @@ int moltiplicazione(){
 </code></pre>
 <!-- lab-snippet:end -->
 </details>
-</td>
-</tr>
-</table>
-<table align="center">
-<tr>
-<td>
+
 <details>
 <summary>&#128187; /lab/0_intro/3_variabili.c</summary>
 
@@ -2506,12 +2501,7 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 </details>
-</td>
-</tr>
-</table>
-<table align="center">
-<tr>
-<td>
+
 <details>
 <summary>&#128187; /lab/1_variables/4_global_external_internal_b.c</summary>
 
@@ -3052,12 +3042,7 @@ int divisione(int dividendo, int divisore){
 </code></pre>
 <!-- lab-snippet:end -->
 </details>
-</td>
-</tr>
-</table>
-<table align="center">
-<tr>
-<td>
+
 <details>
 <summary>&#128187; /lab/0_intro/4_variabili.h</summary>
 
@@ -3096,12 +3081,7 @@ int divisione(int, int);
 </code></pre>
 <!-- lab-snippet:end -->
 </details>
-</td>
-</tr>
-</table>
-<table align="center">
-<tr>
-<td>
+
 <details>
 <summary>&#128187; /lab/0_intro/5_variabili_main.c</summary>
 
@@ -3170,12 +3150,7 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 </details>
-</td>
-</tr>
-</table>
-<table align="center">
-<tr>
-<td>
+
 <details>
 <summary>&#128187; /lab/0_intro/5_variabili.c</summary>
 
@@ -3225,12 +3200,7 @@ int divisione(int dividendo, int divisore){
 </code></pre>
 <!-- lab-snippet:end -->
 </details>
-</td>
-</tr>
-</table>
-<table align="center">
-<tr>
-<td>
+
 <details>
 <summary>&#128187; /lab/0_intro/5_variabili.h</summary>
 
@@ -3759,12 +3729,7 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 </details>
-</td>
-</tr>
-</table>
-<table align="center">
-<tr>
-<td>
+
 <details>
 <summary>&#128187; /lab/2_preprocessor/direttiva_ifdef.c</summary>
 
@@ -3823,12 +3788,7 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 </details>
-</td>
-</tr>
-</table>
-<table align="center">
-<tr>
-<td>
+
 <details>
 <summary>&#128187; /lab/2_preprocessor/direttiva_ifndef.c</summary>
 
@@ -5473,12 +5433,7 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 </details>
-</td>
-</tr>
-</table>
-<table align="center">
-<tr>
-<td>
+
 <details>
 <summary>&#128187; /lab/3_datatype/mistero.c</summary>
 
@@ -5745,12 +5700,7 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 </details>
-</td>
-</tr>
-</table>
-<table align="center">
-<tr>
-<td>
+
 <details>
 <summary>&#128187; /lab/3_datatype/cast_tra_unsigned_signed.c</summary>
 
@@ -6813,12 +6763,7 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 </details>
-</td>
-</tr>
-</table>
-<table align="center">
-<tr>
-<td>
+
 <details>
 <summary>&#128187; /lab/4_operators/pre_post_incremento.c</summary>
 
@@ -7865,12 +7810,7 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 </details>
-</td>
-</tr>
-</table>
-<table align="center">
-<tr>
-<td>
+
 <details>
 <summary>&#128187; /lab/6_pointers/1_pointers.c</summary>
 
@@ -7926,12 +7866,7 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 </details>
-</td>
-</tr>
-</table>
-<table align="center">
-<tr>
-<td>
+
 <details>
 <summary>&#128187; /lab/6_pointers/33_pointers.c</summary>
 
@@ -8552,12 +8487,7 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 </details>
-</td>
-</tr>
-</table>
-<table align="center">
-<tr>
-<td>
+
 <details>
 <summary>&#128187; /lab/7_array/0_array.c</summary>
 
@@ -8609,12 +8539,7 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 </details>
-</td>
-</tr>
-</table>
-<table align="center">
-<tr>
-<td>
+
 <details>
 <summary>&#128187; /lab/7_array/1_array.c</summary>
 
@@ -8812,12 +8737,7 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 </details>
-</td>
-</tr>
-</table>
-<table align="center">
-<tr>
-<td>
+
 <details>
 <summary>&#128187; /lab/7_array/3_array.c</summary>
 
@@ -8865,12 +8785,7 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 </details>
-</td>
-</tr>
-</table>
-<table align="center">
-<tr>
-<td>
+
 <details>
 <summary>&#128187; /lab/7_array/4_array.c</summary>
 
@@ -9125,12 +9040,7 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 </details>
-</td>
-</tr>
-</table>
-<table align="center">
-<tr>
-<td>
+
 <details>
 <summary>&#128187; /lab/7_array/6_array.c</summary>
 
@@ -9303,12 +9213,7 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 </details>
-</td>
-</tr>
-</table>
-<table align="center">
-<tr>
-<td>
+
 <details>
 <summary>&#128187; /lab/6_pointers/7_pointers.c</summary>
 
@@ -9667,12 +9572,7 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 </details>
-</td>
-</tr>
-</table>
-<table align="center">
-<tr>
-<td>
+
 <details>
 <summary>&#128187; /lab/8_strings/1_strings.c</summary>
 
@@ -9891,12 +9791,7 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 </details>
-</td>
-</tr>
-</table>
-<table align="center">
-<tr>
-<td>
+
 <details>
 <summary>&#128187; /lab/8_strings/4_strings.c</summary>
 
@@ -9945,12 +9840,7 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 </details>
-</td>
-</tr>
-</table>
-<table align="center">
-<tr>
-<td>
+
 <details>
 <summary>&#128187; /lab/8_strings/5_strings.c</summary>
 
@@ -11376,12 +11266,7 @@ int main(void){
 </code></pre>
 <!-- lab-snippet:end -->
 </details>
-</td>
-</tr>
-</table>
-<table align="center">
-<tr>
-<td>
+
 <details>
 <summary>&#128187; /lab/6_pointers/11_pointers.c</summary>
 
