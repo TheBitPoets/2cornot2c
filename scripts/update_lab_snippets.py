@@ -9,6 +9,12 @@ The script replaces every block delimited by these markers:
 
 with the current content of the referenced file, escaped for HTML and wrapped in
 <pre lang="..."><code>...</code></pre>.
+
+It also replaces lab output blocks delimited by these markers:
+
+<!-- lab-output:start path="lab/0_intro/output/0_hello.txt" -->
+...
+<!-- lab-output:end -->
 """
 
 from __future__ import annotations
@@ -37,12 +43,23 @@ SNIPPET_RE = re.compile(
     re.DOTALL,
 )
 
+OUTPUT_RE = re.compile(
+    r'<!-- lab-output:start\s+path="(?P<path>[^"]+)"\s*-->'
+    r'.*?'
+    r'<!-- lab-output:end -->',
+    re.DOTALL,
+)
+
 
 def language_for(path: pathlib.Path) -> str:
+    """Return the syntax-highlighting language for a source file path."""
+
     return LANG_BY_SUFFIX.get(path.suffix.lower(), "text")
 
 
 def render_snippet(relative_path: str) -> str:
+    """Render one lab source marker as an escaped HTML code block."""
+
     source_path = (ROOT / relative_path).resolve()
     try:
         source_path.relative_to(ROOT)
@@ -60,13 +77,38 @@ def render_snippet(relative_path: str) -> str:
     )
 
 
+def render_output(relative_path: str) -> str:
+    """Render one lab output marker as an escaped plain-text block."""
+
+    output_path = (ROOT / relative_path).resolve()
+    try:
+        output_path.relative_to(ROOT)
+    except ValueError as exc:
+        raise ValueError(f"path escapes repository root: {relative_path}") from exc
+    if not output_path.is_file():
+        raise FileNotFoundError(f"lab output not found: {relative_path}")
+    output = output_path.read_text(encoding="utf-8")
+    escaped = html.escape(output, quote=False)
+    return (
+        f'<!-- lab-output:start path="{relative_path}" -->\n'
+        f'<pre lang="text"><code>{escaped}</code></pre>\n'
+        '<!-- lab-output:end -->'
+    )
+
+
 def update_file(path: pathlib.Path) -> bool:
+    """Update all lab source and output markers in one Markdown file."""
+
     original = path.read_text(encoding="utf-8")
 
     def replace(match: re.Match[str]) -> str:
         return render_snippet(match.group("path"))
 
+    def replace_output(match: re.Match[str]) -> str:
+        return render_output(match.group("path"))
+
     updated = SNIPPET_RE.sub(replace, original)
+    updated = OUTPUT_RE.sub(replace_output, updated)
     if updated == original:
         return False
     path.write_text(updated, encoding="utf-8", newline="\n")
@@ -74,6 +116,8 @@ def update_file(path: pathlib.Path) -> bool:
 
 
 def main() -> int:
+    """Parse CLI flags and update or check the requested Markdown files."""
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "targets",

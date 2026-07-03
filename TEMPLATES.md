@@ -59,6 +59,15 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/0_intro/output/0_hello.txt" -->
+<pre lang="text"><code>Hello World
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>

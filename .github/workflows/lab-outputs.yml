@@ -1,0 +1,61 @@
+# Verifica che gli output testuali dei laboratori configurati siano aggiornati.
+#
+# La Action non modifica il repository: esegue lo script in modalita --check.
+# Se un output non e aggiornato, la PR fallisce e va rigenerata localmente con:
+#
+#   python scripts/update_lab_outputs.py
+#
+name: Check lab outputs
+
+on:
+  # pull_request: esegue il controllo nelle PR quando cambiano i sorgenti lab,
+  # il manifest, gli output versionati, lo script o questo workflow.
+  pull_request:
+    paths:
+      # Sorgenti C dei laboratori.
+      - "lab/**/*.c"
+      # Header C dei laboratori.
+      - "lab/**/*.h"
+      # Manifest JSON, in particolare lab/lab_outputs.json.
+      - "lab/**/*.json"
+      # Output generati e versionati accanto ai laboratori.
+      - "lab/**/output/*.txt"
+      # Script che genera o controlla gli output.
+      - "scripts/update_lab_outputs.py"
+      # Questo workflow: se cambia, va rieseguito.
+      - ".github/workflows/lab-outputs.yml"
+  # push su main: mantiene protetto anche il ramo principale dopo i merge.
+  push:
+    branches:
+      - main
+    paths:
+      - "lab/**/*.c"
+      - "lab/**/*.h"
+      - "lab/**/*.json"
+      - "lab/**/output/*.txt"
+      - "scripts/update_lab_outputs.py"
+      - ".github/workflows/lab-outputs.yml"
+
+jobs:
+  check-lab-outputs:
+    # Runner Linux coerente con l'ambiente dei laboratori C.
+    runs-on: ubuntu-latest
+    steps:
+      # Scarica il repository nel runner.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Installa Python per eseguire scripts/update_lab_outputs.py.
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      # Installa gcc e toolchain C essenziale per compilare i lab.
+      - name: Install C build tools
+        run: sudo apt-get update && sudo apt-get install -y build-essential
+
+      # Rigenera gli output in memoria e li confronta con i file committati.
+      # In caso di differenza fallisce, chiedendo di eseguire lo script localmente.
+      - name: Verify generated lab outputs
+        run: python scripts/update_lab_outputs.py --check
