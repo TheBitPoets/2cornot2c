@@ -1,10 +1,10 @@
-# Lab snippets: template, script e GitHub Action
+# Frammenti di codice dei laboratori: template, script e GitHub Action
 
 Questo documento spiega come funzionano i blocchi lab generati automaticamente nel README o in altri file Markdown del repository.
 
 L'obiettivo e semplice: mostrare nel README il codice reale degli esercizi presenti in `lab/`, senza copiarlo a mano ogni volta.
 
-## Perche usare gli snippet automatici
+## Perche usare gli frammento automatici
 
 Quando un esercizio in `lab/` cambia, il codice copiato manualmente nel README rischia di diventare vecchio.
 
@@ -12,8 +12,8 @@ Per evitare questo problema usiamo:
 
 - un template HTML/Markdown per presentare il laboratorio;
 - due marker HTML che delimitano il codice generato;
-- lo script `scripts/update_lab_snippets.py`, che legge il file reale in `lab/` e aggiorna lo snippet;
-- una GitHub Action che controlla nelle PR se gli snippet sono aggiornati.
+- lo script `scripts/update_lab_frammentos.py`, che legge il file reale in `lab/` e aggiorna lo frammento;
+- una GitHub Action che controlla nelle PR se gli frammento sono aggiornati.
 
 ## Struttura consigliata di un blocco lab
 
@@ -44,10 +44,10 @@ Esempio:
         </a>
       </p>
 
-<!-- lab-snippet:start path="lab/0_intro/0_hello.c" -->
+<!-- lab-frammento:start path="lab/0_intro/0_hello.c" -->
 <pre lang="c"><code>/* codice generato automaticamente */
 </code></pre>
-<!-- lab-snippet:end -->
+<!-- lab-frammento:end -->
     </td>
   </tr>
 </table>
@@ -58,36 +58,36 @@ Esempio:
 La parte importante e questa:
 
 ```html
-<!-- lab-snippet:start path="lab/0_intro/0_hello.c" -->
+<!-- lab-frammento:start path="lab/0_intro/0_hello.c" -->
 ...
-<!-- lab-snippet:end -->
+<!-- lab-frammento:end -->
 ```
 
 Lo script sostituisce tutto quello che si trova tra questi due marker.
 
 ## Come usare lo script
 
-Per aggiornare gli snippet in `README.md` e `TEMPLATES.md`:
+Per aggiornare gli frammento in `README.md` e `TEMPLATES.md`:
 
 ```bash
-python scripts/update_lab_snippets.py
+python scripts/update_lab_frammentos.py
 ```
 
 Per aggiornare solo un file specifico:
 
 ```bash
-python scripts/update_lab_snippets.py README.md
+python scripts/update_lab_frammentos.py README.md
 ```
 
 oppure:
 
 ```bash
-python scripts/update_lab_snippets.py TEMPLATES.md
+python scripts/update_lab_frammentos.py TEMPLATES.md
 ```
 
 Lo script:
 
-- cerca tutti i marker `lab-snippet:start` / `lab-snippet:end`;
+- cerca tutti i marker `lab-frammento:start` / `lab-frammento:end`;
 - legge il file indicato nell'attributo `path`;
 - converte i caratteri speciali in entita HTML;
 - inserisce il codice dentro un blocco `<pre lang="..."><code>...</code></pre>`;
@@ -106,26 +106,26 @@ Esempi:
 
 ## Modalita controllo
 
-Per controllare se gli snippet sono aggiornati senza volerli modificare intenzionalmente:
+Per controllare se gli frammento sono aggiornati senza volerli modificare intenzionalmente:
 
 ```bash
-python scripts/update_lab_snippets.py --check
+python scripts/update_lab_frammentos.py --check
 ```
 
 Se tutto e aggiornato, il comando termina correttamente.
 
-Se qualche snippet e vecchio, il comando fallisce e stampa un messaggio simile:
+Se qualche frammento e vecchio, il comando fallisce e stampa un messaggio simile:
 
 ```text
-Lab snippets are not up to date:
+I frammenti di codice dei laboratori non sono aggiornati:
 - README.md
-Run: python scripts/update_lab_snippets.py
+Esegui: python scripts/update_lab_frammentos.py
 ```
 
 In quel caso basta eseguire:
 
 ```bash
-python scripts/update_lab_snippets.py
+python scripts/update_lab_frammentos.py
 ```
 
 poi committare i file aggiornati.
@@ -135,7 +135,7 @@ poi committare i file aggiornati.
 Il workflow si trova in:
 
 ```text
-.github/workflows/lab-snippets.yml
+.github/workflows/lab-frammentos.yml
 ```
 
 La Action parte quando in una PR o su `main` cambiano file come:
@@ -144,21 +144,21 @@ La Action parte quando in una PR o su `main` cambiano file come:
 README.md
 TEMPLATES.md
 lab/**
-scripts/update_lab_snippets.py
-.github/workflows/lab-snippets.yml
+scripts/update_lab_frammentos.py
+.github/workflows/lab-frammentos.yml
 ```
 
 La Action esegue:
 
 ```bash
-python scripts/update_lab_snippets.py --check
+python scripts/update_lab_frammentos.py --check
 ```
 
 Quindi non modifica automaticamente il repository.
 
-Serve solo come controllo di sicurezza: se un file in `lab/` cambia ma lo snippet nel README non e stato rigenerato, la PR fallisce e segnala cosa fare.
+Serve solo come controllo di sicurezza: se un file in `lab/` cambia ma lo frammento nel README non e stato rigenerato, la PR fallisce e segnala cosa fare.
 
-## Workflow consigliato
+## Flusso di lavoro consigliato
 
 Quando aggiungi o modifichi un esercizio in `lab/`:
 
@@ -167,7 +167,7 @@ Quando aggiungi o modifichi un esercizio in `lab/`:
 3. Esegui:
 
 ```bash
-python scripts/update_lab_snippets.py
+python scripts/update_lab_frammentos.py
 ```
 
 4. Controlla le modifiche generate.
@@ -189,9 +189,9 @@ TEMPLATES.md
 Non modificare a mano il codice dentro questi marker:
 
 ```html
-<!-- lab-snippet:start path="..." -->
+<!-- lab-frammento:start path="..." -->
 ...
-<!-- lab-snippet:end -->
+<!-- lab-frammento:end -->
 ```
 
 Qualunque modifica manuale dentro i marker verra sovrascritta dallo script.
@@ -205,7 +205,7 @@ Puoi invece modificare liberamente:
 - i comandi di compilazione;
 - tutto il testo fuori dai marker.
 
-## Link al sorgente
+## Collegamento al sorgente
 
 Per i link ai file lab e preferibile usare `blob/main`, per esempio:
 
@@ -217,14 +217,14 @@ Per i link ai file lab e preferibile usare `blob/main`, per esempio:
 
 Evita link con hash di commit vecchi, perche puntano a una versione congelata del file.
 
-## Troubleshooting
+## Risoluzione dei problemi
 
-### La Action fallisce dicendo che gli snippet non sono aggiornati
+### La Action fallisce dicendo che gli frammento non sono aggiornati
 
 Esegui localmente:
 
 ```bash
-python scripts/update_lab_snippets.py
+python scripts/update_lab_frammentos.py
 ```
 
 poi committa i file modificati.
@@ -234,12 +234,12 @@ poi committa i file modificati.
 Controlla il path nel marker:
 
 ```html
-<!-- lab-snippet:start path="lab/0_intro/0_hello.c" -->
+<!-- lab-frammento:start path="lab/0_intro/0_hello.c" -->
 ```
 
 Il path deve essere relativo alla root del repository e deve puntare a un file esistente.
 
-### Il codice appare senza syntax highlighting
+### Il codice appare senza evidenziazione della sintassi
 
 Controlla l'estensione del file sorgente. Lo script usa l'estensione per decidere il linguaggio del blocco `<pre lang="...">`.
 
