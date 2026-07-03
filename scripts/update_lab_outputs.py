@@ -106,9 +106,30 @@ def ensure_compile_output_dir(command: list[str], cwd: pathlib.Path) -> None:
         (cwd / parent).mkdir(parents=True, exist_ok=True)
 
 
+def format_stdin(stdin: str | None) -> str | None:
+    """Return a readable representation of the configured program input.
+
+    When an interactive lab receives input through the manifest's ``stdin``
+    field, saving only program stdout hides what the simulated user typed.
+    Normal lines are preserved as text; empty submitted lines are rendered as
+    ``<INVIO>`` so an exercise that waits for a plain Enter key remains visible
+    in the generated output artifact.
+    """
+
+    if stdin is None:
+        return None
+    lines = stdin.split("\n")
+    if stdin.endswith("\n"):
+        lines = lines[:-1]
+    if not lines:
+        return ""
+    return "\n".join(line if line else "<INVIO>" for line in lines).rstrip()
+
+
 def format_output(
     compile_result: subprocess.CompletedProcess[str],
     run_result: subprocess.CompletedProcess[str],
+    stdin: str | None = None,
 ) -> str:
     """Build the text that will be committed as the lab output artifact.
 
@@ -118,6 +139,9 @@ def format_output(
     """
 
     sections: list[str] = []
+    formatted_stdin = format_stdin(stdin)
+    if formatted_stdin is not None:
+        sections.append("[stdin]\n" + formatted_stdin)
     if compile_result.stdout.strip():
         sections.append("[compile stdout]\n" + compile_result.stdout.rstrip())
     if compile_result.returncode != 0 and compile_result.stderr.strip():
@@ -210,7 +234,7 @@ def process_lab(entry: dict[str, Any], check: bool) -> bool:
             sys.stderr.write(compile_result.stdout)
             sys.stderr.write(compile_result.stderr)
             return False
-        generated = apply_normalizations(format_output(compile_result, subprocess.CompletedProcess(run_cmd, 0, "", "")), entry)
+        generated = apply_normalizations(format_output(compile_result, subprocess.CompletedProcess(run_cmd, 0, "", ""), stdin), entry)
         if check:
             current = output_path.read_text(encoding="utf-8") if output_path.exists() else None
             if current != generated:
@@ -228,7 +252,7 @@ def process_lab(entry: dict[str, Any], check: bool) -> bool:
         sys.stderr.write(run_result.stderr)
         return False
 
-    generated = apply_normalizations(format_output(compile_result, run_result), entry)
+    generated = apply_normalizations(format_output(compile_result, run_result, stdin), entry)
     if check:
         current = output_path.read_text(encoding="utf-8") if output_path.exists() else None
         if current != generated:

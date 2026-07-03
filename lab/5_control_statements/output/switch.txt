@@ -1,3 +1,6 @@
+[stdin]
+a
+
 a=<indefinito> 	 b=<indefinito> 	 c=<indefinito> 	 other=<indefinito>
 Quale variabile vuoi incrementare?
 [a-A]	[b-B]	[c-C]
