@@ -378,15 +378,116 @@ Alcuni esercizi possono dimostrare un errore o un comportamento non sicuro. In q
 
 Usalo solo quando il fallimento e parte dell'esercizio.
 
-## Esempio con output non deterministico
+## Output non deterministico e normalizzazione
 
 Alcuni programmi didattici stampano valori che cambiano a ogni esecuzione, per esempio indirizzi di memoria o valori di variabili automatiche non inizializzate.
 
-In questi casi puoi usare il campo `normalize` per sostituire le parti variabili con segnaposto stabili.
+In questi casi lo script deve continuare a compilare ed eseguire il programma reale, ma l'output salvato deve essere stabile. Per questo il manifest supporta due forme di normalizzazione:
 
-Quando gli indirizzi appartengono allo stesso blocco logico, per esempio variabili locali stampate nello stesso frame, conviene usare `normalize_addresses`.
+- `normalize`, per sostituzioni testuali tramite regex;
+- `normalize_addresses`, per trasformare indirizzi esadecimali in offset relativi.
 
-Esempio con delta preservati:
+La sequenza resta sempre questa:
+
+1. lo script compila il programma;
+2. lo script esegue il programma;
+3. lo script cattura stdout e stderr;
+4. lo script applica le normalizzazioni configurate;
+5. lo script salva o confronta il file `output/*.txt`.
+
+La normalizzazione non cambia il programma e non cambia quello che viene eseguito. Cambia solo il testo finale usato come output versionato.
+
+### Sostituzioni semplici con `normalize`
+
+Il campo `normalize` contiene una lista di regole regex:
+
+```json
+"normalize": [
+  {
+    "pattern": "(?m)^local_var=-?\\d+",
+    "replacement": "local_var=<indefinito>"
+  }
+]
+```
+
+Questa regola trasforma un valore reale ma instabile come:
+
+```text
+local_var=32764
+```
+
+in:
+
+```text
+local_var=<indefinito>
+```
+
+Questo e utile quando il numero stampato non ha significato didattico stabile. Nel caso di una variabile automatica non inizializzata, il valore non va interpretato come risultato affidabile: il segnaposto `<indefinito>` comunica meglio il concetto.
+
+### Indirizzi con delta preservati
+
+Quando gli indirizzi appartengono allo stesso blocco logico, per esempio variabili locali stampate nello stesso frame, conviene usare:
+
+```json
+"normalize_addresses": "paragraph"
+```
+
+Con questa opzione, ogni blocco separato da una riga vuota viene trattato separatamente. Dentro ogni blocco, il primo indirizzo esadecimale diventa la base e tutti gli altri indirizzi vengono convertiti in offset rispetto a quella base.
+
+Esempio reale possibile:
+
+```text
+local_var=123          &local_var=0x7ffca000
+init_local_var=0       &init_local_var=0x7ffc9ffc
+```
+
+Lo script prende `0x7ffca000` come base e calcola:
+
+```text
+0x7ffca000 - 0x7ffca000 = 0x0
+0x7ffc9ffc - 0x7ffca000 = -0x4
+```
+
+L'output normalizzato diventa:
+
+```text
+local_var=<indefinito>          &local_var=<base+0x0>
+init_local_var=0                &init_local_var=<base-0x4>
+```
+
+In questo modo l'indirizzo assoluto non dipende dal runner, ma il delta di `0x4` byte resta visibile nel README.
+
+### Perche `"paragraph"`
+
+Il valore `"paragraph"` significa che la base viene ricalcolata per ogni paragrafo, cioe per ogni blocco separato da una riga vuota.
+
+Questo e utile per programmi come `0_local.c`, dove la stessa funzione viene chiamata piu volte e ogni chiamata stampa un blocco autonomo.
+
+Esempio:
+
+```text
+local_var=123          &local_var=0xaaa0
+init_local_var=0       &init_local_var=0xaa9c
+
+local_var=456          &local_var=0xbbb0
+init_local_var=0       &init_local_var=0xbbac
+```
+
+diventa:
+
+```text
+local_var=<indefinito>          &local_var=<base+0x0>
+init_local_var=0                &init_local_var=<base-0x4>
+
+local_var=<indefinito>          &local_var=<base+0x0>
+init_local_var=0                &init_local_var=<base-0x4>
+```
+
+Non confrontiamo gli indirizzi assoluti tra chiamate diverse. Conserviamo invece la relazione tra variabili nello stesso blocco, che e la parte utile per spiegare il layout locale.
+
+### Caso `0_local.c`
+
+Nel lab `0_local.c` usiamo insieme `normalize_addresses` e `normalize`:
 
 ```json
 {
@@ -407,25 +508,72 @@ Esempio con delta preservati:
 }
 ```
 
-Un output reale come:
+L'output mostrato nel README diventa:
 
 ```text
-&local_var=0x7ffca000
-&init_local_var=0x7ffc9ffc
+local_var=<indefinito>          &local_var=<base+0x0>
+init_local_var=0                &init_local_var=<base-0x4>
 ```
 
-diventa:
+Cosa comunica:
+
+- `local_var=<indefinito>` indica che la variabile locale non inizializzata non ha un valore affidabile;
+- `init_local_var=0` mostra che la variabile inizializzata vale davvero zero;
+- `<base+0x0>` indica il primo indirizzo del blocco;
+- `<base-0x4>` indica un indirizzo distante quattro byte dalla base, espresso in esadecimale.
+
+### Caso `1_static_local.c`
+
+Nel lab `1_static_local.c` il programma stampa l'indirizzo di una variabile `static` locale e quello di una variabile automatica locale.
+
+Questi due indirizzi appartengono a zone di memoria concettualmente diverse:
+
+- `count` e `static`, quindi vive in storage statico;
+- `bad_count` e automatica, quindi vive nello stack.
+
+Il delta assoluto tra area statica e stack puo cambiare a causa di ASLR e del layout del processo. In questo caso conservare un delta numerico sarebbe fragile e potenzialmente fuorviante.
+
+Per questo usiamo sostituzioni semantiche:
+
+```json
+"normalize": [
+  {
+    "pattern": "&count=0x[0-9a-fA-F]+",
+    "replacement": "&count=<static+0x0>"
+  },
+  {
+    "pattern": "&bad_coubt=0x[0-9a-fA-F]+",
+    "replacement": "&bad_coubt=<stack+0x0>"
+  }
+]
+```
+
+L'output mostrato diventa:
 
 ```text
-&local_var=<base+0x0>
-&init_local_var=<base-0x4>
+count=1      &count=<static+0x0>
+bad_count=1  &bad_coubt=<stack+0x0>
+You call me 1 times
 ```
 
-In questo modo l'indirizzo assoluto non dipende dal runner, ma il delta di `0x4` byte resta visibile.
+Qui il punto didattico non e la distanza tra i due indirizzi, ma il fatto che le due variabili hanno durata e collocazione concettuale diverse.
 
-Se invece gli indirizzi appartengono a zone diverse, per esempio una variabile `static` e una variabile sullo stack, il delta assoluto puo dipendere da ASLR e dal layout del processo. In quel caso e meglio usare `normalize` con sostituzioni mirate, per esempio `<static+0x0>` e `<stack+0x0>`.
+### Casi senza normalizzazione
 
-Lo script esegue comunque il programma reale. La normalizzazione avviene solo dopo la cattura dell'output, prima di scrivere il file `output/*.txt` o prima del confronto in modalita `--check`.
+Se l'output e gia stabile, non serve configurare nulla.
+
+Per esempio un lab che stampa:
+
+```text
+global=0
+global=1
+global=2
+global=3
+```
+
+puo essere salvato direttamente senza `normalize` e senza `normalize_addresses`.
+
+In sintesi: usa `normalize` per sostituire valori instabili o semanticamente inutili; usa `normalize_addresses: "paragraph"` quando vuoi mantenere il delta in byte tra indirizzi dello stesso blocco logico.
 
 ## Aggiornare gli output localmente
 
