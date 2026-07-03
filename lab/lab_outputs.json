@@ -1312,6 +1312,74 @@
       ],
       "output": "lab/11_structs/output/1_structs.txt",
       "timeout_seconds": 5
+    },
+    {
+      "name": "2_pointers",
+      "path": "lab/6_pointers/2_pointers.c",
+      "workdir": "lab/6_pointers",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/2_pointers",
+        "2_pointers.c"
+      ],
+      "run": [
+        "bin/2_pointers"
+      ],
+      "output": "lab/6_pointers/output/2_pointers.txt",
+      "timeout_seconds": 5,
+      "allow_failure": true,
+      "normalize": [
+        {
+          "pattern": "(?s)\\A.*\\Z",
+          "replacement": "[exit code]\n-11\n"
+        }
+      ]
+    },
+    {
+      "name": "33_pointers",
+      "path": "lab/6_pointers/33_pointers.c",
+      "workdir": "lab/6_pointers",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/33_pointers",
+        "33_pointers.c"
+      ],
+      "run": [
+        "bin/33_pointers"
+      ],
+      "output": "lab/6_pointers/output/33_pointers.txt",
+      "timeout_seconds": 5,
+      "normalize": [
+        {
+          "pattern": "(?m)^(b|a) = -?\\d+$",
+          "replacement": "\\1 = <fuori-oggetto>"
+        }
+      ]
+    },
+    {
+      "name": "5_strings",
+      "path": "lab/8_strings/5_strings.c",
+      "workdir": "lab/8_strings",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/5_strings",
+        "5_strings.c"
+      ],
+      "run": [
+        "bin/5_strings"
+      ],
+      "output": "lab/8_strings/output/5_strings.txt",
+      "timeout_seconds": 5,
+      "allow_failure": true,
+      "normalize": [
+        {
+          "pattern": "(?s)\\A.*\\Z",
+          "replacement": "[exit code]\n-11\n"
+        }
+      ]
     }
   ]
 }

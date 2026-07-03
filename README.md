@@ -8486,6 +8486,17 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/6_pointers/output/33_pointers.txt" -->
+<pre lang="text"><code>a = &lt;fuori-oggetto&gt;
+b = &lt;fuori-oggetto&gt;
+a = &lt;fuori-oggetto&gt;
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -8701,6 +8712,16 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/6_pointers/output/2_pointers.txt" -->
+<pre lang="text"><code>[exit code]
+-11
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -10671,6 +10692,16 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/8_strings/output/5_strings.txt" -->
+<pre lang="text"><code>[exit code]
+-11
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>

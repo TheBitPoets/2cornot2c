@@ -126,6 +126,8 @@ def format_output(
         sections.append(run_result.stdout.rstrip())
     if run_result.stderr.strip():
         sections.append("[stderr]\n" + run_result.stderr.rstrip())
+    if run_result.returncode != 0:
+        sections.append(f"[exit code]\n{run_result.returncode}")
     if not sections:
         return ""
     return "\n".join(sections) + "\n"

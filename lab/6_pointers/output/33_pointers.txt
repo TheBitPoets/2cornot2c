@@ -1,0 +1,3 @@
+a = <fuori-oggetto>
+b = <fuori-oggetto>
+a = <fuori-oggetto>
