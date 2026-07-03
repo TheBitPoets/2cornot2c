@@ -4,26 +4,26 @@
 <tr>
 <td>
 <details>
-<summary>&#128506; Cornice didattica</summary>
+<summary><span style="font-size: 1.25em;">&#129517;</span> <strong>Cornice didattica</strong></summary>
 
 <p align="justify">
-<strong>&#128506; Contesto:</strong>
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
 Qui spiega in due o tre frasi da quale punto del percorso arriva lo studente. Il testo deve aiutare la lettura sequenziale: "finora abbiamo visto...", "adesso facciamo un passo in piu...", "questo argomento serve per...".
 </p>
 
 <p align="justify">
-<strong>&#128736; Prerequisiti:</strong>
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
 <a href="#sezione-precedente">Nome sezione precedente</a>,
 <a href="#altra-sezione">Nome altra sezione</a>.
 </p>
 
 <p align="justify">
-<strong>&#127919; Obiettivi:</strong>
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
 Alla fine di questa sezione saprai descrivere il concetto principale, riconoscere gli errori piu comuni e applicare il meccanismo in un piccolo programma.
 </p>
 
 <p align="justify">
-<strong>&#10145; Prossimo passo:</strong>
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
 Qui spiega dove porta naturalmente la sezione successiva. Il testo deve mantenere il filo narrativo per chi legge la dispensa dall'inizio alla fine.
 </p>
 </details>
@@ -37,7 +37,7 @@ Qui spiega dove porta naturalmente la sezione successiva. Il testo deve mantener
 <tr>
 <td>
 <p align="justify">
-<strong>&#128257; Richiamo:</strong>
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
 Questo concetto e stato introdotto nella sezione <a href="#sezione-gia-vista">Nome sezione gia vista</a>. Qui lo riprendiamo solo per usarlo nel nuovo contesto.
 </p>
 </td>
@@ -50,7 +50,7 @@ Questo concetto e stato introdotto nella sezione <a href="#sezione-gia-vista">No
 <tr>
 <td>
 <p align="justify">
-<strong>&#128064; Anticipazione:</strong>
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
 Qui compare il concetto di <code>concetto futuro</code>. Per ora ti basta sapere che ... Lo studieremo in dettaglio nella sezione <a href="#sezione-futura">Nome sezione futura</a>.
 </p>
 </td>
@@ -63,7 +63,7 @@ Qui compare il concetto di <code>concetto futuro</code>. Per ora ti basta sapere
 <tr>
 <td>
 <p align="justify">
-<strong>&#128279; Rimando:</strong>
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
 Questo dettaglio sara ripreso piu avanti nella sezione <a href="#sezione-futura">Nome sezione futura</a>. Per ora puoi ignorarlo senza perdere il filo principale.
 </p>
 </td>

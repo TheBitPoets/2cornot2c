@@ -27,7 +27,7 @@ Le dispense sono nate per una lettura sequenziale, ma la schedule permette anche
 | Lettura sequenziale | Il testo continua a raccontare un percorso progressivo: da dove veniamo, cosa impariamo ora, dove andremo dopo. |
 | Lettura modulare | Chi arriva da una UDA o da una tabella capisce subito prerequisiti, obiettivi, concetti anticipati e link utili. |
 
-Per ottenere questo equilibrio, ogni sezione importante dovrebbe iniziare con una cornice didattica leggera e richiudibile, costruita con una linguetta `<details>` come i blocchi dei lab. In questo modo chi legge in sequenza non viene interrotto da un blocco troppo grande, mentre chi arriva dalla schedule puo aprire la cornice e orientarsi subito. Il template operativo si trova in `TEMPLATES.md`, nella sezione `Cornice didattica`.
+Per ottenere questo equilibrio, ogni sezione importante dovrebbe iniziare con una cornice didattica leggera e richiudibile, costruita con una linguetta `<details>` come i blocchi dei lab. La linguetta usa l'icona bussola per richiamare l'idea di orientamento. In questo modo chi legge in sequenza non viene interrotto da un blocco troppo grande, mentre chi arriva dalla schedule puo aprire la cornice e orientarsi subito. Il template operativo si trova in `TEMPLATES.md`, nella sezione `Cornice didattica`.
 
 La cornice didattica contiene:
 
