@@ -717,6 +717,8 @@ Lo script:
 4. cattura stdout e stderr;
 5. scrive il risultato nel file `output` configurato.
 
+Se il comando di compilazione usa `-o bin/nome_lab`, lo script crea automaticamente la cartella `bin` prima di lanciare `gcc`. Non serve quindi versionare una cartella `bin` vuota per ogni directory di laboratorio.
+
 ## Controllare gli output senza modificarli
 
 Per verificare che gli output committati siano aggiornati:

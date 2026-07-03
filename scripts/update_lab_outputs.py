@@ -74,6 +74,27 @@ def run_command(
     )
 
 
+def ensure_compile_output_dir(command: list[str], cwd: pathlib.Path) -> None:
+    """Create the parent directory of a GCC ``-o`` output path when needed.
+
+    Lab manifests commonly compile to paths such as ``bin/0_hello``.  Git does
+    not track empty directories, so a fresh checkout may not contain that
+    ``bin`` directory yet.  Creating it here keeps manifests simple and avoids
+    requiring ``.gitkeep`` files in every lab folder.
+    """
+
+    try:
+        output_index = command.index("-o") + 1
+    except ValueError:
+        return
+    if output_index >= len(command):
+        return
+    output_path = pathlib.Path(command[output_index])
+    parent = output_path.parent
+    if str(parent) != ".":
+        (cwd / parent).mkdir(parents=True, exist_ok=True)
+
+
 def format_output(
     compile_result: subprocess.CompletedProcess[str],
     run_result: subprocess.CompletedProcess[str],
@@ -166,6 +187,7 @@ def process_lab(entry: dict[str, Any], check: bool) -> bool:
     output_path = repo_path(entry["output"])
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
+    ensure_compile_output_dir(compile_cmd, cwd)
     compile_result = run_command(compile_cmd, cwd=cwd, timeout=timeout)
     if compile_result.returncode != 0 and not allow_failure:
         sys.stderr.write(f"Compilation failed for {name}\n")
