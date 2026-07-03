@@ -2,6 +2,7 @@
   headings: [],
   design: null,
   draggedHeading: null,
+  collapsedHeadingIds: new Set(),
 };
 
 const els = {
@@ -82,6 +83,7 @@ function renderHeadings() {
   const headings = state.headings.filter((heading) => {
     if (source && heading.source !== source) return false;
     if (level && String(heading.level) !== level) return false;
+    if (!query && isHiddenByCollapsedParent(heading)) return false;
     if (query && !`${heading.title} ${heading.source}`.toLowerCase().includes(query)) return false;
     return true;
   });
@@ -91,12 +93,33 @@ function renderHeadings() {
     node.dataset.id = heading.id;
     const depth = Math.max(0, heading.level - 1);
     const usedInYears = used.get(heading.id) || new Set();
+    const hasChildren = headingHasChildren(heading);
     node.classList.add(`level-${heading.level}`);
     if (usedInYears.size) {
       node.classList.add("assigned");
     }
     node.style.setProperty("--depth", depth);
-    node.querySelector(".headingTitle").textContent = heading.title;
+    const title = node.querySelector(".headingTitle");
+    title.innerHTML = "";
+    if (hasChildren) {
+      const toggle = document.createElement("button");
+      toggle.className = "treeToggle";
+      toggle.type = "button";
+      toggle.textContent = state.collapsedHeadingIds.has(heading.id) ? "+" : "-";
+      toggle.setAttribute("aria-label", state.collapsedHeadingIds.has(heading.id) ? "Mostra sottoparagrafi" : "Nascondi sottoparagrafi");
+      toggle.addEventListener("click", (event) => {
+        event.stopPropagation();
+        toggleHeading(heading.id);
+      });
+      title.append(toggle);
+    } else {
+      const spacer = document.createElement("span");
+      spacer.className = "treeToggleSpacer";
+      title.append(spacer);
+    }
+    const titleText = document.createElement("span");
+    titleText.textContent = heading.title;
+    title.append(titleText);
     const usedLabel = usedInYears.size ? ` · inserito in ${[...usedInYears].join(", ")}` : "";
     node.querySelector(".headingMeta").textContent = `${heading.source}:${heading.line} · H${heading.level}${usedLabel}`;
     node.addEventListener("dragstart", () => {
@@ -109,6 +132,38 @@ function renderHeadings() {
   if (!headings.length) {
     els.headingList.innerHTML = '<p class="empty">Nessun paragrafo trovato.</p>';
   }
+}
+
+function headingHasChildren(heading) {
+  const index = state.headings.findIndex((candidate) => candidate.id === heading.id);
+  if (index < 0) return false;
+  for (const candidate of state.headings.slice(index + 1)) {
+    if (candidate.source !== heading.source) break;
+    if (candidate.level <= heading.level) return false;
+    return true;
+  }
+  return false;
+}
+
+function isHiddenByCollapsedParent(heading) {
+  const index = state.headings.findIndex((candidate) => candidate.id === heading.id);
+  if (index < 0) return false;
+  for (let i = index - 1; i >= 0; i -= 1) {
+    const candidate = state.headings[i];
+    if (candidate.source !== heading.source) break;
+    if (candidate.level < heading.level && state.collapsedHeadingIds.has(candidate.id)) return true;
+    if (candidate.level < heading.level) continue;
+  }
+  return false;
+}
+
+function toggleHeading(headingId) {
+  if (state.collapsedHeadingIds.has(headingId)) {
+    state.collapsedHeadingIds.delete(headingId);
+  } else {
+    state.collapsedHeadingIds.add(headingId);
+  }
+  renderHeadings();
 }
 
 function addToFirstUda(heading) {

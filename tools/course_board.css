@@ -213,7 +213,37 @@ input, select { width: 100%; padding: .72rem .9rem; }
   text-decoration-thickness: 1px;
 }
 
-.headingTitle { font-size: .92rem; font-weight: 700; line-height: 1.18; }
+.headingTitle {
+  display: flex;
+  align-items: flex-start;
+  gap: .42rem;
+  font-size: .92rem;
+  font-weight: 700;
+  line-height: 1.18;
+}
+
+.treeToggle,
+.treeToggleSpacer {
+  flex: 0 0 1.15rem;
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.treeToggle {
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border-radius: .34rem;
+  font-size: .78rem;
+  line-height: 1;
+  box-shadow: none;
+}
+
+.treeToggle:hover {
+  transform: none;
+  background: #f1f1f1;
+}
+
 .headingMeta { margin-top: .24rem; color: var(--muted); font: .68rem/1.35 var(--mono); }
 
 .courseTree {
