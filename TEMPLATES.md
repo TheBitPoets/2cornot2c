@@ -1,39 +1,39 @@
 ## Lab
 
-<table>
-  <tr>
-    <td>
-      <details>
-        <summary>&#128187; <code>/lab/0_intro/0_hello.c</code></summary>
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#128187; <code>/lab/0_intro/0_hello.c</code></summary>
 
-        <p align="justify">
-          <strong>Descrizione breve:</strong>
-          Primo programma C: stampa un messaggio a schermo e introduce la struttura minima di un programma.
-        </p>
+<p align="justify">
+<strong>Descrizione breve:</strong>
+Primo programma C: stampa un messaggio a schermo e introduce la struttura minima di un programma.
+</p>
 
-        <p align="justify">
-          <strong>Descrizione lunga:</strong>
-          Questo laboratorio mostra come includere un header standard, definire la funzione &lt;code&gt;main()&lt;/code&gt;, chiamare &lt;code&gt;printf()&lt;/code&gt;, compilare il sorgente con &lt;code&gt;gcc&lt;/code&gt; ed eseguire il binario prodotto. È il punto di partenza per collegare codice sorgente, compilazione ed esecuzione.
-        </p>
+<p align="justify">
+<strong>Descrizione lunga:</strong>
+Questo laboratorio mostra come includere un header standard, definire la funzione &lt;code&gt;main()&lt;/code&gt;, chiamare &lt;code&gt;printf()&lt;/code&gt;, compilare il sorgente con &lt;code&gt;gcc&lt;/code&gt; ed eseguire il binario prodotto. È il punto di partenza per collegare codice sorgente, compilazione ed esecuzione.
+</p>
 
-        <p align="justify">
-          <strong>Sorgente:</strong>
-          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/0_hello.c">
+<p align="justify">
+<strong>Sorgente:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/0_hello.c">
           /lab/0_intro/0_hello.c
         </a>
-        </p>
+</p>
 
-        <p align="justify">
-          <strong>Compilazione ed esecuzione:</strong>
-        </p>
+<p align="justify">
+<strong>Compilazione ed esecuzione:</strong>
+</p>
 
 <pre lang="bash"><code>cd /lab/0_intro
 gcc -o bin/0_hello 0_hello.c
 bin/0_hello</code></pre>
 
-        <p align="justify">
-          <strong>Codice:</strong>
-        </p>
+<p align="justify">
+<strong>Codice:</strong>
+</p>
 
 <!-- lab-snippet:start path="lab/0_intro/0_hello.c" -->
 <pre lang="c"><code>/*
@@ -57,9 +57,9 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-      </details>
-    </td>
-  </tr>
+</details>
+</td>
+</tr>
 </table>
 
 ## Lab
