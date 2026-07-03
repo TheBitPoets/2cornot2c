@@ -24,6 +24,53 @@ python scripts/update_lab_snippets.py
 
 5. Committa insieme sorgente, manifest, output e README/template aggiornati.
 
+## Scorciatoia: aggiornare il manifest senza ricordare tutti i campi
+
+Per aggiungere o aggiornare una voce in `lab/lab_outputs.json` puoi usare:
+
+```bash
+python scripts/upsert_lab_output_manifest.py lab/1_variables/0_local.c
+```
+
+Lo script inferisce automaticamente:
+
+- `name`;
+- `path`;
+- `workdir`;
+- comando `compile`;
+- comando `run`;
+- file `output`;
+- normalizzazioni comuni per indirizzi e valori instabili.
+
+Se il lab e gia presente nel manifest, la voce viene aggiornata. Se non e presente, viene aggiunta.
+
+Per vedere cosa verrebbe scritto senza modificare il manifest:
+
+```bash
+python scripts/upsert_lab_output_manifest.py lab/1_variables/0_local.c --dry-run
+```
+
+Per un programma interattivo:
+
+```bash
+python scripts/upsert_lab_output_manifest.py lab/0_intro/2_variabili.c --stdin "4\n2\ns\n"
+```
+
+Per un lab composto da piu file:
+
+```bash
+python scripts/upsert_lab_output_manifest.py lab/1_variables/4_global_external_internal_a.c --extra-source lab/1_variables/4_global_external_internal_b.c
+```
+
+Dopo aver aggiornato il manifest, rigenera output e README:
+
+```bash
+python scripts/update_lab_outputs.py
+python scripts/update_lab_snippets.py
+```
+
+Lo script e pensato come assistente, non come oracolo: per casi molto particolari puoi ancora modificare manualmente la voce generata.
+
 ## Flusso manuale: aggiungere un nuovo lab al README con output
 
 Questo esempio descrive il caso piu comune: hai creato un nuovo file sorgente e vuoi mostrarlo nel README insieme al suo output.
@@ -271,6 +318,7 @@ Se un file non e cambiato, `git add` semplicemente non aggiungera nulla per quel
 | `.github/workflows/lab-outputs.yml` | GitHub Action che controlla gli output in PR e su `main` |
 | `lab/<cartella>/output/<nome>.txt` | Output generato per uno specifico esercizio |
 | `scripts/update_lab_snippets.py` | Script che incolla nel README sia sorgenti sia output generati |
+| `scripts/upsert_lab_output_manifest.py` | Script che aggiunge o aggiorna una voce del manifest inferendo i campi piu comuni |
 
 ## Struttura degli output
 
@@ -574,6 +622,44 @@ global=3
 puo essere salvato direttamente senza `normalize` e senza `normalize_addresses`.
 
 In sintesi: usa `normalize` per sostituire valori instabili o semanticamente inutili; usa `normalize_addresses: "paragraph"` quando vuoi mantenere il delta in byte tra indirizzi dello stesso blocco logico.
+
+## Come lo script inferisce le normalizzazioni
+
+`scripts/upsert_lab_output_manifest.py` legge il sorgente C e cerca i casi piu frequenti.
+
+Se trova una variabile automatica `int` dichiarata senza inizializzazione e stampata con una forma come:
+
+```c
+printf("local_var=%d", local_var);
+```
+
+aggiunge una regola `normalize` che trasforma il valore numerico in:
+
+```text
+local_var=<indefinito>
+```
+
+Se trova piu indirizzi stampati con `%p` e tutti appartengono a variabili automatiche locali, aggiunge:
+
+```json
+"normalize_addresses": "paragraph"
+```
+
+Il README mostrera quindi offset esadecimali relativi, per esempio:
+
+```text
+&local_var=<base+0x0>
+&init_local_var=<base-0x4>
+```
+
+Se invece trova indirizzi appartenenti a zone diverse, per esempio `static` e stack, aggiunge sostituzioni semantiche:
+
+```text
+&count=<static+0x0>
+&bad_count=<stack+0x0>
+```
+
+Questa scelta evita di mostrare delta assoluti tra aree di memoria diverse, che potrebbero cambiare per ASLR o layout del processo.
 
 ## Aggiornare gli output localmente
 
