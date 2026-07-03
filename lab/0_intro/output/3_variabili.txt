@@ -1,0 +1,4 @@
+Inserisci il primo operando
+Insesci il secondo operando
+s)Somma d)Differenza m)Moltiplicazione
+Il risultato e': 6
