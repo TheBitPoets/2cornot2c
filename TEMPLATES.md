@@ -13,7 +13,7 @@ Primo programma C: stampa un messaggio a schermo e introduce la struttura minima
 
 <p align="justify">
 <strong>Descrizione lunga:</strong>
-Questo laboratorio mostra come includere un header standard, definire la funzione &lt;code&gt;main()&lt;/code&gt;, chiamare &lt;code&gt;printf()&lt;/code&gt;, compilare il sorgente con &lt;code&gt;gcc&lt;/code&gt; ed eseguire il binario prodotto. È il punto di partenza per collegare codice sorgente, compilazione ed esecuzione.
+Questo laboratorio mostra come includere un header standard, definire la funzione <code>main()</code>, chiamare <code>printf()</code>, compilare il sorgente con <code>gcc</code> ed eseguire il binario prodotto. È il punto di partenza per collegare codice sorgente, compilazione ed esecuzione.
 </p>
 
 <p align="justify">

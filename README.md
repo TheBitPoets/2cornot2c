@@ -776,7 +776,7 @@ Il preprocessore viene richiamato dal compilatore come primo step nel processo d
 
 <p align="justify">
 <strong>Descrizione breve:</strong>
-&lt;code&gt;printf&lt;/code&gt;, &lt;code&gt;#include &lt;stdio.h&gt;&lt;/code&gt;, funzione &lt;code&gt;main&lt;/code&gt;, compilazione ed esecuzione del primo binario.
+<code>printf</code>, <code>#include &lt;stdio.h&gt;</code>, funzione <code>main</code>, compilazione ed esecuzione del primo binario.
 </p>
 
 <p align="justify">
@@ -993,12 +993,12 @@ Righe 16-19: definizione della funzione main().
 
 <p align="justify">
 <strong>Descrizione breve:</strong>
-Definizione e chiamata di funzioni semplici, esempio &lt;code&gt;sottrazione&lt;/code&gt;.
+Definizione e chiamata di funzioni semplici, esempio <code>sottrazione</code>.
 </p>
 
 <p align="justify">
 <strong>Descrizione lunga:</strong>
-Approfondisce il paragrafo Funzioni con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Definizione e chiamata di funzioni semplici, esempio &lt;code&gt;sottrazione&lt;/code&gt; e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+Approfondisce il paragrafo Funzioni con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Definizione e chiamata di funzioni semplici, esempio <code>sottrazione</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
 </p>
 
 <p align="justify">
@@ -1145,12 +1145,12 @@ Come spiegato ampiamente in precedenza, facciamo uso anche della funzione printf
 
 <p align="justify">
 <strong>Descrizione breve:</strong>
-Calcolatrice minima con variabili globali, funzioni &lt;code&gt;somma&lt;/code&gt;, &lt;code&gt;differenza&lt;/code&gt;, &lt;code&gt;moltiplicazione&lt;/code&gt;.
+Calcolatrice minima con variabili globali, funzioni <code>somma</code>, <code>differenza</code>, <code>moltiplicazione</code>.
 </p>
 
 <p align="justify">
 <strong>Descrizione lunga:</strong>
-Approfondisce il paragrafo Variabili con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Calcolatrice minima con variabili globali, funzioni &lt;code&gt;somma&lt;/code&gt;, &lt;code&gt;differenza&lt;/code&gt;, &lt;code&gt;moltiplicazione&lt;/code&gt; e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+Approfondisce il paragrafo Variabili con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Calcolatrice minima con variabili globali, funzioni <code>somma</code>, <code>differenza</code>, <code>moltiplicazione</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
 </p>
 
 <p align="justify">
@@ -2213,12 +2213,12 @@ int uno(register int a);
 
 <p align="justify">
 <strong>Descrizione breve:</strong>
-Differenza tra variabile locale automatica e &lt;code&gt;static&lt;/code&gt; locale che conserva il valore tra chiamate.
+Differenza tra variabile locale automatica e <code>static</code> locale che conserva il valore tra chiamate.
 </p>
 
 <p align="justify">
 <strong>Descrizione lunga:</strong>
-Approfondisce il paragrafo Variabili statiche locali (static variables with block scope) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza tra variabile locale automatica e &lt;code&gt;static&lt;/code&gt; locale che conserva il valore tra chiamate e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+Approfondisce il paragrafo Variabili statiche locali (static variables with block scope) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza tra variabile locale automatica e <code>static</code> locale che conserva il valore tra chiamate e di collegare la spiegazione teorica al comportamento reale del programma compilato.
 </p>
 
 <p align="justify">
@@ -2517,12 +2517,12 @@ int main(void){
 
 <p align="justify">
 <strong>Descrizione breve:</strong>
-Uso di &lt;code&gt;extern&lt;/code&gt; e variabile locale &lt;code&gt;static&lt;/code&gt; in una funzione accumulatrice.
+Uso di <code>extern</code> e variabile locale <code>static</code> in una funzione accumulatrice.
 </p>
 
 <p align="justify">
 <strong>Descrizione lunga:</strong>
-Approfondisce il paragrafo Variabili globali con External Linkage (Static variables with External Linkage) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Uso di &lt;code&gt;extern&lt;/code&gt; e variabile locale &lt;code&gt;static&lt;/code&gt; in una funzione accumulatrice e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+Approfondisce il paragrafo Variabili globali con External Linkage (Static variables with External Linkage) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Uso di <code>extern</code> e variabile locale <code>static</code> in una funzione accumulatrice e di collegare la spiegazione teorica al comportamento reale del programma compilato.
 </p>
 
 <p align="justify">
@@ -2755,12 +2755,12 @@ int divisione(int dividendo, int divisore){
 
 <p align="justify">
 <strong>Descrizione breve:</strong>
-Variabile globale &lt;code&gt;static&lt;/code&gt; visibile solo nel file corrente.
+Variabile globale <code>static</code> visibile solo nel file corrente.
 </p>
 
 <p align="justify">
 <strong>Descrizione lunga:</strong>
-Approfondisce il paragrafo Variabili globali con Internal Linkage (Static variables with Internal Linkage) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Variabile globale &lt;code&gt;static&lt;/code&gt; visibile solo nel file corrente e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+Approfondisce il paragrafo Variabili globali con Internal Linkage (Static variables with Internal Linkage) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Variabile globale <code>static</code> visibile solo nel file corrente e di collegare la spiegazione teorica al comportamento reale del programma compilato.
 </p>
 
 <p align="justify">
@@ -2971,12 +2971,12 @@ La definizione di b e di j non è mostrata, quindi non è possibile determinare 
 
 <p align="justify">
 <strong>Descrizione breve:</strong>
-Separazione tra sorgente e header, uso di &lt;code&gt;4_variabili.h&lt;/code&gt;.
+Separazione tra sorgente e header, uso di <code>4_variabili.h</code>.
 </p>
 
 <p align="justify">
 <strong>Descrizione lunga:</strong>
-Approfondisce il paragrafo Suddivisione in moduli di un programma con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Separazione tra sorgente e header, uso di &lt;code&gt;4_variabili.h&lt;/code&gt; e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+Approfondisce il paragrafo Suddivisione in moduli di un programma con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Separazione tra sorgente e header, uso di <code>4_variabili.h</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
 </p>
 
 <p align="justify">
@@ -3063,7 +3063,7 @@ int divisione(int dividendo, int divisore){
 
 <p align="justify">
 <strong>Descrizione breve:</strong>
-Prototipi delle funzioni usate da &lt;code&gt;4_variabili.c&lt;/code&gt;.
+Prototipi delle funzioni usate da <code>4_variabili.c</code>.
 </p>
 
 <p align="justify">
@@ -3107,12 +3107,12 @@ int divisione(int, int);
 
 <p align="justify">
 <strong>Descrizione breve:</strong>
-&lt;code&gt;main&lt;/code&gt; separato dalle funzioni operative.
+<code>main</code> separato dalle funzioni operative.
 </p>
 
 <p align="justify">
 <strong>Descrizione lunga:</strong>
-Approfondisce il paragrafo Suddivisione in moduli di un programma con un esempio eseguibile e mirato. Il codice permette di osservare concretamente &lt;code&gt;main&lt;/code&gt; separato dalle funzioni operative e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+Approfondisce il paragrafo Suddivisione in moduli di un programma con un esempio eseguibile e mirato. Il codice permette di osservare concretamente <code>main</code> separato dalle funzioni operative e di collegare la spiegazione teorica al comportamento reale del programma compilato.
 </p>
 
 <p align="justify">
@@ -3181,12 +3181,12 @@ int main(void){
 
 <p align="justify">
 <strong>Descrizione breve:</strong>
-Implementazione delle funzioni aritmetiche separate dal &lt;code&gt;main&lt;/code&gt;.
+Implementazione delle funzioni aritmetiche separate dal <code>main</code>.
 </p>
 
 <p align="justify">
 <strong>Descrizione lunga:</strong>
-Approfondisce il paragrafo Suddivisione in moduli di un programma con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Implementazione delle funzioni aritmetiche separate dal &lt;code&gt;main&lt;/code&gt; e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+Approfondisce il paragrafo Suddivisione in moduli di un programma con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Implementazione delle funzioni aritmetiche separate dal <code>main</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
 </p>
 
 <p align="justify">
@@ -3703,12 +3703,12 @@ La prima forma (parentesi angolari &lt; &gt;) è usata per includere il contenut
 
 <p align="justify">
 <strong>Descrizione breve:</strong>
-Uso di &lt;code&gt;#if DEBUG&lt;/code&gt;, simbolo passato da codice o da &lt;code&gt;gcc -D&lt;/code&gt;.
+Uso di <code>#if DEBUG</code>, simbolo passato da codice o da <code>gcc -D</code>.
 </p>
 
 <p align="justify">
 <strong>Descrizione lunga:</strong>
-Approfondisce il paragrafo Le direttive #if #ifdef #ifndef con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Uso di &lt;code&gt;#if DEBUG&lt;/code&gt;, simbolo passato da codice o da &lt;code&gt;gcc -D&lt;/code&gt; e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+Approfondisce il paragrafo Le direttive #if #ifdef #ifndef con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Uso di <code>#if DEBUG</code>, simbolo passato da codice o da <code>gcc -D</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
 </p>
 
 <p align="justify">
@@ -3770,12 +3770,12 @@ int main(void){
 
 <p align="justify">
 <strong>Descrizione breve:</strong>
-Verifica se &lt;code&gt;DEBUG&lt;/code&gt; e definito, uso di &lt;code&gt;#undef&lt;/code&gt;.
+Verifica se <code>DEBUG</code> e definito, uso di <code>#undef</code>.
 </p>
 
 <p align="justify">
 <strong>Descrizione lunga:</strong>
-Approfondisce il paragrafo Le direttive #if #ifdef #ifndef con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Verifica se &lt;code&gt;DEBUG&lt;/code&gt; e definito, uso di &lt;code&gt;#undef&lt;/code&gt; e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+Approfondisce il paragrafo Le direttive #if #ifdef #ifndef con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Verifica se <code>DEBUG</code> e definito, uso di <code>#undef</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
 </p>
 
 <p align="justify">
@@ -3834,12 +3834,12 @@ int main(void){
 
 <p align="justify">
 <strong>Descrizione breve:</strong>
-Logica inversa di &lt;code&gt;#ifdef&lt;/code&gt;, controllo se un simbolo non e definito.
+Logica inversa di <code>#ifdef</code>, controllo se un simbolo non e definito.
 </p>
 
 <p align="justify">
 <strong>Descrizione lunga:</strong>
-Approfondisce il paragrafo Le direttive #if #ifdef #ifndef con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Logica inversa di &lt;code&gt;#ifdef&lt;/code&gt;, controllo se un simbolo non e definito e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+Approfondisce il paragrafo Le direttive #if #ifdef #ifndef con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Logica inversa di <code>#ifdef</code>, controllo se un simbolo non e definito e di collegare la spiegazione teorica al comportamento reale del programma compilato.
 </p>
 
 <p align="justify">
@@ -3968,12 +3968,12 @@ La definizione del simbolo macro deve essere effettuata con la direttiva #define
 
 <p align="justify">
 <strong>Descrizione breve:</strong>
-Macro &lt;code&gt;TRACE&lt;/code&gt; e inclusione/esclusione temporanea di codice.
+Macro <code>TRACE</code> e inclusione/esclusione temporanea di codice.
 </p>
 
 <p align="justify">
 <strong>Descrizione lunga:</strong>
-Approfondisce il paragrafo Eliminazione temporanea di codice con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Macro &lt;code&gt;TRACE&lt;/code&gt; e inclusione/esclusione temporanea di codice e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+Approfondisce il paragrafo Eliminazione temporanea di codice con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Macro <code>TRACE</code> e inclusione/esclusione temporanea di codice e di collegare la spiegazione teorica al comportamento reale del programma compilato.
 </p>
 
 <p align="justify">
@@ -5094,12 +5094,12 @@ Quando allora usare i diversi tipi di interi? Dipende dalla situazione.
 
 <p align="justify">
 <strong>Descrizione breve:</strong>
-Segnaposto &lt;code&gt;printf&lt;/code&gt; per tipi interi diversi e comportamento inatteso con placeholder errati.
+Segnaposto <code>printf</code> per tipi interi diversi e comportamento inatteso con placeholder errati.
 </p>
 
 <p align="justify">
 <strong>Descrizione lunga:</strong>
-Approfondisce il paragrafo Stampare altri tipi di interi con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Segnaposto &lt;code&gt;printf&lt;/code&gt; per tipi interi diversi e comportamento inatteso con placeholder errati e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+Approfondisce il paragrafo Stampare altri tipi di interi con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Segnaposto <code>printf</code> per tipi interi diversi e comportamento inatteso con placeholder errati e di collegare la spiegazione teorica al comportamento reale del programma compilato.
 </p>
 
 <p align="justify">
@@ -6066,12 +6066,12 @@ uy = 4294954951          ffffcfc7
 
 <p align="justify">
 <strong>Descrizione breve:</strong>
-Perdita dei bit piu significativi nel cast da &lt;code&gt;int&lt;/code&gt; a &lt;code&gt;short&lt;/code&gt;.
+Perdita dei bit piu significativi nel cast da <code>int</code> a <code>short</code>.
 </p>
 
 <p align="justify">
 <strong>Descrizione lunga:</strong>
-Approfondisce il paragrafo Troncamento rappresentazione binaria con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Perdita dei bit piu significativi nel cast da &lt;code&gt;int&lt;/code&gt; a &lt;code&gt;short&lt;/code&gt; e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+Approfondisce il paragrafo Troncamento rappresentazione binaria con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Perdita dei bit piu significativi nel cast da <code>int</code> a <code>short</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
 </p>
 
 <p align="justify">
@@ -6502,12 +6502,12 @@ int main(void){
 
 <p align="justify">
 <strong>Descrizione breve:</strong>
-Divisione intera/reale e comportamento dell'operatore &lt;code&gt;/&lt;/code&gt;.
+Divisione intera/reale e comportamento dell'operatore <code>/</code>.
 </p>
 
 <p align="justify">
 <strong>Descrizione lunga:</strong>
-Approfondisce il paragrafo Operatore divisione: / con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Divisione intera/reale e comportamento dell'operatore &lt;code&gt;/&lt;/code&gt; e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+Approfondisce il paragrafo Operatore divisione: / con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Divisione intera/reale e comportamento dell'operatore <code>/</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
 </p>
 
 <p align="justify">
@@ -6673,12 +6673,12 @@ Come avrai notato sizeof può essere usato con o senza parentesi tonde. L'uso de
 
 <p align="justify">
 <strong>Descrizione breve:</strong>
-Uso dell'operatore &lt;code&gt;%&lt;/code&gt; e resto della divisione intera.
+Uso dell'operatore <code>%</code> e resto della divisione intera.
 </p>
 
 <p align="justify">
 <strong>Descrizione lunga:</strong>
-Approfondisce il paragrafo Operatore % con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Uso dell'operatore &lt;code&gt;%&lt;/code&gt; e resto della divisione intera e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+Approfondisce il paragrafo Operatore % con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Uso dell'operatore <code>%</code> e resto della divisione intera e di collegare la spiegazione teorica al comportamento reale del programma compilato.
 </p>
 
 <p align="justify">
@@ -6758,12 +6758,12 @@ int main(void){
 
 <p align="justify">
 <strong>Descrizione breve:</strong>
-Uso base di &lt;code&gt;++&lt;/code&gt; e &lt;code&gt;--&lt;/code&gt;.
+Uso base di <code>++</code> e <code>--</code>.
 </p>
 
 <p align="justify">
 <strong>Descrizione lunga:</strong>
-Approfondisce il paragrafo Operatore incremento/decremento ++ -- con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Uso base di &lt;code&gt;++&lt;/code&gt; e &lt;code&gt;--&lt;/code&gt; e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+Approfondisce il paragrafo Operatore incremento/decremento ++ -- con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Uso base di <code>++</code> e <code>--</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
 </p>
 
 <p align="justify">
@@ -6824,12 +6824,12 @@ int main(void){
 
 <p align="justify">
 <strong>Descrizione breve:</strong>
-Differenza tra &lt;code&gt;i++&lt;/code&gt; e &lt;code&gt;++i&lt;/code&gt; in valutazione e assegnamento.
+Differenza tra <code>i++</code> e <code>++i</code> in valutazione e assegnamento.
 </p>
 
 <p align="justify">
 <strong>Descrizione lunga:</strong>
-Approfondisce il paragrafo Operatore incremento/decremento ++ -- con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza tra &lt;code&gt;i++&lt;/code&gt; e &lt;code&gt;++i&lt;/code&gt; in valutazione e assegnamento e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+Approfondisce il paragrafo Operatore incremento/decremento ++ -- con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza tra <code>i++</code> e <code>++i</code> in valutazione e assegnamento e di collegare la spiegazione teorica al comportamento reale del programma compilato.
 </p>
 
 <p align="justify">
@@ -7523,12 +7523,12 @@ int main(void){
 
 <p align="justify">
 <strong>Descrizione breve:</strong>
-Selezione multipla e uso/fall-through del &lt;code&gt;break&lt;/code&gt;.
+Selezione multipla e uso/fall-through del <code>break</code>.
 </p>
 
 <p align="justify">
 <strong>Descrizione lunga:</strong>
-Approfondisce il paragrafo switch con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Selezione multipla e uso/fall-through del &lt;code&gt;break&lt;/code&gt; e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+Approfondisce il paragrafo switch con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Selezione multipla e uso/fall-through del <code>break</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
 </p>
 
 <p align="justify">
@@ -8245,12 +8245,12 @@ int main(void){
 
 <p align="justify">
 <strong>Descrizione breve:</strong>
-Inizializzazione a &lt;code&gt;NULL&lt;/code&gt; e controllo prima della dereferenziazione.
+Inizializzazione a <code>NULL</code> e controllo prima della dereferenziazione.
 </p>
 
 <p align="justify">
 <strong>Descrizione lunga:</strong>
-Approfondisce il paragrafo Il puntatore nullo (NULL) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Inizializzazione a &lt;code&gt;NULL&lt;/code&gt; e controllo prima della dereferenziazione e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+Approfondisce il paragrafo Il puntatore nullo (NULL) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Inizializzazione a <code>NULL</code> e controllo prima della dereferenziazione e di collegare la spiegazione teorica al comportamento reale del programma compilato.
 </p>
 
 <p align="justify">
@@ -8502,12 +8502,12 @@ L'aritmetica dei puntatori ci sarà molto utile quando lavoreremo con i vettori 
 
 <p align="justify">
 <strong>Descrizione breve:</strong>
-Inizializzazione elementi con ciclo, accesso con &lt;code&gt;[]&lt;/code&gt; e aritmetica puntatori.
+Inizializzazione elementi con ciclo, accesso con <code>[]</code> e aritmetica puntatori.
 </p>
 
 <p align="justify">
 <strong>Descrizione lunga:</strong>
-Approfondisce il paragrafo Vettori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Inizializzazione elementi con ciclo, accesso con &lt;code&gt;[]&lt;/code&gt; e aritmetica puntatori e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+Approfondisce il paragrafo Vettori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Inizializzazione elementi con ciclo, accesso con <code>[]</code> e aritmetica puntatori e di collegare la spiegazione teorica al comportamento reale del programma compilato.
 </p>
 
 <p align="justify">
@@ -8876,12 +8876,12 @@ int main(void){
 
 <p align="justify">
 <strong>Descrizione breve:</strong>
-Esercizio su vettore con dimensione &lt;code&gt;N&lt;/code&gt;, citato dagli output.
+Esercizio su vettore con dimensione <code>N</code>, citato dagli output.
 </p>
 
 <p align="justify">
 <strong>Descrizione lunga:</strong>
-Approfondisce il paragrafo Inizializzare un vettore con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Esercizio su vettore con dimensione &lt;code&gt;N&lt;/code&gt;, citato dagli output e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+Approfondisce il paragrafo Inizializzare un vettore con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Esercizio su vettore con dimensione <code>N</code>, citato dagli output e di collegare la spiegazione teorica al comportamento reale del programma compilato.
 </p>
 
 <p align="justify">
@@ -9136,12 +9136,12 @@ int main(void){
 
 <p align="justify">
 <strong>Descrizione breve:</strong>
-Macro &lt;code&gt;ARRAY_SIZE(x)&lt;/code&gt; per calcolare numero di elementi.
+Macro <code>ARRAY_SIZE(x)</code> per calcolare numero di elementi.
 </p>
 
 <p align="justify">
 <strong>Descrizione lunga:</strong>
-Approfondisce il paragrafo Dimensione vettore (sizeof) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Macro &lt;code&gt;ARRAY_SIZE(x)&lt;/code&gt; per calcolare numero di elementi e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+Approfondisce il paragrafo Dimensione vettore (sizeof) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Macro <code>ARRAY_SIZE(x)</code> per calcolare numero di elementi e di collegare la spiegazione teorica al comportamento reale del programma compilato.
 </p>
 
 <p align="justify">
@@ -10229,12 +10229,12 @@ Le funzioni possono essere dichiarate e definite.
 
 <p align="justify">
 <strong>Descrizione breve:</strong>
-Prototipo, invocazione e definizione di &lt;code&gt;potenza_di_due&lt;/code&gt;.
+Prototipo, invocazione e definizione di <code>potenza_di_due</code>.
 </p>
 
 <p align="justify">
 <strong>Descrizione lunga:</strong>
-Approfondisce il paragrafo Dichiarazione di funzione con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Prototipo, invocazione e definizione di &lt;code&gt;potenza_di_due&lt;/code&gt; e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+Approfondisce il paragrafo Dichiarazione di funzione con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Prototipo, invocazione e definizione di <code>potenza_di_due</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
 </p>
 
 <p align="justify">
@@ -10931,12 +10931,12 @@ vagrant@ubuntu2204:/lab/9_functions$ bin/3_functions
 
 <p align="justify">
 <strong>Descrizione breve:</strong>
-Confronto tra allocazione statica e &lt;code&gt;malloc&lt;/code&gt;, uso di puntatore indicizzato come array.
+Confronto tra allocazione statica e <code>malloc</code>, uso di puntatore indicizzato come array.
 </p>
 
 <p align="justify">
 <strong>Descrizione lunga:</strong>
-Approfondisce il paragrafo Allocazione dinamica della memoria con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Confronto tra allocazione statica e &lt;code&gt;malloc&lt;/code&gt;, uso di puntatore indicizzato come array e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+Approfondisce il paragrafo Allocazione dinamica della memoria con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Confronto tra allocazione statica e <code>malloc</code>, uso di puntatore indicizzato come array e di collegare la spiegazione teorica al comportamento reale del programma compilato.
 </p>
 
 <p align="justify">
@@ -11139,12 +11139,12 @@ dinamico: 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14
 
 <p align="justify">
 <strong>Descrizione breve:</strong>
-Matrice 2D contigua, formula &lt;code&gt;i*N_COLONNE + j&lt;/code&gt;, accesso con aritmetica puntatori.
+Matrice 2D contigua, formula <code>i*N_COLONNE + j</code>, accesso con aritmetica puntatori.
 </p>
 
 <p align="justify">
 <strong>Descrizione lunga:</strong>
-Approfondisce il paragrafo Array bidimensionali con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Matrice 2D contigua, formula &lt;code&gt;i*N_COLONNE + j&lt;/code&gt;, accesso con aritmetica puntatori e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+Approfondisce il paragrafo Array bidimensionali con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Matrice 2D contigua, formula <code>i*N_COLONNE + j</code>, accesso con aritmetica puntatori e di collegare la spiegazione teorica al comportamento reale del programma compilato.
 </p>
 
 <p align="justify">
@@ -11387,12 +11387,12 @@ int main(void){
 
 <p align="justify">
 <strong>Descrizione breve:</strong>
-Confronto tra array di puntatori, matrice statica e matrice dinamica; uso di &lt;code&gt;malloc&lt;/code&gt;, &lt;code&gt;strcpy&lt;/code&gt;, &lt;code&gt;free&lt;/code&gt;.
+Confronto tra array di puntatori, matrice statica e matrice dinamica; uso di <code>malloc</code>, <code>strcpy</code>, <code>free</code>.
 </p>
 
 <p align="justify">
 <strong>Descrizione lunga:</strong>
-Approfondisce il paragrafo Array di puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Confronto tra array di puntatori, matrice statica e matrice dinamica; uso di &lt;code&gt;malloc&lt;/code&gt;, &lt;code&gt;strcpy&lt;/code&gt;, &lt;code&gt;free&lt;/code&gt; e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+Approfondisce il paragrafo Array di puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Confronto tra array di puntatori, matrice statica e matrice dinamica; uso di <code>malloc</code>, <code>strcpy</code>, <code>free</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
 </p>
 
 <p align="justify">
@@ -12209,12 +12209,12 @@ Pluto
 
 <p align="justify">
 <strong>Descrizione breve:</strong>
-Definizione di &lt;code&gt;struct punto_2d&lt;/code&gt;, variabile struttura, puntatore a struttura.
+Definizione di <code>struct punto_2d</code>, variabile struttura, puntatore a struttura.
 </p>
 
 <p align="justify">
 <strong>Descrizione lunga:</strong>
-Approfondisce il paragrafo Le strutture con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Definizione di &lt;code&gt;struct punto_2d&lt;/code&gt;, variabile struttura, puntatore a struttura e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+Approfondisce il paragrafo Le strutture con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Definizione di <code>struct punto_2d</code>, variabile struttura, puntatore a struttura e di collegare la spiegazione teorica al comportamento reale del programma compilato.
 </p>
 
 <p align="justify">
