@@ -1,0 +1,2 @@
+u = 65535, tu=-1
+u = 0xffff, tu=0xffffffff
