@@ -487,6 +487,8 @@ La sequenza resta sempre questa:
 
 La normalizzazione non cambia il programma e non cambia quello che viene eseguito. Cambia solo il testo finale usato come output versionato.
 
+Lo script preserva il newline finale generato da `format_output()`: anche se una regex sostituisce tutto il contenuto, l'output normalizzato resta confrontabile in modo stabile con i file `output/*.txt`.
+
 ### Sostituzioni semplici con `normalize`
 
 Il campo `normalize` contiene una lista di regole regex:

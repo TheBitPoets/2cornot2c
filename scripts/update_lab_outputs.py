@@ -19,14 +19,25 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import pathlib
 import re
 import subprocess
 import sys
+import difflib
 from typing import Any
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG = ROOT / "lab" / "lab_outputs.json"
+
+
+def github_error(path: pathlib.Path, message: str) -> None:
+    """Emit a GitHub Actions annotation when running in CI."""
+
+    if "GITHUB_ACTIONS" not in os.environ:
+        return
+    escaped = message.replace("%", "%25").replace("\n", "%0A").replace("\r", "%0D")
+    sys.stderr.write(f"::error file={path.as_posix()}::{escaped}\n")
 
 
 def repo_path(value: str) -> pathlib.Path:
@@ -109,7 +120,7 @@ def format_output(
     sections: list[str] = []
     if compile_result.stdout.strip():
         sections.append("[compile stdout]\n" + compile_result.stdout.rstrip())
-    if compile_result.stderr.strip():
+    if compile_result.returncode != 0 and compile_result.stderr.strip():
         sections.append("[compile stderr]\n" + compile_result.stderr.rstrip())
     if run_result.stdout.strip():
         sections.append(run_result.stdout.rstrip())
@@ -136,6 +147,8 @@ def apply_normalizations(generated: str, entry: dict[str, Any]) -> str:
     normalized = normalize_addresses(generated, entry)
     for rule in entry.get("normalize", []):
         normalized = re.sub(rule["pattern"], rule["replacement"], normalized)
+    if generated.endswith("\n") and normalized and not normalized.endswith("\n"):
+        normalized += "\n"
     return normalized
 
 
@@ -218,6 +231,18 @@ def process_lab(entry: dict[str, Any], check: bool) -> bool:
         current = output_path.read_text(encoding="utf-8") if output_path.exists() else None
         if current != generated:
             sys.stderr.write(f"Output is not up to date for {name}: {output_path.relative_to(ROOT)}\n")
+            current_lines = [] if current is None else current.splitlines(keepends=True)
+            generated_lines = generated.splitlines(keepends=True)
+            diff = difflib.unified_diff(
+                current_lines,
+                generated_lines,
+                fromfile=f"committed/{output_path.relative_to(ROOT)}",
+                tofile=f"generated/{output_path.relative_to(ROOT)}",
+                n=3,
+            )
+            diff_text = "".join(diff)
+            sys.stderr.write(diff_text)
+            github_error(output_path.relative_to(ROOT), f"Output is not up to date for {name}\n{diff_text}")
             return False
     else:
         output_path.write_text(generated, encoding="utf-8", newline="\n")

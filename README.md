@@ -7641,7 +7641,7 @@ int main(void){
 <!-- lab-output:start path="lab/5_control_statements/output/logical_relational_operators.txt" -->
 <pre lang="text"><code>Inserisci la tua eta'
 Hai la laurea?
-[S]?? 	 [N]o
+[S]ì 	 [N]o
 Hai la laurea, il tuo stipendio e' 3000
 </code></pre>
 <!-- lab-output:end -->
@@ -7744,7 +7744,7 @@ int main(void){
 </p>
 
 <!-- lab-output:start path="lab/5_control_statements/output/for.txt" -->
-<pre lang="text"><code>0 1 2 3 4 5 6 7 8 9 
+<pre lang="text"><code>0 1 2 3 4 5 6 7 8 9
 </code></pre>
 <!-- lab-output:end -->
 </details>
@@ -7839,7 +7839,7 @@ int main(void){
 </p>
 
 <!-- lab-output:start path="lab/5_control_statements/output/while.txt" -->
-<pre lang="text"><code>0 1 2 3 4 5 6 7 8 9 
+<pre lang="text"><code>0 1 2 3 4 5 6 7 8 9
 </code></pre>
 <!-- lab-output:end -->
 </details>
@@ -7939,7 +7939,7 @@ int main(void){
 </p>
 
 <!-- lab-output:start path="lab/5_control_statements/output/do_while.txt" -->
-<pre lang="text"><code>0 1 2 3 4 5 6 7 8 9 
+<pre lang="text"><code>0 1 2 3 4 5 6 7 8 9
 </code></pre>
 <!-- lab-output:end -->
 </details>
@@ -8242,7 +8242,7 @@ int main(void){
 
 <!-- lab-output:start path="lab/5_control_statements/output/break_continue.txt" -->
 <pre lang="text"><code>1 3 5 7 9 
-1 3 5 7 9 
+1 3 5 7 9
 </code></pre>
 <!-- lab-output:end -->
 </details>
