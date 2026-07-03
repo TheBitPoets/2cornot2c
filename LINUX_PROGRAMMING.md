@@ -756,7 +756,7 @@ Devi includere <code>&lt;sys/types.h&gt;</code> e <code>&lt;signal.h&gt;</code> 
 </p>
 
 <table align="center">
-	<td>:exclamation: <b>Importante</b>
+	<td>&#10071; <b>Importante</b>
 `t<p align=justify>
  Per convenzione, <strong>exit code</strong> è usato per indicare se il programma ha terminato la sua esecuzione correttamente o con degli errori. Un valore pari a zero indica una corretta esecuzione, mentre valori diversi da zero indicano che il processo ha terminato con qualche errore. è importante seguire questa convenzione se vuoi usare gli operatori logici della shell (<code>&amp;&amp;</code> <code>||</code>) per concatenare più programmi tra loro.
 `t</p>

@@ -695,7 +695,7 @@ Di seguito daremo una definizione sommaria per ogni componente sopra citato; rim
 </p>
 
 <table align="center">
-	<td>:exclamation: <b>Importante</b>
+	<td>&#10071; <b>Importante</b>
 	<p align=justify>
  Una <b>variabile</b> è una locazione di memoria a cui è stato associato un <b>identificatore</b>, cioè un nome per referenziare nel codice quella cella di memoria.
 	</p>
@@ -724,7 +724,7 @@ Le variabili possono essere sia dichiarate che definite e spesso i due termini s
 </table>
 
 <table align="center">
-		<td>&#9888; <b>Importante</b>
+		<td>&#10071; <b>Importante</b>
 	<p align=justify>
 Per la <b>costante</b> valgono le stesse considerazioni fatte per le variabili, con l'eccezione che per le costanti non è possibile assegnare un nuovo valore una volta che queste sono state inizializzate.
 	</p>
@@ -736,7 +736,7 @@ const double pi = 3.14; // costante pi greco
 ```
 
 <table align="center">
-		<td>&#9888; <b>Importante</b>
+		<td>&#10071; <b>Importante</b>
 	<p align=justify>
 <b>Una funzione</b> è una collezione di istruzioni che svolgono uno specifico compito.
 	</p>
@@ -755,7 +755,7 @@ int differenza(int minuendo, int sottraendo){
 ```
 
 <table align="center">
-		<td>&#9888; <b>Importante</b>
+		<td>&#10071; <b>Importante</b>
 	<p align=justify>
 Il preprocessore viene richiamato dal compilatore come primo step nel processo di generazione del file eseguibile. Il preprocessore ha il compito di effettuare delle semplici sostituzioni di testo; esistono diverse sostituzioni che il preprocessore può effettuare per conto nostro. L'insieme di queste operazioni è detto <b>chiamate al preprocessore</b>.
 	</p>
@@ -869,7 +869,7 @@ La prima forma è tollerata da vecchie versioni del C (C90) o pre-ANSI C, ma non
 </p>
 
 <table align="center">
-		<td>&#9888; <b>Importante</b>
+		<td>&#10071; <b>Importante</b>
 	<p align=justify>
 <b>Dichiarazione di funzione</b> (o <b>prototipo</b>): il tipo di ritorno, i tipi dei parametri in ingresso e il nome della funzione rappresentano il prototipo della funzione. Quando si fornisce il prototipo di una funzione si usa dire che si effettua la dichiarazione della funzione.
 	</p>
@@ -877,7 +877,7 @@ La prima forma è tollerata da vecchie versioni del C (C90) o pre-ANSI C, ma non
 </table>
 
 <table align="center">
-		<td>&#9888; <b>Importante</b>
+		<td>&#10071; <b>Importante</b>
 	<p align=justify>
 <b>Definizione di funzione</b>: quando si fornisce l'implementazione della funzione (il corpo, cioè le istruzioni contenute tra la coppia di graffe { }), allora si dice che la funzione è definita. La definizione implica anche la dichiarazione.
 	</p>
@@ -911,7 +911,7 @@ int differenza(int minuendo, int sottraendo);  // prototipo della funzione diffe
 ```
 
 <table align="center">
-		<td>&#9888; <b>Importante</b>
+		<td>&#10071; <b>Importante</b>
 	<p align=justify>
 Il compilatore, quando incontra una chiamata a funzione, deve conoscerne almeno il prototipo per verificare che questa venga usata correttamente (il corretto numero e tipo dei parametri di ingresso e che il valore di ritorno sia assegnato a una variabile compatibile, dello stesso tipo). è necessario dunque, prima di usare una qualsiasi funzione, aver fornito nelle righe precedenti almeno il suo prototipo o la definizione completa. 
 	</p>
@@ -1360,7 +1360,7 @@ Oltre al tipo e all'identificatore, una variabile è caratterizzata dalla <b>vis
 </p>
 
 <table align="center">
-		<td>&#9888; <b>Importante</b>
+		<td>&#10071; <b>Importante</b>
 	<p align=justify>
 <b>Visibilità</b>: porzioni di codice nel programma in cui la variabile (il suo identificatore) è visibile e quindi è possibile fare riferimento alla variabile. Se in un dato punto del programma la variabile non è visibile, anche se effettivamente allocata in memoria (ha associata una locazione di memoria), è inutilizzabile o comunque non è possibile accedere al suo contenuto.
 	</p>
@@ -1368,7 +1368,7 @@ Oltre al tipo e all'identificatore, una variabile è caratterizzata dalla <b>vis
 </table>
 
 <table align="center">
-		<td>&#9888; <b>Importante</b>
+		<td>&#10071; <b>Importante</b>
 	<p align=justify>
 <b>Tempo di vita</b>: porzione di tempo all'interno del ciclo di esecuzione del programma durante la quale alla variabile è associata una locazione di memoria.
 	</p>
@@ -1783,7 +1783,7 @@ Una variabile all'interno di un blocco ha un <strong>block scope</strong> ed è 
 </p>
 
 <table align="center">
-		<td>&#9888; <b>Importante</b>
+		<td>&#10071; <b>Importante</b>
 	<p align=justify>
 I parametri formali di una funzione, anche se dichiarati fuori dal corpo della funzione (dal blocco), appartengono al corpo e quindi hanno anch'essi un <b>block scope</b>.
 	</p>
@@ -1997,7 +1997,7 @@ Variabili che hanno un tempo di vita limitato, che non coincide con il tempo di 
 </p>
 
 <table align="center">
-		<td>&#9888; <b>Importante</b>
+		<td>&#10071; <b>Importante</b>
 	<p align=justify>
 è possibile per una variabile con <b>block scope</b> avere uno <b>storage duration</b> non <b>auto</b>, ma <b>static</b>. Per farlo basta dichiarare la variabile all'interno del blocco usando la <i>keyword</i> <b>static</b>, come mostrato nel codice seguente:
 	</p>
@@ -3439,7 +3439,7 @@ Il preprocessamento è il primo step del processo che porta alla generazione del
 </ul>
 
 <table align="center">
-		<td>&#9888; <b>Importante</b>
+		<td>&#10071; <b>Importante</b>
 	<p align=justify>
 Tutte le righe nel codice che iniziano con il carattere `#` sono direttive al preprocessore.
 	</p>
@@ -3947,7 +3947,7 @@ La direttiva #ifdef è molto simile: non valuta un'espressione costante, ma la d
 ```
 
 <table align="center">
-		<td>&#9888; <b>Importante</b>
+		<td>&#10071; <b>Importante</b>
 	<p align=justify>
 La definizione del simbolo macro deve essere effettuata con la direttiva #define.
 	</p>
@@ -5303,7 +5303,7 @@ se sommiamo 1 otteniamo $10000$ ma la rappresentazione è a 4 bit ed il primo bi
 
 
 <table align="center">
-	<td>:exclamation: <b>Importante</b>
+	<td>&#10071; <b>Importante</b>
 	<p align=justify>
  Una qualunque operazione aritmetica su interi si dice in <strong>overflow</strong> quando l'intero risultante dall'operazione ha una dimensione in bit superiore alla dimensione massima (in bit) del tipo di dato. I bit eccedenti sono semplicemente scartati.
 	</p>
@@ -5534,7 +5534,7 @@ Il cast è una conversione esplicita di tipo e prevede un proprio operatore. Esi
 </p>
 
 <table align="center">
-	<td>:exclamation: <b>Importante</b>
+	<td>&#10071; <b>Importante</b>
 	<p align=justify>
  <strong>Conversione automatica</strong>
 	</p>
@@ -5564,7 +5564,7 @@ printf("%lf\n", x/y);
 ```
 
 <table align="center">
-	<td>:exclamation: <b>Importante</b>
+	<td>&#10071; <b>Importante</b>
 	<p align=justify>
  <strong>Conversione per assegnamento</strong>
 	</p>
@@ -5620,7 +5620,7 @@ n = a;
 ```
 
 <table align="center">
-	<td>:exclamation: <b>Importante</b>
+	<td>&#10071; <b>Importante</b>
 	<p align=justify>
  <strong>Conversione esplicita: CAST</strong>
 	</p>
@@ -8714,7 +8714,7 @@ vettore[9] = 10 // ultimo elemento del vettore, assume valore 10
 ```
 
 <table align="center">
-	<td>:exclamation: <b>Importante</b>
+	<td>&#10071; <b>Importante</b>
 	<p align=justify>
  <strong>Limiti indicizzazione di un vettore</strong>
 	</p>
@@ -8725,7 +8725,7 @@ vettore[9] = 10 // ultimo elemento del vettore, assume valore 10
 </table>
 
 <table align="center">
-	<td>:exclamation: <b>Importante</b>
+	<td>&#10071; <b>Importante</b>
 	<p align=justify>
  <strong>Nome del vettore</strong>
 	</p>
@@ -10155,7 +10155,7 @@ Specificare i nomi dei parametri aiuta chi legge il codice a comprendere il tipo
 </p>
 
 <table align="center">
-	<td>:exclamation: <b>Importante</b>
+	<td>&#10071; <b>Importante</b>
 	<p align=justify>
  <strong>Prototipo</strong> di funzione: consiste nel tipo di ritorno, nel nome della funzione e nella lista dei tipi dei parametri in ingresso (se presenti)
 	</p>
@@ -10477,7 +10477,7 @@ I parametri di ingresso di una funzione sono <strong>passati sempre per valore</
 </p>
 
 <table align="center">
-	<td>:exclamation: <b>Importante</b>
+	<td>&#10071; <b>Importante</b>
 	<p align=justify>
  Le variabili allocate all'interno di una funzione sono <strong>locali</strong> alla funzione. La memoria per queste variabili viene allocata solo al momento dell'invocazione della funzione e questa memoria è accessibile solo all'interno della funzione. Quando la funzione termina la memoria viene completamente deallocata. Questa porzione di memoria usata per variabili locali delle funzioni è detta <strong>stack</strong>. Lo <strong>stack</strong> cresce verso il basso: l'allocazione della memoria sullo stack avviene partendo dagli indirizzi più alti verso gli indirizzi più bassi. La deallocazione della memoria sullo stack avviene partendo dall'ultimo elemento allocato fino al primo procedendo quindi in ordine inverso rispetto all'ordine di allocazione. Lo stack viene utilizzato per memorizzare l'indirizzo di ritorno della funzione (l'indirizzo dell'istruzione successiva del chiamante), il valore dei parametri di ritorno e dei parametri in ingresso alla funzione e per allocare la memoria per tutte le variabili locali della funzione stessa. Lo spazio sullo stack per la funzione viene allocato al momento dell'invocazione della funzione e deallocato al termine della sua esecuzione (ultima istruzione della funzione o chiamata a return).
 	</p>
@@ -10672,7 +10672,7 @@ risultato                    : 103
 ```
 
 <table align="center">
-	<td>:exclamation: <b>Importante</b>
+	<td>&#10071; <b>Importante</b>
 	<p align=justify>
  L'utilizzo della tecnica del passaggio di parametri per indirizzo permette al programmatore di:
 	</p>
