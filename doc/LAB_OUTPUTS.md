@@ -324,6 +324,7 @@ Esempio completo:
 | `timeout_seconds` | No | Timeout per compilazione/esecuzione. Default: `10`. |
 | `allow_failure` | No | Se `true`, permette exit code non zero per esercizi che falliscono apposta. |
 | `normalize` | No | Lista di sostituzioni regex da applicare all'output generato prima di salvarlo o confrontarlo. |
+| `normalize_addresses` | No | Se vale `"paragraph"`, trasforma gli indirizzi esadecimali di ogni blocco in offset relativi, preservando i delta in byte. |
 
 ## Esempio con input da tastiera
 
@@ -383,7 +384,9 @@ Alcuni programmi didattici stampano valori che cambiano a ogni esecuzione, per e
 
 In questi casi puoi usare il campo `normalize` per sostituire le parti variabili con segnaposto stabili.
 
-Esempio:
+Quando gli indirizzi appartengono allo stesso blocco logico, per esempio variabili locali stampate nello stesso frame, conviene usare `normalize_addresses`.
+
+Esempio con delta preservati:
 
 ```json
 {
@@ -393,19 +396,34 @@ Esempio:
   "compile": ["gcc", "-o", "bin/0_local", "0_local.c"],
   "run": ["bin/0_local"],
   "output": "lab/1_variables/output/0_local.txt",
+  "normalize_addresses": "paragraph",
   "timeout_seconds": 5,
   "normalize": [
     {
       "pattern": "(?m)^local_var=-?\\d+",
       "replacement": "local_var=<indefinito>"
-    },
-    {
-      "pattern": "0x[0-9a-fA-F]+",
-      "replacement": "<indirizzo>"
     }
   ]
 }
 ```
+
+Un output reale come:
+
+```text
+&local_var=0x7ffca000
+&init_local_var=0x7ffc9ffc
+```
+
+diventa:
+
+```text
+&local_var=<base+0x0>
+&init_local_var=<base-0x4>
+```
+
+In questo modo l'indirizzo assoluto non dipende dal runner, ma il delta di `0x4` byte resta visibile.
+
+Se invece gli indirizzi appartengono a zone diverse, per esempio una variabile `static` e una variabile sullo stack, il delta assoluto puo dipendere da ASLR e dal layout del processo. In quel caso e meglio usare `normalize` con sostituzioni mirate, per esempio `<static+0x0>` e `<stack+0x0>`.
 
 Lo script esegue comunque il programma reale. La normalizzazione avviene solo dopo la cattura dell'output, prima di scrivere il file `output/*.txt` o prima del confronto in modalita `--check`.
 

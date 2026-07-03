@@ -1,19 +1,19 @@
-count=1 	 &count=<indirizzo>
-bad_count=1 	 &bad_coubt=<indirizzo>
+count=1 	 &count=<static+0x0>
+bad_count=1 	 &bad_coubt=<stack+0x0>
 You call me 1 times
 
-count=2 	 &count=<indirizzo>
-bad_count=1 	 &bad_coubt=<indirizzo>
+count=2 	 &count=<static+0x0>
+bad_count=1 	 &bad_coubt=<stack+0x0>
 You call me 2 times
 
-count=3 	 &count=<indirizzo>
-bad_count=1 	 &bad_coubt=<indirizzo>
+count=3 	 &count=<static+0x0>
+bad_count=1 	 &bad_coubt=<stack+0x0>
 You call me 3 times
 
-count=4 	 &count=<indirizzo>
-bad_count=1 	 &bad_coubt=<indirizzo>
+count=4 	 &count=<static+0x0>
+bad_count=1 	 &bad_coubt=<stack+0x0>
 You call me 4 times
 
-count=5 	 &count=<indirizzo>
-bad_count=1 	 &bad_coubt=<indirizzo>
+count=5 	 &count=<static+0x0>
+bad_count=1 	 &bad_coubt=<stack+0x0>
 You call me 5 times

@@ -121,12 +121,9 @@
         {
           "pattern": "(?m)^local_var=-?\\d+",
           "replacement": "local_var=<indefinito>"
-        },
-        {
-          "pattern": "0x[0-9a-fA-F]+",
-          "replacement": "<indirizzo>"
         }
-      ]
+      ],
+      "normalize_addresses": "paragraph"
     },
     {
       "name": "1_static_local",
@@ -145,8 +142,12 @@
       "timeout_seconds": 5,
       "normalize": [
         {
-          "pattern": "0x[0-9a-fA-F]+",
-          "replacement": "<indirizzo>"
+          "pattern": "&count=0x[0-9a-fA-F]+",
+          "replacement": "&count=<static+0x0>"
+        },
+        {
+          "pattern": "&bad_coubt=0x[0-9a-fA-F]+",
+          "replacement": "&bad_coubt=<stack+0x0>"
         }
       ]
     },

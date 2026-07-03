@@ -104,15 +104,48 @@ def apply_normalizations(generated: str, entry: dict[str, Any]) -> str:
 
     Some didactic programs intentionally print values that change between runs,
     such as stack addresses or uninitialized automatic variables.  The manifest
-    can define a ``normalize`` list with ``pattern`` and ``replacement`` fields;
-    each item is applied with ``re.sub`` before the output file is written or
-    compared in ``--check`` mode.
+    can define ``normalize_addresses: "paragraph"`` to replace hexadecimal
+    addresses inside each blank-line-separated output block with offsets from
+    the first address in that block.  It can also define a ``normalize`` list
+    with ``pattern`` and ``replacement`` fields; each item is applied with
+    ``re.sub`` before the output file is written or compared in ``--check``
+    mode.
     """
 
-    normalized = generated
+    normalized = normalize_addresses(generated, entry)
     for rule in entry.get("normalize", []):
         normalized = re.sub(rule["pattern"], rule["replacement"], normalized)
     return normalized
+
+
+def normalize_addresses(generated: str, entry: dict[str, Any]) -> str:
+    """Normalize hexadecimal addresses while preserving local byte deltas.
+
+    With ``normalize_addresses: "paragraph"``, every paragraph uses its first
+    hexadecimal address as ``base``.  Later addresses become values such as
+    ``<base+0x4>`` or ``<base-0x4>``.  This keeps stack-frame relationships
+    visible without committing ASLR-dependent absolute addresses.
+    """
+
+    if entry.get("normalize_addresses") != "paragraph":
+        return generated
+
+    address_re = re.compile(r"0x[0-9a-fA-F]+")
+
+    def replace_paragraph(paragraph: str) -> str:
+        matches = list(address_re.finditer(paragraph))
+        if not matches:
+            return paragraph
+        base = int(matches[0].group(0), 16)
+
+        def replace_address(match: re.Match[str]) -> str:
+            delta = int(match.group(0), 16) - base
+            sign = "+" if delta >= 0 else "-"
+            return f"<base{sign}0x{abs(delta):x}>"
+
+        return address_re.sub(replace_address, paragraph)
+
+    return "\n\n".join(replace_paragraph(part) for part in generated.split("\n\n"))
 
 
 def process_lab(entry: dict[str, Any], check: bool) -> bool:
