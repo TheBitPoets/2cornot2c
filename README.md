@@ -594,6 +594,36 @@ Ogni lab contiene al suo interno una cartella bin destinata a ospitare i file es
 
 ## Il processo di compilazione
 
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Iniziamo dal passaggio piu concreto: trasformare un file sorgente C in un programma eseguibile. Questo crea il ponte tra il codice che scriviamo e il binario che la macchina puo eseguire.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Saper accedere all'ambiente Linux del corso e creare un file di testo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine di questa sezione saprai compilare un file <code>.c</code> con <code>gcc</code>, distinguere sorgente ed eseguibile e riconoscere le fasi principali del processo di compilazione.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo aver capito come nasce un eseguibile, leggeremo la struttura minima di un programma C nella sezione <a href="#il-primo-programma-in-c">Il primo programma in C</a>.
+</p>
+</details>
+</td>
+</tr>
+</table>
+
 <p align="justify">
 I programmi sono scritti in un qualche linguaggio di programmazione; il programmatore scrive il codice sorgente. Nel caso del linguaggio C, i file sorgente hanno estensione .c o .h. Il codice sorgente contiene tutte le istruzioni che il programma dovrà eseguire. Le istruzioni all'interno del codice sorgente, scritte in un qualsiasi linguaggio di programmazione, devono essere tradotte in una sequenza di bit (in altri termini, nel linguaggio macchina) perché la CPU è in grado di comprendere solo il linguaggio macchina, esclusivamente sequenze di bit e nient'altro. In sintesi si dice che il programma sorgente deve essere trasformato in un file eseguibile (file binario) che contiene le istruzioni (sequenze di bit) per la specifica architettura del nostro processore.
 Questo processo di trasformazione del sorgente in binario è detto processo di compilazione ed è svolto dal compilatore. In realtà questo processo è articolato in vari step e non coinvolge solo il compilatore. Vediamo brevemente di studiarne le fasi.
@@ -679,6 +709,36 @@ il linker (ld) ha il compito di aggregare in un unico file oggetto (il file eseg
 
 ## Introduzione
 
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Dopo aver visto come compilare un programma, facciamo una prima mappa dei mattoni che incontreremo spesso nel codice C: variabili, costanti, funzioni e preprocessore.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+<a href="#il-processo-di-compilazione">Il processo di compilazione</a>.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine di questa sezione saprai riconoscere i componenti principali di un programma C, anche se alcuni saranno approfonditi solo piu avanti.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Useremo questa mappa per leggere il codice della sezione <a href="#il-primo-programma-in-c">Il primo programma in C</a>.
+</p>
+</details>
+</td>
+</tr>
+</table>
+
 <p align=justify>
 Un programma C è di fatto una collezione di:
 </p>
@@ -763,6 +823,41 @@ Il preprocessore viene richiamato dal compilatore come primo step nel processo d
 </table>
 
 ## Il primo programma in C
+
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Ora osserviamo il primo programma completo. Non serve capire ogni dettaglio in profondita: l'obiettivo e vedere una forma minima che possiamo compilare ed eseguire.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+<a href="#il-processo-di-compilazione">Il processo di compilazione</a> e <a href="#introduzione-1">Introduzione</a>.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine di questa sezione saprai individuare <code>#include</code>, la funzione <code>main</code>, una chiamata a <code>printf</code> e il valore restituito dal programma.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Qui compaiono le funzioni e il preprocessore. Per ora ti basta riconoscere che <code>printf</code> e una funzione gia pronta e che <code>#include &lt;stdio.h&gt;</code> permette al compilatore di conoscerla; li studieremo meglio nelle sezioni <a href="#funzioni">Funzioni</a> e <a href="#il-preprocessore">Il preprocessore</a>.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo aver letto un programma minimo, inizieremo a salvare e modificare valori nella sezione <a href="#variabili">Variabili</a>.
+</p>
+</details>
+</td>
+</tr>
+</table>
 
 <!-- lab-exercises:start heading="Il primo programma in C" -->
 
@@ -1150,6 +1245,41 @@ Come spiegato ampiamente in precedenza, facciamo uso anche della funzione printf
 
 
 ## Variabili
+
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Dopo il primo programma, abbiamo bisogno di un modo per conservare dati durante l'esecuzione. Le variabili sono il primo strumento per dare un nome a una porzione di memoria e usarla nel codice.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+<a href="#il-primo-programma-in-c">Il primo programma in C</a>.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine di questa sezione saprai distinguere dichiarazione, inizializzazione e assegnamento; riconoscere il ruolo del tipo; leggere esempi semplici con variabili locali e globali.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Nel codice dei lab compaiono funzioni, scope e variabili globali. Per ora concentrati sul fatto che una variabile ha un nome, un tipo e un valore; scope e classi di memorizzazione saranno ripresi piu avanti.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Per scegliere bene una variabile dobbiamo capire come il C rappresenta le informazioni e quali tipi mette a disposizione.
+</p>
+</details>
+</td>
+</tr>
+</table>
 
 <!-- lab-exercises:start heading="Variabili" -->
 
@@ -4525,6 +4655,36 @@ int main(void){
 ```
 ## Rappresentazione delle informazioni
 
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Abbiamo introdotto le variabili come nomi associati a locazioni di memoria. Ora guardiamo il livello sottostante: ogni informazione viene rappresentata come sequenza di bit.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+<a href="#variabili">Variabili</a> e uso elementare delle potenze di 2.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine di questa sezione saprai spiegare perche il computer usa bit e byte, leggere rappresentazioni binarie/esadecimali semplici e distinguere numeri con e senza segno.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Questa base serve per capire i <a href="#tipi-di-dato">Tipi di dato</a>, in particolare <code>int</code> e <code>char</code>.
+</p>
+</details>
+</td>
+</tr>
+</table>
+
 <p align="justify">
 <b>Le informazioni di seguito riportate sono solo un aiuto per fissare i concetti e vedere un'applicazione pratica in un linguaggio di programmazione dei contenuti teorici presentati a lezione e non sostituiscono in alcun modo lo studio del materiale teorico</b>
 </p>
@@ -4980,6 +5140,41 @@ Per esempio:
 </p>
 
 ### Tipi di dato
+
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Dopo aver visto che le informazioni sono bit, torniamo al codice C: il tipo dice come interpretare quei bit e quanto spazio occupa il dato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+<a href="#variabili">Variabili</a> e <a href="#rappresentazione-delle-informazioni">Rappresentazione delle informazioni</a>.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine di questa sezione saprai riconoscere le keyword dei tipi principali, distinguere interi, caratteri e reali, e capire perche la dimensione del tipo influenza il range dei valori rappresentabili.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Alcuni dettagli su cast, overflow e conversioni saranno ripresi nelle sezioni successive. Qui ci interessa costruire la mappa dei tipi di base.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Approfondiremo prima <a href="#int"><code>int</code></a> e poi <a href="#char"><code>char</code></a>.
+</p>
+</details>
+</td>
+</tr>
+</table>
 
 ```c
 int main(void){
