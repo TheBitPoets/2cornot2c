@@ -4,7 +4,7 @@
 <tr>
 <td>
 <details>
-<summary>&#128187; <code>/lab/0_intro/0_hello.c</code></summary>
+<summary>&#128187; /lab/0_intro/0_hello.c</summary>
 
 <p align="justify">
 <strong>Descrizione breve:</strong>
@@ -68,9 +68,9 @@ int main(void){
 <summary>/lab/0_intro/0_hello.c</summary>
 <a href="https://github.com/kinderp/2cornot2c/blob/18b60e866c1e0e22c59835fe953cbe3c534e7422/lab/0_intro/0_hello.c">/lab/0_intro/0_hello.c</a>
 	<ul>
-		<li>Entra nella macchina Linux con <code>vagrant ssh</code></li>
-		<li>Spostati nella cartella <code>lab/0_intro</code></li>
-		<li>Compila il file <code>0_hello.c</code>. L'eseguibile finale deve avere nome <code>bin/0_hello</code></li>
+		<li>Entra nella macchina Linux con vagrant ssh</li>
+		<li>Spostati nella cartella lab/0_intro</li>
+		<li>Compila il file 0_hello.c. L'eseguibile finale deve avere nome bin/0_hello</li>
 	</ul>
 </details>
 
