@@ -453,6 +453,110 @@
       ],
       "output": "lab/3_datatype/output/cast_esplicito_implicito.txt",
       "timeout_seconds": 5
+    },
+    {
+      "name": "op_assegnamento",
+      "path": "lab/4_operators/op_assegnamento.c",
+      "workdir": "lab/4_operators",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/op_assegnamento",
+        "op_assegnamento.c"
+      ],
+      "run": [
+        "bin/op_assegnamento"
+      ],
+      "output": "lab/4_operators/output/op_assegnamento.txt",
+      "timeout_seconds": 5,
+      "allow_failure": true,
+      "normalize": [
+        {
+          "pattern": "(?s)\\[compile stderr\\].*",
+          "replacement": "[compile stderr]\n<errore di compilazione: assegnamento a variabile const>"
+        }
+      ]
+    },
+    {
+      "name": "op_divisione",
+      "path": "lab/4_operators/op_divisione.c",
+      "workdir": "lab/4_operators",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/op_divisione",
+        "op_divisione.c"
+      ],
+      "run": [
+        "bin/op_divisione"
+      ],
+      "output": "lab/4_operators/output/op_divisione.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "sizeof",
+      "path": "lab/4_operators/sizeof.c",
+      "workdir": "lab/4_operators",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/sizeof",
+        "sizeof.c"
+      ],
+      "run": [
+        "bin/sizeof"
+      ],
+      "output": "lab/4_operators/output/sizeof.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "op_modulo",
+      "path": "lab/4_operators/op_modulo.c",
+      "workdir": "lab/4_operators",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/op_modulo",
+        "op_modulo.c"
+      ],
+      "run": [
+        "bin/op_modulo"
+      ],
+      "output": "lab/4_operators/output/op_modulo.txt",
+      "timeout_seconds": 5,
+      "stdin": "4\n"
+    },
+    {
+      "name": "op_incremento_decremento",
+      "path": "lab/4_operators/op_incremento_decremento.c",
+      "workdir": "lab/4_operators",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/op_incremento_decremento",
+        "op_incremento_decremento.c"
+      ],
+      "run": [
+        "bin/op_incremento_decremento"
+      ],
+      "output": "lab/4_operators/output/op_incremento_decremento.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "pre_post_incremento",
+      "path": "lab/4_operators/pre_post_incremento.c",
+      "workdir": "lab/4_operators",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/pre_post_incremento",
+        "pre_post_incremento.c"
+      ],
+      "run": [
+        "bin/pre_post_incremento"
+      ],
+      "output": "lab/4_operators/output/pre_post_incremento.txt",
+      "timeout_seconds": 5
     }
   ]
 }

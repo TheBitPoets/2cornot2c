@@ -466,6 +466,8 @@ Alcuni esercizi possono dimostrare un errore o un comportamento non sicuro. In q
 
 Usalo solo quando il fallimento e parte dell'esercizio.
 
+Se il fallimento avviene in compilazione, lo script salva l'output del compilatore e non prova a eseguire il binario. Questo permette di documentare esercizi costruiti apposta per mostrare errori del compilatore, per esempio un assegnamento a una variabile `const`.
+
 ## Output non deterministico e normalizzazione
 
 Alcuni programmi didattici stampano valori che cambiano a ogni esecuzione, per esempio indirizzi di memoria o valori di variabili automatiche non inizializzate.
