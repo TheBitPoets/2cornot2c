@@ -1,8 +1,8 @@
 local_var=<indefinito> 		 &local_var=<base+0x0>
-init_local_var=0 	 &init_local_var=<base-0x4>
+init_local_var=0 	 &init_local_var=<base+0x4>
 
 local_var=<indefinito> 		 &local_var=<base+0x0>
-init_local_var=0 	 &init_local_var=<base-0x4>
+init_local_var=0 	 &init_local_var=<base+0x4>
 
 local_var=<indefinito> 		 &local_var=<base+0x0>
-init_local_var=0 	 &init_local_var=<base-0x4>
+init_local_var=0 	 &init_local_var=<base+0x4>

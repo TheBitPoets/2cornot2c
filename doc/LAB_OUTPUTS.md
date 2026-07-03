@@ -526,21 +526,21 @@ Esempio reale possibile:
 
 ```text
 local_var=123          &local_var=0x7ffca000
-init_local_var=0       &init_local_var=0x7ffc9ffc
+init_local_var=0       &init_local_var=0x7ffca004
 ```
 
 Lo script prende `0x7ffca000` come base e calcola:
 
 ```text
 0x7ffca000 - 0x7ffca000 = 0x0
-0x7ffc9ffc - 0x7ffca000 = -0x4
+0x7ffca004 - 0x7ffca000 = -0x4
 ```
 
 L'output normalizzato diventa:
 
 ```text
 local_var=<indefinito>          &local_var=<base+0x0>
-init_local_var=0                &init_local_var=<base-0x4>
+init_local_var=0                &init_local_var=<base+0x4>
 ```
 
 In questo modo l'indirizzo assoluto non dipende dal runner, ma il delta di `0x4` byte resta visibile nel README.
@@ -565,10 +565,10 @@ diventa:
 
 ```text
 local_var=<indefinito>          &local_var=<base+0x0>
-init_local_var=0                &init_local_var=<base-0x4>
+init_local_var=0                &init_local_var=<base+0x4>
 
 local_var=<indefinito>          &local_var=<base+0x0>
-init_local_var=0                &init_local_var=<base-0x4>
+init_local_var=0                &init_local_var=<base+0x4>
 ```
 
 Non confrontiamo gli indirizzi assoluti tra chiamate diverse. Conserviamo invece la relazione tra variabili nello stesso blocco, che e la parte utile per spiegare il layout locale.
@@ -600,7 +600,7 @@ L'output mostrato nel README diventa:
 
 ```text
 local_var=<indefinito>          &local_var=<base+0x0>
-init_local_var=0                &init_local_var=<base-0x4>
+init_local_var=0                &init_local_var=<base+0x4>
 ```
 
 Cosa comunica:
@@ -608,7 +608,7 @@ Cosa comunica:
 - `local_var=<indefinito>` indica che la variabile locale non inizializzata non ha un valore affidabile;
 - `init_local_var=0` mostra che la variabile inizializzata vale davvero zero;
 - `<base+0x0>` indica il primo indirizzo del blocco;
-- `<base-0x4>` indica un indirizzo distante quattro byte dalla base, espresso in esadecimale.
+- `<base+0x4>` indica un indirizzo distante quattro byte dalla base, espresso in esadecimale.
 
 ### Caso `1_static_local.c`
 
@@ -689,7 +689,7 @@ Il README mostrera quindi offset esadecimali relativi, per esempio:
 
 ```text
 &local_var=<base+0x0>
-&init_local_var=<base-0x4>
+&init_local_var=<base+0x4>
 ```
 
 Se invece trova indirizzi appartenenti a zone diverse, per esempio `static` e stack, aggiunge sostituzioni semantiche:
