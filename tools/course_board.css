@@ -127,13 +127,13 @@ input, select { width: 100%; padding: .72rem .9rem; }
 .headingCard {
   position: relative;
   cursor: grab;
-  margin-left: calc(var(--depth, 0) * 1.15rem);
+  margin-left: calc(var(--depth, 0) * 2.3rem);
 }
 
 .headingCard::before {
   content: "";
   position: absolute;
-  left: calc(var(--depth, 0) * -1.15rem + .28rem);
+  left: calc(var(--depth, 0) * -2.3rem + .42rem);
   top: -.45rem;
   bottom: -.45rem;
   width: 1px;
