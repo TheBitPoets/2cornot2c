@@ -62,3 +62,101 @@ Alla fine di questo percorso lo studente dovrebbe non solo scrivere codice C, ma
 Il percorso avanzato porta il corso verso pratiche professionali: API pulite, gestione errori, logging, test, sanitizers, analisi statica, thread, processi, socket, sicurezza, coding standard, CI, packaging e manutenzione.
 
 Alla fine di questo percorso lo studente dovrebbe saper progettare codice piu robusto, leggibile, verificabile e adatto a evolvere in un progetto reale.
+
+## Struttura consigliata di ogni lezione
+
+Ogni capitolo dovrebbe mantenere una struttura ricorrente. Questo aiuta lo studente a orientarsi, riduce il carico cognitivo e rende piu facile passare dalla teoria all'esercizio.
+
+### Prima della lezione
+
+| Elemento | Scopo |
+|---|---|
+| Cosa devi gia sapere | Richiama i prerequisiti minimi prima di introdurre il nuovo argomento. |
+| Perche questo argomento e importante | Collega il tema a un problema reale o a un errore comune in C. |
+| Errore tipico che imparerai a evitare | Anticipa il rischio principale, cosi lo studente sa cosa osservare. |
+
+### Durante la lezione
+
+| Elemento | Scopo |
+|---|---|
+| Spiegazione breve | Introduce il concetto senza sommergere lo studente di dettagli. |
+| Esempio minimo | Mostra il caso piu piccolo possibile che funziona. |
+| Esempio realistico | Collega il concetto a un uso piu vicino a un programma vero. |
+| Visualizzazione mentale | Offre un modello semplice per immaginare memoria, flusso o dati. |
+| Esperimento da fare | Invita a modificare il codice e osservare cosa cambia. |
+
+### Dopo la lezione
+
+| Elemento | Scopo |
+|---|---|
+| Esercizio guidato | Consolida il concetto con istruzioni passo passo. |
+| Esercizio autonomo | Chiede allo studente di applicare il concetto senza guida completa. |
+| Debugga questo codice | Allena il riconoscimento degli errori, non solo la scrittura di codice corretto. |
+| Quiz di autovalutazione | Verifica comprensione, lessico tecnico e casi limite. |
+| Checklist delle competenze | Rende esplicito cosa lo studente dovrebbe saper fare alla fine. |
+
+## Esempio: obiettivi di una lezione sui puntatori
+
+Una lezione sui puntatori non dovrebbe partire solo dalla sintassi. Prima conviene definire le domande a cui lo studente dovra saper rispondere.
+
+Alla fine della lezione sui puntatori, lo studente dovrebbe saper rispondere a queste domande:
+
+| Domanda | Perche conta |
+|---|---|
+| Che differenza c'e tra variabile, valore e indirizzo? | Se questa distinzione non e chiara, `&` e `*` diventano simboli meccanici invece che concetti. |
+| Che cosa contiene davvero un puntatore? | Un puntatore non contiene "la variabile", ma un indirizzo. |
+| Cosa succede se dereferenzio un puntatore non inizializzato? | Introduce undefined behavior e codice pericoloso. |
+| Perche un array sembra un puntatore ma non e esattamente un puntatore? | Prepara a capire decadimento array-puntatore, `sizeof` e passaggio a funzione. |
+
+## Tassonomia degli esercizi
+
+Ogni argomento dovrebbe avere esercizi a difficolta crescente. L'obiettivo non e solo accumulare esempi, ma costruire un ponte graduale tra studente principiante e programmatore autonomo.
+
+| Livello | Tipo di esercizio | Obiettivo |
+|---|---|---|
+| A | Copia, compila, osserva | Familiarizzare con un concetto senza dover progettare subito una soluzione. |
+| B | Modifica piccola | Cambiare un dettaglio e osservare l'effetto. |
+| C | Scrivi da zero | Applicare il concetto senza partire da codice gia completo. |
+| D | Trova il bug | Imparare a leggere codice sbagliato e formulare ipotesi. |
+| E | Mini-progetto | Combinare piu concetti in un programma piccolo ma coerente. |
+| F | Produzione | Aggiungere robustezza: error handling, test, strumenti, Makefile, sanitizers. |
+
+### Esempio: progressione su `malloc`
+
+| Livello | Esercizio |
+|---|---|
+| A | Compila un esempio con `malloc` e `free` e osserva l'output. |
+| B | Cambia la dimensione dell'array allocato dinamicamente. |
+| C | Crea un array dinamico la cui dimensione viene letta da input. |
+| D | Trova e correggi un memory leak. |
+| E | Implementa una lista dinamica di studenti. |
+| F | Aggiungi gestione errori, test, AddressSanitizer e Makefile. |
+
+## Laboratorio degli errori
+
+Il C si impara davvero anche quando si rompe. Per questo il corso dovrebbe includere una sezione speciale dedicata al debug didattico e al riconoscimento del codice pericoloso.
+
+L'obiettivo non e insegnare solo "come si scrive codice giusto", ma anche "come si riconosce codice fragile, ambiguo o pericoloso".
+
+### Esempi di errori da studiare
+
+| Codice | Errore didattico |
+|---|---|
+| `int *p; *p = 10;` | Dereferenziazione di puntatore non inizializzato. |
+| `int *p = malloc(sizeof(int) * 10); free(p); p[0] = 5;` | Uso di memoria dopo `free`. |
+| `char s[4]; strcpy(s, "ciao");` | Buffer overflow: manca spazio per `\0`. |
+| `int a[3] = {1, 2, 3}; printf("%d\n", a[10]);` | Accesso fuori dai limiti dell'array. |
+
+Per ogni errore il laboratorio dovrebbe mostrare sempre:
+
+| Punto di analisi | Domanda guida |
+|---|---|
+| Cosa sembra fare | Perche il codice puo sembrare ragionevole a uno studente? |
+| Cosa puo succedere | Quali comportamenti diversi potremmo osservare? |
+| Perche e undefined behavior | Quale regola del linguaggio viene violata? |
+| Come lo vede AddressSanitizer | Che messaggio produce ASan e come si legge? |
+| Come lo vede Valgrind | Che messaggio produce Valgrind e cosa segnala? |
+| Come si corregge | Qual e la versione sicura o corretta del codice? |
+| Quale regola di produzione insegna | Che abitudine professionale dobbiamo portarci dietro? |
+
+Questo laboratorio degli errori puo diventare una delle parti piu importanti del corso: abitua lo studente a ragionare sui fallimenti, non solo sui casi felici.
