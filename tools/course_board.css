@@ -1,13 +1,14 @@
-﻿:root {
-  --ink: #1f2933;
-  --muted: #687385;
-  --paper: #f7f1e6;
-  --panel: #fffaf0;
-  --line: #ddc9aa;
-  --accent: #0f766e;
-  --accent-dark: #115e59;
-  --warm: #b45309;
-  --shadow: 0 18px 45px rgba(58, 41, 20, 0.14);
+:root {
+  --ink: #111111;
+  --muted: #666666;
+  --paper: #f6f6f6;
+  --panel: #ffffff;
+  --line: #d7d7d7;
+  --accent: #111111;
+  --accent-dark: #000000;
+  --warm: #3f3f46;
+  --shadow: 0 18px 42px rgba(0, 0, 0, 0.08);
+  --mono: "Cascadia Code", "JetBrains Mono", "Fira Code", "SFMono-Regular", Consolas, monospace;
 }
 
 * { box-sizing: border-box; }
@@ -17,9 +18,11 @@ body {
   min-height: 100vh;
   color: var(--ink);
   background:
-    radial-gradient(circle at top left, rgba(20, 184, 166, 0.18), transparent 34rem),
-    linear-gradient(135deg, #f5ead7 0%, #f9f4ea 46%, #e7f2ef 100%);
-  font-family: Georgia, "Times New Roman", serif;
+    linear-gradient(rgba(0, 0, 0, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.025) 1px, transparent 1px),
+    #f7f7f7;
+  background-size: 24px 24px;
+  font-family: var(--mono);
 }
 
 .hero {
@@ -33,7 +36,7 @@ body {
 .eyebrow {
   margin: 0 0 .35rem;
   color: var(--warm);
-  font: 700 .76rem/1.2 Verdana, sans-serif;
+  font: 700 .76rem/1.2 var(--mono);
   letter-spacing: .18em;
   text-transform: uppercase;
 }
@@ -59,15 +62,15 @@ h1 {
 button, select, input {
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: #fffdf7;
+  background: #ffffff;
   color: var(--ink);
-  font: 700 .88rem/1.2 Verdana, sans-serif;
+  font: 700 .88rem/1.2 var(--mono);
 }
 
 button {
   cursor: pointer;
   padding: .72rem 1rem;
-  box-shadow: 0 8px 20px rgba(58, 41, 20, 0.08);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
 }
 
 button.primary { background: var(--accent); border-color: var(--accent); color: white; }
@@ -82,9 +85,9 @@ button:hover { transform: translateY(-1px); }
 
 .panel {
   min-height: calc(100vh - 10rem);
-  border: 1px solid rgba(122, 91, 52, .22);
+  border: 1px solid rgba(17, 17, 17, .16);
   border-radius: 28px;
-  background: rgba(255, 250, 240, .82);
+  background: rgba(255, 255, 255, .92);
   box-shadow: var(--shadow);
   backdrop-filter: blur(10px);
   overflow: hidden;
@@ -93,7 +96,7 @@ button:hover { transform: translateY(-1px); }
 .panelHead {
   padding: 1.1rem;
   border-bottom: 1px solid var(--line);
-  background: rgba(255, 255, 255, .45);
+  background: rgba(255, 255, 255, .72);
 }
 
 .panelHead h2 { margin-bottom: .75rem; font-size: 1.25rem; }
@@ -105,7 +108,7 @@ button:hover { transform: translateY(-1px); }
   grid-template-columns: 1fr 8rem;
   gap: .5rem;
   padding: .85rem 1.1rem;
-  border-bottom: 1px solid rgba(221, 201, 170, .6);
+  border-bottom: 1px solid rgba(215, 215, 215, .8);
 }
 
 input, select { width: 100%; padding: .72rem .9rem; }
@@ -117,9 +120,9 @@ input, select { width: 100%; padding: .72rem .9rem; }
 }
 
 .headingCard, .item {
-  border: 1px solid rgba(15, 118, 110, .22);
+  border: 1px solid rgba(17, 17, 17, .16);
   border-radius: 18px;
-  background: #fffdf8;
+  background: #ffffff;
   padding: .62rem .72rem;
   margin-bottom: .4rem;
 }
@@ -137,23 +140,23 @@ input, select { width: 100%; padding: .72rem .9rem; }
   top: -.45rem;
   bottom: -.45rem;
   width: 1px;
-  background: rgba(180, 83, 9, .18);
+  background: rgba(17, 17, 17, .16);
 }
 
 .headingCard.level-1 {
-  border-color: rgba(180, 83, 9, .48);
-  background: #fff4dd;
+  border-color: rgba(17, 17, 17, .38);
+  background: #eeeeee;
 }
 
 .headingCard.level-2 {
-  border-color: rgba(15, 118, 110, .34);
+  border-color: rgba(17, 17, 17, .24);
 }
 
 .headingCard.level-3,
 .headingCard.level-4,
 .headingCard.level-5,
 .headingCard.level-6 {
-  background: rgba(255, 253, 248, .82);
+  background: rgba(255, 255, 255, .84);
 }
 
 .headingCard.level-3 .headingTitle::before,
@@ -177,7 +180,7 @@ input, select { width: 100%; padding: .72rem .9rem; }
 }
 
 .headingTitle { font-size: .92rem; font-weight: 700; line-height: 1.18; }
-.headingMeta { margin-top: .24rem; color: var(--muted); font: .68rem/1.35 Verdana, sans-serif; }
+.headingMeta { margin-top: .24rem; color: var(--muted); font: .68rem/1.35 var(--mono); }
 
 .courseTree {
   height: calc(100vh - 14rem);
@@ -186,9 +189,9 @@ input, select { width: 100%; padding: .72rem .9rem; }
 }
 
 .year {
-  border: 1px solid rgba(180, 83, 9, .25);
+  border: 1px solid rgba(17, 17, 17, .16);
   border-radius: 24px;
-  background: rgba(255, 255, 255, .45);
+  background: rgba(255, 255, 255, .72);
   padding: 1rem;
   margin-bottom: 1rem;
 }
@@ -204,10 +207,10 @@ input, select { width: 100%; padding: .72rem .9rem; }
 .yearMeta { color: var(--muted); font-size: .9rem; }
 
 .uda {
-  border: 1px dashed rgba(104, 115, 133, .38);
+  border: 1px dashed rgba(17, 17, 17, .24);
   border-radius: 20px;
   margin-top: .85rem;
-  background: rgba(255, 250, 240, .74);
+  background: rgba(250, 250, 250, .82);
   overflow: hidden;
 }
 
@@ -217,15 +220,15 @@ input, select { width: 100%; padding: .72rem .9rem; }
   font-weight: 700;
 }
 
-.udaMeta { color: var(--muted); font: .78rem/1.2 Verdana, sans-serif; margin-left: .4rem; }
+.udaMeta { color: var(--muted); font: .78rem/1.2 var(--mono); margin-left: .4rem; }
 
 .dropzone {
   min-height: 4.2rem;
   padding: .85rem;
-  border-top: 1px solid rgba(221, 201, 170, .72);
+  border-top: 1px solid rgba(215, 215, 215, .9);
 }
 
-.dropzone.dragOver { background: rgba(20, 184, 166, .12); }
+.dropzone.dragOver { background: rgba(0, 0, 0, .06); }
 
 .item {
   display: grid;
@@ -235,7 +238,7 @@ input, select { width: 100%; padding: .72rem .9rem; }
 }
 
 .itemTitle { font-weight: 700; }
-.itemMeta { color: var(--muted); font: .76rem/1.35 Verdana, sans-serif; }
+.itemMeta { color: var(--muted); font: .76rem/1.35 var(--mono); }
 .itemActions { display: flex; gap: .25rem; }
 .itemActions button { padding: .35rem .5rem; font-size: .72rem; }
 
