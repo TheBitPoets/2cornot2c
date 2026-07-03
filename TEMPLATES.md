@@ -78,7 +78,7 @@ int main(void){
 ## Importante
 
 <table align="center">
-	<td>:exclamation: <b>Importante</b>
+	<td>&#10071; <b>Importante</b>
 	<p align=justify>
  Una <b>variabile</b> è una locazione di memoria a cui è stato associato un <b>identificatore</b>, cioè un nome per referenziare nel codice quella cella di memoria.
 	</p>
