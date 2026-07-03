@@ -1280,6 +1280,38 @@
       "stdin": "15\n",
       "output": "lab/10_dynamic_memory/output/0_malloc.txt",
       "timeout_seconds": 5
+    },
+    {
+      "name": "0_structs",
+      "path": "lab/11_structs/0_structs.c",
+      "workdir": "lab/11_structs",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/0_structs",
+        "0_structs.c"
+      ],
+      "run": [
+        "bin/0_structs"
+      ],
+      "output": "lab/11_structs/output/0_structs.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "1_structs",
+      "path": "lab/11_structs/1_structs.c",
+      "workdir": "lab/11_structs",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/1_structs",
+        "1_structs.c"
+      ],
+      "run": [
+        "bin/1_structs"
+      ],
+      "output": "lab/11_structs/output/1_structs.txt",
+      "timeout_seconds": 5
     }
   ]
 }
