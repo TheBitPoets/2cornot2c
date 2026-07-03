@@ -16,6 +16,91 @@
       ],
       "output": "lab/0_intro/output/0_hello.txt",
       "timeout_seconds": 5
+    },
+    {
+      "name": "1_funzioni",
+      "path": "lab/0_intro/1_funzioni.c",
+      "workdir": "lab/0_intro",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/1_funzioni",
+        "1_funzioni.c"
+      ],
+      "run": [
+        "bin/1_funzioni"
+      ],
+      "output": "lab/0_intro/output/1_funzioni.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "2_variabili",
+      "path": "lab/0_intro/2_variabili.c",
+      "workdir": "lab/0_intro",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/2_variabili",
+        "2_variabili.c"
+      ],
+      "run": [
+        "bin/2_variabili"
+      ],
+      "stdin": "4\n2\ns\n",
+      "output": "lab/0_intro/output/2_variabili.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "3_variabili",
+      "path": "lab/0_intro/3_variabili.c",
+      "workdir": "lab/0_intro",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/3_variabili",
+        "3_variabili.c"
+      ],
+      "run": [
+        "bin/3_variabili"
+      ],
+      "stdin": "4\n2\ns\n",
+      "output": "lab/0_intro/output/3_variabili.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "4_variabili",
+      "path": "lab/0_intro/4_variabili.c",
+      "workdir": "lab/0_intro",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/4_variabili",
+        "4_variabili.c"
+      ],
+      "run": [
+        "bin/4_variabili"
+      ],
+      "stdin": "4\n2\ns\n8\n2\nD\n",
+      "output": "lab/0_intro/output/4_variabili.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "5_variabili",
+      "path": "lab/0_intro/5_variabili_main.c",
+      "workdir": "lab/0_intro",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/5_variabili",
+        "5_variabili_main.c",
+        "5_variabili.c"
+      ],
+      "run": [
+        "bin/5_variabili"
+      ],
+      "stdin": "4\n2\ns\n8\n2\nD\n",
+      "output": "lab/0_intro/output/5_variabili.txt",
+      "timeout_seconds": 5
     }
   ]
 }

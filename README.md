@@ -823,6 +823,15 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/0_intro/output/0_hello.txt" -->
+<pre lang="text"><code>Hello World
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -1035,6 +1044,15 @@ int sottrazione(int minuendo, int sottraendo){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/0_intro/output/1_funzioni.txt" -->
+<pre lang="text"><code>10 - 3 = 7
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -1214,6 +1232,18 @@ int moltiplicazione(){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/0_intro/output/2_variabili.txt" -->
+<pre lang="text"><code>Inserisci il primo operando
+Inserisci il secondo operando
+s)Somma d)Differenza m)Moltiplicazine
+Il risultato e': 6
+</code></pre>
+<!-- lab-output:end -->
 </details>
 
 <details>
@@ -1296,6 +1326,18 @@ int moltiplicazione(int primo_fattore, int secondo_fattore){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/0_intro/output/3_variabili.txt" -->
+<pre lang="text"><code>Inserisci il primo operando
+Insesci il secondo operando
+s)Somma d)Differenza m)Moltiplicazione
+Il risultato e': 6
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -3041,6 +3083,22 @@ int divisione(int dividendo, int divisore){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/0_intro/output/4_variabili.txt" -->
+<pre lang="text"><code>Inserisci il primo operando
+Inserisci il secondo operando
+s)Somma d)Differenza m)Moltiplicazione D)Divisione
+Il risultato e': 6
+Inserisci il primo operando
+Inserisci il secondo operando
+s)Somma d)Differenza m)Moltiplicazione D)Divisione
+Il risultato e': 4
+</code></pre>
+<!-- lab-output:end -->
 </details>
 
 <details>
@@ -3149,6 +3207,22 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/0_intro/output/5_variabili.txt" -->
+<pre lang="text"><code>Inserisci il primo operando
+Inserisci il secondo operando
+s)Somma d)Differenza m)Moltiplicazione D)Divisione
+Il risultato e': 6
+Inserisci il primo operando
+Inserisci il secondo operando
+s)Somma d)Differenza m)Moltiplicazione D)Divisione
+Il risultato e': 4
+</code></pre>
+<!-- lab-output:end -->
 </details>
 
 <details>
