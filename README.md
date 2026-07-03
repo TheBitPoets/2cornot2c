@@ -768,26 +768,38 @@ Il preprocessore viene richiamato dal compilatore come primo step nel processo d
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/0_intro/0_hello.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/0_intro/0_hello.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          <code>printf</code>, <code>#include &lt;stdio.h&gt;</code>, funzione <code>main</code>, compilazione ed esecuzione del primo binario.
+        </p>
 
-**Descrizione breve:** `printf`, `#include <stdio.h>`, funzione `main`, compilazione ed esecuzione del primo binario.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Introduce il percorso minimo che porta da un sorgente C a un programma eseguibile: inclusione di un header standard, definizione di main, chiamata a printf, compilazione con gcc ed esecuzione del binario prodotto.
+        </p>
 
-**Descrizione lunga:** Introduce il percorso minimo che porta da un sorgente C a un programma eseguibile: inclusione di un header standard, definizione di main, chiamata a printf, compilazione con gcc ed esecuzione del binario prodotto.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/0_hello.c">/lab/0_intro/0_hello.c</a>
+        </p>
 
-**Sorgente:** [/lab/0_intro/0_hello.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/0_hello.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/0_intro
+<pre lang="bash"><code>cd /lab/0_intro
 gcc -o bin/0_hello 0_hello.c
-bin/0_hello
-```
+bin/0_hello</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/0_intro/0_hello.c" -->
 <pre lang="c"><code>/*
@@ -811,10 +823,10 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -973,26 +985,38 @@ Righe 16-19: definizione della funzione <code>main()</code>.
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/0_intro/1_funzioni.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/0_intro/1_funzioni.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Definizione e chiamata di funzioni semplici, esempio <code>sottrazione</code>.
+        </p>
 
-**Descrizione breve:** Definizione e chiamata di funzioni semplici, esempio `sottrazione`.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Funzioni con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Definizione e chiamata di funzioni semplici, esempio <code>sottrazione</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Funzioni con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Definizione e chiamata di funzioni semplici, esempio `sottrazione` e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/1_funzioni.c">/lab/0_intro/1_funzioni.c</a>
+        </p>
 
-**Sorgente:** [/lab/0_intro/1_funzioni.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/1_funzioni.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/0_intro
+<pre lang="bash"><code>cd /lab/0_intro
 gcc -o bin/1_funzioni 1_funzioni.c
-bin/1_funzioni
-```
+bin/1_funzioni</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/0_intro/1_funzioni.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -1011,10 +1035,10 @@ int sottrazione(int minuendo, int sottraendo){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -1113,26 +1137,38 @@ Come spiegato ampiamente in precedenza, facciamo uso anche della funzione <code>
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/0_intro/2_variabili.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/0_intro/2_variabili.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Calcolatrice minima con variabili globali, funzioni <code>somma</code>, <code>differenza</code>, <code>moltiplicazione</code>.
+        </p>
 
-**Descrizione breve:** Calcolatrice minima con variabili globali, funzioni `somma`, `differenza`, `moltiplicazione`.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Variabili con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Calcolatrice minima con variabili globali, funzioni <code>somma</code>, <code>differenza</code>, <code>moltiplicazione</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Variabili con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Calcolatrice minima con variabili globali, funzioni `somma`, `differenza`, `moltiplicazione` e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/2_variabili.c">/lab/0_intro/2_variabili.c</a>
+        </p>
 
-**Sorgente:** [/lab/0_intro/2_variabili.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/2_variabili.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/0_intro
+<pre lang="bash"><code>cd /lab/0_intro
 gcc -o bin/2_variabili 2_variabili.c
-bin/2_variabili
-```
+bin/2_variabili</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/0_intro/2_variabili.c" -->
 <pre lang="c"><code>#include &lt;stdio.h&gt;
@@ -1178,30 +1214,42 @@ int moltiplicazione(){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+      </details>
+    </td>
+  </tr>
+</table>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/0_intro/3_variabili.c</code></summary>
 
-</div>
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Variante della calcolatrice con funzioni e parametri piu espliciti.
+        </p>
 
-</details>
-<details>
-<summary>&#128187; <code>/lab/0_intro/3_variabili.c</code></summary>
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Variabili con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Variante della calcolatrice con funzioni e parametri piu espliciti e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/3_variabili.c">/lab/0_intro/3_variabili.c</a>
+        </p>
 
-**Descrizione breve:** Variante della calcolatrice con funzioni e parametri piu espliciti.
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Variabili con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Variante della calcolatrice con funzioni e parametri piu espliciti e di collegare la spiegazione teorica al comportamento reale del programma compilato.
-
-**Sorgente:** [/lab/0_intro/3_variabili.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/3_variabili.c)
-
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/0_intro
+<pre lang="bash"><code>cd /lab/0_intro
 gcc -o bin/3_variabili 3_variabili.c
-bin/3_variabili
-```
+bin/3_variabili</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/0_intro/3_variabili.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -1253,10 +1301,10 @@ int moltiplicazione(int primo_fattore, int secondo_fattore){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -1760,26 +1808,38 @@ Questo è utile soprattutto per le variabili indice di un ciclo o per documentar
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/1_variables/2_global.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/1_variables/2_global.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Variabile globale visibile da piu funzioni nello stesso file.
+        </p>
 
-**Descrizione breve:** Variabile globale visibile da piu funzioni nello stesso file.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo File scope con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Variabile globale visibile da piu funzioni nello stesso file e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo File scope con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Variabile globale visibile da piu funzioni nello stesso file e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/1_variables/2_global.c">/lab/1_variables/2_global.c</a>
+        </p>
 
-**Sorgente:** [/lab/1_variables/2_global.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/1_variables/2_global.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/1_variables
+<pre lang="bash"><code>cd /lab/1_variables
 gcc -o bin/2_global 2_global.c
-bin/2_global
-```
+bin/2_global</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/1_variables/2_global.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;  // printf()
@@ -1824,10 +1884,10 @@ void three(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -1987,26 +2047,38 @@ Scope, linkage e storage duration sono combinati assieme per definire le <strong
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/1_variables/0_local.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/1_variables/0_local.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Variabile locale non inizializzata e valore indefinito.
+        </p>
 
-**Descrizione breve:** Variabile locale non inizializzata e valore indefinito.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Variabili automatiche (automatic class) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Variabile locale non inizializzata e valore indefinito e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Variabili automatiche (automatic class) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Variabile locale non inizializzata e valore indefinito e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/1_variables/0_local.c">/lab/1_variables/0_local.c</a>
+        </p>
 
-**Sorgente:** [/lab/1_variables/0_local.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/1_variables/0_local.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/1_variables
+<pre lang="bash"><code>cd /lab/1_variables
 gcc -o bin/0_local 0_local.c
-bin/0_local
-```
+bin/0_local</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/1_variables/0_local.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -2037,10 +2109,10 @@ void print_var(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -2133,26 +2205,38 @@ int uno(register int a);
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/1_variables/1_static_local.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/1_variables/1_static_local.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Differenza tra variabile locale automatica e <code>static</code> locale che conserva il valore tra chiamate.
+        </p>
 
-**Descrizione breve:** Differenza tra variabile locale automatica e `static` locale che conserva il valore tra chiamate.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Variabili statiche locali (static variables with block scope) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza tra variabile locale automatica e <code>static</code> locale che conserva il valore tra chiamate e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Variabili statiche locali (static variables with block scope) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza tra variabile locale automatica e `static` locale che conserva il valore tra chiamate e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/1_variables/1_static_local.c">/lab/1_variables/1_static_local.c</a>
+        </p>
 
-**Sorgente:** [/lab/1_variables/1_static_local.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/1_variables/1_static_local.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/1_variables
+<pre lang="bash"><code>cd /lab/1_variables
 gcc -o bin/1_static_local 1_static_local.c
-bin/1_static_local
-```
+bin/1_static_local</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/1_variables/1_static_local.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -2203,10 +2287,10 @@ void call_me(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -2362,26 +2446,38 @@ int main(void){
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/1_variables/4_global_external_internal_a.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/1_variables/4_global_external_internal_a.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          File principale che usa una funzione e una variabile condivisa con un altro file.
+        </p>
 
-**Descrizione breve:** File principale che usa una funzione e una variabile condivisa con un altro file.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Variabili globali con External Linkage (Static variables with External Linkage) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente File principale che usa una funzione e una variabile condivisa con un altro file e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Variabili globali con External Linkage (Static variables with External Linkage) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente File principale che usa una funzione e una variabile condivisa con un altro file e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/1_variables/4_global_external_internal_a.c">/lab/1_variables/4_global_external_internal_a.c</a>
+        </p>
 
-**Sorgente:** [/lab/1_variables/4_global_external_internal_a.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/1_variables/4_global_external_internal_a.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/1_variables
+<pre lang="bash"><code>cd /lab/1_variables
 gcc -o bin/4_global_external_internal 4_global_external_internal_a.c 4_global_external_internal_b.c
-bin/4_global_external_internal
-```
+bin/4_global_external_internal</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/1_variables/4_global_external_internal_a.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;  // printf()
@@ -2409,30 +2505,42 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+      </details>
+    </td>
+  </tr>
+</table>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/1_variables/4_global_external_internal_b.c</code></summary>
 
-</div>
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Uso di <code>extern</code> e variabile locale <code>static</code> in una funzione accumulatrice.
+        </p>
 
-</details>
-<details>
-<summary>&#128187; <code>/lab/1_variables/4_global_external_internal_b.c</code></summary>
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Variabili globali con External Linkage (Static variables with External Linkage) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Uso di <code>extern</code> e variabile locale <code>static</code> in una funzione accumulatrice e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/1_variables/4_global_external_internal_b.c">/lab/1_variables/4_global_external_internal_b.c</a>
+        </p>
 
-**Descrizione breve:** Uso di `extern` e variabile locale `static` in una funzione accumulatrice.
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Variabili globali con External Linkage (Static variables with External Linkage) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Uso di `extern` e variabile locale `static` in una funzione accumulatrice e di collegare la spiegazione teorica al comportamento reale del programma compilato.
-
-**Sorgente:** [/lab/1_variables/4_global_external_internal_b.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/1_variables/4_global_external_internal_b.c)
-
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/1_variables
+<pre lang="bash"><code>cd /lab/1_variables
 gcc -o bin/4_global_external_internal 4_global_external_internal_a.c 4_global_external_internal_b.c
-bin/4_global_external_internal
-```
+bin/4_global_external_internal</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/1_variables/4_global_external_internal_b.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -2455,10 +2563,10 @@ int accumulate(int number){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -2639,26 +2747,38 @@ int divisione(int dividendo, int divisore){
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/1_variables/3_global_internal.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/1_variables/3_global_internal.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Variabile globale <code>static</code> visibile solo nel file corrente.
+        </p>
 
-**Descrizione breve:** Variabile globale `static` visibile solo nel file corrente.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Variabili globali con Internal Linkage (Static variables with Internal Linkage) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Variabile globale <code>static</code> visibile solo nel file corrente e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Variabili globali con Internal Linkage (Static variables with Internal Linkage) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Variabile globale `static` visibile solo nel file corrente e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/1_variables/3_global_internal.c">/lab/1_variables/3_global_internal.c</a>
+        </p>
 
-**Sorgente:** [/lab/1_variables/3_global_internal.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/1_variables/3_global_internal.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/1_variables
+<pre lang="bash"><code>cd /lab/1_variables
 gcc -o bin/3_global_internal 3_global_internal.c
-bin/3_global_internal
-```
+bin/3_global_internal</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/1_variables/3_global_internal.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -2689,10 +2809,10 @@ void two(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -2843,26 +2963,38 @@ La definizione di <code>b</code> e di <code>j</code> non è mostrata, quindi non
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/0_intro/4_variabili.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/0_intro/4_variabili.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Separazione tra sorgente e header, uso di <code>4_variabili.h</code>.
+        </p>
 
-**Descrizione breve:** Separazione tra sorgente e header, uso di `4_variabili.h`.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Suddivisione in moduli di un programma con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Separazione tra sorgente e header, uso di <code>4_variabili.h</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Suddivisione in moduli di un programma con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Separazione tra sorgente e header, uso di `4_variabili.h` e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/4_variabili.c">/lab/0_intro/4_variabili.c</a>
+        </p>
 
-**Sorgente:** [/lab/0_intro/4_variabili.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/4_variabili.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/0_intro
+<pre lang="bash"><code>cd /lab/0_intro
 gcc -o bin/4_variabili 4_variabili.c
-bin/4_variabili
-```
+bin/4_variabili</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/0_intro/4_variabili.c" -->
 <pre lang="c"><code>#include &lt;stdio.h&gt;
@@ -2919,28 +3051,40 @@ int divisione(int dividendo, int divisore){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+      </details>
+    </td>
+  </tr>
+</table>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/0_intro/4_variabili.h</code></summary>
 
-</div>
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Prototipi delle funzioni usate da <code>4_variabili.c</code>.
+        </p>
 
-</details>
-<details>
-<summary>&#128187; <code>/lab/0_intro/4_variabili.h</code></summary>
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Mostra il ruolo del file di intestazione come contratto condiviso: raccoglie i prototipi delle funzioni usate dal sorgente corrispondente e permette al compilatore di controllare le chiamate tra moduli.
+        </p>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/4_variabili.h">/lab/0_intro/4_variabili.h</a>
+        </p>
 
-**Descrizione breve:** Prototipi delle funzioni usate da `4_variabili.c`.
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Descrizione lunga:** Mostra il ruolo del file di intestazione come contratto condiviso: raccoglie i prototipi delle funzioni usate dal sorgente corrispondente e permette al compilatore di controllare le chiamate tra moduli.
+<pre lang="bash"><code>File di supporto: viene incluso da 4_variabili.c.</code></pre>
 
-**Sorgente:** [/lab/0_intro/4_variabili.h](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/4_variabili.h)
-
-**Compilazione ed esecuzione:**
-
-```bash
-File di supporto: viene incluso da 4_variabili.c.
-```
-
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/0_intro/4_variabili.h" -->
 <pre lang="c"><code>const int NUM_ITERATIONS = 2; 
@@ -2951,30 +3095,42 @@ int moltiplicazione(int, int);
 int divisione(int, int);
 </code></pre>
 <!-- lab-snippet:end -->
+      </details>
+    </td>
+  </tr>
+</table>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/0_intro/5_variabili_main.c</code></summary>
 
-</div>
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          <code>main</code> separato dalle funzioni operative.
+        </p>
 
-</details>
-<details>
-<summary>&#128187; <code>/lab/0_intro/5_variabili_main.c</code></summary>
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Suddivisione in moduli di un programma con un esempio eseguibile e mirato. Il codice permette di osservare concretamente <code>main</code> separato dalle funzioni operative e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/5_variabili_main.c">/lab/0_intro/5_variabili_main.c</a>
+        </p>
 
-**Descrizione breve:** `main` separato dalle funzioni operative.
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Suddivisione in moduli di un programma con un esempio eseguibile e mirato. Il codice permette di osservare concretamente `main` separato dalle funzioni operative e di collegare la spiegazione teorica al comportamento reale del programma compilato.
-
-**Sorgente:** [/lab/0_intro/5_variabili_main.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/5_variabili_main.c)
-
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/0_intro
+<pre lang="bash"><code>cd /lab/0_intro
 gcc -o bin/5_variabili 5_variabili_main.c 5_variabili.c
-bin/5_variabili
-```
+bin/5_variabili</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/0_intro/5_variabili_main.c" -->
 <pre lang="c"><code>#include &lt;stdio.h&gt;
@@ -3013,30 +3169,42 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+      </details>
+    </td>
+  </tr>
+</table>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/0_intro/5_variabili.c</code></summary>
 
-</div>
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Implementazione delle funzioni aritmetiche separate dal <code>main</code>.
+        </p>
 
-</details>
-<details>
-<summary>&#128187; <code>/lab/0_intro/5_variabili.c</code></summary>
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Suddivisione in moduli di un programma con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Implementazione delle funzioni aritmetiche separate dal <code>main</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/5_variabili.c">/lab/0_intro/5_variabili.c</a>
+        </p>
 
-**Descrizione breve:** Implementazione delle funzioni aritmetiche separate dal `main`.
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Suddivisione in moduli di un programma con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Implementazione delle funzioni aritmetiche separate dal `main` e di collegare la spiegazione teorica al comportamento reale del programma compilato.
-
-**Sorgente:** [/lab/0_intro/5_variabili.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/5_variabili.c)
-
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/0_intro
+<pre lang="bash"><code>cd /lab/0_intro
 gcc -o bin/5_variabili 5_variabili_main.c 5_variabili.c
-bin/5_variabili
-```
+bin/5_variabili</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/0_intro/5_variabili.c" -->
 <pre lang="c"><code>int somma(int primo_operando, int secondo_operando){
@@ -3056,28 +3224,40 @@ int divisione(int dividendo, int divisore){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+      </details>
+    </td>
+  </tr>
+</table>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/0_intro/5_variabili.h</code></summary>
 
-</div>
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Dichiarazioni/prototipi condivisi.
+        </p>
 
-</details>
-<details>
-<summary>&#128187; <code>/lab/0_intro/5_variabili.h</code></summary>
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Completa l'esempio multi-file dichiarando le funzioni implementate nel modulo separato, cosi il main puo usarle senza conoscerne direttamente il corpo.
+        </p>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/5_variabili.h">/lab/0_intro/5_variabili.h</a>
+        </p>
 
-**Descrizione breve:** Dichiarazioni/prototipi condivisi.
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Descrizione lunga:** Completa l'esempio multi-file dichiarando le funzioni implementate nel modulo separato, cosi il main puo usarle senza conoscerne direttamente il corpo.
+<pre lang="bash"><code>File di supporto: viene incluso da 5_variabili_main.c.</code></pre>
 
-**Sorgente:** [/lab/0_intro/5_variabili.h](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/5_variabili.h)
-
-**Compilazione ed esecuzione:**
-
-```bash
-File di supporto: viene incluso da 5_variabili_main.c.
-```
-
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/0_intro/5_variabili.h" -->
 <pre lang="c"><code>const int NUM_ITERATIONS = 2; 
@@ -3088,10 +3268,10 @@ int moltiplicazione(int, int);
 int divisione(int, int);
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -3302,26 +3482,38 @@ Queste direttive permettono di:
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/2_preprocessor/macro.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/2_preprocessor/macro.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Macro aritmetiche con parametri per somma, differenza, moltiplicazione, divisione.
+        </p>
 
-**Descrizione breve:** Macro aritmetiche con parametri per somma, differenza, moltiplicazione, divisione.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo La direttiva #define con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Macro aritmetiche con parametri per somma, differenza, moltiplicazione, divisione e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo La direttiva #define con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Macro aritmetiche con parametri per somma, differenza, moltiplicazione, divisione e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/2_preprocessor/macro.c">/lab/2_preprocessor/macro.c</a>
+        </p>
 
-**Sorgente:** [/lab/2_preprocessor/macro.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/2_preprocessor/macro.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/2_preprocessor
+<pre lang="bash"><code>cd /lab/2_preprocessor
 gcc -o bin/macro macro.c
-bin/macro
-```
+bin/macro</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/2_preprocessor/macro.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -3363,10 +3555,10 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -3503,26 +3695,38 @@ La prima forma (parentesi angolari <code>&lt;</code> <code>&gt;</code>) è usata
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/2_preprocessor/direttiva_if.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/2_preprocessor/direttiva_if.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Uso di <code>#if DEBUG</code>, simbolo passato da codice o da <code>gcc -D</code>.
+        </p>
 
-**Descrizione breve:** Uso di `#if DEBUG`, simbolo passato da codice o da `gcc -D`.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Le direttive #if #ifdef #ifndef con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Uso di <code>#if DEBUG</code>, simbolo passato da codice o da <code>gcc -D</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Le direttive #if #ifdef #ifndef con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Uso di `#if DEBUG`, simbolo passato da codice o da `gcc -D` e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/2_preprocessor/direttiva_if.c">/lab/2_preprocessor/direttiva_if.c</a>
+        </p>
 
-**Sorgente:** [/lab/2_preprocessor/direttiva_if.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/2_preprocessor/direttiva_if.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/2_preprocessor
+<pre lang="bash"><code>cd /lab/2_preprocessor
 gcc -o bin/direttiva_if direttiva_if.c
-bin/direttiva_if
-```
+bin/direttiva_if</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/2_preprocessor/direttiva_if.c" -->
 <pre lang="c"><code>/* 
@@ -3554,30 +3758,42 @@ int main(void){
 	
 </code></pre>
 <!-- lab-snippet:end -->
+      </details>
+    </td>
+  </tr>
+</table>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/2_preprocessor/direttiva_ifdef.c</code></summary>
 
-</div>
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Verifica se <code>DEBUG</code> e definito, uso di <code>#undef</code>.
+        </p>
 
-</details>
-<details>
-<summary>&#128187; <code>/lab/2_preprocessor/direttiva_ifdef.c</code></summary>
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Le direttive #if #ifdef #ifndef con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Verifica se <code>DEBUG</code> e definito, uso di <code>#undef</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/2_preprocessor/direttiva_ifdef.c">/lab/2_preprocessor/direttiva_ifdef.c</a>
+        </p>
 
-**Descrizione breve:** Verifica se `DEBUG` e definito, uso di `#undef`.
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Le direttive #if #ifdef #ifndef con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Verifica se `DEBUG` e definito, uso di `#undef` e di collegare la spiegazione teorica al comportamento reale del programma compilato.
-
-**Sorgente:** [/lab/2_preprocessor/direttiva_ifdef.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/2_preprocessor/direttiva_ifdef.c)
-
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/2_preprocessor
+<pre lang="bash"><code>cd /lab/2_preprocessor
 gcc -o bin/direttiva_ifdef direttiva_ifdef.c
-bin/direttiva_ifdef
-```
+bin/direttiva_ifdef</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/2_preprocessor/direttiva_ifdef.c" -->
 <pre lang="c"><code>/*
@@ -3606,30 +3822,42 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+      </details>
+    </td>
+  </tr>
+</table>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/2_preprocessor/direttiva_ifndef.c</code></summary>
 
-</div>
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Logica inversa di <code>#ifdef</code>, controllo se un simbolo non e definito.
+        </p>
 
-</details>
-<details>
-<summary>&#128187; <code>/lab/2_preprocessor/direttiva_ifndef.c</code></summary>
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Le direttive #if #ifdef #ifndef con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Logica inversa di <code>#ifdef</code>, controllo se un simbolo non e definito e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/2_preprocessor/direttiva_ifndef.c">/lab/2_preprocessor/direttiva_ifndef.c</a>
+        </p>
 
-**Descrizione breve:** Logica inversa di `#ifdef`, controllo se un simbolo non e definito.
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Le direttive #if #ifdef #ifndef con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Logica inversa di `#ifdef`, controllo se un simbolo non e definito e di collegare la spiegazione teorica al comportamento reale del programma compilato.
-
-**Sorgente:** [/lab/2_preprocessor/direttiva_ifndef.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/2_preprocessor/direttiva_ifndef.c)
-
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/2_preprocessor
+<pre lang="bash"><code>cd /lab/2_preprocessor
 gcc -o bin/direttiva_ifndef direttiva_ifndef.c
-bin/direttiva_ifndef
-```
+bin/direttiva_ifndef</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/2_preprocessor/direttiva_ifndef.c" -->
 <pre lang="c"><code>/*
@@ -3658,10 +3886,10 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -3732,26 +3960,38 @@ La definizione del simbolo macro deve essere effettuata con la direttiva <code>#
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/2_preprocessor/eliminazione_temporanea_codice.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/2_preprocessor/eliminazione_temporanea_codice.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Macro <code>TRACE</code> e inclusione/esclusione temporanea di codice.
+        </p>
 
-**Descrizione breve:** Macro `TRACE` e inclusione/esclusione temporanea di codice.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Eliminazione temporanea di codice con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Macro <code>TRACE</code> e inclusione/esclusione temporanea di codice e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Eliminazione temporanea di codice con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Macro `TRACE` e inclusione/esclusione temporanea di codice e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/2_preprocessor/eliminazione_temporanea_codice.c">/lab/2_preprocessor/eliminazione_temporanea_codice.c</a>
+        </p>
 
-**Sorgente:** [/lab/2_preprocessor/eliminazione_temporanea_codice.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/2_preprocessor/eliminazione_temporanea_codice.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/2_preprocessor
+<pre lang="bash"><code>cd /lab/2_preprocessor
 gcc -o bin/eliminazione_temporanea_codice eliminazione_temporanea_codice.c
-bin/eliminazione_temporanea_codice
-```
+bin/eliminazione_temporanea_codice</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/2_preprocessor/eliminazione_temporanea_codice.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -3771,10 +4011,10 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -4370,26 +4610,38 @@ Per ottenere il valore nella rappresentazione senza segno dovremmo sommare a 2 i
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/3_datatype/estensione_della_rappresentazione_binaria.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/3_datatype/estensione_della_rappresentazione_binaria.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Sign extension e zero extension passando da 16 a 32 bit.
+        </p>
 
-**Descrizione breve:** Sign extension e zero extension passando da 16 a 32 bit.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Estensione rappresentazione binaria di un numero intero con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Sign extension e zero extension passando da 16 a 32 bit e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Estensione rappresentazione binaria di un numero intero con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Sign extension e zero extension passando da 16 a 32 bit e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/estensione_della_rappresentazione_binaria.c">/lab/3_datatype/estensione_della_rappresentazione_binaria.c</a>
+        </p>
 
-**Sorgente:** [/lab/3_datatype/estensione_della_rappresentazione_binaria.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/estensione_della_rappresentazione_binaria.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/3_datatype
+<pre lang="bash"><code>cd /lab/3_datatype
 gcc -o bin/estensione_della_rappresentazione_binaria estensione_della_rappresentazione_binaria.c
-bin/estensione_della_rappresentazione_binaria
-```
+bin/estensione_della_rappresentazione_binaria</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/3_datatype/estensione_della_rappresentazione_binaria.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -4427,10 +4679,10 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -4604,26 +4856,38 @@ int q, w = 200 /* q non è inizializzata, w è inizializzata. scarso stile di  p
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/3_datatype/print_int.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/3_datatype/print_int.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Stampa esadecimale di interi signed/unsigned e complemento a due.
+        </p>
 
-**Descrizione breve:** Stampa esadecimale di interi signed/unsigned e complemento a due.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Stampare int con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Stampa esadecimale di interi signed/unsigned e complemento a due e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Stampare int con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Stampa esadecimale di interi signed/unsigned e complemento a due e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/print_int.c">/lab/3_datatype/print_int.c</a>
+        </p>
 
-**Sorgente:** [/lab/3_datatype/print_int.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/print_int.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/3_datatype
+<pre lang="bash"><code>cd /lab/3_datatype
 gcc -o bin/print_int print_int.c
-bin/print_int
-```
+bin/print_int</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/3_datatype/print_int.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -4694,10 +4958,10 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -4822,26 +5086,38 @@ Quando allora usare i diversi tipi di interi? Dipende dalla situazione.
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/3_datatype/print_others_ints.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/3_datatype/print_others_ints.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Segnaposto <code>printf</code> per tipi interi diversi e comportamento inatteso con placeholder errati.
+        </p>
 
-**Descrizione breve:** Segnaposto `printf` per tipi interi diversi e comportamento inatteso con placeholder errati.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Stampare altri tipi di interi con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Segnaposto <code>printf</code> per tipi interi diversi e comportamento inatteso con placeholder errati e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Stampare altri tipi di interi con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Segnaposto `printf` per tipi interi diversi e comportamento inatteso con placeholder errati e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/print_others_ints.c">/lab/3_datatype/print_others_ints.c</a>
+        </p>
 
-**Sorgente:** [/lab/3_datatype/print_others_ints.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/print_others_ints.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/3_datatype
+<pre lang="bash"><code>cd /lab/3_datatype
 gcc -o bin/print_others_ints print_others_ints.c
-bin/print_others_ints
-```
+bin/print_others_ints</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/3_datatype/print_others_ints.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -4861,10 +5137,10 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -5122,26 +5398,38 @@ signed negative: 0xffffffe5
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/3_datatype/cast_esplicito_implicito.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/3_datatype/cast_esplicito_implicito.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Differenza tra cast esplicito e implicito e quando cambia il valore.
+        </p>
 
-**Descrizione breve:** Differenza tra cast esplicito e implicito e quando cambia il valore.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Cast con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza tra cast esplicito e implicito e quando cambia il valore e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Cast con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza tra cast esplicito e implicito e quando cambia il valore e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/cast_esplicito_implicito.c">/lab/3_datatype/cast_esplicito_implicito.c</a>
+        </p>
 
-**Sorgente:** [/lab/3_datatype/cast_esplicito_implicito.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/cast_esplicito_implicito.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/3_datatype
+<pre lang="bash"><code>cd /lab/3_datatype
 gcc -o bin/cast_esplicito_implicito cast_esplicito_implicito.c
-bin/cast_esplicito_implicito
-```
+bin/cast_esplicito_implicito</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/3_datatype/cast_esplicito_implicito.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -5184,30 +5472,42 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+      </details>
+    </td>
+  </tr>
+</table>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/3_datatype/mistero.c</code></summary>
 
-</div>
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Esercizio esplorativo sui risultati inattesi della rappresentazione dei dati.
+        </p>
 
-</details>
-<details>
-<summary>&#128187; <code>/lab/3_datatype/mistero.c</code></summary>
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Funziona come esercizio di previsione: obbliga a ragionare sul risultato prima di eseguire il programma, collegando rappresentazione binaria, conversioni e interpretazione del valore stampato.
+        </p>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/mistero.c">/lab/3_datatype/mistero.c</a>
+        </p>
 
-**Descrizione breve:** Esercizio esplorativo sui risultati inattesi della rappresentazione dei dati.
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Descrizione lunga:** Funziona come esercizio di previsione: obbliga a ragionare sul risultato prima di eseguire il programma, collegando rappresentazione binaria, conversioni e interpretazione del valore stampato.
-
-**Sorgente:** [/lab/3_datatype/mistero.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/mistero.c)
-
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/3_datatype
+<pre lang="bash"><code>cd /lab/3_datatype
 gcc -o bin/mistero mistero.c
-bin/mistero
-```
+bin/mistero</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/3_datatype/mistero.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -5221,10 +5521,10 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -5366,26 +5666,38 @@ il valore stampato sarebbe 1.0 perché prima viene effettuata la divisione tra <
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/3_datatype/cast_tra_signed_unsigned.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/3_datatype/cast_tra_signed_unsigned.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Stessa sequenza di bit reinterpretata come valore senza segno.
+        </p>
 
-**Descrizione breve:** Stessa sequenza di bit reinterpretata come valore senza segno.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Cast tra signed e unsigned con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Stessa sequenza di bit reinterpretata come valore senza segno e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Cast tra signed e unsigned con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Stessa sequenza di bit reinterpretata come valore senza segno e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/cast_tra_signed_unsigned.c">/lab/3_datatype/cast_tra_signed_unsigned.c</a>
+        </p>
 
-**Sorgente:** [/lab/3_datatype/cast_tra_signed_unsigned.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/cast_tra_signed_unsigned.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/3_datatype
+<pre lang="bash"><code>cd /lab/3_datatype
 gcc -o bin/cast_tra_signed_unsigned cast_tra_signed_unsigned.c
-bin/cast_tra_signed_unsigned
-```
+bin/cast_tra_signed_unsigned</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/3_datatype/cast_tra_signed_unsigned.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -5432,30 +5744,42 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+      </details>
+    </td>
+  </tr>
+</table>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/3_datatype/cast_tra_unsigned_signed.c</code></summary>
 
-</div>
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Conversione dall'estremo unsigned al corrispondente valore signed.
+        </p>
 
-</details>
-<details>
-<summary>&#128187; <code>/lab/3_datatype/cast_tra_unsigned_signed.c</code></summary>
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Cast tra signed e unsigned con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Conversione dall'estremo unsigned al corrispondente valore signed e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/cast_tra_unsigned_signed.c">/lab/3_datatype/cast_tra_unsigned_signed.c</a>
+        </p>
 
-**Descrizione breve:** Conversione dall'estremo unsigned al corrispondente valore signed.
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Cast tra signed e unsigned con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Conversione dall'estremo unsigned al corrispondente valore signed e di collegare la spiegazione teorica al comportamento reale del programma compilato.
-
-**Sorgente:** [/lab/3_datatype/cast_tra_unsigned_signed.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/cast_tra_unsigned_signed.c)
-
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/3_datatype
+<pre lang="bash"><code>cd /lab/3_datatype
 gcc -o bin/cast_tra_unsigned_signed cast_tra_unsigned_signed.c
-bin/cast_tra_unsigned_signed
-```
+bin/cast_tra_unsigned_signed</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/3_datatype/cast_tra_unsigned_signed.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -5479,10 +5803,10 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -5734,26 +6058,38 @@ uy = 4294954951          ffffcfc7
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/3_datatype/troncamento_bit.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/3_datatype/troncamento_bit.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Perdita dei bit piu significativi nel cast da <code>int</code> a <code>short</code>.
+        </p>
 
-**Descrizione breve:** Perdita dei bit piu significativi nel cast da `int` a `short`.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Troncamento rappresentazione binaria con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Perdita dei bit piu significativi nel cast da <code>int</code> a <code>short</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Troncamento rappresentazione binaria con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Perdita dei bit piu significativi nel cast da `int` a `short` e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/troncamento_bit.c">/lab/3_datatype/troncamento_bit.c</a>
+        </p>
 
-**Sorgente:** [/lab/3_datatype/troncamento_bit.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/troncamento_bit.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/3_datatype
+<pre lang="bash"><code>cd /lab/3_datatype
 gcc -o bin/troncamento_bit troncamento_bit.c
-bin/troncamento_bit
-```
+bin/troncamento_bit</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/3_datatype/troncamento_bit.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -5770,10 +6106,10 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -5806,26 +6142,38 @@ y  = -12345      ffffcfc7
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/3_datatype/ascii.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/3_datatype/ascii.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Esercizio su tabella/codici ASCII.
+        </p>
 
-**Descrizione breve:** Esercizio su tabella/codici ASCII.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo char con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Esercizio su tabella/codici ASCII e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo char con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Esercizio su tabella/codici ASCII e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/ascii.c">/lab/3_datatype/ascii.c</a>
+        </p>
 
-**Sorgente:** [/lab/3_datatype/ascii.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/ascii.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/3_datatype
+<pre lang="bash"><code>cd /lab/3_datatype
 gcc -o bin/ascii ascii.c
-bin/ascii
-```
+bin/ascii</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/3_datatype/ascii.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -5839,10 +6187,10 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -5884,26 +6232,38 @@ Il tipo <code>char</code> è lungo 1 byte (8 bit) e in verità è un tipo intero
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/3_datatype/print_char.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/3_datatype/print_char.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Stampa dello stesso carattere come char, intero, unsigned, esadecimale.
+        </p>
 
-**Descrizione breve:** Stampa dello stesso carattere come char, intero, unsigned, esadecimale.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Stampare un char con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Stampa dello stesso carattere come char, intero, unsigned, esadecimale e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Stampare un char con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Stampa dello stesso carattere come char, intero, unsigned, esadecimale e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/print_char.c">/lab/3_datatype/print_char.c</a>
+        </p>
 
-**Sorgente:** [/lab/3_datatype/print_char.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/print_char.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/3_datatype
+<pre lang="bash"><code>cd /lab/3_datatype
 gcc -o bin/print_char print_char.c
-bin/print_char
-```
+bin/print_char</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/3_datatype/print_char.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -5917,10 +6277,10 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -5984,26 +6344,38 @@ Gli operatori sono usati nelle operazioni aritmetiche.
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/4_operators/op_assegnamento.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/4_operators/op_assegnamento.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Differenza tra lvalue modificabile e costante non assegnabile.
+        </p>
 
-**Descrizione breve:** Differenza tra lvalue modificabile e costante non assegnabile.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Operatore di assegnamento: = con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza tra lvalue modificabile e costante non assegnabile e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Operatore di assegnamento: = con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza tra lvalue modificabile e costante non assegnabile e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/4_operators/op_assegnamento.c">/lab/4_operators/op_assegnamento.c</a>
+        </p>
 
-**Sorgente:** [/lab/4_operators/op_assegnamento.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/4_operators/op_assegnamento.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/4_operators
+<pre lang="bash"><code>cd /lab/4_operators
 gcc -o bin/op_assegnamento op_assegnamento.c
-bin/op_assegnamento
-```
+bin/op_assegnamento</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/4_operators/op_assegnamento.c" -->
 <pre lang="c"><code>int main(void){
@@ -6021,10 +6393,10 @@ bin/op_assegnamento
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -6122,26 +6494,38 @@ int main(void){
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/4_operators/op_divisione.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/4_operators/op_divisione.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Divisione intera/reale e comportamento dell'operatore <code>/</code>.
+        </p>
 
-**Descrizione breve:** Divisione intera/reale e comportamento dell'operatore `/`.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Operatore divisione: / con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Divisione intera/reale e comportamento dell'operatore <code>/</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Operatore divisione: / con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Divisione intera/reale e comportamento dell'operatore `/` e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/4_operators/op_divisione.c">/lab/4_operators/op_divisione.c</a>
+        </p>
 
-**Sorgente:** [/lab/4_operators/op_divisione.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/4_operators/op_divisione.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/4_operators
+<pre lang="bash"><code>cd /lab/4_operators
 gcc -o bin/op_divisione op_divisione.c
-bin/op_divisione
-```
+bin/op_divisione</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/4_operators/op_divisione.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -6157,10 +6541,10 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -6189,26 +6573,38 @@ int main(void){
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/4_operators/sizeof.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/4_operators/sizeof.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Dimensione dei tipi o delle variabili in byte.
+        </p>
 
-**Descrizione breve:** Dimensione dei tipi o delle variabili in byte.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Operatore sizeof con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Dimensione dei tipi o delle variabili in byte e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Operatore sizeof con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Dimensione dei tipi o delle variabili in byte e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/4_operators/sizeof.c">/lab/4_operators/sizeof.c</a>
+        </p>
 
-**Sorgente:** [/lab/4_operators/sizeof.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/4_operators/sizeof.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/4_operators
+<pre lang="bash"><code>cd /lab/4_operators
 gcc -o bin/sizeof sizeof.c
-bin/sizeof
-```
+bin/sizeof</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/4_operators/sizeof.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -6224,10 +6620,10 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -6269,26 +6665,38 @@ Come avrai notato <code>sizeof</code> può essere usato con o senza parentesi to
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/4_operators/op_modulo.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/4_operators/op_modulo.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Uso dell'operatore <code>%</code> e resto della divisione intera.
+        </p>
 
-**Descrizione breve:** Uso dell'operatore `%` e resto della divisione intera.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Operatore % con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Uso dell'operatore <code>%</code> e resto della divisione intera e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Operatore % con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Uso dell'operatore `%` e resto della divisione intera e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/4_operators/op_modulo.c">/lab/4_operators/op_modulo.c</a>
+        </p>
 
-**Sorgente:** [/lab/4_operators/op_modulo.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/4_operators/op_modulo.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/4_operators
+<pre lang="bash"><code>cd /lab/4_operators
 gcc -o bin/op_modulo op_modulo.c
-bin/op_modulo
-```
+bin/op_modulo</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/4_operators/op_modulo.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -6307,10 +6715,10 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -6342,26 +6750,38 @@ int main(void){
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/4_operators/op_incremento_decremento.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/4_operators/op_incremento_decremento.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Uso base di <code>++</code> e <code>--</code>.
+        </p>
 
-**Descrizione breve:** Uso base di `++` e `--`.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Operatore incremento/decremento ++ -- con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Uso base di <code>++</code> e <code>--</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Operatore incremento/decremento ++ -- con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Uso base di `++` e `--` e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/4_operators/op_incremento_decremento.c">/lab/4_operators/op_incremento_decremento.c</a>
+        </p>
 
-**Sorgente:** [/lab/4_operators/op_incremento_decremento.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/4_operators/op_incremento_decremento.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/4_operators
+<pre lang="bash"><code>cd /lab/4_operators
 gcc -o bin/op_incremento_decremento op_incremento_decremento.c
-bin/op_incremento_decremento
-```
+bin/op_incremento_decremento</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/4_operators/op_incremento_decremento.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -6392,30 +6812,42 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
+      </details>
+    </td>
+  </tr>
+</table>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/4_operators/pre_post_incremento.c</code></summary>
 
-</div>
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Differenza tra <code>i++</code> e <code>++i</code> in valutazione e assegnamento.
+        </p>
 
-</details>
-<details>
-<summary>&#128187; <code>/lab/4_operators/pre_post_incremento.c</code></summary>
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Operatore incremento/decremento ++ -- con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza tra <code>i++</code> e <code>++i</code> in valutazione e assegnamento e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/4_operators/pre_post_incremento.c">/lab/4_operators/pre_post_incremento.c</a>
+        </p>
 
-**Descrizione breve:** Differenza tra `i++` e `++i` in valutazione e assegnamento.
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Operatore incremento/decremento ++ -- con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza tra `i++` e `++i` in valutazione e assegnamento e di collegare la spiegazione teorica al comportamento reale del programma compilato.
-
-**Sorgente:** [/lab/4_operators/pre_post_incremento.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/4_operators/pre_post_incremento.c)
-
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/4_operators
+<pre lang="bash"><code>cd /lab/4_operators
 gcc -o bin/pre_post_incremento pre_post_incremento.c
-bin/pre_post_incremento
-```
+bin/pre_post_incremento</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/4_operators/pre_post_incremento.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -6442,10 +6874,10 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -6574,26 +7006,38 @@ Operatori Relazionali
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/5_control_statements/if.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/5_control_statements/if.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Controllo pari/dispari con ramo vero/falso.
+        </p>
 
-**Descrizione breve:** Controllo pari/dispari con ramo vero/falso.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo if o if-else con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Controllo pari/dispari con ramo vero/falso e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo if o if-else con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Controllo pari/dispari con ramo vero/falso e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/if.c">/lab/5_control_statements/if.c</a>
+        </p>
 
-**Sorgente:** [/lab/5_control_statements/if.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/if.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/5_control_statements
+<pre lang="bash"><code>cd /lab/5_control_statements
 gcc -o bin/if if.c
-bin/if
-```
+bin/if</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/5_control_statements/if.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -6620,10 +7064,10 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -6691,26 +7135,38 @@ int main(void){
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/5_control_statements/logical_relational_operators.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/5_control_statements/logical_relational_operators.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Condizioni composte con operatori logici e di confronto.
+        </p>
 
-**Descrizione breve:** Condizioni composte con operatori logici e di confronto.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Condizioni complesse con l'uso di operatori logici e condizionali con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Condizioni composte con operatori logici e di confronto e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Condizioni complesse con l'uso di operatori logici e condizionali con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Condizioni composte con operatori logici e di confronto e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/logical_relational_operators.c">/lab/5_control_statements/logical_relational_operators.c</a>
+        </p>
 
-**Sorgente:** [/lab/5_control_statements/logical_relational_operators.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/logical_relational_operators.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/5_control_statements
+<pre lang="bash"><code>cd /lab/5_control_statements
 gcc -o bin/logical_relational_operators logical_relational_operators.c
-bin/logical_relational_operators
-```
+bin/logical_relational_operators</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/5_control_statements/logical_relational_operators.c" -->
 <pre lang="c"><code>
@@ -6746,10 +7202,10 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -6793,26 +7249,38 @@ int main(void){
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/5_control_statements/for.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/5_control_statements/for.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Iterazione con inizializzazione, condizione e incremento.
+        </p>
 
-**Descrizione breve:** Iterazione con inizializzazione, condizione e incremento.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo for con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Iterazione con inizializzazione, condizione e incremento e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo for con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Iterazione con inizializzazione, condizione e incremento e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/for.c">/lab/5_control_statements/for.c</a>
+        </p>
 
-**Sorgente:** [/lab/5_control_statements/for.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/for.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/5_control_statements
+<pre lang="bash"><code>cd /lab/5_control_statements
 gcc -o bin/for for.c
-bin/for
-```
+bin/for</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/5_control_statements/for.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -6827,10 +7295,10 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -6865,26 +7333,38 @@ int main(void){
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/5_control_statements/while.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/5_control_statements/while.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Iterazione controllata prima del corpo.
+        </p>
 
-**Descrizione breve:** Iterazione controllata prima del corpo.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo while con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Iterazione controllata prima del corpo e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo while con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Iterazione controllata prima del corpo e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/while.c">/lab/5_control_statements/while.c</a>
+        </p>
 
-**Sorgente:** [/lab/5_control_statements/while.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/while.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/5_control_statements
+<pre lang="bash"><code>cd /lab/5_control_statements
 gcc -o bin/while while.c
-bin/while
-```
+bin/while</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/5_control_statements/while.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -6901,10 +7381,10 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -6941,26 +7421,38 @@ int main(void){
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/5_control_statements/do_while.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/5_control_statements/do_while.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Corpo eseguito almeno una volta, confronto con pre/post incremento.
+        </p>
 
-**Descrizione breve:** Corpo eseguito almeno una volta, confronto con pre/post incremento.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo do-while con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Corpo eseguito almeno una volta, confronto con pre/post incremento e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo do-while con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Corpo eseguito almeno una volta, confronto con pre/post incremento e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/do_while.c">/lab/5_control_statements/do_while.c</a>
+        </p>
 
-**Sorgente:** [/lab/5_control_statements/do_while.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/do_while.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/5_control_statements
+<pre lang="bash"><code>cd /lab/5_control_statements
 gcc -o bin/do_while do_while.c
-bin/do_while
-```
+bin/do_while</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/5_control_statements/do_while.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -6980,10 +7472,10 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -7023,26 +7515,38 @@ int main(void){
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/5_control_statements/switch.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/5_control_statements/switch.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Selezione multipla e uso/fall-through del <code>break</code>.
+        </p>
 
-**Descrizione breve:** Selezione multipla e uso/fall-through del `break`.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo switch con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Selezione multipla e uso/fall-through del <code>break</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo switch con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Selezione multipla e uso/fall-through del `break` e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/switch.c">/lab/5_control_statements/switch.c</a>
+        </p>
 
-**Sorgente:** [/lab/5_control_statements/switch.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/switch.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/5_control_statements
+<pre lang="bash"><code>cd /lab/5_control_statements
 gcc -o bin/switch switch.c
-bin/switch
-```
+bin/switch</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/5_control_statements/switch.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -7079,10 +7583,10 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -7183,26 +7687,38 @@ int main(void){
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/5_control_statements/break_continue.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/5_control_statements/break_continue.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Interruzione o salto dell'iterazione nei cicli.
+        </p>
 
-**Descrizione breve:** Interruzione o salto dell'iterazione nei cicli.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo break e continue con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Interruzione o salto dell'iterazione nei cicli e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo break e continue con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Interruzione o salto dell'iterazione nei cicli e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/break_continue.c">/lab/5_control_statements/break_continue.c</a>
+        </p>
 
-**Sorgente:** [/lab/5_control_statements/break_continue.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/break_continue.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/5_control_statements
+<pre lang="bash"><code>cd /lab/5_control_statements
 gcc -o bin/break_continue break_continue.c
-bin/break_continue
-```
+bin/break_continue</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/5_control_statements/break_continue.c" -->
 <pre lang="c"><code>
@@ -7237,10 +7753,10 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -7300,26 +7816,38 @@ int main(void){
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/6_pointers/0_pointers.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/6_pointers/0_pointers.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Dichiarazione, indirizzi e dereferenziazione.
+        </p>
 
-**Descrizione breve:** Dichiarazione, indirizzi e dereferenziazione.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo I puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Dichiarazione, indirizzi e dereferenziazione e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo I puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Dichiarazione, indirizzi e dereferenziazione e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/0_pointers.c">/lab/6_pointers/0_pointers.c</a>
+        </p>
 
-**Sorgente:** [/lab/6_pointers/0_pointers.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/0_pointers.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/6_pointers
+<pre lang="bash"><code>cd /lab/6_pointers
 gcc -o bin/0_pointers 0_pointers.c
-bin/0_pointers
-```
+bin/0_pointers</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/6_pointers/0_pointers.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -7336,30 +7864,42 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+      </details>
+    </td>
+  </tr>
+</table>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/6_pointers/1_pointers.c</code></summary>
 
-</div>
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Differenza tra assegnare puntatori, valori puntati e tipi incompatibili.
+        </p>
 
-</details>
-<details>
-<summary>&#128187; <code>/lab/6_pointers/1_pointers.c</code></summary>
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo I puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza tra assegnare puntatori, valori puntati e tipi incompatibili e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/1_pointers.c">/lab/6_pointers/1_pointers.c</a>
+        </p>
 
-**Descrizione breve:** Differenza tra assegnare puntatori, valori puntati e tipi incompatibili.
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo I puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza tra assegnare puntatori, valori puntati e tipi incompatibili e di collegare la spiegazione teorica al comportamento reale del programma compilato.
-
-**Sorgente:** [/lab/6_pointers/1_pointers.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/1_pointers.c)
-
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/6_pointers
+<pre lang="bash"><code>cd /lab/6_pointers
 gcc -o bin/1_pointers 1_pointers.c
-bin/1_pointers
-```
+bin/1_pointers</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/6_pointers/1_pointers.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -7385,30 +7925,42 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+      </details>
+    </td>
+  </tr>
+</table>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/6_pointers/33_pointers.c</code></summary>
 
-</div>
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Esercizio intermedio sui puntatori, gia richiamato dagli output.
+        </p>
 
-</details>
-<details>
-<summary>&#128187; <code>/lab/6_pointers/33_pointers.c</code></summary>
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Rafforza il lessico operativo dei puntatori: indirizzo, valore puntato, dereferenziazione e lettura degli output diventano strumenti per evitare confusione tra variabile e locazione di memoria.
+        </p>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/33_pointers.c">/lab/6_pointers/33_pointers.c</a>
+        </p>
 
-**Descrizione breve:** Esercizio intermedio sui puntatori, gia richiamato dagli output.
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Descrizione lunga:** Rafforza il lessico operativo dei puntatori: indirizzo, valore puntato, dereferenziazione e lettura degli output diventano strumenti per evitare confusione tra variabile e locazione di memoria.
-
-**Sorgente:** [/lab/6_pointers/33_pointers.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/33_pointers.c)
-
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/6_pointers
+<pre lang="bash"><code>cd /lab/6_pointers
 gcc -o bin/33_pointers 33_pointers.c
-bin/33_pointers
-```
+bin/33_pointers</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/6_pointers/33_pointers.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -7428,10 +7980,10 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -7590,26 +8142,38 @@ int main(void){
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/6_pointers/2_pointers.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/6_pointers/2_pointers.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Pericolo di dereferenziare puntatori casuali.
+        </p>
 
-**Descrizione breve:** Pericolo di dereferenziare puntatori casuali.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Puntatori non inizializzati con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Pericolo di dereferenziare puntatori casuali e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Puntatori non inizializzati con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Pericolo di dereferenziare puntatori casuali e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/2_pointers.c">/lab/6_pointers/2_pointers.c</a>
+        </p>
 
-**Sorgente:** [/lab/6_pointers/2_pointers.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/2_pointers.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/6_pointers
+<pre lang="bash"><code>cd /lab/6_pointers
 gcc -o bin/2_pointers 2_pointers.c
-bin/2_pointers
-```
+bin/2_pointers</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/6_pointers/2_pointers.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -7631,10 +8195,10 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -7673,26 +8237,38 @@ int main(void){
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/6_pointers/3_pointers.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/6_pointers/3_pointers.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Inizializzazione a <code>NULL</code> e controllo prima della dereferenziazione.
+        </p>
 
-**Descrizione breve:** Inizializzazione a `NULL` e controllo prima della dereferenziazione.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Il puntatore nullo (NULL) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Inizializzazione a <code>NULL</code> e controllo prima della dereferenziazione e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Il puntatore nullo (NULL) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Inizializzazione a `NULL` e controllo prima della dereferenziazione e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/3_pointers.c">/lab/6_pointers/3_pointers.c</a>
+        </p>
 
-**Sorgente:** [/lab/6_pointers/3_pointers.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/3_pointers.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/6_pointers
+<pre lang="bash"><code>cd /lab/6_pointers
 gcc -o bin/3_pointers 3_pointers.c
-bin/3_pointers
-```
+bin/3_pointers</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/6_pointers/3_pointers.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -7705,10 +8281,10 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -7746,26 +8322,38 @@ int main(void){
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/6_pointers/4_pointers.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/6_pointers/4_pointers.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Spostamento tra elementi via puntatore.
+        </p>
 
-**Descrizione breve:** Spostamento tra elementi via puntatore.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Aritmetica puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Spostamento tra elementi via puntatore e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Aritmetica puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Spostamento tra elementi via puntatore e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/4_pointers.c">/lab/6_pointers/4_pointers.c</a>
+        </p>
 
-**Sorgente:** [/lab/6_pointers/4_pointers.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/4_pointers.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/6_pointers
+<pre lang="bash"><code>cd /lab/6_pointers
 gcc -o bin/4_pointers 4_pointers.c
-bin/4_pointers
-```
+bin/4_pointers</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/6_pointers/4_pointers.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -7793,10 +8381,10 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -7906,26 +8494,38 @@ L'aritmetica dei puntatori ci sarà molto utile quando lavoreremo con i vettori 
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/7_array/00_array.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/7_array/00_array.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Inizializzazione elementi con ciclo, accesso con <code>[]</code> e aritmetica puntatori.
+        </p>
 
-**Descrizione breve:** Inizializzazione elementi con ciclo, accesso con `[]` e aritmetica puntatori.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Vettori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Inizializzazione elementi con ciclo, accesso con <code>[]</code> e aritmetica puntatori e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Vettori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Inizializzazione elementi con ciclo, accesso con `[]` e aritmetica puntatori e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/00_array.c">/lab/7_array/00_array.c</a>
+        </p>
 
-**Sorgente:** [/lab/7_array/00_array.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/00_array.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/7_array
+<pre lang="bash"><code>cd /lab/7_array
 gcc -o bin/00_array 00_array.c
-bin/00_array
-```
+bin/00_array</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/7_array/00_array.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -7951,30 +8551,42 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
+      </details>
+    </td>
+  </tr>
+</table>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/7_array/0_array.c</code></summary>
 
-</div>
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Primo esempio di array.
+        </p>
 
-</details>
-<details>
-<summary>&#128187; <code>/lab/7_array/0_array.c</code></summary>
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Vettori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Primo esempio di array e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/0_array.c">/lab/7_array/0_array.c</a>
+        </p>
 
-**Descrizione breve:** Primo esempio di array.
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Vettori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Primo esempio di array e di collegare la spiegazione teorica al comportamento reale del programma compilato.
-
-**Sorgente:** [/lab/7_array/0_array.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/0_array.c)
-
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/7_array
+<pre lang="bash"><code>cd /lab/7_array
 gcc -o bin/0_array 0_array.c
-bin/0_array
-```
+bin/0_array</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/7_array/0_array.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -7996,30 +8608,42 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
+      </details>
+    </td>
+  </tr>
+</table>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/7_array/1_array.c</code></summary>
 
-</div>
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Esercizio progressivo su dichiarazione/accesso a elementi.
+        </p>
 
-</details>
-<details>
-<summary>&#128187; <code>/lab/7_array/1_array.c</code></summary>
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Vettori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Esercizio progressivo su dichiarazione/accesso a elementi e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/1_array.c">/lab/7_array/1_array.c</a>
+        </p>
 
-**Descrizione breve:** Esercizio progressivo su dichiarazione/accesso a elementi.
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Vettori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Esercizio progressivo su dichiarazione/accesso a elementi e di collegare la spiegazione teorica al comportamento reale del programma compilato.
-
-**Sorgente:** [/lab/7_array/1_array.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/1_array.c)
-
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/7_array
+<pre lang="bash"><code>cd /lab/7_array
 gcc -o bin/1_array 1_array.c
-bin/1_array
-```
+bin/1_array</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/7_array/1_array.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -8036,10 +8660,10 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -8140,26 +8764,38 @@ int main(void){
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/7_array/2_array.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/7_array/2_array.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Esercizio progressivo su inizializzazione/accesso agli elementi.
+        </p>
 
-**Descrizione breve:** Esercizio progressivo su inizializzazione/accesso agli elementi.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Inizializzare un vettore con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Esercizio progressivo su inizializzazione/accesso agli elementi e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Inizializzare un vettore con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Esercizio progressivo su inizializzazione/accesso agli elementi e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/2_array.c">/lab/7_array/2_array.c</a>
+        </p>
 
-**Sorgente:** [/lab/7_array/2_array.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/2_array.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/7_array
+<pre lang="bash"><code>cd /lab/7_array
 gcc -o bin/2_array 2_array.c
-bin/2_array
-```
+bin/2_array</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/7_array/2_array.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -8175,30 +8811,42 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+      </details>
+    </td>
+  </tr>
+</table>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/7_array/3_array.c</code></summary>
 
-</div>
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Uso di dimensione simbolica e ciclo.
+        </p>
 
-</details>
-<details>
-<summary>&#128187; <code>/lab/7_array/3_array.c</code></summary>
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Inizializzare un vettore con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Uso di dimensione simbolica e ciclo e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/3_array.c">/lab/7_array/3_array.c</a>
+        </p>
 
-**Descrizione breve:** Uso di dimensione simbolica e ciclo.
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Inizializzare un vettore con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Uso di dimensione simbolica e ciclo e di collegare la spiegazione teorica al comportamento reale del programma compilato.
-
-**Sorgente:** [/lab/7_array/3_array.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/3_array.c)
-
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/7_array
+<pre lang="bash"><code>cd /lab/7_array
 gcc -o bin/3_array 3_array.c
-bin/3_array
-```
+bin/3_array</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/7_array/3_array.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -8216,30 +8864,42 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+      </details>
+    </td>
+  </tr>
+</table>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/7_array/4_array.c</code></summary>
 
-</div>
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Esercizio su vettore con dimensione <code>N</code>, citato dagli output.
+        </p>
 
-</details>
-<details>
-<summary>&#128187; <code>/lab/7_array/4_array.c</code></summary>
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Inizializzare un vettore con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Esercizio su vettore con dimensione <code>N</code>, citato dagli output e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/4_array.c">/lab/7_array/4_array.c</a>
+        </p>
 
-**Descrizione breve:** Esercizio su vettore con dimensione `N`, citato dagli output.
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Inizializzare un vettore con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Esercizio su vettore con dimensione `N`, citato dagli output e di collegare la spiegazione teorica al comportamento reale del programma compilato.
-
-**Sorgente:** [/lab/7_array/4_array.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/4_array.c)
-
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/7_array
+<pre lang="bash"><code>cd /lab/7_array
 gcc -o bin/4_array 4_array.c
-bin/4_array
-```
+bin/4_array</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/7_array/4_array.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -8261,10 +8921,10 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -8412,26 +9072,38 @@ vettore + 4 = 0x7fff64c6243c + 4 = 0x7fff64c62440
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/7_array/5_array.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/7_array/5_array.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Numero di byte dell'intero array vs singolo elemento.
+        </p>
 
-**Descrizione breve:** Numero di byte dell'intero array vs singolo elemento.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Dimensione vettore (sizeof) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Numero di byte dell'intero array vs singolo elemento e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Dimensione vettore (sizeof) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Numero di byte dell'intero array vs singolo elemento e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/5_array.c">/lab/7_array/5_array.c</a>
+        </p>
 
-**Sorgente:** [/lab/7_array/5_array.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/5_array.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/7_array
+<pre lang="bash"><code>cd /lab/7_array
 gcc -o bin/5_array 5_array.c
-bin/5_array
-```
+bin/5_array</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/7_array/5_array.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -8452,30 +9124,42 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
+      </details>
+    </td>
+  </tr>
+</table>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/7_array/6_array.c</code></summary>
 
-</div>
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Macro <code>ARRAY_SIZE(x)</code> per calcolare numero di elementi.
+        </p>
 
-</details>
-<details>
-<summary>&#128187; <code>/lab/7_array/6_array.c</code></summary>
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Dimensione vettore (sizeof) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Macro <code>ARRAY_SIZE(x)</code> per calcolare numero di elementi e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/6_array.c">/lab/7_array/6_array.c</a>
+        </p>
 
-**Descrizione breve:** Macro `ARRAY_SIZE(x)` per calcolare numero di elementi.
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Dimensione vettore (sizeof) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Macro `ARRAY_SIZE(x)` per calcolare numero di elementi e di collegare la spiegazione teorica al comportamento reale del programma compilato.
-
-**Sorgente:** [/lab/7_array/6_array.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/6_array.c)
-
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/7_array
+<pre lang="bash"><code>cd /lab/7_array
 gcc -o bin/6_array 6_array.c
-bin/6_array
-```
+bin/6_array</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/7_array/6_array.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -8499,10 +9183,10 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -8571,26 +9255,38 @@ int main(void){
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/6_pointers/6_pointers.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/6_pointers/6_pointers.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Nome dell'array come puntatore costante e operazioni non ammesse.
+        </p>
 
-**Descrizione breve:** Nome dell'array come puntatore costante e operazioni non ammesse.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Relazione tra array e puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Nome dell'array come puntatore costante e operazioni non ammesse e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Relazione tra array e puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Nome dell'array come puntatore costante e operazioni non ammesse e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/6_pointers.c">/lab/6_pointers/6_pointers.c</a>
+        </p>
 
-**Sorgente:** [/lab/6_pointers/6_pointers.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/6_pointers.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/6_pointers
+<pre lang="bash"><code>cd /lab/6_pointers
 gcc -o bin/6_pointers 6_pointers.c
-bin/6_pointers
-```
+bin/6_pointers</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/6_pointers/6_pointers.c" -->
 <pre lang="c"><code>#define N 300
@@ -8606,30 +9302,42 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
+      </details>
+    </td>
+  </tr>
+</table>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/6_pointers/7_pointers.c</code></summary>
 
-</div>
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Somma degli elementi con indicizzazione e aritmetica puntatori equivalenti.
+        </p>
 
-</details>
-<details>
-<summary>&#128187; <code>/lab/6_pointers/7_pointers.c</code></summary>
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Relazione tra array e puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Somma degli elementi con indicizzazione e aritmetica puntatori equivalenti e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/7_pointers.c">/lab/6_pointers/7_pointers.c</a>
+        </p>
 
-**Descrizione breve:** Somma degli elementi con indicizzazione e aritmetica puntatori equivalenti.
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Relazione tra array e puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Somma degli elementi con indicizzazione e aritmetica puntatori equivalenti e di collegare la spiegazione teorica al comportamento reale del programma compilato.
-
-**Sorgente:** [/lab/6_pointers/7_pointers.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/7_pointers.c)
-
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/6_pointers
+<pre lang="bash"><code>cd /lab/6_pointers
 gcc -o bin/7_pointers 7_pointers.c
-bin/7_pointers
-```
+bin/7_pointers</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/6_pointers/7_pointers.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -8685,10 +9393,10 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -8777,26 +9485,38 @@ vagrant@ubuntu2204:/lab/6_pointers$ bin/7_pointers
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/6_pointers/8_pointers.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/6_pointers/8_pointers.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Differenza in elementi vs differenza in byte tramite cast.
+        </p>
 
-**Descrizione breve:** Differenza in elementi vs differenza in byte tramite cast.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Differenza tra puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza in elementi vs differenza in byte tramite cast e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Differenza tra puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza in elementi vs differenza in byte tramite cast e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/8_pointers.c">/lab/6_pointers/8_pointers.c</a>
+        </p>
 
-**Sorgente:** [/lab/6_pointers/8_pointers.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/8_pointers.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/6_pointers
+<pre lang="bash"><code>cd /lab/6_pointers
 gcc -o bin/8_pointers 8_pointers.c
-bin/8_pointers
-```
+bin/8_pointers</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/6_pointers/8_pointers.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -8832,10 +9552,10 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -8896,26 +9616,38 @@ vagrant@ubuntu2204:/lab/6_pointers$ bin/8_pointers
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/8_strings/0_strings.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/8_strings/0_strings.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Prima rappresentazione di stringhe C.
+        </p>
 
-**Descrizione breve:** Prima rappresentazione di stringhe C.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Le stringhe con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Prima rappresentazione di stringhe C e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Le stringhe con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Prima rappresentazione di stringhe C e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/8_strings/0_strings.c">/lab/8_strings/0_strings.c</a>
+        </p>
 
-**Sorgente:** [/lab/8_strings/0_strings.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/8_strings/0_strings.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/8_strings
+<pre lang="bash"><code>cd /lab/8_strings
 gcc -o bin/0_strings 0_strings.c
-bin/0_strings
-```
+bin/0_strings</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/8_strings/0_strings.c" -->
 <pre lang="c"><code>
@@ -8934,30 +9666,42 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+      </details>
+    </td>
+  </tr>
+</table>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/8_strings/1_strings.c</code></summary>
 
-</div>
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Esercizio progressivo su terminatore nullo o stampa.
+        </p>
 
-</details>
-<details>
-<summary>&#128187; <code>/lab/8_strings/1_strings.c</code></summary>
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Le stringhe con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Esercizio progressivo su terminatore nullo o stampa e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/8_strings/1_strings.c">/lab/8_strings/1_strings.c</a>
+        </p>
 
-**Descrizione breve:** Esercizio progressivo su terminatore nullo o stampa.
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Le stringhe con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Esercizio progressivo su terminatore nullo o stampa e di collegare la spiegazione teorica al comportamento reale del programma compilato.
-
-**Sorgente:** [/lab/8_strings/1_strings.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/8_strings/1_strings.c)
-
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/8_strings
+<pre lang="bash"><code>cd /lab/8_strings
 gcc -o bin/1_strings 1_strings.c
-bin/1_strings
-```
+bin/1_strings</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/8_strings/1_strings.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -8975,10 +9719,10 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -9097,26 +9841,38 @@ Anche in questo caso possiamo scordarci di <code>\0</code>.
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/8_strings/2_strings.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/8_strings/2_strings.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Esercizio progressivo su inizializzazione/accesso ai caratteri.
+        </p>
 
-**Descrizione breve:** Esercizio progressivo su inizializzazione/accesso ai caratteri.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Dettagli sull'inizializzazione con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Esercizio progressivo su inizializzazione/accesso ai caratteri e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Dettagli sull'inizializzazione con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Esercizio progressivo su inizializzazione/accesso ai caratteri e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/8_strings/2_strings.c">/lab/8_strings/2_strings.c</a>
+        </p>
 
-**Sorgente:** [/lab/8_strings/2_strings.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/8_strings/2_strings.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/8_strings
+<pre lang="bash"><code>cd /lab/8_strings
 gcc -o bin/2_strings 2_strings.c
-bin/2_strings
-```
+bin/2_strings</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/8_strings/2_strings.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -9134,30 +9890,42 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+      </details>
+    </td>
+  </tr>
+</table>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/8_strings/4_strings.c</code></summary>
 
-</div>
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Array dimensionato, puntatore a literal, array con dimensione dedotta.
+        </p>
 
-</details>
-<details>
-<summary>&#128187; <code>/lab/8_strings/4_strings.c</code></summary>
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Dettagli sull'inizializzazione con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Array dimensionato, puntatore a literal, array con dimensione dedotta e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/8_strings/4_strings.c">/lab/8_strings/4_strings.c</a>
+        </p>
 
-**Descrizione breve:** Array dimensionato, puntatore a literal, array con dimensione dedotta.
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Dettagli sull'inizializzazione con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Array dimensionato, puntatore a literal, array con dimensione dedotta e di collegare la spiegazione teorica al comportamento reale del programma compilato.
-
-**Sorgente:** [/lab/8_strings/4_strings.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/8_strings/4_strings.c)
-
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/8_strings
+<pre lang="bash"><code>cd /lab/8_strings
 gcc -o bin/4_strings 4_strings.c
-bin/4_strings
-```
+bin/4_strings</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/8_strings/4_strings.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -9176,30 +9944,42 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
+      </details>
+    </td>
+  </tr>
+</table>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/8_strings/5_strings.c</code></summary>
 
-</div>
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Differenza tra array modificabile e puntatore a string literal read-only.
+        </p>
 
-</details>
-<details>
-<summary>&#128187; <code>/lab/8_strings/5_strings.c</code></summary>
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Dettagli sull'inizializzazione con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza tra array modificabile e puntatore a string literal read-only e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/8_strings/5_strings.c">/lab/8_strings/5_strings.c</a>
+        </p>
 
-**Descrizione breve:** Differenza tra array modificabile e puntatore a string literal read-only.
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Dettagli sull'inizializzazione con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza tra array modificabile e puntatore a string literal read-only e di collegare la spiegazione teorica al comportamento reale del programma compilato.
-
-**Sorgente:** [/lab/8_strings/5_strings.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/8_strings/5_strings.c)
-
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/8_strings
+<pre lang="bash"><code>cd /lab/8_strings
 gcc -o bin/5_strings 5_strings.c
-bin/5_strings
-```
+bin/5_strings</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/8_strings/5_strings.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -9244,10 +10024,10 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -9441,26 +10221,38 @@ Le funzioni possono essere dichiarate e definite.
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/9_functions/0_functions.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/9_functions/0_functions.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Prototipo, invocazione e definizione di <code>potenza_di_due</code>.
+        </p>
 
-**Descrizione breve:** Prototipo, invocazione e definizione di `potenza_di_due`.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Dichiarazione di funzione con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Prototipo, invocazione e definizione di <code>potenza_di_due</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Dichiarazione di funzione con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Prototipo, invocazione e definizione di `potenza_di_due` e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/9_functions/0_functions.c">/lab/9_functions/0_functions.c</a>
+        </p>
 
-**Sorgente:** [/lab/9_functions/0_functions.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/9_functions/0_functions.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/9_functions
+<pre lang="bash"><code>cd /lab/9_functions
 gcc -o bin/0_functions 0_functions.c
-bin/0_functions
-```
+bin/0_functions</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/9_functions/0_functions.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -9489,10 +10281,10 @@ int potenza_di_due(int esponente){
 
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -9605,26 +10397,38 @@ vagrant@ubuntu2204:/lab/9_functions$ bin/0_functions
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/9_functions/1_functions.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/9_functions/1_functions.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Incremento su copia locale del parametro.
+        </p>
 
-**Descrizione breve:** Incremento su copia locale del parametro.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Passaggio di parametri per valore con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Incremento su copia locale del parametro e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Passaggio di parametri per valore con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Incremento su copia locale del parametro e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/9_functions/1_functions.c">/lab/9_functions/1_functions.c</a>
+        </p>
 
-**Sorgente:** [/lab/9_functions/1_functions.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/9_functions/1_functions.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/9_functions
+<pre lang="bash"><code>cd /lab/9_functions
 gcc -o bin/1_functions 1_functions.c
-bin/1_functions
-```
+bin/1_functions</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/9_functions/1_functions.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -9660,10 +10464,10 @@ int incrementa(int valore_f, int iterazioni){
 
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -9739,26 +10543,38 @@ risultato                    : 103
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/9_functions/2_functions.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/9_functions/2_functions.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Modifica della variabile del chiamante tramite puntatore.
+        </p>
 
-**Descrizione breve:** Modifica della variabile del chiamante tramite puntatore.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Passaggio di parametri per indirizzo con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Modifica della variabile del chiamante tramite puntatore e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Passaggio di parametri per indirizzo con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Modifica della variabile del chiamante tramite puntatore e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/9_functions/2_functions.c">/lab/9_functions/2_functions.c</a>
+        </p>
 
-**Sorgente:** [/lab/9_functions/2_functions.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/9_functions/2_functions.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/9_functions
+<pre lang="bash"><code>cd /lab/9_functions
 gcc -o bin/2_functions 2_functions.c
-bin/2_functions
-```
+bin/2_functions</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/9_functions/2_functions.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -9794,10 +10610,10 @@ int incrementa(int *valore_f, int iterazioni){
 
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -9882,26 +10698,38 @@ risultato                    : 103
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/6_pointers/5_pointers.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/6_pointers/5_pointers.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Tentativo di modifica di memoria read-only e differenza tra array e literal.
+        </p>
 
-**Descrizione breve:** Tentativo di modifica di memoria read-only e differenza tra array e literal.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Passaggio di puntatori const con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Tentativo di modifica di memoria read-only e differenza tra array e literal e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Passaggio di puntatori const con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Tentativo di modifica di memoria read-only e differenza tra array e literal e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/5_pointers.c">/lab/6_pointers/5_pointers.c</a>
+        </p>
 
-**Sorgente:** [/lab/6_pointers/5_pointers.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/5_pointers.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/6_pointers
+<pre lang="bash"><code>cd /lab/6_pointers
 gcc -o bin/5_pointers 5_pointers.c
-bin/5_pointers
-```
+bin/5_pointers</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/6_pointers/5_pointers.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -9927,10 +10755,10 @@ void leggi(const char *qualcosa){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -9974,26 +10802,38 @@ xxx voglio essere modificata
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/9_functions/3_functions.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/9_functions/3_functions.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Somma di elementi passando array e dimensione a funzione.
+        </p>
 
-**Descrizione breve:** Somma di elementi passando array e dimensione a funzione.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Array come parametri a funzioni con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Somma di elementi passando array e dimensione a funzione e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Array come parametri a funzioni con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Somma di elementi passando array e dimensione a funzione e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/9_functions/3_functions.c">/lab/9_functions/3_functions.c</a>
+        </p>
 
-**Sorgente:** [/lab/9_functions/3_functions.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/9_functions/3_functions.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/9_functions
+<pre lang="bash"><code>cd /lab/9_functions
 gcc -o bin/3_functions 3_functions.c
-bin/3_functions
-```
+bin/3_functions</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/9_functions/3_functions.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -10027,10 +10867,10 @@ int somma(int *a, int dim){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -10083,26 +10923,38 @@ vagrant@ubuntu2204:/lab/9_functions$ bin/3_functions
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/10_dynamic_memory/0_malloc.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/10_dynamic_memory/0_malloc.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Confronto tra allocazione statica e <code>malloc</code>, uso di puntatore indicizzato come array.
+        </p>
 
-**Descrizione breve:** Confronto tra allocazione statica e `malloc`, uso di puntatore indicizzato come array.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Allocazione dinamica della memoria con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Confronto tra allocazione statica e <code>malloc</code>, uso di puntatore indicizzato come array e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Allocazione dinamica della memoria con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Confronto tra allocazione statica e `malloc`, uso di puntatore indicizzato come array e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/10_dynamic_memory/0_malloc.c">/lab/10_dynamic_memory/0_malloc.c</a>
+        </p>
 
-**Sorgente:** [/lab/10_dynamic_memory/0_malloc.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/10_dynamic_memory/0_malloc.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/10_dynamic_memory
+<pre lang="bash"><code>cd /lab/10_dynamic_memory
 gcc -o bin/0_malloc 0_malloc.c
-bin/0_malloc
-```
+bin/0_malloc</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/10_dynamic_memory/0_malloc.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -10151,10 +11003,10 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -10279,26 +11131,38 @@ dinamico: 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/7_array/7_array.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/7_array/7_array.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Matrice 2D contigua, formula <code>i*N_COLONNE + j</code>, accesso con aritmetica puntatori.
+        </p>
 
-**Descrizione breve:** Matrice 2D contigua, formula `i*N_COLONNE + j`, accesso con aritmetica puntatori.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Array bidimensionali con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Matrice 2D contigua, formula <code>i*N_COLONNE + j</code>, accesso con aritmetica puntatori e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Array bidimensionali con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Matrice 2D contigua, formula `i*N_COLONNE + j`, accesso con aritmetica puntatori e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/7_array.c">/lab/7_array/7_array.c</a>
+        </p>
 
-**Sorgente:** [/lab/7_array/7_array.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/7_array.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/7_array
+<pre lang="bash"><code>cd /lab/7_array
 gcc -o bin/7_array 7_array.c
-bin/7_array
-```
+bin/7_array</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/7_array/7_array.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -10340,10 +11204,10 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -10462,26 +11326,38 @@ vagrant@ubuntu2204:/lab/7_array$ bin/7_array
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/6_pointers/9_pointers.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/6_pointers/9_pointers.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Introduzione a vettori di puntatori o stringhe indicizzate.
+        </p>
 
-**Descrizione breve:** Introduzione a vettori di puntatori o stringhe indicizzate.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Array di puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Introduzione a vettori di puntatori o stringhe indicizzate e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Array di puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Introduzione a vettori di puntatori o stringhe indicizzate e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/9_pointers.c">/lab/6_pointers/9_pointers.c</a>
+        </p>
 
-**Sorgente:** [/lab/6_pointers/9_pointers.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/9_pointers.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/6_pointers
+<pre lang="bash"><code>cd /lab/6_pointers
 gcc -o bin/9_pointers 9_pointers.c
-bin/9_pointers
-```
+bin/9_pointers</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/6_pointers/9_pointers.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -10499,30 +11375,42 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+      </details>
+    </td>
+  </tr>
+</table>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/6_pointers/11_pointers.c</code></summary>
 
-</div>
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Confronto tra array di puntatori, matrice statica e matrice dinamica; uso di <code>malloc</code>, <code>strcpy</code>, <code>free</code>.
+        </p>
 
-</details>
-<details>
-<summary>&#128187; <code>/lab/6_pointers/11_pointers.c</code></summary>
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Array di puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Confronto tra array di puntatori, matrice statica e matrice dinamica; uso di <code>malloc</code>, <code>strcpy</code>, <code>free</code> e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/11_pointers.c">/lab/6_pointers/11_pointers.c</a>
+        </p>
 
-**Descrizione breve:** Confronto tra array di puntatori, matrice statica e matrice dinamica; uso di `malloc`, `strcpy`, `free`.
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Array di puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Confronto tra array di puntatori, matrice statica e matrice dinamica; uso di `malloc`, `strcpy`, `free` e di collegare la spiegazione teorica al comportamento reale del programma compilato.
-
-**Sorgente:** [/lab/6_pointers/11_pointers.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/11_pointers.c)
-
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/6_pointers
+<pre lang="bash"><code>cd /lab/6_pointers
 gcc -o bin/11_pointers 11_pointers.c
-bin/11_pointers
-```
+bin/11_pointers</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/6_pointers/11_pointers.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;  // printf()
@@ -10610,10 +11498,10 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -10651,26 +11539,38 @@ Inserisci un numero da 1 a 12
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/6_pointers/10_pointers.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/6_pointers/10_pointers.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Confronto tra matrici e puntatori.
+        </p>
 
-**Descrizione breve:** Confronto tra matrici e puntatori.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Differenza tra array bidimensionali e array di puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Confronto tra matrici e puntatori e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Differenza tra array bidimensionali e array di puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Confronto tra matrici e puntatori e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/10_pointers.c">/lab/6_pointers/10_pointers.c</a>
+        </p>
 
-**Sorgente:** [/lab/6_pointers/10_pointers.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/10_pointers.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/6_pointers
+<pre lang="bash"><code>cd /lab/6_pointers
 gcc -o bin/10_pointers 10_pointers.c
-bin/10_pointers
-```
+bin/10_pointers</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/6_pointers/10_pointers.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -10692,10 +11592,10 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -10936,26 +11836,38 @@ Lo <strong>stack</strong> è un'area di memoria contigua all'heap e cresce in di
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/6_pointers/12_pointers.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/6_pointers/12_pointers.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Allocazione/deallocazione di matrice dinamica, inizializzazione e stampa tramite funzioni.
+        </p>
 
-**Descrizione breve:** Allocazione/deallocazione di matrice dinamica, inizializzazione e stampa tramite funzioni.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Allocazione dinamica di matrici con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Allocazione/deallocazione di matrice dinamica, inizializzazione e stampa tramite funzioni e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Allocazione dinamica di matrici con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Allocazione/deallocazione di matrice dinamica, inizializzazione e stampa tramite funzioni e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/12_pointers.c">/lab/6_pointers/12_pointers.c</a>
+        </p>
 
-**Sorgente:** [/lab/6_pointers/12_pointers.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/12_pointers.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/6_pointers
+<pre lang="bash"><code>cd /lab/6_pointers
 gcc -o bin/12_pointers 12_pointers.c
-bin/12_pointers
-```
+bin/12_pointers</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/6_pointers/12_pointers.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;  // printf()
@@ -11082,10 +11994,10 @@ void print_just_strings(char **array_of_pointers, char static_matrix[][N_COLS], 
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -11289,26 +12201,38 @@ Pluto
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/11_structs/0_structs.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/11_structs/0_structs.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Definizione di <code>struct punto_2d</code>, variabile struttura, puntatore a struttura.
+        </p>
 
-**Descrizione breve:** Definizione di `struct punto_2d`, variabile struttura, puntatore a struttura.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Le strutture con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Definizione di <code>struct punto_2d</code>, variabile struttura, puntatore a struttura e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Le strutture con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Definizione di `struct punto_2d`, variabile struttura, puntatore a struttura e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/11_structs/0_structs.c">/lab/11_structs/0_structs.c</a>
+        </p>
 
-**Sorgente:** [/lab/11_structs/0_structs.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/11_structs/0_structs.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/11_structs
+<pre lang="bash"><code>cd /lab/11_structs
 gcc -o bin/0_structs 0_structs.c
-bin/0_structs
-```
+bin/0_structs</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/11_structs/0_structs.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -11347,10 +12271,10 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 
@@ -11439,26 +12363,38 @@ int main(void){
 
 <p align="justify"><strong>Esercizi collegati:</strong></p>
 
-<details>
-<summary>&#128187; <code>/lab/11_structs/1_structs.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/11_structs/1_structs.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Passaggio di strutture a funzioni e calcolo di una media.
+        </p>
 
-**Descrizione breve:** Passaggio di strutture a funzioni e calcolo di una media.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Approfondisce il paragrafo Passaggio di strutture a funzioni con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Passaggio di strutture a funzioni e calcolo di una media e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        </p>
 
-**Descrizione lunga:** Approfondisce il paragrafo Passaggio di strutture a funzioni con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Passaggio di strutture a funzioni e calcolo di una media e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/11_structs/1_structs.c">/lab/11_structs/1_structs.c</a>
+        </p>
 
-**Sorgente:** [/lab/11_structs/1_structs.c](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/11_structs/1_structs.c)
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-**Compilazione ed esecuzione:**
-
-```bash
-cd /lab/11_structs
+<pre lang="bash"><code>cd /lab/11_structs
 gcc -o bin/1_structs 1_structs.c
-bin/1_structs
-```
+bin/1_structs</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/11_structs/1_structs.c" -->
 <pre lang="c"><code>#include&lt;stdio.h&gt;
@@ -11524,10 +12460,10 @@ void calcola_media(struct studente *i){
 
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 <!-- lab-exercises:end -->
 

@@ -1,27 +1,39 @@
 ## Lab
 
-<details>
-<summary>&#128187; <code>/lab/0_intro/0_hello.c</code></summary>
+<table>
+  <tr>
+    <td>
+      <details>
+        <summary>&#128187; <code>/lab/0_intro/0_hello.c</code></summary>
 
-<div style="border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin: 12px 0;">
+        <p align="justify">
+          <strong>Descrizione breve:</strong>
+          Primo programma C: stampa un messaggio a schermo e introduce la struttura minima di un programma.
+        </p>
 
-**Descrizione breve:** Primo programma C: stampa un messaggio a schermo e introduce la struttura minima di un programma.
+        <p align="justify">
+          <strong>Descrizione lunga:</strong>
+          Questo laboratorio mostra come includere un header standard, definire la funzione &lt;code&gt;main()&lt;/code&gt;, chiamare &lt;code&gt;printf()&lt;/code&gt;, compilare il sorgente con &lt;code&gt;gcc&lt;/code&gt; ed eseguire il binario prodotto. È il punto di partenza per collegare codice sorgente, compilazione ed esecuzione.
+        </p>
 
-**Descrizione lunga:** Questo laboratorio mostra come includere un header standard, definire la funzione <code>main()</code>, chiamare <code>printf()</code>, compilare il sorgente con <code>gcc</code> ed eseguire il binario prodotto. È il punto di partenza per collegare codice sorgente, compilazione ed esecuzione.
-
-**Sorgente:** [
+        <p align="justify">
+          <strong>Sorgente:</strong>
+          <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/0_hello.c">
           /lab/0_intro/0_hello.c
-        ](https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/0_hello.c)
+        </a>
+        </p>
 
-**Compilazione ed esecuzione:**
+        <p align="justify">
+          <strong>Compilazione ed esecuzione:</strong>
+        </p>
 
-```bash
-cd /lab/0_intro
+<pre lang="bash"><code>cd /lab/0_intro
 gcc -o bin/0_hello 0_hello.c
-bin/0_hello
-```
+bin/0_hello</code></pre>
 
-**Codice:**
+        <p align="justify">
+          <strong>Codice:</strong>
+        </p>
 
 <!-- lab-snippet:start path="lab/0_intro/0_hello.c" -->
 <pre lang="c"><code>/*
@@ -45,10 +57,10 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
-
-</div>
-
-</details>
+      </details>
+    </td>
+  </tr>
+</table>
 
 ## Lab
 
