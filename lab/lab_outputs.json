@@ -678,6 +678,280 @@
       ],
       "output": "lab/5_control_statements/output/break_continue.txt",
       "timeout_seconds": 5
+    },
+    {
+      "name": "0_pointers",
+      "path": "lab/6_pointers/0_pointers.c",
+      "workdir": "lab/6_pointers",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/0_pointers",
+        "0_pointers.c"
+      ],
+      "run": [
+        "bin/0_pointers"
+      ],
+      "output": "lab/6_pointers/output/0_pointers.txt",
+      "timeout_seconds": 5,
+      "stdin": "\n",
+      "normalize": [
+        {
+          "pattern": "&i = 0x[0-9a-fA-F]+",
+          "replacement": "&i = <addr_i>"
+        },
+        {
+          "pattern": "&j = 0x[0-9a-fA-F]+",
+          "replacement": "&j = <addr_j>"
+        },
+        {
+          "pattern": "\\*p = 42, p = 0x[0-9a-fA-F]+",
+          "replacement": "*p = 42, p = <addr_i>"
+        },
+        {
+          "pattern": "\\*q = 107, p = 0x[0-9a-fA-F]+",
+          "replacement": "*q = 107, p = <addr_j>"
+        }
+      ]
+    },
+    {
+      "name": "1_pointers",
+      "path": "lab/6_pointers/1_pointers.c",
+      "workdir": "lab/6_pointers",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/1_pointers",
+        "1_pointers.c"
+      ],
+      "run": [
+        "bin/1_pointers"
+      ],
+      "output": "lab/6_pointers/output/1_pointers.txt",
+      "timeout_seconds": 5,
+      "stdin": "\n",
+      "normalize": [
+        {
+          "pattern": "&i = 0x[0-9a-fA-F]+",
+          "replacement": "&i = <addr_i>"
+        },
+        {
+          "pattern": "&j = 0x[0-9a-fA-F]+",
+          "replacement": "&j = <addr_j>"
+        },
+        {
+          "pattern": "\\*p = 42, p = 0x[0-9a-fA-F]+",
+          "replacement": "*p = 42, p = <addr_i>"
+        },
+        {
+          "pattern": "\\*q = 107, p = 0x[0-9a-fA-F]+",
+          "replacement": "*q = 107, p = <addr_j>"
+        }
+      ]
+    },
+    {
+      "name": "3_pointers",
+      "path": "lab/6_pointers/3_pointers.c",
+      "workdir": "lab/6_pointers",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/3_pointers",
+        "3_pointers.c"
+      ],
+      "run": [
+        "bin/3_pointers"
+      ],
+      "output": "lab/6_pointers/output/3_pointers.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "4_pointers",
+      "path": "lab/6_pointers/4_pointers.c",
+      "workdir": "lab/6_pointers",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/4_pointers",
+        "4_pointers.c"
+      ],
+      "run": [
+        "bin/4_pointers"
+      ],
+      "output": "lab/6_pointers/output/4_pointers.txt",
+      "timeout_seconds": 5,
+      "normalize": [
+        {
+          "pattern": "&magic       = 0x[0-9a-fA-F]+",
+          "replacement": "&magic       = <addr_magic>"
+        },
+        {
+          "pattern": "&after_magic = 0x[0-9a-fA-F]+",
+          "replacement": "&after_magic = <addr_after_magic>"
+        }
+      ]
+    },
+    {
+      "name": "5_pointers",
+      "path": "lab/6_pointers/5_pointers.c",
+      "workdir": "lab/6_pointers",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/5_pointers",
+        "5_pointers.c"
+      ],
+      "run": [
+        "bin/5_pointers"
+      ],
+      "output": "lab/6_pointers/output/5_pointers.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "6_pointers",
+      "path": "lab/6_pointers/6_pointers.c",
+      "workdir": "lab/6_pointers",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/6_pointers",
+        "6_pointers.c"
+      ],
+      "run": [
+        "bin/6_pointers"
+      ],
+      "output": "lab/6_pointers/output/6_pointers.txt",
+      "timeout_seconds": 5,
+      "allow_failure": true,
+      "normalize": [
+        {
+          "pattern": "(?s)\\[compile stderr\\].*",
+          "replacement": "[compile stderr]\n<errore di compilazione: assegnamento/incremento non valido su nome array>"
+        }
+      ]
+    },
+    {
+      "name": "7_pointers",
+      "path": "lab/6_pointers/7_pointers.c",
+      "workdir": "lab/6_pointers",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/7_pointers",
+        "7_pointers.c"
+      ],
+      "run": [
+        "bin/7_pointers"
+      ],
+      "output": "lab/6_pointers/output/7_pointers.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "8_pointers",
+      "path": "lab/6_pointers/8_pointers.c",
+      "workdir": "lab/6_pointers",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/8_pointers",
+        "8_pointers.c"
+      ],
+      "run": [
+        "bin/8_pointers"
+      ],
+      "output": "lab/6_pointers/output/8_pointers.txt",
+      "timeout_seconds": 5,
+      "normalize": [
+        {
+          "pattern": "&b = 0x[0-9a-fA-F]+",
+          "replacement": "&b = <addr_b>"
+        },
+        {
+          "pattern": "&c = 0x[0-9a-fA-F]+",
+          "replacement": "&c = <addr_c>"
+        },
+        {
+          "pattern": "&d = 0x[0-9a-fA-F]+",
+          "replacement": "&d = <addr_d>"
+        },
+        {
+          "pattern": "(?<=&d = <addr_d>\\n)-?\\d+\\n-?\\d+\\n\\Z",
+          "replacement": "<delta_elementi>\n<delta_byte>\n"
+        }
+      ]
+    },
+    {
+      "name": "9_pointers",
+      "path": "lab/6_pointers/9_pointers.c",
+      "workdir": "lab/6_pointers",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/9_pointers",
+        "9_pointers.c"
+      ],
+      "run": [
+        "bin/9_pointers"
+      ],
+      "output": "lab/6_pointers/output/9_pointers.txt",
+      "timeout_seconds": 5,
+      "stdin": "7\n"
+    },
+    {
+      "name": "10_pointers",
+      "path": "lab/6_pointers/10_pointers.c",
+      "workdir": "lab/6_pointers",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/10_pointers",
+        "10_pointers.c"
+      ],
+      "run": [
+        "bin/10_pointers"
+      ],
+      "output": "lab/6_pointers/output/10_pointers.txt",
+      "timeout_seconds": 5,
+      "stdin": "7\n"
+    },
+    {
+      "name": "11_pointers",
+      "path": "lab/6_pointers/11_pointers.c",
+      "workdir": "lab/6_pointers",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/11_pointers",
+        "11_pointers.c"
+      ],
+      "run": [
+        "bin/11_pointers"
+      ],
+      "output": "lab/6_pointers/output/11_pointers.txt",
+      "timeout_seconds": 5,
+      "stdin": "7\n"
+    },
+    {
+      "name": "12_pointers",
+      "path": "lab/6_pointers/12_pointers.c",
+      "workdir": "lab/6_pointers",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/12_pointers",
+        "12_pointers.c"
+      ],
+      "run": [
+        "bin/12_pointers"
+      ],
+      "output": "lab/6_pointers/output/12_pointers.txt",
+      "timeout_seconds": 5,
+      "normalize": [
+        {
+          "pattern": "\\x00",
+          "replacement": "<NUL>"
+        }
+      ]
     }
   ]
 }

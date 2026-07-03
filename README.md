@@ -8356,6 +8356,18 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/6_pointers/output/0_pointers.txt" -->
+<pre lang="text"><code>i = 42, &amp;i = &lt;addr_i&gt;
+j = 107, &amp;j = &lt;addr_j&gt;
+*p = 42, p = &lt;addr_i&gt;
+*q = 107, p = &lt;addr_j&gt;
+</code></pre>
+<!-- lab-output:end -->
 </details>
 
 <details>
@@ -8412,6 +8424,18 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/6_pointers/output/1_pointers.txt" -->
+<pre lang="text"><code>i = 42, &amp;i = &lt;addr_i&gt;
+j = 107, &amp;j = &lt;addr_j&gt;
+*p = 42, p = &lt;addr_i&gt;
+*q = 107, p = &lt;addr_j&gt;
+</code></pre>
+<!-- lab-output:end -->
 </details>
 
 <details>
@@ -8763,6 +8787,14 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/6_pointers/output/3_pointers.txt" -->
+<pre lang="text"><code></code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -8863,6 +8895,22 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/6_pointers/output/4_pointers.txt" -->
+<pre lang="text"><code>magic        = 0x1020304
+after_magic  = 0x75bcd15
+&amp;magic       = &lt;addr_magic&gt;
+&amp;after_magic = &lt;addr_after_magic&gt;
+ptr_byte1    = 4
+ptr_byte2    = 3
+ptr_byte3    = 2
+ptr_byte4    = 1
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -9759,6 +9807,16 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/6_pointers/output/6_pointers.txt" -->
+<pre lang="text"><code>[compile stderr]
+&lt;errore di compilazione: assegnamento/incremento non valido su nome array&gt;
+</code></pre>
+<!-- lab-output:end -->
 </details>
 
 <details>
@@ -9845,6 +9903,18 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/6_pointers/output/7_pointers.txt" -->
+<pre lang="text"><code>300
+300
+300
+300
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -10004,6 +10074,26 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/6_pointers/output/8_pointers.txt" -->
+<pre lang="text"><code>(int  ) 4 bytes
+(long ) 8 bytes
+(int *) 8 bytes
+
+1
+4
+
+&amp;b = &lt;addr_b&gt;
+&amp;c = &lt;addr_c&gt;
+&amp;d = &lt;addr_d&gt;
+&lt;delta_elementi&gt;
+&lt;delta_byte&gt;
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -11192,6 +11282,15 @@ void leggi(const char *qualcosa){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/6_pointers/output/5_pointers.txt" -->
+<pre lang="text"><code>xxx voglio essere modificata
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -11812,6 +11911,16 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/6_pointers/output/9_pointers.txt" -->
+<pre lang="text"><code>Inserisci un numero da 1 a 12
+7 -&gt; Luglio
+</code></pre>
+<!-- lab-output:end -->
 </details>
 
 <details>
@@ -11930,6 +12039,18 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/6_pointers/output/11_pointers.txt" -->
+<pre lang="text"><code>Inserisci un numero da 1 a 12
+7 -&gt; Luglio
+7 -&gt; Luglio
+7 -&gt; Luglio
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -12024,6 +12145,17 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/6_pointers/output/10_pointers.txt" -->
+<pre lang="text"><code>Inserisci un numero da 1 a 12
+7 -&gt; Luglio
+7 -&gt; Luglio
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -12426,6 +12558,75 @@ void print_just_strings(char **array_of_pointers, char static_matrix[][N_COLS], 
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/6_pointers/output/12_pointers.txt" -->
+<pre lang="text"><code>M e r c u r y &lt;NUL&gt; 
+V e n u s &lt;NUL&gt; 
+E a r t h &lt;NUL&gt; 
+M a r s &lt;NUL&gt; 
+J u p i t e r &lt;NUL&gt; 
+S a t u r n &lt;NUL&gt; 
+U r a n u s &lt;NUL&gt; 
+N e p t u n e &lt;NUL&gt; 
+P l u t o &lt;NUL&gt; 
+
+M e r c u r y &lt;NUL&gt; 
+V e n u s &lt;NUL&gt; 
+E a r t h &lt;NUL&gt; 
+M a r s &lt;NUL&gt; 
+J u p i t e r &lt;NUL&gt; 
+S a t u r n &lt;NUL&gt; 
+U r a n u s &lt;NUL&gt; 
+N e p t u n e &lt;NUL&gt; 
+P l u t o &lt;NUL&gt; 
+
+M e r c u r y &lt;NUL&gt; 
+V e n u s &lt;NUL&gt; 
+E a r t h &lt;NUL&gt; 
+M a r s &lt;NUL&gt; 
+J u p i t e r &lt;NUL&gt; 
+S a t u r n &lt;NUL&gt; 
+U r a n u s &lt;NUL&gt; 
+N e p t u n e &lt;NUL&gt; 
+P l u t o &lt;NUL&gt; 
+
+
+
+Mercury
+Venus
+Earth
+Mars
+Jupiter
+Saturn
+Uranus
+Neptune
+Pluto
+
+Mercury
+Venus
+Earth
+Mars
+Jupiter
+Saturn
+Uranus
+Neptune
+Pluto
+
+Mercury
+Venus
+Earth
+Mars
+Jupiter
+Saturn
+Uranus
+Neptune
+Pluto
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
