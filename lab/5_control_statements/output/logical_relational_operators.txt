@@ -1,4 +1,4 @@
 Inserisci la tua eta'
 Hai la laurea?
-[S]? 	 [N]o
+[S]ì 	 [N]o
 Hai la laurea, il tuo stipendio e' 3000

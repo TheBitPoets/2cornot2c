@@ -7641,7 +7641,7 @@ int main(void){
 <!-- lab-output:start path="lab/5_control_statements/output/logical_relational_operators.txt" -->
 <pre lang="text"><code>Inserisci la tua eta'
 Hai la laurea?
-[S]? 	 [N]o
+[S]ì 	 [N]o
 Hai la laurea, il tuo stipendio e' 3000
 </code></pre>
 <!-- lab-output:end -->
