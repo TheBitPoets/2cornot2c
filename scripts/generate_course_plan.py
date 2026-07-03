@@ -119,6 +119,14 @@ def render_design(design: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def display_path(path: Path) -> str:
+    """Return a readable path, relative to the repository when possible."""
+    try:
+        return str(path.relative_to(ROOT))
+    except ValueError:
+        return str(path)
+
+
 def main() -> int:
     """CLI entry point used both manually and, in the future, by CI checks."""
     parser = argparse.ArgumentParser(description="Generate doc/PERCORSO_DIDATTICO.md from doc/course_design.json.")
@@ -133,15 +141,15 @@ def main() -> int:
     if args.check:
         current = args.output.read_text(encoding="utf-8") if args.output.exists() else ""
         if current != content:
-            print(f"{args.output.relative_to(ROOT)} is not up to date.")
+            print(f"{display_path(args.output)} is not up to date.")
             print(f"Run: python {Path(__file__).relative_to(ROOT)}")
             return 1
-        print(f"{args.output.relative_to(ROOT)} is up to date.")
+        print(f"{display_path(args.output)} is up to date.")
         return 0
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(content, encoding="utf-8", newline="\n")
-    print(f"Generated {args.output.relative_to(ROOT)}")
+    print(f"Generated {display_path(args.output)}")
     return 0
 
 
