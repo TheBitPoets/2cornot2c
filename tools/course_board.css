@@ -295,16 +295,32 @@ input, select { width: 100%; padding: .72rem .9rem; }
 .dropzone.dragOver { background: rgba(0, 0, 0, .06); }
 
 .item {
+  margin-left: calc(var(--item-depth, 0) * 1.35rem);
+}
+
+.itemRow {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: .75rem;
   align-items: center;
 }
 
-.itemTitle { font-weight: 700; }
+.itemTitle {
+  display: flex;
+  align-items: flex-start;
+  gap: .42rem;
+  font-weight: 700;
+}
+
 .itemMeta { color: var(--muted); font: .76rem/1.35 var(--mono); }
 .itemActions { display: flex; gap: .25rem; }
 .itemActions button { padding: .35rem .5rem; font-size: .72rem; }
+
+.itemChildren {
+  margin-top: .5rem;
+  padding-top: .5rem;
+  border-top: 1px solid rgba(17, 17, 17, .08);
+}
 
 .empty {
   color: var(--muted);

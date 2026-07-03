@@ -3,6 +3,7 @@
   design: null,
   draggedHeading: null,
   collapsedHeadingIds: new Set(),
+  collapsedCourseItemIds: new Set(),
 };
 
 const els = {
@@ -61,12 +62,18 @@ function populateFilters() {
 
 function assignedYearsById() {
   const ids = new Map();
+  const collect = (item, yearId) => {
+    if (!item.id) return;
+    if (!ids.has(item.id)) ids.set(item.id, new Set());
+    ids.get(item.id).add(yearId);
+    for (const child of item.children || []) {
+      collect(child, yearId);
+    }
+  };
   for (const year of state.design.years || []) {
     for (const uda of year.udas || []) {
       for (const item of uda.items || []) {
-        if (!item.id) continue;
-        if (!ids.has(item.id)) ids.set(item.id, new Set());
-        ids.get(item.id).add(year.id);
+        collect(item, year.id);
       }
     }
   }
@@ -177,7 +184,7 @@ function addToFirstUda(heading) {
 }
 
 function itemFromHeading(heading) {
-  return {
+  const item = {
     id: heading.id,
     title: heading.title,
     source: heading.source,
@@ -188,6 +195,44 @@ function itemFromHeading(heading) {
       status: "todo"
     }
   };
+  const children = childItemsFromHeading(heading);
+  if (children.length) item.children = children;
+  return item;
+}
+
+function childItemsFromHeading(parentHeading) {
+  const parentIndex = state.headings.findIndex((candidate) => candidate.id === parentHeading.id);
+  if (parentIndex < 0) return [];
+  const roots = [];
+  const stack = [{ level: parentHeading.level, children: roots }];
+
+  for (const heading of state.headings.slice(parentIndex + 1)) {
+    if (heading.source !== parentHeading.source || heading.level <= parentHeading.level) break;
+    const item = {
+      id: heading.id,
+      title: heading.title,
+      source: heading.source,
+      href: heading.href,
+      level: heading.level,
+      line: heading.line,
+      frame: {
+        status: "todo"
+      }
+    };
+    while (stack.length && heading.level <= stack.at(-1).level) {
+      stack.pop();
+    }
+    stack.at(-1).children.push(item);
+    item.children = [];
+    stack.push(item);
+  }
+
+  const pruneEmptyChildren = (item) => {
+    item.children.forEach(pruneEmptyChildren);
+    if (!item.children.length) delete item.children;
+  };
+  roots.forEach(pruneEmptyChildren);
+  return roots;
 }
 
 function renderCourse() {
@@ -229,8 +274,8 @@ function renderUda(year, uda) {
     event.preventDefault();
     dropzone.classList.remove("dragOver");
     if (!state.draggedHeading) return;
-    if (isAssignedToYear(state.draggedHeading.id, year.id)) {
-      setStatus(`"${state.draggedHeading.title}" e gia presente in ${year.title}.`);
+    if (isHeadingTreeAssignedToYear(state.draggedHeading, year.id)) {
+      setStatus(`"${state.draggedHeading.title}" o un suo sottoparagrafo e gia presente in ${year.title}.`);
       state.draggedHeading = null;
       return;
     }
@@ -245,7 +290,7 @@ function renderUda(year, uda) {
   if (!items.length) {
     dropzone.innerHTML = '<p class="empty">Trascina qui paragrafi o sottoparagrafi.</p>';
   } else {
-    items.forEach((item, index) => dropzone.append(renderItem(uda, item, index)));
+    items.forEach((item, index) => dropzone.append(renderItem(uda, uda.items, item, index, 0)));
   }
   details.append(dropzone);
   return details;
@@ -254,41 +299,97 @@ function renderUda(year, uda) {
 function isAssignedToYear(itemId, yearId) {
   const year = (state.design.years || []).find((candidate) => candidate.id === yearId);
   if (!year) return false;
-  return (year.udas || []).some((uda) => (uda.items || []).some((item) => item.id === itemId));
+  const contains = (item) => item.id === itemId || (item.children || []).some(contains);
+  return (year.udas || []).some((uda) => (uda.items || []).some(contains));
 }
 
-function renderItem(uda, item, index) {
+function isHeadingTreeAssignedToYear(heading, yearId) {
+  return headingTreeIds(heading).some((id) => isAssignedToYear(id, yearId));
+}
+
+function headingTreeIds(heading) {
+  const ids = [heading.id];
+  const parentIndex = state.headings.findIndex((candidate) => candidate.id === heading.id);
+  if (parentIndex < 0) return ids;
+  for (const candidate of state.headings.slice(parentIndex + 1)) {
+    if (candidate.source !== heading.source || candidate.level <= heading.level) break;
+    ids.push(candidate.id);
+  }
+  return ids;
+}
+
+function renderItem(uda, siblings, item, index, depth) {
   const node = document.createElement("article");
   node.className = "item";
+  node.style.setProperty("--item-depth", depth);
+  const children = item.children || [];
+  const collapseKey = `${uda.id}:${item.id}`;
+  const isCollapsed = state.collapsedCourseItemIds.has(collapseKey);
   node.innerHTML = `
-    <div>
-      <div class="itemTitle">${escapeHtml(item.title)}</div>
-      <div class="itemMeta">${escapeHtml(item.source)} · H${item.level || "?"} · ${escapeHtml(item.frame?.status || "ok")}</div>
-    </div>
-    <div class="itemActions">
-      <button type="button" data-action="up">Su</button>
-      <button type="button" data-action="down">Giu</button>
-      <button type="button" data-action="remove">Rimuovi</button>
+    <div class="itemRow">
+      <div>
+        <div class="itemTitle"></div>
+        <div class="itemMeta">${escapeHtml(item.source)} · H${item.level || "?"} · ${escapeHtml(item.frame?.status || "ok")}</div>
+      </div>
+      <div class="itemActions">
+        <button type="button" data-action="up">Su</button>
+        <button type="button" data-action="down">Giu</button>
+        <button type="button" data-action="remove">Rimuovi</button>
+      </div>
     </div>
   `;
-  node.querySelector('[data-action="up"]').addEventListener("click", () => moveItem(uda, index, -1));
-  node.querySelector('[data-action="down"]').addEventListener("click", () => moveItem(uda, index, 1));
-  node.querySelector('[data-action="remove"]').addEventListener("click", () => removeItem(uda, index));
+  const title = node.querySelector(".itemTitle");
+  if (children.length) {
+    const toggle = document.createElement("button");
+    toggle.className = "treeToggle";
+    toggle.type = "button";
+    toggle.textContent = isCollapsed ? "+" : "-";
+    toggle.setAttribute("aria-label", isCollapsed ? "Mostra sottoparagrafi" : "Nascondi sottoparagrafi");
+    toggle.addEventListener("click", (event) => {
+      event.stopPropagation();
+      toggleCourseItem(collapseKey);
+    });
+    title.append(toggle);
+  } else {
+    const spacer = document.createElement("span");
+    spacer.className = "treeToggleSpacer";
+    title.append(spacer);
+  }
+  const titleText = document.createElement("span");
+  titleText.textContent = item.title;
+  title.append(titleText);
+  node.querySelector('[data-action="up"]').addEventListener("click", () => moveItem(siblings, index, -1));
+  node.querySelector('[data-action="down"]').addEventListener("click", () => moveItem(siblings, index, 1));
+  node.querySelector('[data-action="remove"]').addEventListener("click", () => removeItem(siblings, index));
+  if (children.length && !isCollapsed) {
+    const childList = document.createElement("div");
+    childList.className = "itemChildren";
+    children.forEach((child, childIndex) => childList.append(renderItem(uda, children, child, childIndex, depth + 1)));
+    node.append(childList);
+  }
   return node;
 }
 
-function moveItem(uda, index, delta) {
-  const items = uda.items || [];
+function moveItem(items, index, delta) {
   const target = index + delta;
   if (target < 0 || target >= items.length) return;
   [items[index], items[target]] = [items[target], items[index]];
   renderCourse();
 }
 
-function removeItem(uda, index) {
-  uda.items.splice(index, 1);
+function removeItem(items, index) {
+  items.splice(index, 1);
   renderCourse();
   renderHeadings();
+}
+
+function toggleCourseItem(collapseKey) {
+  if (state.collapsedCourseItemIds.has(collapseKey)) {
+    state.collapsedCourseItemIds.delete(collapseKey);
+  } else {
+    state.collapsedCourseItemIds.add(collapseKey);
+  }
+  renderCourse();
 }
 
 async function saveDesign() {
