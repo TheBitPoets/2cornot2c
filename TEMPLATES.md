@@ -4,7 +4,7 @@
 <tr>
 <td>
 <details>
-<summary><span style="font-size: 1.25em;">&#129517;</span> <strong>Cornice didattica</strong></summary>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
