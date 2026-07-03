@@ -1,0 +1,12 @@
+valore = 100, &valore = <addr_valore_chiamante>
+
+valore prima dell'invocazione: 100
+
+************incrementa****************
+i=0 valore_f = 101, &valore_f = <addr_valore_chiamante>
+i=1 valore_f = 102, &valore_f = <addr_valore_chiamante>
+i=2 valore_f = 103, &valore_f = <addr_valore_chiamante>
+************incrementa****************
+
+valore dopo     l'invocazione: 103
+risultato                    : 103

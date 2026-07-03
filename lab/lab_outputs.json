@@ -1179,6 +1179,90 @@
       ],
       "output": "lab/8_strings/output/4_strings.txt",
       "timeout_seconds": 5
+    },
+    {
+      "name": "0_functions",
+      "path": "lab/9_functions/0_functions.c",
+      "workdir": "lab/9_functions",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/0_functions",
+        "0_functions.c"
+      ],
+      "run": [
+        "bin/0_functions"
+      ],
+      "output": "lab/9_functions/output/0_functions.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "1_functions",
+      "path": "lab/9_functions/1_functions.c",
+      "workdir": "lab/9_functions",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/1_functions",
+        "1_functions.c"
+      ],
+      "run": [
+        "bin/1_functions"
+      ],
+      "output": "lab/9_functions/output/1_functions.txt",
+      "timeout_seconds": 5,
+      "normalize": [
+        {
+          "pattern": "&valore = 0x[0-9a-fA-F]+",
+          "replacement": "&valore = <addr_valore_chiamante>"
+        },
+        {
+          "pattern": "&valore_f = 0x[0-9a-fA-F]+",
+          "replacement": "&valore_f = <addr_copia_locale>"
+        }
+      ]
+    },
+    {
+      "name": "2_functions",
+      "path": "lab/9_functions/2_functions.c",
+      "workdir": "lab/9_functions",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/2_functions",
+        "2_functions.c"
+      ],
+      "run": [
+        "bin/2_functions"
+      ],
+      "output": "lab/9_functions/output/2_functions.txt",
+      "timeout_seconds": 5,
+      "normalize": [
+        {
+          "pattern": "&valore = 0x[0-9a-fA-F]+",
+          "replacement": "&valore = <addr_valore_chiamante>"
+        },
+        {
+          "pattern": "&valore_f = 0x[0-9a-fA-F]+",
+          "replacement": "&valore_f = <addr_valore_chiamante>"
+        }
+      ]
+    },
+    {
+      "name": "3_functions",
+      "path": "lab/9_functions/3_functions.c",
+      "workdir": "lab/9_functions",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/3_functions",
+        "3_functions.c"
+      ],
+      "run": [
+        "bin/3_functions"
+      ],
+      "output": "lab/9_functions/output/3_functions.txt",
+      "timeout_seconds": 5
     }
   ]
 }

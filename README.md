@@ -10928,6 +10928,31 @@ int potenza_di_due(int esponente){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/9_functions/output/0_functions.txt" -->
+<pre lang="text"><code>2^(0)	 = 1
+2^(1)	 = 2
+2^(2)	 = 4
+2^(3)	 = 8
+2^(4)	 = 16
+2^(5)	 = 32
+2^(6)	 = 64
+2^(7)	 = 128
+2^(8)	 = 256
+2^(9)	 = 512
+2^(10)	 = 1024
+2^(11)	 = 2048
+2^(12)	 = 4096
+2^(13)	 = 8192
+2^(14)	 = 16384
+2^(15)	 = 32768
+2^(16)	 = 65536
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -11111,6 +11136,26 @@ int incrementa(int valore_f, int iterazioni){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/9_functions/output/1_functions.txt" -->
+<pre lang="text"><code>valore = 100, &amp;valore = &lt;addr_valore_chiamante&gt;
+
+valore prima dell'invocazione: 100
+
+************incrementa****************
+i=0 valore_f = 101, &amp;valore_f = &lt;addr_copia_locale&gt;
+i=1 valore_f = 102, &amp;valore_f = &lt;addr_copia_locale&gt;
+i=2 valore_f = 103, &amp;valore_f = &lt;addr_copia_locale&gt;
+************incrementa****************
+
+valore dopo     l'invocazione: 100
+risultato                    : 103
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -11257,6 +11302,26 @@ int incrementa(int *valore_f, int iterazioni){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/9_functions/output/2_functions.txt" -->
+<pre lang="text"><code>valore = 100, &amp;valore = &lt;addr_valore_chiamante&gt;
+
+valore prima dell'invocazione: 100
+
+************incrementa****************
+i=0 valore_f = 101, &amp;valore_f = &lt;addr_valore_chiamante&gt;
+i=1 valore_f = 102, &amp;valore_f = &lt;addr_valore_chiamante&gt;
+i=2 valore_f = 103, &amp;valore_f = &lt;addr_valore_chiamante&gt;
+************incrementa****************
+
+valore dopo     l'invocazione: 103
+risultato                    : 103
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -11523,6 +11588,16 @@ int somma(int *a, int dim){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/9_functions/output/3_functions.txt" -->
+<pre lang="text"><code>100
+100
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
