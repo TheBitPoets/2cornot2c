@@ -1,0 +1,4 @@
+a=<indefinito> 	 b=<indefinito> 	 c=<indefinito> 	 other=<indefinito>
+Quale variabile vuoi incrementare?
+[a-A]	[b-B]	[c-C]
+a=<indefinito> 	 b=<indefinito> 	 c=<indefinito> 	 other=<indefinito>
