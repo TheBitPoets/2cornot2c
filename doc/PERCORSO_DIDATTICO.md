@@ -1,12 +1,12 @@
 # Percorso didattico
 
-Questo documento propone una mappa delle lezioni del corso, organizzata in tre percorsi progressivi:
+Questo documento propone una mappa delle lezioni del corso, organizzata in tre percorsi progressivi.
 
-| Percorso | Obiettivo | Idea guida |
-|---|---|---|
-| Base | Imparare a programmare in C | Scrivere programmi semplici, leggere input, produrre output e usare correttamente le strutture fondamentali del linguaggio. |
-| Intermedio | Capire davvero il C | Comprendere memoria, puntatori, compilazione, debugging e strumenti che rendono esplicito cio che il programma fa sotto il cofano. |
-| Avanzato/Produzione | Scrivere C come al lavoro | Progettare codice mantenibile, testabile, robusto e vicino alle pratiche usate in contesti professionali. |
+| Livello | Obiettivo | Cosa devi sapere alla fine | Cartelle |
+|---|---|---|---|
+| Base | Scrivere piccoli programmi C | Variabili, input/output, funzioni, cicli, tipi, operatori, array e stringhe semplici. | `lab/0_intro` - `lab/5_control_statements` |
+| Intermedio | Capire memoria e modularita | Puntatori, memoria, array, stringhe, `malloc`, `free`, struct, header e compilazione separata. | `lab/6_pointers` - `lab/11_structs` |
+| Avanzato/Produzione | Scrivere codice robusto | Makefile, debugging, test, sanitizers, processi, thread, Linux API, sicurezza e CI. | `lab2`, `LINUX_PROGRAMMING.md` |
 
 ## Tabella delle lezioni
 
