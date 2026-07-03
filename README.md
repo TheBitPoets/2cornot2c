@@ -9081,6 +9081,16 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/7_array/output/00_array.txt" -->
+<pre lang="text"><code>0 1 2 3 4 
+0 1 2 3 4
+</code></pre>
+<!-- lab-output:end -->
 </details>
 
 <details>
@@ -9133,6 +9143,15 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/7_array/output/0_array.txt" -->
+<pre lang="text"><code>1 2 3 4 5
+</code></pre>
+<!-- lab-output:end -->
 </details>
 
 <details>
@@ -9180,6 +9199,15 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/7_array/output/1_array.txt" -->
+<pre lang="text"><code>1 2 3 4 5
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -9331,6 +9359,15 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/7_array/output/2_array.txt" -->
+<pre lang="text"><code>0 0 0 0 0
+</code></pre>
+<!-- lab-output:end -->
 </details>
 
 <details>
@@ -9379,6 +9416,15 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/7_array/output/3_array.txt" -->
+<pre lang="text"><code>0 0 0 0 0
+</code></pre>
+<!-- lab-output:end -->
 </details>
 
 <details>
@@ -9431,6 +9477,16 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/7_array/output/4_array.txt" -->
+<pre lang="text"><code>0			1			2			3			4			
+&lt;base+0x0&gt;		&lt;base+0x4&gt;		&lt;base+0x8&gt;		&lt;base+0xc&gt;		&lt;base+0x10&gt;
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -9634,6 +9690,17 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/7_array/output/5_array.txt" -->
+<pre lang="text"><code>Il vettore di interi occupa 400 byte
+Un singolo intero occupa 4 byte
+Il vettore ha 400(byte)/4(byte) = 100 elementi
+</code></pre>
+<!-- lab-output:end -->
 </details>
 
 <details>
@@ -9688,6 +9755,17 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/7_array/output/6_array.txt" -->
+<pre lang="text"><code>Il vettore di interi occupa 400 byte
+Un singolo intero occupa 4 byte
+Il vettore ha 400(byte)/4(byte) = 100 elementi
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -11740,6 +11818,22 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/7_array/output/7_array.txt" -->
+<pre lang="text"><code> 0  1  2  3  4  5  6 
+ 7  8  9 10 11 12 13 
+14 15 16 17 18 19 20 
+21 22 23 24 25 26 27 
+28 29 30 31 32 33 34 
+35 36 37 38 39 40 41 
+
+0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>

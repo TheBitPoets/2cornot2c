@@ -952,6 +952,151 @@
           "replacement": "<NUL>"
         }
       ]
+    },
+    {
+      "name": "00_array",
+      "path": "lab/7_array/00_array.c",
+      "workdir": "lab/7_array",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/00_array",
+        "00_array.c"
+      ],
+      "run": [
+        "bin/00_array"
+      ],
+      "output": "lab/7_array/output/00_array.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "0_array",
+      "path": "lab/7_array/0_array.c",
+      "workdir": "lab/7_array",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/0_array",
+        "0_array.c"
+      ],
+      "run": [
+        "bin/0_array"
+      ],
+      "output": "lab/7_array/output/0_array.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "1_array",
+      "path": "lab/7_array/1_array.c",
+      "workdir": "lab/7_array",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/1_array",
+        "1_array.c"
+      ],
+      "run": [
+        "bin/1_array"
+      ],
+      "output": "lab/7_array/output/1_array.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "2_array",
+      "path": "lab/7_array/2_array.c",
+      "workdir": "lab/7_array",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/2_array",
+        "2_array.c"
+      ],
+      "run": [
+        "bin/2_array"
+      ],
+      "output": "lab/7_array/output/2_array.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "3_array",
+      "path": "lab/7_array/3_array.c",
+      "workdir": "lab/7_array",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/3_array",
+        "3_array.c"
+      ],
+      "run": [
+        "bin/3_array"
+      ],
+      "output": "lab/7_array/output/3_array.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "4_array",
+      "path": "lab/7_array/4_array.c",
+      "workdir": "lab/7_array",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/4_array",
+        "4_array.c"
+      ],
+      "run": [
+        "bin/4_array"
+      ],
+      "output": "lab/7_array/output/4_array.txt",
+      "timeout_seconds": 5,
+      "normalize_addresses": "paragraph"
+    },
+    {
+      "name": "5_array",
+      "path": "lab/7_array/5_array.c",
+      "workdir": "lab/7_array",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/5_array",
+        "5_array.c"
+      ],
+      "run": [
+        "bin/5_array"
+      ],
+      "output": "lab/7_array/output/5_array.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "6_array",
+      "path": "lab/7_array/6_array.c",
+      "workdir": "lab/7_array",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/6_array",
+        "6_array.c"
+      ],
+      "run": [
+        "bin/6_array"
+      ],
+      "output": "lab/7_array/output/6_array.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "7_array",
+      "path": "lab/7_array/7_array.c",
+      "workdir": "lab/7_array",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/7_array",
+        "7_array.c"
+      ],
+      "run": [
+        "bin/7_array"
+      ],
+      "output": "lab/7_array/output/7_array.txt",
+      "timeout_seconds": 5
     }
   ]
 }
