@@ -87,7 +87,10 @@ function renderHeadings() {
   for (const heading of headings) {
     const node = els.headingTemplate.content.firstElementChild.cloneNode(true);
     node.dataset.id = heading.id;
-    node.querySelector(".headingTitle").textContent = `${"  ".repeat(Math.max(0, heading.level - 2))}${heading.title}`;
+    const depth = Math.max(0, heading.level - 1);
+    node.classList.add(`level-${heading.level}`);
+    node.style.setProperty("--depth", depth);
+    node.querySelector(".headingTitle").textContent = heading.title;
     node.querySelector(".headingMeta").textContent = `${heading.source}:${heading.line} · H${heading.level}${used.has(heading.id) ? " · gia assegnato" : ""}`;
     node.addEventListener("dragstart", () => {
       state.draggedHeading = heading;

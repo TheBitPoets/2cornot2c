@@ -124,7 +124,46 @@ input, select { width: 100%; padding: .72rem .9rem; }
   margin-bottom: .55rem;
 }
 
-.headingCard { cursor: grab; }
+.headingCard {
+  position: relative;
+  cursor: grab;
+  margin-left: calc(var(--depth, 0) * .82rem);
+}
+
+.headingCard::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--depth, 0) * -.82rem + .2rem);
+  top: -.6rem;
+  bottom: -.6rem;
+  width: 1px;
+  background: rgba(180, 83, 9, .18);
+}
+
+.headingCard.level-1 {
+  border-color: rgba(180, 83, 9, .48);
+  background: #fff4dd;
+}
+
+.headingCard.level-2 {
+  border-color: rgba(15, 118, 110, .34);
+}
+
+.headingCard.level-3,
+.headingCard.level-4,
+.headingCard.level-5,
+.headingCard.level-6 {
+  background: rgba(255, 253, 248, .82);
+}
+
+.headingCard.level-3 .headingTitle::before,
+.headingCard.level-4 .headingTitle::before,
+.headingCard.level-5 .headingTitle::before,
+.headingCard.level-6 .headingTitle::before {
+  content: "↳ ";
+  color: var(--warm);
+}
+
 .headingCard:active { cursor: grabbing; }
 
 .headingTitle { font-weight: 700; }
