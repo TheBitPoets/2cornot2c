@@ -120,7 +120,7 @@ def format_output(
     sections: list[str] = []
     if compile_result.stdout.strip():
         sections.append("[compile stdout]\n" + compile_result.stdout.rstrip())
-    if compile_result.stderr.strip():
+    if compile_result.returncode != 0 and compile_result.stderr.strip():
         sections.append("[compile stderr]\n" + compile_result.stderr.rstrip())
     if run_result.stdout.strip():
         sections.append(run_result.stdout.rstrip())
