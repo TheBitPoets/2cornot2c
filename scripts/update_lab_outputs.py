@@ -23,6 +23,7 @@ import pathlib
 import re
 import subprocess
 import sys
+import difflib
 from typing import Any
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -220,6 +221,16 @@ def process_lab(entry: dict[str, Any], check: bool) -> bool:
         current = output_path.read_text(encoding="utf-8") if output_path.exists() else None
         if current != generated:
             sys.stderr.write(f"Output is not up to date for {name}: {output_path.relative_to(ROOT)}\n")
+            current_lines = [] if current is None else current.splitlines(keepends=True)
+            generated_lines = generated.splitlines(keepends=True)
+            diff = difflib.unified_diff(
+                current_lines,
+                generated_lines,
+                fromfile=f"committed/{output_path.relative_to(ROOT)}",
+                tofile=f"generated/{output_path.relative_to(ROOT)}",
+                n=3,
+            )
+            sys.stderr.writelines(diff)
             return False
     else:
         output_path.write_text(generated, encoding="utf-8", newline="\n")
