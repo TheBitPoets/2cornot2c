@@ -8492,7 +8492,7 @@ int main(void){
 </p>
 
 <!-- lab-output:start path="lab/6_pointers/output/33_pointers.txt" -->
-<pre lang="text"><code>a = 1
+<pre lang="text"><code>a = &lt;fuori-oggetto&gt;
 b = &lt;fuori-oggetto&gt;
 a = &lt;fuori-oggetto&gt;
 </code></pre>
