@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import json
 import pathlib
+import re
 import subprocess
 import sys
 from typing import Any
@@ -73,6 +74,27 @@ def run_command(
     )
 
 
+def ensure_compile_output_dir(command: list[str], cwd: pathlib.Path) -> None:
+    """Create the parent directory of a GCC ``-o`` output path when needed.
+
+    Lab manifests commonly compile to paths such as ``bin/0_hello``.  Git does
+    not track empty directories, so a fresh checkout may not contain that
+    ``bin`` directory yet.  Creating it here keeps manifests simple and avoids
+    requiring ``.gitkeep`` files in every lab folder.
+    """
+
+    try:
+        output_index = command.index("-o") + 1
+    except ValueError:
+        return
+    if output_index >= len(command):
+        return
+    output_path = pathlib.Path(command[output_index])
+    parent = output_path.parent
+    if str(parent) != ".":
+        (cwd / parent).mkdir(parents=True, exist_ok=True)
+
+
 def format_output(
     compile_result: subprocess.CompletedProcess[str],
     run_result: subprocess.CompletedProcess[str],
@@ -98,6 +120,55 @@ def format_output(
     return "\n".join(sections) + "\n"
 
 
+def apply_normalizations(generated: str, entry: dict[str, Any]) -> str:
+    """Apply optional regex replacements to make expected output stable.
+
+    Some didactic programs intentionally print values that change between runs,
+    such as stack addresses or uninitialized automatic variables.  The manifest
+    can define ``normalize_addresses: "paragraph"`` to replace hexadecimal
+    addresses inside each blank-line-separated output block with offsets from
+    the first address in that block.  It can also define a ``normalize`` list
+    with ``pattern`` and ``replacement`` fields; each item is applied with
+    ``re.sub`` before the output file is written or compared in ``--check``
+    mode.
+    """
+
+    normalized = normalize_addresses(generated, entry)
+    for rule in entry.get("normalize", []):
+        normalized = re.sub(rule["pattern"], rule["replacement"], normalized)
+    return normalized
+
+
+def normalize_addresses(generated: str, entry: dict[str, Any]) -> str:
+    """Normalize hexadecimal addresses while preserving local byte deltas.
+
+    With ``normalize_addresses: "paragraph"``, every paragraph uses its first
+    hexadecimal address as ``base``.  Later addresses become values such as
+    ``<base+0x4>`` or ``<base-0x4>``.  This keeps stack-frame relationships
+    visible without committing ASLR-dependent absolute addresses.
+    """
+
+    if entry.get("normalize_addresses") != "paragraph":
+        return generated
+
+    address_re = re.compile(r"0x[0-9a-fA-F]+")
+
+    def replace_paragraph(paragraph: str) -> str:
+        matches = list(address_re.finditer(paragraph))
+        if not matches:
+            return paragraph
+        base = int(matches[0].group(0), 16)
+
+        def replace_address(match: re.Match[str]) -> str:
+            delta = int(match.group(0), 16) - base
+            sign = "+" if delta >= 0 else "-"
+            return f"<base{sign}0x{abs(delta):x}>"
+
+        return address_re.sub(replace_address, paragraph)
+
+    return "\n\n".join(replace_paragraph(part) for part in generated.split("\n\n"))
+
+
 def process_lab(entry: dict[str, Any], check: bool) -> bool:
     """Compile, run, and either update or verify one manifest entry.
 
@@ -116,6 +187,7 @@ def process_lab(entry: dict[str, Any], check: bool) -> bool:
     output_path = repo_path(entry["output"])
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
+    ensure_compile_output_dir(compile_cmd, cwd)
     compile_result = run_command(compile_cmd, cwd=cwd, timeout=timeout)
     if compile_result.returncode != 0 and not allow_failure:
         sys.stderr.write(f"Compilation failed for {name}\n")
@@ -130,7 +202,7 @@ def process_lab(entry: dict[str, Any], check: bool) -> bool:
         sys.stderr.write(run_result.stderr)
         return False
 
-    generated = format_output(compile_result, run_result)
+    generated = apply_normalizations(format_output(compile_result, run_result), entry)
     if check:
         current = output_path.read_text(encoding="utf-8") if output_path.exists() else None
         if current != generated:

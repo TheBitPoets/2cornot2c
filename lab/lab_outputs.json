@@ -101,6 +101,105 @@
       "stdin": "4\n2\ns\n8\n2\nD\n",
       "output": "lab/0_intro/output/5_variabili.txt",
       "timeout_seconds": 5
+    },
+    {
+      "name": "0_local",
+      "path": "lab/1_variables/0_local.c",
+      "workdir": "lab/1_variables",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/0_local",
+        "0_local.c"
+      ],
+      "run": [
+        "bin/0_local"
+      ],
+      "output": "lab/1_variables/output/0_local.txt",
+      "timeout_seconds": 5,
+      "normalize": [
+        {
+          "pattern": "(?m)^local_var=-?\\d+",
+          "replacement": "local_var=<indefinito>"
+        }
+      ],
+      "normalize_addresses": "paragraph"
+    },
+    {
+      "name": "1_static_local",
+      "path": "lab/1_variables/1_static_local.c",
+      "workdir": "lab/1_variables",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/1_static_local",
+        "1_static_local.c"
+      ],
+      "run": [
+        "bin/1_static_local"
+      ],
+      "output": "lab/1_variables/output/1_static_local.txt",
+      "timeout_seconds": 5,
+      "normalize": [
+        {
+          "pattern": "&count=0x[0-9a-fA-F]+",
+          "replacement": "&count=<static+0x0>"
+        },
+        {
+          "pattern": "&bad_coubt=0x[0-9a-fA-F]+",
+          "replacement": "&bad_coubt=<stack+0x0>"
+        }
+      ]
+    },
+    {
+      "name": "2_global",
+      "path": "lab/1_variables/2_global.c",
+      "workdir": "lab/1_variables",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/2_global",
+        "2_global.c"
+      ],
+      "run": [
+        "bin/2_global"
+      ],
+      "output": "lab/1_variables/output/2_global.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "3_global_internal",
+      "path": "lab/1_variables/3_global_internal.c",
+      "workdir": "lab/1_variables",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/3_global_internal",
+        "3_global_internal.c"
+      ],
+      "run": [
+        "bin/3_global_internal"
+      ],
+      "output": "lab/1_variables/output/3_global_internal.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "4_global_external_internal",
+      "path": "lab/1_variables/4_global_external_internal_a.c",
+      "workdir": "lab/1_variables",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/4_global_external_internal",
+        "4_global_external_internal_a.c",
+        "4_global_external_internal_b.c"
+      ],
+      "run": [
+        "bin/4_global_external_internal"
+      ],
+      "stdin": "3\n5\n0\n",
+      "output": "lab/1_variables/output/4_global_external_internal.txt",
+      "timeout_seconds": 5
     }
   ]
 }

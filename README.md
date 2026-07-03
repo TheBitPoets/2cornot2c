@@ -1921,6 +1921,18 @@ void three(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/1_variables/output/2_global.txt" -->
+<pre lang="text"><code>global=0
+global=1
+global=2
+global=3
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -2146,6 +2158,22 @@ void print_var(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/1_variables/output/0_local.txt" -->
+<pre lang="text"><code>local_var=&lt;indefinito&gt; 		 &amp;local_var=&lt;base+0x0&gt;
+init_local_var=0 	 &amp;init_local_var=&lt;base+0x4&gt;
+
+local_var=&lt;indefinito&gt; 		 &amp;local_var=&lt;base+0x0&gt;
+init_local_var=0 	 &amp;init_local_var=&lt;base+0x4&gt;
+
+local_var=&lt;indefinito&gt; 		 &amp;local_var=&lt;base+0x0&gt;
+init_local_var=0 	 &amp;init_local_var=&lt;base+0x4&gt;
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -2324,6 +2352,33 @@ void call_me(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/1_variables/output/1_static_local.txt" -->
+<pre lang="text"><code>count=1 	 &amp;count=&lt;static+0x0&gt;
+bad_count=1 	 &amp;bad_coubt=&lt;stack+0x0&gt;
+You call me 1 times
+
+count=2 	 &amp;count=&lt;static+0x0&gt;
+bad_count=1 	 &amp;bad_coubt=&lt;stack+0x0&gt;
+You call me 2 times
+
+count=3 	 &amp;count=&lt;static+0x0&gt;
+bad_count=1 	 &amp;bad_coubt=&lt;stack+0x0&gt;
+You call me 3 times
+
+count=4 	 &amp;count=&lt;static+0x0&gt;
+bad_count=1 	 &amp;bad_coubt=&lt;stack+0x0&gt;
+You call me 4 times
+
+count=5 	 &amp;count=&lt;static+0x0&gt;
+bad_count=1 	 &amp;bad_coubt=&lt;stack+0x0&gt;
+You call me 5 times
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -2542,6 +2597,22 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/1_variables/output/4_global_external_internal.txt" -->
+<pre lang="text"><code>Get me an integer &gt; 0 (0 to quit)
+You call me 1 times 
+Subtotal = 3
+Get me an integer &gt; 0 (0 to quit)
+You call me 2 times 
+Subtotal = 8
+Get me an integer &gt; 0 (0 to quit)
+total=8
+</code></pre>
+<!-- lab-output:end -->
 </details>
 
 <details>
@@ -2841,6 +2912,17 @@ void two(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/1_variables/output/3_global_internal.txt" -->
+<pre lang="text"><code>global_internal=0
+global_internal=1
+global_internal=2
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
