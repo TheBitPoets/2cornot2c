@@ -1,3 +1,7 @@
+[stdin]
+4
+2
+s
 Inserisci il primo operando
 Insesci il secondo operando
 s)Somma d)Differenza m)Moltiplicazione

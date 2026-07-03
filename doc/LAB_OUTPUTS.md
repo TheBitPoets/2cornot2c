@@ -407,7 +407,7 @@ Esempio completo:
 | `workdir` | Si | Cartella da cui lanciare compilazione ed esecuzione. |
 | `compile` | Si | Comando di compilazione come array, senza shell implicita. |
 | `run` | Si | Comando di esecuzione come array, senza shell implicita. |
-| `stdin` | No | Testo da passare allo stdin del programma, utile per esercizi interattivi. |
+| `stdin` | No | Testo da passare allo stdin del programma, utile per esercizi interattivi. Se presente, viene mostrato anche nell'output generato. |
 | `output` | Si | File `.txt` generato dallo script. |
 | `timeout_seconds` | No | Timeout per compilazione/esecuzione. Default: `10`. |
 | `allow_failure` | No | Se `true`, permette exit code non zero per esercizi che falliscono apposta. |
@@ -430,6 +430,33 @@ Per un programma che legge tre valori da `scanf`, puoi usare `stdin`:
   "timeout_seconds": 5
 }
 ```
+
+Quando `stdin` e presente, il file `output/*.txt` mostra prima gli input simulati e poi l'output del programma:
+
+```text
+[stdin]
+4
+2
+s
+Risultato del programma...
+```
+
+Questo evita un'ambiguita didattica: nel README non si vede solo il risultato finale, ma anche i valori che hanno prodotto quel risultato.
+
+Se l'input e una riga vuota, per esempio un programma che aspetta solo la pressione di Invio:
+
+```json
+"stdin": "\n"
+```
+
+lo script salva:
+
+```text
+[stdin]
+<INVIO>
+```
+
+In questo modo l'azione dell'utente resta visibile anche quando non c'e un carattere stampabile da mostrare.
 
 ## Esempio multi-file
 
@@ -718,8 +745,9 @@ Lo script:
 1. legge `lab/lab_outputs.json`;
 2. compila ogni lab nella sua `workdir`;
 3. esegue il binario;
-4. cattura stdout e stderr;
-5. scrive il risultato nel file `output` configurato.
+4. passa al programma l'eventuale `stdin` configurato;
+5. cattura stdout e stderr;
+6. scrive nel file `output` configurato gli input simulati, l'output del programma e gli eventuali errori.
 
 Se il comando di compilazione usa `-o bin/nome_lab`, lo script crea automaticamente la cartella `bin` prima di lanciare `gcc`. Non serve quindi versionare una cartella `bin` vuota per ogni directory di laboratorio.
 

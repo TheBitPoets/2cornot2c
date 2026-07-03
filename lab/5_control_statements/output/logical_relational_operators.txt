@@ -1,3 +1,6 @@
+[stdin]
+35
+S
 Inserisci la tua eta'
 Hai la laurea?
 [S]ì 	 [N]o

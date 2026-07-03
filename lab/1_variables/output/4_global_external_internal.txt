@@ -1,3 +1,7 @@
+[stdin]
+3
+5
+0
 Get me an integer > 0 (0 to quit)
 You call me 1 times 
 Subtotal = 3
