@@ -11734,6 +11734,17 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/10_dynamic_memory/output/0_malloc.txt" -->
+<pre lang="text"><code>Quanti elementi per il vettore?
+statico : 0 1 2 3 4 5 6 7 8 9 
+dinamico: 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>

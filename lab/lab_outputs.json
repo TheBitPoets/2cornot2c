@@ -1263,6 +1263,23 @@
       ],
       "output": "lab/9_functions/output/3_functions.txt",
       "timeout_seconds": 5
+    },
+    {
+      "name": "0_malloc",
+      "path": "lab/10_dynamic_memory/0_malloc.c",
+      "workdir": "lab/10_dynamic_memory",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/0_malloc",
+        "0_malloc.c"
+      ],
+      "run": [
+        "bin/0_malloc"
+      ],
+      "stdin": "15\n",
+      "output": "lab/10_dynamic_memory/output/0_malloc.txt",
+      "timeout_seconds": 5
     }
   ]
 }
