@@ -768,15 +768,9 @@ Il preprocessore viene richiamato dal compilatore come primo step nel processo d
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/0_intro/0_hello.c</summary>
 
@@ -991,15 +985,9 @@ Righe 16-19: definizione della funzione main().
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/0_intro/1_funzioni.c</summary>
 
@@ -1149,15 +1137,9 @@ Come spiegato ampiamente in precedenza, facciamo uso anche della funzione printf
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/0_intro/2_variabili.c</summary>
 
@@ -1826,15 +1808,9 @@ Questo è utile soprattutto per le variabili indice di un ciclo o per documentar
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/1_variables/2_global.c</summary>
 
@@ -2071,15 +2047,9 @@ Scope, linkage e storage duration sono combinati assieme per definire le <strong
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/1_variables/0_local.c</summary>
 
@@ -2235,15 +2205,9 @@ int uno(register int a);
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/1_variables/1_static_local.c</summary>
 
@@ -2482,15 +2446,9 @@ int main(void){
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/1_variables/4_global_external_internal_a.c</summary>
 
@@ -2789,15 +2747,9 @@ int divisione(int dividendo, int divisore){
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/1_variables/3_global_internal.c</summary>
 
@@ -3011,15 +2963,9 @@ La definizione di b e di j non è mostrata, quindi non è possibile determinare 
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/0_intro/4_variabili.c</summary>
 
@@ -3536,15 +3482,9 @@ Queste direttive permettono di:
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/2_preprocessor/macro.c</summary>
 
@@ -3755,15 +3695,9 @@ La prima forma (parentesi angolari &lt; &gt;) è usata per includere il contenut
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/2_preprocessor/direttiva_if.c</summary>
 
@@ -4026,15 +3960,9 @@ La definizione del simbolo macro deve essere effettuata con la direttiva #define
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/2_preprocessor/eliminazione_temporanea_codice.c</summary>
 
@@ -4682,15 +4610,9 @@ Per ottenere il valore nella rappresentazione senza segno dovremmo sommare a 2 i
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/3_datatype/estensione_della_rappresentazione_binaria.c</summary>
 
@@ -4934,15 +4856,9 @@ int q, w = 200 /* q non è inizializzata, w è inizializzata. scarso stile di  p
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/3_datatype/print_int.c</summary>
 
@@ -5170,15 +5086,9 @@ Quando allora usare i diversi tipi di interi? Dipende dalla situazione.
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/3_datatype/print_others_ints.c</summary>
 
@@ -5488,15 +5398,9 @@ signed negative: 0xffffffe5
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/3_datatype/cast_esplicito_implicito.c</summary>
 
@@ -5762,15 +5666,9 @@ il valore stampato sarebbe 1.0 perché prima viene effettuata la divisione tra i
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/3_datatype/cast_tra_signed_unsigned.c</summary>
 
@@ -6160,15 +6058,9 @@ uy = 4294954951          ffffcfc7
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/3_datatype/troncamento_bit.c</summary>
 
@@ -6250,15 +6142,9 @@ y  = -12345      ffffcfc7
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/3_datatype/ascii.c</summary>
 
@@ -6346,15 +6232,9 @@ Il tipo char è lungo 1 byte (8 bit) e in verità è un tipo intero: nel senso c
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/3_datatype/print_char.c</summary>
 
@@ -6464,15 +6344,9 @@ Gli operatori sono usati nelle operazioni aritmetiche.
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/4_operators/op_assegnamento.c</summary>
 
@@ -6620,15 +6494,9 @@ int main(void){
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/4_operators/op_divisione.c</summary>
 
@@ -6705,15 +6573,9 @@ int main(void){
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/4_operators/sizeof.c</summary>
 
@@ -6803,15 +6665,9 @@ Come avrai notato sizeof può essere usato con o senza parentesi tonde. L'uso de
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/4_operators/op_modulo.c</summary>
 
@@ -6894,15 +6750,9 @@ int main(void){
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/4_operators/op_incremento_decremento.c</summary>
 
@@ -7156,15 +7006,9 @@ Operatori Relazionali
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/5_control_statements/if.c</summary>
 
@@ -7291,15 +7135,9 @@ int main(void){
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/5_control_statements/logical_relational_operators.c</summary>
 
@@ -7411,15 +7249,9 @@ int main(void){
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/5_control_statements/for.c</summary>
 
@@ -7501,15 +7333,9 @@ int main(void){
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/5_control_statements/while.c</summary>
 
@@ -7595,15 +7421,9 @@ int main(void){
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/5_control_statements/do_while.c</summary>
 
@@ -7695,15 +7515,9 @@ int main(void){
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/5_control_statements/switch.c</summary>
 
@@ -7873,15 +7687,9 @@ int main(void){
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/5_control_statements/break_continue.c</summary>
 
@@ -8008,15 +7816,9 @@ int main(void){
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/6_pointers/0_pointers.c</summary>
 
@@ -8340,15 +8142,9 @@ int main(void){
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/6_pointers/2_pointers.c</summary>
 
@@ -8441,15 +8237,9 @@ int main(void){
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/6_pointers/3_pointers.c</summary>
 
@@ -8532,15 +8322,9 @@ int main(void){
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/6_pointers/4_pointers.c</summary>
 
@@ -8710,15 +8494,9 @@ L'aritmetica dei puntatori ci sarà molto utile quando lavoreremo con i vettori 
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/7_array/00_array.c</summary>
 
@@ -8986,15 +8764,9 @@ int main(void){
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/7_array/2_array.c</summary>
 
@@ -9300,15 +9072,9 @@ vettore + 4 = 0x7fff64c6243c + 4 = 0x7fff64c62440
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/7_array/5_array.c</summary>
 
@@ -9489,15 +9255,9 @@ int main(void){
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/6_pointers/6_pointers.c</summary>
 
@@ -9725,15 +9485,9 @@ vagrant@ubuntu2204:/lab/6_pointers$ bin/7_pointers
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/6_pointers/8_pointers.c</summary>
 
@@ -9862,15 +9616,9 @@ vagrant@ubuntu2204:/lab/6_pointers$ bin/8_pointers
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/8_strings/0_strings.c</summary>
 
@@ -10093,15 +9841,9 @@ Anche in questo caso possiamo scordarci di \0.
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/8_strings/2_strings.c</summary>
 
@@ -10479,15 +10221,9 @@ Le funzioni possono essere dichiarate e definite.
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/9_functions/0_functions.c</summary>
 
@@ -10661,15 +10397,9 @@ vagrant@ubuntu2204:/lab/9_functions$ bin/0_functions
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/9_functions/1_functions.c</summary>
 
@@ -10813,15 +10543,9 @@ risultato                    : 103
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/9_functions/2_functions.c</summary>
 
@@ -10974,15 +10698,9 @@ risultato                    : 103
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/6_pointers/5_pointers.c</summary>
 
@@ -11084,15 +10802,9 @@ xxx voglio essere modificata
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/9_functions/3_functions.c</summary>
 
@@ -11211,15 +10923,9 @@ vagrant@ubuntu2204:/lab/9_functions$ bin/3_functions
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/10_dynamic_memory/0_malloc.c</summary>
 
@@ -11425,15 +11131,9 @@ dinamico: 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/7_array/7_array.c</summary>
 
@@ -11626,15 +11326,9 @@ vagrant@ubuntu2204:/lab/7_array$ bin/7_array
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/6_pointers/9_pointers.c</summary>
 
@@ -11845,15 +11539,9 @@ Inserisci un numero da 1 a 12
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/6_pointers/10_pointers.c</summary>
 
@@ -12148,15 +11836,9 @@ Lo <strong>stack</strong> è un'area di memoria contigua all'heap e cresce in di
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/6_pointers/12_pointers.c</summary>
 
@@ -12519,15 +12201,9 @@ Pluto
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/11_structs/0_structs.c</summary>
 
@@ -12687,15 +12363,9 @@ int main(void){
 
 <table align="center">
 <tr>
-<td align="center">
-<strong>Esercizi collegati</strong>
-</td>
-</tr>
-</table>
-
-<table align="center">
-<tr>
 <td>
+<p align="center"><strong>Esercizi collegati</strong></p>
+
 <details>
 <summary>&#128187; /lab/11_structs/1_structs.c</summary>
 
