@@ -323,6 +323,7 @@ Esempio completo:
 | `output` | Si | File `.txt` generato dallo script. |
 | `timeout_seconds` | No | Timeout per compilazione/esecuzione. Default: `10`. |
 | `allow_failure` | No | Se `true`, permette exit code non zero per esercizi che falliscono apposta. |
+| `normalize` | No | Lista di sostituzioni regex da applicare all'output generato prima di salvarlo o confrontarlo. |
 
 ## Esempio con input da tastiera
 
@@ -375,6 +376,38 @@ Alcuni esercizi possono dimostrare un errore o un comportamento non sicuro. In q
 ```
 
 Usalo solo quando il fallimento e parte dell'esercizio.
+
+## Esempio con output non deterministico
+
+Alcuni programmi didattici stampano valori che cambiano a ogni esecuzione, per esempio indirizzi di memoria o valori di variabili automatiche non inizializzate.
+
+In questi casi puoi usare il campo `normalize` per sostituire le parti variabili con segnaposto stabili.
+
+Esempio:
+
+```json
+{
+  "name": "0_local",
+  "path": "lab/1_variables/0_local.c",
+  "workdir": "lab/1_variables",
+  "compile": ["gcc", "-o", "bin/0_local", "0_local.c"],
+  "run": ["bin/0_local"],
+  "output": "lab/1_variables/output/0_local.txt",
+  "timeout_seconds": 5,
+  "normalize": [
+    {
+      "pattern": "(?m)^local_var=-?\\d+",
+      "replacement": "local_var=<indefinito>"
+    },
+    {
+      "pattern": "0x[0-9a-fA-F]+",
+      "replacement": "<indirizzo>"
+    }
+  ]
+}
+```
+
+Lo script esegue comunque il programma reale. La normalizzazione avviene solo dopo la cattura dell'output, prima di scrivere il file `output/*.txt` o prima del confronto in modalita `--check`.
 
 ## Aggiornare gli output localmente
 
@@ -510,7 +543,7 @@ Per questi casi:
 - usa `stdin` se il programma richiede input;
 - usa `timeout_seconds` per evitare blocchi;
 - usa `allow_failure: true` solo se il fallimento e parte dell'esercizio;
-- evita di configurare subito esercizi con output non deterministico finche non sono stati normalizzati.
+- usa `normalize` quando l'esercizio stampa valori non deterministici ma il comportamento generale deve restare verificabile.
 
 ## Sequenza consigliata in PR
 

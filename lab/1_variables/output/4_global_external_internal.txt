@@ -1,0 +1,8 @@
+Get me an integer > 0 (0 to quit)
+You call me 1 times 
+Subtotal = 3
+Get me an integer > 0 (0 to quit)
+You call me 2 times 
+Subtotal = 8
+Get me an integer > 0 (0 to quit)
+total=8

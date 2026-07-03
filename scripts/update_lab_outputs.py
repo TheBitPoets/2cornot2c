@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import json
 import pathlib
+import re
 import subprocess
 import sys
 from typing import Any
@@ -98,6 +99,22 @@ def format_output(
     return "\n".join(sections) + "\n"
 
 
+def apply_normalizations(generated: str, entry: dict[str, Any]) -> str:
+    """Apply optional regex replacements to make expected output stable.
+
+    Some didactic programs intentionally print values that change between runs,
+    such as stack addresses or uninitialized automatic variables.  The manifest
+    can define a ``normalize`` list with ``pattern`` and ``replacement`` fields;
+    each item is applied with ``re.sub`` before the output file is written or
+    compared in ``--check`` mode.
+    """
+
+    normalized = generated
+    for rule in entry.get("normalize", []):
+        normalized = re.sub(rule["pattern"], rule["replacement"], normalized)
+    return normalized
+
+
 def process_lab(entry: dict[str, Any], check: bool) -> bool:
     """Compile, run, and either update or verify one manifest entry.
 
@@ -130,7 +147,7 @@ def process_lab(entry: dict[str, Any], check: bool) -> bool:
         sys.stderr.write(run_result.stderr)
         return False
 
-    generated = format_output(compile_result, run_result)
+    generated = apply_normalizations(format_output(compile_result, run_result), entry)
     if check:
         current = output_path.read_text(encoding="utf-8") if output_path.exists() else None
         if current != generated:

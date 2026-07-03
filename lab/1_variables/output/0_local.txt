@@ -1,0 +1,8 @@
+local_var=<indefinito> 		 &local_var=<indirizzo>
+init_local_var=0 	 &init_local_var=<indirizzo>
+
+local_var=<indefinito> 		 &local_var=<indirizzo>
+init_local_var=0 	 &init_local_var=<indirizzo>
+
+local_var=<indefinito> 		 &local_var=<indirizzo>
+init_local_var=0 	 &init_local_var=<indirizzo>
