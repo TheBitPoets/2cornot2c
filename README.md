@@ -764,6 +764,74 @@ Il preprocessore viene richiamato dal compilatore come primo step nel processo d
 
 ## Il primo programma in C
 
+<!-- lab-exercises:start heading="Il primo programma in C" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/0_intro/0_hello.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        `printf`, `#include &lt;stdio.h&gt;`, funzione `main`, compilazione ed esecuzione del primo binario.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Introduce il percorso minimo che porta da un sorgente C a un programma eseguibile: inclusione di un header standard, definizione di main, chiamata a printf, compilazione con gcc ed esecuzione del binario prodotto.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/0_hello.c">/lab/0_intro/0_hello.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/0_intro
+gcc -o bin/0_hello 0_hello.c
+bin/0_hello</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/0_intro/0_hello.c" -->
+<pre lang="c"><code>/*
+ * 0_intro -- Primo esempio di programma in c
+ *
+ * Cosa imparerai:
+ *	*) Cosa sono gli header files
+ *      *) Concetto di funzione e chiamata di funzione
+ *	*) Processo di creazione di un file eseguibile (binario)
+ *
+ * Utilizzo:
+ *      gcc -o bin/0_hello 0_hello.c
+ *      bin/0_hello	      
+ */
+
+#include &lt;stdio.h&gt;
+
+int main(void){
+	printf("Hello World\n");
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 Come da tradizione, il primo esempio di codice è il classico <code>Hello World</code>.
 Il programma di seguito stampa a schermo una semplice frase: <code>Ciao Mondo</code>, in inglese.
@@ -914,6 +982,69 @@ Righe 16-19: definizione della funzione <code>main()</code>.
 
 ## Funzioni
 
+<!-- lab-exercises:start heading="Funzioni" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/0_intro/1_funzioni.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Definizione e chiamata di funzioni semplici, esempio `sottrazione`.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Funzioni con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Definizione e chiamata di funzioni semplici, esempio `sottrazione` e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/1_funzioni.c">/lab/0_intro/1_funzioni.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/0_intro
+gcc -o bin/1_funzioni 1_funzioni.c
+bin/1_funzioni</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/0_intro/1_funzioni.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int sottrazione(int, int);
+
+int main(void){
+	int minuendo = 10;
+	int sottraendo = 3;
+	int risultato = sottrazione(minuendo, sottraendo);
+	printf("%d - %d = %d", minuendo, sottraendo, risultato);
+}
+
+int sottrazione(int minuendo, int sottraendo){
+	return minuendo - sottraendo;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 Le funzioni sono un blocco di codice, un insieme di istruzioni che vengono raggruppate e possono essere richiamate in qualsiasi momento all'interno di un programma. Per intenderci, se nel nostro programma calcoliamo più volte la media pesata dei nostri voti, è consigliabile racchiudere tutte le istruzioni all'interno di una funzione e richiamarla ogni volta che ne abbiamo bisogno, piuttosto che riscrivere più volte lo stesso identico codice in punti diversi. Le funzioni possono ritornare un valore come risultato della loro elaborazione (possono anche non ritornare nulla al chiamante) e possono ricevere in ingresso un certo numero di parametri.
 Una funzione ha un'intestazione e un corpo; usando sempre la solita funzione <code>differenza</code> vista in precedenza avremo:
@@ -1003,6 +1134,184 @@ Come spiegato ampiamente in precedenza, facciamo uso anche della funzione <code>
 
 
 ## Variabili
+
+<!-- lab-exercises:start heading="Variabili" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/0_intro/2_variabili.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Calcolatrice minima con variabili globali, funzioni `somma`, `differenza`, `moltiplicazione`.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Variabili con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Calcolatrice minima con variabili globali, funzioni `somma`, `differenza`, `moltiplicazione` e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/2_variabili.c">/lab/0_intro/2_variabili.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/0_intro
+gcc -o bin/2_variabili 2_variabili.c
+bin/2_variabili</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/0_intro/2_variabili.c" -->
+<pre lang="c"><code>#include &lt;stdio.h&gt;
+
+int primo, secondo; /* variabili globali */
+
+int somma();
+int differenza();
+int moltiplicazione();
+
+int main(void){	
+	int risultato; 	 // variabile locale
+	char operazione; // variabile locale
+	printf("Inserisci il primo operando\n");
+	scanf("%d", &amp;primo);
+	printf("Inserisci il secondo operando\n");
+	scanf("%d", &amp;secondo);
+	printf("s)Somma d)Differenza m)Moltiplicazine\n");
+	scanf(" %c", &amp;operazione);
+	if (operazione == 's'){
+		risultato = somma();
+	} else if(operazione == 'd') {
+		risultato = differenza();
+	} else if(operazione == 'm') {
+		risultato = moltiplicazione();
+	} else {
+		printf("Operazione non riconosciuta");
+	}
+	printf("Il risultato e': %d\n", risultato);
+	return 0;
+}
+
+int somma(){
+	return primo + secondo;
+}
+
+int differenza(){
+	return primo - secondo;
+}
+
+int moltiplicazione(){
+	return primo * secondo;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+<details>
+<summary>?? <code>/lab/0_intro/3_variabili.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Variante della calcolatrice con funzioni e parametri piu espliciti.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Variabili con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Variante della calcolatrice con funzioni e parametri piu espliciti e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/3_variabili.c">/lab/0_intro/3_variabili.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/0_intro
+gcc -o bin/3_variabili 3_variabili.c
+bin/3_variabili</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/0_intro/3_variabili.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int somma(int, int);
+int differenza(int, int);
+int moltiplicazione(int, int);
+
+int main(void){
+	int risultato = 0;
+	int primo, secondo;
+	char operazione;
+
+	printf("Inserisci il primo operando\n");
+	scanf("%d", &amp;primo);
+	printf("Insesci il secondo operando\n");
+	scanf("%d", &amp;secondo);
+	printf("s)Somma d)Differenza m)Moltiplicazione\n");
+	getchar();
+	operazione = getchar();
+	switch(operazione){
+		case 's':
+			risultato = somma(primo, secondo);
+			break;
+		case 'd':
+			risultato = differenza(primo, secondo);
+			break;
+		case 'm':
+			risultato = moltiplicazione(primo, secondo);
+			break;
+		default:
+			printf("Operazione non riconosciuta\n");
+
+	}
+	printf("Il risultato e': %d\n", risultato);	
+	return 0;
+}
+
+int somma(int primo_addendo, int secondo_addendo){
+	return primo_addendo + secondo_addendo;
+}
+
+int differenza(int minuendo, int sottraendo){
+	return minuendo - sottraendo;
+}
+
+int moltiplicazione(int primo_fattore, int secondo_fattore){
+	return primo_fattore * secondo_fattore;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
 
 <p align="justify">
 Abbiamo precedentemente detto che una variabile è semplicemente una locazione di memoria a cui sono associati un identificatore e un tipo.
@@ -1499,6 +1808,95 @@ Questo è utile soprattutto per le variabili indice di un ciclo o per documentar
  
 ## File scope
 
+<!-- lab-exercises:start heading="File scope" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/1_variables/2_global.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Variabile globale visibile da piu funzioni nello stesso file.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo File scope con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Variabile globale visibile da piu funzioni nello stesso file e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/1_variables/2_global.c">/lab/1_variables/2_global.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/1_variables
+gcc -o bin/2_global 2_global.c
+bin/2_global</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/1_variables/2_global.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;  // printf()
+
+/* prototipi  funzioni che saranno 
+ * successivamente definitea, dopo
+ * il main()
+ */
+void one(void);
+void two(void);
+void three(void);
+
+int global;	/* variabile globale: file scope, external  linkage
+		 * static storage duration. E' visibile in tutto il
+		 * file  da tutte le funzioni e  poenzialente negli
+		 * altri file del programma. Automaticamente inizia
+		 * lizzata a zero dal compilatore.
+		 */
+
+int main(void){
+	printf("global=%d\n", global);
+	one();
+	two();
+	three();
+	return 0;
+
+}
+
+void one(void){
+	global = global + 1;
+	printf("global=%d\n", global);
+}
+
+void two(void){
+	global = global + 1;
+	printf("global=%d\n", global);
+}
+
+void three(void){
+	global = global + 1;
+	printf("global=%d\n", global);
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 Una variabile definita al di fuori di qualsiasi funzione in un file <code>.c</code> o <code>.h</code> ha un <strong>file scope</strong> ed è visibile dal punto in cui è definita fino alla fine del file che la contiene. Questo è il caso delle variabili globali che abbiamo trattato: esse infatti hanno un <strong>file scope</strong>.
 </p>
@@ -1650,6 +2048,81 @@ Scope, linkage e storage duration sono combinati assieme per definire le <strong
 
 ## Variabili automatiche (automatic class)
 
+<!-- lab-exercises:start heading="Variabili automatiche (automatic class)" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/1_variables/0_local.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Variabile locale non inizializzata e valore indefinito.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Variabili automatiche (automatic class) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Variabile locale non inizializzata e valore indefinito e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/1_variables/0_local.c">/lab/1_variables/0_local.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/1_variables
+gcc -o bin/0_local 0_local.c
+bin/0_local</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/1_variables/0_local.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+void print_var(void);
+
+int main(void){
+	
+	print_var();
+	print_var();
+	print_var();
+}
+
+void print_var(void){
+	int local_var; /* variabile locale (class auto: block scope, auto
+			* storage duration, no linkage) non inizializzata
+			* conterrà un vaore casuale, indefinito. Le varia
+			* bili locali devono essere inizializzate esplici
+			* tamente.
+			*/
+
+	int initialized_local_var = 0;
+
+	printf("local_var=%d \t\t &amp;local_var=%p\n", local_var, &amp;local_var);
+	printf("init_local_var=%d \t &amp;init_local_var=%p\n", initialized_local_var, &amp;initialized_local_var);
+	printf("\n");
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 Una variabile appartenente alla <strong>classe di memorizzazione automatica</strong> (<code>auto</code>) ha:
 </p>
@@ -1733,6 +2206,101 @@ int uno(register int a);
 ```
 
 ## Variabili statiche locali (static variables with block scope)
+
+<!-- lab-exercises:start heading="Variabili statiche locali (static variables with block scope)" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/1_variables/1_static_local.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Differenza tra variabile locale automatica e `static` locale che conserva il valore tra chiamate.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Variabili statiche locali (static variables with block scope) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza tra variabile locale automatica e `static` locale che conserva il valore tra chiamate e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/1_variables/1_static_local.c">/lab/1_variables/1_static_local.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/1_variables
+gcc -o bin/1_static_local 1_static_local.c
+bin/1_static_local</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/1_variables/1_static_local.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+void call_me(void); /* prototipo di funzione  necessario perchè la
+		     * chiamata alla funzione call_me() è eseguita
+		     * prima della sua definizione.
+		     */
+
+int main(void){
+	/*  call_me() incrementa di uno una variabile automatica statica
+	 *  (count) ed una variabile automatica (bad_count). Entrambe so
+	 *  no variabili locali al corpo dellla funzione ma  count viene
+	 *  allocata all'inizio del progrmma e deallocata alla fine (sta
+	 *  tic storage duration)  quindi conserva il  valore precedente 
+	 *  tra una chiamata e la successiva della funzione call_me();la
+	 *  variabile count raggiunge un valore pari al  numero di volte
+	 *  che il chiamante richiamerà la funzione call_me().
+	 *  La variabile non statica  bad_count viene ogni  volta che si 
+	 *  entra nel blocco della funzione allocata e poi deallocata al
+	 *  al termine del blocco ed infatti varrà al massimo uno.
+	 */
+	call_me();
+	call_me();
+	call_me();
+	call_me();
+	call_me();
+
+}
+
+void call_me(void){
+	static int count; /* variabile automatica statica: automatic scope,
+			   * no linkage, static storage duration. Le varia
+			   * bili statiche sono inizializzata a zero impli
+			   * citamente e hanno un tempo di vita pari a quel
+			   * lo del programma
+			   */
+	int bad_count = 0;
+
+	count = count + 1;
+	bad_count = bad_count + 1;
+
+	printf("count=%d \t &amp;count=%p\n", count, &amp;count);
+	printf("bad_count=%d \t &amp;bad_coubt=%p\n", bad_count, &amp;bad_count);
+
+	printf("You call me %d times\n", count);
+	printf("\n");
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
 
 <p align="justify">
 Una variabile con block scope ha visibilità limitata all'interno del blocco in cui è dichiarata e ovviamente nessun linkage (non è visibile alle altre funzioni nel file corrente e negli altri file). Lo storage duration è limitato al tempo di esecuzione del blocco in cui è dichiarata; la variabile è allocata in memoria appena si entra nel blocco e deallocata all'uscita. Queste variabili sono le variabili locali. Rendere statica una variabile locale significa modificare il suo storage duration in modo da farlo coincidere con il tempo di esecuzione del programma e non più con il tempo di esecuzione del blocco; in altre parole, la variabile sarà allocata quando il programma verrà eseguito e deallocata alla sua terminazione. Ovviamente lo scope resta di tipo block, quindi, anche se la variabile non viene deallocata all'uscita del blocco, il suo identificatore non è più visibile e quindi non è possibile accedere alla locazione di memoria. Quando il flusso di esecuzione rientrerà nel blocco, il valore precedentemente conservato sarà disponibile attraverso l'identificatore. Per dichiarare statica una variabile locale si usa la <i>keyword</i> <b>static</b>. Vediamo un esempio:
@@ -1880,6 +2448,137 @@ int main(void){
 ```
 
 ## Variabili globali con External Linkage (Static variables with External Linkage)
+
+<!-- lab-exercises:start heading="Variabili globali con External Linkage (Static variables with External Linkage)" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/1_variables/4_global_external_internal_a.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        File principale che usa una funzione e una variabile condivisa con un altro file.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Variabili globali con External Linkage (Static variables with External Linkage) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente File principale che usa una funzione e una variabile condivisa con un altro file e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/1_variables/4_global_external_internal_a.c">/lab/1_variables/4_global_external_internal_a.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/1_variables
+gcc -o bin/4_global_external_internal 4_global_external_internal_a.c 4_global_external_internal_b.c
+bin/4_global_external_internal</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/1_variables/4_global_external_internal_a.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;  // printf()
+
+int accumulate(int); /* prototipo di funzione definita in
+		      * 4_global_external_internal_b.c
+		      */
+
+int count;  // variabile globale external linkage
+	    // visibile in 4_global_external_internal_b.c
+
+int main(void){
+	int number;    // variabile locale non inizializzata
+	int total = 0; // variabile locale inizializzata
+	while(1){
+		printf("Get me an integer &gt; 0 (0 to quit)\n");
+		scanf("%d", &amp;number);
+		++count;
+		if(number == 0)
+			break;
+		total = accumulate(number);
+	}
+	printf("total=%d\n", total);
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+<details>
+<summary>?? <code>/lab/1_variables/4_global_external_internal_b.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Uso di `extern` e variabile locale `static` in una funzione accumulatrice.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Variabili globali con External Linkage (Static variables with External Linkage) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Uso di `extern` e variabile locale `static` in una funzione accumulatrice e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/1_variables/4_global_external_internal_b.c">/lab/1_variables/4_global_external_internal_b.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/1_variables
+gcc -o bin/4_global_external_internal 4_global_external_internal_a.c 4_global_external_internal_b.c
+bin/4_global_external_internal</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/1_variables/4_global_external_internal_b.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+extern int count; /* dichiarazione di variabile esterna
+		   * definita in 4_global_external_internal_a.c
+		   * per  vedere la variabile in questo file la
+		   * dichiarazione è necessaria.
+		   */
+
+int accumulate(int number){
+	printf("You call me %d times \n", count);
+	static int subtotal; /* variabile locale statica, ricorda il valore
+			      * tra una chiamata e la successiva della funz
+			      * ione accumulate()
+			      */
+	subtotal +=number;
+	printf("Subtotal = %d\n", subtotal);
+	return subtotal;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
 
 <p align="justify">
 Le variabili globali sono DEFINITE all'esterno delle funzioni, di solito all'inizio del file sorgente dopo le direttive al preprocessore (<code>#include</code>). Come anticipato, queste variabili hanno: file scope (sono visibili a tutte le funzioni del file che contiene la loro definizione), static storage duration (tempo di vita in memoria coincidente con l'esecuzione del programma) ed external linkage (sono potenzialmente visibili anche in tutti i file sorgente del programma). Quindi le variabili globali sono variabili statiche con external linkage. Nella definizione non si usa la <i>keyword</i> <code>extern</code>; invece, questa può essere usata (opzionalmente) nella dichiarazione della variabile all'interno delle funzioni che la useranno. L'uso di <code>extern</code> è invece obbligatorio quando si vuole usare una variabile globale definita in un altro file del programma: in questo caso è necessario dichiarare esplicitamente la variabile usando la <i>keyword</i> <code>extern</code> nel file che vuole usare la variabile definita in un altro file. In soldoni, <code>extern</code> non viene usata nella DEFINIZIONE (quando si crea per la prima volta la variabile globale e viene allocata la memoria), bensì nelle DICHIARAZIONI, per informare il compilatore che la variabile è definita da qualche altra parte e che nel file si vuole solo fare uso della variabile esterna già allocata.
@@ -2053,6 +2752,81 @@ int divisione(int dividendo, int divisore){
 
 ## Variabili globali con Internal Linkage (Static variables with Internal Linkage)
 
+<!-- lab-exercises:start heading="Variabili globali con Internal Linkage (Static variables with Internal Linkage)" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/1_variables/3_global_internal.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Variabile globale `static` visibile solo nel file corrente.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Variabili globali con Internal Linkage (Static variables with Internal Linkage) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Variabile globale `static` visibile solo nel file corrente e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/1_variables/3_global_internal.c">/lab/1_variables/3_global_internal.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/1_variables
+gcc -o bin/3_global_internal 3_global_internal.c
+bin/3_global_internal</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/1_variables/3_global_internal.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+void one(void);
+void two(void);
+
+static int global_internal; /* variabile globale ma con internal linkage
+			     * cioè è visibile solo a tutte le funzioni
+			     * del file corrente e non in altri file se
+			     * ci fossero.
+			     */
+
+int main(void){
+	printf("global_internal=%d\n", global_internal);
+	one();
+	two();
+}
+
+void one(void){
+	global_internal++;
+	printf("global_internal=%d\n", global_internal);
+}
+
+void two(void){
+	global_internal++;
+	printf("global_internal=%d\n", global_internal);
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 Queste variabili sono globali e hanno file scope, static storage duration, ma internal linkage: questo vuol dire che la loro visibilità è limitata al file che le contiene. La loro DEFINIZIONE, come quella di tutte le variabili globali, è effettuata fuori da tutte le funzioni, di solito all'inizio del file, con l'aggiunta della parola chiave <b>static</b>.
 </p>
@@ -2194,6 +2968,328 @@ La definizione di <code>b</code> e di <code>j</code> non è mostrata, quindi non
 </table>
 
 ### Suddivisione in moduli di un programma
+
+<!-- lab-exercises:start heading="Suddivisione in moduli di un programma" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/0_intro/4_variabili.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Separazione tra sorgente e header, uso di `4_variabili.h`.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Suddivisione in moduli di un programma con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Separazione tra sorgente e header, uso di `4_variabili.h` e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/4_variabili.c">/lab/0_intro/4_variabili.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/0_intro
+gcc -o bin/4_variabili 4_variabili.c
+bin/4_variabili</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/0_intro/4_variabili.c" -->
+<pre lang="c"><code>#include &lt;stdio.h&gt;
+#include "4_variabili.h"
+
+extern const int NUM_ITERATIONS;
+
+int main(void){
+	int risultato = 0;
+	int primo, secondo;
+	char operazione;
+	for(int i = 0; i &lt; NUM_ITERATIONS; i++){
+		printf("Inserisci il primo operando\n");
+		scanf("%d", &amp;primo);
+		printf("Inserisci il secondo operando\n");
+		scanf("%d", &amp;secondo);
+		printf("s)Somma d)Differenza m)Moltiplicazione D)Divisione\n");
+		scanf(" %c", &amp;operazione);
+		switch(operazione){
+			case 's':
+				risultato = somma(primo, secondo);
+				break;
+			case 'd':
+				risultato = differenza(primo, secondo);
+				break;
+			case 'm':
+				risultato = moltiplicazione(primo, secondo);
+				break;
+			case 'D':
+				risultato = divisione(primo, secondo);
+				break;
+			default:
+				printf("Operazione non riconosciuta\n");
+		
+		}
+		printf("Il risultato e': %d\n", risultato);
+	}	
+}
+
+int somma(int primo_operando, int secondo_operando){
+	return primo_operando + secondo_operando;
+}
+
+int differenza(int minuendo, int sottraendo){
+	return minuendo - sottraendo;
+}
+
+int moltiplicazione(int primo_fattore, int secondo_fattore){
+	return primo_fattore * secondo_fattore;
+}
+
+int divisione(int dividendo, int divisore){
+	return dividendo / divisore;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+<details>
+<summary>?? <code>/lab/0_intro/4_variabili.h</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Prototipi delle funzioni usate da `4_variabili.c`.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Mostra il ruolo del file di intestazione come contratto condiviso: raccoglie i prototipi delle funzioni usate dal sorgente corrispondente e permette al compilatore di controllare le chiamate tra moduli.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/4_variabili.h">/lab/0_intro/4_variabili.h</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>File di supporto: viene incluso da 4_variabili.c.</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/0_intro/4_variabili.h" -->
+<pre lang="c"><code>const int NUM_ITERATIONS = 2; 
+
+int somma(int, int);
+int differenza(int, int);
+int moltiplicazione(int, int);
+int divisione(int, int);
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+<details>
+<summary>?? <code>/lab/0_intro/5_variabili_main.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        `main` separato dalle funzioni operative.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Suddivisione in moduli di un programma con un esempio eseguibile e mirato. Il codice permette di osservare concretamente `main` separato dalle funzioni operative e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/5_variabili_main.c">/lab/0_intro/5_variabili_main.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/0_intro
+gcc -o bin/5_variabili 5_variabili_main.c 5_variabili.c
+bin/5_variabili</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/0_intro/5_variabili_main.c" -->
+<pre lang="c"><code>#include &lt;stdio.h&gt;
+#include "5_variabili.h"
+
+int main(void){
+        int risultato = 0;
+        int primo, secondo;
+        char operazione;
+        for(int i = 0; i &lt; NUM_ITERATIONS; i++){
+                printf("Inserisci il primo operando\n");
+                scanf("%d", &amp;primo);
+                printf("Inserisci il secondo operando\n");
+                scanf("%d", &amp;secondo);
+                printf("s)Somma d)Differenza m)Moltiplicazione D)Divisione\n");
+                scanf(" %c", &amp;operazione);
+                switch(operazione){
+                        case 's':
+                                risultato = somma(primo, secondo);
+                                break;
+                        case 'd':
+                                risultato = differenza(primo, secondo);
+                                break;
+                        case 'm':
+                                risultato = moltiplicazione(primo, secondo);
+                                break;
+                        case 'D':
+                                risultato = divisione(primo, secondo);
+                                break;
+                        default:
+                                printf("Operazione non riconosciuta\n");
+
+                }
+                printf("Il risultato e': %d\n", risultato);
+        }
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+<details>
+<summary>?? <code>/lab/0_intro/5_variabili.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Implementazione delle funzioni aritmetiche separate dal `main`.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Suddivisione in moduli di un programma con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Implementazione delle funzioni aritmetiche separate dal `main` e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/5_variabili.c">/lab/0_intro/5_variabili.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/0_intro
+gcc -o bin/5_variabili 5_variabili_main.c 5_variabili.c
+bin/5_variabili</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/0_intro/5_variabili.c" -->
+<pre lang="c"><code>int somma(int primo_operando, int secondo_operando){
+	return primo_operando + secondo_operando;
+}
+
+int differenza(int minuendo, int sottraendo){
+	return minuendo - sottraendo;
+}
+
+int moltiplicazione(int primo_fattore, int secondo_fattore){
+	return primo_fattore * secondo_fattore;
+}
+
+int divisione(int dividendo, int divisore){
+	return dividendo / divisore;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+<details>
+<summary>?? <code>/lab/0_intro/5_variabili.h</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Dichiarazioni/prototipi condivisi.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Completa l'esempio multi-file dichiarando le funzioni implementate nel modulo separato, cosi il main puo usarle senza conoscerne direttamente il corpo.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/5_variabili.h">/lab/0_intro/5_variabili.h</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>File di supporto: viene incluso da 5_variabili_main.c.</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/0_intro/5_variabili.h" -->
+<pre lang="c"><code>const int NUM_ITERATIONS = 2; 
+
+int somma(int, int);
+int differenza(int, int);
+int moltiplicazione(int, int);
+int divisione(int, int);
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
 
 <p align="justify">
 La capacità di separare l'implementazione delle funzioni dai loro prototipi attraverso l'uso dei file header e la possibilità di condividere variabili tra file diversi del programma ci permettono ora di fare un ulteriore passo nel miglioramento della nostra calcolatrice. Vogliamo riorganizzare il codice in modo da ottenere dei moduli separati: ora vedremo cosa significa e quali sono i vantaggi nel fare ciò. Pensare di realizzare programmi di grandi dimensioni usando un unico grande file sorgente è una cattiva idea per tante ragioni; le principali sono:
@@ -2397,6 +3493,92 @@ Queste direttive permettono di:
 
 #### La direttiva #define 
 
+<!-- lab-exercises:start heading="La direttiva #define" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/2_preprocessor/macro.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Macro aritmetiche con parametri per somma, differenza, moltiplicazione, divisione.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo La direttiva #define con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Macro aritmetiche con parametri per somma, differenza, moltiplicazione, divisione e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/2_preprocessor/macro.c">/lab/2_preprocessor/macro.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/2_preprocessor
+gcc -o bin/macro macro.c
+bin/macro</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/2_preprocessor/macro.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+#define SOMMA(x,y) ((x)+(y))
+#define DIFFERENZA(x,y) ((x)-(y))
+#define MOLTIPLICAZIONE(x,y) ((x)*(y))
+#define DIVISIONE(x,y) ((x)/(y))
+
+
+int main(void){
+        int risultato = 0;
+        int primo, secondo;
+        char operazione;
+        printf("Inserisci il primo operando\n");
+        scanf("%d", &amp;primo);
+        printf("Inserisci il secondo operando\n");
+        scanf("%d", &amp;secondo);
+        printf("s)Somma d)Differenza m)Moltiplicazione D)Divisione\n");
+        scanf(" %c", &amp;operazione);
+        switch(operazione){
+                        case 's':
+                                risultato = SOMMA(primo, secondo);
+                                break;
+                        case 'd':
+                                risultato = DIFFERENZA(primo, secondo);
+                                break;
+                        case 'm':
+                                risultato = MOLTIPLICAZIONE(primo, secondo);
+                                break;
+                        case 'D':
+                                risultato = DIVISIONE(primo, secondo);
+                                break;
+                        default:
+                                printf("Operazione non riconosciuta\n");
+
+        }
+        printf("Il risultato e': %d\n", risultato);
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 La direttiva <code>#define</code> viene usata per creare le <b>macro</b>. Le <b>macro</b> sono utilizzate per effettuare sostituzioni tipografiche nel codice sorgente prima della compilazione. 
 Ha questa forma:
@@ -2525,6 +3707,212 @@ La prima forma (parentesi angolari <code>&lt;</code> <code>&gt;</code>) è usata
 
 #### Le direttive #if #ifdef #ifndef
 
+<!-- lab-exercises:start heading="Le direttive #if #ifdef #ifndef" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/2_preprocessor/direttiva_if.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Uso di `#if DEBUG`, simbolo passato da codice o da `gcc -D`.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Le direttive #if #ifdef #ifndef con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Uso di `#if DEBUG`, simbolo passato da codice o da `gcc -D` e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/2_preprocessor/direttiva_if.c">/lab/2_preprocessor/direttiva_if.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/2_preprocessor
+gcc -o bin/direttiva_if direttiva_if.c
+bin/direttiva_if</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/2_preprocessor/direttiva_if.c" -->
+<pre lang="c"><code>/* 
+ *  Puoi attivare il simbolo DEBUG in due modi:
+ *  - 1 - Nel codice tramite direttiva #define
+ *        #define DEBUG 1
+ *  - 2 - A tempo di compilazione con -D a gcc
+ *        gcc -DDEBUG=1 -o direttiva_if direttiva_if.c 
+ *	  Nota: se hai già dichiarato il simbo
+ *	        lo DEBUG nel codice tramite di
+ *		rettiva #define non puoi usare
+ *		il secondo metodo (-D con gcc)
+ *		in quanto il compilarore dareb
+ *		be errore di ridefinizione del
+ *		simbolo DEBUG. 
+ */
+
+//#define DEBUG 0
+#include&lt;stdio.h&gt;
+
+int main(void){
+	#if DEBUG
+		printf("DEBUG is ON\n");
+	#else
+		printf("DEBUG is OFF\n");
+	#endif /* DEBUG */
+	return 0;
+}
+	
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+<details>
+<summary>?? <code>/lab/2_preprocessor/direttiva_ifdef.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Verifica se `DEBUG` e definito, uso di `#undef`.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Le direttive #if #ifdef #ifndef con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Verifica se `DEBUG` e definito, uso di `#undef` e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/2_preprocessor/direttiva_ifdef.c">/lab/2_preprocessor/direttiva_ifdef.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/2_preprocessor
+gcc -o bin/direttiva_ifdef direttiva_ifdef.c
+bin/direttiva_ifdef</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/2_preprocessor/direttiva_ifdef.c" -->
+<pre lang="c"><code>/*
+ * Puoi definire DEBUG in due modi
+ * - 1 - Nel codice: #define DEBUG
+ * - 2 - con gcc   : gcc -DDEBUG -o direttiva_ifdef direttiva_ifdef.c
+ * Nota: puoi anche eliminare la 
+ *       definizione del simbolo
+ *	 DEBUG nel codice usando
+ *	 #undef DEBUG
+ *	 Questo annullerra DEBUG
+ *	 anche se hai usato il 2
+ *	 metodo
+ */
+
+//#undef DEBUG
+#include&lt;stdio.h&gt;
+
+int main(void){
+	#ifdef DEBUG
+		printf("DEBUG is defined\n");
+	#else
+		printf("DEBUG is not defined\n");
+	#endif /* DEBUG */
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+<details>
+<summary>?? <code>/lab/2_preprocessor/direttiva_ifndef.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Logica inversa di `#ifdef`, controllo se un simbolo non e definito.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Le direttive #if #ifdef #ifndef con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Logica inversa di `#ifdef`, controllo se un simbolo non e definito e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/2_preprocessor/direttiva_ifndef.c">/lab/2_preprocessor/direttiva_ifndef.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/2_preprocessor
+gcc -o bin/direttiva_ifndef direttiva_ifndef.c
+bin/direttiva_ifndef</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/2_preprocessor/direttiva_ifndef.c" -->
+<pre lang="c"><code>/*
+ * Puoi definire DEBUG in due modi
+ * - 1 - Nel codice: #define DEBUG
+ * - 2 - con gcc   : gcc -DDEBUG -o direttiva_ifndef direttiva_ifndef.c
+ * Nota: puoi anche eliminare la
+ *       definizione del simbolo
+ *       DEBUG nel codice usando
+ *       #undef DEBUG
+ *       Questo annullerra DEBUG
+ *       anche se hai usato il 2
+ *       metodo
+ */
+
+//#undef DEBUG
+#include&lt;stdio.h&gt;
+
+int main(void){
+        #ifndef DEBUG
+                printf("DEBUG is not defined\n");
+        #else
+                printf("DEBUG is defined\n");
+        #endif /* DEBUG */
+        return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 Con queste direttive si possono escludere porzioni di codice in base al verificarsi o meno di certe condizioni.
 </p>
@@ -2586,6 +3974,70 @@ La definizione del simbolo macro deve essere effettuata con la direttiva <code>#
 </table>
 
 ### Eliminazione temporanea di codice
+
+<!-- lab-exercises:start heading="Eliminazione temporanea di codice" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/2_preprocessor/eliminazione_temporanea_codice.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Macro `TRACE` e inclusione/esclusione temporanea di codice.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Eliminazione temporanea di codice con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Macro `TRACE` e inclusione/esclusione temporanea di codice e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/2_preprocessor/eliminazione_temporanea_codice.c">/lab/2_preprocessor/eliminazione_temporanea_codice.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/2_preprocessor
+gcc -o bin/eliminazione_temporanea_codice eliminazione_temporanea_codice.c
+bin/eliminazione_temporanea_codice</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/2_preprocessor/eliminazione_temporanea_codice.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+#define TRACE(var, val) printf("[%s (%d): %s]\t%s=%d\n", \
+	__FILE__, __LINE__, __func__, var, val)
+
+int main(void){
+	int i;
+	#ifdef DEBUG
+		TRACE("i", i);
+		printf("int i = %d\n", i);
+	#else
+		printf("int i = %d\n", i);
+	#endif /* DEBUG */
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
 
 <p align="justify">
 In fase di debugging può essere utile eliminare temporaneamente porzioni di codice senza cancellarle, oppure, al contrario, far eseguire certi pezzi di codice (<code>printf()</code> di variabili per valutarne il valore) solo in fase di debug/testing. A questi scopi possiamo usare le direttive mostrate sopra. Vediamo come:
@@ -3174,6 +4626,88 @@ Per ottenere il valore nella rappresentazione senza segno dovremmo sommare a 2 i
 
 ### Estensione rappresentazione binaria di un numero intero
 
+<!-- lab-exercises:start heading="Estensione rappresentazione binaria di un numero intero" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/3_datatype/estensione_della_rappresentazione_binaria.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Sign extension e zero extension passando da 16 a 32 bit.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Estensione rappresentazione binaria di un numero intero con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Sign extension e zero extension passando da 16 a 32 bit e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/estensione_della_rappresentazione_binaria.c">/lab/3_datatype/estensione_della_rappresentazione_binaria.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/3_datatype
+gcc -o bin/estensione_della_rappresentazione_binaria estensione_della_rappresentazione_binaria.c
+bin/estensione_della_rappresentazione_binaria</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/3_datatype/estensione_della_rappresentazione_binaria.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	short sx = -12345;
+	unsigned short usx = sx; /* short: 16 bit,    UMax = 2^16 -1 = 65535
+				  * per passare da valore signed ad unsigned 
+				  * basta sommare Umax + 1 quindi:
+				  * usx = -12345 + 65536 = 53191 
+				  */
+	
+	int x = sx;		 /* int: 32 bit, verranno aggiunti 16 bit al
+				  * la sequenza di 16 bit che rappresenta sx
+				  * siccoma int è signed sarà effettuata una
+				  * sign extension e non  una zero extension
+				  * nei  sedici bit MSB aggiunti verrà copia
+				  * to 1 e non 0 perchè sx era negativo ed è
+				  * rappresentato  in complemento a due dove
+				  * MSB è il bit di segno (0=+, 1=-)
+				  * x = -12345 (ma con 32 e non 16 bi)
+				  */
+
+	unsigned ux = usx;	 /* usx è unsigned short,  aumentando  i bit 
+				  * della sequenza da 16 a 32 (  con il cast 
+				  * da  (unsigned short)  a  (unsigned) sarà
+				  * effettuata una zero extension.
+				  * ux = 53191 (ma con 32 e non 16 bit)
+				  */
+	printf("sx  = %d \t %#hx\n", sx, sx);
+	printf("usx = %u \t %#hx\n", usx, usx);
+	printf("x   = %d \t %#x\n", x, x);
+	printf("ux  = %u \t %#x\n", ux, ux);
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
+
 <p align=justify>
 Può capitare di dover convertire una rappresentazione binaria (una sequenza binaria) di un numero intero in un'altra con capacità (numero di bit per rappresentare i diversi valori) maggiore.
 Consideriamo il caso di una rappresentazione di un numero intero di $W$ bit da convertire (estendere) nella rappresentazione di $W+k$ bit, senza alterare il valore dell'intero rappresentato. 
@@ -3339,6 +4873,121 @@ int q, w = 200 /* q non è inizializzata, w è inizializzata. scarso stile di  p
 
 #### Stampare `int`
 
+<!-- lab-exercises:start heading="Stampare int" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/3_datatype/print_int.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Stampa esadecimale di interi signed/unsigned e complemento a due.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Stampare int con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Stampa esadecimale di interi signed/unsigned e complemento a due e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/print_int.c">/lab/3_datatype/print_int.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/3_datatype
+gcc -o bin/print_int print_int.c
+bin/print_int</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/3_datatype/print_int.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+/*
+ * Calcoliamo la rappresentazione binaria del valore 27:
+ *
+ *  valore	 resto
+ *	27 | 2 | 1
+ *	13 | 2 | 1
+ *	 6 | 2 | 0
+ *	 3 | 2 | 1
+ *	 1 | 2 | 1
+ *	 0 | 
+ *
+ *    7   6   5   4   3   2   1   0
+ *  +---+---+---+---+---+---+---+---+
+ *  | 0 | 0 | 0 | 1 | 1 | 0 | 1 | 1 |
+ *  +---+---+---+---+---+---+---+---+
+ *  		 16 + 8 +   + 2 + 1 = 27
+ *
+ *  Calcoliamo la rappresentazione esadecimale del valore 27:
+ *  0001 1011
+ *  \  / \  /
+ *    1    B
+ *
+ * Gli interi unsigned sono rappresentati in questo modo. Stam 
+ * pando il valore 27 (unsigned int) in esacimale con printf()
+ * dobbiamo ottenere la sequenza: 0x1B
+ *
+ * Per gli interi con segno si usa la rappresentazione in comp
+ * lemento a due, per trovare la sequenza di bit del valore ne
+ * gativo dobbbiamo calcolare il complemento a 2 del valore po
+ * sitivo ( nega tutti i bit ed aggiungi uno)
+ *
+ * unsigned: 00011011
+ * negato  : 11100100
+ * negato+1: 11100101
+ *
+ * 1110 0101
+ * \  / \  /
+ *   E    5
+ *
+ * Gli interi su questa architettura sono a 32  bit ( 4 byte )
+ * Per gli altri byte estendiamo il bit di segno (MSB) del pri
+ * mo byte
+ *
+ * 00000000 00000000 00000000 00011011
+ * 11111111 11111111 11111111 11100101
+ *
+ */
+
+int main(void){
+	int positive = 27;
+	int negative = -27;
+	unsigned u_positive = 27;
+
+	/* 
+	 * stamperemo gli interi in esadecimale (base 16) per
+	 * verificare la diversa rappresentazione degli interi
+	 * di tipo signed ed unsigned
+	 */
+	printf("signed positive: %#x\n", positive);    /* mi aspetto 0x00-00-00-1B */
+	printf("signed negative: %#x\n", negative);    /* mi aspetto 0xff-ff-ff-E5 */
+	printf("       unsigned: %#x\n", u_positive);
+
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 Usa <code>%d</code> (decimal int) per stampare una variabile di tipo <code>int</code> <strong>in base 10</strong>.
 </p>
@@ -3454,6 +5103,70 @@ Quando allora usare i diversi tipi di interi? Dipende dalla situazione.
 </ul>
 
 #### Stampare altri tipi di interi
+
+<!-- lab-exercises:start heading="Stampare altri tipi di interi" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/3_datatype/print_others_ints.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Segnaposto `printf` per tipi interi diversi e comportamento inatteso con placeholder errati.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Stampare altri tipi di interi con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Segnaposto `printf` per tipi interi diversi e comportamento inatteso con placeholder errati e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/print_others_ints.c">/lab/3_datatype/print_others_ints.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/3_datatype
+gcc -o bin/print_others_ints print_others_ints.c
+bin/print_others_ints</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/3_datatype/print_others_ints.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	unsigned int un = 300000000;
+	short end = 200;
+	long big = 65537;
+	long long verybig = 12345678908642;
+	/* Udasa un segnaposto errara nella printf() porta a
+         * risultati strani */	
+	printf("un  = %u  and not %d\n", un, un);
+	printf("end = %hd and not %d\n", end, end);
+	printf("big = %ld and not %hd\n", big, big);
+	printf("verybig = %lld and not %ld\n", verybig, verybig);
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
 
 | Tipo        		| 10	| 16	| 8	
 | ----------		| ------|------ |-------	
@@ -3704,6 +5417,143 @@ signed negative: 0xffffffe5
 
 ### Cast
 
+<!-- lab-exercises:start heading="Cast" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/3_datatype/cast_esplicito_implicito.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Differenza tra cast esplicito e implicito e quando cambia il valore.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Cast con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza tra cast esplicito e implicito e quando cambia il valore e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/cast_esplicito_implicito.c">/lab/3_datatype/cast_esplicito_implicito.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/3_datatype
+gcc -o bin/cast_esplicito_implicito cast_esplicito_implicito.c
+bin/cast_esplicito_implicito</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/3_datatype/cast_esplicito_implicito.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int tx, ty;
+	unsigned ux, uy;
+	ux = 4294967295; /* il cast cambia il valore */
+	ty = 2147483647; /* il cast non cambia il valore */
+	int tx_, ty_;
+	unsigned ux_, uy_;
+
+	ux_ = ux;
+	ty_ = ty;
+	/* cast esplicito */
+	tx = (int) ux;
+	uy = (unsigned) ty;
+
+	/* cast implicito */
+	tx_ = ux_;
+	uy_ = ty_;
+
+	printf("unsigned = %ld byte\n", sizeof(unsigned int));
+	printf("     int = %ld byte\n", sizeof(int));
+	printf("\n");
+
+	printf("ux = %u, tx = %d\n", ux, tx);
+	printf("ux_ = %u, tx_ = %d\n", ux_, tx_);
+	printf("\n");
+
+	printf("uy = %u, ty = %d\n", uy, ty);
+	printf("uy_ = %u, ty_ = %d\n", uy_, ty_);
+	printf("\n");
+
+	/* se prendo un valore intero negativo allora cambia il valore castando verso unsigned */
+	int cast_me = -2147483648; /* TMin */
+	int u_cast_me = (unsigned) cast_me; /* Tmax+1 = (unsigned) TMin */
+	printf("cast_me = %d, u_cast_me = %u\n", cast_me, u_cast_me);
+
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+<details>
+<summary>?? <code>/lab/3_datatype/mistero.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Esercizio esplorativo sui risultati inattesi della rappresentazione dei dati.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Funziona come esercizio di previsione: obbliga a ragionare sul risultato prima di eseguire il programma, collegando rappresentazione binaria, conversioni e interpretazione del valore stampato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/mistero.c">/lab/3_datatype/mistero.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/3_datatype
+gcc -o bin/mistero mistero.c
+bin/mistero</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/3_datatype/mistero.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	short sx = -12345;
+	unsigned uy = sx;
+
+	printf("sx = %hd \t\t %hx\n", sx, sx);
+	printf("uy = %u  \t %x\n", uy, uy);
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 Il cast è una conversione esplicita di tipo e prevede un proprio operatore. Esistono altri tipi di <strong>conversioni di tipo</strong>: conversione automatica e conversione per assegnamento.
 </p>
@@ -3836,6 +5686,157 @@ il valore stampato sarebbe 1.0 perché prima viene effettuata la divisione tra <
 
 
 #### Cast tra `signed` e `unsigned`
+
+<!-- lab-exercises:start heading="Cast tra signed e unsigned" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/3_datatype/cast_tra_signed_unsigned.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Stessa sequenza di bit reinterpretata come valore senza segno.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Cast tra signed e unsigned con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Stessa sequenza di bit reinterpretata come valore senza segno e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/cast_tra_signed_unsigned.c">/lab/3_datatype/cast_tra_signed_unsigned.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/3_datatype
+gcc -o bin/cast_tra_signed_unsigned cast_tra_signed_unsigned.c
+bin/cast_tra_signed_unsigned</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/3_datatype/cast_tra_signed_unsigned.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+/*
+ * Usiamo la rappresentazione in complemento a due del valore 27
+ * che abbiamo calcolato nell'esercizio precedente e che è: 0xE5
+ * 
+ * shoirt int v = -27
+ * è un numero con segno (complemento a 2) ma short (16 bit) la
+ * rappresentazione in esadecimale (complemento a 2) è: 0xff-ff
+ * ff-E5 
+ * 
+ * Cosa accade se facciamo un cast da signed a unsigned? Per se
+ * mplicita stiamo consideriamo short int per avere solo 16 bit.
+ *
+ *  0XFF-FF-FF-E5 in binario è:
+ *  +---+---+---+---+---+---+---+---+
+ *  | 1 | 1 | 1 | 0 | 0 | 1 | 0 | 1 |
+ *  +---+---+---+---+---+---+---+---+
+ *
+ * Castando il tipo (short int) al tipo (unsigned int) la rap-
+ * presentazione (la seuqenza di bit)  rimarrà la stessa ma l'
+ * interpretazione  che il  sistema darà  ai bit sarà diversa.
+ * Nel caso di (short int) sarà interpretato in complemento a
+ * due, nel caso di  (unsigned int) come una sequenza binaria
+ * il cui valore è:
+ *
+ *  +---+---+---+---+---+---+---+---+
+ *  | 1 | 1 | 1 | 0 | 0 | 1 | 0 | 1 |
+ *  +---+---+---+---+---+---+---+---+
+ *  128 + 64+ 32+         4     + 1 = 229
+ *
+ *  Gli altri 8 bit  (dal 15-esimo all'ottavo) sono tutti a uno
+ *  otto bit ad uno (0xff) 255 shiftati di otto 255*(2^8)=65280
+ *  65280+229 = 65509
+ *  Mi aspetto che il sistema a seguito del cast stamperà 65509
+ */
+int main(void){
+	short int v = -27;
+	unsigned int u_v = (unsigned short) v;
+	printf("v = %d,  u_v = %u\n", v, u_v);   /* mi aspetto 0xFF-E5 */
+	printf("v = %#x, u_v = %#x\n", v, u_v);  /* mi aspetto sempre 0xff-e5 ma valore decimale 65509 */
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+<details>
+<summary>?? <code>/lab/3_datatype/cast_tra_unsigned_signed.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Conversione dall'estremo unsigned al corrispondente valore signed.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Cast tra signed e unsigned con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Conversione dall'estremo unsigned al corrispondente valore signed e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/cast_tra_unsigned_signed.c">/lab/3_datatype/cast_tra_unsigned_signed.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/3_datatype
+gcc -o bin/cast_tra_unsigned_signed cast_tra_unsigned_signed.c
+bin/cast_tra_unsigned_signed</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/3_datatype/cast_tra_unsigned_signed.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+/*
+ * Anche nel  caso di cast  da unsigned a signed
+ * la sequenza di bit rimane invariata ma cambia
+ * solo l'interpretazione data alla sequenza.
+ * Scegliendo  come valore senza segno l'estremo
+ * superiore  della  rappresentazione (UMax) che
+ * nel caso di  (unsigned short) e' 65536 (2^16)
+ * per conoscere  il valore  con segno basta sot
+ * trarre (UMax + 1) o 2^W 
+ */
+
+int main(void){
+	unsigned short u = 65535; /* UMax */
+	short int tu = (short int) u;
+	printf("u = %u, tu=%d\n", u, tu);
+	printf("u = %#x, tu=%#x\n", u, tu);
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
 
 <p align="justify">
 In C, il cast in entrambi i versi: da signed ad unsigned e viceversa, non cambia mai la configurazione dei bit ma soltanto l'interpretazione che viene data alla sequenza di bit. Vediamo un esempio:
@@ -4080,6 +6081,67 @@ uy = 4294954951          ffffcfc7
 
 ### Troncamento rappresentazione binaria
 
+<!-- lab-exercises:start heading="Troncamento rappresentazione binaria" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/3_datatype/troncamento_bit.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Perdita dei bit piu significativi nel cast da `int` a `short`.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Troncamento rappresentazione binaria con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Perdita dei bit piu significativi nel cast da `int` a `short` e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/troncamento_bit.c">/lab/3_datatype/troncamento_bit.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/3_datatype
+gcc -o bin/troncamento_bit troncamento_bit.c
+bin/troncamento_bit</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/3_datatype/troncamento_bit.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int x = 53191;
+	/* castando int x a short avremo il trocamento dei 16 bit (MSB) */
+	short sx = (short) x; /* -12345 */
+	int y = sx;	      /* -12345 signed short 2 signed con sign extension */
+	printf("x  = %d \t %x\n", x, x);
+	printf("sx = %hd \t %hx\n", sx, sx);  
+	printf("y  = %d \t %x\n", y, y);
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
+
 ```c
 #include<stdio.h>
 
@@ -4103,6 +6165,64 @@ y  = -12345      ffffcfc7
 ```
 
 ### `char`
+
+<!-- lab-exercises:start heading="char" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/3_datatype/ascii.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Esercizio su tabella/codici ASCII.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo char con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Esercizio su tabella/codici ASCII e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/ascii.c">/lab/3_datatype/ascii.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/3_datatype
+gcc -o bin/ascii ascii.c
+bin/ascii</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/3_datatype/ascii.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	for(int i=33; i&lt;128; i++)
+	{
+		printf("%d\t%c\n", i, i);
+	}
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
 
 <p align="justify">
 Il tipo <code>char</code> è usato per memorizzare caratteri, la dichiarazione di una variabile di tipo <code>char</code> è fatta in questo modo:
@@ -4136,6 +6256,64 @@ Il tipo <code>char</code> è lungo 1 byte (8 bit) e in verità è un tipo intero
 </p>
 
 ### Stampare un `char`
+
+<!-- lab-exercises:start heading="Stampare un char" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/3_datatype/print_char.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Stampa dello stesso carattere come char, intero, unsigned, esadecimale.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Stampare un char con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Stampa dello stesso carattere come char, intero, unsigned, esadecimale e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/print_char.c">/lab/3_datatype/print_char.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/3_datatype
+gcc -o bin/print_char print_char.c
+bin/print_char</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/3_datatype/print_char.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	char lettera_a = 'A';
+	printf("%c\n", lettera_a);  /* stampa il carattere A */
+	printf("%d\n", lettera_a);  /* stampa il valore intero usato per codificare il carattere A */ 
+	printf("%u\n", lettera_a);  /* stampa il valore senza segno, dovrebbe essere lo stesso */
+	printf("%#x\n", lettera_a); /* stampa la rappresentazione esadecimale */
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
 
 <p align="justify">
 Per stampare su schermo il contenuto di una variabile di tipo <code>char</code> si usa <code>%c</code>
@@ -4191,6 +6369,68 @@ Gli operatori sono usati nelle operazioni aritmetiche.
 </p>
 
 #### Operatore di assegnamento: =
+
+<!-- lab-exercises:start heading="Operatore di assegnamento: =" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/4_operators/op_assegnamento.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Differenza tra lvalue modificabile e costante non assegnabile.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Operatore di assegnamento: = con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza tra lvalue modificabile e costante non assegnabile e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/4_operators/op_assegnamento.c">/lab/4_operators/op_assegnamento.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/4_operators
+gcc -o bin/op_assegnamento op_assegnamento.c
+bin/op_assegnamento</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/4_operators/op_assegnamento.c" -->
+<pre lang="c"><code>int main(void){
+	int uno;
+	int due;
+	const int tre = 3;
+
+	uno = 1;
+	due = (uno + 1);
+	tre = due + 1;	/* ERRORE!
+			 * tre è una costante (non è modificabile) non può essere usato come lvalue 
+			 * di un opeatore di assegnamento.
+			 */
+	due = tre - 1;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
 
 <p align="justify">
 Il simbolo di uguale <code>=</code> come abbiamo già visto viene usato per assegnare il valore a una variabile e non rappresenta l'uguaglianza come invece siamo abituati a pensarlo.
@@ -4281,6 +6521,66 @@ int main(void){
 
 ### Operatore divisione: /
 
+<!-- lab-exercises:start heading="Operatore divisione: /" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/4_operators/op_divisione.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Divisione intera/reale e comportamento dell'operatore `/`.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Operatore divisione: / con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Divisione intera/reale e comportamento dell'operatore `/` e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/4_operators/op_divisione.c">/lab/4_operators/op_divisione.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/4_operators
+gcc -o bin/op_divisione op_divisione.c
+bin/op_divisione</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/4_operators/op_divisione.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	printf("5/4=%d\n",5/4);
+	printf("6/3=%d\n",6/3);
+	printf("5.0/4.0=%1.2f\n",5.0/4.0);
+	printf("6.0/3.0=%1.2f\n",6.0/3.0);
+	
+	printf("5.0/4=%1.2f\n",5.0/4);
+	printf("6/3.0=%1.2f\n",6/3.0);
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 L'operatore <code>/</code> effettua la divisione del valore dei due operandi. Il risultato dipende dal tipo degli operandi come si vede nel codice seguente.
 </p>
@@ -4300,6 +6600,66 @@ int main(void){
 ```
 
 ### Operatore `sizeof`
+
+<!-- lab-exercises:start heading="Operatore sizeof" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/4_operators/sizeof.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Dimensione dei tipi o delle variabili in byte.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Operatore sizeof con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Dimensione dei tipi o delle variabili in byte e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/4_operators/sizeof.c">/lab/4_operators/sizeof.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/4_operators
+gcc -o bin/sizeof sizeof.c
+bin/sizeof</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/4_operators/sizeof.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int n = 0;
+	size_t int_in_byte;
+
+	int_in_byte = sizeof(int);
+	printf("n = %d, n occupa %zd bytes\n", n, sizeof n);
+	printf("Gli interi occupano %zd bytes\n", int_in_byte);
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
 
 <p align="justify">
 L'operatore ritorna il numero di byte occupati dal suo operando. L'operatore può essere sia una variabile sia il nome di un tipo. Il valore tornato da <code>sizeof</code> è di tipo <code>size_t</code> che è semplicemente un <code>unsigned int</code> o un <code>unsigned long</code> che è stato ridefinito con <code>typedef</code>.
@@ -4334,6 +6694,69 @@ Come avrai notato <code>sizeof</code> può essere usato con o senza parentesi to
 
 ### Operatore %
 
+<!-- lab-exercises:start heading="Operatore %" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/4_operators/op_modulo.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Uso dell'operatore `%` e resto della divisione intera.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Operatore % con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Uso dell'operatore `%` e resto della divisione intera e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/4_operators/op_modulo.c">/lab/4_operators/op_modulo.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/4_operators
+gcc -o bin/op_modulo op_modulo.c
+bin/op_modulo</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/4_operators/op_modulo.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int n;
+	printf("Inserisci un numero tra 1 e 10\n");
+	scanf("%d", &amp;n);
+	int pari_o_dispari = n % 2;
+	if(pari_o_dispari == 0){
+		printf("%d e' pari\n", n);
+	} else{
+		printf("%d e' dispari\n", n);
+	}
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 L'operatore modulo ritorna il resto della divisione dei suoi due operandi
 </p>
@@ -4356,6 +6779,144 @@ int main(void){
 ```
 
 ### Operatore incremento/decremento ++ --
+
+<!-- lab-exercises:start heading="Operatore incremento/decremento ++ --" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/4_operators/op_incremento_decremento.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Uso base di `++` e `--`.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Operatore incremento/decremento ++ -- con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Uso base di `++` e `--` e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/4_operators/op_incremento_decremento.c">/lab/4_operators/op_incremento_decremento.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/4_operators
+gcc -o bin/op_incremento_decremento op_incremento_decremento.c
+bin/op_incremento_decremento</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/4_operators/op_incremento_decremento.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int i = 0;
+	int j = 0;
+	int z = 0;
+	i++;
+	++j;
+	z = z + 1;
+
+	i++;
+	++j;
+	z = z + 1;
+
+	i++;
+	++j;
+	z = z + 1;
+
+	i++;
+	++j;
+	z = z + 1;
+
+	printf("i=%d, j=%d, z=%d\n", i, j, z);
+	return 0;	
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+<details>
+<summary>?? <code>/lab/4_operators/pre_post_incremento.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Differenza tra `i++` e `++i` in valutazione e assegnamento.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Operatore incremento/decremento ++ -- con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza tra `i++` e `++i` in valutazione e assegnamento e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/4_operators/pre_post_incremento.c">/lab/4_operators/pre_post_incremento.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/4_operators
+gcc -o bin/pre_post_incremento pre_post_incremento.c
+bin/pre_post_incremento</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/4_operators/pre_post_incremento.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+
+	int i = 0;
+	int j = 0;
+
+	int ii = i++; /* prima viene valutato i ( assegnato il suo valore ad ii )
+		       * successivamente i viene incrementato di uno ma ii rimane
+		       * al valore precedente di i, cioè 0
+		       */
+
+	int jj = ++j; /* prima j viene incrementato di uno e poi viene valutato il
+		       * il suo valore (assegnato alla variabile jj). In questo ca
+		       * jj vale 1
+		       */
+
+	printf("i=%d, ii=%d\n", i, ii);
+	printf("j=%d, jj=%d\n", j, jj);
+	return 0;	
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
 
 <p align="justify">
 Questi operatori incrementano o decrementano il proprio operando di un'unità. Possono essere usati in due versioni prima dell'operando o dopo l'operando in questo modo:
@@ -4477,6 +7038,77 @@ Operatori Relazionali
 
 #### if o if-else
 
+<!-- lab-exercises:start heading="if o if-else" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/5_control_statements/if.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Controllo pari/dispari con ramo vero/falso.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo if o if-else con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Controllo pari/dispari con ramo vero/falso e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/if.c">/lab/5_control_statements/if.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/5_control_statements
+gcc -o bin/if if.c
+bin/if</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/5_control_statements/if.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+        int n;
+        printf("Inserisci un numero tra 1 e 10\n");
+        scanf("%d", &amp;n);
+        int pari_o_dispari = n % 2;
+        if(pari_o_dispari == 0){  /* Se la condizione  e' vera (diversa da zero)
+				   * il  flusso   entra in questo blocco, stampa
+				   * "n e' pari" ed il blocco else viene saltato
+				   */
+                printf("%d e' pari\n", n);
+        } else{			  /* Se la condizione e' falsa ( uguale a zero )
+				   * il blocco if viene saltato e si  entra  nel
+				   * blocco else e  viene  stampata  la  stringa
+				   * "n è dispari" 
+				   */
+                printf("%d e' dispari\n", n);
+        }
+        return 0;
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 Il costrutto <code>if</code> serve per realizzare l'istruzione di salta condizionale ed ha questa forma:
 </p>
@@ -4536,6 +7168,86 @@ int main(void){
 
 #### Condizioni complesse con l'uso di operatori logici e condizionali
 
+<!-- lab-exercises:start heading="Condizioni complesse con l'uso di operatori logici e condizionali" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/5_control_statements/logical_relational_operators.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Condizioni composte con operatori logici e di confronto.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Condizioni complesse con l'uso di operatori logici e condizionali con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Condizioni composte con operatori logici e di confronto e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/logical_relational_operators.c">/lab/5_control_statements/logical_relational_operators.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/5_control_statements
+gcc -o bin/logical_relational_operators logical_relational_operators.c
+bin/logical_relational_operators</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/5_control_statements/logical_relational_operators.c" -->
+<pre lang="c"><code>
+#include&lt;stdio.h&gt;
+
+int main(void){
+	int stipendio_base = 1000;
+	int stipendio_medio = 3000;
+	int stipendio_alto = 5000;
+
+	int eta;
+	char laurea = 0;
+	printf("Inserisci la tua eta'\n");
+	scanf("%d", &amp;eta);
+	printf("Hai la laurea?\n");
+	printf("[S]ì \t [N]o\n");
+	scanf(" %c", &amp;laurea);
+	if(laurea == 'S' || laurea == 'N') {
+		if(eta &lt; 30){
+			printf("Sei giovane, il tuo stipendio e' %d\n", stipendio_base);
+		} else if (eta &gt; 30 &amp;&amp; eta &lt; 50 &amp;&amp; laurea == 'N'){
+			printf("Non hai la laurea, il tuo stipendio e' %d\n", stipendio_base);
+		} else if (eta &gt; 30 &amp;&amp; eta &lt; 50 &amp;&amp; laurea == 'S'){
+			printf("Hai la laurea, il tuo stipendio e' %d\n", stipendio_medio);
+		} else {
+			printf("Hai esperienza, il tuo stipendio e' %d\n", stipendio_alto);
+		}
+	} else {
+		printf("Digita S per sì o N per no\n");
+		return 1;
+	}
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
+
 ```c
 #include<stdio.h>
 
@@ -4571,6 +7283,65 @@ int main(void){
 
 #### for
 
+<!-- lab-exercises:start heading="for" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/5_control_statements/for.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Iterazione con inizializzazione, condizione e incremento.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo for con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Iterazione con inizializzazione, condizione e incremento e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/for.c">/lab/5_control_statements/for.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/5_control_statements
+gcc -o bin/for for.c
+bin/for</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/5_control_statements/for.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	for(int i = 0; i &lt; 10; i++){
+		printf("%d ", i);
+	}
+	printf("\n");
+	return 0;
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 Il costrutto <code>for</code> serve per realizzare un ciclo (<strong>loop</strong>) permette di eseguire un'istruzione (o un insieme di istruzioni) per un certo numero di volte consecutivamente. Ha questa forma:
 </p>
@@ -4596,6 +7367,67 @@ int main(void){
 ```
 
 #### while
+
+<!-- lab-exercises:start heading="while" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/5_control_statements/while.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Iterazione controllata prima del corpo.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo while con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Iterazione controllata prima del corpo e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/while.c">/lab/5_control_statements/while.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/5_control_statements
+gcc -o bin/while while.c
+bin/while</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/5_control_statements/while.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int i = 0;
+        while(i &lt; 10){
+                printf("%d ", i);
+		i++;
+        }
+        printf("\n");
+        return 0;
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
 
 <p align="justify">
 Il costrutto <code>while</code> serve (come il <code>for</code>) per realizzare un ciclo. Ha questa forma:
@@ -4624,6 +7456,70 @@ int main(void){
 ```
 
 #### do-while
+
+<!-- lab-exercises:start heading="do-while" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/5_control_statements/do_while.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Corpo eseguito almeno una volta, confronto con pre/post incremento.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo do-while con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Corpo eseguito almeno una volta, confronto con pre/post incremento e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/do_while.c">/lab/5_control_statements/do_while.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/5_control_statements
+gcc -o bin/do_while do_while.c
+bin/do_while</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/5_control_statements/do_while.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+        int i = 0;
+	/* i++ prima viene valutato il  valore di i  (si stampa il suo valore)
+	 * dopo i viene incrementata  di 1 ,  poi  si controlla  che  sia &lt; 10 
+         * cosa accade se uso ++i?Invece di stampare da 0 a 9 stampo da 1 a 10
+	 */
+        do {
+                printf("%d ", i++);
+        } while(i &lt; 10);
+        printf("\n");
+        return 0;
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
 
 <p align="justify">
 Il costrutto <code>do-while</code> serve per realizzare un ciclo ed assume questa forma:
@@ -4655,6 +7551,87 @@ int main(void){
 ```
 
 #### switch
+
+<!-- lab-exercises:start heading="switch" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/5_control_statements/switch.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Selezione multipla e uso/fall-through del `break`.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo switch con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Selezione multipla e uso/fall-through del `break` e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/switch.c">/lab/5_control_statements/switch.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/5_control_statements
+gcc -o bin/switch switch.c
+bin/switch</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/5_control_statements/switch.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	char scelta;
+	int a, b, c, other;
+	printf("a=%d \t b=%d \t c=%d \t other=%d\n", a, b, c, other);
+	printf("Quale variabile vuoi incrementare?\n");
+	printf("[a-A]\t[b-B]\t[c-C]\n");
+	scanf(" %c", &amp;scelta);
+	switch(scelta){
+		case 'a':
+		case 'A':
+			a++;
+			break;
+		case 'b':
+		case 'B':
+			b++;
+			break;
+		case 'c':
+		case 'C':
+			c++;
+			break;
+		default:
+			other++;
+			/* non ho bisogno del break perchè è l'ultimo case se lo avessi messo sopra dovevo mettere il break altrimenti
+			 * l'esecuzione  del  flusso  sarebbe  passata  al  codice  relativo  al  case sottostante la clausola default
+			 */
+	}
+	printf("a=%d \t b=%d \t c=%d \t other=%d\n", a, b, c, other);
+	return 0;
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
 
 <p align="justify">
 Lo <code>switch</code> è assolutamente equivalente a un <code>if-esle</code> e serve a scegliere tra diversi blocchi di istruzioni in base al valore di una espressione intera. La sintassi è la seguente:
@@ -4748,6 +7725,85 @@ int main(void){
 
 #### break e continue
 
+<!-- lab-exercises:start heading="break e continue" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/5_control_statements/break_continue.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Interruzione o salto dell'iterazione nei cicli.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo break e continue con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Interruzione o salto dell'iterazione nei cicli e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/break_continue.c">/lab/5_control_statements/break_continue.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/5_control_statements
+gcc -o bin/break_continue break_continue.c
+bin/break_continue</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/5_control_statements/break_continue.c" -->
+<pre lang="c"><code>
+#include&lt;stdio.h&gt;
+
+int main(void){
+	int i = 0;
+	while(1){
+		if(i == 10){
+			printf("\n");
+			break;
+		}
+		if(i % 2 == 0){
+			++i;
+			continue;
+		}
+		printf("%d ", i);
+		i++;
+	}
+
+
+	for(int j=0; ; j++){
+		if(j == 10){
+			printf("\n");
+			break;
+		}
+		if(j % 2 == 0)
+			continue;
+		printf("%d ", j);
+	}
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 Le istruzioni <code>break</code> e <code>continue</code> sono utilizzate per controllare il flusso di esecuzione nei cicli <code>while</code>, <code>do-while</code> e <code>for</code> in particolare:
 </p>
@@ -4798,6 +7854,185 @@ int main(void){
 ```
 
 ## I puntatori
+
+<!-- lab-exercises:start heading="I puntatori" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/6_pointers/0_pointers.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Dichiarazione, indirizzi e dereferenziazione.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo I puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Dichiarazione, indirizzi e dereferenziazione e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/0_pointers.c">/lab/6_pointers/0_pointers.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/6_pointers
+gcc -o bin/0_pointers 0_pointers.c
+bin/0_pointers</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/6_pointers/0_pointers.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int i = 42, j = 107;
+	printf("i = %d, &amp;i = %p\n", i, &amp;i);
+	printf("j = %d, &amp;j = %p\n", j, &amp;j);
+	getchar();
+	int *p = &amp;i;
+	int *q = &amp;j;
+	printf("*p = %d, p = %p\n", *p, p);
+	printf("*q = %d, p = %p\n", *q, q);
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+<details>
+<summary>?? <code>/lab/6_pointers/1_pointers.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Differenza tra assegnare puntatori, valori puntati e tipi incompatibili.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo I puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza tra assegnare puntatori, valori puntati e tipi incompatibili e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/1_pointers.c">/lab/6_pointers/1_pointers.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/6_pointers
+gcc -o bin/1_pointers 1_pointers.c
+bin/1_pointers</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/6_pointers/1_pointers.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int i = 42, j = 107;
+	printf("i = %d, &amp;i = %p\n", i, &amp;i);
+	printf("j = %d, &amp;j = %p\n", j, &amp;j);
+	
+	getchar();
+	
+	int *p = &amp;i;
+	int *q = &amp;j;
+	
+	printf("*p = %d, p = %p\n", *p, p);
+	printf("*q = %d, p = %p\n", *q, q);
+
+	// p = q;	// (1)
+	// *p = *q;// (2)
+	// *p = q; // (3)
+	// p = *q; // (4)
+	
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+<details>
+<summary>?? <code>/lab/6_pointers/33_pointers.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Esercizio intermedio sui puntatori, gia richiamato dagli output.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Rafforza il lessico operativo dei puntatori: indirizzo, valore puntato, dereferenziazione e lettura degli output diventano strumenti per evitare confusione tra variabile e locazione di memoria.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/33_pointers.c">/lab/6_pointers/33_pointers.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/6_pointers
+gcc -o bin/33_pointers 33_pointers.c
+bin/33_pointers</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/6_pointers/33_pointers.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int a = 1;
+	int b = 2;
+	int c = 3;
+
+	int *ptr_a = &amp;a;
+
+	printf("a = %d\n", *ptr_a);
+	printf("b = %d\n", *(ptr_a + 1));
+	printf("a = %d\n", *(ptr_a + 2));
+
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
 
 <p align="justify">
 Un puntatore è una variabile che contiene un indirizzo di memoria (di un'altra cella di memoria).
@@ -4949,6 +8184,72 @@ int main(void){
 
 ### Puntatori non inizializzati
 
+<!-- lab-exercises:start heading="Puntatori non inizializzati" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/6_pointers/2_pointers.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Pericolo di dereferenziare puntatori casuali.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Puntatori non inizializzati con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Pericolo di dereferenziare puntatori casuali e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/2_pointers.c">/lab/6_pointers/2_pointers.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/6_pointers
+gcc -o bin/2_pointers 2_pointers.c
+bin/2_pointers</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/6_pointers/2_pointers.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int i;	/* i non è inizializzata, è locale quindi avrà un valore sporco (casuale) */
+	int *p;	/* anche  p  non è inizializzato,  punta ad una cella a caso, deve essere 
+		 * inizializzato prima di essere usato con l'operatore di deferenziazione
+		 * *p
+		 */
+
+	printf("i  = %d\n", i); /* non possiamo prevedere che valore stamperà */
+	printf("&amp;i = %p\n", &amp;i);
+	printf("p  = %p\n", p); /* cella  di memoria casuale forse appartenete
+				 * ad un altro processo a cui non possiamo mai
+				 * accedere
+				 */
+	printf("*p = %d\n", *p); /* accediamo ad una cella di memoria sconosciuta */
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 Abbiamo detto che <strong>prima di essere usati</strong> (dereferenziazione) per accedere alla memoria <strong>i puntatori devono essere inizializzati</strong> a un indirizzo valido, altrimenti il programma potrebbe crashare o avere comportamenti imprevisti e difficili da individuare. Vediamo un esempio.
 </p>
@@ -4979,6 +8280,63 @@ int main(void){
 
 ### Il puntatore nullo (NULL)
 
+<!-- lab-exercises:start heading="Il puntatore nullo (NULL)" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/6_pointers/3_pointers.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Inizializzazione a `NULL` e controllo prima della dereferenziazione.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Il puntatore nullo (NULL) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Inizializzazione a `NULL` e controllo prima della dereferenziazione e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/3_pointers.c">/lab/6_pointers/3_pointers.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/6_pointers
+gcc -o bin/3_pointers 3_pointers.c
+bin/3_pointers</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/6_pointers/3_pointers.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int *p = NULL; /* inizializzo il puntatore p a NULL */
+	if (p != NULL)	/* prima di deferenziare controllo se p è diverso da NULL */
+		printf("*p = %d", *p);
+
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 Il puntatore nullo vale zero e non è un puntatore valido, non può essere utilizzato per un'operazione di dereferenziazione. Il valore <code>NULL</code> è definito tramite macro al preprocessore (<code>#define</code>) in questo modo:
 </p>
@@ -5007,6 +8365,78 @@ int main(void){
 ***
 
 #### Aritmetica puntatori
+
+<!-- lab-exercises:start heading="Aritmetica puntatori" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/6_pointers/4_pointers.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Spostamento tra elementi via puntatore.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Aritmetica puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Spostamento tra elementi via puntatore e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/4_pointers.c">/lab/6_pointers/4_pointers.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/6_pointers
+gcc -o bin/4_pointers 4_pointers.c
+bin/4_pointers</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/6_pointers/4_pointers.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int magic = 16909060;
+	int after_magic = 123456789;
+	printf("magic        = %#x\n", magic);
+	printf("after_magic  = %#x\n", after_magic);
+
+	int *ptr_magic = &amp;magic;
+	printf("&amp;magic       = %p\n", ptr_magic);
+	printf("&amp;after_magic = %p\n", &amp;after_magic);
+	
+	char *ptr_byte1 = (char *)ptr_magic;
+	char *ptr_byte2 = ptr_byte1 + 1;
+	char *ptr_byte3 = ptr_byte1 + 2;
+	char *ptr_byte4 = ptr_byte1 + 3;
+
+	printf("ptr_byte1    = %d\n", *ptr_byte1);
+	printf("ptr_byte2    = %d\n", *ptr_byte2);
+	printf("ptr_byte3    = %d\n", *ptr_byte3);
+	printf("ptr_byte4    = %d\n", *ptr_byte4);
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
 
 <p align="justify">
 I puntatori sono variabili che hanno tutte la stessa lunghezza (<code>unsigned long</code> di solito nelle architetture a 64 bit) fissata dall'architettura (32, 64 bit). Però abbiamo detto che quando dichiariamo una variabile puntatore dobbiamo specificare anche il suo tipo che rappresenta il tipo della variabile puntata. Questo serve al compilatore per effettuare i calcoli quando si usa <strong>l'aritmetica dei puntatori</strong>. L'aritmetica dei puntatori ci permette di spostarci, usando l'operatore <code>+</code>, nelle celle di memoria adiacenti a quella puntata dal puntatore. Vediamo un esempio: se ho tre variabili intere (<code>a</code>, <code>b</code>, <code>c</code>) contigue in memoria (<code>int</code> occupa 4 byte) e ho un puntatore (<code>ptr_a</code>) che punta alla prima variabile (<code>a</code>), posso accedere ai due interi successivi (<code>b</code>, <code>c</code>) rispettivamente con <code>ptr_a + 1</code> (accedo a <code>b</code>) e <code>ptr_a + 2</code> (accedo a <code>c</code>). La sintassi <code>ptr_a + 1</code> o <code>ptr_a + 2</code> indica che ci vogliamo spostare dall'indirizzo puntato da <code>ptr_a</code> di un numero di byte pari alla dimensione di un intero (<code>ptr_a + 1</code>) o di due interi (<code>ptr_a + 2</code>) quindi nel nostro caso di interi a 4 byte il compilatore calcola per noi i byte dello scostamento in questo modo $ptr_a + 1*(4)$ e $ptr_a + 2*(4)$ Ecco perché è necessario specificare il tipo del puntatore (il tipo della variabile puntata).
@@ -5109,6 +8539,187 @@ L'aritmetica dei puntatori ci sarà molto utile quando lavoreremo con i vettori 
 
 ### Vettori
 
+<!-- lab-exercises:start heading="Vettori" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/7_array/00_array.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Inizializzazione elementi con ciclo, accesso con `[]` e aritmetica puntatori.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Vettori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Inizializzazione elementi con ciclo, accesso con `[]` e aritmetica puntatori e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/00_array.c">/lab/7_array/00_array.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/7_array
+gcc -o bin/00_array 00_array.c
+bin/00_array</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/7_array/00_array.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int vettore[5];
+
+	/* inizializzo gli elementi del vettore con un ciclo */	
+        for(int i=0; i &lt; 5; i++)
+                vettore[i] = i;
+
+	/* accedo agli elementi del vettore tramite [] */
+        for(int i=0; i &lt; 5; i++)
+                printf("%d ", vettore[i]);
+	printf("\n");
+
+	/* accedo agli elementi del vettore tramite aritemetica puntatori */
+        for(int j=0; j &lt; 5; j++)
+                printf("%d ", *(vettore + j));
+	printf("\n");
+	
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+<details>
+<summary>?? <code>/lab/7_array/0_array.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Primo esempio di array.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Vettori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Primo esempio di array e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/0_array.c">/lab/7_array/0_array.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/7_array
+gcc -o bin/0_array 0_array.c
+bin/0_array</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/7_array/0_array.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int vettore[5];
+	vettore[0] = 1;
+	vettore[1] = 2;
+	vettore[2] = 3;
+	vettore[3] = 4;
+	vettore[4] = 5;
+
+	for(int i=0; i &lt; 5; i++)
+		printf("%d ", vettore[i]);
+
+	printf("\n");
+	return 0;
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+<details>
+<summary>?? <code>/lab/7_array/1_array.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Esercizio progressivo su dichiarazione/accesso a elementi.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Vettori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Esercizio progressivo su dichiarazione/accesso a elementi e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/1_array.c">/lab/7_array/1_array.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/7_array
+gcc -o bin/1_array 1_array.c
+bin/1_array</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/7_array/1_array.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int vettore[] = {1, 2, 3, 4, 5};
+
+	for(int i=0; i &lt; 5; i++)
+		printf("%d ", vettore[i]);
+
+	printf("\n");
+	return 0;
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 I vettori (o array) permettono di allocare un insieme di elementi <strong>dello stesso tipo</strong> in una zona contigua di memoria. La sintassi per dichiarare un array è la seguente:
 </p>
@@ -5200,6 +8811,178 @@ int main(void){
 ```
 
 #### Inizializzare un vettore
+
+<!-- lab-exercises:start heading="Inizializzare un vettore" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/7_array/2_array.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Esercizio progressivo su inizializzazione/accesso agli elementi.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Inizializzare un vettore con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Esercizio progressivo su inizializzazione/accesso agli elementi e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/2_array.c">/lab/7_array/2_array.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/7_array
+gcc -o bin/2_array 2_array.c
+bin/2_array</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/7_array/2_array.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int vettore[5] = {0};
+
+        for(int i=0; i &lt; 5; i++)
+                printf("%d ", vettore[i]);
+
+        printf("\n");
+        return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+<details>
+<summary>?? <code>/lab/7_array/3_array.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Uso di dimensione simbolica e ciclo.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Inizializzare un vettore con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Uso di dimensione simbolica e ciclo e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/3_array.c">/lab/7_array/3_array.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/7_array
+gcc -o bin/3_array 3_array.c
+bin/3_array</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/7_array/3_array.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+#define N 5
+
+int main(void){
+	int vettore[N] = {0};
+
+        for(int i=0; i &lt; N; i++)
+                printf("%d ", vettore[i]);
+
+        printf("\n");
+        return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+<details>
+<summary>?? <code>/lab/7_array/4_array.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Esercizio su vettore con dimensione `N`, citato dagli output.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Inizializzare un vettore con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Esercizio su vettore con dimensione `N`, citato dagli output e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/4_array.c">/lab/7_array/4_array.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/7_array
+gcc -o bin/4_array 4_array.c
+bin/4_array</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/7_array/4_array.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+#define N 5
+
+int main(void){
+	int vettore[N] = {0, 1, 2, 3, 4};
+
+        for(int i=0; i &lt; N; i++)
+                printf("%d\t\t\t", vettore[i]);
+        printf("\n");
+
+	for(int j=0; j &lt; N; j++)
+		printf("%p\t\t", vettore + j);
+        printf("\n");
+
+        return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
 
 <p align="justify">
 Possiamo inizializzare esplicitamente tutti gli elementi di un vettore in questo modo:
@@ -5340,6 +9123,131 @@ vettore + 4 = 0x7fff64c6243c + 4 = 0x7fff64c62440
 
 #### Dimensione vettore (`sizeof`)
 
+<!-- lab-exercises:start heading="Dimensione vettore (sizeof)" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/7_array/5_array.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Numero di byte dell'intero array vs singolo elemento.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Dimensione vettore (sizeof) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Numero di byte dell'intero array vs singolo elemento e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/5_array.c">/lab/7_array/5_array.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/7_array
+gcc -o bin/5_array 5_array.c
+bin/5_array</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/7_array/5_array.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+#define NUM_ELEM 100
+int main(void){
+	int array[NUM_ELEM] = {0};
+
+	unsigned int num_byte_array = sizeof(array); /* n. di byte occupati dall'intero verrore (100*4) */
+	unsigned int num_byte_int   = sizeof(int);   /* n. di byte occupati da un intero in questa arch */
+
+	unsigned int n_elem = num_byte_array / num_byte_int;
+	printf("Il vettore di interi occupa %d byte\n", num_byte_array);
+	printf("Un singolo intero occupa %d byte\n", num_byte_int);
+	printf("Il vettore ha %d(byte)/%d(byte) = %d elementi\n", num_byte_array, num_byte_int, num_byte_array/num_byte_int);
+	return 0;
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+<details>
+<summary>?? <code>/lab/7_array/6_array.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Macro `ARRAY_SIZE(x)` per calcolare numero di elementi.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Dimensione vettore (sizeof) con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Macro `ARRAY_SIZE(x)` per calcolare numero di elementi e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/6_array.c">/lab/7_array/6_array.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/7_array
+gcc -o bin/6_array 6_array.c
+bin/6_array</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/7_array/6_array.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+#define NUM_ELEM 100
+
+#define ARRAY_SIZE(x) sizeof(x)/sizeof(*x)
+
+int main(void){
+	int array[NUM_ELEM] = {0};
+
+	unsigned int num_byte_array = sizeof(array); /* n. di byte occupati dall'intero verrore (100*4) */
+	unsigned int num_byte_int   = sizeof(int);   /* n. di byte occupati da un intero in questa arch */
+
+	unsigned int n_elem = ARRAY_SIZE(array);
+	printf("Il vettore di interi occupa %d byte\n", num_byte_array);
+	printf("Un singolo intero occupa %d byte\n", num_byte_int);
+	printf("Il vettore ha %d(byte)/%d(byte) = %d elementi\n", num_byte_array, num_byte_int, num_byte_array/num_byte_int);
+	return 0;
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 Abbiamo visto come l'operatore <code>sizeof</code> ci permetta di conoscere il numero di byte occupati da una variabile o da un tipo di dato. Possiamo sfruttare questo operatore per conoscere il numero di elementi di un vettore a tempo di esecuzione svolgendo semplicemente la divisione tra il numero di byte totali occupati dal vettore e il numero di byte occupati dal singolo elemento del vettore (ricordiamo che gli elementi di un vettore sono tutti dello stesso tipo e allocati in celle contigue in memoria).
 </p>
@@ -5399,6 +9307,158 @@ int main(void){
 ```
 
 ### Relazione tra array e puntatori
+
+<!-- lab-exercises:start heading="Relazione tra array e puntatori" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/6_pointers/6_pointers.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Nome dell'array come puntatore costante e operazioni non ammesse.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Relazione tra array e puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Nome dell'array come puntatore costante e operazioni non ammesse e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/6_pointers.c">/lab/6_pointers/6_pointers.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/6_pointers
+gcc -o bin/6_pointers 6_pointers.c
+bin/6_pointers</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/6_pointers/6_pointers.c" -->
+<pre lang="c"><code>#define N 300
+
+int main(void){
+	int a[N] = {1};
+	int *p;
+
+	a = p;   // errore: a è un puntaore costante, non lo posso cambiare assegnando un altro indirizzo	
+	p = a++; // errore: a è un puntaore costante, non lo posso incrementare con operatore ++ ma (a+1) ok
+	p = &amp;a;  // errore: a è un puntaore costante, non posso accedere al suo indirizzo
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+<details>
+<summary>?? <code>/lab/6_pointers/7_pointers.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Somma degli elementi con indicizzazione e aritmetica puntatori equivalenti.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Relazione tra array e puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Somma degli elementi con indicizzazione e aritmetica puntatori equivalenti e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/7_pointers.c">/lab/6_pointers/7_pointers.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/6_pointers
+gcc -o bin/7_pointers 7_pointers.c
+bin/7_pointers</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/6_pointers/7_pointers.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+#define N 300
+
+int main(void){
+	int a[N];
+	for(int j=0; j &lt; N; j++)
+		a[j] = 1;
+	int *p = NULL;
+	int i = 0;
+	p = a; // equivalente a: p = &amp;a[0]
+
+	/*
+	 * array e puntatori sono simili:
+	 * - posso usare aritmetica puntatori con nome array
+	 * - posso usare indicizzazione array con puntatori
+	 * quindi le espressioni di sotto sono tutte lecite
+	 *   *(a + 1) // aritmetica puntatori con nome array
+	 *   a[i]     // indicizzazione array con nome array
+	 *   p[i]     // indicizzazione array con  puntatore
+	 *   *(p +1)  // aritemetica puntatori con puntatore
+	 */
+
+	int risultato = 0;
+	/* ciclo il vettore usando l'indicizzazione dei vettore sul nome del vettore */
+	for(i = 0; i &lt; N; i++)
+		risultato += a[i];
+	printf("%d\n", risultato);
+
+	/* ciclo il vettore uando l'artmetica dei puntatori sul puntatore*/
+	risultato = 0;
+	for(p = a; p &lt; &amp;a[N]; p++)
+		risultato += *p;
+	printf("%d\n", risultato);
+
+	/* ciclo il vettore usando l'aritmetica dei puntatori sul nome del vettore */
+	risultato = 0;
+	for(i=0; i &lt; N; i++)
+		risultato += *(a + i);		
+	printf("%d\n", risultato);
+
+	/* ciclo il vettore usando l'indicizzazione dei vettori sul puntatore */
+	risultato = 0;
+	p = a;
+	for(i=0; i &lt; N; i++)
+		risultato += p[i];
+	printf("%d\n", risultato);
+
+	return 0;
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
 
 <p align="justify">
 Abbiamo detto che il nome di un array è un puntatore costante al primo elemento del vettore. Quello che non abbiamo detto è che i puntatori, come gli array, possono essere indicizzati con le parentesi <code>[</code> <code>]</code> esattamente come i vettori. La differenza tra nome di un array e puntatori è che il primo è un puntatore costante quindi non è possibile fare le operazioni seguenti:
@@ -5480,6 +9540,86 @@ vagrant@ubuntu2204:/lab/6_pointers$ bin/7_pointers
 
 ### Differenza tra puntatori
 
+<!-- lab-exercises:start heading="Differenza tra puntatori" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/6_pointers/8_pointers.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Differenza in elementi vs differenza in byte tramite cast.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Differenza tra puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza in elementi vs differenza in byte tramite cast e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/8_pointers.c">/lab/6_pointers/8_pointers.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/6_pointers
+gcc -o bin/8_pointers 8_pointers.c
+bin/8_pointers</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/6_pointers/8_pointers.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	int a[2], *p, *q;
+	printf("(int  ) %ld bytes\n", sizeof(int));
+	printf("(long ) %ld bytes\n", sizeof(long));
+	printf("(int *) %ld bytes\n", sizeof(int *));
+	printf("\n");
+
+	/* La differenza  tra due puntatori ritorna  il numero di elementi
+         * che li separa e NON il numero di byte  come ci si  aspetterebbe 
+         * devi fare  un  cast  per  ottenere  il risultato atteso
+	 */
+	p = a;
+	q = a + 1; // equivalente a: q = p + 1, q = &amp;a[1]
+	printf("%ld\n", q - p); // %ld -&gt; long int, un puntatore è di tipo long int (arch a 64 bit)
+	printf("%ld\n", (long)q - (long)p);
+	printf("\n");
+
+	/* questi vale anche se le variabili puntate non sono elementi di un array */
+	int b = 2;
+	int c = 1;
+	int d = 3;
+	q = &amp;d;
+	p = &amp;b;
+	printf("&amp;b = %p\n", p);
+	printf("&amp;c = %p\n", &amp;c);
+	printf("&amp;d = %p\n", q);
+	printf("%ld\n", q - p); // distanza in elementi in memoria
+	printf("%ld\n", (long)q - (long)p); // distanza in termini di byte
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
+
 ```c
 #include<stdio.h>
 
@@ -5531,6 +9671,123 @@ vagrant@ubuntu2204:/lab/6_pointers$ bin/8_pointers
 ```
 
 ### Le stringhe
+
+<!-- lab-exercises:start heading="Le stringhe" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/8_strings/0_strings.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Prima rappresentazione di stringhe C.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Le stringhe con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Prima rappresentazione di stringhe C e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/8_strings/0_strings.c">/lab/8_strings/0_strings.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/8_strings
+gcc -o bin/0_strings 0_strings.c
+bin/0_strings</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/8_strings/0_strings.c" -->
+<pre lang="c"><code>
+#include&lt;stdio.h&gt;
+
+int main(void){
+	char ciao[5] = "ciao";
+	for(int i=0; i &lt; 5; i++)
+		printf("%c \t", ciao[i]);
+	printf("\n");
+
+	for(int i=0; i &lt; 5; i++)
+		printf("%d \t", ciao[i]);
+	printf("\n");
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+<details>
+<summary>?? <code>/lab/8_strings/1_strings.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Esercizio progressivo su terminatore nullo o stampa.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Le stringhe con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Esercizio progressivo su terminatore nullo o stampa e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/8_strings/1_strings.c">/lab/8_strings/1_strings.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/8_strings
+gcc -o bin/1_strings 1_strings.c
+bin/1_strings</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/8_strings/1_strings.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+        char *ciao = "ciao";
+        for(int i=0; i &lt; 5; i++)
+                printf("%c \t", ciao[i]);
+        printf("\n");
+
+        for(int i=0; i &lt; 5; i++)
+                printf("%d \t", ciao[i]);
+        printf("\n");
+        return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
 
 <p align="justify">
 Il linguaggio C non ha un tipo predefinito per le stringhe, queste vengono implementate come array di caratteri. Una stringa in C deve essere racchiusa tra <strong>doppi apici</strong>: <code>"</code> in questo modo
@@ -5641,6 +9898,204 @@ Anche in questo caso possiamo scordarci di <code>\0</code>.
 </p>
 
 ### Dettagli sull'inizializzazione
+
+<!-- lab-exercises:start heading="Dettagli sull'inizializzazione" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/8_strings/2_strings.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Esercizio progressivo su inizializzazione/accesso ai caratteri.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Dettagli sull'inizializzazione con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Esercizio progressivo su inizializzazione/accesso ai caratteri e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/8_strings/2_strings.c">/lab/8_strings/2_strings.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/8_strings
+gcc -o bin/2_strings 2_strings.c
+bin/2_strings</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/8_strings/2_strings.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+        char ciao[] = "ciao";
+        for(int i=0; i &lt; 5; i++)
+                printf("%c \t", ciao[i]);
+        printf("\n");
+
+        for(int i=0; i &lt; 5; i++)
+                printf("%d \t", ciao[i]);
+        printf("\n");
+        return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+<details>
+<summary>?? <code>/lab/8_strings/4_strings.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Array dimensionato, puntatore a literal, array con dimensione dedotta.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Dettagli sull'inizializzazione con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Array dimensionato, puntatore a literal, array con dimensione dedotta e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/8_strings/4_strings.c">/lab/8_strings/4_strings.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/8_strings
+gcc -o bin/4_strings 4_strings.c
+bin/4_strings</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/8_strings/4_strings.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	char ciao_v1[5] = "ciao"; // vettore dimensione fissa (+1 per '\0')
+        char *ciao_v2 = "ciao";   // puntatore a carattere
+	char ciao_v3[] = "ciao";  // vettore dimensine dedotta dal numero di caratteri
+	
+	printf("%s\n", ciao_v1);
+	printf("%s\n", ciao_v2);
+	printf("%s\n", ciao_v3);
+	printf("%s\n", "ciao");
+	return 0;
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+<details>
+<summary>?? <code>/lab/8_strings/5_strings.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Differenza tra array modificabile e puntatore a string literal read-only.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Dettagli sull'inizializzazione con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Differenza tra array modificabile e puntatore a string literal read-only e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/8_strings/5_strings.c">/lab/8_strings/5_strings.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/8_strings
+gcc -o bin/5_strings 5_strings.c
+bin/5_strings</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/8_strings/5_strings.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+#include&lt;string.h&gt;
+
+int main(void){
+	char ciao[] = "ciao";
+	/*  Il nome di un array e' un putatore costante al primo elemento del vettore
+	 *  non posso farlo puntatore ad un'altro indirizzo, si ottiene un errore:
+	 *  error: assignment to expression with array type
+	 */
+	//ciao = "miao";/* errore: ciao e' puntaore costante */
+	
+	/* Il puntatore non può essere modificato ma i caratteri ovviamente si come 
+	 * singoli elementi del vettore oppure usando la strcpy()
+	 */
+	ciao[0] = 'm'; // corretto
+	printf("%s\n", ciao); // (1) miao
+	strcpy(ciao, "ciao"); 
+	printf("%s\n", ciao); // (2) ciao
+
+	printf("\n");
+
+	/* Se assegno la stringa ad un puntatore a carattere posso far puntare ciao_
+	 * ad un' altra  cella di memoria senza problemi perche' il puntatore non e' 
+	 * const
+	 */
+	char *ciao_ = "ciao";
+	printf("%s\n", ciao_); // (3) ciao
+	ciao_ = "miao";
+	printf("%s\n", ciao_); // (4) miao
+	/* In questo caso *ciao_ punta alla stringa "ciao" e di solito il compilatore 
+	 * inserisce le stringhe in un'area di memoria a sola lettura quindi probabil
+	 * mente tentare di modificare la stringa con indicizzazione  o strcpy  porta 
+	 * al crash del programma (segmentation fault)
+	 */
+	strcpy(ciao_, "ciao");
+	printf("%s\n", ciao_); // (5) ciao
+	ciao_[0] = 's';
+	printf("%s\n", ciao_); // (6) siao
+	
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
 
 <p align="justify">
 Anche se esistono due modi diversi per dichiarare una stringa (il primo pensandola come un array di caratteri e il secondo pensandola come un literal puntato da un puntatore a carattere), esistono delle differenze sottili tra i due metodi che vanno oltre il non doversi preoccupare di allocare spazio per <code>\0</code>. Vediamole in questo esempio:
@@ -5826,6 +10281,79 @@ Le funzioni possono essere dichiarate e definite.
 </p>
 
 ### Dichiarazione di funzione
+
+<!-- lab-exercises:start heading="Dichiarazione di funzione" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/9_functions/0_functions.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Prototipo, invocazione e definizione di `potenza_di_due`.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Dichiarazione di funzione con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Prototipo, invocazione e definizione di `potenza_di_due` e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/9_functions/0_functions.c">/lab/9_functions/0_functions.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/9_functions
+gcc -o bin/0_functions 0_functions.c
+bin/0_functions</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/9_functions/0_functions.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+#define ESPONENTE 16
+
+int potenza_di_due(int esponente); /* prototipo o dichiarazione di funzione */
+
+int main(void){
+	/* stampo potenze del 2 con esponente da 0 a 16 */
+	for(int i=0; i &lt; ESPONENTE + 1; i++){
+		int risultato = potenza_di_due(i); /* invocazione funzione */
+		printf("2^(%d)\t = %d\n", i, risultato);
+	}
+	return 0;
+
+}
+
+/* definizione di funzione */
+int potenza_di_due(int esponente){
+	int risultato = 1;
+	for(int i=1; i &lt;= esponente; i++)
+		risultato *= 2;
+	return risultato;
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
 <p align="justify">
 <strong>La dichiarazione è opzionale</strong> e non prevede che si specifichino le istruzioni che compongono la funzione ma <strong>solo il suo prototipo</strong>. La dichiarazione serve solo per informare il compilatore circa l'esistenza di una certa funzione da qualche altra parte nel codice sorgente. In questo modo, quando il compilatore incontrerà una chiamata alla funzione, avrà (grazie alla dichiarazione che precede la chiamata) le informazioni necessarie per verificare la correttezza della chiamata (i parametri sono dei tipi attesi, nel numero corretto, il valore di ritorno coincide con quello nel prototipo, etc). Ovviamente <strong>la dichiarazione della funzione deve sempre precedere la prima invocazione della funzione stessa</strong>. La definizione (che vedremo sotto) può essere inserita in qualunque punto del codice sorgente. <strong>La dichiarazione è il prototipo della funzione</strong>.
 </p>
@@ -5931,6 +10459,86 @@ vagrant@ubuntu2204:/lab/9_functions$ bin/0_functions
 
 ### Passaggio di parametri per valore
 
+<!-- lab-exercises:start heading="Passaggio di parametri per valore" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/9_functions/1_functions.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Incremento su copia locale del parametro.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Passaggio di parametri per valore con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Incremento su copia locale del parametro e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/9_functions/1_functions.c">/lab/9_functions/1_functions.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/9_functions
+gcc -o bin/1_functions 1_functions.c
+bin/1_functions</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/9_functions/1_functions.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int incrementa(int, int); /* prototipo */
+
+int main(void){
+	int valore = 100;   /* valore iniziale di partenza */
+	printf("valore = %d, &amp;valore = %p\n\n", valore, &amp;valore);
+
+	printf("valore prima dell'invocazione: %d\n\n", valore);
+	/* quando la funzoine incremanta() viene invocata, il contenuto della variabile di nome valore
+	 * viene copiato all'interno della variabile valore_f ( primo parametro in input nel prototipo
+	 * della funzione). Il valore contenuto in questa nuova variabile puo' essere modificato ma è
+	 * una copia del valore della variabile orginale nel chiamante. Quest'ultimo dunque non subisce
+         * alcuna variazione perchè si trova in un'altra variabile in memoria.
+	 */
+	int risultato = incrementa(valore, 3); /* incremento il valore di iniziale di 3 */
+	printf("\n");
+	printf("valore dopo     l'invocazione: %d\n", valore);
+	printf("risultato                    : %d\n", risultato);
+}
+
+int incrementa(int valore_f, int iterazioni){
+	printf("************incrementa****************\n");
+	for(int i=0; i&lt;iterazioni; i++){
+		valore_f++;
+		printf("i=%d valore_f = %d, &amp;valore_f = %p\n", i, valore_f, &amp;valore_f);
+	}
+	printf("************incrementa****************\n");
+	return valore_f;
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 I parametri di ingresso di una funzione sono <strong>passati sempre per valore</strong>: la funzione utilizza <strong>una nuova variabile</strong> (nello stack della funzione) per immagazzinare <strong>una copia del valore</strong> contenuto nella variabile passata come parametro in ingresso alla funzione dal chiamante. Anche se dentro la funzione il valore passato in ingresso viene alterato (incremento/decremento etc), siccome questo valore è stato copiato in una variabile diversa rispetto a quella passata in ingresso dal chiamante, il valore nella variabile del chiamante rimane inalterato; sarà modificato il valore nella variabile (nuova) allocata nello stack della funzione quando questa è stata invocata.
 </p>
@@ -5997,6 +10605,86 @@ risultato                    : 103
 ```
 
 ### Passaggio di parametri per indirizzo
+
+<!-- lab-exercises:start heading="Passaggio di parametri per indirizzo" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/9_functions/2_functions.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Modifica della variabile del chiamante tramite puntatore.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Passaggio di parametri per indirizzo con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Modifica della variabile del chiamante tramite puntatore e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/9_functions/2_functions.c">/lab/9_functions/2_functions.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/9_functions
+gcc -o bin/2_functions 2_functions.c
+bin/2_functions</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/9_functions/2_functions.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int incrementa(int *, int); /* prototipo */
+
+int main(void){
+	int valore = 100;   /* valore iniziale di partenza */
+	printf("valore = %d, &amp;valore = %p\n\n", valore, &amp;valore);
+
+	printf("valore prima dell'invocazione: %d\n\n", valore);
+	/* In questo passiamo l'indirizzo della variabile valore  e lo capiamo dentro
+	 * una  variabile puntatore ad intero locale alla funzione  ( primo parametro
+	 * in  ingresso della funzione incrementa). Dentro la funzione dereferenziamo
+	 * il puntatore accedendo effettivamente alla locazione di memoria della vari
+	 * abile valore del chiamante modificando di fatto il valore originale.  
+	 */
+	int risultato = incrementa(&amp;valore, 3); /* incremento il valore di iniziale di 3 */
+	printf("\n");
+	printf("valore dopo     l'invocazione: %d\n", valore);
+	printf("risultato                    : %d\n", risultato);
+}
+
+int incrementa(int *valore_f, int iterazioni){
+	printf("************incrementa****************\n");
+	for(int i=0; i&lt;iterazioni; i++){
+		(*valore_f)++;
+		printf("i=%d valore_f = %d, &amp;valore_f = %p\n", i, *valore_f, valore_f);
+	}
+	printf("************incrementa****************\n");
+	return *valore_f; /* superfluo */
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
 
 <p align="justify">
 Se si vuole modificare il valore della variabile del chiamante, bisogna passare alla funzione l'indirizzo della variabile (usando una variabile puntatore) del chiamante da modificare. Ovviamente il passaggio dell'indirizzo dal chiamante alla funzione è fatto per copia: cioè l'indirizzo della variabile del chiamante è copiato all'interno di una nuova variabile di tipo puntatore, ma avendo a disposizione l'indirizzo della variabile del chiamante la funzione potrà (attraverso la dereferenziazione) accedere al reale valore della variabile originale. Per ottenere un passaggio per indirizzo nel codice precedente dobbiamo trasformare il primo parametro della funzione (variabile <code>valore_f</code>) da <code>int</code> a <code>int *</code>, rendendola un puntatore pronto a ospitare l'indirizzo della variabile <code>valore</code> (la variabile del chiamante da modificare). Per modificare all'interno della funzione il valore della variabile <code>valore</code> basterà usare la dereferenziazione sul puntatore <code>valore_f</code> in questo modo <code>*valore_f</code>, di fatto accedendo alla locazione di memoria riservata alla variabile <code>valore</code>. Sotto il codice modificato:
@@ -6074,6 +10762,76 @@ risultato                    : 103
 
 ### Passaggio di puntatori const
 
+<!-- lab-exercises:start heading="Passaggio di puntatori const" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/6_pointers/5_pointers.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Tentativo di modifica di memoria read-only e differenza tra array e literal.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Passaggio di puntatori const con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Tentativo di modifica di memoria read-only e differenza tra array e literal e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/5_pointers.c">/lab/6_pointers/5_pointers.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/6_pointers
+gcc -o bin/5_pointers 5_pointers.c
+bin/5_pointers</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/6_pointers/5_pointers.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+void leggi(const char *);
+
+int main(void){
+	char qualcosa[30] = "Non voglio essere modificata";
+	qualcosa[0] = 'x';
+	qualcosa[1] = 'x';
+	qualcosa[2] = 'x'; 
+	leggi(qualcosa);
+}
+
+void leggi(const char *qualcosa){
+	// qualcosa[0] = '\0'; 
+	/* Se decommenti la riga sopra e provi a ricompilare ottineni errore 
+	 * error: assignment of read-only location *qualcosa
+	 * perchè stai provando a modificare una locazione di memoria in sola
+	 * lettura (puntatore costante)
+	 */ 			
+	printf("%s\n",qualcosa);
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 Quando è necessario passare dati di grandi dimensioni a una funzione è quindi cosa buona e giusta passare solo il puntatore al dato (tramite variabile puntatore: passaggio per indirizzo). Abbiamo visto che passando il puntatore di una variabile a una funzione applichiamo un passaggio per indirizzo e il dato originale nel chiamante è di fatto modificabile dalla funzione che lo riceve. Se non vogliamo che la funzione sia in grado di modificare il dato passato per indirizzo attraverso la dereferenziazione del puntatore possiamo dichiarare il puntatore <code>const</code> nel prototipo della funzione rendendo di fatto il dato a sola lettura dentro la funzione. Vediamo un esempio:
 </p>
@@ -6108,6 +10866,84 @@ xxx voglio essere modificata
 ```
 
 ### Array come parametri a funzioni
+
+<!-- lab-exercises:start heading="Array come parametri a funzioni" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/9_functions/3_functions.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Somma di elementi passando array e dimensione a funzione.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Array come parametri a funzioni con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Somma di elementi passando array e dimensione a funzione e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/9_functions/3_functions.c">/lab/9_functions/3_functions.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/9_functions
+gcc -o bin/3_functions 3_functions.c
+bin/3_functions</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/9_functions/3_functions.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+#define N 100
+
+int sum(int a[], int dim);
+int somma(int *, int dim);
+
+int main(void){
+	int vettore[N];
+	for(int i=0; i &lt; N; i++)
+		vettore[i] = 1;
+
+	printf("%d\n", sum(vettore, N));
+	printf("%d\n", somma(vettore, N));
+	return 0;	
+}
+
+int sum(int a[], int dim){
+	int risultato = 0;
+	for(int i=0; i &lt; dim; i++)
+		risultato += a[i];
+	return risultato;
+}
+
+int somma(int *a, int dim){
+	int risultato = 0;
+	for(int i=0; i &lt; dim; i++)
+		risultato += a[i];
+	return risultato;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
 
 <p align="justify">
 In una definizione di funzione, un parametro in ingresso dichiarato come array è in realtà un puntatore. Quindi, quando un array viene passato a una funzione, viene fatto un passaggio per valore dell'indirizzo del primo elemento dell'array; gli elementi degli array non vengono mai copiati. Per convenienza notazionale, il compilatore permette l'utilizzo della notazione con le parentesi quadre (vuote) degli array per dichiarare parametri di tipo puntatore. Vediamo un esempio:
@@ -6152,6 +10988,99 @@ vagrant@ubuntu2204:/lab/9_functions$ bin/3_functions
 ```
 
 ### Allocazione dinamica della memoria
+
+<!-- lab-exercises:start heading="Allocazione dinamica della memoria" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/10_dynamic_memory/0_malloc.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Confronto tra allocazione statica e `malloc`, uso di puntatore indicizzato come array.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Allocazione dinamica della memoria con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Confronto tra allocazione statica e `malloc`, uso di puntatore indicizzato come array e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/10_dynamic_memory/0_malloc.c">/lab/10_dynamic_memory/0_malloc.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/10_dynamic_memory
+gcc -o bin/0_malloc 0_malloc.c
+bin/0_malloc</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/10_dynamic_memory/0_malloc.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+#include&lt;stdlib.h&gt;
+
+#define N 10
+
+int main(void){
+	/* allocazione statica a tempo di compilazione, la dimensione del vettore
+	 * deve essere nota a tempo di compilazione e non puo' essere modificata
+	 * successivamente durante l'esecuzione del programma.
+	 */
+	int statico[N];
+	for(int i=0; i&lt;N; i++)
+		statico[i] = i;
+
+	/* allocazione dinamica a tempo di esecuzione, possiamo definire la dimen
+	 * sione del vettore a durante l'esecuzione del programma ad esempio chie
+	 * dendo all'utente il numero di elementi del vettore
+	 */
+	int M = 0;
+	printf("Quanti elementi per il vettore?\n");
+	scanf("%d", &amp;M);
+	/* malloc alloca n byte contigui in memoria e ritorna l'indirizzo del primo
+	 * byte relativo allo spazio allocato.Nota come la variabile dinamico e' un
+	 * puntaore ma nel ciclo posso usare l'indicizzazione come fosse un vettore
+	 */
+	int *dinamico = (int *) malloc(M * sizeof(int));
+	/* dinamico e' un puntatore*/
+	for(int j=0; j&lt;M; j++)
+		dinamico[j] = j;
+
+	int k;
+	printf("statico : ");
+	for(k=0; k&lt;N; k++)
+		printf("%d ", statico[k]);
+	printf("\n");
+
+	printf("dinamico: ");
+	for(k=0; k&lt;M; k++)
+		printf("%d ", dinamico[k]);
+	printf("\n");
+	/* dealloco la memoria con free() */
+	free(dinamico);
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
 
 <p align="justify">
 Quando si dichiara una variabile, il compilatore alloca automaticamente lo spazio in memoria necessario per memorizzare la variabile. La quantità di spazio allocato dipende dal tipo della variabile. Quando si dichiara un puntatore a un determinato tipo, viene allocato spazio in memoria per il puntatore soltanto (che è sempre lo stesso <code>unsigned long</code>, 8 byte) indipendentemente dalla dimensione del tipo puntato. Il puntatore potrà successivamente essere assegnato per contenere l'indirizzo di una variabile dello stesso tipo del puntatore e da quel momento si potrà utilizzare il puntatore per accedere al contenuto della variabile passando per il suo indirizzo (usando l'operazione di dereferenziazione dei puntatori che abbiamo studiato). Questo tipo di allocazione della memoria avviene a tempo di compilazione ed è spesso detta <strong>allocazione statica della memoria</strong>. L'allocazione statica può risultare inutile soprattutto nel caso dei vettori se la dimensione (il numero di elementi del vettore) non è nota a tempo di compilazione ma solo durante l'esecuzione del programma (ad esempio il numero degli elementi è scelto dall'utente a ogni nuova esecuzione). Il linguaggio C permette di effettuare l'allocazione di memoria a tempo di esecuzione; questo tipo di allocazione è detta: <strong>allocazione dinamica della memoria</strong>. Esistono diverse funzioni offerte dalla libreria standard del C per allocare dinamicamente la memoria a tempo di esecuzione. Per adesso vediamo la più comune: la funzione <strong>malloc()</strong>. Questo è il suo prototipo:
@@ -6269,6 +11198,92 @@ dinamico: 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14
 
 ### Array bidimensionali
 
+<!-- lab-exercises:start heading="Array bidimensionali" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/7_array/7_array.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Matrice 2D contigua, formula `i*N_COLONNE + j`, accesso con aritmetica puntatori.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Array bidimensionali con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Matrice 2D contigua, formula `i*N_COLONNE + j`, accesso con aritmetica puntatori e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/7_array.c">/lab/7_array/7_array.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/7_array
+gcc -o bin/7_array 7_array.c
+bin/7_array</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/7_array/7_array.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+#define N_RIGHE 6
+#define N_COLONNE 7
+
+int main(void){
+	int mat[N_RIGHE][N_COLONNE];
+
+	int i; // indice riga
+	int j; // indice colonna
+	for(i=0; i&lt;N_RIGHE; i++)
+		for(j=0; j&lt;N_COLONNE; j++)
+			mat[i][j] = (i*N_COLONNE) + j;
+	
+	for(i=0; i&lt;N_RIGHE; i++){
+		for(j=0; j&lt;N_COLONNE; j++)
+			printf("%2d ", mat[i][j]);
+		printf("\n");
+	}
+
+	printf("\n");
+	/* Gli elementi della matrice sono  contigui in memoria e 
+	 * posso accedervi senza la notazione  ad indici del vett
+	 * ore ma usando l' artimetica dei  puntatori, se i e' l'
+	 * indice di riga  e j l' indice  colonna per accedere al
+	 * k-esimo elemento contigue in  memoria  basta  usare la
+	 * formula k = (i*N_COLONNE) + j 
+	 * Per accedere ad esempio all' ultimo  elemento della 3°
+	 * riga: k = 20, i=2 (3° riga), j=6 (7° colonna) (ricorda
+	 * che gli indici partono da 0) k=2*7+6=20 
+	 */
+	for(i=0; i&lt;N_RIGHE; i++)
+		for(j=0; j&lt;N_COLONNE; j++)
+			printf("%d ", *(*mat + ( (i*N_COLONNE) + j) ) );
+	printf("\n");
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 Gli array sono memorizzati in modo contiguo (linearmente) in memoria ma spesso è utile pensare a vettori a due dimensioni (detti anche matrici) in cui un elemento del vettore a due dimensioni è identificato da due indici: <strong>indice di riga</strong> e <strong>indice di colonna</strong>. La dichiarazione di una matrice prevede quindi due cardinalità per il numero delle righe e per il numero delle colonne.
 </p>
@@ -6379,6 +11394,192 @@ vagrant@ubuntu2204:/lab/7_array$ bin/7_array
 
 ### Array di puntatori
 
+<!-- lab-exercises:start heading="Array di puntatori" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/6_pointers/9_pointers.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Introduzione a vettori di puntatori o stringhe indicizzate.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Array di puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Introduzione a vettori di puntatori o stringhe indicizzate e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/9_pointers.c">/lab/6_pointers/9_pointers.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/6_pointers
+gcc -o bin/9_pointers 9_pointers.c
+bin/9_pointers</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/6_pointers/9_pointers.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+	char *mesi_anno[12] = {"Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio",
+			      "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"};
+
+	int mese;
+	printf("Inserisci un numero da 1 a 12\n");
+	scanf("%d", &amp;mese);
+
+	printf("%d -&gt; %s\n", mese, mesi_anno[mese-1]);
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+<details>
+<summary>?? <code>/lab/6_pointers/11_pointers.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Confronto tra array di puntatori, matrice statica e matrice dinamica; uso di `malloc`, `strcpy`, `free`.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Array di puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Confronto tra array di puntatori, matrice statica e matrice dinamica; uso di `malloc`, `strcpy`, `free` e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/11_pointers.c">/lab/6_pointers/11_pointers.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/6_pointers
+gcc -o bin/11_pointers 11_pointers.c
+bin/11_pointers</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/6_pointers/11_pointers.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;  // printf()
+#include&lt;stdlib.h&gt; // malloc(), free()
+#include&lt;string.h&gt; // strcpy()
+
+int main(void){
+        char *array_di_puntatori[12] = {"Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio",
+                              		"Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"};
+
+	char matrice[12][10] =  {"Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio",
+                              	 "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"};
+
+	/* array di puntatore a char allocato dinamicamente */
+	char **matrice_dinamica = (char **) malloc(12*sizeof(char*)); // alloca spazio contiguo per 12 puntatori a char
+        for(int k=0; k&lt;12; k++)
+		matrice_dinamica[k] = (char *)malloc(10*sizeof(char));   // alloca spazio contiguoper 10 caretteri
+
+	/* Ho allocato spazio per 10 caratteri per tutti i mesi e sto sprecando spazio ma nulla mi impedisce di allocare
+	 * il numero di caratteri strettamente necessario per ogni singolo mese, non avevo voglia di perdere tempo ma e'
+	 * una cosa fattibile ovviamente ed avremmo avuto lo stesso risultato degli array di puntatori solo che l'alloca
+	 * zione in questo caso è dinamica cioe' e' avvenuto a tempo di esecuzione e non statico cioe' a tempo di compil
+	 * azione. Usa l'allocazione dinamica solo quando la dimensine del vettore o della matrice non e' nota se non du
+	 * rante l'esecuzione; in questo caso e' inutile usare l'allocazione dinamica perche' sia la dimensione delle ri
+	 * ghe che delle colonne e' nota prima dell'esecuzione.
+	 */
+
+	/* Questo metodo per inizializzare i vettori di caratteri non va bene se
+	 * e' prevista la deallocazione con free() in quanto gli string literals
+	 * sono allocati nel DATA segment che e' a sola lettura quindi non potra
+	 * nno e non dovranno mai essere deallocate, provare a fare una free() su
+	 * queste variabili e' inutile (non stanno nello stack) e porta ad un seg
+	 * mentation fault in quanto free() provera' ad scrivere in memoria a so
+	 * la lettura
+	 */
+
+	/* decommanta le righe di sotto e commaenta le righe con strcpy() per pro
+	 * vare l'errore di segmentation fault spiegato sopra
+	 */
+
+	/*
+	matrice_dinamica[0]  = "Gennaio";
+	matrice_dinamica[1]  = "Febbraio";
+	matrice_dinamica[2]  = "Marzo";
+	matrice_dinamica[3]  = "Aprile";
+	matrice_dinamica[4]  = "Maggio";
+	matrice_dinamica[5]  = "Giugno";
+	matrice_dinamica[6]  = "Luglio";
+	matrice_dinamica[7]  = "Agosto";
+	matrice_dinamica[8]  = "Settembre";
+	matrice_dinamica[9]  = "Ottobre";
+	matrice_dinamica[10] = "Novembre";
+	matrice_dinamica[11] = "Dicembre";
+	*/
+		
+	strcpy(matrice_dinamica[0] , "Gennaio");
+	strcpy(matrice_dinamica[1] , "Febbraio");
+	strcpy(matrice_dinamica[2] , "Marzo");
+	strcpy(matrice_dinamica[3] , "Aprile");
+	strcpy(matrice_dinamica[4] , "Maggio");
+	strcpy(matrice_dinamica[5] , "Giugno");
+	strcpy(matrice_dinamica[6] , "Luglio");
+	strcpy(matrice_dinamica[7] , "Agosto");
+	strcpy(matrice_dinamica[8] , "Settembre");
+	strcpy(matrice_dinamica[9] , "Ottobre");
+	strcpy(matrice_dinamica[10], "Novembre");
+	strcpy(matrice_dinamica[11], "Dicembre");
+
+	int mese;
+        printf("Inserisci un numero da 1 a 12\n");
+        scanf("%d", &amp;mese);
+
+        printf("%d -&gt; %s\n", mese, array_di_puntatori[mese-1]);
+        printf("%d -&gt; %s\n", mese, matrice[mese-1]);
+        printf("%d -&gt; %s\n", mese, matrice_dinamica[mese-1]);
+	
+	/* con l'allocazione dinamica e' compito del programmatore deallocare la memoria quando non serve piu'*/
+		
+	/* prima dealloco i 12 array di caratteri di lunghezza 10 contenenti i mesi */
+	for(int k=0; k&lt;12; k++)
+		free(matrice_dinamica[k]);
+	/* infine dealloco i 12 puntatori a caratteri che puntavano ai 12 vettori di caratteri prima deallocati */
+	free(matrice_dinamica);
+        return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 I puntatori sono variabili come tutte le altre e quindi è possibile dichiarare un vettore di puntatori.
 </p>
@@ -6407,6 +11608,72 @@ Inserisci un numero da 1 a 12
 ```
 
 ### Differenza tra array bidimensionali e array di puntatori
+
+<!-- lab-exercises:start heading="Differenza tra array bidimensionali e array di puntatori" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/6_pointers/10_pointers.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Confronto tra matrici e puntatori.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Differenza tra array bidimensionali e array di puntatori con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Confronto tra matrici e puntatori e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/10_pointers.c">/lab/6_pointers/10_pointers.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/6_pointers
+gcc -o bin/10_pointers 10_pointers.c
+bin/10_pointers</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/6_pointers/10_pointers.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+int main(void){
+        char *array_di_puntatori[12] = {"Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio",
+                              		"Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"};
+
+	char matrice[12][10] =  {"Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio",
+                              	 "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"};
+
+        int mese;
+        printf("Inserisci un numero da 1 a 12\n");
+        scanf("%d", &amp;mese);
+
+        printf("%d -&gt; %s\n", mese, array_di_puntatori[mese-1]);
+        printf("%d -&gt; %s\n", mese, matrice[mese-1]);
+        return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
 
 <p align="justify">
 Benché simili, i vettori bidimensionali (matrici) e gli array di puntatori sono diversi. Riprendendo l'esempio dei mesi dell'anno, le due variabili <code>array_di_puntatori</code> e <code>matrice</code> svolgono lo stesso identico ruolo: contenere la lista ordinata dei mesi dell'anno.
@@ -6640,6 +11907,177 @@ Lo <strong>stack</strong> è un'area di memoria contigua all'heap e cresce in di
 
 ### Allocazione dinamica di matrici
 
+<!-- lab-exercises:start heading="Allocazione dinamica di matrici" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/6_pointers/12_pointers.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Allocazione/deallocazione di matrice dinamica, inizializzazione e stampa tramite funzioni.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Allocazione dinamica di matrici con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Allocazione/deallocazione di matrice dinamica, inizializzazione e stampa tramite funzioni e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/12_pointers.c">/lab/6_pointers/12_pointers.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/6_pointers
+gcc -o bin/12_pointers 12_pointers.c
+bin/12_pointers</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/6_pointers/12_pointers.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;  // printf()
+#include&lt;stdlib.h&gt; // malloc(), free()
+#include&lt;string.h&gt; // strcpy()
+
+#define N_ROWS 9
+#define N_COLS 8
+
+char **alloc_planets_mat_dyn(int n_rows, int n_cols);
+void initialize_planets_mat_dyn(char **matrix);
+void print_all_chars(char **array_of_pointers, char static_matrix[][N_COLS], char **dynamic_matrix);
+void print_just_strings(char **array_of_pointers, char static_matrix[][N_COLS], char **dynamic_matrix);
+void dealloc_planets_mat_dyn(char **matrix, int n_rows);
+	
+int main(void){
+	char *planets[] = {"Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto"};
+	char planets_mat[N_ROWS][N_COLS] = {"Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto"};
+	char **planets_mat_dyn = alloc_planets_mat_dyn(N_ROWS, N_COLS);
+	initialize_planets_mat_dyn(planets_mat_dyn);
+
+	print_all_chars(planets, planets_mat, planets_mat_dyn);
+
+	printf("\n\n");
+	print_just_strings(planets, planets_mat, planets_mat_dyn);
+
+	dealloc_planets_mat_dyn(planets_mat_dyn, N_ROWS);
+	return 0;
+}
+
+char **alloc_planets_mat_dyn(int n_rows, int n_cols){
+	char **matrix = (char **)malloc(n_rows*sizeof(char *)); /* alloco un vettore di puntatori a char (le righe) */
+	for(int i=0; i&lt;n_rows; i++)
+		matrix[i] = (char *)malloc(n_cols*sizeof(char)); /* alloco un vettore di caratteri (le collonne di una riga) */
+	return matrix;
+}
+
+
+void dealloc_planets_mat_dyn(char **matrix, int n_rows){
+	/* prima dealloco le righe */
+	for(int i=0; i&lt;n_rows; i++)
+		free(matrix[i]);
+	/* poi il vettore di puntatori a char */
+	free(matrix);
+}	
+void initialize_planets_mat_dyn(char **matrix){
+	
+	/*
+	matrix[0] = "Mercury";
+	matrix[1] = "Venus";
+	matrix[2] = "Earth";
+	matrix[3] = "Mars";
+	matrix[4] = "Jupiter";
+	matrix[5] = "Saturn";
+	matrix[6] = "Uranus";
+	matrix[7] = "Neptune";
+	matrix[8] = "Pluto";
+	*/
+	
+	strcpy(matrix[0], "Mercury");
+	strcpy(matrix[1], "Venus");
+	strcpy(matrix[2], "Earth");
+	strcpy(matrix[3], "Mars");
+	strcpy(matrix[4], "Jupiter");
+	strcpy(matrix[5], "Saturn");
+	strcpy(matrix[6], "Uranus");
+	strcpy(matrix[7], "Neptune");
+	strcpy(matrix[8],"Pluto");
+
+}
+
+void print_all_chars(char **array_of_pointers, char static_matrix[][N_COLS], char **dynamic_matrix){
+	for(int i=0; i&lt;N_ROWS; i++){
+		for(int j=0; j&lt;N_COLS; j++){
+			printf("%c ", array_of_pointers[i][j]);
+			if(array_of_pointers[i][j] == '\0') break;
+		}
+		printf("\n");
+	}
+
+	printf("\n");
+
+
+	for(int i=0; i&lt;N_ROWS; i++){
+		for(int j=0; j&lt;N_COLS; j++){
+			printf("%c ", static_matrix[i][j]);
+			if(static_matrix[i][j] == '\0') break;
+		}
+		printf("\n");
+	}
+
+	printf("\n");
+
+
+	for(int i=0; i&lt;N_ROWS; i++){
+		for(int j=0; j&lt;N_COLS; j++){
+			printf("%c ", dynamic_matrix[i][j]);
+			if(dynamic_matrix[i][j] == '\0') break;
+		}
+		printf("\n");
+	}
+
+	printf("\n");
+}
+
+
+void print_just_strings(char **array_of_pointers, char static_matrix[][N_COLS], char **dynamic_matrix){
+	for(int i=0; i&lt;N_ROWS; i++)
+		printf("%s\n", array_of_pointers[i]);
+
+	printf("\n");
+
+
+	for(int i=0; i&lt;N_ROWS; i++)
+		printf("%s\n", static_matrix[i]);
+
+	printf("\n");
+
+	for(int i=0; i&lt;N_ROWS; i++)
+		printf("%s\n", dynamic_matrix[i]);
+
+	printf("\n");
+
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
+
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/pianeti_matrice.png)
 
@@ -6835,6 +12273,89 @@ Pluto
 
 ### Le strutture
 
+<!-- lab-exercises:start heading="Le strutture" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/11_structs/0_structs.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Definizione di `struct punto_2d`, variabile struttura, puntatore a struttura.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Le strutture con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Definizione di `struct punto_2d`, variabile struttura, puntatore a struttura e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/11_structs/0_structs.c">/lab/11_structs/0_structs.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/11_structs
+gcc -o bin/0_structs 0_structs.c
+bin/0_structs</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/11_structs/0_structs.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+
+/* dichiaro il nuovo tipo che si chiama: struct punto_2d */
+struct punto_2d {
+	int x;
+	int y;
+};
+
+int main(void){
+	/* dichiaro una variabile ed un puntatore del tipo struct punto_2d
+	 * fai attenzione che il nuovo tipo è "struct punto_2s" e non sola
+	 * mente "punto_2d", non ti scordare "struct" nel nome del tipo.
+	 */
+	struct punto_2d i;
+	struct punto_2d *ptr = NULL; /* alloco spazio per il puntatore */
+	
+	/* il puntaore deve essere inizializzato all'indirizzo della struttura
+	 * altrimenti non punta ad una locazione di memoria valida per noi
+	 */
+	ptr = &amp;i;
+	/* inizializzo la struttura accedendo ai campi con la notazione puntata
+	  * attraverso una variabile di tipo "struct punto_2d"
+	  */
+	i.x = 0;
+	i.y = 0;
+	printf("(%d, %d)\n", i.x, i.y);
+	
+	/* accedo ai campi della struttura attraverso il puntatore usando -&gt; */
+	ptr-&gt;x = 1;
+	ptr-&gt;y = 1;
+	printf("(%d, %d)\n", ptr-&gt;x, ptr-&gt;y);
+
+	return 0;
+}
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
+
 <p align="justify">
 Una struttura o <strong>struct</strong> è un tipo di dato derivato che permette di raggruppare un insieme di elementi di tipo diverso con una qualche forte correlazione tra loro, detti <strong>campi</strong> della struttura, in un'area contigua in memoria. I campi della struttura possono essere semplici (predefiniti dal linguaggio) o derivati (anche altre strutture stesse) e come detto possono essere di tipo diverso tra loro (al contrario degli array). La sintassi per dichiarare una struttura è la seguente:
 </p>
@@ -6914,6 +12435,116 @@ int main(void){
 ```
 
 #### Passaggio di strutture a funzioni
+
+<!-- lab-exercises:start heading="Passaggio di strutture a funzioni" -->
+
+<p align="justify"><strong>Esercizi collegati:</strong></p>
+
+<details>
+<summary>?? <code>/lab/11_structs/1_structs.c</code></summary>
+
+<table align="center">
+  <tr>
+    <td>
+      <p align="justify">
+        <strong>Descrizione breve:</strong>
+        Passaggio di strutture a funzioni e calcolo di una media.
+      </p>
+
+      <p align="justify">
+        <strong>Descrizione lunga:</strong>
+        Approfondisce il paragrafo Passaggio di strutture a funzioni con un esempio eseguibile e mirato. Il codice permette di osservare concretamente Passaggio di strutture a funzioni e calcolo di una media e di collegare la spiegazione teorica al comportamento reale del programma compilato.
+      </p>
+
+      <p align="justify">
+        <strong>Sorgente:</strong>
+        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/11_structs/1_structs.c">/lab/11_structs/1_structs.c</a>
+      </p>
+
+      <p align="justify">
+        <strong>Compilazione ed esecuzione:</strong>
+      </p>
+
+<pre lang="bash"><code>cd /lab/11_structs
+gcc -o bin/1_structs 1_structs.c
+bin/1_structs</code></pre>
+
+      <p align="justify">
+        <strong>Codice:</strong>
+      </p>
+
+<!-- lab-snippet:start path="lab/11_structs/1_structs.c" -->
+<pre lang="c"><code>#include&lt;stdio.h&gt;
+#include&lt;string.h&gt;
+
+struct studente {
+	char *nome;
+	char *cognome;
+	char *matricola;
+	int *voti;
+	int eta;
+	float media;
+};
+
+void calcola_media(struct studente *i);
+ 
+int main(void){
+	struct studente ottimo;
+	struct studente medio;
+	struct studente scarso;
+
+	ottimo.nome = "Mario";
+	ottimo.cognome = "Rossi";
+	ottimo.matricola ="1234qwert";
+	ottimo.eta = 21;
+	ottimo.media = 0;
+	int tmp1[10] = {28, 30, 30, 30, 29,27,28, 30, 30, 30};
+	ottimo.voti = tmp1;
+
+	medio.nome = "Andrea";
+	medio.cognome = "Verdi";
+	medio.matricola ="9876zxcvb";
+	medio.eta = 24;
+	medio.media = 0;
+	int tmp2[10] = {26, 27, 24, 25, 26, 27, 23, 25, 24, 25};
+	medio.voti = tmp2;	
+
+	scarso.nome = "Luigi";
+	scarso.cognome = "Bianchi";
+	scarso.matricola ="5678lkjhg";
+	scarso.eta = 31;
+	scarso.media = 0;
+	int tmp3[10] = {18, 20, 23, 18, 19, 22, 18, 20, 20, 19};
+	scarso.voti = tmp3;	
+
+	calcola_media(&amp;ottimo);
+	calcola_media(&amp;medio);
+	calcola_media(&amp;scarso);
+
+	printf("%s %s di eta' %d ha una media di %f\n", ottimo.nome, ottimo.cognome, ottimo.eta, ottimo.media);
+	printf("%s %s di eta' %d ha una media di %f\n", medio.nome, medio.cognome, medio.eta, medio.media);
+	printf("%s %s di eta' %d ha una media di %f\n", scarso.nome, scarso.cognome, scarso.eta, scarso.media);
+
+	return 0;
+}
+
+void calcola_media(struct studente *i){
+	float media = 0.0;
+	for(int j=0; j&lt;10; j++)
+		i-&gt;media += i-&gt;voti[j];
+	i-&gt;media = i-&gt;media / 10;  
+}
+
+</code></pre>
+<!-- lab-snippet:end -->
+    </td>
+  </tr>
+</table>
+
+</details>
+
+<!-- lab-exercises:end -->
+
 
 <p align="justify">
 Una variabile di un tipo struct può essere passata normalmente a una funzione; come abbiamo studiato, il passaggio dei parametri in C avviene sempre per valore e questo può essere un problema in termini di prestazioni e spreco di risorse se la struct ha numerosi campi. Per questo motivo le struct sono quasi sempre passate per riferimento, cioè passando in ingresso alla funzione un puntatore a struttura. Vediamo quindi esclusivamente il caso di passaggio per riferimento.
