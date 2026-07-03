@@ -4,9 +4,9 @@ Questo documento propone una mappa delle lezioni del corso, organizzata in tre p
 
 | Livello | Obiettivo | Cosa devi sapere alla fine | Cartelle |
 |---|---|---|---|
-| Base | Scrivere piccoli programmi C | Variabili, input/output, funzioni, cicli, tipi, operatori, array e stringhe semplici. | `lab/0_intro` - `lab/5_control_statements` |
-| Intermedio | Capire memoria e modularita | Puntatori, memoria, array, stringhe, `malloc`, `free`, struct, header e compilazione separata. | `lab/6_pointers` - `lab/11_structs` |
-| Avanzato/Produzione | Scrivere codice robusto | Makefile, debugging, test, sanitizers, processi, thread, Linux API, sicurezza e CI. | `lab2`, `LINUX_PROGRAMMING.md` |
+| Base | Scrivere piccoli programmi C | Variabili, input/output, funzioni, cicli. | `0_intro` - `5_control_statements` |
+| Intermedio | Capire memoria e modularita | Puntatori, array, stringhe, malloc, struct. | `6_pointers` - `11_structs` |
+| Avanzato | Scrivere codice robusto | Make, debug, test, processi, thread, Linux API. | `lab2`, `LINUX_PROGRAMMING.md` |
 
 ## Tabella delle lezioni
 
