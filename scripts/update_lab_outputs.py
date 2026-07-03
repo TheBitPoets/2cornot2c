@@ -136,6 +136,8 @@ def apply_normalizations(generated: str, entry: dict[str, Any]) -> str:
     normalized = normalize_addresses(generated, entry)
     for rule in entry.get("normalize", []):
         normalized = re.sub(rule["pattern"], rule["replacement"], normalized)
+    if generated.endswith("\n") and normalized and not normalized.endswith("\n"):
+        normalized += "\n"
     return normalized
 
 
