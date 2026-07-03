@@ -2165,13 +2165,13 @@ void print_var(void){
 
 <!-- lab-output:start path="lab/1_variables/output/0_local.txt" -->
 <pre lang="text"><code>local_var=&lt;indefinito&gt; 		 &amp;local_var=&lt;base+0x0&gt;
-init_local_var=0 	 &amp;init_local_var=&lt;base-0x4&gt;
+init_local_var=0 	 &amp;init_local_var=&lt;base+0x4&gt;
 
 local_var=&lt;indefinito&gt; 		 &amp;local_var=&lt;base+0x0&gt;
-init_local_var=0 	 &amp;init_local_var=&lt;base-0x4&gt;
+init_local_var=0 	 &amp;init_local_var=&lt;base+0x4&gt;
 
 local_var=&lt;indefinito&gt; 		 &amp;local_var=&lt;base+0x0&gt;
-init_local_var=0 	 &amp;init_local_var=&lt;base-0x4&gt;
+init_local_var=0 	 &amp;init_local_var=&lt;base+0x4&gt;
 </code></pre>
 <!-- lab-output:end -->
 </details>
