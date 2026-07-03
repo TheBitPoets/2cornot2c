@@ -1,0 +1,2 @@
+[compile stderr]
+<errore di compilazione: assegnamento/incremento non valido su nome array>

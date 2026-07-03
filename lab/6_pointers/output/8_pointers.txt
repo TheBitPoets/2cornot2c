@@ -1,0 +1,12 @@
+(int  ) 4 bytes
+(long ) 8 bytes
+(int *) 8 bytes
+
+1
+4
+
+&b = <addr_b>
+&c = <addr_c>
+&d = <addr_d>
+<delta_elementi>
+<delta_byte>
