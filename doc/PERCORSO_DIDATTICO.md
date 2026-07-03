@@ -8,6 +8,73 @@ Questo documento propone una mappa delle lezioni del corso, organizzata in tre p
 | Intermedio | Capire memoria e modularita | Puntatori, array, stringhe, malloc, struct. | `6_pointers` - `11_structs` |
 | Avanzato | Scrivere codice robusto | Make, debug, test, processi, thread, Linux API. | `lab2`, `LINUX_PROGRAMMING.md` |
 
+## Organizzazione: percorsi, UDA, lezioni
+
+La struttura didattica del corso segue tre livelli:
+
+| Livello | Significato |
+|---|---|
+| Percorso | Macro-area di crescita: Base, Intermedio, Avanzato. |
+| UDA | Unita didattica autonoma, con prerequisiti, obiettivi, lezioni, lab ed esercizi. |
+| Lezione | Singolo blocco settimanale di lavoro, organizzato sulle 3 ore disponibili. |
+
+Ogni settimana prevede 3 ore di TPSI. La divisione naturale e 2 ore di teoria e 1 ora di laboratorio, ma i portatili permettono di trasformare anche parte della teoria in attivita pratica breve. Per questo la scansione sotto distingue:
+
+| Blocco | Uso consigliato |
+|---|---|
+| Ora 1 | Concetto nuovo, modello mentale, esempio minimo. |
+| Ora 2 | Esempio realistico, esperimento guidato, discussione degli errori. |
+| Ora 3 | Lab, esercizi graduati, debug didattico, consegna o autovalutazione. |
+
+## Schedule settimanale
+
+Questa scansione non usa date: puo essere adattata al calendario reale, agli stop scolastici e al ritmo della classe.
+
+| Settimana | Percorso | UDA | Ora 1 | Ora 2 | Ora 3: lab ed esercizi | Esito della settimana |
+|---|---|---|---|---|---|---|
+| 1 | Base | UDA 1: strumenti e primo programma | Ambiente, compilatore, sorgente, binario. | `main`, `printf`, compilazione ed esecuzione. | Lab A: copia, compila, osserva. | Lo studente compila ed esegue un programma C. |
+| 2 | Base | UDA 1: variabili e I/O | Variabili, tipi primitivi, assegnamento. | `scanf`, `printf`, specificatori di formato. | Lab B/C: modificare input e output, scrivere un piccolo calcolatore. | Lo studente legge dati da tastiera e stampa risultati. |
+| 3 | Base | UDA 2: operatori ed espressioni | Operatori aritmetici e assegnamento. | Operatori relazionali, logici, precedenza. | Lab D: debug di espressioni sbagliate. | Lo studente prevede e verifica il valore di espressioni C. |
+| 4 | Base | UDA 2: selezione | `if`, `else`, condizioni. | `switch`, casi multipli, valori non previsti. | Lab B/C: programmi con scelta; quiz su condizioni. | Lo studente controlla il flusso con condizioni. |
+| 5 | Base | UDA 3: cicli | `while` e `do while`. | `for`, contatori, accumuli, `break`, `continue`. | Lab C/D: cicli da scrivere e cicli da correggere. | Lo studente ripete istruzioni in modo controllato. |
+| 6 | Base | UDA 3: funzioni | Definizione, chiamata, parametri. | Valore di ritorno, scope locale, scomposizione. | Lab C: rifattorizzare un programma in funzioni. | Lo studente divide un problema in funzioni piccole. |
+| 7 | Base | UDA 4: array | Array monodimensionali, indici, limiti. | Scansione con cicli, minimo, massimo, somma. | Lab A/B/C: osservare e modificare array. | Lo studente elabora sequenze di valori. |
+| 8 | Base | UDA 4: stringhe semplici | Array di `char`, terminatore `\0`. | Input testuale, funzioni base, errori comuni. | Lab D: stringhe mal terminate e buffer troppo piccoli. | Lo studente distingue array di caratteri e stringa C valida. |
+| 9 | Base | UDA 5: struct base | `struct`, campi, inizializzazione. | Array di struct, funzioni che usano struct. | Mini-progetto E: archivio semplice di studenti. | Lo studente modella dati composti. |
+| 10 | Base | UDA 5: consolidamento base | Ripasso guidato dei concetti base. | Debug didattico su codice base. | Verifica pratica: programma completo piccolo. | Chiusura del percorso Base. |
+| 11 | Intermedio | UDA 6: puntatori | Variabile, valore, indirizzo. | `&`, `*`, puntatori inizializzati e non inizializzati. | Lab A/D: osservare indirizzi e debug di puntatori errati. | Lo studente spiega cosa contiene un puntatore. |
+| 12 | Intermedio | UDA 6: array e puntatori | Decadimento array-puntatore. | Aritmetica dei puntatori, `sizeof`, limiti. | Lab B/C/D: accessi corretti e fuori limite. | Lo studente collega array, indirizzi e offset. |
+| 13 | Intermedio | UDA 7: memoria | Stack, variabili locali, durata. | Variabili statiche, globali, layout concettuale. | Lab A: osservare indirizzi normalizzati negli output. | Lo studente distingue durata e visibilita delle variabili. |
+| 14 | Intermedio | UDA 7: heap | `malloc`, `calloc`, `realloc`, `free`. | Ownership, leak, dangling pointer. | Progressione A-F su `malloc`. | Lo studente alloca e libera memoria dinamica. |
+| 15 | Intermedio | UDA 8: stringhe e memoria | Stringhe dinamiche, copia, lunghezza. | Buffer overflow, input validation. | Laboratorio degli errori: `strcpy`, `\0`, limiti. | Lo studente riconosce stringhe pericolose. |
+| 16 | Intermedio | UDA 8: compilazione separata | Header, prototipi, `.h` e `.c`. | Linkage, `extern`, simboli, errori di link. | Lab C/D: progetto multi-file da compilare. | Lo studente separa interfaccia e implementazione. |
+| 17 | Intermedio | UDA 9: Makefile e file | Makefile, target, dipendenze. | `FILE*`, apertura, lettura, scrittura. | Lab C/E: progetto multi-file con file di dati. | Lo studente automatizza build e usa file. |
+| 18 | Intermedio | UDA 9: debugging e strumenti | `gdb`, breakpoint, step, watch. | Valgrind, ASan, UBSan, interpretazione report. | Lab D: debugga questo codice con strumenti. | Chiusura del percorso Intermedio. |
+| 19 | Avanzato | UDA 10: codice robusto | API pulite, contratti, naming. | Gestione errori, cleanup, `errno`. | Lab F: rendere robusto un lab gia scritto. | Lo studente progetta funzioni piu mantenibili. |
+| 20 | Avanzato | UDA 10: test e logging | Logging, stderr, livelli di log. | Test automatici, casi limite, regressioni. | Lab F: aggiungere test e log a un modulo. | Lo studente distingue output utente, log e test. |
+| 21 | Avanzato | UDA 11: qualita e sicurezza | Warning, `-Wall`, `-Wextra`, analisi statica. | Sicurezza: input validation, overflow, funzioni insicure. | Laboratorio degli errori con ASan/Valgrind. | Lo studente riconosce codice fragile o pericoloso. |
+| 22 | Avanzato | UDA 12: Linux API e processi | Introduzione a Linux API, file descriptor. | Processi: `fork`, `exec`, `wait`, exit status. | Lab C/D: creare e osservare processi. | Lo studente collega programma C e sistema operativo. |
+| 23 | Avanzato | UDA 12: thread e concorrenza | Thread, race condition, dati condivisi. | Mutex, sincronizzazione, errori comuni. | Lab D/F: race condition da trovare e correggere. | Lo studente riconosce problemi concorrenti. |
+| 24 | Avanzato | UDA 13: rete, CI, manutenzione | Socket, client/server, errori di rete. | CI, packaging, manutenzione, coding standard. | Mini-progetto finale o revisione produzione. | Chiusura del percorso Avanzato. |
+
+## UDA previste
+
+| UDA | Percorso | Settimane | Focus | Laboratori ed esercizi |
+|---|---|---|---|---|
+| UDA 1 | Base | 1-2 | Primi programmi, variabili, input/output. | Lab introduttivi, esercizi A-B-C. |
+| UDA 2 | Base | 3-4 | Operatori, condizioni, selezione. | Esercizi su espressioni, `if`, `switch`, debug di condizioni. |
+| UDA 3 | Base | 5-6 | Cicli e funzioni. | Esercizi su iterazione, scomposizione in funzioni. |
+| UDA 4 | Base | 7-8 | Array e stringhe semplici. | Lab su indici, limiti, terminatore `\0`. |
+| UDA 5 | Base | 9-10 | Struct e consolidamento. | Mini-progetto base e verifica pratica. |
+| UDA 6 | Intermedio | 11-12 | Puntatori, array e aritmetica degli indirizzi. | Lab su indirizzi, dereferenziazione, errori fuori limite. |
+| UDA 7 | Intermedio | 13-14 | Memoria automatica, statica e dinamica. | Lab su stack/heap, `malloc`, `free`, leak. |
+| UDA 8 | Intermedio | 15-16 | Stringhe avanzate e compilazione separata. | Lab su buffer, header, linking. |
+| UDA 9 | Intermedio | 17-18 | Makefile, file, debugging e strumenti. | Lab con `make`, file, `gdb`, Valgrind, ASan. |
+| UDA 10 | Avanzato | 19-20 | API, error handling, logging, test. | Esercizi F di produzione su lab esistenti. |
+| UDA 11 | Avanzato | 21 | Qualita, analisi statica, sicurezza. | Laboratorio degli errori. |
+| UDA 12 | Avanzato | 22-23 | Linux API, processi, thread. | Lab su processi e concorrenza. |
+| UDA 13 | Avanzato | 24 | Socket, CI, packaging, manutenzione. | Mini-progetto finale o revisione produzione. |
+
 ## Tabella delle lezioni
 
 | Lezione | Tema | Percorso | Obiettivo didattico | Argomenti principali | Esito atteso |
