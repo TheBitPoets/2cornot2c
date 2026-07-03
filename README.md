@@ -802,30 +802,6 @@ bin/0_hello</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/0_intro/0_hello.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>/*
  * 0_intro -- Primo esempio di programma in c
  *
@@ -846,9 +822,6 @@ int main(void){
 	return 0;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -1046,25 +1019,6 @@ bin/1_funzioni</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/0_intro/1_funzioni.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int sottrazione(int, int);
@@ -1080,9 +1034,6 @@ int sottrazione(int minuendo, int sottraendo){
 	return minuendo - sottraendo;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -1220,52 +1171,6 @@ bin/2_variabili</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/0_intro/2_variabili.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35
-36
-37
-38
-39
-40
-41</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include &lt;stdio.h&gt;
 
 int primo, secondo; /* variabili globali */
@@ -1308,9 +1213,6 @@ int moltiplicazione(){
 	return primo * secondo;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -1350,58 +1252,6 @@ bin/3_variabili</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/0_intro/3_variabili.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35
-36
-37
-38
-39
-40
-41
-42
-43
-44
-45
-46
-47</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int somma(int, int);
@@ -1450,9 +1300,6 @@ int moltiplicazione(int primo_fattore, int secondo_fattore){
 	return primo_fattore * secondo_fattore;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -1995,51 +1842,6 @@ bin/2_global</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/1_variables/2_global.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35
-36
-37
-38
-39
-40</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;  // printf()
 
 /* prototipi  funzioni che saranno 
@@ -2081,9 +1883,6 @@ void three(void){
 	printf("global=%d\n", global);
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -2282,37 +2081,6 @@ bin/0_local</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/1_variables/0_local.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 void print_var(void);
@@ -2340,9 +2108,6 @@ void print_var(void){
 }
 
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -2474,57 +2239,6 @@ bin/1_static_local</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/1_variables/1_static_local.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35
-36
-37
-38
-39
-40
-41
-42
-43
-44
-45
-46</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 void call_me(void); /* prototipo di funzione  necessario perchè la
@@ -2572,9 +2286,6 @@ void call_me(void){
 	printf("\n");
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -2769,34 +2480,6 @@ bin/4_global_external_internal</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/1_variables/4_global_external_internal_a.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;  // printf()
 
 int accumulate(int); /* prototipo di funzione definita in
@@ -2821,9 +2504,6 @@ int main(void){
 	return 0;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -2863,29 +2543,6 @@ bin/4_global_external_internal</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/1_variables/4_global_external_internal_b.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 extern int count; /* dichiarazione di variabile esterna
@@ -2905,9 +2562,6 @@ int accumulate(int number){
 	return subtotal;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -3127,37 +2781,6 @@ bin/3_global_internal</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/1_variables/3_global_internal.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 void one(void);
@@ -3185,9 +2808,6 @@ void two(void){
 	printf("global_internal=%d\n", global_internal);
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -3377,63 +2997,6 @@ bin/4_variabili</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/0_intro/4_variabili.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35
-36
-37
-38
-39
-40
-41
-42
-43
-44
-45
-46
-47
-48
-49
-50
-51
-52</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include &lt;stdio.h&gt;
 #include "4_variabili.h"
 
@@ -3487,9 +3050,6 @@ int divisione(int dividendo, int divisore){
 	return dividendo / divisore;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -3527,17 +3087,6 @@ Mostra il ruolo del file di intestazione come contratto condiviso: raccoglie i p
 </p>
 
 <!-- lab-snippet:start path="lab/0_intro/4_variabili.h" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>const int NUM_ITERATIONS = 2; 
 
 int somma(int, int);
@@ -3545,9 +3094,6 @@ int differenza(int, int);
 int moltiplicazione(int, int);
 int divisione(int, int);
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -3587,45 +3133,6 @@ bin/5_variabili</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/0_intro/5_variabili_main.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include &lt;stdio.h&gt;
 #include "5_variabili.h"
 
@@ -3661,9 +3168,6 @@ int main(void){
         }
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -3703,26 +3207,6 @@ bin/5_variabili</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/0_intro/5_variabili.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>int somma(int primo_operando, int secondo_operando){
 	return primo_operando + secondo_operando;
 }
@@ -3739,9 +3223,6 @@ int divisione(int dividendo, int divisore){
 	return dividendo / divisore;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -3779,17 +3260,6 @@ Completa l'esempio multi-file dichiarando le funzioni implementate nel modulo se
 </p>
 
 <!-- lab-snippet:start path="lab/0_intro/5_variabili.h" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>const int NUM_ITERATIONS = 2; 
 
 int somma(int, int);
@@ -3797,9 +3267,6 @@ int differenza(int, int);
 int moltiplicazione(int, int);
 int divisione(int, int);
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -4049,48 +3516,6 @@ bin/macro</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/2_preprocessor/macro.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35
-36
-37</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 #define SOMMA(x,y) ((x)+(y))
@@ -4129,9 +3554,6 @@ int main(void){
         printf("Il risultato e': %d\n", risultato);
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -4307,38 +3729,6 @@ bin/direttiva_if</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/2_preprocessor/direttiva_if.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>/* 
  *  Puoi attivare il simbolo DEBUG in due modi:
  *  - 1 - Nel codice tramite direttiva #define
@@ -4367,9 +3757,6 @@ int main(void){
 }
 	
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -4409,35 +3796,6 @@ bin/direttiva_ifdef</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/2_preprocessor/direttiva_ifdef.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>/*
  * Puoi definire DEBUG in due modi
  * - 1 - Nel codice: #define DEBUG
@@ -4463,9 +3821,6 @@ int main(void){
 	return 0;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -4505,35 +3860,6 @@ bin/direttiva_ifndef</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/2_preprocessor/direttiva_ifndef.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>/*
  * Puoi definire DEBUG in due modi
  * - 1 - Nel codice: #define DEBUG
@@ -4559,9 +3885,6 @@ int main(void){
         return 0;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -4671,26 +3994,6 @@ bin/eliminazione_temporanea_codice</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/2_preprocessor/eliminazione_temporanea_codice.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 #define TRACE(var, val) printf("[%s (%d): %s]\t%s=%d\n", \
@@ -4707,9 +4010,6 @@ int main(void){
 	return 0;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -5344,44 +4644,6 @@ bin/estensione_della_rappresentazione_binaria</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/3_datatype/estensione_della_rappresentazione_binaria.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int main(void){
@@ -5416,9 +4678,6 @@ int main(void){
 	return 0;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -5631,77 +4890,6 @@ bin/print_int</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/3_datatype/print_int.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35
-36
-37
-38
-39
-40
-41
-42
-43
-44
-45
-46
-47
-48
-49
-50
-51
-52
-53
-54
-55
-56
-57
-58
-59
-60
-61
-62
-63
-64
-65
-66</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 /*
@@ -5769,9 +4957,6 @@ int main(void){
 	return 0;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -5935,26 +5120,6 @@ bin/print_others_ints</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/3_datatype/print_others_ints.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int main(void){
@@ -5971,9 +5136,6 @@ int main(void){
 	return 0;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -6270,49 +5432,6 @@ bin/cast_esplicito_implicito</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/3_datatype/cast_esplicito_implicito.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35
-36
-37
-38</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int main(void){
@@ -6352,9 +5471,6 @@ int main(void){
 
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -6394,20 +5510,6 @@ bin/mistero</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/3_datatype/mistero.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int main(void){
@@ -6418,9 +5520,6 @@ int main(void){
 	printf("uy = %u  \t %x\n", uy, uy);
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -6601,53 +5700,6 @@ bin/cast_tra_signed_unsigned</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/3_datatype/cast_tra_signed_unsigned.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35
-36
-37
-38
-39
-40
-41
-42</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 /*
  * Usiamo la rappresentazione in complemento a due del valore 27
@@ -6691,9 +5743,6 @@ int main(void){
 	return 0;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -6733,30 +5782,6 @@ bin/cast_tra_unsigned_signed</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/3_datatype/cast_tra_unsigned_signed.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 /*
  * Anche nel  caso di cast  da unsigned a signed
@@ -6777,9 +5802,6 @@ int main(void){
 	return 0;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -7070,23 +6092,6 @@ bin/troncamento_bit</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/3_datatype/troncamento_bit.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int main(void){
@@ -7100,9 +6105,6 @@ int main(void){
 	return 0;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -7174,20 +6176,6 @@ bin/ascii</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/3_datatype/ascii.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int main(void){
@@ -7198,9 +6186,6 @@ int main(void){
 	return 0;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -7281,20 +6266,6 @@ bin/print_char</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/3_datatype/print_char.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int main(void){
@@ -7305,9 +6276,6 @@ int main(void){
 	printf("%#x\n", lettera_a); /* stampa la rappresentazione esadecimale */
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -7410,24 +6378,6 @@ bin/op_assegnamento</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/4_operators/op_assegnamento.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>int main(void){
 	int uno;
 	int due;
@@ -7442,9 +6392,6 @@ bin/op_assegnamento</code></pre>
 	due = tre - 1;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -7581,22 +6528,6 @@ bin/op_divisione</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/4_operators/op_divisione.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int main(void){
@@ -7609,9 +6540,6 @@ int main(void){
 	printf("6/3.0=%1.2f\n",6/3.0);
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -7679,22 +6607,6 @@ bin/sizeof</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/4_operators/sizeof.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int main(void){
@@ -7707,9 +6619,6 @@ int main(void){
 	return 0;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -7790,25 +6699,6 @@ bin/op_modulo</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/4_operators/op_modulo.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int main(void){
@@ -7824,9 +6714,6 @@ int main(void){
 	return 0;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -7897,37 +6784,6 @@ bin/op_incremento_decremento</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/4_operators/op_incremento_decremento.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int main(void){
@@ -7955,9 +6811,6 @@ int main(void){
 }
 
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -7997,33 +6850,6 @@ bin/pre_post_incremento</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/4_operators/pre_post_incremento.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int main(void){
@@ -8047,9 +6873,6 @@ int main(void){
 }
 
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -8217,33 +7040,6 @@ bin/if</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/5_control_statements/if.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int main(void){
@@ -8267,9 +7063,6 @@ int main(void){
 }
 
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -8376,42 +7169,6 @@ bin/logical_relational_operators</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/5_control_statements/logical_relational_operators.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>
 #include&lt;stdio.h&gt;
 
@@ -8444,9 +7201,6 @@ int main(void){
 	return 0;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -8529,21 +7283,6 @@ bin/for</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/5_control_statements/for.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int main(void){
@@ -8555,9 +7294,6 @@ int main(void){
 }
 
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -8631,23 +7367,6 @@ bin/while</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/5_control_statements/while.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int main(void){
@@ -8661,9 +7380,6 @@ int main(void){
 }
 
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -8739,26 +7455,6 @@ bin/do_while</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/5_control_statements/do_while.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int main(void){
@@ -8775,9 +7471,6 @@ int main(void){
 }
 
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -8856,43 +7549,6 @@ bin/switch</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/5_control_statements/switch.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int main(void){
@@ -8926,9 +7582,6 @@ int main(void){
 }
 
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -9068,41 +7721,6 @@ bin/break_continue</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/5_control_statements/break_continue.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>
 #include&lt;stdio.h&gt;
 
@@ -9134,9 +7752,6 @@ int main(void){
 	return 0;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -9235,23 +7850,6 @@ bin/0_pointers</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/6_pointers/0_pointers.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int main(void){
@@ -9265,9 +7863,6 @@ int main(void){
 	printf("*q = %d, p = %p\n", *q, q);
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -9307,32 +7902,6 @@ bin/1_pointers</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/6_pointers/1_pointers.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int main(void){
@@ -9355,9 +7924,6 @@ int main(void){
 	
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -9397,26 +7963,6 @@ bin/33_pointers</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/6_pointers/33_pointers.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int main(void){
@@ -9433,9 +7979,6 @@ int main(void){
 	return 0;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -9633,28 +8176,6 @@ bin/2_pointers</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/6_pointers/2_pointers.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int main(void){
@@ -9673,9 +8194,6 @@ int main(void){
 	printf("*p = %d\n", *p); /* accediamo ad una cella di memoria sconosciuta */
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -9753,19 +8271,6 @@ bin/3_pointers</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/6_pointers/3_pointers.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int main(void){
@@ -9775,9 +8280,6 @@ int main(void){
 
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -9854,34 +8356,6 @@ bin/4_pointers</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/6_pointers/4_pointers.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int main(void){
@@ -9906,9 +8380,6 @@ int main(void){
 	return 0;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -10057,32 +8528,6 @@ bin/00_array</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/7_array/00_array.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int main(void){
@@ -10105,9 +8550,6 @@ int main(void){
 }
 
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -10147,28 +8589,6 @@ bin/0_array</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/7_array/0_array.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int main(void){
@@ -10187,9 +8607,6 @@ int main(void){
 }
 
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -10229,23 +8646,6 @@ bin/1_array</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/7_array/1_array.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int main(void){
@@ -10259,9 +8659,6 @@ int main(void){
 }
 
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -10401,22 +8798,6 @@ bin/2_array</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/7_array/2_array.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int main(void){
@@ -10429,9 +8810,6 @@ int main(void){
         return 0;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -10471,24 +8849,6 @@ bin/3_array</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/7_array/3_array.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 #define N 5
@@ -10503,9 +8863,6 @@ int main(void){
         return 0;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -10545,28 +8902,6 @@ bin/4_array</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/7_array/4_array.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 #define N 5
@@ -10585,9 +8920,6 @@ int main(void){
         return 0;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -10774,27 +9106,6 @@ bin/5_array</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/7_array/5_array.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 #define NUM_ELEM 100
@@ -10812,9 +9123,6 @@ int main(void){
 }
 
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -10854,30 +9162,6 @@ bin/6_array</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/7_array/6_array.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 #define NUM_ELEM 100
@@ -10898,9 +9182,6 @@ int main(void){
 }
 
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -11008,22 +9289,6 @@ bin/6_pointers</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/6_pointers/6_pointers.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#define N 300
 
 int main(void){
@@ -11036,9 +9301,6 @@ int main(void){
 }
 
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -11078,62 +9340,6 @@ bin/7_pointers</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/6_pointers/7_pointers.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35
-36
-37
-38
-39
-40
-41
-42
-43
-44
-45
-46
-47
-48
-49
-50
-51</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 #define N 300
@@ -11186,9 +9392,6 @@ int main(void){
 }
 
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -11316,42 +9519,6 @@ bin/8_pointers</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/6_pointers/8_pointers.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int main(void){
@@ -11384,9 +9551,6 @@ int main(void){
 	printf("%ld\n", (long)q - (long)p); // distanza in termini di byte
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -11486,25 +9650,6 @@ bin/0_strings</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/8_strings/0_strings.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>
 #include&lt;stdio.h&gt;
 
@@ -11520,9 +9665,6 @@ int main(void){
 	return 0;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -11562,24 +9704,6 @@ bin/1_strings</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/8_strings/1_strings.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int main(void){
@@ -11594,9 +9718,6 @@ int main(void){
         return 0;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -11754,24 +9875,6 @@ bin/2_strings</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/8_strings/2_strings.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int main(void){
@@ -11786,9 +9889,6 @@ int main(void){
         return 0;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -11828,25 +9928,6 @@ bin/4_strings</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/8_strings/4_strings.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int main(void){
@@ -11862,9 +9943,6 @@ int main(void){
 }
 
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -11904,51 +9982,6 @@ bin/5_strings</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/8_strings/5_strings.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35
-36
-37
-38
-39
-40</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 #include&lt;string.h&gt;
 
@@ -11990,9 +10023,6 @@ int main(void){
 	
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -12225,35 +10255,6 @@ bin/0_functions</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/9_functions/0_functions.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 #define ESPONENTE 16
@@ -12279,9 +10280,6 @@ int potenza_di_due(int esponente){
 }
 
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -12433,42 +10431,6 @@ bin/1_functions</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/9_functions/1_functions.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int incrementa(int, int); /* prototipo */
@@ -12501,9 +10463,6 @@ int incrementa(int valore_f, int iterazioni){
 }
 
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -12618,42 +10577,6 @@ bin/2_functions</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/9_functions/2_functions.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int incrementa(int *, int); /* prototipo */
@@ -12686,9 +10609,6 @@ int incrementa(int *valore_f, int iterazioni){
 }
 
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -12812,32 +10732,6 @@ bin/5_pointers</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/6_pointers/5_pointers.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 void leggi(const char *);
@@ -12860,9 +10754,6 @@ void leggi(const char *qualcosa){
 	printf("%s\n",qualcosa);
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -12945,40 +10836,6 @@ bin/3_functions</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/9_functions/3_functions.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 #define N 100
 
@@ -13009,9 +10866,6 @@ int somma(int *a, int dim){
 	return risultato;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -13103,55 +10957,6 @@ bin/0_malloc</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/10_dynamic_memory/0_malloc.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35
-36
-37
-38
-39
-40
-41
-42
-43
-44</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 #include&lt;stdlib.h&gt;
 
@@ -13197,9 +11002,6 @@ int main(void){
 	return 0;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -13363,48 +11165,6 @@ bin/7_array</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/7_array/7_array.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35
-36
-37</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 #define N_RIGHE 6
@@ -13443,9 +11203,6 @@ int main(void){
 	return 0;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -13603,24 +11360,6 @@ bin/9_pointers</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/6_pointers/9_pointers.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int main(void){
@@ -13635,9 +11374,6 @@ int main(void){
 	return 0;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -13677,94 +11413,6 @@ bin/11_pointers</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/6_pointers/11_pointers.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35
-36
-37
-38
-39
-40
-41
-42
-43
-44
-45
-46
-47
-48
-49
-50
-51
-52
-53
-54
-55
-56
-57
-58
-59
-60
-61
-62
-63
-64
-65
-66
-67
-68
-69
-70
-71
-72
-73
-74
-75
-76
-77
-78
-79
-80
-81
-82
-83</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;  // printf()
 #include&lt;stdlib.h&gt; // malloc(), free()
 #include&lt;string.h&gt; // strcpy()
@@ -13849,9 +11497,6 @@ int main(void){
         return 0;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -13928,28 +11573,6 @@ bin/10_pointers</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/6_pointers/10_pointers.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 int main(void){
@@ -13968,9 +11591,6 @@ int main(void){
         return 0;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -14250,133 +11870,6 @@ bin/12_pointers</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/6_pointers/12_pointers.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35
-36
-37
-38
-39
-40
-41
-42
-43
-44
-45
-46
-47
-48
-49
-50
-51
-52
-53
-54
-55
-56
-57
-58
-59
-60
-61
-62
-63
-64
-65
-66
-67
-68
-69
-70
-71
-72
-73
-74
-75
-76
-77
-78
-79
-80
-81
-82
-83
-84
-85
-86
-87
-88
-89
-90
-91
-92
-93
-94
-95
-96
-97
-98
-99
-100
-101
-102
-103
-104
-105
-106
-107
-108
-109
-110
-111
-112
-113
-114
-115
-116
-117
-118
-119
-120
-121
-122</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;  // printf()
 #include&lt;stdlib.h&gt; // malloc(), free()
 #include&lt;string.h&gt; // strcpy()
@@ -14500,9 +11993,6 @@ void print_just_strings(char **array_of_pointers, char static_matrix[][N_COLS], 
 
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -14745,45 +12235,6 @@ bin/0_structs</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/11_structs/0_structs.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 
 /* dichiaro il nuovo tipo che si chiama: struct punto_2d */
@@ -14819,9 +12270,6 @@ int main(void){
 	return 0;
 }
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
@@ -14949,72 +12397,6 @@ bin/1_structs</code></pre>
 </p>
 
 <!-- lab-snippet:start path="lab/11_structs/1_structs.c" -->
-<table>
-<tr>
-<td valign="top" align="right">
-<pre><code>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35
-36
-37
-38
-39
-40
-41
-42
-43
-44
-45
-46
-47
-48
-49
-50
-51
-52
-53
-54
-55
-56
-57
-58
-59
-60
-61</code></pre>
-</td>
-<td valign="top">
 <pre lang="c"><code>#include&lt;stdio.h&gt;
 #include&lt;string.h&gt;
 
@@ -15077,9 +12459,6 @@ void calcola_media(struct studente *i){
 }
 
 </code></pre>
-</td>
-</tr>
-</table>
 <!-- lab-snippet:end -->
 </details>
 </td>
