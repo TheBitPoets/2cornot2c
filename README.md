@@ -9087,7 +9087,7 @@ int main(void){
 </p>
 
 <!-- lab-output:start path="lab/7_array/output/00_array.txt" -->
-<pre lang="text"><code>0 1 2 3 4
+<pre lang="text"><code>0 1 2 3 4 
 0 1 2 3 4
 </code></pre>
 <!-- lab-output:end -->
@@ -9484,7 +9484,7 @@ int main(void){
 
 <!-- lab-output:start path="lab/7_array/output/4_array.txt" -->
 <pre lang="text"><code>0			1			2			3			4			
-&lt;base+0x0&gt;		&lt;base+0x4&gt;		&lt;base+0x8&gt;		&lt;base+0xc&gt;		&lt;base+0x10&gt;		
+&lt;base+0x0&gt;		&lt;base+0x4&gt;		&lt;base+0x8&gt;		&lt;base+0xc&gt;		&lt;base+0x10&gt;
 </code></pre>
 <!-- lab-output:end -->
 </details>
