@@ -790,6 +790,13 @@ Introduce il percorso minimo che porta da un sorgente C a un programma eseguibil
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/0_hello.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -1007,6 +1014,13 @@ Approfondisce il paragrafo Funzioni con un esempio eseguibile e mirato. Il codic
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/1_funzioni.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -1159,6 +1173,13 @@ Approfondisce il paragrafo Variabili con un esempio eseguibile e mirato. Il codi
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/2_variabili.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -1237,6 +1258,13 @@ Approfondisce il paragrafo Variabili con un esempio eseguibile e mirato. Il codi
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/3_variabili.c">/lab/0_intro/3_variabili.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/3_variabili.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -1830,6 +1858,13 @@ Approfondisce il paragrafo File scope con un esempio eseguibile e mirato. Il cod
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/1_variables/2_global.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -2069,6 +2104,13 @@ Approfondisce il paragrafo Variabili automatiche (automatic class) con un esempi
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/1_variables/0_local.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -2224,6 +2266,13 @@ Approfondisce il paragrafo Variabili statiche locali (static variables with bloc
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/1_variables/1_static_local.c">/lab/1_variables/1_static_local.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/1_variables/1_static_local.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -2468,6 +2517,13 @@ Approfondisce il paragrafo Variabili globali con External Linkage (Static variab
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/1_variables/4_global_external_internal_a.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -2528,6 +2584,13 @@ Approfondisce il paragrafo Variabili globali con External Linkage (Static variab
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/1_variables/4_global_external_internal_b.c">/lab/1_variables/4_global_external_internal_b.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/1_variables/4_global_external_internal_b.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -2769,6 +2832,13 @@ Approfondisce il paragrafo Variabili globali con Internal Linkage (Static variab
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/1_variables/3_global_internal.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -2985,6 +3055,13 @@ Approfondisce il paragrafo Suddivisione in moduli di un programma con un esempio
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/4_variabili.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -3077,6 +3154,13 @@ Mostra il ruolo del file di intestazione come contratto condiviso: raccoglie i p
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/4_variabili.h#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -3118,6 +3202,13 @@ Approfondisce il paragrafo Suddivisione in moduli di un programma con un esempio
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/5_variabili_main.c">/lab/0_intro/5_variabili_main.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/5_variabili_main.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -3195,6 +3286,13 @@ Approfondisce il paragrafo Suddivisione in moduli di un programma con un esempio
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/5_variabili.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -3247,6 +3345,13 @@ Completa l'esempio multi-file dichiarando le funzioni implementate nel modulo se
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/5_variabili.h">/lab/0_intro/5_variabili.h</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/5_variabili.h#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -3504,6 +3609,13 @@ Approfondisce il paragrafo La direttiva #define con un esempio eseguibile e mira
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/2_preprocessor/macro.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -3717,6 +3829,13 @@ Approfondisce il paragrafo Le direttive #if #ifdef #ifndef con un esempio esegui
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/2_preprocessor/direttiva_if.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -3784,6 +3903,13 @@ Approfondisce il paragrafo Le direttive #if #ifdef #ifndef con un esempio esegui
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/2_preprocessor/direttiva_ifdef.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -3845,6 +3971,13 @@ Approfondisce il paragrafo Le direttive #if #ifdef #ifndef con un esempio esegui
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/2_preprocessor/direttiva_ifndef.c">/lab/2_preprocessor/direttiva_ifndef.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/2_preprocessor/direttiva_ifndef.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -3979,6 +4112,13 @@ Approfondisce il paragrafo Eliminazione temporanea di codice con un esempio eseg
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/2_preprocessor/eliminazione_temporanea_codice.c">/lab/2_preprocessor/eliminazione_temporanea_codice.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/2_preprocessor/eliminazione_temporanea_codice.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -4632,6 +4772,13 @@ Approfondisce il paragrafo Estensione rappresentazione binaria di un numero inte
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/estensione_della_rappresentazione_binaria.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -4878,6 +5025,13 @@ Approfondisce il paragrafo Stampare int con un esempio eseguibile e mirato. Il c
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/print_int.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -5105,6 +5259,13 @@ Approfondisce il paragrafo Stampare altri tipi di interi con un esempio eseguibi
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/print_others_ints.c">/lab/3_datatype/print_others_ints.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/print_others_ints.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -5420,6 +5581,13 @@ Approfondisce il paragrafo Cast con un esempio eseguibile e mirato. Il codice pe
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/cast_esplicito_implicito.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -5495,6 +5663,13 @@ Funziona come esercizio di previsione: obbliga a ragionare sul risultato prima d
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/mistero.c">/lab/3_datatype/mistero.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/mistero.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -5688,6 +5863,13 @@ Approfondisce il paragrafo Cast tra signed e unsigned con un esempio eseguibile 
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/cast_tra_signed_unsigned.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -5767,6 +5949,13 @@ Approfondisce il paragrafo Cast tra signed e unsigned con un esempio eseguibile 
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/cast_tra_unsigned_signed.c">/lab/3_datatype/cast_tra_unsigned_signed.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/cast_tra_unsigned_signed.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -6080,6 +6269,13 @@ Approfondisce il paragrafo Troncamento rappresentazione binaria con un esempio e
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/troncamento_bit.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -6161,6 +6357,13 @@ Approfondisce il paragrafo char con un esempio eseguibile e mirato. Il codice pe
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/ascii.c">/lab/3_datatype/ascii.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/ascii.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -6251,6 +6454,13 @@ Approfondisce il paragrafo Stampare un char con un esempio eseguibile e mirato. 
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/print_char.c">/lab/3_datatype/print_char.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/3_datatype/print_char.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -6363,6 +6573,13 @@ Approfondisce il paragrafo Operatore di assegnamento: = con un esempio eseguibil
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/4_operators/op_assegnamento.c">/lab/4_operators/op_assegnamento.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/4_operators/op_assegnamento.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -6516,6 +6733,13 @@ Approfondisce il paragrafo Operatore divisione: / con un esempio eseguibile e mi
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/4_operators/op_divisione.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -6592,6 +6816,13 @@ Approfondisce il paragrafo Operatore sizeof con un esempio eseguibile e mirato. 
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/4_operators/sizeof.c">/lab/4_operators/sizeof.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/4_operators/sizeof.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -6687,6 +6918,13 @@ Approfondisce il paragrafo Operatore % con un esempio eseguibile e mirato. Il co
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/4_operators/op_modulo.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -6772,6 +7010,13 @@ Approfondisce il paragrafo Operatore incremento/decremento ++ -- con un esempio 
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/4_operators/op_incremento_decremento.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -6835,6 +7080,13 @@ Approfondisce il paragrafo Operatore incremento/decremento ++ -- con un esempio 
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/4_operators/pre_post_incremento.c">/lab/4_operators/pre_post_incremento.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/4_operators/pre_post_incremento.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -7028,6 +7280,13 @@ Approfondisce il paragrafo if o if-else con un esempio eseguibile e mirato. Il c
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/if.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -7157,6 +7416,13 @@ Approfondisce il paragrafo Condizioni complesse con l'uso di operatori logici e 
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/logical_relational_operators.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -7271,6 +7537,13 @@ Approfondisce il paragrafo for con un esempio eseguibile e mirato. Il codice per
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/for.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -7352,6 +7625,13 @@ Approfondisce il paragrafo while con un esempio eseguibile e mirato. Il codice p
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/while.c">/lab/5_control_statements/while.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/while.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -7440,6 +7720,13 @@ Approfondisce il paragrafo do-while con un esempio eseguibile e mirato. Il codic
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/do_while.c">/lab/5_control_statements/do_while.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/do_while.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -7534,6 +7821,13 @@ Approfondisce il paragrafo switch con un esempio eseguibile e mirato. Il codice 
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/switch.c">/lab/5_control_statements/switch.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/switch.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -7709,6 +8003,13 @@ Approfondisce il paragrafo break e continue con un esempio eseguibile e mirato. 
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/5_control_statements/break_continue.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -7838,6 +8139,13 @@ Approfondisce il paragrafo I puntatori con un esempio eseguibile e mirato. Il co
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/0_pointers.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -7887,6 +8195,13 @@ Approfondisce il paragrafo I puntatori con un esempio eseguibile e mirato. Il co
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/1_pointers.c">/lab/6_pointers/1_pointers.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/1_pointers.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -7948,6 +8263,13 @@ Rafforza il lessico operativo dei puntatori: indirizzo, valore puntato, derefere
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/33_pointers.c">/lab/6_pointers/33_pointers.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/33_pointers.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -8164,6 +8486,13 @@ Approfondisce il paragrafo Puntatori non inizializzati con un esempio eseguibile
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/2_pointers.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -8259,6 +8588,13 @@ Approfondisce il paragrafo Il puntatore nullo (NULL) con un esempio eseguibile e
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/3_pointers.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -8341,6 +8677,13 @@ Approfondisce il paragrafo Aritmetica puntatori con un esempio eseguibile e mira
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/4_pointers.c">/lab/6_pointers/4_pointers.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/4_pointers.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -8516,6 +8859,13 @@ Approfondisce il paragrafo Vettori con un esempio eseguibile e mirato. Il codice
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/00_array.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -8577,6 +8927,13 @@ Approfondisce il paragrafo Vettori con un esempio eseguibile e mirato. Il codice
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/0_array.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -8631,6 +8988,13 @@ Approfondisce il paragrafo Vettori con un esempio eseguibile e mirato. Il codice
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/1_array.c">/lab/7_array/1_array.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/1_array.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -8786,6 +9150,13 @@ Approfondisce il paragrafo Inizializzare un vettore con un esempio eseguibile e 
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/2_array.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -8834,6 +9205,13 @@ Approfondisce il paragrafo Inizializzare un vettore con un esempio eseguibile e 
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/3_array.c">/lab/7_array/3_array.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/3_array.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -8887,6 +9265,13 @@ Approfondisce il paragrafo Inizializzare un vettore con un esempio eseguibile e 
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/4_array.c">/lab/7_array/4_array.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/4_array.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -9094,6 +9479,13 @@ Approfondisce il paragrafo Dimensione vettore (sizeof) con un esempio eseguibile
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/5_array.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -9147,6 +9539,13 @@ Approfondisce il paragrafo Dimensione vettore (sizeof) con un esempio eseguibile
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/6_array.c">/lab/7_array/6_array.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/6_array.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -9277,6 +9676,13 @@ Approfondisce il paragrafo Relazione tra array e puntatori con un esempio esegui
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/6_pointers.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -9325,6 +9731,13 @@ Approfondisce il paragrafo Relazione tra array e puntatori con un esempio esegui
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/7_pointers.c">/lab/6_pointers/7_pointers.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/7_pointers.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -9507,6 +9920,13 @@ Approfondisce il paragrafo Differenza tra puntatori con un esempio eseguibile e 
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/8_pointers.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -9638,6 +10058,13 @@ Approfondisce il paragrafo Le stringhe con un esempio eseguibile e mirato. Il co
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/8_strings/0_strings.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -9689,6 +10116,13 @@ Approfondisce il paragrafo Le stringhe con un esempio eseguibile e mirato. Il co
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/8_strings/1_strings.c">/lab/8_strings/1_strings.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/8_strings/1_strings.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -9863,6 +10297,13 @@ Approfondisce il paragrafo Dettagli sull'inizializzazione con un esempio eseguib
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/8_strings/2_strings.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -9913,6 +10354,13 @@ Approfondisce il paragrafo Dettagli sull'inizializzazione con un esempio eseguib
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/8_strings/4_strings.c">/lab/8_strings/4_strings.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/8_strings/4_strings.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -9967,6 +10415,13 @@ Approfondisce il paragrafo Dettagli sull'inizializzazione con un esempio eseguib
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/8_strings/5_strings.c">/lab/8_strings/5_strings.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/8_strings/5_strings.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -10243,6 +10698,13 @@ Approfondisce il paragrafo Dichiarazione di funzione con un esempio eseguibile e
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/9_functions/0_functions.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -10419,6 +10881,13 @@ Approfondisce il paragrafo Passaggio di parametri per valore con un esempio eseg
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/9_functions/1_functions.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -10562,6 +11031,13 @@ Approfondisce il paragrafo Passaggio di parametri per indirizzo con un esempio e
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/9_functions/2_functions.c">/lab/9_functions/2_functions.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/9_functions/2_functions.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -10720,6 +11196,13 @@ Approfondisce il paragrafo Passaggio di puntatori const con un esempio eseguibil
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/5_pointers.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -10821,6 +11304,13 @@ Approfondisce il paragrafo Array come parametri a funzioni con un esempio esegui
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/9_functions/3_functions.c">/lab/9_functions/3_functions.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/9_functions/3_functions.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -10942,6 +11432,13 @@ Approfondisce il paragrafo Allocazione dinamica della memoria con un esempio ese
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/10_dynamic_memory/0_malloc.c">/lab/10_dynamic_memory/0_malloc.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/10_dynamic_memory/0_malloc.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -11153,6 +11650,13 @@ Approfondisce il paragrafo Array bidimensionali con un esempio eseguibile e mira
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/7_array/7_array.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -11348,6 +11852,13 @@ Approfondisce il paragrafo Array di puntatori con un esempio eseguibile e mirato
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/9_pointers.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -11398,6 +11909,13 @@ Approfondisce il paragrafo Array di puntatori con un esempio eseguibile e mirato
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/11_pointers.c">/lab/6_pointers/11_pointers.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/11_pointers.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -11558,6 +12076,13 @@ Approfondisce il paragrafo Differenza tra array bidimensionali e array di puntat
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/10_pointers.c">/lab/6_pointers/10_pointers.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/10_pointers.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -11855,6 +12380,13 @@ Approfondisce il paragrafo Allocazione dinamica di matrici con un esempio esegui
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/12_pointers.c">/lab/6_pointers/12_pointers.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/6_pointers/12_pointers.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">
@@ -12223,6 +12755,13 @@ Approfondisce il paragrafo Le strutture con un esempio eseguibile e mirato. Il c
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/11_structs/0_structs.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
@@ -12382,6 +12921,13 @@ Approfondisce il paragrafo Passaggio di strutture a funzioni con un esempio eseg
 <p align="justify">
 <strong>Sorgente:</strong>
 <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/11_structs/1_structs.c">/lab/11_structs/1_structs.c</a>
+</p>
+
+<p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/11_structs/1_structs.c#L1">
+Apri su GitHub
+</a>
 </p>
 
 <p align="justify">

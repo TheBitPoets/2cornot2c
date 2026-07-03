@@ -24,6 +24,13 @@ Questo laboratorio mostra come includere un header standard, definire la funzion
 </p>
 
 <p align="justify">
+<strong>Sorgente con numeri di riga:</strong>
+<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/0_hello.c#L1">
+Apri su GitHub
+</a>
+</p>
+
+<p align="justify">
 <strong>Compilazione ed esecuzione:</strong>
 </p>
 
