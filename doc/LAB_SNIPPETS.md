@@ -1,99 +1,78 @@
-# Frammenti di codice dei laboratori: template, script e GitHub Action
+# Frammenti di codice e output dei laboratori
 
 Questo documento spiega come funzionano i blocchi lab generati automaticamente nel README o in altri file Markdown del repository.
 
-L'obiettivo e semplice: mostrare nel README il codice reale degli esercizi presenti in `lab/`, senza copiarlo a mano ogni volta.
+L'obiettivo e mostrare nel README il codice reale degli esercizi presenti in `lab/`, e quando disponibile anche l'output generato dal programma, senza copiarli a mano ogni volta.
 
-## Perche usare gli frammento automatici
+## Perche usare i frammenti automatici
 
 Quando un esercizio in `lab/` cambia, il codice copiato manualmente nel README rischia di diventare vecchio.
 
 Per evitare questo problema usiamo:
 
 - un template HTML/Markdown per presentare il laboratorio;
-- due marker HTML che delimitano il codice generato;
-- lo script `scripts/update_lab_frammentos.py`, che legge il file reale in `lab/` e aggiorna lo frammento;
-- una GitHub Action che controlla nelle PR se gli frammento sono aggiornati.
+- marker HTML che delimitano il codice generato;
+- marker HTML che delimitano l'output generato;
+- lo script `scripts/update_lab_snippets.py`, che aggiorna i marker leggendo i file reali;
+- GitHub Actions che controllano in PR se codice e output sono aggiornati.
 
-## Struttura consigliata di un blocco lab
+## Marker codice sorgente
 
-Esempio:
+Un blocco codice viene delimitato cosi:
 
 ```html
-<details>
-<summary>💻 <code>/lab/0_intro/0_hello.c</code></summary>
-
-<table align="center">
-  <tr>
-    <td>
-      <p align="justify">
-        <strong>Descrizione breve:</strong>
-        Primo programma C.
-      </p>
-
-      <p align="justify">
-        <strong>Descrizione lunga:</strong>
-        Questo laboratorio mostra come includere un header standard, definire
-        la funzione <code>main()</code>, compilare il sorgente ed eseguire il binario.
-      </p>
-
-      <p align="justify">
-        <strong>Sorgente:</strong>
-        <a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/0_hello.c">
-          /lab/0_intro/0_hello.c
-        </a>
-      </p>
-
-<!-- lab-frammento:start path="lab/0_intro/0_hello.c" -->
+<!-- lab-snippet:start path="lab/0_intro/0_hello.c" -->
 <pre lang="c"><code>/* codice generato automaticamente */
 </code></pre>
-<!-- lab-frammento:end -->
-    </td>
-  </tr>
-</table>
-
-</details>
+<!-- lab-snippet:end -->
 ```
 
-La parte importante e questa:
+Lo script sostituisce tutto quello che si trova tra i due marker.
+
+Il path deve essere relativo alla root del repository.
+
+## Marker output
+
+Un blocco output viene delimitato cosi:
 
 ```html
-<!-- lab-frammento:start path="lab/0_intro/0_hello.c" -->
-...
-<!-- lab-frammento:end -->
+<!-- lab-output:start path="lab/0_intro/output/0_hello.txt" -->
+<pre lang="text"><code>Hello World
+</code></pre>
+<!-- lab-output:end -->
 ```
 
-Lo script sostituisce tutto quello che si trova tra questi due marker.
+Lo script legge il file indicato in `path` e lo inserisce come testo preformattato.
 
 ## Come usare lo script
 
-Per aggiornare gli frammento in `README.md` e `TEMPLATES.md`:
+Per aggiornare codice e output in `README.md` e `TEMPLATES.md`:
 
 ```bash
-python scripts/update_lab_frammentos.py
+python scripts/update_lab_snippets.py
 ```
 
 Per aggiornare solo un file specifico:
 
 ```bash
-python scripts/update_lab_frammentos.py README.md
+python scripts/update_lab_snippets.py README.md
 ```
 
 oppure:
 
 ```bash
-python scripts/update_lab_frammentos.py TEMPLATES.md
+python scripts/update_lab_snippets.py TEMPLATES.md
 ```
 
 Lo script:
 
-- cerca tutti i marker `lab-frammento:start` / `lab-frammento:end`;
+- cerca tutti i marker `lab-snippet:start` / `lab-snippet:end`;
+- cerca tutti i marker `lab-output:start` / `lab-output:end`;
 - legge il file indicato nell'attributo `path`;
 - converte i caratteri speciali in entita HTML;
-- inserisce il codice dentro un blocco `<pre lang="..."><code>...</code></pre>`;
-- sceglie il linguaggio in base all'estensione del file.
+- inserisce codice e output dentro blocchi `<pre><code>`.
 
-Esempi:
+## Linguaggi supportati per il codice
 
 | Estensione | Linguaggio usato nel blocco |
 |---|---|
@@ -104,31 +83,18 @@ Esempi:
 | `.sh` | `bash` |
 | `.py` | `python` |
 
-
-## Frammenti di output dei laboratori
-
-Lo stesso script aggiorna anche i blocchi output delimitati da questi marker:
-
-```html
-<!-- lab-output:start path="lab/0_intro/output/0_hello.txt" -->
-...
-<!-- lab-output:end -->
-```
-
-Il contenuto viene letto dal file indicato in `path` e inserito come blocco:
+Gli output usano sempre:
 
 ```html
 <pre lang="text"><code>...</code></pre>
 ```
 
-Gli output vengono generati e controllati con `scripts/update_lab_outputs.py`. La procedura completa e documentata in `doc/LAB_OUTPUTS.md`.
-
 ## Modalita controllo
 
-Per controllare se gli frammento sono aggiornati senza volerli modificare intenzionalmente:
+Per controllare se i frammenti sono aggiornati senza modificarli:
 
 ```bash
-python scripts/update_lab_frammentos.py --check
+python scripts/update_lab_snippets.py --check
 ```
 
 Se tutto e aggiornato, il comando termina correttamente.
@@ -136,81 +102,107 @@ Se tutto e aggiornato, il comando termina correttamente.
 Se qualche frammento e vecchio, il comando fallisce e stampa un messaggio simile:
 
 ```text
-I frammenti di codice dei laboratori non sono aggiornati:
+Lab snippets are not up to date:
 - README.md
-Esegui: python scripts/update_lab_frammentos.py
+Run: python scripts/update_lab_snippets.py
 ```
 
 In quel caso basta eseguire:
 
 ```bash
-python scripts/update_lab_frammentos.py
+python scripts/update_lab_snippets.py
 ```
 
 poi committare i file aggiornati.
 
-## Come funziona la GitHub Action
+## Flusso completo codice + output
 
-Il workflow si trova in:
+Quando aggiungi o modifichi un esercizio con output:
 
-```text
-.github/workflows/lab-frammentos.yml
+1. Modifica il sorgente in `lab/`.
+2. Aggiorna `lab/lab_outputs.json`, se l'esercizio deve produrre output versionato.
+3. Rigenera gli output:
+
+```bash
+python scripts/update_lab_outputs.py
 ```
 
-La Action parte quando in una PR o su `main` cambiano file come:
+4. Rigenera README/template:
+
+```bash
+python scripts/update_lab_snippets.py
+```
+
+5. Committa insieme sorgente, output e Markdown aggiornato.
+
+## Esempio pratico
+
+Template di un lab con codice e output:
+
+```html
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/0_intro/0_hello.c" -->
+<pre lang="c"><code>/* generato */
+</code></pre>
+<!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/0_intro/output/0_hello.txt" -->
+<pre lang="text"><code>Hello World
+</code></pre>
+<!-- lab-output:end -->
+```
+
+## GitHub Action dei frammenti
+
+Il workflow dei frammenti si trova in:
 
 ```text
-README.md
-TEMPLATES.md
-lab/**
-scripts/update_lab_frammentos.py
-.github/workflows/lab-frammentos.yml
+.github/workflows/lab-snippets.yml
 ```
 
 La Action esegue:
 
 ```bash
-python scripts/update_lab_frammentos.py --check
+python scripts/update_lab_snippets.py --check
 ```
 
-Quindi non modifica automaticamente il repository.
+Quindi non modifica automaticamente il repository. Fallisce solo se i marker nel README o nel template non sono aggiornati.
 
-Serve solo come controllo di sicurezza: se un file in `lab/` cambia ma lo frammento nel README non e stato rigenerato, la PR fallisce e segnala cosa fare.
+## Collegamento con gli output
 
-## Flusso di lavoro consigliato
-
-Quando aggiungi o modifichi un esercizio in `lab/`:
-
-1. Modifica il file sorgente in `lab/`.
-2. Aggiungi o aggiorna il blocco lab nel README, se necessario.
-3. Esegui:
+Gli output vengono generati da:
 
 ```bash
-python scripts/update_lab_frammentos.py
+python scripts/update_lab_outputs.py
 ```
 
-4. Controlla le modifiche generate.
-5. Committa insieme:
+La procedura completa sugli output e documentata in:
 
 ```text
-lab/...
-README.md
-```
-
-oppure, se stai aggiornando solo il template:
-
-```text
-TEMPLATES.md
+doc/LAB_OUTPUTS.md
 ```
 
 ## Cosa non modificare a mano
 
-Non modificare a mano il codice dentro questi marker:
+Non modificare manualmente il contenuto dentro questi marker:
 
 ```html
-<!-- lab-frammento:start path="..." -->
+<!-- lab-snippet:start path="..." -->
 ...
-<!-- lab-frammento:end -->
+<!-- lab-snippet:end -->
+```
+
+```html
+<!-- lab-output:start path="..." -->
+...
+<!-- lab-output:end -->
 ```
 
 Qualunque modifica manuale dentro i marker verra sovrascritta dallo script.
@@ -224,46 +216,30 @@ Puoi invece modificare liberamente:
 - i comandi di compilazione;
 - tutto il testo fuori dai marker.
 
-## Collegamento al sorgente
-
-Per i link ai file lab e preferibile usare `blob/main`, per esempio:
-
-```html
-<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/0_intro/0_hello.c">
-  /lab/0_intro/0_hello.c
-</a>
-```
-
-Evita link con hash di commit vecchi, perche puntano a una versione congelata del file.
-
 ## Risoluzione dei problemi
-
-### La Action fallisce dicendo che gli frammento non sono aggiornati
-
-Esegui localmente:
-
-```bash
-python scripts/update_lab_frammentos.py
-```
-
-poi committa i file modificati.
 
 ### Lo script dice che il file sorgente non esiste
 
 Controlla il path nel marker:
 
 ```html
-<!-- lab-frammento:start path="lab/0_intro/0_hello.c" -->
+<!-- lab-snippet:start path="lab/0_intro/0_hello.c" -->
 ```
 
-Il path deve essere relativo alla root del repository e deve puntare a un file esistente.
+### Lo script dice che il file output non esiste
+
+Prima genera gli output:
+
+```bash
+python scripts/update_lab_outputs.py
+```
+
+Poi aggiorna i marker:
+
+```bash
+python scripts/update_lab_snippets.py
+```
 
 ### Il codice appare senza evidenziazione della sintassi
 
 Controlla l'estensione del file sorgente. Lo script usa l'estensione per decidere il linguaggio del blocco `<pre lang="...">`.
-
-Per file C e header il risultato atteso e:
-
-```html
-<pre lang="c"><code>...</code></pre>
-```

@@ -1,5 +1,19 @@
 #!/usr/bin/env python3
-"""Compile and run configured lab exercises, then update their output files."""
+"""Generate and verify output files for configured C lab exercises.
+
+This script is intentionally manifest-driven: it does not try to discover and
+run every file under ``lab/`` automatically, because several exercises are
+interactive, intentionally fail, or produce non-deterministic output.  Each lab
+that should have a committed output file is listed in ``lab/lab_outputs.json``.
+
+Typical usage:
+
+    python scripts/update_lab_outputs.py
+    python scripts/update_lab_outputs.py --check
+
+The first command rewrites ``lab/**/output/*.txt`` files.  The second command is
+used by GitHub Actions and fails when the committed output files are stale.
+"""
 
 from __future__ import annotations
 
@@ -15,6 +29,13 @@ DEFAULT_CONFIG = ROOT / "lab" / "lab_outputs.json"
 
 
 def repo_path(value: str) -> pathlib.Path:
+    """Return an absolute repository-local path and reject path traversal.
+
+    Manifest paths are intentionally written relative to the repository root.
+    This helper resolves them and prevents accidental values such as
+    ``../../somewhere`` from escaping the repository workspace.
+    """
+
     path = (ROOT / value).resolve()
     try:
         path.relative_to(ROOT)
@@ -24,10 +45,23 @@ def repo_path(value: str) -> pathlib.Path:
 
 
 def load_config(path: pathlib.Path) -> dict[str, Any]:
+    """Load the JSON manifest that lists the labs to compile and execute."""
+
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def run_command(command: list[str], cwd: pathlib.Path, timeout: int, stdin: str | None = None) -> subprocess.CompletedProcess[str]:
+def run_command(
+    command: list[str],
+    cwd: pathlib.Path,
+    timeout: int,
+    stdin: str | None = None,
+) -> subprocess.CompletedProcess[str]:
+    """Run a command in a lab directory and capture stdout/stderr.
+
+    ``check=False`` is deliberate: the caller decides whether a non-zero exit
+    code is acceptable by reading the lab entry's ``allow_failure`` field.
+    """
+
     return subprocess.run(
         command,
         cwd=cwd,
@@ -39,7 +73,17 @@ def run_command(command: list[str], cwd: pathlib.Path, timeout: int, stdin: str 
     )
 
 
-def format_output(compile_result: subprocess.CompletedProcess[str], run_result: subprocess.CompletedProcess[str]) -> str:
+def format_output(
+    compile_result: subprocess.CompletedProcess[str],
+    run_result: subprocess.CompletedProcess[str],
+) -> str:
+    """Build the text that will be committed as the lab output artifact.
+
+    Normal program stdout is written plainly.  Compiler stdout/stderr and runtime
+    stderr are preserved in labelled sections only when they contain text, so the
+    common clean case remains easy to read.
+    """
+
     sections: list[str] = []
     if compile_result.stdout.strip():
         sections.append("[compile stdout]\n" + compile_result.stdout.rstrip())
@@ -55,6 +99,13 @@ def format_output(compile_result: subprocess.CompletedProcess[str], run_result: 
 
 
 def process_lab(entry: dict[str, Any], check: bool) -> bool:
+    """Compile, run, and either update or verify one manifest entry.
+
+    Returns ``True`` when the entry succeeds.  In update mode the generated text
+    is written to ``entry['output']``.  In check mode the generated text is
+    compared with the committed output file and no files are modified.
+    """
+
     name = entry.get("name") or entry["path"]
     cwd = repo_path(entry.get("workdir", str(pathlib.Path(entry["path"]).parent)))
     timeout = int(entry.get("timeout_seconds", 10))
@@ -92,6 +143,8 @@ def process_lab(entry: dict[str, Any], check: bool) -> bool:
 
 
 def main() -> int:
+    """Parse CLI flags and process every configured lab entry."""
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", default=str(DEFAULT_CONFIG), help="Path to the lab output manifest.")
     parser.add_argument("--check", action="store_true", help="Fail if generated outputs differ from committed files.")

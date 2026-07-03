@@ -52,10 +52,14 @@ OUTPUT_RE = re.compile(
 
 
 def language_for(path: pathlib.Path) -> str:
+    """Return the syntax-highlighting language for a source file path."""
+
     return LANG_BY_SUFFIX.get(path.suffix.lower(), "text")
 
 
 def render_snippet(relative_path: str) -> str:
+    """Render one lab source marker as an escaped HTML code block."""
+
     source_path = (ROOT / relative_path).resolve()
     try:
         source_path.relative_to(ROOT)
@@ -74,6 +78,8 @@ def render_snippet(relative_path: str) -> str:
 
 
 def render_output(relative_path: str) -> str:
+    """Render one lab output marker as an escaped plain-text block."""
+
     output_path = (ROOT / relative_path).resolve()
     try:
         output_path.relative_to(ROOT)
@@ -91,6 +97,8 @@ def render_output(relative_path: str) -> str:
 
 
 def update_file(path: pathlib.Path) -> bool:
+    """Update all lab source and output markers in one Markdown file."""
+
     original = path.read_text(encoding="utf-8")
 
     def replace(match: re.Match[str]) -> str:
@@ -108,6 +116,8 @@ def update_file(path: pathlib.Path) -> bool:
 
 
 def main() -> int:
+    """Parse CLI flags and update or check the requested Markdown files."""
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "targets",
