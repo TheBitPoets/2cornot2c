@@ -1,0 +1,3 @@
+signed positive: 0x1b
+signed negative: 0xffffffe5
+       unsigned: 0x1b

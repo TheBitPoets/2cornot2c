@@ -1,0 +1,4 @@
+sx  = -12345 	 0xcfc7
+usx = 53191 	 0xcfc7
+x   = -12345 	 0xffffcfc7
+ux  = 53191 	 0xcfc7

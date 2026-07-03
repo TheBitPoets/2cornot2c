@@ -4843,6 +4843,18 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/3_datatype/output/estensione_della_rappresentazione_binaria.txt" -->
+<pre lang="text"><code>sx  = -12345 	 0xcfc7
+usx = 53191 	 0xcfc7
+x   = -12345 	 0xffffcfc7
+ux  = 53191 	 0xcfc7
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -5122,6 +5134,17 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/3_datatype/output/print_int.txt" -->
+<pre lang="text"><code>signed positive: 0x1b
+signed negative: 0xffffffe5
+       unsigned: 0x1b
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -5301,6 +5324,18 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/3_datatype/output/print_others_ints.txt" -->
+<pre lang="text"><code>un  = 300000000  and not 300000000
+end = 200 and not 200
+big = 65537 and not 1
+verybig = 12345678908642 and not 12345678908642
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -5636,6 +5671,24 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/3_datatype/output/cast_esplicito_implicito.txt" -->
+<pre lang="text"><code>unsigned = 4 byte
+     int = 4 byte
+
+ux = 4294967295, tx = -1
+ux_ = 4294967295, tx_ = -1
+
+uy = 2147483647, ty = 2147483647
+uy_ = 2147483647, ty_ = 2147483647
+
+cast_me = -2147483648, u_cast_me = 2147483648
+</code></pre>
+<!-- lab-output:end -->
 </details>
 
 <details>
@@ -5680,6 +5733,16 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/3_datatype/output/mistero.txt" -->
+<pre lang="text"><code>sx = -12345 		 cfc7
+uy = 4294954951  	 ffffcfc7
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -5903,6 +5966,16 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/3_datatype/output/cast_tra_signed_unsigned.txt" -->
+<pre lang="text"><code>v = -27,  u_v = 65509
+v = 0xffffffe5, u_v = 0xffe5
+</code></pre>
+<!-- lab-output:end -->
 </details>
 
 <details>
@@ -5957,6 +6030,16 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/3_datatype/output/cast_tra_unsigned_signed.txt" -->
+<pre lang="text"><code>u = 65535, tu=-1
+u = 0xffff, tu=0xffffffff
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -6260,6 +6343,17 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/3_datatype/output/troncamento_bit.txt" -->
+<pre lang="text"><code>x  = 53191 	 cfc7
+sx = -12345 	 cfc7
+y  = -12345 	 ffffcfc7
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -6341,6 +6435,109 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/3_datatype/output/ascii.txt" -->
+<pre lang="text"><code>33	!
+34	"
+35	#
+36	$
+37	%
+38	&amp;
+39	'
+40	(
+41	)
+42	*
+43	+
+44	,
+45	-
+46	.
+47	/
+48	0
+49	1
+50	2
+51	3
+52	4
+53	5
+54	6
+55	7
+56	8
+57	9
+58	:
+59	;
+60	&lt;
+61	=
+62	&gt;
+63	?
+64	@
+65	A
+66	B
+67	C
+68	D
+69	E
+70	F
+71	G
+72	H
+73	I
+74	J
+75	K
+76	L
+77	M
+78	N
+79	O
+80	P
+81	Q
+82	R
+83	S
+84	T
+85	U
+86	V
+87	W
+88	X
+89	Y
+90	Z
+91	[
+92	\
+93	]
+94	^
+95	_
+96	`
+97	a
+98	b
+99	c
+100	d
+101	e
+102	f
+103	g
+104	h
+105	i
+106	j
+107	k
+108	l
+109	m
+110	n
+111	o
+112	p
+113	q
+114	r
+115	s
+116	t
+117	u
+118	v
+119	w
+120	x
+121	y
+122	z
+123	{
+124	|
+125	}
+126	~
+127	&lt;DEL&gt;
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -6431,6 +6628,18 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/3_datatype/output/print_char.txt" -->
+<pre lang="text"><code>A
+65
+65
+0x41
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>

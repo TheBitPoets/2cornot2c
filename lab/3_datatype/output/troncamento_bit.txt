@@ -1,0 +1,3 @@
+x  = 53191 	 cfc7
+sx = -12345 	 cfc7
+y  = -12345 	 ffffcfc7

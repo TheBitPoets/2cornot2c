@@ -1,0 +1,2 @@
+v = -27,  u_v = 65509
+v = 0xffffffe5, u_v = 0xffe5

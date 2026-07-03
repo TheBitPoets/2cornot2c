@@ -287,6 +287,172 @@
           "replacement": "int i = <indefinito>"
         }
       ]
+    },
+    {
+      "name": "ascii",
+      "path": "lab/3_datatype/ascii.c",
+      "workdir": "lab/3_datatype",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/ascii",
+        "ascii.c"
+      ],
+      "run": [
+        "bin/ascii"
+      ],
+      "output": "lab/3_datatype/output/ascii.txt",
+      "timeout_seconds": 5,
+      "normalize": [
+        {
+          "pattern": "\\x7f",
+          "replacement": "<DEL>"
+        }
+      ]
+    },
+    {
+      "name": "print_char",
+      "path": "lab/3_datatype/print_char.c",
+      "workdir": "lab/3_datatype",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/print_char",
+        "print_char.c"
+      ],
+      "run": [
+        "bin/print_char"
+      ],
+      "output": "lab/3_datatype/output/print_char.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "print_int",
+      "path": "lab/3_datatype/print_int.c",
+      "workdir": "lab/3_datatype",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/print_int",
+        "print_int.c"
+      ],
+      "run": [
+        "bin/print_int"
+      ],
+      "output": "lab/3_datatype/output/print_int.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "print_others_ints",
+      "path": "lab/3_datatype/print_others_ints.c",
+      "workdir": "lab/3_datatype",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/print_others_ints",
+        "print_others_ints.c"
+      ],
+      "run": [
+        "bin/print_others_ints"
+      ],
+      "output": "lab/3_datatype/output/print_others_ints.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "estensione_della_rappresentazione_binaria",
+      "path": "lab/3_datatype/estensione_della_rappresentazione_binaria.c",
+      "workdir": "lab/3_datatype",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/estensione_della_rappresentazione_binaria",
+        "estensione_della_rappresentazione_binaria.c"
+      ],
+      "run": [
+        "bin/estensione_della_rappresentazione_binaria"
+      ],
+      "output": "lab/3_datatype/output/estensione_della_rappresentazione_binaria.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "troncamento_bit",
+      "path": "lab/3_datatype/troncamento_bit.c",
+      "workdir": "lab/3_datatype",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/troncamento_bit",
+        "troncamento_bit.c"
+      ],
+      "run": [
+        "bin/troncamento_bit"
+      ],
+      "output": "lab/3_datatype/output/troncamento_bit.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "mistero",
+      "path": "lab/3_datatype/mistero.c",
+      "workdir": "lab/3_datatype",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/mistero",
+        "mistero.c"
+      ],
+      "run": [
+        "bin/mistero"
+      ],
+      "output": "lab/3_datatype/output/mistero.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "cast_tra_signed_unsigned",
+      "path": "lab/3_datatype/cast_tra_signed_unsigned.c",
+      "workdir": "lab/3_datatype",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/cast_tra_signed_unsigned",
+        "cast_tra_signed_unsigned.c"
+      ],
+      "run": [
+        "bin/cast_tra_signed_unsigned"
+      ],
+      "output": "lab/3_datatype/output/cast_tra_signed_unsigned.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "cast_tra_unsigned_signed",
+      "path": "lab/3_datatype/cast_tra_unsigned_signed.c",
+      "workdir": "lab/3_datatype",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/cast_tra_unsigned_signed",
+        "cast_tra_unsigned_signed.c"
+      ],
+      "run": [
+        "bin/cast_tra_unsigned_signed"
+      ],
+      "output": "lab/3_datatype/output/cast_tra_unsigned_signed.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "cast_esplicito_implicito",
+      "path": "lab/3_datatype/cast_esplicito_implicito.c",
+      "workdir": "lab/3_datatype",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/cast_esplicito_implicito",
+        "cast_esplicito_implicito.c"
+      ],
+      "run": [
+        "bin/cast_esplicito_implicito"
+      ],
+      "output": "lab/3_datatype/output/cast_esplicito_implicito.txt",
+      "timeout_seconds": 5
     }
   ]
 }
