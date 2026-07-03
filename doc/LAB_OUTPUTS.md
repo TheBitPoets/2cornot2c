@@ -24,9 +24,48 @@ python scripts/update_lab_snippets.py
 
 5. Committa insieme sorgente, manifest, output e README/template aggiornati.
 
-## Scorciatoia: aggiornare il manifest senza ricordare tutti i campi
+## Scorciatoia: wizard guidato per tutto il flusso
 
-Per aggiungere o aggiornare una voce in `lab/lab_outputs.json` puoi usare:
+Se vuoi essere guidato passo passo senza ricordare la procedura, usa il wizard:
+
+```bash
+python scripts/lab_output_wizard.py
+```
+
+Il wizard chiede:
+
+- path del sorgente principale;
+- eventuali sorgenti aggiuntivi;
+- eventuale input da passare a `stdin`;
+- conferma della voce manifest inferita;
+- se generare subito gli output;
+- se aggiornare subito README/template.
+
+Se il blocco lab esiste gia nel README, il wizard aggiunge automaticamente il marker `Output`.
+
+Se il blocco lab non esiste ancora, il wizard stampa un blocco pronto da inserire manualmente nel paragrafo didattico corretto. Questa scelta resta manuale perche lo script non puo sapere con certezza dove un nuovo esercizio sia piu utile dal punto di vista pedagogico.
+
+Puoi anche avviarlo passando direttamente il sorgente:
+
+```bash
+python scripts/lab_output_wizard.py lab/1_variables/0_local.c
+```
+
+Per un programma interattivo:
+
+```bash
+python scripts/lab_output_wizard.py lab/0_intro/2_variabili.c --stdin "4\n2\ns\n"
+```
+
+Per un lab multi-file:
+
+```bash
+python scripts/lab_output_wizard.py lab/1_variables/4_global_external_internal_a.c --extra-source lab/1_variables/4_global_external_internal_b.c
+```
+
+## Scorciatoia tecnica: aggiornare solo il manifest
+
+Se vuoi solo aggiungere o aggiornare una voce in `lab/lab_outputs.json`, senza l'intero flusso guidato, puoi usare:
 
 ```bash
 python scripts/upsert_lab_output_manifest.py lab/1_variables/0_local.c
@@ -319,6 +358,7 @@ Se un file non e cambiato, `git add` semplicemente non aggiungera nulla per quel
 | `lab/<cartella>/output/<nome>.txt` | Output generato per uno specifico esercizio |
 | `scripts/update_lab_snippets.py` | Script che incolla nel README sia sorgenti sia output generati |
 | `scripts/upsert_lab_output_manifest.py` | Script che aggiunge o aggiorna una voce del manifest inferendo i campi piu comuni |
+| `scripts/lab_output_wizard.py` | Procedura guidata interattiva per manifest, output e marker README |
 
 ## Struttura degli output
 
@@ -625,7 +665,7 @@ In sintesi: usa `normalize` per sostituire valori instabili o semanticamente inu
 
 ## Come lo script inferisce le normalizzazioni
 
-`scripts/upsert_lab_output_manifest.py` legge il sorgente C e cerca i casi piu frequenti.
+`scripts/upsert_lab_output_manifest.py` e `scripts/lab_output_wizard.py` leggono il sorgente C e cercano i casi piu frequenti.
 
 Se trova una variabile automatica `int` dichiarata senza inizializzazione e stampata con una forma come:
 
