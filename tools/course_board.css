@@ -57,6 +57,79 @@ h1 {
   font-size: 1.05rem;
 }
 
+.heroTools {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.orgBadge {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 4.3rem;
+  height: 4.3rem;
+  border: 1px solid rgba(17, 17, 17, .18);
+  border-radius: 1.25rem;
+  background: rgba(255, 255, 255, .9);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, .08);
+  overflow: visible;
+  isolation: isolate;
+}
+
+.orgBadge img {
+  width: 3.3rem;
+  height: 3.3rem;
+  border-radius: 1rem;
+  display: block;
+  position: relative;
+  z-index: 2;
+}
+
+.paintDrip {
+  position: absolute;
+  top: 3.15rem;
+  width: .42rem;
+  height: 1.55rem;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #111111, #7a7a7a);
+  opacity: .7;
+  transform-origin: top;
+  animation: drip 2.8s ease-in-out infinite;
+  z-index: 1;
+}
+
+.paintDrip::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -.22rem;
+  width: .62rem;
+  height: .62rem;
+  border-radius: 50%;
+  background: #111111;
+  transform: translateX(-50%);
+}
+
+.paintDripOne {
+  right: 1.05rem;
+}
+
+.paintDripTwo {
+  right: 2rem;
+  height: 1.05rem;
+  opacity: .45;
+  animation-delay: .7s;
+}
+
+@keyframes drip {
+  0%, 100% { transform: scaleY(.58); opacity: .25; }
+  45% { transform: scaleY(1); opacity: .75; }
+  70% { transform: translateY(.28rem) scaleY(.86); opacity: .58; }
+}
+
 .actions { display: flex; gap: .75rem; flex-wrap: wrap; }
 
 button, select, input {
