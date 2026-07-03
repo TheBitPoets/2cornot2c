@@ -24,6 +24,244 @@ python scripts/update_lab_snippets.py
 
 5. Committa insieme sorgente, manifest, output e README/template aggiornati.
 
+## Flusso manuale: aggiungere un nuovo lab al README con output
+
+Questo esempio descrive il caso piu comune: hai creato un nuovo file sorgente e vuoi mostrarlo nel README insieme al suo output.
+
+Immaginiamo di aver creato questo nuovo laboratorio:
+
+```text
+lab/0_intro/6_esempio.c
+```
+
+### 1. Crea o modifica il sorgente del lab
+
+Scrivi il file sorgente nella cartella corretta:
+
+```text
+lab/0_intro/6_esempio.c
+```
+
+Esempio:
+
+```c
+#include <stdio.h>
+
+int main(void) {
+    printf("Esempio nuovo lab\n");
+    return 0;
+}
+```
+
+### 2. Verifica manualmente compilazione ed esecuzione
+
+Prima di integrare il lab nella documentazione, provalo a mano:
+
+```bash
+cd lab/0_intro
+gcc -o bin/6_esempio 6_esempio.c
+bin/6_esempio
+```
+
+Se il programma richiede input, annota esattamente cosa hai digitato: lo userai nel campo `stdin` del manifest.
+
+### 3. Aggiungi il lab a `lab/lab_outputs.json`
+
+Apri `lab/lab_outputs.json` e aggiungi una nuova voce dentro l'array `labs`.
+
+Esempio senza input:
+
+```json
+{
+  "name": "6_esempio",
+  "path": "lab/0_intro/6_esempio.c",
+  "workdir": "lab/0_intro",
+  "compile": ["gcc", "-o", "bin/6_esempio", "6_esempio.c"],
+  "run": ["bin/6_esempio"],
+  "output": "lab/0_intro/output/6_esempio.txt",
+  "timeout_seconds": 5
+}
+```
+
+Esempio con input:
+
+```json
+{
+  "name": "2_variabili",
+  "path": "lab/0_intro/2_variabili.c",
+  "workdir": "lab/0_intro",
+  "compile": ["gcc", "-o", "bin/2_variabili", "2_variabili.c"],
+  "run": ["bin/2_variabili"],
+  "stdin": "4\n2\ns\n",
+  "output": "lab/0_intro/output/2_variabili.txt",
+  "timeout_seconds": 5
+}
+```
+
+### 4. Genera il file output
+
+Torna nella root del repository ed esegui:
+
+```bash
+python scripts/update_lab_outputs.py
+```
+
+Lo script crea o aggiorna:
+
+```text
+lab/0_intro/output/6_esempio.txt
+```
+
+### 5. Inserisci il blocco lab nel README
+
+Nel punto giusto del README, aggiungi un blocco lab seguendo il template.
+
+La parte importante per il codice e:
+
+```html
+<p align="justify">
+<strong>Codice:</strong>
+</p>
+
+<!-- lab-snippet:start path="lab/0_intro/6_esempio.c" -->
+<pre lang="c"><code></code></pre>
+<!-- lab-snippet:end -->
+```
+
+La parte importante per l'output e:
+
+```html
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/0_intro/output/6_esempio.txt" -->
+<pre lang="text"><code></code></pre>
+<!-- lab-output:end -->
+```
+
+Non serve incollare codice o output a mano: i marker verranno riempiti dallo script.
+
+### 6. Rigenera codice e output dentro README/template
+
+Esegui:
+
+```bash
+python scripts/update_lab_snippets.py
+```
+
+Questo aggiorna:
+
+- il codice tra `lab-snippet:start` e `lab-snippet:end`;
+- l'output tra `lab-output:start` e `lab-output:end`.
+
+### 7. Controlla cosa e cambiato
+
+Controlla le modifiche generate:
+
+```bash
+git diff
+```
+
+Verifica che siano presenti:
+
+```text
+lab/0_intro/6_esempio.c
+lab/0_intro/output/6_esempio.txt
+lab/lab_outputs.json
+README.md
+```
+
+### 8. Prima della PR, esegui i controlli locali
+
+```bash
+python scripts/update_lab_outputs.py --check
+python scripts/update_lab_snippets.py --check
+```
+
+Se entrambi i comandi terminano senza errori, la Action dovrebbe passare.
+
+### 9. Committa tutto insieme
+
+```bash
+git add lab/0_intro/6_esempio.c
+git add lab/0_intro/output/6_esempio.txt
+git add lab/lab_outputs.json
+git add README.md
+git commit -m "docs: add output for 6_esempio lab"
+```
+
+Se hai modificato anche `TEMPLATES.md`, aggiungilo allo stesso commit o a un commit dedicato.
+
+## Flusso manuale: modificare un lab gia integrato
+
+Questo e il caso in cui il lab e gia presente nel README e in `lab/lab_outputs.json`, ma cambi il sorgente.
+
+### 1. Modifica il sorgente
+
+Esempio:
+
+```text
+lab/0_intro/0_hello.c
+```
+
+### 2. Rigenera l'output
+
+```bash
+python scripts/update_lab_outputs.py
+```
+
+Se l'output del programma cambia, verra aggiornato il file:
+
+```text
+lab/0_intro/output/0_hello.txt
+```
+
+### 3. Rigenera README/template
+
+```bash
+python scripts/update_lab_snippets.py
+```
+
+Questo aggiorna nel README:
+
+- il codice sorgente mostrato nella linguetta;
+- l'output mostrato nella linguetta, se presente.
+
+### 4. Controlla il diff
+
+```bash
+git diff
+```
+
+Di solito dovresti vedere modifiche a:
+
+```text
+lab/0_intro/0_hello.c
+lab/0_intro/output/0_hello.txt
+README.md
+```
+
+Se hai cambiato solo il codice ma l'output non cambia, il file `output/*.txt` potrebbe restare invariato.
+
+### 5. Esegui i controlli
+
+```bash
+python scripts/update_lab_outputs.py --check
+python scripts/update_lab_snippets.py --check
+```
+
+### 6. Committa
+
+```bash
+git add lab/0_intro/0_hello.c
+git add lab/0_intro/output/0_hello.txt
+git add README.md
+git commit -m "docs: update 0_hello lab output"
+```
+
+Se un file non e cambiato, `git add` semplicemente non aggiungera nulla per quel file.
+
 ## File coinvolti
 
 | File | Ruolo |

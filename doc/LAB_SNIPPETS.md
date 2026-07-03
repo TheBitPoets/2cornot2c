@@ -135,6 +135,12 @@ python scripts/update_lab_snippets.py
 
 5. Committa insieme sorgente, output e Markdown aggiornato.
 
+Per una procedura manuale dettagliata, con esempio di nuovo lab e caso di modifica di un lab esistente, vedi:
+
+```text
+doc/LAB_OUTPUTS.md
+```
+
 ## Esempio pratico
 
 Template di un lab con codice e output:
