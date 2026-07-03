@@ -3,6 +3,9 @@
 <table align="center">
 <tr>
 <td>
+<details>
+<summary>&#128506; Cornice didattica</summary>
+
 <p align="justify">
 <strong>&#128506; Contesto:</strong>
 Qui spiega in due o tre frasi da quale punto del percorso arriva lo studente. Il testo deve aiutare la lettura sequenziale: "finora abbiamo visto...", "adesso facciamo un passo in piu...", "questo argomento serve per...".
@@ -23,6 +26,7 @@ Alla fine di questa sezione saprai descrivere il concetto principale, riconoscer
 <strong>&#10145; Prossimo passo:</strong>
 Qui spiega dove porta naturalmente la sezione successiva. Il testo deve mantenere il filo narrativo per chi legge la dispensa dall'inizio alla fine.
 </p>
+</details>
 </td>
 </tr>
 </table>
