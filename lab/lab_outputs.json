@@ -557,6 +557,127 @@
       ],
       "output": "lab/4_operators/output/pre_post_incremento.txt",
       "timeout_seconds": 5
+    },
+    {
+      "name": "if",
+      "path": "lab/5_control_statements/if.c",
+      "workdir": "lab/5_control_statements",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/if",
+        "if.c"
+      ],
+      "run": [
+        "bin/if"
+      ],
+      "output": "lab/5_control_statements/output/if.txt",
+      "timeout_seconds": 5,
+      "stdin": "4\n"
+    },
+    {
+      "name": "logical_relational_operators",
+      "path": "lab/5_control_statements/logical_relational_operators.c",
+      "workdir": "lab/5_control_statements",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/logical_relational_operators",
+        "logical_relational_operators.c"
+      ],
+      "run": [
+        "bin/logical_relational_operators"
+      ],
+      "output": "lab/5_control_statements/output/logical_relational_operators.txt",
+      "timeout_seconds": 5,
+      "stdin": "35\nS\n"
+    },
+    {
+      "name": "switch",
+      "path": "lab/5_control_statements/switch.c",
+      "workdir": "lab/5_control_statements",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/switch",
+        "switch.c"
+      ],
+      "run": [
+        "bin/switch"
+      ],
+      "output": "lab/5_control_statements/output/switch.txt",
+      "timeout_seconds": 5,
+      "stdin": "a\n",
+      "normalize": [
+        {
+          "pattern": "(?m)^a=-?\\d+ \\t b=-?\\d+ \\t c=-?\\d+ \\t other=-?\\d+",
+          "replacement": "a=<indefinito> \t b=<indefinito> \t c=<indefinito> \t other=<indefinito>"
+        }
+      ]
+    },
+    {
+      "name": "while",
+      "path": "lab/5_control_statements/while.c",
+      "workdir": "lab/5_control_statements",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/while",
+        "while.c"
+      ],
+      "run": [
+        "bin/while"
+      ],
+      "output": "lab/5_control_statements/output/while.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "do_while",
+      "path": "lab/5_control_statements/do_while.c",
+      "workdir": "lab/5_control_statements",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/do_while",
+        "do_while.c"
+      ],
+      "run": [
+        "bin/do_while"
+      ],
+      "output": "lab/5_control_statements/output/do_while.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "for",
+      "path": "lab/5_control_statements/for.c",
+      "workdir": "lab/5_control_statements",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/for",
+        "for.c"
+      ],
+      "run": [
+        "bin/for"
+      ],
+      "output": "lab/5_control_statements/output/for.txt",
+      "timeout_seconds": 5
+    },
+    {
+      "name": "break_continue",
+      "path": "lab/5_control_statements/break_continue.c",
+      "workdir": "lab/5_control_statements",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/break_continue",
+        "break_continue.c"
+      ],
+      "run": [
+        "bin/break_continue"
+      ],
+      "output": "lab/5_control_statements/output/break_continue.txt",
+      "timeout_seconds": 5
     }
   ]
 }

@@ -7485,6 +7485,16 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/5_control_statements/output/if.txt" -->
+<pre lang="text"><code>Inserisci un numero tra 1 e 10
+4 e' pari
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -7623,6 +7633,18 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/5_control_statements/output/logical_relational_operators.txt" -->
+<pre lang="text"><code>Inserisci la tua eta'
+Hai la laurea?
+[S]?? 	 [N]o
+Hai la laurea, il tuo stipendio e' 3000
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -7716,6 +7738,15 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/5_control_statements/output/for.txt" -->
+<pre lang="text"><code>0 1 2 3 4 5 6 7 8 9 
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -7802,6 +7833,15 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/5_control_statements/output/while.txt" -->
+<pre lang="text"><code>0 1 2 3 4 5 6 7 8 9 
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -7893,6 +7933,15 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/5_control_statements/output/do_while.txt" -->
+<pre lang="text"><code>0 1 2 3 4 5 6 7 8 9 
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -8004,6 +8053,18 @@ int main(void){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/5_control_statements/output/switch.txt" -->
+<pre lang="text"><code>a=&lt;indefinito&gt; 	 b=&lt;indefinito&gt; 	 c=&lt;indefinito&gt; 	 other=&lt;indefinito&gt;
+Quale variabile vuoi incrementare?
+[a-A]	[b-B]	[c-C]
+a=&lt;indefinito&gt; 	 b=&lt;indefinito&gt; 	 c=&lt;indefinito&gt; 	 other=&lt;indefinito&gt;
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -8174,6 +8235,16 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/5_control_statements/output/break_continue.txt" -->
+<pre lang="text"><code>1 3 5 7 9 
+1 3 5 7 9 
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
