@@ -13126,6 +13126,16 @@ int main(void){
 }
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/11_structs/output/0_structs.txt" -->
+<pre lang="text"><code>(0, 0)
+(1, 1)
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
@@ -13315,6 +13325,17 @@ void calcola_media(struct studente *i){
 
 </code></pre>
 <!-- lab-snippet:end -->
+
+<p align="justify">
+<strong>Output:</strong>
+</p>
+
+<!-- lab-output:start path="lab/11_structs/output/1_structs.txt" -->
+<pre lang="text"><code>Mario Rossi di eta' 21 ha una media di 29.200001
+Andrea Verdi di eta' 24 ha una media di 25.200001
+Luigi Bianchi di eta' 31 ha una media di 19.700001
+</code></pre>
+<!-- lab-output:end -->
 </details>
 </td>
 </tr>
