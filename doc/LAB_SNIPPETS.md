@@ -104,6 +104,25 @@ Esempi:
 | `.sh` | `bash` |
 | `.py` | `python` |
 
+
+## Frammenti di output dei laboratori
+
+Lo stesso script aggiorna anche i blocchi output delimitati da questi marker:
+
+```html
+<!-- lab-output:start path="lab/0_intro/output/0_hello.txt" -->
+...
+<!-- lab-output:end -->
+```
+
+Il contenuto viene letto dal file indicato in `path` e inserito come blocco:
+
+```html
+<pre lang="text"><code>...</code></pre>
+```
+
+Gli output vengono generati e controllati con `scripts/update_lab_outputs.py`. La procedura completa e documentata in `doc/LAB_OUTPUTS.md`.
+
 ## Modalita controllo
 
 Per controllare se gli frammento sono aggiornati senza volerli modificare intenzionalmente:

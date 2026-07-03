@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "labs": [
+    {
+      "name": "0_hello",
+      "path": "lab/0_intro/0_hello.c",
+      "workdir": "lab/0_intro",
+      "compile": [
+        "gcc",
+        "-o",
+        "bin/0_hello",
+        "0_hello.c"
+      ],
+      "run": [
+        "bin/0_hello"
+      ],
+      "output": "lab/0_intro/output/0_hello.txt",
+      "timeout_seconds": 5
+    }
+  ]
+}
