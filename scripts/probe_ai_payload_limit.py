@@ -153,7 +153,7 @@ def call_provider(provider_id: str, model: str, api_key: str, text_chars: int, t
             {"role": "user", "content": json.dumps(payload, ensure_ascii=False, indent=2)},
         ],
         "response_format": {"type": "json_object"},
-        "max_tokens": 180,
+        "max_tokens": 700,
     }
     encoded = json.dumps(body).encode("utf-8")
     headers = {
