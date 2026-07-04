@@ -52,54 +52,145 @@ La board puo chiedere a un servizio AI di compilare automaticamente la cornice d
 
 Il browser non chiama direttamente il servizio cloud: la richiesta passa dal server locale `scripts/course_board_server.py`, cosi la chiave API resta nella shell e non viene esposta nel frontend.
 
-### Provider supportati
+### Idea generale
+
+Il flusso e sempre lo stesso:
+
+1. scegli un provider AI;
+2. recuperi una API key dal sito del provider;
+3. imposti le variabili d'ambiente nella shell;
+4. avvii il server locale della board;
+5. apri la board nel browser;
+6. clicchi `AI assisted` su un argomento assegnato a una UDA;
+7. controlli il testo generato;
+8. clicchi `Salva JSON`.
 
 La board supporta questi provider:
 
-- `openai`: usa OpenAI API e la variabile `OPENAI_API_KEY`;
-- `gemini`: usa Gemini API e la variabile `GEMINI_API_KEY`.
+| Provider | Variabile provider | Variabile API key | Variabile modello opzionale |
+| --- | --- | --- | --- |
+| OpenAI | `AI_PROVIDER=openai` | `OPENAI_API_KEY` | `OPENAI_MODEL` |
+| Gemini | `AI_PROVIDER=gemini` | `GEMINI_API_KEY` | `GEMINI_MODEL` |
+
+Se non imposti `AI_PROVIDER`, il server usa `openai`.
 
 `ChatGPT Free` non e un provider API per automazioni locali: e l'interfaccia web/app di ChatGPT. Per questo non viene usato direttamente dalla board, perche richiederebbe automazioni fragili del browser e non una integrazione API pulita.
 
-### Configurazione OpenAI
+### Regola di sicurezza importante
 
-Prima di avviare la board, configura la variabile d'ambiente:
+Non scrivere mai una API key dentro:
+
+- `README.md`;
+- `doc/course_design.json`;
+- file `.js`;
+- file `.html`;
+- commit Git.
+
+La API key deve stare solo nella shell, in una variabile d'ambiente locale.
+
+### Guida OpenAI
+
+#### 1. Recupera la API key OpenAI
+
+1. Apri `https://platform.openai.com/`.
+2. Accedi con il tuo account.
+3. Vai nella sezione delle API keys.
+4. Crea una nuova secret key.
+5. Copiala subito e conservala in un posto sicuro, perche di solito viene mostrata una sola volta.
+
+#### 2. Configura le variabili su Windows PowerShell
+
+Queste variabili valgono solo per la finestra PowerShell corrente:
 
 ```powershell
 $env:AI_PROVIDER="openai"
 $env:OPENAI_API_KEY="sk-..."
-```
-
-Se vuoi scegliere un modello diverso da quello predefinito:
-
-```powershell
 $env:OPENAI_MODEL="gpt-5.5"
 ```
 
-### Configurazione Gemini
-
-Gemini puo essere utile per prove a costo zero o a basso costo, in base ai limiti del free tier disponibili sul tuo account Google AI Studio.
-
-Configura:
+Poi avvia il server:
 
 ```powershell
-$env:AI_PROVIDER="gemini"
-$env:GEMINI_API_KEY="..."
+python scripts/course_board_server.py
 ```
 
-Se vuoi scegliere un modello diverso da quello predefinito:
+#### 3. Configura le variabili su Linux/macOS
 
-```powershell
-$env:GEMINI_MODEL="gemini-3-flash-preview"
+Queste variabili valgono solo per il terminale corrente:
+
+```bash
+export AI_PROVIDER="openai"
+export OPENAI_API_KEY="sk-..."
+export OPENAI_MODEL="gpt-5.5"
 ```
 
-Poi avvia normalmente la board:
+Poi avvia il server:
 
 ```bash
 python scripts/course_board_server.py
 ```
 
-### Uso nella board
+#### 4. Apri la board
+
+Nel browser apri:
+
+```text
+http://127.0.0.1:8765/tools/course_board.html
+```
+
+### Guida Gemini
+
+Gemini puo essere utile per prove a costo zero o a basso costo, in base ai limiti del free tier disponibili sul tuo account Google AI Studio.
+
+#### 1. Recupera la API key Gemini
+
+1. Apri `https://aistudio.google.com/`.
+2. Accedi con il tuo account Google.
+3. Vai nella sezione API keys.
+4. Crea una nuova API key.
+5. Copiala e conservala in un posto sicuro.
+
+#### 2. Configura le variabili su Windows PowerShell
+
+Queste variabili valgono solo per la finestra PowerShell corrente:
+
+```powershell
+$env:AI_PROVIDER="gemini"
+$env:GEMINI_API_KEY="..."
+$env:GEMINI_MODEL="gemini-3-flash-preview"
+```
+
+Poi avvia il server:
+
+```powershell
+python scripts/course_board_server.py
+```
+
+#### 3. Configura le variabili su Linux/macOS
+
+Queste variabili valgono solo per il terminale corrente:
+
+```bash
+export AI_PROVIDER="gemini"
+export GEMINI_API_KEY="..."
+export GEMINI_MODEL="gemini-3-flash-preview"
+```
+
+Poi avvia il server:
+
+```bash
+python scripts/course_board_server.py
+```
+
+#### 4. Apri la board
+
+Nel browser apri:
+
+```text
+http://127.0.0.1:8765/tools/course_board.html
+```
+
+### Uso di AI assisted nella board
 
 1. Trascina un paragrafo dentro una UDA.
 2. Clicca `AI assisted` sull'argomento assegnato.
@@ -113,6 +204,17 @@ python scripts/course_board_server.py
 5. Clicca `Salva JSON` per rendere persistenti i campi generati.
 
 Il modello deve restituire dati strutturati; la board accetta solo i campi previsti dalla cornice didattica.
+
+### Errori comuni
+
+Se vedi un errore nella barra di stato della board:
+
+- `Configura OPENAI_API_KEY`: hai scelto OpenAI ma non hai impostato la chiave;
+- `Configura GEMINI_API_KEY`: hai scelto Gemini ma non hai impostato la chiave;
+- `Provider AI non supportato`: `AI_PROVIDER` contiene un valore diverso da `openai` o `gemini`;
+- errore `401` o `403`: chiave non valida, scaduta o non autorizzata;
+- errore `429`: quota o rate limit superato;
+- errore `500`: controlla il terminale dove e avviato il server, perche li trovi il dettaglio tecnico.
 
 ## Generazione del percorso didattico
 
