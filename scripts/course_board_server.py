@@ -30,6 +30,7 @@ from urllib.parse import unquote, urlparse
 ROOT = Path(__file__).resolve().parents[1]
 DESIGN_PATH = ROOT / "doc" / "course_design.json"
 DEFAULT_SOURCES = ["README.md", "LINUX_PROGRAMMING.md"]
+ACTIVE_AI_PROVIDER = os.environ.get("AI_PROVIDER", "openai").strip().lower()
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 TAG_RE = re.compile(r"<[^>]+>")
 PUNCT_RE = re.compile(r"[^\w\s-]", re.UNICODE)
@@ -664,7 +665,7 @@ def call_gemini_didactic_frame(payload: dict) -> dict:
 def call_ai_didactic_frame(payload: dict) -> dict:
     """Route didactic-frame generation to the configured AI provider."""
 
-    provider = os.environ.get("AI_PROVIDER", "openai").strip().lower()
+    provider = ACTIVE_AI_PROVIDER
     if provider == "openai":
         return call_openai_didactic_frame(payload)
     if provider == "gemini":
@@ -764,7 +765,7 @@ def call_gemini_course_plan(payload: dict) -> dict:
 def call_ai_course_plan(payload: dict) -> dict:
     """Route annual course-plan generation to the configured AI provider."""
 
-    provider = os.environ.get("AI_PROVIDER", "openai").strip().lower()
+    provider = ACTIVE_AI_PROVIDER
     if provider == "openai":
         return call_openai_course_plan(payload)
     if provider == "gemini":
@@ -775,22 +776,50 @@ def call_ai_course_plan(payload: dict) -> dict:
 def ai_config() -> dict:
     """Return safe AI provider configuration for the board UI."""
 
-    provider = os.environ.get("AI_PROVIDER", "openai").strip().lower()
-    if provider == "gemini":
-      model = os.environ.get("GEMINI_MODEL") or os.environ.get("AI_MODEL", "gemini-3-flash-preview")
-      return {
-          "provider": "gemini",
-          "model": model,
-          "api_key_configured": bool(os.environ.get("GEMINI_API_KEY")),
-          "billing_note": "Gemini puo avere free tier su Google AI Studio, ma quota e limiti dipendono dall'account.",
-      }
-    model = os.environ.get("OPENAI_MODEL") or os.environ.get("AI_MODEL", "gpt-5.5")
+    providers = ai_providers()
+    active = providers.get(ACTIVE_AI_PROVIDER) or providers["openai"]
     return {
-        "provider": provider,
-        "model": model,
-        "api_key_configured": bool(os.environ.get("OPENAI_API_KEY")),
-        "billing_note": "OpenAI API usa quota/billing API separati da ChatGPT Free/Plus.",
+        "provider": active["id"],
+        "model": active["model"],
+        "api_key_configured": active["api_key_configured"],
+        "billing_note": active["billing_note"],
+        "providers": list(providers.values()),
     }
+
+
+def ai_providers() -> dict:
+    """Return all server-supported providers with safe configuration status."""
+
+    return {
+        "openai": {
+            "id": "openai",
+            "label": "OpenAI",
+            "model": os.environ.get("OPENAI_MODEL") or os.environ.get("AI_MODEL", "gpt-5.5"),
+            "api_key_configured": bool(os.environ.get("OPENAI_API_KEY")),
+            "billing_note": "OpenAI API usa quota/billing API separati da ChatGPT Free/Plus.",
+        },
+        "gemini": {
+            "id": "gemini",
+            "label": "Gemini",
+            "model": os.environ.get("GEMINI_MODEL") or os.environ.get("AI_MODEL", "gemini-3-flash-preview"),
+            "api_key_configured": bool(os.environ.get("GEMINI_API_KEY")),
+            "billing_note": "Gemini puo avere free tier su Google AI Studio, ma quota e limiti dipendono dall'account.",
+        },
+    }
+
+
+def set_ai_provider(provider: str) -> dict:
+    """Set the active provider only when the server has its API key."""
+
+    global ACTIVE_AI_PROVIDER
+    provider = provider.strip().lower()
+    providers = ai_providers()
+    if provider not in providers:
+        raise RuntimeError(f"Provider AI non supportato: {provider}.")
+    if not providers[provider]["api_key_configured"]:
+        raise RuntimeError(f"Provider {providers[provider]['label']} non configurato: API key mancante.")
+    ACTIVE_AI_PROVIDER = provider
+    return ai_config()
 
 
 class CourseBoardHandler(BaseHTTPRequestHandler):
@@ -816,6 +845,15 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/course-design":
             write_design(payload)
             self.write_json({"ok": True, "path": str(DESIGN_PATH.relative_to(ROOT))})
+            return
+        if parsed.path == "/api/ai-config":
+            try:
+                self.write_json(set_ai_provider(payload.get("provider", "")))
+            except Exception as error:  # noqa: BLE001
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
             return
         if parsed.path == "/api/ai-frame":
             try:

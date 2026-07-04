@@ -150,14 +150,32 @@ button:hover { transform: translateY(-1px); }
 .status { margin: 0; color: var(--muted); font-size: .9rem; }
 
 .aiConfig {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  flex-wrap: wrap;
   margin: .35rem 0 0;
   border: 1px solid rgba(17, 17, 17, .1);
-  border-radius: 999px;
+  border-radius: 1rem;
   background: #f5f5f5;
   color: var(--muted);
   font-size: .72rem;
   line-height: 1.35;
   padding: .42rem .65rem;
+}
+
+.aiConfig label {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  font-weight: 700;
+}
+
+.aiConfig select {
+  width: auto;
+  min-width: 16rem;
+  padding: .42rem .65rem;
+  font-size: .72rem;
 }
 
 .filters {

@@ -149,8 +149,37 @@ function renderAiConfig() {
     els.aiConfig.textContent = "AI: configurazione non caricata.";
     return;
   }
+  const providers = state.aiConfig.providers || [];
+  const options = providers.map((provider) => {
+    const configured = provider.api_key_configured ? "configurato" : "non configurato";
+    const selected = provider.id === state.aiConfig.provider ? "selected" : "";
+    return `<option value="${escapeHtml(provider.id)}" ${selected}>${escapeHtml(provider.label)} · ${escapeHtml(provider.model)} · ${configured}</option>`;
+  }).join("");
   const keyStatus = state.aiConfig.api_key_configured ? "API key impostata" : "API key non impostata";
-  els.aiConfig.textContent = `AI: ${state.aiConfig.provider} · modello ${state.aiConfig.model} · ${keyStatus} · ${state.aiConfig.billing_note}`;
+  els.aiConfig.innerHTML = `
+    <label>
+      <span>AI provider</span>
+      <select id="aiProviderSelect">${options}</select>
+    </label>
+    <span>${escapeHtml(keyStatus)} · ${escapeHtml(state.aiConfig.billing_note)}</span>
+  `;
+  els.aiConfig.querySelector("#aiProviderSelect").addEventListener("change", switchAiProvider);
+}
+
+async function switchAiProvider(event) {
+  const provider = event.target.value;
+  setStatus(`Cambio provider AI in ${provider}...`);
+  try {
+    state.aiConfig = await api("/api/ai-config", {
+      method: "POST",
+      body: JSON.stringify({ provider }),
+    });
+    renderAiConfig();
+    setStatus(`Provider AI attivo: ${state.aiConfig.provider}.`);
+  } catch (error) {
+    renderAiConfig();
+    setStatus(`Cambio provider AI non riuscito. Dettaglio: ${error.message}`);
+  }
 }
 
 function populateFilters() {
