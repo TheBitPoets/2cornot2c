@@ -1,0 +1,49 @@
+﻿providers:
+  openai:
+    label: OpenAI
+    secret_key: OPENAI_API_KEY
+    default_model: gpt-5.5
+    billing_note: OpenAI API usa quota/billing API separati da ChatGPT Free/Plus.
+    models:
+      - id: gpt-5.5
+        label: GPT-5.5
+        tier: paid
+      - id: gpt-5-mini
+        label: GPT-5 Mini
+        tier: paid-low-cost
+  gemini:
+    label: Gemini
+    secret_key: GEMINI_API_KEY
+    default_model: gemini-2.5-flash
+    billing_note: Gemini puo avere free tier su Google AI Studio, ma quota e limiti dipendono dall'account.
+    models:
+      - id: gemini-2.5-flash
+        label: Gemini 2.5 Flash
+        tier: free-or-low-cost
+      - id: gemini-3-flash-preview
+        label: Gemini 3 Flash Preview
+        tier: free-or-low-cost
+  groq:
+    label: Groq
+    secret_key: GROQ_API_KEY
+    default_model: llama-3.3-70b-versatile
+    billing_note: Groq offre piani free/dev con rate limit; disponibilita e limiti dipendono dall'account.
+    models:
+      - id: llama-3.3-70b-versatile
+        label: Llama 3.3 70B Versatile
+        tier: free-or-low-cost
+      - id: qwen/qwen3-32b
+        label: Qwen3 32B
+        tier: free-or-low-cost
+  openrouter:
+    label: OpenRouter
+    secret_key: OPENROUTER_API_KEY
+    default_model: openrouter/free
+    billing_note: OpenRouter espone modelli free, ma limiti e fallback dipendono dall'account e dal modello scelto.
+    models:
+      - id: openrouter/free
+        label: Free Models Router
+        tier: free
+      - id: meta-llama/llama-3.3-70b-instruct:free
+        label: Llama 3.3 70B Instruct Free
+        tier: free

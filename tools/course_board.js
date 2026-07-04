@@ -1,9 +1,14 @@
 ﻿const state = {
   headings: [],
   design: null,
+  savedDesigns: [],
+  activeSavedDesign: "",
+  aiConfig: null,
   draggedHeading: null,
   collapsedHeadingIds: new Set(),
   collapsedCourseItemIds: new Set(),
+  courseAiYearId: null,
+  courseAiProposal: null,
 };
 
 const els = {
@@ -14,12 +19,121 @@ const els = {
   searchInput: document.querySelector("#searchInput"),
   courseTree: document.querySelector("#courseTree"),
   status: document.querySelector("#status"),
+  aiConfig: document.querySelector("#aiConfig"),
+  savedDesignSelect: document.querySelector("#savedDesignSelect"),
+  loadSavedDesignBtn: document.querySelector("#loadSavedDesignBtn"),
+  saveArchiveBtn: document.querySelector("#saveArchiveBtn"),
+  generateAllFramesBtn: document.querySelector("#generateAllFramesBtn"),
   reloadBtn: document.querySelector("#reloadBtn"),
   saveBtn: document.querySelector("#saveBtn"),
+  courseAiDialog: document.querySelector("#courseAiDialog"),
+  courseAiTitle: document.querySelector("#courseAiTitle"),
+  courseAiCloseBtn: document.querySelector("#courseAiCloseBtn"),
+  courseAiGenerateBtn: document.querySelector("#courseAiGenerateBtn"),
+  courseAiApplyBtn: document.querySelector("#courseAiApplyBtn"),
+  courseAiPreview: document.querySelector("#courseAiPreview"),
+  aiBusy: document.querySelector("#aiBusy"),
+  aiBusyTitle: document.querySelector("#aiBusyTitle"),
+  aiBusyMessage: document.querySelector("#aiBusyMessage"),
+  aiBusyPercent: document.querySelector("#aiBusyPercent"),
+  aiBusyBarFill: document.querySelector("#aiBusyBarFill"),
+  aiBusyControls: document.querySelector("#aiBusyControls"),
+  aiBusyNextBtn: document.querySelector("#aiBusyNextBtn"),
+  aiBusyAllBtn: document.querySelector("#aiBusyAllBtn"),
+  aiBusyCloseBtn: document.querySelector("#aiBusyCloseBtn"),
+  aiBusyCancelBtn: document.querySelector("#aiBusyCancelBtn"),
+  briefSubject: document.querySelector("#briefSubject"),
+  briefYearTitle: document.querySelector("#briefYearTitle"),
+  briefDescription: document.querySelector("#briefDescription"),
+  briefWeeklyHours: document.querySelector("#briefWeeklyHours"),
+  briefWeeks: document.querySelector("#briefWeeks"),
+  briefTotalHours: document.querySelector("#briefTotalHours"),
+  briefGoals: document.querySelector("#briefGoals"),
+  briefConstraints: document.querySelector("#briefConstraints"),
+  briefPreferences: document.querySelector("#briefPreferences"),
 };
+
+const FRAME_FIELDS = [
+  { key: "context", label: "Contesto" },
+  { key: "prerequisites", label: "Prerequisiti" },
+  { key: "objectives", label: "Obiettivi" },
+  { key: "recall", label: "Richiamo" },
+  { key: "preview", label: "Anticipazione" },
+  { key: "next_step", label: "Prossimo passo" },
+  { key: "references", label: "Rimando" },
+];
+
+const AI_PROGRESS_STAGES = [
+  "Preparo il contesto didattico...",
+  "Leggo paragrafi e sottoparagrafi...",
+  "Invio la richiesta al provider AI...",
+  "Il modello sta elaborando la proposta...",
+  "Ricevo e controllo la risposta strutturata...",
+  "Aggiorno la board con i dati generati..."
+];
+
+let aiProgressTimer = null;
+let frameBatch = null;
 
 function setStatus(message) {
   els.status.textContent = message;
+}
+
+function startAiProgress(title) {
+  let percent = 4;
+  let stageIndex = 0;
+  els.aiBusy.hidden = false;
+  els.aiBusyControls.hidden = true;
+  els.aiBusyTitle.textContent = title;
+  updateAiProgress(percent, AI_PROGRESS_STAGES[stageIndex]);
+  clearInterval(aiProgressTimer);
+  aiProgressTimer = setInterval(() => {
+    percent = Math.min(95, percent + Math.max(1, Math.round((96 - percent) / 9)));
+    stageIndex = Math.min(AI_PROGRESS_STAGES.length - 1, Math.floor(percent / 18));
+    updateAiProgress(percent, AI_PROGRESS_STAGES[stageIndex]);
+  }, 1400);
+}
+
+function updateAiProgress(percent, message) {
+  els.aiBusyMessage.textContent = message;
+  els.aiBusyPercent.textContent = `${percent}%`;
+  els.aiBusyBarFill.style.width = `${percent}%`;
+}
+
+function stopAiProgress(message = "Completato.") {
+  clearInterval(aiProgressTimer);
+  aiProgressTimer = null;
+  updateAiProgress(100, message);
+  setTimeout(() => {
+    if (!aiProgressTimer) els.aiBusy.hidden = true;
+  }, 900);
+}
+
+function failAiProgress(message = "Operazione non riuscita.") {
+  clearInterval(aiProgressTimer);
+  aiProgressTimer = null;
+  updateAiProgress(100, message);
+  setTimeout(() => {
+    if (!aiProgressTimer) els.aiBusy.hidden = true;
+  }, 8000);
+}
+
+function showFrameBatchProgress() {
+  if (!frameBatch) return;
+  clearInterval(aiProgressTimer);
+  aiProgressTimer = null;
+  els.aiBusy.hidden = false;
+  els.aiBusyControls.hidden = false;
+  const total = frameBatch.entries.length;
+  const done = frameBatch.index;
+  const current = frameBatch.entries[done]?.item;
+  const percent = total ? Math.round((done / total) * 100) : 100;
+  els.aiBusyTitle.textContent = `AI assisted cornici: ${frameBatch.rootTitle}`;
+  updateAiProgress(percent, current ? `Prossimo ${done + 1}/${total}: ${current.title}` : `Completati ${done}/${total} argomenti.`);
+  els.aiBusyNextBtn.disabled = frameBatch.running || done >= total;
+  els.aiBusyAllBtn.disabled = frameBatch.running || done >= total;
+  els.aiBusyCloseBtn.disabled = false;
+  els.aiBusyCancelBtn.disabled = false;
 }
 
 async function api(path, options = {}) {
@@ -28,23 +142,152 @@ async function api(path, options = {}) {
     ...options,
   });
   if (!response.ok) {
-    throw new Error(`${response.status} ${response.statusText}`);
+    throw new Error(await responseErrorMessage(response));
   }
   return response.json();
 }
 
+async function responseErrorMessage(response) {
+  const fallback = `${response.status} ${response.statusText}`;
+  try {
+    const payload = await response.json();
+    if (payload.error) return `${fallback}: ${payload.error}`;
+  } catch {
+    return fallback;
+  }
+  return fallback;
+}
+
 async function loadAll() {
   setStatus("Caricamento...");
-  const [headingsPayload, design] = await Promise.all([
+  const [headingsPayload, design, aiConfig, savedDesigns] = await Promise.all([
     api("/api/headings"),
     api("/api/course-design"),
+    api("/api/ai-config"),
+    api("/api/saved-designs"),
   ]);
   state.headings = headingsPayload.headings;
   state.design = design;
+  state.aiConfig = aiConfig;
+  state.savedDesigns = savedDesigns.designs || [];
   populateFilters();
+  renderAiConfig();
+  renderSavedDesigns();
   renderHeadings();
   renderCourse();
   setStatus("Pronto.");
+}
+
+function renderSavedDesigns() {
+  const selected = state.activeSavedDesign || els.savedDesignSelect.value;
+  els.savedDesignSelect.innerHTML = '<option value="">Percorsi salvati</option>';
+  for (const design of state.savedDesigns) {
+    const option = document.createElement("option");
+    option.value = design.name;
+    option.textContent = design.name;
+    els.savedDesignSelect.append(option);
+  }
+  els.savedDesignSelect.value = selected;
+}
+
+async function loadSavedDesign() {
+  const name = els.savedDesignSelect.value;
+  if (!name) {
+    setStatus("Seleziona un percorso salvato da caricare.");
+    return;
+  }
+  if (!confirm(`Caricare "${name}" nella board? Le modifiche non salvate nella vista corrente saranno perse.`)) return;
+  setStatus(`Caricamento percorso salvato "${name}"...`);
+  const payload = await api("/api/saved-designs/load", {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+  state.design = payload.design;
+  state.activeSavedDesign = name;
+  renderHeadings();
+  renderCourse();
+  setStatus(`Percorso "${name}" caricato. Usa "Imposta corrente" o "Aggiorna archivio" per persistere modifiche.`);
+}
+
+async function saveArchiveDesign() {
+  const defaultName = state.activeSavedDesign || els.savedDesignSelect.value || "course_design_as_25_26.json";
+  const name = prompt("Nome file archivio JSON:", defaultName);
+  if (!name) return;
+  setStatus(`Salvataggio archivio "${name}"...`);
+  const payload = await api("/api/saved-designs/save", {
+    method: "POST",
+    body: JSON.stringify({ name, design: state.design }),
+  });
+  state.savedDesigns = payload.designs || [];
+  state.activeSavedDesign = payload.saved?.name || name;
+  renderSavedDesigns();
+  setStatus(`Percorso salvato in archivio: ${state.activeSavedDesign}.`);
+}
+
+function renderAiConfig() {
+  if (!state.aiConfig) {
+    els.aiConfig.textContent = "AI: configurazione non caricata.";
+    return;
+  }
+  const providers = state.aiConfig.providers || [];
+  const options = providers.map((provider) => {
+    const configured = provider.api_key_configured ? "configurato" : "non configurato";
+    const selected = provider.id === state.aiConfig.provider ? "selected" : "";
+    return `<option value="${escapeHtml(provider.id)}" ${selected}>${escapeHtml(provider.label)} · ${configured}</option>`;
+  }).join("");
+  const activeProvider = providers.find((provider) => provider.id === state.aiConfig.provider) || providers[0] || {};
+  const modelOptions = (activeProvider.models || []).map((model) => {
+    const selected = model.id === state.aiConfig.model ? "selected" : "";
+    return `<option value="${escapeHtml(model.id)}" ${selected}>${escapeHtml(model.label || model.id)} · ${escapeHtml(model.tier || "tier n/d")}</option>`;
+  }).join("");
+  const modelDisabled = activeProvider.api_key_configured ? "" : "disabled";
+  const keyStatus = state.aiConfig.api_key_configured ? "API key impostata" : "API key non impostata";
+  els.aiConfig.innerHTML = `
+    <label>
+      <span>AI provider</span>
+      <select id="aiProviderSelect">${options}</select>
+    </label>
+    <label>
+      <span>Modello</span>
+      <select id="aiModelSelect" ${modelDisabled}>${modelOptions}</select>
+    </label>
+    <span>${escapeHtml(keyStatus)} · ${escapeHtml(state.aiConfig.billing_note)}</span>
+  `;
+  els.aiConfig.querySelector("#aiProviderSelect").addEventListener("change", switchAiProvider);
+  els.aiConfig.querySelector("#aiModelSelect").addEventListener("change", switchAiModel);
+}
+
+async function switchAiProvider(event) {
+  const provider = els.aiConfig.querySelector("#aiProviderSelect").value;
+  setStatus(`Cambio provider AI in ${provider}...`);
+  try {
+    state.aiConfig = await api("/api/ai-config", {
+      method: "POST",
+      body: JSON.stringify({ provider }),
+    });
+    renderAiConfig();
+    setStatus(`Provider AI attivo: ${state.aiConfig.provider} · modello ${state.aiConfig.model}.`);
+  } catch (error) {
+    renderAiConfig();
+    setStatus(`Cambio provider AI non riuscito. Dettaglio: ${error.message}`);
+  }
+}
+
+async function switchAiModel() {
+  const provider = els.aiConfig.querySelector("#aiProviderSelect").value;
+  const model = els.aiConfig.querySelector("#aiModelSelect")?.value || "";
+  setStatus(`Cambio modello AI in ${model}...`);
+  try {
+    state.aiConfig = await api("/api/ai-config", {
+      method: "POST",
+      body: JSON.stringify({ provider, model }),
+    });
+    renderAiConfig();
+    setStatus(`Modello AI attivo: ${state.aiConfig.model}.`);
+  } catch (error) {
+    renderAiConfig();
+    setStatus(`Cambio modello AI non riuscito. Dettaglio: ${error.message}`);
+  }
 }
 
 function populateFilters() {
@@ -191,9 +434,7 @@ function itemFromHeading(heading) {
     href: heading.href,
     level: heading.level,
     line: heading.line,
-    frame: {
-      status: "todo"
-    }
+    frame: defaultFrame()
   };
   const children = childItemsFromHeading(heading);
   if (children.length) item.children = children;
@@ -215,9 +456,7 @@ function childItemsFromHeading(parentHeading) {
       href: heading.href,
       level: heading.level,
       line: heading.line,
-      frame: {
-        status: "todo"
-      }
+      frame: defaultFrame()
     };
     while (stack.length && heading.level <= stack.at(-1).level) {
       stack.pop();
@@ -235,6 +474,19 @@ function childItemsFromHeading(parentHeading) {
   return roots;
 }
 
+function defaultFrame() {
+  return {
+    status: "todo",
+    context: "",
+    prerequisites: "",
+    objectives: "",
+    recall: "",
+    preview: "",
+    next_step: "",
+    references: ""
+  };
+}
+
 function renderCourse() {
   els.courseTree.innerHTML = "";
   for (const year of state.design.years || []) {
@@ -246,8 +498,10 @@ function renderCourse() {
           <h3>${escapeHtml(year.title)}</h3>
           <div class="yearMeta">${escapeHtml(year.description || "")} · ${year.weeks || "?"} settimane · ${year.weekly_hours || "?"} ore/settimana</div>
         </div>
+        <button type="button" data-action="ai-course">AI assisted percorso</button>
       </div>
     `;
+    yearNode.querySelector('[data-action="ai-course"]').addEventListener("click", () => openCourseAiDialog(year));
 
     for (const uda of year.udas || []) {
       yearNode.append(renderUda(year, uda));
@@ -290,7 +544,7 @@ function renderUda(year, uda) {
   if (!items.length) {
     dropzone.innerHTML = '<p class="empty">Trascina qui paragrafi o sottoparagrafi.</p>';
   } else {
-    items.forEach((item, index) => dropzone.append(renderItem(uda, uda.items, item, index, 0)));
+    items.forEach((item, index) => dropzone.append(renderItem(year, uda, uda.items, item, index, 0)));
   }
   details.append(dropzone);
   return details;
@@ -318,11 +572,12 @@ function headingTreeIds(heading) {
   return ids;
 }
 
-function renderItem(uda, siblings, item, index, depth) {
+function renderItem(year, uda, siblings, item, index, depth) {
   const node = document.createElement("article");
   node.className = "item";
   node.style.setProperty("--item-depth", depth);
   const children = item.children || [];
+  item.frame = { ...defaultFrame(), ...(item.frame || {}) };
   const collapseKey = `${uda.id}:${item.id}`;
   const isCollapsed = state.collapsedCourseItemIds.has(collapseKey);
   node.innerHTML = `
@@ -332,6 +587,8 @@ function renderItem(uda, siblings, item, index, depth) {
         <div class="itemMeta">${escapeHtml(item.source)} · H${item.level || "?"} · ${escapeHtml(item.frame?.status || "ok")}</div>
       </div>
       <div class="itemActions">
+        <span class="contextBadge">${escapeHtml(contextLabel(index, siblings, item))}</span>
+        <button type="button" data-action="ai">AI assisted</button>
         <button type="button" data-action="up">Su</button>
         <button type="button" data-action="down">Giu</button>
         <button type="button" data-action="remove">Rimuovi</button>
@@ -358,16 +615,448 @@ function renderItem(uda, siblings, item, index, depth) {
   const titleText = document.createElement("span");
   titleText.textContent = item.title;
   title.append(titleText);
+  node.querySelector('[data-action="ai"]').addEventListener("click", () => fillFrameWithAi(year, uda, item));
   node.querySelector('[data-action="up"]').addEventListener("click", () => moveItem(siblings, index, -1));
   node.querySelector('[data-action="down"]').addEventListener("click", () => moveItem(siblings, index, 1));
   node.querySelector('[data-action="remove"]').addEventListener("click", () => removeItem(siblings, index));
+  node.append(renderFrameEditor(item));
   if (children.length && !isCollapsed) {
     const childList = document.createElement("div");
     childList.className = "itemChildren";
-    children.forEach((child, childIndex) => childList.append(renderItem(uda, children, child, childIndex, depth + 1)));
+    children.forEach((child, childIndex) => childList.append(renderItem(year, uda, children, child, childIndex, depth + 1)));
     node.append(childList);
   }
   return node;
+}
+
+function defaultCourseBrief(year) {
+  const totalHours = Number(year.weekly_hours || 0) * Number(year.weeks || 0);
+  return {
+    subject: "TPSI",
+    year_title: year.title || "",
+    description: year.description || "",
+    weekly_hours: year.weekly_hours || 3,
+    weeks: year.weeks || 33,
+    total_hours: totalHours || "",
+    goals: [
+      "Scrivere piccoli programmi in C.",
+      "Comprendere variabili, tipi, operatori, condizioni, cicli e funzioni.",
+      "Introdurre array, stringhe, puntatori e memoria.",
+      "Integrare teoria e laboratorio in modo progressivo."
+    ].join("\n"),
+    constraints: [
+      "Usa solo argomenti presenti tra i paragrafi disponibili.",
+      "Non duplicare argomenti nello stesso anno.",
+      "Mantieni una progressione didattica dal semplice al complesso.",
+      "Lascia tra i non assegnati gli argomenti non coerenti con questo anno.",
+      "Non inserire argomenti Linux/processi/thread nel terzo anno se non richiesto esplicitamente."
+    ].join("\n"),
+    preferences: [
+      "Preferire UDA da 3-5 settimane.",
+      "Alternare spiegazione teorica e attivita di laboratorio.",
+      "Mettere i puntatori dopo funzioni, array e stringhe.",
+      "Produrre una proposta modificabile, non una soluzione definitiva."
+    ].join("\n")
+  };
+}
+
+function openCourseAiDialog(year) {
+  const brief = { ...defaultCourseBrief(year), ...(year.ai_brief || {}) };
+  state.courseAiYearId = year.id;
+  state.courseAiProposal = null;
+  els.courseAiTitle.textContent = `Genera percorso per ${year.title}`;
+  els.briefSubject.value = brief.subject;
+  els.briefYearTitle.value = brief.year_title;
+  els.briefDescription.value = brief.description;
+  els.briefWeeklyHours.value = brief.weekly_hours;
+  els.briefWeeks.value = brief.weeks;
+  els.briefTotalHours.value = brief.total_hours;
+  els.briefGoals.value = brief.goals;
+  els.briefConstraints.value = brief.constraints;
+  els.briefPreferences.value = brief.preferences;
+  els.courseAiPreview.innerHTML = '<p class="empty">Modifica il brief, poi genera una proposta.</p>';
+  els.courseAiApplyBtn.disabled = true;
+  els.courseAiDialog.showModal();
+}
+
+function readCourseBrief() {
+  return {
+    subject: els.briefSubject.value.trim(),
+    year_title: els.briefYearTitle.value.trim(),
+    description: els.briefDescription.value.trim(),
+    weekly_hours: Number(els.briefWeeklyHours.value || 0),
+    weeks: Number(els.briefWeeks.value || 0),
+    total_hours: Number(els.briefTotalHours.value || 0),
+    goals: els.briefGoals.value.trim(),
+    constraints: els.briefConstraints.value.trim(),
+    preferences: els.briefPreferences.value.trim(),
+  };
+}
+
+async function generateCourseAiProposal() {
+  const year = (state.design.years || []).find((candidate) => candidate.id === state.courseAiYearId);
+  if (!year) return;
+  const brief = readCourseBrief();
+  year.ai_brief = brief;
+  els.courseAiGenerateBtn.disabled = true;
+  els.courseAiApplyBtn.disabled = true;
+  els.courseAiPreview.innerHTML = '<p class="empty">Generazione proposta in corso...</p>';
+  setStatus(`AI assisted percorso: genero proposta per ${year.title}...`);
+  startAiProgress(`AI assisted percorso: ${year.title}`);
+  try {
+    const payload = await api("/api/ai-course-plan", {
+      method: "POST",
+      body: JSON.stringify({
+        design: state.design,
+        year_id: year.id,
+        brief,
+      }),
+    });
+    state.courseAiProposal = payload.proposal;
+    renderCourseAiPreview(payload.proposal);
+    els.courseAiApplyBtn.disabled = false;
+    setStatus(`Proposta percorso generata per ${year.title}.`);
+    stopAiProgress("Proposta generata. Puoi controllarla e applicarla.");
+  } catch (error) {
+    els.courseAiPreview.innerHTML = `<p class="empty">Errore: ${escapeHtml(error.message)}</p>`;
+    setStatus(`AI assisted percorso non riuscito. Dettaglio provider/server: ${error.message}`);
+    failAiProgress("Errore durante la generazione AI.");
+  } finally {
+    els.courseAiGenerateBtn.disabled = false;
+  }
+}
+
+function renderCourseAiPreview(proposal) {
+  const stats = proposal.stats || {};
+  const udas = proposal.udas || [];
+  const rows = udas.map((uda) => `
+    <tr>
+      <td>${escapeHtml(uda.id)}</td>
+      <td>${escapeHtml(uda.title)}</td>
+      <td>${escapeHtml(uda.path || "")}</td>
+      <td>${escapeHtml(uda.weeks || "")}</td>
+      <td>${countItems(uda.items || [])}</td>
+    </tr>
+  `).join("");
+  els.courseAiPreview.innerHTML = `
+    <h3>Proposta generata</h3>
+    <p>
+      UDA: <strong>${udas.length}</strong> ·
+      argomenti assegnati: <strong>${stats.assigned_topics || 0}</strong> ·
+      non assegnati: <strong>${(proposal.unplaced_topics || []).length}</strong>
+    </p>
+    <table>
+      <thead><tr><th>UDA</th><th>Titolo</th><th>Percorso</th><th>Settimane</th><th>Argomenti</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    ${proposal.notes ? `<p><strong>Note:</strong> ${escapeHtml(proposal.notes)}</p>` : ""}
+  `;
+}
+
+function countItems(items) {
+  return items.reduce((total, item) => total + 1 + countItems(item.children || []), 0);
+}
+
+function applyCourseAiProposal() {
+  const year = (state.design.years || []).find((candidate) => candidate.id === state.courseAiYearId);
+  if (!year || !state.courseAiProposal) return;
+  year.title = state.courseAiProposal.title || year.title;
+  year.description = state.courseAiProposal.description || year.description;
+  year.udas = state.courseAiProposal.udas || year.udas;
+  year.ai_brief = readCourseBrief();
+  els.courseAiDialog.close();
+  state.courseAiProposal = null;
+  renderCourse();
+  renderHeadings();
+  setStatus(`Proposta AI applicata a ${year.title}. Ricordati di salvare il JSON.`);
+}
+
+function contextLabel(index, siblings, item) {
+  const previous = index;
+  const next = Math.max(0, siblings.length - index - 1);
+  if (previous && next) return "contesto buono";
+  if (previous || next || (item.children || []).length) return "contesto medio";
+  return "poco contesto";
+}
+
+async function fillFrameWithAi(year, uda, item) {
+  const entries = collectSubtreeItems(year, uda, item);
+  if (entries.length > 1) {
+    openFrameBatch(year, uda, item, entries);
+    return;
+  }
+  await fillSingleFrameWithAi(year, uda, item);
+}
+
+async function fillSingleFrameWithAi(year, uda, item) {
+  setStatus(`AI assisted: preparo la cornice per "${item.title}"...`);
+  startAiProgress(`AI assisted cornice: ${item.title}`);
+  try {
+    await generateFrameForEntry({ year, uda, item });
+    renderCourse();
+    setStatus(`Cornice didattica generata per "${item.title}".`);
+    stopAiProgress("Cornice didattica generata.");
+  } catch (error) {
+    setStatus(`AI assisted non riuscito. Dettaglio provider/server: ${error.message}`);
+    failAiProgress(`Errore provider/server: ${error.message}`);
+  }
+}
+
+function collectSubtreeItems(year, uda, item) {
+  const entries = [];
+  const visit = (candidate) => {
+    entries.push({ year, uda, item: candidate });
+    for (const child of candidate.children || []) visit(child);
+  };
+  visit(item);
+  return entries;
+}
+
+function openFrameBatch(year, uda, item, entries) {
+  frameBatch = {
+    rootTitle: item.title,
+    entries,
+    index: 0,
+    running: false,
+    cancelled: false,
+    cancelAction: "",
+    snapshots: entries.map((entry) => ({
+      item: entry.item,
+      frame: JSON.parse(JSON.stringify({ ...defaultFrame(), ...(entry.item.frame || {}) })),
+    })),
+  };
+  setStatus(`Coda AI pronta: ${entries.length} cornici da generare per "${item.title}" e sottoparagrafi.`);
+  showFrameBatchProgress();
+}
+
+async function generateFrameForEntry(entry) {
+  const payload = await api("/api/ai-frame", {
+    method: "POST",
+    body: JSON.stringify({
+      design: state.design,
+      year_id: entry.year.id,
+      uda_id: entry.uda.id,
+      item_id: entry.item.id,
+    }),
+  });
+  entry.item.frame = { ...defaultFrame(), ...(entry.item.frame || {}), ...payload.frame, status: "draft" };
+}
+
+async function generateNextFrameInBatch() {
+  if (!frameBatch || frameBatch.running || frameBatch.index >= frameBatch.entries.length) return;
+  frameBatch.running = true;
+  frameBatch.cancelled = false;
+  showFrameBatchProgress();
+  const entry = frameBatch.entries[frameBatch.index];
+  setStatus(`Genero cornice ${frameBatch.index + 1}/${frameBatch.entries.length}: ${entry.item.title}`);
+  try {
+    await generateFrameForEntry(entry);
+    frameBatch.index += 1;
+    renderCourse();
+    setStatus(`Cornice generata per "${entry.item.title}".`);
+  } catch (error) {
+    setStatus(`Generazione cornice interrotta. Dettaglio provider/server: ${error.message}`);
+    failAiProgress(`Errore provider/server: ${error.message}`);
+    frameBatch = null;
+    return;
+  } finally {
+    if (frameBatch) frameBatch.running = false;
+  }
+  if (frameBatch?.cancelled) {
+    finishCancelledFrameBatch();
+    return;
+  }
+  if (frameBatch) showFrameBatchProgress();
+}
+
+async function generateAllFramesInBatch() {
+  if (!frameBatch || frameBatch.running) return;
+  frameBatch.running = true;
+  frameBatch.cancelled = false;
+  showFrameBatchProgress();
+  try {
+    while (frameBatch && frameBatch.index < frameBatch.entries.length && !frameBatch.cancelled) {
+      const entry = frameBatch.entries[frameBatch.index];
+      const percent = Math.round((frameBatch.index / frameBatch.entries.length) * 100);
+      updateAiProgress(percent, `Genero ${frameBatch.index + 1}/${frameBatch.entries.length}: ${entry.item.title}`);
+      setStatus(`Genero cornice ${frameBatch.index + 1}/${frameBatch.entries.length}: ${entry.item.title}`);
+      await generateFrameForEntry(entry);
+      frameBatch.index += 1;
+      renderCourse();
+    }
+    if (!frameBatch) return;
+    frameBatch.running = false;
+    if (frameBatch.cancelled) {
+      finishCancelledFrameBatch();
+      return;
+    }
+    setStatus(`Generate ${frameBatch.entries.length} cornici per "${frameBatch.rootTitle}". Ricordati di salvare il JSON.`);
+    stopAiProgress("Cornici didattiche generate.");
+    frameBatch = null;
+  } catch (error) {
+    if (frameBatch) frameBatch.running = false;
+    setStatus(`Generazione cornice interrotta. Dettaglio provider/server: ${error.message}`);
+    failAiProgress(`Errore provider/server: ${error.message}`);
+    frameBatch = null;
+  }
+}
+
+function closeFrameBatch() {
+  if (!frameBatch) return;
+  frameBatch.cancelled = true;
+  frameBatch.cancelAction = "close";
+  if (frameBatch.running) {
+    setStatus("La coda si chiudera dopo la richiesta AI in corso.");
+    showFrameBatchProgress();
+    return;
+  }
+  const done = frameBatch.index;
+  const total = frameBatch.entries.length;
+  frameBatch = null;
+  els.aiBusy.hidden = true;
+  els.aiBusyControls.hidden = true;
+  setStatus(`Coda chiusa: mantenute ${done}/${total} cornici generate. Ricordati di salvare il JSON.`);
+}
+
+function cancelFrameBatch() {
+  if (!frameBatch) return;
+  frameBatch.cancelled = true;
+  frameBatch.cancelAction = "restore";
+  if (frameBatch.running) {
+    setStatus("Annullamento richiesto: ripristino appena termina la richiesta AI in corso.");
+    showFrameBatchProgress();
+    return;
+  }
+  for (const snapshot of frameBatch.snapshots) {
+    snapshot.item.frame = JSON.parse(JSON.stringify(snapshot.frame));
+  }
+  const total = frameBatch.entries.length;
+  frameBatch = null;
+  renderCourse();
+  els.aiBusy.hidden = true;
+  els.aiBusyControls.hidden = true;
+  setStatus(`Generazione annullata: ripristinate le ${total} cornici della coda.`);
+}
+
+function finishCancelledFrameBatch() {
+  if (!frameBatch) return;
+  if (frameBatch.cancelAction === "restore") {
+    for (const snapshot of frameBatch.snapshots) {
+      snapshot.item.frame = JSON.parse(JSON.stringify(snapshot.frame));
+    }
+    const total = frameBatch.entries.length;
+    frameBatch = null;
+    renderCourse();
+    els.aiBusy.hidden = true;
+    els.aiBusyControls.hidden = true;
+    setStatus(`Generazione annullata: ripristinate le ${total} cornici della coda.`);
+    return;
+  }
+  const done = frameBatch.index;
+  const total = frameBatch.entries.length;
+  frameBatch = null;
+  els.aiBusy.hidden = true;
+  els.aiBusyControls.hidden = true;
+  setStatus(`Generazione fermata dopo ${done}/${total} cornici. Ricordati di salvare il JSON.`);
+}
+
+function renderFrameEditor(item) {
+  const details = document.createElement("details");
+  details.className = "frameEditor";
+  details.classList.add(frameHasContent(item.frame) ? "frameReady" : "frameEmpty");
+  details.innerHTML = `
+    <summary>Cornice didattica</summary>
+    <div class="frameGrid">
+      <label>
+        <span>Stato</span>
+        <select data-frame-field="status">
+          <option value="todo">todo</option>
+          <option value="draft">draft</option>
+          <option value="review">review</option>
+          <option value="done">done</option>
+        </select>
+      </label>
+    </div>
+  `;
+  const grid = details.querySelector(".frameGrid");
+  const status = details.querySelector('[data-frame-field="status"]');
+  status.value = item.frame.status || "todo";
+  status.addEventListener("change", () => {
+    item.frame.status = status.value;
+    renderCourse();
+  });
+
+  for (const field of FRAME_FIELDS) {
+    const label = document.createElement("label");
+    label.innerHTML = `
+      <span>${escapeHtml(field.label)}</span>
+      <textarea data-frame-field="${field.key}" rows="2"></textarea>
+    `;
+    const textarea = label.querySelector("textarea");
+    textarea.value = item.frame[field.key] || "";
+    textarea.addEventListener("input", () => {
+      item.frame[field.key] = textarea.value;
+    });
+    grid.append(label);
+  }
+  return details;
+}
+
+function frameHasContent(frame = {}) {
+  return FRAME_FIELDS.some((field) => String(frame[field.key] || "").trim());
+}
+
+function collectCourseItems() {
+  const entries = [];
+  for (const year of state.design.years || []) {
+    for (const uda of year.udas || []) {
+      collectItemsFromTree(year, uda, uda.items || [], entries);
+    }
+  }
+  return entries;
+}
+
+function collectItemsFromTree(year, uda, items, entries) {
+  for (const item of items) {
+    entries.push({ year, uda, item });
+    collectItemsFromTree(year, uda, item.children || [], entries);
+  }
+}
+
+async function generateAllFrames() {
+  const entries = collectCourseItems();
+  if (!entries.length) {
+    setStatus("Nessun argomento nel percorso: non ci sono cornici da generare.");
+    return;
+  }
+  if (!confirm(`Generare o aggiornare le cornici didattiche per ${entries.length} argomenti? L'operazione puo richiedere tempo.`)) return;
+  els.generateAllFramesBtn.disabled = true;
+  startAiProgress(`AI assisted cornici: ${entries.length} argomenti`);
+  try {
+    for (const [index, entry] of entries.entries()) {
+      const percent = Math.min(95, Math.round((index / entries.length) * 95));
+      updateAiProgress(percent, `Genero cornice ${index + 1}/${entries.length}: ${entry.item.title}`);
+      setStatus(`Genero cornice ${index + 1}/${entries.length}: ${entry.item.title}`);
+      const payload = await api("/api/ai-frame", {
+        method: "POST",
+        body: JSON.stringify({
+          design: state.design,
+          year_id: entry.year.id,
+          uda_id: entry.uda.id,
+          item_id: entry.item.id,
+        }),
+      });
+      entry.item.frame = { ...defaultFrame(), ...(entry.item.frame || {}), ...payload.frame, status: "draft" };
+    }
+    renderCourse();
+    stopAiProgress("Cornici didattiche generate.");
+    setStatus(`Generate ${entries.length} cornici didattiche. Ricordati di salvare il JSON.`);
+  } catch (error) {
+    failAiProgress(`Errore provider/server: ${error.message}`);
+    setStatus(`Generazione cornici interrotta. Dettaglio provider/server: ${error.message}`);
+  } finally {
+    els.generateAllFramesBtn.disabled = false;
+  }
 }
 
 function moveItem(items, index, delta) {
@@ -398,7 +1087,7 @@ async function saveDesign() {
     method: "POST",
     body: JSON.stringify(state.design),
   });
-  setStatus("Salvato in doc/course_design.json.");
+  setStatus("Percorso impostato come corrente in doc/course_design.json.");
 }
 
 function escapeHtml(value) {
@@ -411,6 +1100,16 @@ function escapeHtml(value) {
 
 els.reloadBtn.addEventListener("click", loadAll);
 els.saveBtn.addEventListener("click", saveDesign);
+els.loadSavedDesignBtn.addEventListener("click", loadSavedDesign);
+els.saveArchiveBtn.addEventListener("click", saveArchiveDesign);
+els.generateAllFramesBtn.addEventListener("click", generateAllFrames);
+els.aiBusyNextBtn.addEventListener("click", generateNextFrameInBatch);
+els.aiBusyAllBtn.addEventListener("click", generateAllFramesInBatch);
+els.aiBusyCloseBtn.addEventListener("click", closeFrameBatch);
+els.aiBusyCancelBtn.addEventListener("click", cancelFrameBatch);
+els.courseAiCloseBtn.addEventListener("click", () => els.courseAiDialog.close());
+els.courseAiGenerateBtn.addEventListener("click", generateCourseAiProposal);
+els.courseAiApplyBtn.addEventListener("click", applyCourseAiProposal);
 els.sourceFilter.addEventListener("change", renderHeadings);
 els.levelFilter.addEventListener("change", renderHeadings);
 els.searchInput.addEventListener("input", renderHeadings);
@@ -419,3 +1118,4 @@ loadAll().catch((error) => {
   console.error(error);
   setStatus(`Errore: ${error.message}`);
 });
+

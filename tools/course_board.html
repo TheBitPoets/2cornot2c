@@ -18,8 +18,14 @@
         <img src="https://github.com/TheBitPoets.png" alt="TheBitPoets">
       </a>
       <div class="actions">
+        <select id="savedDesignSelect" aria-label="Percorsi didattici salvati">
+          <option value="">Percorsi salvati</option>
+        </select>
+        <button id="loadSavedDesignBtn" type="button">Carica archiviato</button>
+        <button id="saveArchiveBtn" type="button">Aggiorna archivio</button>
+        <button id="generateAllFramesBtn" type="button">Genera cornici</button>
         <button id="reloadBtn" type="button">Ricarica</button>
-        <button id="saveBtn" type="button" class="primary">Salva JSON</button>
+        <button id="saveBtn" type="button" class="primary">Imposta corrente</button>
       </div>
     </div>
   </header>
@@ -46,10 +52,30 @@
       <div class="panelHead">
         <h2>Percorso didattico</h2>
         <p id="status" class="status">Pronto.</p>
+        <p id="aiConfig" class="aiConfig">AI: configurazione non caricata.</p>
       </div>
       <div id="courseTree" class="courseTree"></div>
     </section>
   </main>
+
+  <div id="aiBusy" class="aiBusy" hidden>
+    <div class="aiBusyCard">
+      <div>
+        <strong id="aiBusyTitle">AI assisted in corso</strong>
+        <p id="aiBusyMessage">Preparo la richiesta...</p>
+      </div>
+      <div class="aiBusyPercent" id="aiBusyPercent">0%</div>
+      <div class="aiBusyBar" aria-hidden="true">
+        <span id="aiBusyBarFill"></span>
+      </div>
+      <div id="aiBusyControls" class="aiBusyControls" hidden>
+        <button id="aiBusyNextBtn" type="button">Genera prossimo</button>
+        <button id="aiBusyAllBtn" type="button" class="primary">Genera tutti</button>
+        <button id="aiBusyCloseBtn" type="button">Chiudi</button>
+        <button id="aiBusyCancelBtn" type="button">Annulla</button>
+      </div>
+    </div>
+  </div>
 
   <template id="headingTemplate">
     <article class="headingCard" draggable="true">
@@ -57,6 +83,67 @@
       <div class="headingMeta"></div>
     </article>
   </template>
+
+  <dialog id="courseAiDialog" class="courseAiDialog">
+    <form method="dialog" class="courseAiPanel">
+      <header class="courseAiHead">
+        <div>
+          <p class="eyebrow">AI assisted percorso</p>
+          <h2 id="courseAiTitle">Genera percorso</h2>
+        </div>
+        <button id="courseAiCloseBtn" type="button">Chiudi</button>
+      </header>
+
+      <div class="briefGrid">
+        <label>
+          <span>Materia</span>
+          <input id="briefSubject" type="text">
+        </label>
+        <label>
+          <span>Anno</span>
+          <input id="briefYearTitle" type="text">
+        </label>
+        <label>
+          <span>Descrizione</span>
+          <input id="briefDescription" type="text">
+        </label>
+        <label>
+          <span>Ore/settimana</span>
+          <input id="briefWeeklyHours" type="number" min="1">
+        </label>
+        <label>
+          <span>Settimane</span>
+          <input id="briefWeeks" type="number" min="1">
+        </label>
+        <label>
+          <span>Ore totali</span>
+          <input id="briefTotalHours" type="number" min="1">
+        </label>
+      </div>
+
+      <label class="wideField">
+        <span>Obiettivi didattici</span>
+        <textarea id="briefGoals" rows="5"></textarea>
+      </label>
+      <label class="wideField">
+        <span>Vincoli</span>
+        <textarea id="briefConstraints" rows="5"></textarea>
+      </label>
+      <label class="wideField">
+        <span>Preferenze</span>
+        <textarea id="briefPreferences" rows="5"></textarea>
+      </label>
+
+      <div class="courseAiActions">
+        <button id="courseAiGenerateBtn" type="button" class="primary">Genera proposta</button>
+        <button id="courseAiApplyBtn" type="button" disabled>Applica proposta</button>
+      </div>
+
+      <section id="courseAiPreview" class="courseAiPreview">
+        <p class="empty">Nessuna proposta generata.</p>
+      </section>
+    </form>
+  </dialog>
 
   <script src="course_board.js"></script>
 </body>
