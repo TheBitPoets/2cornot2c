@@ -91,7 +91,17 @@ h1 {
   display: block;
 }
 
-.actions { display: flex; gap: .75rem; flex-wrap: wrap; }
+.actions {
+  display: flex;
+  gap: .55rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.actions select {
+  width: auto;
+  min-width: 13rem;
+}
 
 button, select, input {
   border: 1px solid var(--line);

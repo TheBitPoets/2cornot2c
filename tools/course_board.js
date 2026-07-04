@@ -1,6 +1,8 @@
 ﻿const state = {
   headings: [],
   design: null,
+  savedDesigns: [],
+  activeSavedDesign: "",
   aiConfig: null,
   draggedHeading: null,
   collapsedHeadingIds: new Set(),
@@ -18,6 +20,9 @@ const els = {
   courseTree: document.querySelector("#courseTree"),
   status: document.querySelector("#status"),
   aiConfig: document.querySelector("#aiConfig"),
+  savedDesignSelect: document.querySelector("#savedDesignSelect"),
+  loadSavedDesignBtn: document.querySelector("#loadSavedDesignBtn"),
+  saveArchiveBtn: document.querySelector("#saveArchiveBtn"),
   reloadBtn: document.querySelector("#reloadBtn"),
   saveBtn: document.querySelector("#saveBtn"),
   courseAiDialog: document.querySelector("#courseAiDialog"),
@@ -129,19 +134,68 @@ async function responseErrorMessage(response) {
 
 async function loadAll() {
   setStatus("Caricamento...");
-  const [headingsPayload, design, aiConfig] = await Promise.all([
+  const [headingsPayload, design, aiConfig, savedDesigns] = await Promise.all([
     api("/api/headings"),
     api("/api/course-design"),
     api("/api/ai-config"),
+    api("/api/saved-designs"),
   ]);
   state.headings = headingsPayload.headings;
   state.design = design;
   state.aiConfig = aiConfig;
+  state.savedDesigns = savedDesigns.designs || [];
   populateFilters();
   renderAiConfig();
+  renderSavedDesigns();
   renderHeadings();
   renderCourse();
   setStatus("Pronto.");
+}
+
+function renderSavedDesigns() {
+  const selected = state.activeSavedDesign || els.savedDesignSelect.value;
+  els.savedDesignSelect.innerHTML = '<option value="">Percorsi salvati</option>';
+  for (const design of state.savedDesigns) {
+    const option = document.createElement("option");
+    option.value = design.name;
+    option.textContent = design.name;
+    els.savedDesignSelect.append(option);
+  }
+  els.savedDesignSelect.value = selected;
+}
+
+async function loadSavedDesign() {
+  const name = els.savedDesignSelect.value;
+  if (!name) {
+    setStatus("Seleziona un percorso salvato da caricare.");
+    return;
+  }
+  if (!confirm(`Caricare "${name}" nella board? Le modifiche non salvate nella vista corrente saranno perse.`)) return;
+  setStatus(`Caricamento percorso salvato "${name}"...`);
+  const payload = await api("/api/saved-designs/load", {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+  state.design = payload.design;
+  state.activeSavedDesign = name;
+  renderHeadings();
+  renderCourse();
+  setStatus(`Percorso "${name}" caricato. Usa "Salva JSON" o "Salva archivio" per persistere modifiche.`);
+}
+
+async function saveArchiveDesign() {
+  const defaultName = state.activeSavedDesign || els.savedDesignSelect.value || "course_design_as_25_26.json";
+  const name = prompt("Nome file archivio JSON:", defaultName);
+  if (!name) return;
+  setStatus(`Salvataggio archivio "${name}"...`);
+  const payload = await api("/api/saved-designs/save", {
+    method: "POST",
+    body: JSON.stringify({ name, design: state.design }),
+  });
+  state.savedDesigns = payload.designs || [];
+  state.activeSavedDesign = payload.saved?.name || name;
+  renderSavedDesigns();
+  setStatus(`Percorso salvato in archivio: ${state.activeSavedDesign}.`);
 }
 
 function renderAiConfig() {
@@ -776,6 +830,8 @@ function escapeHtml(value) {
 
 els.reloadBtn.addEventListener("click", loadAll);
 els.saveBtn.addEventListener("click", saveDesign);
+els.loadSavedDesignBtn.addEventListener("click", loadSavedDesign);
+els.saveArchiveBtn.addEventListener("click", saveArchiveDesign);
 els.courseAiCloseBtn.addEventListener("click", () => els.courseAiDialog.close());
 els.courseAiGenerateBtn.addEventListener("click", generateCourseAiProposal);
 els.courseAiApplyBtn.addEventListener("click", applyCourseAiProposal);

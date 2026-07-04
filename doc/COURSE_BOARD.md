@@ -25,8 +25,59 @@ http://127.0.0.1:8765/tools/course_board.html
 - permette di riordinare e rimuovere gli elementi assegnati;
 - permette di compilare una cornice didattica per ogni argomento assegnato;
 - permette di generare una proposta di percorso annuale con `AI assisted percorso`;
+- permette di archiviare e ricaricare piu versioni del percorso didattico;
 - salva la struttura in `doc/course_design.json`;
 - genera `doc/PERCORSO_DIDATTICO.md` a partire dal JSON della board.
+
+## Archivio dei percorsi didattici
+
+La board usa `doc/course_design.json` come percorso didattico corrente.
+
+Per conservare versioni diverse, per esempio per anni scolastici differenti, puoi usare l'archivio:
+
+```text
+doc/course_designs/
+```
+
+Esempi di nomi:
+
+```text
+course_design_as_24_25.json
+course_design_as_25_26.json
+```
+
+### Salvare una versione in archivio
+
+1. Modifica la board.
+2. Clicca `Salva archivio`.
+3. Inserisci un nome file `.json`.
+4. La board salva una copia in `doc/course_designs/`.
+
+Il nome puo contenere solo lettere, numeri, trattino, underscore, punto e deve terminare con `.json`.
+
+### Caricare una versione salvata
+
+1. Scegli un file dal select `Percorsi salvati`.
+2. Clicca `Carica`.
+3. La board sostituisce la vista corrente con il JSON archiviato.
+4. Modifica il percorso normalmente.
+5. Usa `Salva archivio` per aggiornare il file archiviato oppure `Salva JSON` per renderlo il percorso corrente.
+
+### Differenza tra Salva JSON e Salva archivio
+
+`Salva JSON` aggiorna:
+
+```text
+doc/course_design.json
+```
+
+`Salva archivio` aggiorna o crea un file dentro:
+
+```text
+doc/course_designs/
+```
+
+In questo modo puoi mantenere piu percorsi didattici storici o alternativi senza sovrascrivere sempre il percorso corrente.
 
 ## Generazione AI assisted del percorso annuale
 

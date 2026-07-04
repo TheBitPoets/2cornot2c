@@ -29,12 +29,14 @@ from urllib.parse import unquote, urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
 DESIGN_PATH = ROOT / "doc" / "course_design.json"
+COURSE_DESIGNS_DIR = ROOT / "doc" / "course_designs"
 DEFAULT_SOURCES = ["README.md", "LINUX_PROGRAMMING.md"]
 ACTIVE_AI_PROVIDER = os.environ.get("AI_PROVIDER", "openai").strip().lower()
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 TAG_RE = re.compile(r"<[^>]+>")
 PUNCT_RE = re.compile(r"[^\w\s-]", re.UNICODE)
 SPACE_RE = re.compile(r"[\s_]+")
+DESIGN_NAME_RE = re.compile(r"^[a-zA-Z0-9_.-]+\.json$")
 AI_FRAME_FIELDS = [
     "context",
     "prerequisites",
@@ -77,6 +79,49 @@ def write_design(payload: dict) -> None:
 
     DESIGN_PATH.parent.mkdir(parents=True, exist_ok=True)
     DESIGN_PATH.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def safe_design_name(name: str) -> str:
+    """Validate a saved course-design filename."""
+
+    name = name.strip()
+    if not DESIGN_NAME_RE.match(name):
+        raise ValueError("Nome non valido. Usa solo lettere, numeri, trattino, underscore, punto e suffisso .json.")
+    return name
+
+
+def saved_design_path(name: str) -> Path:
+    """Return the safe path for a saved course design."""
+
+    return COURSE_DESIGNS_DIR / safe_design_name(name)
+
+
+def list_saved_designs() -> list[dict]:
+    """List saved course designs stored in doc/course_designs."""
+
+    COURSE_DESIGNS_DIR.mkdir(parents=True, exist_ok=True)
+    designs = []
+    for path in sorted(COURSE_DESIGNS_DIR.glob("*.json")):
+        designs.append({"name": path.name, "path": str(path.relative_to(ROOT))})
+    return designs
+
+
+def read_saved_design(name: str) -> dict:
+    """Read a saved course design by filename."""
+
+    path = saved_design_path(name)
+    if not path.is_file():
+        raise FileNotFoundError(f"Percorso salvato non trovato: {name}")
+    return json.loads(path.read_text(encoding="utf-8-sig"))
+
+
+def write_saved_design(name: str, payload: dict) -> dict:
+    """Persist a named course design in the archive folder."""
+
+    COURSE_DESIGNS_DIR.mkdir(parents=True, exist_ok=True)
+    path = saved_design_path(name)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return {"name": path.name, "path": str(path.relative_to(ROOT))}
 
 
 def extract_headings() -> list[dict]:
@@ -833,6 +878,9 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/course-design":
             self.write_json(read_design())
             return
+        if parsed.path == "/api/saved-designs":
+            self.write_json({"designs": list_saved_designs()})
+            return
         if parsed.path == "/api/ai-config":
             self.write_json(ai_config())
             return
@@ -845,6 +893,25 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/course-design":
             write_design(payload)
             self.write_json({"ok": True, "path": str(DESIGN_PATH.relative_to(ROOT))})
+            return
+        if parsed.path == "/api/saved-designs/load":
+            try:
+                self.write_json({"design": read_saved_design(payload.get("name", ""))})
+            except Exception as error:  # noqa: BLE001
+                self.send_response(404)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+            return
+        if parsed.path == "/api/saved-designs/save":
+            try:
+                saved = write_saved_design(payload.get("name", ""), payload.get("design", {}))
+                self.write_json({"ok": True, "saved": saved, "designs": list_saved_designs()})
+            except Exception as error:  # noqa: BLE001
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
             return
         if parsed.path == "/api/ai-config":
             try:
