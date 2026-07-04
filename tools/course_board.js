@@ -23,6 +23,7 @@ const els = {
   savedDesignSelect: document.querySelector("#savedDesignSelect"),
   loadSavedDesignBtn: document.querySelector("#loadSavedDesignBtn"),
   saveArchiveBtn: document.querySelector("#saveArchiveBtn"),
+  generateAllFramesBtn: document.querySelector("#generateAllFramesBtn"),
   reloadBtn: document.querySelector("#reloadBtn"),
   saveBtn: document.querySelector("#saveBtn"),
   courseAiDialog: document.querySelector("#courseAiDialog"),
@@ -107,7 +108,7 @@ function failAiProgress(message = "Operazione non riuscita.") {
   updateAiProgress(100, message);
   setTimeout(() => {
     if (!aiProgressTimer) els.aiBusy.hidden = true;
-  }, 2200);
+  }, 8000);
 }
 
 async function api(path, options = {}) {
@@ -744,13 +745,14 @@ async function fillFrameWithAi(year, uda, item) {
     stopAiProgress("Cornice didattica generata.");
   } catch (error) {
     setStatus(`AI assisted non riuscito. Dettaglio provider/server: ${error.message}`);
-    failAiProgress("Errore durante la generazione della cornice.");
+    failAiProgress(`Errore provider/server: ${error.message}`);
   }
 }
 
 function renderFrameEditor(item) {
   const details = document.createElement("details");
   details.className = "frameEditor";
+  details.classList.add(frameHasContent(item.frame) ? "frameReady" : "frameEmpty");
   details.innerHTML = `
     <summary>Cornice didattica</summary>
     <div class="frameGrid">
@@ -787,6 +789,63 @@ function renderFrameEditor(item) {
     grid.append(label);
   }
   return details;
+}
+
+function frameHasContent(frame = {}) {
+  return FRAME_FIELDS.some((field) => String(frame[field.key] || "").trim());
+}
+
+function collectCourseItems() {
+  const entries = [];
+  for (const year of state.design.years || []) {
+    for (const uda of year.udas || []) {
+      collectItemsFromTree(year, uda, uda.items || [], entries);
+    }
+  }
+  return entries;
+}
+
+function collectItemsFromTree(year, uda, items, entries) {
+  for (const item of items) {
+    entries.push({ year, uda, item });
+    collectItemsFromTree(year, uda, item.children || [], entries);
+  }
+}
+
+async function generateAllFrames() {
+  const entries = collectCourseItems();
+  if (!entries.length) {
+    setStatus("Nessun argomento nel percorso: non ci sono cornici da generare.");
+    return;
+  }
+  if (!confirm(`Generare o aggiornare le cornici didattiche per ${entries.length} argomenti? L'operazione puo richiedere tempo.`)) return;
+  els.generateAllFramesBtn.disabled = true;
+  startAiProgress(`AI assisted cornici: ${entries.length} argomenti`);
+  try {
+    for (const [index, entry] of entries.entries()) {
+      const percent = Math.min(95, Math.round((index / entries.length) * 95));
+      updateAiProgress(percent, `Genero cornice ${index + 1}/${entries.length}: ${entry.item.title}`);
+      setStatus(`Genero cornice ${index + 1}/${entries.length}: ${entry.item.title}`);
+      const payload = await api("/api/ai-frame", {
+        method: "POST",
+        body: JSON.stringify({
+          design: state.design,
+          year_id: entry.year.id,
+          uda_id: entry.uda.id,
+          item_id: entry.item.id,
+        }),
+      });
+      entry.item.frame = { ...defaultFrame(), ...(entry.item.frame || {}), ...payload.frame, status: "draft" };
+    }
+    renderCourse();
+    stopAiProgress("Cornici didattiche generate.");
+    setStatus(`Generate ${entries.length} cornici didattiche. Ricordati di salvare il JSON.`);
+  } catch (error) {
+    failAiProgress(`Errore provider/server: ${error.message}`);
+    setStatus(`Generazione cornici interrotta. Dettaglio provider/server: ${error.message}`);
+  } finally {
+    els.generateAllFramesBtn.disabled = false;
+  }
 }
 
 function moveItem(items, index, delta) {
@@ -832,6 +891,7 @@ els.reloadBtn.addEventListener("click", loadAll);
 els.saveBtn.addEventListener("click", saveDesign);
 els.loadSavedDesignBtn.addEventListener("click", loadSavedDesign);
 els.saveArchiveBtn.addEventListener("click", saveArchiveDesign);
+els.generateAllFramesBtn.addEventListener("click", generateAllFrames);
 els.courseAiCloseBtn.addEventListener("click", () => els.courseAiDialog.close());
 els.courseAiGenerateBtn.addEventListener("click", generateCourseAiProposal);
 els.courseAiApplyBtn.addEventListener("click", applyCourseAiProposal);

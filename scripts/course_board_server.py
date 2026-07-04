@@ -346,30 +346,42 @@ def target_context(design: dict, year_id: str, uda_id: str, item_id: str) -> dic
         for uda in year.get("udas", []):
             if uda.get("id") != uda_id:
                 continue
-            items = uda.get("items", [])
-            for index, item in enumerate(items):
-                if item.get("id") == item_id:
-                    previous_topics = items[max(0, index - 2):index]
-                    next_topics = items[index + 1:index + 3]
-                    return {
-                        "year": {key: year.get(key, "") for key in ["id", "title", "description"]},
-                        "uda": {key: uda.get(key, "") for key in ["id", "title", "path", "weeks"]},
-                        "position": topic_position(index, items, item),
-                        "previous_topics": [
-                            topic_summary(candidate, include_text=True)
-                            for candidate in previous_topics
-                        ],
-                        "target_topic": topic_summary(
-                            item,
-                            include_text=True,
-                            child_text_budget=MAX_CHILDREN_WITH_TEXT,
-                        ),
-                        "next_topics": [
-                            topic_summary(candidate, include_text=True)
-                            for candidate in next_topics
-                        ],
-                    }
+            found = find_item_context(uda.get("items", []), item_id)
+            if found:
+                index, siblings, item = found
+                previous_topics = siblings[max(0, index - 2):index]
+                next_topics = siblings[index + 1:index + 3]
+                return {
+                    "year": {key: year.get(key, "") for key in ["id", "title", "description"]},
+                    "uda": {key: uda.get(key, "") for key in ["id", "title", "path", "weeks"]},
+                    "position": topic_position(index, siblings, item),
+                    "previous_topics": [
+                        topic_summary(candidate, include_text=True)
+                        for candidate in previous_topics
+                    ],
+                    "target_topic": topic_summary(
+                        item,
+                        include_text=True,
+                        child_text_budget=MAX_CHILDREN_WITH_TEXT,
+                    ),
+                    "next_topics": [
+                        topic_summary(candidate, include_text=True)
+                        for candidate in next_topics
+                    ],
+                }
     raise ValueError("Argomento non trovato nel percorso didattico corrente.")
+
+
+def find_item_context(items: list[dict], item_id: str) -> tuple[int, list[dict], dict] | None:
+    """Find an item at any nesting level, returning its index and siblings."""
+
+    for index, item in enumerate(items):
+        if item.get("id") == item_id:
+            return index, items, item
+        found = find_item_context(item.get("children", []), item_id)
+        if found:
+            return found
+    return None
 
 
 def topic_position(index: int, items: list[dict], item: dict) -> dict:

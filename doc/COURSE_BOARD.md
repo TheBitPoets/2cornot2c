@@ -25,6 +25,7 @@ http://127.0.0.1:8765/tools/course_board.html
 - permette di riordinare e rimuovere gli elementi assegnati;
 - permette di compilare una cornice didattica per ogni argomento assegnato;
 - permette di generare una proposta di percorso annuale con `AI assisted percorso`;
+- permette di generare le cornici didattiche per tutto il percorso;
 - permette di archiviare e ricaricare piu versioni del percorso didattico;
 - salva la struttura in `doc/course_design.json`;
 - genera `doc/PERCORSO_DIDATTICO.md` a partire dal JSON della board.
@@ -234,6 +235,13 @@ Nel file `doc/course_design.json` questi dati vengono salvati dentro il campo `f
 
 Nel documento generato `doc/PERCORSO_DIDATTICO.md` vengono mostrati solo i campi compilati, cosi la bozza resta leggibile anche quando molte cornici sono ancora vuote.
 
+Nella board la linguetta `Cornice didattica` cambia colore:
+
+- grigio: cornice ancora vuota;
+- verde: almeno un campo della cornice e stato compilato.
+
+In questo modo puoi capire quali argomenti sono gia stati lavorati senza aprire tutte le linguette.
+
 ## Compilazione AI assisted della cornice
 
 La board puo chiedere a un servizio AI di compilare automaticamente la cornice didattica di un argomento.
@@ -407,6 +415,31 @@ Il modello deve restituire dati strutturati; la board accetta solo i campi previ
 Anche in questo caso compare l'indicatore di lavoro `AI assisted in corso`. Se la risposta impiega tempo, lascia aperta la finestra: il provider potrebbe richiedere diversi secondi per leggere il contesto e produrre il JSON strutturato.
 
 La generazione della cornice del singolo argomento e di solito piu rapida del percorso annuale, perche usa solo il contesto ravvicinato dell'argomento.
+
+Se la richiesta fallisce, la board mostra il dettaglio restituito dal server o dal provider AI. Per esempio:
+
+- quota insufficiente;
+- modello temporaneamente non disponibile;
+- timeout;
+- API key mancante;
+- errore interno del server.
+
+### Generare le cornici di tutto il percorso
+
+Il bottone `Genera cornici` prova a generare le cornici didattiche per tutti gli argomenti presenti nel percorso corrente.
+
+Il processo e ricorsivo:
+
+- visita tutte le UDA;
+- visita tutti gli argomenti;
+- visita tutti i sottoparagrafi annidati, anche a piu livelli;
+- genera una cornice per ogni nodo dell'albero.
+
+Questo significa che, se nel percorso sono presenti argomenti H1, H2, H3, H4, H5 o H6, la board puo generare la cornice anche per i livelli piu profondi.
+
+La generazione avviene in sequenza, una cornice alla volta. Se un provider restituisce errore, la generazione si interrompe e la board mostra il dettaglio dell'errore.
+
+Prima di usare questo comando su un percorso grande, considera che puo consumare molte chiamate API.
 
 ### Come funziona la chiamata AI
 

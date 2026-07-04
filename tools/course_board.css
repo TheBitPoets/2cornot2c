@@ -414,6 +414,18 @@ input, select { width: 100%; padding: .72rem .9rem; }
   letter-spacing: .08em;
 }
 
+.frameEditor.frameEmpty summary {
+  color: #8a8a8a;
+}
+
+.frameEditor.frameReady summary {
+  color: #0f5132;
+}
+
+.frameEditor.frameReady {
+  border-top-color: rgba(15, 81, 50, .24);
+}
+
 .frameGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
