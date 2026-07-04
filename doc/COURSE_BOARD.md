@@ -724,6 +724,14 @@ Il payload contiene due blocchi principali:
 - fino a due argomenti successivi;
 - sottoparagrafi del target.
 
+Per evitare errori di quota o limiti di token, Groq e OpenRouter ricevono una versione compatta del contesto quando generano la cornice didattica:
+
+- mantengono anno, UDA, posizione dell'argomento, titoli precedenti, titolo corrente, titoli successivi e sottoparagrafi;
+- includono il testo dell'argomento corrente, ma lo tagliano se e troppo lungo;
+- non includono il testo completo degli argomenti vicini.
+
+OpenAI e Gemini ricevono invece il contesto piu esteso. In pratica Groq e OpenRouter sono utili per prove rapide e modelli free/low-cost, mentre OpenAI e Gemini possono dare risposte piu contestualizzate quando il testo e lungo.
+
 Il blocco `position` contiene informazioni come:
 
 ```json

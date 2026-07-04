@@ -55,6 +55,7 @@ MAX_CHILDREN_WITH_TEXT = 8
 MAX_CATALOG_EXCERPT_CHARS = 400
 AI_FRAME_TIMEOUT_SECONDS = 120
 AI_COURSE_PLAN_TIMEOUT_SECONDS = 240
+COMPACT_TEXT_CHARS = 1200
 
 
 def github_anchor(title: str, seen: dict[str, int]) -> str:
@@ -873,6 +874,65 @@ def parse_json_object(text: str) -> dict:
     return json.loads(text)
 
 
+def compact_frame_payload(payload: dict) -> dict:
+    """Reduce frame-generation context for providers with strict token limits."""
+
+    target = payload.get("target", {})
+    return {
+        "course": {
+            "years": [
+                {
+                    "title": year.get("title", ""),
+                    "description": year.get("description", ""),
+                    "udas": [
+                        {
+                            "title": uda.get("title", ""),
+                            "path": uda.get("path", ""),
+                            "weeks": uda.get("weeks", ""),
+                        }
+                        for uda in year.get("udas", [])
+                    ],
+                }
+                for year in payload.get("course", {}).get("years", [])
+            ]
+        },
+        "target": {
+            "year": target.get("year", {}),
+            "uda": target.get("uda", {}),
+            "position": target.get("position", {}),
+            "previous_topics": [compact_topic(topic, include_text=False) for topic in target.get("previous_topics", [])],
+            "target_topic": compact_topic(target.get("target_topic", {}), include_text=True),
+            "next_topics": [compact_topic(topic, include_text=False) for topic in target.get("next_topics", [])],
+        },
+        "context_mode": "compact",
+    }
+
+
+def compact_topic(topic: dict, include_text: bool) -> dict:
+    """Return a compact topic with optional truncated text and child titles."""
+
+    compact = {
+        "title": topic.get("title", ""),
+        "source": topic.get("source", ""),
+        "level": topic.get("level", ""),
+        "href": topic.get("href", ""),
+        "children": [
+            {
+                "title": child.get("title", ""),
+                "source": child.get("source", ""),
+                "level": child.get("level", ""),
+            }
+            for child in topic.get("children", [])
+        ],
+    }
+    if include_text:
+        text = str(topic.get("text", ""))
+        compact["text"] = text[:COMPACT_TEXT_CHARS].rstrip()
+        if len(text) > COMPACT_TEXT_CHARS:
+            compact["text"] += "\n[contenuto tagliato per provider con limite token]"
+    return compact
+
+
 def call_groq_didactic_frame(payload: dict) -> dict:
     """Ask Groq to draft didactic-frame fields."""
 
@@ -885,7 +945,7 @@ def call_groq_didactic_frame(payload: dict) -> dict:
         api_key,
         active_ai_model(),
         didactic_frame_system_prompt() + " Restituisci solo JSON con questi campi top-level: context, prerequisites, objectives, recall, preview, next_step, references.",
-        payload,
+        compact_frame_payload(payload),
     )
     return normalize_frame(result)
 
@@ -902,7 +962,7 @@ def call_openrouter_didactic_frame(payload: dict) -> dict:
         api_key,
         active_ai_model(),
         didactic_frame_system_prompt() + " Restituisci solo JSON con questi campi top-level: context, prerequisites, objectives, recall, preview, next_step, references.",
-        payload,
+        compact_frame_payload(payload),
     )
     return normalize_frame(result)
 
