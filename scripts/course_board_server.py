@@ -151,6 +151,18 @@ def secret_value(key: str) -> str:
     return os.environ.get(key, "") or read_secret_env().get(key, "")
 
 
+def secret_int_value(key: str, default: int) -> int:
+    """Return an integer setting from environment or local secret file."""
+
+    raw_value = secret_value(key)
+    if not raw_value:
+        return default
+    try:
+        return int(raw_value)
+    except ValueError:
+        return default
+
+
 def parse_ai_providers_yaml() -> dict:
     """Parse the small YAML subset used by config/ai_providers.yaml."""
 
@@ -911,6 +923,7 @@ def compact_frame_payload(payload: dict) -> dict:
 def compact_topic(topic: dict, include_text: bool) -> dict:
     """Return a compact topic with optional truncated text and child titles."""
 
+    text_limit = secret_int_value(f"{ACTIVE_AI_PROVIDER.upper()}_COMPACT_TEXT_CHARS", COMPACT_TEXT_CHARS)
     compact = {
         "title": topic.get("title", ""),
         "source": topic.get("source", ""),
@@ -927,8 +940,8 @@ def compact_topic(topic: dict, include_text: bool) -> dict:
     }
     if include_text:
         text = str(topic.get("text", ""))
-        compact["text"] = text[:COMPACT_TEXT_CHARS].rstrip()
-        if len(text) > COMPACT_TEXT_CHARS:
+        compact["text"] = text[:text_limit].rstrip()
+        if len(text) > text_limit:
             compact["text"] += "\n[contenuto tagliato per provider con limite token]"
     return compact
 

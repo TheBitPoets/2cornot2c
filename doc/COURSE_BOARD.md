@@ -732,6 +732,50 @@ Per evitare errori di quota o limiti di token, Groq e OpenRouter ricevono una ve
 
 OpenAI e Gemini ricevono invece il contesto piu esteso. In pratica Groq e OpenRouter sono utili per prove rapide e modelli free/low-cost, mentre OpenAI e Gemini possono dare risposte piu contestualizzate quando il testo e lungo.
 
+Il limite di testo usato per il contesto compatto e configurabile:
+
+```text
+GROQ_COMPACT_TEXT_CHARS=1200
+OPENROUTER_COMPACT_TEXT_CHARS=1200
+```
+
+Puoi inserire questi valori come variabili d'ambiente oppure nel file locale `.secrets/ai.secret`.
+
+### Calibrare il payload massimo per Groq e OpenRouter
+
+Groq e OpenRouter non hanno un limite pratico unico valido per sempre: il massimo dipende da provider, modello, account, free tier, rate limit e richieste gia inviate nell'ultimo minuto.
+
+Per trovare un valore piu ricco ma ancora sicuro puoi usare:
+
+```powershell
+python scripts/probe_ai_payload_limit.py --provider groq --max-chars 8000
+```
+
+Oppure:
+
+```powershell
+python scripts/probe_ai_payload_limit.py --provider openrouter --max-chars 12000
+```
+
+Lo script:
+
+1. legge la API key da variabili d'ambiente o `.secrets/ai.secret`;
+2. costruisce un payload simile a quello della cornice didattica;
+3. prova dimensioni crescenti con ricerca binaria;
+4. stampa il massimo riuscito;
+5. propone un valore consigliato con margine di sicurezza.
+
+Esempio di risultato:
+
+```text
+Risultato
+- massimo riuscito: 4200 caratteri target
+- valore consigliato con safety 0.80: 3360
+- variabile da impostare: GROQ_COMPACT_TEXT_CHARS=3360
+```
+
+Se ricevi errori di tipo TPM, attendi circa un minuto prima di rilanciare il probe: il provider potrebbe aver contato anche le richieste precedenti.
+
 Il blocco `position` contiene informazioni come:
 
 ```json
