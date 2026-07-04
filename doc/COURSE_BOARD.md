@@ -270,6 +270,35 @@ La board supporta questi provider dichiarati in `config/ai_providers.yaml`:
 | Groq | `AI_PROVIDER=groq` | `GROQ_API_KEY` | `GROQ_MODEL` |
 | OpenRouter | `AI_PROVIDER=openrouter` | `OPENROUTER_API_KEY` | `OPENROUTER_MODEL` |
 
+### Quale provider conviene usare
+
+L'ordine consigliato, per il lavoro sulla cornice didattica, e questo:
+
+| Priorita | Provider | Quando usarlo | Perche |
+| --- | --- | --- | --- |
+| 1 | Groq | Cornici singole o code di sottoparagrafi | E veloce, nel test ha retto il contesto compatto piu ampio e ha prodotto JSON utilizzabile. Il limite principale e il TPM: troppe richieste ravvicinate possono generare `429`. |
+| 2 | Gemini | Quando serve una risposta piu ragionata e il free tier e disponibile | Tende a essere buono nella qualita didattica e nel JSON strutturato. Il limite principale e la quota free: quando finisce, risponde con `429` o errori temporanei. |
+| 3 | OpenAI | Quando vuoi massima stabilita e accetti il costo API | E il provider piu adatto se vuoi affidabilita, contesto ricco e meno rumore da free tier. Attenzione: il billing API e separato da ChatGPT/Codex. |
+| 4 | OpenRouter free | Solo come fallback leggero | Il router gratuito puo cambiare modello a monte, restituire JSON instabile o andare in rate limit upstream. Nei test e risultato il meno prevedibile. |
+
+In pratica:
+
+- per lavorare tutti i giorni sulla board, parti da `Groq`;
+- se Groq va in TPM, aspetta un minuto o passa temporaneamente a `Gemini`;
+- se Gemini ha quota esaurita, torna a `Groq`;
+- usa `OpenRouter free` solo per prove leggere;
+- usa `OpenAI` se vuoi privilegiare stabilita e qualita rispetto al costo.
+
+I valori compatti consigliati dai test locali sono:
+
+```text
+GROQ_COMPACT_TEXT_CHARS=6360
+GEMINI_COMPACT_TEXT_CHARS=3022
+OPENROUTER_COMPACT_TEXT_CHARS=404
+```
+
+Questi numeri non sono assoluti: dipendono dal modello, dal piano, dai rate limit e dal carico del provider. Sono valori prudenti per evitare di mandare payload troppo grandi durante la generazione delle cornici.
+
 Se non imposti `AI_PROVIDER`, il server usa `openai`.
 
 `ChatGPT Free` non e un provider API per automazioni locali: e l'interfaccia web/app di ChatGPT. Per questo non viene usato direttamente dalla board, perche richiederebbe automazioni fragili del browser e non una integrazione API pulita.
