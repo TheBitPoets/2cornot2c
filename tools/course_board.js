@@ -352,6 +352,7 @@ function renderItem(year, uda, siblings, item, index, depth) {
         <div class="itemMeta">${escapeHtml(item.source)} · H${item.level || "?"} · ${escapeHtml(item.frame?.status || "ok")}</div>
       </div>
       <div class="itemActions">
+        <span class="contextBadge">${escapeHtml(contextLabel(index, siblings, item))}</span>
         <button type="button" data-action="ai">AI assisted</button>
         <button type="button" data-action="up">Su</button>
         <button type="button" data-action="down">Giu</button>
@@ -391,6 +392,14 @@ function renderItem(year, uda, siblings, item, index, depth) {
     node.append(childList);
   }
   return node;
+}
+
+function contextLabel(index, siblings, item) {
+  const previous = index;
+  const next = Math.max(0, siblings.length - index - 1);
+  if (previous && next) return "contesto buono";
+  if (previous || next || (item.children || []).length) return "contesto medio";
+  return "poco contesto";
 }
 
 async function fillFrameWithAi(year, uda, item) {

@@ -205,6 +205,159 @@ http://127.0.0.1:8765/tools/course_board.html
 
 Il modello deve restituire dati strutturati; la board accetta solo i campi previsti dalla cornice didattica.
 
+### Come funziona la chiamata AI
+
+Quando clicchi `AI assisted`, la board non manda al modello solo una frase generica.
+
+Il server costruisce un prompt composto da:
+
+- una istruzione di ruolo;
+- il percorso didattico corrente;
+- la UDA corrente;
+- l'argomento target;
+- gli argomenti immediatamente precedenti;
+- gli argomenti immediatamente successivi;
+- i sottoparagrafi dell'argomento target;
+- la posizione dell'argomento nella UDA;
+- il testo reale dei paragrafi estratto dai file locali;
+- i link GitHub ai paragrafi, usati come riferimento.
+
+L'istruzione di ruolo dice al modello di comportarsi come un docente di TPSI e programmazione C, di produrre una cornice didattica in italiano, di non inventare link e di non perdere il contenuto tecnico.
+
+Il modello deve rispondere con una struttura JSON che contiene solo i campi previsti:
+
+```json
+{
+  "context": "...",
+  "prerequisites": "...",
+  "objectives": "...",
+  "recall": "...",
+  "preview": "...",
+  "next_step": "...",
+  "references": "..."
+}
+```
+
+La board prende questa risposta e aggiorna il campo `frame` dell'argomento.
+
+### Perche non basta passare un link GitHub
+
+Un link GitHub e utile per la tracciabilita, ma non garantisce che il modello lo apra e lo legga.
+
+Per questo il server fa una cosa piu affidabile:
+
+1. legge localmente `README.md` o `LINUX_PROGRAMMING.md`;
+2. trova la riga dell'heading dell'argomento;
+3. estrae il testo fino al prossimo heading dello stesso livello o superiore;
+4. ripete l'operazione per i paragrafi vicini;
+5. passa alla AI sia il testo reale sia il link GitHub.
+
+In questo modo la AI non lavora solo sul titolo del paragrafo, ma legge anche il contenuto tecnico effettivo della dispensa.
+
+Per evitare richieste troppo grandi, ogni sezione estratta viene tagliata se supera un limite interno di caratteri.
+
+### Quale contesto viene mandato alla AI
+
+Il payload contiene due blocchi principali:
+
+```json
+{
+  "course": {
+    "years": []
+  },
+  "target": {
+    "year": {},
+    "uda": {},
+    "position": {},
+    "previous_topics": [],
+    "target_topic": {},
+    "next_topics": []
+  }
+}
+```
+
+`course` contiene la struttura sintetica del percorso: anni, UDA, settimane, titoli e argomenti assegnati.
+
+`target` contiene il contesto ravvicinato:
+
+- anno corrente;
+- UDA corrente;
+- posizione dell'argomento nella UDA;
+- fino a due argomenti precedenti;
+- argomento target con testo locale;
+- fino a due argomenti successivi;
+- sottoparagrafi del target.
+
+Il blocco `position` contiene informazioni come:
+
+```json
+{
+  "index_in_uda": 3,
+  "total_items_in_uda": 7,
+  "previous_topics_available": 2,
+  "next_topics_available": 4,
+  "has_subtopics": true,
+  "context_quality": "good"
+}
+```
+
+`context_quality` puo valere:
+
+- `weak`: l'argomento e quasi isolato;
+- `medium`: esiste almeno un vicino o l'argomento ha sottoparagrafi;
+- `good`: esistono argomenti sia prima sia dopo.
+
+### Comportamento migliore per ottenere buone risposte
+
+Il comportamento consigliato e:
+
+1. costruisci prima una piccola sequenza coerente nella UDA;
+2. inserisci almeno un argomento precedente e uno successivo quando possibile;
+3. poi clicca `AI assisted` sull'argomento target;
+4. rileggi la cornice generata;
+5. correggi eventuali anticipazioni, semplificazioni o collegamenti troppo forzati;
+6. clicca `Salva JSON`.
+
+Esempio di sequenza utile:
+
+```text
+Variabili
+Operatori
+If
+Cicli
+Funzioni
+```
+
+Se generi la cornice su `If`, il modello puo capire che:
+
+- prima sono stati introdotti variabili e operatori;
+- dopo verranno introdotti i cicli;
+- l'argomento deve fare da ponte tra espressioni booleane e controllo del flusso.
+
+Se invece l'argomento e da solo nella UDA, la AI puo comunque generare una bozza, ma sara piu generica.
+
+### Indicatore di contesto nella UI
+
+Accanto al bottone `AI assisted` la board mostra un piccolo indicatore:
+
+- `poco contesto`: l'argomento e isolato;
+- `contesto medio`: esiste un vicino oppure ci sono sottoparagrafi;
+- `contesto buono`: ci sono argomenti sia prima sia dopo.
+
+Il bottone non viene mai bloccato. L'indicatore serve solo a suggerire quando conviene costruire meglio la UDA prima di chiedere aiuto alla AI.
+
+### Regola didattica importante
+
+La AI produce una bozza, non una decisione definitiva.
+
+Prima di salvare definitivamente il JSON, controlla sempre che:
+
+- non abbia inventato prerequisiti non affrontati;
+- non abbia anticipato concetti che nel percorso arrivano molto dopo;
+- non abbia perso dettagli tecnici importanti;
+- non abbia creato rimandi generici o inutili;
+- il linguaggio sia adatto alla classe reale.
+
 ### Errori comuni
 
 Se vedi un errore nella barra di stato della board:

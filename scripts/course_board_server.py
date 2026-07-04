@@ -43,6 +43,8 @@ AI_FRAME_FIELDS = [
     "next_step",
     "references",
 ]
+MAX_SECTION_CHARS = 6000
+MAX_CHILDREN_WITH_TEXT = 8
 
 
 def github_anchor(title: str, seen: dict[str, int]) -> str:
@@ -111,16 +113,63 @@ def extract_headings() -> list[dict]:
     return headings
 
 
-def topic_summary(item: dict) -> dict:
+def github_blob_url(source: str, anchor: str = "") -> str:
+    """Return a GitHub URL for a source file and optional anchor."""
+
+    base = f"https://github.com/TheBitPoets/2cornot2c/blob/main/{source}"
+    return f"{base}#{anchor}" if anchor else base
+
+
+def section_text(source: str, line: int | str, level: int | str) -> str:
+    """Extract local Markdown text for one heading section."""
+
+    try:
+        start_line = int(line)
+        start_level = int(level)
+    except (TypeError, ValueError):
+        return ""
+    path = (ROOT / source).resolve()
+    try:
+        path.relative_to(ROOT)
+    except ValueError:
+        return ""
+    if not path.is_file():
+        return ""
+
+    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    if start_line < 1 or start_line > len(lines):
+        return ""
+
+    section: list[str] = []
+    for current in lines[start_line:]:
+        match = HEADING_RE.match(current)
+        if match and len(match.group(1)) <= start_level:
+            break
+        section.append(current)
+    text = "\n".join(section).strip()
+    if len(text) > MAX_SECTION_CHARS:
+        return text[:MAX_SECTION_CHARS].rstrip() + "\n\n[contenuto tagliato per limite di contesto]"
+    return text
+
+
+def topic_summary(item: dict, include_text: bool = False, child_text_budget: int = 0) -> dict:
     """Return a compact recursive topic summary for the AI prompt."""
 
-    return {
+    anchor = str(item.get("href", "")).split("#", 1)[-1] if "#" in str(item.get("href", "")) else ""
+    summary = {
         "title": item.get("title", ""),
         "source": item.get("source", ""),
         "level": item.get("level", ""),
         "href": item.get("href", ""),
-        "children": [topic_summary(child) for child in item.get("children", [])],
+        "github_url": github_blob_url(item.get("source", ""), anchor),
+        "children": [
+            topic_summary(child, include_text=include_text and index < child_text_budget)
+            for index, child in enumerate(item.get("children", []))
+        ],
     }
+    if include_text:
+        summary["text"] = section_text(item.get("source", ""), item.get("line", ""), item.get("level", ""))
+    return summary
 
 
 def compact_design(design: dict) -> dict:
@@ -160,14 +209,49 @@ def target_context(design: dict, year_id: str, uda_id: str, item_id: str) -> dic
             items = uda.get("items", [])
             for index, item in enumerate(items):
                 if item.get("id") == item_id:
+                    previous_topics = items[max(0, index - 2):index]
+                    next_topics = items[index + 1:index + 3]
                     return {
                         "year": {key: year.get(key, "") for key in ["id", "title", "description"]},
                         "uda": {key: uda.get(key, "") for key in ["id", "title", "path", "weeks"]},
-                        "previous_topics": [topic_summary(candidate) for candidate in items[max(0, index - 2):index]],
-                        "target_topic": topic_summary(item),
-                        "next_topics": [topic_summary(candidate) for candidate in items[index + 1:index + 3]],
+                        "position": topic_position(index, items, item),
+                        "previous_topics": [
+                            topic_summary(candidate, include_text=True)
+                            for candidate in previous_topics
+                        ],
+                        "target_topic": topic_summary(
+                            item,
+                            include_text=True,
+                            child_text_budget=MAX_CHILDREN_WITH_TEXT,
+                        ),
+                        "next_topics": [
+                            topic_summary(candidate, include_text=True)
+                            for candidate in next_topics
+                        ],
                     }
     raise ValueError("Argomento non trovato nel percorso didattico corrente.")
+
+
+def topic_position(index: int, items: list[dict], item: dict) -> dict:
+    """Describe how much local didactic context surrounds a topic."""
+
+    previous_count = index
+    next_count = max(0, len(items) - index - 1)
+    has_children = bool(item.get("children"))
+    if previous_count and next_count:
+        quality = "good"
+    elif previous_count or next_count or has_children:
+        quality = "medium"
+    else:
+        quality = "weak"
+    return {
+        "index_in_uda": index + 1,
+        "total_items_in_uda": len(items),
+        "previous_topics_available": previous_count,
+        "next_topics_available": next_count,
+        "has_subtopics": has_children,
+        "context_quality": quality,
+    }
 
 
 def didactic_frame_schema_openai() -> dict:
@@ -197,7 +281,10 @@ def didactic_frame_system_prompt() -> str:
     return (
         "Sei un docente di TPSI e programmazione C. "
         "Compila una cornice didattica in italiano per un argomento del corso. "
-        "Sii concreto, fluido e didattico; non inventare link; non perdere il contenuto tecnico."
+        "Usa prima di tutto il testo locale dei paragrafi forniti nel payload. "
+        "Sii concreto, fluido e didattico; non inventare link; non perdere il contenuto tecnico. "
+        "Se la qualita del contesto e weak, resta prudente e non inventare una progressione didattica. "
+        "Se la qualita del contesto e medium o good, collega l'argomento ai paragrafi precedenti e successivi."
     )
 
 

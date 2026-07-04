@@ -333,6 +333,18 @@ input, select { width: 100%; padding: .72rem .9rem; }
   color: #ffffff;
 }
 
+.contextBadge {
+  align-self: center;
+  border: 1px solid rgba(17, 17, 17, .14);
+  border-radius: 999px;
+  background: #f4f4f4;
+  color: var(--muted);
+  font-size: .66rem;
+  font-weight: 700;
+  padding: .28rem .5rem;
+  white-space: nowrap;
+}
+
 .itemChildren {
   margin-top: .5rem;
   padding-top: .5rem;
