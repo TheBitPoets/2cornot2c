@@ -180,7 +180,7 @@ async function loadSavedDesign() {
   state.activeSavedDesign = name;
   renderHeadings();
   renderCourse();
-  setStatus(`Percorso "${name}" caricato. Usa "Salva JSON" o "Salva archivio" per persistere modifiche.`);
+  setStatus(`Percorso "${name}" caricato. Usa "Imposta corrente" o "Aggiorna archivio" per persistere modifiche.`);
 }
 
 async function saveArchiveDesign() {
@@ -817,7 +817,7 @@ async function saveDesign() {
     method: "POST",
     body: JSON.stringify(state.design),
   });
-  setStatus("Salvato in doc/course_design.json.");
+  setStatus("Percorso impostato come corrente in doc/course_design.json.");
 }
 
 function escapeHtml(value) {

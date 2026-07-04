@@ -46,10 +46,10 @@ course_design_as_24_25.json
 course_design_as_25_26.json
 ```
 
-### Salvare una versione in archivio
+### Salvare o aggiornare una versione in archivio
 
 1. Modifica la board.
-2. Clicca `Salva archivio`.
+2. Clicca `Aggiorna archivio`.
 3. Inserisci un nome file `.json`.
 4. La board salva una copia in `doc/course_designs/`.
 
@@ -58,20 +58,20 @@ Il nome puo contenere solo lettere, numeri, trattino, underscore, punto e deve t
 ### Caricare una versione salvata
 
 1. Scegli un file dal select `Percorsi salvati`.
-2. Clicca `Carica`.
+2. Clicca `Carica archiviato`.
 3. La board sostituisce la vista corrente con il JSON archiviato.
 4. Modifica il percorso normalmente.
-5. Usa `Salva archivio` per aggiornare il file archiviato oppure `Salva JSON` per renderlo il percorso corrente.
+5. Usa `Aggiorna archivio` per aggiornare il file archiviato oppure `Imposta corrente` per renderlo il percorso corrente.
 
-### Differenza tra Salva JSON e Salva archivio
+### Differenza tra Imposta corrente e Aggiorna archivio
 
-`Salva JSON` aggiorna:
+`Imposta corrente` aggiorna:
 
 ```text
 doc/course_design.json
 ```
 
-`Salva archivio` aggiorna o crea un file dentro:
+`Aggiorna archivio` aggiorna o crea un file dentro:
 
 ```text
 doc/course_designs/
