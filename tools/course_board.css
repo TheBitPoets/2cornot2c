@@ -327,6 +327,11 @@ input, select { width: 100%; padding: .72rem .9rem; }
 .itemMeta { color: var(--muted); font: .76rem/1.35 var(--mono); }
 .itemActions { display: flex; gap: .25rem; }
 .itemActions button { padding: .35rem .5rem; font-size: .72rem; }
+.itemActions [data-action="ai"] {
+  border-color: rgba(17, 17, 17, .32);
+  background: #111111;
+  color: #ffffff;
+}
 
 .itemChildren {
   margin-top: .5rem;

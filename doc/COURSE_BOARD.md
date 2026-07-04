@@ -46,6 +46,47 @@ Nel file `doc/course_design.json` questi dati vengono salvati dentro il campo `f
 
 Nel documento generato `doc/PERCORSO_DIDATTICO.md` vengono mostrati solo i campi compilati, cosi la bozza resta leggibile anche quando molte cornici sono ancora vuote.
 
+## Compilazione AI assisted della cornice
+
+La board puo chiedere a un servizio AI di compilare automaticamente la cornice didattica di un argomento.
+
+Il browser non chiama direttamente il servizio cloud: la richiesta passa dal server locale `scripts/course_board_server.py`, cosi la chiave API resta nella shell e non viene esposta nel frontend.
+
+### Configurazione OpenAI
+
+Prima di avviare la board, configura la variabile d'ambiente:
+
+```powershell
+$env:OPENAI_API_KEY="sk-..."
+```
+
+Se vuoi scegliere un modello diverso da quello predefinito:
+
+```powershell
+$env:OPENAI_MODEL="gpt-5.5"
+```
+
+Poi avvia normalmente la board:
+
+```bash
+python scripts/course_board_server.py
+```
+
+### Uso nella board
+
+1. Trascina un paragrafo dentro una UDA.
+2. Clicca `AI assisted` sull'argomento assegnato.
+3. Il server invia al modello:
+   - struttura completa del percorso;
+   - anno e UDA corrente;
+   - argomento target;
+   - argomenti immediatamente precedenti e successivi nella stessa UDA;
+   - eventuali sottoparagrafi dell'argomento.
+4. La risposta riempie i campi della cornice didattica e imposta lo stato a `draft`.
+5. Clicca `Salva JSON` per rendere persistenti i campi generati.
+
+Il modello deve restituire dati strutturati; la board accetta solo i campi previsti dalla cornice didattica.
+
 ## Generazione del percorso didattico
 
 Dopo aver modificato e salvato la board, rigenera il documento Markdown:

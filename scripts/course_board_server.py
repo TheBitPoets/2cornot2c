@@ -19,7 +19,10 @@ from __future__ import annotations
 import argparse
 import json
 import mimetypes
+import os
 import re
+import urllib.error
+import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlparse
@@ -31,6 +34,15 @@ HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 TAG_RE = re.compile(r"<[^>]+>")
 PUNCT_RE = re.compile(r"[^\w\s-]", re.UNICODE)
 SPACE_RE = re.compile(r"[\s_]+")
+AI_FRAME_FIELDS = [
+    "context",
+    "prerequisites",
+    "objectives",
+    "recall",
+    "preview",
+    "next_step",
+    "references",
+]
 
 
 def github_anchor(title: str, seen: dict[str, int]) -> str:
@@ -99,6 +111,147 @@ def extract_headings() -> list[dict]:
     return headings
 
 
+def topic_summary(item: dict) -> dict:
+    """Return a compact recursive topic summary for the AI prompt."""
+
+    return {
+        "title": item.get("title", ""),
+        "source": item.get("source", ""),
+        "level": item.get("level", ""),
+        "href": item.get("href", ""),
+        "children": [topic_summary(child) for child in item.get("children", [])],
+    }
+
+
+def compact_design(design: dict) -> dict:
+    """Return the full course structure without verbose frame text."""
+
+    return {
+        "years": [
+            {
+                "id": year.get("id", ""),
+                "title": year.get("title", ""),
+                "description": year.get("description", ""),
+                "udas": [
+                    {
+                        "id": uda.get("id", ""),
+                        "title": uda.get("title", ""),
+                        "path": uda.get("path", ""),
+                        "weeks": uda.get("weeks", ""),
+                        "items": [topic_summary(item) for item in uda.get("items", [])],
+                    }
+                    for uda in year.get("udas", [])
+                ],
+            }
+            for year in design.get("years", [])
+        ]
+    }
+
+
+def target_context(design: dict, year_id: str, uda_id: str, item_id: str) -> dict:
+    """Collect the target item plus local before/after context inside its UDA."""
+
+    for year in design.get("years", []):
+        if year.get("id") != year_id:
+            continue
+        for uda in year.get("udas", []):
+            if uda.get("id") != uda_id:
+                continue
+            items = uda.get("items", [])
+            for index, item in enumerate(items):
+                if item.get("id") == item_id:
+                    return {
+                        "year": {key: year.get(key, "") for key in ["id", "title", "description"]},
+                        "uda": {key: uda.get(key, "") for key in ["id", "title", "path", "weeks"]},
+                        "previous_topics": [topic_summary(candidate) for candidate in items[max(0, index - 2):index]],
+                        "target_topic": topic_summary(item),
+                        "next_topics": [topic_summary(candidate) for candidate in items[index + 1:index + 3]],
+                    }
+    raise ValueError("Argomento non trovato nel percorso didattico corrente.")
+
+
+def call_openai_didactic_frame(payload: dict) -> dict:
+    """Ask OpenAI to draft didactic-frame fields for one course topic."""
+
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        raise RuntimeError("Configura OPENAI_API_KEY prima di usare AI assisted.")
+
+    model = os.environ.get("OPENAI_MODEL", "gpt-5.5")
+    schema = {
+        "type": "object",
+        "additionalProperties": False,
+        "required": AI_FRAME_FIELDS,
+        "properties": {field: {"type": "string"} for field in AI_FRAME_FIELDS},
+    }
+    body = {
+        "model": model,
+        "input": [
+            {
+                "role": "system",
+                "content": [
+                    {
+                        "type": "input_text",
+                        "text": (
+                            "Sei un docente di TPSI e programmazione C. "
+                            "Compila una cornice didattica in italiano per un argomento del corso. "
+                            "Sii concreto, fluido e didattico; non inventare link; non perdere il contenuto tecnico."
+                        ),
+                    }
+                ],
+            },
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "input_text",
+                        "text": json.dumps(payload, ensure_ascii=False, indent=2),
+                    }
+                ],
+            },
+        ],
+        "text": {
+            "format": {
+                "type": "json_schema",
+                "name": "didactic_frame",
+                "schema": schema,
+                "strict": True,
+            }
+        },
+        "store": False,
+    }
+    request = urllib.request.Request(
+        "https://api.openai.com/v1/responses",
+        data=json.dumps(body).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=90) as response:
+            data = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Errore OpenAI API {error.code}: {detail}") from error
+
+    output_text = data.get("output_text")
+    if not output_text:
+        for output in data.get("output", []):
+            for content in output.get("content", []):
+                if content.get("type") == "output_text":
+                    output_text = content.get("text")
+                    break
+            if output_text:
+                break
+    if not output_text:
+        raise RuntimeError("La risposta AI non contiene testo utilizzabile.")
+
+    result = json.loads(output_text)
+    return {field: str(result.get(field, "")).strip() for field in AI_FRAME_FIELDS}
+
+
 class CourseBoardHandler(BaseHTTPRequestHandler):
     """HTTP handler for the local board and its JSON API."""
 
@@ -114,13 +267,31 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
-        if parsed.path != "/api/course-design":
-            self.send_error(404)
-            return
         length = int(self.headers.get("Content-Length", "0"))
         payload = json.loads(self.rfile.read(length).decode("utf-8"))
-        write_design(payload)
-        self.write_json({"ok": True, "path": str(DESIGN_PATH.relative_to(ROOT))})
+        if parsed.path == "/api/course-design":
+            write_design(payload)
+            self.write_json({"ok": True, "path": str(DESIGN_PATH.relative_to(ROOT))})
+            return
+        if parsed.path == "/api/ai-frame":
+            try:
+                context = {
+                    "course": compact_design(payload.get("design", {})),
+                    "target": target_context(
+                        payload.get("design", {}),
+                        payload.get("year_id", ""),
+                        payload.get("uda_id", ""),
+                        payload.get("item_id", ""),
+                    ),
+                }
+                self.write_json({"frame": call_openai_didactic_frame(context)})
+            except Exception as error:  # noqa: BLE001
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+            return
+        self.send_error(404)
 
     def write_json(self, payload: dict) -> None:
         body = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")

@@ -309,7 +309,7 @@ function renderUda(year, uda) {
   if (!items.length) {
     dropzone.innerHTML = '<p class="empty">Trascina qui paragrafi o sottoparagrafi.</p>';
   } else {
-    items.forEach((item, index) => dropzone.append(renderItem(uda, uda.items, item, index, 0)));
+    items.forEach((item, index) => dropzone.append(renderItem(year, uda, uda.items, item, index, 0)));
   }
   details.append(dropzone);
   return details;
@@ -337,7 +337,7 @@ function headingTreeIds(heading) {
   return ids;
 }
 
-function renderItem(uda, siblings, item, index, depth) {
+function renderItem(year, uda, siblings, item, index, depth) {
   const node = document.createElement("article");
   node.className = "item";
   node.style.setProperty("--item-depth", depth);
@@ -352,6 +352,7 @@ function renderItem(uda, siblings, item, index, depth) {
         <div class="itemMeta">${escapeHtml(item.source)} · H${item.level || "?"} · ${escapeHtml(item.frame?.status || "ok")}</div>
       </div>
       <div class="itemActions">
+        <button type="button" data-action="ai">AI assisted</button>
         <button type="button" data-action="up">Su</button>
         <button type="button" data-action="down">Giu</button>
         <button type="button" data-action="remove">Rimuovi</button>
@@ -378,6 +379,7 @@ function renderItem(uda, siblings, item, index, depth) {
   const titleText = document.createElement("span");
   titleText.textContent = item.title;
   title.append(titleText);
+  node.querySelector('[data-action="ai"]').addEventListener("click", () => fillFrameWithAi(year, uda, item));
   node.querySelector('[data-action="up"]').addEventListener("click", () => moveItem(siblings, index, -1));
   node.querySelector('[data-action="down"]').addEventListener("click", () => moveItem(siblings, index, 1));
   node.querySelector('[data-action="remove"]').addEventListener("click", () => removeItem(siblings, index));
@@ -385,10 +387,30 @@ function renderItem(uda, siblings, item, index, depth) {
   if (children.length && !isCollapsed) {
     const childList = document.createElement("div");
     childList.className = "itemChildren";
-    children.forEach((child, childIndex) => childList.append(renderItem(uda, children, child, childIndex, depth + 1)));
+    children.forEach((child, childIndex) => childList.append(renderItem(year, uda, children, child, childIndex, depth + 1)));
     node.append(childList);
   }
   return node;
+}
+
+async function fillFrameWithAi(year, uda, item) {
+  setStatus(`AI assisted: preparo la cornice per "${item.title}"...`);
+  try {
+    const payload = await api("/api/ai-frame", {
+      method: "POST",
+      body: JSON.stringify({
+        design: state.design,
+        year_id: year.id,
+        uda_id: uda.id,
+        item_id: item.id,
+      }),
+    });
+    item.frame = { ...defaultFrame(), ...(item.frame || {}), ...payload.frame, status: "draft" };
+    renderCourse();
+    setStatus(`Cornice didattica generata per "${item.title}".`);
+  } catch (error) {
+    setStatus(`AI assisted non riuscito: ${error.message}`);
+  }
 }
 
 function renderFrameEditor(item) {
