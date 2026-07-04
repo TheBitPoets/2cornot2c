@@ -216,6 +216,21 @@ Solo cliccando `Applica proposta` la struttura dell'anno viene sostituita nella 
 
 La modifica diventa persistente solo dopo `Salva JSON`.
 
+### Aggiornare il percorso didattico Markdown
+
+Dalla board puoi rigenerare direttamente il documento:
+
+```text
+doc/PERCORSO_DIDATTICO.md
+```
+
+Il bottone `Aggiorna percorso MD` esegue due passaggi:
+
+1. salva lo stato corrente della board in `doc/course_design.json`;
+2. rigenera `doc/PERCORSO_DIDATTICO.md` usando `scripts/generate_course_plan.py`.
+
+In questo modo non devi ricordare il comando da terminale e riduci il rischio di avere un JSON aggiornato ma un Markdown vecchio.
+
 ## Cornice didattica degli argomenti
 
 Ogni argomento inserito in una UDA puo avere una cornice didattica compilabile dalla board.

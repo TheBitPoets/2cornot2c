@@ -24,6 +24,7 @@ const els = {
   loadSavedDesignBtn: document.querySelector("#loadSavedDesignBtn"),
   saveArchiveBtn: document.querySelector("#saveArchiveBtn"),
   generateAllFramesBtn: document.querySelector("#generateAllFramesBtn"),
+  generateCoursePlanMdBtn: document.querySelector("#generateCoursePlanMdBtn"),
   reloadBtn: document.querySelector("#reloadBtn"),
   saveBtn: document.querySelector("#saveBtn"),
   courseAiDialog: document.querySelector("#courseAiDialog"),
@@ -1086,6 +1087,22 @@ async function saveDesign() {
   setStatus("Percorso impostato come corrente in doc/course_design.json.");
 }
 
+async function generateCoursePlanMd() {
+  els.generateCoursePlanMdBtn.disabled = true;
+  setStatus("Aggiornamento percorso Markdown: salvo il JSON corrente e rigenero doc/PERCORSO_DIDATTICO.md...");
+  try {
+    const payload = await api("/api/course-plan-md", {
+      method: "POST",
+      body: JSON.stringify({ design: state.design }),
+    });
+    setStatus(`Percorso Markdown aggiornato: ${payload.markdown_path}.`);
+  } catch (error) {
+    setStatus(`Aggiornamento percorso Markdown non riuscito. Dettaglio: ${error.message}`);
+  } finally {
+    els.generateCoursePlanMdBtn.disabled = false;
+  }
+}
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -1099,6 +1116,7 @@ els.saveBtn.addEventListener("click", saveDesign);
 els.loadSavedDesignBtn.addEventListener("click", loadSavedDesign);
 els.saveArchiveBtn.addEventListener("click", saveArchiveDesign);
 els.generateAllFramesBtn.addEventListener("click", generateAllFrames);
+els.generateCoursePlanMdBtn.addEventListener("click", generateCoursePlanMd);
 els.aiBusyNextBtn.addEventListener("click", generateNextFrameInBatch);
 els.aiBusyAllBtn.addEventListener("click", generateAllFramesInBatch);
 els.aiBusyCloseBtn.addEventListener("click", closeFrameBatch);
