@@ -828,10 +828,14 @@ def call_chat_completions_json(provider_name: str, url: str, api_key: str, model
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": json.dumps(payload, ensure_ascii=False, indent=2)},
         ],
+        "response_format": {"type": "json_object"},
     }
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": "2cornot2c-course-board/1.0",
+        "Connection": "close",
     }
     if provider_name == "OpenRouter":
         headers["HTTP-Referer"] = "https://github.com/TheBitPoets/2cornot2c"
