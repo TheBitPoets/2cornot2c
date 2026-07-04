@@ -22,6 +22,7 @@ import mimetypes
 import os
 import re
 import subprocess
+import sys
 import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
