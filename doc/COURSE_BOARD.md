@@ -52,11 +52,21 @@ La board puo chiedere a un servizio AI di compilare automaticamente la cornice d
 
 Il browser non chiama direttamente il servizio cloud: la richiesta passa dal server locale `scripts/course_board_server.py`, cosi la chiave API resta nella shell e non viene esposta nel frontend.
 
+### Provider supportati
+
+La board supporta questi provider:
+
+- `openai`: usa OpenAI API e la variabile `OPENAI_API_KEY`;
+- `gemini`: usa Gemini API e la variabile `GEMINI_API_KEY`.
+
+`ChatGPT Free` non e un provider API per automazioni locali: e l'interfaccia web/app di ChatGPT. Per questo non viene usato direttamente dalla board, perche richiederebbe automazioni fragili del browser e non una integrazione API pulita.
+
 ### Configurazione OpenAI
 
 Prima di avviare la board, configura la variabile d'ambiente:
 
 ```powershell
+$env:AI_PROVIDER="openai"
 $env:OPENAI_API_KEY="sk-..."
 ```
 
@@ -64,6 +74,23 @@ Se vuoi scegliere un modello diverso da quello predefinito:
 
 ```powershell
 $env:OPENAI_MODEL="gpt-5.5"
+```
+
+### Configurazione Gemini
+
+Gemini puo essere utile per prove a costo zero o a basso costo, in base ai limiti del free tier disponibili sul tuo account Google AI Studio.
+
+Configura:
+
+```powershell
+$env:AI_PROVIDER="gemini"
+$env:GEMINI_API_KEY="..."
+```
+
+Se vuoi scegliere un modello diverso da quello predefinito:
+
+```powershell
+$env:GEMINI_MODEL="gemini-3-flash-preview"
 ```
 
 Poi avvia normalmente la board:

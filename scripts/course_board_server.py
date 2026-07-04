@@ -170,6 +170,43 @@ def target_context(design: dict, year_id: str, uda_id: str, item_id: str) -> dic
     raise ValueError("Argomento non trovato nel percorso didattico corrente.")
 
 
+def didactic_frame_schema_openai() -> dict:
+    """Return the JSON Schema shape expected from OpenAI."""
+
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": AI_FRAME_FIELDS,
+        "properties": {field: {"type": "string"} for field in AI_FRAME_FIELDS},
+    }
+
+
+def didactic_frame_schema_gemini() -> dict:
+    """Return the JSON Schema shape expected from Gemini generateContent."""
+
+    return {
+        "type": "OBJECT",
+        "required": AI_FRAME_FIELDS,
+        "properties": {field: {"type": "STRING"} for field in AI_FRAME_FIELDS},
+    }
+
+
+def didactic_frame_system_prompt() -> str:
+    """Return the shared provider-independent instruction."""
+
+    return (
+        "Sei un docente di TPSI e programmazione C. "
+        "Compila una cornice didattica in italiano per un argomento del corso. "
+        "Sii concreto, fluido e didattico; non inventare link; non perdere il contenuto tecnico."
+    )
+
+
+def normalize_frame(result: dict) -> dict:
+    """Keep only the expected didactic-frame fields as stripped strings."""
+
+    return {field: str(result.get(field, "")).strip() for field in AI_FRAME_FIELDS}
+
+
 def call_openai_didactic_frame(payload: dict) -> dict:
     """Ask OpenAI to draft didactic-frame fields for one course topic."""
 
@@ -177,13 +214,7 @@ def call_openai_didactic_frame(payload: dict) -> dict:
     if not api_key:
         raise RuntimeError("Configura OPENAI_API_KEY prima di usare AI assisted.")
 
-    model = os.environ.get("OPENAI_MODEL", "gpt-5.5")
-    schema = {
-        "type": "object",
-        "additionalProperties": False,
-        "required": AI_FRAME_FIELDS,
-        "properties": {field: {"type": "string"} for field in AI_FRAME_FIELDS},
-    }
+    model = os.environ.get("OPENAI_MODEL") or os.environ.get("AI_MODEL", "gpt-5.5")
     body = {
         "model": model,
         "input": [
@@ -192,11 +223,7 @@ def call_openai_didactic_frame(payload: dict) -> dict:
                 "content": [
                     {
                         "type": "input_text",
-                        "text": (
-                            "Sei un docente di TPSI e programmazione C. "
-                            "Compila una cornice didattica in italiano per un argomento del corso. "
-                            "Sii concreto, fluido e didattico; non inventare link; non perdere il contenuto tecnico."
-                        ),
+                        "text": didactic_frame_system_prompt(),
                     }
                 ],
             },
@@ -214,7 +241,7 @@ def call_openai_didactic_frame(payload: dict) -> dict:
             "format": {
                 "type": "json_schema",
                 "name": "didactic_frame",
-                "schema": schema,
+                "schema": didactic_frame_schema_openai(),
                 "strict": True,
             }
         },
@@ -249,7 +276,62 @@ def call_openai_didactic_frame(payload: dict) -> dict:
         raise RuntimeError("La risposta AI non contiene testo utilizzabile.")
 
     result = json.loads(output_text)
-    return {field: str(result.get(field, "")).strip() for field in AI_FRAME_FIELDS}
+    return normalize_frame(result)
+
+
+def call_gemini_didactic_frame(payload: dict) -> dict:
+    """Ask Gemini to draft didactic-frame fields for one course topic."""
+
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        raise RuntimeError("Configura GEMINI_API_KEY prima di usare AI assisted con Gemini.")
+
+    model = os.environ.get("GEMINI_MODEL") or os.environ.get("AI_MODEL", "gemini-3-flash-preview")
+    body = {
+        "systemInstruction": {
+            "parts": [{"text": didactic_frame_system_prompt()}],
+        },
+        "contents": [
+            {
+                "role": "user",
+                "parts": [{"text": json.dumps(payload, ensure_ascii=False, indent=2)}],
+            }
+        ],
+        "generationConfig": {
+            "responseMimeType": "application/json",
+            "responseSchema": didactic_frame_schema_gemini(),
+        },
+    }
+    request = urllib.request.Request(
+        f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}",
+        data=json.dumps(body).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=90) as response:
+            data = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Errore Gemini API {error.code}: {detail}") from error
+
+    try:
+        output_text = data["candidates"][0]["content"]["parts"][0]["text"]
+    except (KeyError, IndexError) as error:
+        raise RuntimeError("La risposta Gemini non contiene testo utilizzabile.") from error
+
+    return normalize_frame(json.loads(output_text))
+
+
+def call_ai_didactic_frame(payload: dict) -> dict:
+    """Route didactic-frame generation to the configured AI provider."""
+
+    provider = os.environ.get("AI_PROVIDER", "openai").strip().lower()
+    if provider == "openai":
+        return call_openai_didactic_frame(payload)
+    if provider == "gemini":
+        return call_gemini_didactic_frame(payload)
+    raise RuntimeError(f"Provider AI non supportato: {provider}. Usa AI_PROVIDER=openai oppure AI_PROVIDER=gemini.")
 
 
 class CourseBoardHandler(BaseHTTPRequestHandler):
@@ -284,7 +366,7 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                         payload.get("item_id", ""),
                     ),
                 }
-                self.write_json({"frame": call_openai_didactic_frame(context)})
+                self.write_json({"frame": call_ai_didactic_frame(context)})
             except Exception as error:  # noqa: BLE001
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
