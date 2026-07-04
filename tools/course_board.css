@@ -577,6 +577,20 @@ input, select { width: 100%; padding: .72rem .9rem; }
   transition: width .35s ease;
 }
 
+.aiBusyControls {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: .4rem;
+  flex-wrap: wrap;
+  margin-top: .35rem;
+}
+
+.aiBusyControls button {
+  padding: .38rem .58rem;
+  font-size: .72rem;
+}
+
 @media (max-width: 860px) {
   .hero { align-items: flex-start; flex-direction: column; }
   .board { grid-template-columns: 1fr; }

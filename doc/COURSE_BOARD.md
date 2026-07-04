@@ -612,6 +612,15 @@ http://127.0.0.1:8765/tools/course_board.html
 
 Il modello deve restituire dati strutturati; la board accetta solo i campi previsti dalla cornice didattica.
 
+Se l'argomento contiene sottoparagrafi, il bottone `AI assisted` apre una coda di generazione per l'intero sottoalbero:
+
+- `Genera prossimo`: genera la cornice del prossimo paragrafo o sottoparagrafo;
+- `Genera tutti`: genera in sequenza tutte le cornici del paragrafo e dei suoi sottoparagrafi;
+- `Chiudi`: termina la coda mantenendo le cornici gia generate nella board;
+- `Annulla`: ripristina le cornici allo stato precedente all'apertura della coda.
+
+La modifica diventa definitiva solo quando clicchi `Salva JSON` o `Imposta corrente`, quindi puoi provare una generazione parziale senza compromettere subito il file.
+
 Anche in questo caso compare l'indicatore di lavoro `AI assisted in corso`. Se la risposta impiega tempo, lascia aperta la finestra: il provider potrebbe richiedere diversi secondi per leggere il contesto e produrre il JSON strutturato.
 
 La generazione della cornice del singolo argomento e di solito piu rapida del percorso annuale, perche usa solo il contesto ravvicinato dell'argomento.

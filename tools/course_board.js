@@ -37,6 +37,11 @@ const els = {
   aiBusyMessage: document.querySelector("#aiBusyMessage"),
   aiBusyPercent: document.querySelector("#aiBusyPercent"),
   aiBusyBarFill: document.querySelector("#aiBusyBarFill"),
+  aiBusyControls: document.querySelector("#aiBusyControls"),
+  aiBusyNextBtn: document.querySelector("#aiBusyNextBtn"),
+  aiBusyAllBtn: document.querySelector("#aiBusyAllBtn"),
+  aiBusyCloseBtn: document.querySelector("#aiBusyCloseBtn"),
+  aiBusyCancelBtn: document.querySelector("#aiBusyCancelBtn"),
   briefSubject: document.querySelector("#briefSubject"),
   briefYearTitle: document.querySelector("#briefYearTitle"),
   briefDescription: document.querySelector("#briefDescription"),
@@ -68,6 +73,7 @@ const AI_PROGRESS_STAGES = [
 ];
 
 let aiProgressTimer = null;
+let frameBatch = null;
 
 function setStatus(message) {
   els.status.textContent = message;
@@ -77,6 +83,7 @@ function startAiProgress(title) {
   let percent = 4;
   let stageIndex = 0;
   els.aiBusy.hidden = false;
+  els.aiBusyControls.hidden = true;
   els.aiBusyTitle.textContent = title;
   updateAiProgress(percent, AI_PROGRESS_STAGES[stageIndex]);
   clearInterval(aiProgressTimer);
@@ -109,6 +116,24 @@ function failAiProgress(message = "Operazione non riuscita.") {
   setTimeout(() => {
     if (!aiProgressTimer) els.aiBusy.hidden = true;
   }, 8000);
+}
+
+function showFrameBatchProgress() {
+  if (!frameBatch) return;
+  clearInterval(aiProgressTimer);
+  aiProgressTimer = null;
+  els.aiBusy.hidden = false;
+  els.aiBusyControls.hidden = false;
+  const total = frameBatch.entries.length;
+  const done = frameBatch.index;
+  const current = frameBatch.entries[done]?.item;
+  const percent = total ? Math.round((done / total) * 100) : 100;
+  els.aiBusyTitle.textContent = `AI assisted cornici: ${frameBatch.rootTitle}`;
+  updateAiProgress(percent, current ? `Prossimo ${done + 1}/${total}: ${current.title}` : `Completati ${done}/${total} argomenti.`);
+  els.aiBusyNextBtn.disabled = frameBatch.running || done >= total;
+  els.aiBusyAllBtn.disabled = frameBatch.running || done >= total;
+  els.aiBusyCloseBtn.disabled = false;
+  els.aiBusyCancelBtn.disabled = false;
 }
 
 async function api(path, options = {}) {
@@ -755,19 +780,19 @@ function contextLabel(index, siblings, item) {
 }
 
 async function fillFrameWithAi(year, uda, item) {
+  const entries = collectSubtreeItems(year, uda, item);
+  if (entries.length > 1) {
+    openFrameBatch(year, uda, item, entries);
+    return;
+  }
+  await fillSingleFrameWithAi(year, uda, item);
+}
+
+async function fillSingleFrameWithAi(year, uda, item) {
   setStatus(`AI assisted: preparo la cornice per "${item.title}"...`);
   startAiProgress(`AI assisted cornice: ${item.title}`);
   try {
-    const payload = await api("/api/ai-frame", {
-      method: "POST",
-      body: JSON.stringify({
-        design: state.design,
-        year_id: year.id,
-        uda_id: uda.id,
-        item_id: item.id,
-      }),
-    });
-    item.frame = { ...defaultFrame(), ...(item.frame || {}), ...payload.frame, status: "draft" };
+    await generateFrameForEntry({ year, uda, item });
     renderCourse();
     setStatus(`Cornice didattica generata per "${item.title}".`);
     stopAiProgress("Cornice didattica generata.");
@@ -775,6 +800,164 @@ async function fillFrameWithAi(year, uda, item) {
     setStatus(`AI assisted non riuscito. Dettaglio provider/server: ${error.message}`);
     failAiProgress(`Errore provider/server: ${error.message}`);
   }
+}
+
+function collectSubtreeItems(year, uda, item) {
+  const entries = [];
+  const visit = (candidate) => {
+    entries.push({ year, uda, item: candidate });
+    for (const child of candidate.children || []) visit(child);
+  };
+  visit(item);
+  return entries;
+}
+
+function openFrameBatch(year, uda, item, entries) {
+  frameBatch = {
+    rootTitle: item.title,
+    entries,
+    index: 0,
+    running: false,
+    cancelled: false,
+    cancelAction: "",
+    snapshots: entries.map((entry) => ({
+      item: entry.item,
+      frame: JSON.parse(JSON.stringify({ ...defaultFrame(), ...(entry.item.frame || {}) })),
+    })),
+  };
+  setStatus(`Coda AI pronta: ${entries.length} cornici da generare per "${item.title}" e sottoparagrafi.`);
+  showFrameBatchProgress();
+}
+
+async function generateFrameForEntry(entry) {
+  const payload = await api("/api/ai-frame", {
+    method: "POST",
+    body: JSON.stringify({
+      design: state.design,
+      year_id: entry.year.id,
+      uda_id: entry.uda.id,
+      item_id: entry.item.id,
+    }),
+  });
+  entry.item.frame = { ...defaultFrame(), ...(entry.item.frame || {}), ...payload.frame, status: "draft" };
+}
+
+async function generateNextFrameInBatch() {
+  if (!frameBatch || frameBatch.running || frameBatch.index >= frameBatch.entries.length) return;
+  frameBatch.running = true;
+  frameBatch.cancelled = false;
+  showFrameBatchProgress();
+  const entry = frameBatch.entries[frameBatch.index];
+  setStatus(`Genero cornice ${frameBatch.index + 1}/${frameBatch.entries.length}: ${entry.item.title}`);
+  try {
+    await generateFrameForEntry(entry);
+    frameBatch.index += 1;
+    renderCourse();
+    setStatus(`Cornice generata per "${entry.item.title}".`);
+  } catch (error) {
+    setStatus(`Generazione cornice interrotta. Dettaglio provider/server: ${error.message}`);
+    failAiProgress(`Errore provider/server: ${error.message}`);
+    frameBatch = null;
+    return;
+  } finally {
+    if (frameBatch) frameBatch.running = false;
+  }
+  if (frameBatch?.cancelled) {
+    finishCancelledFrameBatch();
+    return;
+  }
+  if (frameBatch) showFrameBatchProgress();
+}
+
+async function generateAllFramesInBatch() {
+  if (!frameBatch || frameBatch.running) return;
+  frameBatch.running = true;
+  frameBatch.cancelled = false;
+  showFrameBatchProgress();
+  try {
+    while (frameBatch && frameBatch.index < frameBatch.entries.length && !frameBatch.cancelled) {
+      const entry = frameBatch.entries[frameBatch.index];
+      const percent = Math.round((frameBatch.index / frameBatch.entries.length) * 100);
+      updateAiProgress(percent, `Genero ${frameBatch.index + 1}/${frameBatch.entries.length}: ${entry.item.title}`);
+      setStatus(`Genero cornice ${frameBatch.index + 1}/${frameBatch.entries.length}: ${entry.item.title}`);
+      await generateFrameForEntry(entry);
+      frameBatch.index += 1;
+      renderCourse();
+    }
+    if (!frameBatch) return;
+    frameBatch.running = false;
+    if (frameBatch.cancelled) {
+      finishCancelledFrameBatch();
+      return;
+    }
+    setStatus(`Generate ${frameBatch.entries.length} cornici per "${frameBatch.rootTitle}". Ricordati di salvare il JSON.`);
+    stopAiProgress("Cornici didattiche generate.");
+    frameBatch = null;
+  } catch (error) {
+    if (frameBatch) frameBatch.running = false;
+    setStatus(`Generazione cornice interrotta. Dettaglio provider/server: ${error.message}`);
+    failAiProgress(`Errore provider/server: ${error.message}`);
+    frameBatch = null;
+  }
+}
+
+function closeFrameBatch() {
+  if (!frameBatch) return;
+  frameBatch.cancelled = true;
+  frameBatch.cancelAction = "close";
+  if (frameBatch.running) {
+    setStatus("La coda si chiudera dopo la richiesta AI in corso.");
+    showFrameBatchProgress();
+    return;
+  }
+  const done = frameBatch.index;
+  const total = frameBatch.entries.length;
+  frameBatch = null;
+  els.aiBusy.hidden = true;
+  els.aiBusyControls.hidden = true;
+  setStatus(`Coda chiusa: mantenute ${done}/${total} cornici generate. Ricordati di salvare il JSON.`);
+}
+
+function cancelFrameBatch() {
+  if (!frameBatch) return;
+  frameBatch.cancelled = true;
+  frameBatch.cancelAction = "restore";
+  if (frameBatch.running) {
+    setStatus("Annullamento richiesto: ripristino appena termina la richiesta AI in corso.");
+    showFrameBatchProgress();
+    return;
+  }
+  for (const snapshot of frameBatch.snapshots) {
+    snapshot.item.frame = JSON.parse(JSON.stringify(snapshot.frame));
+  }
+  const total = frameBatch.entries.length;
+  frameBatch = null;
+  renderCourse();
+  els.aiBusy.hidden = true;
+  els.aiBusyControls.hidden = true;
+  setStatus(`Generazione annullata: ripristinate le ${total} cornici della coda.`);
+}
+
+function finishCancelledFrameBatch() {
+  if (!frameBatch) return;
+  if (frameBatch.cancelAction === "restore") {
+    for (const snapshot of frameBatch.snapshots) {
+      snapshot.item.frame = JSON.parse(JSON.stringify(snapshot.frame));
+    }
+    const total = frameBatch.entries.length;
+    frameBatch = null;
+    renderCourse();
+    els.aiBusy.hidden = true;
+    els.aiBusyControls.hidden = true;
+    setStatus(`Generazione annullata: ripristinate le ${total} cornici della coda.`);
+    return;
+  }
+  const done = frameBatch.index;
+  const total = frameBatch.entries.length;
+  frameBatch = null;
+  els.aiBusy.hidden = true;
+  els.aiBusyControls.hidden = true;
+  setStatus(`Generazione fermata dopo ${done}/${total} cornici. Ricordati di salvare il JSON.`);
 }
 
 function renderFrameEditor(item) {
@@ -920,6 +1103,10 @@ els.saveBtn.addEventListener("click", saveDesign);
 els.loadSavedDesignBtn.addEventListener("click", loadSavedDesign);
 els.saveArchiveBtn.addEventListener("click", saveArchiveDesign);
 els.generateAllFramesBtn.addEventListener("click", generateAllFrames);
+els.aiBusyNextBtn.addEventListener("click", generateNextFrameInBatch);
+els.aiBusyAllBtn.addEventListener("click", generateAllFramesInBatch);
+els.aiBusyCloseBtn.addEventListener("click", closeFrameBatch);
+els.aiBusyCancelBtn.addEventListener("click", cancelFrameBatch);
 els.courseAiCloseBtn.addEventListener("click", () => els.courseAiDialog.close());
 els.courseAiGenerateBtn.addEventListener("click", generateCourseAiProposal);
 els.courseAiApplyBtn.addEventListener("click", applyCourseAiProposal);
