@@ -32,6 +32,13 @@ ROOT = Path(__file__).resolve().parents[1]
 SECRET_PATH = ROOT / ".secrets" / "ai.secret"
 
 PROVIDERS = {
+    "gemini": {
+        "label": "Gemini",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}",
+        "secret_key": "GEMINI_API_KEY",
+        "model_key": "GEMINI_MODEL",
+        "default_model": "gemini-3-flash-preview",
+    },
     "groq": {
         "label": "Groq",
         "url": "https://api.groq.com/openai/v1/chat/completions",
@@ -140,6 +147,14 @@ def parse_json_object(text: str) -> dict:
 def call_provider(provider_id: str, model: str, api_key: str, text_chars: int, timeout: int) -> tuple[bool, str, int]:
     """Send one probe request and return success, detail, and request bytes."""
 
+    if provider_id == "gemini":
+        return call_gemini_provider(model, api_key, text_chars, timeout)
+    return call_chat_completions_provider(provider_id, model, api_key, text_chars, timeout)
+
+
+def call_chat_completions_provider(provider_id: str, model: str, api_key: str, text_chars: int, timeout: int) -> tuple[bool, str, int]:
+    """Send one probe request to an OpenAI-compatible provider."""
+
     provider = PROVIDERS[provider_id]
     payload = build_payload(text_chars)
     system_prompt = (
@@ -171,6 +186,52 @@ def call_provider(provider_id: str, model: str, api_key: str, text_chars: int, t
         with urllib.request.urlopen(request, timeout=timeout) as response:
             data = json.loads(response.read().decode("utf-8"))
         parse_json_object(data["choices"][0]["message"]["content"])
+        return True, "ok", len(encoded)
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode("utf-8", errors="replace")
+        return False, f"HTTP {error.code}: {detail}", len(encoded)
+    except Exception as error:  # noqa: BLE001 - this is a diagnostic CLI.
+        return False, f"{type(error).__name__}: {error}", len(encoded)
+
+
+def call_gemini_provider(model: str, api_key: str, text_chars: int, timeout: int) -> tuple[bool, str, int]:
+    """Send one probe request to Gemini."""
+
+    payload = build_payload(text_chars)
+    body = {
+        "systemInstruction": {
+            "parts": [
+                {
+                    "text": (
+                        "Rispondi solo con JSON valido. Compila in italiano questi campi: "
+                        "context, prerequisites, objectives, recall, preview, next_step, references."
+                    )
+                }
+            ],
+        },
+        "contents": [
+            {
+                "role": "user",
+                "parts": [{"text": json.dumps(payload, ensure_ascii=False, indent=2)}],
+            }
+        ],
+        "generationConfig": {
+            "responseMimeType": "application/json",
+            "maxOutputTokens": 900,
+        },
+    }
+    encoded = json.dumps(body).encode("utf-8")
+    url = PROVIDERS["gemini"]["url"].format(model=model, api_key=api_key)
+    request = urllib.request.Request(
+        url,
+        data=encoded,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            data = json.loads(response.read().decode("utf-8"))
+        parse_json_object(data["candidates"][0]["content"]["parts"][0]["text"])
         return True, "ok", len(encoded)
     except urllib.error.HTTPError as error:
         detail = error.read().decode("utf-8", errors="replace")

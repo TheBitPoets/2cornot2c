@@ -744,17 +744,26 @@ OpenAI e Gemini ricevono invece il contesto piu esteso. In pratica Groq e OpenRo
 Il limite di testo usato per il contesto compatto e configurabile:
 
 ```text
-GROQ_COMPACT_TEXT_CHARS=1200
-OPENROUTER_COMPACT_TEXT_CHARS=1200
+GEMINI_COMPACT_TEXT_CHARS=3022
+GROQ_COMPACT_TEXT_CHARS=6360
+OPENROUTER_COMPACT_TEXT_CHARS=404
 ```
 
 Puoi inserire questi valori come variabili d'ambiente oppure nel file locale `.secrets/ai.secret`.
 
-### Calibrare il payload massimo per Groq e OpenRouter
+Per Gemini il contesto compatto viene usato solo se imposti esplicitamente `GEMINI_COMPACT_TEXT_CHARS`. Se non la imposti, Gemini continua a ricevere il contesto esteso.
 
-Groq e OpenRouter non hanno un limite pratico unico valido per sempre: il massimo dipende da provider, modello, account, free tier, rate limit e richieste gia inviate nell'ultimo minuto.
+### Calibrare il payload massimo per Gemini, Groq e OpenRouter
+
+Gemini, Groq e OpenRouter non hanno un limite pratico unico valido per sempre: il massimo dipende da provider, modello, account, free tier, rate limit e richieste gia inviate nell'ultimo minuto.
 
 Per trovare un valore piu ricco ma ancora sicuro puoi usare:
+
+```powershell
+python scripts/probe_ai_payload_limit.py --provider gemini --model gemini-3-flash-preview --max-chars 12000
+```
+
+Oppure:
 
 ```powershell
 python scripts/probe_ai_payload_limit.py --provider groq --max-chars 8000

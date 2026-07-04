@@ -803,7 +803,7 @@ def call_gemini_didactic_frame(payload: dict) -> dict:
         "contents": [
             {
                 "role": "user",
-                "parts": [{"text": json.dumps(payload, ensure_ascii=False, indent=2)}],
+                "parts": [{"text": json.dumps(gemini_frame_payload(payload), ensure_ascii=False, indent=2)}],
             }
         ],
         "generationConfig": {
@@ -830,6 +830,14 @@ def call_gemini_didactic_frame(payload: dict) -> dict:
         raise RuntimeError("La risposta Gemini non contiene testo utilizzabile.") from error
 
     return normalize_frame(json.loads(output_text))
+
+
+def gemini_frame_payload(payload: dict) -> dict:
+    """Use compact Gemini context only when explicitly configured."""
+
+    if secret_value("GEMINI_COMPACT_TEXT_CHARS"):
+        return compact_frame_payload(payload)
+    return payload
 
 
 def call_chat_completions_json(provider_name: str, url: str, api_key: str, model: str, system_prompt: str, payload: dict) -> dict:
