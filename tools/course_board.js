@@ -208,21 +208,32 @@ function renderAiConfig() {
   const options = providers.map((provider) => {
     const configured = provider.api_key_configured ? "configurato" : "non configurato";
     const selected = provider.id === state.aiConfig.provider ? "selected" : "";
-    return `<option value="${escapeHtml(provider.id)}" ${selected}>${escapeHtml(provider.label)} · ${escapeHtml(provider.model)} · ${configured}</option>`;
+    return `<option value="${escapeHtml(provider.id)}" ${selected}>${escapeHtml(provider.label)} · ${configured}</option>`;
   }).join("");
+  const activeProvider = providers.find((provider) => provider.id === state.aiConfig.provider) || providers[0] || {};
+  const modelOptions = (activeProvider.models || []).map((model) => {
+    const selected = model.id === state.aiConfig.model ? "selected" : "";
+    return `<option value="${escapeHtml(model.id)}" ${selected}>${escapeHtml(model.label || model.id)} · ${escapeHtml(model.tier || "tier n/d")}</option>`;
+  }).join("");
+  const modelDisabled = activeProvider.api_key_configured ? "" : "disabled";
   const keyStatus = state.aiConfig.api_key_configured ? "API key impostata" : "API key non impostata";
   els.aiConfig.innerHTML = `
     <label>
       <span>AI provider</span>
       <select id="aiProviderSelect">${options}</select>
     </label>
+    <label>
+      <span>Modello</span>
+      <select id="aiModelSelect" ${modelDisabled}>${modelOptions}</select>
+    </label>
     <span>${escapeHtml(keyStatus)} · ${escapeHtml(state.aiConfig.billing_note)}</span>
   `;
   els.aiConfig.querySelector("#aiProviderSelect").addEventListener("change", switchAiProvider);
+  els.aiConfig.querySelector("#aiModelSelect").addEventListener("change", switchAiModel);
 }
 
 async function switchAiProvider(event) {
-  const provider = event.target.value;
+  const provider = els.aiConfig.querySelector("#aiProviderSelect").value;
   setStatus(`Cambio provider AI in ${provider}...`);
   try {
     state.aiConfig = await api("/api/ai-config", {
@@ -230,10 +241,27 @@ async function switchAiProvider(event) {
       body: JSON.stringify({ provider }),
     });
     renderAiConfig();
-    setStatus(`Provider AI attivo: ${state.aiConfig.provider}.`);
+    setStatus(`Provider AI attivo: ${state.aiConfig.provider} · modello ${state.aiConfig.model}.`);
   } catch (error) {
     renderAiConfig();
     setStatus(`Cambio provider AI non riuscito. Dettaglio: ${error.message}`);
+  }
+}
+
+async function switchAiModel() {
+  const provider = els.aiConfig.querySelector("#aiProviderSelect").value;
+  const model = els.aiConfig.querySelector("#aiModelSelect")?.value || "";
+  setStatus(`Cambio modello AI in ${model}...`);
+  try {
+    state.aiConfig = await api("/api/ai-config", {
+      method: "POST",
+      body: JSON.stringify({ provider, model }),
+    });
+    renderAiConfig();
+    setStatus(`Modello AI attivo: ${state.aiConfig.model}.`);
+  } catch (error) {
+    renderAiConfig();
+    setStatus(`Cambio modello AI non riuscito. Dettaglio: ${error.message}`);
   }
 }
 

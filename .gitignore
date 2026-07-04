@@ -4,3 +4,5 @@
 *~
 .vagrant
 *.log
+.secrets/
+*.secret

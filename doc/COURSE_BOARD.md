@@ -261,25 +261,35 @@ Il flusso e sempre lo stesso:
 7. controlli il testo generato;
 8. clicchi `Salva JSON`.
 
-La board supporta questi provider:
+La board supporta questi provider dichiarati in `config/ai_providers.yaml`:
 
 | Provider | Variabile provider | Variabile API key | Variabile modello opzionale |
 | --- | --- | --- | --- |
 | OpenAI | `AI_PROVIDER=openai` | `OPENAI_API_KEY` | `OPENAI_MODEL` |
 | Gemini | `AI_PROVIDER=gemini` | `GEMINI_API_KEY` | `GEMINI_MODEL` |
+| Groq | `AI_PROVIDER=groq` | `GROQ_API_KEY` | `GROQ_MODEL` |
+| OpenRouter | `AI_PROVIDER=openrouter` | `OPENROUTER_API_KEY` | `OPENROUTER_MODEL` |
 
 Se non imposti `AI_PROVIDER`, il server usa `openai`.
 
 `ChatGPT Free` non e un provider API per automazioni locali: e l'interfaccia web/app di ChatGPT. Per questo non viene usato direttamente dalla board, perche richiederebbe automazioni fragili del browser e non una integrazione API pulita.
 
-La board mostra nella sezione `Percorso didattico` la configurazione AI attiva e permette di cambiare provider tramite select:
+La board mostra nella sezione `Percorso didattico` la configurazione AI attiva e permette di cambiare provider e modello tramite select:
 
 - provider selezionato;
 - modello selezionato;
 - presenza o assenza della API key;
 - nota su quota, billing o free tier.
 
-Il cambio provider funziona solo se la API key del provider scelto e gia presente nelle variabili d'ambiente del server locale. Se scegli un provider non configurato, la board mantiene il provider precedente e mostra un messaggio di errore.
+Il cambio provider funziona solo se la API key del provider scelto e gia presente nelle variabili d'ambiente del server locale oppure nel file locale `.secrets/ai.secret`. Se scegli un provider non configurato, la board mantiene il provider precedente e mostra un messaggio di errore.
+
+Il cambio modello funziona dalla UI senza riavviare il server, purche il modello sia dichiarato in:
+
+```text
+config/ai_providers.yaml
+```
+
+Questo e utile per passare rapidamente da un modello gratuito o low-cost a un altro quando un modello e saturo o ha esaurito temporaneamente la quota.
 
 La board non mostra mai il valore della API key. Inoltre non puo sapere con certezza se il tuo account stia usando un piano gratuito, credito residuo o billing a pagamento: puo solo mostrare il provider configurato e una nota orientativa.
 
@@ -293,7 +303,73 @@ Non scrivere mai una API key dentro:
 - file `.html`;
 - commit Git.
 
-La API key deve stare solo nella shell, in una variabile d'ambiente locale.
+La API key deve stare solo nella shell, in una variabile d'ambiente locale, oppure nel file locale non versionato:
+
+```text
+.secrets/ai.secret
+```
+
+Il server legge prima le variabili d'ambiente e poi `.secrets/ai.secret`.
+
+Esempio:
+
+```text
+OPENAI_API_KEY=sk-...
+GEMINI_API_KEY=...
+```
+
+La cartella `.secrets/` e ignorata da Git.
+
+### Configurazione dei provider e dei modelli
+
+I provider e i modelli disponibili nella UI sono definiti in:
+
+```text
+config/ai_providers.yaml
+```
+
+Esempio concettuale:
+
+```yaml
+providers:
+  gemini:
+    label: Gemini
+    secret_key: GEMINI_API_KEY
+    default_model: gemini-2.5-flash
+    models:
+      - id: gemini-2.5-flash
+        label: Gemini 2.5 Flash
+        tier: free-or-low-cost
+```
+
+Il campo `tier` e una nota orientativa per la UI. Non verifica in tempo reale se hai credito gratuito residuo.
+
+### Provider free o low-cost
+
+Anche quando un provider offre modelli gratuiti o free tier, serve comunque una API key.
+
+La API key non implica necessariamente pagamento: spesso serve solo a identificare account, quota e rate limit.
+
+Provider utili:
+
+- `gemini`: consigliato come prima opzione free/low-cost;
+- `groq`: utile per modelli open veloci, con rate limit da account;
+- `openrouter`: utile come router di modelli free, ma bisogna controllare bene modello e fallback;
+- `openai`: qualita alta, ma API separata da ChatGPT/Codex Pro e non gratuita di default.
+
+Per Groq aggiungi nel secret:
+
+```text
+GROQ_API_KEY=...
+```
+
+Per OpenRouter aggiungi:
+
+```text
+OPENROUTER_API_KEY=...
+```
+
+Poi riavvia il server.
 
 ### Guida OpenAI
 

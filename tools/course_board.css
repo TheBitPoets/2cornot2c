@@ -183,9 +183,14 @@ button:hover { transform: translateY(-1px); }
 
 .aiConfig select {
   width: auto;
-  min-width: 16rem;
+  min-width: 12rem;
   padding: .42rem .65rem;
   font-size: .72rem;
+}
+
+.aiConfig select:disabled {
+  opacity: .48;
+  cursor: not-allowed;
 }
 
 .filters {

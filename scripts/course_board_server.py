@@ -30,8 +30,11 @@ from urllib.parse import unquote, urlparse
 ROOT = Path(__file__).resolve().parents[1]
 DESIGN_PATH = ROOT / "doc" / "course_design.json"
 COURSE_DESIGNS_DIR = ROOT / "doc" / "course_designs"
+AI_PROVIDERS_PATH = ROOT / "config" / "ai_providers.yaml"
+AI_SECRET_PATH = ROOT / ".secrets" / "ai.secret"
 DEFAULT_SOURCES = ["README.md", "LINUX_PROGRAMMING.md"]
 ACTIVE_AI_PROVIDER = os.environ.get("AI_PROVIDER", "openai").strip().lower()
+ACTIVE_AI_MODEL = os.environ.get("AI_MODEL", "").strip()
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 TAG_RE = re.compile(r"<[^>]+>")
 PUNCT_RE = re.compile(r"[^\w\s-]", re.UNICODE)
@@ -124,6 +127,93 @@ def write_saved_design(name: str, payload: dict) -> dict:
     path = saved_design_path(name)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return {"name": path.name, "path": str(path.relative_to(ROOT))}
+
+
+def read_secret_env() -> dict[str, str]:
+    """Read local secret values from .secrets/ai.secret."""
+
+    values: dict[str, str] = {}
+    if not AI_SECRET_PATH.is_file():
+        return values
+    for line in AI_SECRET_PATH.read_text(encoding="utf-8-sig").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        values[key.strip()] = value.strip()
+    return values
+
+
+def secret_value(key: str) -> str:
+    """Return a secret from environment first, then local secret file."""
+
+    return os.environ.get(key, "") or read_secret_env().get(key, "")
+
+
+def parse_ai_providers_yaml() -> dict:
+    """Parse the small YAML subset used by config/ai_providers.yaml."""
+
+    if not AI_PROVIDERS_PATH.is_file():
+        return default_ai_provider_config()
+    providers: dict[str, dict] = {}
+    current_provider: str | None = None
+    current_model: dict | None = None
+    in_models = False
+    for raw in AI_PROVIDERS_PATH.read_text(encoding="utf-8-sig").splitlines():
+        if not raw.strip() or raw.strip().startswith("#") or raw.strip() == "providers:":
+            continue
+        indent = len(raw) - len(raw.lstrip(" "))
+        line = raw.strip()
+        if indent == 2 and line.endswith(":"):
+            current_provider = line[:-1]
+            providers[current_provider] = {"id": current_provider, "models": []}
+            in_models = False
+            current_model = None
+            continue
+        if not current_provider:
+            continue
+        if indent == 4 and line == "models:":
+            in_models = True
+            continue
+        if in_models and indent == 6 and line.startswith("- "):
+            current_model = {}
+            providers[current_provider]["models"].append(current_model)
+            key, value = line[2:].split(":", 1)
+            current_model[key.strip()] = value.strip()
+            continue
+        if in_models and indent == 8 and current_model and ":" in line:
+            key, value = line.split(":", 1)
+            current_model[key.strip()] = value.strip()
+            continue
+        if indent == 4 and ":" in line:
+            key, value = line.split(":", 1)
+            providers[current_provider][key.strip()] = value.strip()
+    return {"providers": providers}
+
+
+def default_ai_provider_config() -> dict:
+    """Return built-in AI provider config when YAML is missing."""
+
+    return {
+        "providers": {
+            "openai": {
+                "id": "openai",
+                "label": "OpenAI",
+                "secret_key": "OPENAI_API_KEY",
+                "default_model": "gpt-5.5",
+                "billing_note": "OpenAI API usa quota/billing API separati da ChatGPT Free/Plus.",
+                "models": [{"id": "gpt-5.5", "label": "GPT-5.5", "tier": "paid"}],
+            },
+            "gemini": {
+                "id": "gemini",
+                "label": "Gemini",
+                "secret_key": "GEMINI_API_KEY",
+                "default_model": "gemini-2.5-flash",
+                "billing_note": "Gemini puo avere free tier su Google AI Studio, ma quota e limiti dipendono dall'account.",
+                "models": [{"id": "gemini-2.5-flash", "label": "Gemini 2.5 Flash", "tier": "free-or-low-cost"}],
+            },
+        }
+    }
 
 
 def extract_headings() -> list[dict]:
@@ -608,11 +698,11 @@ def count_item_tree(item: dict) -> int:
 def call_openai_didactic_frame(payload: dict) -> dict:
     """Ask OpenAI to draft didactic-frame fields for one course topic."""
 
-    api_key = os.environ.get("OPENAI_API_KEY")
+    api_key = secret_value("OPENAI_API_KEY")
     if not api_key:
         raise RuntimeError("Configura OPENAI_API_KEY prima di usare AI assisted.")
 
-    model = os.environ.get("OPENAI_MODEL") or os.environ.get("AI_MODEL", "gpt-5.5")
+    model = active_ai_model()
     body = {
         "model": model,
         "input": [
@@ -680,11 +770,11 @@ def call_openai_didactic_frame(payload: dict) -> dict:
 def call_gemini_didactic_frame(payload: dict) -> dict:
     """Ask Gemini to draft didactic-frame fields for one course topic."""
 
-    api_key = os.environ.get("GEMINI_API_KEY")
+    api_key = secret_value("GEMINI_API_KEY")
     if not api_key:
         raise RuntimeError("Configura GEMINI_API_KEY prima di usare AI assisted con Gemini.")
 
-    model = os.environ.get("GEMINI_MODEL") or os.environ.get("AI_MODEL", "gemini-3-flash-preview")
+    model = active_ai_model()
     body = {
         "systemInstruction": {
             "parts": [{"text": didactic_frame_system_prompt()}],
@@ -721,6 +811,76 @@ def call_gemini_didactic_frame(payload: dict) -> dict:
     return normalize_frame(json.loads(output_text))
 
 
+def call_chat_completions_json(provider_name: str, url: str, api_key: str, model: str, system_prompt: str, payload: dict) -> dict:
+    """Call an OpenAI-compatible chat completions endpoint and parse JSON content."""
+
+    body = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": json.dumps(payload, ensure_ascii=False, indent=2)},
+        ],
+        "response_format": {"type": "json_object"},
+    }
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    if provider_name == "OpenRouter":
+        headers["HTTP-Referer"] = "https://github.com/TheBitPoets/2cornot2c"
+        headers["X-Title"] = "2cornot2c Course Design Board"
+    request = urllib.request.Request(
+        url,
+        data=json.dumps(body).encode("utf-8"),
+        headers=headers,
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=AI_COURSE_PLAN_TIMEOUT_SECONDS) as response:
+            data = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Errore {provider_name} API {error.code}: {detail}") from error
+    try:
+        return json.loads(data["choices"][0]["message"]["content"])
+    except (KeyError, IndexError, json.JSONDecodeError) as error:
+        raise RuntimeError(f"La risposta {provider_name} non contiene JSON utilizzabile.") from error
+
+
+def call_groq_didactic_frame(payload: dict) -> dict:
+    """Ask Groq to draft didactic-frame fields."""
+
+    api_key = secret_value("GROQ_API_KEY")
+    if not api_key:
+        raise RuntimeError("Configura GROQ_API_KEY prima di usare AI assisted con Groq.")
+    result = call_chat_completions_json(
+        "Groq",
+        "https://api.groq.com/openai/v1/chat/completions",
+        api_key,
+        active_ai_model(),
+        didactic_frame_system_prompt() + " Restituisci solo JSON con i campi richiesti.",
+        payload,
+    )
+    return normalize_frame(result)
+
+
+def call_openrouter_didactic_frame(payload: dict) -> dict:
+    """Ask OpenRouter to draft didactic-frame fields."""
+
+    api_key = secret_value("OPENROUTER_API_KEY")
+    if not api_key:
+        raise RuntimeError("Configura OPENROUTER_API_KEY prima di usare AI assisted con OpenRouter.")
+    result = call_chat_completions_json(
+        "OpenRouter",
+        "https://openrouter.ai/api/v1/chat/completions",
+        api_key,
+        active_ai_model(),
+        didactic_frame_system_prompt() + " Restituisci solo JSON con i campi richiesti.",
+        payload,
+    )
+    return normalize_frame(result)
+
+
 def call_ai_didactic_frame(payload: dict) -> dict:
     """Route didactic-frame generation to the configured AI provider."""
 
@@ -729,16 +889,20 @@ def call_ai_didactic_frame(payload: dict) -> dict:
         return call_openai_didactic_frame(payload)
     if provider == "gemini":
         return call_gemini_didactic_frame(payload)
-    raise RuntimeError(f"Provider AI non supportato: {provider}. Usa AI_PROVIDER=openai oppure AI_PROVIDER=gemini.")
+    if provider == "groq":
+        return call_groq_didactic_frame(payload)
+    if provider == "openrouter":
+        return call_openrouter_didactic_frame(payload)
+    raise RuntimeError(f"Provider AI non supportato: {provider}. Usa un provider dichiarato in config/ai_providers.yaml.")
 
 
 def call_openai_course_plan(payload: dict) -> dict:
     """Ask OpenAI to draft an annual course plan."""
 
-    api_key = os.environ.get("OPENAI_API_KEY")
+    api_key = secret_value("OPENAI_API_KEY")
     if not api_key:
         raise RuntimeError("Configura OPENAI_API_KEY prima di usare AI assisted percorso.")
-    model = os.environ.get("OPENAI_MODEL") or os.environ.get("AI_MODEL", "gpt-5.5")
+    model = active_ai_model()
     body = {
         "model": model,
         "input": [
@@ -790,10 +954,10 @@ def call_openai_course_plan(payload: dict) -> dict:
 def call_gemini_course_plan(payload: dict) -> dict:
     """Ask Gemini to draft an annual course plan."""
 
-    api_key = os.environ.get("GEMINI_API_KEY")
+    api_key = secret_value("GEMINI_API_KEY")
     if not api_key:
         raise RuntimeError("Configura GEMINI_API_KEY prima di usare AI assisted percorso con Gemini.")
-    model = os.environ.get("GEMINI_MODEL") or os.environ.get("AI_MODEL", "gemini-3-flash-preview")
+    model = active_ai_model()
     body = {
         "systemInstruction": {"parts": [{"text": course_plan_system_prompt()}]},
         "contents": [{"role": "user", "parts": [{"text": json.dumps(payload, ensure_ascii=False, indent=2)}]}],
@@ -821,6 +985,38 @@ def call_gemini_course_plan(payload: dict) -> dict:
     return json.loads(output_text)
 
 
+def call_groq_course_plan(payload: dict) -> dict:
+    """Ask Groq to draft an annual course plan."""
+
+    api_key = secret_value("GROQ_API_KEY")
+    if not api_key:
+        raise RuntimeError("Configura GROQ_API_KEY prima di usare AI assisted percorso con Groq.")
+    return call_chat_completions_json(
+        "Groq",
+        "https://api.groq.com/openai/v1/chat/completions",
+        api_key,
+        active_ai_model(),
+        course_plan_system_prompt(),
+        payload,
+    )
+
+
+def call_openrouter_course_plan(payload: dict) -> dict:
+    """Ask OpenRouter to draft an annual course plan."""
+
+    api_key = secret_value("OPENROUTER_API_KEY")
+    if not api_key:
+        raise RuntimeError("Configura OPENROUTER_API_KEY prima di usare AI assisted percorso con OpenRouter.")
+    return call_chat_completions_json(
+        "OpenRouter",
+        "https://openrouter.ai/api/v1/chat/completions",
+        api_key,
+        active_ai_model(),
+        course_plan_system_prompt(),
+        payload,
+    )
+
+
 def call_ai_course_plan(payload: dict) -> dict:
     """Route annual course-plan generation to the configured AI provider."""
 
@@ -829,7 +1025,11 @@ def call_ai_course_plan(payload: dict) -> dict:
         return call_openai_course_plan(payload)
     if provider == "gemini":
         return call_gemini_course_plan(payload)
-    raise RuntimeError(f"Provider AI non supportato: {provider}. Usa AI_PROVIDER=openai oppure AI_PROVIDER=gemini.")
+    if provider == "groq":
+        return call_groq_course_plan(payload)
+    if provider == "openrouter":
+        return call_openrouter_course_plan(payload)
+    raise RuntimeError(f"Provider AI non supportato: {provider}. Usa un provider dichiarato in config/ai_providers.yaml.")
 
 
 def ai_config() -> dict:
@@ -839,7 +1039,7 @@ def ai_config() -> dict:
     active = providers.get(ACTIVE_AI_PROVIDER) or providers["openai"]
     return {
         "provider": active["id"],
-        "model": active["model"],
+        "model": active_ai_model(),
         "api_key_configured": active["api_key_configured"],
         "billing_note": active["billing_note"],
         "providers": list(providers.values()),
@@ -849,35 +1049,50 @@ def ai_config() -> dict:
 def ai_providers() -> dict:
     """Return all server-supported providers with safe configuration status."""
 
-    return {
-        "openai": {
-            "id": "openai",
-            "label": "OpenAI",
-            "model": os.environ.get("OPENAI_MODEL") or os.environ.get("AI_MODEL", "gpt-5.5"),
-            "api_key_configured": bool(os.environ.get("OPENAI_API_KEY")),
-            "billing_note": "OpenAI API usa quota/billing API separati da ChatGPT Free/Plus.",
-        },
-        "gemini": {
-            "id": "gemini",
-            "label": "Gemini",
-            "model": os.environ.get("GEMINI_MODEL") or os.environ.get("AI_MODEL", "gemini-3-flash-preview"),
-            "api_key_configured": bool(os.environ.get("GEMINI_API_KEY")),
-            "billing_note": "Gemini puo avere free tier su Google AI Studio, ma quota e limiti dipendono dall'account.",
-        },
-    }
+    config = parse_ai_providers_yaml()["providers"]
+    providers: dict[str, dict] = {}
+    for provider_id, provider in config.items():
+        secret_key = provider.get("secret_key", "")
+        default_model = provider.get("default_model", "")
+        env_model = os.environ.get(f"{provider_id.upper()}_MODEL", "")
+        model = env_model or (ACTIVE_AI_MODEL if ACTIVE_AI_PROVIDER == provider_id else "") or default_model
+        models = provider.get("models", [])
+        providers[provider_id] = {
+            "id": provider_id,
+            "label": provider.get("label", provider_id),
+            "model": model,
+            "default_model": default_model,
+            "api_key_configured": bool(secret_value(secret_key)),
+            "billing_note": provider.get("billing_note", ""),
+            "models": models,
+        }
+    return providers
 
 
-def set_ai_provider(provider: str) -> dict:
-    """Set the active provider only when the server has its API key."""
+def active_ai_model() -> str:
+    """Return the currently selected model for the active provider."""
 
-    global ACTIVE_AI_PROVIDER
+    providers = ai_providers()
+    active = providers.get(ACTIVE_AI_PROVIDER) or providers["openai"]
+    return ACTIVE_AI_MODEL or active.get("model") or active.get("default_model", "")
+
+
+def set_ai_provider(provider: str, model: str = "") -> dict:
+    """Set the active provider/model only when the server has its API key."""
+
+    global ACTIVE_AI_PROVIDER, ACTIVE_AI_MODEL
     provider = provider.strip().lower()
     providers = ai_providers()
     if provider not in providers:
         raise RuntimeError(f"Provider AI non supportato: {provider}.")
     if not providers[provider]["api_key_configured"]:
         raise RuntimeError(f"Provider {providers[provider]['label']} non configurato: API key mancante.")
+    model_ids = {candidate.get("id") for candidate in providers[provider].get("models", [])}
+    selected_model = model.strip() or providers[provider].get("model") or providers[provider].get("default_model", "")
+    if model_ids and selected_model not in model_ids:
+        raise RuntimeError(f"Modello non supportato per {providers[provider]['label']}: {selected_model}.")
     ACTIVE_AI_PROVIDER = provider
+    ACTIVE_AI_MODEL = selected_model
     return ai_config()
 
 
@@ -929,7 +1144,7 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/ai-config":
             try:
-                self.write_json(set_ai_provider(payload.get("provider", "")))
+                self.write_json(set_ai_provider(payload.get("provider", ""), payload.get("model", "")))
             except Exception as error:  # noqa: BLE001
                 self.send_response(400)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -1031,3 +1246,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
