@@ -279,6 +279,15 @@ input, select { width: 100%; padding: .72rem .9rem; }
   align-items: baseline;
 }
 
+.yearHead [data-action="ai-course"] {
+  flex: 0 0 auto;
+  border-color: rgba(17, 17, 17, .32);
+  background: #111111;
+  color: #ffffff;
+  padding: .55rem .75rem;
+  font-size: .76rem;
+}
+
 .year h3 { margin-bottom: .2rem; font-size: 1.45rem; }
 .yearMeta { color: var(--muted); font-size: .9rem; }
 
@@ -393,10 +402,79 @@ input, select { width: 100%; padding: .72rem .9rem; }
   padding: .8rem;
 }
 
+.courseAiDialog {
+  width: min(72rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  border: 1px solid rgba(17, 17, 17, .2);
+  border-radius: 24px;
+  background: #ffffff;
+  color: var(--ink);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, .22);
+  padding: 0;
+}
+
+.courseAiDialog::backdrop {
+  background: rgba(0, 0, 0, .34);
+}
+
+.courseAiPanel {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.courseAiHead,
+.courseAiActions {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+}
+
+.briefGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .75rem;
+}
+
+.briefGrid label,
+.wideField {
+  display: grid;
+  gap: .32rem;
+  color: var(--muted);
+  font-size: .76rem;
+  font-weight: 700;
+}
+
+.courseAiPreview {
+  max-height: 22rem;
+  overflow: auto;
+  border: 1px solid rgba(17, 17, 17, .12);
+  border-radius: 18px;
+  background: #fafafa;
+  padding: .85rem;
+}
+
+.courseAiPreview table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .78rem;
+}
+
+.courseAiPreview th,
+.courseAiPreview td {
+  border-bottom: 1px solid rgba(17, 17, 17, .1);
+  padding: .45rem;
+  text-align: left;
+  vertical-align: top;
+}
+
 @media (max-width: 860px) {
   .hero { align-items: flex-start; flex-direction: column; }
   .board { grid-template-columns: 1fr; }
   .panel { min-height: auto; }
   .headingList, .courseTree { height: auto; max-height: 60vh; }
   .frameGrid { grid-template-columns: 1fr; }
+  .briefGrid { grid-template-columns: 1fr; }
+  .courseAiHead, .courseAiActions { align-items: flex-start; flex-direction: column; }
 }

@@ -43,8 +43,10 @@ AI_FRAME_FIELDS = [
     "next_step",
     "references",
 ]
+COURSE_PLAN_REQUIRED_FIELDS = ["year_id", "title", "description", "udas", "unplaced_topics", "notes"]
 MAX_SECTION_CHARS = 6000
 MAX_CHILDREN_WITH_TEXT = 8
+MAX_CATALOG_EXCERPT_CHARS = 900
 
 
 def github_anchor(title: str, seen: dict[str, int]) -> str:
@@ -152,6 +154,51 @@ def section_text(source: str, line: int | str, level: int | str) -> str:
     return text
 
 
+def section_excerpt(heading: dict) -> str:
+    """Return a short local excerpt for course-plan generation."""
+
+    text = section_text(heading.get("source", ""), heading.get("line", ""), heading.get("level", ""))
+    text = re.sub(r"\s+", " ", text).strip()
+    if len(text) > MAX_CATALOG_EXCERPT_CHARS:
+        return text[:MAX_CATALOG_EXCERPT_CHARS].rstrip() + "..."
+    return text
+
+
+def heading_catalog_tree() -> list[dict]:
+    """Return all available headings as a tree with compact excerpts."""
+
+    roots: list[dict] = []
+    stack: list[dict] = []
+    for heading in extract_headings():
+        node = {
+            "id": heading["id"],
+            "title": heading["title"],
+            "source": heading["source"],
+            "level": heading["level"],
+            "href": heading["href"],
+            "excerpt": section_excerpt(heading),
+            "children": [],
+        }
+        while stack and heading["level"] <= stack[-1]["level"]:
+            stack.pop()
+        if stack:
+            stack[-1]["children"].append(node)
+        else:
+            roots.append(node)
+        stack.append(node)
+    prune_empty_children(roots)
+    return roots
+
+
+def prune_empty_children(items: list[dict]) -> None:
+    """Remove empty children arrays recursively."""
+
+    for item in items:
+        prune_empty_children(item.get("children", []))
+        if not item.get("children"):
+            item.pop("children", None)
+
+
 def topic_summary(item: dict, include_text: bool = False, child_text_budget: int = 0) -> dict:
     """Return a compact recursive topic summary for the AI prompt."""
 
@@ -170,6 +217,51 @@ def topic_summary(item: dict, include_text: bool = False, child_text_budget: int
     if include_text:
         summary["text"] = section_text(item.get("source", ""), item.get("line", ""), item.get("level", ""))
     return summary
+
+
+def heading_by_id() -> dict[str, dict]:
+    """Return available headings indexed by stable id."""
+
+    return {heading["id"]: heading for heading in extract_headings()}
+
+
+def item_from_heading_id(heading_id: str, headings: list[dict]) -> dict | None:
+    """Build a board item from a heading id, preserving its subtree."""
+
+    index = next((i for i, heading in enumerate(headings) if heading["id"] == heading_id), None)
+    if index is None:
+        return None
+    heading = headings[index]
+    item = board_item_from_heading(heading)
+    roots: list[dict] = []
+    stack: list[dict] = [{"level": heading["level"], "children": roots}]
+    for child in headings[index + 1:]:
+        if child["source"] != heading["source"] or child["level"] <= heading["level"]:
+            break
+        child_item = board_item_from_heading(child)
+        child_item["children"] = []
+        while stack and child["level"] <= stack[-1]["level"]:
+            stack.pop()
+        stack[-1]["children"].append(child_item)
+        stack.append({"level": child["level"], "children": child_item["children"]})
+    prune_empty_children(roots)
+    if roots:
+        item["children"] = roots
+    return item
+
+
+def board_item_from_heading(heading: dict) -> dict:
+    """Return the JSON item shape consumed by the course board."""
+
+    return {
+        "id": heading["id"],
+        "title": heading["title"],
+        "source": heading["source"],
+        "href": heading["href"],
+        "level": heading["level"],
+        "line": heading["line"],
+        "frame": {"status": "todo"},
+    }
 
 
 def compact_design(design: dict) -> dict:
@@ -275,6 +367,89 @@ def didactic_frame_schema_gemini() -> dict:
     }
 
 
+def course_plan_schema_openai() -> dict:
+    """Return the JSON Schema expected from OpenAI for a course proposal."""
+
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": COURSE_PLAN_REQUIRED_FIELDS,
+        "properties": {
+            "year_id": {"type": "string"},
+            "title": {"type": "string"},
+            "description": {"type": "string"},
+            "udas": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["id", "title", "path", "weeks", "items"],
+                    "properties": {
+                        "id": {"type": "string"},
+                        "title": {"type": "string"},
+                        "path": {"type": "string"},
+                        "weeks": {"type": "string"},
+                        "items": {"type": "array", "items": {"type": "string"}},
+                    },
+                },
+            },
+            "unplaced_topics": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["id", "reason"],
+                    "properties": {
+                        "id": {"type": "string"},
+                        "reason": {"type": "string"},
+                    },
+                },
+            },
+            "notes": {"type": "string"},
+        },
+    }
+
+
+def course_plan_schema_gemini() -> dict:
+    """Return the JSON Schema expected from Gemini for a course proposal."""
+
+    return {
+        "type": "OBJECT",
+        "required": COURSE_PLAN_REQUIRED_FIELDS,
+        "properties": {
+            "year_id": {"type": "STRING"},
+            "title": {"type": "STRING"},
+            "description": {"type": "STRING"},
+            "udas": {
+                "type": "ARRAY",
+                "items": {
+                    "type": "OBJECT",
+                    "required": ["id", "title", "path", "weeks", "items"],
+                    "properties": {
+                        "id": {"type": "STRING"},
+                        "title": {"type": "STRING"},
+                        "path": {"type": "STRING"},
+                        "weeks": {"type": "STRING"},
+                        "items": {"type": "ARRAY", "items": {"type": "STRING"}},
+                    },
+                },
+            },
+            "unplaced_topics": {
+                "type": "ARRAY",
+                "items": {
+                    "type": "OBJECT",
+                    "required": ["id", "reason"],
+                    "properties": {
+                        "id": {"type": "STRING"},
+                        "reason": {"type": "STRING"},
+                    },
+                },
+            },
+            "notes": {"type": "STRING"},
+        },
+    }
+
+
 def didactic_frame_system_prompt() -> str:
     """Return the shared provider-independent instruction."""
 
@@ -288,10 +463,86 @@ def didactic_frame_system_prompt() -> str:
     )
 
 
+def course_plan_system_prompt() -> str:
+    """Return the provider-independent instruction for course-plan generation."""
+
+    return (
+        "Sei un docente esperto di TPSI e progettazione didattica. "
+        "Devi costruire una proposta di percorso annuale usando solo gli id degli argomenti disponibili. "
+        "Rispetta il brief del docente, la progressione didattica, il numero di settimane e gli obiettivi. "
+        "Non inventare id. Non duplicare argomenti nello stesso anno. "
+        "Se un argomento non e coerente con il brief, lascialo tra gli unplaced_topics spiegando il motivo. "
+        "Restituisci solo JSON valido secondo lo schema richiesto."
+    )
+
+
 def normalize_frame(result: dict) -> dict:
     """Keep only the expected didactic-frame fields as stripped strings."""
 
     return {field: str(result.get(field, "")).strip() for field in AI_FRAME_FIELDS}
+
+
+def normalize_course_plan(raw: dict, design: dict, year_id: str) -> dict:
+    """Validate a raw AI proposal and hydrate item ids into board items."""
+
+    headings = extract_headings()
+    valid_ids = {heading["id"] for heading in headings}
+    year = next((candidate for candidate in design.get("years", []) if candidate.get("id") == year_id), {})
+    used: set[str] = set()
+    hydrated_udas: list[dict] = []
+
+    for index, uda in enumerate(raw.get("udas", []), start=1):
+        hydrated_items: list[dict] = []
+        for heading_id in uda.get("items", []):
+            if heading_id not in valid_ids or heading_id in used:
+                continue
+            item = item_from_heading_id(heading_id, headings)
+            if item:
+                hydrated_items.append(item)
+                used.update(collect_item_ids(item))
+        hydrated_udas.append(
+            {
+                "id": str(uda.get("id") or f"uda-{index}"),
+                "title": str(uda.get("title") or f"UDA {index}"),
+                "path": str(uda.get("path") or "Da definire"),
+                "weeks": str(uda.get("weeks") or "?"),
+                "items": hydrated_items,
+            }
+        )
+
+    unplaced = []
+    for topic in raw.get("unplaced_topics", []):
+        heading_id = str(topic.get("id", ""))
+        if heading_id in valid_ids:
+            unplaced.append({"id": heading_id, "reason": str(topic.get("reason", ""))})
+
+    return {
+        "year_id": year_id,
+        "title": str(raw.get("title") or year.get("title", "")),
+        "description": str(raw.get("description") or year.get("description", "")),
+        "udas": hydrated_udas,
+        "unplaced_topics": unplaced,
+        "notes": str(raw.get("notes", "")),
+        "stats": {
+            "assigned_topics": sum(count_item_tree(item) for uda in hydrated_udas for item in uda["items"]),
+            "root_topics": sum(len(uda["items"]) for uda in hydrated_udas),
+        },
+    }
+
+
+def collect_item_ids(item: dict) -> set[str]:
+    """Collect ids from a board item subtree."""
+
+    ids = {item.get("id", "")}
+    for child in item.get("children", []):
+        ids.update(collect_item_ids(child))
+    return {item_id for item_id in ids if item_id}
+
+
+def count_item_tree(item: dict) -> int:
+    """Count a board item subtree."""
+
+    return 1 + sum(count_item_tree(child) for child in item.get("children", []))
 
 
 def call_openai_didactic_frame(payload: dict) -> dict:
@@ -421,6 +672,106 @@ def call_ai_didactic_frame(payload: dict) -> dict:
     raise RuntimeError(f"Provider AI non supportato: {provider}. Usa AI_PROVIDER=openai oppure AI_PROVIDER=gemini.")
 
 
+def call_openai_course_plan(payload: dict) -> dict:
+    """Ask OpenAI to draft an annual course plan."""
+
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        raise RuntimeError("Configura OPENAI_API_KEY prima di usare AI assisted percorso.")
+    model = os.environ.get("OPENAI_MODEL") or os.environ.get("AI_MODEL", "gpt-5.5")
+    body = {
+        "model": model,
+        "input": [
+            {
+                "role": "system",
+                "content": [{"type": "input_text", "text": course_plan_system_prompt()}],
+            },
+            {
+                "role": "user",
+                "content": [{"type": "input_text", "text": json.dumps(payload, ensure_ascii=False, indent=2)}],
+            },
+        ],
+        "text": {
+            "format": {
+                "type": "json_schema",
+                "name": "course_plan_proposal",
+                "schema": course_plan_schema_openai(),
+                "strict": True,
+            }
+        },
+        "store": False,
+    }
+    request = urllib.request.Request(
+        "https://api.openai.com/v1/responses",
+        data=json.dumps(body).encode("utf-8"),
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=120) as response:
+            data = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Errore OpenAI API {error.code}: {detail}") from error
+    output_text = data.get("output_text")
+    if not output_text:
+        for output in data.get("output", []):
+            for content in output.get("content", []):
+                if content.get("type") == "output_text":
+                    output_text = content.get("text")
+                    break
+            if output_text:
+                break
+    if not output_text:
+        raise RuntimeError("La risposta AI non contiene una proposta utilizzabile.")
+    return json.loads(output_text)
+
+
+def call_gemini_course_plan(payload: dict) -> dict:
+    """Ask Gemini to draft an annual course plan."""
+
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        raise RuntimeError("Configura GEMINI_API_KEY prima di usare AI assisted percorso con Gemini.")
+    model = os.environ.get("GEMINI_MODEL") or os.environ.get("AI_MODEL", "gemini-3-flash-preview")
+    body = {
+        "systemInstruction": {"parts": [{"text": course_plan_system_prompt()}]},
+        "contents": [{"role": "user", "parts": [{"text": json.dumps(payload, ensure_ascii=False, indent=2)}]}],
+        "generationConfig": {
+            "responseMimeType": "application/json",
+            "responseSchema": course_plan_schema_gemini(),
+        },
+    }
+    request = urllib.request.Request(
+        f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}",
+        data=json.dumps(body).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=120) as response:
+            data = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Errore Gemini API {error.code}: {detail}") from error
+    try:
+        output_text = data["candidates"][0]["content"]["parts"][0]["text"]
+    except (KeyError, IndexError) as error:
+        raise RuntimeError("La risposta Gemini non contiene una proposta utilizzabile.") from error
+    return json.loads(output_text)
+
+
+def call_ai_course_plan(payload: dict) -> dict:
+    """Route annual course-plan generation to the configured AI provider."""
+
+    provider = os.environ.get("AI_PROVIDER", "openai").strip().lower()
+    if provider == "openai":
+        return call_openai_course_plan(payload)
+    if provider == "gemini":
+        return call_gemini_course_plan(payload)
+    raise RuntimeError(f"Provider AI non supportato: {provider}. Usa AI_PROVIDER=openai oppure AI_PROVIDER=gemini.")
+
+
 class CourseBoardHandler(BaseHTTPRequestHandler):
     """HTTP handler for the local board and its JSON API."""
 
@@ -454,6 +805,30 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                     ),
                 }
                 self.write_json({"frame": call_ai_didactic_frame(context)})
+            except Exception as error:  # noqa: BLE001
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+            return
+        if parsed.path == "/api/ai-course-plan":
+            try:
+                design = payload.get("design", {})
+                year_id = payload.get("year_id", "")
+                ai_payload = {
+                    "brief": payload.get("brief", {}),
+                    "target_year_id": year_id,
+                    "current_course": compact_design(design),
+                    "available_topics": heading_catalog_tree(),
+                    "constraints": {
+                        "use_only_available_topic_ids": True,
+                        "do_not_duplicate_topics": True,
+                        "return_items_as_topic_ids": True,
+                        "teacher_must_review_before_apply": True,
+                    },
+                }
+                raw = call_ai_course_plan(ai_payload)
+                self.write_json({"proposal": normalize_course_plan(raw, design, year_id)})
             except Exception as error:  # noqa: BLE001
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json; charset=utf-8")

@@ -24,8 +24,141 @@ http://127.0.0.1:8765/tools/course_board.html
 - permette di trascinare un paragrafo dentro una UDA;
 - permette di riordinare e rimuovere gli elementi assegnati;
 - permette di compilare una cornice didattica per ogni argomento assegnato;
+- permette di generare una proposta di percorso annuale con `AI assisted percorso`;
 - salva la struttura in `doc/course_design.json`;
 - genera `doc/PERCORSO_DIDATTICO.md` a partire dal JSON della board.
+
+## Generazione AI assisted del percorso annuale
+
+La board puo chiedere alla AI di proporre la struttura di un intero anno scolastico.
+
+Questo flusso e diverso dalla generazione della cornice didattica:
+
+- `AI assisted percorso`: costruisce una proposta di UDA e argomenti per un anno;
+- `AI assisted`: compila la cornice didattica di un singolo argomento gia inserito.
+
+### Flusso consigliato
+
+1. Clicca `AI assisted percorso` sull'anno da progettare.
+2. Si apre un brief didattico modificabile.
+3. Controlla e modifica il brief prima di inviarlo.
+4. Clicca `Genera proposta`.
+5. La board mostra una preview della proposta.
+6. Se la proposta ti convince, clicca `Applica proposta`.
+7. Controlla manualmente la struttura con drag and drop.
+8. Clicca `Salva JSON`.
+
+La proposta non viene applicata automaticamente. Questo evita che la AI sovrascriva il percorso senza revisione docente.
+
+### Brief modificabile
+
+Il brief viene precompilato a partire dai dati dell'anno presenti nel JSON.
+
+Puoi modificare:
+
+- materia;
+- anno;
+- descrizione;
+- ore settimanali;
+- numero di settimane;
+- ore totali;
+- obiettivi didattici;
+- vincoli;
+- preferenze.
+
+Esempi di vincoli utili:
+
+```text
+Usa solo argomenti presenti tra i paragrafi disponibili.
+Non duplicare argomenti nello stesso anno.
+Non inserire argomenti Linux/processi/thread nel terzo anno.
+Non inserire assembly in questa fase.
+Mantieni una progressione dal semplice al complesso.
+Lascia tra i non assegnati gli argomenti non coerenti.
+```
+
+Esempi di preferenze utili:
+
+```text
+Preferire UDA da 3-5 settimane.
+Alternare spiegazione teorica e laboratorio.
+Mettere i puntatori dopo funzioni, array e stringhe.
+Produrre una proposta modificabile, non una soluzione definitiva.
+```
+
+Il brief viene salvato nel JSON dentro il campo `ai_brief` dell'anno quando applichi la proposta e salvi il JSON.
+
+### Cosa viene mandato alla AI per generare il percorso
+
+Per la generazione del percorso annuale il server manda:
+
+- brief modificato dal docente;
+- id dell'anno target;
+- struttura corrente del corso;
+- elenco completo dei paragrafi e sottoparagrafi disponibili;
+- id stabile di ogni paragrafo;
+- titolo;
+- sorgente;
+- livello heading;
+- link relativo;
+- breve estratto locale del testo del paragrafo;
+- vincoli tecnici: usare solo id reali, non duplicare, restituire item come id.
+
+Non viene mandato tutto il testo completo di tutti i paragrafi, per evitare richieste troppo grandi. Per questa fase basta una mappa ragionata degli argomenti con estratti brevi. Il testo completo viene usato invece nella generazione della cornice didattica del singolo argomento.
+
+### Risposta attesa dalla AI
+
+La AI deve restituire una proposta strutturata:
+
+```json
+{
+  "year_id": "terzo-anno",
+  "title": "Terzo anno",
+  "description": "C base e intermedio",
+  "udas": [
+    {
+      "id": "uda-1",
+      "title": "Strumenti e primo programma",
+      "path": "Base",
+      "weeks": "1-3",
+      "items": [
+        "README.md#introduzione",
+        "README.md#variabili"
+      ]
+    }
+  ],
+  "unplaced_topics": [
+    {
+      "id": "README.md#argomento-non-usato",
+      "reason": "Non coerente con i vincoli del terzo anno."
+    }
+  ],
+  "notes": "Note sintetiche sulla proposta."
+}
+```
+
+La AI restituisce solo gli id degli argomenti. Il server poi:
+
+- verifica che ogni id esista davvero;
+- scarta id inventati;
+- evita duplicati;
+- ricostruisce gli item completi per la board;
+- mantiene i sottoparagrafi quando viene scelto un paragrafo padre;
+- produce una preview da revisionare prima dell'applicazione.
+
+### Preview e applicazione
+
+Dopo `Genera proposta`, la board mostra:
+
+- numero di UDA;
+- argomenti assegnati;
+- argomenti non assegnati;
+- tabella con UDA, percorso, settimane e numero di argomenti;
+- eventuali note della AI.
+
+Solo cliccando `Applica proposta` la struttura dell'anno viene sostituita nella UI.
+
+La modifica diventa persistente solo dopo `Salva JSON`.
 
 ## Cornice didattica degli argomenti
 

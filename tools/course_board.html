@@ -58,6 +58,67 @@
     </article>
   </template>
 
+  <dialog id="courseAiDialog" class="courseAiDialog">
+    <form method="dialog" class="courseAiPanel">
+      <header class="courseAiHead">
+        <div>
+          <p class="eyebrow">AI assisted percorso</p>
+          <h2 id="courseAiTitle">Genera percorso</h2>
+        </div>
+        <button id="courseAiCloseBtn" type="button">Chiudi</button>
+      </header>
+
+      <div class="briefGrid">
+        <label>
+          <span>Materia</span>
+          <input id="briefSubject" type="text">
+        </label>
+        <label>
+          <span>Anno</span>
+          <input id="briefYearTitle" type="text">
+        </label>
+        <label>
+          <span>Descrizione</span>
+          <input id="briefDescription" type="text">
+        </label>
+        <label>
+          <span>Ore/settimana</span>
+          <input id="briefWeeklyHours" type="number" min="1">
+        </label>
+        <label>
+          <span>Settimane</span>
+          <input id="briefWeeks" type="number" min="1">
+        </label>
+        <label>
+          <span>Ore totali</span>
+          <input id="briefTotalHours" type="number" min="1">
+        </label>
+      </div>
+
+      <label class="wideField">
+        <span>Obiettivi didattici</span>
+        <textarea id="briefGoals" rows="5"></textarea>
+      </label>
+      <label class="wideField">
+        <span>Vincoli</span>
+        <textarea id="briefConstraints" rows="5"></textarea>
+      </label>
+      <label class="wideField">
+        <span>Preferenze</span>
+        <textarea id="briefPreferences" rows="5"></textarea>
+      </label>
+
+      <div class="courseAiActions">
+        <button id="courseAiGenerateBtn" type="button" class="primary">Genera proposta</button>
+        <button id="courseAiApplyBtn" type="button" disabled>Applica proposta</button>
+      </div>
+
+      <section id="courseAiPreview" class="courseAiPreview">
+        <p class="empty">Nessuna proposta generata.</p>
+      </section>
+    </form>
+  </dialog>
+
   <script src="course_board.js"></script>
 </body>
 </html>

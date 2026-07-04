@@ -4,6 +4,8 @@
   draggedHeading: null,
   collapsedHeadingIds: new Set(),
   collapsedCourseItemIds: new Set(),
+  courseAiYearId: null,
+  courseAiProposal: null,
 };
 
 const els = {
@@ -16,6 +18,21 @@ const els = {
   status: document.querySelector("#status"),
   reloadBtn: document.querySelector("#reloadBtn"),
   saveBtn: document.querySelector("#saveBtn"),
+  courseAiDialog: document.querySelector("#courseAiDialog"),
+  courseAiTitle: document.querySelector("#courseAiTitle"),
+  courseAiCloseBtn: document.querySelector("#courseAiCloseBtn"),
+  courseAiGenerateBtn: document.querySelector("#courseAiGenerateBtn"),
+  courseAiApplyBtn: document.querySelector("#courseAiApplyBtn"),
+  courseAiPreview: document.querySelector("#courseAiPreview"),
+  briefSubject: document.querySelector("#briefSubject"),
+  briefYearTitle: document.querySelector("#briefYearTitle"),
+  briefDescription: document.querySelector("#briefDescription"),
+  briefWeeklyHours: document.querySelector("#briefWeeklyHours"),
+  briefWeeks: document.querySelector("#briefWeeks"),
+  briefTotalHours: document.querySelector("#briefTotalHours"),
+  briefGoals: document.querySelector("#briefGoals"),
+  briefConstraints: document.querySelector("#briefConstraints"),
+  briefPreferences: document.querySelector("#briefPreferences"),
 };
 
 const FRAME_FIELDS = [
@@ -265,8 +282,10 @@ function renderCourse() {
           <h3>${escapeHtml(year.title)}</h3>
           <div class="yearMeta">${escapeHtml(year.description || "")} · ${year.weeks || "?"} settimane · ${year.weekly_hours || "?"} ore/settimana</div>
         </div>
+        <button type="button" data-action="ai-course">AI assisted percorso</button>
       </div>
     `;
+    yearNode.querySelector('[data-action="ai-course"]').addEventListener("click", () => openCourseAiDialog(year));
 
     for (const uda of year.udas || []) {
       yearNode.append(renderUda(year, uda));
@@ -394,6 +413,145 @@ function renderItem(year, uda, siblings, item, index, depth) {
   return node;
 }
 
+function defaultCourseBrief(year) {
+  const totalHours = Number(year.weekly_hours || 0) * Number(year.weeks || 0);
+  return {
+    subject: "TPSI",
+    year_title: year.title || "",
+    description: year.description || "",
+    weekly_hours: year.weekly_hours || 3,
+    weeks: year.weeks || 33,
+    total_hours: totalHours || "",
+    goals: [
+      "Scrivere piccoli programmi in C.",
+      "Comprendere variabili, tipi, operatori, condizioni, cicli e funzioni.",
+      "Introdurre array, stringhe, puntatori e memoria.",
+      "Integrare teoria e laboratorio in modo progressivo."
+    ].join("\n"),
+    constraints: [
+      "Usa solo argomenti presenti tra i paragrafi disponibili.",
+      "Non duplicare argomenti nello stesso anno.",
+      "Mantieni una progressione didattica dal semplice al complesso.",
+      "Lascia tra i non assegnati gli argomenti non coerenti con questo anno.",
+      "Non inserire argomenti Linux/processi/thread nel terzo anno se non richiesto esplicitamente."
+    ].join("\n"),
+    preferences: [
+      "Preferire UDA da 3-5 settimane.",
+      "Alternare spiegazione teorica e attivita di laboratorio.",
+      "Mettere i puntatori dopo funzioni, array e stringhe.",
+      "Produrre una proposta modificabile, non una soluzione definitiva."
+    ].join("\n")
+  };
+}
+
+function openCourseAiDialog(year) {
+  const brief = { ...defaultCourseBrief(year), ...(year.ai_brief || {}) };
+  state.courseAiYearId = year.id;
+  state.courseAiProposal = null;
+  els.courseAiTitle.textContent = `Genera percorso per ${year.title}`;
+  els.briefSubject.value = brief.subject;
+  els.briefYearTitle.value = brief.year_title;
+  els.briefDescription.value = brief.description;
+  els.briefWeeklyHours.value = brief.weekly_hours;
+  els.briefWeeks.value = brief.weeks;
+  els.briefTotalHours.value = brief.total_hours;
+  els.briefGoals.value = brief.goals;
+  els.briefConstraints.value = brief.constraints;
+  els.briefPreferences.value = brief.preferences;
+  els.courseAiPreview.innerHTML = '<p class="empty">Modifica il brief, poi genera una proposta.</p>';
+  els.courseAiApplyBtn.disabled = true;
+  els.courseAiDialog.showModal();
+}
+
+function readCourseBrief() {
+  return {
+    subject: els.briefSubject.value.trim(),
+    year_title: els.briefYearTitle.value.trim(),
+    description: els.briefDescription.value.trim(),
+    weekly_hours: Number(els.briefWeeklyHours.value || 0),
+    weeks: Number(els.briefWeeks.value || 0),
+    total_hours: Number(els.briefTotalHours.value || 0),
+    goals: els.briefGoals.value.trim(),
+    constraints: els.briefConstraints.value.trim(),
+    preferences: els.briefPreferences.value.trim(),
+  };
+}
+
+async function generateCourseAiProposal() {
+  const year = (state.design.years || []).find((candidate) => candidate.id === state.courseAiYearId);
+  if (!year) return;
+  const brief = readCourseBrief();
+  year.ai_brief = brief;
+  els.courseAiGenerateBtn.disabled = true;
+  els.courseAiApplyBtn.disabled = true;
+  els.courseAiPreview.innerHTML = '<p class="empty">Generazione proposta in corso...</p>';
+  setStatus(`AI assisted percorso: genero proposta per ${year.title}...`);
+  try {
+    const payload = await api("/api/ai-course-plan", {
+      method: "POST",
+      body: JSON.stringify({
+        design: state.design,
+        year_id: year.id,
+        brief,
+      }),
+    });
+    state.courseAiProposal = payload.proposal;
+    renderCourseAiPreview(payload.proposal);
+    els.courseAiApplyBtn.disabled = false;
+    setStatus(`Proposta percorso generata per ${year.title}.`);
+  } catch (error) {
+    els.courseAiPreview.innerHTML = `<p class="empty">Errore: ${escapeHtml(error.message)}</p>`;
+    setStatus(`AI assisted percorso non riuscito: ${error.message}`);
+  } finally {
+    els.courseAiGenerateBtn.disabled = false;
+  }
+}
+
+function renderCourseAiPreview(proposal) {
+  const stats = proposal.stats || {};
+  const udas = proposal.udas || [];
+  const rows = udas.map((uda) => `
+    <tr>
+      <td>${escapeHtml(uda.id)}</td>
+      <td>${escapeHtml(uda.title)}</td>
+      <td>${escapeHtml(uda.path || "")}</td>
+      <td>${escapeHtml(uda.weeks || "")}</td>
+      <td>${countItems(uda.items || [])}</td>
+    </tr>
+  `).join("");
+  els.courseAiPreview.innerHTML = `
+    <h3>Proposta generata</h3>
+    <p>
+      UDA: <strong>${udas.length}</strong> ·
+      argomenti assegnati: <strong>${stats.assigned_topics || 0}</strong> ·
+      non assegnati: <strong>${(proposal.unplaced_topics || []).length}</strong>
+    </p>
+    <table>
+      <thead><tr><th>UDA</th><th>Titolo</th><th>Percorso</th><th>Settimane</th><th>Argomenti</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    ${proposal.notes ? `<p><strong>Note:</strong> ${escapeHtml(proposal.notes)}</p>` : ""}
+  `;
+}
+
+function countItems(items) {
+  return items.reduce((total, item) => total + 1 + countItems(item.children || []), 0);
+}
+
+function applyCourseAiProposal() {
+  const year = (state.design.years || []).find((candidate) => candidate.id === state.courseAiYearId);
+  if (!year || !state.courseAiProposal) return;
+  year.title = state.courseAiProposal.title || year.title;
+  year.description = state.courseAiProposal.description || year.description;
+  year.udas = state.courseAiProposal.udas || year.udas;
+  year.ai_brief = readCourseBrief();
+  els.courseAiDialog.close();
+  state.courseAiProposal = null;
+  renderCourse();
+  renderHeadings();
+  setStatus(`Proposta AI applicata a ${year.title}. Ricordati di salvare il JSON.`);
+}
+
 function contextLabel(index, siblings, item) {
   const previous = index;
   const next = Math.max(0, siblings.length - index - 1);
@@ -504,6 +662,9 @@ function escapeHtml(value) {
 
 els.reloadBtn.addEventListener("click", loadAll);
 els.saveBtn.addEventListener("click", saveDesign);
+els.courseAiCloseBtn.addEventListener("click", () => els.courseAiDialog.close());
+els.courseAiGenerateBtn.addEventListener("click", generateCourseAiProposal);
+els.courseAiApplyBtn.addEventListener("click", applyCourseAiProposal);
 els.sourceFilter.addEventListener("change", renderHeadings);
 els.levelFilter.addEventListener("change", renderHeadings);
 els.searchInput.addEventListener("input", renderHeadings);
