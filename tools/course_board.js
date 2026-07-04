@@ -55,9 +55,20 @@ async function api(path, options = {}) {
     ...options,
   });
   if (!response.ok) {
-    throw new Error(`${response.status} ${response.statusText}`);
+    throw new Error(await responseErrorMessage(response));
   }
   return response.json();
+}
+
+async function responseErrorMessage(response) {
+  const fallback = `${response.status} ${response.statusText}`;
+  try {
+    const payload = await response.json();
+    if (payload.error) return `${fallback}: ${payload.error}`;
+  } catch {
+    return fallback;
+  }
+  return fallback;
 }
 
 async function loadAll() {
@@ -501,7 +512,7 @@ async function generateCourseAiProposal() {
     setStatus(`Proposta percorso generata per ${year.title}.`);
   } catch (error) {
     els.courseAiPreview.innerHTML = `<p class="empty">Errore: ${escapeHtml(error.message)}</p>`;
-    setStatus(`AI assisted percorso non riuscito: ${error.message}`);
+    setStatus(`AI assisted percorso non riuscito. Dettaglio provider/server: ${error.message}`);
   } finally {
     els.courseAiGenerateBtn.disabled = false;
   }
@@ -576,7 +587,7 @@ async function fillFrameWithAi(year, uda, item) {
     renderCourse();
     setStatus(`Cornice didattica generata per "${item.title}".`);
   } catch (error) {
-    setStatus(`AI assisted non riuscito: ${error.message}`);
+    setStatus(`AI assisted non riuscito. Dettaglio provider/server: ${error.message}`);
   }
 }
 
@@ -673,3 +684,4 @@ loadAll().catch((error) => {
   console.error(error);
   setStatus(`Errore: ${error.message}`);
 });
+
