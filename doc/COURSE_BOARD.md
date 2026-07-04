@@ -473,6 +473,130 @@ Nel browser apri:
 http://127.0.0.1:8765/tools/course_board.html
 ```
 
+### Guida Groq
+
+Groq puo essere utile come provider veloce per modelli open, con piani free/dev soggetti a rate limit dell'account.
+
+#### 1. Recupera la API key Groq
+
+1. Apri `https://console.groq.com/`.
+2. Accedi o crea un account.
+3. Vai nella sezione API keys.
+4. Crea una nuova API key.
+5. Copiala e conservala in un posto sicuro.
+
+#### 2. Configura le variabili su Windows PowerShell
+
+Queste variabili valgono solo per la finestra PowerShell corrente:
+
+```powershell
+$env:AI_PROVIDER="groq"
+$env:GROQ_API_KEY="..."
+$env:GROQ_MODEL="llama-3.3-70b-versatile"
+```
+
+Poi avvia il server:
+
+```powershell
+python scripts/course_board_server.py
+```
+
+#### 3. Configura le variabili su Linux/macOS
+
+Queste variabili valgono solo per il terminale corrente:
+
+```bash
+export AI_PROVIDER="groq"
+export GROQ_API_KEY="..."
+export GROQ_MODEL="llama-3.3-70b-versatile"
+```
+
+Poi avvia il server:
+
+```bash
+python scripts/course_board_server.py
+```
+
+#### 4. Configurazione tramite `.secrets/ai.secret`
+
+In alternativa puoi salvare la chiave nel file locale non versionato:
+
+```text
+GROQ_API_KEY=...
+```
+
+Poi riavvia il server.
+
+#### 5. Apri la board
+
+Nel browser apri:
+
+```text
+http://127.0.0.1:8765/tools/course_board.html
+```
+
+### Guida OpenRouter
+
+OpenRouter puo essere utile come router di modelli gratuiti o low-cost. E importante controllare il modello scelto, per evitare fallback non desiderati.
+
+#### 1. Recupera la API key OpenRouter
+
+1. Apri `https://openrouter.ai/`.
+2. Accedi o crea un account.
+3. Vai nella sezione Keys.
+4. Crea una nuova API key.
+5. Copiala e conservala in un posto sicuro.
+
+#### 2. Configura le variabili su Windows PowerShell
+
+Queste variabili valgono solo per la finestra PowerShell corrente:
+
+```powershell
+$env:AI_PROVIDER="openrouter"
+$env:OPENROUTER_API_KEY="..."
+$env:OPENROUTER_MODEL="openrouter/free"
+```
+
+Poi avvia il server:
+
+```powershell
+python scripts/course_board_server.py
+```
+
+#### 3. Configura le variabili su Linux/macOS
+
+Queste variabili valgono solo per il terminale corrente:
+
+```bash
+export AI_PROVIDER="openrouter"
+export OPENROUTER_API_KEY="..."
+export OPENROUTER_MODEL="openrouter/free"
+```
+
+Poi avvia il server:
+
+```bash
+python scripts/course_board_server.py
+```
+
+#### 4. Configurazione tramite `.secrets/ai.secret`
+
+In alternativa puoi salvare la chiave nel file locale non versionato:
+
+```text
+OPENROUTER_API_KEY=...
+```
+
+Poi riavvia il server.
+
+#### 5. Apri la board
+
+Nel browser apri:
+
+```text
+http://127.0.0.1:8765/tools/course_board.html
+```
+
 ### Uso di AI assisted nella board
 
 1. Trascina un paragrafo dentro una UDA.
