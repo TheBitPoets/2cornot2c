@@ -51,6 +51,19 @@
     </section>
   </main>
 
+  <div id="aiBusy" class="aiBusy" hidden>
+    <div class="aiBusyCard">
+      <div>
+        <strong id="aiBusyTitle">AI assisted in corso</strong>
+        <p id="aiBusyMessage">Preparo la richiesta...</p>
+      </div>
+      <div class="aiBusyPercent" id="aiBusyPercent">0%</div>
+      <div class="aiBusyBar" aria-hidden="true">
+        <span id="aiBusyBarFill"></span>
+      </div>
+    </div>
+  </div>
+
   <template id="headingTemplate">
     <article class="headingCard" draggable="true">
       <div class="headingTitle"></div>

@@ -50,6 +50,8 @@ Questo flusso e diverso dalla generazione della cornice didattica:
 
 La proposta non viene applicata automaticamente. Questo evita che la AI sovrascriva il percorso senza revisione docente.
 
+Durante la generazione compare un indicatore `AI assisted in corso` con messaggi progressivi e percentuale. La percentuale e una stima di attesa lato interfaccia: serve a farti capire che la richiesta e ancora in corso, non rappresenta il progresso reale interno del provider AI.
+
 ### Brief modificabile
 
 Il brief viene precompilato a partire dai dati dell'anno presenti nel JSON.
@@ -337,6 +339,8 @@ http://127.0.0.1:8765/tools/course_board.html
 5. Clicca `Salva JSON` per rendere persistenti i campi generati.
 
 Il modello deve restituire dati strutturati; la board accetta solo i campi previsti dalla cornice didattica.
+
+Anche in questo caso compare l'indicatore di lavoro `AI assisted in corso`. Se la risposta impiega tempo, lascia aperta la finestra: il provider potrebbe richiedere diversi secondi per leggere il contesto e produrre il JSON strutturato.
 
 ### Come funziona la chiamata AI
 

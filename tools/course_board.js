@@ -24,6 +24,11 @@ const els = {
   courseAiGenerateBtn: document.querySelector("#courseAiGenerateBtn"),
   courseAiApplyBtn: document.querySelector("#courseAiApplyBtn"),
   courseAiPreview: document.querySelector("#courseAiPreview"),
+  aiBusy: document.querySelector("#aiBusy"),
+  aiBusyTitle: document.querySelector("#aiBusyTitle"),
+  aiBusyMessage: document.querySelector("#aiBusyMessage"),
+  aiBusyPercent: document.querySelector("#aiBusyPercent"),
+  aiBusyBarFill: document.querySelector("#aiBusyBarFill"),
   briefSubject: document.querySelector("#briefSubject"),
   briefYearTitle: document.querySelector("#briefYearTitle"),
   briefDescription: document.querySelector("#briefDescription"),
@@ -45,8 +50,57 @@ const FRAME_FIELDS = [
   { key: "references", label: "Rimando" },
 ];
 
+const AI_PROGRESS_STAGES = [
+  "Preparo il contesto didattico...",
+  "Leggo paragrafi e sottoparagrafi...",
+  "Invio la richiesta al provider AI...",
+  "Il modello sta elaborando la proposta...",
+  "Ricevo e controllo la risposta strutturata...",
+  "Aggiorno la board con i dati generati..."
+];
+
+let aiProgressTimer = null;
+
 function setStatus(message) {
   els.status.textContent = message;
+}
+
+function startAiProgress(title) {
+  let percent = 4;
+  let stageIndex = 0;
+  els.aiBusy.hidden = false;
+  els.aiBusyTitle.textContent = title;
+  updateAiProgress(percent, AI_PROGRESS_STAGES[stageIndex]);
+  clearInterval(aiProgressTimer);
+  aiProgressTimer = setInterval(() => {
+    percent = Math.min(95, percent + Math.max(1, Math.round((96 - percent) / 9)));
+    stageIndex = Math.min(AI_PROGRESS_STAGES.length - 1, Math.floor(percent / 18));
+    updateAiProgress(percent, AI_PROGRESS_STAGES[stageIndex]);
+  }, 1400);
+}
+
+function updateAiProgress(percent, message) {
+  els.aiBusyMessage.textContent = message;
+  els.aiBusyPercent.textContent = `${percent}%`;
+  els.aiBusyBarFill.style.width = `${percent}%`;
+}
+
+function stopAiProgress(message = "Completato.") {
+  clearInterval(aiProgressTimer);
+  aiProgressTimer = null;
+  updateAiProgress(100, message);
+  setTimeout(() => {
+    if (!aiProgressTimer) els.aiBusy.hidden = true;
+  }, 900);
+}
+
+function failAiProgress(message = "Operazione non riuscita.") {
+  clearInterval(aiProgressTimer);
+  aiProgressTimer = null;
+  updateAiProgress(100, message);
+  setTimeout(() => {
+    if (!aiProgressTimer) els.aiBusy.hidden = true;
+  }, 2200);
 }
 
 async function api(path, options = {}) {
@@ -497,6 +551,7 @@ async function generateCourseAiProposal() {
   els.courseAiApplyBtn.disabled = true;
   els.courseAiPreview.innerHTML = '<p class="empty">Generazione proposta in corso...</p>';
   setStatus(`AI assisted percorso: genero proposta per ${year.title}...`);
+  startAiProgress(`AI assisted percorso: ${year.title}`);
   try {
     const payload = await api("/api/ai-course-plan", {
       method: "POST",
@@ -510,9 +565,11 @@ async function generateCourseAiProposal() {
     renderCourseAiPreview(payload.proposal);
     els.courseAiApplyBtn.disabled = false;
     setStatus(`Proposta percorso generata per ${year.title}.`);
+    stopAiProgress("Proposta generata. Puoi controllarla e applicarla.");
   } catch (error) {
     els.courseAiPreview.innerHTML = `<p class="empty">Errore: ${escapeHtml(error.message)}</p>`;
     setStatus(`AI assisted percorso non riuscito. Dettaglio provider/server: ${error.message}`);
+    failAiProgress("Errore durante la generazione AI.");
   } finally {
     els.courseAiGenerateBtn.disabled = false;
   }
@@ -573,6 +630,7 @@ function contextLabel(index, siblings, item) {
 
 async function fillFrameWithAi(year, uda, item) {
   setStatus(`AI assisted: preparo la cornice per "${item.title}"...`);
+  startAiProgress(`AI assisted cornice: ${item.title}`);
   try {
     const payload = await api("/api/ai-frame", {
       method: "POST",
@@ -586,8 +644,10 @@ async function fillFrameWithAi(year, uda, item) {
     item.frame = { ...defaultFrame(), ...(item.frame || {}), ...payload.frame, status: "draft" };
     renderCourse();
     setStatus(`Cornice didattica generata per "${item.title}".`);
+    stopAiProgress("Cornice didattica generata.");
   } catch (error) {
     setStatus(`AI assisted non riuscito. Dettaglio provider/server: ${error.message}`);
+    failAiProgress("Errore durante la generazione della cornice.");
   }
 }
 
