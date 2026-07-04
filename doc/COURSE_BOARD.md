@@ -224,12 +224,61 @@ Dalla board puoi rigenerare direttamente il documento:
 doc/PERCORSO_DIDATTICO.md
 ```
 
+### Metodo da UI
+
+Il metodo consigliato e usare direttamente la board.
+
+Flusso:
+
+1. apri la board;
+2. carica o modifica il percorso;
+3. controlla UDA, paragrafi, sottoparagrafi e cornici didattiche;
+4. clicca `Aggiorna percorso MD`.
+
 Il bottone `Aggiorna percorso MD` esegue due passaggi:
 
 1. salva lo stato corrente della board in `doc/course_design.json`;
 2. rigenera `doc/PERCORSO_DIDATTICO.md` usando `scripts/generate_course_plan.py`.
 
 In questo modo non devi ricordare il comando da terminale e riduci il rischio di avere un JSON aggiornato ma un Markdown vecchio.
+
+Se l'operazione riesce, la board mostra il percorso del file aggiornato. Se fallisce, mostra il dettaglio dell'errore restituito dal server.
+
+### Metodo manuale da terminale
+
+Puoi ottenere lo stesso risultato anche senza usare il bottone della UI.
+
+Prima salva il percorso corrente nella board con:
+
+```text
+Imposta corrente
+```
+
+Questo aggiorna:
+
+```text
+doc/course_design.json
+```
+
+Poi dal terminale esegui:
+
+```powershell
+python scripts/generate_course_plan.py
+```
+
+Lo script legge:
+
+```text
+doc/course_design.json
+```
+
+e genera:
+
+```text
+doc/PERCORSO_DIDATTICO.md
+```
+
+Il metodo manuale e utile quando vuoi rigenerare il Markdown in uno script, in una shell oppure prima di fare commit, senza aprire la board.
 
 ## Cornice didattica degli argomenti
 
