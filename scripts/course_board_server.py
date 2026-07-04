@@ -49,7 +49,9 @@ AI_FRAME_FIELDS = [
 COURSE_PLAN_REQUIRED_FIELDS = ["year_id", "title", "description", "udas", "unplaced_topics", "notes"]
 MAX_SECTION_CHARS = 6000
 MAX_CHILDREN_WITH_TEXT = 8
-MAX_CATALOG_EXCERPT_CHARS = 900
+MAX_CATALOG_EXCERPT_CHARS = 400
+AI_FRAME_TIMEOUT_SECONDS = 120
+AI_COURSE_PLAN_TIMEOUT_SECONDS = 240
 
 
 def github_anchor(title: str, seen: dict[str, int]) -> str:
@@ -641,7 +643,7 @@ def call_openai_didactic_frame(payload: dict) -> dict:
         method="POST",
     )
     try:
-        with urllib.request.urlopen(request, timeout=90) as response:
+        with urllib.request.urlopen(request, timeout=AI_FRAME_TIMEOUT_SECONDS) as response:
             data = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as error:
         detail = error.read().decode("utf-8", errors="replace")
@@ -693,7 +695,7 @@ def call_gemini_didactic_frame(payload: dict) -> dict:
         method="POST",
     )
     try:
-        with urllib.request.urlopen(request, timeout=90) as response:
+        with urllib.request.urlopen(request, timeout=AI_FRAME_TIMEOUT_SECONDS) as response:
             data = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as error:
         detail = error.read().decode("utf-8", errors="replace")
@@ -754,7 +756,7 @@ def call_openai_course_plan(payload: dict) -> dict:
         method="POST",
     )
     try:
-        with urllib.request.urlopen(request, timeout=120) as response:
+        with urllib.request.urlopen(request, timeout=AI_COURSE_PLAN_TIMEOUT_SECONDS) as response:
             data = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as error:
         detail = error.read().decode("utf-8", errors="replace")
@@ -795,7 +797,7 @@ def call_gemini_course_plan(payload: dict) -> dict:
         method="POST",
     )
     try:
-        with urllib.request.urlopen(request, timeout=120) as response:
+        with urllib.request.urlopen(request, timeout=AI_COURSE_PLAN_TIMEOUT_SECONDS) as response:
             data = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as error:
         detail = error.read().decode("utf-8", errors="replace")

@@ -159,6 +159,8 @@ Per la generazione del percorso annuale il server manda:
 
 Non viene mandato tutto il testo completo di tutti i paragrafi, per evitare richieste troppo grandi. Per questa fase basta una mappa ragionata degli argomenti con estratti brevi. Il testo completo viene usato invece nella generazione della cornice didattica del singolo argomento.
 
+La generazione del percorso annuale e piu pesante della generazione della singola cornice: puo richiedere anche 1-3 minuti, soprattutto con modelli gratuiti o molto richiesti. Il server usa un timeout piu lungo per questa operazione e invia estratti brevi dei paragrafi per ridurre tempi e costo.
+
 ### Risposta attesa dalla AI
 
 La AI deve restituire una proposta strutturata:
@@ -403,6 +405,8 @@ http://127.0.0.1:8765/tools/course_board.html
 Il modello deve restituire dati strutturati; la board accetta solo i campi previsti dalla cornice didattica.
 
 Anche in questo caso compare l'indicatore di lavoro `AI assisted in corso`. Se la risposta impiega tempo, lascia aperta la finestra: il provider potrebbe richiedere diversi secondi per leggere il contesto e produrre il JSON strutturato.
+
+La generazione della cornice del singolo argomento e di solito piu rapida del percorso annuale, perche usa solo il contesto ravvicinato dell'argomento.
 
 ### Come funziona la chiamata AI
 
