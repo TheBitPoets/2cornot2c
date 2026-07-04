@@ -1,6 +1,7 @@
 ﻿const state = {
   headings: [],
   design: null,
+  aiConfig: null,
   draggedHeading: null,
   collapsedHeadingIds: new Set(),
   collapsedCourseItemIds: new Set(),
@@ -16,6 +17,7 @@ const els = {
   searchInput: document.querySelector("#searchInput"),
   courseTree: document.querySelector("#courseTree"),
   status: document.querySelector("#status"),
+  aiConfig: document.querySelector("#aiConfig"),
   reloadBtn: document.querySelector("#reloadBtn"),
   saveBtn: document.querySelector("#saveBtn"),
   courseAiDialog: document.querySelector("#courseAiDialog"),
@@ -127,16 +129,28 @@ async function responseErrorMessage(response) {
 
 async function loadAll() {
   setStatus("Caricamento...");
-  const [headingsPayload, design] = await Promise.all([
+  const [headingsPayload, design, aiConfig] = await Promise.all([
     api("/api/headings"),
     api("/api/course-design"),
+    api("/api/ai-config"),
   ]);
   state.headings = headingsPayload.headings;
   state.design = design;
+  state.aiConfig = aiConfig;
   populateFilters();
+  renderAiConfig();
   renderHeadings();
   renderCourse();
   setStatus("Pronto.");
+}
+
+function renderAiConfig() {
+  if (!state.aiConfig) {
+    els.aiConfig.textContent = "AI: configurazione non caricata.";
+    return;
+  }
+  const keyStatus = state.aiConfig.api_key_configured ? "API key impostata" : "API key non impostata";
+  els.aiConfig.textContent = `AI: ${state.aiConfig.provider} · modello ${state.aiConfig.model} · ${keyStatus} · ${state.aiConfig.billing_note}`;
 }
 
 function populateFilters() {

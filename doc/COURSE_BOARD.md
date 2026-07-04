@@ -211,6 +211,15 @@ Se non imposti `AI_PROVIDER`, il server usa `openai`.
 
 `ChatGPT Free` non e un provider API per automazioni locali: e l'interfaccia web/app di ChatGPT. Per questo non viene usato direttamente dalla board, perche richiederebbe automazioni fragili del browser e non una integrazione API pulita.
 
+La board mostra nella sezione `Percorso didattico` la configurazione AI attiva:
+
+- provider selezionato;
+- modello selezionato;
+- presenza o assenza della API key;
+- nota su quota, billing o free tier.
+
+La board non mostra mai il valore della API key. Inoltre non puo sapere con certezza se il tuo account stia usando un piano gratuito, credito residuo o billing a pagamento: puo solo mostrare il provider configurato e una nota orientativa.
+
 ### Regola di sicurezza importante
 
 Non scrivere mai una API key dentro:

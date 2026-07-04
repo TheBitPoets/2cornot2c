@@ -772,6 +772,27 @@ def call_ai_course_plan(payload: dict) -> dict:
     raise RuntimeError(f"Provider AI non supportato: {provider}. Usa AI_PROVIDER=openai oppure AI_PROVIDER=gemini.")
 
 
+def ai_config() -> dict:
+    """Return safe AI provider configuration for the board UI."""
+
+    provider = os.environ.get("AI_PROVIDER", "openai").strip().lower()
+    if provider == "gemini":
+      model = os.environ.get("GEMINI_MODEL") or os.environ.get("AI_MODEL", "gemini-3-flash-preview")
+      return {
+          "provider": "gemini",
+          "model": model,
+          "api_key_configured": bool(os.environ.get("GEMINI_API_KEY")),
+          "billing_note": "Gemini puo avere free tier su Google AI Studio, ma quota e limiti dipendono dall'account.",
+      }
+    model = os.environ.get("OPENAI_MODEL") or os.environ.get("AI_MODEL", "gpt-5.5")
+    return {
+        "provider": provider,
+        "model": model,
+        "api_key_configured": bool(os.environ.get("OPENAI_API_KEY")),
+        "billing_note": "OpenAI API usa quota/billing API separati da ChatGPT Free/Plus.",
+    }
+
+
 class CourseBoardHandler(BaseHTTPRequestHandler):
     """HTTP handler for the local board and its JSON API."""
 
@@ -782,6 +803,9 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/course-design":
             self.write_json(read_design())
+            return
+        if parsed.path == "/api/ai-config":
+            self.write_json(ai_config())
             return
         self.serve_static(parsed.path)
 
