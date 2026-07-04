@@ -828,7 +828,6 @@ def call_chat_completions_json(provider_name: str, url: str, api_key: str, model
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": json.dumps(payload, ensure_ascii=False, indent=2)},
         ],
-        "response_format": {"type": "json_object"},
     }
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -850,9 +849,24 @@ def call_chat_completions_json(provider_name: str, url: str, api_key: str, model
         detail = error.read().decode("utf-8", errors="replace")
         raise RuntimeError(f"Errore {provider_name} API {error.code}: {detail}") from error
     try:
-        return json.loads(data["choices"][0]["message"]["content"])
+        return parse_json_object(data["choices"][0]["message"]["content"])
     except (KeyError, IndexError, json.JSONDecodeError) as error:
         raise RuntimeError(f"La risposta {provider_name} non contiene JSON utilizzabile.") from error
+
+
+def parse_json_object(text: str) -> dict:
+    """Parse a JSON object, tolerating markdown fences around it."""
+
+    text = text.strip()
+    if text.startswith("```"):
+        text = re.sub(r"^```(?:json)?", "", text).strip()
+        text = re.sub(r"```$", "", text).strip()
+    if not text.startswith("{"):
+        start = text.find("{")
+        end = text.rfind("}")
+        if start >= 0 and end > start:
+            text = text[start:end + 1]
+    return json.loads(text)
 
 
 def call_groq_didactic_frame(payload: dict) -> dict:
