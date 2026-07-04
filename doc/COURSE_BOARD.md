@@ -664,7 +664,7 @@ Se la richiesta fallisce, la board mostra il dettaglio restituito dal server o d
 
 ### Generare le cornici di tutto il percorso
 
-Il bottone `Genera cornici` prova a generare le cornici didattiche per tutti gli argomenti presenti nel percorso corrente.
+Il bottone `Genera cornici` prepara una coda controllata con tutti gli argomenti presenti nel percorso corrente.
 
 Il processo e ricorsivo:
 
@@ -675,7 +675,14 @@ Il processo e ricorsivo:
 
 Questo significa che, se nel percorso sono presenti argomenti H1, H2, H3, H4, H5 o H6, la board puo generare la cornice anche per i livelli piu profondi.
 
-La generazione avviene in sequenza, una cornice alla volta. Se un provider restituisce errore, la generazione si interrompe e la board mostra il dettaglio dell'errore.
+La generazione non parte subito quando clicchi il bottone globale. Dopo il clic puoi scegliere:
+
+- `Genera prossimo`: genera una sola cornice e poi si ferma;
+- `Genera tutti`: genera in sequenza tutte le cornici della coda;
+- `Chiudi`: chiude la coda mantenendo le cornici gia generate;
+- `Annulla`: ripristina le cornici allo stato precedente all'apertura della coda.
+
+Se un provider restituisce errore, la generazione si interrompe e la board mostra il dettaglio dell'errore.
 
 Prima di usare questo comando su un percorso grande, considera che puo consumare molte chiamate API.
 

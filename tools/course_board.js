@@ -813,8 +813,16 @@ function collectSubtreeItems(year, uda, item) {
 }
 
 function openFrameBatch(year, uda, item, entries) {
+  openFrameBatchQueue(item.title, entries, `Coda AI pronta: ${entries.length} cornici da generare per "${item.title}" e sottoparagrafi.`);
+}
+
+function openFrameBatchQueue(rootTitle, entries, message) {
+  if (frameBatch) {
+    setStatus("Una coda AI e gia in esecuzione: chiudila o attendi il completamento prima di avviarne un'altra.");
+    return;
+  }
   frameBatch = {
-    rootTitle: item.title,
+    rootTitle,
     entries,
     index: 0,
     running: false,
@@ -825,7 +833,8 @@ function openFrameBatch(year, uda, item, entries) {
       frame: JSON.parse(JSON.stringify({ ...defaultFrame(), ...(entry.item.frame || {}) })),
     })),
   };
-  setStatus(`Coda AI pronta: ${entries.length} cornici da generare per "${item.title}" e sottoparagrafi.`);
+  els.generateAllFramesBtn.disabled = true;
+  setStatus(message);
   showFrameBatchProgress();
 }
 
@@ -858,6 +867,8 @@ async function generateNextFrameInBatch() {
     setStatus(`Generazione cornice interrotta. Dettaglio provider/server: ${error.message}`);
     failAiProgress(`Errore provider/server: ${error.message}`);
     frameBatch = null;
+    els.aiBusyControls.hidden = true;
+    els.generateAllFramesBtn.disabled = false;
     return;
   } finally {
     if (frameBatch) frameBatch.running = false;
@@ -891,13 +902,17 @@ async function generateAllFramesInBatch() {
       return;
     }
     setStatus(`Generate ${frameBatch.entries.length} cornici per "${frameBatch.rootTitle}". Ricordati di salvare il JSON.`);
+    els.aiBusyControls.hidden = true;
     stopAiProgress("Cornici didattiche generate.");
     frameBatch = null;
+    els.generateAllFramesBtn.disabled = false;
   } catch (error) {
     if (frameBatch) frameBatch.running = false;
     setStatus(`Generazione cornice interrotta. Dettaglio provider/server: ${error.message}`);
     failAiProgress(`Errore provider/server: ${error.message}`);
     frameBatch = null;
+    els.aiBusyControls.hidden = true;
+    els.generateAllFramesBtn.disabled = false;
   }
 }
 
@@ -915,6 +930,7 @@ function closeFrameBatch() {
   frameBatch = null;
   els.aiBusy.hidden = true;
   els.aiBusyControls.hidden = true;
+  els.generateAllFramesBtn.disabled = false;
   setStatus(`Coda chiusa: mantenute ${done}/${total} cornici generate. Ricordati di salvare il JSON.`);
 }
 
@@ -935,6 +951,7 @@ function cancelFrameBatch() {
   renderCourse();
   els.aiBusy.hidden = true;
   els.aiBusyControls.hidden = true;
+  els.generateAllFramesBtn.disabled = false;
   setStatus(`Generazione annullata: ripristinate le ${total} cornici della coda.`);
 }
 
@@ -949,6 +966,7 @@ function finishCancelledFrameBatch() {
     renderCourse();
     els.aiBusy.hidden = true;
     els.aiBusyControls.hidden = true;
+    els.generateAllFramesBtn.disabled = false;
     setStatus(`Generazione annullata: ripristinate le ${total} cornici della coda.`);
     return;
   }
@@ -957,6 +975,7 @@ function finishCancelledFrameBatch() {
   frameBatch = null;
   els.aiBusy.hidden = true;
   els.aiBusyControls.hidden = true;
+  els.generateAllFramesBtn.disabled = false;
   setStatus(`Generazione fermata dopo ${done}/${total} cornici. Ricordati di salvare il JSON.`);
 }
 
@@ -1029,34 +1048,11 @@ async function generateAllFrames() {
     setStatus("Nessun argomento nel percorso: non ci sono cornici da generare.");
     return;
   }
-  if (!confirm(`Generare o aggiornare le cornici didattiche per ${entries.length} argomenti? L'operazione puo richiedere tempo.`)) return;
-  els.generateAllFramesBtn.disabled = true;
-  startAiProgress(`AI assisted cornici: ${entries.length} argomenti`);
-  try {
-    for (const [index, entry] of entries.entries()) {
-      const percent = Math.min(95, Math.round((index / entries.length) * 95));
-      updateAiProgress(percent, `Genero cornice ${index + 1}/${entries.length}: ${entry.item.title}`);
-      setStatus(`Genero cornice ${index + 1}/${entries.length}: ${entry.item.title}`);
-      const payload = await api("/api/ai-frame", {
-        method: "POST",
-        body: JSON.stringify({
-          design: state.design,
-          year_id: entry.year.id,
-          uda_id: entry.uda.id,
-          item_id: entry.item.id,
-        }),
-      });
-      entry.item.frame = { ...defaultFrame(), ...(entry.item.frame || {}), ...payload.frame, status: "draft" };
-    }
-    renderCourse();
-    stopAiProgress("Cornici didattiche generate.");
-    setStatus(`Generate ${entries.length} cornici didattiche. Ricordati di salvare il JSON.`);
-  } catch (error) {
-    failAiProgress(`Errore provider/server: ${error.message}`);
-    setStatus(`Generazione cornici interrotta. Dettaglio provider/server: ${error.message}`);
-  } finally {
-    els.generateAllFramesBtn.disabled = false;
-  }
+  openFrameBatchQueue(
+    "Tutto il percorso",
+    entries,
+    `Coda AI pronta: ${entries.length} cornici da generare per tutto il percorso. Usa "Genera prossimo" per procedere uno step alla volta oppure "Genera tutti" per avviare la sequenza completa.`
+  );
 }
 
 function moveItem(items, index, delta) {
