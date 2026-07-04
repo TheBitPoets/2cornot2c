@@ -629,7 +629,15 @@ def course_plan_system_prompt() -> str:
 def normalize_frame(result: dict) -> dict:
     """Keep only the expected didactic-frame fields as stripped strings."""
 
-    return {field: str(result.get(field, "")).strip() for field in AI_FRAME_FIELDS}
+    if isinstance(result.get("frame"), dict):
+        result = result["frame"]
+    frame = {field: str(result.get(field, "")).strip() for field in AI_FRAME_FIELDS}
+    if not any(frame.values()):
+        raise RuntimeError(
+            "Il provider AI ha risposto correttamente, ma non ha compilato nessun campo della cornice didattica. "
+            "Prova un modello diverso o un provider diverso."
+        )
+    return frame
 
 
 def normalize_course_plan(raw: dict, design: dict, year_id: str) -> dict:
@@ -858,7 +866,7 @@ def call_groq_didactic_frame(payload: dict) -> dict:
         "https://api.groq.com/openai/v1/chat/completions",
         api_key,
         active_ai_model(),
-        didactic_frame_system_prompt() + " Restituisci solo JSON con i campi richiesti.",
+        didactic_frame_system_prompt() + " Restituisci solo JSON con questi campi top-level: context, prerequisites, objectives, recall, preview, next_step, references.",
         payload,
     )
     return normalize_frame(result)
@@ -875,7 +883,7 @@ def call_openrouter_didactic_frame(payload: dict) -> dict:
         "https://openrouter.ai/api/v1/chat/completions",
         api_key,
         active_ai_model(),
-        didactic_frame_system_prompt() + " Restituisci solo JSON con i campi richiesti.",
+        didactic_frame_system_prompt() + " Restituisci solo JSON con questi campi top-level: context, prerequisites, objectives, recall, preview, next_step, references.",
         payload,
     )
     return normalize_frame(result)

@@ -802,7 +802,9 @@ Se vedi un errore nella barra di stato della board:
 - `Configura GEMINI_API_KEY`: hai scelto Gemini ma non hai impostato la chiave;
 - `Provider AI non supportato`: `AI_PROVIDER` contiene un valore diverso da `openai` o `gemini`;
 - errore `401` o `403`: chiave non valida, scaduta o non autorizzata;
+- errore Groq `403` con codice `1010`: probabile blocco lato Groq/Cloudflare/rete/account, non errore della board;
 - errore `429`: quota o rate limit superato;
+- messaggio `non ha compilato nessun campo`: il provider ha risposto con JSON vuoto o non compatibile; prova un altro modello o provider;
 - errore `500`: controlla il terminale dove e avviato il server, perche li trovi il dettaglio tecnico.
 
 ## Generazione del percorso didattico
