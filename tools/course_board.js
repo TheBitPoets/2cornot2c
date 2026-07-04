@@ -18,6 +18,16 @@ const els = {
   saveBtn: document.querySelector("#saveBtn"),
 };
 
+const FRAME_FIELDS = [
+  { key: "context", label: "Contesto" },
+  { key: "prerequisites", label: "Prerequisiti" },
+  { key: "objectives", label: "Obiettivi" },
+  { key: "recall", label: "Richiamo" },
+  { key: "preview", label: "Anticipazione" },
+  { key: "next_step", label: "Prossimo passo" },
+  { key: "references", label: "Rimando" },
+];
+
 function setStatus(message) {
   els.status.textContent = message;
 }
@@ -191,9 +201,7 @@ function itemFromHeading(heading) {
     href: heading.href,
     level: heading.level,
     line: heading.line,
-    frame: {
-      status: "todo"
-    }
+    frame: defaultFrame()
   };
   const children = childItemsFromHeading(heading);
   if (children.length) item.children = children;
@@ -215,9 +223,7 @@ function childItemsFromHeading(parentHeading) {
       href: heading.href,
       level: heading.level,
       line: heading.line,
-      frame: {
-        status: "todo"
-      }
+      frame: defaultFrame()
     };
     while (stack.length && heading.level <= stack.at(-1).level) {
       stack.pop();
@@ -233,6 +239,19 @@ function childItemsFromHeading(parentHeading) {
   };
   roots.forEach(pruneEmptyChildren);
   return roots;
+}
+
+function defaultFrame() {
+  return {
+    status: "todo",
+    context: "",
+    prerequisites: "",
+    objectives: "",
+    recall: "",
+    preview: "",
+    next_step: "",
+    references: ""
+  };
 }
 
 function renderCourse() {
@@ -323,6 +342,7 @@ function renderItem(uda, siblings, item, index, depth) {
   node.className = "item";
   node.style.setProperty("--item-depth", depth);
   const children = item.children || [];
+  item.frame = { ...defaultFrame(), ...(item.frame || {}) };
   const collapseKey = `${uda.id}:${item.id}`;
   const isCollapsed = state.collapsedCourseItemIds.has(collapseKey);
   node.innerHTML = `
@@ -361,6 +381,7 @@ function renderItem(uda, siblings, item, index, depth) {
   node.querySelector('[data-action="up"]').addEventListener("click", () => moveItem(siblings, index, -1));
   node.querySelector('[data-action="down"]').addEventListener("click", () => moveItem(siblings, index, 1));
   node.querySelector('[data-action="remove"]').addEventListener("click", () => removeItem(siblings, index));
+  node.append(renderFrameEditor(item));
   if (children.length && !isCollapsed) {
     const childList = document.createElement("div");
     childList.className = "itemChildren";
@@ -368,6 +389,47 @@ function renderItem(uda, siblings, item, index, depth) {
     node.append(childList);
   }
   return node;
+}
+
+function renderFrameEditor(item) {
+  const details = document.createElement("details");
+  details.className = "frameEditor";
+  details.innerHTML = `
+    <summary>Cornice didattica</summary>
+    <div class="frameGrid">
+      <label>
+        <span>Stato</span>
+        <select data-frame-field="status">
+          <option value="todo">todo</option>
+          <option value="draft">draft</option>
+          <option value="review">review</option>
+          <option value="done">done</option>
+        </select>
+      </label>
+    </div>
+  `;
+  const grid = details.querySelector(".frameGrid");
+  const status = details.querySelector('[data-frame-field="status"]');
+  status.value = item.frame.status || "todo";
+  status.addEventListener("change", () => {
+    item.frame.status = status.value;
+    renderCourse();
+  });
+
+  for (const field of FRAME_FIELDS) {
+    const label = document.createElement("label");
+    label.innerHTML = `
+      <span>${escapeHtml(field.label)}</span>
+      <textarea data-frame-field="${field.key}" rows="2"></textarea>
+    `;
+    const textarea = label.querySelector("textarea");
+    textarea.value = item.frame[field.key] || "";
+    textarea.addEventListener("input", () => {
+      item.frame[field.key] = textarea.value;
+    });
+    grid.append(label);
+  }
+  return details;
 }
 
 function moveItem(items, index, delta) {

@@ -101,6 +101,18 @@ button, select, input {
   font: 700 .88rem/1.2 var(--mono);
 }
 
+textarea {
+  width: 100%;
+  min-height: 4.2rem;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: .9rem;
+  background: #ffffff;
+  color: var(--ink);
+  font: .78rem/1.45 var(--mono);
+  padding: .65rem .75rem;
+}
+
 button {
   cursor: pointer;
   padding: .72rem 1rem;
@@ -322,6 +334,42 @@ input, select { width: 100%; padding: .72rem .9rem; }
   border-top: 1px solid rgba(17, 17, 17, .08);
 }
 
+.frameEditor {
+  margin-top: .55rem;
+  border-top: 1px solid rgba(17, 17, 17, .08);
+  padding-top: .55rem;
+}
+
+.frameEditor summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: .75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.frameGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .65rem;
+  margin-top: .7rem;
+}
+
+.frameGrid label {
+  display: grid;
+  gap: .28rem;
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 700;
+}
+
+.frameGrid select {
+  width: 100%;
+  padding: .55rem .7rem;
+  font-size: .76rem;
+}
+
 .empty {
   color: var(--muted);
   font-style: italic;
@@ -333,4 +381,5 @@ input, select { width: 100%; padding: .72rem .9rem; }
   .board { grid-template-columns: 1fr; }
   .panel { min-height: auto; }
   .headingList, .courseTree { height: auto; max-height: 60vh; }
+  .frameGrid { grid-template-columns: 1fr; }
 }

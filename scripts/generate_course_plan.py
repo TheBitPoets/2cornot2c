@@ -8,6 +8,15 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_INPUT = ROOT / "doc" / "course_design.json"
 DEFAULT_OUTPUT = ROOT / "doc" / "PERCORSO_DIDATTICO.md"
+FRAME_FIELDS = [
+    ("context", "Contesto"),
+    ("prerequisites", "Prerequisiti"),
+    ("objectives", "Obiettivi"),
+    ("recall", "Richiamo"),
+    ("preview", "Anticipazione"),
+    ("next_step", "Prossimo passo"),
+    ("references", "Rimando"),
+]
 
 
 def load_design(path: Path) -> dict[str, Any]:
@@ -42,7 +51,20 @@ def render_items(items: list[dict[str, Any]], depth: int = 0) -> list[str]:
         level = item.get("level", "?")
         status = item.get("frame", {}).get("status", "todo")
         lines.append(f"{indent}- {title} `{source}` H{level} `{status}`")
+        lines.extend(render_frame(item.get("frame", {}), depth + 1))
         lines.extend(render_items(item.get("children", []), depth + 1))
+    return lines
+
+
+def render_frame(frame: dict[str, Any], depth: int) -> list[str]:
+    """Render filled didactic-frame fields below a topic."""
+    lines: list[str] = []
+    indent = "  " * depth
+    for key, label in FRAME_FIELDS:
+        value = str(frame.get(key, "")).strip()
+        if not value:
+            continue
+        lines.append(f"{indent}- **{label}:** {value}")
     return lines
 
 

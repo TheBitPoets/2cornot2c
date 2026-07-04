@@ -23,8 +23,28 @@ http://127.0.0.1:8765/tools/course_board.html
 - mostra anni, UDA e settimane nella colonna destra;
 - permette di trascinare un paragrafo dentro una UDA;
 - permette di riordinare e rimuovere gli elementi assegnati;
+- permette di compilare una cornice didattica per ogni argomento assegnato;
 - salva la struttura in `doc/course_design.json`;
 - genera `doc/PERCORSO_DIDATTICO.md` a partire dal JSON della board.
+
+## Cornice didattica degli argomenti
+
+Ogni argomento inserito in una UDA puo avere una cornice didattica compilabile dalla board.
+
+I campi disponibili sono:
+
+- `Stato`: avanzamento della progettazione dell'argomento (`todo`, `draft`, `review`, `done`);
+- `Contesto`: dove si colloca l'argomento nel percorso;
+- `Prerequisiti`: cosa gli studenti devono gia sapere;
+- `Obiettivi`: cosa devono saper fare alla fine;
+- `Richiamo`: collegamenti a concetti gia incontrati;
+- `Anticipazione`: concetti che verranno ripresi piu avanti;
+- `Prossimo passo`: cosa studiare o fare subito dopo;
+- `Rimando`: link o riferimenti utili.
+
+Nel file `doc/course_design.json` questi dati vengono salvati dentro il campo `frame` di ogni item.
+
+Nel documento generato `doc/PERCORSO_DIDATTICO.md` vengono mostrati solo i campi compilati, cosi la bozza resta leggibile anche quando molte cornici sono ancora vuote.
 
 ## Generazione del percorso didattico
 
