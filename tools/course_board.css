@@ -25,61 +25,29 @@ body {
   font-family: var(--mono);
 }
 
-.appNav {
+.topNav {
   position: sticky;
-  top: .8rem;
+  top: 0;
   z-index: 20;
-  width: fit-content;
-  margin: .8rem 0 -1.2rem clamp(1rem, 3vw, 3rem);
-}
-
-.appNav details {
-  border: 1px solid rgba(17, 17, 17, .16);
-  border-radius: 20px;
+  display: flex;
+  gap: .35rem;
+  padding: .65rem clamp(1rem, 3vw, 3rem);
+  border-bottom: 1px solid rgba(17, 17, 17, .12);
   background: rgba(255, 255, 255, .94);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, .08);
-  overflow: hidden;
+  backdrop-filter: blur(10px);
 }
 
-.appNav summary {
-  display: grid;
-  place-items: center;
-  min-width: 8.4rem;
-  min-height: 5.2rem;
-  cursor: pointer;
-  padding: .75rem 1rem;
-  color: #ffffff;
-  background:
-    linear-gradient(rgba(255, 255, 255, .58), rgba(255, 255, 255, .58)),
-    url("https://github.com/TheBitPoets.png") center / cover;
-  font: 800 .74rem/1.2 var(--mono);
-  letter-spacing: .12em;
-  text-shadow: 0 1px 8px rgba(0, 0, 0, .65);
-  text-transform: uppercase;
-}
-
-.appNav summary::marker {
-  color: transparent;
-}
-
-.navBrand {
-  padding: .7rem .8rem .55rem;
-  color: var(--warm);
-  font: 800 .7rem/1.2 var(--mono);
-  letter-spacing: .18em;
-  text-transform: uppercase;
-}
-
-.appNav a {
-  display: block;
-  padding: .55rem .8rem;
-  border-top: 1px solid rgba(17, 17, 17, .08);
+.topNav a {
+  border: 1px solid rgba(17, 17, 17, .14);
+  border-radius: 999px;
+  background: #ffffff;
   color: var(--ink);
-  font: 700 .78rem/1.2 var(--mono);
+  font: 800 .78rem/1.2 var(--mono);
+  padding: .55rem .85rem;
   text-decoration: none;
 }
 
-.appNav a[aria-current="page"] {
+.topNav a[aria-current="page"] {
   background: #111111;
   color: #ffffff;
 }
@@ -122,32 +90,6 @@ h1 {
   gap: 1rem;
   flex-wrap: wrap;
   justify-content: flex-end;
-}
-
-.orgBadge {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 3.9rem;
-  height: 3.9rem;
-  border: 1px solid rgba(17, 17, 17, .14);
-  border-radius: 1rem;
-  background: rgba(255, 255, 255, .82);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, .06);
-  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
-}
-
-.orgBadge:hover {
-  border-color: rgba(17, 17, 17, .26);
-  box-shadow: 0 14px 32px rgba(0, 0, 0, .1);
-  transform: translateY(-1px);
-}
-
-.orgBadge img {
-  width: 2.9rem;
-  height: 2.9rem;
-  border-radius: .78rem;
-  display: block;
 }
 
 .actions {
