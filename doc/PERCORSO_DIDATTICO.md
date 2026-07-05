@@ -118,13 +118,9 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
 <table align="center">
 <tr>
-<td width="900" align="center">
-
-<div align="center">
+<td width="900">
 
 ### UDA-1 - Strumenti, primo programma e rappresentazione
-
-</div>
 
 <details>
 <summary><strong>Apri contenuto UDA - Base - 3 settimane</strong></summary>
@@ -1220,13 +1216,9 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
 <table align="center">
 <tr>
-<td width="900" align="center">
-
-<div align="center">
+<td width="900">
 
 ### UDA-2 - Operatori, condizioni e selezione
-
-</div>
 
 <details>
 <summary><strong>Apri contenuto UDA - Base - 3 settimane</strong></summary>
@@ -2104,13 +2096,9 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
 <table align="center">
 <tr>
-<td width="900" align="center">
-
-<div align="center">
+<td width="900">
 
 ### UDA-3 - Cicli e funzioni
-
-</div>
 
 <details>
 <summary><strong>Apri contenuto UDA - Base - 4 settimane</strong></summary>
@@ -2386,13 +2374,9 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
 <table align="center">
 <tr>
-<td width="900" align="center">
-
-<div align="center">
+<td width="900">
 
 ### UDA-4 - Array e stringhe semplici
-
-</div>
 
 <details>
 <summary><strong>Apri contenuto UDA - Base - 4 settimane</strong></summary>
@@ -2711,13 +2695,9 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
 <table align="center">
 <tr>
-<td width="900" align="center">
-
-<div align="center">
+<td width="900">
 
 ### UDA-5 - Struct e consolidamento
-
-</div>
 
 <details>
 <summary><strong>Apri contenuto UDA - Base - 3 settimane</strong></summary>
@@ -2864,13 +2844,9 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
 <table align="center">
 <tr>
-<td width="900" align="center">
-
-<div align="center">
+<td width="900">
 
 ### UDA-6 - Puntatori, array e indirizzi
-
-</div>
 
 <details>
 <summary><strong>Apri contenuto UDA - Intermedio - 4 settimane</strong></summary>
@@ -4178,13 +4154,9 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
 <table align="center">
 <tr>
-<td width="900" align="center">
-
-<div align="center">
+<td width="900">
 
 ### UDA-7 - Memoria automatica, statica e dinamica
-
-</div>
 
 <details>
 <summary><strong>Apri contenuto UDA - Intermedio - 4 settimane</strong></summary>
@@ -4761,13 +4733,9 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
 <table align="center">
 <tr>
-<td width="900" align="center">
-
-<div align="center">
+<td width="900">
 
 ### UDA-8 - Preprocessore, header e compilazione separata
-
-</div>
 
 <details>
 <summary><strong>Apri contenuto UDA - Intermedio - 3 settimane</strong></summary>
@@ -5559,13 +5527,9 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
 <table align="center">
 <tr>
-<td width="900" align="center">
-
-<div align="center">
+<td width="900">
 
 ### UDA-9 - File, Makefile, debugging e progetto
-
-</div>
 
 <details>
 <summary><strong>Apri contenuto UDA - Intermedio - 5 settimane</strong></summary>
@@ -6247,13 +6211,9 @@ Linux programming, processi e thread
 
 <table align="center">
 <tr>
-<td width="900" align="center">
-
-<div align="center">
+<td width="900">
 
 ### UDA-10 - Ripartenza C/Linux, API e qualita
-
-</div>
 
 <details>
 <summary><strong>Apri contenuto UDA - Avanzato - 1-5 settimane</strong></summary>
@@ -6272,13 +6232,9 @@ Linux programming, processi e thread
 
 <table align="center">
 <tr>
-<td width="900" align="center">
-
-<div align="center">
+<td width="900">
 
 ### UDA-11 - Processi
-
-</div>
 
 <details>
 <summary><strong>Apri contenuto UDA - Avanzato - 6-12 settimane</strong></summary>
@@ -6297,13 +6253,9 @@ Linux programming, processi e thread
 
 <table align="center">
 <tr>
-<td width="900" align="center">
-
-<div align="center">
+<td width="900">
 
 ### UDA-12 - Segnali e progetto processi
-
-</div>
 
 <details>
 <summary><strong>Apri contenuto UDA - Avanzato - 13-15 settimane</strong></summary>
@@ -6322,13 +6274,9 @@ Linux programming, processi e thread
 
 <table align="center">
 <tr>
-<td width="900" align="center">
-
-<div align="center">
+<td width="900">
 
 ### UDA-13 - Thread
-
-</div>
 
 <details>
 <summary><strong>Apri contenuto UDA - Avanzato - 16-20 settimane</strong></summary>
@@ -6347,13 +6295,9 @@ Linux programming, processi e thread
 
 <table align="center">
 <tr>
-<td width="900" align="center">
-
-<div align="center">
+<td width="900">
 
 ### UDA-14 - Sincronizzazione
-
-</div>
 
 <details>
 <summary><strong>Apri contenuto UDA - Avanzato - 21-25 settimane</strong></summary>
@@ -6372,13 +6316,9 @@ Linux programming, processi e thread
 
 <table align="center">
 <tr>
-<td width="900" align="center">
-
-<div align="center">
+<td width="900">
 
 ### UDA-15 - I/O, processi e socket intro
-
-</div>
 
 <details>
 <summary><strong>Apri contenuto UDA - Avanzato - 26-28 settimane</strong></summary>
@@ -6397,13 +6337,9 @@ Linux programming, processi e thread
 
 <table align="center">
 <tr>
-<td width="900" align="center">
-
-<div align="center">
+<td width="900">
 
 ### UDA-16 - Sicurezza, CI, manutenzione e progetto finale
-
-</div>
 
 <details>
 <summary><strong>Apri contenuto UDA - Avanzato - 29-33 settimane</strong></summary>
