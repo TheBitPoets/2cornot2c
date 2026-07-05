@@ -25,6 +25,45 @@ body {
   font-family: var(--mono);
 }
 
+.appNav {
+  position: sticky;
+  top: .8rem;
+  z-index: 20;
+  width: fit-content;
+  margin: .8rem 0 -1.2rem clamp(1rem, 3vw, 3rem);
+}
+
+.appNav details {
+  border: 1px solid rgba(17, 17, 17, .16);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .94);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .08);
+  overflow: hidden;
+}
+
+.appNav summary {
+  cursor: pointer;
+  padding: .55rem .8rem;
+  color: var(--warm);
+  font: 800 .74rem/1.2 var(--mono);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.appNav a {
+  display: block;
+  padding: .55rem .8rem;
+  border-top: 1px solid rgba(17, 17, 17, .08);
+  color: var(--ink);
+  font: 700 .78rem/1.2 var(--mono);
+  text-decoration: none;
+}
+
+.appNav a[aria-current="page"] {
+  background: #111111;
+  color: #ffffff;
+}
+
 .hero {
   display: flex;
   align-items: flex-end;
