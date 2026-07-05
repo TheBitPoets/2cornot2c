@@ -30,6 +30,7 @@ body {
   top: 0;
   z-index: 20;
   display: flex;
+  align-items: center;
   gap: .35rem;
   padding: .65rem clamp(1rem, 3vw, 3rem);
   border-bottom: 1px solid rgba(17, 17, 17, .12);
@@ -37,7 +38,26 @@ body {
   backdrop-filter: blur(10px);
 }
 
-.topNav a {
+.topNavBrand {
+  display: grid;
+  place-items: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  margin-right: .25rem;
+  border: 1px solid rgba(17, 17, 17, .14);
+  border-radius: .7rem;
+  background: #ffffff;
+  padding: 0;
+  overflow: hidden;
+}
+
+.topNavBrand img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.topNav a:not(.topNavBrand) {
   border: 1px solid rgba(17, 17, 17, .14);
   border-radius: 999px;
   background: #ffffff;
@@ -47,7 +67,7 @@ body {
   text-decoration: none;
 }
 
-.topNav a[aria-current="page"] {
+.topNav a:not(.topNavBrand)[aria-current="page"] {
   background: #111111;
   color: #ffffff;
 }
