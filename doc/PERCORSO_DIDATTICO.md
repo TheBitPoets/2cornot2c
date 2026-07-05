@@ -91,7 +91,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#guest-additions">Guest Additions</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#guest-additions">Guest Additions</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -349,7 +349,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#big-little-endian">Big &amp; Little endian</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#big-little-endian">Big &amp; Little endian</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -392,7 +392,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#codifica-numeri-decimali">Codifica numeri decimali</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#codifica-numeri-decimali">Codifica numeri decimali</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -434,7 +434,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
         </details>
       </details>
     - <details>
-      <summary><a href="../README.md#codifica-interi-senza-segno">Codifica interi senza segno</a> <code>README.md</code> H4 <code>draft</code></summary>
+      <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#codifica-interi-senza-segno">Codifica interi senza segno</a> <code>README.md</code> H4 <code>draft</code></summary>
 
       - <details>
         <summary><strong>Cornice didattica</strong></summary>
@@ -477,7 +477,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
         </details>
       </details>
     - <details>
-      <summary><a href="../README.md#codifica-interi-con-segno-complemento-a-due">Codifica interi con segno (complemento a due)</a> <code>README.md</code> H4 <code>draft</code></summary>
+      <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#codifica-interi-con-segno-complemento-a-due">Codifica interi con segno (complemento a due)</a> <code>README.md</code> H4 <code>draft</code></summary>
 
       - <details>
         <summary><strong>Cornice didattica</strong></summary>
@@ -521,7 +521,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#mapping-signed---unsigned">Mapping signed - unsigned</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#mapping-signed---unsigned">Mapping signed - unsigned</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -564,7 +564,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#estensione-rappresentazione-binaria-di-un-numero-intero">Estensione rappresentazione binaria di un numero intero</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#estensione-rappresentazione-binaria-di-un-numero-intero">Estensione rappresentazione binaria di un numero intero</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -607,7 +607,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#troncamento-rappresentazione-binaria-di-un-numero">Troncamento rappresentazione binaria di un numero</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#troncamento-rappresentazione-binaria-di-un-numero">Troncamento rappresentazione binaria di un numero</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -650,7 +650,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#addizione-senza-segno">Addizione senza segno</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#addizione-senza-segno">Addizione senza segno</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -693,7 +693,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#addizione-con-segno">Addizione con segno</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#addizione-con-segno">Addizione con segno</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -736,7 +736,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#tipi-di-dato">Tipi di dato</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#tipi-di-dato">Tipi di dato</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -779,7 +779,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#int">`int`</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#int">`int`</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -821,7 +821,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
         </details>
       </details>
     - <details>
-      <summary><a href="../README.md#stampare-int">Stampare `int`</a> <code>README.md</code> H4 <code>draft</code></summary>
+      <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#stampare-int">Stampare `int`</a> <code>README.md</code> H4 <code>draft</code></summary>
 
       - <details>
         <summary><strong>Cornice didattica</strong></summary>
@@ -864,7 +864,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
         </details>
       </details>
     - <details>
-      <summary><a href="../README.md#altri-tipi-interi">Altri tipi interi</a> <code>README.md</code> H4 <code>draft</code></summary>
+      <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#altri-tipi-interi">Altri tipi interi</a> <code>README.md</code> H4 <code>draft</code></summary>
 
       - <details>
         <summary><strong>Cornice didattica</strong></summary>
@@ -907,7 +907,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
         </details>
       </details>
     - <details>
-      <summary><a href="../README.md#stampare-altri-tipi-di-interi">Stampare altri tipi di interi</a> <code>README.md</code> H4 <code>draft</code></summary>
+      <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#stampare-altri-tipi-di-interi">Stampare altri tipi di interi</a> <code>README.md</code> H4 <code>draft</code></summary>
 
       - <details>
         <summary><strong>Cornice didattica</strong></summary>
@@ -950,7 +950,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
         </details>
       </details>
     - <details>
-      <summary><a href="../README.md#overflow-int">Overflow `int`</a> <code>README.md</code> H4 <code>draft</code></summary>
+      <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#overflow-int">Overflow `int`</a> <code>README.md</code> H4 <code>draft</code></summary>
 
       - <details>
         <summary><strong>Cornice didattica</strong></summary>
@@ -1179,7 +1179,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#operatore-di-assegnamento">Operatore di assegnamento: =</a> <code>README.md</code> H4 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#operatore-di-assegnamento">Operatore di assegnamento: =</a> <code>README.md</code> H4 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -1609,7 +1609,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#cast-tra-signed-e-unsigned">Cast tra `signed` e `unsigned`</a> <code>README.md</code> H4 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#cast-tra-signed-e-unsigned">Cast tra `signed` e `unsigned`</a> <code>README.md</code> H4 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -1695,7 +1695,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#if-o-if-else">if o if-else</a> <code>README.md</code> H4 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#if-o-if-else">if o if-else</a> <code>README.md</code> H4 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -1738,7 +1738,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#condizioni-complesse-con-luso-di-operatori-logici-e-condizionali">Condizioni complesse con l'uso di operatori logici e condizionali</a> <code>README.md</code> H4 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#condizioni-complesse-con-luso-di-operatori-logici-e-condizionali">Condizioni complesse con l'uso di operatori logici e condizionali</a> <code>README.md</code> H4 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -1781,7 +1781,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#for">for</a> <code>README.md</code> H4 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#for">for</a> <code>README.md</code> H4 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -1824,7 +1824,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#while">while</a> <code>README.md</code> H4 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#while">while</a> <code>README.md</code> H4 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -1867,7 +1867,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#do-while">do-while</a> <code>README.md</code> H4 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#do-while">do-while</a> <code>README.md</code> H4 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -1910,7 +1910,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#switch">switch</a> <code>README.md</code> H4 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#switch">switch</a> <code>README.md</code> H4 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -1953,7 +1953,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#break-e-continue">break e continue</a> <code>README.md</code> H4 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#break-e-continue">break e continue</a> <code>README.md</code> H4 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -2323,7 +2323,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#inizializzare-un-vettore">Inizializzare un vettore</a> <code>README.md</code> H4 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#inizializzare-un-vettore">Inizializzare un vettore</a> <code>README.md</code> H4 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -2366,7 +2366,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#dimensione-vettore-sizeof">Dimensione vettore (`sizeof`)</a> <code>README.md</code> H4 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#dimensione-vettore-sizeof">Dimensione vettore (`sizeof`)</a> <code>README.md</code> H4 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -2637,7 +2637,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#passaggio-di-strutture-a-funzioni">Passaggio di strutture a funzioni</a> <code>README.md</code> H4 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#passaggio-di-strutture-a-funzioni">Passaggio di strutture a funzioni</a> <code>README.md</code> H4 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -2779,7 +2779,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#puntatori-non-inizializzati">Puntatori non inizializzati</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#puntatori-non-inizializzati">Puntatori non inizializzati</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -2822,7 +2822,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#il-puntatore-nullo-null">Il puntatore nullo (NULL)</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#il-puntatore-nullo-null">Il puntatore nullo (NULL)</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -2864,7 +2864,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
         </details>
       </details>
     - <details>
-      <summary><a href="../README.md#aritmetica-puntatori">Aritmetica puntatori</a> <code>README.md</code> H4 <code>draft</code></summary>
+      <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#aritmetica-puntatori">Aritmetica puntatori</a> <code>README.md</code> H4 <code>draft</code></summary>
 
       - <details>
         <summary><strong>Cornice didattica</strong></summary>
@@ -2908,7 +2908,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#vettori">Vettori</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#vettori">Vettori</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -2950,7 +2950,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
         </details>
       </details>
     - <details>
-      <summary><a href="../README.md#inizializzare-un-vettore">Inizializzare un vettore</a> <code>README.md</code> H4 <code>draft</code></summary>
+      <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#inizializzare-un-vettore">Inizializzare un vettore</a> <code>README.md</code> H4 <code>draft</code></summary>
 
       - <details>
         <summary><strong>Cornice didattica</strong></summary>
@@ -2993,7 +2993,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
         </details>
       </details>
     - <details>
-      <summary><a href="../README.md#dimensione-vettore-sizeof">Dimensione vettore (`sizeof`)</a> <code>README.md</code> H4 <code>draft</code></summary>
+      <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#dimensione-vettore-sizeof">Dimensione vettore (`sizeof`)</a> <code>README.md</code> H4 <code>draft</code></summary>
 
       - <details>
         <summary><strong>Cornice didattica</strong></summary>
@@ -3037,7 +3037,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#relazione-tra-array-e-puntatori">Relazione tra array e puntatori</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#relazione-tra-array-e-puntatori">Relazione tra array e puntatori</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -3080,7 +3080,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#differenza-tra-puntatori">Differenza tra puntatori</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#differenza-tra-puntatori">Differenza tra puntatori</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -3123,7 +3123,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#le-stringhe">Le stringhe</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#le-stringhe">Le stringhe</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -3166,7 +3166,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#dettagli-sullinizializzazione">Dettagli sull'inizializzazione</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#dettagli-sullinizializzazione">Dettagli sull'inizializzazione</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -3209,7 +3209,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#stampare-una-stringa">Stampare una stringa</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#stampare-una-stringa">Stampare una stringa</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -3252,7 +3252,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#funzioni-1">Funzioni</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#funzioni-1">Funzioni</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -3295,7 +3295,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#dichiarazione-di-funzione">Dichiarazione di funzione</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#dichiarazione-di-funzione">Dichiarazione di funzione</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -3338,7 +3338,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#uso-di-void-nelle-funzioni">Uso di void nelle funzioni</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#uso-di-void-nelle-funzioni">Uso di void nelle funzioni</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -3381,7 +3381,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#definizione-di-funzione">Definizione di funzione</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#definizione-di-funzione">Definizione di funzione</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -3424,7 +3424,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#chiamata-di-funzione">Chiamata di funzione</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#chiamata-di-funzione">Chiamata di funzione</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -3467,7 +3467,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#passaggio-di-parametri-per-valore">Passaggio di parametri per valore</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#passaggio-di-parametri-per-valore">Passaggio di parametri per valore</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -3510,7 +3510,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#passaggio-di-parametri-per-indirizzo">Passaggio di parametri per indirizzo</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#passaggio-di-parametri-per-indirizzo">Passaggio di parametri per indirizzo</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -3553,7 +3553,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#passaggio-di-puntatori-const">Passaggio di puntatori const</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#passaggio-di-puntatori-const">Passaggio di puntatori const</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -3596,7 +3596,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#array-come-parametri-a-funzioni">Array come parametri a funzioni</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#array-come-parametri-a-funzioni">Array come parametri a funzioni</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -3639,7 +3639,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#allocazione-dinamica-della-memoria">Allocazione dinamica della memoria</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#allocazione-dinamica-della-memoria">Allocazione dinamica della memoria</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -3682,7 +3682,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#array-bidimensionali">Array bidimensionali</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#array-bidimensionali">Array bidimensionali</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -3725,7 +3725,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#array-di-puntatori">Array di puntatori</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#array-di-puntatori">Array di puntatori</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -3768,7 +3768,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#differenza-tra-array-bidimensionali-e-array-di-puntatori">Differenza tra array bidimensionali e array di puntatori</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#differenza-tra-array-bidimensionali-e-array-di-puntatori">Differenza tra array bidimensionali e array di puntatori</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -3811,7 +3811,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#sezioni-di-memoria-di-un-programma-c">Sezioni di memoria di un programma C</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#sezioni-di-memoria-di-un-programma-c">Sezioni di memoria di un programma C</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -3854,7 +3854,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#linizializzazione-delle-variabili">L'inizializzazione delle variabili</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#linizializzazione-delle-variabili">L'inizializzazione delle variabili</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -3897,7 +3897,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#allocazione-dinamica-di-matrici">Allocazione dinamica di matrici</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#allocazione-dinamica-di-matrici">Allocazione dinamica di matrici</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -3940,7 +3940,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#le-strutture">Le strutture</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#le-strutture">Le strutture</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -3982,7 +3982,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
         </details>
       </details>
     - <details>
-      <summary><a href="../README.md#passaggio-di-strutture-a-funzioni">Passaggio di strutture a funzioni</a> <code>README.md</code> H4 <code>draft</code></summary>
+      <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#passaggio-di-strutture-a-funzioni">Passaggio di strutture a funzioni</a> <code>README.md</code> H4 <code>draft</code></summary>
 
       - <details>
         <summary><strong>Cornice didattica</strong></summary>
@@ -4654,7 +4654,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#la-direttiva-define">La direttiva #define</a> <code>README.md</code> H4 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#la-direttiva-define">La direttiva #define</a> <code>README.md</code> H4 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -4697,7 +4697,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#la-direttiva-include">La direttiva #include</a> <code>README.md</code> H4 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#la-direttiva-include">La direttiva #include</a> <code>README.md</code> H4 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -4740,7 +4740,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#le-direttive-if-ifdef-ifndef">Le direttive #if #ifdef #ifndef</a> <code>README.md</code> H4 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#le-direttive-if-ifdef-ifndef">Le direttive #if #ifdef #ifndef</a> <code>README.md</code> H4 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -4998,7 +4998,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#classi-di-memorizzazione-per-le-funzioni">Classi di memorizzazione per le funzioni</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#classi-di-memorizzazione-per-le-funzioni">Classi di memorizzazione per le funzioni</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -5041,7 +5041,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#classi-di-memorizzazione-riassunto">Classi di memorizzazione: riassunto</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#classi-di-memorizzazione-riassunto">Classi di memorizzazione: riassunto</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -5084,7 +5084,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#suddivisione-in-moduli-di-un-programma">Suddivisione in moduli di un programma</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#suddivisione-in-moduli-di-un-programma">Suddivisione in moduli di un programma</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -5127,7 +5127,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#il-preprocessore">Il preprocessore</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#il-preprocessore">Il preprocessore</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -5169,7 +5169,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
         </details>
       </details>
     - <details>
-      <summary><a href="../README.md#la-direttiva-define">La direttiva #define</a> <code>README.md</code> H4 <code>draft</code></summary>
+      <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#la-direttiva-define">La direttiva #define</a> <code>README.md</code> H4 <code>draft</code></summary>
 
       - <details>
         <summary><strong>Cornice didattica</strong></summary>
@@ -5212,7 +5212,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
         </details>
       </details>
     - <details>
-      <summary><a href="../README.md#la-direttiva-include">La direttiva #include</a> <code>README.md</code> H4 <code>draft</code></summary>
+      <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#la-direttiva-include">La direttiva #include</a> <code>README.md</code> H4 <code>draft</code></summary>
 
       - <details>
         <summary><strong>Cornice didattica</strong></summary>
@@ -5255,7 +5255,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
         </details>
       </details>
     - <details>
-      <summary><a href="../README.md#le-direttive-if-ifdef-ifndef">Le direttive #if #ifdef #ifndef</a> <code>README.md</code> H4 <code>draft</code></summary>
+      <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#le-direttive-if-ifdef-ifndef">Le direttive #if #ifdef #ifndef</a> <code>README.md</code> H4 <code>draft</code></summary>
 
       - <details>
         <summary><strong>Cornice didattica</strong></summary>
@@ -5299,7 +5299,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#eliminazione-temporanea-di-codice">Eliminazione temporanea di codice</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#eliminazione-temporanea-di-codice">Eliminazione temporanea di codice</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
@@ -5342,7 +5342,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
       </details>
     </details>
   - <details>
-    <summary><a href="../README.md#protezione-del-contenuto-dei-file-dintestazione">Protezione del contenuto dei file d'intestazione</a> <code>README.md</code> H3 <code>draft</code></summary>
+    <summary>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="../README.md#protezione-del-contenuto-dei-file-dintestazione">Protezione del contenuto dei file d'intestazione</a> <code>README.md</code> H3 <code>draft</code></summary>
 
     - <details>
       <summary><strong>Cornice didattica</strong></summary>
