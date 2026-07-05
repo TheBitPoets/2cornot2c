@@ -161,6 +161,9 @@ def render_design(design: dict[str, Any]) -> str:
                 "",
                 f"### {uda.get('id', '').upper()} - {uda.get('title', 'UDA senza titolo')}",
                 "",
+                '<table>',
+                '<tr>',
+                '<td>',
                 "<details>",
                 f"<summary><strong>Apri contenuto UDA</strong> - {uda.get('path', 'Da definire')} - {uda.get('weeks', '?')} settimane</summary>",
                 "",
@@ -178,6 +181,9 @@ def render_design(design: dict[str, Any]) -> str:
             lines.extend([
                 "",
                 "</details>",
+                "</td>",
+                "</tr>",
+                "</table>",
             ])
 
     lines.append("")
