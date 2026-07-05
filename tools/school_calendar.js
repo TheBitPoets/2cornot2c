@@ -226,6 +226,10 @@ function renderTracks() {
       input.value = track[field] ?? "";
       input.addEventListener("input", () => {
         track[field] = field === "weekly_hours" ? Number(input.value || 0) : input.value;
+        if (field === "weekly_hours") {
+          normalizeTrackSlots(track);
+          renderTracks();
+        }
         renderSummary();
       });
     });
@@ -235,7 +239,12 @@ function renderTracks() {
     });
     node.querySelector('[data-action="add-slot"]').addEventListener("click", () => {
       track.weekly_slots ||= [];
-      track.weekly_slots.push({ day: "monday", hours: 1, type: "teoria" });
+      const available = availableSlotHours(track);
+      if (available <= 0) {
+        setStatus(`Non puoi aggiungere slot: ${track.label || track.id} ha gia raggiunto ${track.weekly_hours || 0} ore/settimana.`);
+        return;
+      }
+      track.weekly_slots.push({ day: "monday", hours: Math.min(1, available), type: "teoria" });
       renderAll();
     });
     const rows = node.querySelector(".slotRows");
@@ -272,7 +281,18 @@ function renderSlot(track, slot) {
     const field = input.dataset.slotField;
     input.value = slot[field] ?? "";
     input.addEventListener("input", () => {
-      slot[field] = field === "hours" ? Number(input.value || 0) : input.value;
+      if (field === "hours") {
+        const requested = Number(input.value || 0);
+        const max = maxHoursForSlot(track, slot);
+        const accepted = Math.min(requested, max);
+        slot.hours = accepted;
+        if (accepted < requested) {
+          input.value = accepted;
+          setStatus(`Limite ore/settimana raggiunto per ${track.label || track.id}: massimo ${track.weekly_hours || 0} ore totali.`);
+        }
+      } else {
+        slot[field] = input.value;
+      }
       renderSummary();
     });
   });
@@ -281,6 +301,29 @@ function renderSlot(track, slot) {
     renderAll();
   });
   return row;
+}
+
+function slotHoursTotal(track, exceptSlot = null) {
+  return (track.weekly_slots || [])
+    .filter((slot) => slot !== exceptSlot)
+    .reduce((total, slot) => total + Number(slot.hours || 0), 0);
+}
+
+function maxHoursForSlot(track, slot) {
+  return Math.max(0, Number(track.weekly_hours || 0) - slotHoursTotal(track, slot));
+}
+
+function availableSlotHours(track) {
+  return Math.max(0, Number(track.weekly_hours || 0) - slotHoursTotal(track));
+}
+
+function normalizeTrackSlots(track) {
+  let remaining = Number(track.weekly_hours || 0);
+  for (const slot of track.weekly_slots || []) {
+    const current = Number(slot.hours || 0);
+    slot.hours = Math.min(current, Math.max(0, remaining));
+    remaining -= slot.hours;
+  }
 }
 
 function renderClosures() {
