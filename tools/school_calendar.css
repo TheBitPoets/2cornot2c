@@ -62,13 +62,6 @@ body {
   color: transparent;
 }
 
-.appNav summary span {
-  border: 1px solid rgba(255, 255, 255, .44);
-  border-radius: 999px;
-  background: rgba(0, 0, 0, .38);
-  padding: .28rem .62rem;
-}
-
 .navBrand {
   padding: .7rem .8rem .55rem;
   color: var(--warm);
