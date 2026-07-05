@@ -40,6 +40,7 @@ const els = {
 const state = {
   calendars: [],
   calendar: defaultCalendar(),
+  statusTimer: null,
 };
 
 function defaultCalendar() {
@@ -104,8 +105,27 @@ async function api(path, options = {}) {
   return response.json();
 }
 
-function setStatus(message) {
+function setStatus(message, kind = "neutral") {
+  if (state.statusTimer) {
+    clearTimeout(state.statusTimer);
+    state.statusTimer = null;
+  }
   els.status.textContent = message;
+  els.status.classList.toggle("statusError", kind === "error");
+  if (kind === "error") {
+    state.statusTimer = setTimeout(() => {
+      els.status.textContent = "Pronto.";
+      els.status.classList.remove("statusError");
+      state.statusTimer = null;
+    }, 4500);
+  }
+}
+
+function flashFieldError(input) {
+  input.classList.remove("fieldErrorFlash");
+  void input.offsetWidth;
+  input.classList.add("fieldErrorFlash");
+  setTimeout(() => input.classList.remove("fieldErrorFlash"), 1300);
 }
 
 function syncFormToCalendar() {
@@ -241,7 +261,7 @@ function renderTracks() {
       track.weekly_slots ||= [];
       const available = availableSlotHours(track);
       if (available <= 0) {
-        setStatus(`Non puoi aggiungere slot: ${track.label || track.id} ha gia raggiunto ${track.weekly_hours || 0} ore/settimana.`);
+        setStatus(`Non puoi aggiungere slot: ${track.label || track.id} ha gia raggiunto ${track.weekly_hours || 0} ore/settimana.`, "error");
         return;
       }
       track.weekly_slots.push({ day: "monday", hours: Math.min(1, available), type: "teoria" });
@@ -288,7 +308,8 @@ function renderSlot(track, slot) {
         slot.hours = accepted;
         if (accepted < requested) {
           input.value = accepted;
-          setStatus(`Limite ore/settimana raggiunto per ${track.label || track.id}: massimo ${track.weekly_hours || 0} ore totali.`);
+          flashFieldError(input);
+          setStatus(`Limite ore/settimana raggiunto per ${track.label || track.id}: massimo ${track.weekly_hours || 0} ore totali.`, "error");
         }
       } else {
         slot[field] = input.value;

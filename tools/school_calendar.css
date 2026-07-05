@@ -219,6 +219,31 @@ input, select {
   margin: 0;
   color: var(--muted);
   font-size: .9rem;
+  transition: color .2s ease;
+}
+
+.status.statusError {
+  color: #b42318;
+  font-weight: 800;
+}
+
+.fieldErrorFlash {
+  animation: fieldErrorPulse 1.25s ease;
+}
+
+@keyframes fieldErrorPulse {
+  0% {
+    border-color: #b42318;
+    box-shadow: 0 0 0 0 rgba(180, 35, 24, .42);
+  }
+  35% {
+    border-color: #b42318;
+    box-shadow: 0 0 0 5px rgba(180, 35, 24, .16);
+  }
+  100% {
+    border-color: var(--line);
+    box-shadow: none;
+  }
 }
 
 .grid {
