@@ -306,6 +306,62 @@ Nella board la linguetta `Cornice didattica` cambia colore:
 
 In questo modo puoi capire quali argomenti sono gia stati lavorati senza aprire tutte le linguette.
 
+### Scrittura e controllo qualita dei testi
+
+La cornice didattica ha una toolbar unica, subito sotto il titolo `Cornice didattica`.
+
+Per usarla:
+
+1. clicca dentro il campo da modificare;
+2. seleziona una parola o una frase, se vuoi;
+3. clicca il comando della toolbar.
+
+I comandi disponibili sono:
+
+- `B`: inserisce grassetto con `**testo**`;
+- `I`: inserisce corsivo con `_testo_`;
+- `code`: inserisce codice inline con backtick;
+- `• lista`: crea un elenco puntato;
+- `1. lista`: crea un elenco numerato;
+- `Controlla testo`: propone correzioni locali sicure e le applica solo dopo conferma;
+- `AI grammatica`: usa il provider AI configurato per correggere errori contestuali e applica il risultato solo dopo conferma.
+
+Il controllo locale non prova a interpretare il senso della frase. Serve solo per correzioni meccaniche sicure:
+
+- accenti mancanti in parole come `perche`, `piu`, `puo`, `gia`, `cosi`;
+- forme come `qual e`;
+- apostrofo al posto dell'accento in `e'` o `E'`.
+
+Il controllo locale non corregge `e` in `è`, perche quella scelta dipende dal significato della frase.
+
+Per casi contestuali, usa `AI grammatica`. Il server manda solo il campo attivo al provider AI selezionato e chiede una revisione conservativa:
+
+- correggere ortografia, grammatica, accenti e refusi;
+- capire dal contesto se serve `e` oppure `è`;
+- non cambiare il contenuto tecnico;
+- non aggiungere esempi o spiegazioni;
+- preservare la formattazione leggera.
+
+La UI mostra le modifiche proposte e chiede conferma prima di applicare il testo corretto.
+
+`AI grammatica` usa le stesse API key e lo stesso provider configurato nella board, quindi puo consumare quota del provider.
+
+Ogni campo della cornice mostra anche uno stato di controllo:
+
+- pallino rosso: campo non ancora controllato oppure modificato dopo l'ultimo controllo;
+- pallino giallo: campo passato dal controllo locale `Controlla testo`;
+- pallino verde: campo passato da `AI grammatica`.
+
+Se modifichi manualmente un campo gia controllato, lo stato torna rosso per ricordarti che il testo e cambiato e va ricontrollato.
+
+Quando le cornici vengono inserite nel `README.md`, `scripts/update_course_frames.py` converte questa formattazione leggera in HTML sicuro:
+
+- `**testo**` diventa `<strong>testo</strong>`;
+- `_testo_` diventa `<em>testo</em>`;
+- `` `codice` `` diventa `<code>codice</code>`;
+- righe `- voce` diventano `<ul><li>voce</li></ul>`;
+- righe `1. voce` diventano `<ol><li>voce</li></ol>`.
+
 ### Aggiornare le cornici dentro il README
 
 Le cornici didattiche possono essere inserite anche direttamente nei paragrafi del `README.md`.

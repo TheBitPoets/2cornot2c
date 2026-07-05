@@ -21,12 +21,12 @@
         <select id="savedDesignSelect" aria-label="Percorsi didattici salvati">
           <option value="">Percorsi salvati</option>
         </select>
-        <button id="loadSavedDesignBtn" type="button">Carica archiviato</button>
-        <button id="saveArchiveBtn" type="button">Aggiorna archivio</button>
-        <button id="generateAllFramesBtn" type="button">Genera cornici</button>
-        <button id="generateCoursePlanMdBtn" type="button">Aggiorna percorso MD</button>
-        <button id="reloadBtn" type="button">Ricarica</button>
-        <button id="saveBtn" type="button" class="primary">Imposta corrente</button>
+        <button id="loadSavedDesignBtn" type="button" title="Carica nella board un percorso salvato da doc/course_designs.">Carica archiviato</button>
+        <button id="saveArchiveBtn" type="button" title="Salva la struttura corrente come percorso archiviato in doc/course_designs.">Aggiorna archivio</button>
+        <button id="generateAllFramesBtn" type="button" title="Usa il provider AI configurato e apre una coda controllata per generare le cornici didattiche del percorso.">AI genera cornici</button>
+        <button id="generateCoursePlanMdBtn" type="button" title="Salva il JSON corrente e rigenera doc/PERCORSO_DIDATTICO.md.">Aggiorna percorso MD</button>
+        <button id="reloadBtn" type="button" title="Ricarica headings, percorso, archivi e configurazione AI dalla sorgente locale.">Ricarica</button>
+        <button id="saveBtn" type="button" class="primary" title="Salva la struttura corrente in doc/course_design.json.">Imposta corrente</button>
       </div>
     </div>
   </header>
@@ -70,10 +70,10 @@
         <span id="aiBusyBarFill"></span>
       </div>
       <div id="aiBusyControls" class="aiBusyControls" hidden>
-        <button id="aiBusyNextBtn" type="button">Genera prossimo</button>
-        <button id="aiBusyAllBtn" type="button" class="primary">Genera tutti</button>
-        <button id="aiBusyCloseBtn" type="button">Chiudi</button>
-        <button id="aiBusyCancelBtn" type="button">Annulla</button>
+        <button id="aiBusyNextBtn" type="button" title="Usa il provider AI configurato per generare solo la prossima cornice nella coda.">AI genera prossimo</button>
+        <button id="aiBusyAllBtn" type="button" class="primary" title="Usa il provider AI configurato per generare in sequenza tutte le cornici rimaste nella coda.">AI genera tutti</button>
+        <button id="aiBusyCloseBtn" type="button" title="Chiude la coda mantenendo le cornici gia generate.">Chiudi</button>
+        <button id="aiBusyCancelBtn" type="button" title="Annulla la coda e ripristina le cornici allo stato precedente.">Annulla</button>
       </div>
     </div>
   </div>
@@ -92,7 +92,7 @@
           <p class="eyebrow">AI assisted percorso</p>
           <h2 id="courseAiTitle">Genera percorso</h2>
         </div>
-        <button id="courseAiCloseBtn" type="button">Chiudi</button>
+        <button id="courseAiCloseBtn" type="button" title="Chiude la finestra senza applicare la proposta.">Chiudi</button>
       </header>
 
       <div class="briefGrid">
@@ -136,8 +136,8 @@
       </label>
 
       <div class="courseAiActions">
-        <button id="courseAiGenerateBtn" type="button" class="primary">Genera proposta</button>
-        <button id="courseAiApplyBtn" type="button" disabled>Applica proposta</button>
+        <button id="courseAiGenerateBtn" type="button" class="primary" title="Invia il brief al provider AI e genera una proposta di percorso.">AI genera proposta</button>
+        <button id="courseAiApplyBtn" type="button" disabled title="Applica alla board la proposta AI generata.">Applica proposta</button>
       </div>
 
       <section id="courseAiPreview" class="courseAiPreview">

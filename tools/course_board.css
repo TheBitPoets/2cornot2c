@@ -420,11 +420,23 @@ input, select { width: 100%; padding: .72rem .9rem; }
 }
 
 .frameEditor.frameEmpty summary {
-  color: #8a8a8a;
+  color: #b42318;
+}
+
+.frameEditor.framePartial summary {
+  color: #9a7600;
 }
 
 .frameEditor.frameReady summary {
   color: #0f5132;
+}
+
+.frameEditor.frameEmpty {
+  border-top-color: rgba(180, 35, 24, .24);
+}
+
+.frameEditor.framePartial {
+  border-top-color: rgba(217, 164, 0, .28);
 }
 
 .frameEditor.frameReady {
@@ -444,6 +456,88 @@ input, select { width: 100%; padding: .72rem .9rem; }
   color: var(--muted);
   font-size: .72rem;
   font-weight: 700;
+}
+
+.frameFieldTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+}
+
+.qualityDot {
+  display: inline-block;
+  width: .55rem;
+  height: .55rem;
+  border-radius: 999px;
+  background: #b42318;
+  box-shadow: 0 0 0 2px rgba(180, 35, 24, .12);
+}
+
+.frameGrid label[data-quality-state="local"] .qualityDot {
+  background: #d9a400;
+  box-shadow: 0 0 0 2px rgba(217, 164, 0, .16);
+}
+
+.frameGrid label[data-quality-state="ai"] .qualityDot {
+  background: #0f8a4b;
+  box-shadow: 0 0 0 2px rgba(15, 138, 75, .16);
+}
+
+.frameGrid label textarea {
+  border-color: rgba(180, 35, 24, .38);
+}
+
+.frameGrid label[data-quality-state="local"] textarea {
+  border-color: rgba(217, 164, 0, .62);
+}
+
+.frameGrid label[data-quality-state="ai"] textarea {
+  border-color: rgba(15, 138, 75, .58);
+}
+
+.frameToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem;
+  margin-top: .55rem;
+}
+
+.frameToolbar button {
+  border-radius: 10px;
+  padding: .24rem .38rem;
+  font-size: .66rem;
+  font-weight: 700;
+}
+
+.frameToolbar [data-format="check"] {
+  border-color: rgba(217, 164, 0, .72);
+}
+
+.frameToolbar [data-format="ai-proofread"] {
+  border-color: rgba(15, 138, 75, .72);
+}
+
+.textQuality {
+  margin: .45rem 0 0;
+  border-radius: 12px;
+  padding: .45rem .55rem;
+  font-size: .68rem;
+  line-height: 1.35;
+}
+
+.textQualityOk {
+  background: #edf8f1;
+  color: #0f5132;
+}
+
+.textQualityWarn {
+  background: #fff5df;
+  color: #6b4700;
+}
+
+.textQualityNeutral {
+  background: #f4f4f4;
+  color: var(--muted);
 }
 
 .frameGrid select {

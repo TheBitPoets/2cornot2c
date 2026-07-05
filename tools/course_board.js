@@ -9,6 +9,7 @@
   collapsedCourseItemIds: new Set(),
   courseAiYearId: null,
   courseAiProposal: null,
+  activeFrameTextarea: null,
 };
 
 const els = {
@@ -62,6 +63,21 @@ const FRAME_FIELDS = [
   { key: "preview", label: "Anticipazione" },
   { key: "next_step", label: "Prossimo passo" },
   { key: "references", label: "Rimando" },
+];
+
+const TEXT_QUALITY_FIXES = [
+  { pattern: /\bperche\b/gi, replacement: "perché", label: "perche -> perché" },
+  { pattern: /\bpoiche\b/gi, replacement: "poiché", label: "poiche -> poiché" },
+  { pattern: /\bfinche\b/gi, replacement: "finché", label: "finche -> finché" },
+  { pattern: /\baffinche\b/gi, replacement: "affinché", label: "affinche -> affinché" },
+  { pattern: /\bcioe\b/gi, replacement: "cioè", label: "cioe -> cioè" },
+  { pattern: /\bgia\b/gi, replacement: "già", label: "gia -> già" },
+  { pattern: /\bpiu\b/gi, replacement: "più", label: "piu -> più" },
+  { pattern: /\bpuo\b/gi, replacement: "può", label: "puo -> può" },
+  { pattern: /\bcosi\b/gi, replacement: "così", label: "cosi -> così" },
+  { pattern: /\bqual e\b/gi, replacement: "qual è", label: "qual e -> qual è" },
+  { pattern: /\bE'\b/g, replacement: "È", label: "E' -> È" },
+  { pattern: /\be'\b/g, replacement: "è", label: "e' -> è" },
 ];
 
 const AI_PROGRESS_STAGES = [
@@ -357,7 +373,9 @@ function renderHeadings() {
       toggle.className = "treeToggle";
       toggle.type = "button";
       toggle.textContent = state.collapsedHeadingIds.has(heading.id) ? "+" : "-";
-      toggle.setAttribute("aria-label", state.collapsedHeadingIds.has(heading.id) ? "Mostra sottoparagrafi" : "Nascondi sottoparagrafi");
+      const toggleLabel = state.collapsedHeadingIds.has(heading.id) ? "Mostra sottoparagrafi" : "Nascondi sottoparagrafi";
+      toggle.setAttribute("aria-label", toggleLabel);
+      toggle.title = toggleLabel;
       toggle.addEventListener("click", (event) => {
         event.stopPropagation();
         toggleHeading(heading.id);
@@ -488,6 +506,10 @@ function defaultFrame() {
   };
 }
 
+function defaultFrameQuality() {
+  return Object.fromEntries(FRAME_FIELDS.map((field) => [field.key, "none"]));
+}
+
 function renderCourse() {
   els.courseTree.innerHTML = "";
   for (const year of state.design.years || []) {
@@ -499,7 +521,7 @@ function renderCourse() {
           <h3>${escapeHtml(year.title)}</h3>
           <div class="yearMeta">${escapeHtml(year.description || "")} · ${year.weeks || "?"} settimane · ${year.weekly_hours || "?"} ore/settimana</div>
         </div>
-        <button type="button" data-action="ai-course">AI assisted percorso</button>
+        <button type="button" data-action="ai-course" title="Usa il provider AI configurato per generare una proposta di percorso per questo anno.">AI genera percorso</button>
       </div>
     `;
     yearNode.querySelector('[data-action="ai-course"]').addEventListener("click", () => openCourseAiDialog(year));
@@ -579,6 +601,7 @@ function renderItem(year, uda, siblings, item, index, depth) {
   node.style.setProperty("--item-depth", depth);
   const children = item.children || [];
   item.frame = { ...defaultFrame(), ...(item.frame || {}) };
+  item.frame_quality = { ...defaultFrameQuality(), ...(item.frame_quality || {}) };
   const collapseKey = `${uda.id}:${item.id}`;
   const isCollapsed = state.collapsedCourseItemIds.has(collapseKey);
   node.innerHTML = `
@@ -589,10 +612,10 @@ function renderItem(year, uda, siblings, item, index, depth) {
       </div>
       <div class="itemActions">
         <span class="contextBadge">${escapeHtml(contextLabel(index, siblings, item))}</span>
-        <button type="button" data-action="ai">AI assisted</button>
-        <button type="button" data-action="up">Su</button>
-        <button type="button" data-action="down">Giu</button>
-        <button type="button" data-action="remove">Rimuovi</button>
+        <button type="button" data-action="ai" title="Usa il provider AI configurato per aprire o generare la cornice didattica di questo argomento e dei suoi sottoparagrafi.">AI cornice</button>
+        <button type="button" data-action="up" title="Sposta questo argomento verso l'alto nella UDA.">Su</button>
+        <button type="button" data-action="down" title="Sposta questo argomento verso il basso nella UDA.">Giu</button>
+        <button type="button" data-action="remove" title="Rimuove questo argomento dalla UDA.">Rimuovi</button>
       </div>
     </div>
   `;
@@ -602,7 +625,9 @@ function renderItem(year, uda, siblings, item, index, depth) {
     toggle.className = "treeToggle";
     toggle.type = "button";
     toggle.textContent = isCollapsed ? "+" : "-";
-    toggle.setAttribute("aria-label", isCollapsed ? "Mostra sottoparagrafi" : "Nascondi sottoparagrafi");
+    const toggleLabel = isCollapsed ? "Mostra sottoparagrafi" : "Nascondi sottoparagrafi";
+    toggle.setAttribute("aria-label", toggleLabel);
+    toggle.title = toggleLabel;
     toggle.addEventListener("click", (event) => {
       event.stopPropagation();
       toggleCourseItem(collapseKey);
@@ -850,6 +875,7 @@ async function generateFrameForEntry(entry) {
     }),
   });
   entry.item.frame = { ...defaultFrame(), ...(entry.item.frame || {}), ...payload.frame, status: "draft" };
+  entry.item.frame_quality = defaultFrameQuality();
 }
 
 async function generateNextFrameInBatch() {
@@ -983,9 +1009,20 @@ function finishCancelledFrameBatch() {
 function renderFrameEditor(item) {
   const details = document.createElement("details");
   details.className = "frameEditor";
-  details.classList.add(frameHasContent(item.frame) ? "frameReady" : "frameEmpty");
+  item.frame_quality = { ...defaultFrameQuality(), ...(item.frame_quality || {}) };
+  updateFrameEditorQuality(details, item);
   details.innerHTML = `
     <summary>Cornice didattica</summary>
+    <div class="frameToolbar" aria-label="Strumenti testo cornice">
+      <button type="button" data-format="bold" title="Applica il grassetto al testo selezionato nel campo attivo.">B</button>
+      <button type="button" data-format="italic" title="Applica il corsivo al testo selezionato nel campo attivo.">I</button>
+      <button type="button" data-format="code" title="Formatta il testo selezionato come codice inline.">code</button>
+      <button type="button" data-format="bullet" title="Trasforma il testo selezionato in elenco puntato.">• lista</button>
+      <button type="button" data-format="number" title="Trasforma il testo selezionato in elenco numerato.">1. lista</button>
+      <button type="button" data-format="check" title="Propone correzioni locali sicure, come accenti mancanti, e le applica solo dopo conferma.">Controlla testo</button>
+      <button type="button" data-format="ai-proofread" title="Usa il provider AI configurato per correggere grammatica e contesto, poi chiede conferma prima di applicare.">AI grammatica</button>
+    </div>
+    <p class="textQuality textQualityNeutral" hidden></p>
     <div class="frameGrid">
       <label>
         <span>Stato</span>
@@ -999,6 +1036,8 @@ function renderFrameEditor(item) {
     </div>
   `;
   const grid = details.querySelector(".frameGrid");
+  const toolbar = details.querySelector(".frameToolbar");
+  const quality = details.querySelector(".textQuality");
   const status = details.querySelector('[data-frame-field="status"]');
   status.value = item.frame.status || "todo";
   status.addEventListener("change", () => {
@@ -1008,18 +1047,201 @@ function renderFrameEditor(item) {
 
   for (const field of FRAME_FIELDS) {
     const label = document.createElement("label");
+    label.dataset.qualityField = field.key;
+    label.dataset.qualityState = item.frame_quality[field.key] || "none";
     label.innerHTML = `
-      <span>${escapeHtml(field.label)}</span>
+      <span class="frameFieldTitle"><span class="qualityDot" aria-hidden="true"></span>${escapeHtml(field.label)}</span>
       <textarea data-frame-field="${field.key}" rows="2"></textarea>
     `;
     const textarea = label.querySelector("textarea");
     textarea.value = item.frame[field.key] || "";
+    textarea.addEventListener("focus", () => {
+      state.activeFrameTextarea = textarea;
+      quality.hidden = true;
+    });
     textarea.addEventListener("input", () => {
       item.frame[field.key] = textarea.value;
+      item.frame_quality[field.key] = "none";
+      setFrameLabelQuality(label, "none");
+      updateFrameEditorQuality(details, item);
+      quality.hidden = true;
     });
     grid.append(label);
   }
+  toolbar.querySelectorAll("[data-format]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const textarea = activeTextareaFor(details);
+      if (!textarea) {
+        showToolbarMessage(quality, "Seleziona prima un campo della cornice.", "neutral");
+        return;
+      }
+      const action = button.dataset.format;
+      const fieldKey = textarea.dataset.frameField;
+      const label = textarea.closest("label");
+      if (action === "check") {
+        showTextQuality(textarea, quality, item, fieldKey, label);
+        return;
+      }
+      if (action === "ai-proofread") {
+        proofreadTextWithAi(textarea, quality, item, fieldKey, label);
+        return;
+      }
+      applyTextFormat(textarea, action);
+      textarea.focus();
+    });
+  });
   return details;
+}
+
+function activeTextareaFor(details) {
+  if (state.activeFrameTextarea && details.contains(state.activeFrameTextarea)) {
+    return state.activeFrameTextarea;
+  }
+  return details.querySelector("textarea");
+}
+
+function applyTextFormat(textarea, action) {
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  const selected = textarea.value.slice(start, end);
+  const fallback = {
+    bold: "testo in grassetto",
+    italic: "testo in corsivo",
+    code: "codice",
+    bullet: "voce elenco",
+    number: "voce elenco",
+  }[action] || "";
+  const text = selected || fallback;
+  const replacements = {
+    bold: `**${text}**`,
+    italic: `_${text}_`,
+    code: `\`${text}\``,
+    bullet: selected ? selected.split("\n").map((line) => `- ${line.replace(/^[-*]\s+/, "")}`).join("\n") : `- ${text}`,
+    number: selected ? selected.split("\n").map((line, index) => `${index + 1}. ${line.replace(/^\d+\.\s+/, "")}`).join("\n") : `1. ${text}`,
+  };
+  const replacement = replacements[action] || text;
+  textarea.setRangeText(replacement, start, end, "select");
+  textarea.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+function setFrameLabelQuality(label, stateName) {
+  if (!label) return;
+  label.dataset.qualityState = stateName;
+}
+
+function setFrameFieldQuality(item, fieldKey, label, stateName) {
+  if (!fieldKey) return;
+  item.frame_quality ||= defaultFrameQuality();
+  item.frame_quality[fieldKey] = stateName;
+  setFrameLabelQuality(label, stateName);
+  updateFrameEditorQuality(label?.closest(".frameEditor"), item);
+}
+
+function frameQualityState(item) {
+  const quality = { ...defaultFrameQuality(), ...(item.frame_quality || {}) };
+  const states = FRAME_FIELDS.map((field) => quality[field.key] || "none");
+  if (states.some((stateName) => stateName === "none")) return "missing";
+  if (states.some((stateName) => stateName === "local")) return "local";
+  return "ai";
+}
+
+function updateFrameEditorQuality(details, item) {
+  if (!details) return;
+  details.classList.remove("frameEmpty", "frameReady", "framePartial");
+  const stateName = frameQualityState(item);
+  if (stateName === "ai") {
+    details.classList.add("frameReady");
+  } else if (stateName === "local") {
+    details.classList.add("framePartial");
+  } else {
+    details.classList.add("frameEmpty");
+  }
+}
+
+function showTextQuality(textarea, output, item, fieldKey, label) {
+  if (!textarea.value.trim()) {
+    showToolbarMessage(output, "Campo vuoto: niente da controllare.", "neutral");
+    return;
+  }
+  const result = applyLocalTextFixes(textarea.value);
+  if (!result.changes.length) {
+    setFrameFieldQuality(item, fieldKey, label, "local");
+    showToolbarMessage(output, "Nessuna correzione locale sicura trovata. Per dubbi di contesto usa AI grammatica.", "ok");
+    return;
+  }
+  const message = `Trovate correzioni locali sicure:\n- ${result.changes.join("\n- ")}\n\nApplicarle al campo selezionato?`;
+  if (!confirm(message)) {
+    output.innerHTML = `<strong>Correzioni non applicate:</strong><br>${result.changes.map(escapeHtml).join("<br>")}`;
+    output.className = "textQuality textQualityWarn";
+    return;
+  }
+  textarea.value = result.text;
+  textarea.dispatchEvent(new Event("input", { bubbles: true }));
+  setFrameFieldQuality(item, fieldKey, label, "local");
+  showToolbarMessage(output, `Correzioni applicate: ${result.changes.join("; ")}.`, "ok");
+}
+
+function applyLocalTextFixes(value) {
+  let text = value;
+  const changes = [];
+  for (const fix of TEXT_QUALITY_FIXES) {
+    fix.pattern.lastIndex = 0;
+    if (!fix.pattern.test(text)) continue;
+    fix.pattern.lastIndex = 0;
+    text = text.replace(fix.pattern, fix.replacement);
+    changes.push(fix.label);
+  }
+  return { text, changes };
+}
+
+async function proofreadTextWithAi(textarea, output, item, fieldKey, label) {
+  const original = textarea.value;
+  if (!original.trim()) {
+    showToolbarMessage(output, "Campo vuoto: niente da correggere con AI.", "neutral");
+    return;
+  }
+  showToolbarMessage(output, "AI grammatica in corso: invio il campo al provider configurato...", "neutral");
+  try {
+    const payload = await api("/api/ai-proofread", {
+      method: "POST",
+      body: JSON.stringify({ text: original }),
+    });
+    const corrected = String(payload.corrected_text || "");
+    if (!corrected.trim()) {
+      showToolbarMessage(output, "La AI non ha restituito testo corretto utilizzabile.", "warn");
+      return;
+    }
+    if (corrected === original) {
+      setFrameFieldQuality(item, fieldKey, label, "ai");
+      showToolbarMessage(output, "La AI non propone modifiche per questo campo.", "ok");
+      return;
+    }
+    const changes = (payload.changes || []).map(String).filter(Boolean);
+    const notes = String(payload.notes || "").trim();
+    const summary = [
+      "Applicare la correzione AI al campo selezionato?",
+      "",
+      changes.length ? `Modifiche:\n- ${changes.join("\n- ")}` : "Modifiche: la AI non ha fornito un elenco dettagliato.",
+      notes ? `\nNote:\n${notes}` : "",
+    ].join("\n");
+    if (!confirm(summary)) {
+      showToolbarMessage(output, "Correzione AI non applicata.", "neutral");
+      return;
+    }
+    textarea.value = corrected;
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    setFrameFieldQuality(item, fieldKey, label, "ai");
+    output.innerHTML = `<strong>Correzione AI applicata.</strong>${changes.length ? `<br>${changes.map(escapeHtml).join("<br>")}` : ""}`;
+    output.className = "textQuality textQualityOk";
+  } catch (error) {
+    showToolbarMessage(output, `AI grammatica non riuscita: ${error.message}`, "warn");
+  }
+}
+
+function showToolbarMessage(output, message, kind) {
+  output.hidden = false;
+  output.textContent = message;
+  output.className = `textQuality textQuality${kind === "ok" ? "Ok" : kind === "warn" ? "Warn" : "Neutral"}`;
 }
 
 function frameHasContent(frame = {}) {
