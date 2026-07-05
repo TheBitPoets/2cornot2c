@@ -308,7 +308,15 @@ In questo modo puoi capire quali argomenti sono gia stati lavorati senza aprire 
 
 ### Scrittura e controllo qualita dei testi
 
-Ogni campo testuale della cornice ha una piccola toolbar:
+La cornice didattica ha una toolbar unica, subito sotto il titolo `Cornice didattica`.
+
+Per usarla:
+
+1. clicca dentro il campo da modificare;
+2. seleziona una parola o una frase, se vuoi;
+3. clicca il comando della toolbar.
+
+I comandi disponibili sono:
 
 - `B`: inserisce grassetto con `**testo**`;
 - `I`: inserisce corsivo con `_testo_`;

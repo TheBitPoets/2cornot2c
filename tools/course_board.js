@@ -9,6 +9,7 @@
   collapsedCourseItemIds: new Set(),
   courseAiYearId: null,
   courseAiProposal: null,
+  activeFrameTextarea: null,
 };
 
 const els = {
@@ -1001,6 +1002,15 @@ function renderFrameEditor(item) {
   details.classList.add(frameHasContent(item.frame) ? "frameReady" : "frameEmpty");
   details.innerHTML = `
     <summary>Cornice didattica</summary>
+    <div class="frameToolbar" aria-label="Strumenti testo cornice">
+      <button type="button" data-format="bold">B</button>
+      <button type="button" data-format="italic">I</button>
+      <button type="button" data-format="code">code</button>
+      <button type="button" data-format="bullet">• lista</button>
+      <button type="button" data-format="number">1. lista</button>
+      <button type="button" data-format="check">Controlla testo</button>
+    </div>
+    <p class="textQuality textQualityNeutral" hidden></p>
     <div class="frameGrid">
       <label>
         <span>Stato</span>
@@ -1014,6 +1024,8 @@ function renderFrameEditor(item) {
     </div>
   `;
   const grid = details.querySelector(".frameGrid");
+  const toolbar = details.querySelector(".frameToolbar");
+  const quality = details.querySelector(".textQuality");
   const status = details.querySelector('[data-frame-field="status"]');
   status.value = item.frame.status || "todo";
   status.addEventListener("change", () => {
@@ -1025,39 +1037,44 @@ function renderFrameEditor(item) {
     const label = document.createElement("label");
     label.innerHTML = `
       <span>${escapeHtml(field.label)}</span>
-      <div class="frameToolbar" aria-label="Strumenti testo">
-        <button type="button" data-format="bold">B</button>
-        <button type="button" data-format="italic">I</button>
-        <button type="button" data-format="code">code</button>
-        <button type="button" data-format="bullet">• lista</button>
-        <button type="button" data-format="number">1. lista</button>
-        <button type="button" data-format="check">Controlla testo</button>
-      </div>
       <textarea data-frame-field="${field.key}" rows="2"></textarea>
-      <p class="textQuality" hidden></p>
     `;
     const textarea = label.querySelector("textarea");
-    const quality = label.querySelector(".textQuality");
     textarea.value = item.frame[field.key] || "";
+    textarea.addEventListener("focus", () => {
+      state.activeFrameTextarea = textarea;
+      quality.hidden = true;
+    });
     textarea.addEventListener("input", () => {
       item.frame[field.key] = textarea.value;
       quality.hidden = true;
     });
-    label.querySelectorAll("[data-format]").forEach((button) => {
-      button.addEventListener("click", () => {
-        const action = button.dataset.format;
-        if (action === "check") {
-          showTextQuality(textarea, quality);
-          return;
-        }
-        applyTextFormat(textarea, action);
-        item.frame[field.key] = textarea.value;
-        textarea.focus();
-      });
-    });
     grid.append(label);
   }
+  toolbar.querySelectorAll("[data-format]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const textarea = activeTextareaFor(details);
+      if (!textarea) {
+        showToolbarMessage(quality, "Seleziona prima un campo della cornice.", "neutral");
+        return;
+      }
+      const action = button.dataset.format;
+      if (action === "check") {
+        showTextQuality(textarea, quality);
+        return;
+      }
+      applyTextFormat(textarea, action);
+      textarea.focus();
+    });
+  });
   return details;
+}
+
+function activeTextareaFor(details) {
+  if (state.activeFrameTextarea && details.contains(state.activeFrameTextarea)) {
+    return state.activeFrameTextarea;
+  }
+  return details.querySelector("textarea");
 }
 
 function applyTextFormat(textarea, action) {
@@ -1092,17 +1109,21 @@ function showTextQuality(textarea, output) {
   }
   output.hidden = false;
   if (!textarea.value.trim()) {
-    output.textContent = "Campo vuoto: niente da controllare.";
-    output.className = "textQuality textQualityNeutral";
+    showToolbarMessage(output, "Campo vuoto: niente da controllare.", "neutral");
     return;
   }
   if (!findings.length) {
-    output.textContent = "Nessun problema ricorrente trovato dal controllo locale.";
-    output.className = "textQuality textQualityOk";
+    showToolbarMessage(output, "Nessun problema ricorrente trovato dal controllo locale.", "ok");
     return;
   }
   output.innerHTML = `<strong>Controlli suggeriti:</strong><br>${findings.map(escapeHtml).join("<br>")}`;
   output.className = "textQuality textQualityWarn";
+}
+
+function showToolbarMessage(output, message, kind) {
+  output.hidden = false;
+  output.textContent = message;
+  output.className = `textQuality textQuality${kind === "ok" ? "Ok" : kind === "warn" ? "Warn" : "Neutral"}`;
 }
 
 function frameHasContent(frame = {}) {
