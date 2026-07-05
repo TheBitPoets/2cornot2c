@@ -18,9 +18,9 @@ body {
   min-height: 100vh;
   color: var(--ink);
   background:
-    linear-gradient(rgba(0, 0, 0, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.025) 1px, transparent 1px),
-    #f7f7f7;
+    linear-gradient(rgba(0, 0, 0, 0.016) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.016) 1px, transparent 1px),
+    #ffffff;
   background-size: 24px 24px;
   font-family: var(--mono);
 }
