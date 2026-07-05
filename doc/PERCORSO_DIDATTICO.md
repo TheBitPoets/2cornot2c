@@ -37,6 +37,9 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
 ### UDA-1 - Strumenti, primo programma e rappresentazione
 
+<details>
+<summary><strong>Apri contenuto UDA</strong> - Base - 3 settimane</summary>
+
 - Percorso: `Base`
 - Settimane: `3`
 
@@ -246,7 +249,12 @@ Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trat
   - **Prossimo passo:** Dopo la spiegazione, proponi un esempio minimo su "Costanti", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è collegare questo argomento a "Operatori" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
   - **Rimando:** Riferimento principale: README.md sezione "Costanti" (../README.md#costanti). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 
+</details>
+
 ### UDA-2 - Operatori, condizioni e selezione
+
+<details>
+<summary><strong>Apri contenuto UDA</strong> - Base - 3 settimane</summary>
 
 - Percorso: `Base`
 - Settimane: `3`
@@ -414,7 +422,12 @@ Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trat
     - **Prossimo passo:** Dopo la spiegazione, proponi un esempio minimo su "break e continue", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Funzioni" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
     - **Rimando:** Riferimento principale: README.md sezione "break e continue" (../README.md#break-e-continue). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 
+</details>
+
 ### UDA-3 - Cicli e funzioni
+
+<details>
+<summary><strong>Apri contenuto UDA</strong> - Base - 4 settimane</summary>
 
 - Percorso: `Base`
 - Settimane: `4`
@@ -470,7 +483,12 @@ Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trat
   - **Prossimo passo:** Dopo la spiegazione, proponi un esempio minimo su "Passaggio di parametri per valore", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Vettori" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
   - **Rimando:** Riferimento principale: README.md sezione "Passaggio di parametri per valore" (../README.md#passaggio-di-parametri-per-valore). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 
+</details>
+
 ### UDA-4 - Array e stringhe semplici
+
+<details>
+<summary><strong>Apri contenuto UDA</strong> - Base - 4 settimane</summary>
 
 - Percorso: `Base`
 - Settimane: `4`
@@ -534,7 +552,12 @@ Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trat
   - **Prossimo passo:** Dopo la spiegazione, proponi un esempio minimo su "Array come parametri a funzioni", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Le strutture" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
   - **Rimando:** Riferimento principale: README.md sezione "Array come parametri a funzioni" (../README.md#array-come-parametri-a-funzioni). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 
+</details>
+
 ### UDA-5 - Struct e consolidamento
+
+<details>
+<summary><strong>Apri contenuto UDA</strong> - Base - 3 settimane</summary>
 
 - Percorso: `Base`
 - Settimane: `3`
@@ -566,7 +589,12 @@ Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trat
   - **Prossimo passo:** Dopo la spiegazione, proponi un esempio minimo su "Array bidimensionali", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "I puntatori" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
   - **Rimando:** Riferimento principale: README.md sezione "Array bidimensionali" (../README.md#array-bidimensionali). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 
+</details>
+
 ### UDA-6 - Puntatori, array e indirizzi
+
+<details>
+<summary><strong>Apri contenuto UDA</strong> - Intermedio - 4 settimane</summary>
 
 - Percorso: `Intermedio`
 - Settimane: `4`
@@ -814,7 +842,12 @@ Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trat
       - **Prossimo passo:** Dopo la spiegazione, proponi un esempio minimo su "Passaggio di strutture a funzioni", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Classi di memorizzazione" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
       - **Rimando:** Riferimento principale: README.md sezione "Passaggio di strutture a funzioni" (../README.md#passaggio-di-strutture-a-funzioni). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 
+</details>
+
 ### UDA-7 - Memoria automatica, statica e dinamica
+
+<details>
+<summary><strong>Apri contenuto UDA</strong> - Intermedio - 4 settimane</summary>
 
 - Percorso: `Intermedio`
 - Settimane: `4`
@@ -926,7 +959,12 @@ Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trat
   - **Prossimo passo:** Dopo la spiegazione, proponi un esempio minimo su "Differenza tra definizione e dichiarazione di variabile", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Il preprocessore" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
   - **Rimando:** Riferimento principale: README.md sezione "Differenza tra definizione e dichiarazione di variabile" (../README.md#differenza-tra-definizione-e-dichiarazione-di-variabile). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 
+</details>
+
 ### UDA-8 - Preprocessore, header e compilazione separata
+
+<details>
+<summary><strong>Apri contenuto UDA</strong> - Intermedio - 3 settimane</summary>
 
 - Percorso: `Intermedio`
 - Settimane: `3`
@@ -1078,7 +1116,12 @@ Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trat
     - **Prossimo passo:** Dopo la spiegazione, proponi un esempio minimo su "Protezione del contenuto dei file d'intestazione", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Semplici operazioni di I/O sui file" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
     - **Rimando:** Riferimento principale: README.md sezione "Protezione del contenuto dei file d'intestazione" (../README.md#protezione-del-contenuto-dei-file-dintestazione). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 
+</details>
+
 ### UDA-9 - File, Makefile, debugging e progetto
+
+<details>
+<summary><strong>Apri contenuto UDA</strong> - Intermedio - 5 settimane</summary>
 
 - Percorso: `Intermedio`
 - Settimane: `5`
@@ -1198,6 +1241,8 @@ Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trat
   - **Prossimo passo:** Dopo la spiegazione, proponi un esempio minimo su "Gcc --no-pie", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "il consolidamento attraverso esercizi, debug e progetto" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
   - **Rimando:** Riferimento principale: README.md sezione "Gcc --no-pie" (../README.md#gcc---no-pie). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 
+</details>
+
 ## Quarto anno
 
 Linux programming, processi e thread
@@ -1217,6 +1262,9 @@ Linux programming, processi e thread
 
 ### UDA-10 - Ripartenza C/Linux, API e qualita
 
+<details>
+<summary><strong>Apri contenuto UDA</strong> - Avanzato - 1-5 settimane</summary>
+
 - Percorso: `Avanzato`
 - Settimane: `1-5`
 
@@ -1224,7 +1272,12 @@ Linux programming, processi e thread
 
 - Da progettare nella Course Design Board.
 
+</details>
+
 ### UDA-11 - Processi
+
+<details>
+<summary><strong>Apri contenuto UDA</strong> - Avanzato - 6-12 settimane</summary>
 
 - Percorso: `Avanzato`
 - Settimane: `6-12`
@@ -1233,7 +1286,12 @@ Linux programming, processi e thread
 
 - Da progettare nella Course Design Board.
 
+</details>
+
 ### UDA-12 - Segnali e progetto processi
+
+<details>
+<summary><strong>Apri contenuto UDA</strong> - Avanzato - 13-15 settimane</summary>
 
 - Percorso: `Avanzato`
 - Settimane: `13-15`
@@ -1242,7 +1300,12 @@ Linux programming, processi e thread
 
 - Da progettare nella Course Design Board.
 
+</details>
+
 ### UDA-13 - Thread
+
+<details>
+<summary><strong>Apri contenuto UDA</strong> - Avanzato - 16-20 settimane</summary>
 
 - Percorso: `Avanzato`
 - Settimane: `16-20`
@@ -1251,7 +1314,12 @@ Linux programming, processi e thread
 
 - Da progettare nella Course Design Board.
 
+</details>
+
 ### UDA-14 - Sincronizzazione
+
+<details>
+<summary><strong>Apri contenuto UDA</strong> - Avanzato - 21-25 settimane</summary>
 
 - Percorso: `Avanzato`
 - Settimane: `21-25`
@@ -1260,7 +1328,12 @@ Linux programming, processi e thread
 
 - Da progettare nella Course Design Board.
 
+</details>
+
 ### UDA-15 - I/O, processi e socket intro
+
+<details>
+<summary><strong>Apri contenuto UDA</strong> - Avanzato - 26-28 settimane</summary>
 
 - Percorso: `Avanzato`
 - Settimane: `26-28`
@@ -1269,7 +1342,12 @@ Linux programming, processi e thread
 
 - Da progettare nella Course Design Board.
 
+</details>
+
 ### UDA-16 - Sicurezza, CI, manutenzione e progetto finale
+
+<details>
+<summary><strong>Apri contenuto UDA</strong> - Avanzato - 29-33 settimane</summary>
 
 - Percorso: `Avanzato`
 - Settimane: `29-33`
@@ -1277,3 +1355,5 @@ Linux programming, processi e thread
 #### Argomenti
 
 - Da progettare nella Course Design Board.
+
+</details>

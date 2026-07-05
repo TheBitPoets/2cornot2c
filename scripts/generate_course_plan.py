@@ -125,6 +125,9 @@ def render_design(design: dict[str, Any]) -> str:
                 "",
                 f"### {uda.get('id', '').upper()} - {uda.get('title', 'UDA senza titolo')}",
                 "",
+                "<details>",
+                f"<summary><strong>Apri contenuto UDA</strong> - {uda.get('path', 'Da definire')} - {uda.get('weeks', '?')} settimane</summary>",
+                "",
                 f"- Percorso: `{uda.get('path', 'Da definire')}`",
                 f"- Settimane: `{uda.get('weeks', '?')}`",
                 "",
@@ -136,6 +139,10 @@ def render_design(design: dict[str, Any]) -> str:
                 lines.extend(rendered_items)
             else:
                 lines.append("- Da progettare nella Course Design Board.")
+            lines.extend([
+                "",
+                "</details>",
+            ])
 
     lines.append("")
     return "\n".join(lines)
