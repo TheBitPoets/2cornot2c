@@ -21,6 +21,8 @@ import json
 import mimetypes
 import os
 import re
+import subprocess
+import sys
 import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -30,6 +32,7 @@ from urllib.parse import unquote, urlparse
 ROOT = Path(__file__).resolve().parents[1]
 DESIGN_PATH = ROOT / "doc" / "course_design.json"
 COURSE_DESIGNS_DIR = ROOT / "doc" / "course_designs"
+COURSE_PLAN_MD_PATH = ROOT / "doc" / "PERCORSO_DIDATTICO.md"
 AI_PROVIDERS_PATH = ROOT / "config" / "ai_providers.yaml"
 AI_SECRET_PATH = ROOT / ".secrets" / "ai.secret"
 DEFAULT_SOURCES = ["README.md", "LINUX_PROGRAMMING.md"]
@@ -85,6 +88,23 @@ def write_design(payload: dict) -> None:
 
     DESIGN_PATH.parent.mkdir(parents=True, exist_ok=True)
     DESIGN_PATH.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def generate_course_plan_md(payload: dict) -> dict:
+    """Persist the current design and regenerate doc/PERCORSO_DIDATTICO.md."""
+
+    write_design(payload)
+    command = [sys.executable, str(ROOT / "scripts" / "generate_course_plan.py")]
+    completed = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, check=False)
+    if completed.returncode:
+        detail = (completed.stderr or completed.stdout or "Errore sconosciuto durante la generazione del percorso MD.").strip()
+        raise RuntimeError(detail)
+    return {
+        "ok": True,
+        "design_path": str(DESIGN_PATH.relative_to(ROOT)),
+        "markdown_path": str(COURSE_PLAN_MD_PATH.relative_to(ROOT)),
+        "message": (completed.stdout or "").strip(),
+    }
 
 
 def safe_design_name(name: str) -> str:
@@ -1229,6 +1249,15 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/course-design":
             write_design(payload)
             self.write_json({"ok": True, "path": str(DESIGN_PATH.relative_to(ROOT))})
+            return
+        if parsed.path == "/api/course-plan-md":
+            try:
+                self.write_json(generate_course_plan_md(payload.get("design", payload)))
+            except Exception as error:  # noqa: BLE001
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
             return
         if parsed.path == "/api/saved-designs/load":
             try:
