@@ -373,7 +373,9 @@ function renderHeadings() {
       toggle.className = "treeToggle";
       toggle.type = "button";
       toggle.textContent = state.collapsedHeadingIds.has(heading.id) ? "+" : "-";
-      toggle.setAttribute("aria-label", state.collapsedHeadingIds.has(heading.id) ? "Mostra sottoparagrafi" : "Nascondi sottoparagrafi");
+      const toggleLabel = state.collapsedHeadingIds.has(heading.id) ? "Mostra sottoparagrafi" : "Nascondi sottoparagrafi";
+      toggle.setAttribute("aria-label", toggleLabel);
+      toggle.title = toggleLabel;
       toggle.addEventListener("click", (event) => {
         event.stopPropagation();
         toggleHeading(heading.id);
@@ -519,7 +521,7 @@ function renderCourse() {
           <h3>${escapeHtml(year.title)}</h3>
           <div class="yearMeta">${escapeHtml(year.description || "")} · ${year.weeks || "?"} settimane · ${year.weekly_hours || "?"} ore/settimana</div>
         </div>
-        <button type="button" data-action="ai-course">AI assisted percorso</button>
+        <button type="button" data-action="ai-course" title="Genera con AI una proposta di percorso per questo anno.">AI assisted percorso</button>
       </div>
     `;
     yearNode.querySelector('[data-action="ai-course"]').addEventListener("click", () => openCourseAiDialog(year));
@@ -610,10 +612,10 @@ function renderItem(year, uda, siblings, item, index, depth) {
       </div>
       <div class="itemActions">
         <span class="contextBadge">${escapeHtml(contextLabel(index, siblings, item))}</span>
-        <button type="button" data-action="ai">AI assisted</button>
-        <button type="button" data-action="up">Su</button>
-        <button type="button" data-action="down">Giu</button>
-        <button type="button" data-action="remove">Rimuovi</button>
+        <button type="button" data-action="ai" title="Apre o genera la cornice didattica per questo argomento e i suoi sottoparagrafi.">AI assisted</button>
+        <button type="button" data-action="up" title="Sposta questo argomento verso l'alto nella UDA.">Su</button>
+        <button type="button" data-action="down" title="Sposta questo argomento verso il basso nella UDA.">Giu</button>
+        <button type="button" data-action="remove" title="Rimuove questo argomento dalla UDA.">Rimuovi</button>
       </div>
     </div>
   `;
@@ -623,7 +625,9 @@ function renderItem(year, uda, siblings, item, index, depth) {
     toggle.className = "treeToggle";
     toggle.type = "button";
     toggle.textContent = isCollapsed ? "+" : "-";
-    toggle.setAttribute("aria-label", isCollapsed ? "Mostra sottoparagrafi" : "Nascondi sottoparagrafi");
+    const toggleLabel = isCollapsed ? "Mostra sottoparagrafi" : "Nascondi sottoparagrafi";
+    toggle.setAttribute("aria-label", toggleLabel);
+    toggle.title = toggleLabel;
     toggle.addEventListener("click", (event) => {
       event.stopPropagation();
       toggleCourseItem(collapseKey);
