@@ -1,6 +1,7 @@
 ﻿from __future__ import annotations
 
 import argparse
+import html
 import json
 from pathlib import Path
 from typing import Any
@@ -32,6 +33,14 @@ def markdown_link(label: str, href: str | None) -> str:
     return f"[{safe_label}]({href})"
 
 
+def html_link(label: str, href: str | None) -> str:
+    """Return an HTML link for content rendered inside HTML details/summary blocks."""
+    safe_label = html.escape(label, quote=False)
+    if not href:
+        return safe_label
+    return f'<a href="{html.escape(href, quote=True)}">{safe_label}</a>'
+
+
 def item_count(items: list[dict[str, Any]]) -> int:
     """Count assigned topics recursively, including nested subtopics."""
     total = 0
@@ -47,7 +56,7 @@ def render_items(items: list[dict[str, Any]], depth: int = 0) -> list[str]:
     for item in items:
         indent = "  " * depth
         content_indent = "  " * (depth + 1)
-        title = markdown_link(item.get("title", "Argomento senza titolo"), item.get("href"))
+        title = html_link(item.get("title", "Argomento senza titolo"), item.get("href"))
         source = item.get("source", "sorgente sconosciuta")
         level = item.get("level", "?")
         status = item.get("frame", {}).get("status", "todo")
