@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>School Calendar Board</title>
+  <link rel="stylesheet" href="school_calendar.css">
+</head>
+<body>
+  <header class="hero">
+    <div>
+      <p class="eyebrow">2cornot2c</p>
+      <h1>School Calendar Board</h1>
+      <p class="subtitle">Definisci calendario scolastico, orari TPSI, vacanze, ponti e ore effettive disponibili.</p>
+    </div>
+    <div class="actions">
+      <select id="calendarSelect" aria-label="Calendari salvati">
+        <option value="">Calendari salvati</option>
+      </select>
+      <button id="loadBtn" type="button" title="Carica un calendario salvato da doc/calendars.">Carica calendario</button>
+      <button id="saveBtn" type="button" class="primary" title="Salva il calendario corrente in doc/calendars.">Salva calendario</button>
+      <a class="buttonLink" href="course_board.html" title="Torna alla Course Design Board.">Course Board</a>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel">
+      <div class="panelHead">
+        <h2>Anno scolastico</h2>
+        <p id="status" class="status">Pronto.</p>
+      </div>
+      <div class="grid">
+        <label>
+          <span>Nome file</span>
+          <input id="fileName" type="text" placeholder="as_2026_2027.json">
+        </label>
+        <label>
+          <span>Anno scolastico</span>
+          <input id="schoolYear" type="text" placeholder="2026/2027">
+        </label>
+        <label>
+          <span>Regione</span>
+          <input id="region" type="text" placeholder="Regione">
+        </label>
+        <label>
+          <span>Scuola</span>
+          <input id="school" type="text" placeholder="Opzionale">
+        </label>
+        <label>
+          <span>Inizio lezioni</span>
+          <input id="startDate" type="date">
+        </label>
+        <label>
+          <span>Fine lezioni</span>
+          <input id="endDate" type="date">
+        </label>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panelHead">
+        <h2>Percorsi orari TPSI</h2>
+        <button id="addTrackBtn" type="button" title="Aggiunge un nuovo anno o percorso orario.">Aggiungi percorso</button>
+      </div>
+      <div id="tracks" class="tracks"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panelHead">
+        <h2>Vacanze, festività e sospensioni</h2>
+        <button id="addClosureBtn" type="button" title="Aggiunge un periodo di chiusura, vacanza, ponte o festività.">Aggiungi chiusura</button>
+      </div>
+      <div class="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th>Nome</th>
+              <th>Da</th>
+              <th>A</th>
+              <th>Note</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="closures"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panelHead">
+        <h2>Riepilogo ore effettive</h2>
+        <button id="recalculateBtn" type="button" title="Ricalcola ore teoriche, ore perse e ore effettive per ogni percorso.">Ricalcola</button>
+      </div>
+      <div id="summary" class="summary"></div>
+    </section>
+  </main>
+
+  <script src="school_calendar.js"></script>
+</body>
+</html>

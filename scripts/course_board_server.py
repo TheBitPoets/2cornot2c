@@ -32,6 +32,7 @@ from urllib.parse import unquote, urlparse
 ROOT = Path(__file__).resolve().parents[1]
 DESIGN_PATH = ROOT / "doc" / "course_design.json"
 COURSE_DESIGNS_DIR = ROOT / "doc" / "course_designs"
+SCHOOL_CALENDARS_DIR = ROOT / "doc" / "calendars"
 COURSE_PLAN_MD_PATH = ROOT / "doc" / "PERCORSO_DIDATTICO.md"
 README_PATH = ROOT / "README.md"
 AI_PROVIDERS_PATH = ROOT / "config" / "ai_providers.yaml"
@@ -140,6 +141,12 @@ def saved_design_path(name: str) -> Path:
     return COURSE_DESIGNS_DIR / safe_design_name(name)
 
 
+def school_calendar_path(name: str) -> Path:
+    """Return the safe path for a saved school calendar."""
+
+    return SCHOOL_CALENDARS_DIR / safe_design_name(name)
+
+
 def list_saved_designs() -> list[dict]:
     """List saved course designs stored in doc/course_designs."""
 
@@ -164,6 +171,34 @@ def write_saved_design(name: str, payload: dict) -> dict:
 
     COURSE_DESIGNS_DIR.mkdir(parents=True, exist_ok=True)
     path = saved_design_path(name)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return {"name": path.name, "path": str(path.relative_to(ROOT))}
+
+
+def list_school_calendars() -> list[dict]:
+    """List saved school calendars stored in doc/calendars."""
+
+    SCHOOL_CALENDARS_DIR.mkdir(parents=True, exist_ok=True)
+    calendars = []
+    for path in sorted(SCHOOL_CALENDARS_DIR.glob("*.json")):
+        calendars.append({"name": path.name, "path": str(path.relative_to(ROOT))})
+    return calendars
+
+
+def read_school_calendar(name: str) -> dict:
+    """Read a saved school calendar by filename."""
+
+    path = school_calendar_path(name)
+    if not path.is_file():
+        raise FileNotFoundError(f"Calendario scolastico non trovato: {name}")
+    return json.loads(path.read_text(encoding="utf-8-sig"))
+
+
+def write_school_calendar(name: str, payload: dict) -> dict:
+    """Persist a named school calendar in the calendars folder."""
+
+    SCHOOL_CALENDARS_DIR.mkdir(parents=True, exist_ok=True)
+    path = school_calendar_path(name)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return {"name": path.name, "path": str(path.relative_to(ROOT))}
 
@@ -1424,6 +1459,9 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/saved-designs":
             self.write_json({"designs": list_saved_designs()})
             return
+        if parsed.path == "/api/school-calendars":
+            self.write_json({"calendars": list_school_calendars()})
+            return
         if parsed.path == "/api/ai-config":
             self.write_json(ai_config())
             return
@@ -1468,6 +1506,25 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             try:
                 saved = write_saved_design(payload.get("name", ""), payload.get("design", {}))
                 self.write_json({"ok": True, "saved": saved, "designs": list_saved_designs()})
+            except Exception as error:  # noqa: BLE001
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+            return
+        if parsed.path == "/api/school-calendars/load":
+            try:
+                self.write_json({"calendar": read_school_calendar(payload.get("name", ""))})
+            except Exception as error:  # noqa: BLE001
+                self.send_response(404)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+            return
+        if parsed.path == "/api/school-calendars/save":
+            try:
+                saved = write_school_calendar(payload.get("name", ""), payload.get("calendar", {}))
+                self.write_json({"ok": True, "saved": saved, "calendars": list_school_calendars()})
             except Exception as error:  # noqa: BLE001
                 self.send_response(400)
                 self.send_header("Content-Type", "application/json; charset=utf-8")

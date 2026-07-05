@@ -103,7 +103,7 @@ h1 {
   min-width: 13rem;
 }
 
-button, select, input {
+button, .buttonLink, select, input {
   border: 1px solid var(--line);
   border-radius: 999px;
   background: #ffffff;
@@ -123,14 +123,18 @@ textarea {
   padding: .65rem .75rem;
 }
 
-button {
+button, .buttonLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   padding: .72rem 1rem;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+  text-decoration: none;
 }
 
 button.primary { background: var(--accent); border-color: var(--accent); color: white; }
-button:hover { transform: translateY(-1px); }
+button:hover, .buttonLink:hover { transform: translateY(-1px); }
 
 .board {
   display: grid;

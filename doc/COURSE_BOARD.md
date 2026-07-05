@@ -16,6 +16,12 @@ Poi apri nel browser:
 http://127.0.0.1:8765/tools/course_board.html
 ```
 
+Per lavorare sul calendario scolastico reale, vacanze, ponti, festivita e orari settimanali TPSI, apri:
+
+```text
+http://127.0.0.1:8765/tools/school_calendar.html
+```
+
 ## Cosa fa questa prima versione
 
 - legge gli heading da `README.md` e `LINUX_PROGRAMMING.md`;
@@ -29,6 +35,90 @@ http://127.0.0.1:8765/tools/course_board.html
 - permette di archiviare e ricaricare piu versioni del percorso didattico;
 - salva la struttura in `doc/course_design.json`;
 - genera `doc/PERCORSO_DIDATTICO.md` a partire dal JSON della board.
+
+## School Calendar Board
+
+La pagina `tools/school_calendar.html` serve a preparare il calendario scolastico che verra usato per calcolare timeline, ore effettive, vacanze e sospensioni.
+
+Il calendario viene salvato in:
+
+```text
+doc/calendars/
+```
+
+Esempio:
+
+```text
+doc/calendars/as_2026_2027.json
+```
+
+### Cosa contiene il calendario
+
+Il JSON del calendario descrive:
+
+- anno scolastico;
+- data di inizio lezioni;
+- data di fine lezioni;
+- regione e scuola, se vuoi annotarle;
+- percorsi orari TPSI per terzo, quarto e quinto anno;
+- vacanze, festivita, ponti e sospensioni;
+- note eventuali.
+
+La struttura usa `tracks`, perche TPSI non ha lo stesso monte ore in tutti gli anni:
+
+- terzo anno: 2 ore teoria + 1 ora laboratorio;
+- quarto anno: 2 ore teoria + 1 ora laboratorio;
+- quinto anno: 2 ore teoria + 2 ore laboratorio.
+
+Ogni track ha i propri slot settimanali:
+
+```json
+{
+  "id": "terzo-anno",
+  "label": "Terzo anno",
+  "subject": "TPSI",
+  "weekly_hours": 3,
+  "weekly_slots": [
+    {
+      "day": "monday",
+      "hours": 2,
+      "type": "teoria"
+    },
+    {
+      "day": "friday",
+      "hours": 1,
+      "type": "laboratorio"
+    }
+  ]
+}
+```
+
+### Chiusure, vacanze e festivita
+
+La sezione `Vacanze, festivita e sospensioni` permette di inserire periodi in cui non si fa lezione.
+
+Ogni chiusura ha:
+
+- tipo: vacanza, festivita, ponte o sospensione;
+- nome;
+- data iniziale;
+- data finale;
+- note.
+
+Il riepilogo ore effettive sottrae automaticamente le ore di lezione che cadono in uno di questi periodi.
+
+### Riepilogo ore effettive
+
+La pagina calcola per ogni track:
+
+- ore teoriche nel periodo scolastico;
+- ore perse per chiusure;
+- ore effettive disponibili;
+- ore effettive di teoria;
+- ore effettive di laboratorio;
+- numero di lezioni saltate.
+
+Questi dati saranno poi usati per costruire la vista cronologica/Gantt del percorso didattico.
 
 ## Archivio dei percorsi didattici
 
