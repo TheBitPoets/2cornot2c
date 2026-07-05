@@ -1009,8 +1009,8 @@ function finishCancelledFrameBatch() {
 function renderFrameEditor(item) {
   const details = document.createElement("details");
   details.className = "frameEditor";
-  details.classList.add(frameHasContent(item.frame) ? "frameReady" : "frameEmpty");
   item.frame_quality = { ...defaultFrameQuality(), ...(item.frame_quality || {}) };
+  updateFrameEditorQuality(details, item);
   details.innerHTML = `
     <summary>Cornice didattica</summary>
     <div class="frameToolbar" aria-label="Strumenti testo cornice">
@@ -1063,6 +1063,7 @@ function renderFrameEditor(item) {
       item.frame[field.key] = textarea.value;
       item.frame_quality[field.key] = "none";
       setFrameLabelQuality(label, "none");
+      updateFrameEditorQuality(details, item);
       quality.hidden = true;
     });
     grid.append(label);
@@ -1133,6 +1134,28 @@ function setFrameFieldQuality(item, fieldKey, label, stateName) {
   item.frame_quality ||= defaultFrameQuality();
   item.frame_quality[fieldKey] = stateName;
   setFrameLabelQuality(label, stateName);
+  updateFrameEditorQuality(label?.closest(".frameEditor"), item);
+}
+
+function frameQualityState(item) {
+  const quality = { ...defaultFrameQuality(), ...(item.frame_quality || {}) };
+  const states = FRAME_FIELDS.map((field) => quality[field.key] || "none");
+  if (states.some((stateName) => stateName === "none")) return "missing";
+  if (states.some((stateName) => stateName === "local")) return "local";
+  return "ai";
+}
+
+function updateFrameEditorQuality(details, item) {
+  if (!details) return;
+  details.classList.remove("frameEmpty", "frameReady", "framePartial");
+  const stateName = frameQualityState(item);
+  if (stateName === "ai") {
+    details.classList.add("frameReady");
+  } else if (stateName === "local") {
+    details.classList.add("framePartial");
+  } else {
+    details.classList.add("frameEmpty");
+  }
 }
 
 function showTextQuality(textarea, output, item, fieldKey, label) {

@@ -420,11 +420,23 @@ input, select { width: 100%; padding: .72rem .9rem; }
 }
 
 .frameEditor.frameEmpty summary {
-  color: #8a8a8a;
+  color: #b42318;
+}
+
+.frameEditor.framePartial summary {
+  color: #9a7600;
 }
 
 .frameEditor.frameReady summary {
   color: #0f5132;
+}
+
+.frameEditor.frameEmpty {
+  border-top-color: rgba(180, 35, 24, .24);
+}
+
+.frameEditor.framePartial {
+  border-top-color: rgba(217, 164, 0, .28);
 }
 
 .frameEditor.frameReady {
