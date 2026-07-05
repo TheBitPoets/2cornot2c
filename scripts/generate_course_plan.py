@@ -46,13 +46,31 @@ def render_items(items: list[dict[str, Any]], depth: int = 0) -> list[str]:
     lines: list[str] = []
     for item in items:
         indent = "  " * depth
+        content_indent = "  " * (depth + 1)
         title = markdown_link(item.get("title", "Argomento senza titolo"), item.get("href"))
         source = item.get("source", "sorgente sconosciuta")
         level = item.get("level", "?")
         status = item.get("frame", {}).get("status", "todo")
-        lines.append(f"{indent}- {title} `{source}` H{level} `{status}`")
-        lines.extend(render_frame(item.get("frame", {}), depth + 1))
+        lines.extend([
+            f"{indent}- <details>",
+            f"{content_indent}<summary>{title} <code>{source}</code> H{level} <code>{status}</code></summary>",
+            "",
+        ])
+        frame_lines = render_frame(item.get("frame", {}), depth + 1)
+        if frame_lines:
+            lines.extend([
+                f"{content_indent}- <details>",
+                f"{content_indent}  <summary><strong>Cornice didattica</strong></summary>",
+                "",
+            ])
+            lines.extend(frame_lines)
+            lines.extend([
+                f"{content_indent}  </details>",
+            ])
         lines.extend(render_items(item.get("children", []), depth + 1))
+        lines.extend([
+            f"{content_indent}</details>",
+        ])
     return lines
 
 

@@ -45,7 +45,12 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
 #### Argomenti
 
-- [Introduzione](../README.md#introduzione) `README.md` H2 `draft`
+- <details>
+  <summary>[Introduzione](../README.md#introduzione) <code>README.md</code> H2 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -84,7 +89,13 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md, sezione "Introduzione" (../README.md#introduzione). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-  - [Guest Additions](../README.md#guest-additions) `README.md` H3 `draft`
+    </details>
+  - <details>
+    <summary>[Guest Additions](../README.md#guest-additions) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -120,7 +131,15 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md, sezione "Guest Additions" (../README.md#guest-additions). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-- [Laboratori](../README.md#laboratori) `README.md` H2 `draft`
+      </details>
+    </details>
+  </details>
+- <details>
+  <summary>[Laboratori](../README.md#laboratori) <code>README.md</code> H2 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -156,7 +175,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md, sezione "Laboratori" (../README.md#laboratori). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Il processo di compilazione](../README.md#il-processo-di-compilazione) `README.md` H2 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Il processo di compilazione](../README.md#il-processo-di-compilazione) <code>README.md</code> H2 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -192,7 +218,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md, sezione "Il processo di compilazione" (../README.md#il-processo-di-compilazione). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Il primo programma in C](../README.md#il-primo-programma-in-c) `README.md` H2 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Il primo programma in C](../README.md#il-primo-programma-in-c) <code>README.md</code> H2 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -228,7 +261,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md, sezione "Il primo programma in C" (../README.md#il-primo-programma-in-c). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Variabili](../README.md#variabili) `README.md` H2 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Variabili](../README.md#variabili) <code>README.md</code> H2 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -264,7 +304,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md, sezione "Variabili" (../README.md#variabili). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Rappresentazione delle informazioni](../README.md#rappresentazione-delle-informazioni) `README.md` H2 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Rappresentazione delle informazioni](../README.md#rappresentazione-delle-informazioni) <code>README.md</code> H2 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -300,7 +347,13 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md, sezione "Rappresentazione delle informazioni" (../README.md#rappresentazione-delle-informazioni). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-  - [Big & Little endian](../README.md#big-little-endian) `README.md` H3 `draft`
+    </details>
+  - <details>
+    <summary>[Big & Little endian](../README.md#big-little-endian) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -336,7 +389,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md, sezione "Big & Little endian" (../README.md#big-little-endian). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Codifica numeri decimali](../README.md#codifica-numeri-decimali) `README.md` H3 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Codifica numeri decimali](../README.md#codifica-numeri-decimali) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -372,7 +432,13 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md, sezione "Codifica numeri decimali" (../README.md#codifica-numeri-decimali). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-    - [Codifica interi senza segno](../README.md#codifica-interi-senza-segno) `README.md` H4 `draft`
+      </details>
+    - <details>
+      <summary>[Codifica interi senza segno](../README.md#codifica-interi-senza-segno) <code>README.md</code> H4 <code>draft</code></summary>
+
+      - <details>
+        <summary><strong>Cornice didattica</strong></summary>
+
       - <details>
         <summary><strong>Contesto</strong></summary>
 
@@ -408,7 +474,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
         Riferimento principale: README.md, sezione "Codifica interi senza segno" (../README.md#codifica-interi-senza-segno). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
         </details>
-    - [Codifica interi con segno (complemento a due)](../README.md#codifica-interi-con-segno-complemento-a-due) `README.md` H4 `draft`
+        </details>
+      </details>
+    - <details>
+      <summary>[Codifica interi con segno (complemento a due)](../README.md#codifica-interi-con-segno-complemento-a-due) <code>README.md</code> H4 <code>draft</code></summary>
+
+      - <details>
+        <summary><strong>Cornice didattica</strong></summary>
+
       - <details>
         <summary><strong>Contesto</strong></summary>
 
@@ -444,7 +517,15 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
         Riferimento principale: README.md, sezione "Codifica interi con segno (complemento a due)" (../README.md#codifica-interi-con-segno-complemento-a-due). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
         </details>
-  - [Mapping signed - unsigned](../README.md#mapping-signed---unsigned) `README.md` H3 `draft`
+        </details>
+      </details>
+    </details>
+  - <details>
+    <summary>[Mapping signed - unsigned](../README.md#mapping-signed---unsigned) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -480,7 +561,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md, sezione "Mapping signed - unsigned" (../README.md#mapping-signed---unsigned). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Estensione rappresentazione binaria di un numero intero](../README.md#estensione-rappresentazione-binaria-di-un-numero-intero) `README.md` H3 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Estensione rappresentazione binaria di un numero intero](../README.md#estensione-rappresentazione-binaria-di-un-numero-intero) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -516,7 +604,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md, sezione "Estensione rappresentazione binaria di un numero intero" (../README.md#estensione-rappresentazione-binaria-di-un-numero-intero). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Troncamento rappresentazione binaria di un numero](../README.md#troncamento-rappresentazione-binaria-di-un-numero) `README.md` H3 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Troncamento rappresentazione binaria di un numero](../README.md#troncamento-rappresentazione-binaria-di-un-numero) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -552,7 +647,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md, sezione "Troncamento rappresentazione binaria di un numero" (../README.md#troncamento-rappresentazione-binaria-di-un-numero). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Addizione senza segno](../README.md#addizione-senza-segno) `README.md` H3 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Addizione senza segno](../README.md#addizione-senza-segno) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -588,7 +690,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md, sezione "Addizione senza segno" (../README.md#addizione-senza-segno). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Addizione con segno](../README.md#addizione-con-segno) `README.md` H3 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Addizione con segno](../README.md#addizione-con-segno) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -624,7 +733,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md, sezione "Addizione con segno" (../README.md#addizione-con-segno). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Tipi di dato](../README.md#tipi-di-dato) `README.md` H3 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Tipi di dato](../README.md#tipi-di-dato) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -660,7 +776,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md, sezione "Tipi di dato" (../README.md#tipi-di-dato). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [`int`](../README.md#int) `README.md` H3 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[`int`](../README.md#int) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -696,7 +819,13 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "`int`" (../README.md#int). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-    - [Stampare `int`](../README.md#stampare-int) `README.md` H4 `draft`
+      </details>
+    - <details>
+      <summary>[Stampare `int`](../README.md#stampare-int) <code>README.md</code> H4 <code>draft</code></summary>
+
+      - <details>
+        <summary><strong>Cornice didattica</strong></summary>
+
       - <details>
         <summary><strong>Contesto</strong></summary>
 
@@ -732,7 +861,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
         Riferimento principale: README.md sezione "Stampare `int`" (../README.md#stampare-int). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
         </details>
-    - [Altri tipi interi](../README.md#altri-tipi-interi) `README.md` H4 `draft`
+        </details>
+      </details>
+    - <details>
+      <summary>[Altri tipi interi](../README.md#altri-tipi-interi) <code>README.md</code> H4 <code>draft</code></summary>
+
+      - <details>
+        <summary><strong>Cornice didattica</strong></summary>
+
       - <details>
         <summary><strong>Contesto</strong></summary>
 
@@ -768,7 +904,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
         Riferimento principale: README.md, sezione "Altri tipi interi" (../README.md#altri-tipi-interi). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
         </details>
-    - [Stampare altri tipi di interi](../README.md#stampare-altri-tipi-di-interi) `README.md` H4 `draft`
+        </details>
+      </details>
+    - <details>
+      <summary>[Stampare altri tipi di interi](../README.md#stampare-altri-tipi-di-interi) <code>README.md</code> H4 <code>draft</code></summary>
+
+      - <details>
+        <summary><strong>Cornice didattica</strong></summary>
+
       - <details>
         <summary><strong>Contesto</strong></summary>
 
@@ -804,7 +947,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
         Riferimento principale: README.md, sezione "Stampare altri tipi di interi" (../README.md#stampare-altri-tipi-di-interi). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
         </details>
-    - [Overflow `int`](../README.md#overflow-int) `README.md` H4 `draft`
+        </details>
+      </details>
+    - <details>
+      <summary>[Overflow `int`](../README.md#overflow-int) <code>README.md</code> H4 <code>draft</code></summary>
+
+      - <details>
+        <summary><strong>Cornice didattica</strong></summary>
+
       - <details>
         <summary><strong>Contesto</strong></summary>
 
@@ -840,7 +990,16 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
         Riferimento principale: README.md, sezione "Overflow `int`" (../README.md#overflow-int). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
         </details>
-- [`char`](../README.md#char) `README.md` H3 `draft`
+        </details>
+      </details>
+    </details>
+  </details>
+- <details>
+  <summary>[`char`](../README.md#char) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -876,7 +1035,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md, sezione "`char`" (../README.md#char). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Stampare un `char`](../README.md#stampare-un-char) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Stampare un `char`](../README.md#stampare-un-char) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -912,7 +1078,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md, sezione "Stampare un `char`" (../README.md#stampare-un-char). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Costanti](../README.md#costanti) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Costanti](../README.md#costanti) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -948,6 +1121,8 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Costanti" (../README.md#costanti). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
+    </details>
+  </details>
 
 </details>
 
@@ -961,7 +1136,12 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
 #### Argomenti
 
-- [Operatori](../README.md#operatori) `README.md` H3 `draft`
+- <details>
+  <summary>[Operatori](../README.md#operatori) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -997,7 +1177,13 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Operatori" (../README.md#operatori). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-  - [Operatore di assegnamento: =](../README.md#operatore-di-assegnamento) `README.md` H4 `draft`
+    </details>
+  - <details>
+    <summary>[Operatore di assegnamento: =](../README.md#operatore-di-assegnamento) <code>README.md</code> H4 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -1033,7 +1219,15 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Operatore di assegnamento: =" (../README.md#operatore-di-assegnamento). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-- [Operatore somma: +](../README.md#operatore-somma) `README.md` H3 `draft`
+      </details>
+    </details>
+  </details>
+- <details>
+  <summary>[Operatore somma: +](../README.md#operatore-somma) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -1069,7 +1263,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Operatore somma: +" (../README.md#operatore-somma). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Operatore differenza: -](../README.md#operatore-differenza) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Operatore differenza: -](../README.md#operatore-differenza) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -1105,7 +1306,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Operatore differenza: -" (../README.md#operatore-differenza). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Operatore segno: - e +](../README.md#operatore-segno---e) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Operatore segno: - e +](../README.md#operatore-segno---e) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -1141,7 +1349,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Operatore segno: - e +" (../README.md#operatore-segno---e). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Operatore moltiplicazione: *](../README.md#operatore-moltiplicazione) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Operatore moltiplicazione: *](../README.md#operatore-moltiplicazione) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -1177,7 +1392,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Operatore moltiplicazione: *" (../README.md#operatore-moltiplicazione). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Operatore divisione: /](../README.md#operatore-divisione) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Operatore divisione: /](../README.md#operatore-divisione) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -1213,7 +1435,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Operatore divisione: /" (../README.md#operatore-divisione). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Operatore %](../README.md#operatore) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Operatore %](../README.md#operatore) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -1249,7 +1478,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Operatore %" (../README.md#operatore). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Operatore incremento/decremento ++ --](../README.md#operatore-incrementodecremento) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Operatore incremento/decremento ++ --](../README.md#operatore-incrementodecremento) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -1285,7 +1521,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Operatore incremento/decremento ++ --" (../README.md#operatore-incrementodecremento). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Operatore `sizeof`](../README.md#operatore-sizeof) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Operatore `sizeof`](../README.md#operatore-sizeof) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -1321,7 +1564,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Operatore `sizeof`" (../README.md#operatore-sizeof). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Cast](../README.md#cast) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Cast](../README.md#cast) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -1357,7 +1607,13 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Cast" (../README.md#cast). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-  - [Cast tra `signed` e `unsigned`](../README.md#cast-tra-signed-e-unsigned) `README.md` H4 `draft`
+    </details>
+  - <details>
+    <summary>[Cast tra `signed` e `unsigned`](../README.md#cast-tra-signed-e-unsigned) <code>README.md</code> H4 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -1393,7 +1649,15 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Cast tra `signed` e `unsigned`" (../README.md#cast-tra-signed-e-unsigned). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-- [Controllo del flusso](../README.md#controllo-del-flusso) `README.md` H3 `draft`
+      </details>
+    </details>
+  </details>
+- <details>
+  <summary>[Controllo del flusso](../README.md#controllo-del-flusso) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -1429,7 +1693,13 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Controllo del flusso" (../README.md#controllo-del-flusso). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-  - [if o if-else](../README.md#if-o-if-else) `README.md` H4 `draft`
+    </details>
+  - <details>
+    <summary>[if o if-else](../README.md#if-o-if-else) <code>README.md</code> H4 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -1465,7 +1735,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "if o if-else" (../README.md#if-o-if-else). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Condizioni complesse con l'uso di operatori logici e condizionali](../README.md#condizioni-complesse-con-luso-di-operatori-logici-e-condizionali) `README.md` H4 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Condizioni complesse con l'uso di operatori logici e condizionali](../README.md#condizioni-complesse-con-luso-di-operatori-logici-e-condizionali) <code>README.md</code> H4 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -1501,7 +1778,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Condizioni complesse con l'uso di operatori logici e condizionali" (../README.md#condizioni-complesse-con-luso-di-operatori-logici-e-condizionali). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [for](../README.md#for) `README.md` H4 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[for](../README.md#for) <code>README.md</code> H4 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -1537,7 +1821,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "for" (../README.md#for). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [while](../README.md#while) `README.md` H4 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[while](../README.md#while) <code>README.md</code> H4 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -1573,7 +1864,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "while" (../README.md#while). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [do-while](../README.md#do-while) `README.md` H4 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[do-while](../README.md#do-while) <code>README.md</code> H4 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -1609,7 +1907,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "do-while" (../README.md#do-while). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [switch](../README.md#switch) `README.md` H4 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[switch](../README.md#switch) <code>README.md</code> H4 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -1645,7 +1950,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "switch" (../README.md#switch). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [break e continue](../README.md#break-e-continue) `README.md` H4 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[break e continue](../README.md#break-e-continue) <code>README.md</code> H4 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -1681,6 +1993,9 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "break e continue" (../README.md#break-e-continue). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
+      </details>
+    </details>
+  </details>
 
 </details>
 
@@ -1694,7 +2009,12 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
 #### Argomenti
 
-- [Funzioni](../README.md#funzioni-1) `README.md` H3 `draft`
+- <details>
+  <summary>[Funzioni](../README.md#funzioni-1) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -1730,7 +2050,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Funzioni" (../README.md#funzioni-1). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Dichiarazione di funzione](../README.md#dichiarazione-di-funzione) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Dichiarazione di funzione](../README.md#dichiarazione-di-funzione) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -1766,7 +2093,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Dichiarazione di funzione" (../README.md#dichiarazione-di-funzione). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Uso di void nelle funzioni](../README.md#uso-di-void-nelle-funzioni) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Uso di void nelle funzioni](../README.md#uso-di-void-nelle-funzioni) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -1802,7 +2136,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Uso di void nelle funzioni" (../README.md#uso-di-void-nelle-funzioni). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Definizione di funzione](../README.md#definizione-di-funzione) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Definizione di funzione](../README.md#definizione-di-funzione) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -1838,7 +2179,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Definizione di funzione" (../README.md#definizione-di-funzione). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Chiamata di funzione](../README.md#chiamata-di-funzione) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Chiamata di funzione](../README.md#chiamata-di-funzione) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -1874,7 +2222,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Chiamata di funzione" (../README.md#chiamata-di-funzione). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Passaggio di parametri per valore](../README.md#passaggio-di-parametri-per-valore) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Passaggio di parametri per valore](../README.md#passaggio-di-parametri-per-valore) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -1910,6 +2265,8 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Passaggio di parametri per valore" (../README.md#passaggio-di-parametri-per-valore). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
+    </details>
+  </details>
 
 </details>
 
@@ -1923,7 +2280,12 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
 #### Argomenti
 
-- [Vettori](../README.md#vettori) `README.md` H3 `draft`
+- <details>
+  <summary>[Vettori](../README.md#vettori) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -1959,7 +2321,13 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Vettori" (../README.md#vettori). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-  - [Inizializzare un vettore](../README.md#inizializzare-un-vettore) `README.md` H4 `draft`
+    </details>
+  - <details>
+    <summary>[Inizializzare un vettore](../README.md#inizializzare-un-vettore) <code>README.md</code> H4 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -1995,7 +2363,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Inizializzare un vettore" (../README.md#inizializzare-un-vettore). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Dimensione vettore (`sizeof`)](../README.md#dimensione-vettore-sizeof) `README.md` H4 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Dimensione vettore (`sizeof`)](../README.md#dimensione-vettore-sizeof) <code>README.md</code> H4 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -2031,7 +2406,15 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Dimensione vettore (`sizeof`)" (../README.md#dimensione-vettore-sizeof). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-- [Le stringhe](../README.md#le-stringhe) `README.md` H3 `draft`
+      </details>
+    </details>
+  </details>
+- <details>
+  <summary>[Le stringhe](../README.md#le-stringhe) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -2067,7 +2450,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Le stringhe" (../README.md#le-stringhe). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Dettagli sull'inizializzazione](../README.md#dettagli-sullinizializzazione) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Dettagli sull'inizializzazione](../README.md#dettagli-sullinizializzazione) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -2103,7 +2493,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Dettagli sull'inizializzazione" (../README.md#dettagli-sullinizializzazione). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Stampare una stringa](../README.md#stampare-una-stringa) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Stampare una stringa](../README.md#stampare-una-stringa) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -2139,7 +2536,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Stampare una stringa" (../README.md#stampare-una-stringa). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Array come parametri a funzioni](../README.md#array-come-parametri-a-funzioni) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Array come parametri a funzioni](../README.md#array-come-parametri-a-funzioni) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -2175,6 +2579,8 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Array come parametri a funzioni" (../README.md#array-come-parametri-a-funzioni). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
+    </details>
+  </details>
 
 </details>
 
@@ -2188,7 +2594,12 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
 #### Argomenti
 
-- [Le strutture](../README.md#le-strutture) `README.md` H3 `draft`
+- <details>
+  <summary>[Le strutture](../README.md#le-strutture) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -2224,7 +2635,13 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Le strutture" (../README.md#le-strutture). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-  - [Passaggio di strutture a funzioni](../README.md#passaggio-di-strutture-a-funzioni) `README.md` H4 `draft`
+    </details>
+  - <details>
+    <summary>[Passaggio di strutture a funzioni](../README.md#passaggio-di-strutture-a-funzioni) <code>README.md</code> H4 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -2260,7 +2677,15 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Passaggio di strutture a funzioni" (../README.md#passaggio-di-strutture-a-funzioni). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-- [Array bidimensionali](../README.md#array-bidimensionali) `README.md` H3 `draft`
+      </details>
+    </details>
+  </details>
+- <details>
+  <summary>[Array bidimensionali](../README.md#array-bidimensionali) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -2296,6 +2721,8 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Array bidimensionali" (../README.md#array-bidimensionali). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
+    </details>
+  </details>
 
 </details>
 
@@ -2309,7 +2736,12 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
 #### Argomenti
 
-- [I puntatori](../README.md#i-puntatori) `README.md` H2 `draft`
+- <details>
+  <summary>[I puntatori](../README.md#i-puntatori) <code>README.md</code> H2 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -2345,7 +2777,13 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "I puntatori" (../README.md#i-puntatori). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-  - [Puntatori non inizializzati](../README.md#puntatori-non-inizializzati) `README.md` H3 `draft`
+    </details>
+  - <details>
+    <summary>[Puntatori non inizializzati](../README.md#puntatori-non-inizializzati) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -2381,7 +2819,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Puntatori non inizializzati" (../README.md#puntatori-non-inizializzati). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Il puntatore nullo (NULL)](../README.md#il-puntatore-nullo-null) `README.md` H3 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Il puntatore nullo (NULL)](../README.md#il-puntatore-nullo-null) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -2417,7 +2862,13 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Il puntatore nullo (NULL)" (../README.md#il-puntatore-nullo-null). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-    - [Aritmetica puntatori](../README.md#aritmetica-puntatori) `README.md` H4 `draft`
+      </details>
+    - <details>
+      <summary>[Aritmetica puntatori](../README.md#aritmetica-puntatori) <code>README.md</code> H4 <code>draft</code></summary>
+
+      - <details>
+        <summary><strong>Cornice didattica</strong></summary>
+
       - <details>
         <summary><strong>Contesto</strong></summary>
 
@@ -2453,7 +2904,15 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
         Riferimento principale: README.md sezione "Aritmetica puntatori" (../README.md#aritmetica-puntatori). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
         </details>
-  - [Vettori](../README.md#vettori) `README.md` H3 `draft`
+        </details>
+      </details>
+    </details>
+  - <details>
+    <summary>[Vettori](../README.md#vettori) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -2489,7 +2948,13 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Vettori" (../README.md#vettori). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-    - [Inizializzare un vettore](../README.md#inizializzare-un-vettore) `README.md` H4 `draft`
+      </details>
+    - <details>
+      <summary>[Inizializzare un vettore](../README.md#inizializzare-un-vettore) <code>README.md</code> H4 <code>draft</code></summary>
+
+      - <details>
+        <summary><strong>Cornice didattica</strong></summary>
+
       - <details>
         <summary><strong>Contesto</strong></summary>
 
@@ -2525,7 +2990,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
         Riferimento principale: README.md sezione "Inizializzare un vettore" (../README.md#inizializzare-un-vettore). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
         </details>
-    - [Dimensione vettore (`sizeof`)](../README.md#dimensione-vettore-sizeof) `README.md` H4 `draft`
+        </details>
+      </details>
+    - <details>
+      <summary>[Dimensione vettore (`sizeof`)](../README.md#dimensione-vettore-sizeof) <code>README.md</code> H4 <code>draft</code></summary>
+
+      - <details>
+        <summary><strong>Cornice didattica</strong></summary>
+
       - <details>
         <summary><strong>Contesto</strong></summary>
 
@@ -2561,7 +3033,15 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
         Riferimento principale: README.md sezione "Dimensione vettore (`sizeof`)" (../README.md#dimensione-vettore-sizeof). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
         </details>
-  - [Relazione tra array e puntatori](../README.md#relazione-tra-array-e-puntatori) `README.md` H3 `draft`
+        </details>
+      </details>
+    </details>
+  - <details>
+    <summary>[Relazione tra array e puntatori](../README.md#relazione-tra-array-e-puntatori) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -2597,7 +3077,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Relazione tra array e puntatori" (../README.md#relazione-tra-array-e-puntatori). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Differenza tra puntatori](../README.md#differenza-tra-puntatori) `README.md` H3 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Differenza tra puntatori](../README.md#differenza-tra-puntatori) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -2633,7 +3120,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Differenza tra puntatori" (../README.md#differenza-tra-puntatori). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Le stringhe](../README.md#le-stringhe) `README.md` H3 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Le stringhe](../README.md#le-stringhe) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -2669,7 +3163,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Le stringhe" (../README.md#le-stringhe). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Dettagli sull'inizializzazione](../README.md#dettagli-sullinizializzazione) `README.md` H3 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Dettagli sull'inizializzazione](../README.md#dettagli-sullinizializzazione) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -2705,7 +3206,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Dettagli sull'inizializzazione" (../README.md#dettagli-sullinizializzazione). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Stampare una stringa](../README.md#stampare-una-stringa) `README.md` H3 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Stampare una stringa](../README.md#stampare-una-stringa) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -2741,7 +3249,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Stampare una stringa" (../README.md#stampare-una-stringa). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Funzioni](../README.md#funzioni-1) `README.md` H3 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Funzioni](../README.md#funzioni-1) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -2777,7 +3292,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Funzioni" (../README.md#funzioni-1). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Dichiarazione di funzione](../README.md#dichiarazione-di-funzione) `README.md` H3 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Dichiarazione di funzione](../README.md#dichiarazione-di-funzione) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -2813,7 +3335,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Dichiarazione di funzione" (../README.md#dichiarazione-di-funzione). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Uso di void nelle funzioni](../README.md#uso-di-void-nelle-funzioni) `README.md` H3 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Uso di void nelle funzioni](../README.md#uso-di-void-nelle-funzioni) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -2849,7 +3378,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Uso di void nelle funzioni" (../README.md#uso-di-void-nelle-funzioni). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Definizione di funzione](../README.md#definizione-di-funzione) `README.md` H3 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Definizione di funzione](../README.md#definizione-di-funzione) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -2885,7 +3421,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Definizione di funzione" (../README.md#definizione-di-funzione). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Chiamata di funzione](../README.md#chiamata-di-funzione) `README.md` H3 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Chiamata di funzione](../README.md#chiamata-di-funzione) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -2921,7 +3464,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Chiamata di funzione" (../README.md#chiamata-di-funzione). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Passaggio di parametri per valore](../README.md#passaggio-di-parametri-per-valore) `README.md` H3 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Passaggio di parametri per valore](../README.md#passaggio-di-parametri-per-valore) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -2957,7 +3507,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Passaggio di parametri per valore" (../README.md#passaggio-di-parametri-per-valore). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Passaggio di parametri per indirizzo](../README.md#passaggio-di-parametri-per-indirizzo) `README.md` H3 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Passaggio di parametri per indirizzo](../README.md#passaggio-di-parametri-per-indirizzo) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -2993,7 +3550,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Passaggio di parametri per indirizzo" (../README.md#passaggio-di-parametri-per-indirizzo). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Passaggio di puntatori const](../README.md#passaggio-di-puntatori-const) `README.md` H3 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Passaggio di puntatori const](../README.md#passaggio-di-puntatori-const) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -3029,7 +3593,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Passaggio di puntatori const" (../README.md#passaggio-di-puntatori-const). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Array come parametri a funzioni](../README.md#array-come-parametri-a-funzioni) `README.md` H3 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Array come parametri a funzioni](../README.md#array-come-parametri-a-funzioni) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -3065,7 +3636,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Array come parametri a funzioni" (../README.md#array-come-parametri-a-funzioni). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Allocazione dinamica della memoria](../README.md#allocazione-dinamica-della-memoria) `README.md` H3 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Allocazione dinamica della memoria](../README.md#allocazione-dinamica-della-memoria) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -3101,7 +3679,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Allocazione dinamica della memoria" (../README.md#allocazione-dinamica-della-memoria). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Array bidimensionali](../README.md#array-bidimensionali) `README.md` H3 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Array bidimensionali](../README.md#array-bidimensionali) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -3137,7 +3722,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Array bidimensionali" (../README.md#array-bidimensionali). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Array di puntatori](../README.md#array-di-puntatori) `README.md` H3 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Array di puntatori](../README.md#array-di-puntatori) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -3173,7 +3765,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Array di puntatori" (../README.md#array-di-puntatori). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Differenza tra array bidimensionali e array di puntatori](../README.md#differenza-tra-array-bidimensionali-e-array-di-puntatori) `README.md` H3 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Differenza tra array bidimensionali e array di puntatori](../README.md#differenza-tra-array-bidimensionali-e-array-di-puntatori) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -3209,7 +3808,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Differenza tra array bidimensionali e array di puntatori" (../README.md#differenza-tra-array-bidimensionali-e-array-di-puntatori). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Sezioni di memoria di un programma C](../README.md#sezioni-di-memoria-di-un-programma-c) `README.md` H3 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Sezioni di memoria di un programma C](../README.md#sezioni-di-memoria-di-un-programma-c) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -3245,7 +3851,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Sezioni di memoria di un programma C" (../README.md#sezioni-di-memoria-di-un-programma-c). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [L'inizializzazione delle variabili](../README.md#linizializzazione-delle-variabili) `README.md` H3 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[L'inizializzazione delle variabili](../README.md#linizializzazione-delle-variabili) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -3281,7 +3894,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "L'inizializzazione delle variabili" (../README.md#linizializzazione-delle-variabili). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Allocazione dinamica di matrici](../README.md#allocazione-dinamica-di-matrici) `README.md` H3 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Allocazione dinamica di matrici](../README.md#allocazione-dinamica-di-matrici) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -3317,7 +3937,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Allocazione dinamica di matrici" (../README.md#allocazione-dinamica-di-matrici). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Le strutture](../README.md#le-strutture) `README.md` H3 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Le strutture](../README.md#le-strutture) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -3353,7 +3980,13 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Le strutture" (../README.md#le-strutture). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-    - [Passaggio di strutture a funzioni](../README.md#passaggio-di-strutture-a-funzioni) `README.md` H4 `draft`
+      </details>
+    - <details>
+      <summary>[Passaggio di strutture a funzioni](../README.md#passaggio-di-strutture-a-funzioni) <code>README.md</code> H4 <code>draft</code></summary>
+
+      - <details>
+        <summary><strong>Cornice didattica</strong></summary>
+
       - <details>
         <summary><strong>Contesto</strong></summary>
 
@@ -3389,6 +4022,10 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
         Riferimento principale: README.md sezione "Passaggio di strutture a funzioni" (../README.md#passaggio-di-strutture-a-funzioni). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
         </details>
+        </details>
+      </details>
+    </details>
+  </details>
 
 </details>
 
@@ -3402,7 +4039,12 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
 #### Argomenti
 
-- [Classi di memorizzazione](../README.md#classi-di-memorizzazione) `README.md` H2 `draft`
+- <details>
+  <summary>[Classi di memorizzazione](../README.md#classi-di-memorizzazione) <code>README.md</code> H2 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -3438,7 +4080,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Classi di memorizzazione" (../README.md#classi-di-memorizzazione). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Block scope](../README.md#block-scope) `README.md` H2 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Block scope](../README.md#block-scope) <code>README.md</code> H2 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -3474,7 +4123,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Block scope" (../README.md#block-scope). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [File scope](../README.md#file-scope) `README.md` H2 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[File scope](../README.md#file-scope) <code>README.md</code> H2 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -3510,7 +4166,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "File scope" (../README.md#file-scope). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Linkage](../README.md#linkage) `README.md` H2 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Linkage](../README.md#linkage) <code>README.md</code> H2 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -3546,7 +4209,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Linkage" (../README.md#linkage). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Storage duration](../README.md#storage-duration) `README.md` H2 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Storage duration](../README.md#storage-duration) <code>README.md</code> H2 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -3582,7 +4252,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Storage duration" (../README.md#storage-duration). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Static storage duration](../README.md#static-storage-duration) `README.md` H2 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Static storage duration](../README.md#static-storage-duration) <code>README.md</code> H2 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -3618,7 +4295,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Static storage duration" (../README.md#static-storage-duration). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Auto storage duration](../README.md#auto-storage-duration) `README.md` H2 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Auto storage duration](../README.md#auto-storage-duration) <code>README.md</code> H2 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -3654,7 +4338,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Auto storage duration" (../README.md#auto-storage-duration). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Classi di memorizzazione](../README.md#classi-di-memorizzazione-1) `README.md` H2 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Classi di memorizzazione](../README.md#classi-di-memorizzazione-1) <code>README.md</code> H2 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -3690,7 +4381,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Classi di memorizzazione" (../README.md#classi-di-memorizzazione-1). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Variabili automatiche (automatic class)](../README.md#variabili-automatiche-automatic-class) `README.md` H2 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Variabili automatiche (automatic class)](../README.md#variabili-automatiche-automatic-class) <code>README.md</code> H2 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -3726,7 +4424,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Variabili automatiche (automatic class)" (../README.md#variabili-automatiche-automatic-class). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Variabili statiche locali (static variables with block scope)](../README.md#variabili-statiche-locali-static-variables-with-block-scope) `README.md` H2 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Variabili statiche locali (static variables with block scope)](../README.md#variabili-statiche-locali-static-variables-with-block-scope) <code>README.md</code> H2 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -3762,7 +4467,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Variabili statiche locali (static variables with block scope)" (../README.md#variabili-statiche-locali-static-variables-with-block-scope). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Variabili globali con External Linkage (Static variables with External Linkage)](../README.md#variabili-globali-con-external-linkage-static-variables-with-external-linkage) `README.md` H2 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Variabili globali con External Linkage (Static variables with External Linkage)](../README.md#variabili-globali-con-external-linkage-static-variables-with-external-linkage) <code>README.md</code> H2 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -3798,7 +4510,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Variabili globali con External Linkage (Static variables with External Linkage)" (../README.md#variabili-globali-con-external-linkage-static-variables-with-external-linkage). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Variabili globali con Internal Linkage (Static variables with Internal Linkage)](../README.md#variabili-globali-con-internal-linkage-static-variables-with-internal-linkage) `README.md` H2 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Variabili globali con Internal Linkage (Static variables with Internal Linkage)](../README.md#variabili-globali-con-internal-linkage-static-variables-with-internal-linkage) <code>README.md</code> H2 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -3834,7 +4553,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Variabili globali con Internal Linkage (Static variables with Internal Linkage)" (../README.md#variabili-globali-con-internal-linkage-static-variables-with-internal-linkage). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Differenza tra definizione e dichiarazione di variabile](../README.md#differenza-tra-definizione-e-dichiarazione-di-variabile) `README.md` H2 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Differenza tra definizione e dichiarazione di variabile](../README.md#differenza-tra-definizione-e-dichiarazione-di-variabile) <code>README.md</code> H2 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -3870,6 +4596,8 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Differenza tra definizione e dichiarazione di variabile" (../README.md#differenza-tra-definizione-e-dichiarazione-di-variabile). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
+    </details>
+  </details>
 
 </details>
 
@@ -3883,7 +4611,12 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
 #### Argomenti
 
-- [Il preprocessore](../README.md#il-preprocessore) `README.md` H3 `draft`
+- <details>
+  <summary>[Il preprocessore](../README.md#il-preprocessore) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -3919,7 +4652,13 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Il preprocessore" (../README.md#il-preprocessore). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-  - [La direttiva #define](../README.md#la-direttiva-define) `README.md` H4 `draft`
+    </details>
+  - <details>
+    <summary>[La direttiva #define](../README.md#la-direttiva-define) <code>README.md</code> H4 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -3955,7 +4694,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "La direttiva #define" (../README.md#la-direttiva-define). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [La direttiva #include](../README.md#la-direttiva-include) `README.md` H4 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[La direttiva #include](../README.md#la-direttiva-include) <code>README.md</code> H4 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -3991,7 +4737,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "La direttiva #include" (../README.md#la-direttiva-include). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Le direttive #if #ifdef #ifndef](../README.md#le-direttive-if-ifdef-ifndef) `README.md` H4 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Le direttive #if #ifdef #ifndef](../README.md#le-direttive-if-ifdef-ifndef) <code>README.md</code> H4 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -4027,7 +4780,15 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Le direttive #if #ifdef #ifndef" (../README.md#le-direttive-if-ifdef-ifndef). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-- [Eliminazione temporanea di codice](../README.md#eliminazione-temporanea-di-codice) `README.md` H3 `draft`
+      </details>
+    </details>
+  </details>
+- <details>
+  <summary>[Eliminazione temporanea di codice](../README.md#eliminazione-temporanea-di-codice) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -4063,7 +4824,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Eliminazione temporanea di codice" (../README.md#eliminazione-temporanea-di-codice). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Protezione del contenuto dei file d'intestazione](../README.md#protezione-del-contenuto-dei-file-dintestazione) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Protezione del contenuto dei file d'intestazione](../README.md#protezione-del-contenuto-dei-file-dintestazione) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -4099,7 +4867,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Protezione del contenuto dei file d'intestazione" (../README.md#protezione-del-contenuto-dei-file-dintestazione). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Suddivisione in moduli di un programma](../README.md#suddivisione-in-moduli-di-un-programma) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Suddivisione in moduli di un programma](../README.md#suddivisione-in-moduli-di-un-programma) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -4135,7 +4910,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Suddivisione in moduli di un programma" (../README.md#suddivisione-in-moduli-di-un-programma). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Classi di memorizzazione per le funzioni](../README.md#classi-di-memorizzazione-per-le-funzioni) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Classi di memorizzazione per le funzioni](../README.md#classi-di-memorizzazione-per-le-funzioni) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -4171,7 +4953,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Classi di memorizzazione per le funzioni" (../README.md#classi-di-memorizzazione-per-le-funzioni). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Sintassi dichiarazione variabili](../README.md#sintassi-dichiarazione-variabili) `README.md` H2 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Sintassi dichiarazione variabili](../README.md#sintassi-dichiarazione-variabili) <code>README.md</code> H2 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -4207,7 +4996,13 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Sintassi dichiarazione variabili" (../README.md#sintassi-dichiarazione-variabili). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-  - [Classi di memorizzazione per le funzioni](../README.md#classi-di-memorizzazione-per-le-funzioni) `README.md` H3 `draft`
+    </details>
+  - <details>
+    <summary>[Classi di memorizzazione per le funzioni](../README.md#classi-di-memorizzazione-per-le-funzioni) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -4243,7 +5038,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Classi di memorizzazione per le funzioni" (../README.md#classi-di-memorizzazione-per-le-funzioni). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Classi di memorizzazione: riassunto](../README.md#classi-di-memorizzazione-riassunto) `README.md` H3 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Classi di memorizzazione: riassunto](../README.md#classi-di-memorizzazione-riassunto) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -4279,7 +5081,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Classi di memorizzazione: riassunto" (../README.md#classi-di-memorizzazione-riassunto). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Suddivisione in moduli di un programma](../README.md#suddivisione-in-moduli-di-un-programma) `README.md` H3 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Suddivisione in moduli di un programma](../README.md#suddivisione-in-moduli-di-un-programma) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -4315,7 +5124,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Suddivisione in moduli di un programma" (../README.md#suddivisione-in-moduli-di-un-programma). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Il preprocessore](../README.md#il-preprocessore) `README.md` H3 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Il preprocessore](../README.md#il-preprocessore) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -4351,7 +5167,13 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Il preprocessore" (../README.md#il-preprocessore). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-    - [La direttiva #define](../README.md#la-direttiva-define) `README.md` H4 `draft`
+      </details>
+    - <details>
+      <summary>[La direttiva #define](../README.md#la-direttiva-define) <code>README.md</code> H4 <code>draft</code></summary>
+
+      - <details>
+        <summary><strong>Cornice didattica</strong></summary>
+
       - <details>
         <summary><strong>Contesto</strong></summary>
 
@@ -4387,7 +5209,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
         Riferimento principale: README.md sezione "La direttiva #define" (../README.md#la-direttiva-define). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
         </details>
-    - [La direttiva #include](../README.md#la-direttiva-include) `README.md` H4 `draft`
+        </details>
+      </details>
+    - <details>
+      <summary>[La direttiva #include](../README.md#la-direttiva-include) <code>README.md</code> H4 <code>draft</code></summary>
+
+      - <details>
+        <summary><strong>Cornice didattica</strong></summary>
+
       - <details>
         <summary><strong>Contesto</strong></summary>
 
@@ -4423,7 +5252,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
         Riferimento principale: README.md sezione "La direttiva #include" (../README.md#la-direttiva-include). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
         </details>
-    - [Le direttive #if #ifdef #ifndef](../README.md#le-direttive-if-ifdef-ifndef) `README.md` H4 `draft`
+        </details>
+      </details>
+    - <details>
+      <summary>[Le direttive #if #ifdef #ifndef](../README.md#le-direttive-if-ifdef-ifndef) <code>README.md</code> H4 <code>draft</code></summary>
+
+      - <details>
+        <summary><strong>Cornice didattica</strong></summary>
+
       - <details>
         <summary><strong>Contesto</strong></summary>
 
@@ -4459,7 +5295,15 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
         Riferimento principale: README.md sezione "Le direttive #if #ifdef #ifndef" (../README.md#le-direttive-if-ifdef-ifndef). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
         </details>
-  - [Eliminazione temporanea di codice](../README.md#eliminazione-temporanea-di-codice) `README.md` H3 `draft`
+        </details>
+      </details>
+    </details>
+  - <details>
+    <summary>[Eliminazione temporanea di codice](../README.md#eliminazione-temporanea-di-codice) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -4495,7 +5339,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Eliminazione temporanea di codice" (../README.md#eliminazione-temporanea-di-codice). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
-  - [Protezione del contenuto dei file d'intestazione](../README.md#protezione-del-contenuto-dei-file-dintestazione) `README.md` H3 `draft`
+      </details>
+    </details>
+  - <details>
+    <summary>[Protezione del contenuto dei file d'intestazione](../README.md#protezione-del-contenuto-dei-file-dintestazione) <code>README.md</code> H3 <code>draft</code></summary>
+
+    - <details>
+      <summary><strong>Cornice didattica</strong></summary>
+
     - <details>
       <summary><strong>Contesto</strong></summary>
 
@@ -4531,6 +5382,9 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
       Riferimento principale: README.md sezione "Protezione del contenuto dei file d'intestazione" (../README.md#protezione-del-contenuto-dei-file-dintestazione). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
       </details>
+      </details>
+    </details>
+  </details>
 
 </details>
 
@@ -4544,7 +5398,12 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
 #### Argomenti
 
-- [Semplici operazioni di I/O sui file](../README.md#semplici-operazioni-di-io-sui-file) `README.md` H3 `draft`
+- <details>
+  <summary>[Semplici operazioni di I/O sui file](../README.md#semplici-operazioni-di-io-sui-file) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -4580,7 +5439,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Semplici operazioni di I/O sui file" (../README.md#semplici-operazioni-di-io-sui-file). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Creare ed Aprire i File](../README.md#creare-ed-aprire-i-file) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Creare ed Aprire i File](../README.md#creare-ed-aprire-i-file) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -4616,7 +5482,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Creare ed Aprire i File" (../README.md#creare-ed-aprire-i-file). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Leggere testo dai file con fgets()](../README.md#leggere-testo-dai-file-con-fgets) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Leggere testo dai file con fgets()](../README.md#leggere-testo-dai-file-con-fgets) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -4652,7 +5525,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Leggere testo dai file con fgets()" (../README.md#leggere-testo-dai-file-con-fgets). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Scrivere testo su file con fprintf()](../README.md#scrivere-testo-su-file-con-fprintf) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Scrivere testo su file con fprintf()](../README.md#scrivere-testo-su-file-con-fprintf) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -4688,7 +5568,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Scrivere testo su file con fprintf()" (../README.md#scrivere-testo-su-file-con-fprintf). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Dati in con fgets() e scanf()](../README.md#dati-in-con-fgets-e-scanf) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Dati in con fgets() e scanf()](../README.md#dati-in-con-fgets-e-scanf) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -4724,7 +5611,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Dati in con fgets() e scanf()" (../README.md#dati-in-con-fgets-e-scanf). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Utilizzando scanf() per l'inserimento di valori numerici](../README.md#utilizzando-scanf-per-linserimento-di-valori-numerici) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Utilizzando scanf() per l'inserimento di valori numerici](../README.md#utilizzando-scanf-per-linserimento-di-valori-numerici) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -4760,7 +5654,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Utilizzando scanf() per l'inserimento di valori numerici" (../README.md#utilizzando-scanf-per-linserimento-di-valori-numerici). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Convertire le stringhe in numeri con sscanf()](../README.md#convertire-le-stringhe-in-numeri-con-sscanf) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Convertire le stringhe in numeri con sscanf()](../README.md#convertire-le-stringhe-in-numeri-con-sscanf) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -4796,7 +5697,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Convertire le stringhe in numeri con sscanf()" (../README.md#convertire-le-stringhe-in-numeri-con-sscanf). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Testo formattato con printf()](../README.md#testo-formattato-con-printf) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Testo formattato con printf()](../README.md#testo-formattato-con-printf) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -4832,7 +5740,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Testo formattato con printf()" (../README.md#testo-formattato-con-printf). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Passaggio di parametri a printf()](../README.md#passaggio-di-parametri-a-printf) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Passaggio di parametri a printf()](../README.md#passaggio-di-parametri-a-printf) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -4868,7 +5783,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Passaggio di parametri a printf()" (../README.md#passaggio-di-parametri-a-printf). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Linking alla libreria standard del C](../README.md#linking-alla-libreria-standard-del-c) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Linking alla libreria standard del C](../README.md#linking-alla-libreria-standard-del-c) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -4904,7 +5826,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Linking alla libreria standard del C" (../README.md#linking-alla-libreria-standard-del-c). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Costruzione di librerie di procedure esterne](../README.md#costruzione-di-librerie-di-procedure-esterne) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Costruzione di librerie di procedure esterne](../README.md#costruzione-di-librerie-di-procedure-esterne) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -4940,7 +5869,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Costruzione di librerie di procedure esterne" (../README.md#costruzione-di-librerie-di-procedure-esterne). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Collegare le librerie nei tuoi programmi](../README.md#collegare-le-librerie-nei-tuoi-programmi) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Collegare le librerie nei tuoi programmi](../README.md#collegare-le-librerie-nei-tuoi-programmi) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -4976,7 +5912,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Collegare le librerie nei tuoi programmi" (../README.md#collegare-le-librerie-nei-tuoi-programmi). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Note sulla raccolta delle procedure in librerie](../README.md#note-sulla-raccolta-delle-procedure-in-librerie) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Note sulla raccolta delle procedure in librerie](../README.md#note-sulla-raccolta-delle-procedure-in-librerie) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -5012,7 +5955,14 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Note sulla raccolta delle procedure in librerie" (../README.md#note-sulla-raccolta-delle-procedure-in-librerie). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
-- [Gcc --no-pie](../README.md#gcc---no-pie) `README.md` H3 `draft`
+    </details>
+  </details>
+- <details>
+  <summary>[Gcc --no-pie](../README.md#gcc---no-pie) <code>README.md</code> H3 <code>draft</code></summary>
+
+  - <details>
+    <summary><strong>Cornice didattica</strong></summary>
+
   - <details>
     <summary><strong>Contesto</strong></summary>
 
@@ -5048,6 +5998,8 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
     Riferimento principale: README.md sezione "Gcc --no-pie" (../README.md#gcc---no-pie). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
     </details>
+    </details>
+  </details>
 
 </details>
 
