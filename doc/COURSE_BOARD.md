@@ -323,16 +323,28 @@ I comandi disponibili sono:
 - `code`: inserisce codice inline con backtick;
 - `• lista`: crea un elenco puntato;
 - `1. lista`: crea un elenco numerato;
-- `Controlla testo`: esegue un controllo locale sugli errori ricorrenti.
+- `Controlla testo`: propone correzioni locali sicure e le applica solo dopo conferma;
+- `AI grammatica`: usa il provider AI configurato per correggere errori contestuali e applica il risultato solo dopo conferma.
 
-Il controllo locale non sostituisce una revisione grammaticale completa, ma intercetta casi frequenti:
+Il controllo locale non prova a interpretare il senso della frase. Serve solo per correzioni meccaniche sicure:
 
 - accenti mancanti in parole come `perche`, `piu`, `puo`, `gia`, `cosi`;
 - forme come `qual e`;
-- apostrofo al posto dell'accento in `e'`;
-- possibile uso di `e` al posto di `è`.
+- apostrofo al posto dell'accento in `e'` o `E'`.
 
-Il controllo su `e` e volutamente prudente: segnala un possibile problema, ma serve sempre leggere il contesto per distinguere la congiunzione `e` dal verbo `è`.
+Il controllo locale non corregge `e` in `è`, perche quella scelta dipende dal significato della frase.
+
+Per casi contestuali, usa `AI grammatica`. Il server manda solo il campo attivo al provider AI selezionato e chiede una revisione conservativa:
+
+- correggere ortografia, grammatica, accenti e refusi;
+- capire dal contesto se serve `e` oppure `è`;
+- non cambiare il contenuto tecnico;
+- non aggiungere esempi o spiegazioni;
+- preservare la formattazione leggera.
+
+La UI mostra le modifiche proposte e chiede conferma prima di applicare il testo corretto.
+
+`AI grammatica` usa le stesse API key e lo stesso provider configurato nella board, quindi puo consumare quota del provider.
 
 Quando le cornici vengono inserite nel `README.md`, `scripts/update_course_frames.py` converte questa formattazione leggera in HTML sicuro:
 

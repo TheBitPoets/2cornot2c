@@ -550,6 +550,21 @@ def didactic_frame_schema_gemini() -> dict:
     }
 
 
+def proofread_schema_openai() -> dict:
+    """Return the JSON schema for AI proofreading responses."""
+
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "corrected_text": {"type": "string"},
+            "changes": {"type": "array", "items": {"type": "string"}},
+            "notes": {"type": "string"},
+        },
+        "required": ["corrected_text", "changes", "notes"],
+    }
+
+
 def course_plan_schema_openai() -> dict:
     """Return the JSON Schema expected from OpenAI for a course proposal."""
 
@@ -646,6 +661,19 @@ def didactic_frame_system_prompt() -> str:
     )
 
 
+def proofread_system_prompt() -> str:
+    """Return the provider-independent instruction for grammar proofreading."""
+
+    return (
+        "Sei un revisore grammaticale italiano per materiali didattici di programmazione C. "
+        "Correggi solo ortografia, grammatica, accenti, punteggiatura minima e refusi. "
+        "Devi capire dal contesto se serve 'e' oppure 'è'. "
+        "Non cambiare il contenuto tecnico, non semplificare concetti, non aggiungere esempi e non rimuovere termini tecnici. "
+        "Preserva la formattazione leggera: **grassetto**, _corsivo_, `inline code`, elenchi puntati e numerati. "
+        "Restituisci solo JSON con corrected_text, changes e notes."
+    )
+
+
 def course_plan_system_prompt() -> str:
     """Return the provider-independent instruction for course-plan generation."""
 
@@ -671,6 +699,20 @@ def normalize_frame(result: dict) -> dict:
             "Prova un modello diverso o un provider diverso."
         )
     return frame
+
+
+def normalize_proofread(result: dict, original_text: str) -> dict:
+    """Keep only expected proofreading fields."""
+
+    corrected_text = str(result.get("corrected_text", "")).strip() or original_text
+    changes = result.get("changes", [])
+    if not isinstance(changes, list):
+        changes = [changes]
+    return {
+        "corrected_text": corrected_text,
+        "changes": [str(change).strip() for change in changes if str(change).strip()],
+        "notes": str(result.get("notes", "")).strip(),
+    }
 
 
 def normalize_course_plan(raw: dict, design: dict, year_id: str) -> dict:
@@ -1023,6 +1065,133 @@ def call_ai_didactic_frame(payload: dict) -> dict:
     raise RuntimeError(f"Provider AI non supportato: {provider}. Usa un provider dichiarato in config/ai_providers.yaml.")
 
 
+def call_openai_proofread(text: str) -> dict:
+    """Ask OpenAI to proofread one didactic-frame field."""
+
+    api_key = secret_value("OPENAI_API_KEY")
+    if not api_key:
+        raise RuntimeError("Configura OPENAI_API_KEY prima di usare AI grammatica.")
+    body = {
+        "model": active_ai_model(),
+        "input": [
+            {"role": "system", "content": [{"type": "input_text", "text": proofread_system_prompt()}]},
+            {"role": "user", "content": [{"type": "input_text", "text": json.dumps({"text": text}, ensure_ascii=False)}]},
+        ],
+        "text": {
+            "format": {
+                "type": "json_schema",
+                "name": "proofread",
+                "schema": proofread_schema_openai(),
+                "strict": True,
+            }
+        },
+        "store": False,
+    }
+    request = urllib.request.Request(
+        "https://api.openai.com/v1/responses",
+        data=json.dumps(body).encode("utf-8"),
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=AI_FRAME_TIMEOUT_SECONDS) as response:
+            data = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Errore OpenAI API {error.code}: {detail}") from error
+    output_text = data.get("output_text")
+    if not output_text:
+        for output in data.get("output", []):
+            for content in output.get("content", []):
+                if content.get("type") == "output_text":
+                    output_text = content.get("text")
+                    break
+            if output_text:
+                break
+    if not output_text:
+        raise RuntimeError("La risposta OpenAI non contiene testo utilizzabile.")
+    return normalize_proofread(json.loads(output_text), text)
+
+
+def call_gemini_proofread(text: str) -> dict:
+    """Ask Gemini to proofread one didactic-frame field."""
+
+    api_key = secret_value("GEMINI_API_KEY")
+    if not api_key:
+        raise RuntimeError("Configura GEMINI_API_KEY prima di usare AI grammatica con Gemini.")
+    body = {
+        "systemInstruction": {"parts": [{"text": proofread_system_prompt()}]},
+        "contents": [{"role": "user", "parts": [{"text": json.dumps({"text": text}, ensure_ascii=False)}]}],
+        "generationConfig": {"responseMimeType": "application/json"},
+    }
+    request = urllib.request.Request(
+        f"https://generativelanguage.googleapis.com/v1beta/models/{active_ai_model()}:generateContent?key={api_key}",
+        data=json.dumps(body).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=AI_FRAME_TIMEOUT_SECONDS) as response:
+            data = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Errore Gemini API {error.code}: {detail}") from error
+    try:
+        output_text = data["candidates"][0]["content"]["parts"][0]["text"]
+    except (KeyError, IndexError) as error:
+        raise RuntimeError("La risposta Gemini non contiene testo utilizzabile.") from error
+    return normalize_proofread(parse_json_object(output_text), text)
+
+
+def call_groq_proofread(text: str) -> dict:
+    """Ask Groq to proofread one didactic-frame field."""
+
+    api_key = secret_value("GROQ_API_KEY")
+    if not api_key:
+        raise RuntimeError("Configura GROQ_API_KEY prima di usare AI grammatica con Groq.")
+    result = call_chat_completions_json(
+        "Groq",
+        "https://api.groq.com/openai/v1/chat/completions",
+        api_key,
+        active_ai_model(),
+        proofread_system_prompt(),
+        {"text": text},
+    )
+    return normalize_proofread(result, text)
+
+
+def call_openrouter_proofread(text: str) -> dict:
+    """Ask OpenRouter to proofread one didactic-frame field."""
+
+    api_key = secret_value("OPENROUTER_API_KEY")
+    if not api_key:
+        raise RuntimeError("Configura OPENROUTER_API_KEY prima di usare AI grammatica con OpenRouter.")
+    result = call_chat_completions_json(
+        "OpenRouter",
+        "https://openrouter.ai/api/v1/chat/completions",
+        api_key,
+        active_ai_model(),
+        proofread_system_prompt(),
+        {"text": text},
+    )
+    return normalize_proofread(result, text)
+
+
+def call_ai_proofread(text: str) -> dict:
+    """Route proofreading to the configured AI provider."""
+
+    provider = ACTIVE_AI_PROVIDER
+    if provider == "openai":
+        return call_openai_proofread(text)
+    if provider == "gemini":
+        return call_gemini_proofread(text)
+    if provider == "groq":
+        return call_groq_proofread(text)
+    if provider == "openrouter":
+        return call_openrouter_proofread(text)
+    raise RuntimeError(f"Provider AI non supportato: {provider}.")
+
+
 def call_openai_course_plan(payload: dict) -> dict:
     """Ask OpenAI to draft an annual course plan."""
 
@@ -1299,6 +1468,18 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                     ),
                 }
                 self.write_json({"frame": call_ai_didactic_frame(context)})
+            except Exception as error:  # noqa: BLE001
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+            return
+        if parsed.path == "/api/ai-proofread":
+            try:
+                text = str(payload.get("text", ""))
+                if not text.strip():
+                    raise RuntimeError("Testo vuoto: niente da correggere.")
+                self.write_json(call_ai_proofread(text))
             except Exception as error:  # noqa: BLE001
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json; charset=utf-8")

@@ -65,19 +65,19 @@ const FRAME_FIELDS = [
   { key: "references", label: "Rimando" },
 ];
 
-const TEXT_QUALITY_RULES = [
-  { pattern: /\bperche\b/gi, message: "Possibile accento mancante: usa \"perche'\" solo se intenzionale, altrimenti \"perché\"." },
-  { pattern: /\bpoiche\b/gi, message: "Possibile accento mancante: \"poiché\"." },
-  { pattern: /\bfinche\b/gi, message: "Possibile accento mancante: \"finché\"." },
-  { pattern: /\baffinche\b/gi, message: "Possibile accento mancante: \"affinché\"." },
-  { pattern: /\bcioe\b/gi, message: "Possibile accento mancante: \"cioè\"." },
-  { pattern: /\bgia\b/gi, message: "Possibile accento mancante: \"già\"." },
-  { pattern: /\bpiu\b/gi, message: "Possibile accento mancante: \"più\"." },
-  { pattern: /\bpuo\b/gi, message: "Possibile accento mancante: \"può\"." },
-  { pattern: /\bcosi\b/gi, message: "Possibile accento mancante: \"così\"." },
-  { pattern: /\bqual e\b/gi, message: "Possibile forma da correggere: \"qual è\"." },
-  { pattern: /\b[Ee]'\b/g, message: "Possibile apostrofo al posto dell'accento: usa \"è\" o \"È\"." },
-  { pattern: /\b[Ee]\b/g, message: "Controlla \"e\": se e' verbo essere, usa \"è\"." },
+const TEXT_QUALITY_FIXES = [
+  { pattern: /\bperche\b/gi, replacement: "perché", label: "perche -> perché" },
+  { pattern: /\bpoiche\b/gi, replacement: "poiché", label: "poiche -> poiché" },
+  { pattern: /\bfinche\b/gi, replacement: "finché", label: "finche -> finché" },
+  { pattern: /\baffinche\b/gi, replacement: "affinché", label: "affinche -> affinché" },
+  { pattern: /\bcioe\b/gi, replacement: "cioè", label: "cioe -> cioè" },
+  { pattern: /\bgia\b/gi, replacement: "già", label: "gia -> già" },
+  { pattern: /\bpiu\b/gi, replacement: "più", label: "piu -> più" },
+  { pattern: /\bpuo\b/gi, replacement: "può", label: "puo -> può" },
+  { pattern: /\bcosi\b/gi, replacement: "così", label: "cosi -> così" },
+  { pattern: /\bqual e\b/gi, replacement: "qual è", label: "qual e -> qual è" },
+  { pattern: /\bE'\b/g, replacement: "È", label: "E' -> È" },
+  { pattern: /\be'\b/g, replacement: "è", label: "e' -> è" },
 ];
 
 const AI_PROGRESS_STAGES = [
@@ -1009,6 +1009,7 @@ function renderFrameEditor(item) {
       <button type="button" data-format="bullet">• lista</button>
       <button type="button" data-format="number">1. lista</button>
       <button type="button" data-format="check">Controlla testo</button>
+      <button type="button" data-format="ai-proofread">AI grammatica</button>
     </div>
     <p class="textQuality textQualityNeutral" hidden></p>
     <div class="frameGrid">
@@ -1063,6 +1064,10 @@ function renderFrameEditor(item) {
         showTextQuality(textarea, quality);
         return;
       }
+      if (action === "ai-proofread") {
+        proofreadTextWithAi(textarea, quality);
+        return;
+      }
       applyTextFormat(textarea, action);
       textarea.focus();
     });
@@ -1102,22 +1107,79 @@ function applyTextFormat(textarea, action) {
 }
 
 function showTextQuality(textarea, output) {
-  const findings = [];
-  for (const rule of TEXT_QUALITY_RULES) {
-    rule.pattern.lastIndex = 0;
-    if (rule.pattern.test(textarea.value)) findings.push(rule.message);
-  }
-  output.hidden = false;
   if (!textarea.value.trim()) {
     showToolbarMessage(output, "Campo vuoto: niente da controllare.", "neutral");
     return;
   }
-  if (!findings.length) {
-    showToolbarMessage(output, "Nessun problema ricorrente trovato dal controllo locale.", "ok");
+  const result = applyLocalTextFixes(textarea.value);
+  if (!result.changes.length) {
+    showToolbarMessage(output, "Nessuna correzione locale sicura trovata. Per dubbi di contesto usa AI grammatica.", "ok");
     return;
   }
-  output.innerHTML = `<strong>Controlli suggeriti:</strong><br>${findings.map(escapeHtml).join("<br>")}`;
-  output.className = "textQuality textQualityWarn";
+  const message = `Trovate correzioni locali sicure:\n- ${result.changes.join("\n- ")}\n\nApplicarle al campo selezionato?`;
+  if (!confirm(message)) {
+    output.innerHTML = `<strong>Correzioni non applicate:</strong><br>${result.changes.map(escapeHtml).join("<br>")}`;
+    output.className = "textQuality textQualityWarn";
+    return;
+  }
+  textarea.value = result.text;
+  textarea.dispatchEvent(new Event("input", { bubbles: true }));
+  showToolbarMessage(output, `Correzioni applicate: ${result.changes.join("; ")}.`, "ok");
+}
+
+function applyLocalTextFixes(value) {
+  let text = value;
+  const changes = [];
+  for (const fix of TEXT_QUALITY_FIXES) {
+    fix.pattern.lastIndex = 0;
+    if (!fix.pattern.test(text)) continue;
+    fix.pattern.lastIndex = 0;
+    text = text.replace(fix.pattern, fix.replacement);
+    changes.push(fix.label);
+  }
+  return { text, changes };
+}
+
+async function proofreadTextWithAi(textarea, output) {
+  const original = textarea.value;
+  if (!original.trim()) {
+    showToolbarMessage(output, "Campo vuoto: niente da correggere con AI.", "neutral");
+    return;
+  }
+  showToolbarMessage(output, "AI grammatica in corso: invio il campo al provider configurato...", "neutral");
+  try {
+    const payload = await api("/api/ai-proofread", {
+      method: "POST",
+      body: JSON.stringify({ text: original }),
+    });
+    const corrected = String(payload.corrected_text || "");
+    if (!corrected.trim()) {
+      showToolbarMessage(output, "La AI non ha restituito testo corretto utilizzabile.", "warn");
+      return;
+    }
+    if (corrected === original) {
+      showToolbarMessage(output, "La AI non propone modifiche per questo campo.", "ok");
+      return;
+    }
+    const changes = (payload.changes || []).map(String).filter(Boolean);
+    const notes = String(payload.notes || "").trim();
+    const summary = [
+      "Applicare la correzione AI al campo selezionato?",
+      "",
+      changes.length ? `Modifiche:\n- ${changes.join("\n- ")}` : "Modifiche: la AI non ha fornito un elenco dettagliato.",
+      notes ? `\nNote:\n${notes}` : "",
+    ].join("\n");
+    if (!confirm(summary)) {
+      showToolbarMessage(output, "Correzione AI non applicata.", "neutral");
+      return;
+    }
+    textarea.value = corrected;
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    output.innerHTML = `<strong>Correzione AI applicata.</strong>${changes.length ? `<br>${changes.map(escapeHtml).join("<br>")}` : ""}`;
+    output.className = "textQuality textQualityOk";
+  } catch (error) {
+    showToolbarMessage(output, `AI grammatica non riuscita: ${error.message}`, "warn");
+  }
 }
 
 function showToolbarMessage(output, message, kind) {
