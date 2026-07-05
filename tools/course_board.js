@@ -26,6 +26,7 @@ const els = {
   saveArchiveBtn: document.querySelector("#saveArchiveBtn"),
   generateAllFramesBtn: document.querySelector("#generateAllFramesBtn"),
   generateCoursePlanMdBtn: document.querySelector("#generateCoursePlanMdBtn"),
+  updateReadmeFramesBtn: document.querySelector("#updateReadmeFramesBtn"),
   reloadBtn: document.querySelector("#reloadBtn"),
   saveBtn: document.querySelector("#saveBtn"),
   courseAiDialog: document.querySelector("#courseAiDialog"),
@@ -1325,6 +1326,22 @@ async function generateCoursePlanMd() {
   }
 }
 
+async function updateReadmeFrames() {
+  els.updateReadmeFramesBtn.disabled = true;
+  setStatus("Aggiornamento README: salvo il JSON corrente e inserisco le cornici didattiche nei paragrafi...");
+  try {
+    const payload = await api("/api/readme-frames", {
+      method: "POST",
+      body: JSON.stringify({ design: state.design }),
+    });
+    setStatus(`README aggiornato: ${payload.readme_path}.`);
+  } catch (error) {
+    setStatus(`Aggiornamento README non riuscito. Dettaglio: ${error.message}`);
+  } finally {
+    els.updateReadmeFramesBtn.disabled = false;
+  }
+}
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -1339,6 +1356,7 @@ els.loadSavedDesignBtn.addEventListener("click", loadSavedDesign);
 els.saveArchiveBtn.addEventListener("click", saveArchiveDesign);
 els.generateAllFramesBtn.addEventListener("click", generateAllFrames);
 els.generateCoursePlanMdBtn.addEventListener("click", generateCoursePlanMd);
+els.updateReadmeFramesBtn.addEventListener("click", updateReadmeFrames);
 els.aiBusyNextBtn.addEventListener("click", generateNextFrameInBatch);
 els.aiBusyAllBtn.addEventListener("click", generateAllFramesInBatch);
 els.aiBusyCloseBtn.addEventListener("click", closeFrameBatch);

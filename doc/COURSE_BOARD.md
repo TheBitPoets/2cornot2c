@@ -366,6 +366,27 @@ Quando le cornici vengono inserite nel `README.md`, `scripts/update_course_frame
 
 Le cornici didattiche possono essere inserite anche direttamente nei paragrafi del `README.md`.
 
+#### Metodo da UI
+
+Il metodo consigliato e usare il bottone:
+
+```text
+Aggiorna README
+```
+
+Il bottone esegue due passaggi:
+
+1. salva lo stato corrente della board in `doc/course_design.json`;
+2. esegue `scripts/update_course_frames.py --target README.md`.
+
+La board mostra un messaggio di successo con il percorso aggiornato oppure il dettaglio dell'errore restituito dallo script.
+
+Usa questo bottone quando hai gia controllato il percorso e vuoi riportare nel `README.md` le cornici `Orientamento della sezione` associate agli argomenti presenti nel JSON.
+
+#### Metodo manuale da terminale
+
+Puoi ottenere lo stesso risultato anche da terminale.
+
 Il comando:
 
 ```powershell

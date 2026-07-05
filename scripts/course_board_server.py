@@ -33,6 +33,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DESIGN_PATH = ROOT / "doc" / "course_design.json"
 COURSE_DESIGNS_DIR = ROOT / "doc" / "course_designs"
 COURSE_PLAN_MD_PATH = ROOT / "doc" / "PERCORSO_DIDATTICO.md"
+README_PATH = ROOT / "README.md"
 AI_PROVIDERS_PATH = ROOT / "config" / "ai_providers.yaml"
 AI_SECRET_PATH = ROOT / ".secrets" / "ai.secret"
 DEFAULT_SOURCES = ["README.md", "LINUX_PROGRAMMING.md"]
@@ -103,6 +104,23 @@ def generate_course_plan_md(payload: dict) -> dict:
         "ok": True,
         "design_path": str(DESIGN_PATH.relative_to(ROOT)),
         "markdown_path": str(COURSE_PLAN_MD_PATH.relative_to(ROOT)),
+        "message": (completed.stdout or "").strip(),
+    }
+
+
+def update_readme_frames(payload: dict) -> dict:
+    """Persist the current design and update README.md didactic-frame blocks."""
+
+    write_design(payload)
+    command = [sys.executable, str(ROOT / "scripts" / "update_course_frames.py"), "--target", str(README_PATH)]
+    completed = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, check=False)
+    if completed.returncode:
+        detail = (completed.stderr or completed.stdout or "Errore sconosciuto durante l'aggiornamento del README.").strip()
+        raise RuntimeError(detail)
+    return {
+        "ok": True,
+        "design_path": str(DESIGN_PATH.relative_to(ROOT)),
+        "readme_path": str(README_PATH.relative_to(ROOT)),
         "message": (completed.stdout or "").strip(),
     }
 
@@ -1422,6 +1440,15 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/course-plan-md":
             try:
                 self.write_json(generate_course_plan_md(payload.get("design", payload)))
+            except Exception as error:  # noqa: BLE001
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+            return
+        if parsed.path == "/api/readme-frames":
+            try:
+                self.write_json(update_readme_frames(payload.get("design", payload)))
             except Exception as error:  # noqa: BLE001
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
