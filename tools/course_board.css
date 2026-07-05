@@ -497,6 +497,14 @@ input, select { width: 100%; padding: .72rem .9rem; }
   font-weight: 700;
 }
 
+.frameToolbar [data-format="check"] {
+  border-color: rgba(217, 164, 0, .72);
+}
+
+.frameToolbar [data-format="ai-proofread"] {
+  border-color: rgba(15, 138, 75, .72);
+}
+
 .textQuality {
   margin: .45rem 0 0;
   border-radius: 12px;
