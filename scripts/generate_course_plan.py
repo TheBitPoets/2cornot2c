@@ -60,10 +60,9 @@ def render_items(items: list[dict[str, Any]], depth: int = 0) -> list[str]:
         source = item.get("source", "sorgente sconosciuta")
         level = item.get("level", "?")
         status = item.get("frame", {}).get("status", "todo")
-        summary_indent = "&nbsp;" * (depth * 6)
         lines.extend([
             f"{indent}- <details>",
-            f"{content_indent}<summary>{summary_indent}{title} <code>{source}</code> H{level} <code>{status}</code></summary>",
+            f"{content_indent}<summary>{title} <code>{source}</code> H{level} <code>{status}</code></summary>",
             "",
         ])
         frame_lines = render_frame(item.get("frame", {}), depth + 1)
