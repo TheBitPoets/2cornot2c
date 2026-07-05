@@ -64,6 +64,21 @@ const FRAME_FIELDS = [
   { key: "references", label: "Rimando" },
 ];
 
+const TEXT_QUALITY_RULES = [
+  { pattern: /\bperche\b/gi, message: "Possibile accento mancante: usa \"perche'\" solo se intenzionale, altrimenti \"perché\"." },
+  { pattern: /\bpoiche\b/gi, message: "Possibile accento mancante: \"poiché\"." },
+  { pattern: /\bfinche\b/gi, message: "Possibile accento mancante: \"finché\"." },
+  { pattern: /\baffinche\b/gi, message: "Possibile accento mancante: \"affinché\"." },
+  { pattern: /\bcioe\b/gi, message: "Possibile accento mancante: \"cioè\"." },
+  { pattern: /\bgia\b/gi, message: "Possibile accento mancante: \"già\"." },
+  { pattern: /\bpiu\b/gi, message: "Possibile accento mancante: \"più\"." },
+  { pattern: /\bpuo\b/gi, message: "Possibile accento mancante: \"può\"." },
+  { pattern: /\bcosi\b/gi, message: "Possibile accento mancante: \"così\"." },
+  { pattern: /\bqual e\b/gi, message: "Possibile forma da correggere: \"qual è\"." },
+  { pattern: /\b[Ee]'\b/g, message: "Possibile apostrofo al posto dell'accento: usa \"è\" o \"È\"." },
+  { pattern: /\b[Ee]\b/g, message: "Controlla \"e\": se e' verbo essere, usa \"è\"." },
+];
+
 const AI_PROGRESS_STAGES = [
   "Preparo il contesto didattico...",
   "Leggo paragrafi e sottoparagrafi...",
@@ -1010,16 +1025,84 @@ function renderFrameEditor(item) {
     const label = document.createElement("label");
     label.innerHTML = `
       <span>${escapeHtml(field.label)}</span>
+      <div class="frameToolbar" aria-label="Strumenti testo">
+        <button type="button" data-format="bold">B</button>
+        <button type="button" data-format="italic">I</button>
+        <button type="button" data-format="code">code</button>
+        <button type="button" data-format="bullet">• lista</button>
+        <button type="button" data-format="number">1. lista</button>
+        <button type="button" data-format="check">Controlla testo</button>
+      </div>
       <textarea data-frame-field="${field.key}" rows="2"></textarea>
+      <p class="textQuality" hidden></p>
     `;
     const textarea = label.querySelector("textarea");
+    const quality = label.querySelector(".textQuality");
     textarea.value = item.frame[field.key] || "";
     textarea.addEventListener("input", () => {
       item.frame[field.key] = textarea.value;
+      quality.hidden = true;
+    });
+    label.querySelectorAll("[data-format]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const action = button.dataset.format;
+        if (action === "check") {
+          showTextQuality(textarea, quality);
+          return;
+        }
+        applyTextFormat(textarea, action);
+        item.frame[field.key] = textarea.value;
+        textarea.focus();
+      });
     });
     grid.append(label);
   }
   return details;
+}
+
+function applyTextFormat(textarea, action) {
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  const selected = textarea.value.slice(start, end);
+  const fallback = {
+    bold: "testo in grassetto",
+    italic: "testo in corsivo",
+    code: "codice",
+    bullet: "voce elenco",
+    number: "voce elenco",
+  }[action] || "";
+  const text = selected || fallback;
+  const replacements = {
+    bold: `**${text}**`,
+    italic: `_${text}_`,
+    code: `\`${text}\``,
+    bullet: selected ? selected.split("\n").map((line) => `- ${line.replace(/^[-*]\s+/, "")}`).join("\n") : `- ${text}`,
+    number: selected ? selected.split("\n").map((line, index) => `${index + 1}. ${line.replace(/^\d+\.\s+/, "")}`).join("\n") : `1. ${text}`,
+  };
+  const replacement = replacements[action] || text;
+  textarea.setRangeText(replacement, start, end, "select");
+  textarea.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+function showTextQuality(textarea, output) {
+  const findings = [];
+  for (const rule of TEXT_QUALITY_RULES) {
+    rule.pattern.lastIndex = 0;
+    if (rule.pattern.test(textarea.value)) findings.push(rule.message);
+  }
+  output.hidden = false;
+  if (!textarea.value.trim()) {
+    output.textContent = "Campo vuoto: niente da controllare.";
+    output.className = "textQuality textQualityNeutral";
+    return;
+  }
+  if (!findings.length) {
+    output.textContent = "Nessun problema ricorrente trovato dal controllo locale.";
+    output.className = "textQuality textQualityOk";
+    return;
+  }
+  output.innerHTML = `<strong>Controlli suggeriti:</strong><br>${findings.map(escapeHtml).join("<br>")}`;
+  output.className = "textQuality textQualityWarn";
 }
 
 function frameHasContent(frame = {}) {

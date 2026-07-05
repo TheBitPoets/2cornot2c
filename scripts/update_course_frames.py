@@ -93,7 +93,6 @@ def remove_existing_frames(markdown: str) -> str:
     markdown = COURSE_FRAME_RE.sub("\n", markdown)
     markdown = LEGACY_ORIENTATION_TABLE_RE.sub("\n", markdown)
     markdown = LEGACY_ORIENTATION_DETAILS_RE.sub("\n", markdown)
-    markdown = re.sub(r"\n{4,}", "\n\n\n", markdown)
     return markdown
 
 
@@ -117,7 +116,7 @@ def render_frame_block(item_id: str, item: dict[str, Any]) -> list[str]:
         lines.extend([
             '<p align="justify">',
             f'<strong><span style="font-size: 1.15em;">{icon}</span> {label}:</strong>',
-            html.escape(value, quote=False),
+            render_frame_value(value),
             "</p>",
             "",
         ])
@@ -129,6 +128,30 @@ def render_frame_block(item_id: str, item: dict[str, Any]) -> list[str]:
         f"<!-- COURSE-FRAME:END {item_id} -->",
     ])
     return lines
+
+
+def render_inline_markup(value: str) -> str:
+    """Render a small safe subset of inline Markdown as HTML."""
+
+    escaped = html.escape(value, quote=False)
+    escaped = re.sub(r"`([^`]+)`", r"<code>\1</code>", escaped)
+    escaped = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", escaped)
+    escaped = re.sub(r"(?<!\w)_([^_]+)_(?!\w)", r"<em>\1</em>", escaped)
+    return escaped
+
+
+def render_frame_value(value: str) -> str:
+    """Render paragraphs and simple lists inside a didactic-frame field."""
+
+    lines = [line.rstrip() for line in value.splitlines()]
+    non_empty = [line for line in lines if line.strip()]
+    if non_empty and all(re.match(r"^\s*[-*]\s+", line) for line in non_empty):
+        items = [re.sub(r"^\s*[-*]\s+", "", line).strip() for line in non_empty]
+        return "<ul>" + "".join(f"<li>{render_inline_markup(item)}</li>" for item in items) + "</ul>"
+    if non_empty and all(re.match(r"^\s*\d+\.\s+", line) for line in non_empty):
+        items = [re.sub(r"^\s*\d+\.\s+", "", line).strip() for line in non_empty]
+        return "<ol>" + "".join(f"<li>{render_inline_markup(item)}</li>" for item in items) + "</ol>"
+    return "<br>".join(render_inline_markup(line) for line in lines)
 
 
 def update_markdown(markdown: str, target_name: str, frames: dict[str, dict[str, Any]]) -> str:

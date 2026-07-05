@@ -306,6 +306,34 @@ Nella board la linguetta `Cornice didattica` cambia colore:
 
 In questo modo puoi capire quali argomenti sono gia stati lavorati senza aprire tutte le linguette.
 
+### Scrittura e controllo qualita dei testi
+
+Ogni campo testuale della cornice ha una piccola toolbar:
+
+- `B`: inserisce grassetto con `**testo**`;
+- `I`: inserisce corsivo con `_testo_`;
+- `code`: inserisce codice inline con backtick;
+- `• lista`: crea un elenco puntato;
+- `1. lista`: crea un elenco numerato;
+- `Controlla testo`: esegue un controllo locale sugli errori ricorrenti.
+
+Il controllo locale non sostituisce una revisione grammaticale completa, ma intercetta casi frequenti:
+
+- accenti mancanti in parole come `perche`, `piu`, `puo`, `gia`, `cosi`;
+- forme come `qual e`;
+- apostrofo al posto dell'accento in `e'`;
+- possibile uso di `e` al posto di `è`.
+
+Il controllo su `e` e volutamente prudente: segnala un possibile problema, ma serve sempre leggere il contesto per distinguere la congiunzione `e` dal verbo `è`.
+
+Quando le cornici vengono inserite nel `README.md`, `scripts/update_course_frames.py` converte questa formattazione leggera in HTML sicuro:
+
+- `**testo**` diventa `<strong>testo</strong>`;
+- `_testo_` diventa `<em>testo</em>`;
+- `` `codice` `` diventa `<code>codice</code>`;
+- righe `- voce` diventano `<ul><li>voce</li></ul>`;
+- righe `1. voce` diventano `<ol><li>voce</li></ol>`.
+
 ### Aggiornare le cornici dentro il README
 
 Le cornici didattiche possono essere inserite anche direttamente nei paragrafi del `README.md`.

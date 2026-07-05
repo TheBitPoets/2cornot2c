@@ -446,6 +446,42 @@ input, select { width: 100%; padding: .72rem .9rem; }
   font-weight: 700;
 }
 
+.frameToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem;
+}
+
+.frameToolbar button {
+  border-radius: 10px;
+  padding: .24rem .38rem;
+  font-size: .66rem;
+  font-weight: 700;
+}
+
+.textQuality {
+  margin: 0;
+  border-radius: 12px;
+  padding: .45rem .55rem;
+  font-size: .68rem;
+  line-height: 1.35;
+}
+
+.textQualityOk {
+  background: #edf8f1;
+  color: #0f5132;
+}
+
+.textQualityWarn {
+  background: #fff5df;
+  color: #6b4700;
+}
+
+.textQualityNeutral {
+  background: #f4f4f4;
+  color: var(--muted);
+}
+
 .frameGrid select {
   width: 100%;
   padding: .55rem .7rem;

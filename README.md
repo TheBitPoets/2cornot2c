@@ -5924,7 +5924,7 @@ int main(void){
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su bit, byte, basi numeriche e interpretazione dei dati in memoria. I sottoparagrafi collegati sono: Big &amp; Little endian, Codifica numeri decimali, Mapping signed - unsigned, Estensione rappresentazione binaria di un numero intero, Troncamento rappresentazione binaria di un numero, Addizione senza segno, Addizione con segno, Tipi di dato, `int`. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su bit, byte, basi numeriche e interpretazione dei dati in memoria. I sottoparagrafi collegati sono: Big &amp; Little endian, Codifica numeri decimali, Mapping signed - unsigned, Estensione rappresentazione binaria di un numero intero, Troncamento rappresentazione binaria di un numero, Addizione senza segno, Addizione con segno, Tipi di dato, <code>int</code>. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
@@ -6880,12 +6880,12 @@ Richiama il passaggio precedente su "Addizione con segno" e riprendi il vocabola
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Questo argomento prepara il lavoro successivo su "`int`". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+Questo argomento prepara il lavoro successivo su "<code>int</code>". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Tipi di dato", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "`int`" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Tipi di dato", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "<code>int</code>" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
@@ -6944,17 +6944,17 @@ int permette di rappresentare in memoria i tipi interi (senza parte decimale), l
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore Rappresentazione delle informazioni. I sottoparagrafi collegati sono: Stampare `int`, Altri tipi interi, Stampare altri tipi di interi, Overflow `int`. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore Rappresentazione delle informazioni. I sottoparagrafi collegati sono: Stampare <code>int</code>, Altri tipi interi, Stampare altri tipi di interi, Overflow <code>int</code>. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "`int`" lo studente dovrebbe aver seguito il lavoro precedente su "Tipi di dato", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "<code>int</code>" lo studente dovrebbe aver seguito il lavoro precedente su "Tipi di dato", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine della lezione lo studente deve saper spiegare il ruolo di "`int`", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "<code>int</code>", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
 </p>
 
 <p align="justify">
@@ -6964,17 +6964,17 @@ Richiama il passaggio precedente su "Tipi di dato" e riprendi il vocabolario gia
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Questo argomento prepara il lavoro successivo su "Stampare `int`". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+Questo argomento prepara il lavoro successivo su "Stampare <code>int</code>". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "`int`", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Stampare `int`" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "<code>int</code>", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Stampare <code>int</code>" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "`int`" (../README.md#int). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: README.md sezione "<code>int</code>" (../README.md#int). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -7033,22 +7033,22 @@ int q, w = 200 /* q non è inizializzata, w è inizializzata. scarso stile di  p
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore Rappresentazione delle informazioni &gt; `int`. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore Rappresentazione delle informazioni &gt; <code>int</code>. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Stampare `int`" lo studente dovrebbe aver seguito il lavoro precedente su "`int`", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Stampare <code>int</code>" lo studente dovrebbe aver seguito il lavoro precedente su "<code>int</code>", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine della lezione lo studente deve saper spiegare il ruolo di "Stampare `int`", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Stampare <code>int</code>", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
-Richiama il passaggio precedente su "`int`" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+Richiama il passaggio precedente su "<code>int</code>" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
@@ -7058,12 +7058,12 @@ Questo argomento prepara il lavoro successivo su "Altri tipi interi". Durante la
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Stampare `int`", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Altri tipi interi" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Stampare <code>int</code>", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Altri tipi interi" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Stampare `int`" (../README.md#stampare-int). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: README.md sezione "Stampare <code>int</code>" (../README.md#stampare-int). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -7243,12 +7243,12 @@ int main(void){
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su tipi primitivi del C, dimensioni, range e scelta del tipo corretto. Si collega al blocco superiore Rappresentazione delle informazioni &gt; `int`. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su tipi primitivi del C, dimensioni, range e scelta del tipo corretto. Si collega al blocco superiore Rappresentazione delle informazioni &gt; <code>int</code>. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Altri tipi interi" lo studente dovrebbe aver seguito il lavoro precedente su "Stampare `int`", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Altri tipi interi" lo studente dovrebbe aver seguito il lavoro precedente su "Stampare <code>int</code>", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
@@ -7258,7 +7258,7 @@ Alla fine della lezione lo studente deve saper spiegare il ruolo di "Altri tipi 
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
-Richiama il passaggio precedente su "Stampare `int`" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+Richiama il passaggio precedente su "Stampare <code>int</code>" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
@@ -7370,7 +7370,7 @@ Quando allora usare i diversi tipi di interi? Dipende dalla situazione.
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su tipi primitivi del C, dimensioni, range e scelta del tipo corretto. Si collega al blocco superiore Rappresentazione delle informazioni &gt; `int`. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su tipi primitivi del C, dimensioni, range e scelta del tipo corretto. Si collega al blocco superiore Rappresentazione delle informazioni &gt; <code>int</code>. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
@@ -7390,12 +7390,12 @@ Richiama il passaggio precedente su "Altri tipi interi" e riprendi il vocabolari
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Questo argomento prepara il lavoro successivo su "Overflow `int`". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+Questo argomento prepara il lavoro successivo su "Overflow <code>int</code>". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Stampare altri tipi di interi", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Overflow `int`" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Stampare altri tipi di interi", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Overflow <code>int</code>" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
@@ -7531,17 +7531,17 @@ verybig = 12345678908642 and not 12345678908642
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore Rappresentazione delle informazioni &gt; `int`. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore Rappresentazione delle informazioni &gt; <code>int</code>. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Overflow `int`" lo studente dovrebbe aver seguito il lavoro precedente su "Stampare altri tipi di interi", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Overflow <code>int</code>" lo studente dovrebbe aver seguito il lavoro precedente su "Stampare altri tipi di interi", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine della lezione lo studente deve saper spiegare il ruolo di "Overflow `int`", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Overflow <code>int</code>", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
 </p>
 
 <p align="justify">
@@ -7551,17 +7551,17 @@ Richiama il passaggio precedente su "Stampare altri tipi di interi" e riprendi i
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Questo argomento prepara il lavoro successivo su "`char`". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+Questo argomento prepara il lavoro successivo su "<code>char</code>". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Overflow `int`", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "`char`" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Overflow <code>int</code>", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "<code>char</code>" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Overflow `int`" (../README.md#overflow-int). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: README.md sezione "Overflow <code>int</code>" (../README.md#overflow-int). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -7790,12 +7790,12 @@ signed negative: 0xffffffe5
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Questo argomento si colloca nell'UDA "Operatori, condizioni e selezione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. I sottoparagrafi collegati sono: Cast tra `signed` e `unsigned`. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+Questo argomento si colloca nell'UDA "Operatori, condizioni e selezione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. I sottoparagrafi collegati sono: Cast tra <code>signed</code> e <code>unsigned</code>. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Cast" lo studente dovrebbe aver seguito il lavoro precedente su "Operatore `sizeof`", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Cast" lo studente dovrebbe aver seguito il lavoro precedente su "Operatore <code>sizeof</code>", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
@@ -7805,17 +7805,17 @@ Alla fine della lezione lo studente deve saper spiegare il ruolo di "Cast", rico
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
-Richiama il passaggio precedente su "Operatore `sizeof`" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+Richiama il passaggio precedente su "Operatore <code>sizeof</code>" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Questo argomento prepara il lavoro successivo su "Cast tra `signed` e `unsigned`". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+Questo argomento prepara il lavoro successivo su "Cast tra <code>signed</code> e <code>unsigned</code>". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Cast", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Cast tra `signed` e `unsigned`" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Cast", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Cast tra <code>signed</code> e <code>unsigned</code>" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
@@ -8134,12 +8134,12 @@ Questo argomento si colloca nell'UDA "Operatori, condizioni e selezione" del per
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Cast tra `signed` e `unsigned`" lo studente dovrebbe aver seguito il lavoro precedente su "Cast", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Cast tra <code>signed</code> e <code>unsigned</code>" lo studente dovrebbe aver seguito il lavoro precedente su "Cast", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine della lezione lo studente deve saper spiegare il ruolo di "Cast tra `signed` e `unsigned`", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Cast tra <code>signed</code> e <code>unsigned</code>", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
 </p>
 
 <p align="justify">
@@ -8154,12 +8154,12 @@ Questo argomento prepara il lavoro successivo su "Controllo del flusso". Durante
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Cast tra `signed` e `unsigned`", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Controllo del flusso" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Cast tra <code>signed</code> e <code>unsigned</code>", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Controllo del flusso" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Cast tra `signed` e `unsigned`" (../README.md#cast-tra-signed-e-unsigned). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: README.md sezione "Cast tra <code>signed</code> e <code>unsigned</code>" (../README.md#cast-tra-signed-e-unsigned). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -8684,32 +8684,32 @@ Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazi
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "`char`" lo studente dovrebbe aver seguito il lavoro precedente su "Overflow `int`", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "<code>char</code>" lo studente dovrebbe aver seguito il lavoro precedente su "Overflow <code>int</code>", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine della lezione lo studente deve saper spiegare il ruolo di "`char`", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "<code>char</code>", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
-Richiama il passaggio precedente su "Overflow `int`" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+Richiama il passaggio precedente su "Overflow <code>int</code>" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Questo argomento prepara il lavoro successivo su "Stampare un `char`". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+Questo argomento prepara il lavoro successivo su "Stampare un <code>char</code>". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "`char`", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Stampare un `char`" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "<code>char</code>", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Stampare un <code>char</code>" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "`char`" (../README.md#char). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: README.md sezione "<code>char</code>" (../README.md#char). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -8925,17 +8925,17 @@ Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazi
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Stampare un `char`" lo studente dovrebbe aver seguito il lavoro precedente su "`char`", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Stampare un <code>char</code>" lo studente dovrebbe aver seguito il lavoro precedente su "<code>char</code>", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine della lezione lo studente deve saper spiegare il ruolo di "Stampare un `char`", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Stampare un <code>char</code>", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
-Richiama il passaggio precedente su "`char`" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+Richiama il passaggio precedente su "<code>char</code>" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
@@ -8945,12 +8945,12 @@ Questo argomento prepara il lavoro successivo su "Costanti". Durante la spiegazi
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Stampare un `char`", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Costanti" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Stampare un <code>char</code>", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Costanti" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Stampare un `char`" (../README.md#stampare-un-char). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: README.md sezione "Stampare un <code>char</code>" (../README.md#stampare-un-char). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -9085,7 +9085,7 @@ Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazi
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Costanti" lo studente dovrebbe aver seguito il lavoro precedente su "Stampare un `char`", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Costanti" lo studente dovrebbe aver seguito il lavoro precedente su "Stampare un <code>char</code>", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
@@ -9095,7 +9095,7 @@ Alla fine della lezione lo studente deve saper spiegare il ruolo di "Costanti", 
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
-Richiama il passaggio precedente su "Stampare un `char`" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+Richiama il passaggio precedente su "Stampare un <code>char</code>" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
@@ -9734,12 +9734,12 @@ Questo argomento si colloca nell'UDA "Operatori, condizioni e selezione" del per
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Operatore `sizeof`" lo studente dovrebbe aver seguito il lavoro precedente su "Operatore incremento/decremento ++ --", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Operatore <code>sizeof</code>" lo studente dovrebbe aver seguito il lavoro precedente su "Operatore incremento/decremento ++ --", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine della lezione lo studente deve saper spiegare il ruolo di "Operatore `sizeof`", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Operatore <code>sizeof</code>", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
 </p>
 
 <p align="justify">
@@ -9754,12 +9754,12 @@ Questo argomento prepara il lavoro successivo su "Cast". Durante la spiegazione 
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Operatore `sizeof`", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Cast" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Operatore <code>sizeof</code>", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Cast" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Operatore `sizeof`" (../README.md#operatore-sizeof). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: README.md sezione "Operatore <code>sizeof</code>" (../README.md#operatore-sizeof). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -10044,12 +10044,12 @@ Richiama il passaggio precedente su "Operatore %" e riprendi il vocabolario gia 
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Questo argomento prepara il lavoro successivo su "Operatore `sizeof`". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+Questo argomento prepara il lavoro successivo su "Operatore <code>sizeof</code>". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Operatore incremento/decremento ++ --", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Operatore `sizeof`" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Operatore incremento/decremento ++ --", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Operatore <code>sizeof</code>" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
@@ -10321,7 +10321,7 @@ Questo argomento si colloca nell'UDA "Operatori, condizioni e selezione" del per
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Controllo del flusso" lo studente dovrebbe aver seguito il lavoro precedente su "Cast tra `signed` e `unsigned`", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Controllo del flusso" lo studente dovrebbe aver seguito il lavoro precedente su "Cast tra <code>signed</code> e <code>unsigned</code>", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
@@ -10331,7 +10331,7 @@ Alla fine della lezione lo studente deve saper spiegare il ruolo di "Controllo d
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
-Richiama il passaggio precedente su "Cast tra `signed` e `unsigned`" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+Richiama il passaggio precedente su "Cast tra <code>signed</code> e <code>unsigned</code>" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
@@ -12546,7 +12546,7 @@ L'aritmetica dei puntatori ci sarà molto utile quando lavoreremo con i vettori 
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso Intermedio per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore I puntatori. I sottoparagrafi collegati sono: Inizializzare un vettore, Dimensione vettore (`sizeof`). La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso Intermedio per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore I puntatori. I sottoparagrafi collegati sono: Inizializzare un vettore, Dimensione vettore (<code>sizeof</code>). La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
@@ -12902,12 +12902,12 @@ Richiama il passaggio precedente su "Vettori" e riprendi il vocabolario gia cons
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Questo argomento prepara il lavoro successivo su "Dimensione vettore (`sizeof`)". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+Questo argomento prepara il lavoro successivo su "Dimensione vettore (<code>sizeof</code>)". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Inizializzare un vettore", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Dimensione vettore (`sizeof`)" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Inizializzare un vettore", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Dimensione vettore (<code>sizeof</code>)" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
@@ -13261,12 +13261,12 @@ Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Dimensione vettore (`sizeof`)" lo studente dovrebbe aver seguito il lavoro precedente su "Inizializzare un vettore", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Dimensione vettore (<code>sizeof</code>)" lo studente dovrebbe aver seguito il lavoro precedente su "Inizializzare un vettore", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine della lezione lo studente deve saper spiegare il ruolo di "Dimensione vettore (`sizeof`)", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Dimensione vettore (<code>sizeof</code>)", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
 </p>
 
 <p align="justify">
@@ -13281,12 +13281,12 @@ Questo argomento prepara il lavoro successivo su "Relazione tra array e puntator
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Dimensione vettore (`sizeof`)", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Relazione tra array e puntatori" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Dimensione vettore (<code>sizeof</code>)", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Relazione tra array e puntatori" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Dimensione vettore (`sizeof`)" (../README.md#dimensione-vettore-sizeof). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: README.md sezione "Dimensione vettore (<code>sizeof</code>)" (../README.md#dimensione-vettore-sizeof). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -13509,7 +13509,7 @@ Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Relazione tra array e puntatori" lo studente dovrebbe aver seguito il lavoro precedente su "Dimensione vettore (`sizeof`)", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Relazione tra array e puntatori" lo studente dovrebbe aver seguito il lavoro precedente su "Dimensione vettore (<code>sizeof</code>)", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
@@ -13519,7 +13519,7 @@ Alla fine della lezione lo studente deve saper spiegare il ruolo di "Relazione t
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
-Richiama il passaggio precedente su "Dimensione vettore (`sizeof`)" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+Richiama il passaggio precedente su "Dimensione vettore (<code>sizeof</code>)" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
