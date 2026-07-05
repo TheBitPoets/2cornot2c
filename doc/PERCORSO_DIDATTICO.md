@@ -14,30 +14,30 @@ Per modificarlo, aggiorna la struttura con la Course Design Board e poi rigenera
 <table align="center">
 <thead>
 <tr>
-<th>Anno</th>
-<th>Descrizione</th>
-<th>Ore/settimana</th>
-<th>Settimane</th>
-<th>UDA</th>
-<th>Argomenti assegnati</th>
+<th align="center">Anno</th>
+<th align="center">Descrizione</th>
+<th align="center">Ore/settimana</th>
+<th align="center">Settimane</th>
+<th align="center">UDA</th>
+<th align="center">Argomenti assegnati</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Terzo anno</td>
-<td>Corso di C base e intermedio focalizzato sulla logica di programmazione e la gestione della memoria, con integrazione di attività di laboratorio.</td>
-<td>3</td>
-<td>33</td>
-<td>9</td>
-<td>136</td>
+<td align="center"><div align="justify">Terzo anno</div></td>
+<td align="center"><div align="justify">Corso di C base e intermedio focalizzato sulla logica di programmazione e la gestione della memoria, con integrazione di attività di laboratorio.</div></td>
+<td align="center"><div align="justify">3</div></td>
+<td align="center"><div align="justify">33</div></td>
+<td align="center"><div align="justify">9</div></td>
+<td align="center"><div align="justify">136</div></td>
 </tr>
 <tr>
-<td>Quarto anno</td>
-<td>Linux programming, processi e thread</td>
-<td>3</td>
-<td>33</td>
-<td>7</td>
-<td>0</td>
+<td align="center"><div align="justify">Quarto anno</div></td>
+<td align="center"><div align="justify">Linux programming, processi e thread</div></td>
+<td align="center"><div align="justify">3</div></td>
+<td align="center"><div align="justify">33</div></td>
+<td align="center"><div align="justify">7</div></td>
+<td align="center"><div align="justify">0</div></td>
 </tr>
 </tbody>
 </table>
@@ -52,75 +52,79 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 <table align="center">
 <thead>
 <tr>
-<th>UDA</th>
-<th>Percorso</th>
-<th>Settimane</th>
-<th>Argomenti</th>
+<th align="center">UDA</th>
+<th align="center">Percorso</th>
+<th align="center">Settimane</th>
+<th align="center">Argomenti</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>uda-1</code> Strumenti, primo programma e rappresentazione</td>
-<td>Base</td>
-<td>3</td>
-<td>25</td>
+<td align="center"><div align="justify"><code>uda-1</code> Strumenti, primo programma e rappresentazione</div></td>
+<td align="center"><div align="justify">Base</div></td>
+<td align="center"><div align="justify">3</div></td>
+<td align="center"><div align="justify">25</div></td>
 </tr>
 <tr>
-<td><code>uda-2</code> Operatori, condizioni e selezione</td>
-<td>Base</td>
-<td>3</td>
-<td>20</td>
+<td align="center"><div align="justify"><code>uda-2</code> Operatori, condizioni e selezione</div></td>
+<td align="center"><div align="justify">Base</div></td>
+<td align="center"><div align="justify">3</div></td>
+<td align="center"><div align="justify">20</div></td>
 </tr>
 <tr>
-<td><code>uda-3</code> Cicli e funzioni</td>
-<td>Base</td>
-<td>4</td>
-<td>6</td>
+<td align="center"><div align="justify"><code>uda-3</code> Cicli e funzioni</div></td>
+<td align="center"><div align="justify">Base</div></td>
+<td align="center"><div align="justify">4</div></td>
+<td align="center"><div align="justify">6</div></td>
 </tr>
 <tr>
-<td><code>uda-4</code> Array e stringhe semplici</td>
-<td>Base</td>
-<td>4</td>
-<td>7</td>
+<td align="center"><div align="justify"><code>uda-4</code> Array e stringhe semplici</div></td>
+<td align="center"><div align="justify">Base</div></td>
+<td align="center"><div align="justify">4</div></td>
+<td align="center"><div align="justify">7</div></td>
 </tr>
 <tr>
-<td><code>uda-5</code> Struct e consolidamento</td>
-<td>Base</td>
-<td>3</td>
-<td>3</td>
+<td align="center"><div align="justify"><code>uda-5</code> Struct e consolidamento</div></td>
+<td align="center"><div align="justify">Base</div></td>
+<td align="center"><div align="justify">3</div></td>
+<td align="center"><div align="justify">3</div></td>
 </tr>
 <tr>
-<td><code>uda-6</code> Puntatori, array e indirizzi</td>
-<td>Intermedio</td>
-<td>4</td>
-<td>30</td>
+<td align="center"><div align="justify"><code>uda-6</code> Puntatori, array e indirizzi</div></td>
+<td align="center"><div align="justify">Intermedio</div></td>
+<td align="center"><div align="justify">4</div></td>
+<td align="center"><div align="justify">30</div></td>
 </tr>
 <tr>
-<td><code>uda-7</code> Memoria automatica, statica e dinamica</td>
-<td>Intermedio</td>
-<td>4</td>
-<td>13</td>
+<td align="center"><div align="justify"><code>uda-7</code> Memoria automatica, statica e dinamica</div></td>
+<td align="center"><div align="justify">Intermedio</div></td>
+<td align="center"><div align="justify">4</div></td>
+<td align="center"><div align="justify">13</div></td>
 </tr>
 <tr>
-<td><code>uda-8</code> Preprocessore, header e compilazione separata</td>
-<td>Intermedio</td>
-<td>3</td>
-<td>18</td>
+<td align="center"><div align="justify"><code>uda-8</code> Preprocessore, header e compilazione separata</div></td>
+<td align="center"><div align="justify">Intermedio</div></td>
+<td align="center"><div align="justify">3</div></td>
+<td align="center"><div align="justify">18</div></td>
 </tr>
 <tr>
-<td><code>uda-9</code> File, Makefile, debugging e progetto</td>
-<td>Intermedio</td>
-<td>5</td>
-<td>14</td>
+<td align="center"><div align="justify"><code>uda-9</code> File, Makefile, debugging e progetto</div></td>
+<td align="center"><div align="justify">Intermedio</div></td>
+<td align="center"><div align="justify">5</div></td>
+<td align="center"><div align="justify">14</div></td>
 </tr>
 </tbody>
 </table>
 
 <table align="center">
 <tr>
-<td width="900">
+<td width="900" align="center">
+
+<div align="center">
 
 ### UDA-1 - Strumenti, primo programma e rappresentazione
+
+</div>
 
 <details>
 <summary><strong>Apri contenuto UDA - Base - 3 settimane</strong></summary>
@@ -1216,9 +1220,13 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
 <table align="center">
 <tr>
-<td width="900">
+<td width="900" align="center">
+
+<div align="center">
 
 ### UDA-2 - Operatori, condizioni e selezione
+
+</div>
 
 <details>
 <summary><strong>Apri contenuto UDA - Base - 3 settimane</strong></summary>
@@ -2096,9 +2104,13 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
 <table align="center">
 <tr>
-<td width="900">
+<td width="900" align="center">
+
+<div align="center">
 
 ### UDA-3 - Cicli e funzioni
+
+</div>
 
 <details>
 <summary><strong>Apri contenuto UDA - Base - 4 settimane</strong></summary>
@@ -2374,9 +2386,13 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
 <table align="center">
 <tr>
-<td width="900">
+<td width="900" align="center">
+
+<div align="center">
 
 ### UDA-4 - Array e stringhe semplici
+
+</div>
 
 <details>
 <summary><strong>Apri contenuto UDA - Base - 4 settimane</strong></summary>
@@ -2695,9 +2711,13 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
 <table align="center">
 <tr>
-<td width="900">
+<td width="900" align="center">
+
+<div align="center">
 
 ### UDA-5 - Struct e consolidamento
+
+</div>
 
 <details>
 <summary><strong>Apri contenuto UDA - Base - 3 settimane</strong></summary>
@@ -2844,9 +2864,13 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
 <table align="center">
 <tr>
-<td width="900">
+<td width="900" align="center">
+
+<div align="center">
 
 ### UDA-6 - Puntatori, array e indirizzi
+
+</div>
 
 <details>
 <summary><strong>Apri contenuto UDA - Intermedio - 4 settimane</strong></summary>
@@ -4154,9 +4178,13 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
 <table align="center">
 <tr>
-<td width="900">
+<td width="900" align="center">
+
+<div align="center">
 
 ### UDA-7 - Memoria automatica, statica e dinamica
+
+</div>
 
 <details>
 <summary><strong>Apri contenuto UDA - Intermedio - 4 settimane</strong></summary>
@@ -4733,9 +4761,13 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
 <table align="center">
 <tr>
-<td width="900">
+<td width="900" align="center">
+
+<div align="center">
 
 ### UDA-8 - Preprocessore, header e compilazione separata
+
+</div>
 
 <details>
 <summary><strong>Apri contenuto UDA - Intermedio - 3 settimane</strong></summary>
@@ -5527,9 +5559,13 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 
 <table align="center">
 <tr>
-<td width="900">
+<td width="900" align="center">
+
+<div align="center">
 
 ### UDA-9 - File, Makefile, debugging e progetto
+
+</div>
 
 <details>
 <summary><strong>Apri contenuto UDA - Intermedio - 5 settimane</strong></summary>
@@ -6157,63 +6193,67 @@ Linux programming, processi e thread
 <table align="center">
 <thead>
 <tr>
-<th>UDA</th>
-<th>Percorso</th>
-<th>Settimane</th>
-<th>Argomenti</th>
+<th align="center">UDA</th>
+<th align="center">Percorso</th>
+<th align="center">Settimane</th>
+<th align="center">Argomenti</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>uda-10</code> Ripartenza C/Linux, API e qualita</td>
-<td>Avanzato</td>
-<td>1-5</td>
-<td>0</td>
+<td align="center"><div align="justify"><code>uda-10</code> Ripartenza C/Linux, API e qualita</div></td>
+<td align="center"><div align="justify">Avanzato</div></td>
+<td align="center"><div align="justify">1-5</div></td>
+<td align="center"><div align="justify">0</div></td>
 </tr>
 <tr>
-<td><code>uda-11</code> Processi</td>
-<td>Avanzato</td>
-<td>6-12</td>
-<td>0</td>
+<td align="center"><div align="justify"><code>uda-11</code> Processi</div></td>
+<td align="center"><div align="justify">Avanzato</div></td>
+<td align="center"><div align="justify">6-12</div></td>
+<td align="center"><div align="justify">0</div></td>
 </tr>
 <tr>
-<td><code>uda-12</code> Segnali e progetto processi</td>
-<td>Avanzato</td>
-<td>13-15</td>
-<td>0</td>
+<td align="center"><div align="justify"><code>uda-12</code> Segnali e progetto processi</div></td>
+<td align="center"><div align="justify">Avanzato</div></td>
+<td align="center"><div align="justify">13-15</div></td>
+<td align="center"><div align="justify">0</div></td>
 </tr>
 <tr>
-<td><code>uda-13</code> Thread</td>
-<td>Avanzato</td>
-<td>16-20</td>
-<td>0</td>
+<td align="center"><div align="justify"><code>uda-13</code> Thread</div></td>
+<td align="center"><div align="justify">Avanzato</div></td>
+<td align="center"><div align="justify">16-20</div></td>
+<td align="center"><div align="justify">0</div></td>
 </tr>
 <tr>
-<td><code>uda-14</code> Sincronizzazione</td>
-<td>Avanzato</td>
-<td>21-25</td>
-<td>0</td>
+<td align="center"><div align="justify"><code>uda-14</code> Sincronizzazione</div></td>
+<td align="center"><div align="justify">Avanzato</div></td>
+<td align="center"><div align="justify">21-25</div></td>
+<td align="center"><div align="justify">0</div></td>
 </tr>
 <tr>
-<td><code>uda-15</code> I/O, processi e socket intro</td>
-<td>Avanzato</td>
-<td>26-28</td>
-<td>0</td>
+<td align="center"><div align="justify"><code>uda-15</code> I/O, processi e socket intro</div></td>
+<td align="center"><div align="justify">Avanzato</div></td>
+<td align="center"><div align="justify">26-28</div></td>
+<td align="center"><div align="justify">0</div></td>
 </tr>
 <tr>
-<td><code>uda-16</code> Sicurezza, CI, manutenzione e progetto finale</td>
-<td>Avanzato</td>
-<td>29-33</td>
-<td>0</td>
+<td align="center"><div align="justify"><code>uda-16</code> Sicurezza, CI, manutenzione e progetto finale</div></td>
+<td align="center"><div align="justify">Avanzato</div></td>
+<td align="center"><div align="justify">29-33</div></td>
+<td align="center"><div align="justify">0</div></td>
 </tr>
 </tbody>
 </table>
 
 <table align="center">
 <tr>
-<td width="900">
+<td width="900" align="center">
+
+<div align="center">
 
 ### UDA-10 - Ripartenza C/Linux, API e qualita
+
+</div>
 
 <details>
 <summary><strong>Apri contenuto UDA - Avanzato - 1-5 settimane</strong></summary>
@@ -6232,9 +6272,13 @@ Linux programming, processi e thread
 
 <table align="center">
 <tr>
-<td width="900">
+<td width="900" align="center">
+
+<div align="center">
 
 ### UDA-11 - Processi
+
+</div>
 
 <details>
 <summary><strong>Apri contenuto UDA - Avanzato - 6-12 settimane</strong></summary>
@@ -6253,9 +6297,13 @@ Linux programming, processi e thread
 
 <table align="center">
 <tr>
-<td width="900">
+<td width="900" align="center">
+
+<div align="center">
 
 ### UDA-12 - Segnali e progetto processi
+
+</div>
 
 <details>
 <summary><strong>Apri contenuto UDA - Avanzato - 13-15 settimane</strong></summary>
@@ -6274,9 +6322,13 @@ Linux programming, processi e thread
 
 <table align="center">
 <tr>
-<td width="900">
+<td width="900" align="center">
+
+<div align="center">
 
 ### UDA-13 - Thread
+
+</div>
 
 <details>
 <summary><strong>Apri contenuto UDA - Avanzato - 16-20 settimane</strong></summary>
@@ -6295,9 +6347,13 @@ Linux programming, processi e thread
 
 <table align="center">
 <tr>
-<td width="900">
+<td width="900" align="center">
+
+<div align="center">
 
 ### UDA-14 - Sincronizzazione
+
+</div>
 
 <details>
 <summary><strong>Apri contenuto UDA - Avanzato - 21-25 settimane</strong></summary>
@@ -6316,9 +6372,13 @@ Linux programming, processi e thread
 
 <table align="center">
 <tr>
-<td width="900">
+<td width="900" align="center">
+
+<div align="center">
 
 ### UDA-15 - I/O, processi e socket intro
+
+</div>
 
 <details>
 <summary><strong>Apri contenuto UDA - Avanzato - 26-28 settimane</strong></summary>
@@ -6337,9 +6397,13 @@ Linux programming, processi e thread
 
 <table align="center">
 <tr>
-<td width="900">
+<td width="900" align="center">
+
+<div align="center">
 
 ### UDA-16 - Sicurezza, CI, manutenzione e progetto finale
+
+</div>
 
 <details>
 <summary><strong>Apri contenuto UDA - Avanzato - 29-33 settimane</strong></summary>

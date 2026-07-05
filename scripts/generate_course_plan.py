@@ -53,11 +53,11 @@ def item_count(items: list[dict[str, Any]]) -> int:
 def render_centered_table(headers: list[str], rows: list[list[str]]) -> list[str]:
     """Render a GitHub-compatible centered HTML table."""
     lines = ['<table align="center">', '<thead>', '<tr>']
-    lines.extend(f"<th>{html.escape(header, quote=False)}</th>" for header in headers)
+    lines.extend(f'<th align="center">{html.escape(header, quote=False)}</th>' for header in headers)
     lines.extend(["</tr>", "</thead>", "<tbody>"])
     for row in rows:
         lines.append("<tr>")
-        lines.extend(f"<td>{cell}</td>" for cell in row)
+        lines.extend(f'<td align="center"><div align="justify">{cell}</div></td>' for cell in row)
         lines.append("</tr>")
     lines.extend(["</tbody>", "</table>"])
     return lines
@@ -191,9 +191,13 @@ def render_design(design: dict[str, Any]) -> str:
                 "",
                 '<table align="center">',
                 '<tr>',
-                '<td width="900">',
+                '<td width="900" align="center">',
+                "",
+                f'<div align="center">',
                 "",
                 f"### {uda_heading_text(uda)}",
+                "",
+                "</div>",
                 "",
                 "<details>",
                 f"<summary><strong>{summary_text}</strong></summary>",
