@@ -11,10 +11,36 @@ Per modificarlo, aggiorna la struttura con la Course Design Board e poi rigenera
 
 ## Sintesi dei percorsi
 
-| Anno | Descrizione | Ore/settimana | Settimane | UDA | Argomenti assegnati |
-| --- | --- | ---: | ---: | ---: | ---: |
-| Terzo anno | Corso di C base e intermedio focalizzato sulla logica di programmazione e la gestione della memoria, con integrazione di attività di laboratorio. | 3 | 33 | 9 | 136 |
-| Quarto anno | Linux programming, processi e thread | 3 | 33 | 7 | 0 |
+<table align="center">
+<thead>
+<tr>
+<th>Anno</th>
+<th>Descrizione</th>
+<th>Ore/settimana</th>
+<th>Settimane</th>
+<th>UDA</th>
+<th>Argomenti assegnati</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Terzo anno</td>
+<td>Corso di C base e intermedio focalizzato sulla logica di programmazione e la gestione della memoria, con integrazione di attività di laboratorio.</td>
+<td>3</td>
+<td>33</td>
+<td>9</td>
+<td>136</td>
+</tr>
+<tr>
+<td>Quarto anno</td>
+<td>Linux programming, processi e thread</td>
+<td>3</td>
+<td>33</td>
+<td>7</td>
+<td>0</td>
+</tr>
+</tbody>
+</table>
 
 ## Terzo anno
 
@@ -23,19 +49,74 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 - Ore settimanali: `3`
 - Settimane: `33`
 
-| UDA | Percorso | Settimane | Argomenti |
-| --- | --- | --- | ---: |
-| `uda-1` Strumenti, primo programma e rappresentazione | Base | 3 | 25 |
-| `uda-2` Operatori, condizioni e selezione | Base | 3 | 20 |
-| `uda-3` Cicli e funzioni | Base | 4 | 6 |
-| `uda-4` Array e stringhe semplici | Base | 4 | 7 |
-| `uda-5` Struct e consolidamento | Base | 3 | 3 |
-| `uda-6` Puntatori, array e indirizzi | Intermedio | 4 | 30 |
-| `uda-7` Memoria automatica, statica e dinamica | Intermedio | 4 | 13 |
-| `uda-8` Preprocessore, header e compilazione separata | Intermedio | 3 | 18 |
-| `uda-9` File, Makefile, debugging e progetto | Intermedio | 5 | 14 |
+<table align="center">
+<thead>
+<tr>
+<th>UDA</th>
+<th>Percorso</th>
+<th>Settimane</th>
+<th>Argomenti</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>uda-1</code> Strumenti, primo programma e rappresentazione</td>
+<td>Base</td>
+<td>3</td>
+<td>25</td>
+</tr>
+<tr>
+<td><code>uda-2</code> Operatori, condizioni e selezione</td>
+<td>Base</td>
+<td>3</td>
+<td>20</td>
+</tr>
+<tr>
+<td><code>uda-3</code> Cicli e funzioni</td>
+<td>Base</td>
+<td>4</td>
+<td>6</td>
+</tr>
+<tr>
+<td><code>uda-4</code> Array e stringhe semplici</td>
+<td>Base</td>
+<td>4</td>
+<td>7</td>
+</tr>
+<tr>
+<td><code>uda-5</code> Struct e consolidamento</td>
+<td>Base</td>
+<td>3</td>
+<td>3</td>
+</tr>
+<tr>
+<td><code>uda-6</code> Puntatori, array e indirizzi</td>
+<td>Intermedio</td>
+<td>4</td>
+<td>30</td>
+</tr>
+<tr>
+<td><code>uda-7</code> Memoria automatica, statica e dinamica</td>
+<td>Intermedio</td>
+<td>4</td>
+<td>13</td>
+</tr>
+<tr>
+<td><code>uda-8</code> Preprocessore, header e compilazione separata</td>
+<td>Intermedio</td>
+<td>3</td>
+<td>18</td>
+</tr>
+<tr>
+<td><code>uda-9</code> File, Makefile, debugging e progetto</td>
+<td>Intermedio</td>
+<td>5</td>
+<td>14</td>
+</tr>
+</tbody>
+</table>
 
-<table>
+<table align="center">
 <tr>
 <td>
 
@@ -1133,7 +1214,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 </tr>
 </table>
 
-<table>
+<table align="center">
 <tr>
 <td>
 
@@ -2013,7 +2094,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 </tr>
 </table>
 
-<table>
+<table align="center">
 <tr>
 <td>
 
@@ -2291,7 +2372,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 </tr>
 </table>
 
-<table>
+<table align="center">
 <tr>
 <td>
 
@@ -2612,7 +2693,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 </tr>
 </table>
 
-<table>
+<table align="center">
 <tr>
 <td>
 
@@ -2761,7 +2842,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 </tr>
 </table>
 
-<table>
+<table align="center">
 <tr>
 <td>
 
@@ -4071,7 +4152,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 </tr>
 </table>
 
-<table>
+<table align="center">
 <tr>
 <td>
 
@@ -4650,7 +4731,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 </tr>
 </table>
 
-<table>
+<table align="center">
 <tr>
 <td>
 
@@ -5444,7 +5525,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 </tr>
 </table>
 
-<table>
+<table align="center">
 <tr>
 <td>
 
@@ -6073,17 +6154,62 @@ Linux programming, processi e thread
 - Ore settimanali: `3`
 - Settimane: `33`
 
-| UDA | Percorso | Settimane | Argomenti |
-| --- | --- | --- | ---: |
-| `uda-10` Ripartenza C/Linux, API e qualita | Avanzato | 1-5 | 0 |
-| `uda-11` Processi | Avanzato | 6-12 | 0 |
-| `uda-12` Segnali e progetto processi | Avanzato | 13-15 | 0 |
-| `uda-13` Thread | Avanzato | 16-20 | 0 |
-| `uda-14` Sincronizzazione | Avanzato | 21-25 | 0 |
-| `uda-15` I/O, processi e socket intro | Avanzato | 26-28 | 0 |
-| `uda-16` Sicurezza, CI, manutenzione e progetto finale | Avanzato | 29-33 | 0 |
+<table align="center">
+<thead>
+<tr>
+<th>UDA</th>
+<th>Percorso</th>
+<th>Settimane</th>
+<th>Argomenti</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>uda-10</code> Ripartenza C/Linux, API e qualita</td>
+<td>Avanzato</td>
+<td>1-5</td>
+<td>0</td>
+</tr>
+<tr>
+<td><code>uda-11</code> Processi</td>
+<td>Avanzato</td>
+<td>6-12</td>
+<td>0</td>
+</tr>
+<tr>
+<td><code>uda-12</code> Segnali e progetto processi</td>
+<td>Avanzato</td>
+<td>13-15</td>
+<td>0</td>
+</tr>
+<tr>
+<td><code>uda-13</code> Thread</td>
+<td>Avanzato</td>
+<td>16-20</td>
+<td>0</td>
+</tr>
+<tr>
+<td><code>uda-14</code> Sincronizzazione</td>
+<td>Avanzato</td>
+<td>21-25</td>
+<td>0</td>
+</tr>
+<tr>
+<td><code>uda-15</code> I/O, processi e socket intro</td>
+<td>Avanzato</td>
+<td>26-28</td>
+<td>0</td>
+</tr>
+<tr>
+<td><code>uda-16</code> Sicurezza, CI, manutenzione e progetto finale</td>
+<td>Avanzato</td>
+<td>29-33</td>
+<td>0</td>
+</tr>
+</tbody>
+</table>
 
-<table>
+<table align="center">
 <tr>
 <td>
 
@@ -6104,7 +6230,7 @@ Linux programming, processi e thread
 </tr>
 </table>
 
-<table>
+<table align="center">
 <tr>
 <td>
 
@@ -6125,7 +6251,7 @@ Linux programming, processi e thread
 </tr>
 </table>
 
-<table>
+<table align="center">
 <tr>
 <td>
 
@@ -6146,7 +6272,7 @@ Linux programming, processi e thread
 </tr>
 </table>
 
-<table>
+<table align="center">
 <tr>
 <td>
 
@@ -6167,7 +6293,7 @@ Linux programming, processi e thread
 </tr>
 </table>
 
-<table>
+<table align="center">
 <tr>
 <td>
 
@@ -6188,7 +6314,7 @@ Linux programming, processi e thread
 </tr>
 </table>
 
-<table>
+<table align="center">
 <tr>
 <td>
 
@@ -6209,7 +6335,7 @@ Linux programming, processi e thread
 </tr>
 </table>
 
-<table>
+<table align="center">
 <tr>
 <td>
 

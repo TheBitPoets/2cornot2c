@@ -50,6 +50,19 @@ def item_count(items: list[dict[str, Any]]) -> int:
     return total
 
 
+def render_centered_table(headers: list[str], rows: list[list[str]]) -> list[str]:
+    """Render a GitHub-compatible centered HTML table."""
+    lines = ['<table align="center">', '<thead>', '<tr>']
+    lines.extend(f"<th>{html.escape(header, quote=False)}</th>" for header in headers)
+    lines.extend(["</tr>", "</thead>", "<tbody>"])
+    for row in rows:
+        lines.append("<tr>")
+        lines.extend(f"<td>{cell}</td>" for cell in row)
+        lines.append("</tr>")
+    lines.extend(["</tbody>", "</table>"])
+    return lines
+
+
 def render_items(items: list[dict[str, Any]], depth: int = 0) -> list[str]:
     """Render assigned topics as an indented Markdown bullet tree."""
     lines: list[str] = []
@@ -124,17 +137,21 @@ def render_design(design: dict[str, Any]) -> str:
         "",
         "## Sintesi dei percorsi",
         "",
-        "| Anno | Descrizione | Ore/settimana | Settimane | UDA | Argomenti assegnati |",
-        "| --- | --- | ---: | ---: | ---: | ---: |",
     ])
 
+    summary_rows: list[list[str]] = []
     for year in design.get("years", []):
         udas = year.get("udas", [])
         topics = sum(item_count(uda.get("items", [])) for uda in udas)
-        lines.append(
-            f"| {year.get('title', '')} | {year.get('description', '')} | "
-            f"{year.get('weekly_hours', '?')} | {year.get('weeks', '?')} | {len(udas)} | {topics} |"
-        )
+        summary_rows.append([
+            html.escape(str(year.get("title", "")), quote=False),
+            html.escape(str(year.get("description", "")), quote=False),
+            html.escape(str(year.get("weekly_hours", "?")), quote=False),
+            html.escape(str(year.get("weeks", "?")), quote=False),
+            str(len(udas)),
+            str(topics),
+        ])
+    lines.extend(render_centered_table(["Anno", "Descrizione", "Ore/settimana", "Settimane", "UDA", "Argomenti assegnati"], summary_rows))
 
     for year in design.get("years", []):
         lines.extend([
@@ -146,20 +163,22 @@ def render_design(design: dict[str, Any]) -> str:
             f"- Ore settimanali: `{year.get('weekly_hours', '?')}`",
             f"- Settimane: `{year.get('weeks', '?')}`",
             "",
-            "| UDA | Percorso | Settimane | Argomenti |",
-            "| --- | --- | --- | ---: |",
         ])
 
+        uda_rows: list[list[str]] = []
         for uda in year.get("udas", []):
-            lines.append(
-                f"| `{uda.get('id', '')}` {uda.get('title', '')} | {uda.get('path', '')} | "
-                f"{uda.get('weeks', '?')} | {item_count(uda.get('items', []))} |"
-            )
+            uda_rows.append([
+                f"<code>{html.escape(str(uda.get('id', '')), quote=False)}</code> {html.escape(str(uda.get('title', '')), quote=False)}",
+                html.escape(str(uda.get("path", "")), quote=False),
+                html.escape(str(uda.get("weeks", "?")), quote=False),
+                str(item_count(uda.get("items", []))),
+            ])
+        lines.extend(render_centered_table(["UDA", "Percorso", "Settimane", "Argomenti"], uda_rows))
 
         for uda in year.get("udas", []):
             lines.extend([
                 "",
-                '<table>',
+                '<table align="center">',
                 '<tr>',
                 '<td>',
                 "",
