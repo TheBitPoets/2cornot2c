@@ -72,7 +72,7 @@ def render_items(items: list[dict[str, Any]], depth: int = 0) -> list[str]:
                 f"{content_indent}  <summary><strong>Cornice didattica</strong></summary>",
                 "",
             ])
-            lines.extend(frame_lines)
+            lines.extend(render_frame(item.get("frame", {}), depth + 2))
             lines.extend([
                 f"{content_indent}  </details>",
             ])
