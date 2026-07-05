@@ -63,6 +63,26 @@ def render_centered_table(headers: list[str], rows: list[list[str]]) -> list[str
     return lines
 
 
+def uda_heading_text(uda: dict[str, Any]) -> str:
+    """Return the visible UDA heading text used inside bordered blocks."""
+    return f"{str(uda.get('id', '')).upper()} - {uda.get('title', 'UDA senza titolo')}"
+
+
+def uda_summary_text(uda: dict[str, Any]) -> str:
+    """Return the visible UDA details summary text."""
+    return f"Apri contenuto UDA - {uda.get('path', 'Da definire')} - {uda.get('weeks', '?')} settimane"
+
+
+def uda_block_width(design: dict[str, Any]) -> int:
+    """Return a text-width target based on the widest UDA heading or summary."""
+    widths = [0]
+    for year in design.get("years", []):
+        for uda in year.get("udas", []):
+            widths.append(len(uda_heading_text(uda)))
+            widths.append(len(uda_summary_text(uda)))
+    return max(widths)
+
+
 def render_items(items: list[dict[str, Any]], depth: int = 0) -> list[str]:
     """Render assigned topics as an indented Markdown bullet tree."""
     lines: list[str] = []
@@ -119,6 +139,7 @@ def render_frame(frame: dict[str, Any], depth: int) -> list[str]:
 
 def render_design(design: dict[str, Any]) -> str:
     """Generate the Markdown course plan from the JSON course design."""
+    target_uda_width = uda_block_width(design)
     lines: list[str] = [
         "# Percorso didattico",
         "",
@@ -176,16 +197,18 @@ def render_design(design: dict[str, Any]) -> str:
         lines.extend(render_centered_table(["UDA", "Percorso", "Settimane", "Argomenti"], uda_rows))
 
         for uda in year.get("udas", []):
+            summary_text = uda_summary_text(uda)
+            summary_padding = "&nbsp;" * max(0, target_uda_width - len(summary_text))
             lines.extend([
                 "",
-                '<table align="center" width="100%">',
+                '<table align="center">',
                 '<tr>',
                 '<td>',
                 "",
-                f"### {uda.get('id', '').upper()} - {uda.get('title', 'UDA senza titolo')}",
+                f"### {uda_heading_text(uda)}",
                 "",
                 "<details>",
-                f"<summary><strong>Apri contenuto UDA</strong> - {uda.get('path', 'Da definire')} - {uda.get('weeks', '?')} settimane</summary>",
+                f"<summary><strong>{summary_text}</strong>{summary_padding}</summary>",
                 "",
                 f"- Percorso: `{uda.get('path', 'Da definire')}`",
                 f"- Settimane: `{uda.get('weeks', '?')}`",
