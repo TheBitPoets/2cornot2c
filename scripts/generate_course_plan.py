@@ -50,14 +50,19 @@ def item_count(items: list[dict[str, Any]]) -> int:
     return total
 
 
-def render_centered_table(headers: list[str], rows: list[list[str]]) -> list[str]:
+def render_centered_table(headers: list[str], rows: list[list[str]], numeric_columns: set[int] | None = None) -> list[str]:
     """Render a GitHub-compatible centered HTML table."""
+    numeric_columns = numeric_columns or set()
     lines = ['<table align="center">', '<thead>', '<tr>']
     lines.extend(f'<th align="center">{html.escape(header, quote=False)}</th>' for header in headers)
     lines.extend(["</tr>", "</thead>", "<tbody>"])
     for row in rows:
         lines.append("<tr>")
-        lines.extend(f'<td align="center"><div align="justify">{cell}</div></td>' for cell in row)
+        for index, cell in enumerate(row):
+            if index in numeric_columns:
+                lines.append(f'<td align="center">{cell}</td>')
+            else:
+                lines.append(f'<td><div align="justify">{cell}</div></td>')
         lines.append("</tr>")
     lines.extend(["</tbody>", "</table>"])
     return lines
@@ -161,7 +166,7 @@ def render_design(design: dict[str, Any]) -> str:
             str(len(udas)),
             str(topics),
         ])
-    lines.extend(render_centered_table(["Anno", "Descrizione", "Ore/settimana", "Settimane", "UDA", "Argomenti assegnati"], summary_rows))
+    lines.extend(render_centered_table(["Anno", "Descrizione", "Ore/settimana", "Settimane", "UDA", "Argomenti assegnati"], summary_rows, {2, 3, 4, 5}))
 
     for year in design.get("years", []):
         lines.extend([
@@ -183,7 +188,7 @@ def render_design(design: dict[str, Any]) -> str:
                 html.escape(str(uda.get("weeks", "?")), quote=False),
                 str(item_count(uda.get("items", []))),
             ])
-        lines.extend(render_centered_table(["UDA", "Percorso", "Settimane", "Argomenti"], uda_rows))
+        lines.extend(render_centered_table(["UDA", "Percorso", "Settimane", "Argomenti"], uda_rows, {2, 3}))
 
         for uda in year.get("udas", []):
             summary_text = uda_summary_text(uda)

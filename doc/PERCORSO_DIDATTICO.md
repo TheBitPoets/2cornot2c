@@ -24,20 +24,20 @@ Per modificarlo, aggiorna la struttura con la Course Design Board e poi rigenera
 </thead>
 <tbody>
 <tr>
-<td align="center"><div align="justify">Terzo anno</div></td>
-<td align="center"><div align="justify">Corso di C base e intermedio focalizzato sulla logica di programmazione e la gestione della memoria, con integrazione di attività di laboratorio.</div></td>
-<td align="center"><div align="justify">3</div></td>
-<td align="center"><div align="justify">33</div></td>
-<td align="center"><div align="justify">9</div></td>
-<td align="center"><div align="justify">136</div></td>
+<td><div align="justify">Terzo anno</div></td>
+<td><div align="justify">Corso di C base e intermedio focalizzato sulla logica di programmazione e la gestione della memoria, con integrazione di attività di laboratorio.</div></td>
+<td align="center">3</td>
+<td align="center">33</td>
+<td align="center">9</td>
+<td align="center">136</td>
 </tr>
 <tr>
-<td align="center"><div align="justify">Quarto anno</div></td>
-<td align="center"><div align="justify">Linux programming, processi e thread</div></td>
-<td align="center"><div align="justify">3</div></td>
-<td align="center"><div align="justify">33</div></td>
-<td align="center"><div align="justify">7</div></td>
-<td align="center"><div align="justify">0</div></td>
+<td><div align="justify">Quarto anno</div></td>
+<td><div align="justify">Linux programming, processi e thread</div></td>
+<td align="center">3</td>
+<td align="center">33</td>
+<td align="center">7</td>
+<td align="center">0</td>
 </tr>
 </tbody>
 </table>
@@ -60,58 +60,58 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 </thead>
 <tbody>
 <tr>
-<td align="center"><div align="justify"><code>uda-1</code> Strumenti, primo programma e rappresentazione</div></td>
-<td align="center"><div align="justify">Base</div></td>
-<td align="center"><div align="justify">3</div></td>
-<td align="center"><div align="justify">25</div></td>
+<td><div align="justify"><code>uda-1</code> Strumenti, primo programma e rappresentazione</div></td>
+<td><div align="justify">Base</div></td>
+<td align="center">3</td>
+<td align="center">25</td>
 </tr>
 <tr>
-<td align="center"><div align="justify"><code>uda-2</code> Operatori, condizioni e selezione</div></td>
-<td align="center"><div align="justify">Base</div></td>
-<td align="center"><div align="justify">3</div></td>
-<td align="center"><div align="justify">20</div></td>
+<td><div align="justify"><code>uda-2</code> Operatori, condizioni e selezione</div></td>
+<td><div align="justify">Base</div></td>
+<td align="center">3</td>
+<td align="center">20</td>
 </tr>
 <tr>
-<td align="center"><div align="justify"><code>uda-3</code> Cicli e funzioni</div></td>
-<td align="center"><div align="justify">Base</div></td>
-<td align="center"><div align="justify">4</div></td>
-<td align="center"><div align="justify">6</div></td>
+<td><div align="justify"><code>uda-3</code> Cicli e funzioni</div></td>
+<td><div align="justify">Base</div></td>
+<td align="center">4</td>
+<td align="center">6</td>
 </tr>
 <tr>
-<td align="center"><div align="justify"><code>uda-4</code> Array e stringhe semplici</div></td>
-<td align="center"><div align="justify">Base</div></td>
-<td align="center"><div align="justify">4</div></td>
-<td align="center"><div align="justify">7</div></td>
+<td><div align="justify"><code>uda-4</code> Array e stringhe semplici</div></td>
+<td><div align="justify">Base</div></td>
+<td align="center">4</td>
+<td align="center">7</td>
 </tr>
 <tr>
-<td align="center"><div align="justify"><code>uda-5</code> Struct e consolidamento</div></td>
-<td align="center"><div align="justify">Base</div></td>
-<td align="center"><div align="justify">3</div></td>
-<td align="center"><div align="justify">3</div></td>
+<td><div align="justify"><code>uda-5</code> Struct e consolidamento</div></td>
+<td><div align="justify">Base</div></td>
+<td align="center">3</td>
+<td align="center">3</td>
 </tr>
 <tr>
-<td align="center"><div align="justify"><code>uda-6</code> Puntatori, array e indirizzi</div></td>
-<td align="center"><div align="justify">Intermedio</div></td>
-<td align="center"><div align="justify">4</div></td>
-<td align="center"><div align="justify">30</div></td>
+<td><div align="justify"><code>uda-6</code> Puntatori, array e indirizzi</div></td>
+<td><div align="justify">Intermedio</div></td>
+<td align="center">4</td>
+<td align="center">30</td>
 </tr>
 <tr>
-<td align="center"><div align="justify"><code>uda-7</code> Memoria automatica, statica e dinamica</div></td>
-<td align="center"><div align="justify">Intermedio</div></td>
-<td align="center"><div align="justify">4</div></td>
-<td align="center"><div align="justify">13</div></td>
+<td><div align="justify"><code>uda-7</code> Memoria automatica, statica e dinamica</div></td>
+<td><div align="justify">Intermedio</div></td>
+<td align="center">4</td>
+<td align="center">13</td>
 </tr>
 <tr>
-<td align="center"><div align="justify"><code>uda-8</code> Preprocessore, header e compilazione separata</div></td>
-<td align="center"><div align="justify">Intermedio</div></td>
-<td align="center"><div align="justify">3</div></td>
-<td align="center"><div align="justify">18</div></td>
+<td><div align="justify"><code>uda-8</code> Preprocessore, header e compilazione separata</div></td>
+<td><div align="justify">Intermedio</div></td>
+<td align="center">3</td>
+<td align="center">18</td>
 </tr>
 <tr>
-<td align="center"><div align="justify"><code>uda-9</code> File, Makefile, debugging e progetto</div></td>
-<td align="center"><div align="justify">Intermedio</div></td>
-<td align="center"><div align="justify">5</div></td>
-<td align="center"><div align="justify">14</div></td>
+<td><div align="justify"><code>uda-9</code> File, Makefile, debugging e progetto</div></td>
+<td><div align="justify">Intermedio</div></td>
+<td align="center">5</td>
+<td align="center">14</td>
 </tr>
 </tbody>
 </table>
@@ -6165,46 +6165,46 @@ Linux programming, processi e thread
 </thead>
 <tbody>
 <tr>
-<td align="center"><div align="justify"><code>uda-10</code> Ripartenza C/Linux, API e qualita</div></td>
-<td align="center"><div align="justify">Avanzato</div></td>
-<td align="center"><div align="justify">1-5</div></td>
-<td align="center"><div align="justify">0</div></td>
+<td><div align="justify"><code>uda-10</code> Ripartenza C/Linux, API e qualita</div></td>
+<td><div align="justify">Avanzato</div></td>
+<td align="center">1-5</td>
+<td align="center">0</td>
 </tr>
 <tr>
-<td align="center"><div align="justify"><code>uda-11</code> Processi</div></td>
-<td align="center"><div align="justify">Avanzato</div></td>
-<td align="center"><div align="justify">6-12</div></td>
-<td align="center"><div align="justify">0</div></td>
+<td><div align="justify"><code>uda-11</code> Processi</div></td>
+<td><div align="justify">Avanzato</div></td>
+<td align="center">6-12</td>
+<td align="center">0</td>
 </tr>
 <tr>
-<td align="center"><div align="justify"><code>uda-12</code> Segnali e progetto processi</div></td>
-<td align="center"><div align="justify">Avanzato</div></td>
-<td align="center"><div align="justify">13-15</div></td>
-<td align="center"><div align="justify">0</div></td>
+<td><div align="justify"><code>uda-12</code> Segnali e progetto processi</div></td>
+<td><div align="justify">Avanzato</div></td>
+<td align="center">13-15</td>
+<td align="center">0</td>
 </tr>
 <tr>
-<td align="center"><div align="justify"><code>uda-13</code> Thread</div></td>
-<td align="center"><div align="justify">Avanzato</div></td>
-<td align="center"><div align="justify">16-20</div></td>
-<td align="center"><div align="justify">0</div></td>
+<td><div align="justify"><code>uda-13</code> Thread</div></td>
+<td><div align="justify">Avanzato</div></td>
+<td align="center">16-20</td>
+<td align="center">0</td>
 </tr>
 <tr>
-<td align="center"><div align="justify"><code>uda-14</code> Sincronizzazione</div></td>
-<td align="center"><div align="justify">Avanzato</div></td>
-<td align="center"><div align="justify">21-25</div></td>
-<td align="center"><div align="justify">0</div></td>
+<td><div align="justify"><code>uda-14</code> Sincronizzazione</div></td>
+<td><div align="justify">Avanzato</div></td>
+<td align="center">21-25</td>
+<td align="center">0</td>
 </tr>
 <tr>
-<td align="center"><div align="justify"><code>uda-15</code> I/O, processi e socket intro</div></td>
-<td align="center"><div align="justify">Avanzato</div></td>
-<td align="center"><div align="justify">26-28</div></td>
-<td align="center"><div align="justify">0</div></td>
+<td><div align="justify"><code>uda-15</code> I/O, processi e socket intro</div></td>
+<td><div align="justify">Avanzato</div></td>
+<td align="center">26-28</td>
+<td align="center">0</td>
 </tr>
 <tr>
-<td align="center"><div align="justify"><code>uda-16</code> Sicurezza, CI, manutenzione e progetto finale</div></td>
-<td align="center"><div align="justify">Avanzato</div></td>
-<td align="center"><div align="justify">29-33</div></td>
-<td align="center"><div align="justify">0</div></td>
+<td><div align="justify"><code>uda-16</code> Sicurezza, CI, manutenzione e progetto finale</div></td>
+<td><div align="justify">Avanzato</div></td>
+<td align="center">29-33</td>
+<td align="center">0</td>
 </tr>
 </tbody>
 </table>
