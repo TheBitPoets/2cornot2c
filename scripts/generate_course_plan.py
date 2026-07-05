@@ -60,11 +60,20 @@ def render_frame(frame: dict[str, Any], depth: int) -> list[str]:
     """Render filled didactic-frame fields below a topic."""
     lines: list[str] = []
     indent = "  " * depth
+    content_indent = "  " * (depth + 1)
     for key, label in FRAME_FIELDS:
         value = str(frame.get(key, "")).strip()
         if not value:
             continue
-        lines.append(f"{indent}- **{label}:** {value}")
+        lines.extend([
+            f"{indent}- <details>",
+            f"{content_indent}<summary><strong>{label}</strong></summary>",
+            "",
+        ])
+        lines.extend(f"{content_indent}{line}" if line else "" for line in value.splitlines())
+        lines.extend([
+            f"{content_indent}</details>",
+        ])
     return lines
 
 
