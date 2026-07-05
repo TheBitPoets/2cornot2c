@@ -35,18 +35,45 @@ body {
 
 .appNav details {
   border: 1px solid rgba(17, 17, 17, .16);
-  border-radius: 18px;
+  border-radius: 20px;
   background: rgba(255, 255, 255, .94);
   box-shadow: 0 12px 30px rgba(0, 0, 0, .08);
   overflow: hidden;
 }
 
 .appNav summary {
+  display: grid;
+  place-items: center;
+  min-width: 5.2rem;
+  min-height: 3.1rem;
   cursor: pointer;
-  padding: .55rem .8rem;
-  color: var(--warm);
+  padding: .55rem .85rem;
+  color: #ffffff;
+  background:
+    linear-gradient(rgba(0, 0, 0, .42), rgba(0, 0, 0, .42)),
+    url("https://github.com/TheBitPoets.png") center / cover;
   font: 800 .74rem/1.2 var(--mono);
   letter-spacing: .12em;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, .65);
+  text-transform: uppercase;
+}
+
+.appNav summary::marker {
+  color: transparent;
+}
+
+.appNav summary span {
+  border: 1px solid rgba(255, 255, 255, .44);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, .38);
+  padding: .22rem .5rem;
+}
+
+.navBrand {
+  padding: .7rem .8rem .55rem;
+  color: var(--warm);
+  font: 800 .7rem/1.2 var(--mono);
+  letter-spacing: .18em;
   text-transform: uppercase;
 }
 
