@@ -18,9 +18,9 @@ body {
   min-height: 100vh;
   color: var(--ink);
   background:
-    linear-gradient(rgba(0, 0, 0, 0.016) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.016) 1px, transparent 1px),
-    #ffffff;
+    linear-gradient(rgba(0, 0, 0, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.025) 1px, transparent 1px),
+    #f7f7f7;
   background-size: 24px 24px;
   font-family: var(--mono);
 }
@@ -50,7 +50,7 @@ body {
   padding: .75rem 1rem;
   color: #ffffff;
   background:
-    linear-gradient(rgba(0, 0, 0, .42), rgba(0, 0, 0, .42)),
+    linear-gradient(rgba(255, 255, 255, .58), rgba(255, 255, 255, .58)),
     url("https://github.com/TheBitPoets.png") center / cover;
   font: 800 .74rem/1.2 var(--mono);
   letter-spacing: .12em;
