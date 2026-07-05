@@ -306,6 +306,38 @@ Nella board la linguetta `Cornice didattica` cambia colore:
 
 In questo modo puoi capire quali argomenti sono gia stati lavorati senza aprire tutte le linguette.
 
+### Aggiornare le cornici dentro il README
+
+Le cornici didattiche possono essere inserite anche direttamente nei paragrafi del `README.md`.
+
+Il comando:
+
+```powershell
+python scripts/update_course_frames.py --target README.md
+```
+
+legge `doc/course_design.json`, cerca gli argomenti con id del tipo `README.md#...` e inserisce sotto gli heading corrispondenti un blocco HTML marcato:
+
+```html
+<!-- COURSE-FRAME:START README.md#variabili -->
+...
+<!-- COURSE-FRAME:END README.md#variabili -->
+```
+
+Lo script rimuove automaticamente le vecchie cornici non marcate con titolo `Orientamento della sezione`, poi inserisce o aggiorna solo le cornici degli argomenti presenti nel JSON del percorso.
+
+Se vuoi usare un archivio specifico invece del percorso corrente, passa `--input`:
+
+```powershell
+python scripts/update_course_frames.py --input doc/course_designs/course_design_code.json --target README.md
+```
+
+Per controllare se il README e gia aggiornato senza modificarlo:
+
+```powershell
+python scripts/update_course_frames.py --target README.md --check
+```
+
 ## Compilazione AI assisted della cornice
 
 La board puo chiedere a un servizio AI di compilare automaticamente la cornice didattica di un argomento.

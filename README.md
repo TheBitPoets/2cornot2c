@@ -336,10 +336,57 @@ This is a C 101 course for my students. Sorry, only the Italian version is avail
 <small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
 
 
-
 ## 
 
 ## Introduzione
+
+<!-- COURSE-FRAME:START README.md#introduzione -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su configurazione dell'ambiente, strumenti di lavoro e avvio del laboratorio. I sottoparagrafi collegati sono: Guest Additions. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Introduzione" lo studente dovrebbe aver seguito il lavoro precedente su "l'avvio del percorso e la costruzione delle basi operative", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Introduzione", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "l'avvio del percorso e la costruzione delle basi operative" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Guest Additions". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Introduzione", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Guest Additions" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Introduzione" (../README.md#introduzione). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#introduzione -->
 
 <p align=justify>
 Il corso è fondamentalmente pratico, non è richiesto alcun prerequisito e nulla è dato per scontato.
@@ -482,6 +529,55 @@ vagrant ssh
 ```
 
 ### Guest Additions
+
+<!-- COURSE-FRAME:START README.md#guest-additions -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore Introduzione. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Guest Additions" lo studente dovrebbe aver seguito il lavoro precedente su "Introduzione", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Guest Additions", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Introduzione" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Laboratori". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Guest Additions", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Laboratori" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Guest Additions" (../README.md#guest-additions). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#guest-additions -->
+
 <p align="justify">
 Questo paragrafo ti fornisce informazioni aggiuntive sul plugin per installare le Guest Additions in caso ne avessi necessità.
 </p>
@@ -586,14 +682,7 @@ Dopo aver apportato modifiche al tuo Vagrantfile, esegui vagrant up per avviare 
 
 ## Laboratori
 
-<div align="justify">	
-All'interno della cartella /lab nella macchina Linux troverai il codice su cui lavorare.
-Ogni lab ha un numero e un nome associati; ad esempio, al primo laboratorio sono assegnati il numero 0 e il nome intro. Questo significa che per questo lab esisterà una cartella lab/0_intro che conterrà tutto il codice del lab. All'interno della cartella del laboratorio troverai dei file sorgente con estensione .c o .h, anche questi con un numero e un nome; ad esempio il primo sorgente del lab 0_intro è 0_hello.c.
-Ogni lab contiene al suo interno una cartella bin destinata a ospitare i file eseguibili ottenuti al termine del processo di compilazione.
-</div>
-
-## Il processo di compilazione
-
+<!-- COURSE-FRAME:START README.md#laboratori -->
 <table align="center">
 <tr>
 <td>
@@ -602,27 +691,100 @@ Ogni lab contiene al suo interno una cartella bin destinata a ospitare i file es
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Iniziamo dal passaggio piu concreto: trasformare un file sorgente C in un programma eseguibile. Questo crea il ponte tra il codice che scriviamo e il binario che la macchina puo eseguire.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su organizzazione dei sorgenti, cartelle di lavoro e compilazione degli esercizi. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Saper accedere all'ambiente Linux del corso e creare un file di testo.
+Prima di affrontare "Laboratori" lo studente dovrebbe aver seguito il lavoro precedente su "Guest Additions", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine di questa sezione saprai compilare un file <code>.c</code> con <code>gcc</code>, distinguere sorgente ed eseguibile e riconoscere le fasi principali del processo di compilazione.
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Laboratori", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Guest Additions" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Il processo di compilazione". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo aver capito come nasce un eseguibile, leggeremo la struttura minima di un programma C nella sezione <a href="#il-primo-programma-in-c">Il primo programma in C</a>.
+Dopo la spiegazione, proponi un esempio minimo su "Laboratori", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Il processo di compilazione" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Laboratori" (../README.md#laboratori). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
 </details>
 </td>
 </tr>
 </table>
+<!-- COURSE-FRAME:END README.md#laboratori -->
+
+<div align="justify">	
+All'interno della cartella /lab nella macchina Linux troverai il codice su cui lavorare.
+Ogni lab ha un numero e un nome associati; ad esempio, al primo laboratorio sono assegnati il numero 0 e il nome intro. Questo significa che per questo lab esisterà una cartella lab/0_intro che conterrà tutto il codice del lab. All'interno della cartella del laboratorio troverai dei file sorgente con estensione .c o .h, anche questi con un numero e un nome; ad esempio il primo sorgente del lab 0_intro è 0_hello.c.
+Ogni lab contiene al suo interno una cartella bin destinata a ospitare i file eseguibili ottenuti al termine del processo di compilazione.
+</div>
+
+## Il processo di compilazione
+
+<!-- COURSE-FRAME:START README.md#il-processo-di-compilazione -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su trasformazione del sorgente C in eseguibile tramite preprocessore, compilatore, assembler e linker. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Il processo di compilazione" lo studente dovrebbe aver seguito il lavoro precedente su "Laboratori", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Il processo di compilazione", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Laboratori" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Il primo programma in C". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Il processo di compilazione", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Il primo programma in C" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Il processo di compilazione" (../README.md#il-processo-di-compilazione). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#il-processo-di-compilazione -->
 
 <p align="justify">
 I programmi sono scritti in un qualche linguaggio di programmazione; il programmatore scrive il codice sorgente. Nel caso del linguaggio C, i file sorgente hanno estensione .c o .h. Il codice sorgente contiene tutte le istruzioni che il programma dovrà eseguire. Le istruzioni all'interno del codice sorgente, scritte in un qualsiasi linguaggio di programmazione, devono essere tradotte in una sequenza di bit (in altri termini, nel linguaggio macchina) perché la CPU è in grado di comprendere solo il linguaggio macchina, esclusivamente sequenze di bit e nient'altro. In sintesi si dice che il programma sorgente deve essere trasformato in un file eseguibile (file binario) che contiene le istruzioni (sequenze di bit) per la specifica architettura del nostro processore.
@@ -709,35 +871,6 @@ il linker (ld) ha il compito di aggregare in un unico file oggetto (il file eseg
 
 ## Introduzione
 
-<table align="center">
-<tr>
-<td>
-<details>
-<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
-
-<p align="justify">
-<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Dopo aver visto come compilare un programma, facciamo una prima mappa dei mattoni che incontreremo spesso nel codice C: variabili, costanti, funzioni e preprocessore.
-</p>
-
-<p align="justify">
-<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-<a href="#il-processo-di-compilazione">Il processo di compilazione</a>.
-</p>
-
-<p align="justify">
-<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine di questa sezione saprai riconoscere i componenti principali di un programma C, anche se alcuni saranno approfonditi solo piu avanti.
-</p>
-
-<p align="justify">
-<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Useremo questa mappa per leggere il codice della sezione <a href="#il-primo-programma-in-c">Il primo programma in C</a>.
-</p>
-</details>
-</td>
-</tr>
-</table>
 
 <p align=justify>
 Un programma C è di fatto una collezione di:
@@ -824,6 +957,7 @@ Il preprocessore viene richiamato dal compilatore come primo step nel processo d
 
 ## Il primo programma in C
 
+<!-- COURSE-FRAME:START README.md#il-primo-programma-in-c -->
 <table align="center">
 <tr>
 <td>
@@ -832,32 +966,44 @@ Il preprocessore viene richiamato dal compilatore come primo step nel processo d
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Ora osserviamo il primo programma completo. Non serve capire ogni dettaglio in profondita: l'obiettivo e vedere una forma minima che possiamo compilare ed eseguire.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su struttura minima di un programma C, funzione main, include e stampa a video. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-<a href="#il-processo-di-compilazione">Il processo di compilazione</a> e <a href="#introduzione-1">Introduzione</a>.
+Prima di affrontare "Il primo programma in C" lo studente dovrebbe aver seguito il lavoro precedente su "Il processo di compilazione", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine di questa sezione saprai individuare <code>#include</code>, la funzione <code>main</code>, una chiamata a <code>printf</code> e il valore restituito dal programma.
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Il primo programma in C", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Il processo di compilazione" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Qui compaiono le funzioni e il preprocessore. Per ora ti basta riconoscere che <code>printf</code> e una funzione gia pronta e che <code>#include &lt;stdio.h&gt;</code> permette al compilatore di conoscerla; li studieremo meglio nelle sezioni <a href="#funzioni">Funzioni</a> e <a href="#il-preprocessore">Il preprocessore</a>.
+Questo argomento prepara il lavoro successivo su "Variabili". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo aver letto un programma minimo, inizieremo a salvare e modificare valori nella sezione <a href="#variabili">Variabili</a>.
+Dopo la spiegazione, proponi un esempio minimo su "Il primo programma in C", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Variabili" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Il primo programma in C" (../README.md#il-primo-programma-in-c). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
 </details>
 </td>
 </tr>
 </table>
+<!-- COURSE-FRAME:END README.md#il-primo-programma-in-c -->
 
 <!-- lab-exercises:start heading="Il primo programma in C" -->
 
@@ -1246,6 +1392,7 @@ Come spiegato ampiamente in precedenza, facciamo uso anche della funzione printf
 
 ## Variabili
 
+<!-- COURSE-FRAME:START README.md#variabili -->
 <table align="center">
 <tr>
 <td>
@@ -1254,32 +1401,44 @@ Come spiegato ampiamente in precedenza, facciamo uso anche della funzione printf
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Dopo il primo programma, abbiamo bisogno di un modo per conservare dati durante l'esecuzione. Le variabili sono il primo strumento per dare un nome a una porzione di memoria e usarla nel codice.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su dichiarazione, tipo, valore, memoria e uso dei dati durante l'esecuzione. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-<a href="#il-primo-programma-in-c">Il primo programma in C</a>.
+Prima di affrontare "Variabili" lo studente dovrebbe aver seguito il lavoro precedente su "Il primo programma in C", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine di questa sezione saprai distinguere dichiarazione, inizializzazione e assegnamento; riconoscere il ruolo del tipo; leggere esempi semplici con variabili locali e globali.
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Variabili", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Il primo programma in C" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Nel codice dei lab compaiono funzioni, scope e variabili globali. Per ora concentrati sul fatto che una variabile ha un nome, un tipo e un valore; scope e classi di memorizzazione saranno ripresi piu avanti.
+Questo argomento prepara il lavoro successivo su "Rappresentazione delle informazioni". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Per scegliere bene una variabile dobbiamo capire come il C rappresenta le informazioni e quali tipi mette a disposizione.
+Dopo la spiegazione, proponi un esempio minimo su "Variabili", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Rappresentazione delle informazioni" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Variabili" (../README.md#variabili). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
 </details>
 </td>
 </tr>
 </table>
+<!-- COURSE-FRAME:END README.md#variabili -->
 
 <!-- lab-exercises:start heading="Variabili" -->
 
@@ -1811,6 +1970,54 @@ char operazione;
 
 ## Classi di memorizzazione
 
+<!-- COURSE-FRAME:START README.md#classi-di-memorizzazione -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Memoria automatica, statica e dinamica" del percorso Intermedio per Terzo anno. Serve a lavorare su durata, visibilita e collegamento degli identificatori in C. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Classi di memorizzazione" lo studente dovrebbe aver seguito il lavoro precedente su "Passaggio di strutture a funzioni", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Classi di memorizzazione", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Passaggio di strutture a funzioni" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Block scope". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Classi di memorizzazione", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Block scope" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Classi di memorizzazione" (../README.md#classi-di-memorizzazione). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#classi-di-memorizzazione -->
+
 <p align="justify">
 Conoscere la differenza tra variabili globali e locali è un buon punto di partenza; le cose sono però più complesse. Agli identificatori è associato uno <strong>scope</strong> (<strong>visibilità</strong>), alle variabili invece uno <strong>storage duration</strong> (<strong>tempo di vita</strong>) e il <strong>linkage</strong> (<strong>collegamento</strong>).
 </p>
@@ -1905,6 +2112,54 @@ Il <strong>linkage</strong> definisce se una variabile può essere condivisa dal
 
 ## Block scope
 
+<!-- COURSE-FRAME:START README.md#block-scope -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Memoria automatica, statica e dinamica" del percorso Intermedio per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Block scope" lo studente dovrebbe aver seguito il lavoro precedente su "Classi di memorizzazione", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Block scope", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Classi di memorizzazione" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "File scope". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Block scope", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "File scope" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Block scope" (../README.md#block-scope). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#block-scope -->
+
 <p align="justify">
 Un blocco è un insieme di istruzioni comprese tra { e }. Esempi di blocchi (alcuni li abbiamo già incontrati) sono:
 </p>
@@ -1978,6 +2233,54 @@ Questo è utile soprattutto per le variabili indice di un ciclo o per documentar
 </table>
  
 ## File scope
+
+<!-- COURSE-FRAME:START README.md#file-scope -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Memoria automatica, statica e dinamica" del percorso Intermedio per Terzo anno. Serve a lavorare su apertura, lettura, scrittura e chiusura dei file tramite libreria standard C. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "File scope" lo studente dovrebbe aver seguito il lavoro precedente su "Block scope", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "File scope", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Block scope" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Linkage". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "File scope", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Linkage" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "File scope" (../README.md#file-scope). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#file-scope -->
 
 <!-- lab-exercises:start heading="File scope" -->
 
@@ -2101,6 +2404,54 @@ int uno(){
 
 ## Linkage
 
+<!-- COURSE-FRAME:START README.md#linkage -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Memoria automatica, statica e dinamica" del percorso Intermedio per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Linkage" lo studente dovrebbe aver seguito il lavoro precedente su "File scope", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Linkage", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "File scope" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Storage duration". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Linkage", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Storage duration" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Linkage" (../README.md#linkage). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#linkage -->
+
 <p align="justify">
 Il <strong>linkage</strong> definisce se una variabile è visibile in più file diversi o solo nel file in cui è definita.
 </p>
@@ -2151,6 +2502,54 @@ La parola chiave <b>static</b> non ha nulla a che vedere con lo <b>storage durat
 
 ## Storage duration
 
+<!-- COURSE-FRAME:START README.md#storage-duration -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Memoria automatica, statica e dinamica" del percorso Intermedio per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Storage duration" lo studente dovrebbe aver seguito il lavoro precedente su "Linkage", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Storage duration", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Linkage" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Static storage duration". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Storage duration", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Static storage duration" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Storage duration" (../README.md#storage-duration). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#storage-duration -->
+
 <p align="justify">
 Esistono quattro tipi diversi di <strong>storage duration</strong>: static, thread, auto e allocated.
 </p>
@@ -2160,6 +2559,54 @@ Per il momento affrontiamo solamente i tipi static e auto.
 </p>
 
 ## Static storage duration
+
+<!-- COURSE-FRAME:START README.md#static-storage-duration -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Memoria automatica, statica e dinamica" del percorso Intermedio per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Static storage duration" lo studente dovrebbe aver seguito il lavoro precedente su "Storage duration", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Static storage duration", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Storage duration" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Auto storage duration". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Static storage duration", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Auto storage duration" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Static storage duration" (../README.md#static-storage-duration). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#static-storage-duration -->
 
 <p align="justify">
 Variabili che esistono in memoria per l'intero tempo di esecuzione del programma: sono le variabili con <strong>file scope</strong> (variabili globali sia di tipo external sia di tipo internal <strong>linkage</strong>).
@@ -2178,6 +2625,54 @@ int main(void){
 ```
 
 ## Auto storage duration
+
+<!-- COURSE-FRAME:START README.md#auto-storage-duration -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Memoria automatica, statica e dinamica" del percorso Intermedio per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Auto storage duration" lo studente dovrebbe aver seguito il lavoro precedente su "Static storage duration", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Auto storage duration", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Static storage duration" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Classi di memorizzazione". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Auto storage duration", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Classi di memorizzazione" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Auto storage duration" (../README.md#auto-storage-duration). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#auto-storage-duration -->
 
 <p align="justify">
 Variabili che hanno un tempo di vita limitato, che non coincide con il tempo di esecuzione del programma: sono le variabili con <b>block scope</b>, che vengono allocate quando il programma entra nel blocco nel quale sono definite e poi deallocate quando si esce dallo stesso.
@@ -2212,6 +2707,54 @@ int uno(void){
 
 ## Classi di memorizzazione
 
+<!-- COURSE-FRAME:START README.md#classi-di-memorizzazione-1 -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Memoria automatica, statica e dinamica" del percorso Intermedio per Terzo anno. Serve a lavorare su durata, visibilita e collegamento degli identificatori in C. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Classi di memorizzazione" lo studente dovrebbe aver seguito il lavoro precedente su "Auto storage duration", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Classi di memorizzazione", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Auto storage duration" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Variabili automatiche (automatic class)". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Classi di memorizzazione", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Variabili automatiche (automatic class)" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Classi di memorizzazione" (../README.md#classi-di-memorizzazione-1). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#classi-di-memorizzazione-1 -->
+
 <p align="justify">
 Scope, linkage e storage duration sono combinati assieme per definire le <strong>classi di memorizzazione</strong>.
 </p>
@@ -2229,6 +2772,54 @@ Scope, linkage e storage duration sono combinati assieme per definire le <strong
 </div>
 
 ## Variabili automatiche (automatic class)
+
+<!-- COURSE-FRAME:START README.md#variabili-automatiche-automatic-class -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Memoria automatica, statica e dinamica" del percorso Intermedio per Terzo anno. Serve a lavorare su dichiarazione, tipo, valore, memoria e uso dei dati durante l'esecuzione. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Variabili automatiche (automatic class)" lo studente dovrebbe aver seguito il lavoro precedente su "Classi di memorizzazione", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Variabili automatiche (automatic class)", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Classi di memorizzazione" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Variabili statiche locali (static variables with block scope)". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Variabili automatiche (automatic class)", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Variabili statiche locali (static variables with block scope)" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Variabili automatiche (automatic class)" (../README.md#variabili-automatiche-automatic-class). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#variabili-automatiche-automatic-class -->
 
 <!-- lab-exercises:start heading="Variabili automatiche (automatic class)" -->
 
@@ -2403,6 +2994,54 @@ int uno(register int a);
 ```
 
 ## Variabili statiche locali (static variables with block scope)
+
+<!-- COURSE-FRAME:START README.md#variabili-statiche-locali-static-variables-with-block-scope -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Memoria automatica, statica e dinamica" del percorso Intermedio per Terzo anno. Serve a lavorare su dichiarazione, tipo, valore, memoria e uso dei dati durante l'esecuzione. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Variabili statiche locali (static variables with block scope)" lo studente dovrebbe aver seguito il lavoro precedente su "Variabili automatiche (automatic class)", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Variabili statiche locali (static variables with block scope)", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Variabili automatiche (automatic class)" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Variabili globali con External Linkage (Static variables with External Linkage)". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Variabili statiche locali (static variables with block scope)", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Variabili globali con External Linkage (Static variables with External Linkage)" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Variabili statiche locali (static variables with block scope)" (../README.md#variabili-statiche-locali-static-variables-with-block-scope). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#variabili-statiche-locali-static-variables-with-block-scope -->
 
 <!-- lab-exercises:start heading="Variabili statiche locali (static variables with block scope)" -->
 
@@ -2600,6 +3239,54 @@ int no_possible_static_parameter(static int a); /* ERRORE */
 
 ## Differenza tra definizione e dichiarazione di variabile
 
+<!-- COURSE-FRAME:START README.md#differenza-tra-definizione-e-dichiarazione-di-variabile -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Memoria automatica, statica e dinamica" del percorso Intermedio per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Differenza tra definizione e dichiarazione di variabile" lo studente dovrebbe aver seguito il lavoro precedente su "Variabili globali con Internal Linkage (Static variables with Internal Linkage)", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Differenza tra definizione e dichiarazione di variabile", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Variabili globali con Internal Linkage (Static variables with Internal Linkage)" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Il preprocessore". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Differenza tra definizione e dichiarazione di variabile", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Il preprocessore" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Differenza tra definizione e dichiarazione di variabile" (../README.md#differenza-tra-definizione-e-dichiarazione-di-variabile). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#differenza-tra-definizione-e-dichiarazione-di-variabile -->
+
 <p align=justify>
 Fino a questo punto abbiamo usato i termini dichiarazione e definizione in modo intercambiabile come se fossero la stessa cosa. In realtà esiste una differenza ed è arrivato il momento di affrontarla.
 La definizione di una variabile coincide con l'istruzione in cui avviene l'allocazione di spazio in memoria per la variabile. La dichiarazione, invece, consiste nel dichiarare al compilatore che si farà uso di una variabile già allocata nel file corrente o in un altro file.
@@ -2671,6 +3358,54 @@ int main(void){
 ```
 
 ## Variabili globali con External Linkage (Static variables with External Linkage)
+
+<!-- COURSE-FRAME:START README.md#variabili-globali-con-external-linkage-static-variables-with-external-linkage -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Memoria automatica, statica e dinamica" del percorso Intermedio per Terzo anno. Serve a lavorare su dichiarazione, tipo, valore, memoria e uso dei dati durante l'esecuzione. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Variabili globali con External Linkage (Static variables with External Linkage)" lo studente dovrebbe aver seguito il lavoro precedente su "Variabili statiche locali (static variables with block scope)", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Variabili globali con External Linkage (Static variables with External Linkage)", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Variabili statiche locali (static variables with block scope)" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Variabili globali con Internal Linkage (Static variables with Internal Linkage)". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Variabili globali con External Linkage (Static variables with External Linkage)", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Variabili globali con Internal Linkage (Static variables with Internal Linkage)" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Variabili globali con External Linkage (Static variables with External Linkage)" (../README.md#variabili-globali-con-external-linkage-static-variables-with-external-linkage). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#variabili-globali-con-external-linkage-static-variables-with-external-linkage -->
 
 <!-- lab-exercises:start heading="Variabili globali con External Linkage (Static variables with External Linkage)" -->
 
@@ -2988,6 +3723,54 @@ int divisione(int dividendo, int divisore){
 
 ## Variabili globali con Internal Linkage (Static variables with Internal Linkage)
 
+<!-- COURSE-FRAME:START README.md#variabili-globali-con-internal-linkage-static-variables-with-internal-linkage -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Memoria automatica, statica e dinamica" del percorso Intermedio per Terzo anno. Serve a lavorare su dichiarazione, tipo, valore, memoria e uso dei dati durante l'esecuzione. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Variabili globali con Internal Linkage (Static variables with Internal Linkage)" lo studente dovrebbe aver seguito il lavoro precedente su "Variabili globali con External Linkage (Static variables with External Linkage)", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Variabili globali con Internal Linkage (Static variables with Internal Linkage)", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Variabili globali con External Linkage (Static variables with External Linkage)" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Differenza tra definizione e dichiarazione di variabile". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Variabili globali con Internal Linkage (Static variables with Internal Linkage)", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Differenza tra definizione e dichiarazione di variabile" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Variabili globali con Internal Linkage (Static variables with Internal Linkage)" (../README.md#variabili-globali-con-internal-linkage-static-variables-with-internal-linkage). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#variabili-globali-con-internal-linkage-static-variables-with-internal-linkage -->
+
 <!-- lab-exercises:start heading="Variabili globali con Internal Linkage (Static variables with Internal Linkage)" -->
 
 <table align="center">
@@ -3089,6 +3872,54 @@ int main(void){
 
 ## Sintassi dichiarazione variabili
 
+<!-- COURSE-FRAME:START README.md#sintassi-dichiarazione-variabili -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Preprocessore, header e compilazione separata" del percorso Intermedio per Terzo anno. Serve a lavorare su dichiarazione, tipo, valore, memoria e uso dei dati durante l'esecuzione. I sottoparagrafi collegati sono: Classi di memorizzazione per le funzioni, Classi di memorizzazione: riassunto, Suddivisione in moduli di un programma, Il preprocessore, Eliminazione temporanea di codice, Protezione del contenuto dei file d'intestazione. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Sintassi dichiarazione variabili" lo studente dovrebbe aver seguito il lavoro precedente su "Classi di memorizzazione per le funzioni", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Sintassi dichiarazione variabili", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Classi di memorizzazione per le funzioni" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Classi di memorizzazione per le funzioni". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Sintassi dichiarazione variabili", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Classi di memorizzazione per le funzioni" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Sintassi dichiarazione variabili" (../README.md#sintassi-dichiarazione-variabili). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#sintassi-dichiarazione-variabili -->
+
 <p align="justify">
 Una dichiarazione di variabile ha questa forma:
 </p>
@@ -3162,6 +3993,54 @@ extern const unsigned long int a[10];
 ```
 ### Classi di memorizzazione per le funzioni
 
+<!-- COURSE-FRAME:START README.md#classi-di-memorizzazione-per-le-funzioni -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Preprocessore, header e compilazione separata" del percorso Intermedio per Terzo anno. Serve a lavorare su scomposizione del programma, parametri, valore di ritorno e riuso del codice. Si collega al blocco superiore Sintassi dichiarazione variabili. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Classi di memorizzazione per le funzioni" lo studente dovrebbe aver seguito il lavoro precedente su "Sintassi dichiarazione variabili", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Classi di memorizzazione per le funzioni", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Sintassi dichiarazione variabili" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Classi di memorizzazione: riassunto". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Classi di memorizzazione per le funzioni", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Classi di memorizzazione: riassunto" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Classi di memorizzazione per le funzioni" (../README.md#classi-di-memorizzazione-per-le-funzioni). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#classi-di-memorizzazione-per-le-funzioni -->
+
 <p align="justify">
 La definizione (e dichiarazione) di funzione, come per le variabili, può contenere una classe di memorizzazione. Per le funzioni abbiamo solo due classi di memorizzazione: extern e static. La <i>keyword</i> extern all'inizio della dichiarazione o definizione di funzione specifica che la funzione ha <b>external linkage</b>: può essere chiamata da funzioni in altri file del programma. La parola chiave static, invece, indica <b>internal linkage</b> e quindi limita l'uso della funzione all'interno del file in cui è definita. <b>Se non viene specificata una classe di memorizzazione per la funzione, questa assume la classe extern</b>.
 </p>
@@ -3173,6 +4052,54 @@ int h(int i); /* default extern */
 ```
 
 ### Classi di memorizzazione: riassunto
+
+<!-- COURSE-FRAME:START README.md#classi-di-memorizzazione-riassunto -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Preprocessore, header e compilazione separata" del percorso Intermedio per Terzo anno. Serve a lavorare su durata, visibilita e collegamento degli identificatori in C. Si collega al blocco superiore Sintassi dichiarazione variabili. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Classi di memorizzazione: riassunto" lo studente dovrebbe aver seguito il lavoro precedente su "Classi di memorizzazione per le funzioni", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Classi di memorizzazione: riassunto", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Classi di memorizzazione per le funzioni" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Suddivisione in moduli di un programma". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Classi di memorizzazione: riassunto", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Suddivisione in moduli di un programma" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Classi di memorizzazione: riassunto" (../README.md#classi-di-memorizzazione-riassunto). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#classi-di-memorizzazione-riassunto -->
 
 ```c
 int a;
@@ -3214,6 +4141,54 @@ La definizione di b e di j non è mostrata, quindi non è possibile determinare 
 </table>
 
 ### Suddivisione in moduli di un programma
+
+<!-- COURSE-FRAME:START README.md#suddivisione-in-moduli-di-un-programma -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Preprocessore, header e compilazione separata" del percorso Intermedio per Terzo anno. Serve a lavorare su struttura minima di un programma C, funzione main, include e stampa a video. Si collega al blocco superiore Sintassi dichiarazione variabili. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Suddivisione in moduli di un programma" lo studente dovrebbe aver seguito il lavoro precedente su "Classi di memorizzazione: riassunto", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Suddivisione in moduli di un programma", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Classi di memorizzazione: riassunto" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Il preprocessore". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Suddivisione in moduli di un programma", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Il preprocessore" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Suddivisione in moduli di un programma" (../README.md#suddivisione-in-moduli-di-un-programma). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#suddivisione-in-moduli-di-un-programma -->
 
 <!-- lab-exercises:start heading="Suddivisione in moduli di un programma" -->
 
@@ -3697,6 +4672,54 @@ https://github.com/kinderp/2cornot2c/blob/23edeb0541fb524a4389e3728b72eec3df1da4
 
 ### Il preprocessore
 
+<!-- COURSE-FRAME:START README.md#il-preprocessore -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Preprocessore, header e compilazione separata" del percorso Intermedio per Terzo anno. Serve a lavorare su direttive, macro, inclusione di header e compilazione condizionale. Si collega al blocco superiore Sintassi dichiarazione variabili. I sottoparagrafi collegati sono: La direttiva #define, La direttiva #include, Le direttive #if #ifdef #ifndef. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Il preprocessore" lo studente dovrebbe aver seguito il lavoro precedente su "Suddivisione in moduli di un programma", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Il preprocessore", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Suddivisione in moduli di un programma" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "La direttiva #define". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Il preprocessore", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "La direttiva #define" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Il preprocessore" (../README.md#il-preprocessore). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#il-preprocessore -->
+
 <p align="justify">
 Il preprocessore elabora il contenuto di un file sorgente <b>prima della compilazione</b> e opera delle sostituzioni di testo: la sostituzione di parti del codice sorgente originale con altro testo.
 Il preprocessamento è il primo step del processo che porta alla generazione del file eseguibile. Il preprocessore può svolgere differenti sostituzioni, tutte le chiamate al preprocessore sono dette <b>direttive al preprocessore</b>, le più famose sono:
@@ -3759,6 +4782,54 @@ Queste direttive permettono di:
 </table>
 
 #### La direttiva #define 
+
+<!-- COURSE-FRAME:START README.md#la-direttiva-define -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Preprocessore, header e compilazione separata" del percorso Intermedio per Terzo anno. Serve a lavorare su macro simboliche e sostituzione testuale prima della compilazione. Si collega al blocco superiore Sintassi dichiarazione variabili &gt; Il preprocessore. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "La direttiva #define" lo studente dovrebbe aver seguito il lavoro precedente su "Il preprocessore", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "La direttiva #define", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Il preprocessore" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "La direttiva #include". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "La direttiva #define", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "La direttiva #include" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "La direttiva #define" (../README.md#la-direttiva-define). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#la-direttiva-define -->
 
 <!-- lab-exercises:start heading="La direttiva #define" -->
 
@@ -3963,6 +5034,54 @@ L'uso di macro con parametri senza l'uso di parentesi tonde porta a errori diffi
 
 #### La direttiva #include
 
+<!-- COURSE-FRAME:START README.md#la-direttiva-include -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Preprocessore, header e compilazione separata" del percorso Intermedio per Terzo anno. Serve a lavorare su inclusione di dichiarazioni e separazione tra interfaccia e implementazione. Si collega al blocco superiore Sintassi dichiarazione variabili &gt; Il preprocessore. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "La direttiva #include" lo studente dovrebbe aver seguito il lavoro precedente su "La direttiva #define", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "La direttiva #include", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "La direttiva #define" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Le direttive #if #ifdef #ifndef". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "La direttiva #include", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Le direttive #if #ifdef #ifndef" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "La direttiva #include" (../README.md#la-direttiva-include). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#la-direttiva-include -->
+
 <p align="justify">
 Abbiamo accennato a questa direttiva nei paragrafi introduttivi spiegando che serviva a includere, nel file sorgente, il file header stdio.h che conteneva il prototipo della funzione printf().
 </p>
@@ -3988,6 +5107,54 @@ La prima forma (parentesi angolari &lt; &gt;) è usata per includere il contenut
 </p>
 
 #### Le direttive #if #ifdef #ifndef
+
+<!-- COURSE-FRAME:START README.md#le-direttive-if-ifdef-ifndef -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Preprocessore, header e compilazione separata" del percorso Intermedio per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore Sintassi dichiarazione variabili &gt; Il preprocessore. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Le direttive #if #ifdef #ifndef" lo studente dovrebbe aver seguito il lavoro precedente su "La direttiva #include", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Le direttive #if #ifdef #ifndef", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "La direttiva #include" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Eliminazione temporanea di codice". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Le direttive #if #ifdef #ifndef", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Eliminazione temporanea di codice" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Le direttive #if #ifdef #ifndef" (../README.md#le-direttive-if-ifdef-ifndef). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#le-direttive-if-ifdef-ifndef -->
 
 <!-- lab-exercises:start heading="Le direttive #if #ifdef #ifndef" -->
 
@@ -4271,6 +5438,54 @@ La definizione del simbolo macro deve essere effettuata con la direttiva #define
 
 ### Eliminazione temporanea di codice
 
+<!-- COURSE-FRAME:START README.md#eliminazione-temporanea-di-codice -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Preprocessore, header e compilazione separata" del percorso Intermedio per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore Sintassi dichiarazione variabili. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Eliminazione temporanea di codice" lo studente dovrebbe aver seguito il lavoro precedente su "Le direttive #if #ifdef #ifndef", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Eliminazione temporanea di codice", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Le direttive #if #ifdef #ifndef" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Protezione del contenuto dei file d'intestazione". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Eliminazione temporanea di codice", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Protezione del contenuto dei file d'intestazione" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Eliminazione temporanea di codice" (../README.md#eliminazione-temporanea-di-codice). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#eliminazione-temporanea-di-codice -->
+
 <!-- lab-exercises:start heading="Eliminazione temporanea di codice" -->
 
 <table align="center">
@@ -4538,6 +5753,54 @@ Production code, no debugging enabled
 
 ### Protezione del contenuto dei file d'intestazione
 
+<!-- COURSE-FRAME:START README.md#protezione-del-contenuto-dei-file-dintestazione -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Preprocessore, header e compilazione separata" del percorso Intermedio per Terzo anno. Serve a lavorare su apertura, lettura, scrittura e chiusura dei file tramite libreria standard C. Si collega al blocco superiore Sintassi dichiarazione variabili. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Protezione del contenuto dei file d'intestazione" lo studente dovrebbe aver seguito il lavoro precedente su "Eliminazione temporanea di codice", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Protezione del contenuto dei file d'intestazione", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Eliminazione temporanea di codice" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Semplici operazioni di I/O sui file". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Protezione del contenuto dei file d'intestazione", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Semplici operazioni di I/O sui file" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Protezione del contenuto dei file d'intestazione" (../README.md#protezione-del-contenuto-dei-file-dintestazione). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#protezione-del-contenuto-dei-file-dintestazione -->
+
 <p align="justify">
 I file d'intestazione contengono dichiarazioni sia di funzioni (prototipi) sia di dati (strutture, definizioni di tipo, variabili e costanti); questi file possono essere inclusi in più sorgenti, correndo il rischio di avere una situazione in cui lo stesso file d'intestazione è incluso due volte nello stesso sorgente. In queste situazioni il preprocessore copierà due volte il contenuto del file d'intestazione.
 Non è un grosso problema, all'interno di un file .c, avere due o più dichiarazioni (prototipi) della stessa funzione; il compilatore, invece, darà errore se trova due dichiarazioni di tipo identiche. Dobbiamo quindi trovare un modo per evitare inclusioni multiple dello stesso file d'intestazione in un file sorgente.
@@ -4640,9 +5903,6 @@ vagrant@ubuntu2204:~$ gcc -E prog.c
 # 1 "file3.h" 1
 
 
-
-
-
 typedef int Bool;
 # 2 "file1.h" 2
 # 2 "prog.c" 2
@@ -4655,6 +5915,7 @@ int main(void){
 ```
 ## Rappresentazione delle informazioni
 
+<!-- COURSE-FRAME:START README.md#rappresentazione-delle-informazioni -->
 <table align="center">
 <tr>
 <td>
@@ -4663,27 +5924,44 @@ int main(void){
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Abbiamo introdotto le variabili come nomi associati a locazioni di memoria. Ora guardiamo il livello sottostante: ogni informazione viene rappresentata come sequenza di bit.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su bit, byte, basi numeriche e interpretazione dei dati in memoria. I sottoparagrafi collegati sono: Big &amp; Little endian, Codifica numeri decimali, Mapping signed - unsigned, Estensione rappresentazione binaria di un numero intero, Troncamento rappresentazione binaria di un numero, Addizione senza segno, Addizione con segno, Tipi di dato, `int`. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-<a href="#variabili">Variabili</a> e uso elementare delle potenze di 2.
+Prima di affrontare "Rappresentazione delle informazioni" lo studente dovrebbe aver seguito il lavoro precedente su "Variabili", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine di questa sezione saprai spiegare perche il computer usa bit e byte, leggere rappresentazioni binarie/esadecimali semplici e distinguere numeri con e senza segno.
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Rappresentazione delle informazioni", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Variabili" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Big &amp; Little endian". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Questa base serve per capire i <a href="#tipi-di-dato">Tipi di dato</a>, in particolare <code>int</code> e <code>char</code>.
+Dopo la spiegazione, proponi un esempio minimo su "Rappresentazione delle informazioni", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Big &amp; Little endian" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Rappresentazione delle informazioni" (../README.md#rappresentazione-delle-informazioni). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
 </details>
 </td>
 </tr>
 </table>
+<!-- COURSE-FRAME:END README.md#rappresentazione-delle-informazioni -->
 
 <p align="justify">
 <b>Le informazioni di seguito riportate sono solo un aiuto per fissare i concetti e vedere un'applicazione pratica in un linguaggio di programmazione dei contenuti teorici presentati a lezione e non sostituiscono in alcun modo lo studio del materiale teorico</b>
@@ -4723,6 +6001,54 @@ $1 7 3 A 4 C$
 </p>
 
 ### Big & Little endian
+
+<!-- COURSE-FRAME:START README.md#big-little-endian -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su ordine dei byte in memoria e lettura corretta dei valori multibyte. Si collega al blocco superiore Rappresentazione delle informazioni. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Big &amp; Little endian" lo studente dovrebbe aver seguito il lavoro precedente su "Rappresentazione delle informazioni", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Big &amp; Little endian", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Rappresentazione delle informazioni" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Codifica numeri decimali". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Big &amp; Little endian", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Codifica numeri decimali" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Big &amp; Little endian" (../README.md#big-little-endian). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#big-little-endian -->
 
 <p align=justify>
 La memoria è una sequenza di byte (8 bit), detti celle. A ogni cella è associato un indirizzo per leggere e scrivere da e su di essa. La dimensione (in bit) degli indirizzi di un sistema è detta <b>word size</b>. Se la word size è $N$, si potranno indirizzare $2^N$ celle diverse di memoria. Il numero totale di celle di memoria indirizzabili è detto spazio degli indirizzi virtuale. Quindi la differenza tra una macchina a 32 bit e una a 64 bit è la dimensione in bit degli indirizzi (e probabilmente dei registri interni della CPU).
@@ -4768,6 +6094,54 @@ Per esempio: la seguente sequenza di bit $0x01234567$ scritta in esadecimale (og
 
 ### Codifica numeri decimali
 
+<!-- COURSE-FRAME:START README.md#codifica-numeri-decimali -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su rappresentazione binaria dei numeri e significato dei bit. Si collega al blocco superiore Rappresentazione delle informazioni. I sottoparagrafi collegati sono: Codifica interi senza segno, Codifica interi con segno (complemento a due). La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Codifica numeri decimali" lo studente dovrebbe aver seguito il lavoro precedente su "Big &amp; Little endian", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Codifica numeri decimali", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Big &amp; Little endian" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Codifica interi senza segno". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Codifica numeri decimali", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Codifica interi senza segno" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Codifica numeri decimali" (../README.md#codifica-numeri-decimali). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#codifica-numeri-decimali -->
+
 <p align="justify">
 Esistono tre diversi modi per codificare i numeri:
 </p>
@@ -4791,6 +6165,54 @@ Esistono tre diversi modi per codificare i numeri:
 </ul>
 
 #### Codifica interi senza segno
+
+<!-- COURSE-FRAME:START README.md#codifica-interi-senza-segno -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su rappresentazione binaria dei numeri e significato dei bit. Si collega al blocco superiore Rappresentazione delle informazioni &gt; Codifica numeri decimali. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Codifica interi senza segno" lo studente dovrebbe aver seguito il lavoro precedente su "Codifica numeri decimali", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Codifica interi senza segno", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Codifica numeri decimali" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Codifica interi con segno (complemento a due)". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Codifica interi senza segno", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Codifica interi con segno (complemento a due)" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Codifica interi senza segno" (../README.md#codifica-interi-senza-segno). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#codifica-interi-senza-segno -->
 
 <p align=justify>
 Per i numeri interi senza segno si usa la tradizionale codifica binaria tradizionale.
@@ -4834,6 +6256,54 @@ Alcuni esempi:
 ```
 
 #### Codifica interi con segno (complemento a due)
+
+<!-- COURSE-FRAME:START README.md#codifica-interi-con-segno-complemento-a-due -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su rappresentazione binaria dei numeri e significato dei bit. Si collega al blocco superiore Rappresentazione delle informazioni &gt; Codifica numeri decimali. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Codifica interi con segno (complemento a due)" lo studente dovrebbe aver seguito il lavoro precedente su "Codifica interi senza segno", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Codifica interi con segno (complemento a due)", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Codifica interi senza segno" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Mapping signed - unsigned". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Codifica interi con segno (complemento a due)", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Mapping signed - unsigned" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Codifica interi con segno (complemento a due)" (../README.md#codifica-interi-con-segno-complemento-a-due). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#codifica-interi-con-segno-complemento-a-due -->
 
 <p align=justify>
 La codifica in complemento a due è la più utilizzata per i numeri interi con segno (positivi e negativi). Il motivo principale è che ci permette di svolgere le operazioni aritmetiche con gli stessi circuiti usati per i numeri senza segno e, inoltre, anche in questo caso ogni valore ha associata una sola rappresentazione (come nel caso dei numeri senza segno).
@@ -4898,6 +6368,54 @@ Nella figura seguente sono invece riportati i range reali per i vari tipi che le
 
 ### Mapping signed - unsigned
 
+<!-- COURSE-FRAME:START README.md#mapping-signed---unsigned -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su numeri con segno, complemento a due, range e casi limite. Si collega al blocco superiore Rappresentazione delle informazioni. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Mapping signed - unsigned" lo studente dovrebbe aver seguito il lavoro precedente su "Codifica interi con segno (complemento a due)", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Mapping signed - unsigned", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Codifica interi con segno (complemento a due)" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Estensione rappresentazione binaria di un numero intero". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Mapping signed - unsigned", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Estensione rappresentazione binaria di un numero intero" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Mapping signed - unsigned" (../README.md#mapping-signed---unsigned). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#mapping-signed---unsigned -->
+
 <p align="justify">
 $UMax$ : Estremo superiore intervallo codifica senza segno $TMax$ : Estremo superiore intervallo codifica   con segno $TMin$ : Estremo inferiore intervallo codifica   con segno
 </p>
@@ -4959,6 +6477,54 @@ Per ottenere il valore nella rappresentazione senza segno dovremmo sommare a 2 i
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/conversione_signed_unsigned.png)
 
 ### Estensione rappresentazione binaria di un numero intero
+
+<!-- COURSE-FRAME:START README.md#estensione-rappresentazione-binaria-di-un-numero-intero -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su bit, byte, basi numeriche e interpretazione dei dati in memoria. Si collega al blocco superiore Rappresentazione delle informazioni. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Estensione rappresentazione binaria di un numero intero" lo studente dovrebbe aver seguito il lavoro precedente su "Mapping signed - unsigned", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Estensione rappresentazione binaria di un numero intero", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Mapping signed - unsigned" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Troncamento rappresentazione binaria di un numero". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Estensione rappresentazione binaria di un numero intero", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Troncamento rappresentazione binaria di un numero" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Estensione rappresentazione binaria di un numero intero" (../README.md#estensione-rappresentazione-binaria-di-un-numero-intero). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#estensione-rappresentazione-binaria-di-un-numero-intero -->
 
 <!-- lab-exercises:start heading="Estensione rappresentazione binaria di un numero intero" -->
 
@@ -5081,6 +6647,54 @@ Per esempio:
 
 ### Troncamento rappresentazione binaria di un numero
 
+<!-- COURSE-FRAME:START README.md#troncamento-rappresentazione-binaria-di-un-numero -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su bit, byte, basi numeriche e interpretazione dei dati in memoria. Si collega al blocco superiore Rappresentazione delle informazioni. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Troncamento rappresentazione binaria di un numero" lo studente dovrebbe aver seguito il lavoro precedente su "Estensione rappresentazione binaria di un numero intero", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Troncamento rappresentazione binaria di un numero", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Estensione rappresentazione binaria di un numero intero" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Addizione senza segno". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Troncamento rappresentazione binaria di un numero", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Addizione senza segno" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Troncamento rappresentazione binaria di un numero" (../README.md#troncamento-rappresentazione-binaria-di-un-numero). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#troncamento-rappresentazione-binaria-di-un-numero -->
+
 <p align=justify>
 Data una rappresentazione di un numero intero (con o senza segno) di $W+k$ per convertirla in una rappresentazione di $W$ bit che rappresenti lo stesso intero dovremmo eliminare i $k$ bit più significativi in questo modo:
 </p>
@@ -5129,18 +6743,7 @@ Per esempio:
 
 ### Addizione senza segno
 
-<p align=center>
-<img src=https://github.com/kinderp/2cornot2c/blob/main/images/unsigned_addition.png>
-</p>
-
-### Addizione con segno
-
-<p align=center>
-<img src=https://github.com/kinderp/2cornot2c/blob/main/images/two_complement_addition.png>
-</p>
-
-### Tipi di dato
-
+<!-- COURSE-FRAME:START README.md#addizione-senza-segno -->
 <table align="center">
 <tr>
 <td>
@@ -5149,32 +6752,152 @@ Per esempio:
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Dopo aver visto che le informazioni sono bit, torniamo al codice C: il tipo dice come interpretare quei bit e quanto spazio occupa il dato.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore Rappresentazione delle informazioni. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-<a href="#variabili">Variabili</a> e <a href="#rappresentazione-delle-informazioni">Rappresentazione delle informazioni</a>.
+Prima di affrontare "Addizione senza segno" lo studente dovrebbe aver seguito il lavoro precedente su "Troncamento rappresentazione binaria di un numero", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine di questa sezione saprai riconoscere le keyword dei tipi principali, distinguere interi, caratteri e reali, e capire perche la dimensione del tipo influenza il range dei valori rappresentabili.
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Addizione senza segno", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Troncamento rappresentazione binaria di un numero" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Alcuni dettagli su cast, overflow e conversioni saranno ripresi nelle sezioni successive. Qui ci interessa costruire la mappa dei tipi di base.
+Questo argomento prepara il lavoro successivo su "Addizione con segno". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Approfondiremo prima <a href="#int"><code>int</code></a> e poi <a href="#char"><code>char</code></a>.
+Dopo la spiegazione, proponi un esempio minimo su "Addizione senza segno", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Addizione con segno" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Addizione senza segno" (../README.md#addizione-senza-segno). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
 </details>
 </td>
 </tr>
 </table>
+<!-- COURSE-FRAME:END README.md#addizione-senza-segno -->
+
+<p align=center>
+<img src=https://github.com/kinderp/2cornot2c/blob/main/images/unsigned_addition.png>
+</p>
+
+### Addizione con segno
+
+<!-- COURSE-FRAME:START README.md#addizione-con-segno -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore Rappresentazione delle informazioni. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Addizione con segno" lo studente dovrebbe aver seguito il lavoro precedente su "Addizione senza segno", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Addizione con segno", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Addizione senza segno" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Tipi di dato". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Addizione con segno", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Tipi di dato" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Addizione con segno" (../README.md#addizione-con-segno). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#addizione-con-segno -->
+
+<p align=center>
+<img src=https://github.com/kinderp/2cornot2c/blob/main/images/two_complement_addition.png>
+</p>
+
+### Tipi di dato
+
+<!-- COURSE-FRAME:START README.md#tipi-di-dato -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su tipi primitivi del C, dimensioni, range e scelta del tipo corretto. Si collega al blocco superiore Rappresentazione delle informazioni. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Tipi di dato" lo studente dovrebbe aver seguito il lavoro precedente su "Addizione con segno", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Tipi di dato", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Addizione con segno" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "`int`". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Tipi di dato", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "`int`" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Tipi di dato" (../README.md#tipi-di-dato). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#tipi-di-dato -->
 
 ```c
 int main(void){
@@ -5211,6 +6934,54 @@ int permette di rappresentare in memoria i tipi interi (senza parte decimale), l
 </p>
 
 ### `int`
+
+<!-- COURSE-FRAME:START README.md#int -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore Rappresentazione delle informazioni. I sottoparagrafi collegati sono: Stampare `int`, Altri tipi interi, Stampare altri tipi di interi, Overflow `int`. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "`int`" lo studente dovrebbe aver seguito il lavoro precedente su "Tipi di dato", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "`int`", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Tipi di dato" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Stampare `int`". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "`int`", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Stampare `int`" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "`int`" (../README.md#int). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#int -->
 
 <p align="justify">
 Il tipo int è signed: questo vuol dire che possiamo esprimere sia numeri positivi (segno +) sia numeri negativi (segno -). La dimensione in bit usata per rappresentare un int (e quindi anche il valore intero massimo esprimibile) dipende dall'architettura. Tipicamente un int utilizza una word nell'architettura target: quindi nei sistemi con word a 16 bit (IBM compatibile) int occuperà 16 bit. Quale sarà il valore massimo e minimo rappresentabili con un int a 16 bit? Semplice:
@@ -5252,6 +7023,54 @@ int q, w = 200 /* q non è inizializzata, w è inizializzata. scarso stile di  p
 ```
 
 #### Stampare `int`
+
+<!-- COURSE-FRAME:START README.md#stampare-int -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore Rappresentazione delle informazioni &gt; `int`. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Stampare `int`" lo studente dovrebbe aver seguito il lavoro precedente su "`int`", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Stampare `int`", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "`int`" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Altri tipi interi". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Stampare `int`", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Altri tipi interi" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Stampare `int`" (../README.md#stampare-int). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#stampare-int -->
 
 <!-- lab-exercises:start heading="Stampare int" -->
 
@@ -5415,6 +7234,54 @@ int main(void){
 
 #### Altri tipi interi
 
+<!-- COURSE-FRAME:START README.md#altri-tipi-interi -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su tipi primitivi del C, dimensioni, range e scelta del tipo corretto. Si collega al blocco superiore Rappresentazione delle informazioni &gt; `int`. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Altri tipi interi" lo studente dovrebbe aver seguito il lavoro precedente su "Stampare `int`", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Altri tipi interi", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Stampare `int`" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Stampare altri tipi di interi". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Altri tipi interi", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Stampare altri tipi di interi" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Altri tipi interi" (../README.md#altri-tipi-interi). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#altri-tipi-interi -->
+
 <p align="justify">
 Il linguaggio offre le <em>keyword</em> short long unsigned per modificare il tipo int di default.
 </p>
@@ -5493,6 +7360,54 @@ Quando allora usare i diversi tipi di interi? Dipende dalla situazione.
 </ul>
 
 #### Stampare altri tipi di interi
+
+<!-- COURSE-FRAME:START README.md#stampare-altri-tipi-di-interi -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su tipi primitivi del C, dimensioni, range e scelta del tipo corretto. Si collega al blocco superiore Rappresentazione delle informazioni &gt; `int`. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Stampare altri tipi di interi" lo studente dovrebbe aver seguito il lavoro precedente su "Altri tipi interi", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Stampare altri tipi di interi", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Altri tipi interi" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Overflow `int`". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Stampare altri tipi di interi", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Overflow `int`" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Stampare altri tipi di interi" (../README.md#stampare-altri-tipi-di-interi). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#stampare-altri-tipi-di-interi -->
 
 <!-- lab-exercises:start heading="Stampare altri tipi di interi" -->
 
@@ -5606,6 +7521,54 @@ verybig = 12345678908642 and not 12345678908642
 ```
 
 #### Overflow `int`
+
+<!-- COURSE-FRAME:START README.md#overflow-int -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore Rappresentazione delle informazioni &gt; `int`. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Overflow `int`" lo studente dovrebbe aver seguito il lavoro precedente su "Stampare altri tipi di interi", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Overflow `int`", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Stampare altri tipi di interi" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "`char`". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Overflow `int`", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "`char`" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Overflow `int`" (../README.md#overflow-int). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#overflow-int -->
 
 <p align="justify">
 Cosa accade quando si cerca di rappresentare un numero intero più grande del massimo valore rappresentabile: quando si esce fuori dal range massimo. Vediamo in questo esempio. Consideriamo un sistema a 32 bit quindi int 32.
@@ -5817,6 +7780,54 @@ signed negative: 0xffffffe5
 ```
 
 ### Cast
+
+<!-- COURSE-FRAME:START README.md#cast -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Operatori, condizioni e selezione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. I sottoparagrafi collegati sono: Cast tra `signed` e `unsigned`. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Cast" lo studente dovrebbe aver seguito il lavoro precedente su "Operatore `sizeof`", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Cast", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Operatore `sizeof`" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Cast tra `signed` e `unsigned`". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Cast", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Cast tra `signed` e `unsigned`" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Cast" (../README.md#cast). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#cast -->
 
 <!-- lab-exercises:start heading="Cast" -->
 
@@ -6108,6 +8119,54 @@ il valore stampato sarebbe 1.0 perché prima viene effettuata la divisione tra i
 
 
 #### Cast tra `signed` e `unsigned`
+
+<!-- COURSE-FRAME:START README.md#cast-tra-signed-e-unsigned -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Operatori, condizioni e selezione" del percorso Base per Terzo anno. Serve a lavorare su numeri con segno, complemento a due, range e casi limite. Si collega al blocco superiore Cast. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Cast tra `signed` e `unsigned`" lo studente dovrebbe aver seguito il lavoro precedente su "Cast", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Cast tra `signed` e `unsigned`", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Cast" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Controllo del flusso". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Cast tra `signed` e `unsigned`", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Controllo del flusso" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Cast tra `signed` e `unsigned`" (../README.md#cast-tra-signed-e-unsigned). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#cast-tra-signed-e-unsigned -->
 
 <!-- lab-exercises:start heading="Cast tra signed e unsigned" -->
 
@@ -6611,6 +8670,54 @@ y  = -12345      ffffcfc7
 
 ### `char`
 
+<!-- COURSE-FRAME:START README.md#char -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "`char`" lo studente dovrebbe aver seguito il lavoro precedente su "Overflow `int`", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "`char`", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Overflow `int`" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Stampare un `char`". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "`char`", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Stampare un `char`" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "`char`" (../README.md#char). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#char -->
+
 <!-- lab-exercises:start heading="char" -->
 
 <table align="center">
@@ -6804,6 +8911,54 @@ Il tipo char è lungo 1 byte (8 bit) e in verità è un tipo intero: nel senso c
 
 ### Stampare un `char`
 
+<!-- COURSE-FRAME:START README.md#stampare-un-char -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Stampare un `char`" lo studente dovrebbe aver seguito il lavoro precedente su "`char`", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Stampare un `char`", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "`char`" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Costanti". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Stampare un `char`", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Costanti" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Stampare un `char`" (../README.md#stampare-un-char). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#stampare-un-char -->
+
 <!-- lab-exercises:start heading="Stampare un char" -->
 
 <table align="center">
@@ -6916,17 +9071,161 @@ Il valore decimale per rappresentare il carattere A è 65; in memoria vengono sa
 
 ### Costanti
 
+<!-- COURSE-FRAME:START README.md#costanti -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Costanti" lo studente dovrebbe aver seguito il lavoro precedente su "Stampare un `char`", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Costanti", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Stampare un `char`" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Operatori". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Costanti", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Operatori" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Costanti" (../README.md#costanti). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#costanti -->
+
 <p align="justify">
 <strong>TODO</strong>
 </p>
 
 ### Operatori
 
+<!-- COURSE-FRAME:START README.md#operatori -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Operatori, condizioni e selezione" del percorso Base per Terzo anno. Serve a lavorare su operatori aritmetici, logici, relazionali e loro precedenza. I sottoparagrafi collegati sono: Operatore di assegnamento: =. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Operatori" lo studente dovrebbe aver seguito il lavoro precedente su "Costanti", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Operatori", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Costanti" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Operatore di assegnamento: =". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Operatori", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Operatore di assegnamento: =" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Operatori" (../README.md#operatori). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#operatori -->
+
 <p align="justify">
 Gli operatori sono usati nelle operazioni aritmetiche.
 </p>
 
 #### Operatore di assegnamento: =
+
+<!-- COURSE-FRAME:START README.md#operatore-di-assegnamento -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Operatori, condizioni e selezione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore Operatori. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Operatore di assegnamento: =" lo studente dovrebbe aver seguito il lavoro precedente su "Operatori", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Operatore di assegnamento: =", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Operatori" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Operatore somma: +". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Operatore di assegnamento: =", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Operatore somma: +" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Operatore di assegnamento: =" (../README.md#operatore-di-assegnamento). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#operatore-di-assegnamento -->
 
 <!-- lab-exercises:start heading="Operatore di assegnamento: =" -->
 
@@ -7042,6 +9341,54 @@ int main(void){
 
 ### Operatore somma: +
 
+<!-- COURSE-FRAME:START README.md#operatore-somma -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Operatori, condizioni e selezione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Operatore somma: +" lo studente dovrebbe aver seguito il lavoro precedente su "Operatore di assegnamento: =", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Operatore somma: +", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Operatore di assegnamento: =" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Operatore differenza: -". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Operatore somma: +", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Operatore differenza: -" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Operatore somma: +" (../README.md#operatore-somma). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#operatore-somma -->
+
 <p align="justify">
 L'operatore di somma + somma tra loro il valore dei suoi operandi
 </p>
@@ -7057,11 +9404,107 @@ int main(void){
 
 ### Operatore differenza: -
 
+<!-- COURSE-FRAME:START README.md#operatore-differenza -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Operatori, condizioni e selezione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Operatore differenza: -" lo studente dovrebbe aver seguito il lavoro precedente su "Operatore somma: +", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Operatore differenza: -", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Operatore somma: +" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Operatore segno: - e +". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Operatore differenza: -", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Operatore segno: - e +" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Operatore differenza: -" (../README.md#operatore-differenza). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#operatore-differenza -->
+
 <p align="justify">
 L'operatore differenza - sottrae il valore dell'operando di destra al valore dell'operando di sinistra
 </p>
 
 ### Operatore segno: - e +
+
+<!-- COURSE-FRAME:START README.md#operatore-segno---e -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Operatori, condizioni e selezione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Operatore segno: - e +" lo studente dovrebbe aver seguito il lavoro precedente su "Operatore differenza: -", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Operatore segno: - e +", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Operatore differenza: -" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Operatore moltiplicazione: *". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Operatore segno: - e +", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Operatore moltiplicazione: *" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Operatore segno: - e +" (../README.md#operatore-segno---e). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#operatore-segno---e -->
 
 <p align="justify">
 L'operatore segno permette di specificare o alterare il segno di un valore. Questo è un <strong>operatore unario</strong> perché agisce su un singolo operando, al contrario degli operatori che abbiamo visto fino ad ora.
@@ -7076,6 +9519,54 @@ int main(void){
 
 ### Operatore moltiplicazione: *
 
+<!-- COURSE-FRAME:START README.md#operatore-moltiplicazione -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Operatori, condizioni e selezione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Operatore moltiplicazione: *" lo studente dovrebbe aver seguito il lavoro precedente su "Operatore segno: - e +", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Operatore moltiplicazione: *", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Operatore segno: - e +" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Operatore divisione: /". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Operatore moltiplicazione: *", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Operatore divisione: /" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Operatore moltiplicazione: *" (../README.md#operatore-moltiplicazione). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#operatore-moltiplicazione -->
+
 <p align="justify">
 Questo operatore effettua il prodotto del valore dei due operandi
 </p>
@@ -7087,6 +9578,54 @@ int main(void){
 ```
 
 ### Operatore divisione: /
+
+<!-- COURSE-FRAME:START README.md#operatore-divisione -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Operatori, condizioni e selezione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Operatore divisione: /" lo studente dovrebbe aver seguito il lavoro precedente su "Operatore moltiplicazione: *", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Operatore divisione: /", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Operatore moltiplicazione: *" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Operatore %". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Operatore divisione: /", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Operatore %" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Operatore divisione: /" (../README.md#operatore-divisione). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#operatore-divisione -->
 
 <!-- lab-exercises:start heading="Operatore divisione: /" -->
 
@@ -7180,6 +9719,54 @@ int main(void){
 ```
 
 ### Operatore `sizeof`
+
+<!-- COURSE-FRAME:START README.md#operatore-sizeof -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Operatori, condizioni e selezione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Operatore `sizeof`" lo studente dovrebbe aver seguito il lavoro precedente su "Operatore incremento/decremento ++ --", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Operatore `sizeof`", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Operatore incremento/decremento ++ --" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Cast". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Operatore `sizeof`", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Cast" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Operatore `sizeof`" (../README.md#operatore-sizeof). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#operatore-sizeof -->
 
 <!-- lab-exercises:start heading="Operatore sizeof" -->
 
@@ -7283,6 +9870,54 @@ Come avrai notato sizeof può essere usato con o senza parentesi tonde. L'uso de
 
 ### Operatore %
 
+<!-- COURSE-FRAME:START README.md#operatore -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Operatori, condizioni e selezione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Operatore %" lo studente dovrebbe aver seguito il lavoro precedente su "Operatore divisione: /", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Operatore %", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Operatore divisione: /" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Operatore incremento/decremento ++ --". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Operatore %", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Operatore incremento/decremento ++ --" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Operatore %" (../README.md#operatore). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#operatore -->
+
 <!-- lab-exercises:start heading="Operatore %" -->
 
 <table align="center">
@@ -7379,6 +10014,54 @@ int main(void){
 ```
 
 ### Operatore incremento/decremento ++ --
+
+<!-- COURSE-FRAME:START README.md#operatore-incrementodecremento -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Operatori, condizioni e selezione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Operatore incremento/decremento ++ --" lo studente dovrebbe aver seguito il lavoro precedente su "Operatore %", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Operatore incremento/decremento ++ --", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Operatore %" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Operatore `sizeof`". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Operatore incremento/decremento ++ --", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Operatore `sizeof`" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Operatore incremento/decremento ++ --" (../README.md#operatore-incrementodecremento). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#operatore-incrementodecremento -->
 
 <!-- lab-exercises:start heading="Operatore incremento/decremento ++ --" -->
 
@@ -7622,8 +10305,55 @@ Quindi quando l'operatore è usato singolarmente non c'è differenza nell'usare 
 </p>
 
 
-
 ### Controllo del flusso
+
+<!-- COURSE-FRAME:START README.md#controllo-del-flusso -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Operatori, condizioni e selezione" del percorso Base per Terzo anno. Serve a lavorare su if, switch, cicli e costruzione del flusso di esecuzione. I sottoparagrafi collegati sono: if o if-else, Condizioni complesse con l'uso di operatori logici e condizionali, for, while, do-while, switch, break e continue. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Controllo del flusso" lo studente dovrebbe aver seguito il lavoro precedente su "Cast tra `signed` e `unsigned`", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Controllo del flusso", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Cast tra `signed` e `unsigned`" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "if o if-else". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Controllo del flusso", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "if o if-else" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Controllo del flusso" (../README.md#controllo-del-flusso). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#controllo-del-flusso -->
 
 <p align="justify">
 Operatori Logici
@@ -7649,6 +10379,54 @@ Operatori Relazionali
 | `!=` | diverso           |
 
 #### if o if-else
+
+<!-- COURSE-FRAME:START README.md#if-o-if-else -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Operatori, condizioni e selezione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore Controllo del flusso. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "if o if-else" lo studente dovrebbe aver seguito il lavoro precedente su "Controllo del flusso", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "if o if-else", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Controllo del flusso" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Condizioni complesse con l'uso di operatori logici e condizionali". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "if o if-else", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Condizioni complesse con l'uso di operatori logici e condizionali" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "if o if-else" (../README.md#if-o-if-else). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#if-o-if-else -->
 
 <!-- lab-exercises:start heading="if o if-else" -->
 
@@ -7791,6 +10569,54 @@ int main(void){
 
 #### Condizioni complesse con l'uso di operatori logici e condizionali
 
+<!-- COURSE-FRAME:START README.md#condizioni-complesse-con-luso-di-operatori-logici-e-condizionali -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Operatori, condizioni e selezione" del percorso Base per Terzo anno. Serve a lavorare su operatori aritmetici, logici, relazionali e loro precedenza. Si collega al blocco superiore Controllo del flusso. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Condizioni complesse con l'uso di operatori logici e condizionali" lo studente dovrebbe aver seguito il lavoro precedente su "if o if-else", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Condizioni complesse con l'uso di operatori logici e condizionali", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "if o if-else" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "for". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Condizioni complesse con l'uso di operatori logici e condizionali", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "for" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Condizioni complesse con l'uso di operatori logici e condizionali" (../README.md#condizioni-complesse-con-luso-di-operatori-logici-e-condizionali). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#condizioni-complesse-con-luso-di-operatori-logici-e-condizionali -->
+
 <!-- lab-exercises:start heading="Condizioni complesse con l'uso di operatori logici e condizionali" -->
 
 <table align="center">
@@ -7920,6 +10746,54 @@ int main(void){
 
 #### for
 
+<!-- COURSE-FRAME:START README.md#for -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Operatori, condizioni e selezione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore Controllo del flusso. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "for" lo studente dovrebbe aver seguito il lavoro precedente su "Condizioni complesse con l'uso di operatori logici e condizionali", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "for", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Condizioni complesse con l'uso di operatori logici e condizionali" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "while". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "for", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "while" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "for" (../README.md#for). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#for -->
+
 <!-- lab-exercises:start heading="for" -->
 
 <table align="center">
@@ -8012,6 +10886,54 @@ int main(void){
 ```
 
 #### while
+
+<!-- COURSE-FRAME:START README.md#while -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Operatori, condizioni e selezione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore Controllo del flusso. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "while" lo studente dovrebbe aver seguito il lavoro precedente su "for", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "while", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "for" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "do-while". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "while", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "do-while" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "while" (../README.md#while). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#while -->
 
 <!-- lab-exercises:start heading="while" -->
 
@@ -8109,6 +11031,54 @@ int main(void){
 ```
 
 #### do-while
+
+<!-- COURSE-FRAME:START README.md#do-while -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Operatori, condizioni e selezione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore Controllo del flusso. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "do-while" lo studente dovrebbe aver seguito il lavoro precedente su "while", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "do-while", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "while" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "switch". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "do-while", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "switch" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "do-while" (../README.md#do-while). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#do-while -->
 
 <!-- lab-exercises:start heading="do-while" -->
 
@@ -8212,6 +11182,54 @@ int main(void){
 ```
 
 #### switch
+
+<!-- COURSE-FRAME:START README.md#switch -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Operatori, condizioni e selezione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore Controllo del flusso. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "switch" lo studente dovrebbe aver seguito il lavoro precedente su "do-while", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "switch", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "do-while" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "break e continue". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "switch", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "break e continue" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "switch" (../README.md#switch). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#switch -->
 
 <!-- lab-exercises:start heading="switch" -->
 
@@ -8399,6 +11417,54 @@ int main(void){
 
 #### break e continue
 
+<!-- COURSE-FRAME:START README.md#break-e-continue -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Operatori, condizioni e selezione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore Controllo del flusso. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "break e continue" lo studente dovrebbe aver seguito il lavoro precedente su "switch", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "break e continue", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "switch" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Funzioni". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "break e continue", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Funzioni" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "break e continue" (../README.md#break-e-continue). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#break-e-continue -->
+
 <!-- lab-exercises:start heading="break e continue" -->
 
 <table align="center">
@@ -8537,6 +11603,54 @@ int main(void){
 ```
 
 ## I puntatori
+
+<!-- COURSE-FRAME:START README.md#i-puntatori -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso Intermedio per Terzo anno. Serve a lavorare su indirizzi, dereferenziazione, aritmetica dei puntatori e relazione con gli array. I sottoparagrafi collegati sono: Puntatori non inizializzati, Il puntatore nullo (NULL), Vettori, Relazione tra array e puntatori, Differenza tra puntatori, Le stringhe, Dettagli sull'inizializzazione, Stampare una stringa, Funzioni, Dichiarazione di funzione, Uso di void nelle funzioni, Definizione di funzione, Chiamata di funzione, Passaggio di parametri per valore, Passaggio di parametri per indirizzo, Passaggio di puntatori const, Array come parametri a funzioni, Allocazione dinamica della memoria, Array bidimensionali, Array di puntatori, Differenza tra array bidimensionali e array di puntatori, Sezioni di memoria di un programma C, L'inizializzazione delle variabili, Allocazione dinamica di matrici, Le strutture. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "I puntatori" lo studente dovrebbe aver seguito il lavoro precedente su "Array bidimensionali", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "I puntatori", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Array bidimensionali" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Puntatori non inizializzati". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "I puntatori", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Puntatori non inizializzati" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "I puntatori" (../README.md#i-puntatori). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#i-puntatori -->
 
 <!-- lab-exercises:start heading="I puntatori" -->
 
@@ -8893,6 +12007,54 @@ int main(void){
 
 ### Puntatori non inizializzati
 
+<!-- COURSE-FRAME:START README.md#puntatori-non-inizializzati -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso Intermedio per Terzo anno. Serve a lavorare su indirizzi, dereferenziazione, aritmetica dei puntatori e relazione con gli array. Si collega al blocco superiore I puntatori. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Puntatori non inizializzati" lo studente dovrebbe aver seguito il lavoro precedente su "I puntatori", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Puntatori non inizializzati", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "I puntatori" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Il puntatore nullo (NULL)". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Puntatori non inizializzati", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Il puntatore nullo (NULL)" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Puntatori non inizializzati" (../README.md#puntatori-non-inizializzati). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#puntatori-non-inizializzati -->
+
 <!-- lab-exercises:start heading="Puntatori non inizializzati" -->
 
 <table align="center">
@@ -8998,6 +12160,54 @@ int main(void){
 
 ### Il puntatore nullo (NULL)
 
+<!-- COURSE-FRAME:START README.md#il-puntatore-nullo-null -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso Intermedio per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore I puntatori. I sottoparagrafi collegati sono: Aritmetica puntatori. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Il puntatore nullo (NULL)" lo studente dovrebbe aver seguito il lavoro precedente su "Puntatori non inizializzati", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Il puntatore nullo (NULL)", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Puntatori non inizializzati" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Aritmetica puntatori". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Il puntatore nullo (NULL)", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Aritmetica puntatori" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Il puntatore nullo (NULL)" (../README.md#il-puntatore-nullo-null). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#il-puntatore-nullo-null -->
+
 <!-- lab-exercises:start heading="Il puntatore nullo (NULL)" -->
 
 <table align="center">
@@ -9090,6 +12300,54 @@ int main(void){
 ***
 
 #### Aritmetica puntatori
+
+<!-- COURSE-FRAME:START README.md#aritmetica-puntatori -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso Intermedio per Terzo anno. Serve a lavorare su indirizzi, dereferenziazione, aritmetica dei puntatori e relazione con gli array. Si collega al blocco superiore I puntatori &gt; Il puntatore nullo (NULL). La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Aritmetica puntatori" lo studente dovrebbe aver seguito il lavoro precedente su "Il puntatore nullo (NULL)", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Aritmetica puntatori", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Il puntatore nullo (NULL)" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Vettori". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Aritmetica puntatori", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Vettori" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Aritmetica puntatori" (../README.md#aritmetica-puntatori). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#aritmetica-puntatori -->
 
 <!-- lab-exercises:start heading="Aritmetica puntatori" -->
 
@@ -9278,6 +12536,54 @@ L'aritmetica dei puntatori ci sarà molto utile quando lavoreremo con i vettori 
 </p>
 
 ### Vettori
+
+<!-- COURSE-FRAME:START README.md#vettori -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso Intermedio per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore I puntatori. I sottoparagrafi collegati sono: Inizializzare un vettore, Dimensione vettore (`sizeof`). La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Vettori" lo studente dovrebbe aver seguito il lavoro precedente su "Aritmetica puntatori", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Vettori", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Aritmetica puntatori" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Inizializzare un vettore". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Vettori", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Inizializzare un vettore" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Vettori" (../README.md#vettori). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#vettori -->
 
 <!-- lab-exercises:start heading="Vettori" -->
 
@@ -9566,6 +12872,54 @@ int main(void){
 ```
 
 #### Inizializzare un vettore
+
+<!-- COURSE-FRAME:START README.md#inizializzare-un-vettore -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso Intermedio per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore I puntatori &gt; Vettori. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Inizializzare un vettore" lo studente dovrebbe aver seguito il lavoro precedente su "Vettori", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Inizializzare un vettore", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Vettori" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Dimensione vettore (`sizeof`)". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Inizializzare un vettore", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Dimensione vettore (`sizeof`)" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Inizializzare un vettore" (../README.md#inizializzare-un-vettore). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#inizializzare-un-vettore -->
 
 <!-- lab-exercises:start heading="Inizializzare un vettore" -->
 
@@ -9893,6 +13247,54 @@ vettore + 4 = 0x7fff64c6243c + 4 = 0x7fff64c62440
 
 #### Dimensione vettore (`sizeof`)
 
+<!-- COURSE-FRAME:START README.md#dimensione-vettore-sizeof -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso Intermedio per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore I puntatori &gt; Vettori. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Dimensione vettore (`sizeof`)" lo studente dovrebbe aver seguito il lavoro precedente su "Inizializzare un vettore", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Dimensione vettore (`sizeof`)", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Inizializzare un vettore" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Relazione tra array e puntatori". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Dimensione vettore (`sizeof`)", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Relazione tra array e puntatori" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Dimensione vettore (`sizeof`)" (../README.md#dimensione-vettore-sizeof). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#dimensione-vettore-sizeof -->
+
 <!-- lab-exercises:start heading="Dimensione vettore (sizeof)" -->
 
 <table align="center">
@@ -10092,6 +13494,54 @@ int main(void){
 ```
 
 ### Relazione tra array e puntatori
+
+<!-- COURSE-FRAME:START README.md#relazione-tra-array-e-puntatori -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso Intermedio per Terzo anno. Serve a lavorare su sequenze contigue di elementi, indici, dimensione e accesso in memoria. Si collega al blocco superiore I puntatori. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Relazione tra array e puntatori" lo studente dovrebbe aver seguito il lavoro precedente su "Dimensione vettore (`sizeof`)", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Relazione tra array e puntatori", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Dimensione vettore (`sizeof`)" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Differenza tra puntatori". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Relazione tra array e puntatori", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Differenza tra puntatori" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Relazione tra array e puntatori" (../README.md#relazione-tra-array-e-puntatori). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#relazione-tra-array-e-puntatori -->
 
 <!-- lab-exercises:start heading="Relazione tra array e puntatori" -->
 
@@ -10340,6 +13790,54 @@ vagrant@ubuntu2204:/lab/6_pointers$ bin/7_pointers
 
 ### Differenza tra puntatori
 
+<!-- COURSE-FRAME:START README.md#differenza-tra-puntatori -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso Intermedio per Terzo anno. Serve a lavorare su indirizzi, dereferenziazione, aritmetica dei puntatori e relazione con gli array. Si collega al blocco superiore I puntatori. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Differenza tra puntatori" lo studente dovrebbe aver seguito il lavoro precedente su "Relazione tra array e puntatori", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Differenza tra puntatori", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Relazione tra array e puntatori" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Le stringhe". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Differenza tra puntatori", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Le stringhe" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Differenza tra puntatori" (../README.md#differenza-tra-puntatori). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#differenza-tra-puntatori -->
+
 <!-- lab-exercises:start heading="Differenza tra puntatori" -->
 
 <table align="center">
@@ -10490,6 +13988,54 @@ vagrant@ubuntu2204:/lab/6_pointers$ bin/8_pointers
 ```
 
 ### Le stringhe
+
+<!-- COURSE-FRAME:START README.md#le-stringhe -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso Intermedio per Terzo anno. Serve a lavorare su array di char terminati da carattere nullo e funzioni di libreria associate. Si collega al blocco superiore I puntatori. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Le stringhe" lo studente dovrebbe aver seguito il lavoro precedente su "Differenza tra puntatori", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Le stringhe", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Differenza tra puntatori" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Dettagli sull'inizializzazione". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Le stringhe", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Dettagli sull'inizializzazione" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Le stringhe" (../README.md#le-stringhe). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#le-stringhe -->
 
 <!-- lab-exercises:start heading="Le stringhe" -->
 
@@ -10730,6 +14276,54 @@ Anche in questo caso possiamo scordarci di \0.
 </p>
 
 ### Dettagli sull'inizializzazione
+
+<!-- COURSE-FRAME:START README.md#dettagli-sullinizializzazione -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso Intermedio per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore I puntatori. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Dettagli sull'inizializzazione" lo studente dovrebbe aver seguito il lavoro precedente su "Le stringhe", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Dettagli sull'inizializzazione", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Le stringhe" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Stampare una stringa". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Dettagli sull'inizializzazione", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Stampare una stringa" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Dettagli sull'inizializzazione" (../README.md#dettagli-sullinizializzazione). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#dettagli-sullinizializzazione -->
 
 <!-- lab-exercises:start heading="Dettagli sull'inizializzazione" -->
 
@@ -11007,6 +14601,54 @@ Segmentation fault (core dumped)
 
 ### Stampare una stringa
 
+<!-- COURSE-FRAME:START README.md#stampare-una-stringa -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso Intermedio per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore I puntatori. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Stampare una stringa" lo studente dovrebbe aver seguito il lavoro precedente su "Dettagli sull'inizializzazione", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Stampare una stringa", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Dettagli sull'inizializzazione" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Funzioni". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Stampare una stringa", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Funzioni" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Stampare una stringa" (../README.md#stampare-una-stringa). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#stampare-una-stringa -->
+
 <p align="justify">
 Fare un ciclo for per stampare carattere dopo carattere tutti gli elementi della stringa (come fatto sopra) non è una grande idea, per stampare una stringa basta usare %s con la funzione printf() passando l'indirizzo base della stringa (l'indirizzo del primo carattere).
 </p>
@@ -11037,6 +14679,54 @@ ciao
 ```
 
 ### Funzioni
+
+<!-- COURSE-FRAME:START README.md#funzioni-1 -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso Intermedio per Terzo anno. Serve a lavorare su scomposizione del programma, parametri, valore di ritorno e riuso del codice. Si collega al blocco superiore I puntatori. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Funzioni" lo studente dovrebbe aver seguito il lavoro precedente su "Stampare una stringa", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Funzioni", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Stampare una stringa" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Dichiarazione di funzione". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Funzioni", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Dichiarazione di funzione" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Funzioni" (../README.md#funzioni-1). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#funzioni-1 -->
 
 <p align="justify">
 Quando un certo numero di istruzioni viene usato più volte nel codice, piuttosto che copiarle e incollarle in tutte le parti dove ne abbiamo bisogno, è preferibile raggrupparle in una funzione. Una funzione è una porzione di codice che può essere richiamata in qualsiasi parte del programma e di solito raggruppa le istruzioni che cooperano per svolgere un certo compito. Ogni funzione ritorna uno e un solo valore (di solito un intero che informa circa il successo o meno delle operazioni svolte oppure direttamente il risultato dell'operazione) e riceve una serie di parametri in ingresso (può anche non accettare alcun parametro in ingresso se non ne ha bisogno). Una funzione ha questa forma:
@@ -11132,6 +14822,54 @@ Le funzioni possono essere dichiarate e definite.
 </p>
 
 ### Dichiarazione di funzione
+
+<!-- COURSE-FRAME:START README.md#dichiarazione-di-funzione -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso Intermedio per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore I puntatori. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Dichiarazione di funzione" lo studente dovrebbe aver seguito il lavoro precedente su "Funzioni", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Dichiarazione di funzione", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Funzioni" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Uso di void nelle funzioni". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Dichiarazione di funzione", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Uso di void nelle funzioni" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Dichiarazione di funzione" (../README.md#dichiarazione-di-funzione). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#dichiarazione-di-funzione -->
 
 <!-- lab-exercises:start heading="Dichiarazione di funzione" -->
 
@@ -11235,6 +14973,54 @@ int potenza_di_due(int esponente){
 
 ### Uso di void nelle funzioni
 
+<!-- COURSE-FRAME:START README.md#uso-di-void-nelle-funzioni -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso Intermedio per Terzo anno. Serve a lavorare su scomposizione del programma, parametri, valore di ritorno e riuso del codice. Si collega al blocco superiore I puntatori. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Uso di void nelle funzioni" lo studente dovrebbe aver seguito il lavoro precedente su "Dichiarazione di funzione", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Uso di void nelle funzioni", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Dichiarazione di funzione" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Definizione di funzione". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Uso di void nelle funzioni", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Definizione di funzione" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Uso di void nelle funzioni" (../README.md#uso-di-void-nelle-funzioni). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#uso-di-void-nelle-funzioni -->
+
 <p align="justify">
 Le funzioni possono non accettare alcun parametro in ingresso o non restituire alcun valore di ritorno. Per informare di questo il compilatore si usa il tipo void. Per esempio:
 </p>
@@ -11261,6 +15047,54 @@ char *saluta(void){
 
 ### Definizione di funzione
 
+<!-- COURSE-FRAME:START README.md#definizione-di-funzione -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso Intermedio per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore I puntatori. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Definizione di funzione" lo studente dovrebbe aver seguito il lavoro precedente su "Uso di void nelle funzioni", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Definizione di funzione", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Uso di void nelle funzioni" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Chiamata di funzione". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Definizione di funzione", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Chiamata di funzione" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Definizione di funzione" (../README.md#definizione-di-funzione). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#definizione-di-funzione -->
+
 <p align="justify">
 La definizione di funzione include il prototipo e le istruzioni che formano il corpo della funzione. Una definizione di funzione può comparire solo una volta nel codice sorgente. La definizione di funzione termina quando viene eseguita l'ultima istruzione o quando viene incontrata l'istruzione return. Quando l'istruzione termina, il programma prosegue dall'istruzione successiva alla chiamata della funzione appena terminata. Lo scopo dell'istruzione return è quello di specificare il valore di ritorno della funzione. Una funzione può anche avere un corpo vuoto:
 </p>
@@ -11280,6 +15114,54 @@ void do_nothing(void){
 </table>
 
 ### Chiamata di funzione
+
+<!-- COURSE-FRAME:START README.md#chiamata-di-funzione -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso Intermedio per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore I puntatori. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Chiamata di funzione" lo studente dovrebbe aver seguito il lavoro precedente su "Definizione di funzione", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Chiamata di funzione", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Definizione di funzione" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Passaggio di parametri per valore". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Chiamata di funzione", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Passaggio di parametri per valore" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Chiamata di funzione" (../README.md#chiamata-di-funzione). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#chiamata-di-funzione -->
 
 <p align="justify">
 La chiamata di una funzione (invocazione di funzione) è l'operazione con la quale si richiama l'esecuzione della funzione stessa. è possibile richiamare 0 o N volte una funzione in un qualunque punto del programma. Ogni volta che la funzione viene invocata, l'esecuzione del programma si sposta dal punto di invocazione alla prima istruzione del corpo della funzione. Quando una funzione termina la propria esecuzione, il flusso di esecuzione ritorna al punto in cui la funzione era stata invocata e continua a eseguire l'istruzione successiva. Vediamo un esempio:
@@ -11333,6 +15215,54 @@ vagrant@ubuntu2204:/lab/9_functions$ bin/0_functions
 ```
 
 ### Passaggio di parametri per valore
+
+<!-- COURSE-FRAME:START README.md#passaggio-di-parametri-per-valore -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso Intermedio per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore I puntatori. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Passaggio di parametri per valore" lo studente dovrebbe aver seguito il lavoro precedente su "Chiamata di funzione", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Passaggio di parametri per valore", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Chiamata di funzione" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Passaggio di parametri per indirizzo". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Passaggio di parametri per valore", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Passaggio di parametri per indirizzo" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Passaggio di parametri per valore" (../README.md#passaggio-di-parametri-per-valore). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#passaggio-di-parametri-per-valore -->
 
 <!-- lab-exercises:start heading="Passaggio di parametri per valore" -->
 
@@ -11499,6 +15429,54 @@ risultato                    : 103
 ```
 
 ### Passaggio di parametri per indirizzo
+
+<!-- COURSE-FRAME:START README.md#passaggio-di-parametri-per-indirizzo -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso Intermedio per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore I puntatori. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Passaggio di parametri per indirizzo" lo studente dovrebbe aver seguito il lavoro precedente su "Passaggio di parametri per valore", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Passaggio di parametri per indirizzo", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Passaggio di parametri per valore" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Passaggio di puntatori const". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Passaggio di parametri per indirizzo", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Passaggio di puntatori const" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Passaggio di parametri per indirizzo" (../README.md#passaggio-di-parametri-per-indirizzo). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#passaggio-di-parametri-per-indirizzo -->
 
 <!-- lab-exercises:start heading="Passaggio di parametri per indirizzo" -->
 
@@ -11675,6 +15653,54 @@ risultato                    : 103
 
 ### Passaggio di puntatori const
 
+<!-- COURSE-FRAME:START README.md#passaggio-di-puntatori-const -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso Intermedio per Terzo anno. Serve a lavorare su indirizzi, dereferenziazione, aritmetica dei puntatori e relazione con gli array. Si collega al blocco superiore I puntatori. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Passaggio di puntatori const" lo studente dovrebbe aver seguito il lavoro precedente su "Passaggio di parametri per indirizzo", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Passaggio di puntatori const", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Passaggio di parametri per indirizzo" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Array come parametri a funzioni". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Passaggio di puntatori const", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Array come parametri a funzioni" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Passaggio di puntatori const" (../README.md#passaggio-di-puntatori-const). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#passaggio-di-puntatori-const -->
+
 <!-- lab-exercises:start heading="Passaggio di puntatori const" -->
 
 <table align="center">
@@ -11787,6 +15813,54 @@ xxx voglio essere modificata
 ```
 
 ### Array come parametri a funzioni
+
+<!-- COURSE-FRAME:START README.md#array-come-parametri-a-funzioni -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso Intermedio per Terzo anno. Serve a lavorare su scomposizione del programma, parametri, valore di ritorno e riuso del codice. Si collega al blocco superiore I puntatori. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Array come parametri a funzioni" lo studente dovrebbe aver seguito il lavoro precedente su "Passaggio di puntatori const", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Array come parametri a funzioni", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Passaggio di puntatori const" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Allocazione dinamica della memoria". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Array come parametri a funzioni", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Allocazione dinamica della memoria" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Array come parametri a funzioni" (../README.md#array-come-parametri-a-funzioni). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#array-come-parametri-a-funzioni -->
 
 <!-- lab-exercises:start heading="Array come parametri a funzioni" -->
 
@@ -11918,6 +15992,54 @@ vagrant@ubuntu2204:/lab/9_functions$ bin/3_functions
 ```
 
 ### Allocazione dinamica della memoria
+
+<!-- COURSE-FRAME:START README.md#allocazione-dinamica-della-memoria -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso Intermedio per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore I puntatori. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Allocazione dinamica della memoria" lo studente dovrebbe aver seguito il lavoro precedente su "Array come parametri a funzioni", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Allocazione dinamica della memoria", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Array come parametri a funzioni" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Array bidimensionali". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Allocazione dinamica della memoria", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Array bidimensionali" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Allocazione dinamica della memoria" (../README.md#allocazione-dinamica-della-memoria). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#allocazione-dinamica-della-memoria -->
 
 <!-- lab-exercises:start heading="Allocazione dinamica della memoria" -->
 
@@ -12140,6 +16262,54 @@ dinamico: 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14
 
 ### Array bidimensionali
 
+<!-- COURSE-FRAME:START README.md#array-bidimensionali -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso Intermedio per Terzo anno. Serve a lavorare su sequenze contigue di elementi, indici, dimensione e accesso in memoria. Si collega al blocco superiore I puntatori. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Array bidimensionali" lo studente dovrebbe aver seguito il lavoro precedente su "Allocazione dinamica della memoria", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Array bidimensionali", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Allocazione dinamica della memoria" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Array di puntatori". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Array bidimensionali", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Array di puntatori" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Array bidimensionali" (../README.md#array-bidimensionali). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#array-bidimensionali -->
+
 <!-- lab-exercises:start heading="Array bidimensionali" -->
 
 <table align="center">
@@ -12348,8 +16518,55 @@ vagrant@ubuntu2204:/lab/7_array$ bin/7_array
 ```
 
 
-
 ### Array di puntatori
+
+<!-- COURSE-FRAME:START README.md#array-di-puntatori -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso Intermedio per Terzo anno. Serve a lavorare su sequenze contigue di elementi, indici, dimensione e accesso in memoria. Si collega al blocco superiore I puntatori. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Array di puntatori" lo studente dovrebbe aver seguito il lavoro precedente su "Array bidimensionali", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Array di puntatori", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Array bidimensionali" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Differenza tra array bidimensionali e array di puntatori". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Array di puntatori", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Differenza tra array bidimensionali e array di puntatori" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Array di puntatori" (../README.md#array-di-puntatori). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#array-di-puntatori -->
 
 <!-- lab-exercises:start heading="Array di puntatori" -->
 
@@ -12585,6 +16802,54 @@ Inserisci un numero da 1 a 12
 
 ### Differenza tra array bidimensionali e array di puntatori
 
+<!-- COURSE-FRAME:START README.md#differenza-tra-array-bidimensionali-e-array-di-puntatori -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso Intermedio per Terzo anno. Serve a lavorare su sequenze contigue di elementi, indici, dimensione e accesso in memoria. Si collega al blocco superiore I puntatori. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Differenza tra array bidimensionali e array di puntatori" lo studente dovrebbe aver seguito il lavoro precedente su "Array di puntatori", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Differenza tra array bidimensionali e array di puntatori", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Array di puntatori" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Sezioni di memoria di un programma C". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Differenza tra array bidimensionali e array di puntatori", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Sezioni di memoria di un programma C" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Differenza tra array bidimensionali e array di puntatori" (../README.md#differenza-tra-array-bidimensionali-e-array-di-puntatori). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#differenza-tra-array-bidimensionali-e-array-di-puntatori -->
+
 <!-- lab-exercises:start heading="Differenza tra array bidimensionali e array di puntatori" -->
 
 <table align="center">
@@ -12800,6 +17065,54 @@ Inserisci un numero da 1 a 12
 
 ### Sezioni di memoria di un programma C
 
+<!-- COURSE-FRAME:START README.md#sezioni-di-memoria-di-un-programma-c -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso Intermedio per Terzo anno. Serve a lavorare su struttura minima di un programma C, funzione main, include e stampa a video. Si collega al blocco superiore I puntatori. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Sezioni di memoria di un programma C" lo studente dovrebbe aver seguito il lavoro precedente su "Differenza tra array bidimensionali e array di puntatori", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Sezioni di memoria di un programma C", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Differenza tra array bidimensionali e array di puntatori" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "L'inizializzazione delle variabili". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Sezioni di memoria di un programma C", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "L'inizializzazione delle variabili" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Sezioni di memoria di un programma C" (../README.md#sezioni-di-memoria-di-un-programma-c). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#sezioni-di-memoria-di-un-programma-c -->
+
 <p align="justify">
 Quando un programma viene caricato in memoria per la sua esecuzione, al programma vengono assegnate delle porzioni di memoria dette <strong>sezioni</strong> o <strong>segmenti</strong>, ciascuna delle quali è deputata a una funzione specifica. La memoria di un programma C consiste nelle seguenti sezioni:
 </p>
@@ -12866,6 +17179,54 @@ Lo <strong>stack</strong> è un'area di memoria contigua all'heap e cresce in di
 
 ### L'inizializzazione delle variabili
 
+<!-- COURSE-FRAME:START README.md#linizializzazione-delle-variabili -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso Intermedio per Terzo anno. Serve a lavorare su dichiarazione, tipo, valore, memoria e uso dei dati durante l'esecuzione. Si collega al blocco superiore I puntatori. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "L'inizializzazione delle variabili" lo studente dovrebbe aver seguito il lavoro precedente su "Sezioni di memoria di un programma C", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "L'inizializzazione delle variabili", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Sezioni di memoria di un programma C" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Allocazione dinamica di matrici". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "L'inizializzazione delle variabili", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Allocazione dinamica di matrici" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "L'inizializzazione delle variabili" (../README.md#linizializzazione-delle-variabili). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#linizializzazione-delle-variabili -->
+
 <p align="justify">
 <strong>In assenza di inizializzazioni esplicite</strong>, l'inizializzazione di una variabile segue alcune regole che dipendono dalla classe di memorizzazione alla quale la variabile appartiene. In particolare:
 </p>
@@ -12894,6 +17255,54 @@ Lo <strong>stack</strong> è un'area di memoria contigua all'heap e cresce in di
 </ul>
 
 ### Allocazione dinamica di matrici
+
+<!-- COURSE-FRAME:START README.md#allocazione-dinamica-di-matrici -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso Intermedio per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore I puntatori. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Allocazione dinamica di matrici" lo studente dovrebbe aver seguito il lavoro precedente su "L'inizializzazione delle variabili", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Allocazione dinamica di matrici", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "L'inizializzazione delle variabili" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Le strutture". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Allocazione dinamica di matrici", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Le strutture" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Allocazione dinamica di matrici" (../README.md#allocazione-dinamica-di-matrici). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#allocazione-dinamica-di-matrici -->
 
 <!-- lab-exercises:start heading="Allocazione dinamica di matrici" -->
 
@@ -13134,7 +17543,6 @@ Pluto
 <!-- lab-exercises:end -->
 
 
-
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/pianeti_matrice.png)
 
 ```c
@@ -13295,7 +17703,6 @@ N e p t u n e
 P l u t o
 
 
-
 Mercury
 Venus
 Earth
@@ -13328,6 +17735,54 @@ Pluto
 ```
 
 ### Le strutture
+
+<!-- COURSE-FRAME:START README.md#le-strutture -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso Intermedio per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore I puntatori. I sottoparagrafi collegati sono: Passaggio di strutture a funzioni. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Le strutture" lo studente dovrebbe aver seguito il lavoro precedente su "Allocazione dinamica di matrici", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Le strutture", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Allocazione dinamica di matrici" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Passaggio di strutture a funzioni". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Le strutture", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Passaggio di strutture a funzioni" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Le strutture" (../README.md#le-strutture). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#le-strutture -->
 
 <!-- lab-exercises:start heading="Le strutture" -->
 
@@ -13500,6 +17955,54 @@ int main(void){
 ```
 
 #### Passaggio di strutture a funzioni
+
+<!-- COURSE-FRAME:START README.md#passaggio-di-strutture-a-funzioni -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "Puntatori, array e indirizzi" del percorso Intermedio per Terzo anno. Serve a lavorare su scomposizione del programma, parametri, valore di ritorno e riuso del codice. Si collega al blocco superiore I puntatori &gt; Le strutture. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Passaggio di strutture a funzioni" lo studente dovrebbe aver seguito il lavoro precedente su "Le strutture", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Passaggio di strutture a funzioni", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Le strutture" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Classi di memorizzazione". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Passaggio di strutture a funzioni", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Classi di memorizzazione" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Passaggio di strutture a funzioni" (../README.md#passaggio-di-strutture-a-funzioni). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#passaggio-di-strutture-a-funzioni -->
 
 <!-- lab-exercises:start heading="Passaggio di strutture a funzioni" -->
 
@@ -13898,8 +18401,6 @@ Ancora una volta, questo può essere mostrato meglio graficamente. La figura seg
 <p align=center>
 <img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/8_16_32_64_bit_registers.png">
 </p>
-
-
 
 
 <p align=justify>
@@ -18133,6 +22634,54 @@ I principianti tendono a imbattersi in questo modo nell'errore "salto breve fuor
 
 ### Costruzione di librerie di procedure esterne
 
+<!-- COURSE-FRAME:START README.md#costruzione-di-librerie-di-procedure-esterne -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "File, Makefile, debugging e progetto" del percorso Intermedio per Terzo anno. Serve a lavorare su organizzazione del codice in moduli riusabili e collegamento con il linker. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Costruzione di librerie di procedure esterne" lo studente dovrebbe aver seguito il lavoro precedente su "Linking alla libreria standard del C", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Costruzione di librerie di procedure esterne", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Linking alla libreria standard del C" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Collegare le librerie nei tuoi programmi". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Costruzione di librerie di procedure esterne", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Collegare le librerie nei tuoi programmi" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Costruzione di librerie di procedure esterne" (../README.md#costruzione-di-librerie-di-procedure-esterne). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#costruzione-di-librerie-di-procedure-esterne -->
+
 <p align=justify>
 Noterai che il programma hexdump2gcc fornito ha la maggior parte del suo codice separato in procedure. Questo è proprio come dovrebbe essere, per mantenere il programma comprensibile e manutenibile. Tuttavia, le procedure dichiarate all'interno del file hexdump2gcc.asm sono utilizzabili solo dal programma hexdump2gcc stesso. Se dovessi scrivere un programma più potente che, per qualche motivo, avesse bisogno di visualizzare un dump esadecimale/ASCII di alcuni dati, quelle procedure potrebbero essere riutilizzate, ma non finché sono all'interno del file hexdump2gcc.asm. La risposta è spostare le procedure di hexdump2gcc completamente fuori da hexdump2gcc.asm e collocarle in un file di codice sorgente separato, chiamato libreria. Potrebbe essere pieno di procedure, ma non ha alcuna porzione di programma principale e quindi nessun'etichetta _start: o main: per indicare dove inizia l'esecuzione. Contiene solo procedure (e forse alcune definizioni di dati), quindi non può essere tradotto dal linker in un programma eseguibile autonomo. Una volta creati i file di libreria contenenti procedure, ci sono due modi per usarli:
 </p>
@@ -18986,6 +23535,54 @@ Se vuoi che vengano esportate, dichiara le variabili GLOBAL. Nota che gli esempi
 </p>
 
 ### Collegare le librerie nei tuoi programmi
+
+<!-- COURSE-FRAME:START README.md#collegare-le-librerie-nei-tuoi-programmi -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "File, Makefile, debugging e progetto" del percorso Intermedio per Terzo anno. Serve a lavorare su organizzazione del codice in moduli riusabili e collegamento con il linker. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Collegare le librerie nei tuoi programmi" lo studente dovrebbe aver seguito il lavoro precedente su "Costruzione di librerie di procedure esterne", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Collegare le librerie nei tuoi programmi", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Costruzione di librerie di procedure esterne" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Note sulla raccolta delle procedure in librerie". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Collegare le librerie nei tuoi programmi", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Note sulla raccolta delle procedure in librerie" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Collegare le librerie nei tuoi programmi" (../README.md#collegare-le-librerie-nei-tuoi-programmi). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#collegare-le-librerie-nei-tuoi-programmi -->
 
 <p align=justify>
 Per tutti i precedenti programmi di esempio presentati in questo libro, i makefile sono abbastanza semplici. Qui, ad esempio, c'è il makefile per il programma hexdump2:
@@ -21388,6 +25985,54 @@ Se fosse così semplice, non menzionerei affatto il gas, poiché non è necessar
 
 ### Linking alla libreria standard del C
 
+<!-- COURSE-FRAME:START README.md#linking-alla-libreria-standard-del-c -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "File, Makefile, debugging e progetto" del percorso Intermedio per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Linking alla libreria standard del C" lo studente dovrebbe aver seguito il lavoro precedente su "Passaggio di parametri a printf()", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Linking alla libreria standard del C", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Passaggio di parametri a printf()" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Costruzione di librerie di procedure esterne". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Linking alla libreria standard del C", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Costruzione di librerie di procedure esterne" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Linking alla libreria standard del C" (../README.md#linking-alla-libreria-standard-del-c). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#linking-alla-libreria-standard-del-c -->
+
 <p align=justify>
 Quando scrivi un programma interamente in assembly utilizzando un makefile e l'utility make, scrivi tutto. A parte un'occasionale immersione nei servizi del kernel Linux, tutto il codice che viene eseguito è solo il codice che scrivi. L'integrazione di librerie di procedure in linguaggio assembly esterno complica un po' questo quadro, soprattutto se non sei tu a aver scritto quelle librerie. L'integrazione di funzioni nella libreria standard C (che per Linux si chiama glibc) complica ulteriormente la situazione. Può essere un conforto sapere che l'integrazione delle routine di glibc è più semplice nel linguaggio assembly x64 rispetto a quanto lo fosse nell'assembly x86 a 32 bit. Come ho accennato in precedenza, scrivere un programma in assembly in SASM è molto simile a scrivere un programma C nel quale scrivi il corpo principale del programma in assembly. I programmi generati da SASM sono una sorta di ibrido tra C e linguaggio assembly. Se crei un programma in linguaggio assembly per Linux che integra le funzioni di glibc, stai facendo praticamente la stessa cosa. La struttura di questo ibrido è mostrata nella figura seguente
 </p>
@@ -21599,6 +26244,54 @@ main:
 ```
 ### Testo formattato con printf()
 
+<!-- COURSE-FRAME:START README.md#testo-formattato-con-printf -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "File, Makefile, debugging e progetto" del percorso Intermedio per Terzo anno. Serve a lavorare su formattazione dell'output e corrispondenza tra specificatori e argomenti. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Testo formattato con printf()" lo studente dovrebbe aver seguito il lavoro precedente su "Convertire le stringhe in numeri con sscanf()", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Testo formattato con printf()", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Convertire le stringhe in numeri con sscanf()" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Passaggio di parametri a printf()". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Testo formattato con printf()", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Passaggio di parametri a printf()" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Testo formattato con printf()" (../README.md#testo-formattato-con-printf). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#testo-formattato-con-printf -->
+
 <p align=justify>
 La routine della libreria puts() può sembrare piuttosto utile, ma rispetto ad alcuni dei suoi più sofisticati "fratelli", è roba da bambini. Con puts() puoi inviare solo una semplice stringa di testo a un file (per impostazione predefinita, stdout), senza alcun tipo di formattazione. Peggio ancora, puts() include sempre un carattere EOL alla fine della sua visualizzazione, sia che tu ne includa uno nei tuoi dati di stringa o meno. Questo ti impedisce di utilizzare più chiamate a puts() per stampare più stringhe di testo tutte sulla stessa riga nel terminale. Circa il meglio che puoi dire per puts() è che ha la virtù della semplicità. Per quasi tutte le tue necessità di output di caratteri, è molto meglio usare una funzione di libreria molto più potente chiamata printf(). La funzione printf() ti consente di fare un numero di cose davvero utili, il tutto con una sola chiamata di funzione:
 </p>
@@ -21658,6 +26351,54 @@ Questo codice dice a printf() di visualizzare il valore allineato a destra all'i
 </p>
 
 ### Passaggio di parametri a printf()
+
+<!-- COURSE-FRAME:START README.md#passaggio-di-parametri-a-printf -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "File, Makefile, debugging e progetto" del percorso Intermedio per Terzo anno. Serve a lavorare su formattazione dell'output e corrispondenza tra specificatori e argomenti. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Passaggio di parametri a printf()" lo studente dovrebbe aver seguito il lavoro precedente su "Testo formattato con printf()", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Passaggio di parametri a printf()", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Testo formattato con printf()" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Linking alla libreria standard del C". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Passaggio di parametri a printf()", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Linking alla libreria standard del C" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Passaggio di parametri a printf()" (../README.md#passaggio-di-parametri-a-printf). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#passaggio-di-parametri-a-printf -->
 
 <p align=justify>
 Passare valori a printf() segue le convenzioni di chiamata x64. Se stai visualizzando una stringa con codici di formato incorporati, la stringa base dovrebbe essere il primo parametro, con il suo indirizzo passato in RDI. Dopo, il primo valore da unire alla stringa viene passato in RSI, il secondo in RDX e così via, nell'ordine standard dei registri dei parametri. I valori vengono inseriti nei codici della stringa in ordine, da sinistra a destra. Il programma seguente presenta una dimostrazione molto semplice del formato di printf(). Una cosa interessante da notare è che puoi passare numeri sia per riferimento che per valore. Il primo intero viene passato posizionando il suo indirizzo in RSI. Il secondo intero viene passato copiando un valore letterale in RDX. Il terzo intero è anch'esso passato come letterale in RCX. Il terzo valore è mostrato in notazione esadecimale, anche se il letterale era un semplice valore intero decimale caricato in RCX. La funzione printf() può effettuare molte conversioni di questo tipo. Puoi unire stringhe di testo alla stringa base in modo simile caricando gli indirizzi delle stringhe da unire nei registri e utilizzando il codice %s che istruisce printf() su dove inserire le stringhe secondarie. Ho eliminato l'intestazione del commento per risparmiare spazio sulla pagina. Il makefile per answer.asm è questo:
@@ -21721,11 +26462,107 @@ C'è un'altra piccola sottigliezza nell'uso di printf(). In quasi tutti i casi (
 
 ### Gcc --no-pie
 
+<!-- COURSE-FRAME:START README.md#gcc---no-pie -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "File, Makefile, debugging e progetto" del percorso Intermedio per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Gcc --no-pie" lo studente dovrebbe aver seguito il lavoro precedente su "Note sulla raccolta delle procedure in librerie", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Gcc --no-pie", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Note sulla raccolta delle procedure in librerie" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "il consolidamento attraverso esercizi, debug e progetto". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Gcc --no-pie", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "il consolidamento attraverso esercizi, debug e progetto" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Gcc --no-pie" (../README.md#gcc---no-pie). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#gcc---no-pie -->
+
 <p align=justify>
 Nei makefile per i programmi di questo capitolo che usano gcc come linker, vedrai l'opzione gcc -no-pie. Lo scopo di questa opzione è impedire a gcc di collegare il tuo programma come un PIE. Spiegare in dettaglio il PIE sarebbe un argomento avanzato ben oltre lo scopo di questo libro. In breve: il PIE è un modo per prevenire certi tipi di exploit del codice, collocando porzioni del file eseguibile in posizioni casuali quando l'eseguibile viene caricato. Questo rende impossibile prevedere dove una determinata sezione di codice verrà eseguita. Gli attacchi di programmazione orientata al ritorno (ROP) dipendono dalla conoscenza di dove si trovano alcune porzioni di un programma nel sistema di memoria virtuale di Linux. I programmi PIE sono meno vulnerabili agli attacchi ROP. L'opzione -no-pie indica che il linker non genererà un PIE. Questo rende teoricamente vulnerabili ai attacchi i programmi di esempio -no-pie di questo libro. Teoricamente. Una volta che sei un programmatore esperto che produce software per uso generale (e non semplicemente apprendendo la programmazione), dovresti sapere abbastanza per comprendere le problematiche e dovresti informarti online. Il PIE complica qualche aspetto del debugging, motivo per cui non uso il PIE nei miei esempi qui. Ma una volta che un programma che stai scrivendo è stato debuggato e funziona bene, ricompilalo come PIE, che è il valore predefinito quando gcc funge da linker.
 </p>
 
 ### Dati in con fgets() e scanf()
+
+<!-- COURSE-FRAME:START README.md#dati-in-con-fgets-e-scanf -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "File, Makefile, debugging e progetto" del percorso Intermedio per Terzo anno. Serve a lavorare su lettura dell'input, conversione dei dati e gestione dei casi problematici. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Dati in con fgets() e scanf()" lo studente dovrebbe aver seguito il lavoro precedente su "Scrivere testo su file con fprintf()", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Dati in con fgets() e scanf()", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Scrivere testo su file con fprintf()" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Utilizzando scanf() per l'inserimento di valori numerici". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Dati in con fgets() e scanf()", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Utilizzando scanf() per l'inserimento di valori numerici" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Dati in con fgets() e scanf()" (../README.md#dati-in-con-fgets-e-scanf). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#dati-in-con-fgets-e-scanf -->
 
 <p align=justify>
 Leggere i caratteri dalla tastiera Linux utilizzando l'istruzione SYSCALL e la chiamata di sistema sys_read è semplice ma non molto versatile. La libreria standard C ha un modo migliore. Infatti, le funzioni della libreria C per leggere dati dalla tastiera (che è la sorgente di dati predefinita assegnata all'input standard) sono quasi l'inverso di quelle che visualizzano dati sull'output standard. Se fai un po' di ricerche in un riferimento della libreria C (e dovresti - ci sono una moltitudine di routine interessanti che puoi chiamare dai programmi in assembly), potresti scoprire la routine gets(). Potresti esserti chiesto (se non ho scelto di dirti qui) perché non l'ho trattata. La routine gets() è di una semplicità disarmante: gli passi il nome di un array di stringhe in cui posizionare i caratteri, e poi l'utente digita i caratteri sulla tastiera, che vengono collocati nell'array. Quando l'utente preme Invio, gets() aggiunge un null alla fine del testo inserito e restituisce. Cosa c'è da non amare? Ebbene, quanto è grande l'array? E quanto è stupido il tuo utente? Ecco il problema: non c'è modo di dire a gets() quando smettere di accettare caratteri. Se l'utente digita più caratteri di quanti ne hai allocato nello spazio per accettarli in un array, gets() continuerà felicemente ad accettare caratteri e sovrascriverà qualsiasi dato sia seduto accanto al tuo array in memoria. Se quel qualcosa è qualcosa di importante, il tuo programma malfunzionerà quasi certamente e potrebbe semplicemente bloccarsi. è per questo che, se provi a usare gets(), gcc ti avviserà che gets() è pericoloso. è un'antica routine, e molto meglio è stata creata negli (innumerevoli) decenni trascorsi da quando Unix e la libreria standard C furono progettati per la prima volta. Il successore designato di gets() è fgets(), che ha alcuni elementi di sicurezza incorporati - e anche alcune complicazioni. Le complicazioni derivano dal fatto che devi passare un handle di file a fgets(). In generale, le routine della libreria standard C i cui nomi iniziano con f agiscono su file. (Spiegherò come lavorare con i file su disco un po' più avanti in questo capitolo.) Puoi usare fgets() per leggere testo da un file su disco - ma ricorda, in termini Unix, la tua tastiera è già collegata a un file, il file chiamato input standard, stdin. Se possiamo collegare fgets() all'input standard, possiamo leggere testo dalla tastiera, che è ciò che la vecchia e pericolosa funzione gets() fa automaticamente.
@@ -21835,6 +26672,54 @@ Il programma fgetstest dimostra come incorporare un codice stringa %s nella stri
 </p>
 
 ### Utilizzando scanf() per l'inserimento di valori numerici
+
+<!-- COURSE-FRAME:START README.md#utilizzando-scanf-per-linserimento-di-valori-numerici -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "File, Makefile, debugging e progetto" del percorso Intermedio per Terzo anno. Serve a lavorare su lettura dell'input, conversione dei dati e gestione dei casi problematici. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Utilizzando scanf() per l'inserimento di valori numerici" lo studente dovrebbe aver seguito il lavoro precedente su "Dati in con fgets() e scanf()", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Utilizzando scanf() per l'inserimento di valori numerici", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Dati in con fgets() e scanf()" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Convertire le stringhe in numeri con sscanf()". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Utilizzando scanf() per l'inserimento di valori numerici", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Convertire le stringhe in numeri con sscanf()" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Utilizzando scanf() per l'inserimento di valori numerici" (../README.md#utilizzando-scanf-per-linserimento-di-valori-numerici). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#utilizzando-scanf-per-linserimento-di-valori-numerici -->
 
 <p align="justify">
 In un modo peculiare, la funzione scanf() della libreria C è printf() che funziona all'indietro: invece di produrre dati formattati in un flusso di caratteri, scanf() prende un flusso di dati carattere dalla tastiera e lo converte in dati numerici memorizzati in una variabile numerica. La funzione scanf() funziona molto bene e comprende molti formati che non sarò in grado di spiegare qui, specialmente per l'inserimento di numeri in virgola mobile. (I valori in virgola mobile rappresentano un problema speciale nel lavoro in assembly e non li tratterò in questo libro.) La voce di Wikipedia è molto buona.
@@ -22803,6 +27688,54 @@ Il termine base è R13, che è l'indirizzo dell'inizio della tabella. Ogni indir
 
 ### Semplici operazioni di I/O sui file
 
+<!-- COURSE-FRAME:START README.md#semplici-operazioni-di-io-sui-file -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "File, Makefile, debugging e progetto" del percorso Intermedio per Terzo anno. Serve a lavorare su apertura, lettura, scrittura e chiusura dei file tramite libreria standard C. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Semplici operazioni di I/O sui file" lo studente dovrebbe aver seguito il lavoro precedente su "Protezione del contenuto dei file d'intestazione", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Semplici operazioni di I/O sui file", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Protezione del contenuto dei file d'intestazione" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Creare ed Aprire i File". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Semplici operazioni di I/O sui file", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Creare ed Aprire i File" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Semplici operazioni di I/O sui file" (../README.md#semplici-operazioni-di-io-sui-file). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#semplici-operazioni-di-io-sui-file -->
+
 <p align="justify">
 L'ultimo programma di esempio che presento qui è nominalmente dedicato al lavoro con file di testo su disco. Tuttavia, raccoglie molti trucchi e funzionalità di assembly che ho spiegato in precedenza e ne aggiunge alcuni altri. è il programma più grande e complesso che ti ho mostrato, e se riesci a leggerlo e seguire il flusso della logica, hai appreso tutto ciò che mi ero ripromesso di insegnarti in questo libro. è più simile a un programma 'reale' rispetto a qualsiasi altra cosa in questo libro, in quanto lavora con argomenti da riga di comando, scrive l'output in un file su disco e fa altre cose utili che qualsiasi utility che intendi costruire richiederà probabilmente. Il programma textfile.asm (mostrato di seguito) crea e riempie un file di testo con del testo. Puoi specificare il numero di righe da riempire nel file, così come il testo per le righe. Se non specifichi il testo per il file, il programma genererà una riga di caratteri scelti casualmente e userà quella al suo posto. L'invocazione del programma avviene in questo modo: 
 </p>
@@ -22816,6 +27749,54 @@ Questa invocazione crea un nuovo file (il cui nome è fissato nel programma come
 </p>
 
 ### Convertire le stringhe in numeri con sscanf()
+
+<!-- COURSE-FRAME:START README.md#convertire-le-stringhe-in-numeri-con-sscanf -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "File, Makefile, debugging e progetto" del percorso Intermedio per Terzo anno. Serve a lavorare su array di char terminati da carattere nullo e funzioni di libreria associate. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Convertire le stringhe in numeri con sscanf()" lo studente dovrebbe aver seguito il lavoro precedente su "Utilizzando scanf() per l'inserimento di valori numerici", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Convertire le stringhe in numeri con sscanf()", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Utilizzando scanf() per l'inserimento di valori numerici" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Testo formattato con printf()". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Convertire le stringhe in numeri con sscanf()", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Testo formattato con printf()" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Convertire le stringhe in numeri con sscanf()" (../README.md#convertire-le-stringhe-in-numeri-con-sscanf). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#convertire-le-stringhe-in-numeri-con-sscanf -->
 
 <p align="justify">
 Quando digiti un numero nella riga di comando mentre invochi un programma, puoi accedere a quel numero come uno degli argomenti della riga di comando, attraverso i meccanismi che ho descritto poco prima in questo capitolo. Tuttavia, c'è un problema: il numero è presente come testo, e non puoi semplicemente prendere la stringa testuale "o751" e caricarla in un registro o in una variabile intera. Per utilizzare gli argomenti numerici come numeri, devi prima convertire la loro espressione testuale in forma numerica. La libreria standard C ha diverse funzioni per affrontare questa sfida. Alcune di esse, come strtod(), sono abbastanza specifiche e limitate e convertono il testo solo in un tipo numerico. Tuttavia, una di esse ha la capacità di convertire quasi qualsiasi espressione testuale di un valore numerico legale in una forma numerica appropriata. Questa è sscanf(), e sarà quella che useremo nel programma seguente
@@ -22874,6 +27855,54 @@ Assumendo che l'utente abbia inserito almeno un argomento nella riga di comando 
 
 ### Creare ed Aprire i File
 
+<!-- COURSE-FRAME:START README.md#creare-ed-aprire-i-file -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "File, Makefile, debugging e progetto" del percorso Intermedio per Terzo anno. Serve a lavorare su apertura, lettura, scrittura e chiusura dei file tramite libreria standard C. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Creare ed Aprire i File" lo studente dovrebbe aver seguito il lavoro precedente su "Semplici operazioni di I/O sui file", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Creare ed Aprire i File", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Semplici operazioni di I/O sui file" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Leggere testo dai file con fgets()". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Creare ed Aprire i File", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Leggere testo dai file con fgets()" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Creare ed Aprire i File" (../README.md#creare-ed-aprire-i-file). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#creare-ed-aprire-i-file -->
+
 <p align="justify">
 A questo punto dovresti essere abbastanza a tuo agio con il meccanismo generale per effettuare chiamate alle librerie C dall'assembly. E che tu te ne renda conto o meno, sei già abbastanza a tuo agio con alcuni dei meccanismi per manipolare i file di testo. Hai già usato printf() per visualizzare testo formattato sullo schermo tramite l'output standard. Lo stesso meccanismo viene utilizzato per scrivere testo formattato nei file di testo su disco: stai praticamente sostituendo un file su disco reale con l'output standard. Quindi, capire l'I/O dei file di testo non dovrebbe essere un grande salto concettuale. Ma, a differenza dell'output standard, che è predefinito per te dalla libreria C ed è sempre disponibile, devi creare o aprire un file di testo su disco per usarlo. La funzione fopen() è quella che svolge il lavoro. Ci sono tre modi generali per aprire un file: per leggere, per scrivere e per aggiungere. Quando apri un file per la lettura, puoi leggere il testo da esso tramite funzioni come fgets(), ma non puoi scrivere nel file. Quando apri un file per scrivere, qualsiasi cosa ci fosse nel file prima viene scartata e nuovo materiale viene scritto all'inizio del file. Quando apri un file per aggiungere, puoi scrivere nel file, ma nuovo materiale viene scritto dopo qualsiasi materiale esistente e qualsiasi cosa fosse originariamente nel file viene mantenuta.
 </p>
@@ -22922,6 +27951,54 @@ Il processo di creazione di un file e poi di scrittura su di esso è identico, t
 </div>
 
 ### Leggere testo dai file con fgets()
+
+<!-- COURSE-FRAME:START README.md#leggere-testo-dai-file-con-fgets -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "File, Makefile, debugging e progetto" del percorso Intermedio per Terzo anno. Serve a lavorare su apertura, lettura, scrittura e chiusura dei file tramite libreria standard C. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Leggere testo dai file con fgets()" lo studente dovrebbe aver seguito il lavoro precedente su "Creare ed Aprire i File", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Leggere testo dai file con fgets()", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Creare ed Aprire i File" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Scrivere testo su file con fprintf()". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Leggere testo dai file con fgets()", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Scrivere testo su file con fprintf()" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Leggere testo dai file con fgets()" (../README.md#leggere-testo-dai-file-con-fgets). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#leggere-testo-dai-file-con-fgets -->
 
 <p align="justify">
 Quando fopen() crea o apre con successo un file per te, restituisce un handle del file in RAX. Tieni al sicuro quell'handle del file da qualche parte: ti consiglio di copiarlo in una variabile di memoria allocata per questo scopo o di metterlo in un registro che sai non verrà utilizzato per nient'altro. Questo è importante: se lo memorizzi in RAX, RCX o RDX e poi chiami quasi qualsiasi funzione della libreria C, l'handle del file nel registro verrà danneggiato e lo perderai. Una volta che un file è aperto per la lettura, puoi leggere le righe di testo da esso sequenzialmente con la funzione fgets(). Ogni volta che chiami fgets() su un file di testo aperto, leggerà una riga del file, che è definita come tutti i caratteri fino al prossimo carattere EOL ("onewline") (ASCII 10), che nel mondo Unix indica sempre la fine di una riga di testo. Ora, in un dato file non c'è modo di sapere quanti caratteri ci saranno fino al prossimo newline, quindi sarebbe pericoloso lasciare semplicemente fgets() libero di riportare i caratteri fino a quando non incontra un newline. Se tenti di aprire il tipo sbagliato di file (un file di codice binario è una possibilità, o un file di dati compressi), potresti portare dentro migliaia di byte prima di imbattersi nel valore binario 10 che il file system considera un newline. Qualunque buffer tu abbia allocato per contenere il testo in arrivo traboccherà e fgets() potrebbe forse distruggere dati adiacenti e/o far crashare il tuo programma.
@@ -22992,6 +28069,54 @@ Prima che venga chiamata la procedura diskhelp, il chiamante passa un puntatore 
 
 ### Scrivere testo su file con fprintf()
 
+<!-- COURSE-FRAME:START README.md#scrivere-testo-su-file-con-fprintf -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "File, Makefile, debugging e progetto" del percorso Intermedio per Terzo anno. Serve a lavorare su apertura, lettura, scrittura e chiusura dei file tramite libreria standard C. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Scrivere testo su file con fprintf()" lo studente dovrebbe aver seguito il lavoro precedente su "Leggere testo dai file con fgets()", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Scrivere testo su file con fprintf()", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Leggere testo dai file con fgets()" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Dati in con fgets() e scanf()". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Scrivere testo su file con fprintf()", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Dati in con fgets() e scanf()" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Scrivere testo su file con fprintf()" (../README.md#scrivere-testo-su-file-con-fprintf). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#scrivere-testo-su-file-con-fprintf -->
+
 <p align="justify">
 In precedenza in questo capitolo, ho spiegato come scrivere testo formattato sul display tramite l'output standard, utilizzando la funzione printf(). La libreria standard C fornisce una funzione che scrive lo stesso testo formattato su qualsiasi file di testo aperto. La funzione fprintf() fa esattamente ciò che fa printf(), ma richiede un parametro aggiuntivo nello stack: il gestore del file di un file di testo aperto. Lo stesso flusso di testo che printf() invierebbe all'output standard viene inviato da fprintf() a quel file aperto. Quindi non mi prenderò la briga di riesplorare come formattare il testo per printf() utilizzando codici di formattazione e stringhe di base. Si fa nello stesso modo, con gli stessi identici codici. Invece, semplicemente riassumerò come impostare una chiamata a fprintf():
 </p>
@@ -23048,6 +28173,54 @@ Ecco la chiamata fprintf() da textfile.asm:
 ```
 
 ### Note sulla raccolta delle procedure in librerie
+
+<!-- COURSE-FRAME:START README.md#note-sulla-raccolta-delle-procedure-in-librerie -->
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "File, Makefile, debugging e progetto" del percorso Intermedio per Terzo anno. Serve a lavorare su organizzazione del codice in moduli riusabili e collegamento con il linker. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Note sulla raccolta delle procedure in librerie" lo studente dovrebbe aver seguito il lavoro precedente su "Collegare le librerie nei tuoi programmi", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Note sulla raccolta delle procedure in librerie", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Collegare le librerie nei tuoi programmi" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Gcc --no-pie". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Note sulla raccolta delle procedure in librerie", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Gcc --no-pie" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: README.md sezione "Note sulla raccolta delle procedure in librerie" (../README.md#note-sulla-raccolta-delle-procedure-in-librerie). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+<!-- COURSE-FRAME:END README.md#note-sulla-raccolta-delle-procedure-in-librerie -->
 
 <p align="justify">
 Ecco un riassunto su come raccogliere le procedure in librerie:
@@ -23384,4 +28557,3 @@ randline:
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.17.png)
 
 ![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.18.png)
-
