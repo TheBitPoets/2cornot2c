@@ -116,7 +116,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 </tbody>
 </table>
 
-<table align="center">
+<table align="center" width="100%">
 <tr>
 <td>
 
@@ -1214,7 +1214,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 </tr>
 </table>
 
-<table align="center">
+<table align="center" width="100%">
 <tr>
 <td>
 
@@ -2094,7 +2094,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 </tr>
 </table>
 
-<table align="center">
+<table align="center" width="100%">
 <tr>
 <td>
 
@@ -2372,7 +2372,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 </tr>
 </table>
 
-<table align="center">
+<table align="center" width="100%">
 <tr>
 <td>
 
@@ -2693,7 +2693,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 </tr>
 </table>
 
-<table align="center">
+<table align="center" width="100%">
 <tr>
 <td>
 
@@ -2842,7 +2842,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 </tr>
 </table>
 
-<table align="center">
+<table align="center" width="100%">
 <tr>
 <td>
 
@@ -4152,7 +4152,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 </tr>
 </table>
 
-<table align="center">
+<table align="center" width="100%">
 <tr>
 <td>
 
@@ -4731,7 +4731,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 </tr>
 </table>
 
-<table align="center">
+<table align="center" width="100%">
 <tr>
 <td>
 
@@ -5525,7 +5525,7 @@ Corso di C base e intermedio focalizzato sulla logica di programmazione e la ges
 </tr>
 </table>
 
-<table align="center">
+<table align="center" width="100%">
 <tr>
 <td>
 
@@ -6209,7 +6209,7 @@ Linux programming, processi e thread
 </tbody>
 </table>
 
-<table align="center">
+<table align="center" width="100%">
 <tr>
 <td>
 
@@ -6230,7 +6230,7 @@ Linux programming, processi e thread
 </tr>
 </table>
 
-<table align="center">
+<table align="center" width="100%">
 <tr>
 <td>
 
@@ -6251,7 +6251,7 @@ Linux programming, processi e thread
 </tr>
 </table>
 
-<table align="center">
+<table align="center" width="100%">
 <tr>
 <td>
 
@@ -6272,7 +6272,7 @@ Linux programming, processi e thread
 </tr>
 </table>
 
-<table align="center">
+<table align="center" width="100%">
 <tr>
 <td>
 
@@ -6293,7 +6293,7 @@ Linux programming, processi e thread
 </tr>
 </table>
 
-<table align="center">
+<table align="center" width="100%">
 <tr>
 <td>
 
@@ -6314,7 +6314,7 @@ Linux programming, processi e thread
 </tr>
 </table>
 
-<table align="center">
+<table align="center" width="100%">
 <tr>
 <td>
 
@@ -6335,7 +6335,7 @@ Linux programming, processi e thread
 </tr>
 </table>
 
-<table align="center">
+<table align="center" width="100%">
 <tr>
 <td>
 

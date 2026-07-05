@@ -178,7 +178,7 @@ def render_design(design: dict[str, Any]) -> str:
         for uda in year.get("udas", []):
             lines.extend([
                 "",
-                '<table align="center">',
+                '<table align="center" width="100%">',
                 '<tr>',
                 '<td>',
                 "",
