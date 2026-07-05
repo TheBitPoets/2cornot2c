@@ -44,10 +44,10 @@ body {
 .appNav summary {
   display: grid;
   place-items: center;
-  min-width: 5.2rem;
-  min-height: 3.1rem;
+  min-width: 8.4rem;
+  min-height: 5.2rem;
   cursor: pointer;
-  padding: .55rem .85rem;
+  padding: .75rem 1rem;
   color: #ffffff;
   background:
     linear-gradient(rgba(0, 0, 0, .42), rgba(0, 0, 0, .42)),
@@ -66,7 +66,7 @@ body {
   border: 1px solid rgba(255, 255, 255, .44);
   border-radius: 999px;
   background: rgba(0, 0, 0, .38);
-  padding: .22rem .5rem;
+  padding: .28rem .62rem;
 }
 
 .navBrand {
