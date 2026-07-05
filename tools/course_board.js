@@ -521,7 +521,7 @@ function renderCourse() {
           <h3>${escapeHtml(year.title)}</h3>
           <div class="yearMeta">${escapeHtml(year.description || "")} · ${year.weeks || "?"} settimane · ${year.weekly_hours || "?"} ore/settimana</div>
         </div>
-        <button type="button" data-action="ai-course" title="Genera con AI una proposta di percorso per questo anno.">AI assisted percorso</button>
+        <button type="button" data-action="ai-course" title="Usa il provider AI configurato per generare una proposta di percorso per questo anno.">AI genera percorso</button>
       </div>
     `;
     yearNode.querySelector('[data-action="ai-course"]').addEventListener("click", () => openCourseAiDialog(year));
@@ -612,7 +612,7 @@ function renderItem(year, uda, siblings, item, index, depth) {
       </div>
       <div class="itemActions">
         <span class="contextBadge">${escapeHtml(contextLabel(index, siblings, item))}</span>
-        <button type="button" data-action="ai" title="Apre o genera la cornice didattica per questo argomento e i suoi sottoparagrafi.">AI assisted</button>
+        <button type="button" data-action="ai" title="Usa il provider AI configurato per aprire o generare la cornice didattica di questo argomento e dei suoi sottoparagrafi.">AI cornice</button>
         <button type="button" data-action="up" title="Sposta questo argomento verso l'alto nella UDA.">Su</button>
         <button type="button" data-action="down" title="Sposta questo argomento verso il basso nella UDA.">Giu</button>
         <button type="button" data-action="remove" title="Rimuove questo argomento dalla UDA.">Rimuovi</button>
