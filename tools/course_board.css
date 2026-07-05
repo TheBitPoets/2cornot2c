@@ -446,6 +446,43 @@ input, select { width: 100%; padding: .72rem .9rem; }
   font-weight: 700;
 }
 
+.frameFieldTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+}
+
+.qualityDot {
+  display: inline-block;
+  width: .55rem;
+  height: .55rem;
+  border-radius: 999px;
+  background: #b42318;
+  box-shadow: 0 0 0 2px rgba(180, 35, 24, .12);
+}
+
+.frameGrid label[data-quality-state="local"] .qualityDot {
+  background: #d9a400;
+  box-shadow: 0 0 0 2px rgba(217, 164, 0, .16);
+}
+
+.frameGrid label[data-quality-state="ai"] .qualityDot {
+  background: #0f8a4b;
+  box-shadow: 0 0 0 2px rgba(15, 138, 75, .16);
+}
+
+.frameGrid label textarea {
+  border-color: rgba(180, 35, 24, .38);
+}
+
+.frameGrid label[data-quality-state="local"] textarea {
+  border-color: rgba(217, 164, 0, .62);
+}
+
+.frameGrid label[data-quality-state="ai"] textarea {
+  border-color: rgba(15, 138, 75, .58);
+}
+
 .frameToolbar {
   display: flex;
   flex-wrap: wrap;

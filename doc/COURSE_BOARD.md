@@ -346,6 +346,14 @@ La UI mostra le modifiche proposte e chiede conferma prima di applicare il testo
 
 `AI grammatica` usa le stesse API key e lo stesso provider configurato nella board, quindi puo consumare quota del provider.
 
+Ogni campo della cornice mostra anche uno stato di controllo:
+
+- pallino rosso: campo non ancora controllato oppure modificato dopo l'ultimo controllo;
+- pallino giallo: campo passato dal controllo locale `Controlla testo`;
+- pallino verde: campo passato da `AI grammatica`.
+
+Se modifichi manualmente un campo gia controllato, lo stato torna rosso per ricordarti che il testo e cambiato e va ricontrollato.
+
 Quando le cornici vengono inserite nel `README.md`, `scripts/update_course_frames.py` converte questa formattazione leggera in HTML sicuro:
 
 - `**testo**` diventa `<strong>testo</strong>`;

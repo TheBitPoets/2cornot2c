@@ -504,6 +504,10 @@ function defaultFrame() {
   };
 }
 
+function defaultFrameQuality() {
+  return Object.fromEntries(FRAME_FIELDS.map((field) => [field.key, "none"]));
+}
+
 function renderCourse() {
   els.courseTree.innerHTML = "";
   for (const year of state.design.years || []) {
@@ -595,6 +599,7 @@ function renderItem(year, uda, siblings, item, index, depth) {
   node.style.setProperty("--item-depth", depth);
   const children = item.children || [];
   item.frame = { ...defaultFrame(), ...(item.frame || {}) };
+  item.frame_quality = { ...defaultFrameQuality(), ...(item.frame_quality || {}) };
   const collapseKey = `${uda.id}:${item.id}`;
   const isCollapsed = state.collapsedCourseItemIds.has(collapseKey);
   node.innerHTML = `
@@ -866,6 +871,7 @@ async function generateFrameForEntry(entry) {
     }),
   });
   entry.item.frame = { ...defaultFrame(), ...(entry.item.frame || {}), ...payload.frame, status: "draft" };
+  entry.item.frame_quality = defaultFrameQuality();
 }
 
 async function generateNextFrameInBatch() {
@@ -1000,6 +1006,7 @@ function renderFrameEditor(item) {
   const details = document.createElement("details");
   details.className = "frameEditor";
   details.classList.add(frameHasContent(item.frame) ? "frameReady" : "frameEmpty");
+  item.frame_quality = { ...defaultFrameQuality(), ...(item.frame_quality || {}) };
   details.innerHTML = `
     <summary>Cornice didattica</summary>
     <div class="frameToolbar" aria-label="Strumenti testo cornice">
@@ -1036,8 +1043,10 @@ function renderFrameEditor(item) {
 
   for (const field of FRAME_FIELDS) {
     const label = document.createElement("label");
+    label.dataset.qualityField = field.key;
+    label.dataset.qualityState = item.frame_quality[field.key] || "none";
     label.innerHTML = `
-      <span>${escapeHtml(field.label)}</span>
+      <span class="frameFieldTitle"><span class="qualityDot" aria-hidden="true"></span>${escapeHtml(field.label)}</span>
       <textarea data-frame-field="${field.key}" rows="2"></textarea>
     `;
     const textarea = label.querySelector("textarea");
@@ -1048,6 +1057,8 @@ function renderFrameEditor(item) {
     });
     textarea.addEventListener("input", () => {
       item.frame[field.key] = textarea.value;
+      item.frame_quality[field.key] = "none";
+      setFrameLabelQuality(label, "none");
       quality.hidden = true;
     });
     grid.append(label);
@@ -1060,12 +1071,14 @@ function renderFrameEditor(item) {
         return;
       }
       const action = button.dataset.format;
+      const fieldKey = textarea.dataset.frameField;
+      const label = textarea.closest("label");
       if (action === "check") {
-        showTextQuality(textarea, quality);
+        showTextQuality(textarea, quality, item, fieldKey, label);
         return;
       }
       if (action === "ai-proofread") {
-        proofreadTextWithAi(textarea, quality);
+        proofreadTextWithAi(textarea, quality, item, fieldKey, label);
         return;
       }
       applyTextFormat(textarea, action);
@@ -1106,13 +1119,26 @@ function applyTextFormat(textarea, action) {
   textarea.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
-function showTextQuality(textarea, output) {
+function setFrameLabelQuality(label, stateName) {
+  if (!label) return;
+  label.dataset.qualityState = stateName;
+}
+
+function setFrameFieldQuality(item, fieldKey, label, stateName) {
+  if (!fieldKey) return;
+  item.frame_quality ||= defaultFrameQuality();
+  item.frame_quality[fieldKey] = stateName;
+  setFrameLabelQuality(label, stateName);
+}
+
+function showTextQuality(textarea, output, item, fieldKey, label) {
   if (!textarea.value.trim()) {
     showToolbarMessage(output, "Campo vuoto: niente da controllare.", "neutral");
     return;
   }
   const result = applyLocalTextFixes(textarea.value);
   if (!result.changes.length) {
+    setFrameFieldQuality(item, fieldKey, label, "local");
     showToolbarMessage(output, "Nessuna correzione locale sicura trovata. Per dubbi di contesto usa AI grammatica.", "ok");
     return;
   }
@@ -1124,6 +1150,7 @@ function showTextQuality(textarea, output) {
   }
   textarea.value = result.text;
   textarea.dispatchEvent(new Event("input", { bubbles: true }));
+  setFrameFieldQuality(item, fieldKey, label, "local");
   showToolbarMessage(output, `Correzioni applicate: ${result.changes.join("; ")}.`, "ok");
 }
 
@@ -1140,7 +1167,7 @@ function applyLocalTextFixes(value) {
   return { text, changes };
 }
 
-async function proofreadTextWithAi(textarea, output) {
+async function proofreadTextWithAi(textarea, output, item, fieldKey, label) {
   const original = textarea.value;
   if (!original.trim()) {
     showToolbarMessage(output, "Campo vuoto: niente da correggere con AI.", "neutral");
@@ -1158,6 +1185,7 @@ async function proofreadTextWithAi(textarea, output) {
       return;
     }
     if (corrected === original) {
+      setFrameFieldQuality(item, fieldKey, label, "ai");
       showToolbarMessage(output, "La AI non propone modifiche per questo campo.", "ok");
       return;
     }
@@ -1175,6 +1203,7 @@ async function proofreadTextWithAi(textarea, output) {
     }
     textarea.value = corrected;
     textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    setFrameFieldQuality(item, fieldKey, label, "ai");
     output.innerHTML = `<strong>Correzione AI applicata.</strong>${changes.length ? `<br>${changes.map(escapeHtml).join("<br>")}` : ""}`;
     output.className = "textQuality textQualityOk";
   } catch (error) {
