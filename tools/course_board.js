@@ -1010,13 +1010,13 @@ function renderFrameEditor(item) {
   details.innerHTML = `
     <summary>Cornice didattica</summary>
     <div class="frameToolbar" aria-label="Strumenti testo cornice">
-      <button type="button" data-format="bold">B</button>
-      <button type="button" data-format="italic">I</button>
-      <button type="button" data-format="code">code</button>
-      <button type="button" data-format="bullet">• lista</button>
-      <button type="button" data-format="number">1. lista</button>
-      <button type="button" data-format="check">Controlla testo</button>
-      <button type="button" data-format="ai-proofread">AI grammatica</button>
+      <button type="button" data-format="bold" title="Applica il grassetto al testo selezionato nel campo attivo.">B</button>
+      <button type="button" data-format="italic" title="Applica il corsivo al testo selezionato nel campo attivo.">I</button>
+      <button type="button" data-format="code" title="Formatta il testo selezionato come codice inline.">code</button>
+      <button type="button" data-format="bullet" title="Trasforma il testo selezionato in elenco puntato.">• lista</button>
+      <button type="button" data-format="number" title="Trasforma il testo selezionato in elenco numerato.">1. lista</button>
+      <button type="button" data-format="check" title="Propone correzioni locali sicure, come accenti mancanti, e le applica solo dopo conferma.">Controlla testo</button>
+      <button type="button" data-format="ai-proofread" title="Usa il provider AI configurato per correggere grammatica e contesto, poi chiede conferma prima di applicare.">AI grammatica</button>
     </div>
     <p class="textQuality textQualityNeutral" hidden></p>
     <div class="frameGrid">
