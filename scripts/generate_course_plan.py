@@ -159,11 +159,12 @@ def render_design(design: dict[str, Any]) -> str:
         for uda in year.get("udas", []):
             lines.extend([
                 "",
-                f"### {uda.get('id', '').upper()} - {uda.get('title', 'UDA senza titolo')}",
-                "",
                 '<table>',
                 '<tr>',
                 '<td>',
+                "",
+                f"### {uda.get('id', '').upper()} - {uda.get('title', 'UDA senza titolo')}",
+                "",
                 "<details>",
                 f"<summary><strong>Apri contenuto UDA</strong> - {uda.get('path', 'Da definire')} - {uda.get('weeks', '?')} settimane</summary>",
                 "",
