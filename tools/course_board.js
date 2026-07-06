@@ -205,7 +205,10 @@ async function loadAll() {
 
 function renderSavedDesigns() {
   const selected = state.activeSavedDesign || els.savedDesignSelect.value;
-  els.savedDesignSelect.innerHTML = '<option value="">Percorsi salvati</option>';
+  els.savedDesignSelect.innerHTML = `
+    <option value="">Percorsi salvati</option>
+    <option value="__current__">Percorso corrente (doc/course_design.json)</option>
+  `;
   for (const design of state.savedDesigns) {
     const option = document.createElement("option");
     option.value = design.name;
@@ -221,7 +224,23 @@ async function loadSavedDesign() {
     setStatus("Seleziona un percorso salvato da caricare.");
     return;
   }
+  if (name === "__current__") {
+    await loadCurrentDesign();
+    return;
+  }
   await loadSavedDesignByName(name, { confirmFirst: true, render: true });
+}
+
+async function loadCurrentDesign() {
+  if (!confirm("Caricare il percorso corrente da doc/course_design.json? Le modifiche non salvate nella vista corrente saranno perse.")) return;
+  setStatus("Caricamento percorso corrente...");
+  state.design = await api("/api/course-design");
+  state.activeSavedDesign = "";
+  localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
+  renderSavedDesigns();
+  renderHeadings();
+  renderCourse();
+  setStatus("Percorso corrente caricato da doc/course_design.json.");
 }
 
 async function loadSavedDesignByName(name, options = {}) {
