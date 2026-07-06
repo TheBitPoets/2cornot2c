@@ -1646,6 +1646,8 @@ Test end-to-end:
 - aprire un modal UDA;
 - salvare una modifica controllata.
 
+Regola per gli E2E: i test browser non devono scrivere sui JSON reali del corso, come `doc/course_design.json`, `doc/course_designs/*.json` o `doc/calendars/*.json`. Devono usare fixture dedicate, copie temporanee o un workspace di test isolato. Ogni test deve poter essere eseguito piu volte senza modificare dati didattici reali e senza lasciare file sporchi nel repository.
+
 GitHub Actions:
 
 - aggiungere una workflow di qualita;
