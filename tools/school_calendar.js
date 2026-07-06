@@ -24,6 +24,7 @@ const els = {
   saveBtn: document.querySelector("#saveBtn"),
   addTrackBtn: document.querySelector("#addTrackBtn"),
   addClosureBtn: document.querySelector("#addClosureBtn"),
+  importItalianHolidaysBtn: document.querySelector("#importItalianHolidaysBtn"),
   recalculateBtn: document.querySelector("#recalculateBtn"),
   status: document.querySelector("#status"),
   fileName: document.querySelector("#fileName"),
@@ -34,6 +35,8 @@ const els = {
   endDate: document.querySelector("#endDate"),
   tracks: document.querySelector("#tracks"),
   closures: document.querySelector("#closures"),
+  calendarValidation: document.querySelector("#calendarValidation"),
+  monthGrid: document.querySelector("#monthGrid"),
   summary: document.querySelector("#summary"),
 };
 
@@ -205,6 +208,7 @@ function renderAll() {
   syncCalendarToForm();
   renderTracks();
   renderClosures();
+  renderCalendarView();
   renderSummary();
 }
 
@@ -250,6 +254,7 @@ function renderTracks() {
           normalizeTrackSlots(track);
           renderTracks();
         }
+        renderCalendarView();
         renderSummary();
       });
     });
@@ -314,6 +319,7 @@ function renderSlot(track, slot) {
       } else {
         slot[field] = input.value;
       }
+      renderCalendarView();
       renderSummary();
     });
   });
@@ -373,6 +379,7 @@ function renderClosures() {
       input.value = closure[field] ?? "";
       input.addEventListener("input", () => {
         closure[field] = input.value;
+        renderCalendarView();
         renderSummary();
       });
     });
@@ -411,6 +418,81 @@ function addClosure() {
   renderAll();
 }
 
+function easterDate(year) {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(year, month - 1, day);
+}
+
+function addDays(date, days) {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
+function italianHolidaysForYear(year) {
+  const easter = easterDate(year);
+  const easterMonday = addDays(easter, 1);
+  return [
+    { label: "Capodanno", date: `${year}-01-01` },
+    { label: "Epifania", date: `${year}-01-06` },
+    { label: "Pasqua", date: isoDate(easter) },
+    { label: "Lunedì dell'Angelo", date: isoDate(easterMonday) },
+    { label: "Festa della Liberazione", date: `${year}-04-25` },
+    { label: "Festa del Lavoro", date: `${year}-05-01` },
+    { label: "Festa della Repubblica", date: `${year}-06-02` },
+    { label: "Ferragosto", date: `${year}-08-15` },
+    { label: "Ognissanti", date: `${year}-11-01` },
+    { label: "Immacolata Concezione", date: `${year}-12-08` },
+    { label: "Natale", date: `${year}-12-25` },
+    { label: "Santo Stefano", date: `${year}-12-26` },
+  ];
+}
+
+function importItalianHolidays() {
+  syncFormToCalendar();
+  const start = dateFromInput(state.calendar.start_date);
+  const end = dateFromInput(state.calendar.end_date);
+  if (!start || !end || start > end) {
+    setStatus("Inserisci date di inizio e fine lezioni valide prima di importare le festività.", "error");
+    return;
+  }
+  state.calendar.closures ||= [];
+  const existing = new Set(state.calendar.closures.map((closure) => `${closure.label}|${closure.from}|${closure.to || closure.from}`));
+  let added = 0;
+  for (let year = start.getFullYear(); year <= end.getFullYear(); year += 1) {
+    for (const holiday of italianHolidaysForYear(year)) {
+      const date = dateFromInput(holiday.date);
+      if (!date || date < start || date > end) continue;
+      const key = `${holiday.label}|${holiday.date}|${holiday.date}`;
+      if (existing.has(key)) continue;
+      state.calendar.closures.push({
+        type: "national_holiday",
+        label: holiday.label,
+        from: holiday.date,
+        to: holiday.date,
+        notes: "Festività nazionale italiana",
+      });
+      existing.add(key);
+      added += 1;
+    }
+  }
+  renderAll();
+  setStatus(added ? `Festività italiane importate: ${added}.` : "Nessuna nuova festività italiana da importare.");
+}
+
 function dateFromInput(value) {
   if (!value) return null;
   const [year, month, day] = value.split("-").map(Number);
@@ -436,6 +518,141 @@ function closedLabelsByDate() {
     }
   }
   return labels;
+}
+
+function lessonLabelsByDate() {
+  const labels = new Map();
+  const start = dateFromInput(state.calendar.start_date);
+  const end = dateFromInput(state.calendar.end_date);
+  if (!start || !end || start > end) return labels;
+  const tracks = state.calendar.tracks || [];
+  for (const date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
+    const dayLabels = [];
+    for (const track of tracks) {
+      const matching = (track.weekly_slots || []).filter((slot) => DAY_INDEX[slot.day] === date.getDay());
+      const hours = matching.reduce((total, slot) => total + Number(slot.hours || 0), 0);
+      if (hours > 0) dayLabels.push(`${track.label || track.id}: ${hours}h`);
+    }
+    if (dayLabels.length) labels.set(isoDate(date), dayLabels);
+  }
+  return labels;
+}
+
+function calendarMonths(start, end) {
+  const months = [];
+  if (!start || !end || start > end) return months;
+  const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+  const last = new Date(end.getFullYear(), end.getMonth(), 1);
+  while (cursor <= last) {
+    months.push(new Date(cursor));
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+  return months;
+}
+
+function validateCalendar() {
+  const issues = [];
+  const start = dateFromInput(state.calendar.start_date);
+  const end = dateFromInput(state.calendar.end_date);
+  if (!state.calendar.start_date) issues.push("Inserisci la data di inizio lezioni.");
+  if (!state.calendar.end_date) issues.push("Inserisci la data di fine lezioni.");
+  if (start && end && start > end) issues.push("La data di fine lezioni non può precedere la data di inizio.");
+  for (const track of state.calendar.tracks || []) {
+    const total = slotHoursTotal(track);
+    const weekly = Number(track.weekly_hours || 0);
+    if (total > weekly) issues.push(`${track.label || track.id}: gli slot sommano ${total}h ma il limite è ${weekly}h.`);
+    const days = new Set();
+    for (const slot of track.weekly_slots || []) {
+      const key = `${slot.day}:${slot.type}`;
+      if (days.has(key)) issues.push(`${track.label || track.id}: slot duplicato per ${DAY_LABELS[slot.day] || slot.day} (${slot.type}).`);
+      days.add(key);
+    }
+  }
+  for (const closure of state.calendar.closures || []) {
+    const from = dateFromInput(closure.from);
+    const to = dateFromInput(closure.to || closure.from);
+    if (!closure.from) issues.push(`${closure.label || "Chiusura"}: manca la data iniziale.`);
+    if (from && to && from > to) issues.push(`${closure.label || "Chiusura"}: la data finale precede quella iniziale.`);
+    if (start && end && from && to && (to < start || from > end)) {
+      issues.push(`${closure.label || "Chiusura"}: periodo fuori dall'anno scolastico.`);
+    }
+  }
+  return issues;
+}
+
+function renderValidation() {
+  const issues = validateCalendar();
+  els.calendarValidation.innerHTML = "";
+  if (!issues.length) {
+    const item = document.createElement("div");
+    item.className = "validationItem validationOk";
+    item.textContent = "Calendario coerente: nessun problema rilevato.";
+    els.calendarValidation.append(item);
+    return;
+  }
+  for (const issue of issues) {
+    const item = document.createElement("div");
+    item.className = "validationItem";
+    item.textContent = issue;
+    els.calendarValidation.append(item);
+  }
+}
+
+function renderCalendarView() {
+  syncFormToCalendar();
+  renderValidation();
+  els.monthGrid.innerHTML = "";
+  const start = dateFromInput(state.calendar.start_date);
+  const end = dateFromInput(state.calendar.end_date);
+  if (!start || !end || start > end) return;
+  const closures = closedLabelsByDate();
+  const lessons = lessonLabelsByDate();
+  for (const month of calendarMonths(start, end)) {
+    els.monthGrid.append(renderMonth(month, start, end, lessons, closures));
+  }
+}
+
+function renderMonth(month, start, end, lessons, closures) {
+  const card = document.createElement("article");
+  card.className = "monthCard";
+  const title = month.toLocaleDateString("it-IT", { month: "long", year: "numeric" });
+  card.innerHTML = `
+    <h3 class="monthTitle">${escapeHtml(title)}</h3>
+    <div class="monthWeekdays">
+      <span>Lun</span><span>Mar</span><span>Mer</span><span>Gio</span><span>Ven</span><span>Sab</span><span>Dom</span>
+    </div>
+    <div class="monthDays"></div>
+  `;
+  const days = card.querySelector(".monthDays");
+  const first = new Date(month.getFullYear(), month.getMonth(), 1);
+  const startOffset = (first.getDay() + 6) % 7;
+  const cursor = new Date(first);
+  cursor.setDate(cursor.getDate() - startOffset);
+  for (let index = 0; index < 42; index += 1) {
+    days.append(renderDayCell(cursor, month, start, end, lessons, closures));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return card;
+}
+
+function renderDayCell(date, month, start, end, lessons, closures) {
+  const iso = isoDate(date);
+  const cell = document.createElement("div");
+  const lesson = lessons.get(iso) || [];
+  const closure = closures.get(iso);
+  const inMonth = date.getMonth() === month.getMonth();
+  const inSchool = date >= start && date <= end;
+  cell.className = "dayCell";
+  if (!inMonth) cell.classList.add("dayOutsideMonth");
+  if (!inSchool) cell.classList.add("dayOutsideSchool");
+  if (lesson.length) cell.classList.add("dayLesson");
+  if (closure) cell.classList.add("dayClosure");
+  cell.innerHTML = `
+    <span class="dayNumber">${date.getDate()}</span>
+    ${closure ? `<span class="dayMeta">${escapeHtml(closure)}</span>` : ""}
+    ${lesson.length ? `<span class="dayMeta">${escapeHtml(lesson.join(" · "))}</span>` : ""}
+  `;
+  return cell;
 }
 
 function trackStats(track) {
@@ -497,6 +714,7 @@ function escapeHtml(value) {
       if (input === els.schoolYear && !els.fileName.value.trim()) {
         els.fileName.value = fileNameFromYear(els.schoolYear.value);
       }
+      renderCalendarView();
       renderSummary();
     });
   });
@@ -506,6 +724,7 @@ els.loadBtn.addEventListener("click", loadSelectedCalendar);
 els.saveBtn.addEventListener("click", saveCalendar);
 els.addTrackBtn.addEventListener("click", addTrack);
 els.addClosureBtn.addEventListener("click", addClosure);
+els.importItalianHolidaysBtn.addEventListener("click", importItalianHolidays);
 els.recalculateBtn.addEventListener("click", renderSummary);
 
 loadCalendarList()

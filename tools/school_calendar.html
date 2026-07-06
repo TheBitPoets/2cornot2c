@@ -76,7 +76,10 @@
     <section class="panel">
       <div class="panelHead">
         <h2>Vacanze, festività e sospensioni</h2>
-        <button id="addClosureBtn" type="button" title="Aggiunge un periodo di chiusura, vacanza, ponte o festività.">Aggiungi chiusura</button>
+        <div class="panelActions">
+          <button id="importItalianHolidaysBtn" type="button" title="Inserisce le festività nazionali italiane comprese tra inizio e fine anno scolastico.">Importa festività italiane</button>
+          <button id="addClosureBtn" type="button" title="Aggiunge un periodo di chiusura, vacanza, ponte o festività.">Aggiungi chiusura</button>
+        </div>
       </div>
       <div class="tableWrap">
         <table>
@@ -93,6 +96,15 @@
           <tbody id="closures"></tbody>
         </table>
       </div>
+    </section>
+
+    <section class="panel">
+      <div class="panelHead">
+        <h2>Vista calendario</h2>
+        <p class="status">Legenda: lezione TPSI, chiusura, fuori anno scolastico.</p>
+      </div>
+      <div id="calendarValidation" class="validationList"></div>
+      <div id="monthGrid" class="monthGrid"></div>
     </section>
 
     <section class="panel">

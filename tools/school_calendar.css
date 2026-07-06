@@ -177,6 +177,13 @@ input, select {
 
 .panelHead h2 { margin-bottom: 0; font-size: 1.25rem; }
 
+.panelActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  justify-content: flex-end;
+}
+
 .status {
   margin: 0;
   color: var(--muted);
@@ -310,6 +317,113 @@ th {
   margin: .25rem 0;
 }
 
+.validationList {
+  display: grid;
+  gap: .45rem;
+  padding: 1.1rem 1.1rem 0;
+}
+
+.validationItem {
+  border: 1px solid rgba(180, 35, 24, .24);
+  border-radius: 14px;
+  background: rgba(180, 35, 24, .06);
+  color: #8f1d14;
+  font-size: .78rem;
+  font-weight: 800;
+  padding: .6rem .75rem;
+}
+
+.validationItem.validationOk {
+  border-color: rgba(15, 138, 75, .22);
+  background: rgba(15, 138, 75, .07);
+  color: #0f6b3d;
+}
+
+.monthGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  padding: 1.1rem;
+}
+
+.monthCard {
+  border: 1px solid rgba(17, 17, 17, .16);
+  border-radius: 18px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.monthTitle {
+  margin: 0;
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, .78);
+  font-size: .9rem;
+  padding: .75rem;
+}
+
+.monthWeekdays,
+.monthDays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.monthWeekdays span {
+  color: var(--muted);
+  font-size: .66rem;
+  font-weight: 900;
+  padding: .45rem .3rem;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.dayCell {
+  min-height: 2.8rem;
+  border-top: 1px solid rgba(17, 17, 17, .08);
+  border-left: 1px solid rgba(17, 17, 17, .08);
+  background: #ffffff;
+  font-size: .68rem;
+  padding: .35rem;
+}
+
+.dayCell:nth-child(7n + 1) {
+  border-left: 0;
+}
+
+.dayCell.dayOutsideMonth {
+  background: #f5f5f5;
+  color: #aaaaaa;
+}
+
+.dayCell.dayOutsideSchool {
+  background: #eeeeee;
+  color: #999999;
+}
+
+.dayCell.dayLesson {
+  background: #eaf7ef;
+}
+
+.dayCell.dayClosure {
+  background: #fdecea;
+  color: #8f1d14;
+}
+
+.dayCell.dayClosure.dayLesson {
+  background: linear-gradient(135deg, #fdecea 0 50%, #eaf7ef 50% 100%);
+}
+
+.dayNumber {
+  display: block;
+  font-weight: 900;
+}
+
+.dayMeta {
+  display: block;
+  margin-top: .18rem;
+  color: inherit;
+  line-height: 1.2;
+}
+
 @media (max-width: 950px) {
   .hero, .panelHead {
     display: grid;
@@ -319,7 +433,7 @@ th {
     justify-content: flex-start;
   }
 
-  .grid, .tracks, .summary {
+  .grid, .tracks, .summary, .monthGrid {
     grid-template-columns: 1fr;
   }
 
