@@ -32,7 +32,7 @@
   </header>
 
   <main class="layout">
-    <section class="panel">
+    <section class="panel" data-panel-key="school-year">
       <div class="panelHead">
         <h2>Anno scolastico</h2>
         <p id="status" class="status">Pronto.</p>
@@ -71,7 +71,7 @@
       </div>
     </section>
 
-    <section class="panel">
+    <section class="panel" data-panel-key="schedule-tracks">
       <div class="panelHead">
         <h2>Percorsi orari</h2>
         <button id="addTrackBtn" type="button" title="Aggiunge un nuovo anno o percorso orario.">Aggiungi percorso</button>
@@ -79,7 +79,7 @@
       <div id="tracks" class="tracks"></div>
     </section>
 
-    <section class="panel">
+    <section class="panel" data-panel-key="school-closures">
       <div class="panelHead">
         <h2>Vacanze, festività e sospensioni</h2>
         <div class="panelActions">
@@ -104,7 +104,7 @@
       </div>
     </section>
 
-    <section class="panel">
+    <section class="panel" data-panel-key="calendar-view">
       <div class="panelHead">
         <h2>Vista calendario</h2>
         <p class="status">Legenda: lezione del percorso, chiusura, fuori anno scolastico.</p>
@@ -113,7 +113,7 @@
       <div id="monthGrid" class="monthGrid"></div>
     </section>
 
-    <section class="panel">
+    <section class="panel" data-panel-key="uda-gantt">
       <div class="panelHead">
         <h2>Diagramma Gantt UDA</h2>
         <div class="panelActions ganttZoomControls">
@@ -137,7 +137,7 @@
       <div id="ganttDialogBody" class="ganttDialogBody"></div>
     </dialog>
 
-    <section class="panel">
+    <section class="panel" data-panel-key="effective-hours-summary">
       <div class="panelHead">
         <h2>Riepilogo ore effettive</h2>
         <button id="recalculateBtn" type="button" title="Ricalcola ore teoriche, ore perse e ore effettive per ogni percorso.">Ricalcola</button>
