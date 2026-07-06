@@ -1576,7 +1576,7 @@ Questa e una versione ancora in evoluzione. Non gestisce ancora automaticamente:
 - ricalcolo automatico completo di tutte le UDA adiacenti quando una UDA viene allungata o accorciata;
 - report automatico `in anticipo`, `in linea`, `in ritardo`;
 - esportazione o stampa del Gantt;
-- confronto sintetico tra ore previste, ore perse e ore svolte per tutto il corso.
+- confronto sintetico tra ore teoriche, ore disponibili, ore perse e ore svolte per tutto il corso.
 
 ### Direzione futura: un solo JSON per corso e calendario
 
