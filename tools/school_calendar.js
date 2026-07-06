@@ -71,7 +71,7 @@ function defaultCalendar() {
       {
         id: "terzo-anno",
         label: "Terzo anno",
-        subject: "TPSI",
+        subject: "",
         course_year_id: "terzo-anno",
         weekly_hours: 3,
         weekly_slots: [
@@ -82,7 +82,7 @@ function defaultCalendar() {
       {
         id: "quarto-anno",
         label: "Quarto anno",
-        subject: "TPSI",
+        subject: "",
         course_year_id: "quarto-anno",
         weekly_hours: 3,
         weekly_slots: [
@@ -93,7 +93,7 @@ function defaultCalendar() {
       {
         id: "quinto-anno",
         label: "Quinto anno",
-        subject: "TPSI",
+        subject: "",
         course_year_id: "quinto-anno",
         weekly_hours: 4,
         weekly_slots: [
@@ -351,7 +351,7 @@ function syncTracksFromCourseDesign() {
     return {
       id: year.id,
       label: year.title || year.id,
-      subject: existing?.subject || "TPSI",
+      subject: existing?.subject || year.subject || "",
       course_year_id: year.id,
       weekly_hours: existing?.weekly_hours ?? defaultWeeklyHoursForCourseYear(year),
       weekly_slots: existing?.weekly_slots?.length ? existing.weekly_slots : defaultWeeklySlotsForCourseYear(year),
@@ -361,6 +361,8 @@ function syncTracksFromCourseDesign() {
 }
 
 function defaultWeeklyHoursForCourseYear(year) {
+  const explicitHours = Number(year.weekly_hours || 0);
+  if (explicitHours > 0) return explicitHours;
   return /quinto|5/.test(String(`${year.id} ${year.title}`).toLowerCase()) ? 4 : 3;
 }
 
@@ -599,7 +601,7 @@ function renderTracks() {
           <input data-track-field="weekly_hours" type="number" min="0" step="0.5">
         </label>
         <label>
-          <span>Anno percorso</span>
+          <span>Percorso didattico</span>
           <select data-track-field="course_year_id">${courseYearOptions(track.course_year_id || track.id)}</select>
         </label>
       </div>
@@ -773,7 +775,7 @@ function addTrack() {
   const track = {
     id: `percorso-${index}`,
     label: `Percorso ${index}`,
-    subject: "TPSI",
+    subject: "",
     course_year_id: "",
     weekly_hours: 0,
     weekly_slots: [],
@@ -932,6 +934,8 @@ function lessonLabelsByDate() {
 }
 
 function trackShortLabel(track) {
+  const subject = String(track.subject || "").trim();
+  if (subject) return subject;
   const label = String(track.label || track.id || "");
   if (/terzo/i.test(label)) return "III";
   if (/quarto/i.test(label)) return "IV";
@@ -1031,7 +1035,7 @@ function validateCalendar() {
     const weekly = Number(track.weekly_hours || 0);
     if (total > weekly) issues.push(`${track.label || track.id}: gli slot sommano ${total}h ma il limite è ${weekly}h.`);
     if (state.courseDesign && track.course_year_id && !courseYearForTrack(track)) {
-      issues.push(`${track.label || track.id}: anno percorso "${track.course_year_id}" non trovato nel percorso didattico associato.`);
+      issues.push(`${track.label || track.id}: percorso didattico "${track.course_year_id}" non trovato nel progetto associato.`);
     }
     const days = new Set();
     for (const slot of track.weekly_slots || []) {
