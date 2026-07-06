@@ -618,12 +618,12 @@ button:disabled {
 }
 
 .ganttTrackHead strong {
-  font-size: .92rem;
+  font-size: 1.35rem;
 }
 
 .ganttTrackHead span {
   color: var(--muted);
-  font-size: .74rem;
+  font-size: 1.05rem;
 }
 
 .ganttMonths,
@@ -641,7 +641,7 @@ button:disabled {
 .ganttMonths span {
   border-left: 1px solid rgba(17, 17, 17, .12);
   color: #111111;
-  font: 800 .68rem/1 var(--mono);
+  font: 800 1.15rem/1 var(--mono);
   padding: .25rem .3rem;
   text-transform: uppercase;
 }
@@ -659,19 +659,19 @@ button:disabled {
   color: var(--muted);
   display: grid;
   gap: .16rem;
-  font: 700 .62rem/1 var(--mono);
+  font: 700 1rem/1.05 var(--mono);
   padding: .25rem .2rem;
   text-align: center;
 }
 
 .ganttWeeks strong {
   color: #111111;
-  font-size: .66rem;
+  font-size: 1.08rem;
 }
 
 .ganttWeeks small {
   color: var(--muted);
-  font-size: .52rem;
+  font-size: .88rem;
   font-weight: 700;
 }
 
@@ -691,7 +691,7 @@ button:disabled {
   background: #fdecea;
   color: #8f1d14;
   display: grid;
-  font: 800 .58rem/1.1 var(--mono);
+  font: 800 .95rem/1.1 var(--mono);
   min-height: 1.2rem;
   overflow: hidden;
   padding: .18rem .45rem;
@@ -701,19 +701,19 @@ button:disabled {
 
 .ganttBars {
   gap: .35rem 0;
-  min-height: 4.4rem;
+  min-height: 5.4rem;
 }
 
 .ganttBar {
   display: grid;
   align-content: center;
   gap: .34rem;
-  min-height: 4.4rem;
+  min-height: 5.4rem;
   border: 1px solid rgba(17, 17, 17, .24);
   border-radius: 12px;
   background: linear-gradient(135deg, #111111, #3a3a3a);
   color: #ffffff;
-  padding: .7rem .8rem;
+  padding: .85rem 1rem;
   overflow: hidden;
   cursor: pointer;
 }
@@ -739,16 +739,16 @@ button:disabled {
 }
 
 .ganttBarText strong {
-  font: 800 .66rem/1.15 var(--mono);
+  font: 800 1.16rem/1.15 var(--mono);
 }
 
 .ganttBarText span {
-  font-size: .7rem;
+  font-size: 1.08rem;
   opacity: .9;
 }
 
 .ganttBarMeta {
-  font: 800 .62rem/1.15 var(--mono);
+  font: 800 1rem/1.15 var(--mono);
   opacity: .86;
   text-align: right;
 }
@@ -803,7 +803,7 @@ button:disabled {
 
 .ganttDialogHead h2 {
   margin: .15rem 0 0;
-  font-size: 1.1rem;
+  font-size: 1.45rem;
 }
 
 .ganttDialogBody {
@@ -829,13 +829,13 @@ button:disabled {
 
 .ganttDialogMeta strong {
   color: var(--muted);
-  font-size: .66rem;
+  font-size: .95rem;
   text-transform: uppercase;
 }
 
 .ganttDialogBody h3 {
   margin: 0 0 .55rem;
-  font-size: .9rem;
+  font-size: 1.2rem;
 }
 
 .ganttDialogTopics ul {
