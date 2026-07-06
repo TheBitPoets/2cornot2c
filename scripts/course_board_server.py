@@ -737,9 +737,10 @@ def course_plan_system_prompt() -> str:
     """Return the provider-independent instruction for course-plan generation."""
 
     return (
-        "Sei un docente esperto di TPSI e progettazione didattica. "
+        "Sei un docente esperto di progettazione didattica per discipline tecniche e informatiche. "
         "Devi costruire una proposta di percorso annuale usando solo gli id degli argomenti disponibili. "
-        "Rispetta il brief del docente, la progressione didattica, il numero di settimane e gli obiettivi. "
+        "Rispetta il brief del docente, la progressione didattica, il numero di settimane, le ore disponibili e gli obiettivi. "
+        "Il campo brief.description rappresenta gli obiettivi e i criteri principali di selezione: usalo per decidere quali paragrafi e sottoparagrafi includere, escludere o lasciare non assegnati. "
         "Non inventare id. Non duplicare argomenti nello stesso anno. "
         "Se un argomento non e coerente con il brief, lascialo tra gli unplaced_topics spiegando il motivo. "
         "Restituisci solo JSON valido secondo lo schema richiesto."
@@ -1580,8 +1581,11 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             try:
                 design = payload.get("design", {})
                 year_id = payload.get("year_id", "")
+                brief = payload.get("brief", {})
                 ai_payload = {
-                    "brief": payload.get("brief", {}),
+                    "brief": brief,
+                    "selection_objectives": brief.get("description", ""),
+                    "selection_rule": "Usa selection_objectives come criterio principale per scegliere quali paragrafi e sottoparagrafi inserire nelle UDA.",
                     "target_year_id": year_id,
                     "current_course": compact_design(design),
                     "available_topics": heading_catalog_tree(),
