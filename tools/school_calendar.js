@@ -943,6 +943,7 @@ function renderCalendarView() {
   renderValidation();
   renderCalendarViewControls();
   els.monthGrid.innerHTML = "";
+  els.monthGrid.classList.toggle("monthFocusGrid", state.calendarView.mode === "month");
   const start = dateFromInput(state.calendar.start_date);
   const end = dateFromInput(state.calendar.end_date);
   if (!start || !end || start > end) return;
@@ -954,20 +955,27 @@ function renderCalendarView() {
     return;
   }
   const months = state.calendarView.mode === "month"
-    ? selectedCalendarMonth(start, end)
+    ? selectedCalendarMonthContext(start, end)
     : calendarMonths(start, end);
-  for (const month of months) {
-    els.monthGrid.append(renderMonth(month, start, end, lessons, closures));
+  for (const item of months) {
+    const month = item.month || item;
+    const role = item.role || "main";
+    els.monthGrid.append(renderMonth(month, start, end, lessons, closures, role));
   }
 }
 
-function selectedCalendarMonth(start, end) {
+function selectedCalendarMonthContext(start, end) {
   const months = calendarMonths(start, end);
-  const selected = months.find((month) => {
+  const selectedIndex = months.findIndex((month) => {
     const value = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
     return value === state.calendarView.month;
   });
-  return selected ? [selected] : months.slice(0, 1);
+  const index = selectedIndex >= 0 ? selectedIndex : 0;
+  return [
+    months[index - 1] ? { month: months[index - 1], role: "context" } : null,
+    months[index] ? { month: months[index], role: "main" } : null,
+    months[index + 1] ? { month: months[index + 1], role: "context" } : null,
+  ].filter(Boolean);
 }
 
 function selectedCalendarWeek(start, end) {
@@ -997,9 +1005,9 @@ function renderWeek(week, start, end, lessons, closures) {
   return card;
 }
 
-function renderMonth(month, start, end, lessons, closures) {
+function renderMonth(month, start, end, lessons, closures, role = "main") {
   const card = document.createElement("article");
-  card.className = "monthCard";
+  card.className = `monthCard ${role === "context" ? "monthContextCard" : "monthMainCard"}`;
   const title = month.toLocaleDateString("it-IT", { month: "long", year: "numeric" });
   card.innerHTML = `
     <div class="monthTitle ${state.calendarView.mode === "month" ? "monthTitleNav" : ""}">

@@ -437,11 +437,37 @@ button:disabled {
   padding: 1.1rem;
 }
 
+.monthGrid.monthFocusGrid {
+  grid-template-columns: minmax(12rem, .72fr) minmax(20rem, 1.35fr) minmax(12rem, .72fr);
+  align-items: start;
+}
+
 .monthCard {
   border: 1px solid rgba(17, 17, 17, .16);
   border-radius: 18px;
   background: #ffffff;
   overflow: hidden;
+}
+
+.monthContextCard {
+  opacity: .74;
+  transform: scale(.94);
+  transform-origin: top center;
+}
+
+.monthContextCard .dayCell {
+  min-height: 2.25rem;
+  font-size: .58rem;
+  padding: .25rem;
+}
+
+.monthContextCard .dayMeta {
+  max-height: 2.2rem;
+  overflow: hidden;
+}
+
+.monthMainCard {
+  box-shadow: 0 18px 42px rgba(0, 0, 0, .1);
 }
 
 .weekCard {
@@ -556,8 +582,12 @@ button:disabled {
     justify-content: flex-start;
   }
 
-  .grid, .tracks, .summary, .monthGrid, .calendarViewFields {
+  .grid, .tracks, .summary, .monthGrid, .monthGrid.monthFocusGrid, .calendarViewFields {
     grid-template-columns: 1fr;
+  }
+
+  .monthContextCard {
+    transform: none;
   }
 
   .slotRow, .closureRow {
