@@ -1136,6 +1136,7 @@ function openGanttDialog(segment, firstWeek, lastWeek) {
           <input data-actual-field="hours_done" type="number" min="0" step="0.5">
         </label>
       </div>
+      <button type="button" data-action="calculate-actual-hours" title="Calcola le ore svolte usando date reali, slot settimanali e chiusure del calendario.">Calcola ore da calendario</button>
       <label class="actualNotes">
         <span>Note</span>
         <textarea data-actual-field="notes" rows="3" placeholder="Annota recuperi, ritardi, tagli o approfondimenti."></textarea>
@@ -1152,6 +1153,7 @@ function openGanttDialog(segment, firstWeek, lastWeek) {
   els.ganttDialogBody.querySelector('[data-actual-field="end_date"]').value = actual.end_date || "";
   els.ganttDialogBody.querySelector('[data-actual-field="hours_done"]').value = actual.hours_done ?? "";
   els.ganttDialogBody.querySelector('[data-actual-field="notes"]').value = actual.notes || "";
+  els.ganttDialogBody.querySelector('[data-action="calculate-actual-hours"]').addEventListener("click", () => calculateActualHours(segment));
   els.ganttDialogBody.querySelector('[data-action="save-actual"]').addEventListener("click", () => saveActualProgress(segment));
   els.ganttDialog.showModal();
 }
@@ -1207,6 +1209,26 @@ async function saveActualProgress(segment) {
   } catch (error) {
     setStatus(`Salvataggio programmazione svolta non riuscito: ${error.message}`, "error");
   }
+}
+
+function calculateActualHours(segment) {
+  const start = dateFromInput(els.ganttDialogBody.querySelector('[data-actual-field="start_date"]').value || "");
+  const end = dateFromInput(els.ganttDialogBody.querySelector('[data-actual-field="end_date"]').value || "");
+  if (!start || !end || start > end) {
+    setStatus("Inserisci date reali valide prima di calcolare le ore svolte.", "error");
+    return;
+  }
+  const closures = closedLabelsByDate();
+  let hours = 0;
+  for (const date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
+    const iso = isoDate(date);
+    if (closures.has(iso)) continue;
+    hours += (segment.track?.weekly_slots || [])
+      .filter((slot) => DAY_INDEX[slot.day] === date.getDay())
+      .reduce((total, slot) => total + Number(slot.hours || 0), 0);
+  }
+  els.ganttDialogBody.querySelector('[data-actual-field="hours_done"]').value = hours;
+  setStatus(`Ore svolte calcolate dal calendario: ${hours}h.`);
 }
 
 function ganttMonthSegments(weeks) {

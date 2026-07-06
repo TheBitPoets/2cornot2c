@@ -968,6 +968,11 @@ button:disabled {
   margin: .75rem 0;
 }
 
+[data-action="calculate-actual-hours"] {
+  justify-self: start;
+  margin-top: .65rem;
+}
+
 .actualNotes textarea {
   min-height: 5rem;
   resize: vertical;
