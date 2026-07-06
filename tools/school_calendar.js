@@ -1400,7 +1400,7 @@ function actualUdaSegments(track, weeks) {
   return segments;
 }
 
-function renderActualGanttBar(segment, dialogSegment = segment) {
+function renderActualGanttBar(segment, dialogSegment = null) {
   const bar = document.createElement("div");
   const status = segment.actual.status || "todo";
   bar.className = `ganttActualBar ganttActualBar-${status}`;
@@ -1417,12 +1417,21 @@ function renderActualGanttBar(segment, dialogSegment = segment) {
     <strong>${escapeHtml(String(segment.uda.id || "").toUpperCase())}</strong>
     <span>${escapeHtml(segment.hours ? `${segment.hours}h` : status)}</span>
   `;
-  bar.addEventListener("click", () => {
-    const firstWeek = dialogSegment.weeks[0];
-    const lastWeek = dialogSegment.weeks[dialogSegment.weeks.length - 1];
-    openGanttDialog(dialogSegment, firstWeek, lastWeek);
-  });
+  if (dialogSegment?.weeks?.length) {
+    bar.addEventListener("click", () => {
+      const firstWeek = dialogSegment.weeks[0];
+      const lastWeek = dialogSegment.weeks[dialogSegment.weeks.length - 1];
+      openGanttDialog(dialogSegment, firstWeek, lastWeek);
+    });
+  }
   return bar;
+}
+
+function matchesUdaSegment(candidate, segment) {
+  if (candidate.uda === segment.uda) return true;
+  const candidateId = candidate.uda?.id;
+  const segmentId = segment.uda?.id;
+  return Boolean(candidateId && segmentId && candidateId === segmentId);
 }
 
 function renderGanttBarDays(track, segment, closures) {
@@ -1567,8 +1576,8 @@ function renderGanttChart() {
     const actualSegments = actualUdaSegments(track, weeks);
     if (actualSegments.length) {
       for (const segment of actualSegments) {
-        const plannedSegment = plannedSegments.find((candidate) => candidate.uda === segment.uda || candidate.uda.id === segment.uda.id);
-        actualBars.append(renderActualGanttBar(segment, plannedSegment || segment));
+        const plannedSegment = plannedSegments.find((candidate) => matchesUdaSegment(candidate, segment));
+        actualBars.append(renderActualGanttBar(segment, plannedSegment));
       }
     } else {
       const empty = document.createElement("div");
