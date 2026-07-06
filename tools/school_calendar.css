@@ -701,19 +701,19 @@ button:disabled {
 
 .ganttBars {
   gap: .35rem 0;
-  min-height: 3.7rem;
+  min-height: 4.4rem;
 }
 
 .ganttBar {
   display: grid;
   align-content: center;
   gap: .34rem;
-  min-height: 3.7rem;
+  min-height: 4.4rem;
   border: 1px solid rgba(17, 17, 17, .24);
   border-radius: 12px;
   background: linear-gradient(135deg, #111111, #3a3a3a);
   color: #ffffff;
-  padding: .55rem .7rem;
+  padding: .7rem .8rem;
   overflow: hidden;
   cursor: pointer;
 }
@@ -760,7 +760,7 @@ button:disabled {
 }
 
 .ganttBarDay {
-  min-height: .52rem;
+  min-height: .68rem;
   border-radius: 999px;
   background: rgba(255, 255, 255, .18);
 }
