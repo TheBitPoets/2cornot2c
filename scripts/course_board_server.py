@@ -175,6 +175,34 @@ def write_saved_design(name: str, payload: dict) -> dict:
     return {"name": path.name, "path": str(path.relative_to(ROOT))}
 
 
+def delete_saved_design(name: str, delete_calendars: bool = False, calendars: list[str] | None = None) -> dict:
+    """Delete an archived course design and, optionally, its linked calendars."""
+
+    safe_name = safe_design_name(name)
+    path = saved_design_path(safe_name)
+    if not path.is_file():
+        raise FileNotFoundError(f"Percorso salvato non trovato: {safe_name}")
+    path.unlink()
+    deleted_calendars = []
+    if delete_calendars:
+        for calendar_name in calendars or []:
+            safe_calendar_name = safe_design_name(calendar_name)
+            calendar_path = school_calendar_path(safe_calendar_name)
+            if not calendar_path.is_file():
+                continue
+            payload = json.loads(calendar_path.read_text(encoding="utf-8-sig"))
+            if payload.get("course_design_name", "") != safe_name:
+                continue
+            calendar_path.unlink()
+            deleted_calendars.append(safe_calendar_name)
+    return {
+        "name": safe_name,
+        "deleted_calendars": deleted_calendars,
+        "designs": list_saved_designs(),
+        "calendars": list_school_calendars(),
+    }
+
+
 def list_school_calendars() -> list[dict]:
     """List saved school calendars stored in doc/calendars."""
 
@@ -1513,6 +1541,19 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             try:
                 saved = write_saved_design(payload.get("name", ""), payload.get("design", {}))
                 self.write_json({"ok": True, "saved": saved, "designs": list_saved_designs()})
+            except Exception as error:  # noqa: BLE001
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+            return
+        if parsed.path == "/api/saved-designs/delete":
+            try:
+                self.write_json(delete_saved_design(
+                    payload.get("name", ""),
+                    bool(payload.get("delete_calendars", False)),
+                    payload.get("calendars", []),
+                ))
             except Exception as error:  # noqa: BLE001
                 self.send_response(400)
                 self.send_header("Content-Type", "application/json; charset=utf-8")

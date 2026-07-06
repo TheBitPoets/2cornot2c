@@ -32,6 +32,7 @@ const els = {
   newDesignBtn: document.querySelector("#newDesignBtn"),
   saveArchiveBtn: document.querySelector("#saveArchiveBtn"),
   saveArchiveAsBtn: document.querySelector("#saveArchiveAsBtn"),
+  deleteArchiveBtn: document.querySelector("#deleteArchiveBtn"),
   generateAllFramesBtn: document.querySelector("#generateAllFramesBtn"),
   generateCoursePlanMdBtn: document.querySelector("#generateCoursePlanMdBtn"),
   updateReadmeFramesBtn: document.querySelector("#updateReadmeFramesBtn"),
@@ -292,6 +293,10 @@ function renderCourseActions() {
     els.saveArchiveBtn.title = "Salva il nuovo progetto nell'archivio dei progetti didattici.";
   }
   els.saveArchiveAsBtn.title = "Salva una copia del progetto con un nuovo nome nell'archivio; poi potrai impostarla come progetto corrente.";
+  els.deleteArchiveBtn.disabled = isCurrent;
+  els.deleteArchiveBtn.title = isCurrent
+    ? "Il progetto corrente doc/course_design.json non puo essere eliminato dalla board."
+    : `Cancella il progetto archiviato ${state.activeSavedDesign}.`;
   els.saveBtn.disabled = isCurrent;
   els.saveBtn.title = isCurrent
     ? "Il progetto corrente e gia caricato: non serve impostarlo di nuovo."
@@ -413,6 +418,62 @@ async function saveCurrentProject() {
   renderProjectTitle();
   renderCourseActions();
   setStatus("Progetto corrente salvato in doc/course_design.json.");
+}
+
+async function deleteArchiveDesign() {
+  if (!state.activeSavedDesign) {
+    setStatus("Il progetto corrente non si cancella: puoi sovrascriverlo o salvare un altro progetto come corrente.");
+    renderCourseActions();
+    return;
+  }
+  const name = state.activeSavedDesign;
+  const calendarsPayload = await api("/api/school-calendars");
+  const linkedCalendars = (calendarsPayload.calendars || []).filter((calendar) => (calendar.course_design_name || "") === name);
+  let deleteCalendars = false;
+  if (linkedCalendars.length) {
+    const calendarList = linkedCalendars.map((calendar) => `- ${calendar.name}`).join("\n");
+    const choice = prompt(
+      `Il progetto "${name}" ha ${linkedCalendars.length} calendario/i associato/i:\n\n${calendarList}\n\n` +
+      "Scrivi:\n" +
+      "- progetto: cancella solo il progetto\n" +
+      "- tutto: cancella progetto e calendari associati\n" +
+      "- annulla: interrompi"
+    );
+    const normalized = (choice || "").trim().toLowerCase();
+    if (!normalized || normalized === "annulla") return;
+    if (normalized === "tutto") {
+      deleteCalendars = true;
+    } else if (normalized !== "progetto") {
+      setStatus("Cancellazione annullata: scelta non riconosciuta.");
+      return;
+    }
+  } else if (!confirm(`Cancellare definitivamente il progetto archiviato "${name}"?`)) {
+    return;
+  }
+  setStatus(`Cancellazione progetto "${name}"...`);
+  const payload = await api("/api/saved-designs/delete", {
+    method: "POST",
+    body: JSON.stringify({
+      name,
+      delete_calendars: deleteCalendars,
+      calendars: linkedCalendars.map((calendar) => calendar.name),
+    }),
+  });
+  state.savedDesigns = payload.designs || [];
+  localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
+  sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
+  state.design = await api("/api/course-design");
+  state.activeSavedDesign = "";
+  state.isNewDesign = false;
+  renderSavedDesigns();
+  renderProjectTitle();
+  renderHeadings();
+  renderCourse();
+  renderCourseActions();
+  const removedCalendars = payload.deleted_calendars?.length
+    ? ` Calendari eliminati: ${payload.deleted_calendars.join(", ")}.`
+    : "";
+  setStatus(`Progetto archiviato eliminato: ${name}.${removedCalendars}`);
 }
 
 async function newCourseDesign() {
@@ -1637,6 +1698,7 @@ els.loadSavedDesignBtn.addEventListener("click", openSavedDesignPicker);
 els.newDesignBtn.addEventListener("click", newCourseDesign);
 els.saveArchiveBtn.addEventListener("click", saveArchiveDesign);
 els.saveArchiveAsBtn.addEventListener("click", saveArchiveDesignAs);
+els.deleteArchiveBtn.addEventListener("click", deleteArchiveDesign);
 els.addYearBtn.addEventListener("click", openYearDialog);
 els.yearCloseBtn.addEventListener("click", () => els.yearDialog.close());
 els.yearCancelBtn.addEventListener("click", () => els.yearDialog.close());

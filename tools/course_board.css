@@ -193,6 +193,15 @@ button, .buttonLink {
 }
 
 button.primary { background: var(--accent); border-color: var(--accent); color: white; }
+button.danger {
+  border-color: #8f2d2d;
+  color: #8f2d2d;
+}
+
+button.danger:not(:disabled):hover {
+  background: #fff5f5;
+}
+
 button:hover, .buttonLink:hover { transform: translateY(-1px); }
 
 button:disabled,
