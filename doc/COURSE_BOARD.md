@@ -1856,6 +1856,8 @@ Classifiche possibili:
 
 Da evitare una classifica basata solo sul voto assoluto, per non demotivare chi parte piu indietro.
 
+La visibilita delle classifiche deve essere progettata con attenzione. Le classifiche possono essere anonime, visibili solo al docente, visibili solo allo studente rispetto al proprio progresso, oppure pubbliche solo per indicatori positivi e non sensibili. La scelta deve evitare esposizione, confronto punitivo o pressione eccessiva sugli studenti in difficolta.
+
 #### PR 10 - Correzione AI controllata e report finale
 
 Obiettivo: usare AI per feedback, motivazioni e giudizio naturale, non per sostituire i test deterministici.
