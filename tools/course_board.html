@@ -23,17 +23,17 @@
     <div class="heroTools">
       <div class="actions">
         <div class="courseLoadMenu">
-          <button id="loadSavedDesignBtn" type="button" aria-expanded="false" title="Apre il menu dei percorsi disponibili e carica quello selezionato.">Carica percorso</button>
+          <button id="loadSavedDesignBtn" type="button" aria-expanded="false" title="Apre il menu dei progetti didattici disponibili e carica quello selezionato.">Apri progetto</button>
           <div id="savedDesignMenu" class="courseLoadDropdown" hidden></div>
         </div>
-        <button id="newDesignBtn" type="button" title="Crea un percorso vuoto da salvare poi con Salva percorso o Salva con nome percorso.">Nuovo percorso</button>
-        <button id="saveArchiveBtn" type="button" title="Salva il percorso attuale nell'archivio doc/course_designs. Se non ha ancora un nome, lo chiede.">Salva percorso</button>
-        <button id="saveArchiveAsBtn" type="button" title="Salva il percorso attuale con un nuovo nome nell'archivio doc/course_designs.">Salva con nome percorso</button>
+        <button id="newDesignBtn" type="button" title="Crea un nuovo progetto didattico e lo salva nell'archivio.">Nuovo progetto</button>
+        <button id="saveArchiveBtn" type="button" title="Salva il progetto didattico attuale nell'archivio doc/course_designs. Se non ha ancora un nome, lo chiede.">Salva progetto</button>
+        <button id="saveArchiveAsBtn" type="button" title="Salva il progetto didattico attuale con un nuovo nome nell'archivio doc/course_designs.">Salva progetto con nome</button>
         <button id="generateAllFramesBtn" type="button" title="Usa il provider AI configurato e apre una coda controllata per generare le cornici didattiche del percorso.">AI genera cornici</button>
         <button id="generateCoursePlanMdBtn" type="button" title="Salva il JSON corrente e rigenera doc/PERCORSO_DIDATTICO.md.">Aggiorna percorso MD</button>
         <button id="updateReadmeFramesBtn" type="button" title="Salva il JSON corrente e inserisce le cornici didattiche nei paragrafi del README.md.">Aggiorna README</button>
         <button id="reloadBtn" type="button" title="Ricarica headings, percorso, archivi e configurazione AI dalla sorgente locale.">Ricarica</button>
-        <button id="saveBtn" type="button" class="primary" title="Imposta il percorso caricato come percorso corrente, sovrascrivendo doc/course_design.json dopo conferma esplicita.">Imposta corrente</button>
+        <button id="saveBtn" type="button" class="primary" title="Imposta il progetto caricato come progetto corrente, sovrascrivendo doc/course_design.json dopo conferma esplicita.">Imposta corrente</button>
       </div>
     </div>
   </header>
@@ -58,7 +58,7 @@
 
     <section class="panel planner">
       <div class="panelHead">
-        <h2>Percorso didattico</h2>
+        <h2 id="projectTitle">Progetto didattico: doc/course_design.json</h2>
         <p id="status" class="status">Pronto.</p>
         <p id="aiConfig" class="aiConfig">AI: configurazione non caricata.</p>
         <button id="addYearBtn" type="button" title="Aggiunge esplicitamente un percorso didattico di materia/anno con settimane e ore personalizzate.">Aggiungi percorso</button>

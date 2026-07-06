@@ -23,6 +23,7 @@ const els = {
   levelFilter: document.querySelector("#levelFilter"),
   searchInput: document.querySelector("#searchInput"),
   courseTree: document.querySelector("#courseTree"),
+  projectTitle: document.querySelector("#projectTitle"),
   status: document.querySelector("#status"),
   aiConfig: document.querySelector("#aiConfig"),
   loadSavedDesignBtn: document.querySelector("#loadSavedDesignBtn"),
@@ -241,6 +242,7 @@ async function loadAll() {
   populateFilters();
   renderAiConfig();
   renderSavedDesigns();
+  renderProjectTitle();
   renderHeadings();
   renderCourse();
   setStatus("Pronto.");
@@ -251,7 +253,7 @@ function renderSavedDesigns() {
   const currentButton = document.createElement("button");
   currentButton.type = "button";
   currentButton.className = "courseLoadItem";
-  currentButton.textContent = "Percorso corrente (doc/course_design.json)";
+  currentButton.textContent = "Progetto corrente (doc/course_design.json)";
   currentButton.addEventListener("click", () => loadDesignFromMenu("__current__"));
   els.savedDesignMenu.append(currentButton);
   for (const design of state.savedDesigns) {
@@ -265,12 +267,20 @@ function renderSavedDesigns() {
   renderCourseActions();
 }
 
+function projectDisplayName() {
+  return state.activeSavedDesign || "doc/course_design.json";
+}
+
+function renderProjectTitle() {
+  els.projectTitle.textContent = `Progetto didattico: ${projectDisplayName()}`;
+}
+
 function renderCourseActions() {
   const isCurrent = !state.activeSavedDesign && !state.isNewDesign;
   els.saveBtn.disabled = isCurrent;
   els.saveBtn.title = isCurrent
-    ? "Il percorso corrente e gia caricato: non serve impostarlo di nuovo."
-    : "Imposta il percorso caricato come percorso corrente, sovrascrivendo doc/course_design.json dopo conferma esplicita.";
+    ? "Il progetto corrente e gia caricato: non serve impostarlo di nuovo."
+    : "Imposta il progetto caricato come progetto corrente, sovrascrivendo doc/course_design.json dopo conferma esplicita.";
 }
 
 function openSavedDesignPicker() {
@@ -294,23 +304,24 @@ async function loadDesignFromMenu(name) {
 }
 
 async function loadCurrentDesign() {
-  if (!confirm("Caricare il percorso corrente da doc/course_design.json? Le modifiche non salvate nella vista corrente saranno perse.")) return;
-  setStatus("Caricamento percorso corrente...");
+  if (!confirm("Caricare il progetto corrente da doc/course_design.json? Le modifiche non salvate nella vista corrente saranno perse.")) return;
+  setStatus("Caricamento progetto corrente...");
   state.design = await api("/api/course-design");
   state.activeSavedDesign = "";
   state.isNewDesign = false;
   localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
   renderSavedDesigns();
+  renderProjectTitle();
   renderHeadings();
   renderCourse();
   renderCourseActions();
-  setStatus("Percorso corrente caricato da doc/course_design.json.");
+  setStatus("Progetto corrente caricato da doc/course_design.json.");
 }
 
 async function loadSavedDesignByName(name, options = {}) {
   const { confirmFirst = true, render = true } = options;
   if (confirmFirst && !confirm(`Caricare "${name}" nella board? Le modifiche non salvate nella vista corrente saranno perse.`)) return;
-  setStatus(`Caricamento percorso salvato "${name}"...`);
+  setStatus(`Caricamento progetto salvato "${name}"...`);
   const payload = await api("/api/saved-designs/load", {
     method: "POST",
     body: JSON.stringify({ name }),
@@ -321,11 +332,12 @@ async function loadSavedDesignByName(name, options = {}) {
   localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, name);
   if (render) {
     renderSavedDesigns();
+    renderProjectTitle();
     renderHeadings();
     renderCourse();
     renderCourseActions();
   }
-  setStatus(`Percorso "${name}" caricato. Usa "Salva percorso" per aggiornare l'archivio o "Imposta corrente" per sovrascrivere doc/course_design.json.`);
+  setStatus(`Progetto "${name}" caricato. Usa "Salva progetto" per aggiornare l'archivio o "Imposta corrente" per sovrascrivere doc/course_design.json.`);
 }
 
 async function saveArchiveDesign() {
@@ -357,8 +369,9 @@ async function saveArchiveDesignWithName(name) {
   state.isNewDesign = false;
   localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, state.activeSavedDesign);
   renderSavedDesigns();
+  renderProjectTitle();
   renderCourseActions();
-  setStatus(`Percorso salvato in archivio: ${state.activeSavedDesign}.`);
+  setStatus(`Progetto salvato in archivio: ${state.activeSavedDesign}.`);
 }
 
 async function newCourseDesign() {
@@ -370,10 +383,11 @@ async function newCourseDesign() {
   state.isNewDesign = false;
   await saveArchiveDesignWithName(name);
   renderSavedDesigns();
+  renderProjectTitle();
   renderHeadings();
   renderCourse();
   renderCourseActions();
-  setStatus(`Nuovo percorso "${name}" creato e salvato in archivio.`);
+  setStatus(`Nuovo progetto "${name}" creato e salvato in archivio.`);
 }
 
 function renderAiConfig() {
@@ -1512,7 +1526,7 @@ function toggleCourseItem(collapseKey) {
 
 async function saveDesign() {
   if (!state.activeSavedDesign && !state.isNewDesign) {
-    setStatus("Il percorso corrente e gia caricato: non serve impostarlo di nuovo.");
+    setStatus("Il progetto corrente e gia caricato: non serve impostarlo di nuovo.");
     renderCourseActions();
     return;
   }
@@ -1530,8 +1544,9 @@ async function saveDesign() {
   state.activeSavedDesign = "";
   state.isNewDesign = false;
   renderSavedDesigns();
+  renderProjectTitle();
   renderCourseActions();
-  setStatus("Percorso impostato come corrente in doc/course_design.json.");
+  setStatus("Progetto impostato come corrente in doc/course_design.json.");
 }
 
 async function generateCoursePlanMd() {
