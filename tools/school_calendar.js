@@ -45,6 +45,11 @@ const state = {
   calendar: defaultCalendar(),
   courseDesign: null,
   visibleTrackIds: null,
+  calendarView: {
+    mode: "year",
+    month: "",
+    week: "",
+  },
   statusTimer: null,
 };
 
@@ -225,6 +230,7 @@ function renderAll() {
   syncCalendarToForm();
   renderTracks();
   renderClosures();
+  renderCalendarViewControls();
   renderTrackFilters();
   renderCalendarView();
   renderSummary();
@@ -312,6 +318,75 @@ function renderTrackFilters() {
     state.visibleTrackIds = new Set();
     renderTrackFilters();
     renderCalendarView();
+  });
+}
+
+function ensureCalendarViewControlsPanel() {
+  let panel = document.querySelector("#calendarViewControls");
+  if (panel) return panel;
+  panel = document.createElement("section");
+  panel.id = "calendarViewControls";
+  panel.className = "calendarViewControls";
+  els.monthGrid.parentElement.insertBefore(panel, els.monthGrid);
+  return panel;
+}
+
+function renderCalendarViewControls() {
+  const panel = ensureCalendarViewControlsPanel();
+  const start = dateFromInput(state.calendar.start_date);
+  const end = dateFromInput(state.calendar.end_date);
+  if (!start || !end || start > end) {
+    panel.innerHTML = "";
+    return;
+  }
+  const months = calendarMonths(start, end);
+  const weeks = calendarWeeks(start, end);
+  if (!state.calendarView.month && months.length) {
+    state.calendarView.month = `${months[0].getFullYear()}-${String(months[0].getMonth() + 1).padStart(2, "0")}`;
+  }
+  if (!state.calendarView.week && weeks.length) {
+    state.calendarView.week = isoDate(weeks[0].start);
+  }
+  const monthOptions = months.map((month) => {
+    const value = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
+    const label = month.toLocaleDateString("it-IT", { month: "long", year: "numeric" });
+    return `<option value="${value}"${state.calendarView.month === value ? " selected" : ""}>${escapeHtml(label)}</option>`;
+  });
+  const weekOptions = weeks.map((week, index) => {
+    const value = isoDate(week.start);
+    const label = `Settimana ${index + 1}: ${week.start.toLocaleDateString("it-IT")} - ${week.end.toLocaleDateString("it-IT")}`;
+    return `<option value="${value}"${state.calendarView.week === value ? " selected" : ""}>${escapeHtml(label)}</option>`;
+  });
+  panel.innerHTML = `
+    <div class="calendarViewHead">
+      <strong>Vista calendario</strong>
+      <span>Regola lo zoom temporale senza modificare il calendario salvato.</span>
+    </div>
+    <div class="calendarViewFields">
+      <label>
+        <span>Modalita</span>
+        <select data-calendar-view="mode">
+          <option value="year"${state.calendarView.mode === "year" ? " selected" : ""}>Anno</option>
+          <option value="month"${state.calendarView.mode === "month" ? " selected" : ""}>Mese</option>
+          <option value="week"${state.calendarView.mode === "week" ? " selected" : ""}>Settimana</option>
+        </select>
+      </label>
+      <label class="${state.calendarView.mode === "month" ? "" : "isHidden"}">
+        <span>Mese</span>
+        <select data-calendar-view="month">${monthOptions.join("")}</select>
+      </label>
+      <label class="${state.calendarView.mode === "week" ? "" : "isHidden"}">
+        <span>Settimana</span>
+        <select data-calendar-view="week">${weekOptions.join("")}</select>
+      </label>
+    </div>
+  `;
+  panel.querySelectorAll("[data-calendar-view]").forEach((input) => {
+    const field = input.dataset.calendarView;
+    input.addEventListener("change", () => {
+      state.calendarView[field] = input.value;
+      renderCalendarView();
+    });
   });
 }
 
@@ -749,6 +824,21 @@ function calendarMonths(start, end) {
   return months;
 }
 
+function calendarWeeks(start, end) {
+  const weeks = [];
+  if (!start || !end || start > end) return weeks;
+  const cursor = new Date(start);
+  const offset = (cursor.getDay() + 6) % 7;
+  cursor.setDate(cursor.getDate() - offset);
+  while (cursor <= end) {
+    const weekStart = new Date(cursor);
+    const weekEnd = addDays(weekStart, 6);
+    weeks.push({ start: weekStart, end: weekEnd });
+    cursor.setDate(cursor.getDate() + 7);
+  }
+  return weeks;
+}
+
 function validateCalendar() {
   const issues = [];
   const start = dateFromInput(state.calendar.start_date);
@@ -803,15 +893,55 @@ function renderValidation() {
 function renderCalendarView() {
   syncFormToCalendar();
   renderValidation();
+  renderCalendarViewControls();
   els.monthGrid.innerHTML = "";
   const start = dateFromInput(state.calendar.start_date);
   const end = dateFromInput(state.calendar.end_date);
   if (!start || !end || start > end) return;
   const closures = closedLabelsByDate();
   const lessons = lessonLabelsByDate();
-  for (const month of calendarMonths(start, end)) {
+  if (state.calendarView.mode === "week") {
+    const week = selectedCalendarWeek(start, end);
+    if (week) els.monthGrid.append(renderWeek(week, start, end, lessons, closures));
+    return;
+  }
+  const months = state.calendarView.mode === "month"
+    ? selectedCalendarMonth(start, end)
+    : calendarMonths(start, end);
+  for (const month of months) {
     els.monthGrid.append(renderMonth(month, start, end, lessons, closures));
   }
+}
+
+function selectedCalendarMonth(start, end) {
+  const months = calendarMonths(start, end);
+  const selected = months.find((month) => {
+    const value = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
+    return value === state.calendarView.month;
+  });
+  return selected ? [selected] : months.slice(0, 1);
+}
+
+function selectedCalendarWeek(start, end) {
+  const weeks = calendarWeeks(start, end);
+  return weeks.find((week) => isoDate(week.start) === state.calendarView.week) || weeks[0] || null;
+}
+
+function renderWeek(week, start, end, lessons, closures) {
+  const card = document.createElement("article");
+  card.className = "monthCard weekCard";
+  card.innerHTML = `
+    <h3 class="monthTitle">Settimana: ${escapeHtml(week.start.toLocaleDateString("it-IT"))} - ${escapeHtml(week.end.toLocaleDateString("it-IT"))}</h3>
+    <div class="monthWeekdays">
+      <span>Lun</span><span>Mar</span><span>Mer</span><span>Gio</span><span>Ven</span><span>Sab</span><span>Dom</span>
+    </div>
+    <div class="monthDays weekDays"></div>
+  `;
+  const days = card.querySelector(".monthDays");
+  for (const date = new Date(week.start); date <= week.end; date.setDate(date.getDate() + 1)) {
+    days.append(renderDayCell(date, week.start, start, end, lessons, closures));
+  }
+  return card;
 }
 
 function renderMonth(month, start, end, lessons, closures) {

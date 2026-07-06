@@ -339,6 +339,38 @@ th {
   color: #0f6b3d;
 }
 
+.calendarViewControls {
+  display: grid;
+  gap: .8rem;
+  margin: 1.1rem 1.1rem 0;
+  border: 1px solid rgba(17, 17, 17, .16);
+  border-radius: 18px;
+  background: #ffffff;
+  padding: .9rem;
+}
+
+.calendarViewHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.calendarViewHead span {
+  color: var(--muted);
+  font-size: .74rem;
+}
+
+.calendarViewFields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .75rem;
+}
+
+.calendarViewFields label.isHidden {
+  display: none;
+}
+
 .trackFilters {
   display: grid;
   gap: .8rem;
@@ -405,6 +437,10 @@ th {
   overflow: hidden;
 }
 
+.weekCard {
+  grid-column: 1 / -1;
+}
+
 .monthTitle {
   margin: 0;
   border-bottom: 1px solid var(--line);
@@ -435,6 +471,10 @@ th {
   background: #ffffff;
   font-size: .68rem;
   padding: .35rem;
+}
+
+.weekDays .dayCell {
+  min-height: 8rem;
 }
 
 .dayCell:nth-child(7n + 1) {
@@ -485,7 +525,7 @@ th {
     justify-content: flex-start;
   }
 
-  .grid, .tracks, .summary, .monthGrid {
+  .grid, .tracks, .summary, .monthGrid, .calendarViewFields {
     grid-template-columns: 1fr;
   }
 
