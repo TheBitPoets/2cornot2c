@@ -1658,6 +1658,8 @@ GitHub Actions:
 - eseguire test JavaScript;
 - tenere eventuali test Playwright separati o opzionali se diventano pesanti.
 
+La suite frontend dovrebbe distinguere due livelli: uno smoke test obbligatorio, leggero e veloce, che verifica almeno avvio server, apertura board e rendering base senza errori; e test E2E estesi, piu lenti, che possono restare opzionali, manuali o eseguiti solo in workflow dedicati.
+
 #### PR 1.2 - Primo set di test di regressione
 
 Obiettivo: coprire subito i flussi che si sono dimostrati piu delicati durante lo sviluppo.
