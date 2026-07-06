@@ -1097,6 +1097,32 @@ function shortDate(date) {
   return date.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" });
 }
 
+function renderGanttBarDays(track, segment, closures) {
+  const strip = document.createElement("div");
+  strip.className = "ganttBarDays";
+  strip.style.gridTemplateColumns = `repeat(${segment.weeks.length * 7}, minmax(.34rem, 1fr))`;
+  for (const week of segment.weeks) {
+    for (let offset = 0; offset < 7; offset += 1) {
+      const date = addDays(week.start, offset);
+      const iso = isoDate(date);
+      const day = document.createElement("span");
+      const hasLesson = (track.weekly_slots || []).some((slot) => DAY_INDEX[slot.day] === date.getDay() && Number(slot.hours || 0) > 0);
+      if (closures.has(iso)) {
+        day.className = "ganttBarDay ganttBarDayClosed";
+        day.title = `${date.toLocaleDateString("it-IT")} - ${closures.get(iso)}`;
+      } else if (hasLesson) {
+        day.className = "ganttBarDay ganttBarDayLesson";
+        day.title = `${date.toLocaleDateString("it-IT")} - lezione`;
+      } else {
+        day.className = "ganttBarDay";
+        day.title = date.toLocaleDateString("it-IT");
+      }
+      strip.append(day);
+    }
+  }
+  return strip;
+}
+
 function renderGanttChart() {
   syncFormToCalendar();
   els.ganttChart.innerHTML = "";
@@ -1182,6 +1208,7 @@ function renderGanttChart() {
         <strong>${escapeHtml(String(segment.uda.id || "").toUpperCase())}</strong>
         <span>${escapeHtml(segment.uda.title || "UDA senza titolo")}</span>
       `;
+      bar.append(renderGanttBarDays(track, segment, closures));
       bars.append(bar);
     }
     els.ganttChart.append(row);

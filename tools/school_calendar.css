@@ -693,6 +693,7 @@ button:disabled {
 .ganttBar {
   display: grid;
   align-content: center;
+  gap: .34rem;
   min-height: 2.7rem;
   border: 1px solid rgba(17, 17, 17, .24);
   border-radius: 12px;
@@ -716,6 +717,26 @@ button:disabled {
 .ganttBar span {
   font-size: .7rem;
   opacity: .9;
+}
+
+.ganttBarDays {
+  display: grid;
+  gap: .12rem;
+  margin-top: .08rem;
+}
+
+.ganttBarDay {
+  min-height: .38rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .18);
+}
+
+.ganttBarDayLesson {
+  background: #39d98a;
+}
+
+.ganttBarDayClosed {
+  background: #ff5c4d;
 }
 
 @media (max-width: 950px) {
