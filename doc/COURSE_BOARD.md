@@ -1636,6 +1636,8 @@ Test frontend JavaScript:
 - valutare `vitest` per le funzioni JS pure;
 - evitare test fragili legati solo alla struttura visiva.
 
+Prima di introdurre test unitari frontend estesi puo essere necessario separare la logica pura dalla manipolazione diretta del DOM. Le funzioni che calcolano settimane, ore, segmenti Gantt, associazioni UDA e validazioni dovrebbero essere estraibili o esportabili in modo testabile. Il codice che aggiorna la pagina resta nella UI, mentre la logica deterministica va resa invocabile dai test senza aprire il browser.
+
 Test end-to-end:
 
 - usare pochi test browser mirati, per esempio con Playwright;
