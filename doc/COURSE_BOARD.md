@@ -30,9 +30,10 @@ http://127.0.0.1:8765/tools/school_calendar.html
 - permette di trascinare un paragrafo dentro una UDA;
 - permette di riordinare e rimuovere gli elementi assegnati;
 - permette di compilare una cornice didattica per ogni argomento assegnato;
-- permette di generare una proposta di percorso annuale con `AI assisted percorso`;
+- permette di generare una proposta di percorso annuale con `AI genera percorso`;
 - permette di generare le cornici didattiche per tutto il percorso;
-- permette di archiviare e ricaricare piu versioni del percorso didattico;
+- permette di creare, salvare, ricaricare, impostare come corrente e cancellare progetti didattici archiviati;
+- mantiene sincronizzati progetto didattico e calendario scolastico associato;
 - salva la struttura in `doc/course_design.json`;
 - genera `doc/PERCORSO_DIDATTICO.md` a partire dal JSON della board.
 
@@ -50,6 +51,20 @@ Esempio:
 
 ```text
 doc/calendars/as_2026_2027.json
+```
+
+Ogni calendario puo essere associato a un progetto didattico tramite il campo:
+
+```json
+{
+  "course_design_name": "course_design_as_26_27.json"
+}
+```
+
+Se `course_design_name` e vuoto, il calendario e associato al progetto corrente:
+
+```text
+doc/course_design.json
 ```
 
 ### Cosa contiene il calendario
@@ -122,7 +137,7 @@ Questi dati saranno poi usati per costruire la vista cronologica/Gantt del perco
 
 ## Archivio dei percorsi didattici
 
-La board usa `doc/course_design.json` come percorso didattico corrente.
+La board usa `doc/course_design.json` come progetto didattico corrente.
 
 Per conservare versioni diverse, per esempio per anni scolastici differenti, puoi usare l'archivio:
 
@@ -137,38 +152,220 @@ course_design_as_24_25.json
 course_design_as_25_26.json
 ```
 
-### Salvare o aggiornare una versione in archivio
+### Differenza tra progetto corrente e progetti archiviati
 
-1. Modifica la board.
-2. Clicca `Aggiorna archivio`.
-3. Inserisci un nome file `.json`.
-4. La board salva una copia in `doc/course_designs/`.
-
-Il nome puo contenere solo lettere, numeri, trattino, underscore, punto e deve terminare con `.json`.
-
-### Caricare una versione salvata
-
-1. Scegli un file dal select `Percorsi salvati`.
-2. Clicca `Carica archiviato`.
-3. La board sostituisce la vista corrente con il JSON archiviato.
-4. Modifica il percorso normalmente.
-5. Usa `Aggiorna archivio` per aggiornare il file archiviato oppure `Imposta corrente` per renderlo il percorso corrente.
-
-### Differenza tra Imposta corrente e Aggiorna archivio
-
-`Imposta corrente` aggiorna:
+Il progetto corrente e il file stabile usato dagli script quando non specifichi un input diverso:
 
 ```text
 doc/course_design.json
 ```
 
-`Aggiorna archivio` aggiorna o crea un file dentro:
+I progetti archiviati sono copie nominative salvate in:
 
 ```text
 doc/course_designs/
 ```
 
-In questo modo puoi mantenere piu percorsi didattici storici o alternativi senza sovrascrivere sempre il percorso corrente.
+La board mostra il nome del file caricato nel titolo:
+
+```text
+Progetto didattico: doc/course_design.json
+```
+
+oppure:
+
+```text
+Progetto didattico: course_design_as_26_27.json
+```
+
+### Aprire un progetto
+
+Usa `Apri progetto`.
+
+Il menu contiene:
+
+- `Progetto corrente (doc/course_design.json)`;
+- tutti i file `.json` presenti in `doc/course_designs/`.
+
+Quando apri un progetto archiviato, la board salva in sessione il progetto attivo. Se passi alla pagina calendario e poi torni alla board nella stessa sessione, ritrovi lo stesso progetto.
+
+Quando apri una nuova sessione di lavoro, la board parte dal progetto corrente `doc/course_design.json`.
+
+### Creare un nuovo progetto
+
+1. Clicca `Nuovo progetto`.
+2. Inserisci il nome del file `.json`.
+3. La board crea un progetto vuoto e lo salva subito in `doc/course_designs/`.
+4. Aggiungi uno o piu percorsi didattici interni con `Aggiungi percorso`.
+
+Un progetto didattico puo contenere piu percorsi didattici interni. Per esempio:
+
+- TPSI terzo anno;
+- TPSI quarto anno;
+- TPSI quinto anno;
+- Sistemi e reti quarto anno;
+- Informatica primo anno;
+- un percorso non scolastico, senza materia e senza anno.
+
+### Salvare il progetto caricato
+
+Usa `Salva progetto`.
+
+Il bottone e contestuale:
+
+- se stai lavorando su `doc/course_design.json`, salva direttamente `doc/course_design.json`;
+- se stai lavorando su un progetto archiviato, aggiorna quel file in `doc/course_designs/`.
+
+Quindi, se hai caricato il progetto corrente e vuoi solo salvare le modifiche, devi cliccare:
+
+```text
+Salva progetto
+```
+
+Non viene chiesto un nuovo nome.
+
+### Salvare una copia con un nuovo nome
+
+Usa `Salva progetto con nome`.
+
+La board chiede un nome file `.json` e salva una copia in:
+
+```text
+doc/course_designs/
+```
+
+Dopo questa operazione stai lavorando sulla copia archiviata. Il bottone `Imposta corrente` torna attivo, perche puoi decidere se rendere quella copia il nuovo progetto corrente.
+
+Il nome puo contenere solo lettere, numeri, trattino, underscore, punto e deve terminare con `.json`.
+
+### Impostare un progetto come corrente
+
+Usa `Imposta corrente` quando hai caricato un progetto archiviato e vuoi sovrascrivere:
+
+```text
+doc/course_design.json
+```
+
+La board chiede una conferma esplicita prima di sovrascrivere il progetto corrente.
+
+Se sei gia sul progetto corrente, `Imposta corrente` e disabilitato: non serve impostare come corrente qualcosa che lo e gia.
+
+### Cancellare un progetto archiviato
+
+Usa `Cancella progetto`.
+
+Il bottone e disponibile solo se hai caricato un progetto archiviato.
+
+Il progetto corrente:
+
+```text
+doc/course_design.json
+```
+
+non viene cancellato dalla board.
+
+Se il progetto archiviato non ha calendari associati, la board chiede solo conferma.
+
+Se esistono calendari associati, la board mostra l'elenco e chiede cosa fare:
+
+- `progetto`: cancella solo il progetto archiviato;
+- `tutto`: cancella il progetto archiviato e i calendari associati;
+- `annulla`: interrompe la cancellazione.
+
+La cancellazione dei calendari e prudente: il server elimina un calendario solo se il suo campo `course_design_name` punta davvero al progetto che stai cancellando.
+
+## Sincronizzazione tra progetto didattico e calendario
+
+La board e il calendario usano due famiglie di file separate:
+
+```text
+doc/course_designs/
+doc/calendars/
+```
+
+Il collegamento tra i due passa dal campo `course_design_name` dentro il calendario.
+
+### Quando cambi progetto nella board
+
+Se carichi un progetto archiviato nella board, il browser memorizza il nome del progetto attivo nella sessione locale.
+
+Quando apri la pagina calendario:
+
+1. il calendario cerca un file in `doc/calendars/` associato a quel progetto;
+2. se lo trova, lo carica;
+3. se non lo trova, mostra una vista vuota pronta per configurare un nuovo calendario associato a quel progetto.
+
+### Quando cambi calendario nella pagina calendario
+
+Se carichi un calendario associato a un progetto archiviato:
+
+1. il calendario legge `course_design_name`;
+2. memorizza quel progetto come progetto attivo;
+3. quando torni alla board, la board carica il progetto associato.
+
+Se il calendario ha `course_design_name` vuoto, viene associato al progetto corrente:
+
+```text
+doc/course_design.json
+```
+
+### Quando cambiano i percorsi interni del progetto
+
+Il calendario legge i percorsi interni presenti nel JSON del progetto e ricostruisce i `tracks` orari.
+
+Per ogni percorso interno:
+
+- se esiste gia un track con lo stesso id, conserva ore e slot gia impostati;
+- se trova un nuovo percorso interno, crea automaticamente un nuovo track;
+- se un vecchio percorso non esiste piu nel progetto associato, non viene piu mostrato nella vista collegata.
+
+Per questo e importante usare id stabili per i percorsi didattici interni.
+
+Esempio:
+
+```json
+{
+  "id": "tpsi-terzo-anno",
+  "title": "TPSI terzo anno"
+}
+```
+
+Se cambi l'id in un secondo momento, il calendario lo interpreta come un percorso diverso.
+
+## Gestione dei file JSON locali e generati
+
+La board e il calendario generano o modificano file JSON dentro:
+
+```text
+doc/course_design.json
+doc/course_designs/
+doc/calendars/
+```
+
+Prima di fare commit controlla sempre:
+
+```bash
+git status --short
+```
+
+Regola pratica:
+
+- committa `doc/course_design.json` quando vuoi aggiornare il progetto corrente del repository;
+- committa un file in `doc/course_designs/` quando vuoi conservare e condividere quel progetto archiviato;
+- committa un file in `doc/calendars/` quando vuoi conservare e condividere quel calendario scolastico;
+- non committare file di prova, test temporanei o JSON generati solo per esperimenti locali.
+
+Esempi di file da valutare con attenzione:
+
+```text
+doc/course_designs/test_nuovo.json
+doc/course_designs/test1.json
+doc/calendars/as_2026_2027_test.json
+```
+
+Se sono solo prove locali, lasciali fuori dal commit oppure cancellali manualmente quando non servono piu.
+
+Non cancellare automaticamente questi file con uno script generico: potrebbero contenere una bozza utile non ancora salvata altrove.
 
 ## Generazione AI assisted del percorso annuale
 
@@ -176,19 +373,19 @@ La board puo chiedere alla AI di proporre la struttura di un intero anno scolast
 
 Questo flusso e diverso dalla generazione della cornice didattica:
 
-- `AI assisted percorso`: costruisce una proposta di UDA e argomenti per un anno;
+- `AI genera percorso`: costruisce una proposta di UDA e argomenti per un anno;
 - `AI assisted`: compila la cornice didattica di un singolo argomento gia inserito.
 
 ### Flusso consigliato
 
-1. Clicca `AI assisted percorso` sull'anno da progettare.
+1. Clicca `AI genera percorso` sul percorso didattico da progettare.
 2. Si apre un brief didattico modificabile.
 3. Controlla e modifica il brief prima di inviarlo.
 4. Clicca `Genera proposta`.
 5. La board mostra una preview della proposta.
 6. Se la proposta ti convince, clicca `Applica proposta`.
 7. Controlla manualmente la struttura con drag and drop.
-8. Clicca `Salva JSON`.
+8. Clicca `Salva progetto`.
 
 La proposta non viene applicata automaticamente. Questo evita che la AI sovrascriva il percorso senza revisione docente.
 
@@ -304,7 +501,7 @@ Dopo `Genera proposta`, la board mostra:
 
 Solo cliccando `Applica proposta` la struttura dell'anno viene sostituita nella UI.
 
-La modifica diventa persistente solo dopo `Salva JSON`.
+La modifica diventa persistente solo dopo `Salva progetto`.
 
 ### Aggiornare il percorso didattico Markdown
 
@@ -522,7 +719,7 @@ Il flusso e sempre lo stesso:
 5. apri la board nel browser;
 6. clicchi `AI assisted` su un argomento assegnato a una UDA;
 7. controlli il testo generato;
-8. clicchi `Salva JSON`.
+8. clicchi `Salva progetto`.
 
 La board supporta questi provider dichiarati in `config/ai_providers.yaml`:
 
@@ -900,7 +1097,7 @@ http://127.0.0.1:8765/tools/course_board.html
    - argomenti immediatamente precedenti e successivi nella stessa UDA;
    - eventuali sottoparagrafi dell'argomento.
 4. La risposta riempie i campi della cornice didattica e imposta lo stato a `draft`.
-5. Clicca `Salva JSON` per rendere persistenti i campi generati.
+5. Clicca `Salva progetto` per rendere persistenti i campi generati.
 
 Il modello deve restituire dati strutturati; la board accetta solo i campi previsti dalla cornice didattica.
 
@@ -911,7 +1108,7 @@ Se l'argomento contiene sottoparagrafi, il bottone `AI assisted` apre una coda d
 - `Chiudi`: termina la coda mantenendo le cornici gia generate nella board;
 - `Annulla`: ripristina le cornici allo stato precedente all'apertura della coda.
 
-La modifica diventa definitiva solo quando clicchi `Salva JSON` o `Imposta corrente`, quindi puoi provare una generazione parziale senza compromettere subito il file.
+La modifica diventa definitiva solo quando clicchi `Salva progetto` o `Imposta corrente`, quindi puoi provare una generazione parziale senza compromettere subito il file.
 
 Anche in questo caso compare l'indicatore di lavoro `AI assisted in corso`. Se la risposta impiega tempo, lascia aperta la finestra: il provider potrebbe richiedere diversi secondi per leggere il contesto e produrre il JSON strutturato.
 
@@ -927,7 +1124,7 @@ Se la richiesta fallisce, la board mostra il dettaglio restituito dal server o d
 
 ### Generare le cornici di tutto il percorso
 
-Il bottone `Genera cornici` prepara una coda controllata con tutti gli argomenti presenti nel percorso corrente.
+Il bottone `AI genera cornici` prepara una coda controllata con tutti gli argomenti presenti nel percorso corrente.
 
 Il processo e ricorsivo:
 
@@ -1121,7 +1318,7 @@ Il comportamento consigliato e:
 3. poi clicca `AI assisted` sull'argomento target;
 4. rileggi la cornice generata;
 5. correggi eventuali anticipazioni, semplificazioni o collegamenti troppo forzati;
-6. clicca `Salva JSON`.
+6. clicca `Salva progetto`.
 
 Esempio di sequenza utile:
 
