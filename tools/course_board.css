@@ -124,16 +124,50 @@ h1 {
   min-width: 13rem;
 }
 
-.actions select[hidden] {
-  display: none;
-}
-
 button, .buttonLink, select, input {
   border: 1px solid var(--line);
   border-radius: 999px;
   background: #ffffff;
   color: var(--ink);
   font: 700 .88rem/1.2 var(--mono);
+}
+
+.courseLoadMenu {
+  position: relative;
+}
+
+.courseLoadDropdown {
+  position: absolute;
+  top: calc(100% + .45rem);
+  left: 0;
+  z-index: 30;
+  display: grid;
+  min-width: 18rem;
+  max-height: 18rem;
+  overflow: auto;
+  border: 1px solid rgba(17, 17, 17, .16);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: var(--shadow);
+  padding: .45rem;
+}
+
+.courseLoadDropdown[hidden] {
+  display: none;
+}
+
+.courseLoadItem {
+  justify-content: flex-start;
+  width: 100%;
+  border: 0;
+  border-radius: 12px;
+  box-shadow: none;
+  padding: .65rem .75rem;
+  text-align: left;
+}
+
+.courseLoadItem:hover {
+  background: #f3f3f3;
 }
 
 textarea {

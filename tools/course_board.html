@@ -22,10 +22,10 @@
     </div>
     <div class="heroTools">
       <div class="actions">
-        <select id="savedDesignSelect" aria-label="Percorsi didattici salvati" hidden>
-          <option value="">Percorsi salvati</option>
-        </select>
-        <button id="loadSavedDesignBtn" type="button" title="Carica nella board il percorso selezionato, corrente o archiviato.">Carica percorso</button>
+        <div class="courseLoadMenu">
+          <button id="loadSavedDesignBtn" type="button" aria-expanded="false" title="Apre il menu dei percorsi disponibili e carica quello selezionato.">Carica percorso</button>
+          <div id="savedDesignMenu" class="courseLoadDropdown" hidden></div>
+        </div>
         <button id="newDesignBtn" type="button" title="Crea un percorso vuoto da salvare poi con Salva percorso o Salva con nome percorso.">Nuovo percorso</button>
         <button id="saveArchiveBtn" type="button" title="Salva il percorso attuale nell'archivio doc/course_designs. Se non ha ancora un nome, lo chiede.">Salva percorso</button>
         <button id="saveArchiveAsBtn" type="button" title="Salva il percorso attuale con un nuovo nome nell'archivio doc/course_designs.">Salva con nome percorso</button>

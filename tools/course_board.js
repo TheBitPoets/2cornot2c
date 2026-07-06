@@ -25,8 +25,8 @@ const els = {
   courseTree: document.querySelector("#courseTree"),
   status: document.querySelector("#status"),
   aiConfig: document.querySelector("#aiConfig"),
-  savedDesignSelect: document.querySelector("#savedDesignSelect"),
   loadSavedDesignBtn: document.querySelector("#loadSavedDesignBtn"),
+  savedDesignMenu: document.querySelector("#savedDesignMenu"),
   newDesignBtn: document.querySelector("#newDesignBtn"),
   saveArchiveBtn: document.querySelector("#saveArchiveBtn"),
   saveArchiveAsBtn: document.querySelector("#saveArchiveAsBtn"),
@@ -216,18 +216,21 @@ async function loadAll() {
 }
 
 function renderSavedDesigns() {
-  const selected = state.activeSavedDesign || els.savedDesignSelect.value;
-  els.savedDesignSelect.innerHTML = `
-    <option value="">Scegli percorso...</option>
-    <option value="__current__">Percorso corrente (doc/course_design.json)</option>
-  `;
+  els.savedDesignMenu.innerHTML = "";
+  const currentButton = document.createElement("button");
+  currentButton.type = "button";
+  currentButton.className = "courseLoadItem";
+  currentButton.textContent = "Percorso corrente (doc/course_design.json)";
+  currentButton.addEventListener("click", () => loadDesignFromMenu("__current__"));
+  els.savedDesignMenu.append(currentButton);
   for (const design of state.savedDesigns) {
-    const option = document.createElement("option");
-    option.value = design.name;
-    option.textContent = design.name;
-    els.savedDesignSelect.append(option);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "courseLoadItem";
+    button.textContent = design.name;
+    button.addEventListener("click", () => loadDesignFromMenu(design.name));
+    els.savedDesignMenu.append(button);
   }
-  els.savedDesignSelect.value = selected;
   renderCourseActions();
 }
 
@@ -241,21 +244,17 @@ function renderCourseActions() {
 
 function openSavedDesignPicker() {
   renderSavedDesigns();
-  els.savedDesignSelect.value = "";
-  els.savedDesignSelect.hidden = false;
-  els.savedDesignSelect.focus();
-  if (typeof els.savedDesignSelect.showPicker === "function") {
-    els.savedDesignSelect.showPicker();
-  }
+  const isOpen = !els.savedDesignMenu.hidden;
+  els.savedDesignMenu.hidden = isOpen;
+  els.loadSavedDesignBtn.setAttribute("aria-expanded", String(!isOpen));
 }
 
-async function loadSavedDesign() {
-  const name = els.savedDesignSelect.value;
+async function loadDesignFromMenu(name) {
+  els.savedDesignMenu.hidden = true;
+  els.loadSavedDesignBtn.setAttribute("aria-expanded", "false");
   if (!name) {
-    els.savedDesignSelect.hidden = true;
     return;
   }
-  els.savedDesignSelect.hidden = true;
   if (name === "__current__") {
     await loadCurrentDesign();
     return;
@@ -336,7 +335,6 @@ function newCourseDesign() {
   state.design = emptyCourseDesign();
   state.activeSavedDesign = "";
   state.isNewDesign = true;
-  els.savedDesignSelect.value = "";
   localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
   renderSavedDesigns();
   renderHeadings();
@@ -1471,7 +1469,6 @@ function escapeHtml(value) {
 els.reloadBtn.addEventListener("click", loadAll);
 els.saveBtn.addEventListener("click", saveDesign);
 els.loadSavedDesignBtn.addEventListener("click", openSavedDesignPicker);
-els.savedDesignSelect.addEventListener("change", loadSavedDesign);
 els.newDesignBtn.addEventListener("click", newCourseDesign);
 els.saveArchiveBtn.addEventListener("click", saveArchiveDesign);
 els.saveArchiveAsBtn.addEventListener("click", saveArchiveDesignAs);
@@ -1488,6 +1485,13 @@ els.courseAiApplyBtn.addEventListener("click", applyCourseAiProposal);
 els.sourceFilter.addEventListener("change", renderHeadings);
 els.levelFilter.addEventListener("change", renderHeadings);
 els.searchInput.addEventListener("input", renderHeadings);
+
+document.addEventListener("click", (event) => {
+  if (els.savedDesignMenu.hidden) return;
+  if (event.target === els.loadSavedDesignBtn || els.savedDesignMenu.contains(event.target)) return;
+  els.savedDesignMenu.hidden = true;
+  els.loadSavedDesignBtn.setAttribute("aria-expanded", "false");
+});
 
 loadAll().catch((error) => {
   console.error(error);
