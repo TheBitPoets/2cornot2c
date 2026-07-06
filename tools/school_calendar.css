@@ -798,6 +798,10 @@ button:disabled {
   background: #ff5c4d;
 }
 
+.ganttBarDayInterrupted {
+  background: linear-gradient(135deg, #ff5c4d 0 50%, #39d98a 50% 100%);
+}
+
 .ganttDialog {
   width: min(760px, calc(100vw - 2rem));
   border: 1px solid rgba(17, 17, 17, .18);
@@ -834,7 +838,7 @@ button:disabled {
 
 .ganttDialogMeta {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: .6rem;
 }
 

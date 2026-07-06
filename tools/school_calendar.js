@@ -1069,6 +1069,7 @@ function udaGanttSegments(track, weeks) {
     const hours = segmentWeeks.reduce((total, week) => total + Number(week.hours || 0), 0);
     segments.push({
       uda,
+      track,
       startIndex,
       endIndex,
       weeks: segmentWeeks,
@@ -1098,12 +1099,14 @@ function renderTopicList(items) {
 }
 
 function openGanttDialog(segment, firstWeek, lastWeek) {
+  const lostHours = ganttSegmentLostHours(segment);
   els.ganttDialogTitle.textContent = `${String(segment.uda.id || "").toUpperCase()} - ${segment.uda.title || "UDA senza titolo"}`;
   els.ganttDialogBody.innerHTML = `
     <div class="ganttDialogMeta">
       <span><strong>Settimane effettive</strong>${segment.startIndex + 1}-${segment.endIndex + 1}</span>
       <span><strong>Date</strong>${shortDate(firstWeek.start)}-${shortDate(lastWeek.end)}</span>
       <span><strong>Ore previste</strong>${segment.hours}h</span>
+      <span><strong>Ore perse</strong>${lostHours}h</span>
     </div>
     <section>
       <h3>Argomenti e sottoparagrafi</h3>
@@ -1116,11 +1119,13 @@ function openGanttDialog(segment, firstWeek, lastWeek) {
 function ganttSegmentTooltip(segment) {
   const firstWeek = segment.weeks[0];
   const lastWeek = segment.weeks[segment.weeks.length - 1];
+  const lostHours = ganttSegmentLostHours(segment);
   return [
     `${String(segment.uda.id || "").toUpperCase()} - ${segment.uda.title || "UDA senza titolo"}`,
     `Settimane effettive: ${segment.startIndex + 1}-${segment.endIndex + 1}`,
     `Date: ${firstWeek.start.toLocaleDateString("it-IT")} - ${lastWeek.end.toLocaleDateString("it-IT")}`,
     `Ore previste: ${segment.hours}`,
+    `Ore perse: ${lostHours}`,
     "",
     "Argomenti:",
     ...collectUdaTopicTitles(segment.uda.items || []),
@@ -1197,6 +1202,22 @@ function resetGanttZoom() {
   applyGanttZoom();
 }
 
+function ganttSegmentLostHours(segment) {
+  const closures = closedLabelsByDate();
+  let lost = 0;
+  for (const week of segment.weeks || []) {
+    for (let offset = 0; offset < 7; offset += 1) {
+      const date = addDays(week.start, offset);
+      const iso = isoDate(date);
+      if (!closures.has(iso)) continue;
+      lost += (segment.track?.weekly_slots || [])
+        .filter((slot) => DAY_INDEX[slot.day] === date.getDay())
+        .reduce((total, slot) => total + Number(slot.hours || 0), 0);
+    }
+  }
+  return lost;
+}
+
 function renderGanttBarDays(track, segment, closures) {
   const strip = document.createElement("div");
   strip.className = "ganttBarDays";
@@ -1211,7 +1232,10 @@ function renderGanttBarDays(track, segment, closures) {
       if (offset === 0) {
         day.classList.add("ganttBarWeekStart");
       }
-      if (closures.has(iso)) {
+      if (closures.has(iso) && hasLesson) {
+        day.classList.add("ganttBarDayInterrupted");
+        day.title = `${date.toLocaleDateString("it-IT")} - lezione sospesa: ${closures.get(iso)}`;
+      } else if (closures.has(iso)) {
         day.classList.add("ganttBarDayClosed");
         day.title = `${date.toLocaleDateString("it-IT")} - ${closures.get(iso)}`;
       } else if (hasLesson) {
