@@ -330,20 +330,19 @@ async function saveArchiveDesignWithName(name) {
   setStatus(`Percorso salvato in archivio: ${state.activeSavedDesign}.`);
 }
 
-function newCourseDesign() {
+async function newCourseDesign() {
   if (!confirm("Creare un nuovo percorso vuoto? Le modifiche non salvate nella vista corrente saranno perse.")) return;
   const name = prompt("Nome file del nuovo percorso JSON:", "course_design_as_25_26.json");
   if (!name) return;
   state.design = emptyCourseDesign();
   state.activeSavedDesign = name;
   state.isNewDesign = false;
-  localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
-  localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, name);
+  await saveArchiveDesignWithName(name);
   renderSavedDesigns();
   renderHeadings();
   renderCourse();
   renderCourseActions();
-  setStatus(`Nuovo percorso "${name}" creato. Usa Salva percorso per archiviarlo.`);
+  setStatus(`Nuovo percorso "${name}" creato e salvato in archivio.`);
 }
 
 function renderAiConfig() {
