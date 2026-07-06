@@ -1051,6 +1051,15 @@ function udaGanttSegments(track, weeks) {
   return segments;
 }
 
+function collectUdaTopicTitles(items, depth = 0, output = []) {
+  for (const item of items || []) {
+    const prefix = depth > 0 ? `${"  ".repeat(depth)}- ` : "- ";
+    output.push(`${prefix}${item.title || item.id || "Argomento senza titolo"}`);
+    collectUdaTopicTitles(item.children || [], depth + 1, output);
+  }
+  return output;
+}
+
 function ganttMonthSegments(weeks) {
   const segments = [];
   for (const [index, week] of weeks.entries()) {
@@ -1210,6 +1219,9 @@ function renderGanttChart() {
         `Settimane effettive: ${segment.startIndex + 1}-${segment.endIndex + 1}`,
         `Date: ${firstWeek.start.toLocaleDateString("it-IT")} - ${lastWeek.end.toLocaleDateString("it-IT")}`,
         `Ore previste: ${segment.hours}`,
+        "",
+        "Argomenti:",
+        ...collectUdaTopicTitles(segment.uda.items || []),
       ].join("\n");
       bar.innerHTML = `
         <strong>${escapeHtml(String(segment.uda.id || "").toUpperCase())}</strong>
