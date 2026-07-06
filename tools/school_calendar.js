@@ -1051,6 +1051,52 @@ function udaGanttSegments(track, weeks) {
   return segments;
 }
 
+function ganttMonthSegments(weeks) {
+  const segments = [];
+  for (const [index, week] of weeks.entries()) {
+    const key = `${week.start.getFullYear()}-${week.start.getMonth()}`;
+    const label = week.start.toLocaleDateString("it-IT", { month: "short", year: "numeric" });
+    const last = segments[segments.length - 1];
+    if (last?.key === key) {
+      last.endIndex = index;
+    } else {
+      segments.push({ key, label, startIndex: index, endIndex: index });
+    }
+  }
+  return segments;
+}
+
+function ganttClosureSegments(weeks) {
+  const segments = [];
+  for (const closure of state.calendar.closures || []) {
+    const from = dateFromInput(closure.from);
+    const to = dateFromInput(closure.to || closure.from);
+    if (!from || !to) continue;
+    let startIndex = -1;
+    let endIndex = -1;
+    for (const [index, week] of weeks.entries()) {
+      if (week.start <= to && week.end >= from) {
+        if (startIndex < 0) startIndex = index;
+        endIndex = index;
+      }
+    }
+    if (startIndex >= 0) {
+      segments.push({
+        label: closure.label || closure.type || "Chiusura",
+        from,
+        to,
+        startIndex,
+        endIndex,
+      });
+    }
+  }
+  return segments;
+}
+
+function shortDate(date) {
+  return date.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" });
+}
+
 function renderGanttChart() {
   syncFormToCalendar();
   els.ganttChart.innerHTML = "";
@@ -1087,17 +1133,37 @@ function renderGanttChart() {
         <strong>${escapeHtml(title)}</strong>
         <span>${weeks.length} settimane effettive - ${weeks.reduce((total, week) => total + Number(week.hours || 0), 0)}h previste</span>
       </div>
+      <div class="ganttMonths"></div>
       <div class="ganttWeeks"></div>
+      <div class="ganttClosures"></div>
       <div class="ganttBars"></div>
     `;
+    const monthGrid = row.querySelector(".ganttMonths");
+    monthGrid.style.gridTemplateColumns = `repeat(${weeks.length}, minmax(2.1rem, 1fr))`;
+    for (const segment of ganttMonthSegments(weeks)) {
+      const month = document.createElement("span");
+      month.style.gridColumn = `${segment.startIndex + 1} / ${segment.endIndex + 2}`;
+      month.textContent = segment.label;
+      monthGrid.append(month);
+    }
     const weekGrid = row.querySelector(".ganttWeeks");
     weekGrid.style.gridTemplateColumns = `repeat(${weeks.length}, minmax(2.1rem, 1fr))`;
     weeks.forEach((week, index) => {
       const label = document.createElement("span");
       label.title = `${week.start.toLocaleDateString("it-IT")} - ${week.end.toLocaleDateString("it-IT")} - ${week.hours}h`;
-      label.textContent = String(index + 1);
+      label.innerHTML = `<strong>${index + 1}</strong><small>${shortDate(week.start)}-${shortDate(week.end)}</small>`;
       weekGrid.append(label);
     });
+    const closureGrid = row.querySelector(".ganttClosures");
+    closureGrid.style.gridTemplateColumns = `repeat(${weeks.length}, minmax(2.1rem, 1fr))`;
+    for (const closure of ganttClosureSegments(weeks)) {
+      const closureBar = document.createElement("div");
+      closureBar.className = "ganttClosure";
+      closureBar.style.gridColumn = `${closure.startIndex + 1} / ${closure.endIndex + 2}`;
+      closureBar.title = `${closure.label}: ${closure.from.toLocaleDateString("it-IT")} - ${closure.to.toLocaleDateString("it-IT")}`;
+      closureBar.textContent = closure.label;
+      closureGrid.append(closureBar);
+    }
     const bars = row.querySelector(".ganttBars");
     bars.style.gridTemplateColumns = `repeat(${weeks.length}, minmax(2.1rem, 1fr))`;
     for (const segment of udaGanttSegments(track, weeks)) {

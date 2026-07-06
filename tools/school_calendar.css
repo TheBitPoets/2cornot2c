@@ -612,10 +612,28 @@ button:disabled {
   font-size: .74rem;
 }
 
+.ganttMonths,
 .ganttWeeks,
+.ganttClosures,
 .ganttBars {
   display: grid;
   min-width: max-content;
+}
+
+.ganttMonths {
+  margin-bottom: .2rem;
+}
+
+.ganttMonths span {
+  border-left: 1px solid rgba(17, 17, 17, .12);
+  color: #111111;
+  font: 800 .68rem/1 var(--mono);
+  padding: .25rem .3rem;
+  text-transform: uppercase;
+}
+
+.ganttMonths span:first-child {
+  border-left: 0;
 }
 
 .ganttWeeks {
@@ -625,13 +643,46 @@ button:disabled {
 .ganttWeeks span {
   border-left: 1px solid rgba(17, 17, 17, .08);
   color: var(--muted);
+  display: grid;
+  gap: .16rem;
   font: 700 .62rem/1 var(--mono);
   padding: .25rem .2rem;
   text-align: center;
 }
 
+.ganttWeeks strong {
+  color: #111111;
+  font-size: .66rem;
+}
+
+.ganttWeeks small {
+  color: var(--muted);
+  font-size: .52rem;
+  font-weight: 700;
+}
+
 .ganttWeeks span:first-child {
   border-left: 0;
+}
+
+.ganttClosures {
+  min-height: 1.45rem;
+  margin-bottom: .35rem;
+}
+
+.ganttClosure {
+  align-content: center;
+  border: 1px solid rgba(143, 29, 20, .32);
+  border-radius: 999px;
+  background: #fdecea;
+  color: #8f1d14;
+  display: grid;
+  font: 800 .58rem/1.1 var(--mono);
+  min-height: 1.2rem;
+  overflow: hidden;
+  padding: .18rem .45rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ganttBars {
