@@ -161,9 +161,21 @@ Per ogni UDA la barra mostra:
 
 - codice UDA;
 - titolo breve;
-- ore previste;
+- ore disponibili;
 - data iniziale e finale calcolate;
 - micro-calendario dei giorni interni alla barra.
+
+#### Ore teoriche, disponibili e perse
+
+Nel Gantt le ore sono distinte in tre valori:
+
+- `Ore teoriche`: ore che la UDA avrebbe avuto se non ci fossero state vacanze, festivita, ponti o sospensioni;
+- `Ore perse`: ore che cadono in giorni in cui il calendario prevede lezione, ma la scuola e chiusa o la lezione e sospesa;
+- `Ore disponibili`: ore realmente utilizzabili per la UDA dopo aver sottratto le ore perse.
+
+Esempio: se una UDA occupa tre settimane da 3 ore ciascuna, avrebbe `9h` teoriche. Se in quelle settimane una lezione da `1h` cade in un giorno di sospensione, il Gantt mostra `9h` teoriche, `1h` persa e `8h` disponibili.
+
+La barra della UDA mostra le ore disponibili, perche sono quelle effettivamente usabili nella programmazione didattica. Il tooltip e il modal mostrano anche ore teoriche e ore perse, cosi puoi capire quanto calendario e stato assorbito dalle chiusure.
 
 Nel micro-calendario:
 
@@ -187,7 +199,8 @@ Passando con il mouse su una barra UDA, la pagina mostra un tooltip con:
 - titolo UDA;
 - settimane effettive;
 - date calcolate;
-- ore previste;
+- ore teoriche;
+- ore disponibili;
 - ore perse;
 - argomenti e sottoparagrafi.
 
@@ -196,6 +209,8 @@ Cliccando su una UDA nel Gantt oppure sulla stessa UDA nella vista calendario si
 Il modal mostra:
 
 - dati della programmazione prevista;
+- ore teoriche;
+- ore disponibili;
 - ore perse;
 - argomenti e sottoparagrafi;
 - campi della programmazione svolta.
