@@ -7,26 +7,34 @@
   <link rel="stylesheet" href="course_board.css">
 </head>
 <body>
+  <nav class="topNav" aria-label="Navigazione strumenti">
+    <a class="topNavBrand" href="https://github.com/TheBitPoets" target="_blank" rel="noreferrer" aria-label="Apri TheBitPoets su GitHub">
+      <img src="https://github.com/TheBitPoets.png" alt="TheBitPoets">
+    </a>
+    <a href="course_board.html" aria-current="page">Percorso</a>
+    <a href="school_calendar.html">Calendario</a>
+  </nav>
+
   <header class="hero">
     <div>
-      <p class="eyebrow">2cornot2c</p>
       <h1>Course Design Board</h1>
       <p class="subtitle">Costruisci percorsi, UDA e settimane partendo dai paragrafi reali delle dispense.</p>
     </div>
     <div class="heroTools">
-      <a class="orgBadge" href="https://github.com/TheBitPoets" target="_blank" rel="noreferrer" aria-label="Apri TheBitPoets su GitHub">
-        <img src="https://github.com/TheBitPoets.png" alt="TheBitPoets">
-      </a>
       <div class="actions">
-        <select id="savedDesignSelect" aria-label="Percorsi didattici salvati">
-          <option value="">Percorsi salvati</option>
-        </select>
-        <button id="loadSavedDesignBtn" type="button" title="Carica nella board un percorso salvato da doc/course_designs.">Carica archiviato</button>
-        <button id="saveArchiveBtn" type="button" title="Salva la struttura corrente come percorso archiviato in doc/course_designs.">Aggiorna archivio</button>
+        <div class="courseLoadMenu">
+          <button id="loadSavedDesignBtn" type="button" aria-expanded="false" title="Apre il menu dei progetti didattici disponibili e carica quello selezionato.">Apri progetto</button>
+          <div id="savedDesignMenu" class="courseLoadDropdown" hidden></div>
+        </div>
+        <button id="newDesignBtn" type="button" title="Crea un nuovo progetto didattico e lo salva nell'archivio.">Nuovo progetto</button>
+        <button id="saveArchiveBtn" type="button" title="Salva il progetto didattico attuale nell'archivio doc/course_designs. Se non ha ancora un nome, lo chiede.">Salva progetto</button>
+        <button id="saveArchiveAsBtn" type="button" title="Salva il progetto didattico attuale con un nuovo nome nell'archivio doc/course_designs.">Salva progetto con nome</button>
+        <button id="deleteArchiveBtn" type="button" class="danger" title="Cancella il progetto archiviato caricato. Il progetto corrente doc/course_design.json non puo essere eliminato.">Cancella progetto</button>
         <button id="generateAllFramesBtn" type="button" title="Usa il provider AI configurato e apre una coda controllata per generare le cornici didattiche del percorso.">AI genera cornici</button>
         <button id="generateCoursePlanMdBtn" type="button" title="Salva il JSON corrente e rigenera doc/PERCORSO_DIDATTICO.md.">Aggiorna percorso MD</button>
+        <button id="updateReadmeFramesBtn" type="button" title="Salva il JSON corrente e inserisce le cornici didattiche nei paragrafi del README.md.">Aggiorna README</button>
         <button id="reloadBtn" type="button" title="Ricarica headings, percorso, archivi e configurazione AI dalla sorgente locale.">Ricarica</button>
-        <button id="saveBtn" type="button" class="primary" title="Salva la struttura corrente in doc/course_design.json.">Imposta corrente</button>
+        <button id="saveBtn" type="button" class="primary" title="Imposta il progetto caricato come progetto corrente, sovrascrivendo doc/course_design.json dopo conferma esplicita.">Imposta corrente</button>
       </div>
     </div>
   </header>
@@ -51,9 +59,10 @@
 
     <section class="panel planner">
       <div class="panelHead">
-        <h2>Percorso didattico</h2>
+        <h2 id="projectTitle">Progetto didattico: doc/course_design.json</h2>
         <p id="status" class="status">Pronto.</p>
         <p id="aiConfig" class="aiConfig">AI: configurazione non caricata.</p>
+        <button id="addYearBtn" type="button" title="Aggiunge esplicitamente un percorso didattico di materia/anno con settimane e ore personalizzate.">Aggiungi percorso</button>
       </div>
       <div id="courseTree" class="courseTree"></div>
     </section>
@@ -105,7 +114,7 @@
           <input id="briefYearTitle" type="text">
         </label>
         <label>
-          <span>Descrizione</span>
+          <span>Obiettivi/descrizione</span>
           <input id="briefDescription" type="text">
         </label>
         <label>
@@ -143,6 +152,51 @@
       <section id="courseAiPreview" class="courseAiPreview">
         <p class="empty">Nessuna proposta generata.</p>
       </section>
+    </form>
+  </dialog>
+
+  <dialog id="yearDialog" class="courseAiDialog yearDialog">
+    <form method="dialog" class="courseAiPanel">
+      <header class="courseAiHead">
+        <div>
+          <p class="eyebrow">Percorso didattico</p>
+          <h2>Aggiungi percorso</h2>
+        </div>
+        <button id="yearCloseBtn" type="button" title="Chiude la finestra senza creare il percorso.">Chiudi</button>
+      </header>
+
+      <div class="briefGrid">
+        <label>
+          <span>Nome percorso</span>
+          <input id="yearTitleInput" type="text" placeholder="TPSI - Terzo anno, Sistemi e reti - Quarto anno...">
+        </label>
+        <label>
+          <span>Materia</span>
+          <input id="yearSubjectInput" type="text" placeholder="TPSI, Sistemi e reti, Informatica...">
+        </label>
+        <label>
+          <span>ID</span>
+          <input id="yearIdInput" type="text" placeholder="terzo-anno">
+        </label>
+        <label>
+          <span>Settimane</span>
+          <input id="yearWeeksInput" type="number" min="1" value="33">
+        </label>
+        <label>
+          <span>Ore/settimana</span>
+          <input id="yearWeeklyHoursInput" type="number" min="1" step="0.5" value="3">
+        </label>
+      </div>
+
+      <label class="wideField">
+        <span>Obiettivi/descrizione</span>
+        <textarea id="yearDescriptionInput" rows="4" placeholder="Obiettivi del percorso, criteri di scelta degli argomenti, focus della materia..."></textarea>
+      </label>
+
+      <div class="courseAiActions">
+        <button id="yearCreateBtn" type="button" class="primary" title="Crea il percorso con una UDA iniziale vuota.">Crea percorso</button>
+        <button id="yearCancelBtn" type="button" title="Annulla la creazione.">Annulla</button>
+      </div>
     </form>
   </dialog>
 

@@ -1,0 +1,604 @@
+:root {
+  --ink: #111111;
+  --muted: #666666;
+  --paper: #f6f6f6;
+  --panel: #ffffff;
+  --line: #d7d7d7;
+  --accent: #111111;
+  --accent-dark: #000000;
+  --warm: #3f3f46;
+  --shadow: 0 18px 42px rgba(0, 0, 0, 0.08);
+  --mono: "Cascadia Code", "JetBrains Mono", "Fira Code", "SFMono-Regular", Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--ink);
+  background:
+    linear-gradient(rgba(0, 0, 0, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.025) 1px, transparent 1px),
+    #f7f7f7;
+  background-size: 24px 24px;
+  font-family: var(--mono);
+}
+
+.topNav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .65rem clamp(1rem, 3vw, 3rem);
+  border-bottom: 1px solid rgba(17, 17, 17, .12);
+  background: rgba(255, 255, 255, .94);
+  backdrop-filter: blur(10px);
+}
+
+.topNavBrand {
+  display: grid;
+  place-items: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  margin-right: .25rem;
+  border: 1px solid rgba(17, 17, 17, .14);
+  border-radius: .7rem;
+  background: #ffffff;
+  padding: 0;
+  overflow: hidden;
+}
+
+.topNavBrand img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.topNav a:not(.topNavBrand) {
+  border: 1px solid rgba(17, 17, 17, .14);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--ink);
+  font: 800 .78rem/1.2 var(--mono);
+  padding: .55rem .85rem;
+  text-decoration: none;
+}
+
+.topNav a:not(.topNavBrand)[aria-current="page"] {
+  background: #111111;
+  color: #ffffff;
+}
+
+.hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 2rem clamp(1rem, 3vw, 3rem) 1.25rem;
+}
+
+.eyebrow {
+  margin: 0 0 .35rem;
+  color: var(--warm);
+  font: 700 .76rem/1.2 var(--mono);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+h1, h2, h3, p { margin-top: 0; }
+
+h1 {
+  margin-bottom: .35rem;
+  font-size: clamp(2rem, 5vw, 4.6rem);
+  line-height: .92;
+  letter-spacing: -.06em;
+}
+
+.subtitle {
+  max-width: 52rem;
+  margin-bottom: 0;
+  color: var(--muted);
+  font-size: 1.05rem;
+}
+
+.heroTools {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: .5rem;
+}
+
+.actions select {
+  width: auto;
+  min-width: 13rem;
+}
+
+button, .buttonLink, input, select {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--ink);
+  font: 700 .88rem/1.2 var(--mono);
+}
+
+button, .buttonLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: .72rem 1rem;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+  text-decoration: none;
+}
+
+button.primary { background: var(--accent); border-color: var(--accent); color: white; }
+button:hover, .buttonLink:hover { transform: translateY(-1px); }
+
+input, select {
+  width: 100%;
+  padding: .72rem .9rem;
+}
+
+.layout {
+  display: grid;
+  gap: 1rem;
+  padding: 0 clamp(1rem, 3vw, 3rem) 2rem;
+}
+
+.panel {
+  border: 1px solid rgba(17, 17, 17, .16);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, .92);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+}
+
+.panelHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  padding: 1.1rem;
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, .72);
+}
+
+.panelHead h2 { margin-bottom: 0; font-size: 1.25rem; }
+
+.panelActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  justify-content: flex-end;
+}
+
+.status {
+  margin: 0;
+  color: var(--muted);
+  font-size: .9rem;
+  transition: color .2s ease;
+}
+
+.status.statusError {
+  color: #b42318;
+  font-weight: 800;
+}
+
+.fieldErrorFlash {
+  animation: fieldErrorPulse 1.25s ease;
+}
+
+@keyframes fieldErrorPulse {
+  0% {
+    border-color: #b42318;
+    box-shadow: 0 0 0 0 rgba(180, 35, 24, .42);
+  }
+  35% {
+    border-color: #b42318;
+    box-shadow: 0 0 0 5px rgba(180, 35, 24, .16);
+  }
+  100% {
+    border-color: var(--line);
+    box-shadow: none;
+  }
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .8rem;
+  padding: 1.1rem;
+}
+
+label {
+  display: grid;
+  gap: .32rem;
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 700;
+}
+
+.tracks {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  padding: 1.1rem;
+}
+
+.track {
+  border: 1px solid rgba(17, 17, 17, .16);
+  border-radius: 18px;
+  padding: .9rem;
+  background: #ffffff;
+}
+
+.trackHead {
+  display: flex;
+  justify-content: space-between;
+  gap: .75rem;
+  align-items: center;
+  margin-bottom: .75rem;
+}
+
+.slotRows {
+  display: grid;
+  gap: .5rem;
+}
+
+.slotRows + [data-action="add-slot"] {
+  margin-top: .85rem;
+}
+
+.slotRow, .closureRow {
+  display: grid;
+  gap: .5rem;
+  align-items: end;
+}
+
+.slotRow {
+  grid-template-columns: 1.2fr .7fr 1fr auto;
+}
+
+.closureRow {
+  grid-template-columns: 1fr 1.4fr 1fr 1fr 1.2fr auto;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  padding: 1.1rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  border-bottom: 1px solid var(--line);
+  padding: .55rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  color: var(--muted);
+  font-size: .75rem;
+  text-transform: uppercase;
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .8rem;
+  padding: 1.1rem;
+}
+
+.summaryCard {
+  border: 1px solid rgba(17, 17, 17, .16);
+  border-radius: 18px;
+  padding: .9rem;
+  background: #ffffff;
+}
+
+.summaryCard strong {
+  display: block;
+  margin-bottom: .5rem;
+}
+
+.summaryCard p {
+  margin: .25rem 0;
+}
+
+.validationList {
+  display: grid;
+  gap: .45rem;
+  padding: 1.1rem 1.1rem 0;
+}
+
+.validationItem {
+  border: 1px solid rgba(180, 35, 24, .24);
+  border-radius: 14px;
+  background: rgba(180, 35, 24, .06);
+  color: #8f1d14;
+  font-size: .78rem;
+  font-weight: 800;
+  padding: .6rem .75rem;
+}
+
+.validationItem.validationOk {
+  border-color: rgba(15, 138, 75, .22);
+  background: rgba(15, 138, 75, .07);
+  color: #0f6b3d;
+}
+
+.calendarViewControls {
+  display: grid;
+  gap: .8rem;
+  margin: 1.1rem 1.1rem 0;
+  border: 1px solid rgba(17, 17, 17, .16);
+  border-radius: 18px;
+  background: #ffffff;
+  padding: .9rem;
+}
+
+.calendarViewHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.calendarViewHead span {
+  color: var(--muted);
+  font-size: .74rem;
+}
+
+.calendarViewFields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .75rem;
+  align-items: end;
+}
+
+.calendarViewFields label.isHidden {
+  display: none;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: .42;
+  transform: none;
+}
+
+.trackFilters {
+  display: grid;
+  gap: .8rem;
+  margin: 1.1rem 1.1rem 0;
+  border: 1px solid rgba(17, 17, 17, .16);
+  border-radius: 18px;
+  background: #ffffff;
+  padding: .9rem;
+}
+
+.trackFiltersHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.trackFilterActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+}
+
+.trackFilterActions button {
+  padding: .45rem .7rem;
+  font-size: .72rem;
+  box-shadow: none;
+}
+
+.trackFilterList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.trackFilter {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  border: 1px solid rgba(17, 17, 17, .14);
+  border-radius: 999px;
+  background: #f8f8f8;
+  font-size: .78rem;
+  font-weight: 800;
+  padding: .45rem .7rem;
+}
+
+.trackFilter input {
+  width: auto;
+  accent-color: #111111;
+}
+
+.monthGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  padding: 1.1rem;
+}
+
+.monthGrid.monthFocusGrid {
+  grid-template-columns: minmax(12rem, .72fr) minmax(20rem, 1.35fr) minmax(12rem, .72fr);
+  align-items: start;
+}
+
+.monthCard {
+  border: 1px solid rgba(17, 17, 17, .16);
+  border-radius: 18px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.monthContextCard {
+  opacity: .74;
+  transform: scale(.94);
+  transform-origin: top center;
+}
+
+.monthPlaceholder {
+  min-height: 1px;
+}
+
+.monthContextCard .dayCell {
+  min-height: 2.25rem;
+  font-size: .58rem;
+  padding: .25rem;
+}
+
+.monthContextCard .dayMeta {
+  max-height: 2.2rem;
+  overflow: hidden;
+}
+
+.monthMainCard {
+  box-shadow: 0 18px 42px rgba(0, 0, 0, .1);
+}
+
+.weekCard {
+  grid-column: 1 / -1;
+}
+
+.monthTitle {
+  margin: 0;
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, .78);
+  padding: .75rem;
+}
+
+.monthTitle h3 {
+  margin: 0;
+  font-size: .9rem;
+}
+
+.monthTitleNav {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: .7rem;
+}
+
+.monthTitleNav h3 {
+  text-align: center;
+}
+
+.monthTitleNav button {
+  width: 2.1rem;
+  height: 2.1rem;
+  padding: 0;
+  border-radius: 999px;
+  box-shadow: none;
+  font-size: 1rem;
+}
+
+.monthWeekdays,
+.monthDays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.monthWeekdays span {
+  color: var(--muted);
+  font-size: .66rem;
+  font-weight: 900;
+  padding: .45rem .3rem;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.dayCell {
+  min-height: 2.8rem;
+  border-top: 1px solid rgba(17, 17, 17, .08);
+  border-left: 1px solid rgba(17, 17, 17, .08);
+  background: #ffffff;
+  font-size: .68rem;
+  padding: .35rem;
+}
+
+.weekDays .dayCell {
+  min-height: 8rem;
+}
+
+.dayCell:nth-child(7n + 1) {
+  border-left: 0;
+}
+
+.dayCell.dayOutsideMonth {
+  background: #f5f5f5;
+  color: #aaaaaa;
+}
+
+.dayCell.dayOutsideSchool {
+  background: #eeeeee;
+  color: #999999;
+}
+
+.dayCell.dayLesson {
+  background: #eaf7ef;
+}
+
+.dayCell.dayClosure {
+  background: #fdecea;
+  color: #8f1d14;
+}
+
+.dayCell.dayClosure.dayLesson {
+  background: linear-gradient(135deg, #fdecea 0 50%, #eaf7ef 50% 100%);
+}
+
+.dayNumber {
+  display: block;
+  font-weight: 900;
+}
+
+.dayMeta {
+  display: block;
+  margin-top: .18rem;
+  color: inherit;
+  line-height: 1.2;
+}
+
+@media (max-width: 950px) {
+  .hero, .panelHead {
+    display: grid;
+  }
+
+  .actions {
+    justify-content: flex-start;
+  }
+
+  .grid, .tracks, .summary, .monthGrid, .monthGrid.monthFocusGrid, .calendarViewFields {
+    grid-template-columns: 1fr;
+  }
+
+  .monthContextCard {
+    transform: none;
+  }
+
+  .slotRow, .closureRow {
+    grid-template-columns: 1fr;
+  }
+}

@@ -32,7 +32,9 @@ from urllib.parse import unquote, urlparse
 ROOT = Path(__file__).resolve().parents[1]
 DESIGN_PATH = ROOT / "doc" / "course_design.json"
 COURSE_DESIGNS_DIR = ROOT / "doc" / "course_designs"
+SCHOOL_CALENDARS_DIR = ROOT / "doc" / "calendars"
 COURSE_PLAN_MD_PATH = ROOT / "doc" / "PERCORSO_DIDATTICO.md"
+README_PATH = ROOT / "README.md"
 AI_PROVIDERS_PATH = ROOT / "config" / "ai_providers.yaml"
 AI_SECRET_PATH = ROOT / ".secrets" / "ai.secret"
 DEFAULT_SOURCES = ["README.md", "LINUX_PROGRAMMING.md"]
@@ -107,6 +109,23 @@ def generate_course_plan_md(payload: dict) -> dict:
     }
 
 
+def update_readme_frames(payload: dict) -> dict:
+    """Persist the current design and update README.md didactic-frame blocks."""
+
+    write_design(payload)
+    command = [sys.executable, str(ROOT / "scripts" / "update_course_frames.py"), "--target", str(README_PATH)]
+    completed = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, check=False)
+    if completed.returncode:
+        detail = (completed.stderr or completed.stdout or "Errore sconosciuto durante l'aggiornamento del README.").strip()
+        raise RuntimeError(detail)
+    return {
+        "ok": True,
+        "design_path": str(DESIGN_PATH.relative_to(ROOT)),
+        "readme_path": str(README_PATH.relative_to(ROOT)),
+        "message": (completed.stdout or "").strip(),
+    }
+
+
 def safe_design_name(name: str) -> str:
     """Validate a saved course-design filename."""
 
@@ -120,6 +139,12 @@ def saved_design_path(name: str) -> Path:
     """Return the safe path for a saved course design."""
 
     return COURSE_DESIGNS_DIR / safe_design_name(name)
+
+
+def school_calendar_path(name: str) -> Path:
+    """Return the safe path for a saved school calendar."""
+
+    return SCHOOL_CALENDARS_DIR / safe_design_name(name)
 
 
 def list_saved_designs() -> list[dict]:
@@ -146,6 +171,68 @@ def write_saved_design(name: str, payload: dict) -> dict:
 
     COURSE_DESIGNS_DIR.mkdir(parents=True, exist_ok=True)
     path = saved_design_path(name)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return {"name": path.name, "path": str(path.relative_to(ROOT))}
+
+
+def delete_saved_design(name: str, delete_calendars: bool = False, calendars: list[str] | None = None) -> dict:
+    """Delete an archived course design and, optionally, its linked calendars."""
+
+    safe_name = safe_design_name(name)
+    path = saved_design_path(safe_name)
+    if not path.is_file():
+        raise FileNotFoundError(f"Percorso salvato non trovato: {safe_name}")
+    path.unlink()
+    deleted_calendars = []
+    if delete_calendars:
+        for calendar_name in calendars or []:
+            safe_calendar_name = safe_design_name(calendar_name)
+            calendar_path = school_calendar_path(safe_calendar_name)
+            if not calendar_path.is_file():
+                continue
+            payload = json.loads(calendar_path.read_text(encoding="utf-8-sig"))
+            if payload.get("course_design_name", "") != safe_name:
+                continue
+            calendar_path.unlink()
+            deleted_calendars.append(safe_calendar_name)
+    return {
+        "name": safe_name,
+        "deleted_calendars": deleted_calendars,
+        "designs": list_saved_designs(),
+        "calendars": list_school_calendars(),
+    }
+
+
+def list_school_calendars() -> list[dict]:
+    """List saved school calendars stored in doc/calendars."""
+
+    SCHOOL_CALENDARS_DIR.mkdir(parents=True, exist_ok=True)
+    calendars = []
+    for path in sorted(SCHOOL_CALENDARS_DIR.glob("*.json")):
+        metadata = {"name": path.name, "path": str(path.relative_to(ROOT)), "course_design_name": ""}
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8-sig"))
+            metadata["course_design_name"] = payload.get("course_design_name", "")
+        except Exception:  # noqa: BLE001
+            metadata["course_design_name"] = ""
+        calendars.append(metadata)
+    return calendars
+
+
+def read_school_calendar(name: str) -> dict:
+    """Read a saved school calendar by filename."""
+
+    path = school_calendar_path(name)
+    if not path.is_file():
+        raise FileNotFoundError(f"Calendario scolastico non trovato: {name}")
+    return json.loads(path.read_text(encoding="utf-8-sig"))
+
+
+def write_school_calendar(name: str, payload: dict) -> dict:
+    """Persist a named school calendar in the calendars folder."""
+
+    SCHOOL_CALENDARS_DIR.mkdir(parents=True, exist_ok=True)
+    path = school_calendar_path(name)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return {"name": path.name, "path": str(path.relative_to(ROOT))}
 
@@ -678,9 +765,10 @@ def course_plan_system_prompt() -> str:
     """Return the provider-independent instruction for course-plan generation."""
 
     return (
-        "Sei un docente esperto di TPSI e progettazione didattica. "
+        "Sei un docente esperto di progettazione didattica per discipline tecniche e informatiche. "
         "Devi costruire una proposta di percorso annuale usando solo gli id degli argomenti disponibili. "
-        "Rispetta il brief del docente, la progressione didattica, il numero di settimane e gli obiettivi. "
+        "Rispetta il brief del docente, la progressione didattica, il numero di settimane, le ore disponibili e gli obiettivi. "
+        "Il campo brief.description rappresenta gli obiettivi e i criteri principali di selezione: usalo per decidere quali paragrafi e sottoparagrafi includere, escludere o lasciare non assegnati. "
         "Non inventare id. Non duplicare argomenti nello stesso anno. "
         "Se un argomento non e coerente con il brief, lascialo tra gli unplaced_topics spiegando il motivo. "
         "Restituisci solo JSON valido secondo lo schema richiesto."
@@ -1406,6 +1494,9 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/saved-designs":
             self.write_json({"designs": list_saved_designs()})
             return
+        if parsed.path == "/api/school-calendars":
+            self.write_json({"calendars": list_school_calendars()})
+            return
         if parsed.path == "/api/ai-config":
             self.write_json(ai_config())
             return
@@ -1428,6 +1519,15 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
             return
+        if parsed.path == "/api/readme-frames":
+            try:
+                self.write_json(update_readme_frames(payload.get("design", payload)))
+            except Exception as error:  # noqa: BLE001
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+            return
         if parsed.path == "/api/saved-designs/load":
             try:
                 self.write_json({"design": read_saved_design(payload.get("name", ""))})
@@ -1441,6 +1541,38 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             try:
                 saved = write_saved_design(payload.get("name", ""), payload.get("design", {}))
                 self.write_json({"ok": True, "saved": saved, "designs": list_saved_designs()})
+            except Exception as error:  # noqa: BLE001
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+            return
+        if parsed.path == "/api/saved-designs/delete":
+            try:
+                self.write_json(delete_saved_design(
+                    payload.get("name", ""),
+                    bool(payload.get("delete_calendars", False)),
+                    payload.get("calendars", []),
+                ))
+            except Exception as error:  # noqa: BLE001
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+            return
+        if parsed.path == "/api/school-calendars/load":
+            try:
+                self.write_json({"calendar": read_school_calendar(payload.get("name", ""))})
+            except Exception as error:  # noqa: BLE001
+                self.send_response(404)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+            return
+        if parsed.path == "/api/school-calendars/save":
+            try:
+                saved = write_school_calendar(payload.get("name", ""), payload.get("calendar", {}))
+                self.write_json({"ok": True, "saved": saved, "calendars": list_school_calendars()})
             except Exception as error:  # noqa: BLE001
                 self.send_response(400)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -1490,8 +1622,11 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             try:
                 design = payload.get("design", {})
                 year_id = payload.get("year_id", "")
+                brief = payload.get("brief", {})
                 ai_payload = {
-                    "brief": payload.get("brief", {}),
+                    "brief": brief,
+                    "selection_objectives": brief.get("description", ""),
+                    "selection_rule": "Usa selection_objectives come criterio principale per scegliere quali paragrafi e sottoparagrafi inserire nelle UDA.",
                     "target_year_id": year_id,
                     "current_course": compact_design(design),
                     "available_topics": heading_catalog_tree(),

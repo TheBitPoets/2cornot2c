@@ -3,6 +3,7 @@
   design: null,
   savedDesigns: [],
   activeSavedDesign: "",
+  isNewDesign: false,
   aiConfig: null,
   draggedHeading: null,
   collapsedHeadingIds: new Set(),
@@ -12,6 +13,10 @@
   activeFrameTextarea: null,
 };
 
+const ACTIVE_COURSE_DESIGN_KEY = "2cornot2c.activeCourseDesign";
+const ACTIVE_SCHOOL_CALENDAR_KEY = "2cornot2c.activeSchoolCalendar";
+const ACTIVE_COURSE_SESSION_KEY = "2cornot2c.keepActiveCourseInSession";
+
 const els = {
   headingList: document.querySelector("#headingList"),
   headingTemplate: document.querySelector("#headingTemplate"),
@@ -19,15 +24,31 @@ const els = {
   levelFilter: document.querySelector("#levelFilter"),
   searchInput: document.querySelector("#searchInput"),
   courseTree: document.querySelector("#courseTree"),
+  projectTitle: document.querySelector("#projectTitle"),
   status: document.querySelector("#status"),
   aiConfig: document.querySelector("#aiConfig"),
-  savedDesignSelect: document.querySelector("#savedDesignSelect"),
   loadSavedDesignBtn: document.querySelector("#loadSavedDesignBtn"),
+  savedDesignMenu: document.querySelector("#savedDesignMenu"),
+  newDesignBtn: document.querySelector("#newDesignBtn"),
   saveArchiveBtn: document.querySelector("#saveArchiveBtn"),
+  saveArchiveAsBtn: document.querySelector("#saveArchiveAsBtn"),
+  deleteArchiveBtn: document.querySelector("#deleteArchiveBtn"),
   generateAllFramesBtn: document.querySelector("#generateAllFramesBtn"),
   generateCoursePlanMdBtn: document.querySelector("#generateCoursePlanMdBtn"),
+  updateReadmeFramesBtn: document.querySelector("#updateReadmeFramesBtn"),
   reloadBtn: document.querySelector("#reloadBtn"),
   saveBtn: document.querySelector("#saveBtn"),
+  addYearBtn: document.querySelector("#addYearBtn"),
+  yearDialog: document.querySelector("#yearDialog"),
+  yearCloseBtn: document.querySelector("#yearCloseBtn"),
+  yearCancelBtn: document.querySelector("#yearCancelBtn"),
+  yearCreateBtn: document.querySelector("#yearCreateBtn"),
+  yearTitleInput: document.querySelector("#yearTitleInput"),
+  yearSubjectInput: document.querySelector("#yearSubjectInput"),
+  yearIdInput: document.querySelector("#yearIdInput"),
+  yearWeeksInput: document.querySelector("#yearWeeksInput"),
+  yearWeeklyHoursInput: document.querySelector("#yearWeeklyHoursInput"),
+  yearDescriptionInput: document.querySelector("#yearDescriptionInput"),
   courseAiDialog: document.querySelector("#courseAiDialog"),
   courseAiTitle: document.querySelector("#courseAiTitle"),
   courseAiCloseBtn: document.querySelector("#courseAiCloseBtn"),
@@ -91,6 +112,34 @@ const AI_PROGRESS_STAGES = [
 
 let aiProgressTimer = null;
 let frameBatch = null;
+
+function emptyCourseDesign() {
+  return {
+    version: 1,
+    source_files: ["README.md", "LINUX_PROGRAMMING.md"],
+    years: [],
+  };
+}
+
+function emptyCourseYear(id, title, weeklyHours, weeks = 33, subject = "") {
+  return {
+    id,
+    title,
+    subject,
+    description: "",
+    weekly_hours: weeklyHours,
+    weeks,
+    udas: [
+      {
+        id: "uda-1",
+        title: "Da definire",
+        path: "",
+        weeks: "",
+        items: [],
+      },
+    ],
+  };
+}
 
 function setStatus(message) {
   els.status.textContent = message;
@@ -185,51 +234,160 @@ async function loadAll() {
   ]);
   state.headings = headingsPayload.headings;
   state.design = design;
+  state.activeSavedDesign = "";
+  state.isNewDesign = false;
   state.aiConfig = aiConfig;
   state.savedDesigns = savedDesigns.designs || [];
+  const keepActiveDesign = sessionStorage.getItem(ACTIVE_COURSE_SESSION_KEY) === "true";
+  const activeDesign = localStorage.getItem(ACTIVE_COURSE_DESIGN_KEY) || "";
+  if (keepActiveDesign && activeDesign && state.savedDesigns.some((saved) => saved.name === activeDesign)) {
+    await loadSavedDesignByName(activeDesign, { confirmFirst: false, render: false });
+  }
   populateFilters();
   renderAiConfig();
   renderSavedDesigns();
+  renderProjectTitle();
   renderHeadings();
   renderCourse();
-  setStatus("Pronto.");
+  if (state.activeSavedDesign || state.isNewDesign) {
+    setStatus("Pronto.");
+  } else {
+    renderCourseActions();
+  }
 }
 
 function renderSavedDesigns() {
-  const selected = state.activeSavedDesign || els.savedDesignSelect.value;
-  els.savedDesignSelect.innerHTML = '<option value="">Percorsi salvati</option>';
+  els.savedDesignMenu.innerHTML = "";
+  const currentButton = document.createElement("button");
+  currentButton.type = "button";
+  currentButton.className = "courseLoadItem";
+  currentButton.textContent = "Progetto corrente (doc/course_design.json)";
+  currentButton.addEventListener("click", () => loadDesignFromMenu("__current__"));
+  els.savedDesignMenu.append(currentButton);
   for (const design of state.savedDesigns) {
-    const option = document.createElement("option");
-    option.value = design.name;
-    option.textContent = design.name;
-    els.savedDesignSelect.append(option);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "courseLoadItem";
+    button.textContent = design.name;
+    button.addEventListener("click", () => loadDesignFromMenu(design.name));
+    els.savedDesignMenu.append(button);
   }
-  els.savedDesignSelect.value = selected;
+  renderCourseActions();
 }
 
-async function loadSavedDesign() {
-  const name = els.savedDesignSelect.value;
+function projectDisplayName() {
+  return state.activeSavedDesign || "doc/course_design.json";
+}
+
+function renderProjectTitle() {
+  els.projectTitle.textContent = `Progetto didattico: ${projectDisplayName()}`;
+}
+
+function renderCourseActions() {
+  const isCurrent = !state.activeSavedDesign && !state.isNewDesign;
+  if (isCurrent) {
+    els.saveArchiveBtn.title = "Salva le modifiche direttamente nel progetto corrente doc/course_design.json.";
+  } else if (state.activeSavedDesign) {
+    els.saveArchiveBtn.title = `Salva le modifiche nel progetto archiviato ${state.activeSavedDesign}.`;
+  } else {
+    els.saveArchiveBtn.title = "Salva il nuovo progetto nell'archivio dei progetti didattici.";
+  }
+  els.saveArchiveAsBtn.title = "Salva una copia del progetto con un nuovo nome nell'archivio; poi potrai impostarla come progetto corrente.";
+  els.deleteArchiveBtn.disabled = isCurrent;
+  els.deleteArchiveBtn.title = isCurrent
+    ? "Il progetto corrente doc/course_design.json non puo essere eliminato dalla board."
+    : `Cancella il progetto archiviato ${state.activeSavedDesign}.`;
+  els.saveBtn.disabled = isCurrent;
+  els.saveBtn.title = isCurrent
+    ? "Il progetto corrente e gia caricato: non serve impostarlo di nuovo."
+    : "Imposta il progetto caricato come progetto corrente, sovrascrivendo doc/course_design.json dopo conferma esplicita.";
+  if (isCurrent && (!els.status.textContent || els.status.textContent === "Pronto.")) {
+    setStatus("Stai lavorando sul progetto corrente: Imposta corrente non è disponibile.");
+  }
+}
+
+function openSavedDesignPicker() {
+  renderSavedDesigns();
+  const isOpen = !els.savedDesignMenu.hidden;
+  els.savedDesignMenu.hidden = isOpen;
+  els.loadSavedDesignBtn.setAttribute("aria-expanded", String(!isOpen));
+}
+
+async function loadDesignFromMenu(name) {
+  els.savedDesignMenu.hidden = true;
+  els.loadSavedDesignBtn.setAttribute("aria-expanded", "false");
   if (!name) {
-    setStatus("Seleziona un percorso salvato da caricare.");
     return;
   }
-  if (!confirm(`Caricare "${name}" nella board? Le modifiche non salvate nella vista corrente saranno perse.`)) return;
-  setStatus(`Caricamento percorso salvato "${name}"...`);
+  if (name === "__current__") {
+    await loadCurrentDesign();
+    return;
+  }
+  await loadSavedDesignByName(name, { confirmFirst: true, render: true });
+}
+
+async function loadCurrentDesign() {
+  if (!confirm("Caricare il progetto corrente da doc/course_design.json? Le modifiche non salvate nella vista corrente saranno perse.")) return;
+  setStatus("Caricamento progetto corrente...");
+  state.design = await api("/api/course-design");
+  state.activeSavedDesign = "";
+  state.isNewDesign = false;
+  localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
+  sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
+  renderSavedDesigns();
+  renderProjectTitle();
+  renderHeadings();
+  renderCourse();
+  renderCourseActions();
+  setStatus("Progetto corrente caricato da doc/course_design.json.");
+}
+
+async function loadSavedDesignByName(name, options = {}) {
+  const { confirmFirst = true, render = true } = options;
+  if (confirmFirst && !confirm(`Caricare "${name}" nella board? Le modifiche non salvate nella vista corrente saranno perse.`)) return;
+  setStatus(`Caricamento progetto salvato "${name}"...`);
   const payload = await api("/api/saved-designs/load", {
     method: "POST",
     body: JSON.stringify({ name }),
   });
   state.design = payload.design;
   state.activeSavedDesign = name;
-  renderHeadings();
-  renderCourse();
-  setStatus(`Percorso "${name}" caricato. Usa "Imposta corrente" o "Aggiorna archivio" per persistere modifiche.`);
+  state.isNewDesign = false;
+  localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, name);
+  sessionStorage.setItem(ACTIVE_COURSE_SESSION_KEY, "true");
+  if (render) {
+    renderSavedDesigns();
+    renderProjectTitle();
+    renderHeadings();
+    renderCourse();
+    renderCourseActions();
+  }
+  setStatus(`Progetto "${name}" caricato. Usa "Salva progetto" per aggiornare l'archivio o "Imposta corrente" per sovrascrivere doc/course_design.json.`);
 }
 
 async function saveArchiveDesign() {
-  const defaultName = state.activeSavedDesign || els.savedDesignSelect.value || "course_design_as_25_26.json";
+  if (!state.activeSavedDesign && !state.isNewDesign) {
+    await saveCurrentProject();
+    return;
+  }
+  const defaultName = state.activeSavedDesign || "course_design_as_25_26.json";
+  if (state.activeSavedDesign) {
+    await saveArchiveDesignWithName(state.activeSavedDesign);
+    return;
+  }
   const name = prompt("Nome file archivio JSON:", defaultName);
   if (!name) return;
+  await saveArchiveDesignWithName(name);
+}
+
+async function saveArchiveDesignAs() {
+  const defaultName = state.activeSavedDesign || "course_design_as_25_26.json";
+  const name = prompt("Nome file archivio JSON:", defaultName);
+  if (!name) return;
+  await saveArchiveDesignWithName(name);
+}
+
+async function saveArchiveDesignWithName(name) {
   setStatus(`Salvataggio archivio "${name}"...`);
   const payload = await api("/api/saved-designs/save", {
     method: "POST",
@@ -237,8 +395,101 @@ async function saveArchiveDesign() {
   });
   state.savedDesigns = payload.designs || [];
   state.activeSavedDesign = payload.saved?.name || name;
+  state.isNewDesign = false;
+  localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, state.activeSavedDesign);
+  sessionStorage.setItem(ACTIVE_COURSE_SESSION_KEY, "true");
   renderSavedDesigns();
-  setStatus(`Percorso salvato in archivio: ${state.activeSavedDesign}.`);
+  renderProjectTitle();
+  renderCourseActions();
+  setStatus(`Progetto salvato in archivio: ${state.activeSavedDesign}.`);
+}
+
+async function saveCurrentProject() {
+  setStatus("Salvataggio progetto corrente in doc/course_design.json...");
+  await api("/api/course-design", {
+    method: "POST",
+    body: JSON.stringify(state.design),
+  });
+  localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
+  sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
+  state.activeSavedDesign = "";
+  state.isNewDesign = false;
+  renderSavedDesigns();
+  renderProjectTitle();
+  renderCourseActions();
+  setStatus("Progetto corrente salvato in doc/course_design.json.");
+}
+
+async function deleteArchiveDesign() {
+  if (!state.activeSavedDesign) {
+    setStatus("Il progetto corrente non si cancella: puoi sovrascriverlo o salvare un altro progetto come corrente.");
+    renderCourseActions();
+    return;
+  }
+  const name = state.activeSavedDesign;
+  const calendarsPayload = await api("/api/school-calendars");
+  const linkedCalendars = (calendarsPayload.calendars || []).filter((calendar) => (calendar.course_design_name || "") === name);
+  let deleteCalendars = false;
+  if (linkedCalendars.length) {
+    const calendarList = linkedCalendars.map((calendar) => `- ${calendar.name}`).join("\n");
+    const choice = prompt(
+      `Il progetto "${name}" ha ${linkedCalendars.length} calendario/i associato/i:\n\n${calendarList}\n\n` +
+      "Scrivi:\n" +
+      "- progetto: cancella solo il progetto\n" +
+      "- tutto: cancella progetto e calendari associati\n" +
+      "- annulla: interrompi"
+    );
+    const normalized = (choice || "").trim().toLowerCase();
+    if (!normalized || normalized === "annulla") return;
+    if (normalized === "tutto") {
+      deleteCalendars = true;
+    } else if (normalized !== "progetto") {
+      setStatus("Cancellazione annullata: scelta non riconosciuta.");
+      return;
+    }
+  } else if (!confirm(`Cancellare definitivamente il progetto archiviato "${name}"?`)) {
+    return;
+  }
+  setStatus(`Cancellazione progetto "${name}"...`);
+  const payload = await api("/api/saved-designs/delete", {
+    method: "POST",
+    body: JSON.stringify({
+      name,
+      delete_calendars: deleteCalendars,
+      calendars: linkedCalendars.map((calendar) => calendar.name),
+    }),
+  });
+  state.savedDesigns = payload.designs || [];
+  localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
+  sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
+  state.design = await api("/api/course-design");
+  state.activeSavedDesign = "";
+  state.isNewDesign = false;
+  renderSavedDesigns();
+  renderProjectTitle();
+  renderHeadings();
+  renderCourse();
+  renderCourseActions();
+  const removedCalendars = payload.deleted_calendars?.length
+    ? ` Calendari eliminati: ${payload.deleted_calendars.join(", ")}.`
+    : "";
+  setStatus(`Progetto archiviato eliminato: ${name}.${removedCalendars}`);
+}
+
+async function newCourseDesign() {
+  if (!confirm("Creare un nuovo percorso vuoto? Le modifiche non salvate nella vista corrente saranno perse.")) return;
+  const name = prompt("Nome file del nuovo percorso JSON:", "course_design_as_25_26.json");
+  if (!name) return;
+  state.design = emptyCourseDesign();
+  state.activeSavedDesign = name;
+  state.isNewDesign = false;
+  await saveArchiveDesignWithName(name);
+  renderSavedDesigns();
+  renderProjectTitle();
+  renderHeadings();
+  renderCourse();
+  renderCourseActions();
+  setStatus(`Nuovo progetto "${name}" creato e salvato in archivio.`);
 }
 
 function renderAiConfig() {
@@ -510,8 +761,63 @@ function defaultFrameQuality() {
   return Object.fromEntries(FRAME_FIELDS.map((field) => [field.key, "none"]));
 }
 
+function slugifyId(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function openYearDialog() {
+  els.yearTitleInput.value = "";
+  els.yearSubjectInput.value = "";
+  els.yearIdInput.value = "";
+  els.yearIdInput.dataset.touched = "";
+  els.yearWeeksInput.value = "33";
+  els.yearWeeklyHoursInput.value = "3";
+  els.yearDescriptionInput.value = "";
+  els.yearDialog.showModal();
+  els.yearTitleInput.focus();
+}
+
+function createYearFromDialog() {
+  const title = els.yearTitleInput.value.trim();
+  const subject = els.yearSubjectInput.value.trim();
+  const id = els.yearIdInput.value.trim();
+  const weeks = Number(els.yearWeeksInput.value || 33);
+  const weeklyHours = Number(els.yearWeeklyHoursInput.value || 3);
+  const description = els.yearDescriptionInput.value.trim();
+  if (!title) {
+    setStatus("Inserisci il nome del percorso.");
+    return;
+  }
+  if (!id) {
+    setStatus("Inserisci un ID per il percorso.");
+    return;
+  }
+  if ((state.design.years || []).some((year) => year.id === id)) {
+    setStatus(`Esiste gia un percorso con ID "${id}".`);
+    return;
+  }
+  state.design.years ||= [];
+  const year = emptyCourseYear(id, title, weeklyHours, weeks, subject);
+  year.description = description;
+  state.design.years.push(year);
+  els.yearDialog.close();
+  renderCourse();
+  renderHeadings();
+  setStatus(`Percorso "${title}" aggiunto.`);
+}
+
 function renderCourse() {
   els.courseTree.innerHTML = "";
+  if (!(state.design.years || []).length) {
+    els.courseTree.innerHTML = '<p class="empty">Nessun percorso definito. Usa "Aggiungi percorso" per creare il primo contenitore UDA.</p>';
+    return;
+  }
   for (const year of state.design.years || []) {
     const yearNode = document.createElement("section");
     yearNode.className = "year";
@@ -519,18 +825,31 @@ function renderCourse() {
       <div class="yearHead">
         <div>
           <h3>${escapeHtml(year.title)}</h3>
-          <div class="yearMeta">${escapeHtml(year.description || "")} · ${year.weeks || "?"} settimane · ${year.weekly_hours || "?"} ore/settimana</div>
+          <div class="yearMeta">${escapeHtml(year.subject || "Materia n/d")} · ${escapeHtml(year.description || "")} · ${year.weeks || "?"} settimane · ${year.weekly_hours || "?"} ore/settimana</div>
         </div>
-        <button type="button" data-action="ai-course" title="Usa il provider AI configurato per generare una proposta di percorso per questo anno.">AI genera percorso</button>
+        <div class="yearActions">
+          <button type="button" data-action="ai-course" title="Usa il provider AI configurato per generare una proposta di percorso per questo anno.">AI genera percorso</button>
+          <button type="button" data-action="remove-year" title="Elimina questo percorso e tutte le sue UDA.">Elimina percorso</button>
+        </div>
       </div>
     `;
     yearNode.querySelector('[data-action="ai-course"]').addEventListener("click", () => openCourseAiDialog(year));
+    yearNode.querySelector('[data-action="remove-year"]').addEventListener("click", () => removeYear(year));
 
     for (const uda of year.udas || []) {
       yearNode.append(renderUda(year, uda));
     }
     els.courseTree.append(yearNode);
   }
+}
+
+function removeYear(year) {
+  const confirmed = confirm(`Eliminare "${year.title}"?\n\nSaranno eliminate anche tutte le UDA e gli argomenti collegati a questo percorso.`);
+  if (!confirmed) return;
+  state.design.years = (state.design.years || []).filter((candidate) => candidate !== year);
+  renderCourse();
+  renderHeadings();
+  setStatus(`Percorso "${year.title}" eliminato.`);
 }
 
 function renderUda(year, uda) {
@@ -656,31 +975,34 @@ function renderItem(year, uda, siblings, item, index, depth) {
 }
 
 function defaultCourseBrief(year) {
-  const totalHours = Number(year.weekly_hours || 0) * Number(year.weeks || 0);
+  const weeklyHours = Number(year.weekly_hours || 0);
+  const weeks = Number(year.weeks || 0);
+  const totalHours = weeklyHours * weeks;
+  const subject = year.subject || "";
   return {
-    subject: "TPSI",
+    subject,
     year_title: year.title || "",
     description: year.description || "",
-    weekly_hours: year.weekly_hours || 3,
-    weeks: year.weeks || 33,
+    weekly_hours: weeklyHours || "",
+    weeks: weeks || "",
     total_hours: totalHours || "",
     goals: [
-      "Scrivere piccoli programmi in C.",
-      "Comprendere variabili, tipi, operatori, condizioni, cicli e funzioni.",
-      "Introdurre array, stringhe, puntatori e memoria.",
-      "Integrare teoria e laboratorio in modo progressivo."
+      "Costruire una progressione didattica coerente con la materia e con il percorso indicato.",
+      "Distribuire gli argomenti nelle UDA rispettando settimane, ore disponibili e complessita crescente.",
+      "Integrare teoria, laboratorio, esercizi guidati e attivita autonome.",
+      "Lasciare modificabile la proposta generata."
     ].join("\n"),
     constraints: [
       "Usa solo argomenti presenti tra i paragrafi disponibili.",
       "Non duplicare argomenti nello stesso anno.",
       "Mantieni una progressione didattica dal semplice al complesso.",
       "Lascia tra i non assegnati gli argomenti non coerenti con questo anno.",
-      "Non inserire argomenti Linux/processi/thread nel terzo anno se non richiesto esplicitamente."
+      "Rispetta il monte ore e il numero di settimane indicati nel brief."
     ].join("\n"),
     preferences: [
       "Preferire UDA da 3-5 settimane.",
       "Alternare spiegazione teorica e attivita di laboratorio.",
-      "Mettere i puntatori dopo funzioni, array e stringhe.",
+      "Collocare gli argomenti avanzati dopo i prerequisiti necessari.",
       "Produrre una proposta modificabile, non una soluzione definitiva."
     ].join("\n")
   };
@@ -786,10 +1108,14 @@ function countItems(items) {
 function applyCourseAiProposal() {
   const year = (state.design.years || []).find((candidate) => candidate.id === state.courseAiYearId);
   if (!year || !state.courseAiProposal) return;
+  const brief = readCourseBrief();
   year.title = state.courseAiProposal.title || year.title;
   year.description = state.courseAiProposal.description || year.description;
+  year.subject = brief.subject || year.subject || "";
+  year.weekly_hours = brief.weekly_hours || year.weekly_hours;
+  year.weeks = brief.weeks || year.weeks;
   year.udas = state.courseAiProposal.udas || year.udas;
-  year.ai_brief = readCourseBrief();
+  year.ai_brief = brief;
   els.courseAiDialog.close();
   state.courseAiProposal = null;
   renderCourse();
@@ -1301,12 +1627,29 @@ function toggleCourseItem(collapseKey) {
 }
 
 async function saveDesign() {
+  if (!state.activeSavedDesign && !state.isNewDesign) {
+    setStatus("Il progetto corrente e gia caricato: non serve impostarlo di nuovo.");
+    renderCourseActions();
+    return;
+  }
+  const confirmed = confirm(
+    "Confermi di voler impostare questo percorso come corrente?\n\n" +
+    "Questa operazione sovrascrive doc/course_design.json."
+  );
+  if (!confirmed) return;
   setStatus("Salvataggio...");
   await api("/api/course-design", {
     method: "POST",
     body: JSON.stringify(state.design),
   });
-  setStatus("Percorso impostato come corrente in doc/course_design.json.");
+  localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
+  sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
+  state.activeSavedDesign = "";
+  state.isNewDesign = false;
+  renderSavedDesigns();
+  renderProjectTitle();
+  renderCourseActions();
+  setStatus("Progetto impostato come corrente in doc/course_design.json.");
 }
 
 async function generateCoursePlanMd() {
@@ -1325,6 +1668,22 @@ async function generateCoursePlanMd() {
   }
 }
 
+async function updateReadmeFrames() {
+  els.updateReadmeFramesBtn.disabled = true;
+  setStatus("Aggiornamento README: salvo il JSON corrente e inserisco le cornici didattiche nei paragrafi...");
+  try {
+    const payload = await api("/api/readme-frames", {
+      method: "POST",
+      body: JSON.stringify({ design: state.design }),
+    });
+    setStatus(`README aggiornato: ${payload.readme_path}.`);
+  } catch (error) {
+    setStatus(`Aggiornamento README non riuscito. Dettaglio: ${error.message}`);
+  } finally {
+    els.updateReadmeFramesBtn.disabled = false;
+  }
+}
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -1335,10 +1694,25 @@ function escapeHtml(value) {
 
 els.reloadBtn.addEventListener("click", loadAll);
 els.saveBtn.addEventListener("click", saveDesign);
-els.loadSavedDesignBtn.addEventListener("click", loadSavedDesign);
+els.loadSavedDesignBtn.addEventListener("click", openSavedDesignPicker);
+els.newDesignBtn.addEventListener("click", newCourseDesign);
 els.saveArchiveBtn.addEventListener("click", saveArchiveDesign);
+els.saveArchiveAsBtn.addEventListener("click", saveArchiveDesignAs);
+els.deleteArchiveBtn.addEventListener("click", deleteArchiveDesign);
+els.addYearBtn.addEventListener("click", openYearDialog);
+els.yearCloseBtn.addEventListener("click", () => els.yearDialog.close());
+els.yearCancelBtn.addEventListener("click", () => els.yearDialog.close());
+els.yearCreateBtn.addEventListener("click", createYearFromDialog);
+els.yearIdInput.addEventListener("input", () => {
+  els.yearIdInput.dataset.touched = "true";
+});
+els.yearTitleInput.addEventListener("input", () => {
+  if (els.yearIdInput.dataset.touched) return;
+  els.yearIdInput.value = slugifyId(els.yearTitleInput.value);
+});
 els.generateAllFramesBtn.addEventListener("click", generateAllFrames);
 els.generateCoursePlanMdBtn.addEventListener("click", generateCoursePlanMd);
+els.updateReadmeFramesBtn.addEventListener("click", updateReadmeFrames);
 els.aiBusyNextBtn.addEventListener("click", generateNextFrameInBatch);
 els.aiBusyAllBtn.addEventListener("click", generateAllFramesInBatch);
 els.aiBusyCloseBtn.addEventListener("click", closeFrameBatch);
@@ -1349,6 +1723,13 @@ els.courseAiApplyBtn.addEventListener("click", applyCourseAiProposal);
 els.sourceFilter.addEventListener("change", renderHeadings);
 els.levelFilter.addEventListener("change", renderHeadings);
 els.searchInput.addEventListener("input", renderHeadings);
+
+document.addEventListener("click", (event) => {
+  if (els.savedDesignMenu.hidden) return;
+  if (event.target === els.loadSavedDesignBtn || els.savedDesignMenu.contains(event.target)) return;
+  els.savedDesignMenu.hidden = true;
+  els.loadSavedDesignBtn.setAttribute("aria-expanded", "false");
+});
 
 loadAll().catch((error) => {
   console.error(error);

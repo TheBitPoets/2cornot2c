@@ -349,12 +349,12 @@ This is a C 101 course for my students. Sorry, only the Italian version is avail
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su configurazione dell'ambiente, strumenti di lavoro e avvio del laboratorio. I sottoparagrafi collegati sono: Guest Additions. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare sulla configurazione dell'ambiente, sugli strumenti di lavoro e sull'avvio del laboratorio. I sottoparagrafi collegati sono: Guest Additions. La cornice è pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo però il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Introduzione" lo studente dovrebbe aver seguito il lavoro precedente su "l'avvio del percorso e la costruzione delle basi operative", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Introduzione", lo studente dovrebbe aver seguito il lavoro precedente su "l'avvio del percorso e la costruzione delle basi operative":<br>- saper compilare ed eseguire piccoli programmi C<br>- leggere esempi guidati e riconoscere il lessico tecnico già introdotto.<br>Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
@@ -364,22 +364,22 @@ Alla fine della lezione lo studente deve saper spiegare il ruolo di "Introduzion
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
-Richiama il passaggio precedente su "l'avvio del percorso e la costruzione delle basi operative" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+Richiama il passaggio precedente su "l'avvio del percorso e la costruzione delle basi operative" e riprendi il vocabolario già consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo è far percepire l'argomento come una prosecuzione naturale, non come un blocco isolato.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Questo argomento prepara il lavoro successivo su "Guest Additions". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+Questo argomento prepara il lavoro successivo su "Guest Additions". Durante la spiegazione, conviene evidenziare quali dettagli verranno approfonditi più avanti, così da non sovraccaricare la prima lettura, ma lasciare già una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Introduzione", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Guest Additions" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Introduzione", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è quello di collegare questo argomento a "Guest Additions" oppure, se l'argomento ha sottoparagrafi, di affrontarli in ordine.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Introduzione" (../README.md#introduzione). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: README.md, sezione "Introduzione" (../README.md#introduzione). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -539,37 +539,37 @@ vagrant ssh
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore Introduzione. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per il Terzo anno. Serve a lavorare sul concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore "Introduzione". La cornice è pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo però il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Guest Additions" lo studente dovrebbe aver seguito il lavoro precedente su "Introduzione", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Guest Additions", lo studente dovrebbe aver seguito il lavoro precedente su "Introduzione", sapere come compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico già introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine della lezione lo studente deve saper spiegare il ruolo di "Guest Additions", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+Alla fine della lezione lo studente deve sapere spiegare il ruolo di "Guest Additions", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
-Richiama il passaggio precedente su "Introduzione" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+Richiama il passaggio precedente su "Introduzione" e riprendi il vocabolario già consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo è far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Questo argomento prepara il lavoro successivo su "Laboratori". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+Questo argomento prepara il lavoro successivo su "Laboratori". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi più avanti, così da non sovraccaricare la prima lettura, ma lasciare già una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Guest Additions", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Laboratori" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Guest Additions", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è collegare questo argomento a "Laboratori" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Guest Additions" (../README.md#guest-additions). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: README.md, sezione "Guest Additions" (../README.md#guest-additions). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -691,37 +691,37 @@ Dopo aver apportato modifiche al tuo Vagrantfile, esegui vagrant up per avviare 
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su organizzazione dei sorgenti, cartelle di lavoro e compilazione degli esercizi. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su organizzazione dei sorgenti, cartelle di lavoro e compilazione degli esercizi. La cornice è pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo però il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Laboratori" lo studente dovrebbe aver seguito il lavoro precedente su "Guest Additions", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Laboratori" lo studente dovrebbe aver seguito il lavoro precedente su "Guest Additions", sapere come compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico già introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine della lezione lo studente deve saper spiegare il ruolo di "Laboratori", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+Alla fine della lezione, lo studente deve saper spiegare il ruolo dei "Laboratori", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
-Richiama il passaggio precedente su "Guest Additions" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+Richiama il passaggio precedente su "Guest Additions" e riprendi il vocabolario già consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo è far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Questo argomento prepara il lavoro successivo su "Il processo di compilazione". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+Questo argomento prepara il lavoro successivo su "Il processo di compilazione". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi più avanti, così da non sovraccaricare la prima lettura ma lasciare già una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Laboratori", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Il processo di compilazione" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Laboratori", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è collegare questo argomento a "Il processo di compilazione" oppure, se l'argomento ha dei sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Laboratori" (../README.md#laboratori). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: README.md, sezione "Laboratori" (../README.md#laboratori). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -747,37 +747,37 @@ Ogni lab contiene al suo interno una cartella bin destinata a ospitare i file es
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su trasformazione del sorgente C in eseguibile tramite preprocessore, compilatore, assembler e linker. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare sulla trasformazione del sorgente C in eseguibile tramite preprocessore, compilatore, assembler e linker. La cornice è pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo però il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Il processo di compilazione" lo studente dovrebbe aver seguito il lavoro precedente su "Laboratori", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Il processo di compilazione", lo studente dovrebbe aver seguito il lavoro precedente su "Laboratori", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico già introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine della lezione lo studente deve saper spiegare il ruolo di "Il processo di compilazione", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+Alla fine della lezione, lo studente deve sapere spiegare il ruolo del "processo di compilazione", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre sapere indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
-Richiama il passaggio precedente su "Laboratori" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+Richiama il passaggio precedente su "Laboratori" e riprendi il vocabolario già consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo è far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Questo argomento prepara il lavoro successivo su "Il primo programma in C". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+Questo argomento prepara il lavoro successivo su "Il primo programma in C". Durante la spiegazione, conviene evidenziare quali dettagli verranno approfonditi più avanti, così da non sovraccaricare la prima lettura, ma lasciare già una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Il processo di compilazione", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Il primo programma in C" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Il processo di compilazione", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è collegare questo argomento a "Il primo programma in C" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Il processo di compilazione" (../README.md#il-processo-di-compilazione). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: README.md, sezione "Il processo di compilazione" (../README.md#il-processo-di-compilazione). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -966,37 +966,37 @@ Il preprocessore viene richiamato dal compilatore come primo step nel processo d
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su struttura minima di un programma C, funzione main, include e stampa a video. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su struttura minima di un programma C, funzione main, include e stampa a video. La cornice è pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo però il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Il primo programma in C" lo studente dovrebbe aver seguito il lavoro precedente su "Il processo di compilazione", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Il primo programma in C", lo studente dovrebbe aver seguito il lavoro precedente su "Il processo di compilazione", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico già introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine della lezione lo studente deve saper spiegare il ruolo di "Il primo programma in C", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+Alla fine della lezione, lo studente deve sapere spiegare il ruolo di "Il primo programma in C", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre sapere indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
-Richiama il passaggio precedente su "Il processo di compilazione" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+Richiama il passaggio precedente su "Il processo di compilazione" e riprendi il vocabolario già consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo è far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Questo argomento prepara il lavoro successivo su "Variabili". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+Questo argomento prepara il lavoro successivo su "Variabili". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi più avanti, così da non sovraccaricare la prima lettura ma lasciare già una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Il primo programma in C", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Variabili" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Il primo programma in C", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è collegare questo argomento a "Variabili" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Il primo programma in C" (../README.md#il-primo-programma-in-c). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: README.md, sezione "Il primo programma in C" (../README.md#il-primo-programma-in-c). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -1401,37 +1401,37 @@ Come spiegato ampiamente in precedenza, facciamo uso anche della funzione printf
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su dichiarazione, tipo, valore, memoria e uso dei dati durante l'esecuzione. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su dichiarazione, tipo, valore, memoria e uso dei dati durante l'esecuzione. La cornice è pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo però il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Variabili" lo studente dovrebbe aver seguito il lavoro precedente su "Il primo programma in C", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Variabili", lo studente dovrebbe aver seguito il lavoro precedente su "Il primo programma in C", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico già introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine della lezione lo studente deve saper spiegare il ruolo di "Variabili", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+Alla fine della lezione lo studente deve sapere spiegare il ruolo di "Variabili", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
-Richiama il passaggio precedente su "Il primo programma in C" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+Richiama il passaggio precedente su "Il primo programma in C" e riprendi il vocabolario già consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo è far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Questo argomento prepara il lavoro successivo su "Rappresentazione delle informazioni". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+Questo argomento prepara il lavoro successivo su "Rappresentazione delle informazioni". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi più avanti, così da non sovraccaricare la prima lettura, ma lasciare già una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Variabili", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Rappresentazione delle informazioni" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Variabili", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è quello di collegare questo argomento a "Rappresentazione delle informazioni" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Variabili" (../README.md#variabili). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: README.md, sezione "Variabili" (../README.md#variabili). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -5924,37 +5924,37 @@ int main(void){
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su bit, byte, basi numeriche e interpretazione dei dati in memoria. I sottoparagrafi collegati sono: Big &amp; Little endian, Codifica numeri decimali, Mapping signed - unsigned, Estensione rappresentazione binaria di un numero intero, Troncamento rappresentazione binaria di un numero, Addizione senza segno, Addizione con segno, Tipi di dato, <code>int</code>. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su bit, byte, basi numeriche e interpretazione dei dati in memoria. I sottoparagrafi collegati sono: Big &amp; Little endian, Codifica numeri decimali, Mapping signed - unsigned, Estensione della rappresentazione binaria di un numero intero, Troncamento della rappresentazione binaria di un numero, Addizione senza segno, Addizione con segno, Tipi di dato, <code>int</code>. La cornice è pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo però il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Rappresentazione delle informazioni" lo studente dovrebbe aver seguito il lavoro precedente su "Variabili", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Rappresentazione delle informazioni", lo studente dovrebbe aver seguito il lavoro precedente su "Variabili", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico già introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine della lezione lo studente deve saper spiegare il ruolo di "Rappresentazione delle informazioni", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+Alla fine della lezione, lo studente deve saper spiegare il ruolo di "Rappresentazione delle informazioni", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
-Richiama il passaggio precedente su "Variabili" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+Richiama il passaggio precedente su "Variabili" e riprendi il vocabolario già consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo è far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Questo argomento prepara il lavoro successivo su "Big &amp; Little endian". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+Questo argomento prepara il lavoro successivo su "Big &amp; Little endian". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi più avanti, così da non sovraccaricare la prima lettura ma lasciare già una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Rappresentazione delle informazioni", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Big &amp; Little endian" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Rappresentazione delle informazioni", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è collegare questo argomento a "Big &amp; Little endian" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Rappresentazione delle informazioni" (../README.md#rappresentazione-delle-informazioni). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: README.md, sezione "Rappresentazione delle informazioni" (../README.md#rappresentazione-delle-informazioni). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -6011,37 +6011,37 @@ $1 7 3 A 4 C$
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su ordine dei byte in memoria e lettura corretta dei valori multibyte. Si collega al blocco superiore Rappresentazione delle informazioni. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare sull'ordine dei byte in memoria e sulla lettura corretta dei valori multibyte. Si collega al blocco superiore "Rappresentazione delle informazioni". La cornice è pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo però il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Big &amp; Little endian" lo studente dovrebbe aver seguito il lavoro precedente su "Rappresentazione delle informazioni", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Big &amp; Little endian", lo studente dovrebbe aver seguito il lavoro precedente su "Rappresentazione delle informazioni", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico già introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine della lezione lo studente deve saper spiegare il ruolo di "Big &amp; Little endian", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+Alla fine della lezione, lo studente deve saper spiegare il ruolo di "Big &amp; Little endian", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
-Richiama il passaggio precedente su "Rappresentazione delle informazioni" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+Richiama il passaggio precedente su "Rappresentazione delle informazioni" e riprendi il vocabolario già consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo è far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Questo argomento prepara il lavoro successivo su "Codifica numeri decimali". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+Questo argomento prepara il lavoro successivo su "Codifica di numeri decimali". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi più avanti, così da non sovraccaricare la prima lettura, ma lasciare già una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Big &amp; Little endian", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Codifica numeri decimali" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Big &amp; Little Endian", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è collegare questo argomento a "Codifica dei numeri decimali" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Big &amp; Little endian" (../README.md#big-little-endian). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: README.md, sezione "Big &amp; Little endian" (../README.md#big-little-endian). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -6103,37 +6103,37 @@ Per esempio: la seguente sequenza di bit $0x01234567$ scritta in esadecimale (og
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su rappresentazione binaria dei numeri e significato dei bit. Si collega al blocco superiore Rappresentazione delle informazioni. I sottoparagrafi collegati sono: Codifica interi senza segno, Codifica interi con segno (complemento a due). La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare sulla rappresentazione binaria dei numeri e sul significato dei bit. Si collega al blocco superiore "Rappresentazione delle informazioni". I sottoparagrafi collegati sono: Codifica interi senza segno, Codifica interi con segno (complemento a due). La cornice è pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo però il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Codifica numeri decimali" lo studente dovrebbe aver seguito il lavoro precedente su "Big &amp; Little endian", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Codifica numeri decimali" lo studente dovrebbe aver seguito il lavoro precedente su "Big &amp; Little Endian", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico già introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine della lezione lo studente deve saper spiegare il ruolo di "Codifica numeri decimali", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+Alla fine della lezione lo studente deve sapere spiegare il ruolo di "Codifica di numeri decimali", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre sapere indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
-Richiama il passaggio precedente su "Big &amp; Little endian" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+Richiama il passaggio precedente su "Big &amp; Little endian" e riprendi il vocabolario già consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo è far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Questo argomento prepara il lavoro successivo su "Codifica interi senza segno". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+Questo argomento prepara il lavoro successivo su "Codifica interi senza segno". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi più avanti, così da non sovraccaricare la prima lettura, ma lasciare già una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Codifica numeri decimali", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Codifica interi senza segno" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Codifica numeri decimali", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è collegare questo argomento a "Codifica interi senza segno" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Codifica numeri decimali" (../README.md#codifica-numeri-decimali). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: README.md, sezione "Codifica numeri decimali" (../README.md#codifica-numeri-decimali). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -6175,37 +6175,37 @@ Esistono tre diversi modi per codificare i numeri:
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su rappresentazione binaria dei numeri e significato dei bit. Si collega al blocco superiore Rappresentazione delle informazioni &gt; Codifica numeri decimali. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare sulla rappresentazione binaria dei numeri e sul significato dei bit. Si collega al blocco superiore Rappresentazione delle informazioni &gt; Codifica numeri decimali. La cornice è pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo però il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Codifica interi senza segno" lo studente dovrebbe aver seguito il lavoro precedente su "Codifica numeri decimali", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Codifica interi senza segno", lo studente dovrebbe aver seguito il lavoro precedente su "Codifica numeri decimali", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico già introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine della lezione lo studente deve saper spiegare il ruolo di "Codifica interi senza segno", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+Alla fine della lezione, lo studente deve sapere spiegare il ruolo di "Codifica interi senza segno", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre sapere indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
-Richiama il passaggio precedente su "Codifica numeri decimali" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+Richiama il passaggio precedente su "Codifica numeri decimali" e riprendi il vocabolario già consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo è far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Questo argomento prepara il lavoro successivo su "Codifica interi con segno (complemento a due)". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+Questo argomento prepara il lavoro successivo su "Codifica interi con segno (complemento a due)". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi più avanti, così da non sovraccaricare la prima lettura ma lasciare già una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Codifica interi senza segno", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Codifica interi con segno (complemento a due)" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Codifica interi senza segno", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è collegare questo argomento a "Codifica interi con segno (complemento a due)", oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Codifica interi senza segno" (../README.md#codifica-interi-senza-segno). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: README.md, sezione "Codifica interi senza segno" (../README.md#codifica-interi-senza-segno). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -6266,37 +6266,37 @@ Alcuni esempi:
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su rappresentazione binaria dei numeri e significato dei bit. Si collega al blocco superiore Rappresentazione delle informazioni &gt; Codifica numeri decimali. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare sulla rappresentazione binaria dei numeri e sul significato dei bit. Si collega al blocco superiore Rappresentazione delle informazioni &gt; Codifica dei numeri decimali. La cornice è pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo però il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Codifica interi con segno (complemento a due)" lo studente dovrebbe aver seguito il lavoro precedente su "Codifica interi senza segno", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Codifica interi con segno (complemento a due)" lo studente dovrebbe aver seguito il lavoro precedente su "Codifica interi senza segno", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico già introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine della lezione lo studente deve saper spiegare il ruolo di "Codifica interi con segno (complemento a due)", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+Alla fine della lezione, lo studente deve saper spiegare il ruolo di "Codifica interi con segno (complemento a due)", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
-Richiama il passaggio precedente su "Codifica interi senza segno" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+Richiama il passaggio precedente su "Codifica interi senza segno" e riprendi il vocabolario già consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo è far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Questo argomento prepara il lavoro successivo su "Mapping signed - unsigned". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+Questo argomento prepara il lavoro successivo su "Mapping signed - unsigned". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi più avanti, così da non sovraccaricare la prima lettura ma lasciare già una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Codifica interi con segno (complemento a due)", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Mapping signed - unsigned" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Codifica interi con segno (complemento a due)", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è collegare questo argomento a "Mapping signed - unsigned" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Codifica interi con segno (complemento a due)" (../README.md#codifica-interi-con-segno-complemento-a-due). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: README.md, sezione "Codifica interi con segno (complemento a due)" (../README.md#codifica-interi-con-segno-complemento-a-due). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -6377,37 +6377,37 @@ Nella figura seguente sono invece riportati i range reali per i vari tipi che le
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su numeri con segno, complemento a due, range e casi limite. Si collega al blocco superiore Rappresentazione delle informazioni. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per terzo anno. Serve a lavorare su numeri con segno, complemento a due, range e casi limite. Si collega al blocco superiore "Rappresentazione delle informazioni". La cornice è pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo però il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Mapping signed - unsigned" lo studente dovrebbe aver seguito il lavoro precedente su "Codifica interi con segno (complemento a due)", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Mapping signed - unsigned" lo studente dovrebbe aver seguito il lavoro precedente su "Codifica interi con segno (complemento a due)", saper compilare ed eseguire piccoli programmi in C, leggere esempi guidati e riconoscere il lessico tecnico già introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine della lezione lo studente deve saper spiegare il ruolo di "Mapping signed - unsigned", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+Alla fine della lezione, lo studente deve saper spiegare il ruolo di "Mapping signed - unsigned", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
-Richiama il passaggio precedente su "Codifica interi con segno (complemento a due)" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+Richiama il passaggio precedente su "Codifica interi con segno (complemento a due)" e riprendi il vocabolario già consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo è far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Questo argomento prepara il lavoro successivo su "Estensione rappresentazione binaria di un numero intero". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+Questo argomento prepara il lavoro successivo su "Estensione della rappresentazione binaria di un numero intero". Durante la spiegazione, conviene evidenziare quali dettagli verranno approfonditi più avanti, così da non sovraccaricare la prima lettura, ma lasciare già una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Mapping signed - unsigned", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Estensione rappresentazione binaria di un numero intero" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Mapping signed - unsigned", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è collegare questo argomento a "Estensione rappresentazione binaria di un numero intero" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Mapping signed - unsigned" (../README.md#mapping-signed---unsigned). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: README.md, sezione "Mapping signed - unsigned" (../README.md#mapping-signed---unsigned). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -6487,37 +6487,37 @@ Per ottenere il valore nella rappresentazione senza segno dovremmo sommare a 2 i
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su bit, byte, basi numeriche e interpretazione dei dati in memoria. Si collega al blocco superiore Rappresentazione delle informazioni. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su bit, byte, basi numeriche e interpretazione dei dati in memoria. Si collega al blocco superiore Rappresentazione delle informazioni. La cornice è pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo però il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Estensione rappresentazione binaria di un numero intero" lo studente dovrebbe aver seguito il lavoro precedente su "Mapping signed - unsigned", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Estensione della rappresentazione binaria di un numero intero" lo studente dovrebbe aver seguito il lavoro precedente su "Mapping signed - unsigned", sapere come compilare ed eseguire piccoli programmi in C, leggere esempi guidati e riconoscere il lessico tecnico già introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine della lezione lo studente deve saper spiegare il ruolo di "Estensione rappresentazione binaria di un numero intero", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+Alla fine della lezione, lo studente deve saper spiegare il ruolo di "Estensione e rappresentazione binaria di un numero intero", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
-Richiama il passaggio precedente su "Mapping signed - unsigned" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+Richiama il passaggio precedente su "Mapping signed - unsigned" e riprendi il vocabolario già consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo è far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Questo argomento prepara il lavoro successivo su "Troncamento rappresentazione binaria di un numero". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+Questo argomento prepara il lavoro successivo su "Troncamento e rappresentazione binaria di un numero". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi più avanti, così da non sovraccaricare la prima lettura, ma lasciare già una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Estensione rappresentazione binaria di un numero intero", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Troncamento rappresentazione binaria di un numero" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Estensione rappresentazione binaria di un numero intero", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è collegare questo argomento a "Troncamento rappresentazione binaria di un numero" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Estensione rappresentazione binaria di un numero intero" (../README.md#estensione-rappresentazione-binaria-di-un-numero-intero). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: README.md, sezione "Estensione rappresentazione binaria di un numero intero" (../README.md#estensione-rappresentazione-binaria-di-un-numero-intero). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -6656,37 +6656,37 @@ Per esempio:
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su bit, byte, basi numeriche e interpretazione dei dati in memoria. Si collega al blocco superiore Rappresentazione delle informazioni. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su bit, byte, basi numeriche e interpretazione dei dati in memoria. Si collega al blocco superiore "Rappresentazione delle informazioni". La cornice è pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo però il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Troncamento rappresentazione binaria di un numero" lo studente dovrebbe aver seguito il lavoro precedente su "Estensione rappresentazione binaria di un numero intero", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Troncamento rappresentazione binaria di un numero", lo studente dovrebbe aver seguito il lavoro precedente su "Estensione rappresentazione binaria di un numero intero", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico già introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine della lezione lo studente deve saper spiegare il ruolo di "Troncamento rappresentazione binaria di un numero", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+Alla fine della lezione, lo studente deve sapere spiegare il ruolo di "Troncamento rappresentazione binaria di un numero", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre sapere indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
-Richiama il passaggio precedente su "Estensione rappresentazione binaria di un numero intero" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+Richiama il passaggio precedente su "Estensione rappresentazione binaria di un numero intero" e riprendi il vocabolario già consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo è far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Questo argomento prepara il lavoro successivo su "Addizione senza segno". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+Questo argomento prepara il lavoro successivo su "Addizione senza segno". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi più avanti, così da non sovraccaricare la prima lettura, ma lasciare già una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Troncamento rappresentazione binaria di un numero", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Addizione senza segno" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Troncamento della rappresentazione binaria di un numero", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è collegare questo argomento a "Addizione senza segno" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Troncamento rappresentazione binaria di un numero" (../README.md#troncamento-rappresentazione-binaria-di-un-numero). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: README.md, sezione "Troncamento rappresentazione binaria di un numero" (../README.md#troncamento-rappresentazione-binaria-di-un-numero). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -6752,37 +6752,37 @@ Per esempio:
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore Rappresentazione delle informazioni. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare sul concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore "Rappresentazione delle informazioni". La cornice è pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo però il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Addizione senza segno" lo studente dovrebbe aver seguito il lavoro precedente su "Troncamento rappresentazione binaria di un numero", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Addizione senza segno", lo studente dovrebbe aver seguito il lavoro precedente su "Troncamento rappresentazione binaria di un numero", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico già introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine della lezione lo studente deve saper spiegare il ruolo di "Addizione senza segno", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+Alla fine della lezione, lo studente deve saper spiegare il ruolo di "Addizione senza segno", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
-Richiama il passaggio precedente su "Troncamento rappresentazione binaria di un numero" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+Richiama il passaggio precedente su "Troncamento rappresentazione binaria di un numero" e riprendi il vocabolario già consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo è far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Questo argomento prepara il lavoro successivo su "Addizione con segno". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+Questo argomento prepara il lavoro successivo su "Addizione con segno". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi più avanti, così da non sovraccaricare la prima lettura, ma lasciare già una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Addizione senza segno", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Addizione con segno" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Addizione senza segno", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è collegare questo argomento a "Addizione con segno" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Addizione senza segno" (../README.md#addizione-senza-segno). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: README.md, sezione "Addizione senza segno" (../README.md#addizione-senza-segno). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -6806,37 +6806,37 @@ Riferimento principale: README.md sezione "Addizione senza segno" (../README.md#
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore Rappresentazione delle informazioni. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare sul concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore "Rappresentazione delle informazioni". La cornice è pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo però il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Addizione con segno" lo studente dovrebbe aver seguito il lavoro precedente su "Addizione senza segno", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Addizione con segno", lo studente dovrebbe aver seguito il lavoro precedente su "Addizione senza segno", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico già introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine della lezione lo studente deve saper spiegare il ruolo di "Addizione con segno", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+Alla fine della lezione, lo studente deve saper spiegare il ruolo di "Addizione con segno", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
-Richiama il passaggio precedente su "Addizione senza segno" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+Richiama il passaggio precedente su "Addizione senza segno" e riprendi il vocabolario già consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo è far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Questo argomento prepara il lavoro successivo su "Tipi di dato". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+Questo argomento prepara il lavoro successivo su "Tipi di dato". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi più avanti, così da non sovraccaricare la prima lettura ma lasciare già una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Addizione con segno", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Tipi di dato" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Addizione con segno", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è collegare questo argomento a "Tipi di dato" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Addizione con segno" (../README.md#addizione-con-segno). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: README.md, sezione "Addizione con segno" (../README.md#addizione-con-segno). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -6860,37 +6860,37 @@ Riferimento principale: README.md sezione "Addizione con segno" (../README.md#ad
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su tipi primitivi del C, dimensioni, range e scelta del tipo corretto. Si collega al blocco superiore Rappresentazione delle informazioni. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su tipi primitivi del C, dimensioni, range e scelta del tipo corretto. Si collega al blocco superiore "Rappresentazione delle informazioni". La cornice è pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo però il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Tipi di dato" lo studente dovrebbe aver seguito il lavoro precedente su "Addizione con segno", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Tipi di dato", lo studente dovrebbe aver seguito il lavoro precedente su "Addizione con segno", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico già introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine della lezione lo studente deve saper spiegare il ruolo di "Tipi di dato", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+Alla fine della lezione, lo studente deve sapere spiegare il ruolo di "Tipi di dato", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre sapere indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
-Richiama il passaggio precedente su "Addizione con segno" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+Richiama il passaggio precedente su "Addizione con segno" e riprendi il vocabolario già consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo è far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Questo argomento prepara il lavoro successivo su "<code>int</code>". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+Questo argomento prepara il lavoro successivo su "<code>int</code>". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi più avanti, così da non sovraccaricare la prima lettura ma lasciare già una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Tipi di dato", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "<code>int</code>" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Tipi di dato", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è collegare questo argomento a "<code>int</code>" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Tipi di dato" (../README.md#tipi-di-dato). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: README.md, sezione "Tipi di dato" (../README.md#tipi-di-dato). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -6944,32 +6944,32 @@ int permette di rappresentare in memoria i tipi interi (senza parte decimale), l
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore Rappresentazione delle informazioni. I sottoparagrafi collegati sono: Stampare <code>int</code>, Altri tipi interi, Stampare altri tipi di interi, Overflow <code>int</code>. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per il Terzo anno. Serve a lavorare sul concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore "Rappresentazione delle informazioni". I sottoparagrafi collegati sono: Stampare <code>int</code>, Altri tipi interi, Stampare altri tipi di interi, Overflow <code>int</code>. La cornice è pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo però il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "<code>int</code>" lo studente dovrebbe aver seguito il lavoro precedente su "Tipi di dato", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare <code>int</code>, lo studente dovrebbe aver seguito il lavoro precedente su "Tipi di dato", sapere come compilare ed eseguire piccoli programmi C, saper leggere esempi guidati e riconoscere il lessico tecnico già introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine della lezione lo studente deve saper spiegare il ruolo di "<code>int</code>", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+Alla fine della lezione, lo studente deve saper spiegare il ruolo di "<code>int</code>", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
-Richiama il passaggio precedente su "Tipi di dato" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+Richiama il passaggio precedente su "Tipi di dato" e riprendi il vocabolario già consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo è far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Questo argomento prepara il lavoro successivo su "Stampare <code>int</code>". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+Questo argomento prepara il lavoro successivo su "Stampare <code>int</code>". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi più avanti, così da non sovraccaricare la prima lettura, ma lasciare già una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "<code>int</code>", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Stampare <code>int</code>" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "<code>int</code>", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è collegare questo argomento a "Stampare <code>int</code>" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
@@ -7033,12 +7033,12 @@ int q, w = 200 /* q non è inizializzata, w è inizializzata. scarso stile di  p
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore Rappresentazione delle informazioni &gt; <code>int</code>. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore Rappresentazione delle informazioni &gt; <code>int</code>. La cornice è pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo però il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Stampare <code>int</code>" lo studente dovrebbe aver seguito il lavoro precedente su "<code>int</code>", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Stampare <code>int</code>" lo studente dovrebbe aver seguito il lavoro precedente su "<code>int</code>", sapere come compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico già introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
@@ -7048,17 +7048,17 @@ Alla fine della lezione lo studente deve saper spiegare il ruolo di "Stampare <c
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
-Richiama il passaggio precedente su "<code>int</code>" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+Richiama il passaggio precedente su "<code>int</code>" e riprendi il vocabolario già consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo è far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Questo argomento prepara il lavoro successivo su "Altri tipi interi". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+Questo argomento prepara il lavoro successivo su "Altri tipi interi". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi più avanti, così da non sovraccaricare la prima lettura, lasciando già una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Stampare <code>int</code>", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Altri tipi interi" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Stampare <code>int</code>", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è collegare questo argomento a "Altri tipi interi" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
@@ -7243,37 +7243,37 @@ int main(void){
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su tipi primitivi del C, dimensioni, range e scelta del tipo corretto. Si collega al blocco superiore Rappresentazione delle informazioni &gt; <code>int</code>. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su tipi primitivi del C, dimensioni, range e scelta del tipo corretto. Si collega al blocco superiore Rappresentazione delle informazioni &gt; <code>int</code>. La cornice è pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo però il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Altri tipi interi" lo studente dovrebbe aver seguito il lavoro precedente su "Stampare <code>int</code>", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Altri tipi interi", lo studente dovrebbe aver seguito il lavoro precedente su "Stampare <code>int</code>", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico già introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine della lezione lo studente deve saper spiegare il ruolo di "Altri tipi interi", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+Alla fine della lezione lo studente deve sapere spiegare il ruolo di "Altri tipi interi", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre sapere indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
-Richiama il passaggio precedente su "Stampare <code>int</code>" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+Richiama il passaggio precedente su "Stampare <code>int</code>" e riprendi il vocabolario già consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo è far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Questo argomento prepara il lavoro successivo su "Stampare altri tipi di interi". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+Questo argomento prepara il lavoro successivo su "Stampare altri tipi di interi". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi più avanti, così da non sovraccaricare la prima lettura ma lasciare già una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Altri tipi interi", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Stampare altri tipi di interi" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Altri tipi interi", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è collegare questo argomento a "Stampare altri tipi di interi" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Altri tipi interi" (../README.md#altri-tipi-interi). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: README.md, sezione "Altri tipi interi" (../README.md#altri-tipi-interi). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -7370,37 +7370,37 @@ Quando allora usare i diversi tipi di interi? Dipende dalla situazione.
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su tipi primitivi del C, dimensioni, range e scelta del tipo corretto. Si collega al blocco superiore Rappresentazione delle informazioni &gt; <code>int</code>. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su tipi primitivi del C, dimensioni, range e scelta del tipo corretto. Si collega al blocco superiore Rappresentazione delle informazioni &gt; <code>int</code>. La cornice è pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo però il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Stampare altri tipi di interi" lo studente dovrebbe aver seguito il lavoro precedente su "Altri tipi interi", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Stampare altri tipi di interi" lo studente dovrebbe aver seguito il lavoro precedente su "Altri tipi interi", saper compilare ed eseguire piccoli programmi in C, leggere esempi guidati e riconoscere il lessico tecnico già introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine della lezione lo studente deve saper spiegare il ruolo di "Stampare altri tipi di interi", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+Alla fine della lezione, lo studente deve saper spiegare il ruolo di "Stampare altri tipi di interi", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
-Richiama il passaggio precedente su "Altri tipi interi" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+Richiama il passaggio precedente su "Altri tipi interi" e riprendi il vocabolario già consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo è far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Questo argomento prepara il lavoro successivo su "Overflow <code>int</code>". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+Questo argomento prepara il lavoro successivo su "Overflow <code>int</code>". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi più avanti, così da non sovraccaricare la prima lettura, ma lasciare già una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Stampare altri tipi di interi", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Overflow <code>int</code>" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Stampare altri tipi di interi", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è collegare questo argomento a "Overflow <code>int</code>" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Stampare altri tipi di interi" (../README.md#stampare-altri-tipi-di-interi). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: README.md, sezione "Stampare altri tipi di interi" (../README.md#stampare-altri-tipi-di-interi). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -7531,37 +7531,37 @@ verybig = 12345678908642 and not 12345678908642
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore Rappresentazione delle informazioni &gt; <code>int</code>. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare sul concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. Si collega al blocco superiore "Rappresentazione delle informazioni" &gt; <code>int</code>. La cornice è pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo però il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Overflow <code>int</code>" lo studente dovrebbe aver seguito il lavoro precedente su "Stampare altri tipi di interi", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Overflow <code>int</code>" lo studente dovrebbe aver seguito il lavoro precedente su "Stampare altri tipi di interi", sapere come compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico già introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine della lezione lo studente deve saper spiegare il ruolo di "Overflow <code>int</code>", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+Alla fine della lezione lo studente deve sapere spiegare il ruolo di "Overflow <code>int</code>", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre sapere indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
-Richiama il passaggio precedente su "Stampare altri tipi di interi" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+Richiama il passaggio precedente su "Stampare altri tipi di interi" e riprendi il vocabolario già consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo è far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Questo argomento prepara il lavoro successivo su "<code>char</code>". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+Questo argomento prepara il lavoro successivo su "<code>char</code>". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi più avanti, così da non sovraccaricare la prima lettura ma lasciare già una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Overflow <code>int</code>", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "<code>char</code>" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Overflow <code>int</code>", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è collegare questo argomento a "<code>char</code>" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Overflow <code>int</code>" (../README.md#overflow-int). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: README.md, sezione "Overflow <code>int</code>" (../README.md#overflow-int). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -8679,37 +8679,37 @@ y  = -12345      ffffcfc7
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice è pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo però il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "<code>char</code>" lo studente dovrebbe aver seguito il lavoro precedente su "Overflow <code>int</code>", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "<code>char</code>" lo studente dovrebbe aver seguito il lavoro precedente su "Overflow <code>int</code>", sapere come compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico già introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine della lezione lo studente deve saper spiegare il ruolo di "<code>char</code>", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+Alla fine della lezione, lo studente deve saper spiegare il ruolo di "<code>char</code>", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
-Richiama il passaggio precedente su "Overflow <code>int</code>" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+Richiama il passaggio precedente su "Overflow <code>int</code>" e riprendi il vocabolario già consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo è far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Questo argomento prepara il lavoro successivo su "Stampare un <code>char</code>". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+Questo argomento prepara il lavoro successivo su "Stampare un <code>char</code>". Durante la spiegazione, conviene evidenziare quali dettagli verranno approfonditi più avanti, così da non sovraccaricare la prima lettura, ma lasciare già una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "<code>char</code>", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Stampare un <code>char</code>" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "<code>char</code>", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è collegare questo argomento a "Stampare un <code>char</code>" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "<code>char</code>" (../README.md#char). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: README.md, sezione "<code>char</code>" (../README.md#char). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -8920,37 +8920,37 @@ Il tipo char è lungo 1 byte (8 bit) e in verità è un tipo intero: nel senso c
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
-Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazione" del percorso Base per Terzo anno. Serve a lavorare sul concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice è pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo però il filo sequenziale della dispensa.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Stampare un <code>char</code>" lo studente dovrebbe aver seguito il lavoro precedente su "<code>char</code>", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Stampare un <code>char</code>", lo studente dovrebbe aver seguito il lavoro precedente su "<code>char</code>", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico già introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
-Alla fine della lezione lo studente deve saper spiegare il ruolo di "Stampare un <code>char</code>", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+Alla fine della lezione, lo studente deve sapere spiegare il ruolo di "Stampare un <code>char</code>", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre sapere indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
-Richiama il passaggio precedente su "<code>char</code>" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+Richiama il passaggio precedente su "<code>char</code>" e riprendi il vocabolario già consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo è far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
-Questo argomento prepara il lavoro successivo su "Costanti". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+Questo argomento prepara il lavoro successivo su "Costanti". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi più avanti, così da non sovraccaricare la prima lettura, ma lasciare già una mappa mentale del percorso.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Stampare un <code>char</code>", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Costanti" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Stampare un <code>char</code>", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è collegare questo argomento a "Costanti" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
-Riferimento principale: README.md sezione "Stampare un <code>char</code>" (../README.md#stampare-un-char). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
+Riferimento principale: README.md, sezione "Stampare un <code>char</code>" (../README.md#stampare-un-char). Usare gli eventuali laboratori collegati nel README come esercizi di osservazione, modifica, scrittura autonoma e debug.
 </p>
 
 </details>
@@ -9085,7 +9085,7 @@ Questo argomento si colloca nell'UDA "Strumenti, primo programma e rappresentazi
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
-Prima di affrontare "Costanti" lo studente dovrebbe aver seguito il lavoro precedente su "Stampare un <code>char</code>", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+Prima di affrontare "Costanti", lo studente dovrebbe aver seguito il lavoro precedente su "Stampare un <code>char</code>", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico già introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
 </p>
 
 <p align="justify">
@@ -9095,7 +9095,7 @@ Alla fine della lezione lo studente deve saper spiegare il ruolo di "Costanti", 
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
-Richiama il passaggio precedente su "Stampare un <code>char</code>" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+Richiama il passaggio precedente su "Stampare un <code>char</code>" e riprendi il vocabolario già consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo è far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
 </p>
 
 <p align="justify">
@@ -9105,7 +9105,7 @@ Questo argomento prepara il lavoro successivo su "Operatori". Durante la spiegaz
 
 <p align="justify">
 <strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
-Dopo la spiegazione, proponi un esempio minimo su "Costanti", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Operatori" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+Dopo la spiegazione, proponi un esempio minimo su "Costanti", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso è collegare questo argomento a "Operatori" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
 </p>
 
 <p align="justify">
