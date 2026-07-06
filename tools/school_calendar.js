@@ -1142,13 +1142,15 @@ function renderTopicList(items) {
 
 function openGanttDialog(segment, firstWeek, lastWeek) {
   const lostHours = ganttSegmentLostHours(segment);
+  const theoreticalHours = segment.hours + lostHours;
   const actual = segment.uda.actual || {};
   els.ganttDialogTitle.textContent = `${String(segment.uda.id || "").toUpperCase()} - ${segment.uda.title || "UDA senza titolo"}`;
   els.ganttDialogBody.innerHTML = `
     <div class="ganttDialogMeta">
       <span><strong>Settimane effettive</strong>${segment.startIndex + 1}-${segment.endIndex + 1}</span>
       <span><strong>Date</strong>${shortDate(firstWeek.start)}-${shortDate(lastWeek.end)}</span>
-      <span><strong>Ore previste</strong>${segment.hours}h</span>
+      <span><strong>Ore teoriche</strong>${theoreticalHours}h</span>
+      <span><strong>Ore disponibili</strong>${segment.hours}h</span>
       <span><strong>Ore perse</strong>${lostHours}h</span>
     </div>
     <section>
@@ -1203,11 +1205,13 @@ function ganttSegmentTooltip(segment) {
   const firstWeek = segment.weeks[0];
   const lastWeek = segment.weeks[segment.weeks.length - 1];
   const lostHours = ganttSegmentLostHours(segment);
+  const theoreticalHours = segment.hours + lostHours;
   return [
     `${String(segment.uda.id || "").toUpperCase()} - ${segment.uda.title || "UDA senza titolo"}`,
     `Settimane effettive: ${segment.startIndex + 1}-${segment.endIndex + 1}`,
     `Date: ${firstWeek.start.toLocaleDateString("it-IT")} - ${lastWeek.end.toLocaleDateString("it-IT")}`,
-    `Ore previste: ${segment.hours}`,
+    `Ore teoriche: ${theoreticalHours}`,
+    `Ore disponibili: ${segment.hours}`,
     `Ore perse: ${lostHours}`,
     "",
     "Argomenti:",
@@ -1486,10 +1490,10 @@ function renderGanttChart() {
       continue;
     }
     row.innerHTML = `
-      <div class="ganttTrackHead">
-        <strong>${escapeHtml(title)}</strong>
-        <span>${weeks.length} settimane effettive - ${weeks.reduce((total, week) => total + Number(week.hours || 0), 0)}h previste</span>
-      </div>
+        <div class="ganttTrackHead">
+          <strong>${escapeHtml(title)}</strong>
+          <span>${weeks.length} settimane effettive - ${weeks.reduce((total, week) => total + Number(week.hours || 0), 0)}h disponibili</span>
+        </div>
       <div class="ganttMonths"></div>
       <div class="ganttWeeks"></div>
       <div class="ganttClosures"></div>
@@ -1539,7 +1543,7 @@ function renderGanttChart() {
             <strong>${escapeHtml(String(segment.uda.id || "").toUpperCase())}</strong>
             <span>${escapeHtml(segment.uda.title || "UDA senza titolo")}</span>
           </div>
-          <span class="ganttBarMeta">${segment.hours}h - ${shortDate(firstWeek.start)}-${shortDate(lastWeek.end)}</span>
+          <span class="ganttBarMeta">${segment.hours}h disponibili - ${shortDate(firstWeek.start)}-${shortDate(lastWeek.end)}</span>
         </div>
       `;
       bar.addEventListener("click", () => openGanttDialog(segment, firstWeek, lastWeek));
