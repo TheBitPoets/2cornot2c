@@ -1097,6 +1097,10 @@ function shortDate(date) {
   return date.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" });
 }
 
+function ganttWeekColumns(weeks) {
+  return `repeat(${weeks.length}, var(--gantt-week-width))`;
+}
+
 function renderGanttBarDays(track, segment, closures) {
   const strip = document.createElement("div");
   strip.className = "ganttBarDays";
@@ -1168,7 +1172,7 @@ function renderGanttChart() {
       <div class="ganttBars"></div>
     `;
     const monthGrid = row.querySelector(".ganttMonths");
-    monthGrid.style.gridTemplateColumns = `repeat(${weeks.length}, minmax(2.1rem, 1fr))`;
+    monthGrid.style.gridTemplateColumns = ganttWeekColumns(weeks);
     for (const segment of ganttMonthSegments(weeks)) {
       const month = document.createElement("span");
       month.style.gridColumn = `${segment.startIndex + 1} / ${segment.endIndex + 2}`;
@@ -1176,7 +1180,7 @@ function renderGanttChart() {
       monthGrid.append(month);
     }
     const weekGrid = row.querySelector(".ganttWeeks");
-    weekGrid.style.gridTemplateColumns = `repeat(${weeks.length}, minmax(2.1rem, 1fr))`;
+    weekGrid.style.gridTemplateColumns = ganttWeekColumns(weeks);
     weeks.forEach((week, index) => {
       const label = document.createElement("span");
       label.title = `${week.start.toLocaleDateString("it-IT")} - ${week.end.toLocaleDateString("it-IT")} - ${week.hours}h`;
@@ -1184,7 +1188,7 @@ function renderGanttChart() {
       weekGrid.append(label);
     });
     const closureGrid = row.querySelector(".ganttClosures");
-    closureGrid.style.gridTemplateColumns = `repeat(${weeks.length}, minmax(2.1rem, 1fr))`;
+    closureGrid.style.gridTemplateColumns = ganttWeekColumns(weeks);
     for (const closure of ganttClosureSegments(weeks)) {
       const closureBar = document.createElement("div");
       closureBar.className = "ganttClosure";
@@ -1194,7 +1198,7 @@ function renderGanttChart() {
       closureGrid.append(closureBar);
     }
     const bars = row.querySelector(".ganttBars");
-    bars.style.gridTemplateColumns = `repeat(${weeks.length}, minmax(2.1rem, 1fr))`;
+    bars.style.gridTemplateColumns = ganttWeekColumns(weeks);
     for (const segment of udaGanttSegments(track, weeks)) {
       const bar = document.createElement("div");
       bar.className = "ganttBar";

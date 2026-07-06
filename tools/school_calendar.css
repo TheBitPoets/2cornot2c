@@ -588,6 +588,7 @@ button:disabled {
 }
 
 .ganttTrack {
+  --gantt-week-width: 3.4rem;
   border: 1px solid rgba(17, 17, 17, .16);
   border-radius: 18px;
   background: #ffffff;
@@ -617,7 +618,7 @@ button:disabled {
 .ganttClosures,
 .ganttBars {
   display: grid;
-  min-width: max-content;
+  width: max-content;
 }
 
 .ganttMonths {
@@ -732,7 +733,8 @@ button:disabled {
 }
 
 .ganttBarWeekStart {
-  box-shadow: -3px 0 0 rgba(255, 255, 255, .78);
+  border-left: 2px solid rgba(255, 255, 255, .9);
+  border-radius: 0 999px 999px 0;
 }
 
 .ganttBarDayLesson {
