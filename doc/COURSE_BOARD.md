@@ -1658,6 +1658,19 @@ La distinzione importante e:
 - `mode`: come viene usata, per esempio `study`, `practice`, `assessment`;
 - `support_level`: quanto aiuto e consentito, per esempio `full`, `guided`, `limited`, `none`.
 
+In questa PR va definito anche il contratto minimo per test e report, prima della generazione AI degli esercizi. Il generatore AI non deve inventare un formato libero: deve produrre test e rubrica compatibili con lo schema che il runner usera nelle PR successive.
+
+Schema minimo da definire:
+
+- formato dei test visibili;
+- formato dei test nascosti;
+- input atteso;
+- output atteso;
+- timeout;
+- punteggio tecnico;
+- formato del `report.json`;
+- codici di errore per compilazione, runtime, timeout e test fallito.
+
 #### PR 3 - UI attivita nella board/calendario
 
 Obiettivo: permettere al docente di creare, modificare, eliminare e visualizzare attivita didattiche.
@@ -1711,6 +1724,8 @@ L'AI puo generare:
 - hint progressivi;
 - feedback atteso;
 - domande orali di controllo.
+
+Vincolo: test, soluzione, rubrica e report atteso devono rispettare lo schema definito nel modello attivita. Se lo schema non e ancora sufficiente, va esteso prima di accettare nuovi output AI.
 
 #### PR 5 - Runner locale e sandbox Docker per C
 
