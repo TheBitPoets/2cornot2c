@@ -379,10 +379,6 @@ function renderCalendarViewControls() {
         <span>Settimana</span>
         <select data-calendar-view="week">${weekOptions.join("")}</select>
       </label>
-      <div class="calendarViewNav ${state.calendarView.mode === "year" ? "isHidden" : ""}">
-        <button type="button" data-calendar-nav="previous" title="Vai al mese o alla settimana precedente.">← Precedente</button>
-        <button type="button" data-calendar-nav="next" title="Vai al mese o alla settimana successiva.">Successivo →</button>
-      </div>
     </div>
   `;
   panel.querySelectorAll("[data-calendar-view]").forEach((input) => {
@@ -392,24 +388,23 @@ function renderCalendarViewControls() {
       renderCalendarView();
     });
   });
-  updateCalendarNavButtons(panel, months, weeks);
-  panel.querySelector('[data-calendar-nav="previous"]')?.addEventListener("click", () => {
-    moveCalendarView(-1, months, weeks);
-  });
-  panel.querySelector('[data-calendar-nav="next"]')?.addEventListener("click", () => {
-    moveCalendarView(1, months, weeks);
-  });
 }
 
-function updateCalendarNavButtons(panel, months, weeks) {
-  const previous = panel.querySelector('[data-calendar-nav="previous"]');
-  const next = panel.querySelector('[data-calendar-nav="next"]');
+function updateCalendarNavButtons(container, months, weeks) {
+  const previous = container.querySelector('[data-calendar-nav="previous"]');
+  const next = container.querySelector('[data-calendar-nav="next"]');
   if (!previous || !next || state.calendarView.mode === "year") return;
   const values = calendarViewValues(months, weeks);
   const current = currentCalendarViewValue();
   const index = values.indexOf(current);
   previous.disabled = index <= 0;
   next.disabled = index < 0 || index >= values.length - 1;
+  previous.addEventListener("click", () => {
+    moveCalendarView(-1, months, weeks);
+  });
+  next.addEventListener("click", () => {
+    moveCalendarView(1, months, weeks);
+  });
 }
 
 function moveCalendarView(direction, months, weeks) {
@@ -984,12 +979,17 @@ function renderWeek(week, start, end, lessons, closures) {
   const card = document.createElement("article");
   card.className = "monthCard weekCard";
   card.innerHTML = `
-    <h3 class="monthTitle">Settimana: ${escapeHtml(week.start.toLocaleDateString("it-IT"))} - ${escapeHtml(week.end.toLocaleDateString("it-IT"))}</h3>
+    <div class="monthTitle monthTitleNav">
+      <button type="button" data-calendar-nav="previous" title="Vai alla settimana precedente.">&larr;</button>
+      <h3>Settimana: ${escapeHtml(week.start.toLocaleDateString("it-IT"))} - ${escapeHtml(week.end.toLocaleDateString("it-IT"))}</h3>
+      <button type="button" data-calendar-nav="next" title="Vai alla settimana successiva.">&rarr;</button>
+    </div>
     <div class="monthWeekdays">
       <span>Lun</span><span>Mar</span><span>Mer</span><span>Gio</span><span>Ven</span><span>Sab</span><span>Dom</span>
     </div>
     <div class="monthDays weekDays"></div>
   `;
+  updateCalendarNavButtons(card, calendarMonths(start, end), calendarWeeks(start, end));
   const days = card.querySelector(".monthDays");
   for (const date = new Date(week.start); date <= week.end; date.setDate(date.getDate() + 1)) {
     days.append(renderDayCell(date, week.start, start, end, lessons, closures));
@@ -1002,12 +1002,17 @@ function renderMonth(month, start, end, lessons, closures) {
   card.className = "monthCard";
   const title = month.toLocaleDateString("it-IT", { month: "long", year: "numeric" });
   card.innerHTML = `
-    <h3 class="monthTitle">${escapeHtml(title)}</h3>
+    <div class="monthTitle ${state.calendarView.mode === "month" ? "monthTitleNav" : ""}">
+      ${state.calendarView.mode === "month" ? '<button type="button" data-calendar-nav="previous" title="Vai al mese precedente.">&larr;</button>' : ""}
+      <h3>${escapeHtml(title)}</h3>
+      ${state.calendarView.mode === "month" ? '<button type="button" data-calendar-nav="next" title="Vai al mese successivo.">&rarr;</button>' : ""}
+    </div>
     <div class="monthWeekdays">
       <span>Lun</span><span>Mar</span><span>Mer</span><span>Gio</span><span>Ven</span><span>Sab</span><span>Dom</span>
     </div>
     <div class="monthDays"></div>
   `;
+  updateCalendarNavButtons(card, calendarMonths(start, end), calendarWeeks(start, end));
   const days = card.querySelector(".monthDays");
   const first = new Date(month.getFullYear(), month.getMonth(), 1);
   const startOffset = (first.getDay() + 6) % 7;

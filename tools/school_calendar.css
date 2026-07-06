@@ -372,20 +372,6 @@ th {
   display: none;
 }
 
-.calendarViewNav {
-  display: flex;
-  gap: .5rem;
-  justify-content: flex-end;
-}
-
-.calendarViewNav.isHidden {
-  display: none;
-}
-
-.calendarViewNav button {
-  padding: .72rem .85rem;
-}
-
 button:disabled {
   cursor: not-allowed;
   opacity: .42;
@@ -466,8 +452,32 @@ button:disabled {
   margin: 0;
   border-bottom: 1px solid var(--line);
   background: rgba(255, 255, 255, .78);
-  font-size: .9rem;
   padding: .75rem;
+}
+
+.monthTitle h3 {
+  margin: 0;
+  font-size: .9rem;
+}
+
+.monthTitleNav {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: .7rem;
+}
+
+.monthTitleNav h3 {
+  text-align: center;
+}
+
+.monthTitleNav button {
+  width: 2.1rem;
+  height: 2.1rem;
+  padding: 0;
+  border-radius: 999px;
+  box-shadow: none;
+  font-size: 1rem;
 }
 
 .monthWeekdays,
