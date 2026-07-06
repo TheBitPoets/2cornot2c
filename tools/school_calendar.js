@@ -1400,7 +1400,7 @@ function actualUdaSegments(track, weeks) {
   return segments;
 }
 
-function renderActualGanttBar(segment) {
+function renderActualGanttBar(segment, dialogSegment = segment) {
   const bar = document.createElement("div");
   const status = segment.actual.status || "todo";
   bar.className = `ganttActualBar ganttActualBar-${status}`;
@@ -1418,9 +1418,9 @@ function renderActualGanttBar(segment) {
     <span>${escapeHtml(segment.hours ? `${segment.hours}h` : status)}</span>
   `;
   bar.addEventListener("click", () => {
-    const firstWeek = segment.weeks[0];
-    const lastWeek = segment.weeks[segment.weeks.length - 1];
-    openGanttDialog(segment, firstWeek, lastWeek);
+    const firstWeek = dialogSegment.weeks[0];
+    const lastWeek = dialogSegment.weeks[dialogSegment.weeks.length - 1];
+    openGanttDialog(dialogSegment, firstWeek, lastWeek);
   });
   return bar;
 }
@@ -1541,7 +1541,8 @@ function renderGanttChart() {
     }
     const bars = row.querySelector(".ganttBars");
     bars.style.gridTemplateColumns = ganttWeekColumns(weeks);
-    for (const segment of udaGanttSegments(track, weeks)) {
+    const plannedSegments = udaGanttSegments(track, weeks);
+    for (const segment of plannedSegments) {
       const bar = document.createElement("div");
       bar.className = "ganttBar";
       bar.style.gridColumn = `${segment.startIndex + 1} / ${segment.endIndex + 2}`;
@@ -1566,7 +1567,8 @@ function renderGanttChart() {
     const actualSegments = actualUdaSegments(track, weeks);
     if (actualSegments.length) {
       for (const segment of actualSegments) {
-        actualBars.append(renderActualGanttBar(segment));
+        const plannedSegment = plannedSegments.find((candidate) => candidate.uda === segment.uda || candidate.uda.id === segment.uda.id);
+        actualBars.append(renderActualGanttBar(segment, plannedSegment || segment));
       }
     } else {
       const empty = document.createElement("div");
