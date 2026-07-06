@@ -1627,6 +1627,8 @@ Test backend/script Python:
 - testare API principali del server con provider AI mockati;
 - testare salvataggi ed errori su input invalidi.
 
+Regola per i provider AI: i test automatici non devono mai chiamare provider reali come OpenAI, Gemini, Groq o OpenRouter. In CI e nei test locali standard si usano sempre mock, fake provider o risposte registrate e controllate. Le chiamate reali ai provider possono esistere solo come probe o test manuali espliciti, separati dalla suite ordinaria, per evitare consumo crediti, rate limit, lentezza e risultati non deterministici.
+
 Test frontend JavaScript:
 
 - isolare le funzioni pure dove possibile;
