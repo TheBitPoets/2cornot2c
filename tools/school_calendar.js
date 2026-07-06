@@ -1224,8 +1224,13 @@ function renderGanttChart() {
         ...collectUdaTopicTitles(segment.uda.items || []),
       ].join("\n");
       bar.innerHTML = `
-        <strong>${escapeHtml(String(segment.uda.id || "").toUpperCase())}</strong>
-        <span>${escapeHtml(segment.uda.title || "UDA senza titolo")}</span>
+        <div class="ganttBarContent">
+          <div class="ganttBarText">
+            <strong>${escapeHtml(String(segment.uda.id || "").toUpperCase())}</strong>
+            <span>${escapeHtml(segment.uda.title || "UDA senza titolo")}</span>
+          </div>
+          <span class="ganttBarMeta">${segment.hours}h - ${shortDate(firstWeek.start)}-${shortDate(lastWeek.end)}</span>
+        </div>
       `;
       bar.append(renderGanttBarDays(track, segment, closures));
       bars.append(bar);

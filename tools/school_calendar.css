@@ -704,20 +704,39 @@ button:disabled {
   overflow: hidden;
 }
 
-.ganttBar strong,
-.ganttBar span {
+.ganttBarContent {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .55rem;
+  align-items: start;
+}
+
+.ganttBarText {
+  display: grid;
+  min-width: 0;
+}
+
+.ganttBarText strong,
+.ganttBarText span,
+.ganttBarMeta {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.ganttBar strong {
+.ganttBarText strong {
   font: 800 .66rem/1.15 var(--mono);
 }
 
-.ganttBar span {
+.ganttBarText span {
   font-size: .7rem;
   opacity: .9;
+}
+
+.ganttBarMeta {
+  font: 800 .62rem/1.15 var(--mono);
+  opacity: .86;
+  text-align: right;
 }
 
 .ganttBarDays {
