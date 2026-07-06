@@ -246,11 +246,13 @@ async function loadCourseDesign() {
 
 async function loadCalendarForActiveCourseDesign() {
   const activeDesign = localStorage.getItem(ACTIVE_COURSE_DESIGN_KEY) || "";
-  if (!activeDesign) {
-    await loadCourseDesign();
-    return false;
+  const activeCalendar = localStorage.getItem(ACTIVE_SCHOOL_CALENDAR_KEY) || "";
+  const activeCalendarMetadata = state.calendars.find((calendar) => calendar.name === activeCalendar);
+  if (activeCalendarMetadata && (activeCalendarMetadata.course_design_name || "") === activeDesign) {
+    await loadCalendarByName(activeCalendarMetadata.name);
+    return true;
   }
-  const matchingCalendar = state.calendars.find((calendar) => calendar.course_design_name === activeDesign);
+  const matchingCalendar = state.calendars.find((calendar) => (calendar.course_design_name || "") === activeDesign);
   if (matchingCalendar) {
     await loadCalendarByName(matchingCalendar.name);
     return true;
@@ -260,7 +262,7 @@ async function loadCalendarForActiveCourseDesign() {
   els.fileName.value = "";
   await loadCourseDesign();
   renderAll();
-  setStatus(`Nessun calendario associato a ${activeDesign}: vista vuota pronta per la configurazione.`);
+  setStatus(`Nessun calendario associato a ${activeDesign || "percorso corrente"}: vista vuota pronta per la configurazione.`);
   return true;
 }
 
@@ -284,6 +286,8 @@ async function loadCalendarByName(name) {
   localStorage.setItem(ACTIVE_SCHOOL_CALENDAR_KEY, name);
   if (state.calendar.course_design_name) {
     localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, state.calendar.course_design_name);
+  } else {
+    localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
   }
   await loadCourseDesign();
   renderAll();
@@ -304,6 +308,8 @@ async function saveCalendar() {
   localStorage.setItem(ACTIVE_SCHOOL_CALENDAR_KEY, payload.saved?.name || name);
   if (state.calendar.course_design_name) {
     localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, state.calendar.course_design_name);
+  } else {
+    localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
   }
   setStatus(`Calendario salvato: ${payload.saved?.path || name}.`);
 }

@@ -1324,6 +1324,7 @@ async function saveDesign() {
     method: "POST",
     body: JSON.stringify(state.design),
   });
+  localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
   setStatus("Percorso impostato come corrente in doc/course_design.json.");
 }
 
