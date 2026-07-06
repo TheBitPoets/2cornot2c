@@ -43,6 +43,7 @@ const els = {
 const state = {
   calendars: [],
   calendar: defaultCalendar(),
+  courseDesign: null,
   statusTimer: null,
 };
 
@@ -59,6 +60,7 @@ function defaultCalendar() {
         id: "terzo-anno",
         label: "Terzo anno",
         subject: "TPSI",
+        course_year_id: "terzo-anno",
         weekly_hours: 3,
         weekly_slots: [
           { day: "monday", hours: 2, type: "teoria" },
@@ -69,6 +71,7 @@ function defaultCalendar() {
         id: "quarto-anno",
         label: "Quarto anno",
         subject: "TPSI",
+        course_year_id: "quarto-anno",
         weekly_hours: 3,
         weekly_slots: [
           { day: "monday", hours: 2, type: "teoria" },
@@ -79,6 +82,7 @@ function defaultCalendar() {
         id: "quinto-anno",
         label: "Quinto anno",
         subject: "TPSI",
+        course_year_id: "quinto-anno",
         weekly_hours: 4,
         weekly_slots: [
           { day: "monday", hours: 2, type: "teoria" },
@@ -174,6 +178,15 @@ async function loadCalendarList() {
   renderCalendarList();
 }
 
+async function loadCourseDesign() {
+  try {
+    state.courseDesign = await api("/api/course-design");
+  } catch (error) {
+    state.courseDesign = null;
+    setStatus(`Percorso didattico non caricato: ${error.message}`, "error");
+  }
+}
+
 async function loadSelectedCalendar() {
   const name = els.calendarSelect.value;
   if (!name) {
@@ -205,11 +218,21 @@ async function saveCalendar() {
 }
 
 function renderAll() {
+  ensureTrackCourseLinks();
   syncCalendarToForm();
   renderTracks();
   renderClosures();
   renderCalendarView();
   renderSummary();
+}
+
+function ensureTrackCourseLinks() {
+  const ids = new Set((state.courseDesign?.years || []).map((year) => year.id));
+  for (const track of state.calendar.tracks || []) {
+    if (!track.course_year_id && ids.has(track.id)) {
+      track.course_year_id = track.id;
+    }
+  }
 }
 
 function renderTracks() {
@@ -240,6 +263,10 @@ function renderTracks() {
           <span>Ore/settimana</span>
           <input data-track-field="weekly_hours" type="number" min="0" step="0.5">
         </label>
+        <label>
+          <span>Anno percorso</span>
+          <select data-track-field="course_year_id">${courseYearOptions(track.course_year_id || track.id)}</select>
+        </label>
       </div>
       <h3>Slot settimanali</h3>
       <div class="slotRows"></div>
@@ -248,7 +275,8 @@ function renderTracks() {
     node.querySelectorAll("[data-track-field]").forEach((input) => {
       const field = input.dataset.trackField;
       input.value = track[field] ?? "";
-      input.addEventListener("input", () => {
+      const eventName = input.tagName === "SELECT" ? "change" : "input";
+      input.addEventListener(eventName, () => {
         track[field] = field === "weekly_hours" ? Number(input.value || 0) : input.value;
         if (field === "weekly_hours") {
           normalizeTrackSlots(track);
@@ -330,6 +358,17 @@ function renderSlot(track, slot) {
   return row;
 }
 
+function courseYearOptions(selected) {
+  const years = state.courseDesign?.years || [];
+  const options = ['<option value="">Nessun percorso</option>'];
+  for (const year of years) {
+    const value = escapeHtml(year.id || "");
+    const label = escapeHtml(year.title || year.id || "Anno senza titolo");
+    options.push(`<option value="${value}"${year.id === selected ? " selected" : ""}>${label}</option>`);
+  }
+  return options.join("");
+}
+
 function slotHoursTotal(track, exceptSlot = null) {
   return (track.weekly_slots || [])
     .filter((slot) => slot !== exceptSlot)
@@ -400,6 +439,7 @@ function addTrack() {
     id: `percorso-${index}`,
     label: `Percorso ${index}`,
     subject: "TPSI",
+    course_year_id: "",
     weekly_hours: 0,
     weekly_slots: [],
   });
@@ -526,16 +566,92 @@ function lessonLabelsByDate() {
   const end = dateFromInput(state.calendar.end_date);
   if (!start || !end || start > end) return labels;
   const tracks = state.calendar.tracks || [];
+  const closures = closedLabelsByDate();
+  const schedules = trackSchedules(start, end, closures);
+  const lessonCounters = new Map();
   for (const date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
+    const iso = isoDate(date);
     const dayLabels = [];
     for (const track of tracks) {
       const matching = (track.weekly_slots || []).filter((slot) => DAY_INDEX[slot.day] === date.getDay());
       const hours = matching.reduce((total, slot) => total + Number(slot.hours || 0), 0);
-      if (hours > 0) dayLabels.push(`${track.label || track.id}: ${hours}h`);
+      if (hours <= 0) continue;
+      const prefix = trackShortLabel(track);
+      if (closures.has(iso)) {
+        dayLabels.push(`${prefix}: lezione sospesa (${hours}h)`);
+        continue;
+      }
+      const count = (lessonCounters.get(track.id) || 0) + 1;
+      lessonCounters.set(track.id, count);
+      const uda = schedules.get(track.id)?.get(weekKey(date));
+      const udaLabel = uda ? `${String(uda.id || "").toUpperCase()} ${uda.title || ""}`.trim() : "UDA non assegnata";
+      const types = [...new Set(matching.map((slot) => slot.type).filter(Boolean))].join("/");
+      dayLabels.push(`${prefix}: ${udaLabel} · L${count} · ${hours}h${types ? ` ${types}` : ""}`);
     }
     if (dayLabels.length) labels.set(isoDate(date), dayLabels);
   }
   return labels;
+}
+
+function trackShortLabel(track) {
+  const label = String(track.label || track.id || "");
+  if (/terzo/i.test(label)) return "III";
+  if (/quarto/i.test(label)) return "IV";
+  if (/quinto/i.test(label)) return "V";
+  return label || "Track";
+}
+
+function courseYearForTrack(track) {
+  const yearId = track.course_year_id || track.id;
+  return (state.courseDesign?.years || []).find((year) => year.id === yearId) || null;
+}
+
+function weekKey(date) {
+  const monday = new Date(date);
+  const offset = (monday.getDay() + 6) % 7;
+  monday.setDate(monday.getDate() - offset);
+  return isoDate(monday);
+}
+
+function parseUdaWeeks(value) {
+  const text = String(value ?? "");
+  const range = text.match(/(\d+)\D+(\d+)/);
+  if (range) {
+    return Math.max(1, Math.abs(Number(range[2]) - Number(range[1])) + 1);
+  }
+  const single = text.match(/\d+/);
+  return single ? Math.max(1, Number(single[0])) : 1;
+}
+
+function trackSchedules(start, end, closures) {
+  const schedules = new Map();
+  for (const track of state.calendar.tracks || []) {
+    const year = courseYearForTrack(track);
+    const weekKeys = [];
+    const seen = new Set();
+    for (const date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
+      const iso = isoDate(date);
+      if (closures.has(iso)) continue;
+      const hasLesson = (track.weekly_slots || []).some((slot) => DAY_INDEX[slot.day] === date.getDay() && Number(slot.hours || 0) > 0);
+      if (!hasLesson) continue;
+      const key = weekKey(date);
+      if (!seen.has(key)) {
+        seen.add(key);
+        weekKeys.push(key);
+      }
+    }
+    const schedule = new Map();
+    let cursor = 0;
+    for (const uda of year?.udas || []) {
+      const duration = parseUdaWeeks(uda.weeks);
+      for (let index = 0; index < duration && cursor < weekKeys.length; index += 1) {
+        schedule.set(weekKeys[cursor], uda);
+        cursor += 1;
+      }
+    }
+    schedules.set(track.id, schedule);
+  }
+  return schedules;
 }
 
 function calendarMonths(start, end) {
@@ -561,6 +677,9 @@ function validateCalendar() {
     const total = slotHoursTotal(track);
     const weekly = Number(track.weekly_hours || 0);
     if (total > weekly) issues.push(`${track.label || track.id}: gli slot sommano ${total}h ma il limite è ${weekly}h.`);
+    if (state.courseDesign && track.course_year_id && !courseYearForTrack(track)) {
+      issues.push(`${track.label || track.id}: anno percorso "${track.course_year_id}" non trovato in doc/course_design.json.`);
+    }
     const days = new Set();
     for (const slot of track.weekly_slots || []) {
       const key = `${slot.day}:${slot.type}`;
@@ -727,6 +846,6 @@ els.addClosureBtn.addEventListener("click", addClosure);
 els.importItalianHolidaysBtn.addEventListener("click", importItalianHolidays);
 els.recalculateBtn.addEventListener("click", renderSummary);
 
-loadCalendarList()
+Promise.all([loadCalendarList(), loadCourseDesign()])
   .then(() => renderAll())
   .catch((error) => setStatus(`Errore: ${error.message}`));
