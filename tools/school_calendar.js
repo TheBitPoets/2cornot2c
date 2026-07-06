@@ -24,6 +24,7 @@ const ACTIVE_COURSE_SESSION_KEY = "2cornot2c.keepActiveCourseInSession";
 const GANTT_ZOOM_KEY = "2cornot2c.ganttZoom";
 const GANTT_WEEK_WIDTHS = [2.4, 3.0, 3.4, 4.2, 5.2, 6.4, 8.0, 10.0, 12.0];
 const GANTT_DEFAULT_ZOOM_INDEX = 2;
+const GANTT_DAY_ABBR = ["L", "M", "M", "G", "V", "S", "D"];
 
 const els = {
   calendarSelect: document.querySelector("#calendarSelect"),
@@ -1219,9 +1220,15 @@ function ganttSegmentLostHours(segment) {
 }
 
 function renderGanttBarDays(track, segment, closures) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "ganttBarDayBlock";
   const strip = document.createElement("div");
+  const labels = document.createElement("div");
   strip.className = "ganttBarDays";
-  strip.style.gridTemplateColumns = `repeat(${segment.weeks.length * 7}, minmax(.34rem, 1fr))`;
+  labels.className = "ganttBarDayLabels";
+  const columns = `repeat(${segment.weeks.length * 7}, minmax(.34rem, 1fr))`;
+  strip.style.gridTemplateColumns = columns;
+  labels.style.gridTemplateColumns = columns;
   for (const week of segment.weeks) {
     for (let offset = 0; offset < 7; offset += 1) {
       const date = addDays(week.start, offset);
@@ -1245,9 +1252,15 @@ function renderGanttBarDays(track, segment, closures) {
         day.title = date.toLocaleDateString("it-IT");
       }
       strip.append(day);
+      const label = document.createElement("span");
+      label.textContent = GANTT_DAY_ABBR[offset];
+      if (offset === 5) label.className = "ganttBarDayLabelSaturday";
+      if (offset === 6) label.className = "ganttBarDayLabelSunday";
+      labels.append(label);
     }
   }
-  return strip;
+  wrapper.append(strip, labels);
+  return wrapper;
 }
 
 function renderGanttChart() {

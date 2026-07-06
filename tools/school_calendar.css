@@ -773,10 +773,16 @@ button:disabled {
   text-align: right;
 }
 
-.ganttBarDays {
+.ganttBarDayBlock {
+  display: grid;
+  gap: .18rem;
+  margin-top: .08rem;
+}
+
+.ganttBarDays,
+.ganttBarDayLabels {
   display: grid;
   gap: .12rem;
-  margin-top: .08rem;
 }
 
 .ganttBarDay {
@@ -800,6 +806,20 @@ button:disabled {
 
 .ganttBarDayInterrupted {
   background: linear-gradient(135deg, #ff5c4d 0 50%, #39d98a 50% 100%);
+}
+
+.ganttBarDayLabels span {
+  color: rgba(255, 255, 255, .72);
+  font: 800 .62rem/1 var(--mono);
+  text-align: center;
+}
+
+.ganttBarDayLabels .ganttBarDayLabelSaturday {
+  color: #ffd166;
+}
+
+.ganttBarDayLabels .ganttBarDayLabelSunday {
+  color: #ff7a70;
 }
 
 .ganttDialog {
