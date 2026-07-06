@@ -1590,10 +1590,15 @@ Aspetti da verificare:
 
 - qualita e chiarezza del codice Python;
 - qualita e chiarezza del codice JavaScript;
+- strategia test backend;
+- strategia test frontend;
+- test end-to-end minimi;
+- test sui generatori Markdown e lab;
 - separazione delle responsabilita tra board, calendario, server, script e documentazione;
 - assenza di ambiguita nei nomi, nei dati e nei flussi utente;
 - robustezza dei salvataggi e gestione degli errori;
 - affidabilita dei controlli `--check`;
+- integrazione dei controlli in GitHub Actions;
 - manutenibilita delle strutture JSON;
 - coerenza tra UI, file generati e documentazione;
 - commenti, docstring e spiegazioni nei punti non immediati del codice Python;
@@ -1605,6 +1610,65 @@ Aspetti da verificare:
 - preparazione a una futura pubblicazione open source.
 
 Questa PR non dovrebbe introdurre grandi feature. Dovrebbe invece ridurre debito tecnico, rendere piu leggibile il progetto e documentare le parti critiche.
+
+#### PR 1.1 - Infrastruttura test backend e frontend
+
+Obiettivo: introdurre una rete minima di sicurezza prima di aggiungere attivita, runner, metriche e dashboard.
+
+Test backend/script Python:
+
+- usare `pytest`;
+- creare fixture JSON piccole e stabili;
+- testare parsing di progetto e calendario;
+- testare generazione del percorso didattico Markdown;
+- testare aggiornamento output lab;
+- testare aggiornamento snippet lab;
+- testare normalizzazione output;
+- testare API principali del server con provider AI mockati;
+- testare salvataggi ed errori su input invalidi.
+
+Test frontend JavaScript:
+
+- isolare le funzioni pure dove possibile;
+- introdurre test unitari per calcolo settimane, ore, visibilita percorsi, mapping UDA e validazione slot;
+- valutare `vitest` per le funzioni JS pure;
+- evitare test fragili legati solo alla struttura visiva.
+
+Test end-to-end:
+
+- usare pochi test browser mirati, per esempio con Playwright;
+- aprire la board;
+- caricare un progetto;
+- aprire il calendario;
+- verificare che il Gantt venga renderizzato;
+- aprire un modal UDA;
+- salvare una modifica controllata.
+
+GitHub Actions:
+
+- aggiungere una workflow di qualita;
+- eseguire test Python;
+- eseguire controlli `--check` dei generatori;
+- eseguire test JavaScript;
+- tenere eventuali test Playwright separati o opzionali se diventano pesanti.
+
+#### PR 1.2 - Primo set di test di regressione
+
+Obiettivo: coprire subito i flussi che si sono dimostrati piu delicati durante lo sviluppo.
+
+Flussi prioritari:
+
+- `generate_course_plan.py --check`;
+- `update_lab_outputs.py --check`;
+- `update_lab_snippets.py --check`;
+- caricamento progetto didattico;
+- associazione progetto/calendario;
+- calcolo ore teoriche, disponibili, perse e svolte;
+- rendering base del Gantt;
+- salvataggio della programmazione svolta;
+- gestione provider AI non configurato o non disponibile.
+
+Questi test devono proteggere il progetto da regressioni prima di introdurre correzione automatica, Docker runner e dashboard studenti.
 
 #### PR 2 - Modello attivita didattiche
 
