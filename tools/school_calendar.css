@@ -581,6 +581,92 @@ button:disabled {
   line-height: 1.2;
 }
 
+.ganttChart {
+  display: grid;
+  gap: 1rem;
+  padding: 1.1rem;
+}
+
+.ganttTrack {
+  border: 1px solid rgba(17, 17, 17, .16);
+  border-radius: 18px;
+  background: #ffffff;
+  overflow-x: auto;
+  padding: .9rem;
+}
+
+.ganttTrackHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: baseline;
+  margin-bottom: .75rem;
+}
+
+.ganttTrackHead strong {
+  font-size: .92rem;
+}
+
+.ganttTrackHead span {
+  color: var(--muted);
+  font-size: .74rem;
+}
+
+.ganttWeeks,
+.ganttBars {
+  display: grid;
+  min-width: max-content;
+}
+
+.ganttWeeks {
+  margin-bottom: .35rem;
+}
+
+.ganttWeeks span {
+  border-left: 1px solid rgba(17, 17, 17, .08);
+  color: var(--muted);
+  font: 700 .62rem/1 var(--mono);
+  padding: .25rem .2rem;
+  text-align: center;
+}
+
+.ganttWeeks span:first-child {
+  border-left: 0;
+}
+
+.ganttBars {
+  gap: .35rem 0;
+  min-height: 2.7rem;
+}
+
+.ganttBar {
+  display: grid;
+  align-content: center;
+  min-height: 2.7rem;
+  border: 1px solid rgba(17, 17, 17, .24);
+  border-radius: 12px;
+  background: linear-gradient(135deg, #111111, #3a3a3a);
+  color: #ffffff;
+  padding: .45rem .6rem;
+  overflow: hidden;
+}
+
+.ganttBar strong,
+.ganttBar span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ganttBar strong {
+  font: 800 .66rem/1.15 var(--mono);
+}
+
+.ganttBar span {
+  font-size: .7rem;
+  opacity: .9;
+}
+
 @media (max-width: 950px) {
   .hero, .panelHead {
     display: grid;

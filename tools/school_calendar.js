@@ -42,6 +42,7 @@ const els = {
   closures: document.querySelector("#closures"),
   calendarValidation: document.querySelector("#calendarValidation"),
   monthGrid: document.querySelector("#monthGrid"),
+  ganttChart: document.querySelector("#ganttChart"),
   summary: document.querySelector("#summary"),
 };
 
@@ -1002,6 +1003,125 @@ function trackSchedules(start, end, closures) {
   return schedules;
 }
 
+function teachingWeeksForTrack(track, start, end, closures) {
+  const weeks = [];
+  const byKey = new Map();
+  for (const date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
+    const iso = isoDate(date);
+    if (closures.has(iso)) continue;
+    const daySlots = (track.weekly_slots || []).filter((slot) => DAY_INDEX[slot.day] === date.getDay() && Number(slot.hours || 0) > 0);
+    if (!daySlots.length) continue;
+    const key = weekKey(date);
+    if (!byKey.has(key)) {
+      const monday = dateFromInput(key);
+      const week = {
+        key,
+        start: monday,
+        end: addDays(monday, 6),
+        hours: 0,
+      };
+      byKey.set(key, week);
+      weeks.push(week);
+    }
+    byKey.get(key).hours += daySlots.reduce((total, slot) => total + Number(slot.hours || 0), 0);
+  }
+  return weeks;
+}
+
+function udaGanttSegments(track, weeks) {
+  const year = courseYearForTrack(track);
+  const segments = [];
+  let cursor = 0;
+  for (const uda of year?.udas || []) {
+    const duration = parseUdaWeeks(uda.weeks);
+    if (cursor >= weeks.length) break;
+    const startIndex = cursor;
+    const endIndex = Math.min(cursor + duration, weeks.length) - 1;
+    const segmentWeeks = weeks.slice(startIndex, endIndex + 1);
+    const hours = segmentWeeks.reduce((total, week) => total + Number(week.hours || 0), 0);
+    segments.push({
+      uda,
+      startIndex,
+      endIndex,
+      weeks: segmentWeeks,
+      hours,
+    });
+    cursor = endIndex + 1;
+  }
+  return segments;
+}
+
+function renderGanttChart() {
+  syncFormToCalendar();
+  els.ganttChart.innerHTML = "";
+  const start = dateFromInput(state.calendar.start_date);
+  const end = dateFromInput(state.calendar.end_date);
+  if (!start || !end || start > end) {
+    els.ganttChart.innerHTML = '<p class="empty">Inserisci date di inizio e fine lezioni valide per generare il Gantt.</p>';
+    return;
+  }
+  const tracks = visibleTracks();
+  if (!tracks.length) {
+    els.ganttChart.innerHTML = '<p class="empty">Seleziona almeno un percorso da visualizzare.</p>';
+    return;
+  }
+  const closures = closedLabelsByDate();
+  for (const track of tracks) {
+    const weeks = teachingWeeksForTrack(track, start, end, closures);
+    const year = courseYearForTrack(track);
+    const row = document.createElement("article");
+    row.className = "ganttTrack";
+    const title = track.label || year?.title || track.id || "Percorso";
+    if (!weeks.length || !year?.udas?.length) {
+      row.innerHTML = `
+        <div class="ganttTrackHead">
+          <strong>${escapeHtml(title)}</strong>
+          <span>${weeks.length ? "Nessuna UDA associata" : "Nessuna settimana di lezione disponibile"}</span>
+        </div>
+      `;
+      els.ganttChart.append(row);
+      continue;
+    }
+    row.innerHTML = `
+      <div class="ganttTrackHead">
+        <strong>${escapeHtml(title)}</strong>
+        <span>${weeks.length} settimane effettive - ${weeks.reduce((total, week) => total + Number(week.hours || 0), 0)}h previste</span>
+      </div>
+      <div class="ganttWeeks"></div>
+      <div class="ganttBars"></div>
+    `;
+    const weekGrid = row.querySelector(".ganttWeeks");
+    weekGrid.style.gridTemplateColumns = `repeat(${weeks.length}, minmax(2.1rem, 1fr))`;
+    weeks.forEach((week, index) => {
+      const label = document.createElement("span");
+      label.title = `${week.start.toLocaleDateString("it-IT")} - ${week.end.toLocaleDateString("it-IT")} - ${week.hours}h`;
+      label.textContent = String(index + 1);
+      weekGrid.append(label);
+    });
+    const bars = row.querySelector(".ganttBars");
+    bars.style.gridTemplateColumns = `repeat(${weeks.length}, minmax(2.1rem, 1fr))`;
+    for (const segment of udaGanttSegments(track, weeks)) {
+      const bar = document.createElement("div");
+      bar.className = "ganttBar";
+      bar.style.gridColumn = `${segment.startIndex + 1} / ${segment.endIndex + 2}`;
+      const firstWeek = segment.weeks[0];
+      const lastWeek = segment.weeks[segment.weeks.length - 1];
+      bar.title = [
+        `${String(segment.uda.id || "").toUpperCase()} - ${segment.uda.title || "UDA senza titolo"}`,
+        `Settimane effettive: ${segment.startIndex + 1}-${segment.endIndex + 1}`,
+        `Date: ${firstWeek.start.toLocaleDateString("it-IT")} - ${lastWeek.end.toLocaleDateString("it-IT")}`,
+        `Ore previste: ${segment.hours}`,
+      ].join("\n");
+      bar.innerHTML = `
+        <strong>${escapeHtml(String(segment.uda.id || "").toUpperCase())}</strong>
+        <span>${escapeHtml(segment.uda.title || "UDA senza titolo")}</span>
+      `;
+      bars.append(bar);
+    }
+    els.ganttChart.append(row);
+  }
+}
+
 function calendarMonths(start, end) {
   const months = [];
   if (!start || !end || start > end) return months;
@@ -1088,12 +1208,16 @@ function renderCalendarView() {
   els.monthGrid.classList.toggle("monthFocusGrid", state.calendarView.mode === "month");
   const start = dateFromInput(state.calendar.start_date);
   const end = dateFromInput(state.calendar.end_date);
-  if (!start || !end || start > end) return;
+  if (!start || !end || start > end) {
+    renderGanttChart();
+    return;
+  }
   const closures = closedLabelsByDate();
   const lessons = lessonLabelsByDate();
   if (state.calendarView.mode === "week") {
     const week = selectedCalendarWeek(start, end);
     if (week) els.monthGrid.append(renderWeek(week, start, end, lessons, closures));
+    renderGanttChart();
     return;
   }
   const months = state.calendarView.mode === "month"
@@ -1110,6 +1234,7 @@ function renderCalendarView() {
     const role = item.role || "main";
     els.monthGrid.append(renderMonth(month, start, end, lessons, closures, role));
   }
+  renderGanttChart();
 }
 
 function selectedCalendarMonthContext(start, end) {
