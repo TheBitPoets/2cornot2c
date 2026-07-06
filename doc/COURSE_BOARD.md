@@ -1670,7 +1670,11 @@ Funzioni minime:
 - collegamento a percorso, UDA e argomenti;
 - visualizzazione nel calendario;
 - visualizzazione nel Gantt come marker collegato alla UDA;
-- salvataggio nel JSON del progetto o del calendario.
+- salvataggio nel JSON del calendario associato al progetto.
+
+Decisione provvisoria sui dati: fino a quando progetto didattico e calendario resteranno file separati, le attivita didattiche saranno salvate nel JSON del calendario associato, per esempio in una sezione `activities`. L'attivita non deve duplicare UDA, argomenti o sottoparagrafi: deve conservarne solo gli ID di riferimento. Il progetto didattico resta la sorgente della struttura didattica; il calendario resta la sorgente degli eventi datati, delle scadenze, delle verifiche, dei compiti e delle attivita svolte nel tempo.
+
+Quando il progetto passera a un JSON unico, la sezione `activities` potra essere spostata nel file unificato senza cambiare il significato dei dati.
 
 Il compito a casa non va trattato come una festivita: non sospende la lezione, ma rappresenta lavoro assegnato e tracciabile. La verifica non e una chiusura: consuma ore didattiche per valutazione. Per questo attivita, verifiche e compiti devono avere una sezione propria.
 
