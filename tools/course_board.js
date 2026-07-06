@@ -35,6 +35,7 @@ const els = {
   updateReadmeFramesBtn: document.querySelector("#updateReadmeFramesBtn"),
   reloadBtn: document.querySelector("#reloadBtn"),
   saveBtn: document.querySelector("#saveBtn"),
+  addYearBtn: document.querySelector("#addYearBtn"),
   courseAiDialog: document.querySelector("#courseAiDialog"),
   courseAiTitle: document.querySelector("#courseAiTitle"),
   courseAiCloseBtn: document.querySelector("#courseAiCloseBtn"),
@@ -103,21 +104,17 @@ function emptyCourseDesign() {
   return {
     version: 1,
     source_files: ["README.md", "LINUX_PROGRAMMING.md"],
-    years: [
-      emptyCourseYear("terzo-anno", "Terzo anno", 3),
-      emptyCourseYear("quarto-anno", "Quarto anno", 3),
-      emptyCourseYear("quinto-anno", "Quinto anno", 4),
-    ],
+    years: [],
   };
 }
 
-function emptyCourseYear(id, title, weeklyHours) {
+function emptyCourseYear(id, title, weeklyHours, weeks = 33) {
   return {
     id,
     title,
     description: "",
     weekly_hours: weeklyHours,
-    weeks: 33,
+    weeks,
     udas: [
       {
         id: "uda-1",
@@ -637,8 +634,41 @@ function defaultFrameQuality() {
   return Object.fromEntries(FRAME_FIELDS.map((field) => [field.key, "none"]));
 }
 
+function slugifyId(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function addYear() {
+  const title = prompt("Nome anno/percorso:", "Terzo anno");
+  if (!title) return;
+  const defaultId = slugifyId(title) || `percorso-${(state.design.years || []).length + 1}`;
+  const id = prompt("ID anno/percorso:", defaultId);
+  if (!id) return;
+  if ((state.design.years || []).some((year) => year.id === id)) {
+    setStatus(`Esiste gia un anno/percorso con ID "${id}".`);
+    return;
+  }
+  const weeks = Number(prompt("Numero settimane:", "33") || 33);
+  const weeklyHours = Number(prompt("Ore a settimana:", "3") || 3);
+  state.design.years ||= [];
+  state.design.years.push(emptyCourseYear(id, title, weeklyHours, weeks));
+  renderCourse();
+  renderHeadings();
+  setStatus(`Anno/percorso "${title}" aggiunto.`);
+}
+
 function renderCourse() {
   els.courseTree.innerHTML = "";
+  if (!(state.design.years || []).length) {
+    els.courseTree.innerHTML = '<p class="empty">Nessun anno/percorso definito. Usa "Aggiungi anno" per creare il primo contenitore UDA.</p>';
+    return;
+  }
   for (const year of state.design.years || []) {
     const yearNode = document.createElement("section");
     yearNode.className = "year";
@@ -1497,6 +1527,7 @@ els.loadSavedDesignBtn.addEventListener("click", openSavedDesignPicker);
 els.newDesignBtn.addEventListener("click", newCourseDesign);
 els.saveArchiveBtn.addEventListener("click", saveArchiveDesign);
 els.saveArchiveAsBtn.addEventListener("click", saveArchiveDesignAs);
+els.addYearBtn.addEventListener("click", addYear);
 els.generateAllFramesBtn.addEventListener("click", generateAllFrames);
 els.generateCoursePlanMdBtn.addEventListener("click", generateCoursePlanMd);
 els.updateReadmeFramesBtn.addEventListener("click", updateReadmeFrames);
