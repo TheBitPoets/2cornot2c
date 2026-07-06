@@ -61,7 +61,7 @@
         <h2>Percorso didattico</h2>
         <p id="status" class="status">Pronto.</p>
         <p id="aiConfig" class="aiConfig">AI: configurazione non caricata.</p>
-        <button id="addYearBtn" type="button" title="Aggiunge esplicitamente un anno o percorso didattico con settimane e ore personalizzate.">Aggiungi anno</button>
+        <button id="addYearBtn" type="button" title="Aggiunge esplicitamente un percorso didattico di materia/anno con settimane e ore personalizzate.">Aggiungi percorso</button>
       </div>
       <div id="courseTree" class="courseTree"></div>
     </section>
@@ -159,15 +159,15 @@
       <header class="courseAiHead">
         <div>
           <p class="eyebrow">Percorso didattico</p>
-          <h2>Aggiungi anno/percorso</h2>
+          <h2>Aggiungi percorso</h2>
         </div>
         <button id="yearCloseBtn" type="button" title="Chiude la finestra senza creare il percorso.">Chiudi</button>
       </header>
 
       <div class="briefGrid">
         <label>
-          <span>Nome</span>
-          <input id="yearTitleInput" type="text" placeholder="Terzo anno, Sistemi e reti, Informatica...">
+          <span>Nome percorso</span>
+          <input id="yearTitleInput" type="text" placeholder="TPSI - Terzo anno, Sistemi e reti - Quarto anno...">
         </label>
         <label>
           <span>Materia</span>
@@ -193,7 +193,7 @@
       </label>
 
       <div class="courseAiActions">
-        <button id="yearCreateBtn" type="button" class="primary" title="Crea il contenitore con una UDA iniziale vuota.">Crea anno</button>
+        <button id="yearCreateBtn" type="button" class="primary" title="Crea il percorso con una UDA iniziale vuota.">Crea percorso</button>
         <button id="yearCancelBtn" type="button" title="Annulla la creazione.">Annulla</button>
       </div>
     </form>

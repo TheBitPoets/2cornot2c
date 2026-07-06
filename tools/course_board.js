@@ -675,15 +675,15 @@ function createYearFromDialog() {
   const weeklyHours = Number(els.yearWeeklyHoursInput.value || 3);
   const description = els.yearDescriptionInput.value.trim();
   if (!title) {
-    setStatus("Inserisci il nome dell'anno/percorso.");
+    setStatus("Inserisci il nome del percorso.");
     return;
   }
   if (!id) {
-    setStatus("Inserisci un ID per l'anno/percorso.");
+    setStatus("Inserisci un ID per il percorso.");
     return;
   }
   if ((state.design.years || []).some((year) => year.id === id)) {
-    setStatus(`Esiste gia un anno/percorso con ID "${id}".`);
+    setStatus(`Esiste gia un percorso con ID "${id}".`);
     return;
   }
   state.design.years ||= [];
@@ -693,13 +693,13 @@ function createYearFromDialog() {
   els.yearDialog.close();
   renderCourse();
   renderHeadings();
-  setStatus(`Anno/percorso "${title}" aggiunto.`);
+  setStatus(`Percorso "${title}" aggiunto.`);
 }
 
 function renderCourse() {
   els.courseTree.innerHTML = "";
   if (!(state.design.years || []).length) {
-    els.courseTree.innerHTML = '<p class="empty">Nessun anno/percorso definito. Usa "Aggiungi anno" per creare il primo contenitore UDA.</p>';
+    els.courseTree.innerHTML = '<p class="empty">Nessun percorso definito. Usa "Aggiungi percorso" per creare il primo contenitore UDA.</p>';
     return;
   }
   for (const year of state.design.years || []) {
@@ -713,7 +713,7 @@ function renderCourse() {
         </div>
         <div class="yearActions">
           <button type="button" data-action="ai-course" title="Usa il provider AI configurato per generare una proposta di percorso per questo anno.">AI genera percorso</button>
-          <button type="button" data-action="remove-year" title="Elimina questo anno/percorso e tutte le sue UDA.">Elimina anno</button>
+          <button type="button" data-action="remove-year" title="Elimina questo percorso e tutte le sue UDA.">Elimina percorso</button>
         </div>
       </div>
     `;
@@ -728,12 +728,12 @@ function renderCourse() {
 }
 
 function removeYear(year) {
-  const confirmed = confirm(`Eliminare "${year.title}"?\n\nSaranno eliminate anche tutte le UDA e gli argomenti collegati a questo anno/percorso.`);
+  const confirmed = confirm(`Eliminare "${year.title}"?\n\nSaranno eliminate anche tutte le UDA e gli argomenti collegati a questo percorso.`);
   if (!confirmed) return;
   state.design.years = (state.design.years || []).filter((candidate) => candidate !== year);
   renderCourse();
   renderHeadings();
-  setStatus(`Anno/percorso "${year.title}" eliminato.`);
+  setStatus(`Percorso "${year.title}" eliminato.`);
 }
 
 function renderUda(year, uda) {
@@ -871,7 +871,7 @@ function defaultCourseBrief(year) {
     weeks: weeks || "",
     total_hours: totalHours || "",
     goals: [
-      "Costruire una progressione didattica coerente con la materia e con l'anno/percorso indicato.",
+      "Costruire una progressione didattica coerente con la materia e con il percorso indicato.",
       "Distribuire gli argomenti nelle UDA rispettando settimane, ore disponibili e complessita crescente.",
       "Integrare teoria, laboratorio, esercizi guidati e attivita autonome.",
       "Lasciare modificabile la proposta generata."
