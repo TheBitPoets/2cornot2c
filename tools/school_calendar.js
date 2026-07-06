@@ -44,6 +44,7 @@ const state = {
   calendars: [],
   calendar: defaultCalendar(),
   courseDesign: null,
+  visibleTrackIds: null,
   statusTimer: null,
 };
 
@@ -198,6 +199,7 @@ async function loadSelectedCalendar() {
     body: JSON.stringify({ name }),
   });
   state.calendar = payload.calendar;
+  state.visibleTrackIds = null;
   els.fileName.value = name;
   renderAll();
   setStatus(`Calendario caricato: ${name}.`);
@@ -219,9 +221,11 @@ async function saveCalendar() {
 
 function renderAll() {
   ensureTrackCourseLinks();
+  ensureVisibleTrackIds();
   syncCalendarToForm();
   renderTracks();
   renderClosures();
+  renderTrackFilters();
   renderCalendarView();
   renderSummary();
 }
@@ -233,6 +237,82 @@ function ensureTrackCourseLinks() {
       track.course_year_id = track.id;
     }
   }
+}
+
+function ensureVisibleTrackIds() {
+  const trackIds = new Set((state.calendar.tracks || []).map((track) => track.id));
+  if (!state.visibleTrackIds) {
+    state.visibleTrackIds = new Set(trackIds);
+    return;
+  }
+  for (const id of [...state.visibleTrackIds]) {
+    if (!trackIds.has(id)) state.visibleTrackIds.delete(id);
+  }
+}
+
+function visibleTracks() {
+  ensureVisibleTrackIds();
+  return (state.calendar.tracks || []).filter((track) => state.visibleTrackIds.has(track.id));
+}
+
+function ensureTrackFiltersPanel() {
+  let panel = document.querySelector("#trackFilters");
+  if (panel) return panel;
+  panel = document.createElement("section");
+  panel.id = "trackFilters";
+  panel.className = "trackFilters";
+  els.monthGrid.parentElement.insertBefore(panel, els.monthGrid);
+  return panel;
+}
+
+function renderTrackFilters() {
+  const panel = ensureTrackFiltersPanel();
+  ensureVisibleTrackIds();
+  const tracks = state.calendar.tracks || [];
+  if (!tracks.length) {
+    panel.innerHTML = "";
+    return;
+  }
+  panel.innerHTML = `
+    <div class="trackFiltersHead">
+      <strong>Percorsi visibili</strong>
+      <div class="trackFilterActions">
+        <button type="button" data-filter-action="all" title="Mostra tutti i percorsi nel calendario.">Tutti</button>
+        <button type="button" data-filter-action="none" title="Nasconde tutte le lezioni dei percorsi, lasciando visibili calendario e chiusure.">Nessuno</button>
+      </div>
+    </div>
+    <div class="trackFilterList"></div>
+  `;
+  const list = panel.querySelector(".trackFilterList");
+  for (const track of tracks) {
+    const id = track.id || "";
+    const label = track.label || track.id || "Percorso senza nome";
+    const item = document.createElement("label");
+    item.className = "trackFilter";
+    item.innerHTML = `
+      <input type="checkbox" value="${escapeHtml(id)}"${state.visibleTrackIds.has(id) ? " checked" : ""}>
+      <span>${escapeHtml(label)}</span>
+    `;
+    item.querySelector("input").addEventListener("change", (event) => {
+      if (event.target.checked) {
+        state.visibleTrackIds.add(id);
+      } else {
+        state.visibleTrackIds.delete(id);
+      }
+      renderCalendarView();
+    });
+    list.append(item);
+  }
+  panel.querySelector('[data-filter-action="all"]').addEventListener("click", () => {
+    state.visibleTrackIds = new Set(tracks.map((track) => track.id));
+    renderTrackFilters();
+    renderCalendarView();
+  });
+  panel.querySelector('[data-filter-action="none"]').addEventListener("click", () => {
+    state.visibleTrackIds = new Set();
+    renderTrackFilters();
+    renderCalendarView();
+  });
 }
 
 function renderTracks() {
@@ -435,14 +515,17 @@ function renderClosures() {
 function addTrack() {
   state.calendar.tracks ||= [];
   const index = state.calendar.tracks.length + 1;
-  state.calendar.tracks.push({
+  const track = {
     id: `percorso-${index}`,
     label: `Percorso ${index}`,
     subject: "TPSI",
     course_year_id: "",
     weekly_hours: 0,
     weekly_slots: [],
-  });
+  };
+  state.calendar.tracks.push(track);
+  state.visibleTrackIds ||= new Set();
+  state.visibleTrackIds.add(track.id);
   renderAll();
 }
 
@@ -565,7 +648,7 @@ function lessonLabelsByDate() {
   const start = dateFromInput(state.calendar.start_date);
   const end = dateFromInput(state.calendar.end_date);
   if (!start || !end || start > end) return labels;
-  const tracks = state.calendar.tracks || [];
+  const tracks = visibleTracks();
   const closures = closedLabelsByDate();
   const schedules = trackSchedules(start, end, closures);
   const lessonCounters = new Map();

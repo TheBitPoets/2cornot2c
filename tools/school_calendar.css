@@ -339,6 +339,58 @@ th {
   color: #0f6b3d;
 }
 
+.trackFilters {
+  display: grid;
+  gap: .8rem;
+  margin: 1.1rem 1.1rem 0;
+  border: 1px solid rgba(17, 17, 17, .16);
+  border-radius: 18px;
+  background: #ffffff;
+  padding: .9rem;
+}
+
+.trackFiltersHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.trackFilterActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+}
+
+.trackFilterActions button {
+  padding: .45rem .7rem;
+  font-size: .72rem;
+  box-shadow: none;
+}
+
+.trackFilterList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.trackFilter {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  border: 1px solid rgba(17, 17, 17, .14);
+  border-radius: 999px;
+  background: #f8f8f8;
+  font-size: .78rem;
+  font-weight: 800;
+  padding: .45rem .7rem;
+}
+
+.trackFilter input {
+  width: auto;
+  accent-color: #111111;
+}
+
 .monthGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
