@@ -9,6 +9,7 @@
   --warm: #3f3f46;
   --shadow: 0 18px 42px rgba(0, 0, 0, 0.08);
   --mono: "Cascadia Code", "JetBrains Mono", "Fira Code", "SFMono-Regular", Consolas, monospace;
+  --gantt-week-width: 3.4rem;
 }
 
 * { box-sizing: border-box; }
@@ -175,7 +176,34 @@ input, select {
   background: rgba(255, 255, 255, .72);
 }
 
-.panelHead h2 { margin-bottom: 0; font-size: 1.25rem; }
+.panelHead h2 {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  margin-bottom: 0;
+  font-size: 1.25rem;
+}
+
+.panelHead h2::before {
+  content: "−";
+  display: inline-grid;
+  place-items: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  border: 1px solid rgba(17, 17, 17, .18);
+  border-radius: 999px;
+  font-size: .82rem;
+  line-height: 1;
+}
+
+.panelCollapsed .panelHead h2::before {
+  content: "+";
+}
+
+.panelCollapsed > :not(.panelHead) {
+  display: none !important;
+}
 
 .panelActions {
   display: flex;
@@ -581,6 +609,402 @@ button:disabled {
   line-height: 1.2;
 }
 
+.dayLessonButton {
+  width: 100%;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(17, 17, 17, .07);
+  box-shadow: none;
+  color: inherit;
+  cursor: pointer;
+  display: block;
+  font: inherit;
+  justify-content: flex-start;
+  padding: .18rem .24rem;
+  text-align: left;
+}
+
+.dayLessonButton:hover {
+  background: rgba(17, 17, 17, .12);
+  transform: none;
+}
+
+.ganttChart {
+  display: grid;
+  gap: 1rem;
+  padding: 1.1rem;
+}
+
+.ganttHelp {
+  margin: 0 1.1rem;
+}
+
+.ganttZoomControls {
+  align-items: center;
+}
+
+.ganttZoomControls button {
+  min-width: 2.5rem;
+  padding: .45rem .65rem;
+}
+
+.ganttTrack {
+  border: 1px solid rgba(17, 17, 17, .16);
+  border-radius: 18px;
+  background: #ffffff;
+  overflow-x: auto;
+  padding: .9rem;
+}
+
+.ganttTrackHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: baseline;
+  margin-bottom: .75rem;
+}
+
+.ganttTrackHead strong {
+  font-size: 1.35rem;
+}
+
+.ganttTrackHead span {
+  color: var(--muted);
+  font-size: 1.05rem;
+}
+
+.ganttMonths,
+.ganttWeeks,
+.ganttClosures,
+.ganttBars {
+  display: grid;
+  width: max-content;
+}
+
+.ganttMonths {
+  margin-bottom: .2rem;
+}
+
+.ganttMonths span {
+  border-left: 1px solid rgba(17, 17, 17, .12);
+  color: #111111;
+  font: 800 1.15rem/1 var(--mono);
+  padding: .25rem .3rem;
+  text-transform: uppercase;
+}
+
+.ganttMonths span:first-child {
+  border-left: 0;
+}
+
+.ganttWeeks {
+  margin-bottom: .35rem;
+}
+
+.ganttWeeks span {
+  border-left: 1px solid rgba(17, 17, 17, .08);
+  color: var(--muted);
+  display: grid;
+  gap: .16rem;
+  font: 700 1rem/1.05 var(--mono);
+  padding: .25rem .2rem;
+  text-align: center;
+}
+
+.ganttWeeks strong {
+  color: #111111;
+  font-size: 1.08rem;
+}
+
+.ganttWeeks small {
+  color: var(--muted);
+  font-size: .88rem;
+  font-weight: 700;
+}
+
+.ganttWeeks span:first-child {
+  border-left: 0;
+}
+
+.ganttClosures {
+  min-height: 1.45rem;
+  margin-bottom: .35rem;
+}
+
+.ganttClosure {
+  align-content: center;
+  border: 1px solid rgba(143, 29, 20, .32);
+  border-radius: 999px;
+  background: #fdecea;
+  color: #8f1d14;
+  display: grid;
+  font: 800 .95rem/1.1 var(--mono);
+  min-height: 1.2rem;
+  overflow: hidden;
+  padding: .18rem .45rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ganttBars {
+  gap: .35rem 0;
+  min-height: 5.4rem;
+}
+
+.ganttLaneLabel {
+  color: var(--muted);
+  font: 900 .78rem/1 var(--mono);
+  margin: .7rem 0 .35rem;
+  text-transform: uppercase;
+}
+
+.ganttActualBars {
+  display: grid;
+  gap: .35rem 0;
+  min-height: 2.8rem;
+  width: max-content;
+}
+
+.ganttActualBar {
+  display: grid;
+  align-content: center;
+  border: 1px solid rgba(17, 17, 17, .18);
+  border-radius: 12px;
+  background: #dbeafe;
+  color: #0f172a;
+  min-height: 2.8rem;
+  overflow: hidden;
+  padding: .5rem .65rem;
+}
+
+.ganttActualBar strong,
+.ganttActualBar span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ganttActualBar strong {
+  font: 900 .86rem/1.1 var(--mono);
+}
+
+.ganttActualBar span {
+  font-size: .78rem;
+}
+
+.ganttActualBar-done {
+  background: #dcfce7;
+}
+
+.ganttActualBar-in_progress {
+  background: #fef3c7;
+}
+
+.ganttActualBar-paused,
+.ganttActualBar-skipped {
+  background: #fee2e2;
+}
+
+.ganttActualEmpty {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: .82rem;
+  padding: .45rem 0;
+}
+
+.ganttBar {
+  display: grid;
+  align-content: center;
+  gap: .34rem;
+  min-height: 5.4rem;
+  border: 1px solid rgba(17, 17, 17, .24);
+  border-radius: 12px;
+  background: linear-gradient(135deg, #111111, #3a3a3a);
+  color: #ffffff;
+  padding: .85rem 1rem;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.ganttBarContent {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .55rem;
+  align-items: start;
+}
+
+.ganttBarText {
+  display: grid;
+  min-width: 0;
+}
+
+.ganttBarText strong,
+.ganttBarText span,
+.ganttBarMeta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ganttBarText strong {
+  font: 800 1.16rem/1.15 var(--mono);
+}
+
+.ganttBarText span {
+  font-size: 1.08rem;
+  opacity: .9;
+}
+
+.ganttBarMeta {
+  font: 800 1rem/1.15 var(--mono);
+  opacity: .86;
+  text-align: right;
+}
+
+.ganttBarDayBlock {
+  display: grid;
+  gap: .18rem;
+  margin-top: .08rem;
+}
+
+.ganttBarDays,
+.ganttBarDayLabels {
+  display: grid;
+  gap: .12rem;
+}
+
+.ganttBarDay {
+  min-height: .68rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .18);
+}
+
+.ganttBarWeekStart {
+  border-left: 2px solid rgba(255, 255, 255, .9);
+  border-radius: 0 999px 999px 0;
+}
+
+.ganttBarDayLesson {
+  background: #39d98a;
+}
+
+.ganttBarDayClosed {
+  background: #ff5c4d;
+}
+
+.ganttBarDayInterrupted {
+  background: linear-gradient(135deg, #ff5c4d 0 50%, #39d98a 50% 100%);
+}
+
+.ganttBarDayLabels span {
+  color: rgba(255, 255, 255, .72);
+  font: 800 .62rem/1 var(--mono);
+  text-align: center;
+}
+
+.ganttBarDayLabels .ganttBarDayLabelSaturday {
+  color: #ffd166;
+}
+
+.ganttBarDayLabels .ganttBarDayLabelSunday {
+  color: #ff7a70;
+}
+
+.ganttDialog {
+  width: min(760px, calc(100vw - 2rem));
+  border: 1px solid rgba(17, 17, 17, .18);
+  border-radius: 22px;
+  background: #ffffff;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .24);
+  color: var(--ink);
+  padding: 0;
+}
+
+.ganttDialog::backdrop {
+  background: rgba(17, 17, 17, .36);
+}
+
+.ganttDialogHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  border-bottom: 1px solid var(--line);
+  padding: 1rem;
+}
+
+.ganttDialogHead h2 {
+  margin: .15rem 0 0;
+  font-size: 1.45rem;
+}
+
+.ganttDialogBody {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.ganttDialogMeta {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .6rem;
+}
+
+.ganttDialogMeta span {
+  border: 1px solid rgba(17, 17, 17, .12);
+  border-radius: 14px;
+  background: #f7f7f7;
+  display: grid;
+  gap: .2rem;
+  padding: .65rem;
+}
+
+.ganttDialogMeta strong {
+  color: var(--muted);
+  font-size: .95rem;
+  text-transform: uppercase;
+}
+
+.ganttDialogBody h3 {
+  margin: 0 0 .55rem;
+  font-size: 1.2rem;
+}
+
+.ganttDialogTopics ul {
+  margin: .3rem 0 .3rem 1.1rem;
+  padding: 0;
+}
+
+.ganttDialogTopics li {
+  margin: .28rem 0;
+}
+
+.ganttDialogTopics span {
+  line-height: 1.35;
+}
+
+.actualForm {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .65rem;
+}
+
+.actualNotes {
+  display: grid;
+  gap: .35rem;
+  margin: .75rem 0;
+}
+
+[data-action="calculate-actual-hours"] {
+  justify-self: start;
+  margin-top: .65rem;
+}
+
+.actualNotes textarea {
+  min-height: 5rem;
+  resize: vertical;
+}
+
 @media (max-width: 950px) {
   .hero, .panelHead {
     display: grid;
@@ -599,6 +1023,14 @@ button:disabled {
   }
 
   .slotRow, .closureRow {
+    grid-template-columns: 1fr;
+  }
+
+  .ganttDialogMeta {
+    grid-template-columns: 1fr;
+  }
+
+  .actualForm {
     grid-template-columns: 1fr;
   }
 }

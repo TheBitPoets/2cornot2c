@@ -21,6 +21,11 @@ const DAY_INDEX = {
 const ACTIVE_COURSE_DESIGN_KEY = "2cornot2c.activeCourseDesign";
 const ACTIVE_SCHOOL_CALENDAR_KEY = "2cornot2c.activeSchoolCalendar";
 const ACTIVE_COURSE_SESSION_KEY = "2cornot2c.keepActiveCourseInSession";
+const GANTT_ZOOM_KEY = "2cornot2c.ganttZoom";
+const GANTT_WEEK_WIDTHS = [2.4, 3.0, 3.4, 4.2, 5.2, 6.4, 8.0, 10.0, 12.0];
+const GANTT_DEFAULT_ZOOM_INDEX = 2;
+const GANTT_DAY_ABBR = ["L", "M", "M", "G", "V", "S", "D"];
+const COLLAPSED_PANELS_KEY = "2cornot2c.calendarCollapsedPanels";
 
 const els = {
   calendarSelect: document.querySelector("#calendarSelect"),
@@ -42,6 +47,14 @@ const els = {
   closures: document.querySelector("#closures"),
   calendarValidation: document.querySelector("#calendarValidation"),
   monthGrid: document.querySelector("#monthGrid"),
+  ganttChart: document.querySelector("#ganttChart"),
+  ganttDialog: document.querySelector("#ganttDialog"),
+  ganttDialogTitle: document.querySelector("#ganttDialogTitle"),
+  ganttDialogBody: document.querySelector("#ganttDialogBody"),
+  ganttDialogCloseBtn: document.querySelector("#ganttDialogCloseBtn"),
+  ganttZoomOutBtn: document.querySelector("#ganttZoomOutBtn"),
+  ganttZoomResetBtn: document.querySelector("#ganttZoomResetBtn"),
+  ganttZoomInBtn: document.querySelector("#ganttZoomInBtn"),
   summary: document.querySelector("#summary"),
 };
 
@@ -56,6 +69,7 @@ const state = {
     month: "",
     week: "",
   },
+  ganttZoomIndex: GANTT_DEFAULT_ZOOM_INDEX,
   statusTimer: null,
 };
 
@@ -154,6 +168,45 @@ function setStatus(message, kind = "neutral") {
       state.statusTimer = null;
     }, 4500);
   }
+}
+
+function collapsedPanels() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(COLLAPSED_PANELS_KEY) || "[]"));
+  } catch {
+    return new Set();
+  }
+}
+
+function saveCollapsedPanels(values) {
+  localStorage.setItem(COLLAPSED_PANELS_KEY, JSON.stringify([...values]));
+}
+
+function panelKey(panel, index) {
+  return panel.dataset.panelKey || panel.id || `panel-${index}`;
+}
+
+function setupCollapsiblePanels() {
+  const collapsed = collapsedPanels();
+  document.querySelectorAll("main.layout > .panel").forEach((panel, index) => {
+    const head = panel.querySelector(".panelHead");
+    const title = head?.querySelector("h2");
+    if (!head || !title) return;
+    const key = panelKey(panel, index);
+    panel.dataset.panelKey = key;
+    if (collapsed.has(key)) panel.classList.add("panelCollapsed");
+    title.title = "Apri o chiudi questa sezione.";
+    title.addEventListener("click", () => {
+      panel.classList.toggle("panelCollapsed");
+      const current = collapsedPanels();
+      if (panel.classList.contains("panelCollapsed")) {
+        current.add(key);
+      } else {
+        current.delete(key);
+      }
+      saveCollapsedPanels(current);
+    });
+  });
 }
 
 function flashFieldError(input) {
@@ -914,6 +967,17 @@ function lessonLabelsByDate() {
   const tracks = visibleTracks();
   const closures = closedLabelsByDate();
   const schedules = trackSchedules(start, end, closures);
+  const segmentByTrackWeek = new Map();
+  for (const track of tracks) {
+    const weeks = teachingWeeksForTrack(track, start, end, closures);
+    const byWeek = new Map();
+    for (const segment of udaGanttSegments(track, weeks)) {
+      for (const week of segment.weeks) {
+        byWeek.set(week.key, segment);
+      }
+    }
+    segmentByTrackWeek.set(track.id, byWeek);
+  }
   const lessonCounters = new Map();
   for (const date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
     const iso = isoDate(date);
@@ -924,21 +988,27 @@ function lessonLabelsByDate() {
       if (hours <= 0) continue;
       const prefix = trackShortLabel(track);
       if (closures.has(iso)) {
-        dayLabels.push(`${prefix}: lezione sospesa (${hours}h)`);
+        dayLabels.push({ label: `${prefix}: lezione sospesa (${hours}h)` });
         continue;
       }
       const count = (lessonCounters.get(track.id) || 0) + 1;
       lessonCounters.set(track.id, count);
-      const uda = schedules.get(track.id)?.get(weekKey(date));
+      const week = weekKey(date);
+      const uda = schedules.get(track.id)?.get(week);
+      const segment = segmentByTrackWeek.get(track.id)?.get(week);
       const udaLabel = uda ? `${String(uda.id || "").toUpperCase()} ${uda.title || ""}`.trim() : "UDA non assegnata";
       const types = [...new Set(matching.map((slot) => slot.type).filter(Boolean))].join("/");
-      dayLabels.push(`${prefix}: ${udaLabel} · L${count} · ${hours}h${types ? ` ${types}` : ""}`);
+      const label = `${prefix}: ${udaLabel} - L${count} - ${hours}h${types ? ` ${types}` : ""}`;
+      dayLabels.push({
+        label,
+        segment,
+        title: segment ? ganttSegmentTooltip(segment) : label,
+      });
     }
     if (dayLabels.length) labels.set(isoDate(date), dayLabels);
   }
   return labels;
 }
-
 function trackShortLabel(track) {
   const subject = String(track.subject || "").trim();
   if (subject) return subject;
@@ -1000,6 +1070,523 @@ function trackSchedules(start, end, closures) {
     schedules.set(track.id, schedule);
   }
   return schedules;
+}
+
+function teachingWeeksForTrack(track, start, end, closures) {
+  const weeks = [];
+  const byKey = new Map();
+  for (const date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
+    const iso = isoDate(date);
+    if (closures.has(iso)) continue;
+    const daySlots = (track.weekly_slots || []).filter((slot) => DAY_INDEX[slot.day] === date.getDay() && Number(slot.hours || 0) > 0);
+    if (!daySlots.length) continue;
+    const key = weekKey(date);
+    if (!byKey.has(key)) {
+      const monday = dateFromInput(key);
+      const week = {
+        key,
+        start: monday,
+        end: addDays(monday, 6),
+        hours: 0,
+      };
+      byKey.set(key, week);
+      weeks.push(week);
+    }
+    byKey.get(key).hours += daySlots.reduce((total, slot) => total + Number(slot.hours || 0), 0);
+  }
+  return weeks;
+}
+
+function udaGanttSegments(track, weeks) {
+  const year = courseYearForTrack(track);
+  const segments = [];
+  let cursor = 0;
+  for (const uda of year?.udas || []) {
+    const duration = parseUdaWeeks(uda.weeks);
+    if (cursor >= weeks.length) break;
+    const startIndex = cursor;
+    const endIndex = Math.min(cursor + duration, weeks.length) - 1;
+    const segmentWeeks = weeks.slice(startIndex, endIndex + 1);
+    const hours = segmentWeeks.reduce((total, week) => total + Number(week.hours || 0), 0);
+    segments.push({
+      uda,
+      track,
+      startIndex,
+      endIndex,
+      weeks: segmentWeeks,
+      hours,
+    });
+    cursor = endIndex + 1;
+  }
+  return segments;
+}
+
+function collectUdaTopicTitles(items, depth = 0, output = []) {
+  for (const item of items || []) {
+    const prefix = depth > 0 ? `${"  ".repeat(depth)}- ` : "- ";
+    output.push(`${prefix}${item.title || item.id || "Argomento senza titolo"}`);
+    collectUdaTopicTitles(item.children || [], depth + 1, output);
+  }
+  return output;
+}
+
+function renderTopicList(items) {
+  if (!items?.length) return '<p class="empty">Nessun argomento assegnato.</p>';
+  const list = items.map((item) => {
+    const children = item.children?.length ? renderTopicList(item.children) : "";
+    return `<li><span>${escapeHtml(item.title || item.id || "Argomento senza titolo")}</span>${children}</li>`;
+  }).join("");
+  return `<ul>${list}</ul>`;
+}
+
+function openGanttDialog(segment, firstWeek, lastWeek) {
+  const lostHours = ganttSegmentLostHours(segment);
+  const theoreticalHours = segment.hours + lostHours;
+  const actual = segment.uda.actual || {};
+  els.ganttDialogTitle.textContent = `${String(segment.uda.id || "").toUpperCase()} - ${segment.uda.title || "UDA senza titolo"}`;
+  els.ganttDialogBody.innerHTML = `
+    <div class="ganttDialogMeta">
+      <span><strong>Settimane effettive</strong>${segment.startIndex + 1}-${segment.endIndex + 1}</span>
+      <span><strong>Date</strong>${shortDate(firstWeek.start)}-${shortDate(lastWeek.end)}</span>
+      <span><strong>Ore teoriche</strong>${theoreticalHours}h</span>
+      <span><strong>Ore disponibili</strong>${segment.hours}h</span>
+      <span><strong>Ore perse</strong>${lostHours}h</span>
+    </div>
+    <section>
+      <h3>Programmazione svolta</h3>
+      <div class="actualForm">
+        <label>
+          <span>Stato</span>
+          <select data-actual-field="status">
+            <option value="todo">Da fare</option>
+            <option value="in_progress">In corso</option>
+            <option value="done">Conclusa</option>
+            <option value="paused">Sospesa</option>
+            <option value="skipped">Saltata</option>
+          </select>
+        </label>
+        <label>
+          <span>Inizio reale</span>
+          <input data-actual-field="start_date" type="date">
+        </label>
+        <label>
+          <span>Fine reale</span>
+          <input data-actual-field="end_date" type="date">
+        </label>
+        <label>
+          <span>Ore svolte</span>
+          <input data-actual-field="hours_done" type="number" min="0" step="0.5">
+        </label>
+      </div>
+      <button type="button" data-action="calculate-actual-hours" title="Calcola le ore svolte usando date reali, slot settimanali e chiusure del calendario.">Calcola ore da calendario</button>
+      <label class="actualNotes">
+        <span>Note</span>
+        <textarea data-actual-field="notes" rows="3" placeholder="Annota recuperi, ritardi, tagli o approfondimenti."></textarea>
+      </label>
+      <button type="button" data-action="save-actual" class="primary" title="Salva il consuntivo nel progetto didattico associato.">Salva programmazione svolta</button>
+    </section>
+    <section>
+      <h3>Argomenti e sottoparagrafi</h3>
+      <div class="ganttDialogTopics">${renderTopicList(segment.uda.items || [])}</div>
+    </section>
+  `;
+  els.ganttDialogBody.querySelector('[data-actual-field="status"]').value = actual.status || "todo";
+  els.ganttDialogBody.querySelector('[data-actual-field="start_date"]').value = actual.start_date || "";
+  els.ganttDialogBody.querySelector('[data-actual-field="end_date"]').value = actual.end_date || "";
+  els.ganttDialogBody.querySelector('[data-actual-field="hours_done"]').value = actual.hours_done ?? "";
+  els.ganttDialogBody.querySelector('[data-actual-field="notes"]').value = actual.notes || "";
+  els.ganttDialogBody.querySelector('[data-action="calculate-actual-hours"]').addEventListener("click", () => calculateActualHours(segment));
+  els.ganttDialogBody.querySelector('[data-action="save-actual"]').addEventListener("click", () => saveActualProgress(segment));
+  els.ganttDialog.showModal();
+}
+
+function ganttSegmentTooltip(segment) {
+  const firstWeek = segment.weeks[0];
+  const lastWeek = segment.weeks[segment.weeks.length - 1];
+  const lostHours = ganttSegmentLostHours(segment);
+  const theoreticalHours = segment.hours + lostHours;
+  return [
+    `${String(segment.uda.id || "").toUpperCase()} - ${segment.uda.title || "UDA senza titolo"}`,
+    `Settimane effettive: ${segment.startIndex + 1}-${segment.endIndex + 1}`,
+    `Date: ${firstWeek.start.toLocaleDateString("it-IT")} - ${lastWeek.end.toLocaleDateString("it-IT")}`,
+    `Ore teoriche: ${theoreticalHours}`,
+    `Ore disponibili: ${segment.hours}`,
+    `Ore perse: ${lostHours}`,
+    "",
+    "Argomenti:",
+    ...collectUdaTopicTitles(segment.uda.items || []),
+  ].join("\n");
+}
+
+async function saveAssociatedCourseDesign() {
+  if (!state.courseDesign) {
+    throw new Error("Nessun progetto didattico associato caricato.");
+  }
+  const name = state.calendar.course_design_name || "";
+  if (name) {
+    await api("/api/saved-designs/save", {
+      method: "POST",
+      body: JSON.stringify({ name, design: state.courseDesign }),
+    });
+    return `doc/course_designs/${name}`;
+  }
+  await api("/api/course-design", {
+    method: "POST",
+    body: JSON.stringify(state.courseDesign),
+  });
+  return "doc/course_design.json";
+}
+
+async function saveActualProgress(segment) {
+  const field = (name) => els.ganttDialogBody.querySelector(`[data-actual-field="${name}"]`);
+  const previousActual = segment.uda.actual ? { ...segment.uda.actual } : null;
+  const nextActual = {
+    status: field("status").value || "todo",
+    start_date: field("start_date").value || "",
+    end_date: field("end_date").value || "",
+    hours_done: field("hours_done").value === "" ? "" : Number(field("hours_done").value),
+    notes: field("notes").value.trim(),
+  };
+  segment.uda.actual = nextActual;
+  try {
+    const path = await saveAssociatedCourseDesign();
+    renderAll();
+    setStatus(`Programmazione svolta salvata in ${path}.`);
+  } catch (error) {
+    if (previousActual) {
+      segment.uda.actual = previousActual;
+    } else {
+      delete segment.uda.actual;
+    }
+    setStatus(`Salvataggio programmazione svolta non riuscito: ${error.message}`, "error");
+  }
+}
+
+function calculateActualHours(segment) {
+  const start = dateFromInput(els.ganttDialogBody.querySelector('[data-actual-field="start_date"]').value || "");
+  const end = dateFromInput(els.ganttDialogBody.querySelector('[data-actual-field="end_date"]').value || "");
+  if (!start || !end || start > end) {
+    setStatus("Inserisci date reali valide prima di calcolare le ore svolte.", "error");
+    return;
+  }
+  const closures = closedLabelsByDate();
+  let hours = 0;
+  for (const date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
+    const iso = isoDate(date);
+    if (closures.has(iso)) continue;
+    hours += (segment.track?.weekly_slots || [])
+      .filter((slot) => DAY_INDEX[slot.day] === date.getDay())
+      .reduce((total, slot) => total + Number(slot.hours || 0), 0);
+  }
+  els.ganttDialogBody.querySelector('[data-actual-field="hours_done"]').value = hours;
+  setStatus(`Ore svolte calcolate dal calendario: ${hours}h.`);
+}
+
+function ganttMonthSegments(weeks) {
+  const segments = [];
+  for (const [index, week] of weeks.entries()) {
+    const key = `${week.start.getFullYear()}-${week.start.getMonth()}`;
+    const label = week.start.toLocaleDateString("it-IT", { month: "short", year: "numeric" });
+    const last = segments[segments.length - 1];
+    if (last?.key === key) {
+      last.endIndex = index;
+    } else {
+      segments.push({ key, label, startIndex: index, endIndex: index });
+    }
+  }
+  return segments;
+}
+
+function ganttClosureSegments(weeks) {
+  const segments = [];
+  for (const closure of state.calendar.closures || []) {
+    const from = dateFromInput(closure.from);
+    const to = dateFromInput(closure.to || closure.from);
+    if (!from || !to) continue;
+    let startIndex = -1;
+    let endIndex = -1;
+    for (const [index, week] of weeks.entries()) {
+      if (week.start <= to && week.end >= from) {
+        if (startIndex < 0) startIndex = index;
+        endIndex = index;
+      }
+    }
+    if (startIndex >= 0) {
+      segments.push({
+        label: closure.label || closure.type || "Chiusura",
+        from,
+        to,
+        startIndex,
+        endIndex,
+      });
+    }
+  }
+  return segments;
+}
+
+function shortDate(date) {
+  return date.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" });
+}
+
+function ganttWeekColumns(weeks) {
+  return `repeat(${weeks.length}, var(--gantt-week-width))`;
+}
+
+function applyGanttZoom() {
+  const width = GANTT_WEEK_WIDTHS[state.ganttZoomIndex] || GANTT_WEEK_WIDTHS[GANTT_DEFAULT_ZOOM_INDEX];
+  document.documentElement.style.setProperty("--gantt-week-width", `${width}rem`);
+  const percent = Math.round((width / GANTT_WEEK_WIDTHS[GANTT_DEFAULT_ZOOM_INDEX]) * 100);
+  els.ganttZoomResetBtn.textContent = `${percent}%`;
+  els.ganttZoomOutBtn.disabled = state.ganttZoomIndex <= 0;
+  els.ganttZoomInBtn.disabled = state.ganttZoomIndex >= GANTT_WEEK_WIDTHS.length - 1;
+  localStorage.setItem(GANTT_ZOOM_KEY, String(state.ganttZoomIndex));
+}
+
+function changeGanttZoom(delta) {
+  state.ganttZoomIndex = Math.min(GANTT_WEEK_WIDTHS.length - 1, Math.max(0, state.ganttZoomIndex + delta));
+  applyGanttZoom();
+}
+
+function resetGanttZoom() {
+  state.ganttZoomIndex = GANTT_DEFAULT_ZOOM_INDEX;
+  applyGanttZoom();
+}
+
+function ganttSegmentLostHours(segment) {
+  const closures = closedLabelsByDate();
+  let lost = 0;
+  for (const week of segment.weeks || []) {
+    for (let offset = 0; offset < 7; offset += 1) {
+      const date = addDays(week.start, offset);
+      const iso = isoDate(date);
+      if (!closures.has(iso)) continue;
+      lost += (segment.track?.weekly_slots || [])
+        .filter((slot) => DAY_INDEX[slot.day] === date.getDay())
+        .reduce((total, slot) => total + Number(slot.hours || 0), 0);
+    }
+  }
+  return lost;
+}
+
+function actualUdaSegments(track, weeks) {
+  const year = courseYearForTrack(track);
+  const segments = [];
+  for (const uda of year?.udas || []) {
+    const actual = uda.actual || {};
+    const start = dateFromInput(actual.start_date || "");
+    const end = dateFromInput(actual.end_date || actual.start_date || "");
+    if (!start || !end) continue;
+    let startIndex = -1;
+    let endIndex = -1;
+    for (const [index, week] of weeks.entries()) {
+      if (week.start <= end && week.end >= start) {
+        if (startIndex < 0) startIndex = index;
+        endIndex = index;
+      }
+    }
+    if (startIndex < 0) continue;
+    segments.push({
+      uda,
+      track,
+      actual,
+      start,
+      end,
+      startIndex,
+      endIndex,
+      weeks: weeks.slice(startIndex, endIndex + 1),
+      hours: Number(actual.hours_done || 0),
+    });
+  }
+  return segments;
+}
+
+function renderActualGanttBar(segment, dialogSegment = null) {
+  const bar = document.createElement("div");
+  const status = segment.actual.status || "todo";
+  bar.className = `ganttActualBar ganttActualBar-${status}`;
+  bar.style.gridColumn = `${segment.startIndex + 1} / ${segment.endIndex + 2}`;
+  const label = `${String(segment.uda.id || "").toUpperCase()} - ${segment.uda.title || "UDA senza titolo"}`;
+  bar.title = [
+    label,
+    `Stato: ${status}`,
+    `Date reali: ${segment.start.toLocaleDateString("it-IT")} - ${segment.end.toLocaleDateString("it-IT")}`,
+    `Ore svolte: ${segment.hours}`,
+    segment.actual.notes ? `Note: ${segment.actual.notes}` : "",
+  ].filter(Boolean).join("\n");
+  bar.innerHTML = `
+    <strong>${escapeHtml(String(segment.uda.id || "").toUpperCase())}</strong>
+    <span>${escapeHtml(segment.hours ? `${segment.hours}h` : status)}</span>
+  `;
+  if (dialogSegment?.weeks?.length) {
+    bar.addEventListener("click", () => {
+      const firstWeek = dialogSegment.weeks[0];
+      const lastWeek = dialogSegment.weeks[dialogSegment.weeks.length - 1];
+      openGanttDialog(dialogSegment, firstWeek, lastWeek);
+    });
+  }
+  return bar;
+}
+
+function matchesUdaSegment(candidate, segment) {
+  if (candidate.uda === segment.uda) return true;
+  const candidateId = candidate.uda?.id;
+  const segmentId = segment.uda?.id;
+  return Boolean(candidateId && segmentId && candidateId === segmentId);
+}
+
+function renderGanttBarDays(track, segment, closures) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "ganttBarDayBlock";
+  const strip = document.createElement("div");
+  const labels = document.createElement("div");
+  strip.className = "ganttBarDays";
+  labels.className = "ganttBarDayLabels";
+  const columns = `repeat(${segment.weeks.length * 7}, minmax(.34rem, 1fr))`;
+  strip.style.gridTemplateColumns = columns;
+  labels.style.gridTemplateColumns = columns;
+  for (const week of segment.weeks) {
+    for (let offset = 0; offset < 7; offset += 1) {
+      const date = addDays(week.start, offset);
+      const iso = isoDate(date);
+      const day = document.createElement("span");
+      const hasLesson = (track.weekly_slots || []).some((slot) => DAY_INDEX[slot.day] === date.getDay() && Number(slot.hours || 0) > 0);
+      day.className = "ganttBarDay";
+      if (offset === 0) {
+        day.classList.add("ganttBarWeekStart");
+      }
+      if (closures.has(iso) && hasLesson) {
+        day.classList.add("ganttBarDayInterrupted");
+        day.title = `${date.toLocaleDateString("it-IT")} - lezione sospesa: ${closures.get(iso)}`;
+      } else if (closures.has(iso)) {
+        day.classList.add("ganttBarDayClosed");
+        day.title = `${date.toLocaleDateString("it-IT")} - ${closures.get(iso)}`;
+      } else if (hasLesson) {
+        day.classList.add("ganttBarDayLesson");
+        day.title = `${date.toLocaleDateString("it-IT")} - lezione`;
+      } else {
+        day.title = date.toLocaleDateString("it-IT");
+      }
+      strip.append(day);
+      const label = document.createElement("span");
+      label.textContent = GANTT_DAY_ABBR[offset];
+      if (offset === 5) label.className = "ganttBarDayLabelSaturday";
+      if (offset === 6) label.className = "ganttBarDayLabelSunday";
+      labels.append(label);
+    }
+  }
+  wrapper.append(strip, labels);
+  return wrapper;
+}
+
+function renderGanttChart() {
+  syncFormToCalendar();
+  els.ganttChart.innerHTML = "";
+  const start = dateFromInput(state.calendar.start_date);
+  const end = dateFromInput(state.calendar.end_date);
+  if (!start || !end || start > end) {
+    els.ganttChart.innerHTML = '<p class="empty">Inserisci date di inizio e fine lezioni valide per generare il Gantt.</p>';
+    return;
+  }
+  const tracks = visibleTracks();
+  if (!tracks.length) {
+    els.ganttChart.innerHTML = '<p class="empty">Seleziona almeno un percorso da visualizzare.</p>';
+    return;
+  }
+  const closures = closedLabelsByDate();
+  for (const track of tracks) {
+    const weeks = teachingWeeksForTrack(track, start, end, closures);
+    const year = courseYearForTrack(track);
+    const row = document.createElement("article");
+    row.className = "ganttTrack";
+    const title = track.label || year?.title || track.id || "Percorso";
+    if (!weeks.length || !year?.udas?.length) {
+      row.innerHTML = `
+        <div class="ganttTrackHead">
+          <strong>${escapeHtml(title)}</strong>
+          <span>${weeks.length ? "Nessuna UDA associata" : "Nessuna settimana di lezione disponibile"}</span>
+        </div>
+      `;
+      els.ganttChart.append(row);
+      continue;
+    }
+    row.innerHTML = `
+        <div class="ganttTrackHead">
+          <strong>${escapeHtml(title)}</strong>
+          <span>${weeks.length} settimane effettive - ${weeks.reduce((total, week) => total + Number(week.hours || 0), 0)}h disponibili</span>
+        </div>
+      <div class="ganttMonths"></div>
+      <div class="ganttWeeks"></div>
+      <div class="ganttClosures"></div>
+      <div class="ganttLaneLabel">Pianificato</div>
+      <div class="ganttBars"></div>
+      <div class="ganttLaneLabel">Svolto</div>
+      <div class="ganttActualBars"></div>
+    `;
+    const monthGrid = row.querySelector(".ganttMonths");
+    monthGrid.style.gridTemplateColumns = ganttWeekColumns(weeks);
+    for (const segment of ganttMonthSegments(weeks)) {
+      const month = document.createElement("span");
+      month.style.gridColumn = `${segment.startIndex + 1} / ${segment.endIndex + 2}`;
+      month.textContent = segment.label;
+      monthGrid.append(month);
+    }
+    const weekGrid = row.querySelector(".ganttWeeks");
+    weekGrid.style.gridTemplateColumns = ganttWeekColumns(weeks);
+    weeks.forEach((week, index) => {
+      const label = document.createElement("span");
+      label.title = `${week.start.toLocaleDateString("it-IT")} - ${week.end.toLocaleDateString("it-IT")} - ${week.hours}h`;
+      label.innerHTML = `<strong>${index + 1}</strong><small>${shortDate(week.start)}-${shortDate(week.end)}</small>`;
+      weekGrid.append(label);
+    });
+    const closureGrid = row.querySelector(".ganttClosures");
+    closureGrid.style.gridTemplateColumns = ganttWeekColumns(weeks);
+    for (const closure of ganttClosureSegments(weeks)) {
+      const closureBar = document.createElement("div");
+      closureBar.className = "ganttClosure";
+      closureBar.style.gridColumn = `${closure.startIndex + 1} / ${closure.endIndex + 2}`;
+      closureBar.title = `${closure.label}: ${closure.from.toLocaleDateString("it-IT")} - ${closure.to.toLocaleDateString("it-IT")}`;
+      closureBar.textContent = closure.label;
+      closureGrid.append(closureBar);
+    }
+    const bars = row.querySelector(".ganttBars");
+    bars.style.gridTemplateColumns = ganttWeekColumns(weeks);
+    const plannedSegments = udaGanttSegments(track, weeks);
+    for (const segment of plannedSegments) {
+      const bar = document.createElement("div");
+      bar.className = "ganttBar";
+      bar.style.gridColumn = `${segment.startIndex + 1} / ${segment.endIndex + 2}`;
+      const firstWeek = segment.weeks[0];
+      const lastWeek = segment.weeks[segment.weeks.length - 1];
+      bar.title = ganttSegmentTooltip(segment);
+      bar.innerHTML = `
+        <div class="ganttBarContent">
+          <div class="ganttBarText">
+            <strong>${escapeHtml(String(segment.uda.id || "").toUpperCase())}</strong>
+            <span>${escapeHtml(segment.uda.title || "UDA senza titolo")}</span>
+          </div>
+          <span class="ganttBarMeta">${segment.hours}h disponibili - ${shortDate(firstWeek.start)}-${shortDate(lastWeek.end)}</span>
+        </div>
+      `;
+      bar.addEventListener("click", () => openGanttDialog(segment, firstWeek, lastWeek));
+      bar.append(renderGanttBarDays(track, segment, closures));
+      bars.append(bar);
+    }
+    const actualBars = row.querySelector(".ganttActualBars");
+    actualBars.style.gridTemplateColumns = ganttWeekColumns(weeks);
+    const actualSegments = actualUdaSegments(track, weeks);
+    if (actualSegments.length) {
+      for (const segment of actualSegments) {
+        const plannedSegment = plannedSegments.find((candidate) => matchesUdaSegment(candidate, segment));
+        actualBars.append(renderActualGanttBar(segment, plannedSegment));
+      }
+    } else {
+      const empty = document.createElement("div");
+      empty.className = "ganttActualEmpty";
+      empty.textContent = "Nessuna UDA svolta registrata.";
+      actualBars.append(empty);
+    }
+    els.ganttChart.append(row);
+  }
 }
 
 function calendarMonths(start, end) {
@@ -1088,12 +1675,16 @@ function renderCalendarView() {
   els.monthGrid.classList.toggle("monthFocusGrid", state.calendarView.mode === "month");
   const start = dateFromInput(state.calendar.start_date);
   const end = dateFromInput(state.calendar.end_date);
-  if (!start || !end || start > end) return;
+  if (!start || !end || start > end) {
+    renderGanttChart();
+    return;
+  }
   const closures = closedLabelsByDate();
   const lessons = lessonLabelsByDate();
   if (state.calendarView.mode === "week") {
     const week = selectedCalendarWeek(start, end);
     if (week) els.monthGrid.append(renderWeek(week, start, end, lessons, closures));
+    renderGanttChart();
     return;
   }
   const months = state.calendarView.mode === "month"
@@ -1110,6 +1701,7 @@ function renderCalendarView() {
     const role = item.role || "main";
     els.monthGrid.append(renderMonth(month, start, end, lessons, closures, role));
   }
+  renderGanttChart();
 }
 
 function selectedCalendarMonthContext(start, end) {
@@ -1196,8 +1788,28 @@ function renderDayCell(date, month, start, end, lessons, closures) {
   cell.innerHTML = `
     <span class="dayNumber">${date.getDate()}</span>
     ${closure ? `<span class="dayMeta">${escapeHtml(closure)}</span>` : ""}
-    ${lesson.length ? `<span class="dayMeta">${escapeHtml(lesson.join(" · "))}</span>` : ""}
   `;
+  for (const entry of lesson) {
+    if (entry.segment) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "dayMeta dayLessonButton";
+      button.title = entry.title;
+      button.textContent = entry.label;
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const firstWeek = entry.segment.weeks[0];
+        const lastWeek = entry.segment.weeks[entry.segment.weeks.length - 1];
+        openGanttDialog(entry.segment, firstWeek, lastWeek);
+      });
+      cell.append(button);
+    } else {
+      const meta = document.createElement("span");
+      meta.className = "dayMeta";
+      meta.textContent = entry.label;
+      cell.append(meta);
+    }
+  }
   return cell;
 }
 
@@ -1286,6 +1898,17 @@ els.addTrackBtn.addEventListener("click", addTrack);
 els.addClosureBtn.addEventListener("click", addClosure);
 els.importItalianHolidaysBtn.addEventListener("click", importItalianHolidays);
 els.recalculateBtn.addEventListener("click", renderSummary);
+els.ganttDialogCloseBtn.addEventListener("click", () => els.ganttDialog.close());
+els.ganttZoomOutBtn.addEventListener("click", () => changeGanttZoom(-1));
+els.ganttZoomResetBtn.addEventListener("click", resetGanttZoom);
+els.ganttZoomInBtn.addEventListener("click", () => changeGanttZoom(1));
+
+state.ganttZoomIndex = Number(localStorage.getItem(GANTT_ZOOM_KEY) || GANTT_DEFAULT_ZOOM_INDEX);
+if (!Number.isInteger(state.ganttZoomIndex) || state.ganttZoomIndex < 0 || state.ganttZoomIndex >= GANTT_WEEK_WIDTHS.length) {
+  state.ganttZoomIndex = GANTT_DEFAULT_ZOOM_INDEX;
+}
+applyGanttZoom();
+setupCollapsiblePanels();
 
 Promise.all([loadCalendarList(), loadSavedDesignList()])
   .then(() => loadCalendarForActiveCourseDesign())
