@@ -1806,6 +1806,8 @@ Metriche iniziali:
 
 Queste metriche non devono essere usate in modo punitivo, ma per capire chi e in difficolta, su quali argomenti e con quali pattern di errore.
 
+Il tempo stimato tra primo e ultimo commit va trattato come metrica euristica. Non misura con certezza il tempo reale di studio: uno studente puo lavorare offline, lasciare passare molte ore tra due commit, fare un unico push finale oppure interrompere il lavoro. Per questo il dato deve avere valore orientativo e puo essere accompagnato da un livello di affidabilita, per esempio `bassa`, `media`, `alta`.
+
 #### PR 8 - Dashboard docente minima
 
 Obiettivo: dare al docente una vista sintetica di classe.
