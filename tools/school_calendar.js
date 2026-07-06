@@ -183,8 +183,7 @@ function saveCollapsedPanels(values) {
 }
 
 function panelKey(panel, index) {
-  const title = panel.querySelector(".panelHead h2")?.textContent?.trim() || `panel-${index}`;
-  return title.toLowerCase().replaceAll(/\s+/g, "-");
+  return panel.dataset.panelKey || panel.id || `panel-${index}`;
 }
 
 function setupCollapsiblePanels() {
