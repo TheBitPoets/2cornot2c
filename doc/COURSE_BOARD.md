@@ -1578,6 +1578,268 @@ Questa e una versione ancora in evoluzione. Non gestisce ancora automaticamente:
 - esportazione o stampa del Gantt;
 - confronto sintetico tra ore teoriche, ore disponibili, ore perse e ore svolte per tutto il corso.
 
+### Roadmap PR: qualita, attivita didattiche, esercizi e valutazione
+
+Prima di aggiungere nuove funzionalita importanti conviene aprire una PR dedicata alla qualita complessiva del progetto. L'obiettivo e preparare il repository a diventare, in futuro, un progetto open source pubblicabile, leggibile e mantenibile.
+
+#### PR 1 - Audit qualita progetto
+
+Obiettivo: controllare e migliorare la base tecnica prima di far crescere ancora il sistema.
+
+Aspetti da verificare:
+
+- qualita e chiarezza del codice Python;
+- qualita e chiarezza del codice JavaScript;
+- separazione delle responsabilita tra board, calendario, server, script e documentazione;
+- assenza di ambiguita nei nomi, nei dati e nei flussi utente;
+- robustezza dei salvataggi e gestione degli errori;
+- affidabilita dei controlli `--check`;
+- manutenibilita delle strutture JSON;
+- coerenza tra UI, file generati e documentazione;
+- commenti, docstring e spiegazioni nei punti non immediati del codice Python;
+- commenti mirati nel codice JavaScript dove la logica non e ovvia;
+- prestazioni della board e del calendario quando aumentano percorsi, UDA, attivita e dati storici;
+- sicurezza dei dati locali, delle API key, dei file `.secret` e delle chiamate ai provider AI;
+- sicurezza futura del runner per codice studente;
+- qualita della documentazione per uso locale, sviluppo, manutenzione e contributi esterni;
+- preparazione a una futura pubblicazione open source.
+
+Questa PR non dovrebbe introdurre grandi feature. Dovrebbe invece ridurre debito tecnico, rendere piu leggibile il progetto e documentare le parti critiche.
+
+#### PR 2 - Modello attivita didattiche
+
+Obiettivo: introdurre un modello unico per rappresentare studio guidato, esercizi, compiti a casa, laboratorio, verifiche, recupero e potenziamento.
+
+Un'attivita didattica dovrebbe poter rappresentare:
+
+- studio guidato;
+- esercizio in classe;
+- esercizio in laboratorio;
+- compito a casa;
+- verifica scritta;
+- verifica pratica;
+- recupero;
+- potenziamento.
+
+Il modello deve collegare ogni attivita a:
+
+- progetto didattico;
+- percorso;
+- UDA;
+- argomenti e sottoparagrafi;
+- date di assegnazione, svolgimento o consegna;
+- durata stimata;
+- modalita didattica;
+- livello di supporto;
+- eventuale uso di AI;
+- metriche da raccogliere.
+
+Concettualmente:
+
+```json
+{
+  "id": "c-variabili-homework-001",
+  "title": "Variabili e input/output",
+  "type": "homework",
+  "mode": "practice",
+  "support_level": "guided",
+  "course_path_id": "tpsi-terzo",
+  "uda_id": "uda-1",
+  "topic_ids": ["variabili", "input-output"],
+  "assigned_date": "2026-10-05",
+  "due_date": "2026-10-12",
+  "estimated_minutes": 45
+}
+```
+
+La distinzione importante e:
+
+- `type`: che cosa e l'attivita, per esempio `homework`, `lab`, `written_test`, `practical_test`;
+- `mode`: come viene usata, per esempio `study`, `practice`, `assessment`;
+- `support_level`: quanto aiuto e consentito, per esempio `full`, `guided`, `limited`, `none`.
+
+#### PR 3 - UI attivita nella board/calendario
+
+Obiettivo: permettere al docente di creare, modificare, eliminare e visualizzare attivita didattiche.
+
+Funzioni minime:
+
+- sezione `Attivita didattiche`;
+- creazione manuale di una attivita;
+- modifica dei metadati;
+- collegamento a percorso, UDA e argomenti;
+- visualizzazione nel calendario;
+- visualizzazione nel Gantt come marker collegato alla UDA;
+- salvataggio nel JSON del progetto o del calendario.
+
+Il compito a casa non va trattato come una festivita: non sospende la lezione, ma rappresenta lavoro assegnato e tracciabile. La verifica non e una chiusura: consuma ore didattiche per valutazione. Per questo attivita, verifiche e compiti devono avere una sezione propria.
+
+#### PR 4 - Generazione AI delle attivita e degli esercizi
+
+Obiettivo: generare attivita didattiche a partire da contenuti del corso, UDA, argomenti, livello, durata e obiettivi.
+
+Il docente dovrebbe poter scegliere:
+
+- tipo di attivita;
+- livello;
+- durata stimata;
+- numero di esercizi;
+- linguaggio;
+- modalita di aiuto;
+- presenza di soluzione docente;
+- presenza di test;
+- presenza di rubrica;
+- eventuali hint progressivi.
+
+L'output AI dovrebbe essere sempre validato dal docente prima di diventare attivita salvata.
+
+L'AI puo generare:
+
+- consegna;
+- obiettivi;
+- prerequisiti;
+- esercizi;
+- starter code;
+- soluzione di riferimento;
+- test visibili;
+- test nascosti;
+- griglia di valutazione;
+- hint progressivi;
+- feedback atteso;
+- domande orali di controllo.
+
+#### PR 5 - Runner locale e sandbox Docker per C
+
+Obiettivo: eseguire realmente gli esercizi di programmazione in modo riproducibile e sicuro.
+
+Il runner deve:
+
+- compilare codice C;
+- eseguire test input/output;
+- gestire timeout;
+- gestire errori di compilazione;
+- produrre un report JSON;
+- distinguere test visibili e nascosti;
+- supportare Docker come sandbox obbligatoria;
+- preparare in futuro ASan, UBSan e Valgrind.
+
+Principio: il punteggio tecnico deve essere deterministico. L'AI non deve inventare il voto, ma spiegare e motivare a partire da risultati gia calcolati.
+
+#### PR 6 - Template GitHub Actions per repo studenti
+
+Obiettivo: usare GitHub come identita, consegna e storico del lavoro degli studenti.
+
+Non serve login proprietario: gli studenti usano i propri account GitHub.
+
+Il sistema deve prevedere:
+
+- repository template dell'attivita;
+- repository individuali degli studenti;
+- commit e push come traccia del lavoro;
+- GitHub Actions per l'esecuzione automatica dei test;
+- Docker dentro Actions;
+- report JSON come artifact;
+- stato pass/fail leggibile dal docente.
+
+#### PR 7 - Raccolta metriche individuali
+
+Obiettivo: misurare il processo di apprendimento, non solo il risultato finale.
+
+Metriche iniziali:
+
+- studente o username GitHub;
+- repository;
+- attivita;
+- primo commit;
+- ultimo commit;
+- numero commit;
+- numero push;
+- numero run GitHub Actions;
+- test superati;
+- test falliti;
+- errori di compilazione;
+- errori runtime;
+- timeout;
+- tempo stimato tra primo e ultimo commit;
+- consegna entro la scadenza;
+- argomenti collegati agli errori.
+
+Queste metriche non devono essere usate in modo punitivo, ma per capire chi e in difficolta, su quali argomenti e con quali pattern di errore.
+
+#### PR 8 - Dashboard docente minima
+
+Obiettivo: dare al docente una vista sintetica di classe.
+
+Vista per attivita:
+
+- studente;
+- stato;
+- ultimo push;
+- commit;
+- test superati;
+- errori principali;
+- tempo stimato;
+- consegna in orario o in ritardo.
+
+Vista classe:
+
+- percentuale consegne;
+- media test superati;
+- studenti in difficolta;
+- errori piu comuni;
+- argomenti critici;
+- andamento nel tempo.
+
+La dashboard puo partire semplice, ma deve gia aiutare a rispondere a domande didattiche concrete:
+
+- chi non ha iniziato?
+- chi ha consegnato?
+- chi ha molti errori di compilazione?
+- quale argomento sta creando problemi alla classe?
+- quali studenti stanno migliorando?
+
+#### PR 9 - Classifiche e gamification non punitive
+
+Obiettivo: stimolare gli studenti senza ridurre tutto al voto.
+
+Classifiche possibili:
+
+- costanza;
+- miglioramento;
+- esercizi completati;
+- debug riusciti;
+- streak settimanale;
+- test superati;
+- recuperi completati.
+
+Da evitare una classifica basata solo sul voto assoluto, per non demotivare chi parte piu indietro.
+
+#### PR 10 - Correzione AI controllata e report finale
+
+Obiettivo: usare AI per feedback, motivazioni e giudizio naturale, non per sostituire i test deterministici.
+
+Input per AI evaluator:
+
+- consegna;
+- griglia;
+- codice studente;
+- risultati test;
+- errori compilazione/runtime;
+- log essenziali;
+- eventuale storico commit;
+- metriche dell'attivita.
+
+Output:
+
+- motivazione per ogni indicatore della griglia;
+- giudizio finale;
+- errori concettuali probabili;
+- suggerimenti di recupero;
+- domande orali suggerite;
+- report JSON, Markdown, HTML o PDF.
+
+Regola fondamentale: stessa consegna, stessi test, stessa griglia e stesso formato di risposta per tutti gli studenti.
+
 ### Direzione futura: un solo JSON per corso e calendario
 
 Al momento progetto didattico e calendario sono file separati:
