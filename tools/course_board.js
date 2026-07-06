@@ -103,7 +103,30 @@ function emptyCourseDesign() {
   return {
     version: 1,
     source_files: ["README.md", "LINUX_PROGRAMMING.md"],
-    years: [],
+    years: [
+      emptyCourseYear("terzo-anno", "Terzo anno", 3),
+      emptyCourseYear("quarto-anno", "Quarto anno", 3),
+      emptyCourseYear("quinto-anno", "Quinto anno", 4),
+    ],
+  };
+}
+
+function emptyCourseYear(id, title, weeklyHours) {
+  return {
+    id,
+    title,
+    description: "",
+    weekly_hours: weeklyHours,
+    weeks: 33,
+    udas: [
+      {
+        id: "uda-1",
+        title: "Da definire",
+        path: "",
+        weeks: "",
+        items: [],
+      },
+    ],
   };
 }
 
