@@ -284,6 +284,14 @@ function renderProjectTitle() {
 
 function renderCourseActions() {
   const isCurrent = !state.activeSavedDesign && !state.isNewDesign;
+  if (isCurrent) {
+    els.saveArchiveBtn.title = "Salva le modifiche direttamente nel progetto corrente doc/course_design.json.";
+  } else if (state.activeSavedDesign) {
+    els.saveArchiveBtn.title = `Salva le modifiche nel progetto archiviato ${state.activeSavedDesign}.`;
+  } else {
+    els.saveArchiveBtn.title = "Salva il nuovo progetto nell'archivio dei progetti didattici.";
+  }
+  els.saveArchiveAsBtn.title = "Salva una copia del progetto con un nuovo nome nell'archivio; poi potrai impostarla come progetto corrente.";
   els.saveBtn.disabled = isCurrent;
   els.saveBtn.title = isCurrent
     ? "Il progetto corrente e gia caricato: non serve impostarlo di nuovo."
@@ -353,6 +361,10 @@ async function loadSavedDesignByName(name, options = {}) {
 }
 
 async function saveArchiveDesign() {
+  if (!state.activeSavedDesign && !state.isNewDesign) {
+    await saveCurrentProject();
+    return;
+  }
   const defaultName = state.activeSavedDesign || "course_design_as_25_26.json";
   if (state.activeSavedDesign) {
     await saveArchiveDesignWithName(state.activeSavedDesign);
@@ -385,6 +397,22 @@ async function saveArchiveDesignWithName(name) {
   renderProjectTitle();
   renderCourseActions();
   setStatus(`Progetto salvato in archivio: ${state.activeSavedDesign}.`);
+}
+
+async function saveCurrentProject() {
+  setStatus("Salvataggio progetto corrente in doc/course_design.json...");
+  await api("/api/course-design", {
+    method: "POST",
+    body: JSON.stringify(state.design),
+  });
+  localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
+  sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
+  state.activeSavedDesign = "";
+  state.isNewDesign = false;
+  renderSavedDesigns();
+  renderProjectTitle();
+  renderCourseActions();
+  setStatus("Progetto corrente salvato in doc/course_design.json.");
 }
 
 async function newCourseDesign() {
