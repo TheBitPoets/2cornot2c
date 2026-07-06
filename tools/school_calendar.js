@@ -31,6 +31,7 @@ const els = {
   schoolYear: document.querySelector("#schoolYear"),
   region: document.querySelector("#region"),
   school: document.querySelector("#school"),
+  courseDesignSelect: document.querySelector("#courseDesignSelect"),
   startDate: document.querySelector("#startDate"),
   endDate: document.querySelector("#endDate"),
   tracks: document.querySelector("#tracks"),
@@ -42,6 +43,7 @@ const els = {
 
 const state = {
   calendars: [],
+  savedDesigns: [],
   calendar: defaultCalendar(),
   courseDesign: null,
   visibleTrackIds: null,
@@ -59,6 +61,7 @@ function defaultCalendar() {
     school_year: "2026/2027",
     region: "",
     school: "",
+    course_design_name: "",
     start_date: "",
     end_date: "",
     tracks: [
@@ -145,6 +148,7 @@ function syncFormToCalendar() {
   state.calendar.school_year = els.schoolYear.value.trim();
   state.calendar.region = els.region.value.trim();
   state.calendar.school = els.school.value.trim();
+  state.calendar.course_design_name = els.courseDesignSelect.value;
   state.calendar.start_date = els.startDate.value;
   state.calendar.end_date = els.endDate.value;
 }
@@ -153,6 +157,7 @@ function syncCalendarToForm() {
   els.schoolYear.value = state.calendar.school_year || "";
   els.region.value = state.calendar.region || "";
   els.school.value = state.calendar.school || "";
+  els.courseDesignSelect.value = state.calendar.course_design_name || "";
   els.startDate.value = state.calendar.start_date || "";
   els.endDate.value = state.calendar.end_date || "";
   if (!els.fileName.value) {
@@ -164,6 +169,24 @@ function fileNameFromYear(year) {
   const match = String(year).match(/(\d{4})\D+(\d{4})/);
   if (!match) return "as_2026_2027.json";
   return `as_${match[1]}_${match[2]}.json`;
+}
+
+function renderSavedDesignList() {
+  const selected = state.calendar.course_design_name || els.courseDesignSelect.value;
+  els.courseDesignSelect.innerHTML = '<option value="">Percorso corrente (doc/course_design.json)</option>';
+  for (const design of state.savedDesigns) {
+    const option = document.createElement("option");
+    option.value = design.name;
+    option.textContent = design.name;
+    els.courseDesignSelect.append(option);
+  }
+  els.courseDesignSelect.value = selected;
+}
+
+async function loadSavedDesignList() {
+  const payload = await api("/api/saved-designs");
+  state.savedDesigns = payload.designs || [];
+  renderSavedDesignList();
 }
 
 function renderCalendarList() {
@@ -186,6 +209,16 @@ async function loadCalendarList() {
 
 async function loadCourseDesign() {
   try {
+    const name = state.calendar.course_design_name || "";
+    if (name) {
+      const payload = await api("/api/saved-designs/load", {
+        method: "POST",
+        body: JSON.stringify({ name }),
+      });
+      state.courseDesign = payload.design;
+      setStatus(`Percorso didattico associato: ${name}.`);
+      return;
+    }
     state.courseDesign = await api("/api/course-design");
   } catch (error) {
     state.courseDesign = null;
@@ -206,6 +239,7 @@ async function loadSelectedCalendar() {
   state.calendar = payload.calendar;
   state.visibleTrackIds = null;
   els.fileName.value = name;
+  await loadCourseDesign();
   renderAll();
   setStatus(`Calendario caricato: ${name}.`);
 }
@@ -225,6 +259,7 @@ async function saveCalendar() {
 }
 
 function renderAll() {
+  renderSavedDesignList();
   ensureTrackCourseLinks();
   ensureVisibleTrackIds();
   syncCalendarToForm();
@@ -899,7 +934,7 @@ function validateCalendar() {
     const weekly = Number(track.weekly_hours || 0);
     if (total > weekly) issues.push(`${track.label || track.id}: gli slot sommano ${total}h ma il limite è ${weekly}h.`);
     if (state.courseDesign && track.course_year_id && !courseYearForTrack(track)) {
-      issues.push(`${track.label || track.id}: anno percorso "${track.course_year_id}" non trovato in doc/course_design.json.`);
+      issues.push(`${track.label || track.id}: anno percorso "${track.course_year_id}" non trovato nel percorso didattico associato.`);
     }
     const days = new Set();
     for (const slot of track.weekly_slots || []) {
@@ -1124,6 +1159,12 @@ function escapeHtml(value) {
   });
 });
 
+els.courseDesignSelect.addEventListener("change", async () => {
+  syncFormToCalendar();
+  await loadCourseDesign();
+  renderAll();
+});
+
 els.loadBtn.addEventListener("click", loadSelectedCalendar);
 els.saveBtn.addEventListener("click", saveCalendar);
 els.addTrackBtn.addEventListener("click", addTrack);
@@ -1131,6 +1172,6 @@ els.addClosureBtn.addEventListener("click", addClosure);
 els.importItalianHolidaysBtn.addEventListener("click", importItalianHolidays);
 els.recalculateBtn.addEventListener("click", renderSummary);
 
-Promise.all([loadCalendarList(), loadCourseDesign()])
+Promise.all([loadCalendarList(), loadSavedDesignList(), loadCourseDesign()])
   .then(() => renderAll())
   .catch((error) => setStatus(`Errore: ${error.message}`));
