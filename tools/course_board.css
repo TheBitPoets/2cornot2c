@@ -256,6 +256,10 @@ button:hover, .buttonLink:hover { transform: translateY(-1px); }
   cursor: not-allowed;
 }
 
+.planner #addYearBtn {
+  margin-top: .85rem;
+}
+
 .filters {
   display: grid;
   grid-template-columns: 1fr 8rem;
