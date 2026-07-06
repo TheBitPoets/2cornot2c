@@ -926,6 +926,17 @@ function lessonLabelsByDate() {
   const tracks = visibleTracks();
   const closures = closedLabelsByDate();
   const schedules = trackSchedules(start, end, closures);
+  const segmentByTrackWeek = new Map();
+  for (const track of tracks) {
+    const weeks = teachingWeeksForTrack(track, start, end, closures);
+    const byWeek = new Map();
+    for (const segment of udaGanttSegments(track, weeks)) {
+      for (const week of segment.weeks) {
+        byWeek.set(week.key, segment);
+      }
+    }
+    segmentByTrackWeek.set(track.id, byWeek);
+  }
   const lessonCounters = new Map();
   for (const date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
     const iso = isoDate(date);
@@ -936,21 +947,27 @@ function lessonLabelsByDate() {
       if (hours <= 0) continue;
       const prefix = trackShortLabel(track);
       if (closures.has(iso)) {
-        dayLabels.push(`${prefix}: lezione sospesa (${hours}h)`);
+        dayLabels.push({ label: `${prefix}: lezione sospesa (${hours}h)` });
         continue;
       }
       const count = (lessonCounters.get(track.id) || 0) + 1;
       lessonCounters.set(track.id, count);
-      const uda = schedules.get(track.id)?.get(weekKey(date));
+      const week = weekKey(date);
+      const uda = schedules.get(track.id)?.get(week);
+      const segment = segmentByTrackWeek.get(track.id)?.get(week);
       const udaLabel = uda ? `${String(uda.id || "").toUpperCase()} ${uda.title || ""}`.trim() : "UDA non assegnata";
       const types = [...new Set(matching.map((slot) => slot.type).filter(Boolean))].join("/");
-      dayLabels.push(`${prefix}: ${udaLabel} · L${count} · ${hours}h${types ? ` ${types}` : ""}`);
+      const label = `${prefix}: ${udaLabel} - L${count} - ${hours}h${types ? ` ${types}` : ""}`;
+      dayLabels.push({
+        label,
+        segment,
+        title: segment ? ganttSegmentTooltip(segment) : label,
+      });
     }
     if (dayLabels.length) labels.set(isoDate(date), dayLabels);
   }
   return labels;
 }
-
 function trackShortLabel(track) {
   const subject = String(track.subject || "").trim();
   if (subject) return subject;
@@ -1094,6 +1111,20 @@ function openGanttDialog(segment, firstWeek, lastWeek) {
     </section>
   `;
   els.ganttDialog.showModal();
+}
+
+function ganttSegmentTooltip(segment) {
+  const firstWeek = segment.weeks[0];
+  const lastWeek = segment.weeks[segment.weeks.length - 1];
+  return [
+    `${String(segment.uda.id || "").toUpperCase()} - ${segment.uda.title || "UDA senza titolo"}`,
+    `Settimane effettive: ${segment.startIndex + 1}-${segment.endIndex + 1}`,
+    `Date: ${firstWeek.start.toLocaleDateString("it-IT")} - ${lastWeek.end.toLocaleDateString("it-IT")}`,
+    `Ore previste: ${segment.hours}`,
+    "",
+    "Argomenti:",
+    ...collectUdaTopicTitles(segment.uda.items || []),
+  ].join("\n");
 }
 
 function ganttMonthSegments(weeks) {
@@ -1270,15 +1301,7 @@ function renderGanttChart() {
       bar.style.gridColumn = `${segment.startIndex + 1} / ${segment.endIndex + 2}`;
       const firstWeek = segment.weeks[0];
       const lastWeek = segment.weeks[segment.weeks.length - 1];
-      bar.title = [
-        `${String(segment.uda.id || "").toUpperCase()} - ${segment.uda.title || "UDA senza titolo"}`,
-        `Settimane effettive: ${segment.startIndex + 1}-${segment.endIndex + 1}`,
-        `Date: ${firstWeek.start.toLocaleDateString("it-IT")} - ${lastWeek.end.toLocaleDateString("it-IT")}`,
-        `Ore previste: ${segment.hours}`,
-        "",
-        "Argomenti:",
-        ...collectUdaTopicTitles(segment.uda.items || []),
-      ].join("\n");
+      bar.title = ganttSegmentTooltip(segment);
       bar.innerHTML = `
         <div class="ganttBarContent">
           <div class="ganttBarText">
@@ -1495,8 +1518,28 @@ function renderDayCell(date, month, start, end, lessons, closures) {
   cell.innerHTML = `
     <span class="dayNumber">${date.getDate()}</span>
     ${closure ? `<span class="dayMeta">${escapeHtml(closure)}</span>` : ""}
-    ${lesson.length ? `<span class="dayMeta">${escapeHtml(lesson.join(" · "))}</span>` : ""}
   `;
+  for (const entry of lesson) {
+    if (entry.segment) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "dayMeta dayLessonButton";
+      button.title = entry.title;
+      button.textContent = entry.label;
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const firstWeek = entry.segment.weeks[0];
+        const lastWeek = entry.segment.weeks[entry.segment.weeks.length - 1];
+        openGanttDialog(entry.segment, firstWeek, lastWeek);
+      });
+      cell.append(button);
+    } else {
+      const meta = document.createElement("span");
+      meta.className = "dayMeta";
+      meta.textContent = entry.label;
+      cell.append(meta);
+    }
+  }
   return cell;
 }
 

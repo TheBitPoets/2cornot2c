@@ -582,6 +582,26 @@ button:disabled {
   line-height: 1.2;
 }
 
+.dayLessonButton {
+  width: 100%;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(17, 17, 17, .07);
+  box-shadow: none;
+  color: inherit;
+  cursor: pointer;
+  display: block;
+  font: inherit;
+  justify-content: flex-start;
+  padding: .18rem .24rem;
+  text-align: left;
+}
+
+.dayLessonButton:hover {
+  background: rgba(17, 17, 17, .12);
+  transform: none;
+}
+
 .ganttChart {
   display: grid;
   gap: 1rem;
