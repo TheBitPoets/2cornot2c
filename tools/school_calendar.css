@@ -176,7 +176,34 @@ input, select {
   background: rgba(255, 255, 255, .72);
 }
 
-.panelHead h2 { margin-bottom: 0; font-size: 1.25rem; }
+.panelHead h2 {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  margin-bottom: 0;
+  font-size: 1.25rem;
+}
+
+.panelHead h2::before {
+  content: "−";
+  display: inline-grid;
+  place-items: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  border: 1px solid rgba(17, 17, 17, .18);
+  border-radius: 999px;
+  font-size: .82rem;
+  line-height: 1;
+}
+
+.panelCollapsed .panelHead h2::before {
+  content: "+";
+}
+
+.panelCollapsed > :not(.panelHead) {
+  display: none !important;
+}
 
 .panelActions {
   display: flex;

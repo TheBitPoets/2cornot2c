@@ -25,6 +25,7 @@ const GANTT_ZOOM_KEY = "2cornot2c.ganttZoom";
 const GANTT_WEEK_WIDTHS = [2.4, 3.0, 3.4, 4.2, 5.2, 6.4, 8.0, 10.0, 12.0];
 const GANTT_DEFAULT_ZOOM_INDEX = 2;
 const GANTT_DAY_ABBR = ["L", "M", "M", "G", "V", "S", "D"];
+const COLLAPSED_PANELS_KEY = "2cornot2c.calendarCollapsedPanels";
 
 const els = {
   calendarSelect: document.querySelector("#calendarSelect"),
@@ -167,6 +168,46 @@ function setStatus(message, kind = "neutral") {
       state.statusTimer = null;
     }, 4500);
   }
+}
+
+function collapsedPanels() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(COLLAPSED_PANELS_KEY) || "[]"));
+  } catch {
+    return new Set();
+  }
+}
+
+function saveCollapsedPanels(values) {
+  localStorage.setItem(COLLAPSED_PANELS_KEY, JSON.stringify([...values]));
+}
+
+function panelKey(panel, index) {
+  const title = panel.querySelector(".panelHead h2")?.textContent?.trim() || `panel-${index}`;
+  return title.toLowerCase().replaceAll(/\s+/g, "-");
+}
+
+function setupCollapsiblePanels() {
+  const collapsed = collapsedPanels();
+  document.querySelectorAll("main.layout > .panel").forEach((panel, index) => {
+    const head = panel.querySelector(".panelHead");
+    const title = head?.querySelector("h2");
+    if (!head || !title) return;
+    const key = panelKey(panel, index);
+    panel.dataset.panelKey = key;
+    if (collapsed.has(key)) panel.classList.add("panelCollapsed");
+    title.title = "Apri o chiudi questa sezione.";
+    title.addEventListener("click", () => {
+      panel.classList.toggle("panelCollapsed");
+      const current = collapsedPanels();
+      if (panel.classList.contains("panelCollapsed")) {
+        current.add(key);
+      } else {
+        current.delete(key);
+      }
+      saveCollapsedPanels(current);
+    });
+  });
 }
 
 function flashFieldError(input) {
@@ -1841,6 +1882,7 @@ if (!Number.isInteger(state.ganttZoomIndex) || state.ganttZoomIndex < 0 || state
   state.ganttZoomIndex = GANTT_DEFAULT_ZOOM_INDEX;
 }
 applyGanttZoom();
+setupCollapsiblePanels();
 
 Promise.all([loadCalendarList(), loadSavedDesignList()])
   .then(() => loadCalendarForActiveCourseDesign())
