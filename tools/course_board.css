@@ -195,6 +195,30 @@ button, .buttonLink {
 button.primary { background: var(--accent); border-color: var(--accent); color: white; }
 button:hover, .buttonLink:hover { transform: translateY(-1px); }
 
+button:disabled,
+button:disabled:hover {
+  cursor: not-allowed;
+  border-color: #cfcfcf;
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      #eeeeee 0,
+      #eeeeee 8px,
+      #e3e3e3 8px,
+      #e3e3e3 16px
+    );
+  color: #777777;
+  box-shadow: none;
+  opacity: .82;
+  transform: none;
+  animation: disabledButtonPulse 2.4s ease-in-out infinite;
+}
+
+@keyframes disabledButtonPulse {
+  0%, 100% { filter: grayscale(.2); }
+  50% { filter: grayscale(.55); }
+}
+
 .board {
   display: grid;
   grid-template-columns: minmax(19rem, 28rem) minmax(0, 1fr);

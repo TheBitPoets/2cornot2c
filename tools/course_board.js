@@ -248,7 +248,11 @@ async function loadAll() {
   renderProjectTitle();
   renderHeadings();
   renderCourse();
-  setStatus("Pronto.");
+  if (state.activeSavedDesign || state.isNewDesign) {
+    setStatus("Pronto.");
+  } else {
+    renderCourseActions();
+  }
 }
 
 function renderSavedDesigns() {
@@ -284,6 +288,9 @@ function renderCourseActions() {
   els.saveBtn.title = isCurrent
     ? "Il progetto corrente e gia caricato: non serve impostarlo di nuovo."
     : "Imposta il progetto caricato come progetto corrente, sovrascrivendo doc/course_design.json dopo conferma esplicita.";
+  if (isCurrent && (!els.status.textContent || els.status.textContent === "Pronto.")) {
+    setStatus("Stai lavorando sul progetto corrente: Imposta corrente non è disponibile.");
+  }
 }
 
 function openSavedDesignPicker() {
