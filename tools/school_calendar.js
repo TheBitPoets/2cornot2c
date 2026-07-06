@@ -280,6 +280,47 @@ function ensureTrackCourseLinks() {
   }
 }
 
+function syncTracksFromCourseDesign() {
+  const years = state.courseDesign?.years || [];
+  if (!years.length) return;
+  const existingTracks = state.calendar.tracks || [];
+  const byCourseYear = new Map();
+  const byId = new Map();
+  for (const track of existingTracks) {
+    if (track.course_year_id) byCourseYear.set(track.course_year_id, track);
+    if (track.id) byId.set(track.id, track);
+  }
+  state.calendar.tracks = years.map((year) => {
+    const existing = byCourseYear.get(year.id) || byId.get(year.id);
+    return {
+      id: year.id,
+      label: year.title || year.id,
+      subject: existing?.subject || "TPSI",
+      course_year_id: year.id,
+      weekly_hours: existing?.weekly_hours ?? defaultWeeklyHoursForCourseYear(year),
+      weekly_slots: existing?.weekly_slots?.length ? existing.weekly_slots : defaultWeeklySlotsForCourseYear(year),
+    };
+  });
+  state.visibleTrackIds = null;
+}
+
+function defaultWeeklyHoursForCourseYear(year) {
+  return /quinto|5/.test(String(`${year.id} ${year.title}`).toLowerCase()) ? 4 : 3;
+}
+
+function defaultWeeklySlotsForCourseYear(year) {
+  if (defaultWeeklyHoursForCourseYear(year) === 4) {
+    return [
+      { day: "monday", hours: 2, type: "teoria" },
+      { day: "friday", hours: 2, type: "laboratorio" },
+    ];
+  }
+  return [
+    { day: "monday", hours: 2, type: "teoria" },
+    { day: "friday", hours: 1, type: "laboratorio" },
+  ];
+}
+
 function ensureVisibleTrackIds() {
   const trackIds = new Set((state.calendar.tracks || []).map((track) => track.id));
   if (!state.visibleTrackIds) {
@@ -1162,6 +1203,7 @@ function escapeHtml(value) {
 els.courseDesignSelect.addEventListener("change", async () => {
   syncFormToCalendar();
   await loadCourseDesign();
+  syncTracksFromCourseDesign();
   renderAll();
 });
 
