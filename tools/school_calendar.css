@@ -257,6 +257,10 @@ label {
   gap: .5rem;
 }
 
+.slotRows + [data-action="add-slot"] {
+  margin-top: .85rem;
+}
+
 .slotRow, .closureRow {
   display: grid;
   gap: .5rem;
