@@ -702,6 +702,7 @@ button:disabled {
   color: #ffffff;
   padding: .45rem .6rem;
   overflow: hidden;
+  cursor: pointer;
 }
 
 .ganttBarContent {
@@ -764,6 +765,79 @@ button:disabled {
   background: #ff5c4d;
 }
 
+.ganttDialog {
+  width: min(760px, calc(100vw - 2rem));
+  border: 1px solid rgba(17, 17, 17, .18);
+  border-radius: 22px;
+  background: #ffffff;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .24);
+  color: var(--ink);
+  padding: 0;
+}
+
+.ganttDialog::backdrop {
+  background: rgba(17, 17, 17, .36);
+}
+
+.ganttDialogHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  border-bottom: 1px solid var(--line);
+  padding: 1rem;
+}
+
+.ganttDialogHead h2 {
+  margin: .15rem 0 0;
+  font-size: 1.1rem;
+}
+
+.ganttDialogBody {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.ganttDialogMeta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .6rem;
+}
+
+.ganttDialogMeta span {
+  border: 1px solid rgba(17, 17, 17, .12);
+  border-radius: 14px;
+  background: #f7f7f7;
+  display: grid;
+  gap: .2rem;
+  padding: .65rem;
+}
+
+.ganttDialogMeta strong {
+  color: var(--muted);
+  font-size: .66rem;
+  text-transform: uppercase;
+}
+
+.ganttDialogBody h3 {
+  margin: 0 0 .55rem;
+  font-size: .9rem;
+}
+
+.ganttDialogTopics ul {
+  margin: .3rem 0 .3rem 1.1rem;
+  padding: 0;
+}
+
+.ganttDialogTopics li {
+  margin: .28rem 0;
+}
+
+.ganttDialogTopics span {
+  line-height: 1.35;
+}
+
 @media (max-width: 950px) {
   .hero, .panelHead {
     display: grid;
@@ -782,6 +856,10 @@ button:disabled {
   }
 
   .slotRow, .closureRow {
+    grid-template-columns: 1fr;
+  }
+
+  .ganttDialogMeta {
     grid-template-columns: 1fr;
   }
 }

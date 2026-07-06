@@ -43,6 +43,10 @@ const els = {
   calendarValidation: document.querySelector("#calendarValidation"),
   monthGrid: document.querySelector("#monthGrid"),
   ganttChart: document.querySelector("#ganttChart"),
+  ganttDialog: document.querySelector("#ganttDialog"),
+  ganttDialogTitle: document.querySelector("#ganttDialogTitle"),
+  ganttDialogBody: document.querySelector("#ganttDialogBody"),
+  ganttDialogCloseBtn: document.querySelector("#ganttDialogCloseBtn"),
   summary: document.querySelector("#summary"),
 };
 
@@ -1060,6 +1064,31 @@ function collectUdaTopicTitles(items, depth = 0, output = []) {
   return output;
 }
 
+function renderTopicList(items) {
+  if (!items?.length) return '<p class="empty">Nessun argomento assegnato.</p>';
+  const list = items.map((item) => {
+    const children = item.children?.length ? renderTopicList(item.children) : "";
+    return `<li><span>${escapeHtml(item.title || item.id || "Argomento senza titolo")}</span>${children}</li>`;
+  }).join("");
+  return `<ul>${list}</ul>`;
+}
+
+function openGanttDialog(segment, firstWeek, lastWeek) {
+  els.ganttDialogTitle.textContent = `${String(segment.uda.id || "").toUpperCase()} - ${segment.uda.title || "UDA senza titolo"}`;
+  els.ganttDialogBody.innerHTML = `
+    <div class="ganttDialogMeta">
+      <span><strong>Settimane effettive</strong>${segment.startIndex + 1}-${segment.endIndex + 1}</span>
+      <span><strong>Date</strong>${shortDate(firstWeek.start)}-${shortDate(lastWeek.end)}</span>
+      <span><strong>Ore previste</strong>${segment.hours}h</span>
+    </div>
+    <section>
+      <h3>Argomenti e sottoparagrafi</h3>
+      <div class="ganttDialogTopics">${renderTopicList(segment.uda.items || [])}</div>
+    </section>
+  `;
+  els.ganttDialog.showModal();
+}
+
 function ganttMonthSegments(weeks) {
   const segments = [];
   for (const [index, week] of weeks.entries()) {
@@ -1232,6 +1261,7 @@ function renderGanttChart() {
           <span class="ganttBarMeta">${segment.hours}h - ${shortDate(firstWeek.start)}-${shortDate(lastWeek.end)}</span>
         </div>
       `;
+      bar.addEventListener("click", () => openGanttDialog(segment, firstWeek, lastWeek));
       bar.append(renderGanttBarDays(track, segment, closures));
       bars.append(bar);
     }
@@ -1528,6 +1558,7 @@ els.addTrackBtn.addEventListener("click", addTrack);
 els.addClosureBtn.addEventListener("click", addClosure);
 els.importItalianHolidaysBtn.addEventListener("click", importItalianHolidays);
 els.recalculateBtn.addEventListener("click", renderSummary);
+els.ganttDialogCloseBtn.addEventListener("click", () => els.ganttDialog.close());
 
 Promise.all([loadCalendarList(), loadSavedDesignList()])
   .then(() => loadCalendarForActiveCourseDesign())
