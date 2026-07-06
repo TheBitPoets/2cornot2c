@@ -22,7 +22,7 @@ const ACTIVE_COURSE_DESIGN_KEY = "2cornot2c.activeCourseDesign";
 const ACTIVE_SCHOOL_CALENDAR_KEY = "2cornot2c.activeSchoolCalendar";
 const ACTIVE_COURSE_SESSION_KEY = "2cornot2c.keepActiveCourseInSession";
 const GANTT_ZOOM_KEY = "2cornot2c.ganttZoom";
-const GANTT_WEEK_WIDTHS = [2.4, 3.0, 3.4, 4.2, 5.2, 6.4];
+const GANTT_WEEK_WIDTHS = [2.4, 3.0, 3.4, 4.2, 5.2, 6.4, 8.0, 10.0, 12.0];
 const GANTT_DEFAULT_ZOOM_INDEX = 2;
 
 const els = {
