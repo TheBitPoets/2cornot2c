@@ -20,6 +20,7 @@ const DAY_INDEX = {
 
 const ACTIVE_COURSE_DESIGN_KEY = "2cornot2c.activeCourseDesign";
 const ACTIVE_SCHOOL_CALENDAR_KEY = "2cornot2c.activeSchoolCalendar";
+const ACTIVE_COURSE_SESSION_KEY = "2cornot2c.keepActiveCourseInSession";
 
 const els = {
   calendarSelect: document.querySelector("#calendarSelect"),
@@ -245,7 +246,8 @@ async function loadCourseDesign() {
 }
 
 async function loadCalendarForActiveCourseDesign() {
-  const activeDesign = localStorage.getItem(ACTIVE_COURSE_DESIGN_KEY) || "";
+  const keepActiveDesign = sessionStorage.getItem(ACTIVE_COURSE_SESSION_KEY) === "true";
+  const activeDesign = keepActiveDesign ? localStorage.getItem(ACTIVE_COURSE_DESIGN_KEY) || "" : "";
   const activeCalendar = localStorage.getItem(ACTIVE_SCHOOL_CALENDAR_KEY) || "";
   const activeCalendarMetadata = state.calendars.find((calendar) => calendar.name === activeCalendar);
   if (activeCalendarMetadata && (activeCalendarMetadata.course_design_name || "") === activeDesign) {
@@ -286,8 +288,10 @@ async function loadCalendarByName(name) {
   localStorage.setItem(ACTIVE_SCHOOL_CALENDAR_KEY, name);
   if (state.calendar.course_design_name) {
     localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, state.calendar.course_design_name);
+    sessionStorage.setItem(ACTIVE_COURSE_SESSION_KEY, "true");
   } else {
     localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
+    sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
   }
   await loadCourseDesign();
   renderAll();
@@ -308,8 +312,10 @@ async function saveCalendar() {
   localStorage.setItem(ACTIVE_SCHOOL_CALENDAR_KEY, payload.saved?.name || name);
   if (state.calendar.course_design_name) {
     localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, state.calendar.course_design_name);
+    sessionStorage.setItem(ACTIVE_COURSE_SESSION_KEY, "true");
   } else {
     localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
+    sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
   }
   setStatus(`Calendario salvato: ${payload.saved?.path || name}.`);
 }
@@ -1264,8 +1270,10 @@ els.courseDesignSelect.addEventListener("change", async () => {
   syncFormToCalendar();
   if (state.calendar.course_design_name) {
     localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, state.calendar.course_design_name);
+    sessionStorage.setItem(ACTIVE_COURSE_SESSION_KEY, "true");
   } else {
     localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
+    sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
   }
   await loadCourseDesign();
   syncTracksFromCourseDesign();

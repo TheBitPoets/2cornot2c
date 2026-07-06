@@ -15,6 +15,7 @@
 
 const ACTIVE_COURSE_DESIGN_KEY = "2cornot2c.activeCourseDesign";
 const ACTIVE_SCHOOL_CALENDAR_KEY = "2cornot2c.activeSchoolCalendar";
+const ACTIVE_COURSE_SESSION_KEY = "2cornot2c.keepActiveCourseInSession";
 
 const els = {
   headingList: document.querySelector("#headingList"),
@@ -236,6 +237,11 @@ async function loadAll() {
   state.isNewDesign = false;
   state.aiConfig = aiConfig;
   state.savedDesigns = savedDesigns.designs || [];
+  const keepActiveDesign = sessionStorage.getItem(ACTIVE_COURSE_SESSION_KEY) === "true";
+  const activeDesign = localStorage.getItem(ACTIVE_COURSE_DESIGN_KEY) || "";
+  if (keepActiveDesign && activeDesign && state.savedDesigns.some((saved) => saved.name === activeDesign)) {
+    await loadSavedDesignByName(activeDesign, { confirmFirst: false, render: false });
+  }
   populateFilters();
   renderAiConfig();
   renderSavedDesigns();
@@ -307,6 +313,7 @@ async function loadCurrentDesign() {
   state.activeSavedDesign = "";
   state.isNewDesign = false;
   localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
+  sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
   renderSavedDesigns();
   renderProjectTitle();
   renderHeadings();
@@ -327,6 +334,7 @@ async function loadSavedDesignByName(name, options = {}) {
   state.activeSavedDesign = name;
   state.isNewDesign = false;
   localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, name);
+  sessionStorage.setItem(ACTIVE_COURSE_SESSION_KEY, "true");
   if (render) {
     renderSavedDesigns();
     renderProjectTitle();
@@ -365,6 +373,7 @@ async function saveArchiveDesignWithName(name) {
   state.activeSavedDesign = payload.saved?.name || name;
   state.isNewDesign = false;
   localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, state.activeSavedDesign);
+  sessionStorage.setItem(ACTIVE_COURSE_SESSION_KEY, "true");
   renderSavedDesigns();
   renderProjectTitle();
   renderCourseActions();
@@ -1538,6 +1547,7 @@ async function saveDesign() {
     body: JSON.stringify(state.design),
   });
   localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
+  sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
   state.activeSavedDesign = "";
   state.isNewDesign = false;
   renderSavedDesigns();
