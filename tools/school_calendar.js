@@ -1418,6 +1418,11 @@ function renderActualGanttBar(segment) {
     <strong>${escapeHtml(String(segment.uda.id || "").toUpperCase())}</strong>
     <span>${escapeHtml(segment.hours ? `${segment.hours}h` : status)}</span>
   `;
+  bar.addEventListener("click", () => {
+    const firstWeek = segment.weeks[0];
+    const lastWeek = segment.weeks[segment.weeks.length - 1];
+    openGanttDialog(segment, firstWeek, lastWeek);
+  });
   return bar;
 }
 
