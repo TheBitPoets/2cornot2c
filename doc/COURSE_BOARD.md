@@ -135,6 +135,159 @@ La pagina calcola per ogni track:
 
 Questi dati saranno poi usati per costruire la vista cronologica/Gantt del percorso didattico.
 
+### Diagramma Gantt UDA
+
+La pagina calendario include anche il `Diagramma Gantt UDA`.
+
+Il Gantt usa:
+
+- il progetto didattico associato;
+- le UDA presenti nel progetto;
+- il campo `weeks` di ogni UDA;
+- le date di inizio e fine anno scolastico;
+- gli slot settimanali dei percorsi;
+- vacanze, festivita, ponti e sospensioni.
+
+La vista e divisa in due parti:
+
+- `Pianificato`: programmazione prevista;
+- `Svolto`: programmazione reale registrata durante l'anno.
+
+#### Programmazione prevista
+
+La riga `Pianificato` mostra le UDA nella sequenza prevista dal progetto didattico.
+
+Per ogni UDA la barra mostra:
+
+- codice UDA;
+- titolo breve;
+- ore previste;
+- data iniziale e finale calcolate;
+- micro-calendario dei giorni interni alla barra.
+
+Nel micro-calendario:
+
+- verde: giorno con lezione;
+- rosso: giorno di chiusura, festivita o sospensione;
+- rosso/verde: giorno in cui ci sarebbe lezione, ma la lezione salta per chiusura;
+- nero/scuro: giorno senza lezione.
+
+Sotto i pallini sono mostrate le abbreviazioni dei giorni della settimana:
+
+```text
+L M M G V S D
+```
+
+Sabato e evidenziato in giallo, domenica in rosso.
+
+#### Tooltip e dettaglio UDA
+
+Passando con il mouse su una barra UDA, la pagina mostra un tooltip con:
+
+- titolo UDA;
+- settimane effettive;
+- date calcolate;
+- ore previste;
+- ore perse;
+- argomenti e sottoparagrafi.
+
+Cliccando su una UDA nel Gantt oppure sulla stessa UDA nella vista calendario si apre lo stesso modal di dettaglio.
+
+Il modal mostra:
+
+- dati della programmazione prevista;
+- ore perse;
+- argomenti e sottoparagrafi;
+- campi della programmazione svolta.
+
+#### Programmazione svolta
+
+La riga `Svolto` serve a registrare il consuntivo durante l'anno.
+
+Nel modal UDA puoi compilare:
+
+- stato: da fare, in corso, conclusa, sospesa, saltata;
+- data di inizio reale;
+- data di fine reale;
+- ore svolte;
+- note.
+
+Questi dati vengono salvati nel progetto didattico, dentro la UDA:
+
+```json
+{
+  "actual": {
+    "status": "done",
+    "start_date": "2026-10-01",
+    "end_date": "2026-10-20",
+    "hours_done": 8,
+    "notes": "Recuperata un'ora nella settimana successiva."
+  }
+}
+```
+
+Se il calendario e associato al progetto corrente, il salvataggio aggiorna:
+
+```text
+doc/course_design.json
+```
+
+Se il calendario e associato a un progetto archiviato, aggiorna il file corrispondente in:
+
+```text
+doc/course_designs/
+```
+
+#### Calcolo delle ore svolte
+
+Il campo `Ore svolte` puo essere compilato manualmente oppure calcolato con:
+
+```text
+Calcola ore da calendario
+```
+
+Il calcolo usa:
+
+- data di inizio reale;
+- data di fine reale;
+- slot settimanali del percorso;
+- chiusure, festivita e sospensioni.
+
+Le ore che cadono in giorni chiusi non vengono conteggiate.
+
+Il valore calcolato resta modificabile manualmente, perche nella realta didattica potrebbero esserci assemblee, verifiche, recuperi, uscite o attivita non riconducibili automaticamente alla UDA.
+
+#### Zoom del Gantt
+
+Il Gantt ha controlli di zoom:
+
+- `-`: riduce la larghezza delle settimane;
+- `+`: aumenta la larghezza delle settimane;
+- percentuale centrale: ripristina lo zoom predefinito.
+
+Lo zoom modifica una scala temporale comune, quindi restano allineati:
+
+- mesi;
+- settimane;
+- festivita;
+- barre UDA pianificate;
+- barre UDA svolte.
+
+Il valore di zoom viene salvato nel browser con `localStorage`.
+
+#### Sezioni collassabili
+
+Le sezioni della pagina calendario sono collassabili cliccando sul titolo:
+
+- `Anno scolastico`;
+- `Percorsi orari`;
+- `Vacanze, festivita e sospensioni`;
+- `Vista calendario`;
+- `Diagramma Gantt UDA`;
+- `Riepilogo ore effettive`.
+
+Lo stato aperto/chiuso viene salvato nel browser con `localStorage`.
+
 ## Archivio dei percorsi didattici
 
 La board usa `doc/course_design.json` come progetto didattico corrente.
@@ -1401,10 +1554,56 @@ python scripts/generate_course_plan.py --check
 
 ## Cosa non fa ancora
 
-Questa e una prima versione MVP. Non genera ancora automaticamente:
+Questa e una versione ancora in evoluzione. Non gestisce ancora automaticamente:
 
-- le cornici `Orientamento della sezione` dentro il README;
-- report dei TODO;
-- report dei paragrafi non assegnati.
+- un unico JSON che contenga insieme progetto didattico e calendario;
+- modifica drag/resize delle UDA direttamente dal Gantt;
+- ricalcolo automatico completo di tutte le UDA adiacenti quando una UDA viene allungata o accorciata;
+- report automatico `in anticipo`, `in linea`, `in ritardo`;
+- esportazione o stampa del Gantt;
+- confronto sintetico tra ore previste, ore perse e ore svolte per tutto il corso.
 
-Queste funzioni saranno aggiunte dopo aver stabilizzato il modello dati.
+### Direzione futura: un solo JSON per corso e calendario
+
+Al momento progetto didattico e calendario sono file separati:
+
+```text
+doc/course_design.json
+doc/course_designs/*.json
+doc/calendars/*.json
+```
+
+Questa separazione ha permesso di sviluppare velocemente board e calendario, ma a lungo termine conviene valutare un modello unico.
+
+L'idea futura e avere un solo file progetto che contenga:
+
+- metadati del corso;
+- percorsi didattici;
+- UDA;
+- cornici didattiche;
+- calendario scolastico;
+- slot settimanali;
+- chiusure e festivita;
+- programmazione svolta.
+
+Esempio concettuale:
+
+```json
+{
+  "version": 2,
+  "project": {
+    "title": "TPSI 2026/2027"
+  },
+  "years": [],
+  "calendar": {
+    "school_year": "2026/2027",
+    "start_date": "2026-09-03",
+    "end_date": "2027-06-04",
+    "closures": []
+  }
+}
+```
+
+Questo eviterebbe dubbi su quale calendario sia associato a quale progetto e renderebbe piu semplice cancellare, duplicare, archiviare o esportare un intero corso.
+
+La migrazione va fatta in una PR dedicata, perche tocca modello dati, UI, script e documentazione.
