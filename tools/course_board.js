@@ -707,16 +707,29 @@ function renderCourse() {
           <h3>${escapeHtml(year.title)}</h3>
           <div class="yearMeta">${escapeHtml(year.description || "")} · ${year.weeks || "?"} settimane · ${year.weekly_hours || "?"} ore/settimana</div>
         </div>
-        <button type="button" data-action="ai-course" title="Usa il provider AI configurato per generare una proposta di percorso per questo anno.">AI genera percorso</button>
+        <div class="yearActions">
+          <button type="button" data-action="ai-course" title="Usa il provider AI configurato per generare una proposta di percorso per questo anno.">AI genera percorso</button>
+          <button type="button" data-action="remove-year" title="Elimina questo anno/percorso e tutte le sue UDA.">Elimina anno</button>
+        </div>
       </div>
     `;
     yearNode.querySelector('[data-action="ai-course"]').addEventListener("click", () => openCourseAiDialog(year));
+    yearNode.querySelector('[data-action="remove-year"]').addEventListener("click", () => removeYear(year));
 
     for (const uda of year.udas || []) {
       yearNode.append(renderUda(year, uda));
     }
     els.courseTree.append(yearNode);
   }
+}
+
+function removeYear(year) {
+  const confirmed = confirm(`Eliminare "${year.title}"?\n\nSaranno eliminate anche tutte le UDA e gli argomenti collegati a questo anno/percorso.`);
+  if (!confirmed) return;
+  state.design.years = (state.design.years || []).filter((candidate) => candidate !== year);
+  renderCourse();
+  renderHeadings();
+  setStatus(`Anno/percorso "${year.title}" eliminato.`);
 }
 
 function renderUda(year, uda) {

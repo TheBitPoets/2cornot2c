@@ -386,13 +386,24 @@ input, select { width: 100%; padding: .72rem .9rem; }
   align-items: baseline;
 }
 
-.yearHead [data-action="ai-course"] {
+.yearActions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: .45rem;
+  justify-content: flex-end;
+}
+
+.yearActions button {
+  padding: .55rem .75rem;
+  font-size: .76rem;
+}
+
+.yearActions [data-action="ai-course"] {
   flex: 0 0 auto;
   border-color: rgba(17, 17, 17, .32);
   background: #111111;
   color: #ffffff;
-  padding: .55rem .75rem;
-  font-size: .76rem;
 }
 
 .year h3 { margin-bottom: .2rem; font-size: 1.45rem; }
