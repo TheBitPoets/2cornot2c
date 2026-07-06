@@ -1107,14 +1107,17 @@ function renderGanttBarDays(track, segment, closures) {
       const iso = isoDate(date);
       const day = document.createElement("span");
       const hasLesson = (track.weekly_slots || []).some((slot) => DAY_INDEX[slot.day] === date.getDay() && Number(slot.hours || 0) > 0);
+      day.className = "ganttBarDay";
+      if (offset === 0) {
+        day.classList.add("ganttBarWeekStart");
+      }
       if (closures.has(iso)) {
-        day.className = "ganttBarDay ganttBarDayClosed";
+        day.classList.add("ganttBarDayClosed");
         day.title = `${date.toLocaleDateString("it-IT")} - ${closures.get(iso)}`;
       } else if (hasLesson) {
-        day.className = "ganttBarDay ganttBarDayLesson";
+        day.classList.add("ganttBarDayLesson");
         day.title = `${date.toLocaleDateString("it-IT")} - lezione`;
       } else {
-        day.className = "ganttBarDay";
         day.title = date.toLocaleDateString("it-IT");
       }
       strip.append(day);
