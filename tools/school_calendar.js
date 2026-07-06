@@ -21,6 +21,9 @@ const DAY_INDEX = {
 const ACTIVE_COURSE_DESIGN_KEY = "2cornot2c.activeCourseDesign";
 const ACTIVE_SCHOOL_CALENDAR_KEY = "2cornot2c.activeSchoolCalendar";
 const ACTIVE_COURSE_SESSION_KEY = "2cornot2c.keepActiveCourseInSession";
+const GANTT_ZOOM_KEY = "2cornot2c.ganttZoom";
+const GANTT_WEEK_WIDTHS = [2.4, 3.0, 3.4, 4.2, 5.2, 6.4];
+const GANTT_DEFAULT_ZOOM_INDEX = 2;
 
 const els = {
   calendarSelect: document.querySelector("#calendarSelect"),
@@ -47,6 +50,9 @@ const els = {
   ganttDialogTitle: document.querySelector("#ganttDialogTitle"),
   ganttDialogBody: document.querySelector("#ganttDialogBody"),
   ganttDialogCloseBtn: document.querySelector("#ganttDialogCloseBtn"),
+  ganttZoomOutBtn: document.querySelector("#ganttZoomOutBtn"),
+  ganttZoomResetBtn: document.querySelector("#ganttZoomResetBtn"),
+  ganttZoomInBtn: document.querySelector("#ganttZoomInBtn"),
   summary: document.querySelector("#summary"),
 };
 
@@ -61,6 +67,7 @@ const state = {
     month: "",
     week: "",
   },
+  ganttZoomIndex: GANTT_DEFAULT_ZOOM_INDEX,
   statusTimer: null,
 };
 
@@ -1139,6 +1146,26 @@ function ganttWeekColumns(weeks) {
   return `repeat(${weeks.length}, var(--gantt-week-width))`;
 }
 
+function applyGanttZoom() {
+  const width = GANTT_WEEK_WIDTHS[state.ganttZoomIndex] || GANTT_WEEK_WIDTHS[GANTT_DEFAULT_ZOOM_INDEX];
+  document.documentElement.style.setProperty("--gantt-week-width", `${width}rem`);
+  const percent = Math.round((width / GANTT_WEEK_WIDTHS[GANTT_DEFAULT_ZOOM_INDEX]) * 100);
+  els.ganttZoomResetBtn.textContent = `${percent}%`;
+  els.ganttZoomOutBtn.disabled = state.ganttZoomIndex <= 0;
+  els.ganttZoomInBtn.disabled = state.ganttZoomIndex >= GANTT_WEEK_WIDTHS.length - 1;
+  localStorage.setItem(GANTT_ZOOM_KEY, String(state.ganttZoomIndex));
+}
+
+function changeGanttZoom(delta) {
+  state.ganttZoomIndex = Math.min(GANTT_WEEK_WIDTHS.length - 1, Math.max(0, state.ganttZoomIndex + delta));
+  applyGanttZoom();
+}
+
+function resetGanttZoom() {
+  state.ganttZoomIndex = GANTT_DEFAULT_ZOOM_INDEX;
+  applyGanttZoom();
+}
+
 function renderGanttBarDays(track, segment, closures) {
   const strip = document.createElement("div");
   strip.className = "ganttBarDays";
@@ -1559,6 +1586,15 @@ els.addClosureBtn.addEventListener("click", addClosure);
 els.importItalianHolidaysBtn.addEventListener("click", importItalianHolidays);
 els.recalculateBtn.addEventListener("click", renderSummary);
 els.ganttDialogCloseBtn.addEventListener("click", () => els.ganttDialog.close());
+els.ganttZoomOutBtn.addEventListener("click", () => changeGanttZoom(-1));
+els.ganttZoomResetBtn.addEventListener("click", resetGanttZoom);
+els.ganttZoomInBtn.addEventListener("click", () => changeGanttZoom(1));
+
+state.ganttZoomIndex = Number(localStorage.getItem(GANTT_ZOOM_KEY) || GANTT_DEFAULT_ZOOM_INDEX);
+if (!Number.isInteger(state.ganttZoomIndex) || state.ganttZoomIndex < 0 || state.ganttZoomIndex >= GANTT_WEEK_WIDTHS.length) {
+  state.ganttZoomIndex = GANTT_DEFAULT_ZOOM_INDEX;
+}
+applyGanttZoom();
 
 Promise.all([loadCalendarList(), loadSavedDesignList()])
   .then(() => loadCalendarForActiveCourseDesign())

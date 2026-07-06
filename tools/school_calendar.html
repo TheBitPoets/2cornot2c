@@ -116,8 +116,13 @@
     <section class="panel">
       <div class="panelHead">
         <h2>Diagramma Gantt UDA</h2>
-        <p class="status">Distribuzione cronologica delle UDA sulle settimane effettive di lezione.</p>
+        <div class="panelActions ganttZoomControls">
+          <button id="ganttZoomOutBtn" type="button" title="Riduce lo zoom del diagramma Gantt.">-</button>
+          <button id="ganttZoomResetBtn" type="button" title="Ripristina lo zoom predefinito del diagramma Gantt.">100%</button>
+          <button id="ganttZoomInBtn" type="button" title="Aumenta lo zoom del diagramma Gantt.">+</button>
+        </div>
       </div>
+      <p class="status ganttHelp">Distribuzione cronologica delle UDA sulle settimane effettive di lezione.</p>
       <div id="ganttChart" class="ganttChart"></div>
     </section>
 

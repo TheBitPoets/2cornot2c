@@ -9,6 +9,7 @@
   --warm: #3f3f46;
   --shadow: 0 18px 42px rgba(0, 0, 0, 0.08);
   --mono: "Cascadia Code", "JetBrains Mono", "Fira Code", "SFMono-Regular", Consolas, monospace;
+  --gantt-week-width: 3.4rem;
 }
 
 * { box-sizing: border-box; }
@@ -587,8 +588,20 @@ button:disabled {
   padding: 1.1rem;
 }
 
+.ganttHelp {
+  margin: 0 1.1rem;
+}
+
+.ganttZoomControls {
+  align-items: center;
+}
+
+.ganttZoomControls button {
+  min-width: 2.5rem;
+  padding: .45rem .65rem;
+}
+
 .ganttTrack {
-  --gantt-week-width: 3.4rem;
   border: 1px solid rgba(17, 17, 17, .16);
   border-radius: 18px;
   background: #ffffff;
