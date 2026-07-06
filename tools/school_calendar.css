@@ -455,6 +455,10 @@ button:disabled {
   transform-origin: top center;
 }
 
+.monthPlaceholder {
+  min-height: 1px;
+}
+
 .monthContextCard .dayCell {
   min-height: 2.25rem;
   font-size: .58rem;

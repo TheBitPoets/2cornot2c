@@ -958,6 +958,12 @@ function renderCalendarView() {
     ? selectedCalendarMonthContext(start, end)
     : calendarMonths(start, end);
   for (const item of months) {
+    if (item.role === "placeholder") {
+      const placeholder = document.createElement("div");
+      placeholder.className = "monthPlaceholder";
+      els.monthGrid.append(placeholder);
+      continue;
+    }
     const month = item.month || item;
     const role = item.role || "main";
     els.monthGrid.append(renderMonth(month, start, end, lessons, closures, role));
@@ -972,9 +978,9 @@ function selectedCalendarMonthContext(start, end) {
   });
   const index = selectedIndex >= 0 ? selectedIndex : 0;
   return [
-    months[index - 1] ? { month: months[index - 1], role: "context" } : null,
+    months[index - 1] ? { month: months[index - 1], role: "context" } : { role: "placeholder" },
     months[index] ? { month: months[index], role: "main" } : null,
-    months[index + 1] ? { month: months[index + 1], role: "context" } : null,
+    months[index + 1] ? { month: months[index + 1], role: "context" } : { role: "placeholder" },
   ].filter(Boolean);
 }
 
