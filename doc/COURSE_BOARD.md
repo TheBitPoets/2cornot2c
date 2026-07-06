@@ -1737,6 +1737,8 @@ Non serve login proprietario: gli studenti usano i propri account GitHub.
 
 Il sistema deve prevedere:
 
+- registro classe con username GitHub degli studenti;
+- associazione tra studente, attivita e repository individuale;
 - repository template dell'attivita;
 - repository individuali degli studenti;
 - commit e push come traccia del lavoro;
@@ -1744,6 +1746,25 @@ Il sistema deve prevedere:
 - Docker dentro Actions;
 - report JSON come artifact;
 - stato pass/fail leggibile dal docente.
+
+Il registro classe e necessario per sapere anche chi non ha iniziato o non ha consegnato. Non basta leggere i repository esistenti: serve una mappa esplicita tra classe, studente, account GitHub, attivita assegnata e repository atteso.
+
+Esempio concettuale:
+
+```json
+{
+  "class_id": "3A-2026-2027",
+  "students": [
+    {
+      "student_id": "studente-001",
+      "github_username": "student-github-user",
+      "repos": {
+        "c-variabili-homework-001": "https://github.com/org/c-variabili-homework-001-student-github-user"
+      }
+    }
+  ]
+}
+```
 
 #### PR 7 - Raccolta metriche individuali
 
