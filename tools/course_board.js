@@ -41,6 +41,7 @@ const els = {
   yearCancelBtn: document.querySelector("#yearCancelBtn"),
   yearCreateBtn: document.querySelector("#yearCreateBtn"),
   yearTitleInput: document.querySelector("#yearTitleInput"),
+  yearSubjectInput: document.querySelector("#yearSubjectInput"),
   yearIdInput: document.querySelector("#yearIdInput"),
   yearWeeksInput: document.querySelector("#yearWeeksInput"),
   yearWeeklyHoursInput: document.querySelector("#yearWeeklyHoursInput"),
@@ -117,10 +118,11 @@ function emptyCourseDesign() {
   };
 }
 
-function emptyCourseYear(id, title, weeklyHours, weeks = 33) {
+function emptyCourseYear(id, title, weeklyHours, weeks = 33, subject = "") {
   return {
     id,
     title,
+    subject,
     description: "",
     weekly_hours: weeklyHours,
     weeks,
@@ -655,6 +657,7 @@ function slugifyId(value) {
 
 function openYearDialog() {
   els.yearTitleInput.value = "";
+  els.yearSubjectInput.value = "";
   els.yearIdInput.value = "";
   els.yearIdInput.dataset.touched = "";
   els.yearWeeksInput.value = "33";
@@ -666,6 +669,7 @@ function openYearDialog() {
 
 function createYearFromDialog() {
   const title = els.yearTitleInput.value.trim();
+  const subject = els.yearSubjectInput.value.trim();
   const id = els.yearIdInput.value.trim();
   const weeks = Number(els.yearWeeksInput.value || 33);
   const weeklyHours = Number(els.yearWeeklyHoursInput.value || 3);
@@ -683,7 +687,7 @@ function createYearFromDialog() {
     return;
   }
   state.design.years ||= [];
-  const year = emptyCourseYear(id, title, weeklyHours, weeks);
+  const year = emptyCourseYear(id, title, weeklyHours, weeks, subject);
   year.description = description;
   state.design.years.push(year);
   els.yearDialog.close();
@@ -705,7 +709,7 @@ function renderCourse() {
       <div class="yearHead">
         <div>
           <h3>${escapeHtml(year.title)}</h3>
-          <div class="yearMeta">${escapeHtml(year.description || "")} · ${year.weeks || "?"} settimane · ${year.weekly_hours || "?"} ore/settimana</div>
+          <div class="yearMeta">${escapeHtml(year.subject || "Materia n/d")} · ${escapeHtml(year.description || "")} · ${year.weeks || "?"} settimane · ${year.weekly_hours || "?"} ore/settimana</div>
         </div>
         <div class="yearActions">
           <button type="button" data-action="ai-course" title="Usa il provider AI configurato per generare una proposta di percorso per questo anno.">AI genera percorso</button>
@@ -855,31 +859,34 @@ function renderItem(year, uda, siblings, item, index, depth) {
 }
 
 function defaultCourseBrief(year) {
-  const totalHours = Number(year.weekly_hours || 0) * Number(year.weeks || 0);
+  const weeklyHours = Number(year.weekly_hours || 0);
+  const weeks = Number(year.weeks || 0);
+  const totalHours = weeklyHours * weeks;
+  const subject = year.subject || "";
   return {
-    subject: "TPSI",
+    subject,
     year_title: year.title || "",
     description: year.description || "",
-    weekly_hours: year.weekly_hours || 3,
-    weeks: year.weeks || 33,
+    weekly_hours: weeklyHours || "",
+    weeks: weeks || "",
     total_hours: totalHours || "",
     goals: [
-      "Scrivere piccoli programmi in C.",
-      "Comprendere variabili, tipi, operatori, condizioni, cicli e funzioni.",
-      "Introdurre array, stringhe, puntatori e memoria.",
-      "Integrare teoria e laboratorio in modo progressivo."
+      "Costruire una progressione didattica coerente con la materia e con l'anno/percorso indicato.",
+      "Distribuire gli argomenti nelle UDA rispettando settimane, ore disponibili e complessita crescente.",
+      "Integrare teoria, laboratorio, esercizi guidati e attivita autonome.",
+      "Lasciare modificabile la proposta generata."
     ].join("\n"),
     constraints: [
       "Usa solo argomenti presenti tra i paragrafi disponibili.",
       "Non duplicare argomenti nello stesso anno.",
       "Mantieni una progressione didattica dal semplice al complesso.",
       "Lascia tra i non assegnati gli argomenti non coerenti con questo anno.",
-      "Non inserire argomenti Linux/processi/thread nel terzo anno se non richiesto esplicitamente."
+      "Rispetta il monte ore e il numero di settimane indicati nel brief."
     ].join("\n"),
     preferences: [
       "Preferire UDA da 3-5 settimane.",
       "Alternare spiegazione teorica e attivita di laboratorio.",
-      "Mettere i puntatori dopo funzioni, array e stringhe.",
+      "Collocare gli argomenti avanzati dopo i prerequisiti necessari.",
       "Produrre una proposta modificabile, non una soluzione definitiva."
     ].join("\n")
   };
@@ -985,10 +992,14 @@ function countItems(items) {
 function applyCourseAiProposal() {
   const year = (state.design.years || []).find((candidate) => candidate.id === state.courseAiYearId);
   if (!year || !state.courseAiProposal) return;
+  const brief = readCourseBrief();
   year.title = state.courseAiProposal.title || year.title;
   year.description = state.courseAiProposal.description || year.description;
+  year.subject = brief.subject || year.subject || "";
+  year.weekly_hours = brief.weekly_hours || year.weekly_hours;
+  year.weeks = brief.weeks || year.weeks;
   year.udas = state.courseAiProposal.udas || year.udas;
-  year.ai_brief = readCourseBrief();
+  year.ai_brief = brief;
   els.courseAiDialog.close();
   state.courseAiProposal = null;
   renderCourse();
