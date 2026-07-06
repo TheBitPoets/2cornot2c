@@ -379,6 +379,10 @@ function renderCalendarViewControls() {
         <span>Settimana</span>
         <select data-calendar-view="week">${weekOptions.join("")}</select>
       </label>
+      <div class="calendarViewNav ${state.calendarView.mode === "year" ? "isHidden" : ""}">
+        <button type="button" data-calendar-nav="previous" title="Vai al mese o alla settimana precedente.">← Precedente</button>
+        <button type="button" data-calendar-nav="next" title="Vai al mese o alla settimana successiva.">Successivo →</button>
+      </div>
     </div>
   `;
   panel.querySelectorAll("[data-calendar-view]").forEach((input) => {
@@ -388,6 +392,55 @@ function renderCalendarViewControls() {
       renderCalendarView();
     });
   });
+  updateCalendarNavButtons(panel, months, weeks);
+  panel.querySelector('[data-calendar-nav="previous"]')?.addEventListener("click", () => {
+    moveCalendarView(-1, months, weeks);
+  });
+  panel.querySelector('[data-calendar-nav="next"]')?.addEventListener("click", () => {
+    moveCalendarView(1, months, weeks);
+  });
+}
+
+function updateCalendarNavButtons(panel, months, weeks) {
+  const previous = panel.querySelector('[data-calendar-nav="previous"]');
+  const next = panel.querySelector('[data-calendar-nav="next"]');
+  if (!previous || !next || state.calendarView.mode === "year") return;
+  const values = calendarViewValues(months, weeks);
+  const current = currentCalendarViewValue();
+  const index = values.indexOf(current);
+  previous.disabled = index <= 0;
+  next.disabled = index < 0 || index >= values.length - 1;
+}
+
+function moveCalendarView(direction, months, weeks) {
+  const values = calendarViewValues(months, weeks);
+  const current = currentCalendarViewValue();
+  const index = values.indexOf(current);
+  const nextIndex = Math.max(0, Math.min(values.length - 1, index + direction));
+  const nextValue = values[nextIndex];
+  if (!nextValue || nextValue === current) return;
+  if (state.calendarView.mode === "month") {
+    state.calendarView.month = nextValue;
+  } else if (state.calendarView.mode === "week") {
+    state.calendarView.week = nextValue;
+  }
+  renderCalendarView();
+}
+
+function calendarViewValues(months, weeks) {
+  if (state.calendarView.mode === "month") {
+    return months.map((month) => `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`);
+  }
+  if (state.calendarView.mode === "week") {
+    return weeks.map((week) => isoDate(week.start));
+  }
+  return [];
+}
+
+function currentCalendarViewValue() {
+  if (state.calendarView.mode === "month") return state.calendarView.month;
+  if (state.calendarView.mode === "week") return state.calendarView.week;
+  return "";
 }
 
 function renderTracks() {
