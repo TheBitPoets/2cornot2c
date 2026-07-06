@@ -25,13 +25,15 @@
         <select id="savedDesignSelect" aria-label="Percorsi didattici salvati">
           <option value="">Percorsi salvati</option>
         </select>
-        <button id="loadSavedDesignBtn" type="button" title="Carica nella board un percorso salvato da doc/course_designs.">Carica archiviato</button>
-        <button id="saveArchiveBtn" type="button" title="Salva la struttura corrente come percorso archiviato in doc/course_designs.">Aggiorna archivio</button>
+        <button id="loadSavedDesignBtn" type="button" title="Carica nella board il percorso selezionato, corrente o archiviato.">Carica percorso</button>
+        <button id="newDesignBtn" type="button" title="Crea un percorso vuoto da salvare poi con Salva percorso o Salva con nome percorso.">Nuovo percorso</button>
+        <button id="saveArchiveBtn" type="button" title="Salva il percorso attuale nell'archivio doc/course_designs. Se non ha ancora un nome, lo chiede.">Salva percorso</button>
+        <button id="saveArchiveAsBtn" type="button" title="Salva il percorso attuale con un nuovo nome nell'archivio doc/course_designs.">Salva con nome percorso</button>
         <button id="generateAllFramesBtn" type="button" title="Usa il provider AI configurato e apre una coda controllata per generare le cornici didattiche del percorso.">AI genera cornici</button>
         <button id="generateCoursePlanMdBtn" type="button" title="Salva il JSON corrente e rigenera doc/PERCORSO_DIDATTICO.md.">Aggiorna percorso MD</button>
         <button id="updateReadmeFramesBtn" type="button" title="Salva il JSON corrente e inserisce le cornici didattiche nei paragrafi del README.md.">Aggiorna README</button>
         <button id="reloadBtn" type="button" title="Ricarica headings, percorso, archivi e configurazione AI dalla sorgente locale.">Ricarica</button>
-        <button id="saveBtn" type="button" class="primary" title="Salva la struttura corrente in doc/course_design.json.">Imposta corrente</button>
+        <button id="saveBtn" type="button" class="primary" title="Imposta il percorso caricato come percorso corrente, sovrascrivendo doc/course_design.json dopo conferma esplicita.">Imposta corrente</button>
       </div>
     </div>
   </header>

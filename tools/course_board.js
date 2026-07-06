@@ -3,6 +3,7 @@
   design: null,
   savedDesigns: [],
   activeSavedDesign: "",
+  isNewDesign: false,
   aiConfig: null,
   draggedHeading: null,
   collapsedHeadingIds: new Set(),
@@ -26,7 +27,9 @@ const els = {
   aiConfig: document.querySelector("#aiConfig"),
   savedDesignSelect: document.querySelector("#savedDesignSelect"),
   loadSavedDesignBtn: document.querySelector("#loadSavedDesignBtn"),
+  newDesignBtn: document.querySelector("#newDesignBtn"),
   saveArchiveBtn: document.querySelector("#saveArchiveBtn"),
+  saveArchiveAsBtn: document.querySelector("#saveArchiveAsBtn"),
   generateAllFramesBtn: document.querySelector("#generateAllFramesBtn"),
   generateCoursePlanMdBtn: document.querySelector("#generateCoursePlanMdBtn"),
   updateReadmeFramesBtn: document.querySelector("#updateReadmeFramesBtn"),
@@ -95,6 +98,14 @@ const AI_PROGRESS_STAGES = [
 
 let aiProgressTimer = null;
 let frameBatch = null;
+
+function emptyCourseDesign() {
+  return {
+    version: 1,
+    source_files: ["README.md", "LINUX_PROGRAMMING.md"],
+    years: [],
+  };
+}
 
 function setStatus(message) {
   els.status.textContent = message;
@@ -189,6 +200,7 @@ async function loadAll() {
   ]);
   state.headings = headingsPayload.headings;
   state.design = design;
+  state.isNewDesign = false;
   state.aiConfig = aiConfig;
   state.savedDesigns = savedDesigns.designs || [];
   const activeDesign = localStorage.getItem(ACTIVE_COURSE_DESIGN_KEY) || "";
@@ -216,6 +228,15 @@ function renderSavedDesigns() {
     els.savedDesignSelect.append(option);
   }
   els.savedDesignSelect.value = selected;
+  renderCourseActions();
+}
+
+function renderCourseActions() {
+  const isCurrent = !state.activeSavedDesign && !state.isNewDesign;
+  els.saveBtn.disabled = isCurrent;
+  els.saveBtn.title = isCurrent
+    ? "Il percorso corrente e gia caricato: non serve impostarlo di nuovo."
+    : "Imposta il percorso caricato come percorso corrente, sovrascrivendo doc/course_design.json dopo conferma esplicita.";
 }
 
 async function loadSavedDesign() {
@@ -236,10 +257,12 @@ async function loadCurrentDesign() {
   setStatus("Caricamento percorso corrente...");
   state.design = await api("/api/course-design");
   state.activeSavedDesign = "";
+  state.isNewDesign = false;
   localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
   renderSavedDesigns();
   renderHeadings();
   renderCourse();
+  renderCourseActions();
   setStatus("Percorso corrente caricato da doc/course_design.json.");
 }
 
@@ -253,19 +276,36 @@ async function loadSavedDesignByName(name, options = {}) {
   });
   state.design = payload.design;
   state.activeSavedDesign = name;
+  state.isNewDesign = false;
   localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, name);
   if (render) {
     renderSavedDesigns();
     renderHeadings();
     renderCourse();
+    renderCourseActions();
   }
-  setStatus(`Percorso "${name}" caricato. Usa "Imposta corrente" o "Aggiorna archivio" per persistere modifiche.`);
+  setStatus(`Percorso "${name}" caricato. Usa "Salva percorso" per aggiornare l'archivio o "Imposta corrente" per sovrascrivere doc/course_design.json.`);
 }
 
 async function saveArchiveDesign() {
-  const defaultName = state.activeSavedDesign || els.savedDesignSelect.value || "course_design_as_25_26.json";
+  const defaultName = state.activeSavedDesign || "course_design_as_25_26.json";
+  if (state.activeSavedDesign) {
+    await saveArchiveDesignWithName(state.activeSavedDesign);
+    return;
+  }
   const name = prompt("Nome file archivio JSON:", defaultName);
   if (!name) return;
+  await saveArchiveDesignWithName(name);
+}
+
+async function saveArchiveDesignAs() {
+  const defaultName = state.activeSavedDesign || "course_design_as_25_26.json";
+  const name = prompt("Nome file archivio JSON:", defaultName);
+  if (!name) return;
+  await saveArchiveDesignWithName(name);
+}
+
+async function saveArchiveDesignWithName(name) {
   setStatus(`Salvataggio archivio "${name}"...`);
   const payload = await api("/api/saved-designs/save", {
     method: "POST",
@@ -273,9 +313,25 @@ async function saveArchiveDesign() {
   });
   state.savedDesigns = payload.designs || [];
   state.activeSavedDesign = payload.saved?.name || name;
+  state.isNewDesign = false;
   localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, state.activeSavedDesign);
   renderSavedDesigns();
+  renderCourseActions();
   setStatus(`Percorso salvato in archivio: ${state.activeSavedDesign}.`);
+}
+
+function newCourseDesign() {
+  if (!confirm("Creare un nuovo percorso vuoto? Le modifiche non salvate nella vista corrente saranno perse.")) return;
+  state.design = emptyCourseDesign();
+  state.activeSavedDesign = "";
+  state.isNewDesign = true;
+  els.savedDesignSelect.value = "";
+  localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
+  renderSavedDesigns();
+  renderHeadings();
+  renderCourse();
+  renderCourseActions();
+  setStatus("Nuovo percorso vuoto creato. Usa Salva percorso per archiviarlo con un nome.");
 }
 
 function renderAiConfig() {
@@ -1338,12 +1394,26 @@ function toggleCourseItem(collapseKey) {
 }
 
 async function saveDesign() {
+  if (!state.activeSavedDesign && !state.isNewDesign) {
+    setStatus("Il percorso corrente e gia caricato: non serve impostarlo di nuovo.");
+    renderCourseActions();
+    return;
+  }
+  const confirmed = confirm(
+    "Confermi di voler impostare questo percorso come corrente?\n\n" +
+    "Questa operazione sovrascrive doc/course_design.json."
+  );
+  if (!confirmed) return;
   setStatus("Salvataggio...");
   await api("/api/course-design", {
     method: "POST",
     body: JSON.stringify(state.design),
   });
   localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
+  state.activeSavedDesign = "";
+  state.isNewDesign = false;
+  renderSavedDesigns();
+  renderCourseActions();
   setStatus("Percorso impostato come corrente in doc/course_design.json.");
 }
 
@@ -1390,7 +1460,9 @@ function escapeHtml(value) {
 els.reloadBtn.addEventListener("click", loadAll);
 els.saveBtn.addEventListener("click", saveDesign);
 els.loadSavedDesignBtn.addEventListener("click", loadSavedDesign);
+els.newDesignBtn.addEventListener("click", newCourseDesign);
 els.saveArchiveBtn.addEventListener("click", saveArchiveDesign);
+els.saveArchiveAsBtn.addEventListener("click", saveArchiveDesignAs);
 els.generateAllFramesBtn.addEventListener("click", generateAllFrames);
 els.generateCoursePlanMdBtn.addEventListener("click", generateCoursePlanMd);
 els.updateReadmeFramesBtn.addEventListener("click", updateReadmeFrames);
