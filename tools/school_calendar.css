@@ -724,6 +724,67 @@ button:disabled {
   min-height: 5.4rem;
 }
 
+.ganttLaneLabel {
+  color: var(--muted);
+  font: 900 .78rem/1 var(--mono);
+  margin: .7rem 0 .35rem;
+  text-transform: uppercase;
+}
+
+.ganttActualBars {
+  display: grid;
+  gap: .35rem 0;
+  min-height: 2.8rem;
+  width: max-content;
+}
+
+.ganttActualBar {
+  display: grid;
+  align-content: center;
+  border: 1px solid rgba(17, 17, 17, .18);
+  border-radius: 12px;
+  background: #dbeafe;
+  color: #0f172a;
+  min-height: 2.8rem;
+  overflow: hidden;
+  padding: .5rem .65rem;
+}
+
+.ganttActualBar strong,
+.ganttActualBar span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ganttActualBar strong {
+  font: 900 .86rem/1.1 var(--mono);
+}
+
+.ganttActualBar span {
+  font-size: .78rem;
+}
+
+.ganttActualBar-done {
+  background: #dcfce7;
+}
+
+.ganttActualBar-in_progress {
+  background: #fef3c7;
+}
+
+.ganttActualBar-paused,
+.ganttActualBar-skipped {
+  background: #fee2e2;
+}
+
+.ganttActualEmpty {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: .82rem;
+  padding: .45rem 0;
+}
+
 .ganttBar {
   display: grid;
   align-content: center;
@@ -895,6 +956,23 @@ button:disabled {
   line-height: 1.35;
 }
 
+.actualForm {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .65rem;
+}
+
+.actualNotes {
+  display: grid;
+  gap: .35rem;
+  margin: .75rem 0;
+}
+
+.actualNotes textarea {
+  min-height: 5rem;
+  resize: vertical;
+}
+
 @media (max-width: 950px) {
   .hero, .panelHead {
     display: grid;
@@ -917,6 +995,10 @@ button:disabled {
   }
 
   .ganttDialogMeta {
+    grid-template-columns: 1fr;
+  }
+
+  .actualForm {
     grid-template-columns: 1fr;
   }
 }

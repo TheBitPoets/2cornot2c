@@ -1101,6 +1101,7 @@ function renderTopicList(items) {
 
 function openGanttDialog(segment, firstWeek, lastWeek) {
   const lostHours = ganttSegmentLostHours(segment);
+  const actual = segment.uda.actual || {};
   els.ganttDialogTitle.textContent = `${String(segment.uda.id || "").toUpperCase()} - ${segment.uda.title || "UDA senza titolo"}`;
   els.ganttDialogBody.innerHTML = `
     <div class="ganttDialogMeta">
@@ -1110,10 +1111,48 @@ function openGanttDialog(segment, firstWeek, lastWeek) {
       <span><strong>Ore perse</strong>${lostHours}h</span>
     </div>
     <section>
+      <h3>Programmazione svolta</h3>
+      <div class="actualForm">
+        <label>
+          <span>Stato</span>
+          <select data-actual-field="status">
+            <option value="todo">Da fare</option>
+            <option value="in_progress">In corso</option>
+            <option value="done">Conclusa</option>
+            <option value="paused">Sospesa</option>
+            <option value="skipped">Saltata</option>
+          </select>
+        </label>
+        <label>
+          <span>Inizio reale</span>
+          <input data-actual-field="start_date" type="date">
+        </label>
+        <label>
+          <span>Fine reale</span>
+          <input data-actual-field="end_date" type="date">
+        </label>
+        <label>
+          <span>Ore svolte</span>
+          <input data-actual-field="hours_done" type="number" min="0" step="0.5">
+        </label>
+      </div>
+      <label class="actualNotes">
+        <span>Note</span>
+        <textarea data-actual-field="notes" rows="3" placeholder="Annota recuperi, ritardi, tagli o approfondimenti."></textarea>
+      </label>
+      <button type="button" data-action="save-actual" class="primary" title="Salva il consuntivo nel progetto didattico associato.">Salva programmazione svolta</button>
+    </section>
+    <section>
       <h3>Argomenti e sottoparagrafi</h3>
       <div class="ganttDialogTopics">${renderTopicList(segment.uda.items || [])}</div>
     </section>
   `;
+  els.ganttDialogBody.querySelector('[data-actual-field="status"]').value = actual.status || "todo";
+  els.ganttDialogBody.querySelector('[data-actual-field="start_date"]').value = actual.start_date || "";
+  els.ganttDialogBody.querySelector('[data-actual-field="end_date"]').value = actual.end_date || "";
+  els.ganttDialogBody.querySelector('[data-actual-field="hours_done"]').value = actual.hours_done ?? "";
+  els.ganttDialogBody.querySelector('[data-actual-field="notes"]').value = actual.notes || "";
+  els.ganttDialogBody.querySelector('[data-action="save-actual"]').addEventListener("click", () => saveActualProgress(segment));
   els.ganttDialog.showModal();
 }
 
@@ -1131,6 +1170,43 @@ function ganttSegmentTooltip(segment) {
     "Argomenti:",
     ...collectUdaTopicTitles(segment.uda.items || []),
   ].join("\n");
+}
+
+async function saveAssociatedCourseDesign() {
+  if (!state.courseDesign) {
+    throw new Error("Nessun progetto didattico associato caricato.");
+  }
+  const name = state.calendar.course_design_name || "";
+  if (name) {
+    await api("/api/saved-designs/save", {
+      method: "POST",
+      body: JSON.stringify({ name, design: state.courseDesign }),
+    });
+    return `doc/course_designs/${name}`;
+  }
+  await api("/api/course-design", {
+    method: "POST",
+    body: JSON.stringify(state.courseDesign),
+  });
+  return "doc/course_design.json";
+}
+
+async function saveActualProgress(segment) {
+  const field = (name) => els.ganttDialogBody.querySelector(`[data-actual-field="${name}"]`);
+  segment.uda.actual = {
+    status: field("status").value || "todo",
+    start_date: field("start_date").value || "",
+    end_date: field("end_date").value || "",
+    hours_done: field("hours_done").value === "" ? "" : Number(field("hours_done").value),
+    notes: field("notes").value.trim(),
+  };
+  try {
+    const path = await saveAssociatedCourseDesign();
+    renderAll();
+    setStatus(`Programmazione svolta salvata in ${path}.`);
+  } catch (error) {
+    setStatus(`Salvataggio programmazione svolta non riuscito: ${error.message}`, "error");
+  }
 }
 
 function ganttMonthSegments(weeks) {
@@ -1219,6 +1295,58 @@ function ganttSegmentLostHours(segment) {
   return lost;
 }
 
+function actualUdaSegments(track, weeks) {
+  const year = courseYearForTrack(track);
+  const segments = [];
+  for (const uda of year?.udas || []) {
+    const actual = uda.actual || {};
+    const start = dateFromInput(actual.start_date || "");
+    const end = dateFromInput(actual.end_date || actual.start_date || "");
+    if (!start || !end) continue;
+    let startIndex = -1;
+    let endIndex = -1;
+    for (const [index, week] of weeks.entries()) {
+      if (week.start <= end && week.end >= start) {
+        if (startIndex < 0) startIndex = index;
+        endIndex = index;
+      }
+    }
+    if (startIndex < 0) continue;
+    segments.push({
+      uda,
+      track,
+      actual,
+      start,
+      end,
+      startIndex,
+      endIndex,
+      weeks: weeks.slice(startIndex, endIndex + 1),
+      hours: Number(actual.hours_done || 0),
+    });
+  }
+  return segments;
+}
+
+function renderActualGanttBar(segment) {
+  const bar = document.createElement("div");
+  const status = segment.actual.status || "todo";
+  bar.className = `ganttActualBar ganttActualBar-${status}`;
+  bar.style.gridColumn = `${segment.startIndex + 1} / ${segment.endIndex + 2}`;
+  const label = `${String(segment.uda.id || "").toUpperCase()} - ${segment.uda.title || "UDA senza titolo"}`;
+  bar.title = [
+    label,
+    `Stato: ${status}`,
+    `Date reali: ${segment.start.toLocaleDateString("it-IT")} - ${segment.end.toLocaleDateString("it-IT")}`,
+    `Ore svolte: ${segment.hours}`,
+    segment.actual.notes ? `Note: ${segment.actual.notes}` : "",
+  ].filter(Boolean).join("\n");
+  bar.innerHTML = `
+    <strong>${escapeHtml(String(segment.uda.id || "").toUpperCase())}</strong>
+    <span>${escapeHtml(segment.hours ? `${segment.hours}h` : status)}</span>
+  `;
+  return bar;
+}
+
 function renderGanttBarDays(track, segment, closures) {
   const wrapper = document.createElement("div");
   wrapper.className = "ganttBarDayBlock";
@@ -1302,7 +1430,10 @@ function renderGanttChart() {
       <div class="ganttMonths"></div>
       <div class="ganttWeeks"></div>
       <div class="ganttClosures"></div>
+      <div class="ganttLaneLabel">Pianificato</div>
       <div class="ganttBars"></div>
+      <div class="ganttLaneLabel">Svolto</div>
+      <div class="ganttActualBars"></div>
     `;
     const monthGrid = row.querySelector(".ganttMonths");
     monthGrid.style.gridTemplateColumns = ganttWeekColumns(weeks);
@@ -1351,6 +1482,19 @@ function renderGanttChart() {
       bar.addEventListener("click", () => openGanttDialog(segment, firstWeek, lastWeek));
       bar.append(renderGanttBarDays(track, segment, closures));
       bars.append(bar);
+    }
+    const actualBars = row.querySelector(".ganttActualBars");
+    actualBars.style.gridTemplateColumns = ganttWeekColumns(weeks);
+    const actualSegments = actualUdaSegments(track, weeks);
+    if (actualSegments.length) {
+      for (const segment of actualSegments) {
+        actualBars.append(renderActualGanttBar(segment));
+      }
+    } else {
+      const empty = document.createElement("div");
+      empty.className = "ganttActualEmpty";
+      empty.textContent = "Nessuna UDA svolta registrata.";
+      actualBars.append(empty);
     }
     els.ganttChart.append(row);
   }
