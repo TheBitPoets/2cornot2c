@@ -181,7 +181,13 @@ def list_school_calendars() -> list[dict]:
     SCHOOL_CALENDARS_DIR.mkdir(parents=True, exist_ok=True)
     calendars = []
     for path in sorted(SCHOOL_CALENDARS_DIR.glob("*.json")):
-        calendars.append({"name": path.name, "path": str(path.relative_to(ROOT))})
+        metadata = {"name": path.name, "path": str(path.relative_to(ROOT)), "course_design_name": ""}
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8-sig"))
+            metadata["course_design_name"] = payload.get("course_design_name", "")
+        except Exception:  # noqa: BLE001
+            metadata["course_design_name"] = ""
+        calendars.append(metadata)
     return calendars
 
 

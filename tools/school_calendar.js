@@ -18,6 +18,9 @@ const DAY_INDEX = {
   saturday: 6,
 };
 
+const ACTIVE_COURSE_DESIGN_KEY = "2cornot2c.activeCourseDesign";
+const ACTIVE_SCHOOL_CALENDAR_KEY = "2cornot2c.activeSchoolCalendar";
+
 const els = {
   calendarSelect: document.querySelector("#calendarSelect"),
   loadBtn: document.querySelector("#loadBtn"),
@@ -99,6 +102,21 @@ function defaultCalendar() {
         ],
       },
     ],
+    closures: [],
+    notes: [],
+  };
+}
+
+function emptyCalendar(courseDesignName = "") {
+  return {
+    version: 1,
+    school_year: "",
+    region: "",
+    school: "",
+    course_design_name: courseDesignName,
+    start_date: "",
+    end_date: "",
+    tracks: [],
     closures: [],
     notes: [],
   };
@@ -226,12 +244,36 @@ async function loadCourseDesign() {
   }
 }
 
+async function loadCalendarForActiveCourseDesign() {
+  const activeDesign = localStorage.getItem(ACTIVE_COURSE_DESIGN_KEY) || "";
+  if (!activeDesign) {
+    await loadCourseDesign();
+    return false;
+  }
+  const matchingCalendar = state.calendars.find((calendar) => calendar.course_design_name === activeDesign);
+  if (matchingCalendar) {
+    await loadCalendarByName(matchingCalendar.name);
+    return true;
+  }
+  state.calendar = emptyCalendar(activeDesign);
+  state.visibleTrackIds = null;
+  els.fileName.value = "";
+  await loadCourseDesign();
+  renderAll();
+  setStatus(`Nessun calendario associato a ${activeDesign}: vista vuota pronta per la configurazione.`);
+  return true;
+}
+
 async function loadSelectedCalendar() {
   const name = els.calendarSelect.value;
   if (!name) {
     setStatus("Seleziona un calendario salvato.");
     return;
   }
+  await loadCalendarByName(name);
+}
+
+async function loadCalendarByName(name) {
   const payload = await api("/api/school-calendars/load", {
     method: "POST",
     body: JSON.stringify({ name }),
@@ -239,6 +281,10 @@ async function loadSelectedCalendar() {
   state.calendar = payload.calendar;
   state.visibleTrackIds = null;
   els.fileName.value = name;
+  localStorage.setItem(ACTIVE_SCHOOL_CALENDAR_KEY, name);
+  if (state.calendar.course_design_name) {
+    localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, state.calendar.course_design_name);
+  }
   await loadCourseDesign();
   renderAll();
   setStatus(`Calendario caricato: ${name}.`);
@@ -255,6 +301,10 @@ async function saveCalendar() {
   state.calendars = payload.calendars || [];
   renderCalendarList();
   els.calendarSelect.value = payload.saved?.name || name;
+  localStorage.setItem(ACTIVE_SCHOOL_CALENDAR_KEY, payload.saved?.name || name);
+  if (state.calendar.course_design_name) {
+    localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, state.calendar.course_design_name);
+  }
   setStatus(`Calendario salvato: ${payload.saved?.path || name}.`);
 }
 
@@ -1202,6 +1252,11 @@ function escapeHtml(value) {
 
 els.courseDesignSelect.addEventListener("change", async () => {
   syncFormToCalendar();
+  if (state.calendar.course_design_name) {
+    localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, state.calendar.course_design_name);
+  } else {
+    localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
+  }
   await loadCourseDesign();
   syncTracksFromCourseDesign();
   renderAll();
@@ -1214,6 +1269,9 @@ els.addClosureBtn.addEventListener("click", addClosure);
 els.importItalianHolidaysBtn.addEventListener("click", importItalianHolidays);
 els.recalculateBtn.addEventListener("click", renderSummary);
 
-Promise.all([loadCalendarList(), loadSavedDesignList(), loadCourseDesign()])
-  .then(() => renderAll())
+Promise.all([loadCalendarList(), loadSavedDesignList()])
+  .then(() => loadCalendarForActiveCourseDesign())
+  .then((loadedFromActiveDesign) => {
+    if (!loadedFromActiveDesign) renderAll();
+  })
   .catch((error) => setStatus(`Errore: ${error.message}`));

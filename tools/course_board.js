@@ -12,6 +12,9 @@
   activeFrameTextarea: null,
 };
 
+const ACTIVE_COURSE_DESIGN_KEY = "2cornot2c.activeCourseDesign";
+const ACTIVE_SCHOOL_CALENDAR_KEY = "2cornot2c.activeSchoolCalendar";
+
 const els = {
   headingList: document.querySelector("#headingList"),
   headingTemplate: document.querySelector("#headingTemplate"),
@@ -188,6 +191,10 @@ async function loadAll() {
   state.design = design;
   state.aiConfig = aiConfig;
   state.savedDesigns = savedDesigns.designs || [];
+  const activeDesign = localStorage.getItem(ACTIVE_COURSE_DESIGN_KEY) || "";
+  if (activeDesign && state.savedDesigns.some((saved) => saved.name === activeDesign)) {
+    await loadSavedDesignByName(activeDesign, { confirmFirst: false, render: false });
+  }
   populateFilters();
   renderAiConfig();
   renderSavedDesigns();
@@ -214,7 +221,12 @@ async function loadSavedDesign() {
     setStatus("Seleziona un percorso salvato da caricare.");
     return;
   }
-  if (!confirm(`Caricare "${name}" nella board? Le modifiche non salvate nella vista corrente saranno perse.`)) return;
+  await loadSavedDesignByName(name, { confirmFirst: true, render: true });
+}
+
+async function loadSavedDesignByName(name, options = {}) {
+  const { confirmFirst = true, render = true } = options;
+  if (confirmFirst && !confirm(`Caricare "${name}" nella board? Le modifiche non salvate nella vista corrente saranno perse.`)) return;
   setStatus(`Caricamento percorso salvato "${name}"...`);
   const payload = await api("/api/saved-designs/load", {
     method: "POST",
@@ -222,8 +234,12 @@ async function loadSavedDesign() {
   });
   state.design = payload.design;
   state.activeSavedDesign = name;
-  renderHeadings();
-  renderCourse();
+  localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, name);
+  if (render) {
+    renderSavedDesigns();
+    renderHeadings();
+    renderCourse();
+  }
   setStatus(`Percorso "${name}" caricato. Usa "Imposta corrente" o "Aggiorna archivio" per persistere modifiche.`);
 }
 
@@ -238,6 +254,7 @@ async function saveArchiveDesign() {
   });
   state.savedDesigns = payload.designs || [];
   state.activeSavedDesign = payload.saved?.name || name;
+  localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, state.activeSavedDesign);
   renderSavedDesigns();
   setStatus(`Percorso salvato in archivio: ${state.activeSavedDesign}.`);
 }
