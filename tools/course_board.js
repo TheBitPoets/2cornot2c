@@ -232,13 +232,10 @@ async function loadAll() {
   ]);
   state.headings = headingsPayload.headings;
   state.design = design;
+  state.activeSavedDesign = "";
   state.isNewDesign = false;
   state.aiConfig = aiConfig;
   state.savedDesigns = savedDesigns.designs || [];
-  const activeDesign = localStorage.getItem(ACTIVE_COURSE_DESIGN_KEY) || "";
-  if (activeDesign && state.savedDesigns.some((saved) => saved.name === activeDesign)) {
-    await loadSavedDesignByName(activeDesign, { confirmFirst: false, render: false });
-  }
   populateFilters();
   renderAiConfig();
   renderSavedDesigns();
