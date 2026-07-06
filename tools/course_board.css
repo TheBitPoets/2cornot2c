@@ -124,6 +124,10 @@ h1 {
   min-width: 13rem;
 }
 
+.actions select[hidden] {
+  display: none;
+}
+
 button, .buttonLink, select, input {
   border: 1px solid var(--line);
   border-radius: 999px;

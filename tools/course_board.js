@@ -218,7 +218,7 @@ async function loadAll() {
 function renderSavedDesigns() {
   const selected = state.activeSavedDesign || els.savedDesignSelect.value;
   els.savedDesignSelect.innerHTML = `
-    <option value="">Percorsi salvati</option>
+    <option value="">Scegli percorso...</option>
     <option value="__current__">Percorso corrente (doc/course_design.json)</option>
   `;
   for (const design of state.savedDesigns) {
@@ -239,12 +239,23 @@ function renderCourseActions() {
     : "Imposta il percorso caricato come percorso corrente, sovrascrivendo doc/course_design.json dopo conferma esplicita.";
 }
 
+function openSavedDesignPicker() {
+  renderSavedDesigns();
+  els.savedDesignSelect.value = "";
+  els.savedDesignSelect.hidden = false;
+  els.savedDesignSelect.focus();
+  if (typeof els.savedDesignSelect.showPicker === "function") {
+    els.savedDesignSelect.showPicker();
+  }
+}
+
 async function loadSavedDesign() {
   const name = els.savedDesignSelect.value;
   if (!name) {
-    setStatus("Seleziona un percorso salvato da caricare.");
+    els.savedDesignSelect.hidden = true;
     return;
   }
+  els.savedDesignSelect.hidden = true;
   if (name === "__current__") {
     await loadCurrentDesign();
     return;
@@ -1459,7 +1470,8 @@ function escapeHtml(value) {
 
 els.reloadBtn.addEventListener("click", loadAll);
 els.saveBtn.addEventListener("click", saveDesign);
-els.loadSavedDesignBtn.addEventListener("click", loadSavedDesign);
+els.loadSavedDesignBtn.addEventListener("click", openSavedDesignPicker);
+els.savedDesignSelect.addEventListener("change", loadSavedDesign);
 els.newDesignBtn.addEventListener("click", newCourseDesign);
 els.saveArchiveBtn.addEventListener("click", saveArchiveDesign);
 els.saveArchiveAsBtn.addEventListener("click", saveArchiveDesignAs);
