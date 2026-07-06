@@ -1240,18 +1240,25 @@ async function saveAssociatedCourseDesign() {
 
 async function saveActualProgress(segment) {
   const field = (name) => els.ganttDialogBody.querySelector(`[data-actual-field="${name}"]`);
-  segment.uda.actual = {
+  const previousActual = segment.uda.actual ? { ...segment.uda.actual } : null;
+  const nextActual = {
     status: field("status").value || "todo",
     start_date: field("start_date").value || "",
     end_date: field("end_date").value || "",
     hours_done: field("hours_done").value === "" ? "" : Number(field("hours_done").value),
     notes: field("notes").value.trim(),
   };
+  segment.uda.actual = nextActual;
   try {
     const path = await saveAssociatedCourseDesign();
     renderAll();
     setStatus(`Programmazione svolta salvata in ${path}.`);
   } catch (error) {
+    if (previousActual) {
+      segment.uda.actual = previousActual;
+    } else {
+      delete segment.uda.actual;
+    }
     setStatus(`Salvataggio programmazione svolta non riuscito: ${error.message}`, "error");
   }
 }
