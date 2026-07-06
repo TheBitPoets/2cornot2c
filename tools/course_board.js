@@ -36,6 +36,15 @@ const els = {
   reloadBtn: document.querySelector("#reloadBtn"),
   saveBtn: document.querySelector("#saveBtn"),
   addYearBtn: document.querySelector("#addYearBtn"),
+  yearDialog: document.querySelector("#yearDialog"),
+  yearCloseBtn: document.querySelector("#yearCloseBtn"),
+  yearCancelBtn: document.querySelector("#yearCancelBtn"),
+  yearCreateBtn: document.querySelector("#yearCreateBtn"),
+  yearTitleInput: document.querySelector("#yearTitleInput"),
+  yearIdInput: document.querySelector("#yearIdInput"),
+  yearWeeksInput: document.querySelector("#yearWeeksInput"),
+  yearWeeklyHoursInput: document.querySelector("#yearWeeklyHoursInput"),
+  yearDescriptionInput: document.querySelector("#yearDescriptionInput"),
   courseAiDialog: document.querySelector("#courseAiDialog"),
   courseAiTitle: document.querySelector("#courseAiTitle"),
   courseAiCloseBtn: document.querySelector("#courseAiCloseBtn"),
@@ -644,20 +653,40 @@ function slugifyId(value) {
     .replace(/^-+|-+$/g, "");
 }
 
-function addYear() {
-  const title = prompt("Nome anno/percorso:", "Terzo anno");
-  if (!title) return;
-  const defaultId = slugifyId(title) || `percorso-${(state.design.years || []).length + 1}`;
-  const id = prompt("ID anno/percorso:", defaultId);
-  if (!id) return;
+function openYearDialog() {
+  els.yearTitleInput.value = "";
+  els.yearIdInput.value = "";
+  els.yearIdInput.dataset.touched = "";
+  els.yearWeeksInput.value = "33";
+  els.yearWeeklyHoursInput.value = "3";
+  els.yearDescriptionInput.value = "";
+  els.yearDialog.showModal();
+  els.yearTitleInput.focus();
+}
+
+function createYearFromDialog() {
+  const title = els.yearTitleInput.value.trim();
+  const id = els.yearIdInput.value.trim();
+  const weeks = Number(els.yearWeeksInput.value || 33);
+  const weeklyHours = Number(els.yearWeeklyHoursInput.value || 3);
+  const description = els.yearDescriptionInput.value.trim();
+  if (!title) {
+    setStatus("Inserisci il nome dell'anno/percorso.");
+    return;
+  }
+  if (!id) {
+    setStatus("Inserisci un ID per l'anno/percorso.");
+    return;
+  }
   if ((state.design.years || []).some((year) => year.id === id)) {
     setStatus(`Esiste gia un anno/percorso con ID "${id}".`);
     return;
   }
-  const weeks = Number(prompt("Numero settimane:", "33") || 33);
-  const weeklyHours = Number(prompt("Ore a settimana:", "3") || 3);
   state.design.years ||= [];
-  state.design.years.push(emptyCourseYear(id, title, weeklyHours, weeks));
+  const year = emptyCourseYear(id, title, weeklyHours, weeks);
+  year.description = description;
+  state.design.years.push(year);
+  els.yearDialog.close();
   renderCourse();
   renderHeadings();
   setStatus(`Anno/percorso "${title}" aggiunto.`);
@@ -1527,7 +1556,17 @@ els.loadSavedDesignBtn.addEventListener("click", openSavedDesignPicker);
 els.newDesignBtn.addEventListener("click", newCourseDesign);
 els.saveArchiveBtn.addEventListener("click", saveArchiveDesign);
 els.saveArchiveAsBtn.addEventListener("click", saveArchiveDesignAs);
-els.addYearBtn.addEventListener("click", addYear);
+els.addYearBtn.addEventListener("click", openYearDialog);
+els.yearCloseBtn.addEventListener("click", () => els.yearDialog.close());
+els.yearCancelBtn.addEventListener("click", () => els.yearDialog.close());
+els.yearCreateBtn.addEventListener("click", createYearFromDialog);
+els.yearIdInput.addEventListener("input", () => {
+  els.yearIdInput.dataset.touched = "true";
+});
+els.yearTitleInput.addEventListener("input", () => {
+  if (els.yearIdInput.dataset.touched) return;
+  els.yearIdInput.value = slugifyId(els.yearTitleInput.value);
+});
 els.generateAllFramesBtn.addEventListener("click", generateAllFrames);
 els.generateCoursePlanMdBtn.addEventListener("click", generateCoursePlanMd);
 els.updateReadmeFramesBtn.addEventListener("click", updateReadmeFrames);

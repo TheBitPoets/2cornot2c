@@ -154,6 +154,47 @@
     </form>
   </dialog>
 
+  <dialog id="yearDialog" class="courseAiDialog yearDialog">
+    <form method="dialog" class="courseAiPanel">
+      <header class="courseAiHead">
+        <div>
+          <p class="eyebrow">Percorso didattico</p>
+          <h2>Aggiungi anno/percorso</h2>
+        </div>
+        <button id="yearCloseBtn" type="button" title="Chiude la finestra senza creare il percorso.">Chiudi</button>
+      </header>
+
+      <div class="briefGrid">
+        <label>
+          <span>Nome</span>
+          <input id="yearTitleInput" type="text" placeholder="Terzo anno, Sistemi e reti, Informatica...">
+        </label>
+        <label>
+          <span>ID</span>
+          <input id="yearIdInput" type="text" placeholder="terzo-anno">
+        </label>
+        <label>
+          <span>Settimane</span>
+          <input id="yearWeeksInput" type="number" min="1" value="33">
+        </label>
+        <label>
+          <span>Ore/settimana</span>
+          <input id="yearWeeklyHoursInput" type="number" min="1" step="0.5" value="3">
+        </label>
+      </div>
+
+      <label class="wideField">
+        <span>Descrizione</span>
+        <textarea id="yearDescriptionInput" rows="4" placeholder="Obiettivo o contesto del percorso..."></textarea>
+      </label>
+
+      <div class="courseAiActions">
+        <button id="yearCreateBtn" type="button" class="primary" title="Crea il contenitore con una UDA iniziale vuota.">Crea anno</button>
+        <button id="yearCancelBtn" type="button" title="Annulla la creazione.">Annulla</button>
+      </div>
+    </form>
+  </dialog>
+
   <script src="course_board.js"></script>
 </body>
 </html>

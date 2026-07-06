@@ -626,6 +626,10 @@ input, select { width: 100%; padding: .72rem .9rem; }
   padding: 0;
 }
 
+.yearDialog {
+  width: min(44rem, calc(100vw - 2rem));
+}
+
 .courseAiDialog::backdrop {
   background: rgba(0, 0, 0, .34);
 }
