@@ -40,14 +40,16 @@ def write_activity(tmp_path):
 
 
 def test_collect_targets_uses_direct_and_file_targets(tmp_path) -> None:
-    targets_file = tmp_path / "targets.txt"
+    targets_dir = tmp_path / "classes"
+    targets_dir.mkdir()
+    targets_file = targets_dir / "targets.txt"
     targets_file.write_text(
         "\n".join(
             [
                 "# classe 3A",
-                str(tmp_path / "student-b"),
+                "../student-b",
                 "",
-                str(tmp_path / "student-c"),
+                "../student-c",
             ]
         ),
         encoding="utf-8",

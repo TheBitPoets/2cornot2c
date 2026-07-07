@@ -21,7 +21,10 @@ def load_targets_file(path: Path) -> list[Path]:
     for line in path.read_text(encoding="utf-8").splitlines():
         clean_line = line.strip()
         if clean_line and not clean_line.startswith("#"):
-            targets.append(Path(clean_line))
+            target = Path(clean_line)
+            if not target.is_absolute():
+                target = path.parent / target
+            targets.append(target)
     return targets
 
 
