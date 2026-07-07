@@ -210,6 +210,20 @@ def test_create_scaffold_rejects_empty_activity_language(tmp_path) -> None:
         raise AssertionError("create_scaffold should reject empty activity languages")
 
 
+def test_create_scaffold_rejects_conflicting_activity_languages(tmp_path) -> None:
+    activity_path = write_activity(tmp_path, {**activity(), "linguaggio": "python", "language": "c"})
+
+    try:
+        create_submission_scaffold.create_scaffold(
+            activity_path=activity_path,
+            target_dir=tmp_path,
+        )
+    except ValueError as error:
+        assert "linguaggio e language" in str(error)
+    else:
+        raise AssertionError("create_scaffold should reject conflicting activity languages")
+
+
 def test_create_scaffold_supports_custom_thebitlab_ref(tmp_path) -> None:
     activity_path = write_activity(tmp_path)
 
