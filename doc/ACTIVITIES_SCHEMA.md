@@ -209,6 +209,7 @@ Il validatore controlla:
 
 - JSON valido;
 - campi obbligatori;
+- campi testuali obbligatori non vuoti;
 - tipo di attivita ammesso;
 - difficolta ammessa;
 - lista `argomenti` non vuota;
