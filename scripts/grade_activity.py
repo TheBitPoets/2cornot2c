@@ -107,6 +107,26 @@ def run_test_case(binary: Path, test_case: dict[str, Any], *, timeout_seconds: i
     }
 
 
+def validate_test_cases(test_cases: Any) -> list[str]:
+    """Validate minimal deterministic test case structure."""
+    if not isinstance(test_cases, list) or not test_cases:
+        return ["L'attivita deve contenere una lista non vuota test_cases."]
+
+    errors: list[str] = []
+    for index, test_case in enumerate(test_cases):
+        prefix = f"test_cases[{index}]"
+        if not isinstance(test_case, dict):
+            errors.append(f"{prefix} deve essere un oggetto")
+            continue
+        if "expected_stdout" not in test_case:
+            errors.append(f"{prefix}.expected_stdout mancante")
+        elif not isinstance(test_case["expected_stdout"], str):
+            errors.append(f"{prefix}.expected_stdout deve essere una stringa")
+        if "stdin" in test_case and not isinstance(test_case["stdin"], str):
+            errors.append(f"{prefix}.stdin deve essere una stringa")
+    return errors
+
+
 def activity_language(activity: dict[str, Any], explicit_language: str | None = None) -> str:
     """Return the language requested by CLI or activity metadata."""
     return (explicit_language or activity.get("linguaggio") or activity.get("language") or "c").lower()
@@ -173,11 +193,12 @@ def grade_c_activity(activity: dict[str, Any], source: Path, *, timeout_seconds:
         }
 
     test_cases = activity.get("test_cases", [])
-    if not isinstance(test_cases, list) or not test_cases:
+    test_case_errors = validate_test_cases(test_cases)
+    if test_case_errors:
         return {
             "passed": False,
             "status": "invalid-activity",
-            "error": "L'attivita deve contenere una lista non vuota test_cases.",
+            "errors": test_case_errors,
         }
 
     with tempfile.TemporaryDirectory() as temp_dir:

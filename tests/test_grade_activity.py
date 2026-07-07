@@ -73,6 +73,17 @@ def test_grade_activity_requires_test_cases(tmp_path) -> None:
     assert report["status"] == "invalid-activity"
 
 
+def test_grade_activity_requires_expected_stdout(tmp_path) -> None:
+    source = tmp_path / "main.c"
+    source.write_text("int main(void){ return 0; }\n", encoding="utf-8")
+
+    report = grade_activity.grade_activity({"id": "senza-output", "linguaggio": "c", "test_cases": [{"stdin": ""}]}, source)
+
+    assert report["passed"] is False
+    assert report["status"] == "invalid-activity"
+    assert "test_cases[0].expected_stdout mancante" in report["errors"]
+
+
 def test_grade_activity_reports_missing_source(tmp_path) -> None:
     source = tmp_path / "missing.c"
 
