@@ -124,6 +124,26 @@ Prima di pubblicare open source conviene definire chiaramente:
 - quali test devono usare mock;
 - quali endpoint sono pensati solo per uso locale.
 
+### Sicurezza del runner per codice studente
+
+Il futuro runner Docker sara uno dei punti piu delicati del progetto, perche eseguira codice non fidato scritto dagli studenti.
+
+Prima di implementarlo serve definire un threat model minimo:
+
+- il codice studente non deve poter leggere API key, secrets o file di configurazione locali;
+- il container non deve ricevere variabili d'ambiente sensibili;
+- la rete dovrebbe essere disabilitata durante l'esecuzione dei test, salvo casi esplicitamente motivati;
+- il filesystem deve essere temporaneo e limitato alla consegna;
+- il runner deve imporre timeout;
+- il runner deve imporre limiti di memoria e CPU;
+- gli artifact prodotti devono essere controllati e non devono poter sovrascrivere file arbitrari;
+- stdout e stderr vanno limitati per evitare log enormi;
+- i processi figli devono essere terminati a fine run;
+- i test nascosti non devono essere esposti nel repository studente;
+- il report JSON deve contenere solo dati necessari alla valutazione.
+
+Questo tema va affrontato prima della PR sul runner vero e proprio. Il runner non e solo un dettaglio tecnico: e il confine di sicurezza tra il progetto del docente e codice potenzialmente malevolo o semplicemente errato.
+
 ### CI parziale
 
 Le GitHub Actions sui lab sono utili e concrete, ma manca una workflow generale di qualita che esegua almeno:
