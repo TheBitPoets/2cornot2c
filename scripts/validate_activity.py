@@ -160,17 +160,6 @@ def validate_metrics(metrics: Any, source: str) -> list[str]:
     return errors
 
 
-def iter_activity_files(paths: list[Path]) -> list[Path]:
-    """Return JSON files from explicit files or directories."""
-    files: list[Path] = []
-    for path in paths:
-        if path.is_dir():
-            files.extend(sorted(path.rglob("*.json")))
-        else:
-            files.append(path)
-    return files
-
-
 def validate_files(paths: list[Path]) -> list[str]:
     """Validate all activity files found in the given paths."""
     errors: list[str] = []
