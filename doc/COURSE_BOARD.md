@@ -1578,6 +1578,384 @@ Questa e una versione ancora in evoluzione. Non gestisce ancora automaticamente:
 - esportazione o stampa del Gantt;
 - confronto sintetico tra ore teoriche, ore disponibili, ore perse e ore svolte per tutto il corso.
 
+### Roadmap PR: qualita, attivita didattiche, esercizi e valutazione
+
+Prima di aggiungere nuove funzionalita importanti conviene aprire una PR dedicata alla qualita complessiva del progetto. L'obiettivo e preparare il repository a diventare, in futuro, un progetto open source pubblicabile, leggibile e mantenibile.
+
+#### PR 1 - Audit qualita progetto
+
+Obiettivo: controllare e migliorare la base tecnica prima di far crescere ancora il sistema.
+
+Aspetti da verificare:
+
+- qualita e chiarezza del codice Python;
+- qualita e chiarezza del codice JavaScript;
+- strategia test backend;
+- strategia test frontend;
+- test end-to-end minimi;
+- test sui generatori Markdown e lab;
+- separazione delle responsabilita tra board, calendario, server, script e documentazione;
+- assenza di ambiguita nei nomi, nei dati e nei flussi utente;
+- robustezza dei salvataggi e gestione degli errori;
+- affidabilita dei controlli `--check`;
+- integrazione dei controlli in GitHub Actions;
+- manutenibilita delle strutture JSON;
+- coerenza tra UI, file generati e documentazione;
+- commenti, docstring e spiegazioni nei punti non immediati del codice Python;
+- commenti mirati nel codice JavaScript dove la logica non e ovvia;
+- prestazioni della board e del calendario quando aumentano percorsi, UDA, attivita e dati storici;
+- sicurezza dei dati locali, delle API key, dei file `.secret` e delle chiamate ai provider AI;
+- sicurezza futura del runner per codice studente;
+- qualita della documentazione per uso locale, sviluppo, manutenzione e contributi esterni;
+- preparazione a una futura pubblicazione open source.
+
+Questa PR non dovrebbe introdurre grandi feature. Dovrebbe invece ridurre debito tecnico, rendere piu leggibile il progetto e documentare le parti critiche.
+
+#### PR 1.1 - Infrastruttura test backend e frontend
+
+Obiettivo: introdurre una rete minima di sicurezza prima di aggiungere attivita, runner, metriche e dashboard.
+
+Test backend/script Python:
+
+- usare `pytest`;
+- creare fixture JSON piccole e stabili;
+- testare parsing di progetto e calendario;
+- testare generazione del percorso didattico Markdown;
+- testare aggiornamento output lab;
+- testare aggiornamento snippet lab;
+- testare normalizzazione output;
+- testare API principali del server con provider AI mockati;
+- testare salvataggi ed errori su input invalidi.
+
+Regola per i provider AI: i test automatici non devono mai chiamare provider reali come OpenAI, Gemini, Groq o OpenRouter. In CI e nei test locali standard si usano sempre mock, fake provider o risposte registrate e controllate. Le chiamate reali ai provider possono esistere solo come probe o test manuali espliciti, separati dalla suite ordinaria, per evitare consumo crediti, rate limit, lentezza e risultati non deterministici.
+
+Test frontend JavaScript:
+
+- isolare le funzioni pure dove possibile;
+- introdurre test unitari per calcolo settimane, ore, visibilita percorsi, mapping UDA e validazione slot;
+- valutare `vitest` per le funzioni JS pure;
+- evitare test fragili legati solo alla struttura visiva.
+
+Prima di introdurre test unitari frontend estesi puo essere necessario separare la logica pura dalla manipolazione diretta del DOM. Le funzioni che calcolano settimane, ore, segmenti Gantt, associazioni UDA e validazioni dovrebbero essere estraibili o esportabili in modo testabile. Il codice che aggiorna la pagina resta nella UI, mentre la logica deterministica va resa invocabile dai test senza aprire il browser.
+
+Test end-to-end:
+
+- usare pochi test browser mirati, per esempio con Playwright;
+- aprire la board;
+- caricare un progetto;
+- aprire il calendario;
+- verificare che il Gantt venga renderizzato;
+- aprire un modal UDA;
+- salvare una modifica controllata.
+
+Regola per gli E2E: i test browser non devono scrivere sui JSON reali del corso, come `doc/course_design.json`, `doc/course_designs/*.json` o `doc/calendars/*.json`. Devono usare fixture dedicate, copie temporanee o un workspace di test isolato. Ogni test deve poter essere eseguito piu volte senza modificare dati didattici reali e senza lasciare file sporchi nel repository.
+
+GitHub Actions:
+
+- aggiungere una workflow di qualita;
+- eseguire test Python;
+- eseguire controlli `--check` dei generatori;
+- eseguire test JavaScript;
+- tenere eventuali test Playwright separati o opzionali se diventano pesanti.
+
+La suite frontend dovrebbe distinguere due livelli: uno smoke test obbligatorio, leggero e veloce, che verifica almeno avvio server, apertura board e rendering base senza errori; e test E2E estesi, piu lenti, che possono restare opzionali, manuali o eseguiti solo in workflow dedicati.
+
+#### PR 1.2 - Primo set di test di regressione
+
+Obiettivo: coprire subito i flussi che si sono dimostrati piu delicati durante lo sviluppo.
+
+Flussi prioritari:
+
+- `generate_course_plan.py --check`;
+- `update_lab_outputs.py --check`;
+- `update_lab_snippets.py --check`;
+- caricamento progetto didattico;
+- associazione progetto/calendario;
+- calcolo ore teoriche, disponibili, perse e svolte;
+- rendering base del Gantt;
+- salvataggio della programmazione svolta;
+- gestione provider AI non configurato o non disponibile.
+
+Questi test devono proteggere il progetto da regressioni prima di introdurre correzione automatica, Docker runner e dashboard studenti.
+
+#### PR 2 - Modello attivita didattiche
+
+Obiettivo: introdurre un modello unico per rappresentare studio guidato, esercizi, compiti a casa, laboratorio, verifiche, recupero e potenziamento.
+
+Un'attivita didattica dovrebbe poter rappresentare:
+
+- studio guidato;
+- esercizio in classe;
+- esercizio in laboratorio;
+- compito a casa;
+- verifica scritta;
+- verifica pratica;
+- recupero;
+- potenziamento.
+
+Il modello deve collegare ogni attivita a:
+
+- progetto didattico;
+- percorso;
+- UDA;
+- argomenti e sottoparagrafi;
+- date di assegnazione, svolgimento o consegna;
+- durata stimata;
+- modalita didattica;
+- livello di supporto;
+- eventuale uso di AI;
+- metriche da raccogliere.
+
+Concettualmente:
+
+```json
+{
+  "id": "c-variabili-homework-001",
+  "title": "Variabili e input/output",
+  "type": "homework",
+  "mode": "practice",
+  "support_level": "guided",
+  "course_path_id": "tpsi-terzo",
+  "uda_id": "uda-1",
+  "topic_ids": ["variabili", "input-output"],
+  "assigned_date": "2026-10-05",
+  "due_date": "2026-10-12",
+  "estimated_minutes": 45
+}
+```
+
+La distinzione importante e:
+
+- `type`: che cosa e l'attivita, per esempio `homework`, `lab`, `written_test`, `practical_test`;
+- `mode`: come viene usata, per esempio `study`, `practice`, `assessment`;
+- `support_level`: quanto aiuto e consentito, per esempio `full`, `guided`, `limited`, `none`.
+
+In questa PR va definito anche il contratto minimo per test e report, prima della generazione AI degli esercizi. Il generatore AI non deve inventare un formato libero: deve produrre test e rubrica compatibili con lo schema che il runner usera nelle PR successive.
+
+Schema minimo da definire:
+
+- formato dei test visibili;
+- formato dei test nascosti;
+- input atteso;
+- output atteso;
+- timeout;
+- punteggio tecnico;
+- formato del `report.json`;
+- codici di errore per compilazione, runtime, timeout e test fallito.
+
+#### PR 3 - UI attivita nella board/calendario
+
+Obiettivo: permettere al docente di creare, modificare, eliminare e visualizzare attivita didattiche.
+
+Funzioni minime:
+
+- sezione `Attivita didattiche`;
+- creazione manuale di una attivita;
+- modifica dei metadati;
+- collegamento a percorso, UDA e argomenti;
+- visualizzazione nel calendario;
+- visualizzazione nel Gantt come marker collegato alla UDA;
+- salvataggio nel JSON del calendario associato al progetto.
+
+Decisione provvisoria sui dati: fino a quando progetto didattico e calendario resteranno file separati, le attivita didattiche saranno salvate nel JSON del calendario associato, per esempio in una sezione `activities`. L'attivita non deve duplicare UDA, argomenti o sottoparagrafi: deve conservarne solo gli ID di riferimento. Il progetto didattico resta la sorgente della struttura didattica; il calendario resta la sorgente degli eventi datati, delle scadenze, delle verifiche, dei compiti e delle attivita svolte nel tempo.
+
+Quando il progetto passera a un JSON unico, la sezione `activities` potra essere spostata nel file unificato senza cambiare il significato dei dati.
+
+Il compito a casa non va trattato come una festivita: non sospende la lezione, ma rappresenta lavoro assegnato e tracciabile. La verifica non e una chiusura: consuma ore didattiche per valutazione. Per questo attivita, verifiche e compiti devono avere una sezione propria.
+
+#### PR 4 - Generazione AI delle attivita e degli esercizi
+
+Obiettivo: generare attivita didattiche a partire da contenuti del corso, UDA, argomenti, livello, durata e obiettivi.
+
+Il docente dovrebbe poter scegliere:
+
+- tipo di attivita;
+- livello;
+- durata stimata;
+- numero di esercizi;
+- linguaggio;
+- modalita di aiuto;
+- presenza di soluzione docente;
+- presenza di test;
+- presenza di rubrica;
+- eventuali hint progressivi.
+
+L'output AI dovrebbe essere sempre validato dal docente prima di diventare attivita salvata.
+
+L'AI puo generare:
+
+- consegna;
+- obiettivi;
+- prerequisiti;
+- esercizi;
+- starter code;
+- soluzione di riferimento;
+- test visibili;
+- test nascosti;
+- griglia di valutazione;
+- hint progressivi;
+- feedback atteso;
+- domande orali di controllo.
+
+Vincolo: test, soluzione, rubrica e report atteso devono rispettare lo schema definito nel modello attivita. Se lo schema non e ancora sufficiente, va esteso prima di accettare nuovi output AI.
+
+#### PR 5 - Runner locale e sandbox Docker per C
+
+Obiettivo: eseguire realmente gli esercizi di programmazione in modo riproducibile e sicuro.
+
+Il runner deve:
+
+- compilare codice C;
+- eseguire test input/output;
+- gestire timeout;
+- gestire errori di compilazione;
+- produrre un report JSON;
+- distinguere test visibili e nascosti;
+- supportare Docker come sandbox obbligatoria;
+- preparare in futuro ASan, UBSan e Valgrind.
+
+Principio: il punteggio tecnico deve essere deterministico. L'AI non deve inventare il voto, ma spiegare e motivare a partire da risultati gia calcolati.
+
+#### PR 6 - Template GitHub Actions per repo studenti
+
+Obiettivo: usare GitHub come identita, consegna e storico del lavoro degli studenti.
+
+Non serve login proprietario: gli studenti usano i propri account GitHub.
+
+Il sistema deve prevedere:
+
+- registro classe con username GitHub degli studenti;
+- associazione tra studente, attivita e repository individuale;
+- repository template dell'attivita;
+- repository individuali degli studenti;
+- commit e push come traccia del lavoro;
+- GitHub Actions per l'esecuzione automatica dei test;
+- Docker dentro Actions;
+- report JSON come artifact;
+- stato pass/fail leggibile dal docente.
+
+Il registro classe e necessario per sapere anche chi non ha iniziato o non ha consegnato. Non basta leggere i repository esistenti: serve una mappa esplicita tra classe, studente, account GitHub, attivita assegnata e repository atteso.
+
+Esempio concettuale:
+
+```json
+{
+  "class_id": "3A-2026-2027",
+  "students": [
+    {
+      "student_id": "studente-001",
+      "github_username": "student-github-user",
+      "repos": {
+        "c-variabili-homework-001": "https://github.com/org/c-variabili-homework-001-student-github-user"
+      }
+    }
+  ]
+}
+```
+
+#### PR 7 - Raccolta metriche individuali
+
+Obiettivo: misurare il processo di apprendimento, non solo il risultato finale.
+
+Metriche iniziali:
+
+- studente o username GitHub;
+- repository;
+- attivita;
+- primo commit;
+- ultimo commit;
+- numero commit;
+- numero push;
+- numero run GitHub Actions;
+- test superati;
+- test falliti;
+- errori di compilazione;
+- errori runtime;
+- timeout;
+- tempo stimato tra primo e ultimo commit;
+- consegna entro la scadenza;
+- argomenti collegati agli errori.
+
+Queste metriche non devono essere usate in modo punitivo, ma per capire chi e in difficolta, su quali argomenti e con quali pattern di errore.
+
+Il tempo stimato tra primo e ultimo commit va trattato come metrica euristica. Non misura con certezza il tempo reale di studio: uno studente puo lavorare offline, lasciare passare molte ore tra due commit, fare un unico push finale oppure interrompere il lavoro. Per questo il dato deve avere valore orientativo e puo essere accompagnato da un livello di affidabilita, per esempio `bassa`, `media`, `alta`.
+
+#### PR 8 - Dashboard docente minima
+
+Obiettivo: dare al docente una vista sintetica di classe.
+
+Vista per attivita:
+
+- studente;
+- stato;
+- ultimo push;
+- commit;
+- test superati;
+- errori principali;
+- tempo stimato;
+- consegna in orario o in ritardo.
+
+Vista classe:
+
+- percentuale consegne;
+- media test superati;
+- studenti in difficolta;
+- errori piu comuni;
+- argomenti critici;
+- andamento nel tempo.
+
+La dashboard puo partire semplice, ma deve gia aiutare a rispondere a domande didattiche concrete:
+
+- chi non ha iniziato?
+- chi ha consegnato?
+- chi ha molti errori di compilazione?
+- quale argomento sta creando problemi alla classe?
+- quali studenti stanno migliorando?
+
+#### PR 9 - Classifiche e gamification non punitive
+
+Obiettivo: stimolare gli studenti senza ridurre tutto al voto.
+
+Classifiche possibili:
+
+- costanza;
+- miglioramento;
+- esercizi completati;
+- debug riusciti;
+- streak settimanale;
+- test superati;
+- recuperi completati.
+
+Da evitare una classifica basata solo sul voto assoluto, per non demotivare chi parte piu indietro.
+
+La visibilita delle classifiche deve essere progettata con attenzione. Le classifiche possono essere anonime, visibili solo al docente, visibili solo allo studente rispetto al proprio progresso, oppure pubbliche solo per indicatori positivi e non sensibili. La scelta deve evitare esposizione, confronto punitivo o pressione eccessiva sugli studenti in difficolta.
+
+#### PR 10 - Correzione AI controllata e report finale
+
+Obiettivo: usare AI per feedback, motivazioni e giudizio naturale, non per sostituire i test deterministici.
+
+Input per AI evaluator:
+
+- consegna;
+- griglia;
+- codice studente;
+- risultati test;
+- errori compilazione/runtime;
+- log essenziali;
+- eventuale storico commit;
+- metriche dell'attivita.
+
+Output:
+
+- motivazione per ogni indicatore della griglia;
+- giudizio finale;
+- errori concettuali probabili;
+- suggerimenti di recupero;
+- domande orali suggerite;
+- report JSON, Markdown, HTML o PDF.
+
+Regola fondamentale: stessa consegna, stessi test, stessa griglia e stesso formato di risposta per tutti gli studenti.
+
 ### Direzione futura: un solo JSON per corso e calendario
 
 Al momento progetto didattico e calendario sono file separati:
