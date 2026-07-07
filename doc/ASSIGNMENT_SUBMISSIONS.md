@@ -353,3 +353,5 @@ Le prossime PR possono introdurre:
 3. Script per generare scaffold consegna.
 4. Script per raccogliere report e metriche.
 5. Dashboard Markdown minima per docente.
+
+Il primo template repository studente e documentato in `STUDENT_REPOSITORY_TEMPLATE.md`.

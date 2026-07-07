@@ -1,0 +1,57 @@
+name: TheBitLab grading
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      activity_path:
+        description: "Path della activity JSON nel repository studente"
+        required: true
+        default: "assignments/c-base-somma-001/activity.json"
+      source_path:
+        description: "Path del sorgente da correggere nel repository studente"
+        required: true
+        default: "assignments/c-base-somma-001/main.c"
+      language:
+        description: "Linguaggio della consegna"
+        required: true
+        default: "c"
+
+jobs:
+  grade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout student repository
+        uses: actions/checkout@v4
+        with:
+          path: student-work
+
+      - name: Checkout TheBitLab source
+        uses: actions/checkout@v4
+        with:
+          repository: TheBitPoets/2cornot2c
+          path: thebitlab
+
+      - name: Build grading Docker image
+        run: docker build -t thebitlab-assignment-runner -f thebitlab/docker/assignment-runner/Dockerfile thebitlab
+
+      - name: Run deterministic grading
+        run: |
+          mkdir -p "$RUNNER_TEMP/thebitlab-report"
+          python thebitlab/scripts/grade_activity.py \
+            --activity "student-work/${{ inputs.activity_path }}" \
+            --source "student-work/${{ inputs.source_path }}" \
+            --language "${{ inputs.language }}" \
+            --docker \
+            --report "$RUNNER_TEMP/thebitlab-report/report.json"
+
+      - name: Upload grading report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: thebitlab-grading-report
+          path: ${{ runner.temp }}/thebitlab-report/report.json
+          if-no-files-found: error
