@@ -176,8 +176,8 @@ def test_docker_command_uses_read_only_workspace(tmp_path) -> None:
     assert f"{tmp_path.resolve()}:/workspace:ro" in command
     assert f"{(tmp_path / 'work').resolve()}:/thebitlab-work" in command
     assert "TMPDIR=/thebitlab-work" in command
-    assert f"{tmp_path.resolve()}:/thebitlab-output" in command
-    assert "/thebitlab-output/report.json" in command
+    assert "/thebitlab-output" not in command
+    assert "--report" not in command
     assert "--language" in command
     assert "c" in command
 

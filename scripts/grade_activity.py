@@ -269,7 +269,6 @@ def docker_command(
     work_dir = (work_dir or Path(tempfile.gettempdir()) / "thebitlab-work").resolve()
     activity_path = activity.resolve()
     source_path = source.resolve()
-    report_container_path: str | None = None
     command = [
         "docker",
         "run",
@@ -287,16 +286,6 @@ def docker_command(
         "-w",
         "/workspace",
     ]
-    if report:
-        report_path = report.resolve()
-        command.extend(
-            [
-                "-v",
-                f"{report_path.parent}:/thebitlab-output",
-            ]
-        )
-        report_container_path = f"/thebitlab-output/{report_path.name}"
-
     command.extend(
         [
         image,
@@ -310,8 +299,6 @@ def docker_command(
     )
     if language:
         command.extend(["--language", language])
-    if report_container_path:
-        command.extend(["--report", report_container_path])
     return command
 
 
@@ -333,10 +320,29 @@ def run_docker_grading(args: argparse.Namespace) -> int:
             return 1
 
         try:
-            result = subprocess.run(command, check=False)
+            result = subprocess.run(command, capture_output=True, text=True, check=False)
         except FileNotFoundError:
             print("Docker non trovato. Installa Docker oppure esegui senza --docker.")
             return 1
+
+        if args.report:
+            try:
+                report = json.loads(result.stdout)
+            except json.JSONDecodeError:
+                print("Sandbox Docker non ha prodotto un report JSON valido.")
+                if result.stdout:
+                    print(result.stdout)
+                if result.stderr:
+                    print(result.stderr)
+                return 1
+            write_report(report, args.report)
+            if result.stderr:
+                print(result.stderr)
+        else:
+            if result.stdout:
+                print(result.stdout)
+            if result.stderr:
+                print(result.stderr)
         return result.returncode
 
 
