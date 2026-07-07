@@ -132,7 +132,8 @@ def validate_rubric(rubric: Any, source: str) -> list[str]:
             continue
         if not isinstance(item.get("criterio"), str) or not item.get("criterio"):
             errors.append(f"{prefix}.criterio deve essere una stringa non vuota")
-        if not isinstance(item.get("punti"), (int, float)) or item.get("punti") < 0:
+        points = item.get("punti")
+        if isinstance(points, bool) or not isinstance(points, (int, float)) or points < 0:
             errors.append(f"{prefix}.punti deve essere un numero non negativo")
     return errors
 

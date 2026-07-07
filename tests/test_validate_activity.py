@@ -95,6 +95,15 @@ def test_metric_flags_must_be_boolean() -> None:
     assert "activity.json: metriche.traccia_sessioni_thebitlab deve essere boolean" in errors
 
 
+def test_rubric_points_must_not_be_boolean() -> None:
+    activity = valid_activity()
+    activity["rubrica"] = [{"criterio": "Compilazione", "punti": True}]
+
+    errors = validate_activity.validate_activity(activity, "activity.json")
+
+    assert "activity.json: rubrica[0].punti deve essere un numero non negativo" in errors
+
+
 def test_cli_validation_fails_on_invalid_file(tmp_path, monkeypatch) -> None:
     invalid_file = tmp_path / "invalid.json"
     invalid_file.write_text(json.dumps({"id": "troppo-poco"}), encoding="utf-8")
