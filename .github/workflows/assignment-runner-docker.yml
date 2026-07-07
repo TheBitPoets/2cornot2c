@@ -27,3 +27,39 @@ jobs:
 
       - name: Build assignment runner image
         run: docker build -t thebitlab-assignment-runner -f docker/assignment-runner/Dockerfile .
+
+      - name: Smoke test assignment runner image
+        run: |
+          cat > "$RUNNER_TEMP/activity.json" <<'JSON'
+          {
+            "id": "docker-smoke-c",
+            "linguaggio": "c",
+            "test_cases": [
+              {
+                "name": "somma minima",
+                "stdin": "2 3\n",
+                "expected_stdout": "5\n"
+              }
+            ]
+          }
+          JSON
+          cat > "$RUNNER_TEMP/main.c" <<'C'
+          #include <stdio.h>
+
+          int main(void) {
+            int a;
+            int b;
+            if (scanf("%d %d", &a, &b) != 2) {
+              return 1;
+            }
+            printf("%d\n", a + b);
+            return 0;
+          }
+          C
+          python scripts/grade_activity.py \
+            --activity "$RUNNER_TEMP/activity.json" \
+            --source "$RUNNER_TEMP/main.c" \
+            --language c \
+            --docker \
+            --report "$RUNNER_TEMP/report.json"
+          test -s "$RUNNER_TEMP/report.json"
