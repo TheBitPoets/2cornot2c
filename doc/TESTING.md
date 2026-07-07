@@ -104,6 +104,7 @@ Le GitHub Actions attive sono:
 | `.github/workflows/quality.yml` | PR e push su `main` quando cambiano `scripts/**`, `tests/**`, `activities/**`, documenti del percorso didattico o configurazione test | Installa le dipendenze, esegue `pytest`, poi controlla il Markdown del percorso didattico | `python -m pytest` e `python scripts/generate_course_plan.py --check` |
 | `.github/workflows/lab-snippets.yml` | PR e push su `main` quando cambiano `README.md`, `TEMPLATES.md`, `lab/**`, `scripts/update_lab_snippets.py` o il workflow | Controlla che snippet, codice lab e output inseriti nei documenti siano aggiornati | `python scripts/update_lab_snippets.py --check` |
 | `.github/workflows/lab-outputs.yml` | PR e push su `main` quando cambiano sorgenti/header lab, manifest JSON, output versionati, script output o il workflow | Installa la toolchain C e verifica che gli output dei lab siano aggiornati | `python scripts/update_lab_outputs.py --check` |
+| `.github/workflows/assignment-runner-docker.yml` | PR e push su `main` quando cambiano Dockerfile, script di grading o workflow | Verifica che l'immagine Docker del runner di grading venga costruita correttamente | `docker build -t thebitlab-assignment-runner -f docker/assignment-runner/Dockerfile .` |
 
 ### Workflow `Quality`
 
@@ -143,6 +144,19 @@ python scripts/update_lab_snippets.py
 ```
 
 Poi si committano gli output rigenerati e gli eventuali aggiornamenti del README.
+
+### Workflow `Build assignment runner Docker image`
+
+La workflow `.github/workflows/assignment-runner-docker.yml` esegue:
+
+- build dell'immagine Docker `thebitlab-assignment-runner`;
+- controllo minimo che `docker/assignment-runner/Dockerfile` e dipendenze di base siano coerenti.
+
+Comando locale equivalente:
+
+```bash
+docker build -t thebitlab-assignment-runner -f docker/assignment-runner/Dockerfile .
+```
 
 ## Checklist prima di pushare una PR
 
