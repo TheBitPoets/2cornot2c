@@ -334,6 +334,58 @@ TheBitLab potra automatizzare:
 - generazione dashboard classe;
 - feedback AI assisted da report deterministico.
 
+## Assegnare una activity a repository studenti
+
+Dopo aver creato e validato una activity JSON, il docente puo assegnarla a uno o piu repository studente usando:
+
+```bash
+python scripts/assign_activity.py \
+  --activity activities/examples/c_sum_with_tests.json \
+  --target ../studenti/tpsi-3a-rossi-mario \
+  --target ../studenti/tpsi-3a-bianchi-luca \
+  --thebitlab-ref main
+```
+
+Lo script usa lo stesso motore di `create_submission_scaffold.py`, quindi per ogni repository crea:
+
+```text
+assignments/<activity_id>/
+  activity.json
+  <source-file>
+  README.md
+```
+
+Il flusso e pensato in tre livelli:
+
+| Livello | Responsabilita |
+|---|---|
+| Core Python | Funzioni riusabili da test, CLI e futura GUI |
+| CLI | Wrapper operativo per docente, CI e debug |
+| GUI futura | Form e bottoni che chiamano lo stesso core, senza duplicare logica |
+
+Se la classe ha molti repository, puoi usare un file di target:
+
+```text
+# targets-3a.txt
+../studenti/tpsi-3a-rossi-mario
+../studenti/tpsi-3a-bianchi-luca
+../studenti/tpsi-3a-verdi-anna
+```
+
+Poi:
+
+```bash
+python scripts/assign_activity.py \
+  --activity activities/examples/c_sum_with_tests.json \
+  --targets-file targets-3a.txt
+```
+
+Le righe vuote e le righe che iniziano con `#` vengono ignorate.
+
+Come per lo scaffold singolo, `--force` aggiorna i metadati della consegna, ma non sovrascrive il sorgente dello studente. Per rigenerare anche il sorgente serve `--overwrite-source`.
+
+Nella GUI futura il docente non dovra ricordare questi comandi: selezionera activity, classe/team GitHub e repository studenti; il server locale chiamera lo stesso core usato dalla CLI.
+
 ## Regole di sicurezza
 
 Regole minime:
@@ -352,6 +404,7 @@ Le prossime PR possono introdurre:
 2. Workflow grading riusabile per repository studente.
 3. Script per generare scaffold consegna.
 4. Script per raccogliere report e metriche.
-5. Dashboard Markdown minima per docente.
+5. Integrazione GUI per assegnare activity a classi/team.
+6. Dashboard Markdown minima per docente.
 
 Il primo template repository studente e documentato in `STUDENT_REPOSITORY_TEMPLATE.md`.
