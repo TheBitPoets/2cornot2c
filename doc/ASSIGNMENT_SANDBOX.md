@@ -54,7 +54,7 @@ La prima sandbox:
 - esegue come utente non root;
 - prepara un workspace temporaneo minimale con solo runner, activity JSON e sorgente da correggere;
 - monta quel workspace minimale in sola lettura su `/workspace`;
-- monta una `tmpfs` scrivibile su `/thebitlab-work`;
+- monta una `tmpfs` scrivibile ed eseguibile su `/thebitlab-work`, necessaria per compilare ed eseguire binari C temporanei;
 - disabilita la rete del container con `--network none`;
 - usa root filesystem read-only;
 - elimina le capabilities Linux con `--cap-drop ALL`;

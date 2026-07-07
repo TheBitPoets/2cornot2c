@@ -323,7 +323,7 @@ def docker_command(
         "-v",
         f"{workspace}:/workspace:ro",
         "--tmpfs",
-        "/thebitlab-work:rw,nosuid,nodev,size=64m",
+        "/thebitlab-work:rw,exec,nosuid,nodev,mode=1777,size=64m",
         "-e",
         "TMPDIR=/thebitlab-work",
         "-w",

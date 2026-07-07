@@ -183,7 +183,7 @@ def test_docker_command_uses_read_only_workspace(tmp_path) -> None:
     assert "1" in command
     assert f"{tmp_path.resolve()}:/workspace:ro" in command
     assert "--tmpfs" in command
-    assert "/thebitlab-work:rw,nosuid,nodev,size=64m" in command
+    assert "/thebitlab-work:rw,exec,nosuid,nodev,mode=1777,size=64m" in command
     assert "TMPDIR=/thebitlab-work" in command
     assert "/thebitlab-output" not in command
     assert "--report" not in command
