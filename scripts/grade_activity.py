@@ -252,6 +252,13 @@ def has_minimal_report_shape(value: Any) -> bool:
     return isinstance(value, dict) and isinstance(value.get("passed"), bool) and isinstance(value.get("status"), str)
 
 
+def docker_timeout_seconds(activity: dict[str, Any], timeout_seconds: int) -> int:
+    """Return the outer Docker timeout for compile plus all declared test cases."""
+    test_cases = activity.get("test_cases", [])
+    test_count = len(test_cases) if isinstance(test_cases, list) else 0
+    return ((test_count + 1) * timeout_seconds) + DEFAULT_DOCKER_TIMEOUT_GRACE_SECONDS
+
+
 def path_inside_workspace(path: Path, workspace: Path, label: str) -> str:
     """Return a workspace-relative path or raise a teacher-friendly error."""
     try:
@@ -340,11 +347,11 @@ def docker_command(
 
 def run_docker_grading(args: argparse.Namespace) -> int:
     """Run grading through Docker using the same CLI inside the container."""
-    docker_timeout = args.timeout + DEFAULT_DOCKER_TIMEOUT_GRACE_SECONDS
     with tempfile.TemporaryDirectory(prefix="thebitlab-docker-") as temp_dir:
         temp_root = Path(temp_dir)
         try:
             workspace, activity, source = prepare_docker_workspace(args.activity, args.source, temp_root)
+            docker_timeout = docker_timeout_seconds(load_activity(activity), args.timeout)
             command = docker_command(
                 activity=activity,
                 source=source,

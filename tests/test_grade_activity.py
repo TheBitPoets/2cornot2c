@@ -253,6 +253,12 @@ def test_run_docker_grading_reports_docker_timeout(monkeypatch, tmp_path) -> Non
     assert grade_activity.run_docker_grading(Args()) == 1
 
 
+def test_docker_timeout_scales_with_test_cases() -> None:
+    activity = {"test_cases": [{"name": "uno"}, {"name": "due"}, {"name": "tre"}]}
+
+    assert grade_activity.docker_timeout_seconds(activity, 5) == 30
+
+
 def test_run_docker_grading_reports_missing_input_before_docker(tmp_path) -> None:
     class Args:
         activity = tmp_path / "missing.json"
