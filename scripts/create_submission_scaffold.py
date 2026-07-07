@@ -55,7 +55,14 @@ def validate_source_name(source_name: str) -> str:
     """Validate that a source name is a simple filename."""
     value = source_name.strip()
     path = Path(value)
-    if not value or path.name != value or path.is_absolute() or "/" in value or "\\" in value:
+    if (
+        not value
+        or path.name != value
+        or path.is_absolute()
+        or "/" in value
+        or "\\" in value
+        or not re.fullmatch(r"[A-Za-z0-9_.-]+", value)
+    ):
         raise ValueError("source_name deve essere un nome file semplice, per esempio main.c.")
     return value
 
