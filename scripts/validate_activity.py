@@ -17,6 +17,7 @@ ALLOWED_TYPES = {
 }
 
 ALLOWED_DIFFICULTIES = {"A", "B", "C", "D", "E", "F"}
+SUPPORTED_SCHEMA_VERSION = "1.0"
 
 REQUIRED_FIELDS = {
     "schema_version",
@@ -58,6 +59,10 @@ def validate_activity(data: dict[str, Any], source: str = "<activity>") -> list[
     missing = sorted(REQUIRED_FIELDS - data.keys())
     for field in missing:
         errors.append(f"{source}: campo obbligatorio mancante: {field}")
+
+    schema_version = data.get("schema_version")
+    if schema_version is not None and schema_version != SUPPORTED_SCHEMA_VERSION:
+        errors.append(f"{source}: schema_version non supportata: {schema_version}")
 
     activity_type = data.get("tipo")
     if activity_type is not None and activity_type not in ALLOWED_TYPES:

@@ -58,6 +58,15 @@ def test_invalid_type_is_reported() -> None:
     assert "activity.json: tipo non ammesso: gara-di-cucina" in errors
 
 
+def test_unsupported_schema_version_is_reported() -> None:
+    activity = valid_activity()
+    activity["schema_version"] = "2.0"
+
+    errors = validate_activity.validate_activity(activity, "activity.json")
+
+    assert "activity.json: schema_version non supportata: 2.0" in errors
+
+
 def test_correction_flags_must_be_boolean() -> None:
     activity = valid_activity()
     activity["correzione"]["sandbox"] = "si"
