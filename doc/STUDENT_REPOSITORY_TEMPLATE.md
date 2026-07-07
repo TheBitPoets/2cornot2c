@@ -98,6 +98,19 @@ Un trigger automatico su push richiede una PR dedicata per decidere come individ
 
 Questa separazione mantiene il template utile subito, ma evita di introdurre automazioni ambigue.
 
+## Smoke test del template
+
+Il repository sorgente contiene una workflow di smoke test che simula un repository studente separato e lancia il grading Docker con activity e sorgente fuori dal checkout principale.
+
+Questo controllo verifica il rischio tecnico piu importante del template:
+
+- sorgente TheBitLab in un checkout;
+- lavoro studente in un'altra directory;
+- grading Docker avviato dal runner TheBitLab;
+- report JSON prodotto correttamente.
+
+Non esegue ancora direttamente il file `.github/workflows/thebitlab-grading.yml` del template come workflow importato. Una validazione piu specifica del workflow template potra arrivare in una PR futura.
+
 ## Report autorevole
 
 Il report autorevole e l'artifact prodotto dalla GitHub Action.
