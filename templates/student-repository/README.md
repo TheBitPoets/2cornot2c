@@ -67,6 +67,8 @@ Richiede questi input:
 | `language` | `c` |
 | `thebitlab_ref` | `main`, oppure tag/commit indicato dal docente |
 
+`activity_id` deve essere scritto come slug sicuro: usa lettere minuscole, numeri e trattini. Evita spazi, slash e caratteri speciali.
+
 Il workflow:
 
 1. scarica questo repository studente;

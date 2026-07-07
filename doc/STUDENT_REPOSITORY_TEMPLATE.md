@@ -67,6 +67,8 @@ Richiede:
 | `language` | Linguaggio della consegna |
 | `thebitlab_ref` | Branch, tag o commit di TheBitLab da usare per il grading |
 
+`activity_id` deve essere uno slug sicuro, per esempio `c-base-somma-001`: niente spazi, slash o caratteri speciali. In futuro lo scaffold TheBitLab dovra generarlo automaticamente.
+
 Il workflow:
 
 1. fa checkout del repository studente;
