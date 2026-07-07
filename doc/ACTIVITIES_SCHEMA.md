@@ -157,10 +157,10 @@ Campi obbligatori:
 
 | Campo | Tipo | Significato |
 |---|---|---|
-| `compila` | boolean | L'attivita richiede compilazione |
-| `test` | boolean | L'attivita prevede test automatici |
-| `sandbox` | boolean | L'esecuzione deve avvenire in sandbox |
-| `ai_feedback` | boolean | Il feedback AI assisted e previsto |
+| `compila` | boolean obbligatorio | L'attivita richiede compilazione |
+| `test` | boolean obbligatorio | L'attivita prevede test automatici |
+| `sandbox` | boolean obbligatorio | L'esecuzione deve avvenire in sandbox |
+| `ai_feedback` | boolean obbligatorio | Il feedback AI assisted e previsto |
 
 Regola importante:
 
