@@ -48,6 +48,7 @@ def test_create_scaffold_writes_assignment_files(tmp_path) -> None:
     readme = (destination / "README.md").read_text(encoding="utf-8")
     assert "activity_id`: `c-base-somma-001`" in readme
     assert "source_path`: `assignments/c-base-somma-001/main.c`" in readme
+    assert "thebitlab_ref`: `main`" in readme
 
 
 def test_create_scaffold_rejects_unsafe_activity_id(tmp_path) -> None:
@@ -125,6 +126,19 @@ def test_create_scaffold_supports_custom_source_name_and_language(tmp_path) -> N
     readme = (destination / "README.md").read_text(encoding="utf-8")
     assert "language`: `python`" in readme
     assert "source_path`: `assignments/c-base-somma-001/solution.py`" in readme
+
+
+def test_create_scaffold_supports_custom_thebitlab_ref(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+
+    destination = create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=tmp_path,
+        thebitlab_ref="v1.0.0",
+    )
+
+    readme = (destination / "README.md").read_text(encoding="utf-8")
+    assert "thebitlab_ref`: `v1.0.0`" in readme
 
 
 def test_create_scaffold_rejects_source_name_with_path_segments(tmp_path) -> None:

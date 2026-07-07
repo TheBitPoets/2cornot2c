@@ -11,6 +11,7 @@ from scripts import validate_activity
 
 DEFAULT_TARGET_DIR = Path(".")
 DEFAULT_SOURCE_NAME = "main.c"
+DEFAULT_THEBITLAB_REF = "main"
 
 
 def is_safe_slug(value: str) -> bool:
@@ -72,7 +73,7 @@ def starter_source(language: str) -> str:
     return ""
 
 
-def assignment_readme(activity: dict[str, Any], identifier: str, source_name: str, language: str) -> str:
+def assignment_readme(activity: dict[str, Any], identifier: str, source_name: str, language: str, thebitlab_ref: str) -> str:
     """Build the README for one student assignment scaffold."""
     title = str(activity.get("titolo") or identifier)
     prompt = str(activity.get("consegna") or "Segui le indicazioni del docente.")
@@ -90,6 +91,7 @@ def assignment_readme(activity: dict[str, Any], identifier: str, source_name: st
         f"- `activity_path`: `assignments/{identifier}/activity.json`\n"
         f"- `source_path`: `assignments/{identifier}/{source_name}`\n"
         f"- `language`: `{language}`\n"
+        f"- `thebitlab_ref`: `{thebitlab_ref}`\n"
     )
 
 
@@ -99,6 +101,7 @@ def create_scaffold(
     target_dir: Path = DEFAULT_TARGET_DIR,
     source_name: str = DEFAULT_SOURCE_NAME,
     language: str | None = None,
+    thebitlab_ref: str = DEFAULT_THEBITLAB_REF,
     overwrite: bool = False,
     overwrite_source: bool = False,
 ) -> Path:
@@ -125,7 +128,7 @@ def create_scaffold(
         source_path.write_text(starter_source(selected_language), encoding="utf-8", newline="\n")
 
     (destination / "README.md").write_text(
-        assignment_readme(activity, identifier, source_name, selected_language),
+        assignment_readme(activity, identifier, source_name, selected_language, thebitlab_ref),
         encoding="utf-8",
         newline="\n",
     )
@@ -138,6 +141,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--target", type=Path, default=DEFAULT_TARGET_DIR, help="Root del repository studente.")
     parser.add_argument("--source-name", default=DEFAULT_SOURCE_NAME, help="Nome del file sorgente da creare.")
     parser.add_argument("--language", help="Linguaggio da usare, se diverso dalla activity.")
+    parser.add_argument("--thebitlab-ref", default=DEFAULT_THEBITLAB_REF, help="Branch, tag o commit TheBitLab da indicare nel README.")
     parser.add_argument("--force", action="store_true", help="Sovrascrive una consegna gia esistente.")
     parser.add_argument("--overwrite-source", action="store_true", help="Sovrascrive anche il sorgente se esiste.")
     return parser.parse_args()
@@ -151,6 +155,7 @@ def main() -> int:
             target_dir=args.target,
             source_name=args.source_name,
             language=args.language,
+            thebitlab_ref=args.thebitlab_ref,
             overwrite=args.force,
             overwrite_source=args.overwrite_source,
         )

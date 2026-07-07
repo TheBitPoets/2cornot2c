@@ -156,7 +156,8 @@ Per creare una cartella consegna compatibile con il template puoi usare:
 python scripts/create_submission_scaffold.py \
   --activity activities/examples/c_sum_with_tests.json \
   --target templates/student-repository \
-  --source-name main.c
+  --source-name main.c \
+  --thebitlab-ref main
 ```
 
 Lo script crea:
