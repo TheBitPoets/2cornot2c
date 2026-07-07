@@ -55,6 +55,8 @@ TheBitLab grading
 
 Per ora si avvia manualmente con `workflow_dispatch`.
 
+Nel README del template sono documentati anche i passaggi clic per clic per studenti che non conoscono ancora GitHub Actions.
+
 Richiede:
 
 | Input | Significato |

@@ -47,6 +47,16 @@ assignments/c-base-somma-001/main.c
 
 Il workflow `TheBitLab grading` puo essere avviato manualmente dalla scheda Actions.
 
+Passi da seguire su GitHub:
+
+1. Apri la scheda **Actions** del repository.
+2. Clicca sul workflow **TheBitLab grading**.
+3. Clicca su **Run workflow**.
+4. Compila i campi richiesti.
+5. Clicca sul pulsante verde **Run workflow**.
+6. Attendi la fine del job.
+7. Apri il run e scarica l'artifact del report.
+
 Richiede questi input:
 
 | Input | Esempio |
