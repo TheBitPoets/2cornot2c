@@ -1,0 +1,282 @@
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import subprocess
+import tempfile
+from pathlib import Path
+from typing import Any
+
+
+DEFAULT_TIMEOUT_SECONDS = 5
+SUPPORTED_LANGUAGES = {
+    "c": "implemented",
+    "python": "planned",
+    "javascript": "planned",
+    "nodejs": "planned",
+    "html": "planned",
+    "java": "planned",
+    "sql": "planned",
+    "golang": "planned",
+    "assembly": "planned",
+    "cpp": "planned",
+    "php": "planned",
+}
+
+
+def load_activity(path: Path) -> dict[str, Any]:
+    """Load an activity JSON file."""
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def compile_c_source(source: Path, output: Path, *, timeout_seconds: int) -> dict[str, Any]:
+    """Compile a C source file with gcc and return a deterministic result."""
+    command = ["gcc", str(source), "-o", str(output)]
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, timeout=timeout_seconds, check=False)
+    except subprocess.TimeoutExpired as error:
+        return {
+            "passed": False,
+            "status": "compile-timeout",
+            "command": command,
+            "stdout": error.stdout or "",
+            "stderr": error.stderr or "",
+        }
+    except FileNotFoundError:
+        return {
+            "passed": False,
+            "status": "compiler-not-found",
+            "command": command,
+            "stdout": "",
+            "stderr": "gcc non trovato",
+        }
+
+    return {
+        "passed": result.returncode == 0,
+        "status": "compiled" if result.returncode == 0 else "compile-error",
+        "command": command,
+        "returncode": result.returncode,
+        "stdout": result.stdout,
+        "stderr": result.stderr,
+    }
+
+
+def normalize_output(value: str) -> str:
+    """Normalize output for deterministic stdout comparisons."""
+    return value.replace("\r\n", "\n").strip()
+
+
+def run_test_case(binary: Path, test_case: dict[str, Any], *, timeout_seconds: int) -> dict[str, Any]:
+    """Run a compiled binary against one test case."""
+    stdin = str(test_case.get("stdin", ""))
+    expected_stdout = str(test_case.get("expected_stdout", ""))
+    name = str(test_case.get("name", "test"))
+
+    try:
+        result = subprocess.run(
+            [str(binary)],
+            input=stdin,
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as error:
+        return {
+            "name": name,
+            "passed": False,
+            "status": "timeout",
+            "returncode": None,
+            "stdin": stdin,
+            "expected_stdout": expected_stdout,
+            "stdout": error.stdout or "",
+            "stderr": error.stderr or "",
+        }
+
+    actual_stdout = result.stdout
+    passed = result.returncode == 0 and normalize_output(actual_stdout) == normalize_output(expected_stdout)
+    return {
+        "name": name,
+        "passed": passed,
+        "status": "passed" if passed else "failed",
+        "returncode": result.returncode,
+        "stdin": stdin,
+        "expected_stdout": expected_stdout,
+        "stdout": actual_stdout,
+        "stderr": result.stderr,
+    }
+
+
+def validate_test_cases(test_cases: Any) -> list[str]:
+    """Validate minimal deterministic test case structure."""
+    if not isinstance(test_cases, list) or not test_cases:
+        return ["L'attivita deve contenere una lista non vuota test_cases."]
+
+    errors: list[str] = []
+    for index, test_case in enumerate(test_cases):
+        prefix = f"test_cases[{index}]"
+        if not isinstance(test_case, dict):
+            errors.append(f"{prefix} deve essere un oggetto")
+            continue
+        if "expected_stdout" not in test_case:
+            errors.append(f"{prefix}.expected_stdout mancante")
+        elif not isinstance(test_case["expected_stdout"], str):
+            errors.append(f"{prefix}.expected_stdout deve essere una stringa")
+        if "stdin" in test_case and not isinstance(test_case["stdin"], str):
+            errors.append(f"{prefix}.stdin deve essere una stringa")
+    return errors
+
+
+def activity_language(activity: dict[str, Any], explicit_language: str | None = None) -> str:
+    """Return the language requested by CLI or activity metadata."""
+    return str(explicit_language or activity.get("linguaggio") or activity.get("language") or "c").strip().lower()
+
+
+def unsupported_language_report(activity: dict[str, Any], source: Path, language: str) -> dict[str, Any]:
+    """Return a deterministic report for planned but not implemented languages."""
+    return {
+        "passed": False,
+        "status": "unsupported-language",
+        "activity_id": activity.get("id"),
+        "source": str(source),
+        "language": language,
+        "supported_languages": SUPPORTED_LANGUAGES,
+        "error": f"Runner non ancora implementato per il linguaggio: {language}",
+    }
+
+
+def unknown_language_report(activity: dict[str, Any], source: Path, language: str) -> dict[str, Any]:
+    """Return a deterministic report for languages outside the supported model."""
+    return {
+        "passed": False,
+        "status": "unknown-language",
+        "activity_id": activity.get("id"),
+        "source": str(source),
+        "language": language,
+        "supported_languages": SUPPORTED_LANGUAGES,
+        "error": f"Linguaggio non riconosciuto: {language}",
+    }
+
+
+def grade_activity(
+    activity: dict[str, Any],
+    source: Path,
+    *,
+    timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
+    language: str | None = None,
+) -> dict[str, Any]:
+    """Grade a source file using the language runner requested by the activity."""
+    selected_language = activity_language(activity, language)
+    if selected_language not in SUPPORTED_LANGUAGES:
+        return unknown_language_report(activity, source, selected_language)
+
+    if SUPPORTED_LANGUAGES.get(selected_language) != "implemented":
+        return unsupported_language_report(activity, source, selected_language)
+
+    if selected_language == "c":
+        return grade_c_activity(activity, source, timeout_seconds=timeout_seconds)
+
+    return unsupported_language_report(activity, source, selected_language)
+
+
+def grade_c_activity(activity: dict[str, Any], source: Path, *, timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS) -> dict[str, Any]:
+    """Compile and grade a C source file using test cases from an activity."""
+    if not source.exists():
+        return {
+            "passed": False,
+            "status": "source-not-found",
+            "activity_id": activity.get("id"),
+            "language": "c",
+            "source": str(source),
+            "tests": [],
+            "error": f"Sorgente non trovato: {source}",
+        }
+
+    test_cases = activity.get("test_cases", [])
+    test_case_errors = validate_test_cases(test_cases)
+    if test_case_errors:
+        return {
+            "passed": False,
+            "status": "invalid-activity",
+            "activity_id": activity.get("id"),
+            "language": "c",
+            "source": str(source),
+            "tests": [],
+            "errors": test_case_errors,
+        }
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        suffix = ".exe" if os.name == "nt" else ""
+        binary = Path(temp_dir) / f"submission{suffix}"
+        compile_result = compile_c_source(source, binary, timeout_seconds=timeout_seconds)
+        if not compile_result["passed"]:
+            return {
+                "passed": False,
+                "status": compile_result["status"],
+                "activity_id": activity.get("id"),
+                "language": "c",
+                "source": str(source),
+                "compile": compile_result,
+                "tests": [],
+            }
+
+        tests = [run_test_case(binary, test_case, timeout_seconds=timeout_seconds) for test_case in test_cases]
+        passed = all(test["passed"] for test in tests)
+        return {
+            "passed": passed,
+            "status": "passed" if passed else "failed",
+            "activity_id": activity.get("id"),
+            "language": "c",
+            "source": str(source),
+            "compile": compile_result,
+            "tests": tests,
+            "summary": {
+                "passed": sum(1 for test in tests if test["passed"]),
+                "total": len(tests),
+            },
+        }
+
+
+def write_report(report: dict[str, Any], path: Path) -> None:
+    """Write a grading report as JSON."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
+
+
+def positive_int(value: str) -> int:
+    """Parse a positive integer CLI argument."""
+    try:
+        number = int(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError("deve essere un numero intero") from error
+    if number <= 0:
+        raise argparse.ArgumentTypeError("deve essere un numero positivo")
+    return number
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Corregge in modo deterministico una consegna TheBitLab.")
+    parser.add_argument("--activity", type=Path, required=True, help="Scheda attivita JSON con test_cases.")
+    parser.add_argument("--source", type=Path, required=True, help="File sorgente da correggere.")
+    parser.add_argument("--language", choices=sorted(SUPPORTED_LANGUAGES), help="Linguaggio da usare, se diverso dalla scheda.")
+    parser.add_argument("--report", type=Path, help="Percorso report JSON da scrivere.")
+    parser.add_argument("--timeout", type=positive_int, default=DEFAULT_TIMEOUT_SECONDS, help="Timeout compilazione/esecuzione.")
+    return parser.parse_args()
+
+
+def main() -> int:
+    args = parse_args()
+    activity = load_activity(args.activity)
+    report = grade_activity(activity, args.source, timeout_seconds=args.timeout, language=args.language)
+
+    if args.report:
+        write_report(report, args.report)
+    else:
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+
+    return 0 if report["passed"] else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
