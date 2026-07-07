@@ -846,17 +846,17 @@ Il Core non deve:
 La direzione delle dipendenze deve essere questa:
 
 ```text
-CLI ───────┐
-TUI ───────┼──► Core
-VS Code ───┘
+CLI -------+
+TUI -------+--> Core
+VS Code ---+
 
-Runner ───► Core
-Metrics ──► Core
-Feedback ─► Core
+Runner ---> Core
+Metrics --> Core
+Feedback -> Core
 
-Adapter GitHub ─► Core
-Adapter Docker ─► Runner/Core
-Adapter AI ─────► Feedback/Core
+Adapter GitHub -> Core
+Adapter Docker -> Runner/Core
+Adapter AI -----> Feedback/Core
 ```
 
 I servizi esterni devono stare ai bordi del sistema:
