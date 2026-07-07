@@ -219,7 +219,7 @@ La fase di grading deve rispettare queste regole:
 - non usare segreti;
 - non usare `pull_request_target` per eseguire codice proveniente da fork o repository studente;
 - avere timeout espliciti;
-- produrre report come file o artifact;
+- produrre report come artifact o raccolta centralizzata, seguendo il flusso descritto in `ASSIGNMENT_SUBMISSIONS.md`;
 - non avere accesso a credenziali o token con permessi di scrittura;
 - eseguire il codice in sandbox appena il runner Docker sara disponibile.
 
@@ -1003,7 +1003,7 @@ Obiettivo:
 File possibili:
 
 - `scripts/collect_assignment_metrics.py`
-- `reports/`
+- `teacher-reports/` o altra raccolta centralizzata non modificabile dagli studenti
 - `doc/ASSIGNMENT_METRICS.md`
 
 ### PR 7: AI assisted feedback
