@@ -59,6 +59,8 @@ La prima sandbox:
 - produce il report JSON su stdout;
 - scrive il report finale dal processo host, se usi `--report`.
 
+La cartella `/thebitlab-work` viene usata anche come `TMPDIR`: compilazione e file temporanei del grading devono passare da li, non dal workspace read-only.
+
 I file `--activity` e `--source` devono stare dentro il workspace montato. Se sono fuori dal repository/workspace, il comando Docker viene rifiutato con un messaggio esplicito.
 
 Il file `--report` puo stare anche fuori dal workspace: viene scritto dal processo host dopo aver letto il JSON prodotto dal container.
