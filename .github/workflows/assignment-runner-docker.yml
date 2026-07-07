@@ -62,4 +62,12 @@ jobs:
             --language c \
             --docker \
             --report "$RUNNER_TEMP/report.json"
-          test -s "$RUNNER_TEMP/report.json"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          report = json.loads((Path(os.environ["RUNNER_TEMP"]) / "report.json").read_text(encoding="utf-8"))
+          assert report["passed"] is True
+          assert report["status"] == "passed"
+          PY
