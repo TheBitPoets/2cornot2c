@@ -170,7 +170,7 @@ Regola importante:
 
 Il campo `metriche` indica cosa raccogliere.
 
-Campi consigliati:
+Campi obbligatori:
 
 | Campo | Tipo | Significato |
 |---|---|---|
