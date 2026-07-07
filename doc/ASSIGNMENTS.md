@@ -142,7 +142,9 @@ Esempio concettuale:
   "metriche": {
     "tempo_stimato_minuti": 25,
     "tentativi_massimi": null,
-    "traccia_tempo": true,
+    "traccia_tempo_dichiarato": true,
+    "traccia_sessioni_thebitlab": true,
+    "traccia_eventi_didattici": true,
     "traccia_errori_compilazione": true
   },
   "rubrica": [
