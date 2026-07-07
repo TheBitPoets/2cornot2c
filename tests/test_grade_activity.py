@@ -145,6 +145,20 @@ def test_timeout_report_has_null_returncode(monkeypatch) -> None:
     assert report["returncode"] is None
 
 
+def test_execution_error_report_has_null_returncode(monkeypatch) -> None:
+    def permission_error_run(*args, **kwargs):
+        raise PermissionError("permesso negato")
+
+    monkeypatch.setattr(grade_activity.subprocess, "run", permission_error_run)
+
+    report = grade_activity.run_test_case("submission", {"expected_stdout": ""}, timeout_seconds=1)
+
+    assert report["passed"] is False
+    assert report["status"] == "execution-error"
+    assert report["returncode"] is None
+    assert "permesso negato" in report["stderr"]
+
+
 def test_positive_int_rejects_zero() -> None:
     try:
         grade_activity.positive_int("0")

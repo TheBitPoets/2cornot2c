@@ -96,6 +96,17 @@ def run_test_case(binary: Path, test_case: dict[str, Any], *, timeout_seconds: i
             "stdout": error.stdout or "",
             "stderr": error.stderr or "",
         }
+    except OSError as error:
+        return {
+            "name": name,
+            "passed": False,
+            "status": "execution-error",
+            "returncode": None,
+            "stdin": stdin,
+            "expected_stdout": expected_stdout,
+            "stdout": "",
+            "stderr": str(error),
+        }
 
     actual_stdout = result.stdout
     passed = result.returncode == 0 and normalize_output(actual_stdout) == normalize_output(expected_stdout)
