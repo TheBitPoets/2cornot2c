@@ -172,6 +172,17 @@ def test_docker_command_uses_read_only_workspace(tmp_path) -> None:
 
     assert "--network" in command
     assert "none" in command
+    assert "--read-only" in command
+    assert "--cap-drop" in command
+    assert "ALL" in command
+    assert "--security-opt" in command
+    assert "no-new-privileges" in command
+    assert "--pids-limit" in command
+    assert "128" in command
+    assert "--memory" in command
+    assert "256m" in command
+    assert "--cpus" in command
+    assert "1" in command
     assert f"{tmp_path.resolve()}:/workspace:ro" in command
     assert "--tmpfs" in command
     assert "/thebitlab-work:rw,nosuid,nodev,size=64m" in command
