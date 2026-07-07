@@ -157,14 +157,12 @@ def test_positive_int_rejects_zero() -> None:
 def test_docker_command_uses_read_only_workspace(tmp_path) -> None:
     activity_path = tmp_path / "activity.json"
     source_path = tmp_path / "main.c"
-    report_path = tmp_path / "report.json"
     activity_path.write_text("{}", encoding="utf-8")
     source_path.write_text("int main(void){return 0;}", encoding="utf-8")
 
     command = grade_activity.docker_command(
         activity=activity_path,
         source=source_path,
-        report=report_path,
         language="c",
         timeout_seconds=5,
         workspace=tmp_path,
@@ -292,7 +290,6 @@ def test_docker_command_requires_paths_inside_workspace(tmp_path) -> None:
         grade_activity.docker_command(
             activity=activity_path,
             source=outside,
-            report=None,
             language="c",
             timeout_seconds=5,
             workspace=tmp_path,

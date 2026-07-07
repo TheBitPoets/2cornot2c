@@ -279,7 +279,6 @@ def docker_command(
     *,
     activity: Path,
     source: Path,
-    report: Path | None,
     language: str | None,
     timeout_seconds: int,
     image: str = DEFAULT_DOCKER_IMAGE,
@@ -342,7 +341,6 @@ def run_docker_grading(args: argparse.Namespace) -> int:
             command = docker_command(
                 activity=activity,
                 source=source,
-                report=args.report,
                 language=args.language,
                 timeout_seconds=args.timeout,
                 image=args.docker_image,
