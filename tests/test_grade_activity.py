@@ -202,6 +202,29 @@ def test_run_docker_grading_reports_missing_docker(monkeypatch, tmp_path) -> Non
     assert grade_activity.run_docker_grading(Args()) == 1
 
 
+def test_run_docker_grading_rejects_invalid_json_output(monkeypatch, tmp_path) -> None:
+    class Args:
+        activity = tmp_path / "activity.json"
+        source = tmp_path / "main.c"
+        report = tmp_path / "report.json"
+        language = "c"
+        timeout = 5
+        docker_image = "thebitlab-assignment-runner"
+
+    Args.activity.write_text("{}", encoding="utf-8")
+    Args.source.write_text("int main(void){return 0;}", encoding="utf-8")
+
+    class Result:
+        returncode = 1
+        stdout = "non-json"
+        stderr = "errore container"
+
+    monkeypatch.setattr(grade_activity.subprocess, "run", lambda *args, **kwargs: Result())
+
+    assert grade_activity.run_docker_grading(Args()) == 1
+    assert not Args.report.exists()
+
+
 def test_docker_command_requires_paths_inside_workspace(tmp_path) -> None:
     outside = tmp_path.parent / "outside.c"
     outside.write_text("int main(void){return 0;}", encoding="utf-8")
