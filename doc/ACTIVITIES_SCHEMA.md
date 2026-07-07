@@ -214,7 +214,8 @@ Il validatore controlla:
 - lista `argomenti` non vuota;
 - oggetto `correzione` completo;
 - valori booleani in `correzione`;
-- oggetto `metriche` presente;
+- oggetto `metriche` completo;
+- campi obbligatori e tipi in `metriche`;
 - rubrica ben formata quando presente.
 
 Il validatore non esegue codice e non valuta la qualita didattica dell'attivita.
