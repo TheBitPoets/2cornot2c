@@ -6,6 +6,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+from scripts import validate_activity
+
 
 DEFAULT_TARGET_DIR = Path(".")
 DEFAULT_SOURCE_NAME = "main.c"
@@ -29,6 +31,13 @@ def activity_id(activity: dict[str, Any]) -> str:
     if not is_safe_slug(value):
         raise ValueError("activity_id deve essere uno slug sicuro: usa lettere minuscole, numeri e trattini.")
     return value
+
+
+def validate_activity_or_raise(activity: dict[str, Any], identifier: str) -> None:
+    """Validate an activity using the shared TheBitLab validator."""
+    errors = validate_activity.validate_activity(activity, identifier)
+    if errors:
+        raise ValueError("\n".join(errors))
 
 
 def language_for(activity: dict[str, Any], explicit_language: str | None = None) -> str:
@@ -86,6 +95,7 @@ def create_scaffold(
     """Create an assignment scaffold in a student repository."""
     activity = load_activity(activity_path)
     identifier = activity_id(activity)
+    validate_activity_or_raise(activity, identifier)
     selected_language = language_for(activity, language)
     destination = scaffold_dir(target_dir, identifier)
 

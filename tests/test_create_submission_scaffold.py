@@ -7,10 +7,27 @@ from scripts import create_submission_scaffold
 
 def activity() -> dict:
     return {
+        "schema_version": "1.0",
         "id": "c-base-somma-001",
         "titolo": "Somma di due interi",
+        "tipo": "compito-casa",
+        "difficolta": "B",
+        "argomenti": ["variabili", "operatori"],
         "linguaggio": "c",
         "consegna": "Scrivi un programma C che legge due interi e stampa la somma.",
+        "correzione": {
+            "compila": True,
+            "test": True,
+            "sandbox": True,
+            "ai_feedback": False,
+        },
+        "metriche": {
+            "tempo_stimato_minuti": 20,
+            "traccia_tempo_dichiarato": True,
+            "traccia_sessioni_thebitlab": True,
+            "traccia_eventi_didattici": True,
+            "traccia_errori_compilazione": True,
+        },
     }
 
 
@@ -42,6 +59,19 @@ def test_create_scaffold_rejects_unsafe_activity_id(tmp_path) -> None:
         assert "slug sicuro" in str(error)
     else:
         raise AssertionError("create_scaffold should reject unsafe activity ids")
+
+
+def test_create_scaffold_rejects_invalid_activity_before_writing(tmp_path) -> None:
+    activity_path = write_activity(tmp_path, {"id": "c-base-somma-001"})
+
+    try:
+        create_submission_scaffold.create_scaffold(activity_path=activity_path, target_dir=tmp_path)
+    except ValueError as error:
+        assert "schema_version" in str(error)
+    else:
+        raise AssertionError("create_scaffold should reject invalid activities")
+
+    assert not (tmp_path / "assignments").exists()
 
 
 def test_create_scaffold_refuses_existing_assignment_without_force(tmp_path) -> None:
