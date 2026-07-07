@@ -126,6 +126,15 @@ def test_activity_from_args_rejects_empty_topics() -> None:
         raise AssertionError("activity_from_args should reject empty topics")
 
 
+def test_positive_int_rejects_zero() -> None:
+    try:
+        create_activity.positive_int("0")
+    except Exception as error:
+        assert "positivo" in str(error)
+    else:
+        raise AssertionError("positive_int should reject zero")
+
+
 def test_create_interactive_uses_defaults() -> None:
     answers = iter(
         [

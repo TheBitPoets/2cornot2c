@@ -138,7 +138,7 @@ def ask_choice(
 
 
 def ask_int(prompt: str, *, default: int, input_fn: Callable[[str], str] = input) -> int:
-    """Ask until a non-negative integer is provided."""
+    """Ask until a positive integer is provided."""
     while True:
         value = ask(prompt, default=str(default), input_fn=input_fn)
         try:
@@ -146,9 +146,20 @@ def ask_int(prompt: str, *, default: int, input_fn: Callable[[str], str] = input
         except ValueError:
             print("Inserisci un numero intero.")
             continue
-        if number >= 0:
+        if number > 0:
             return number
-        print("Inserisci un numero non negativo.")
+        print("Inserisci un numero positivo.")
+
+
+def positive_int(value: str) -> int:
+    """Parse a positive integer CLI argument."""
+    try:
+        number = int(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError("deve essere un numero intero") from error
+    if number <= 0:
+        raise argparse.ArgumentTypeError("deve essere un numero positivo")
+    return number
 
 
 def create_interactive(input_fn: Callable[[str], str] = input) -> dict:
@@ -199,7 +210,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--difficolta", choices=sorted(validate_activity.ALLOWED_DIFFICULTIES), help="Difficolta A-F.")
     parser.add_argument("--argomenti", help="Argomenti separati da virgola.")
     parser.add_argument("--consegna", help="Testo della consegna.")
-    parser.add_argument("--tempo-stimato", type=int, default=30, help="Tempo stimato in minuti.")
+    parser.add_argument("--tempo-stimato", type=positive_int, default=30, help="Tempo stimato in minuti.")
     parser.add_argument("--classe", default="", help="Classe collegata all'attivita.")
     parser.add_argument("--team-github", default="", help="Team GitHub collegato all'attivita.")
     parser.add_argument("--percorso", default="", help="Percorso didattico collegato.")
