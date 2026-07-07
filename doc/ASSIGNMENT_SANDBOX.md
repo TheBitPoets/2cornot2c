@@ -54,12 +54,14 @@ La prima sandbox:
 - esegue come utente non root;
 - monta il repository in sola lettura su `/workspace`;
 - monta una cartella temporanea scrivibile su `/thebitlab-work`;
-- monta la cartella del report su `/thebitlab-output` quando usi `--report`;
 - disabilita la rete del container con `--network none`;
 - applica il timeout gia gestito dallo script;
-- produce un report JSON fuori dal container.
+- produce il report JSON su stdout;
+- scrive il report finale dal processo host, se usi `--report`.
 
 I file `--activity` e `--source` devono stare dentro il workspace montato. Se sono fuori dal repository/workspace, il comando Docker viene rifiutato con un messaggio esplicito.
+
+Il file `--report` puo stare anche fuori dal workspace: viene scritto dal processo host dopo aver letto il JSON prodotto dal container.
 
 ## Cosa non risolve ancora
 
