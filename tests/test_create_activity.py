@@ -160,3 +160,26 @@ def test_create_interactive_uses_defaults() -> None:
     assert activity["argomenti"] == ["variabili", "operatori"]
     assert activity["metriche"]["tempo_stimato_minuti"] == 30
     assert validate_activity.validate_activity(activity) == []
+
+
+def test_create_interactive_repeats_empty_topics() -> None:
+    answers = iter(
+        [
+            "Somma due interi",
+            "",
+            "",
+            "",
+            ", ,",
+            "variabili",
+            "Scrivi un programma C.",
+            "",
+            "",
+            "",
+            "",
+            "",
+        ]
+    )
+
+    activity = create_activity.create_interactive(input_fn=lambda _: next(answers))
+
+    assert activity["argomenti"] == ["variabili"]

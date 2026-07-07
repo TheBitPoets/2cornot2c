@@ -151,6 +151,16 @@ def ask_int(prompt: str, *, default: int, input_fn: Callable[[str], str] = input
         print("Inserisci un numero positivo.")
 
 
+def ask_topics(input_fn: Callable[[str], str] = input) -> list[str]:
+    """Ask until at least one topic is provided."""
+    while True:
+        value = ask_required("Argomenti separati da virgola", input_fn=input_fn)
+        try:
+            return parse_topics(value)
+        except ValueError as error:
+            print(error)
+
+
 def positive_int(value: str) -> int:
     """Parse a positive integer CLI argument."""
     try:
@@ -179,7 +189,7 @@ def create_interactive(input_fn: Callable[[str], str] = input) -> dict:
         default="B",
         input_fn=input_fn,
     )
-    topics = split_csv(ask_required("Argomenti separati da virgola", input_fn=input_fn))
+    topics = ask_topics(input_fn=input_fn)
     prompt = ask_required("Consegna", input_fn=input_fn)
     estimated_minutes = ask_int("Tempo stimato minuti", default=30, input_fn=input_fn)
 
