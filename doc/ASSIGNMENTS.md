@@ -271,6 +271,64 @@ Il progetto didattico gia presente nella board puo diventare il punto di partenz
    - esercizi consigliati.
 5. Il docente puo approvare, modificare o ignorare il feedback.
 
+## TheBitLab
+
+Il laboratorio interattivo del progetto prende il nome di **TheBitLab**.
+
+TheBitLab non deve nascere come piattaforma web completa, ma come infrastruttura didattica modulare. La scelta iniziale di CLI e TUI serve a costruire prima il motore del sistema, lasciando liberi i frontend futuri.
+
+Il principio architetturale e questo:
+
+> TheBitLab deve separare la logica didattica e tecnica dal frontend.
+
+La stessa infrastruttura interna deve poter essere usata da:
+
+- CLI;
+- TUI semi-grafica;
+- eventuale plugin VS Code;
+- eventuale web app futura.
+
+### Componenti logici
+
+TheBitLab dovrebbe essere pensato a livelli.
+
+| Livello | Responsabilita |
+|---|---|
+| Core | Modello attivita, validazione, collegamenti a percorsi, UDA e argomenti |
+| Runner | Compilazione, esecuzione, test, timeout, sandbox |
+| Feedback | Report deterministici, suggerimenti, feedback AI assisted |
+| Metrics | Raccolta risultati, tentativi, errori, tempi e progressi |
+| Frontend CLI | Comandi rapidi per docente, automazioni e GitHub Actions |
+| Frontend TUI | Interfaccia locale semi-grafica per laboratorio e studio guidato |
+| Frontend futuri | Plugin VS Code o piattaforma web |
+
+### Perche partire da CLI e TUI
+
+La CLI e la TUI sono il primo frontend, non il prodotto finale obbligatorio.
+
+Servono per:
+
+- costruire subito qualcosa di usabile;
+- evitare di partire da una piattaforma troppo grande;
+- mantenere il sistema vicino a terminale, C, gcc, make e Linux;
+- progettare bene il backend prima della UI definitiva;
+- poter sostituire o affiancare il frontend in futuro.
+
+La TUI potra mostrare spiegazioni, report, esercizi, errori e visualizzazioni didattiche anche in forma testuale o ASCII.
+
+Esempi futuri:
+
+- memoria stack/heap;
+- array;
+- puntatori;
+- liste collegate;
+- alberi;
+- output dei test;
+- errori di compilazione spiegati;
+- suggerimenti di recupero.
+
+La struttura grafica precisa dell'interfaccia non viene decisa in questa fase. Sara progettata in una PR dedicata, dopo aver stabilizzato modello dati, flussi e responsabilita del backend.
+
 ## Roadmap PR consigliata
 
 ### PR 1: Fondazione documentale
