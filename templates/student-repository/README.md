@@ -43,6 +43,8 @@ Esempio:
 assignments/c-base-somma-001/main.c
 ```
 
+Il docente puo generare questa cartella con lo script TheBitLab di scaffold consegna. Se la cartella e gia pronta, lavora solo sui file indicati nella consegna.
+
 ## Grading manuale da GitHub Actions
 
 Il workflow `TheBitLab grading` puo essere avviato manualmente dalla scheda Actions.

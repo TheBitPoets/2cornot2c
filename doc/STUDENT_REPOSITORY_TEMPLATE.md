@@ -143,8 +143,29 @@ Qualunque fase di feedback AI deve essere separata dal grading.
 
 Le prossime PR possono aggiungere:
 
-1. script per creare lo scaffold di una consegna in `assignments/<activity_id>/`;
-2. trigger automatico su push;
-3. raccolta centralizzata degli artifact;
-4. dashboard docente minima;
-5. automazione GitHub per creare repository studenti da template.
+1. trigger automatico su push;
+2. raccolta centralizzata degli artifact;
+3. dashboard docente minima;
+4. automazione GitHub per creare repository studenti da template.
+
+## Scaffold consegna
+
+Per creare una cartella consegna compatibile con il template puoi usare:
+
+```bash
+python scripts/create_submission_scaffold.py \
+  --activity activities/examples/c_sum_with_tests.json \
+  --target templates/student-repository \
+  --source-name main.c
+```
+
+Lo script crea:
+
+```text
+assignments/<activity_id>/
+  activity.json
+  main.c
+  README.md
+```
+
+Lo scaffold non sovrascrive una consegna gia esistente, a meno di usare `--force`.

@@ -55,6 +55,7 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 | `scripts/generate_course_plan.py` | Rigenera `doc/PERCORSO_DIDATTICO.md` dal progetto didattico corrente | [`COURSE_BOARD.md`](COURSE_BOARD.md) |
 | `scripts/update_course_frames.py` | Inserisce nel README le cornici didattiche presenti nel progetto | [`COURSE_BOARD.md`](COURSE_BOARD.md) |
 | `scripts/create_activity.py` | Crea una scheda JSON di attivita TheBitLab da prompt guidato o argomenti CLI | [`ACTIVITIES_SCHEMA.md`](ACTIVITIES_SCHEMA.md) |
+| `scripts/create_submission_scaffold.py` | Crea una cartella consegna in un repository studente a partire da una activity JSON | [`STUDENT_REPOSITORY_TEMPLATE.md`](STUDENT_REPOSITORY_TEMPLATE.md) |
 | `scripts/validate_activity.py` | Valida le schede JSON di attivita TheBitLab | [`ACTIVITIES_SCHEMA.md`](ACTIVITIES_SCHEMA.md) |
 | `scripts/grade_activity.py` | Esegue il runner deterministico del linguaggio richiesto e produce un report, anche via Docker | [`ASSIGNMENT_GRADING.md`](ASSIGNMENT_GRADING.md) |
 
