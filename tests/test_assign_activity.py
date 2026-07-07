@@ -113,3 +113,22 @@ def test_assign_activity_preflight_blocks_partial_assignment(tmp_path) -> None:
         raise AssertionError("assign_activity_to_targets should reject partial assignments")
 
     assert not (untouched_target / "assignments").exists()
+
+
+def test_assign_activity_preflight_validates_parameters_before_writing(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+    targets = [tmp_path / "student-a", tmp_path / "student-b"]
+
+    try:
+        assign_activity.assign_activity_to_targets(
+            activity_path=activity_path,
+            targets=targets,
+            thebitlab_ref="main\nbad",
+        )
+    except ValueError as error:
+        assert "thebitlab_ref" in str(error)
+    else:
+        raise AssertionError("assign_activity_to_targets should validate parameters before writing")
+
+    for target in targets:
+        assert not (target / "assignments").exists()

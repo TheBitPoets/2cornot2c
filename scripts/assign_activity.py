@@ -51,6 +51,14 @@ def assign_activity_to_targets(
     """Create the activity scaffold in each target student repository."""
     activity = create_submission_scaffold.load_activity(activity_path)
     identifier = create_submission_scaffold.activity_id(activity)
+    create_submission_scaffold.validate_activity_or_raise(activity, identifier)
+    selected_language = create_submission_scaffold.language_for(activity, language)
+    create_submission_scaffold.validate_source_name(
+        source_name
+        if source_name is not None
+        else create_submission_scaffold.default_source_name_for(selected_language)
+    )
+    create_submission_scaffold.validate_thebitlab_ref(thebitlab_ref)
     blocked_targets = [
         target
         for target in targets
