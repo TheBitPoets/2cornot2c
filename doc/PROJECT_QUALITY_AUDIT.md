@@ -315,7 +315,7 @@ Contenuto:
 - funzioni storage con root configurabile;
 - fixture temporanee nei test;
 - test salvataggio/caricamento;
-- protezione dati reali.
+- protezione dati reali;
 - `schema_version` nei JSON principali;
 - validazione minima degli schemi;
 - strategia di migrazione per progetto, calendario, attivita, classi e metriche.
@@ -350,7 +350,7 @@ Ogni nuova PR dovrebbe dichiarare:
 - se chiama provider esterni;
 - se aggiunge test;
 - come si verifica manualmente;
-- quali rischi introduce.
+- quali rischi introduce;
 - se cambia uno schema JSON esistente;
 - se rompe compatibilita con dati gia salvati;
 - se serve una migrazione;
