@@ -135,12 +135,10 @@ def track_assignments(
 
     students: list[dict[str, Any]] = []
     for target in targets:
-        current_assignment_dir = assignment_dir(target, activity_id)
         report_path = default_report_path(target, activity_id)
         report = load_report(report_path)
         source_path = report.get("source") if report else None
-        source_exists = Path(source_path).exists() if source_path else current_assignment_dir.exists()
-        submitted = source_exists or report is not None
+        submitted = report is not None
         submitted_at = report.get("submitted_at") if report else None
         status, late = submission_status(
             submitted=submitted,
