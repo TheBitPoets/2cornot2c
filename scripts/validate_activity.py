@@ -136,7 +136,20 @@ def iter_activity_files(paths: list[Path]) -> list[Path]:
 def validate_files(paths: list[Path]) -> list[str]:
     """Validate all activity files found in the given paths."""
     errors: list[str] = []
-    for path in iter_activity_files(paths):
+    files: list[Path] = []
+    for path in paths:
+        if not path.exists():
+            errors.append(f"{path}: path non trovato")
+            continue
+        if path.is_dir():
+            json_files = sorted(path.rglob("*.json"))
+            if not json_files:
+                errors.append(f"{path}: nessun file JSON trovato")
+            files.extend(json_files)
+        else:
+            files.append(path)
+
+    for path in files:
         data, load_errors = load_json(path)
         errors.extend(load_errors)
         if data is None:

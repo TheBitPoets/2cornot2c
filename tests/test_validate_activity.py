@@ -83,3 +83,20 @@ def test_cli_validation_passes_on_valid_file(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr("sys.argv", ["validate_activity.py", str(valid_file)])
 
     assert validate_activity.main() == 0
+
+
+def test_missing_path_is_reported(tmp_path) -> None:
+    missing_path = tmp_path / "missing"
+
+    errors = validate_activity.validate_files([missing_path])
+
+    assert f"{missing_path}: path non trovato" in errors
+
+
+def test_empty_directory_is_reported(tmp_path) -> None:
+    empty_dir = tmp_path / "empty"
+    empty_dir.mkdir()
+
+    errors = validate_activity.validate_files([empty_dir])
+
+    assert f"{empty_dir}: nessun file JSON trovato" in errors
