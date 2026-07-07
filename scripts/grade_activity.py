@@ -254,9 +254,11 @@ def docker_command(
     timeout_seconds: int,
     image: str = DEFAULT_DOCKER_IMAGE,
     workspace: Path | None = None,
+    work_dir: Path | None = None,
 ) -> list[str]:
     """Build the docker command used to run grading in a container."""
     workspace = (workspace or Path.cwd()).resolve()
+    work_dir = (work_dir or Path(tempfile.gettempdir()) / "thebitlab-work").resolve()
     activity_path = activity.resolve()
     source_path = source.resolve()
     report_container_path: str | None = None
@@ -270,6 +272,10 @@ def docker_command(
         "runner",
         "-v",
         f"{workspace}:/workspace:ro",
+        "-v",
+        f"{work_dir}:/thebitlab-work",
+        "-e",
+        "TMPDIR=/thebitlab-work",
         "-w",
         "/workspace",
     ]
@@ -303,25 +309,27 @@ def docker_command(
 
 def run_docker_grading(args: argparse.Namespace) -> int:
     """Run grading through Docker using the same CLI inside the container."""
-    try:
-        command = docker_command(
-            activity=args.activity,
-            source=args.source,
-            report=args.report,
-            language=args.language,
-            timeout_seconds=args.timeout,
-            image=args.docker_image,
-        )
-    except ValueError as error:
-        print(f"Sandbox Docker non avviata: {error}")
-        return 1
+    with tempfile.TemporaryDirectory(prefix="thebitlab-docker-") as work_dir:
+        try:
+            command = docker_command(
+                activity=args.activity,
+                source=args.source,
+                report=args.report,
+                language=args.language,
+                timeout_seconds=args.timeout,
+                image=args.docker_image,
+                work_dir=Path(work_dir),
+            )
+        except ValueError as error:
+            print(f"Sandbox Docker non avviata: {error}")
+            return 1
 
-    try:
-        result = subprocess.run(command, check=False)
-    except FileNotFoundError:
-        print("Docker non trovato. Installa Docker oppure esegui senza --docker.")
-        return 1
-    return result.returncode
+        try:
+            result = subprocess.run(command, check=False)
+        except FileNotFoundError:
+            print("Docker non trovato. Installa Docker oppure esegui senza --docker.")
+            return 1
+        return result.returncode
 
 
 def positive_int(value: str) -> int:
