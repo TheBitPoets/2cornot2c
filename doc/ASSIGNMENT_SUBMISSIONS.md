@@ -386,6 +386,72 @@ Come per lo scaffold singolo, `--force` aggiorna i metadati della consegna, ma n
 
 Nella GUI futura il docente non dovra ricordare questi comandi: selezionera activity, classe/team GitHub e repository studenti; il server locale chiamera lo stesso core usato dalla CLI.
 
+## Registro consegne con scadenza, voti e AI placeholder
+
+Prima di calcolare metriche avanzate bisogna sapere chi ha consegnato e chi no.
+
+Il primo registro consegne si genera con:
+
+```bash
+python scripts/track_assignments.py \
+  --activity activities/examples/c_sum_with_tests.json \
+  --targets-file targets-3a.txt \
+  --assigned-at 2026-10-12T09:00:00+02:00 \
+  --due-at 2026-10-19T23:59:00+02:00 \
+  --output teacher-reports/3A/c_sum_with_tests.json
+```
+
+Il registro prodotto e pensato per la futura GUI docente.
+
+Per ogni studente contiene:
+
+| Campo | Significato |
+|---|---|
+| `assigned` | Lo studente era tra i destinatari della consegna |
+| `submitted` | Esiste una consegna o un report locale associato |
+| `status` | Stato sintetico: `missing`, `submitted_on_time`, `submitted_late`, `not_graded`, ecc. |
+| `due_at` | Scadenza della consegna |
+| `submission` | Dati della consegna: sorgente, data invio, commit se disponibile |
+| `grading` | Esito deterministico, test superati, voto docente se presente |
+| `ai_feedback` | Placeholder per feedback AI assisted approvabile dal docente |
+
+Esempio ridotto:
+
+```json
+{
+  "activity_id": "python-base-somma-001",
+  "due_at": "2026-10-19T23:59:00+02:00",
+  "students": [
+    {
+      "student": "rossi-mario",
+      "repo": "TheBitPoets/tpsi-3a-rossi-mario",
+      "status": "submitted_on_time",
+      "submitted": true,
+      "late": false,
+      "grading": {
+        "status": "graded_passed",
+        "tests_passed": 2,
+        "tests_total": 2,
+        "teacher_grade": null
+      },
+      "ai_feedback": {
+        "status": "not_generated",
+        "suggested_grade": null,
+        "approved_by_teacher": false
+      }
+    }
+  ]
+}
+```
+
+Per ora il registro legge report locali nel path:
+
+```text
+reports/<activity_id>/latest.json
+```
+
+In futuro la stessa struttura potra essere alimentata scaricando gli artifact GitHub Actions dei repository studenti.
+
 ## Regole di sicurezza
 
 Regole minime:
@@ -403,8 +469,8 @@ Le prossime PR possono introdurre:
 1. Template repository studente.
 2. Workflow grading riusabile per repository studente.
 3. Script per generare scaffold consegna.
-4. Script per raccogliere report e metriche.
-5. Integrazione GUI per assegnare activity a classi/team.
+4. Integrazione GUI per assegnare activity a classi/team.
+5. Download artifact GitHub Actions e collegamento al registro consegne.
 6. Dashboard Markdown minima per docente.
 
 Il primo template repository studente e documentato in `STUDENT_REPOSITORY_TEMPLATE.md`.
