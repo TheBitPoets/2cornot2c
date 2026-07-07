@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import argparse
 
 from scripts import grade_activity
 
@@ -101,3 +102,12 @@ def test_grade_activity_reports_unknown_language(tmp_path) -> None:
     assert report["passed"] is False
     assert report["status"] == "unknown-language"
     assert report["language"] == "brainheck"
+
+
+def test_positive_int_rejects_zero() -> None:
+    try:
+        grade_activity.positive_int("0")
+    except argparse.ArgumentTypeError as error:
+        assert "positivo" in str(error)
+    else:
+        raise AssertionError("positive_int should reject zero")

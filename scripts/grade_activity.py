@@ -207,13 +207,24 @@ def write_report(report: dict[str, Any], path: Path) -> None:
     path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
 
 
+def positive_int(value: str) -> int:
+    """Parse a positive integer CLI argument."""
+    try:
+        number = int(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError("deve essere un numero intero") from error
+    if number <= 0:
+        raise argparse.ArgumentTypeError("deve essere un numero positivo")
+    return number
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Corregge in modo deterministico una consegna TheBitLab.")
     parser.add_argument("--activity", type=Path, required=True, help="Scheda attivita JSON con test_cases.")
     parser.add_argument("--source", type=Path, required=True, help="File sorgente da correggere.")
     parser.add_argument("--language", choices=sorted(SUPPORTED_LANGUAGES), help="Linguaggio da usare, se diverso dalla scheda.")
     parser.add_argument("--report", type=Path, help="Percorso report JSON da scrivere.")
-    parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT_SECONDS, help="Timeout compilazione/esecuzione.")
+    parser.add_argument("--timeout", type=positive_int, default=DEFAULT_TIMEOUT_SECONDS, help="Timeout compilazione/esecuzione.")
     return parser.parse_args()
 
 
