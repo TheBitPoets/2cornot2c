@@ -23,7 +23,7 @@ def load_targets_file(path: Path) -> list[Path]:
         if clean_line and not clean_line.startswith("#"):
             target = Path(clean_line)
             if not target.is_absolute():
-                target = path.parent / target
+                target = (path.parent / target).resolve(strict=False)
             targets.append(target)
     return targets
 
