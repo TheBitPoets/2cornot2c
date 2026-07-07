@@ -17,6 +17,7 @@ Per orientarti rapidamente:
 
 - [Assunzioni organizzative](#assunzioni-organizzative): organizzazione GitHub, team classe e repository;
 - [Strategia iniziale per i repository studenti](#strategia-iniziale-per-i-repository-studenti): scelta operativa di partenza;
+- [Flusso consegne studenti con GitHub](ASSIGNMENT_SUBMISSIONS.md): processo operativo per repository studente, push/PR, grading e report;
 - [Correzione automatica reale](#correzione-automatica-reale): grading deterministico e sicurezza;
 - [Metriche individuali e di classe](#metriche-individuali-e-di-classe): cosa misurare e con quali limiti;
 - [Policy minima per AI assisted](#policy-minima-per-ai-assisted): dati, privacy e modalita AI;
@@ -218,7 +219,7 @@ La fase di grading deve rispettare queste regole:
 - non usare segreti;
 - non usare `pull_request_target` per eseguire codice proveniente da fork o repository studente;
 - avere timeout espliciti;
-- produrre report come file o artifact;
+- produrre report come artifact o raccolta centralizzata, seguendo il flusso descritto in `ASSIGNMENT_SUBMISSIONS.md`;
 - non avere accesso a credenziali o token con permessi di scrittura;
 - eseguire il codice in sandbox appena il runner Docker sara disponibile.
 
@@ -991,6 +992,8 @@ File possibili:
 
 ### PR 6: Report e metriche
 
+Stato: da fare, dopo il flusso consegne GitHub.
+
 Obiettivo:
 
 - raccogliere risultati di consegne;
@@ -1000,7 +1003,7 @@ Obiettivo:
 File possibili:
 
 - `scripts/collect_assignment_metrics.py`
-- `reports/`
+- `teacher-reports/` o altra raccolta centralizzata non modificabile dagli studenti
 - `doc/ASSIGNMENT_METRICS.md`
 
 ### PR 7: AI assisted feedback
