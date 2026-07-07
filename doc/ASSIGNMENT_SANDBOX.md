@@ -59,7 +59,7 @@ La prima sandbox:
 - usa root filesystem read-only;
 - elimina le capabilities Linux con `--cap-drop ALL`;
 - impedisce l'acquisizione di nuovi privilegi con `--security-opt no-new-privileges`;
-- applica limiti iniziali a processi, memoria e CPU;
+- applica limiti iniziali: massimo `128` processi, `256m` di memoria e `1` CPU;
 - applica il timeout gia gestito dallo script;
 - produce il report JSON su stdout;
 - scrive il report finale dal processo host, se usi `--report`.
