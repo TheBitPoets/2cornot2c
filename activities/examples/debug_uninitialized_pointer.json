@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "id": "c-intermedio-debug-puntatori-001",
+  "titolo": "Debug di un puntatore non inizializzato",
+  "tipo": "debug-didattico",
+  "difficolta": "D",
+  "argomenti": [
+    "puntatori",
+    "memoria",
+    "undefined-behavior"
+  ],
+  "contesto": {
+    "classe": "3A-TPSI",
+    "team_github": "3A-TPSI",
+    "percorso": "terzo-anno",
+    "uda": "uda-7"
+  },
+  "consegna": "Analizza un programma che dereferenzia un puntatore non inizializzato, spiega il problema e correggilo.",
+  "vincoli": [
+    "spiega perche il comportamento e indefinito",
+    "proponi una correzione sicura",
+    "verifica la correzione con sanitizer quando disponibile"
+  ],
+  "correzione": {
+    "compila": true,
+    "test": true,
+    "sandbox": true,
+    "ai_feedback": true
+  },
+  "metriche": {
+    "tempo_stimato_minuti": 35,
+    "traccia_tempo_dichiarato": true,
+    "traccia_sessioni_thebitlab": true,
+    "traccia_eventi_didattici": true,
+    "traccia_errori_compilazione": true
+  }
+}

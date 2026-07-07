@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0",
+  "id": "c-base-array-lab-001",
+  "titolo": "Somma degli elementi di un array",
+  "tipo": "laboratorio",
+  "difficolta": "C",
+  "argomenti": [
+    "array",
+    "cicli",
+    "input-output"
+  ],
+  "contesto": {
+    "classe": "3A-TPSI",
+    "team_github": "3A-TPSI",
+    "percorso": "terzo-anno",
+    "uda": "uda-5"
+  },
+  "consegna": "Scrivi un programma che legge cinque interi in un array e stampa la somma totale.",
+  "materiali": [
+    {
+      "tipo": "paragrafo",
+      "titolo": "Array",
+      "link": "../README.md#array"
+    }
+  ],
+  "correzione": {
+    "compila": true,
+    "test": true,
+    "sandbox": true,
+    "ai_feedback": true
+  },
+  "metriche": {
+    "tempo_stimato_minuti": 40,
+    "traccia_tempo_dichiarato": true,
+    "traccia_sessioni_thebitlab": true,
+    "traccia_eventi_didattici": true,
+    "traccia_errori_compilazione": true
+  }
+}

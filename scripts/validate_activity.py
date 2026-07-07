@@ -1,0 +1,175 @@
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+from typing import Any
+
+
+ALLOWED_TYPES = {
+    "studio-guidato",
+    "esercizio-classe",
+    "compito-casa",
+    "laboratorio",
+    "verifica-pratica",
+    "verifica-scritta",
+    "debug-didattico",
+}
+
+ALLOWED_DIFFICULTIES = {"A", "B", "C", "D", "E", "F"}
+
+REQUIRED_FIELDS = {
+    "schema_version",
+    "id",
+    "titolo",
+    "tipo",
+    "difficolta",
+    "argomenti",
+    "consegna",
+    "correzione",
+    "metriche",
+}
+
+REQUIRED_CORRECTION_FIELDS = {
+    "compila",
+    "test",
+    "sandbox",
+    "ai_feedback",
+}
+
+
+def load_json(path: Path) -> tuple[dict[str, Any] | None, list[str]]:
+    """Load an activity JSON file and return validation errors instead of raising."""
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as error:
+        return None, [f"{path}: JSON non valido: {error.msg}"]
+
+    if not isinstance(data, dict):
+        return None, [f"{path}: il contenuto deve essere un oggetto JSON"]
+
+    return data, []
+
+
+def validate_activity(data: dict[str, Any], source: str = "<activity>") -> list[str]:
+    """Validate the minimal TheBitLab activity schema."""
+    errors: list[str] = []
+
+    missing = sorted(REQUIRED_FIELDS - data.keys())
+    for field in missing:
+        errors.append(f"{source}: campo obbligatorio mancante: {field}")
+
+    activity_type = data.get("tipo")
+    if activity_type is not None and activity_type not in ALLOWED_TYPES:
+        errors.append(f"{source}: tipo non ammesso: {activity_type}")
+
+    difficulty = data.get("difficolta")
+    if difficulty is not None and difficulty not in ALLOWED_DIFFICULTIES:
+        errors.append(f"{source}: difficolta non ammessa: {difficulty}")
+
+    topics = data.get("argomenti")
+    if topics is not None:
+        if not isinstance(topics, list) or not topics or not all(isinstance(topic, str) and topic for topic in topics):
+            errors.append(f"{source}: argomenti deve essere una lista non vuota di stringhe")
+
+    correction = data.get("correzione")
+    if correction is not None:
+        errors.extend(validate_correction(correction, source))
+
+    metrics = data.get("metriche")
+    if metrics is not None and not isinstance(metrics, dict):
+        errors.append(f"{source}: metriche deve essere un oggetto")
+
+    rubric = data.get("rubrica")
+    if rubric is not None:
+        errors.extend(validate_rubric(rubric, source))
+
+    return errors
+
+
+def validate_correction(correction: Any, source: str) -> list[str]:
+    """Validate deterministic and AI feedback flags for an activity."""
+    if not isinstance(correction, dict):
+        return [f"{source}: correzione deve essere un oggetto"]
+
+    errors: list[str] = []
+    missing = sorted(REQUIRED_CORRECTION_FIELDS - correction.keys())
+    for field in missing:
+        errors.append(f"{source}: correzione.{field} mancante")
+
+    for field in REQUIRED_CORRECTION_FIELDS & correction.keys():
+        if not isinstance(correction[field], bool):
+            errors.append(f"{source}: correzione.{field} deve essere boolean")
+
+    return errors
+
+
+def validate_rubric(rubric: Any, source: str) -> list[str]:
+    """Validate the optional evaluation rubric."""
+    if not isinstance(rubric, list):
+        return [f"{source}: rubrica deve essere una lista"]
+
+    errors: list[str] = []
+    for index, item in enumerate(rubric):
+        prefix = f"{source}: rubrica[{index}]"
+        if not isinstance(item, dict):
+            errors.append(f"{prefix} deve essere un oggetto")
+            continue
+        if not isinstance(item.get("criterio"), str) or not item.get("criterio"):
+            errors.append(f"{prefix}.criterio deve essere una stringa non vuota")
+        if not isinstance(item.get("punti"), (int, float)) or item.get("punti") < 0:
+            errors.append(f"{prefix}.punti deve essere un numero non negativo")
+    return errors
+
+
+def iter_activity_files(paths: list[Path]) -> list[Path]:
+    """Return JSON files from explicit files or directories."""
+    files: list[Path] = []
+    for path in paths:
+        if path.is_dir():
+            files.extend(sorted(path.rglob("*.json")))
+        else:
+            files.append(path)
+    return files
+
+
+def validate_files(paths: list[Path]) -> list[str]:
+    """Validate all activity files found in the given paths."""
+    errors: list[str] = []
+    for path in iter_activity_files(paths):
+        data, load_errors = load_json(path)
+        errors.extend(load_errors)
+        if data is None:
+            continue
+        errors.extend(validate_activity(data, str(path)))
+    return errors
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Valida file attivita TheBitLab.")
+    parser.add_argument(
+        "paths",
+        nargs="*",
+        type=Path,
+        default=[Path("activities/examples")],
+        help="File o cartelle JSON da validare.",
+    )
+    return parser.parse_args()
+
+
+def main() -> int:
+    args = parse_args()
+    errors = validate_files(args.paths)
+
+    if errors:
+        print("Activity validation failed:")
+        for error in errors:
+            print(f"- {error}")
+        return 1
+
+    print("Activity validation passed.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
