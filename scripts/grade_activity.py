@@ -246,6 +246,11 @@ def write_report(report: dict[str, Any], path: Path) -> None:
     path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
 
 
+def has_minimal_report_shape(value: Any) -> bool:
+    """Return whether a value looks like a grading report."""
+    return isinstance(value, dict) and "passed" in value and "status" in value
+
+
 def path_inside_workspace(path: Path, workspace: Path, label: str) -> str:
     """Return a workspace-relative path or raise a teacher-friendly error."""
     try:
@@ -363,6 +368,11 @@ def run_docker_grading(args: argparse.Namespace) -> int:
                 print("Sandbox Docker non ha prodotto un report JSON valido.")
                 if result.stdout:
                     print(result.stdout)
+                if result.stderr:
+                    print(result.stderr)
+                return 1
+            if result.returncode != 0 and not has_minimal_report_shape(report):
+                print("Sandbox Docker non ha prodotto un report di grading valido.")
                 if result.stderr:
                     print(result.stderr)
                 return 1
