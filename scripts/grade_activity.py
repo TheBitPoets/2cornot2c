@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -253,6 +254,27 @@ def path_inside_workspace(path: Path, workspace: Path, label: str) -> str:
         raise ValueError(f"{label} deve trovarsi dentro il workspace montato: {workspace}") from error
 
 
+def prepare_docker_workspace(activity: Path, source: Path, root: Path) -> tuple[Path, Path, Path]:
+    """Create a minimal Docker workspace with only grading inputs."""
+    workspace = root / "workspace"
+    scripts_dir = workspace / "scripts"
+    activity_dir = workspace / "activity"
+    source_dir = workspace / "source"
+    scripts_dir.mkdir(parents=True, exist_ok=True)
+    activity_dir.mkdir(parents=True, exist_ok=True)
+    source_dir.mkdir(parents=True, exist_ok=True)
+
+    script_copy = scripts_dir / Path(__file__).name
+    activity_copy = activity_dir / activity.name
+    source_copy = source_dir / source.name
+
+    shutil.copy2(Path(__file__).resolve(), script_copy)
+    shutil.copy2(activity.resolve(), activity_copy)
+    shutil.copy2(source.resolve(), source_copy)
+
+    return workspace, activity_copy, source_copy
+
+
 def docker_command(
     *,
     activity: Path,
@@ -304,16 +326,19 @@ def docker_command(
 
 def run_docker_grading(args: argparse.Namespace) -> int:
     """Run grading through Docker using the same CLI inside the container."""
-    with tempfile.TemporaryDirectory(prefix="thebitlab-docker-") as work_dir:
+    with tempfile.TemporaryDirectory(prefix="thebitlab-docker-") as temp_dir:
+        temp_root = Path(temp_dir)
         try:
+            workspace, activity, source = prepare_docker_workspace(args.activity, args.source, temp_root)
             command = docker_command(
-                activity=args.activity,
-                source=args.source,
+                activity=activity,
+                source=source,
                 report=args.report,
                 language=args.language,
                 timeout_seconds=args.timeout,
                 image=args.docker_image,
-                work_dir=Path(work_dir),
+                workspace=workspace,
+                work_dir=temp_root / "work",
             )
         except ValueError as error:
             print(f"Sandbox Docker non avviata: {error}")

@@ -182,6 +182,26 @@ def test_docker_command_uses_read_only_workspace(tmp_path) -> None:
     assert "c" in command
 
 
+def test_prepare_docker_workspace_copies_only_runner_inputs(tmp_path) -> None:
+    activity_path = tmp_path / "activity.json"
+    source_path = tmp_path / "main.c"
+    secret_path = tmp_path / ".secret"
+    activity_path.write_text("{}", encoding="utf-8")
+    source_path.write_text("int main(void){return 0;}", encoding="utf-8")
+    secret_path.write_text("non deve entrare nel container", encoding="utf-8")
+
+    workspace, copied_activity, copied_source = grade_activity.prepare_docker_workspace(
+        activity_path,
+        source_path,
+        tmp_path / "docker",
+    )
+
+    assert (workspace / "scripts" / "grade_activity.py").exists()
+    assert copied_activity == workspace / "activity" / "activity.json"
+    assert copied_source == workspace / "source" / "main.c"
+    assert not (workspace / ".secret").exists()
+
+
 def test_run_docker_grading_reports_missing_docker(monkeypatch, tmp_path) -> None:
     class Args:
         activity = tmp_path / "activity.json"
