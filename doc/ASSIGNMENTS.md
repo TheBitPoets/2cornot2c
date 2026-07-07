@@ -17,6 +17,7 @@ Per orientarti rapidamente:
 
 - [Assunzioni organizzative](#assunzioni-organizzative): organizzazione GitHub, team classe e repository;
 - [Strategia iniziale per i repository studenti](#strategia-iniziale-per-i-repository-studenti): scelta operativa di partenza;
+- [Flusso consegne studenti con GitHub](ASSIGNMENT_SUBMISSIONS.md): processo operativo per repository studente, push/PR, grading e report;
 - [Correzione automatica reale](#correzione-automatica-reale): grading deterministico e sicurezza;
 - [Metriche individuali e di classe](#metriche-individuali-e-di-classe): cosa misurare e con quali limiti;
 - [Policy minima per AI assisted](#policy-minima-per-ai-assisted): dati, privacy e modalita AI;
@@ -990,6 +991,8 @@ File possibili:
 - `doc/ASSIGNMENT_SANDBOX.md`
 
 ### PR 6: Report e metriche
+
+Stato: da fare, dopo il flusso consegne GitHub.
 
 Obiettivo:
 
