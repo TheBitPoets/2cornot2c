@@ -21,6 +21,12 @@ Se devi lavorare sulla progettazione del corso, sui percorsi didattici o sul cal
 
 `COURSE_BOARD.md` spiega come usare la board, come salvare progetti didattici, come associarli al calendario e come rigenerare i Markdown prodotti dagli script.
 
+Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o metriche studenti, leggi:
+
+1. [`ASSIGNMENTS.md`](ASSIGNMENTS.md)
+
+`ASSIGNMENTS.md` descrive il modello leggero per attivita didattiche, uso dei team GitHub come classi, correzione automatica, sandbox, metriche e roadmap delle prossime PR.
+
 ## Mappa rapida
 
 | Documento | Quando leggerlo |
@@ -28,6 +34,7 @@ Se devi lavorare sulla progettazione del corso, sui percorsi didattici o sul cal
 | [`LAB_SNIPPETS.md`](LAB_SNIPPETS.md) | Quando devi modificare i blocchi lab nel README o nel template |
 | [`LAB_OUTPUTS.md`](LAB_OUTPUTS.md) | Quando devi aggiungere o aggiornare l'output di un laboratorio |
 | [`COURSE_BOARD.md`](COURSE_BOARD.md) | Quando devi usare la board dei progetti didattici, il calendario scolastico o le funzioni AI assisted |
+| [`ASSIGNMENTS.md`](ASSIGNMENTS.md) | Quando devi progettare esercizi, compiti, verifiche, correzioni automatiche o metriche di classe |
 
 ## Script collegati
 
