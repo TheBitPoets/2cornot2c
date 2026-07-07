@@ -285,6 +285,143 @@ Le classifiche possono essere utili, ma vanno trattate con attenzione:
 - evitare classifiche solo sul voto assoluto;
 - prevedere badge o obiettivi cooperativi.
 
+## Metriche: cosa misuriamo davvero
+
+TheBitLab deve distinguere tra metriche affidabili, metriche indicative e dati da non interpretare rigidamente.
+
+Il tempo reale di studio non e misurabile direttamente con certezza. Uno studente puo studiare su carta, ragionare lontano dal computer, lasciare aperta la TUI senza lavorare o fare un unico commit dopo molto tempo.
+
+Per questo le metriche devono essere usate per individuare difficolta e progressi, non per sorvegliare.
+
+| Metrica | Tipo | Attendibilita | Nota |
+|---|---|---|---|
+| Test superati | Automatica | Alta | Misura correttezza rispetto ai test disponibili |
+| Errori di compilazione | Automatica | Alta | Utile per capire difficolta tecniche ricorrenti |
+| Numero di tentativi | Automatica | Alta | Indica il processo di miglioramento |
+| Percentuale esercizi corretti | Automatica | Alta | Va distinta tra primo tentativo e dopo revisione |
+| Esercizi extra svolti | Automatica | Alta | Indica allenamento oltre il minimo assegnato |
+| Comandi o test lanciati | Automatica | Media | Indica attivita pratica, non comprensione certa |
+| Tempo sessione TheBitLab | Automatica | Media | Indica interazione con CLI/TUI, non tempo reale di studio |
+| Timestamp commit/push | Automatica | Media | Utile per cronologia, ma non misura il lavoro effettivo |
+| Tempo dichiarato | Manuale | Media/bassa | Utile per autovalutazione |
+| Tempo stimato | Docente/sistema | Indicativo | Serve a progettare il carico di lavoro |
+| Tempo reale di studio | Non misurabile direttamente | Bassa | Non deve essere usato come dato certo |
+
+TheBitLab puo raccogliere eventi didattici espliciti e non invasivi, per esempio:
+
+- sessione iniziata;
+- esercizio aperto;
+- esercizio salvato;
+- test locale eseguito;
+- consegna inviata;
+- feedback aperto;
+- esercizio extra scelto;
+- nuovo tentativo avviato;
+- percorso o UDA completata.
+
+TheBitLab non deve registrare contenuti o tasti digitati in modo invasivo.
+
+In particolare, evitare:
+
+- keylogging;
+- registrazione dei singoli tasti premuti;
+- raccolta di testo non collegato all'esercizio;
+- deduzioni rigide sul tempo reale di studio.
+
+Metriche utili da calcolare:
+
+- percentuale di esercizi corretti al primo tentativo;
+- percentuale di esercizi corretti dopo revisione;
+- esercizi extra svolti rispetto al minimo richiesto;
+- errori di compilazione piu frequenti;
+- test falliti piu frequenti;
+- argomenti collegati agli errori;
+- numero medio di tentativi;
+- miglioramento nel tempo.
+
+Le metriche devono aiutare il docente a rispondere a domande didattiche:
+
+- chi non sta consegnando?
+- quali argomenti stanno creando difficolta?
+- chi sta migliorando?
+- chi sta facendo esercizi extra?
+- quali esercizi sono troppo difficili o troppo facili?
+
+## Automazione GitHub nella UI
+
+GitHub resta il motore tecnico, ma l'interfaccia didattica non deve obbligare lo studente a conoscere Git per iniziare.
+
+TheBitLab deve poter eseguire sotto il cofano operazioni come:
+
+- `git status`;
+- `git add`;
+- `git commit`;
+- `git push`;
+- apertura o aggiornamento di pull request;
+- lettura dello stato delle GitHub Actions;
+- recupero di report e feedback;
+- sincronizzazione degli esercizi.
+
+Lo studente, pero, dovrebbe vedere azioni didattiche piu semplici:
+
+| Azione UI | Operazioni tecniche possibili |
+|---|---|
+| Inizia esercizio | prepara file, branch o cartella di lavoro |
+| Salva progresso | esegue add/commit locale o remoto |
+| Consegna esercizio | esegue commit, push e avvia workflow |
+| Controlla risultato | legge stato Actions e report |
+| Leggi feedback | apre report deterministico e feedback AI |
+| Riprova | prepara un nuovo tentativo |
+
+Questa automazione abbassa la soglia di ingresso per studenti del primo biennio o per studenti che non hanno ancora familiarita con Git.
+
+TheBitLab deve introdurre Git in modo progressivo.
+
+| Livello | Comportamento |
+|---|---|
+| Git invisibile | Lo studente usa solo pulsanti come Salva, Consegna, Controlla risultato |
+| Git assistito | La UI spiega cosa sta facendo, per esempio "sto creando un commit" |
+| Git esplicito | La UI mostra anche i comandi Git equivalenti |
+
+Esempio di messaggio in modalita assistita:
+
+```text
+Sto salvando le modifiche.
+Un commit e una fotografia del tuo lavoro in questo momento.
+```
+
+Esempio in modalita esplicita:
+
+```text
+git add .
+git commit -m "submit: esercizio variabili"
+git push
+```
+
+TheBitLab deve abbassare la soglia di ingresso a GitHub senza eliminare il valore formativo di Git: all'inizio lo nasconde, poi lo rende visibile e comprensibile.
+
+Gli eventi generati da queste azioni UI possono alimentare le metriche in modo piu significativo dei soli commit grezzi.
+
+Esempio:
+
+```json
+{
+  "event": "exercise_submitted",
+  "assignment_id": "c-base-variabili-001",
+  "student_id": "student-042",
+  "timestamp": "2026-09-20T16:05:00"
+}
+```
+
+La UI deve anche gestire errori GitHub con messaggi comprensibili:
+
+- credenziali mancanti;
+- repository non configurato;
+- push fallito;
+- workflow fallito;
+- permessi insufficienti;
+- connessione assente.
+
 ## Dashboard classe
 
 Una prima dashboard utile dovrebbe mostrare:
