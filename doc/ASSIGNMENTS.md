@@ -1032,6 +1032,16 @@ File possibili:
 - report statico generato da JSON;
 - documentazione.
 
+### PR 9: Prime funzioni TheBitLab CLI/TUI
+
+Obiettivo:
+
+- introdurre il primo frontend locale sopra l'infrastruttura gia stabilizzata;
+- riusare schema attivita, grading deterministico e report minimi;
+- evitare che la logica didattica finisca direttamente nella UI.
+
+Questa PR deve arrivare dopo schema attivita, correzione deterministica e report minimi, cosi CLI e TUI restano frontend sostituibili e non diventano il cuore del sistema.
+
 ## Cosa non fare subito
 
 Per restare snelli, nella prima fase non conviene partire da:
