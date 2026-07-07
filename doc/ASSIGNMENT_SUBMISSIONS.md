@@ -312,7 +312,7 @@ Esempio concettuale:
       "student_repo": "TheBitPoets/tpsi-3a-rossi-mario",
       "status": "passed",
       "attempts": 3,
-      "latest_report": "reports/c-base-somma-001/latest.json"
+      "latest_report_artifact": "grading-reports/c-base-somma-001/attempt-003.json"
     }
   ]
 }
