@@ -183,10 +183,21 @@ Scelta iniziale consigliata:
 
 | Contesto | Evento consigliato |
 |---|---|
-| Esercizi a casa | push su repository studente |
-| Laboratorio guidato | push o comando TheBitLab |
+| Esercizi a casa | push su `main` del repository studente |
+| Laboratorio guidato | push su `main` o comando TheBitLab equivalente |
 | Verifica pratica | branch o repository dedicato |
 | Revisione docente | pull request |
+
+Per l'MVP, il default operativo e:
+
+```text
+repository studente
+branch: main
+path soluzione: assignments/<activity_id>/
+evento: push
+```
+
+Branch dedicati, pull request e repository separati restano opzioni avanzate per verifiche pratiche, revisioni formali o attivita in cui serve maggiore controllo.
 
 Per studenti alle prime armi, TheBitLab dovrebbe nascondere push e PR dietro il bottone "Consegna".
 
