@@ -81,7 +81,11 @@ def language_for(activity: dict[str, Any], explicit_language: str | None = None)
     """Return the language requested by CLI or activity metadata."""
     if explicit_language is not None:
         return validate_language(explicit_language)
-    return validate_language(activity.get("linguaggio") or activity.get("language") or "c")
+    if "linguaggio" in activity:
+        return validate_language(activity["linguaggio"])
+    if "language" in activity:
+        return validate_language(activity["language"])
+    return validate_language("c")
 
 
 def validate_language(value: Any) -> str:
