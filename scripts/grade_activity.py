@@ -383,7 +383,7 @@ def run_docker_grading(args: argparse.Namespace) -> int:
                 if result.stderr:
                     print(result.stderr)
                 return 1
-            if result.returncode != 0 and not has_minimal_report_shape(report):
+            if not has_minimal_report_shape(report):
                 print("Sandbox Docker non ha prodotto un report di grading valido.")
                 if result.stderr:
                     print(result.stderr)

@@ -321,6 +321,30 @@ def test_run_docker_grading_rejects_non_report_json_on_container_error(monkeypat
     assert not Args.report.exists()
 
 
+def test_run_docker_grading_rejects_non_report_json_on_success(monkeypatch, tmp_path) -> None:
+    class Args:
+        activity = tmp_path / "activity.json"
+        source = tmp_path / "main.c"
+        report = tmp_path / "report.json"
+        language = "c"
+        timeout = 5
+        docker_image = "thebitlab-assignment-runner"
+
+    Args.activity.write_text("{}", encoding="utf-8")
+    Args.source.write_text("int main(void){return 0;}", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    class Result:
+        returncode = 0
+        stdout = json.dumps({"ok": True})
+        stderr = ""
+
+    monkeypatch.setattr(grade_activity.subprocess, "run", lambda *args, **kwargs: Result())
+
+    assert grade_activity.run_docker_grading(Args()) == 1
+    assert not Args.report.exists()
+
+
 def test_run_docker_grading_rejects_report_with_invalid_field_types(monkeypatch, tmp_path) -> None:
     class Args:
         activity = tmp_path / "activity.json"
