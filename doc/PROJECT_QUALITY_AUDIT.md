@@ -351,6 +351,10 @@ Ogni nuova PR dovrebbe dichiarare:
 - se aggiunge test;
 - come si verifica manualmente;
 - quali rischi introduce.
+- se cambia uno schema JSON esistente;
+- se rompe compatibilita con dati gia salvati;
+- se serve una migrazione;
+- come verificare che i file esistenti continuino a funzionare.
 
 Per codice Python:
 
