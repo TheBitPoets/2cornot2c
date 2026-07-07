@@ -35,6 +35,44 @@ Questa scelta evita, almeno nella prima fase, di dover sviluppare:
 
 GitHub diventa quindi il "registro tecnico" delle attivita: chi consegna, quando consegna, cosa passa, cosa fallisce, quali errori emergono.
 
+## Strategia iniziale per i repository studenti
+
+La strategia iniziale consigliata e usare un repository individuale per ogni studente dentro l'organizzazione `TheBitPoets`.
+
+Esempio:
+
+```text
+TheBitPoets/tpsi-3a-rossi-mario
+TheBitPoets/tpsi-3a-bianchi-luca
+```
+
+Ogni repository studente dovrebbe essere:
+
+- creato da un template comune;
+- associato al team GitHub della classe;
+- accessibile allo studente proprietario del lavoro;
+- accessibile al docente e agli eventuali maintainer;
+- configurato con workflow di correzione coerenti;
+- usato per consegne, report, metriche e feedback.
+
+Questa scelta privilegia:
+
+- controllo didattico;
+- uniformita delle GitHub Actions;
+- gestione piu chiara dei permessi;
+- raccolta piu semplice delle metriche;
+- minore dispersione rispetto ai repository personali fuori dall'organizzazione.
+
+Le alternative restano possibili, ma non sono la strada iniziale.
+
+| Alternativa | Quando puo servire | Limite principale |
+|---|---|---|
+| Repository unico per classe | Attivita molto guidate o demo collettive | Permessi e privacy piu difficili |
+| Fork personali degli studenti | Percorsi piu vicini al modello open source | Metriche e configurazione piu disperse |
+| Repository per verifica | Prove pratiche isolate o valutazioni formali | Richiede automazione dedicata |
+
+La CLI futura di TheBitLab potra automatizzare la creazione dei repository studenti a partire da classe, team GitHub e template scelto.
+
 ## Tipi di attivita
 
 Il sistema dovrebbe distinguere almeno questi tipi di attivita.
