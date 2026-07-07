@@ -75,6 +75,17 @@ def test_create_scaffold_rejects_invalid_activity_before_writing(tmp_path) -> No
     assert not (tmp_path / "assignments").exists()
 
 
+def test_create_scaffold_rejects_non_object_activity_json(tmp_path) -> None:
+    activity_path = write_activity(tmp_path, [])
+
+    try:
+        create_submission_scaffold.create_scaffold(activity_path=activity_path, target_dir=tmp_path)
+    except ValueError as error:
+        assert "oggetto JSON" in str(error)
+    else:
+        raise AssertionError("create_scaffold should reject non-object activity JSON")
+
+
 def test_create_scaffold_refuses_existing_assignment_without_force(tmp_path) -> None:
     activity_path = write_activity(tmp_path)
     create_submission_scaffold.create_scaffold(activity_path=activity_path, target_dir=tmp_path)

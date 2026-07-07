@@ -21,7 +21,10 @@ def is_safe_slug(value: str) -> bool:
 
 def load_activity(path: Path) -> dict[str, Any]:
     """Load an activity JSON file."""
-    return json.loads(path.read_text(encoding="utf-8"))
+    activity = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(activity, dict):
+        raise ValueError("La activity deve essere un oggetto JSON.")
+    return activity
 
 
 def activity_id(activity: dict[str, Any]) -> str:
