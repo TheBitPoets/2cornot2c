@@ -21,7 +21,7 @@ La struttura organizzativa prevista e questa:
 |---|---|
 | Organizzazione GitHub | `TheBitPoets` |
 | Team GitHub | Una classe, per esempio `3A-TPSI`, `4B-INF`, `5A-SISTEMI` |
-| Repository studente | Repository personale o fork usato dallo studente per consegnare |
+| Repository studente | Repository individuale dentro `TheBitPoets`, creato da template; fork e repository personali restano alternative |
 | Repository sorgente | Questo repository, che contiene lezioni, lab, consegne, test e rubriche |
 | GitHub Actions | Motore iniziale per compilazione, test, sandbox e raccolta risultati |
 | Pull request o push | Evento che attiva correzione e tracciamento |
