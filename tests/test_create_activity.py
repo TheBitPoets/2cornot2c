@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import argparse
 
 from scripts import create_activity, validate_activity
 
@@ -151,7 +152,7 @@ def test_activity_from_args_rejects_empty_topics() -> None:
 def test_positive_int_rejects_zero() -> None:
     try:
         create_activity.positive_int("0")
-    except Exception as error:
+    except argparse.ArgumentTypeError as error:
         assert "positivo" in str(error)
     else:
         raise AssertionError("positive_int should reject zero")
