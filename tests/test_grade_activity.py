@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import argparse
+import subprocess
 
 from scripts import grade_activity
 
@@ -131,6 +132,17 @@ def test_grade_activity_reports_unknown_language(tmp_path) -> None:
 
 def test_activity_language_strips_spaces() -> None:
     assert grade_activity.activity_language({"linguaggio": " C "}) == "c"
+
+
+def test_timeout_report_has_null_returncode(monkeypatch) -> None:
+    def timeout_run(*args, **kwargs):
+        raise subprocess.TimeoutExpired(cmd="submission", timeout=1)
+
+    monkeypatch.setattr(grade_activity.subprocess, "run", timeout_run)
+
+    report = grade_activity.run_test_case("submission", {"expected_stdout": ""}, timeout_seconds=1)
+
+    assert report["returncode"] is None
 
 
 def test_positive_int_rejects_zero() -> None:

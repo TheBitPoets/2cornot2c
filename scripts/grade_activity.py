@@ -87,6 +87,7 @@ def run_test_case(binary: Path, test_case: dict[str, Any], *, timeout_seconds: i
             "name": name,
             "passed": False,
             "status": "timeout",
+            "returncode": None,
             "stdin": stdin,
             "expected_stdout": expected_stdout,
             "stdout": error.stdout or "",
