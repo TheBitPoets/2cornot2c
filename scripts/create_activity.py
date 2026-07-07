@@ -39,6 +39,14 @@ def split_csv(value: str) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
+def parse_topics(value: str) -> list[str]:
+    """Parse topics and fail early when no valid topic is provided."""
+    topics = split_csv(value)
+    if not topics:
+        raise ValueError("Inserisci almeno un argomento valido.")
+    return topics
+
+
 def build_activity(
     *,
     activity_id: str,
@@ -223,7 +231,7 @@ def activity_from_args(args: argparse.Namespace) -> dict:
         title=title,
         activity_type=args.tipo,
         difficulty=args.difficolta,
-        topics=split_csv(args.argomenti),
+        topics=parse_topics(args.argomenti),
         prompt=args.consegna,
         estimated_minutes=args.tempo_stimato,
         context={

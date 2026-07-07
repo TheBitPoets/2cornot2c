@@ -104,6 +104,28 @@ def test_activity_from_args_requires_required_fields() -> None:
         raise AssertionError("activity_from_args should reject missing required fields")
 
 
+def test_activity_from_args_rejects_empty_topics() -> None:
+    class Args:
+        titolo = "Titolo"
+        tipo = "compito-casa"
+        difficolta = "B"
+        argomenti = " , , "
+        consegna = "Consegna"
+        activity_id = None
+        tempo_stimato = 30
+        classe = ""
+        team_github = ""
+        percorso = ""
+        uda = ""
+
+    try:
+        create_activity.activity_from_args(Args())
+    except ValueError as error:
+        assert "almeno un argomento" in str(error)
+    else:
+        raise AssertionError("activity_from_args should reject empty topics")
+
+
 def test_create_interactive_uses_defaults() -> None:
     answers = iter(
         [
