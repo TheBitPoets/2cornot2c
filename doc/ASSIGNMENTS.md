@@ -11,6 +11,17 @@ L'obiettivo non e costruire subito una piattaforma completa, ma introdurre una s
 - raccogliere metriche utili per capire difficolta, progressi e partecipazione;
 - usare GitHub come infrastruttura iniziale, senza login proprietario.
 
+## Mappa del documento
+
+Per orientarti rapidamente:
+
+- [Assunzioni organizzative](#assunzioni-organizzative): organizzazione GitHub, team classe e repository;
+- [Strategia iniziale per i repository studenti](#strategia-iniziale-per-i-repository-studenti): scelta operativa di partenza;
+- [Correzione automatica reale](#correzione-automatica-reale): grading deterministico e sicurezza;
+- [Metriche individuali e di classe](#metriche-individuali-e-di-classe): cosa misurare e con quali limiti;
+- [Policy minima per AI assisted](#policy-minima-per-ai-assisted): dati, privacy e modalita AI;
+- [TheBitLab](#thebitlab): architettura backend-first, CLI/TUI e frontend futuri.
+
 ## Assunzioni organizzative
 
 Gli studenti usano GitHub come identita e ambiente di lavoro.
