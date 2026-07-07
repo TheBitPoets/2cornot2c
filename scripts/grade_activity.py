@@ -129,7 +129,7 @@ def validate_test_cases(test_cases: Any) -> list[str]:
 
 def activity_language(activity: dict[str, Any], explicit_language: str | None = None) -> str:
     """Return the language requested by CLI or activity metadata."""
-    return (explicit_language or activity.get("linguaggio") or activity.get("language") or "c").lower()
+    return str(explicit_language or activity.get("linguaggio") or activity.get("language") or "c").strip().lower()
 
 
 def unsupported_language_report(activity: dict[str, Any], source: Path, language: str) -> dict[str, Any]:

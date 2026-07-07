@@ -129,6 +129,10 @@ def test_grade_activity_reports_unknown_language(tmp_path) -> None:
     assert report["language"] == "brainheck"
 
 
+def test_activity_language_strips_spaces() -> None:
+    assert grade_activity.activity_language({"linguaggio": " C "}) == "c"
+
+
 def test_positive_int_rejects_zero() -> None:
     try:
         grade_activity.positive_int("0")
