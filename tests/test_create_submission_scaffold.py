@@ -33,7 +33,7 @@ def activity() -> dict:
 
 def write_activity(tmp_path, payload: dict | None = None):
     path = tmp_path / "activity.json"
-    path.write_text(json.dumps(payload or activity()), encoding="utf-8")
+    path.write_text(json.dumps(activity() if payload is None else payload), encoding="utf-8")
     return path
 
 
