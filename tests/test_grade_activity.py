@@ -200,3 +200,25 @@ def test_run_docker_grading_reports_missing_docker(monkeypatch, tmp_path) -> Non
     monkeypatch.setattr(grade_activity.subprocess, "run", missing_docker)
 
     assert grade_activity.run_docker_grading(Args()) == 1
+
+
+def test_docker_command_requires_paths_inside_workspace(tmp_path) -> None:
+    outside = tmp_path.parent / "outside.c"
+    outside.write_text("int main(void){return 0;}", encoding="utf-8")
+    activity_path = tmp_path / "activity.json"
+    activity_path.write_text("{}", encoding="utf-8")
+
+    try:
+        grade_activity.docker_command(
+            activity=activity_path,
+            source=outside,
+            report=None,
+            language="c",
+            timeout_seconds=5,
+            workspace=tmp_path,
+            work_dir=tmp_path / "work",
+        )
+    except ValueError as error:
+        assert "source deve trovarsi dentro il workspace" in str(error)
+    else:
+        raise AssertionError("docker_command should reject paths outside workspace")

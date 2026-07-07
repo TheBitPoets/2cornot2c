@@ -245,6 +245,14 @@ def write_report(report: dict[str, Any], path: Path) -> None:
     path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
 
 
+def path_inside_workspace(path: Path, workspace: Path, label: str) -> str:
+    """Return a workspace-relative path or raise a teacher-friendly error."""
+    try:
+        return str(path.resolve().relative_to(workspace.resolve()))
+    except ValueError as error:
+        raise ValueError(f"{label} deve trovarsi dentro il workspace montato: {workspace}") from error
+
+
 def docker_command(
     *,
     activity: Path,
@@ -293,9 +301,9 @@ def docker_command(
         [
         image,
         "--activity",
-        str(activity_path.relative_to(workspace)),
+        path_inside_workspace(activity_path, workspace, "activity"),
         "--source",
-        str(source_path.relative_to(workspace)),
+        path_inside_workspace(source_path, workspace, "source"),
         "--timeout",
         str(timeout_seconds),
         ]
