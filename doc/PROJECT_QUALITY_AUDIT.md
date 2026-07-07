@@ -316,6 +316,11 @@ Contenuto:
 - fixture temporanee nei test;
 - test salvataggio/caricamento;
 - protezione dati reali.
+- `schema_version` nei JSON principali;
+- validazione minima degli schemi;
+- strategia di migrazione per progetto, calendario, attivita, classi e metriche.
+
+Con l'arrivo di attivita didattiche, registro classe, metriche e dashboard, gli schemi JSON cambieranno spesso. Serve quindi decidere presto come riconoscere la versione dei dati e come migrare o validare file creati con versioni precedenti.
 
 ### PR D - Logica calendario/Gantt testabile
 
