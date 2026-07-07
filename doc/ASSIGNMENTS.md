@@ -349,6 +349,65 @@ TheBitLab dovrebbe essere pensato a livelli.
 | Frontend TUI | Interfaccia locale semi-grafica per laboratorio e studio guidato |
 | Frontend futuri | Plugin VS Code o piattaforma web |
 
+### Regole di dipendenza
+
+TheBitLab deve mantenere il `Core` indipendente dai frontend e dai servizi esterni.
+
+La regola principale e questa:
+
+> Il Core non deve conoscere CLI, TUI, GitHub, Docker o provider AI.
+
+Il Core contiene:
+
+- modello delle attivita;
+- validazione dei dati;
+- collegamenti a progetto didattico, percorsi, UDA e argomenti;
+- regole didattiche comuni;
+- strutture dati condivise.
+
+Il Core non deve:
+
+- importare codice della CLI;
+- importare codice della TUI;
+- chiamare direttamente GitHub;
+- chiamare direttamente provider AI;
+- eseguire direttamente Docker;
+- contenere logica grafica.
+
+La direzione delle dipendenze deve essere questa:
+
+```text
+CLI ───────┐
+TUI ───────┼──► Core
+VS Code ───┘
+
+Runner ───► Core
+Metrics ──► Core
+Feedback ─► Core
+
+Adapter GitHub ─► Core
+Adapter Docker ─► Runner/Core
+Adapter AI ─────► Feedback/Core
+```
+
+I servizi esterni devono stare ai bordi del sistema:
+
+| Adapter | Responsabilita |
+|---|---|
+| GitHub | Team, repository, consegne, pull request, workflow, artifact |
+| Docker | Sandbox, immagine di esecuzione, limiti, isolamento |
+| AI provider | Generazione feedback, esercizi, spiegazioni e recupero |
+
+Questa separazione serve a garantire che:
+
+- la CLI possa essere sostituita da una TUI;
+- la TUI possa essere affiancata da un plugin VS Code;
+- una futura web app possa riusare la stessa logica;
+- un provider AI possa essere sostituito senza riscrivere il sistema;
+- GitHub possa essere usato come prima infrastruttura senza diventare una dipendenza rigida del modello didattico.
+
+Se domani sostituiamo la TUI con un plugin VS Code o una web app, modello attivita, correzione, metriche e feedback devono continuare a funzionare senza riscrittura.
+
 ### Perche partire da CLI e TUI
 
 La CLI e la TUI sono il primo frontend, non il prodotto finale obbligatorio.
