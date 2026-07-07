@@ -74,6 +74,8 @@ I file `--activity` e `--source` sono path letti dal processo host. Prima di avv
 
 Se uno dei file indicati non esiste o non puo essere letto, la sandbox non parte e il wrapper restituisce un messaggio esplicito.
 
+Questa prima versione supporta una activity JSON e un solo file sorgente. Header, fixture, directory di progetto e consegne multi-file richiederanno una strategia di copia dedicata, in modo da preservare la struttura dei path senza esporre file estranei al grading.
+
 Il file `--report` puo stare anche fuori dal workspace: viene scritto dal processo host dopo aver letto il JSON prodotto dal container.
 
 ## Cosa non risolve ancora
