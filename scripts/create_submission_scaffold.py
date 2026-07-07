@@ -100,6 +100,7 @@ def create_scaffold(
     source_name: str = DEFAULT_SOURCE_NAME,
     language: str | None = None,
     overwrite: bool = False,
+    overwrite_source: bool = False,
 ) -> Path:
     """Create an assignment scaffold in a student repository."""
     activity = load_activity(activity_path)
@@ -120,7 +121,7 @@ def create_scaffold(
     )
 
     source_path = destination / source_name
-    if overwrite or not source_path.exists():
+    if overwrite_source or not source_path.exists():
         source_path.write_text(starter_source(selected_language), encoding="utf-8", newline="\n")
 
     (destination / "README.md").write_text(
@@ -138,6 +139,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--source-name", default=DEFAULT_SOURCE_NAME, help="Nome del file sorgente da creare.")
     parser.add_argument("--language", help="Linguaggio da usare, se diverso dalla activity.")
     parser.add_argument("--force", action="store_true", help="Sovrascrive una consegna gia esistente.")
+    parser.add_argument("--overwrite-source", action="store_true", help="Sovrascrive anche il sorgente se esiste.")
     return parser.parse_args()
 
 
@@ -150,6 +152,7 @@ def main() -> int:
             source_name=args.source_name,
             language=args.language,
             overwrite=args.force,
+            overwrite_source=args.overwrite_source,
         )
     except ValueError as error:
         print(f"Scaffold consegna non creato:\n{error}")

@@ -169,3 +169,5 @@ assignments/<activity_id>/
 ```
 
 Lo scaffold non sovrascrive una consegna gia esistente, a meno di usare `--force`.
+
+`--force` aggiorna `activity.json` e `README.md`, ma non sovrascrive il sorgente se esiste gia. Per rigenerare anche il sorgente starter serve `--overwrite-source`.
