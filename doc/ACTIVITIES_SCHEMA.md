@@ -51,6 +51,57 @@ Per validare un singolo file:
 python scripts/validate_activity.py activities/examples/homework_variables.json
 ```
 
+## Creazione guidata
+
+Per creare una nuova attivita senza scrivere il JSON a mano puoi usare:
+
+```bash
+python scripts/create_activity.py --interactive
+```
+
+Lo script chiede i campi principali, applica default coerenti per `correzione` e `metriche`, valida la scheda e salva il file in:
+
+```text
+activities/drafts/
+```
+
+Il nome del file viene generato dallo slug dell'ID dell'attivita.
+
+Per esempio, un ID come:
+
+```text
+Esercizio Variabili 01
+```
+
+viene salvato in un file simile a:
+
+```text
+esercizio-variabili-01.json
+```
+
+L'ID interno resta quello scelto nella scheda, mentre il nome del file viene normalizzato per essere sicuro sul filesystem.
+
+Se esiste gia un file con lo stesso ID/slug, la CLI non lo sovrascrive automaticamente.
+
+Per sovrascrivere in modo esplicito:
+
+```bash
+python scripts/create_activity.py --interactive --force
+```
+
+Usa `--force` con cautela: il file esistente viene sostituito.
+
+Puoi anche usare la modalita non interattiva:
+
+```bash
+python scripts/create_activity.py \
+  --titolo "Somma di due interi" \
+  --tipo compito-casa \
+  --difficolta B \
+  --argomenti "variabili,input-output,operatori" \
+  --consegna "Scrivi un programma C che legge due interi e stampa la somma."
+```
+
 ## Tipi di attivita
 
 Il campo `tipo` deve avere uno di questi valori:
