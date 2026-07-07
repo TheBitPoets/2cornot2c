@@ -249,7 +249,7 @@ def write_report(report: dict[str, Any], path: Path) -> None:
 
 def has_minimal_report_shape(value: Any) -> bool:
     """Return whether a value looks like a grading report."""
-    return isinstance(value, dict) and "passed" in value and "status" in value
+    return isinstance(value, dict) and isinstance(value.get("passed"), bool) and isinstance(value.get("status"), str)
 
 
 def path_inside_workspace(path: Path, workspace: Path, label: str) -> str:
