@@ -356,6 +356,99 @@ Il progetto didattico gia presente nella board puo diventare il punto di partenz
    - esercizi consigliati.
 5. Il docente puo approvare, modificare o ignorare il feedback.
 
+## Policy minima per AI assisted
+
+L'AI deve ricevere solo i dati necessari a produrre feedback didattico.
+
+Il feedback AI non sostituisce test, rubrica o valutazione docente: interpreta i risultati e li trasforma in spiegazioni didattiche.
+
+### Modalita possibili
+
+TheBitLab deve prevedere due modalita di uso dell'AI.
+
+| Modalita | Descrizione | Attenzione principale |
+|---|---|---|
+| Provider esterno | OpenAI, Gemini, Groq, OpenRouter o altri servizi cloud | Minimizzare i dati inviati fuori dal repository |
+| Assistente locale del docente | Uso manuale o semi-automatico di Codex/LLM locale nella macchina del docente | Mantenere tracciabile cosa viene generato e approvato |
+
+La modalita con provider esterno deve essere sempre disattivabile.
+
+La modalita locale, per esempio tramite Codex usato dal docente, puo essere utile quando:
+
+- non si vogliono consumare API esterne;
+- si vuole controllare manualmente il contesto passato all'AI;
+- si preferisce generare feedback o rubriche prima della pubblicazione;
+- si vuole mantenere il processo piu vicino al repository locale.
+
+Anche nella modalita locale vale la stessa regola didattica:
+
+> L'AI assiste, ma il risultato deterministico e la decisione del docente restano separati.
+
+### Dati che possono essere inviati all'AI
+
+Quando serve generare feedback, l'AI puo ricevere:
+
+- consegna;
+- codice consegnato;
+- errori di compilazione;
+- test falliti;
+- output ottenuto;
+- argomenti collegati;
+- rubrica;
+- livello o difficolta dell'esercizio.
+
+### Dati da evitare
+
+Nei payload AI non devono essere inclusi dati personali non necessari.
+
+Evitare quindi:
+
+- email dello studente;
+- nome e cognome quando non servono;
+- token;
+- URL privati con credenziali;
+- informazioni sensibili sulla classe;
+- contenuti non necessari alla correzione.
+
+Quando possibile, usare identificativi pseudonimi.
+
+Esempio consigliato:
+
+```json
+{
+  "student_id": "student-042",
+  "classe": "3A-TPSI",
+  "assignment_id": "c-base-variabili-001"
+}
+```
+
+Esempio da evitare:
+
+```json
+{
+  "nome": "Mario Rossi",
+  "email": "mario.rossi@example.com"
+}
+```
+
+### Separazione nel report
+
+Il report deve distinguere sempre risultato deterministico e feedback AI assisted.
+
+Esempio:
+
+```text
+Esito deterministico:
+- Compilazione: OK
+- Test: 3/5 superati
+
+Feedback AI assisted:
+- Hai gestito bene l'input.
+- Rivedi la differenza tra assegnamento e confronto.
+```
+
+Questa separazione rende chiaro cosa e stato verificato automaticamente e cosa invece e una spiegazione didattica generata o supportata dall'AI.
+
 ## TheBitLab
 
 Il laboratorio interattivo del progetto prende il nome di **TheBitLab**.
