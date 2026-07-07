@@ -156,7 +156,6 @@ Per creare una cartella consegna compatibile con il template puoi usare:
 python scripts/create_submission_scaffold.py \
   --activity activities/examples/c_sum_with_tests.json \
   --target templates/student-repository \
-  --source-name main.c \
   --thebitlab-ref main
 ```
 
@@ -165,9 +164,26 @@ Lo script crea:
 ```text
 assignments/<activity_id>/
   activity.json
-  main.c
+  <source-file>
   README.md
 ```
+
+Se non passi `--source-name`, il nome del sorgente viene scelto in base al linguaggio della activity:
+
+| Linguaggio | File generato |
+|---|---|
+| `c` | `main.c` |
+| `python` | `main.py` |
+| `javascript` / `nodejs` | `main.js` |
+| `java` | `Main.java` |
+| `cpp` | `main.cpp` |
+| `go` | `main.go` |
+| `html` | `index.html` |
+| `php` | `main.php` |
+| `sql` | `main.sql` |
+| `assembly` | `main.asm` |
+
+Usa `--source-name` solo quando vuoi forzare un nome diverso da quello predefinito.
 
 Lo scaffold non sovrascrive una consegna gia esistente, a meno di usare `--force`.
 
