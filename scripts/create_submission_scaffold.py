@@ -12,6 +12,26 @@ from scripts import validate_activity
 DEFAULT_TARGET_DIR = Path(".")
 DEFAULT_SOURCE_NAME = "main.c"
 DEFAULT_THEBITLAB_REF = "main"
+SUPPORTED_LANGUAGES = {
+    "assembly",
+    "c",
+    "cpp",
+    "go",
+    "html",
+    "java",
+    "javascript",
+    "nodejs",
+    "php",
+    "python",
+    "sql",
+}
+LANGUAGE_ALIASES = {
+    "c++": "cpp",
+    "golang": "go",
+    "js": "javascript",
+    "node": "nodejs",
+    "py": "python",
+}
 
 
 def is_safe_slug(value: str) -> bool:
@@ -46,7 +66,17 @@ def validate_activity_or_raise(activity: dict[str, Any], identifier: str) -> Non
 
 def language_for(activity: dict[str, Any], explicit_language: str | None = None) -> str:
     """Return the language requested by CLI or activity metadata."""
-    return str(explicit_language or activity.get("linguaggio") or activity.get("language") or "c").strip().lower()
+    return validate_language(explicit_language or activity.get("linguaggio") or activity.get("language") or "c")
+
+
+def validate_language(value: Any) -> str:
+    """Return a supported normalized language name."""
+    language = str(value).strip().lower()
+    language = LANGUAGE_ALIASES.get(language, language)
+    if language not in SUPPORTED_LANGUAGES:
+        supported = ", ".join(sorted(SUPPORTED_LANGUAGES))
+        raise ValueError(f"Linguaggio non supportato: {value}. Valori supportati: {supported}.")
+    return language
 
 
 def scaffold_dir(target_dir: Path, identifier: str) -> Path:

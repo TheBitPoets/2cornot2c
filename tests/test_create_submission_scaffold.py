@@ -139,6 +139,34 @@ def test_create_scaffold_supports_custom_source_name_and_language(tmp_path) -> N
     assert "source_path`: `assignments/c-base-somma-001/solution.py`" in readme
 
 
+def test_create_scaffold_normalizes_language_aliases(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+
+    destination = create_submission_scaffold.create_scaffold(
+        activity_path=activity_path,
+        target_dir=tmp_path,
+        language="c++",
+    )
+
+    readme = (destination / "README.md").read_text(encoding="utf-8")
+    assert "language`: `cpp`" in readme
+
+
+def test_create_scaffold_rejects_unsupported_language(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+
+    try:
+        create_submission_scaffold.create_scaffold(
+            activity_path=activity_path,
+            target_dir=tmp_path,
+            language="brainfuck",
+        )
+    except ValueError as error:
+        assert "Linguaggio non supportato" in str(error)
+    else:
+        raise AssertionError("create_scaffold should reject unsupported languages")
+
+
 def test_create_scaffold_supports_custom_thebitlab_ref(tmp_path) -> None:
     activity_path = write_activity(tmp_path)
 
