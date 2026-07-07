@@ -208,12 +208,12 @@ def grade_c_activity(activity: dict[str, Any], source: Path, *, timeout_seconds:
         if not compile_result["passed"]:
             return {
                 "passed": False,
-            "status": compile_result["status"],
-            "activity_id": activity.get("id"),
-            "language": "c",
-            "source": str(source),
-            "compile": compile_result,
-            "tests": [],
+                "status": compile_result["status"],
+                "activity_id": activity.get("id"),
+                "language": "c",
+                "source": str(source),
+                "compile": compile_result,
+                "tests": [],
             }
 
         tests = [run_test_case(binary, test_case, timeout_seconds=timeout_seconds) for test_case in test_cases]
