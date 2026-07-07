@@ -346,7 +346,7 @@ def run_docker_grading(args: argparse.Namespace) -> int:
                 image=args.docker_image,
                 workspace=workspace,
             )
-        except ValueError as error:
+        except (OSError, ValueError) as error:
             print(f"Sandbox Docker non avviata: {error}")
             return 1
 
