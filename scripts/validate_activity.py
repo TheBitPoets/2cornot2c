@@ -38,6 +38,16 @@ REQUIRED_CORRECTION_FIELDS = {
     "ai_feedback",
 }
 
+REQUIRED_METRIC_FIELDS = {
+    "tempo_stimato_minuti",
+    "traccia_tempo_dichiarato",
+    "traccia_sessioni_thebitlab",
+    "traccia_eventi_didattici",
+    "traccia_errori_compilazione",
+}
+
+BOOLEAN_METRIC_FIELDS = REQUIRED_METRIC_FIELDS - {"tempo_stimato_minuti"}
+
 
 def load_json(path: Path) -> tuple[dict[str, Any] | None, list[str]]:
     """Load an activity JSON file and return validation errors instead of raising."""
@@ -82,8 +92,8 @@ def validate_activity(data: dict[str, Any], source: str = "<activity>") -> list[
         errors.extend(validate_correction(correction, source))
 
     metrics = data.get("metriche")
-    if metrics is not None and not isinstance(metrics, dict):
-        errors.append(f"{source}: metriche deve essere un oggetto")
+    if metrics is not None:
+        errors.extend(validate_metrics(metrics, source))
 
     rubric = data.get("rubrica")
     if rubric is not None:
@@ -124,6 +134,28 @@ def validate_rubric(rubric: Any, source: str) -> list[str]:
             errors.append(f"{prefix}.criterio deve essere una stringa non vuota")
         if not isinstance(item.get("punti"), (int, float)) or item.get("punti") < 0:
             errors.append(f"{prefix}.punti deve essere un numero non negativo")
+    return errors
+
+
+def validate_metrics(metrics: Any, source: str) -> list[str]:
+    """Validate required metric configuration fields."""
+    if not isinstance(metrics, dict):
+        return [f"{source}: metriche deve essere un oggetto"]
+
+    errors: list[str] = []
+    missing = sorted(REQUIRED_METRIC_FIELDS - metrics.keys())
+    for field in missing:
+        errors.append(f"{source}: metriche.{field} mancante")
+
+    estimated_time = metrics.get("tempo_stimato_minuti")
+    if estimated_time is not None:
+        if isinstance(estimated_time, bool) or not isinstance(estimated_time, (int, float)) or estimated_time < 0:
+            errors.append(f"{source}: metriche.tempo_stimato_minuti deve essere un numero non negativo")
+
+    for field in BOOLEAN_METRIC_FIELDS & metrics.keys():
+        if not isinstance(metrics[field], bool):
+            errors.append(f"{source}: metriche.{field} deve essere boolean")
+
     return errors
 
 

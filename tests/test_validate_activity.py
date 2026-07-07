@@ -76,6 +76,25 @@ def test_correction_flags_must_be_boolean() -> None:
     assert "activity.json: correzione.sandbox deve essere boolean" in errors
 
 
+def test_metrics_base_fields_are_required() -> None:
+    activity = valid_activity()
+    activity["metriche"] = {}
+
+    errors = validate_activity.validate_activity(activity, "activity.json")
+
+    assert "activity.json: metriche.tempo_stimato_minuti mancante" in errors
+    assert "activity.json: metriche.traccia_eventi_didattici mancante" in errors
+
+
+def test_metric_flags_must_be_boolean() -> None:
+    activity = valid_activity()
+    activity["metriche"]["traccia_sessioni_thebitlab"] = "si"
+
+    errors = validate_activity.validate_activity(activity, "activity.json")
+
+    assert "activity.json: metriche.traccia_sessioni_thebitlab deve essere boolean" in errors
+
+
 def test_cli_validation_fails_on_invalid_file(tmp_path, monkeypatch) -> None:
     invalid_file = tmp_path / "invalid.json"
     invalid_file.write_text(json.dumps({"id": "troppo-poco"}), encoding="utf-8")
