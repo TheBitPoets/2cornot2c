@@ -65,6 +65,14 @@ Lo script chiede i campi principali, applica default coerenti per `correzione` e
 activities/drafts/
 ```
 
+Se esiste gia un file con lo stesso ID/slug, la CLI non lo sovrascrive automaticamente.
+
+Per sovrascrivere in modo esplicito:
+
+```bash
+python scripts/create_activity.py --interactive --force
+```
+
 Puoi anche usare la modalita non interattiva:
 
 ```bash
