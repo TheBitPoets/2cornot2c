@@ -388,6 +388,11 @@ def run_docker_grading(args: argparse.Namespace) -> int:
                 if result.stderr:
                     print(result.stderr)
                 return 1
+            if result.returncode != 0 and report.get("passed") is True:
+                print("Sandbox Docker ha prodotto un report incoerente con l'esito del container.")
+                if result.stderr:
+                    print(result.stderr)
+                return 1
             write_report(report, args.report)
             if result.stderr:
                 print(result.stderr)
