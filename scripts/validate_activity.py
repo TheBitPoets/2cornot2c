@@ -31,6 +31,12 @@ REQUIRED_FIELDS = {
     "metriche",
 }
 
+REQUIRED_TEXT_FIELDS = {
+    "id",
+    "titolo",
+    "consegna",
+}
+
 REQUIRED_CORRECTION_FIELDS = {
     "compila",
     "test",
@@ -73,6 +79,10 @@ def validate_activity(data: dict[str, Any], source: str = "<activity>") -> list[
     schema_version = data.get("schema_version")
     if schema_version is not None and schema_version != SUPPORTED_SCHEMA_VERSION:
         errors.append(f"{source}: schema_version non supportata: {schema_version}")
+
+    for field in sorted(REQUIRED_TEXT_FIELDS & data.keys()):
+        if not isinstance(data[field], str) or not data[field]:
+            errors.append(f"{source}: {field} deve essere una stringa non vuota")
 
     activity_type = data.get("tipo")
     if activity_type is not None and activity_type not in ALLOWED_TYPES:

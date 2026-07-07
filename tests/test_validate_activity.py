@@ -58,6 +58,17 @@ def test_invalid_type_is_reported() -> None:
     assert "activity.json: tipo non ammesso: gara-di-cucina" in errors
 
 
+def test_required_text_fields_must_be_non_empty_strings() -> None:
+    activity = valid_activity()
+    activity["id"] = ""
+    activity["titolo"] = 123
+
+    errors = validate_activity.validate_activity(activity, "activity.json")
+
+    assert "activity.json: id deve essere una stringa non vuota" in errors
+    assert "activity.json: titolo deve essere una stringa non vuota" in errors
+
+
 def test_unsupported_schema_version_is_reported() -> None:
     activity = valid_activity()
     activity["schema_version"] = "2.0"
