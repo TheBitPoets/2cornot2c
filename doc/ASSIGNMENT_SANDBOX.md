@@ -52,11 +52,14 @@ Il flag `--docker` chiede di eseguire lo stesso grading dentro il container.
 La prima sandbox:
 
 - esegue come utente non root;
-- monta il repository in sola lettura;
-- monta una cartella temporanea di lavoro;
+- monta il repository in sola lettura su `/workspace`;
+- monta una cartella temporanea scrivibile su `/thebitlab-work`;
+- monta la cartella del report su `/thebitlab-output` quando usi `--report`;
 - disabilita la rete del container con `--network none`;
 - applica il timeout gia gestito dallo script;
 - produce un report JSON fuori dal container.
+
+I file `--activity` e `--source` devono stare dentro il workspace montato. Se sono fuori dal repository/workspace, il comando Docker viene rifiutato con un messaggio esplicito.
 
 ## Cosa non risolve ancora
 
