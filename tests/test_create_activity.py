@@ -45,6 +45,43 @@ def test_write_activity_uses_slugged_id_and_valid_json(tmp_path) -> None:
     assert validate_activity.validate_activity(written) == []
 
 
+def test_write_activity_refuses_to_overwrite_existing_file(tmp_path) -> None:
+    activity = create_activity.build_activity(
+        activity_id="attivita-duplicata",
+        title="Attivita duplicata",
+        activity_type="compito-casa",
+        difficulty="B",
+        topics=["variabili"],
+        prompt="Scrivi un programma minimale.",
+        estimated_minutes=20,
+    )
+    create_activity.write_activity(activity, tmp_path)
+
+    try:
+        create_activity.write_activity(activity, tmp_path)
+    except ValueError as error:
+        assert "File gia esistente" in str(error)
+    else:
+        raise AssertionError("write_activity should reject overwrite without force")
+
+
+def test_write_activity_can_overwrite_with_force(tmp_path) -> None:
+    activity = create_activity.build_activity(
+        activity_id="attivita-force",
+        title="Attivita force",
+        activity_type="compito-casa",
+        difficulty="B",
+        topics=["variabili"],
+        prompt="Scrivi un programma minimale.",
+        estimated_minutes=20,
+    )
+    create_activity.write_activity(activity, tmp_path)
+
+    output_path = create_activity.write_activity(activity, tmp_path, overwrite=True)
+
+    assert output_path.exists()
+
+
 def test_activity_from_args_requires_required_fields() -> None:
     class Args:
         titolo = "Titolo"

@@ -78,7 +78,7 @@ def output_path_for(activity: dict, output_dir: Path) -> Path:
     return output_dir / f"{slugify(activity['id'])}.json"
 
 
-def write_activity(activity: dict, output_dir: Path) -> Path:
+def write_activity(activity: dict, output_dir: Path, *, overwrite: bool = False) -> Path:
     """Validate and write an activity JSON file."""
     errors = validate_activity.validate_activity(activity, activity["id"])
     if errors:
@@ -86,6 +86,8 @@ def write_activity(activity: dict, output_dir: Path) -> Path:
 
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_path_for(activity, output_dir)
+    if output_path.exists() and not overwrite:
+        raise ValueError(f"File gia esistente: {output_path}. Usa --force per sovrascriverlo.")
     output_path.write_text(
         json.dumps(activity, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
@@ -196,6 +198,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--uda", default="", help="UDA collegata.")
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR, help="Cartella di output.")
     parser.add_argument("--interactive", action="store_true", help="Avvia la modalita guidata.")
+    parser.add_argument("--force", action="store_true", help="Sovrascrive un file attivita gia esistente.")
     return parser.parse_args()
 
 
@@ -237,7 +240,7 @@ def main() -> int:
 
     try:
         activity = create_interactive() if args.interactive else activity_from_args(args)
-        output_path = write_activity(activity, args.output_dir)
+        output_path = write_activity(activity, args.output_dir, overwrite=args.force)
     except ValueError as error:
         print(f"Creazione attivita non riuscita:\n{error}")
         return 1
