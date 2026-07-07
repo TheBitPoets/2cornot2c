@@ -52,9 +52,14 @@ Il flag `--docker` chiede di eseguire lo stesso grading dentro il container.
 La prima sandbox:
 
 - esegue come utente non root;
-- monta il repository in sola lettura su `/workspace`;
-- monta una cartella temporanea scrivibile su `/thebitlab-work`;
+- prepara un workspace temporaneo minimale con solo runner, activity JSON e sorgente da correggere;
+- monta quel workspace minimale in sola lettura su `/workspace`;
+- monta una `tmpfs` scrivibile su `/thebitlab-work`;
 - disabilita la rete del container con `--network none`;
+- usa root filesystem read-only;
+- elimina le capabilities Linux con `--cap-drop ALL`;
+- impedisce l'acquisizione di nuovi privilegi con `--security-opt no-new-privileges`;
+- applica limiti iniziali a processi, memoria e CPU;
 - applica il timeout gia gestito dallo script;
 - produce il report JSON su stdout;
 - scrive il report finale dal processo host, se usi `--report`.
@@ -78,6 +83,8 @@ Limiti noti:
 ## Regola di sicurezza
 
 Il job che esegue codice studente non deve avere segreti.
+
+Read-only significa che il container non puo modificare il mount, non che non possa leggerlo. Per questo il wrapper non monta piu l'intero repository: prima copia in un workspace temporaneo solo i file necessari al grading.
 
 La sandbox deve essere usata nel grading deterministico. Eventuale feedback AI deve arrivare dopo, leggendo solo il report prodotto.
 
