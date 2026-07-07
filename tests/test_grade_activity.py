@@ -225,6 +225,29 @@ def test_run_docker_grading_rejects_invalid_json_output(monkeypatch, tmp_path) -
     assert not Args.report.exists()
 
 
+def test_run_docker_grading_writes_report_on_host(monkeypatch, tmp_path) -> None:
+    class Args:
+        activity = tmp_path / "activity.json"
+        source = tmp_path / "main.c"
+        report = tmp_path / "nested" / "report.json"
+        language = "c"
+        timeout = 5
+        docker_image = "thebitlab-assignment-runner"
+
+    Args.activity.write_text("{}", encoding="utf-8")
+    Args.source.write_text("int main(void){return 0;}", encoding="utf-8")
+
+    class Result:
+        returncode = 0
+        stdout = json.dumps({"passed": True, "status": "passed"})
+        stderr = ""
+
+    monkeypatch.setattr(grade_activity.subprocess, "run", lambda *args, **kwargs: Result())
+
+    assert grade_activity.run_docker_grading(Args()) == 0
+    assert json.loads(Args.report.read_text(encoding="utf-8")) == {"passed": True, "status": "passed"}
+
+
 def test_docker_command_requires_paths_inside_workspace(tmp_path) -> None:
     outside = tmp_path.parent / "outside.c"
     outside.write_text("int main(void){return 0;}", encoding="utf-8")
