@@ -154,6 +154,26 @@ Le GitHub Actions sui lab sono utili e concrete, ma manca una workflow generale 
 - smoke test UI leggero;
 - controlli su file generati.
 
+### Open source readiness
+
+Se il progetto dovra essere pubblicato come progetto open source, non basta migliorare il codice. Serve anche una base minima per chi legge, usa o contribuisce al repository.
+
+Prima della pubblicazione conviene aggiungere o verificare:
+
+- licenza esplicita;
+- `CONTRIBUTING.md`;
+- `CODE_OF_CONDUCT.md`, se il progetto prevede contributi esterni;
+- issue template;
+- pull request template;
+- `SECURITY.md` per segnalare vulnerabilita;
+- guida rapida di setup locale;
+- elenco dei file generati e dei file da non modificare manualmente;
+- checklist release;
+- indicazione chiara dei moduli sperimentali;
+- policy su secrets, API key e dati degli studenti.
+
+Questa parte e importante per evitare che il progetto sembri utilizzabile in produzione prima che siano chiari limiti, requisiti e responsabilita.
+
 ## Priorita consigliate
 
 ### P0 - Definire protezione dati e test automatici
