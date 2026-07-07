@@ -57,7 +57,7 @@ Significato:
 | Path | Scopo |
 |---|---|
 | `assignments/` | Codice e file consegnati dallo studente |
-| `reports/` | Report deterministici prodotti dal grading |
+| `reports/` | Copie informative o cache locali dei report; la fonte autorevole resta artifact/raccolta centralizzata |
 | `feedback/` | Feedback docente o AI assisted approvato |
 | `.github/workflows/` | Workflow di correzione |
 | `README.md` | Istruzioni per lo studente |
