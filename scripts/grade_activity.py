@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -10,6 +11,8 @@ from typing import Any
 
 
 DEFAULT_TIMEOUT_SECONDS = 5
+DEFAULT_DOCKER_TIMEOUT_GRACE_SECONDS = 10
+DEFAULT_DOCKER_IMAGE = "thebitlab-assignment-runner"
 SUPPORTED_LANGUAGES = {
     "c": "implemented",
     "python": "planned",
@@ -92,6 +95,17 @@ def run_test_case(binary: Path, test_case: dict[str, Any], *, timeout_seconds: i
             "expected_stdout": expected_stdout,
             "stdout": error.stdout or "",
             "stderr": error.stderr or "",
+        }
+    except OSError as error:
+        return {
+            "name": name,
+            "passed": False,
+            "status": "execution-error",
+            "returncode": None,
+            "stdin": stdin,
+            "expected_stdout": expected_stdout,
+            "stdout": "",
+            "stderr": str(error),
         }
 
     actual_stdout = result.stdout
@@ -244,6 +258,163 @@ def write_report(report: dict[str, Any], path: Path) -> None:
     path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
 
 
+def has_minimal_report_shape(value: Any) -> bool:
+    """Return whether a value looks like a grading report."""
+    return isinstance(value, dict) and isinstance(value.get("passed"), bool) and isinstance(value.get("status"), str)
+
+
+def docker_timeout_seconds(activity: dict[str, Any], timeout_seconds: int) -> int:
+    """Return the outer Docker timeout for compile plus all declared test cases."""
+    test_cases = activity.get("test_cases", [])
+    test_count = len(test_cases) if isinstance(test_cases, list) else 0
+    return ((test_count + 1) * timeout_seconds) + DEFAULT_DOCKER_TIMEOUT_GRACE_SECONDS
+
+
+def path_inside_workspace(path: Path, workspace: Path, label: str) -> str:
+    """Return a workspace-relative path or raise a teacher-friendly error."""
+    try:
+        return str(path.resolve().relative_to(workspace.resolve()))
+    except ValueError as error:
+        raise ValueError(f"{label} deve trovarsi dentro il workspace montato: {workspace}") from error
+
+
+def prepare_docker_workspace(activity: Path, source: Path, root: Path) -> tuple[Path, Path, Path]:
+    """Create a minimal Docker workspace with only grading inputs."""
+    workspace = root / "workspace"
+    scripts_dir = workspace / "scripts"
+    activity_dir = workspace / "activity"
+    source_dir = workspace / "source"
+    scripts_dir.mkdir(parents=True, exist_ok=True)
+    activity_dir.mkdir(parents=True, exist_ok=True)
+    source_dir.mkdir(parents=True, exist_ok=True)
+
+    script_copy = scripts_dir / Path(__file__).name
+    activity_copy = activity_dir / activity.name
+    source_copy = source_dir / source.name
+
+    shutil.copy2(Path(__file__).resolve(), script_copy)
+    shutil.copy2(activity.resolve(), activity_copy)
+    shutil.copy2(source.resolve(), source_copy)
+
+    return workspace, activity_copy, source_copy
+
+
+def docker_command(
+    *,
+    activity: Path,
+    source: Path,
+    language: str | None,
+    timeout_seconds: int,
+    image: str = DEFAULT_DOCKER_IMAGE,
+    workspace: Path | None = None,
+) -> list[str]:
+    """Build the docker command used to run grading in a container."""
+    workspace = (workspace or Path.cwd()).resolve()
+    activity_path = activity.resolve()
+    source_path = source.resolve()
+    command = [
+        "docker",
+        "run",
+        "--rm",
+        "--network",
+        "none",
+        "--user",
+        "runner",
+        "--read-only",
+        "--cap-drop",
+        "ALL",
+        "--security-opt",
+        "no-new-privileges",
+        "--pids-limit",
+        "128",
+        "--memory",
+        "256m",
+        "--cpus",
+        "1",
+        "-v",
+        f"{workspace}:/workspace:ro",
+        "--tmpfs",
+        "/thebitlab-work:rw,exec,nosuid,nodev,mode=1777,size=64m",
+        "-e",
+        "TMPDIR=/thebitlab-work",
+        "-w",
+        "/workspace",
+    ]
+    command.extend(
+        [
+        image,
+        "--activity",
+        path_inside_workspace(activity_path, workspace, "activity"),
+        "--source",
+        path_inside_workspace(source_path, workspace, "source"),
+        "--timeout",
+        str(timeout_seconds),
+        ]
+    )
+    if language:
+        command.extend(["--language", language])
+    return command
+
+
+def run_docker_grading(args: argparse.Namespace) -> int:
+    """Run grading through Docker using the same CLI inside the container."""
+    with tempfile.TemporaryDirectory(prefix="thebitlab-docker-") as temp_dir:
+        temp_root = Path(temp_dir)
+        try:
+            workspace, activity, source = prepare_docker_workspace(args.activity, args.source, temp_root)
+            docker_timeout = docker_timeout_seconds(load_activity(activity), args.timeout)
+            command = docker_command(
+                activity=activity,
+                source=source,
+                language=args.language,
+                timeout_seconds=args.timeout,
+                image=args.docker_image,
+                workspace=workspace,
+            )
+        except (OSError, ValueError) as error:
+            print(f"Sandbox Docker non avviata: {error}")
+            return 1
+
+        try:
+            result = subprocess.run(command, capture_output=True, text=True, timeout=docker_timeout, check=False)
+        except subprocess.TimeoutExpired:
+            print(f"Sandbox Docker interrotta dopo {docker_timeout} secondi.")
+            return 1
+        except FileNotFoundError:
+            print("Docker non trovato. Installa Docker oppure esegui senza --docker.")
+            return 1
+
+        if args.report:
+            try:
+                report = json.loads(result.stdout)
+            except json.JSONDecodeError:
+                print("Sandbox Docker non ha prodotto un report JSON valido.")
+                if result.stdout:
+                    print(result.stdout)
+                if result.stderr:
+                    print(result.stderr)
+                return 1
+            if not has_minimal_report_shape(report):
+                print("Sandbox Docker non ha prodotto un report di grading valido.")
+                if result.stderr:
+                    print(result.stderr)
+                return 1
+            if result.returncode != 0 and report.get("passed") is True:
+                print("Sandbox Docker ha prodotto un report incoerente con l'esito del container.")
+                if result.stderr:
+                    print(result.stderr)
+                return 1
+            write_report(report, args.report)
+            if result.stderr:
+                print(result.stderr)
+        else:
+            if result.stdout:
+                print(result.stdout)
+            if result.stderr:
+                print(result.stderr)
+        return result.returncode
+
+
 def positive_int(value: str) -> int:
     """Parse a positive integer CLI argument."""
     try:
@@ -262,11 +433,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--language", choices=sorted(SUPPORTED_LANGUAGES), help="Linguaggio da usare, se diverso dalla scheda.")
     parser.add_argument("--report", type=Path, help="Percorso report JSON da scrivere.")
     parser.add_argument("--timeout", type=positive_int, default=DEFAULT_TIMEOUT_SECONDS, help="Timeout compilazione/esecuzione.")
+    parser.add_argument("--docker", action="store_true", help="Esegue il grading dentro la sandbox Docker.")
+    parser.add_argument("--docker-image", default=DEFAULT_DOCKER_IMAGE, help="Immagine Docker da usare con --docker.")
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
+    if args.docker:
+        return run_docker_grading(args)
+
     activity = load_activity(args.activity)
     report = grade_activity(activity, args.source, timeout_seconds=args.timeout, language=args.language)
 

@@ -40,6 +40,8 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 | [`ASSIGNMENTS.md`](ASSIGNMENTS.md) | Quando devi progettare esercizi, compiti, verifiche, correzioni automatiche o metriche di classe |
 | [`ACTIVITIES_SCHEMA.md`](ACTIVITIES_SCHEMA.md) | Quando devi creare o validare schede JSON di attivita TheBitLab |
 | [`ASSIGNMENT_GRADING.md`](ASSIGNMENT_GRADING.md) | Quando devi correggere in modo deterministico una consegna TheBitLab |
+| [`ASSIGNMENT_SANDBOX.md`](ASSIGNMENT_SANDBOX.md) | Quando devi eseguire il grading in una sandbox Docker |
+| [`TESTING.md`](TESTING.md) | Quando devi lanciare test locali o capire quali GitHub Actions sono attive |
 
 ## Script collegati
 
@@ -52,7 +54,15 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 | `scripts/update_course_frames.py` | Inserisce nel README le cornici didattiche presenti nel progetto | [`COURSE_BOARD.md`](COURSE_BOARD.md) |
 | `scripts/create_activity.py` | Crea una scheda JSON di attivita TheBitLab da prompt guidato o argomenti CLI | [`ACTIVITIES_SCHEMA.md`](ACTIVITIES_SCHEMA.md) |
 | `scripts/validate_activity.py` | Valida le schede JSON di attivita TheBitLab | [`ACTIVITIES_SCHEMA.md`](ACTIVITIES_SCHEMA.md) |
-| `scripts/grade_activity.py` | Esegue il runner deterministico del linguaggio richiesto e produce un report | [`ASSIGNMENT_GRADING.md`](ASSIGNMENT_GRADING.md) |
+| `scripts/grade_activity.py` | Esegue il runner deterministico del linguaggio richiesto e produce un report, anche via Docker | [`ASSIGNMENT_GRADING.md`](ASSIGNMENT_GRADING.md) |
+
+## Test e controlli automatici
+
+Per sapere quali test e GitHub Actions sono attivi, cosa controllano e come lanciarli in locale, leggi:
+
+```text
+doc/TESTING.md
+```
 
 ## GitHub Actions collegate
 
