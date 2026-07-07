@@ -12,6 +12,19 @@ from scripts import validate_activity
 DEFAULT_TARGET_DIR = Path(".")
 DEFAULT_SOURCE_NAME = "main.c"
 DEFAULT_THEBITLAB_REF = "main"
+DEFAULT_SOURCE_NAMES = {
+    "assembly": "main.asm",
+    "c": "main.c",
+    "cpp": "main.cpp",
+    "go": "main.go",
+    "html": "index.html",
+    "java": "Main.java",
+    "javascript": "main.js",
+    "nodejs": "main.js",
+    "php": "main.php",
+    "python": "main.py",
+    "sql": "main.sql",
+}
 SUPPORTED_LANGUAGES = {
     "assembly",
     "c",
@@ -82,6 +95,11 @@ def validate_language(value: Any) -> str:
 def scaffold_dir(target_dir: Path, identifier: str) -> Path:
     """Return the assignment scaffold directory for an activity id."""
     return target_dir / "assignments" / identifier
+
+
+def default_source_name_for(language: str) -> str:
+    """Return the default source filename for a supported language."""
+    return DEFAULT_SOURCE_NAMES[language]
 
 
 def validate_source_name(source_name: str) -> str:
@@ -182,7 +200,7 @@ def create_scaffold(
     *,
     activity_path: Path,
     target_dir: Path = DEFAULT_TARGET_DIR,
-    source_name: str = DEFAULT_SOURCE_NAME,
+    source_name: str | None = None,
     language: str | None = None,
     thebitlab_ref: str = DEFAULT_THEBITLAB_REF,
     overwrite: bool = False,
@@ -193,7 +211,7 @@ def create_scaffold(
     identifier = activity_id(activity)
     validate_activity_or_raise(activity, identifier)
     selected_language = language_for(activity, language)
-    source_name = validate_source_name(source_name)
+    source_name = validate_source_name(source_name or default_source_name_for(selected_language))
     thebitlab_ref = validate_thebitlab_ref(thebitlab_ref)
     destination = scaffold_dir(target_dir, identifier)
 
@@ -223,7 +241,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Crea lo scaffold di una consegna in un repository studente.")
     parser.add_argument("--activity", type=Path, required=True, help="Path della activity JSON.")
     parser.add_argument("--target", type=Path, default=DEFAULT_TARGET_DIR, help="Root del repository studente.")
-    parser.add_argument("--source-name", default=DEFAULT_SOURCE_NAME, help="Nome del file sorgente da creare.")
+    parser.add_argument("--source-name", help="Nome del file sorgente da creare. Se omesso, viene scelto in base al linguaggio.")
     parser.add_argument("--language", help="Linguaggio da usare, se diverso dalla activity.")
     parser.add_argument("--thebitlab-ref", default=DEFAULT_THEBITLAB_REF, help="Branch, tag o commit TheBitLab da indicare nel README.")
     parser.add_argument("--force", action="store_true", help="Sovrascrive una consegna gia esistente.")
