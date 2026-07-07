@@ -12,6 +12,7 @@ on:
       - "doc/course_design.json"
       - "doc/PERCORSO_DIDATTICO.md"
       - "pyproject.toml"
+      - "requirements-dev.txt"
       - ".github/workflows/quality.yml"
   push:
     branches:
@@ -22,6 +23,7 @@ on:
       - "doc/course_design.json"
       - "doc/PERCORSO_DIDATTICO.md"
       - "pyproject.toml"
+      - "requirements-dev.txt"
       - ".github/workflows/quality.yml"
 
 jobs:
