@@ -161,6 +161,17 @@ def grade_activity(
 
 def grade_c_activity(activity: dict[str, Any], source: Path, *, timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS) -> dict[str, Any]:
     """Compile and grade a C source file using test cases from an activity."""
+    if not source.exists():
+        return {
+            "passed": False,
+            "status": "source-not-found",
+            "activity_id": activity.get("id"),
+            "language": "c",
+            "source": str(source),
+            "tests": [],
+            "error": f"Sorgente non trovato: {source}",
+        }
+
     test_cases = activity.get("test_cases", [])
     if not isinstance(test_cases, list) or not test_cases:
         return {

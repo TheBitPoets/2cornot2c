@@ -73,6 +73,16 @@ def test_grade_activity_requires_test_cases(tmp_path) -> None:
     assert report["status"] == "invalid-activity"
 
 
+def test_grade_activity_reports_missing_source(tmp_path) -> None:
+    source = tmp_path / "missing.c"
+
+    report = grade_activity.grade_activity(activity(), source)
+
+    assert report["passed"] is False
+    assert report["status"] == "source-not-found"
+    assert report["tests"] == []
+
+
 def test_write_report_writes_json(tmp_path) -> None:
     report_path = tmp_path / "report.json"
     report = {"passed": True, "status": "passed"}
