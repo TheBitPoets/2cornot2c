@@ -65,6 +65,22 @@ Lo script chiede i campi principali, applica default coerenti per `correzione` e
 activities/drafts/
 ```
 
+Il nome del file viene generato dallo slug dell'ID dell'attivita.
+
+Per esempio, un ID come:
+
+```text
+Esercizio Variabili 01
+```
+
+viene salvato in un file simile a:
+
+```text
+esercizio-variabili-01.json
+```
+
+L'ID interno resta quello scelto nella scheda, mentre il nome del file viene normalizzato per essere sicuro sul filesystem.
+
 Se esiste gia un file con lo stesso ID/slug, la CLI non lo sovrascrive automaticamente.
 
 Per sovrascrivere in modo esplicito:
