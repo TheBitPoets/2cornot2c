@@ -285,6 +285,207 @@ Le classifiche possono essere utili, ma vanno trattate con attenzione:
 - evitare classifiche solo sul voto assoluto;
 - prevedere badge o obiettivi cooperativi.
 
+## Classifiche, confronti e visibilita
+
+Le metriche comparative sono strumenti didattici importanti, ma devono avere visibilita diversa per docente e studenti.
+
+Il principio e questo:
+
+> Il docente ha bisogno di confronti diretti per leggere il gruppo classe. Gli studenti devono ricevere confronti calibrati per sostenere motivazione e autovalutazione.
+
+### Vista docente
+
+La vista docente deve poter mostrare classifiche e confronti nominativi.
+
+Queste informazioni servono a capire il livello del singolo e del gruppo rispetto alla classe.
+
+Metriche utili nella vista docente:
+
+- percentuale di esercizi corretti;
+- esercizi consegnati;
+- esercizi extra svolti;
+- puntualita;
+- numero medio di tentativi;
+- errori di compilazione ricorrenti;
+- tempo sessione TheBitLab;
+- confronto con media classe;
+- confronto con distribuzione del gruppo;
+- studenti sotto soglia;
+- studenti in forte miglioramento;
+- studenti fermi;
+- argomenti critici per singolo studente;
+- argomenti critici per classe.
+
+Esempio:
+
+```text
+Studente     Corretti   Extra   Tentativi medi   Errori comp.   Trend
+Mario        82%        4       1.8              3              su
+Luca         45%        0       4.6              18             giu
+Anna         71%        2       2.3              7              stabile
+```
+
+### Vista studente
+
+La vista studente deve essere piu prudente.
+
+Puo mostrare:
+
+- progressi personali;
+- badge;
+- obiettivi personali;
+- esercizi extra svolti;
+- confronto con media classe in forma aggregata;
+- posizione in classifica solo se abilitata dal docente;
+- classifiche cooperative.
+
+Esempio:
+
+```text
+Hai completato 7 esercizi su 10.
+Media classe: 6.2 esercizi.
+Stai migliorando sugli array.
+Da ripassare: input/output.
+```
+
+### Regole di visibilita
+
+| Vista | Confronti nominativi | Scopo |
+|---|---|---|
+| Docente | Si | Diagnosi didattica, recupero, monitoraggio |
+| Studente | Solo se abilitati e con cautela | Motivazione e autovalutazione |
+| Classe/proiezione | Preferibilmente aggregati o cooperativi | Obiettivi comuni |
+
+Le classifiche pubbliche devono premiare soprattutto:
+
+- progresso;
+- costanza;
+- recupero;
+- esercizi extra;
+- collaborazione;
+- obiettivi di gruppo.
+
+Devono invece evitare di diventare ranking punitivi basati solo sul voto assoluto.
+
+## Modalita sfida e collaborazione
+
+TheBitLab deve poter evolvere verso attivita competitive e collaborative.
+
+Queste modalita non sono il primo obiettivo implementativo, ma vanno previste nel modello per non chiudere la strada a un laboratorio piu interattivo.
+
+### Challenge mode tra studenti
+
+La challenge mode permette a due o piu studenti di sfidarsi sullo stesso esercizio o su esercizi equivalenti.
+
+Possibili formati:
+
+- quiz real-time;
+- debug race;
+- primo che fa passare tutti i test;
+- miglior soluzione entro tempo limite;
+- confronto su correttezza e qualita del codice;
+- sfida a squadre.
+
+La vista potrebbe mostrare pannelli affiancati con stato, test superati, errori e tempo.
+
+Esempio concettuale:
+
+```text
++---------------- Mario ----------------+ +---------------- Luca -----------------+
+| main.c                                | | main.c                                |
+| Test: 3/5                             | | Test: 4/5                             |
+| Errori: 1                             | | Errori: 0                             |
++---------------------------------------+ +---------------------------------------+
+```
+
+La challenge deve essere abilitata dal docente.
+
+Metriche utili:
+
+- tempo al primo test passato;
+- numero di tentativi;
+- test superati;
+- errori;
+- miglioramento;
+- contributo individuale o di squadra.
+
+### Sfida contro AI
+
+TheBitLab puo prevedere una modalita in cui lo studente sfida il computer, cioe un avversario AI.
+
+Questa modalita puo essere utile per allenarsi anche da soli, a casa o in laboratorio.
+
+L'avversario AI deve poter avere livelli diversi:
+
+| Livello AI | Comportamento |
+|---|---|
+| Principiante | Commette errori semplici, procede lentamente, offre confronto vicino a studenti alle prime armi |
+| Intermedio | Risolve con qualche esitazione, usa strategie ragionevoli, lascia spazio allo studente |
+| Avanzato | Produce soluzioni piu rapide e robuste, utile per studenti forti |
+| Adattivo | Si calibra sul livello dello studente e propone una sfida leggermente superiore |
+
+La modalita adattiva e quella didatticamente piu interessante.
+
+L'obiettivo non e far perdere lo studente, ma creare una sfida vicina alla sua zona di sviluppo:
+
+- abbastanza facile da non scoraggiare;
+- abbastanza difficile da stimolare miglioramento;
+- capace di suggerire strategie dopo la prova;
+- collegata agli errori ricorrenti dello studente.
+
+Anche nella sfida contro AI deve restare chiara la separazione:
+
+- test deterministici verificano il codice;
+- AI simula l'avversario o propone feedback;
+- il docente puo controllare impostazioni e risultati.
+
+### Pair e group mode
+
+TheBitLab puo supportare attivita collaborative in cui due o piu studenti lavorano sullo stesso esercizio.
+
+Possibili modalita:
+
+- lavoro a coppie;
+- lavoro a gruppi;
+- ruoli driver/navigator;
+- controllo a turni;
+- report finale di gruppo;
+- storico dei contributi.
+
+Il modello driver/navigator e particolarmente utile:
+
+```text
+Driver: scrive codice
+Navigator: osserva, ragiona, propone correzioni
+```
+
+I ruoli possono essere invertiti durante l'attivita.
+
+### Real-time e controllo remoto
+
+In futuro si potranno valutare modalita real-time piu avanzate:
+
+- terminale condiviso controllato;
+- sessioni remote temporanee;
+- finestre affiancate;
+- esercizi sincroni;
+- editor collaborativo;
+- eventuale integrazione con plugin VS Code.
+
+Audio, video e chat non sono necessari nella prima fase.
+
+Le modalita real-time e remote devono essere progettate come ambienti controllati, temporanei e sicuri, non come semplice accesso remoto libero.
+
+Regole minime:
+
+- abilitate dal docente;
+- sessioni temporanee;
+- ambiente isolato;
+- permessi limitati;
+- nessun accesso libero alla macchina reale dello studente;
+- log degli eventi didattici rilevanti;
+- preferenza per container o sandbox condivise.
+
 ## Metriche: cosa misuriamo davvero
 
 TheBitLab deve distinguere tra metriche affidabili, metriche indicative e dati da non interpretare rigidamente.
