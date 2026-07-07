@@ -46,6 +46,19 @@ def assign_activity_to_targets(
     overwrite_source: bool = False,
 ) -> list[AssignmentResult]:
     """Create the activity scaffold in each target student repository."""
+    activity = create_submission_scaffold.load_activity(activity_path)
+    identifier = create_submission_scaffold.activity_id(activity)
+    blocked_targets = [
+        target
+        for target in targets
+        if create_submission_scaffold.scaffold_dir(target, identifier).exists()
+        and any(create_submission_scaffold.scaffold_dir(target, identifier).iterdir())
+        and not overwrite
+    ]
+    if blocked_targets:
+        blocked = "\n".join(str(target) for target in blocked_targets)
+        raise ValueError(f"Consegna gia esistente in questi repository:\n{blocked}\nUsa --force per aggiornare.")
+
     results: list[AssignmentResult] = []
     for target in targets:
         assignment_dir = create_submission_scaffold.create_scaffold(

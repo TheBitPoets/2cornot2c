@@ -92,3 +92,22 @@ def test_assign_activity_preserves_existing_source_with_force(tmp_path) -> None:
     assign_activity.assign_activity_to_targets(activity_path=activity_path, targets=[target], overwrite=True)
 
     assert source.read_text(encoding="utf-8") == "print('custom')\n"
+
+
+def test_assign_activity_preflight_blocks_partial_assignment(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+    blocked_target = tmp_path / "student-a"
+    untouched_target = tmp_path / "student-b"
+    assign_activity.assign_activity_to_targets(activity_path=activity_path, targets=[blocked_target])
+
+    try:
+        assign_activity.assign_activity_to_targets(
+            activity_path=activity_path,
+            targets=[untouched_target, blocked_target],
+        )
+    except ValueError as error:
+        assert "Consegna gia esistente" in str(error)
+    else:
+        raise AssertionError("assign_activity_to_targets should reject partial assignments")
+
+    assert not (untouched_target / "assignments").exists()
