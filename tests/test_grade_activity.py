@@ -168,13 +168,13 @@ def test_docker_command_uses_read_only_workspace(tmp_path) -> None:
         language="c",
         timeout_seconds=5,
         workspace=tmp_path,
-        work_dir=tmp_path / "work",
     )
 
     assert "--network" in command
     assert "none" in command
     assert f"{tmp_path.resolve()}:/workspace:ro" in command
-    assert f"{(tmp_path / 'work').resolve()}:/thebitlab-work" in command
+    assert "--tmpfs" in command
+    assert "/thebitlab-work:rw,nosuid,nodev,size=64m" in command
     assert "TMPDIR=/thebitlab-work" in command
     assert "/thebitlab-output" not in command
     assert "--report" not in command
@@ -285,7 +285,6 @@ def test_docker_command_requires_paths_inside_workspace(tmp_path) -> None:
             language="c",
             timeout_seconds=5,
             workspace=tmp_path,
-            work_dir=tmp_path / "work",
         )
     except ValueError as error:
         assert "source deve trovarsi dentro il workspace" in str(error)

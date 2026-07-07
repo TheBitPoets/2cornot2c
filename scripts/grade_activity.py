@@ -284,11 +284,9 @@ def docker_command(
     timeout_seconds: int,
     image: str = DEFAULT_DOCKER_IMAGE,
     workspace: Path | None = None,
-    work_dir: Path | None = None,
 ) -> list[str]:
     """Build the docker command used to run grading in a container."""
     workspace = (workspace or Path.cwd()).resolve()
-    work_dir = (work_dir or Path(tempfile.gettempdir()) / "thebitlab-work").resolve()
     activity_path = activity.resolve()
     source_path = source.resolve()
     command = [
@@ -301,8 +299,8 @@ def docker_command(
         "runner",
         "-v",
         f"{workspace}:/workspace:ro",
-        "-v",
-        f"{work_dir}:/thebitlab-work",
+        "--tmpfs",
+        "/thebitlab-work:rw,nosuid,nodev,size=64m",
         "-e",
         "TMPDIR=/thebitlab-work",
         "-w",
@@ -338,7 +336,6 @@ def run_docker_grading(args: argparse.Namespace) -> int:
                 timeout_seconds=args.timeout,
                 image=args.docker_image,
                 workspace=workspace,
-                work_dir=temp_root / "work",
             )
         except ValueError as error:
             print(f"Sandbox Docker non avviata: {error}")
