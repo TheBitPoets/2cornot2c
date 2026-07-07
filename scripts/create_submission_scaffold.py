@@ -60,6 +60,14 @@ def validate_source_name(source_name: str) -> str:
     return value
 
 
+def validate_thebitlab_ref(value: str) -> str:
+    """Validate a TheBitLab git ref for README usage."""
+    clean_value = value.strip()
+    if not clean_value or "\n" in clean_value or "\r" in clean_value:
+        raise ValueError("thebitlab_ref deve essere un branch, tag o commit non vuoto e su una sola riga.")
+    return clean_value
+
+
 def starter_source(language: str) -> str:
     """Return a minimal starter source for the requested language."""
     if language == "c":
@@ -111,6 +119,7 @@ def create_scaffold(
     validate_activity_or_raise(activity, identifier)
     selected_language = language_for(activity, language)
     source_name = validate_source_name(source_name)
+    thebitlab_ref = validate_thebitlab_ref(thebitlab_ref)
     destination = scaffold_dir(target_dir, identifier)
 
     if destination.exists() and any(destination.iterdir()) and not overwrite:

@@ -141,6 +141,21 @@ def test_create_scaffold_supports_custom_thebitlab_ref(tmp_path) -> None:
     assert "thebitlab_ref`: `v1.0.0`" in readme
 
 
+def test_create_scaffold_rejects_multiline_thebitlab_ref(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+
+    try:
+        create_submission_scaffold.create_scaffold(
+            activity_path=activity_path,
+            target_dir=tmp_path,
+            thebitlab_ref="main\naltro",
+        )
+    except ValueError as error:
+        assert "thebitlab_ref" in str(error)
+    else:
+        raise AssertionError("create_scaffold should reject multiline refs")
+
+
 def test_create_scaffold_rejects_source_name_with_path_segments(tmp_path) -> None:
     activity_path = write_activity(tmp_path)
 
