@@ -6,6 +6,10 @@ permissions:
 on:
   workflow_dispatch:
     inputs:
+      activity_id:
+        description: "Identificativo stabile dell'attivita"
+        required: true
+        default: "c-base-somma-001"
       activity_path:
         description: "Path della activity JSON nel repository studente"
         required: true
@@ -57,6 +61,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: thebitlab-grading-report
+          name: thebitlab-${{ inputs.activity_id }}-${{ inputs.language }}-report
           path: ${{ runner.temp }}/thebitlab-report/report.json
           if-no-files-found: error

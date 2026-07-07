@@ -51,6 +51,7 @@ Richiede questi input:
 
 | Input | Esempio |
 |---|---|
+| `activity_id` | `c-base-somma-001` |
 | `activity_path` | `assignments/c-base-somma-001/activity.json` |
 | `source_path` | `assignments/c-base-somma-001/main.c` |
 | `language` | `c` |
@@ -63,6 +64,12 @@ Il workflow:
 3. costruisce l'immagine Docker del runner;
 4. esegue il grading in sandbox;
 5. carica il report come artifact.
+
+Il nome dell'artifact contiene activity e linguaggio, per esempio:
+
+```text
+thebitlab-c-base-somma-001-c-report
+```
 
 ## Regola importante
 

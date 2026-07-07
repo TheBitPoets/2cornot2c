@@ -59,6 +59,7 @@ Richiede:
 
 | Input | Significato |
 |---|---|
+| `activity_id` | Identificativo stabile dell'attivita, usato anche nel nome artifact |
 | `activity_path` | Path della scheda activity JSON nel repository studente |
 | `source_path` | Path del sorgente da correggere |
 | `language` | Linguaggio della consegna |
@@ -70,7 +71,7 @@ Il workflow:
 2. fa checkout di `TheBitPoets/2cornot2c` al ref indicato;
 3. costruisce l'immagine Docker del runner;
 4. esegue `scripts/grade_activity.py --docker`;
-5. pubblica `report.json` come artifact GitHub.
+5. pubblica `report.json` come artifact GitHub con nome collegato ad activity e linguaggio.
 
 ## Perche workflow manuale
 
