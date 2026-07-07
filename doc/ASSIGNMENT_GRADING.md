@@ -70,6 +70,10 @@ Un test case ha questa forma:
 }
 ```
 
+`expected_stdout` e obbligatorio e deve essere una stringa.
+
+`stdin` e opzionale; se presente, deve essere una stringa.
+
 `stdout` viene normalizzato rimuovendo differenze finali di spazi e newline.
 
 ## Linguaggio nella scheda attivita
