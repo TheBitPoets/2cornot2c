@@ -50,3 +50,24 @@ def test_cli_check_uses_explicit_paths_without_touching_real_course_design(tmp_p
     )
 
     assert generate_course_plan.main() == 0
+
+
+def test_cli_check_fails_when_output_is_not_up_to_date(tmp_path, monkeypatch) -> None:
+    input_path = tmp_path / "course_design.json"
+    output_path = tmp_path / "PERCORSO_DIDATTICO.md"
+    input_path.write_text(FIXTURE.read_text(encoding="utf-8"), encoding="utf-8")
+    output_path.write_text("contenuto non aggiornato\n", encoding="utf-8", newline="\n")
+
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "generate_course_plan.py",
+            "--input",
+            str(input_path),
+            "--output",
+            str(output_path),
+            "--check",
+        ],
+    )
+
+    assert generate_course_plan.main() == 1
