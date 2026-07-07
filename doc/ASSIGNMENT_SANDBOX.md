@@ -66,7 +66,13 @@ La prima sandbox:
 
 La cartella `/thebitlab-work` viene usata anche come `TMPDIR`: compilazione e file temporanei del grading devono passare da li, non dal workspace read-only.
 
-I file `--activity` e `--source` devono stare dentro il workspace montato. Se sono fuori dal repository/workspace, il comando Docker viene rifiutato con un messaggio esplicito.
+I file `--activity` e `--source` sono path letti dal processo host. Prima di avviare Docker, il wrapper li copia in un workspace temporaneo minimale e monta solo quel workspace nel container. Dentro il container, quindi, il grading vede soltanto:
+
+- `scripts/grade_activity.py`;
+- una copia dell'activity JSON;
+- una copia del sorgente da correggere.
+
+Se uno dei file indicati non esiste o non puo essere letto, la sandbox non parte e il wrapper restituisce un messaggio esplicito.
 
 Il file `--report` puo stare anche fuori dal workspace: viene scritto dal processo host dopo aver letto il JSON prodotto dal container.
 
