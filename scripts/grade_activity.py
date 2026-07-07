@@ -11,6 +11,7 @@ from typing import Any
 
 
 DEFAULT_TIMEOUT_SECONDS = 5
+DEFAULT_DOCKER_TIMEOUT_GRACE_SECONDS = 10
 DEFAULT_DOCKER_IMAGE = "thebitlab-assignment-runner"
 SUPPORTED_LANGUAGES = {
     "c": "implemented",
@@ -339,6 +340,7 @@ def docker_command(
 
 def run_docker_grading(args: argparse.Namespace) -> int:
     """Run grading through Docker using the same CLI inside the container."""
+    docker_timeout = args.timeout + DEFAULT_DOCKER_TIMEOUT_GRACE_SECONDS
     with tempfile.TemporaryDirectory(prefix="thebitlab-docker-") as temp_dir:
         temp_root = Path(temp_dir)
         try:
@@ -356,7 +358,10 @@ def run_docker_grading(args: argparse.Namespace) -> int:
             return 1
 
         try:
-            result = subprocess.run(command, capture_output=True, text=True, check=False)
+            result = subprocess.run(command, capture_output=True, text=True, timeout=docker_timeout, check=False)
+        except subprocess.TimeoutExpired:
+            print(f"Sandbox Docker interrotta dopo {docker_timeout} secondi.")
+            return 1
         except FileNotFoundError:
             print("Docker non trovato. Installa Docker oppure esegui senza --docker.")
             return 1
