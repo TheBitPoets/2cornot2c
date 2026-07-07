@@ -44,6 +44,17 @@ python scripts/grade_activity.py \
   --report reports/c_sum_report.json
 ```
 
+Per eseguire lo stesso grading dentro la sandbox Docker:
+
+```bash
+python scripts/grade_activity.py \
+  --activity activities/examples/c_sum_with_tests.json \
+  --source main.c \
+  --language c \
+  --docker \
+  --report reports/c_sum_report.json
+```
+
 ## Cosa fa
 
 Lo script:
@@ -125,7 +136,7 @@ Limiti noti:
 
 - solo il runner C e implementato in questa fase;
 - i runner pianificati ma non implementati restituiscono `unsupported-language`;
-- l'esecuzione non e ancora isolata in Docker;
+- la sandbox Docker e iniziale e documentata in `ASSIGNMENT_SANDBOX.md`;
 - non vengono ancora applicati limiti su memoria o filesystem;
 - non viene disabilitata la rete;
 - non c'e ancora integrazione GitHub automatica;

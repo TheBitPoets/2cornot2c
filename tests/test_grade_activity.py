@@ -152,3 +152,46 @@ def test_positive_int_rejects_zero() -> None:
         assert "positivo" in str(error)
     else:
         raise AssertionError("positive_int should reject zero")
+
+
+def test_docker_command_uses_read_only_workspace(tmp_path) -> None:
+    activity_path = tmp_path / "activity.json"
+    source_path = tmp_path / "main.c"
+    report_path = tmp_path / "report.json"
+    activity_path.write_text("{}", encoding="utf-8")
+    source_path.write_text("int main(void){return 0;}", encoding="utf-8")
+
+    command = grade_activity.docker_command(
+        activity=activity_path,
+        source=source_path,
+        report=report_path,
+        language="c",
+        timeout_seconds=5,
+        workspace=tmp_path,
+    )
+
+    assert "--network" in command
+    assert "none" in command
+    assert f"{tmp_path.resolve()}:/workspace:ro" in command
+    assert "--language" in command
+    assert "c" in command
+
+
+def test_run_docker_grading_reports_missing_docker(monkeypatch, tmp_path) -> None:
+    class Args:
+        activity = tmp_path / "activity.json"
+        source = tmp_path / "main.c"
+        report = None
+        language = "c"
+        timeout = 5
+        docker_image = "thebitlab-assignment-runner"
+
+    Args.activity.write_text("{}", encoding="utf-8")
+    Args.source.write_text("int main(void){return 0;}", encoding="utf-8")
+
+    def missing_docker(*args, **kwargs):
+        raise FileNotFoundError
+
+    monkeypatch.setattr(grade_activity.subprocess, "run", missing_docker)
+
+    assert grade_activity.run_docker_grading(Args()) == 1

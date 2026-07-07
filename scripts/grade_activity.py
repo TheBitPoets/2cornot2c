@@ -10,6 +10,7 @@ from typing import Any
 
 
 DEFAULT_TIMEOUT_SECONDS = 5
+DEFAULT_DOCKER_IMAGE = "thebitlab-assignment-runner"
 SUPPORTED_LANGUAGES = {
     "c": "implemented",
     "python": "planned",
@@ -244,6 +245,71 @@ def write_report(report: dict[str, Any], path: Path) -> None:
     path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
 
 
+def docker_command(
+    *,
+    activity: Path,
+    source: Path,
+    report: Path | None,
+    language: str | None,
+    timeout_seconds: int,
+    image: str = DEFAULT_DOCKER_IMAGE,
+    workspace: Path | None = None,
+) -> list[str]:
+    """Build the docker command used to run grading in a container."""
+    workspace = (workspace or Path.cwd()).resolve()
+    activity_path = activity.resolve()
+    source_path = source.resolve()
+    command = [
+        "docker",
+        "run",
+        "--rm",
+        "--network",
+        "none",
+        "--user",
+        "runner",
+        "-v",
+        f"{workspace}:/workspace:ro",
+        "-w",
+        "/workspace",
+        image,
+        "--activity",
+        str(activity_path.relative_to(workspace)),
+        "--source",
+        str(source_path.relative_to(workspace)),
+        "--timeout",
+        str(timeout_seconds),
+    ]
+    if language:
+        command.extend(["--language", language])
+    if report:
+        report_path = report.resolve()
+        command.extend(["--report", str(report_path.relative_to(workspace))])
+    return command
+
+
+def run_docker_grading(args: argparse.Namespace) -> int:
+    """Run grading through Docker using the same CLI inside the container."""
+    try:
+        command = docker_command(
+            activity=args.activity,
+            source=args.source,
+            report=args.report,
+            language=args.language,
+            timeout_seconds=args.timeout,
+            image=args.docker_image,
+        )
+    except ValueError as error:
+        print(f"Sandbox Docker non avviata: {error}")
+        return 1
+
+    try:
+        result = subprocess.run(command, check=False)
+    except FileNotFoundError:
+        print("Docker non trovato. Installa Docker oppure esegui senza --docker.")
+        return 1
+    return result.returncode
+
+
 def positive_int(value: str) -> int:
     """Parse a positive integer CLI argument."""
     try:
@@ -262,11 +328,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--language", choices=sorted(SUPPORTED_LANGUAGES), help="Linguaggio da usare, se diverso dalla scheda.")
     parser.add_argument("--report", type=Path, help="Percorso report JSON da scrivere.")
     parser.add_argument("--timeout", type=positive_int, default=DEFAULT_TIMEOUT_SECONDS, help="Timeout compilazione/esecuzione.")
+    parser.add_argument("--docker", action="store_true", help="Esegue il grading dentro la sandbox Docker.")
+    parser.add_argument("--docker-image", default=DEFAULT_DOCKER_IMAGE, help="Immagine Docker da usare con --docker.")
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
+    if args.docker:
+        return run_docker_grading(args)
+
     activity = load_activity(args.activity)
     report = grade_activity(activity, args.source, timeout_seconds=args.timeout, language=args.language)
 
