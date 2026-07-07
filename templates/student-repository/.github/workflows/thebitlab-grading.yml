@@ -18,6 +18,10 @@ on:
         description: "Linguaggio della consegna"
         required: true
         default: "c"
+      thebitlab_ref:
+        description: "Branch, tag o commit di TheBitLab da usare per il grading"
+        required: true
+        default: "main"
 
 jobs:
   grade:
@@ -33,6 +37,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: TheBitPoets/2cornot2c
+          ref: ${{ inputs.thebitlab_ref }}
           path: thebitlab
 
       - name: Build grading Docker image

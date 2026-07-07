@@ -62,11 +62,12 @@ Richiede:
 | `activity_path` | Path della scheda activity JSON nel repository studente |
 | `source_path` | Path del sorgente da correggere |
 | `language` | Linguaggio della consegna |
+| `thebitlab_ref` | Branch, tag o commit di TheBitLab da usare per il grading |
 
 Il workflow:
 
 1. fa checkout del repository studente;
-2. fa checkout di `TheBitPoets/2cornot2c`;
+2. fa checkout di `TheBitPoets/2cornot2c` al ref indicato;
 3. costruisce l'immagine Docker del runner;
 4. esegue `scripts/grade_activity.py --docker`;
 5. pubblica `report.json` come artifact GitHub.

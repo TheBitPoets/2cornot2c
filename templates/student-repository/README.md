@@ -54,6 +54,7 @@ Richiede questi input:
 | `activity_path` | `assignments/c-base-somma-001/activity.json` |
 | `source_path` | `assignments/c-base-somma-001/main.c` |
 | `language` | `c` |
+| `thebitlab_ref` | `main`, oppure tag/commit indicato dal docente |
 
 Il workflow:
 
