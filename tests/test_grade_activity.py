@@ -71,6 +71,10 @@ def test_grade_activity_requires_test_cases(tmp_path) -> None:
 
     assert report["passed"] is False
     assert report["status"] == "invalid-activity"
+    assert report["activity_id"] == "vuota"
+    assert report["language"] == "c"
+    assert report["source"] == str(source)
+    assert report["tests"] == []
 
 
 def test_grade_activity_requires_expected_stdout(tmp_path) -> None:

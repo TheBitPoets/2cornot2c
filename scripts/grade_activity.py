@@ -198,6 +198,10 @@ def grade_c_activity(activity: dict[str, Any], source: Path, *, timeout_seconds:
         return {
             "passed": False,
             "status": "invalid-activity",
+            "activity_id": activity.get("id"),
+            "language": "c",
+            "source": str(source),
+            "tests": [],
             "errors": test_case_errors,
         }
 
