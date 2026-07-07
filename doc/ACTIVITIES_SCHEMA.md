@@ -174,11 +174,11 @@ Campi obbligatori:
 
 | Campo | Tipo | Significato |
 |---|---|---|
-| `tempo_stimato_minuti` | numero | Tempo stimato dal docente o dal sistema |
-| `traccia_tempo_dichiarato` | boolean | Lo studente puo dichiarare il tempo impiegato |
-| `traccia_sessioni_thebitlab` | boolean | TheBitLab puo registrare durata delle sessioni |
-| `traccia_eventi_didattici` | boolean | TheBitLab puo registrare eventi espliciti |
-| `traccia_errori_compilazione` | boolean | Gli errori di compilazione vengono raccolti |
+| `tempo_stimato_minuti` | numero obbligatorio | Tempo stimato dal docente o dal sistema |
+| `traccia_tempo_dichiarato` | boolean obbligatorio | Lo studente puo dichiarare il tempo impiegato |
+| `traccia_sessioni_thebitlab` | boolean obbligatorio | TheBitLab puo registrare durata delle sessioni |
+| `traccia_eventi_didattici` | boolean obbligatorio | TheBitLab puo registrare eventi espliciti |
+| `traccia_errori_compilazione` | boolean obbligatorio | Gli errori di compilazione vengono raccolti |
 
 TheBitLab non deve usare queste metriche come sorveglianza. Servono a capire difficolta, progressi e bisogni di recupero.
 
