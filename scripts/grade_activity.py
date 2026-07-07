@@ -125,6 +125,19 @@ def unsupported_language_report(activity: dict[str, Any], source: Path, language
     }
 
 
+def unknown_language_report(activity: dict[str, Any], source: Path, language: str) -> dict[str, Any]:
+    """Return a deterministic report for languages outside the supported model."""
+    return {
+        "passed": False,
+        "status": "unknown-language",
+        "activity_id": activity.get("id"),
+        "source": str(source),
+        "language": language,
+        "supported_languages": SUPPORTED_LANGUAGES,
+        "error": f"Linguaggio non riconosciuto: {language}",
+    }
+
+
 def grade_activity(
     activity: dict[str, Any],
     source: Path,
@@ -134,6 +147,9 @@ def grade_activity(
 ) -> dict[str, Any]:
     """Grade a source file using the language runner requested by the activity."""
     selected_language = activity_language(activity, language)
+    if selected_language not in SUPPORTED_LANGUAGES:
+        return unknown_language_report(activity, source, selected_language)
+
     if SUPPORTED_LANGUAGES.get(selected_language) != "implemented":
         return unsupported_language_report(activity, source, selected_language)
 

@@ -90,3 +90,14 @@ def test_grade_activity_reports_unsupported_planned_language(tmp_path) -> None:
     assert report["passed"] is False
     assert report["status"] == "unsupported-language"
     assert report["language"] == "python"
+
+
+def test_grade_activity_reports_unknown_language(tmp_path) -> None:
+    source = tmp_path / "main.xyz"
+    source.write_text("contenuto\n", encoding="utf-8")
+
+    report = grade_activity.grade_activity({"id": "x-001", "linguaggio": "brainheck", "test_cases": []}, source)
+
+    assert report["passed"] is False
+    assert report["status"] == "unknown-language"
+    assert report["language"] == "brainheck"
