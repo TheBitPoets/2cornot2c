@@ -193,6 +193,7 @@ def test_run_docker_grading_reports_missing_docker(monkeypatch, tmp_path) -> Non
 
     Args.activity.write_text("{}", encoding="utf-8")
     Args.source.write_text("int main(void){return 0;}", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
 
     def missing_docker(*args, **kwargs):
         raise FileNotFoundError
@@ -213,6 +214,7 @@ def test_run_docker_grading_rejects_invalid_json_output(monkeypatch, tmp_path) -
 
     Args.activity.write_text("{}", encoding="utf-8")
     Args.source.write_text("int main(void){return 0;}", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
 
     class Result:
         returncode = 1
@@ -236,6 +238,7 @@ def test_run_docker_grading_writes_report_on_host(monkeypatch, tmp_path) -> None
 
     Args.activity.write_text("{}", encoding="utf-8")
     Args.source.write_text("int main(void){return 0;}", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
 
     class Result:
         returncode = 0
