@@ -202,9 +202,16 @@ La fase di grading dovrebbe:
 - usare `permissions: contents: read`;
 - non usare segreti;
 - eseguire `scripts/grade_activity.py --docker`;
-- salvare il report come artifact o file versionato;
+- salvare il report come artifact GitHub;
 - fallire se il grading fallisce;
 - non inviare codice studente a provider AI.
+
+Il job di grading non deve committare file nel repository studente, perche per farlo avrebbe bisogno di permessi di scrittura. Se serve una copia versionata del report, deve produrla una fase separata di reporting che:
+
+- non esegue codice studente;
+- legge solo artifact/report gia prodotti;
+- usa permessi espliciti e limitati;
+- mantiene separata la scrittura dei risultati dall'esecuzione del codice.
 
 La fase feedback puo leggere il report e generare spiegazioni, ma non deve eseguire codice studente.
 
