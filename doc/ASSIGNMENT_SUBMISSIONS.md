@@ -287,14 +287,16 @@ Per ogni consegna conviene raccogliere almeno:
 
 Queste metriche non devono diventare sorveglianza. Servono a capire difficolta, progressi e bisogni di recupero.
 
-## File indice futuro
+## File indice centralizzato futuro
 
-Per aggregare le consegne senza database, una prima versione puo usare file JSON versionati.
+Per aggregare le consegne senza database, una prima versione puo usare file JSON versionati in un repository docente, nel repository sorgente o in una raccolta centralizzata TheBitLab.
+
+Questo indice non deve vivere come fonte autorevole nel repository studente.
 
 Esempio:
 
 ```text
-reports/index.json
+teacher-reports/class-index.json
 ```
 
 Esempio concettuale:
