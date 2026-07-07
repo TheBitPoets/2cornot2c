@@ -1,0 +1,50 @@
+{
+  "source_files": [
+    "README.md"
+  ],
+  "years": [
+    {
+      "id": "terzo",
+      "title": "Terzo anno",
+      "description": "Percorso minimo per testare la generazione Markdown.",
+      "weekly_hours": 3,
+      "weeks": 33,
+      "udas": [
+        {
+          "id": "uda-1",
+          "title": "Variabili e input/output",
+          "path": "Base / Variabili",
+          "weeks": 2,
+          "items": [
+            {
+              "id": "variabili",
+              "title": "Variabili",
+              "href": "../README.md#variabili",
+              "source": "README.md",
+              "level": 2,
+              "frame": {
+                "status": "draft",
+                "context": "Le variabili sono il primo modo con cui un programma conserva informazioni.",
+                "objectives": "Distinguere nome, tipo e valore di una variabile."
+              },
+              "children": [
+                {
+                  "id": "input-output",
+                  "title": "Input/output",
+                  "href": "../README.md#input-output",
+                  "source": "README.md",
+                  "level": 3,
+                  "frame": {
+                    "status": "draft",
+                    "recall": "Richiama il ruolo di printf e scanf."
+                  },
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
