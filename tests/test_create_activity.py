@@ -104,6 +104,28 @@ def test_activity_from_args_requires_required_fields() -> None:
         raise AssertionError("activity_from_args should reject missing required fields")
 
 
+def test_activity_from_args_rejects_blank_text_fields() -> None:
+    class Args:
+        titolo = "   "
+        tipo = "compito-casa"
+        difficolta = "B"
+        argomenti = "variabili"
+        consegna = "Consegna"
+        activity_id = None
+        tempo_stimato = 30
+        classe = ""
+        team_github = ""
+        percorso = ""
+        uda = ""
+
+    try:
+        create_activity.activity_from_args(Args())
+    except ValueError as error:
+        assert "--titolo" in str(error)
+    else:
+        raise AssertionError("activity_from_args should reject blank titles")
+
+
 def test_activity_from_args_rejects_empty_topics() -> None:
     class Args:
         titolo = "Titolo"

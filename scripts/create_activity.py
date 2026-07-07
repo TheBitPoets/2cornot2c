@@ -59,6 +59,10 @@ def build_activity(
     context: dict[str, str] | None = None,
 ) -> dict:
     """Build a minimal activity dictionary compatible with validate_activity."""
+    activity_id = activity_id.strip()
+    title = title.strip()
+    prompt = prompt.strip()
+
     activity = {
         "schema_version": validate_activity.SUPPORTED_SCHEMA_VERSION,
         "id": activity_id,
@@ -240,12 +244,12 @@ def activity_from_args(args: argparse.Namespace) -> dict:
         "--argomenti": args.argomenti,
         "--consegna": args.consegna,
     }
-    missing = [flag for flag, value in required.items() if not value]
+    missing = [flag for flag, value in required.items() if not value or not str(value).strip()]
     if missing:
         raise ValueError(f"Argomenti mancanti: {', '.join(missing)}. Usa --interactive per la modalita guidata.")
 
-    title = args.titolo
-    activity_id = args.activity_id or slugify(title)
+    title = args.titolo.strip()
+    activity_id = args.activity_id.strip() if args.activity_id else slugify(title)
 
     return build_activity(
         activity_id=activity_id,
