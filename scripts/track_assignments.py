@@ -33,6 +33,14 @@ def parse_datetime(value: str | None, field_name: str) -> str | None:
     return value
 
 
+def parse_timezone_datetime(value: str, field_name: str) -> datetime:
+    """Parse an ISO datetime and require timezone information for safe comparisons."""
+    parsed = datetime.fromisoformat(value)
+    if parsed.tzinfo is None or parsed.tzinfo.utcoffset(parsed) is None:
+        raise ValueError(f"{field_name} deve includere il timezone, per esempio +02:00.")
+    return parsed
+
+
 def load_targets(targets: list[Path] | None = None, targets_file: Path | None = None) -> list[TrackingTarget]:
     """Load tracking targets from direct paths and an optional targets file."""
     paths = assign_activity.collect_targets(targets, targets_file)
@@ -69,15 +77,15 @@ def submission_status(
     """Return the submission status and late flag."""
     if due_at is None:
         return (NO_DUE_DATE_STATUS if not submitted else "submitted_no_due_date", False)
-    due = datetime.fromisoformat(due_at)
+    due = parse_timezone_datetime(due_at, "due_at")
     if not submitted:
-        current_time = datetime.fromisoformat(now) if now is not None else datetime.now(due.tzinfo)
+        current_time = parse_timezone_datetime(now, "now") if now is not None else datetime.now(due.tzinfo)
         if current_time <= due:
             return ("pending", False)
         return ("missing", True)
     if submitted_at is None:
         return ("submitted_unknown_time", False)
-    submitted_time = datetime.fromisoformat(submitted_at)
+    submitted_time = parse_timezone_datetime(submitted_at, "submitted_at")
     if submitted_time > due:
         return ("submitted_late", True)
     return ("submitted_on_time", False)

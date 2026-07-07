@@ -146,6 +146,40 @@ def test_track_assignments_marks_missing_after_due_date(tmp_path) -> None:
     assert row["grading"]["status"] == "not_graded"
 
 
+def test_track_assignments_rejects_naive_now_when_due_has_timezone(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+    student = target(tmp_path, "bianchi-luca")
+
+    try:
+        track_assignments.track_assignments(
+            activity_path=activity_path,
+            targets=[student],
+            due_at="2026-10-19T23:59:00+02:00",
+            now="2026-10-18T12:00:00",
+        )
+    except ValueError as error:
+        assert "now deve includere il timezone" in str(error)
+    else:
+        raise AssertionError("track_assignments should reject now without timezone")
+
+
+def test_track_assignments_rejects_naive_submitted_at_when_due_has_timezone(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+    student = target(tmp_path, "verdi-anna")
+    write_report(student.path, "2026-10-20T08:00:00", passed=False)
+
+    try:
+        track_assignments.track_assignments(
+            activity_path=activity_path,
+            targets=[student],
+            due_at="2026-10-19T23:59:00+02:00",
+        )
+    except ValueError as error:
+        assert "submitted_at deve includere il timezone" in str(error)
+    else:
+        raise AssertionError("track_assignments should reject submitted_at without timezone")
+
+
 def test_track_assignments_marks_submitted_late(tmp_path) -> None:
     activity_path = write_activity(tmp_path)
     student = target(tmp_path, "verdi-anna")
