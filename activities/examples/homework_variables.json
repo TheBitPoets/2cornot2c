@@ -1,0 +1,60 @@
+{
+  "schema_version": "1.0",
+  "id": "c-base-variabili-001",
+  "titolo": "Calcolo della differenza tra due interi",
+  "tipo": "compito-casa",
+  "difficolta": "B",
+  "argomenti": [
+    "variabili",
+    "input-output",
+    "operatori"
+  ],
+  "contesto": {
+    "classe": "3A-TPSI",
+    "team_github": "3A-TPSI",
+    "percorso": "terzo-anno",
+    "uda": "uda-2"
+  },
+  "consegna": "Scrivi un programma C che legge due interi e stampa la loro differenza.",
+  "vincoli": [
+    "usa scanf",
+    "usa printf",
+    "gestisci anche risultati negativi"
+  ],
+  "soluzione_attesa": {
+    "tipo": "programma-c",
+    "file": "main.c",
+    "output_atteso": "Differenza: 3"
+  },
+  "correzione": {
+    "compila": true,
+    "test": true,
+    "sandbox": true,
+    "ai_feedback": true
+  },
+  "metriche": {
+    "tempo_stimato_minuti": 25,
+    "traccia_tempo_dichiarato": true,
+    "traccia_sessioni_thebitlab": true,
+    "traccia_eventi_didattici": true,
+    "traccia_errori_compilazione": true
+  },
+  "rubrica": [
+    {
+      "criterio": "Compilazione",
+      "punti": 2
+    },
+    {
+      "criterio": "Correttezza del risultato",
+      "punti": 4
+    },
+    {
+      "criterio": "Chiarezza del codice",
+      "punti": 2
+    },
+    {
+      "criterio": "Gestione dei casi limite",
+      "punti": 2
+    }
+  ]
+}

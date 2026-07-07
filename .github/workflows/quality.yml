@@ -9,6 +9,8 @@ on:
     paths:
       - "scripts/**"
       - "tests/**"
+      - "activities/**"
+      - "doc/ACTIVITIES_SCHEMA.md"
       - "doc/course_design.json"
       - "doc/PERCORSO_DIDATTICO.md"
       - "pyproject.toml"
@@ -20,6 +22,8 @@ on:
     paths:
       - "scripts/**"
       - "tests/**"
+      - "activities/**"
+      - "doc/ACTIVITIES_SCHEMA.md"
       - "doc/course_design.json"
       - "doc/PERCORSO_DIDATTICO.md"
       - "pyproject.toml"

@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.0",
+  "id": "c-base-funzioni-verifica-001",
+  "titolo": "Verifica pratica su funzioni e condizioni",
+  "tipo": "verifica-pratica",
+  "difficolta": "C",
+  "argomenti": [
+    "funzioni",
+    "if",
+    "operatori"
+  ],
+  "contesto": {
+    "classe": "3A-TPSI",
+    "team_github": "3A-TPSI",
+    "percorso": "terzo-anno",
+    "uda": "uda-4"
+  },
+  "consegna": "Implementa una funzione che riceve tre interi e restituisce il maggiore.",
+  "vincoli": [
+    "la logica principale deve stare in una funzione separata",
+    "il main deve occuparsi solo di input e output"
+  ],
+  "correzione": {
+    "compila": true,
+    "test": true,
+    "sandbox": true,
+    "ai_feedback": false
+  },
+  "metriche": {
+    "tempo_stimato_minuti": 50,
+    "traccia_tempo_dichiarato": false,
+    "traccia_sessioni_thebitlab": true,
+    "traccia_eventi_didattici": true,
+    "traccia_errori_compilazione": true
+  },
+  "rubrica": [
+    {
+      "criterio": "Compilazione senza errori",
+      "punti": 2
+    },
+    {
+      "criterio": "Funzione corretta",
+      "punti": 4
+    },
+    {
+      "criterio": "Gestione dei casi con valori uguali",
+      "punti": 2
+    },
+    {
+      "criterio": "Pulizia del codice",
+      "punti": 2
+    }
+  ]
+}
