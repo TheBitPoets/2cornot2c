@@ -259,6 +259,7 @@ def docker_command(
     workspace = (workspace or Path.cwd()).resolve()
     activity_path = activity.resolve()
     source_path = source.resolve()
+    report_container_path: str | None = None
     command = [
         "docker",
         "run",
@@ -271,6 +272,19 @@ def docker_command(
         f"{workspace}:/workspace:ro",
         "-w",
         "/workspace",
+    ]
+    if report:
+        report_path = report.resolve()
+        command.extend(
+            [
+                "-v",
+                f"{report_path.parent}:/thebitlab-output",
+            ]
+        )
+        report_container_path = f"/thebitlab-output/{report_path.name}"
+
+    command.extend(
+        [
         image,
         "--activity",
         str(activity_path.relative_to(workspace)),
@@ -278,12 +292,12 @@ def docker_command(
         str(source_path.relative_to(workspace)),
         "--timeout",
         str(timeout_seconds),
-    ]
+        ]
+    )
     if language:
         command.extend(["--language", language])
-    if report:
-        report_path = report.resolve()
-        command.extend(["--report", str(report_path.relative_to(workspace))])
+    if report_container_path:
+        command.extend(["--report", report_container_path])
     return command
 
 
