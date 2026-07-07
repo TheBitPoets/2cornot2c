@@ -12,6 +12,12 @@ Questo documento raccoglie i primi comandi di test del progetto.
 
 ## Test Python
 
+Installa prima la dipendenza di test:
+
+```bash
+python -m pip install pytest
+```
+
 Per eseguire i test Python:
 
 ```bash
