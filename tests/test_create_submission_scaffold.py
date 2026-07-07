@@ -156,13 +156,14 @@ def test_create_scaffold_writes_non_empty_starter_for_supported_languages(tmp_pa
     for language in create_submission_scaffold.SUPPORTED_LANGUAGES:
         activity_id = f"{language}-exercise"
         activity_path = write_activity(tmp_path, {**activity(), "id": activity_id, "linguaggio": language})
+        source_name = create_submission_scaffold.default_source_name_for(language)
 
         destination = create_submission_scaffold.create_scaffold(
             activity_path=activity_path,
             target_dir=tmp_path / language,
         )
 
-        assert (destination / "main.c").read_text(encoding="utf-8").strip()
+        assert (destination / source_name).read_text(encoding="utf-8").strip()
 
 
 def test_create_scaffold_rejects_unsupported_language(tmp_path) -> None:
