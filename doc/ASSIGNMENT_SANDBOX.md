@@ -80,7 +80,7 @@ Il file `--report` puo stare anche fuori dal workspace: viene scritto dal proces
 
 Limiti noti:
 
-- non applica ancora limiti espliciti di memoria;
+- applica limiti iniziali di memoria, CPU e numero processi, ma non ha ancora una policy configurabile per classe, linguaggio o difficolta dell'esercizio;
 - non gestisce ancora quote su file generati;
 - non isola in modo fine tutti i linguaggi futuri;
 - non integra ancora GitHub Actions dedicate alle consegne studenti;
