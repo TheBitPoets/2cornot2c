@@ -89,6 +89,8 @@ Per sovrascrivere in modo esplicito:
 python scripts/create_activity.py --interactive --force
 ```
 
+Usa `--force` con cautela: il file esistente viene sostituito.
+
 Puoi anche usare la modalita non interattiva:
 
 ```bash
