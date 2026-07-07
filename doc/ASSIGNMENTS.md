@@ -148,6 +148,53 @@ La regola importante e questa:
 
 L'AI non deve decidere da sola se un programma funziona. Deve aiutare a spiegare errori, suggerire studio mirato, produrre feedback leggibile e proporre esercizi di recupero.
 
+## Sicurezza dei workflow di correzione
+
+Il codice studente deve essere trattato come codice non fidato.
+
+Questa regola vale anche quando gli studenti appartengono all'organizzazione GitHub `TheBitPoets`, perche un workflow di correzione compila ed esegue codice scritto dagli studenti.
+
+I workflow devono separare due fasi:
+
+| Fase | Cosa fa | Regola di sicurezza |
+|---|---|---|
+| Grading deterministico | Compila codice studente, esegue test, produce report | Non deve avere segreti e deve usare permessi minimi |
+| Feedback/reporting | Legge il report, genera feedback, pubblica risultati | Puo usare segreti solo se non esegue codice studente |
+
+La fase di grading deve rispettare queste regole:
+
+- usare permessi minimi, idealmente `contents: read`;
+- non usare segreti;
+- non usare `pull_request_target` per eseguire codice proveniente da fork o repository studente;
+- avere timeout espliciti;
+- produrre report come file o artifact;
+- non avere accesso a credenziali o token con permessi di scrittura;
+- eseguire il codice in sandbox appena il runner Docker sara disponibile.
+
+Esempio di impostazione minima:
+
+```yaml
+permissions:
+  contents: read
+
+jobs:
+  grading:
+    timeout-minutes: 5
+```
+
+La fase di feedback AI deve avvenire dopo il grading.
+
+Questa fase puo usare una API key solo se:
+
+- non compila codice studente;
+- non esegue codice studente;
+- legge solo report, errori, test falliti e metadati didattici;
+- produce feedback testuale o report per il docente.
+
+In sintesi:
+
+> Il job che esegue codice studente non deve avere segreti. Il job che usa segreti non deve eseguire codice studente.
+
 ## Sandbox obbligatoria
 
 L'esecuzione del codice studente deve avvenire in sandbox.
