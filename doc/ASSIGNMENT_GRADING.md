@@ -120,6 +120,7 @@ Questa e una fondazione minimale.
 Limiti noti:
 
 - solo il runner C e implementato in questa fase;
+- i runner pianificati ma non implementati restituiscono `unsupported-language`;
 - l'esecuzione non e ancora isolata in Docker;
 - non vengono ancora applicati limiti su memoria o filesystem;
 - non viene disabilitata la rete;
