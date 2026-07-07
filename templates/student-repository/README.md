@@ -32,7 +32,7 @@ Il report autorevole e quello prodotto dalla GitHub Action come artifact. I file
 Per l'MVP, il flusso consigliato e:
 
 1. Crea o apri la cartella dell'attivita in `assignments/<activity_id>/`.
-2. Scrivi il file richiesto, per esempio `main.c`.
+2. Scrivi il file indicato nel README della consegna, per esempio `main.c` per C o `main.py` per Python.
 3. Fai commit e push su `main`.
 4. Avvia o controlla la GitHub Action di grading.
 5. Leggi il report prodotto come artifact.
@@ -42,6 +42,8 @@ Esempio:
 ```text
 assignments/c-base-somma-001/main.c
 ```
+
+Il docente puo generare questa cartella con lo script TheBitLab di scaffold consegna. Se la cartella e gia pronta, lavora solo sui file indicati nel README della consegna.
 
 ## Grading manuale da GitHub Actions
 

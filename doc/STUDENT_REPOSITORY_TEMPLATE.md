@@ -143,8 +143,48 @@ Qualunque fase di feedback AI deve essere separata dal grading.
 
 Le prossime PR possono aggiungere:
 
-1. script per creare lo scaffold di una consegna in `assignments/<activity_id>/`;
-2. trigger automatico su push;
-3. raccolta centralizzata degli artifact;
-4. dashboard docente minima;
-5. automazione GitHub per creare repository studenti da template.
+1. trigger automatico su push;
+2. raccolta centralizzata degli artifact;
+3. dashboard docente minima;
+4. automazione GitHub per creare repository studenti da template.
+
+## Scaffold consegna
+
+Per creare una cartella consegna compatibile con il template puoi usare:
+
+```bash
+python scripts/create_submission_scaffold.py \
+  --activity activities/examples/c_sum_with_tests.json \
+  --target templates/student-repository \
+  --thebitlab-ref main
+```
+
+Lo script crea:
+
+```text
+assignments/<activity_id>/
+  activity.json
+  <source-file>
+  README.md
+```
+
+Se non passi `--source-name`, il nome del sorgente viene scelto in base al linguaggio della activity:
+
+| Linguaggio | File generato |
+|---|---|
+| `c` | `main.c` |
+| `python` | `main.py` |
+| `javascript` / `nodejs` | `main.js` |
+| `java` | `Main.java` |
+| `cpp` | `main.cpp` |
+| `go` | `main.go` |
+| `html` | `index.html` |
+| `php` | `main.php` |
+| `sql` | `main.sql` |
+| `assembly` | `main.asm` |
+
+Usa `--source-name` solo quando vuoi forzare un nome diverso da quello predefinito.
+
+Lo scaffold non sovrascrive una consegna gia esistente, a meno di usare `--force`.
+
+`--force` aggiorna `activity.json` e `README.md`, ma non sovrascrive il sorgente se esiste gia. Per rigenerare anche il sorgente starter serve `--overwrite-source`.
