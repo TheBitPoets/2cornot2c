@@ -696,6 +696,8 @@ Il progetto didattico gia presente nella board puo diventare il punto di partenz
    - esercizi consigliati.
 5. Il docente puo approvare, modificare o ignorare il feedback.
 
+Questo passaggio deve rispettare la policy minima per AI assisted descritta piu avanti: minimizzazione dei dati, possibilita di disattivare provider esterni e separazione tra esito deterministico e feedback generato.
+
 ## Policy minima per AI assisted
 
 L'AI deve ricevere solo i dati necessari a produrre feedback didattico.
