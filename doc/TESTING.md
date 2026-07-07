@@ -15,7 +15,7 @@ Questo documento raccoglie i primi comandi di test del progetto.
 Installa prima la dipendenza di test:
 
 ```bash
-python -m pip install pytest
+python -m pip install -r requirements-dev.txt
 ```
 
 Per eseguire i test Python:

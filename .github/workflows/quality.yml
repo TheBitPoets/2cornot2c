@@ -37,7 +37,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install test dependencies
-        run: python -m pip install pytest
+        run: python -m pip install -r requirements-dev.txt
 
       - name: Run Python tests
         run: python -m pytest
