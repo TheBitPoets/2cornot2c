@@ -211,7 +211,9 @@ def create_scaffold(
     identifier = activity_id(activity)
     validate_activity_or_raise(activity, identifier)
     selected_language = language_for(activity, language)
-    source_name = validate_source_name(source_name or default_source_name_for(selected_language))
+    source_name = validate_source_name(
+        source_name if source_name is not None else default_source_name_for(selected_language)
+    )
     thebitlab_ref = validate_thebitlab_ref(thebitlab_ref)
     destination = scaffold_dir(target_dir, identifier)
 

@@ -237,3 +237,18 @@ def test_create_scaffold_rejects_source_name_with_unsafe_characters(tmp_path) ->
         assert "nome file semplice" in str(error)
     else:
         raise AssertionError("create_scaffold should reject unsafe characters in source_name")
+
+
+def test_create_scaffold_rejects_empty_source_name(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+
+    try:
+        create_submission_scaffold.create_scaffold(
+            activity_path=activity_path,
+            target_dir=tmp_path,
+            source_name="",
+        )
+    except ValueError as error:
+        assert "nome file semplice" in str(error)
+    else:
+        raise AssertionError("create_scaffold should reject empty source_name")
