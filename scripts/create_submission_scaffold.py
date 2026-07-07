@@ -50,6 +50,15 @@ def scaffold_dir(target_dir: Path, identifier: str) -> Path:
     return target_dir / "assignments" / identifier
 
 
+def validate_source_name(source_name: str) -> str:
+    """Validate that a source name is a simple filename."""
+    value = source_name.strip()
+    path = Path(value)
+    if not value or path.name != value or path.is_absolute() or "/" in value or "\\" in value:
+        raise ValueError("source_name deve essere un nome file semplice, per esempio main.c.")
+    return value
+
+
 def starter_source(language: str) -> str:
     """Return a minimal starter source for the requested language."""
     if language == "c":
@@ -97,6 +106,7 @@ def create_scaffold(
     identifier = activity_id(activity)
     validate_activity_or_raise(activity, identifier)
     selected_language = language_for(activity, language)
+    source_name = validate_source_name(source_name)
     destination = scaffold_dir(target_dir, identifier)
 
     if destination.exists() and any(destination.iterdir()) and not overwrite:
