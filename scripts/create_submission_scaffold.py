@@ -118,6 +118,41 @@ def starter_source(language: str) -> str:
             "    return 0;\n"
             "}\n"
         )
+    if language == "cpp":
+        return (
+            "#include <iostream>\n\n"
+            "int main() {\n"
+            "    // Scrivi qui la tua soluzione.\n"
+            "    return 0;\n"
+            "}\n"
+        )
+    if language == "go":
+        return (
+            "package main\n\n"
+            "func main() {\n"
+            "    // Scrivi qui la tua soluzione.\n"
+            "}\n"
+        )
+    if language == "java":
+        return (
+            "public class Main {\n"
+            "    public static void main(String[] args) {\n"
+            "        // Scrivi qui la tua soluzione.\n"
+            "    }\n"
+            "}\n"
+        )
+    if language == "javascript" or language == "nodejs":
+        return "// Scrivi qui la tua soluzione.\n"
+    if language == "php":
+        return "<?php\n// Scrivi qui la tua soluzione.\n"
+    if language == "python":
+        return "# Scrivi qui la tua soluzione.\n"
+    if language == "html":
+        return "<!doctype html>\n<html lang=\"it\">\n<body>\n  <!-- Scrivi qui la tua soluzione. -->\n</body>\n</html>\n"
+    if language == "sql":
+        return "-- Scrivi qui la tua soluzione.\n"
+    if language == "assembly":
+        return "; Scrivi qui la tua soluzione.\n"
     return ""
 
 

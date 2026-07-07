@@ -152,6 +152,19 @@ def test_create_scaffold_normalizes_language_aliases(tmp_path) -> None:
     assert "language`: `cpp`" in readme
 
 
+def test_create_scaffold_writes_non_empty_starter_for_supported_languages(tmp_path) -> None:
+    for language in create_submission_scaffold.SUPPORTED_LANGUAGES:
+        activity_id = f"{language}-exercise"
+        activity_path = write_activity(tmp_path, {**activity(), "id": activity_id, "linguaggio": language})
+
+        destination = create_submission_scaffold.create_scaffold(
+            activity_path=activity_path,
+            target_dir=tmp_path / language,
+        )
+
+        assert (destination / "main.c").read_text(encoding="utf-8").strip()
+
+
 def test_create_scaffold_rejects_unsupported_language(tmp_path) -> None:
     activity_path = write_activity(tmp_path)
 
