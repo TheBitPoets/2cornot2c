@@ -174,6 +174,36 @@ Prima della pubblicazione conviene aggiungere o verificare:
 
 Questa parte e importante per evitare che il progetto sembri utilizzabile in produzione prima che siano chiari limiti, requisiti e responsabilita.
 
+### Privacy e dati studenti
+
+Le feature future su compiti, metriche, dashboard e classifiche introdurranno dati personali o comunque sensibili dal punto di vista didattico.
+
+Tra i dati previsti o probabili ci sono:
+
+- username GitHub;
+- repository individuali;
+- timestamp di commit e push;
+- risultati dei test;
+- errori frequenti;
+- tempi stimati di lavoro;
+- stato delle consegne;
+- indicatori di difficolta;
+- classifiche o badge.
+
+Prima di implementare metriche e dashboard serve una regola chiara:
+
+- raccogliere solo dati necessari allo scopo didattico;
+- evitare dati personali non indispensabili;
+- permettere pseudonimizzazione degli studenti;
+- distinguere cio che vede il docente da cio che vede lo studente;
+- evitare classifiche pubbliche su indicatori sensibili;
+- documentare la retention dei dati;
+- chiarire quali dati vengono letti da GitHub;
+- chiarire quali dati vengono salvati localmente;
+- evitare invio di dati studente ai provider AI se non strettamente necessario e dichiarato.
+
+Le metriche devono aiutare il docente a intervenire, non produrre sorveglianza fine a se stessa.
+
 ## Priorita consigliate
 
 ### P0 - Definire protezione dati e test automatici
