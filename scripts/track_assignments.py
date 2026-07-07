@@ -59,12 +59,21 @@ def load_report(path: Path) -> dict[str, Any] | None:
     return report
 
 
-def submission_status(*, submitted: bool, submitted_at: str | None, due_at: str | None) -> tuple[str, bool]:
+def submission_status(
+    *,
+    submitted: bool,
+    submitted_at: str | None,
+    due_at: str | None,
+    now: str | None = None,
+) -> tuple[str, bool]:
     """Return the submission status and late flag."""
     if due_at is None:
         return (NO_DUE_DATE_STATUS if not submitted else "submitted_no_due_date", False)
     due = datetime.fromisoformat(due_at)
     if not submitted:
+        current_time = datetime.fromisoformat(now) if now is not None else datetime.now(due.tzinfo)
+        if current_time <= due:
+            return ("pending", False)
         return ("missing", True)
     if submitted_at is None:
         return ("submitted_unknown_time", False)
@@ -114,6 +123,7 @@ def track_assignments(
     targets: list[TrackingTarget],
     assigned_at: str | None = None,
     due_at: str | None = None,
+    now: str | None = None,
 ) -> dict[str, Any]:
     """Build a teacher-facing tracking index for one activity."""
     activity = create_submission_scaffold.load_activity(activity_path)
@@ -121,6 +131,7 @@ def track_assignments(
     create_submission_scaffold.validate_activity_or_raise(activity, activity_id)
     normalized_assigned_at = parse_datetime(assigned_at, "assigned_at")
     normalized_due_at = parse_datetime(due_at, "due_at")
+    normalized_now = parse_datetime(now, "now")
 
     students: list[dict[str, Any]] = []
     for target in targets:
@@ -131,7 +142,12 @@ def track_assignments(
         source_exists = Path(source_path).exists() if source_path else current_assignment_dir.exists()
         submitted = source_exists or report is not None
         submitted_at = report.get("submitted_at") if report else None
-        status, late = submission_status(submitted=submitted, submitted_at=submitted_at, due_at=normalized_due_at)
+        status, late = submission_status(
+            submitted=submitted,
+            submitted_at=submitted_at,
+            due_at=normalized_due_at,
+            now=normalized_now,
+        )
         students.append(
             {
                 "student": target.student,
@@ -177,6 +193,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--targets-file", type=Path, help="File con repository studenti, uno per riga.")
     parser.add_argument("--assigned-at", help="Data ISO di assegnazione.")
     parser.add_argument("--due-at", help="Data ISO di scadenza.")
+    parser.add_argument("--now", help="Data ISO da usare come riferimento temporale nei test o nelle simulazioni.")
     parser.add_argument("--output", type=Path, required=True, help="Path JSON del registro generato.")
     return parser.parse_args()
 
@@ -191,6 +208,7 @@ def main() -> int:
             targets=targets,
             assigned_at=args.assigned_at,
             due_at=args.due_at,
+            now=args.now,
         )
         write_tracking_index(index, args.output)
     except ValueError as error:

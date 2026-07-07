@@ -92,6 +92,23 @@ def test_track_assignments_marks_submitted_on_time(tmp_path) -> None:
     assert row["ai_feedback"]["status"] == "not_generated"
 
 
+def test_track_assignments_marks_pending_before_due_date(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+    student = target(tmp_path, "bianchi-luca")
+
+    index = track_assignments.track_assignments(
+        activity_path=activity_path,
+        targets=[student],
+        due_at="2026-10-19T23:59:00+02:00",
+        now="2026-10-18T12:00:00+02:00",
+    )
+
+    row = index["students"][0]
+    assert row["status"] == "pending"
+    assert row["submitted"] is False
+    assert row["late"] is False
+
+
 def test_track_assignments_marks_missing_after_due_date(tmp_path) -> None:
     activity_path = write_activity(tmp_path)
     student = target(tmp_path, "bianchi-luca")
@@ -100,6 +117,7 @@ def test_track_assignments_marks_missing_after_due_date(tmp_path) -> None:
         activity_path=activity_path,
         targets=[student],
         due_at="2026-10-19T23:59:00+02:00",
+        now="2026-10-20T12:00:00+02:00",
     )
 
     row = index["students"][0]
