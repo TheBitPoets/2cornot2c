@@ -145,6 +145,8 @@ Comando locale opzionale:
 python scripts/grade_activity.py --activity activities/c-base-somma-001.json --source assignments/c-base-somma-001/main.c --language c --docker --report reports/c-base-somma-001/latest.json
 ```
 
+Questo comando serve per prova locale o autoverifica. Il report autorevole per docente, metriche e dashboard deve arrivare dalla GitHub Action di grading o da una raccolta centralizzata.
+
 In futuro TheBitLab potra creare automaticamente cartelle, branch, issue o PR.
 
 ## Flusso studente
