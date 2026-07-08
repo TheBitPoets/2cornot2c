@@ -44,6 +44,7 @@ const state = {
   overviewView: "list",
   coverageCollapsedActivities: new Set(),
   reviewStudent: null,
+  reviewSource: "",
   reviewFilePath: "",
   reviewFile: null,
   reviewSplit: readReviewSplit(),
@@ -57,6 +58,7 @@ const els = {
   coverageStatus: document.querySelector("#coverageStatus"),
   coverageSummary: document.querySelector("#coverageSummary"),
   coverageDialog: document.querySelector("#coverageDialog"),
+  coverageBreadcrumb: document.querySelector("#coverageBreadcrumb"),
   coverageOpenBtn: document.querySelector("#coverageOpenBtn"),
   coverageCloseBtn: document.querySelector("#coverageCloseBtn"),
   coverageBody: document.querySelector("#coverageBody"),
@@ -78,11 +80,13 @@ const els = {
   overviewMatrixBody: document.querySelector("#overviewMatrixBody"),
   tableStatus: document.querySelector("#tableStatus"),
   studentsDialog: document.querySelector("#studentsDialog"),
+  studentsBreadcrumb: document.querySelector("#studentsBreadcrumb"),
   studentsOpenBtn: document.querySelector("#studentsOpenBtn"),
   studentsCloseBtn: document.querySelector("#studentsCloseBtn"),
   studentsTable: document.querySelector("#studentsTable"),
   studentsBody: document.querySelector("#studentsBody"),
   reviewDialog: document.querySelector("#reviewDialog"),
+  reviewBreadcrumb: document.querySelector("#reviewBreadcrumb"),
   reviewPrevBtn: document.querySelector("#reviewPrevBtn"),
   reviewNextBtn: document.querySelector("#reviewNextBtn"),
   reviewCloseBtn: document.querySelector("#reviewCloseBtn"),
@@ -1280,6 +1284,7 @@ function submissionFiles(student) {
 
 function clearReview() {
   state.reviewStudent = null;
+  state.reviewSource = "";
   state.reviewFilePath = "";
   state.reviewFile = null;
   els.reviewStatus.textContent = "Seleziona una consegna dalla tabella studenti.";
@@ -1294,10 +1299,42 @@ function studentByName(studentName) {
   return (state.report?.students || []).find((student) => student.student === studentName);
 }
 
+function renderModalBreadcrumb(element, items) {
+  if (!element) return;
+  element.innerHTML = items.map((item, index) => {
+    const currentClass = index === items.length - 1 ? " class=\"modalBreadcrumbCurrent\"" : "";
+    const separator = index === items.length - 1
+      ? ""
+      : "<span class=\"modalBreadcrumbSeparator\" aria-hidden=\"true\">&gt;</span>";
+    return `<span${currentClass}>${escapeHtml(item)}</span>${separator}`;
+  }).join("");
+}
+
+function updateModalBreadcrumbs() {
+  renderModalBreadcrumb(els.coverageBreadcrumb, ["Dashboard", "Copertura registri"]);
+  renderModalBreadcrumb(
+    els.studentsBreadcrumb,
+    els.coverageDialog?.open
+      ? ["Dashboard", "Copertura registri", "Studenti"]
+      : ["Dashboard", "Studenti"],
+  );
+
+  const reviewPath = ["Dashboard"];
+  if (state.reviewSource === "overview") {
+    reviewPath.push("Quadro classe");
+  } else {
+    if (els.coverageDialog?.open) reviewPath.push("Copertura registri");
+    if (els.studentsDialog?.open) reviewPath.push("Studenti");
+  }
+  reviewPath.push("Revisione consegna");
+  renderModalBreadcrumb(els.reviewBreadcrumb, reviewPath);
+}
+
 function openReviewDialog() {
   if (els.reviewDialog && !els.reviewDialog.open) {
     els.reviewDialog.showModal();
   }
+  updateModalBreadcrumbs();
   applyReviewSplit();
 }
 
@@ -1330,10 +1367,10 @@ async function openAdjacentSubmission(direction) {
   if (index < 0) return;
   const nextStudent = students[index + direction];
   if (!nextStudent) return;
-  await openSubmission(nextStudent.student);
+  await openSubmission(nextStudent.student, "", state.reviewSource || "students");
 }
 
-async function openSubmission(studentName, preferredPath = "") {
+async function openSubmission(studentName, preferredPath = "", source = "students") {
   const student = studentByName(studentName);
   if (!student) return;
   const files = submissionFiles(student);
@@ -1343,6 +1380,7 @@ async function openSubmission(studentName, preferredPath = "") {
     return;
   }
   state.reviewStudent = studentName;
+  state.reviewSource = source;
   const selectedPath = preferredPath || files[0].path;
   openReviewDialog();
   updateReviewNavigation();
@@ -1430,6 +1468,7 @@ function openCoverageDialog() {
   if (els.coverageDialog && !els.coverageDialog.open) {
     els.coverageDialog.showModal();
   }
+  updateModalBreadcrumbs();
   setupResizableTable(els.coverageTable, "coverage");
 }
 
@@ -1443,6 +1482,7 @@ function openStudentsDialog() {
   if (els.studentsDialog && !els.studentsDialog.open) {
     els.studentsDialog.showModal();
   }
+  updateModalBreadcrumbs();
   setupResizableTable(els.studentsTable, "students");
 }
 
@@ -1528,7 +1568,7 @@ els.overviewBody.addEventListener("click", async (event) => {
   els.reportSelect.value = button.dataset.overviewReport;
   await loadSelectedReport();
   if (button.dataset.overviewStudent) {
-    openSubmission(button.dataset.overviewStudent);
+    openSubmission(button.dataset.overviewStudent, "", "overview");
   }
 });
 els.overviewMatrixBody.addEventListener("click", async (event) => {
@@ -1537,13 +1577,13 @@ els.overviewMatrixBody.addEventListener("click", async (event) => {
   els.reportSelect.value = button.dataset.overviewReport;
   await loadSelectedReport();
   if (button.dataset.overviewStudent) {
-    openSubmission(button.dataset.overviewStudent);
+    openSubmission(button.dataset.overviewStudent, "", "overview");
   }
 });
 els.studentsBody.addEventListener("click", (event) => {
   const button = event.target.closest("[data-review-student]");
   if (!button || button.disabled) return;
-  openSubmission(button.dataset.reviewStudent);
+  openSubmission(button.dataset.reviewStudent, "", "students");
 });
 els.submissionReview.addEventListener("click", (event) => {
   const button = event.target.closest("[data-review-file]");
