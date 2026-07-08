@@ -28,11 +28,12 @@ async function api(path, options = {}) {
     ...options,
   });
   if (!response.ok) {
-    let detail = "";
+    const body = await response.text();
+    let detail = body;
     try {
-      detail = (await response.json()).error || "";
+      detail = JSON.parse(body).error || body;
     } catch {
-      detail = await response.text();
+      detail = body;
     }
     throw new Error(`${response.status} ${response.statusText}${detail ? `: ${detail}` : ""}`);
   }
