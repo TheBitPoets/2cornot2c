@@ -681,10 +681,6 @@ label {
   min-width: 78rem;
 }
 
-#overviewListTable {
-  min-width: 96rem;
-}
-
 .status {
   margin: 0;
   color: var(--muted);
@@ -897,14 +893,6 @@ th.isResizableColumn:hover {
 }
 
 .classBadge { background: #eef4f8; color: #28506a; }
-
-.classBadge {
-  max-width: 11rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .typeHomework { background: #eaf1ff; color: #1e4fa8; }
 .typeLab { background: #e5f6ef; color: #0f684a; }
 .typeClasswork { background: #fff1df; color: #81501a; }
