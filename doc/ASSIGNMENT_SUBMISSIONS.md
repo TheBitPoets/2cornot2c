@@ -490,8 +490,9 @@ La vista mostra:
 |---|---|
 | Registro selezionato | activity, scadenza, numero studenti, consegnati, mancanti, ritardi |
 | Quadro classe | tutte le activity salvate nei registri, per studente, con tipo, modalita, stato, test e voto |
-| Filtro consegne | tutti, da consegnare, mancanti, consegnati, in ritardo, test falliti |
-| Studenti | stato, scadenza, data consegna, commit, sorgente, grading, voto, stato AI |
+| Copertura registri | riepilogo activity con/senza registro e modal con una riga per registro generato |
+| Studenti | modal con filtri consegne, stato, scadenza, data consegna, commit, sorgente, grading, voto, stato AI |
+| Revisione consegna | modal per leggere i file consegnati, con navigazione tra studenti e syntax highlighting |
 
 La dashboard non ricalcola il grading: visualizza il formato prodotto da `scripts/track_assignments.py`. In questo modo CLI, test e GUI restano allineati allo stesso contratto JSON.
 
@@ -644,5 +645,7 @@ Le prossime PR possono introdurre:
 5. Download artifact GitHub Actions e collegamento al registro consegne.
 6. Modalita studente e feedback assistito.
 7. Dashboard Markdown minima per docente.
+8. Legenda/help della dashboard consegne: spiegare colori, badge, sigle della matrice, lucchetti, stati, filtri e azioni dei modal.
+9. Layout pannelli personalizzabile: drag and drop dei pannelli della pagina consegne, griglia a una/due colonne, persistenza in `localStorage` e valutazione dello stesso pattern per calendario, course board e altre pagine GUI.
 
 Il primo template repository studente e documentato in `STUDENT_REPOSITORY_TEMPLATE.md`.
