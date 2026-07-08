@@ -1099,8 +1099,8 @@ function renderOverview() {
       </td>
       <td><code>${escapeHtml(grade)}</code></td>
       <td>
-        <button type="button" class="smallButton" data-overview-report="${escapeHtml(row.report_name)}" data-overview-student="${escapeHtml(row.student || "")}" title="Apri il registro ${escapeHtml(row.report_name || "collegato")} e la consegna di ${escapeHtml(row.student || "questo studente")}.">
-          Apri
+        <button type="button" class="smallButton" data-overview-report="${escapeHtml(row.report_name)}" data-overview-student="${escapeHtml(row.student || "")}" title="Apri la consegna di ${escapeHtml(row.student || "questo studente")} per questa activity.">
+          Consegna
         </button><br>
         <small class="overviewReportName" title="${escapeHtml(row.report_name || "-")}">${escapeHtml(row.report_name || "-")}</small>
       </td>
