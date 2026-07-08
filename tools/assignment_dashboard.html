@@ -162,23 +162,6 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
       </div>
     </section>
 
-    <section class="panel" data-panel-key="submission-filters">
-      <div class="panelHead">
-        <div>
-          <h2>Filtro consegne</h2>
-          <p class="status">Usa i filtri per isolare mancanti, ritardi ed esiti di grading.</p>
-        </div>
-      </div>
-      <div class="filterBar">
-        <button type="button" data-filter="all" title="Mostra tutti gli studenti del registro selezionato.">Tutti</button>
-        <button type="button" data-filter="pending" title="Mostra gli studenti che devono ancora consegnare ma sono entro la scadenza.">Da consegnare</button>
-        <button type="button" data-filter="missing" title="Mostra gli studenti senza consegna dopo la scadenza.">Mancanti</button>
-        <button type="button" data-filter="submitted" title="Mostra gli studenti che hanno consegnato.">Consegnati</button>
-        <button type="button" data-filter="late" title="Mostra gli studenti che hanno consegnato oltre la scadenza.">In ritardo</button>
-        <button type="button" data-filter="failed" title="Mostra gli studenti con grading o test falliti.">Test falliti</button>
-      </div>
-    </section>
-
     <section class="panel" data-panel-key="students">
       <div class="panelHead">
         <div>
@@ -243,6 +226,20 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
         <p class="status">Stato, grading e consegne del registro selezionato.</p>
       </div>
       <button id="studentsCloseBtn" type="button" class="smallButton" title="Chiudi la tabella studenti e torna alla dashboard.">Chiudi</button>
+    </div>
+    <div class="studentsDialogFilters">
+      <div>
+        <strong>Filtro consegne</strong>
+        <p class="status">Isola mancanti, ritardi ed esiti di grading.</p>
+      </div>
+      <div class="filterBar">
+        <button type="button" data-filter="all" title="Mostra tutti gli studenti del registro selezionato.">Tutti</button>
+        <button type="button" data-filter="pending" title="Mostra gli studenti che devono ancora consegnare ma sono entro la scadenza.">Da consegnare</button>
+        <button type="button" data-filter="missing" title="Mostra gli studenti senza consegna dopo la scadenza.">Mancanti</button>
+        <button type="button" data-filter="submitted" title="Mostra gli studenti che hanno consegnato.">Consegnati</button>
+        <button type="button" data-filter="late" title="Mostra gli studenti che hanno consegnato oltre la scadenza.">In ritardo</button>
+        <button type="button" data-filter="failed" title="Mostra gli studenti con grading o test falliti.">Test falliti</button>
+      </div>
     </div>
     <div class="tableWrap studentsDialogTable">
       <table id="studentsTable" class="resizableTable">

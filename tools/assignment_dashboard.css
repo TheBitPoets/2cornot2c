@@ -583,8 +583,21 @@ label {
   font-size: 1.2rem;
 }
 
+.studentsDialogFilters {
+  display: grid;
+  gap: .65rem;
+  padding: .9rem 1.1rem;
+  border-bottom: 1px solid var(--line);
+  background: #ffffff;
+}
+
+.studentsDialogFilters strong {
+  display: block;
+  margin-bottom: .15rem;
+}
+
 .studentsDialogTable {
-  height: calc(100% - 4.8rem);
+  height: calc(100% - 11.6rem);
 }
 
 .status {
@@ -625,6 +638,10 @@ label {
   flex-wrap: wrap;
   gap: .55rem;
   padding: 1.1rem;
+}
+
+.studentsDialogFilters .filterBar {
+  padding: 0;
 }
 
 .filterBar button.isActive {
