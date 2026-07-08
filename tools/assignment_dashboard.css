@@ -346,6 +346,7 @@ th {
 
 th.isResizableColumn {
   padding-right: 1rem;
+  border-right: 1px solid rgba(17, 17, 17, .18);
 }
 
 .columnResizeHandle {
@@ -362,14 +363,18 @@ th.isResizableColumn {
 .columnResizeHandle::after {
   content: "";
   position: absolute;
-  top: .35rem;
+  top: .2rem;
   right: 3px;
-  bottom: .35rem;
-  border-right: 2px solid transparent;
+  bottom: .2rem;
+  border-right: 2px solid rgba(17, 17, 17, .2);
 }
 
 .columnResizeHandle:hover::after,
 .resizableTable.isResizingColumns .columnResizeHandle::after {
+  border-right-color: rgba(17, 17, 17, .72);
+}
+
+th.isResizableColumn:hover {
   border-right-color: rgba(17, 17, 17, .38);
 }
 
