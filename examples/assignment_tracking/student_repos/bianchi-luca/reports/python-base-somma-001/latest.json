@@ -1,0 +1,13 @@
+{
+  "passed": false,
+  "status": "failed",
+  "activity_id": "python-base-somma-001",
+  "source": "examples/assignment_tracking/student_repos/bianchi-luca/assignments/python-base-somma-001/main.py",
+  "submitted_at": "2026-10-20T08:15:00+02:00",
+  "commit": "demo222",
+  "summary": {
+    "passed": 1,
+    "total": 2
+  },
+  "teacher_grade": 5
+}

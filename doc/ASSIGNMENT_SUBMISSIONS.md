@@ -494,6 +494,57 @@ La vista mostra:
 
 La dashboard non ricalcola il grading: visualizza il formato prodotto da `scripts/track_assignments.py`. In questo modo CLI, test e GUI restano allineati allo stesso contratto JSON.
 
+### Generare il registro dalla GUI
+
+La pagina `Consegne` puo anche generare un registro senza usare direttamente la CLI.
+
+Nel riquadro `Genera registro` compila:
+
+| Campo | Significato |
+|---|---|
+| Activity JSON | Scheda activity da tracciare |
+| Output registro | Path relativo dentro `teacher-reports`, per esempio `3A/somma.json` |
+| Assegnato il | Data ISO di assegnazione |
+| Scadenza | Data ISO di scadenza |
+| Ora simulata opzionale | Data ISO usata per simulare il momento attuale |
+| Repository studenti locali | Un path per riga verso i repository/cartelle studente |
+
+Quando clicchi `Genera registro`, il server locale:
+
+1. legge la activity;
+2. costruisce i target studenti;
+3. cerca per ogni studente `reports/<activity_id>/latest.json`;
+4. calcola stato consegna, ritardi e grading disponibile;
+5. salva il JSON in `teacher-reports`;
+6. carica subito il risultato nella dashboard.
+
+### Classe demo per provare il flusso
+
+Questa PR aggiunge una classe finta in:
+
+```text
+examples/assignment_tracking/
+```
+
+Contiene:
+
+| Path | Uso |
+|---|---|
+| `demo_activity.json` | Activity di esempio |
+| `targets_demo.txt` | Elenco dei repository studenti finti |
+| `student_repos/rossi-mario` | Studente con consegna in tempo e test superati |
+| `student_repos/bianchi-luca` | Studente con consegna in ritardo e test falliti |
+| `student_repos/verdi-anna` | Studente con scaffold ma senza report, quindi non consegnato |
+
+Per testare dalla GUI:
+
+1. avvia il server con `python scripts/course_board_server.py`;
+2. apri `http://localhost:8765/tools/assignment_dashboard.html`;
+3. lascia i campi demo gia compilati;
+4. clicca `Genera registro`;
+5. verifica che la dashboard mostri consegnati, mancanti, ritardi e test falliti;
+6. usa i filtri per controllare i diversi stati.
+
 ## Regole di sicurezza
 
 Regole minime:

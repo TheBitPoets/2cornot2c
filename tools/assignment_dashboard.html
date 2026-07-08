@@ -36,6 +36,46 @@
     <section class="panel">
       <div class="panelHead">
         <div>
+          <h2>Genera registro</h2>
+          <p class="status">Crea o aggiorna un registro consegne partendo da activity, target locali e scadenza.</p>
+        </div>
+      </div>
+      <div class="generateGrid">
+        <label>
+          <span>Activity JSON</span>
+          <input id="activityPath" type="text" value="examples/assignment_tracking/demo_activity.json">
+        </label>
+        <label>
+          <span>Output registro</span>
+          <input id="outputName" type="text" value="demo/demo_assignment.json">
+        </label>
+        <label>
+          <span>Assegnato il</span>
+          <input id="assignedAt" type="text" value="2026-10-12T09:00:00+02:00">
+        </label>
+        <label>
+          <span>Scadenza</span>
+          <input id="dueAt" type="text" value="2026-10-19T23:59:00+02:00">
+        </label>
+        <label>
+          <span>Ora simulata opzionale</span>
+          <input id="nowAt" type="text" placeholder="2026-10-18T12:00:00+02:00">
+        </label>
+        <label class="wideField">
+          <span>Repository studenti locali, uno per riga</span>
+          <textarea id="targetsText" rows="4">examples/assignment_tracking/student_repos/rossi-mario
+examples/assignment_tracking/student_repos/bianchi-luca
+examples/assignment_tracking/student_repos/verdi-anna</textarea>
+        </label>
+      </div>
+      <div class="generateActions">
+        <button id="generateReportBtn" type="button" class="primary" title="Genera il registro, lo salva in teacher-reports e lo carica nella dashboard.">Genera registro</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panelHead">
+        <div>
           <h2>Registro selezionato</h2>
           <p id="status" class="status">Pronto.</p>
         </div>

@@ -103,12 +103,27 @@ h1 {
   justify-content: flex-end;
 }
 
-button, select {
+button, select, input, textarea {
   border: 1px solid var(--line);
-  border-radius: 999px;
   background: #ffffff;
   color: var(--ink);
   font: 700 .88rem/1.2 var(--mono);
+}
+
+button, select {
+  border-radius: 999px;
+}
+
+input, textarea {
+  border-radius: 16px;
+  font-size: .82rem;
+  line-height: 1.35;
+  padding: .7rem .85rem;
+}
+
+textarea {
+  min-height: 6rem;
+  resize: vertical;
 }
 
 button {
@@ -122,9 +137,40 @@ button {
 
 button:hover { transform: translateY(-1px); }
 
+button.primary {
+  background: #111111;
+  border-color: #111111;
+  color: #ffffff;
+}
+
 select {
   min-width: 18rem;
   padding: .72rem .9rem;
+}
+
+.generateGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .8rem;
+  padding: 1.1rem;
+}
+
+label {
+  display: grid;
+  gap: .32rem;
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 700;
+}
+
+.wideField {
+  grid-column: 1 / -1;
+}
+
+.generateActions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 1.1rem 1.1rem;
 }
 
 .layout {
@@ -258,5 +304,9 @@ code {
 
   .summaryGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .generateGrid {
+    grid-template-columns: 1fr;
   }
 }

@@ -29,6 +29,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
+from scripts import track_assignments
+
 ROOT = Path(__file__).resolve().parents[1]
 DESIGN_PATH = ROOT / "doc" / "course_design.json"
 COURSE_DESIGNS_DIR = ROOT / "doc" / "course_designs"
@@ -266,6 +268,57 @@ def read_assignment_report(name: str) -> dict:
     if not isinstance(payload.get("students"), list):
         raise ValueError("Registro consegne non valido: students deve essere una lista.")
     return payload
+
+
+def resolve_local_path(path_value: str, field_name: str) -> Path:
+    """Resolve a user-provided local path from the repository root."""
+
+    raw_path = Path(str(path_value).strip())
+    if not str(raw_path):
+        raise ValueError(f"{field_name} obbligatorio.")
+    return raw_path if raw_path.is_absolute() else (ROOT / raw_path).resolve()
+
+
+def read_targets_from_text(targets_text: str) -> list[track_assignments.TrackingTarget]:
+    """Build tracking targets from one path per line."""
+
+    targets = []
+    for raw_line in targets_text.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        target_path = resolve_local_path(line, "target")
+        targets.append(track_assignments.TrackingTarget(student=target_path.name, repo=str(target_path), path=target_path))
+    if not targets:
+        raise ValueError("Inserisci almeno un repository studente nei target.")
+    return targets
+
+
+def generate_assignment_report(payload: dict) -> dict:
+    """Generate and persist an assignment tracking report from the local GUI."""
+
+    activity_path = resolve_local_path(payload.get("activity_path", ""), "activity_path")
+    if not activity_path.is_file():
+        raise FileNotFoundError(f"Activity non trovata: {activity_path}")
+    targets = read_targets_from_text(str(payload.get("targets_text", "")))
+    output_path = safe_teacher_report_path(payload.get("output_name", ""))
+    index = track_assignments.track_assignments(
+        activity_path=activity_path,
+        targets=targets,
+        assigned_at=payload.get("assigned_at") or None,
+        due_at=payload.get("due_at") or None,
+        now=payload.get("now") or None,
+    )
+    track_assignments.write_tracking_index(index, output_path)
+    return {
+        "ok": True,
+        "report": index,
+        "saved": {
+            "name": str(output_path.relative_to(TEACHER_REPORTS_DIR)).replace("\\", "/"),
+            "path": str(output_path.relative_to(ROOT)).replace("\\", "/"),
+        },
+        "reports": list_assignment_reports(),
+    }
 
 
 def read_school_calendar(name: str) -> dict:
@@ -1626,6 +1679,15 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 self.write_json({"report": read_assignment_report(payload.get("name", ""))})
             except Exception as error:  # noqa: BLE001
                 self.send_response(404)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+            return
+        if parsed.path == "/api/assignment-reports/generate":
+            try:
+                self.write_json(generate_assignment_report(payload))
+            except Exception as error:  # noqa: BLE001
+                self.send_response(400)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))

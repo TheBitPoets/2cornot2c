@@ -13,6 +13,13 @@ const els = {
   tableStatus: document.querySelector("#tableStatus"),
   studentsBody: document.querySelector("#studentsBody"),
   filterButtons: document.querySelectorAll("[data-filter]"),
+  activityPath: document.querySelector("#activityPath"),
+  outputName: document.querySelector("#outputName"),
+  assignedAt: document.querySelector("#assignedAt"),
+  dueAt: document.querySelector("#dueAt"),
+  nowAt: document.querySelector("#nowAt"),
+  targetsText: document.querySelector("#targetsText"),
+  generateReportBtn: document.querySelector("#generateReportBtn"),
 };
 
 async function api(path, options = {}) {
@@ -89,6 +96,34 @@ async function loadSelectedReport() {
   state.report = payload.report;
   renderDashboard();
   setStatus(`Registro caricato: ${name}.`);
+}
+
+async function generateReport() {
+  els.generateReportBtn.disabled = true;
+  setStatus("Generazione registro consegne...");
+  try {
+    const payload = await api("/api/assignment-reports/generate", {
+      method: "POST",
+      body: JSON.stringify({
+        activity_path: els.activityPath.value,
+        output_name: els.outputName.value,
+        assigned_at: els.assignedAt.value,
+        due_at: els.dueAt.value,
+        now: els.nowAt.value,
+        targets_text: els.targetsText.value,
+      }),
+    });
+    state.report = payload.report;
+    state.reports = payload.reports || [];
+    renderReportSelect();
+    els.reportSelect.value = payload.saved?.name || "";
+    renderDashboard();
+    setStatus(`Registro generato e caricato: ${payload.saved?.path || payload.saved?.name}.`);
+  } catch (error) {
+    setStatus(`Registro non generato: ${error.message}`);
+  } finally {
+    els.generateReportBtn.disabled = false;
+  }
 }
 
 function statusKind(status, late, grading) {
@@ -213,6 +248,7 @@ function setFilter(filter) {
 
 els.loadReportBtn.addEventListener("click", loadSelectedReport);
 els.reloadBtn.addEventListener("click", loadReports);
+els.generateReportBtn.addEventListener("click", generateReport);
 els.reportSelect.addEventListener("change", loadSelectedReport);
 els.filterButtons.forEach((button) => {
   button.addEventListener("click", () => setFilter(button.dataset.filter));
