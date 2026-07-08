@@ -161,6 +161,30 @@ def test_track_assignments_lists_multiple_submission_files(tmp_path) -> None:
     assert not any("__pycache__" in path for path in paths)
 
 
+def test_track_assignments_resolves_relative_report_source_from_student_repo(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+    student = target(tmp_path, "rossi-mario")
+    write_report(student.path, "2026-10-18T18:22:10+02:00")
+    report_path = student.path / "reports" / "python-base-somma-001" / "latest.json"
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    report["source"] = "assignments/python-base-somma-001/main.py"
+    report_path.write_text(json.dumps(report), encoding="utf-8")
+
+    index = track_assignments.track_assignments(
+        activity_path=activity_path,
+        targets=[student],
+        due_at="2026-10-19T23:59:00+02:00",
+    )
+
+    files = index["students"][0]["submission"]["files"]
+    source_files = [
+        file_entry for file_entry in files
+        if file_entry["path"].endswith("assignments/python-base-somma-001/main.py")
+    ]
+    assert len(source_files) == 1
+    assert source_files[0]["role"] == "solution"
+
+
 def test_track_assignments_uses_report_file_manifest_when_available(tmp_path) -> None:
     activity_path = write_activity(tmp_path)
     student = target(tmp_path, "rossi-mario")

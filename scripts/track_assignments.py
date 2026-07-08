@@ -163,6 +163,16 @@ def should_include_submission_file(path: Path) -> bool:
     return path.is_file()
 
 
+def report_source_path(target: TrackingTarget, source_value: str | None) -> Path | None:
+    """Return the submitted source path resolved from the student repository."""
+    if not source_value:
+        return None
+    source_path = Path(source_value)
+    if source_path.is_absolute():
+        return source_path.resolve()
+    return (target.path / source_path).resolve()
+
+
 def submission_files(
     target: TrackingTarget,
     activity_id: str,
@@ -198,7 +208,7 @@ def submission_files(
             return normalized_files
 
     source_value = report.get("source")
-    source_path = Path(source_value).resolve() if source_value else None
+    source_path = report_source_path(target, source_value)
     base_dir = assignment_dir(target, activity_id)
     files = []
     resolved_files = set()
