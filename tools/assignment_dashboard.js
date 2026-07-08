@@ -586,6 +586,35 @@ function reportOutcome(report) {
   return { kind: "muted", label: "dati parziali" };
 }
 
+function reportCounts(report) {
+  const students = Array.isArray(report?.students) ? report.students : [];
+  const total = students.length || Number(report?.students || 0);
+  const submitted = students.length
+    ? students.filter((student) => student.submitted).length
+    : Number(report?.submitted || 0);
+  const missing = students.length
+    ? students.filter((student) => student.status === "missing").length
+    : Number(report?.not_submitted || 0);
+  const late = students.length
+    ? students.filter((student) => student.late).length
+    : Number(report?.late || 0);
+  return {
+    total: Number.isFinite(total) ? total : 0,
+    submitted: Number.isFinite(submitted) ? submitted : 0,
+    missing: Number.isFinite(missing) ? missing : 0,
+    late: Number.isFinite(late) ? late : 0,
+  };
+}
+
+function coverageReportCounts(report) {
+  const counts = reportCounts(report);
+  return `
+    <small class="coverageReportCounts">
+      ${escapeHtml(counts.total)} studenti · ${escapeHtml(counts.submitted)} consegne · ${escapeHtml(counts.missing)} mancanti · ${escapeHtml(counts.late)} in ritardo
+    </small>
+  `;
+}
+
 function coverageWorstKind(reports) {
   if (!reports.length) return "missing";
   const kinds = reports.map((report) => reportOutcome(report).kind);
@@ -613,6 +642,7 @@ function coverageReportDetails(reports) {
       <span class="coverageReportItem coverageReport${outcome.kind}">
         <button type="button" data-coverage-report="${escapeHtml(report.name)}" title="Apri il registro ${escapeHtml(report.name)} e caricalo nella dashboard.">${escapeHtml(report.name)} ${reportLock(report)}</button>
         ${badge(outcome.label, outcome.kind)}
+        ${coverageReportCounts(report)}
       </span>
     `;
   }).join("");

@@ -319,6 +319,11 @@ label {
   transform: none;
 }
 
+.coverageReportCounts {
+  color: #667085;
+  font-size: .7rem;
+}
+
 .coverageReportok button { color: #0f6b3d; }
 .coverageReportwarn button { color: #8a5a00; }
 .coverageReportbad button { color: #8f1d14; }
