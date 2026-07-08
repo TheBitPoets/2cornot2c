@@ -283,6 +283,8 @@ label {
 }
 
 .coverageDialog {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   width: min(96vw, 88rem);
   height: min(88vh, 50rem);
   min-width: min(92vw, 38rem);
@@ -320,7 +322,8 @@ label {
 }
 
 .coverageDialogTable {
-  height: calc(100% - 4.8rem);
+  min-height: 0;
+  overflow: auto;
 }
 
 .coverageOk { background: #f5fbf7; }
@@ -993,6 +996,8 @@ code {
 }
 
 .reviewDialog {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   width: min(96vw, 82rem);
   height: min(90vh, 52rem);
   min-width: min(92vw, 38rem);
@@ -1044,8 +1049,7 @@ code {
 .reviewGrid {
   display: grid;
   grid-template-columns: minmax(11rem, var(--review-list-width, 20rem)) 8px minmax(0, 1fr);
-  min-height: 28rem;
-  height: calc(100% - 4.8rem);
+  min-height: 0;
   overflow: hidden;
 }
 
