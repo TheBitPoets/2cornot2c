@@ -285,8 +285,10 @@ label {
 .coverageDialog {
   width: min(96vw, 88rem);
   height: min(88vh, 50rem);
-  max-width: none;
-  max-height: none;
+  min-width: min(92vw, 38rem);
+  min-height: 24rem;
+  max-width: 98vw;
+  max-height: 94vh;
   margin: auto;
   border: 1px solid rgba(17, 17, 17, .18);
   border-radius: 18px;
@@ -294,6 +296,7 @@ label {
   box-shadow: 0 22px 70px rgba(17, 17, 17, .28);
   color: var(--ink);
   padding: 0;
+  resize: both;
   overflow: hidden;
 }
 
@@ -814,8 +817,10 @@ code {
 .reviewDialog {
   width: min(96vw, 82rem);
   height: min(90vh, 52rem);
-  max-width: none;
-  max-height: none;
+  min-width: min(92vw, 38rem);
+  min-height: 24rem;
+  max-width: 98vw;
+  max-height: 94vh;
   margin: auto;
   border: 1px solid rgba(17, 17, 17, .18);
   border-radius: 18px;
@@ -823,6 +828,7 @@ code {
   box-shadow: 0 22px 70px rgba(17, 17, 17, .28);
   color: var(--ink);
   padding: 0;
+  resize: both;
   overflow: hidden;
 }
 
