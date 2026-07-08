@@ -251,7 +251,7 @@ def list_assignment_reports() -> list[dict]:
             payload = {}
         students = payload.get("students", []) if isinstance(payload.get("students"), list) else []
         submitted = sum(1 for student in students if isinstance(student, dict) and student.get("submitted"))
-        late = sum(1 for student in students if isinstance(student, dict) and student.get("late"))
+        late = sum(1 for student in students if isinstance(student, dict) and student.get("submitted") and student.get("late"))
         not_submitted = sum(1 for student in students if isinstance(student, dict) and not student.get("submitted"))
         reports.append(
             {

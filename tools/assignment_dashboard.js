@@ -596,7 +596,7 @@ function reportCounts(report) {
     ? students.filter((student) => student.status === "missing").length
     : Number(report?.not_submitted || 0);
   const late = students.length
-    ? students.filter((student) => student.late).length
+    ? students.filter((student) => student.submitted && student.late).length
     : Number(report?.late || 0);
   return {
     total: Number.isFinite(total) ? total : 0,
@@ -610,7 +610,7 @@ function coverageReportCounts(report) {
   const counts = reportCounts(report);
   return `
     <small class="coverageReportCounts">
-      ${escapeHtml(counts.total)} studenti · ${escapeHtml(counts.submitted)} consegne · ${escapeHtml(counts.missing)} mancanti · ${escapeHtml(counts.late)} in ritardo
+      ${escapeHtml(counts.total)} studenti · ${escapeHtml(counts.submitted)} consegnati · ${escapeHtml(counts.missing)} mancanti · ${escapeHtml(counts.late)} in ritardo
     </small>
   `;
 }
@@ -636,11 +636,12 @@ function coverageActivityClass(reports) {
 
 function coverageReportDetails(reports) {
   if (!reports.length) return '<span class="coverageReportItem coverageReportMissing">nessun registro</span>';
-  return reports.map((report) => {
+  return reports.map((report, index) => {
     const outcome = reportOutcome(report);
     return `
       <span class="coverageReportItem coverageReport${outcome.kind}">
         <button type="button" data-coverage-report="${escapeHtml(report.name)}" title="Apri il registro ${escapeHtml(report.name)} e caricalo nella dashboard.">${escapeHtml(report.name)} ${reportLock(report)}</button>
+        ${index === 0 ? badge("ultimo", "muted") : ""}
         ${badge(outcome.label, outcome.kind)}
         ${coverageReportCounts(report)}
       </span>
@@ -689,6 +690,7 @@ function renderCoverage() {
       <td>
         ${escapeHtml(formatDate(latest?.updated_at || latest?.due_at))}<br>
         <small>${escapeHtml(latest?.name || "-")}</small>
+        ${latest ? `<br>${coverageReportCounts(latest)}` : ""}
       </td>
       <td>
         <button type="button" class="smallButton" data-coverage-select="${escapeHtml(activity.path)}" data-coverage-output="${escapeHtml(defaultOutputName(activity))}" title="Compila i campi di generazione con questa activity senza generare il registro.">Seleziona</button>
@@ -1114,7 +1116,7 @@ function summaryCounts(students) {
     pending: students.filter((student) => student.status === "pending").length,
     missing: students.filter((student) => student.status === "missing").length,
     submitted: students.filter((student) => student.submitted).length,
-    late: students.filter((student) => student.late).length,
+    late: students.filter((student) => student.submitted && student.late).length,
     failed: students.filter((student) => student.grading?.status === "graded_failed").length,
   };
 }
@@ -1151,7 +1153,7 @@ function filteredStudents(students) {
   if (state.filter === "pending") return students.filter((student) => student.status === "pending");
   if (state.filter === "missing") return students.filter((student) => student.status === "missing");
   if (state.filter === "submitted") return students.filter((student) => student.submitted);
-  if (state.filter === "late") return students.filter((student) => student.late);
+  if (state.filter === "late") return students.filter((student) => student.submitted && student.late);
   if (state.filter === "failed") return students.filter((student) => student.grading?.status === "graded_failed");
   return students;
 }

@@ -71,3 +71,31 @@ def test_assignment_overview_lists_students_across_saved_reports(tmp_path, monke
     assert rows[1]["late"] is True
     assert rows[1]["failed_tests"] == ["somma numeri negativi"]
     assert rows[1]["score"] == 5
+
+
+def test_list_assignment_reports_counts_late_only_for_submitted_students(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
+
+    report_dir = tmp_path / "teacher-reports" / "demo"
+    report_dir.mkdir(parents=True)
+    (report_dir / "activity.json").write_text(
+        json.dumps(
+            {
+                "activity_id": "activity",
+                "students": [
+                    {"student": "rossi-mario", "status": "submitted_late", "submitted": True, "late": True},
+                    {"student": "bianchi-luca", "status": "missing", "submitted": False, "late": True},
+                    {"student": "verdi-anna", "status": "submitted_on_time", "submitted": True, "late": False},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    reports = course_board_server.list_assignment_reports()
+
+    assert reports[0]["students"] == 3
+    assert reports[0]["submitted"] == 2
+    assert reports[0]["not_submitted"] == 1
+    assert reports[0]["late"] == 1
