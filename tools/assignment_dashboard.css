@@ -568,7 +568,43 @@ label {
 }
 
 .studentsActions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 1.1rem 1.1rem;
+}
+
+.studentsSummary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: .75rem;
   padding: 1.1rem;
+}
+
+.studentsSummaryItem {
+  min-width: 0;
+  border: 1px solid rgba(17, 17, 17, .14);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: .75rem;
+}
+
+.studentsSummary > .status {
+  grid-column: 1 / -1;
+}
+
+.studentsSummaryItem strong {
+  display: block;
+  margin-bottom: .35rem;
+  color: var(--muted);
+  font-size: .72rem;
+  text-transform: uppercase;
+}
+
+.studentsSummaryItem span {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 1.1rem;
+  font-weight: 900;
 }
 
 .studentsDialog {
@@ -1198,6 +1234,10 @@ code {
   }
 
   .summaryGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .studentsSummary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 

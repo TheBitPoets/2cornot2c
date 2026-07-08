@@ -79,6 +79,7 @@ const els = {
   overviewMatrixHead: document.querySelector("#overviewMatrixHead"),
   overviewMatrixBody: document.querySelector("#overviewMatrixBody"),
   tableStatus: document.querySelector("#tableStatus"),
+  studentsSummary: document.querySelector("#studentsSummary"),
   studentsDialog: document.querySelector("#studentsDialog"),
   studentsBreadcrumb: document.querySelector("#studentsBreadcrumb"),
   studentsOpenBtn: document.querySelector("#studentsOpenBtn"),
@@ -1166,6 +1167,17 @@ function summaryCounts(students) {
   };
 }
 
+function currentFilterLabel() {
+  return {
+    all: "Tutti",
+    pending: "Da consegnare",
+    missing: "Mancanti",
+    submitted: "Consegnati",
+    late: "In ritardo",
+    failed: "Test falliti",
+  }[state.filter] || "Tutti";
+}
+
 function renderDashboard() {
   const students = Array.isArray(state.report?.students) ? state.report.students : [];
   renderSummary(students);
@@ -1209,6 +1221,25 @@ function renderStudents(students) {
   els.tableStatus.textContent = state.report
     ? `Mostrati ${visible.length}/${students.length} studenti.`
     : "Nessun registro caricato.";
+  els.studentsOpenBtn.disabled = !state.report;
+  if (!state.report) {
+    els.studentsSummary.innerHTML = '<p class="status">Carica un registro per vedere il riepilogo studenti.</p>';
+  } else {
+    const counts = summaryCounts(students);
+    const summaryItems = [
+      ["Studenti", counts.total],
+      ["Consegnati", counts.submitted],
+      ["Mancanti", counts.missing],
+      ["In ritardo", counts.late],
+      ["Filtro", `${currentFilterLabel()} (${visible.length})`],
+    ];
+    els.studentsSummary.innerHTML = summaryItems.map(([label, value]) => `
+      <article class="studentsSummaryItem">
+        <strong>${escapeHtml(label)}</strong>
+        <span>${escapeHtml(value)}</span>
+      </article>
+    `).join("");
+  }
   els.studentsBody.innerHTML = "";
   if (!state.report) {
     els.studentsBody.innerHTML = '<tr><td colspan="8">Carica un registro consegne.</td></tr>';
