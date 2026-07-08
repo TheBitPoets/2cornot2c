@@ -146,22 +146,22 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
         </label>
       </div>
       <div class="viewTabs" role="tablist" aria-label="Vista quadro classe">
-        <button type="button" class="isActive" data-overview-view="list" role="tab" aria-selected="true">Elenco</button>
-        <button type="button" data-overview-view="matrix" role="tab" aria-selected="false">Matrice</button>
+        <button type="button" class="isActive" data-overview-view="list" role="tab" aria-selected="true" title="Mostra il quadro classe come elenco ordinabile, una riga per studente e activity.">Elenco</button>
+        <button type="button" data-overview-view="matrix" role="tab" aria-selected="false" title="Mostra il quadro classe come matrice con studenti a sinistra e consegne in colonna.">Matrice</button>
       </div>
       <div id="overviewListView" class="tableWrap">
         <table id="overviewListTable" class="resizableTable">
           <thead>
             <tr>
-              <th><button type="button" class="sortButton" data-overview-sort="student">Studente</button></th>
-              <th><button type="button" class="sortButton" data-overview-sort="activity">Activity</button></th>
-              <th><button type="button" class="sortButton" data-overview-sort="kind">Tipo</button></th>
-              <th><button type="button" class="sortButton" data-overview-sort="support">Modalita</button></th>
-              <th><button type="button" class="sortButton" data-overview-sort="due_at">Scadenza</button></th>
-              <th><button type="button" class="sortButton" data-overview-sort="status">Stato</button></th>
-              <th><button type="button" class="sortButton" data-overview-sort="tests">Test</button></th>
-              <th><button type="button" class="sortButton" data-overview-sort="grade">Voto</button></th>
-              <th><button type="button" class="sortButton" data-overview-sort="report">Registro</button></th>
+              <th><button type="button" class="sortButton" data-overview-sort="student" title="Ordina le righe per studente: crescente, decrescente, poi reset.">Studente</button></th>
+              <th><button type="button" class="sortButton" data-overview-sort="activity" title="Ordina le righe per titolo o id activity: crescente, decrescente, poi reset.">Activity</button></th>
+              <th><button type="button" class="sortButton" data-overview-sort="kind" title="Ordina le righe per tipo di consegna secondo l'ordine didattico.">Tipo</button></th>
+              <th><button type="button" class="sortButton" data-overview-sort="support" title="Ordina le righe per modalita di supporto allo studente.">Modalita</button></th>
+              <th><button type="button" class="sortButton" data-overview-sort="due_at" title="Ordina le righe per scadenza: prima crescente, poi decrescente, poi reset.">Scadenza</button></th>
+              <th><button type="button" class="sortButton" data-overview-sort="status" title="Ordina le righe per stato operativo della consegna.">Stato</button></th>
+              <th><button type="button" class="sortButton" data-overview-sort="tests" title="Ordina le righe per percentuale di test superati.">Test</button></th>
+              <th><button type="button" class="sortButton" data-overview-sort="grade" title="Ordina le righe per voto numerico.">Voto</button></th>
+              <th><button type="button" class="sortButton" data-overview-sort="report" title="Ordina le righe per nome del registro JSON.">Registro</button></th>
             </tr>
           </thead>
           <tbody id="overviewBody"></tbody>
@@ -183,12 +183,12 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
         </div>
       </div>
       <div class="filterBar">
-        <button type="button" data-filter="all">Tutti</button>
-        <button type="button" data-filter="pending">Da consegnare</button>
-        <button type="button" data-filter="missing">Mancanti</button>
-        <button type="button" data-filter="submitted">Consegnati</button>
-        <button type="button" data-filter="late">In ritardo</button>
-        <button type="button" data-filter="failed">Test falliti</button>
+        <button type="button" data-filter="all" title="Mostra tutti gli studenti del registro selezionato.">Tutti</button>
+        <button type="button" data-filter="pending" title="Mostra gli studenti che devono ancora consegnare ma sono entro la scadenza.">Da consegnare</button>
+        <button type="button" data-filter="missing" title="Mostra gli studenti senza consegna dopo la scadenza.">Mancanti</button>
+        <button type="button" data-filter="submitted" title="Mostra gli studenti che hanno consegnato.">Consegnati</button>
+        <button type="button" data-filter="late" title="Mostra gli studenti che hanno consegnato oltre la scadenza.">In ritardo</button>
+        <button type="button" data-filter="failed" title="Mostra gli studenti con grading o test falliti.">Test falliti</button>
       </div>
     </section>
 

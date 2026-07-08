@@ -611,7 +611,7 @@ function coverageReportDetails(reports) {
     const outcome = reportOutcome(report);
     return `
       <span class="coverageReportItem coverageReport${outcome.kind}">
-        <button type="button" data-coverage-report="${escapeHtml(report.name)}">${escapeHtml(report.name)} ${reportLock(report)}</button>
+        <button type="button" data-coverage-report="${escapeHtml(report.name)}" title="Apri il registro ${escapeHtml(report.name)} e caricalo nella dashboard.">${escapeHtml(report.name)} ${reportLock(report)}</button>
         ${badge(outcome.label, outcome.kind)}
       </span>
     `;
@@ -661,9 +661,9 @@ function renderCoverage() {
         <small>${escapeHtml(latest?.name || "-")}</small>
       </td>
       <td>
-        <button type="button" class="smallButton" data-coverage-select="${escapeHtml(activity.path)}" data-coverage-output="${escapeHtml(defaultOutputName(activity))}">Seleziona</button>
-        <button type="button" class="smallButton" data-coverage-generate="${escapeHtml(activity.path)}" data-coverage-output="${escapeHtml(defaultOutputName(activity))}">Genera</button>
-        <button type="button" class="smallButton" data-coverage-report="${escapeHtml(latest?.name || "")}" ${latest ? "" : "disabled"}>Apri</button>
+        <button type="button" class="smallButton" data-coverage-select="${escapeHtml(activity.path)}" data-coverage-output="${escapeHtml(defaultOutputName(activity))}" title="Compila i campi di generazione con questa activity senza generare il registro.">Seleziona</button>
+        <button type="button" class="smallButton" data-coverage-generate="${escapeHtml(activity.path)}" data-coverage-output="${escapeHtml(defaultOutputName(activity))}" title="Compila i campi e genera subito un registro per questa activity.">Genera</button>
+        <button type="button" class="smallButton" data-coverage-report="${escapeHtml(latest?.name || "")}" title="${latest ? `Apri l'ultimo registro generato per questa activity: ${escapeHtml(latest.name)}.` : "Nessun registro disponibile da aprire per questa activity."}" ${latest ? "" : "disabled"}>Apri</button>
       </td>
     `;
     els.coverageBody.append(tr);
@@ -894,7 +894,7 @@ function renderOverviewMatrix(rows) {
         return `
           <td>
             ${row ? `
-              <button type="button" class="matrixCell matrixCell${kind}" data-overview-report="${escapeHtml(row.report_name)}" data-overview-student="${escapeHtml(row.student || "")}">
+              <button type="button" class="matrixCell matrixCell${kind}" data-overview-report="${escapeHtml(row.report_name)}" data-overview-student="${escapeHtml(row.student || "")}" title="Apri il registro ${escapeHtml(row.report_name)} e la consegna di ${escapeHtml(row.student || "questo studente")}.">
                 <strong>${escapeHtml(matrixCellText(row))}</strong>
                 ${score !== "" ? `<small>${escapeHtml(score)}</small>` : ""}
               </button>
@@ -952,7 +952,7 @@ function renderOverview() {
       </td>
       <td><code>${escapeHtml(grade)}</code></td>
       <td>
-        <button type="button" class="smallButton" data-overview-report="${escapeHtml(row.report_name)}" data-overview-student="${escapeHtml(row.student || "")}">
+        <button type="button" class="smallButton" data-overview-report="${escapeHtml(row.report_name)}" data-overview-student="${escapeHtml(row.student || "")}" title="Apri il registro ${escapeHtml(row.report_name || "collegato")} e la consegna di ${escapeHtml(row.student || "questo studente")}.">
           Apri
         </button><br>
         <small>${escapeHtml(row.report_name || "-")}</small>
@@ -1148,6 +1148,9 @@ function renderStudents(students) {
     const submission = student.submission || {};
     const files = submissionFiles(student);
     const canReview = student.submitted && files.length > 0;
+    const reviewTitle = canReview
+      ? `Apri i file consegnati da ${student.student} nella vista Revisione consegna.`
+      : `Nessuna consegna apribile per ${student.student}: lo studente non ha consegnato o non ci sono file disponibili.`;
     const row = document.createElement("tr");
     row.innerHTML = `
       <td>
@@ -1173,7 +1176,7 @@ function renderStudents(students) {
         <small>${ai.suggested_grade ? `Suggerito: ${escapeHtml(ai.suggested_grade)}` : "Nessun voto AI"}</small>
       </td>
       <td>
-        <button type="button" class="smallButton" data-review-student="${escapeHtml(student.student)}" ${canReview ? "" : "disabled"}>
+        <button type="button" class="smallButton" data-review-student="${escapeHtml(student.student)}" title="${escapeHtml(reviewTitle)}" ${canReview ? "" : "disabled"}>
           Apri consegna
         </button><br>
         <small>${canReview ? `${files.length} file` : "nessun file"}</small>
@@ -1266,7 +1269,7 @@ function renderReview(isError = false) {
     <aside class="fileList">
       <h3>${escapeHtml(student.student)}</h3>
       ${files.map((file) => `
-        <button type="button" class="${file.path === state.reviewFilePath ? "isActive" : ""}" data-review-file="${escapeHtml(file.path)}">
+        <button type="button" class="${file.path === state.reviewFilePath ? "isActive" : ""}" data-review-file="${escapeHtml(file.path)}" title="Mostra il contenuto del file ${escapeHtml(file.path)}.">
           <span>${escapeHtml(file.path.split("/").pop())}</span>
           <small>${escapeHtml(file.role || "support")}</small>
         </button>
