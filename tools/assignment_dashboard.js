@@ -42,6 +42,7 @@ const state = {
     direction: "",
   },
   overviewView: "list",
+  coverageCollapsedActivities: new Set(),
   reviewStudent: null,
   reviewFilePath: "",
   reviewFile: null,
@@ -696,19 +697,28 @@ function renderCoverage() {
     const reports = reportsForActivity(activity.id);
     const hasReport = reports.length > 0;
     const reportRows = hasReport ? reports : [null];
+    const canCollapse = reportRows.length > 1;
+    const isCollapsed = canCollapse && state.coverageCollapsedActivities.has(activity.id);
+    const visibleReportRows = isCollapsed ? [reportRows[0]] : reportRows;
     const groupClass = coverageGroupClass(reports);
-    reportRows.forEach((report, index) => {
+    visibleReportRows.forEach((report, index) => {
       const tr = document.createElement("tr");
       tr.className = [
         report ? coverageActivityClass([report]) : coverageActivityClass([]),
         groupClass,
         index === 0 ? "coverageGroupStart" : "coverageGroupContinuation",
-        index === reportRows.length - 1 ? "coverageGroupEnd" : "",
+        index === visibleReportRows.length - 1 ? "coverageGroupEnd" : "",
+        isCollapsed ? "coverageGroupCollapsed" : "",
       ].filter(Boolean).join(" ");
       const outcome = reportOutcome(report);
       tr.innerHTML = `
         <td>
-          <strong class="coverageActivityName">${escapeHtml(activity.title || activity.id)}</strong><br>
+          <div class="coverageActivityCell">
+            ${canCollapse && index === 0 ? `
+              <button type="button" class="coverageGroupToggle" data-coverage-toggle="${escapeHtml(activity.id)}" aria-expanded="${isCollapsed ? "false" : "true"}" title="${isCollapsed ? "Espandi i registri di questa activity." : "Collassa i registri di questa activity."}">${isCollapsed ? "+" : "-"}</button>
+            ` : '<span class="coverageGroupToggleSpacer"></span>'}
+            <strong class="coverageActivityName">${escapeHtml(activity.title || activity.id)}</strong>
+          </div>
           <small>${escapeHtml(activity.id || "-")}</small><br>
           <small>${escapeHtml(activity.path || "-")}</small>
         </td>
@@ -1426,9 +1436,20 @@ els.activitySelect.addEventListener("change", () => {
 });
 els.activityPath.addEventListener("input", renderActivitySelect);
 els.coverageBody.addEventListener("click", async (event) => {
+  const toggleButton = event.target.closest("[data-coverage-toggle]");
   const selectButton = event.target.closest("[data-coverage-select]");
   const generateButton = event.target.closest("[data-coverage-generate]");
   const reportButton = event.target.closest("[data-coverage-report]");
+  if (toggleButton) {
+    const activityId = toggleButton.dataset.coverageToggle;
+    if (state.coverageCollapsedActivities.has(activityId)) {
+      state.coverageCollapsedActivities.delete(activityId);
+    } else {
+      state.coverageCollapsedActivities.add(activityId);
+    }
+    renderCoverage();
+    return;
+  }
   if (selectButton) {
     selectCoverageActivity(selectButton.dataset.coverageSelect, selectButton.dataset.coverageOutput);
     return;
