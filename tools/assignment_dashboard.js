@@ -76,6 +76,9 @@ const els = {
   overviewMatrixHead: document.querySelector("#overviewMatrixHead"),
   overviewMatrixBody: document.querySelector("#overviewMatrixBody"),
   tableStatus: document.querySelector("#tableStatus"),
+  studentsDialog: document.querySelector("#studentsDialog"),
+  studentsOpenBtn: document.querySelector("#studentsOpenBtn"),
+  studentsCloseBtn: document.querySelector("#studentsCloseBtn"),
   studentsTable: document.querySelector("#studentsTable"),
   studentsBody: document.querySelector("#studentsBody"),
   reviewDialog: document.querySelector("#reviewDialog"),
@@ -1382,6 +1385,19 @@ function closeCoverageDialog() {
   }
 }
 
+function openStudentsDialog() {
+  if (els.studentsDialog && !els.studentsDialog.open) {
+    els.studentsDialog.showModal();
+  }
+  setupResizableTable(els.studentsTable, "students");
+}
+
+function closeStudentsDialog() {
+  if (els.studentsDialog?.open) {
+    els.studentsDialog.close();
+  }
+}
+
 els.loadReportBtn.addEventListener("click", loadSelectedReport);
 els.reloadBtn.addEventListener("click", async () => {
   await loadReports();
@@ -1391,6 +1407,8 @@ els.generateReportBtn.addEventListener("click", generateReport);
 els.reportSelect.addEventListener("change", loadSelectedReport);
 els.coverageOpenBtn.addEventListener("click", openCoverageDialog);
 els.coverageCloseBtn.addEventListener("click", closeCoverageDialog);
+els.studentsOpenBtn.addEventListener("click", openStudentsDialog);
+els.studentsCloseBtn.addEventListener("click", closeStudentsDialog);
 els.reviewCloseBtn.addEventListener("click", closeReviewDialog);
 els.activitySelect.addEventListener("change", () => {
   if (els.activitySelect.value) selectActivity(els.activitySelect.value);

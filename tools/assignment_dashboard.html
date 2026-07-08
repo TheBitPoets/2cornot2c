@@ -186,22 +186,8 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
           <p id="tableStatus" class="status">Nessun registro caricato.</p>
         </div>
       </div>
-      <div class="tableWrap">
-        <table id="studentsTable" class="resizableTable">
-          <thead>
-            <tr>
-              <th>Studente</th>
-              <th>Stato</th>
-              <th>Scadenza</th>
-              <th>Consegna</th>
-              <th>Grading</th>
-              <th>Voto</th>
-              <th>AI</th>
-              <th>Azioni</th>
-            </tr>
-          </thead>
-          <tbody id="studentsBody"></tbody>
-        </table>
+      <div class="studentsActions">
+        <button id="studentsOpenBtn" type="button" title="Apri la tabella studenti del registro selezionato in un modal.">Apri studenti</button>
       </div>
     </section>
 
@@ -242,6 +228,33 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
           </tr>
         </thead>
         <tbody id="coverageBody"></tbody>
+      </table>
+    </div>
+  </dialog>
+
+  <dialog id="studentsDialog" class="studentsDialog" aria-labelledby="studentsDialogTitle">
+    <div class="studentsDialogHead">
+      <div>
+        <h2 id="studentsDialogTitle">Studenti</h2>
+        <p class="status">Stato, grading e consegne del registro selezionato.</p>
+      </div>
+      <button id="studentsCloseBtn" type="button" class="smallButton" title="Chiudi la tabella studenti e torna alla dashboard.">Chiudi</button>
+    </div>
+    <div class="tableWrap studentsDialogTable">
+      <table id="studentsTable" class="resizableTable">
+        <thead>
+          <tr>
+            <th>Studente</th>
+            <th>Stato</th>
+            <th>Scadenza</th>
+            <th>Consegna</th>
+            <th>Grading</th>
+            <th>Voto</th>
+            <th>AI</th>
+            <th>Azioni</th>
+          </tr>
+        </thead>
+        <tbody id="studentsBody"></tbody>
       </table>
     </div>
   </dialog>
