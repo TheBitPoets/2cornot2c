@@ -32,6 +32,7 @@ const state = {
   reportName: "",
   filter: "all",
   overviewFilters: {
+    class: "",
     student: "",
     kind: "",
     status: "",
@@ -66,12 +67,17 @@ const els = {
   reportSummary: document.querySelector("#reportSummary"),
   overviewStatus: document.querySelector("#overviewStatus"),
   overviewBody: document.querySelector("#overviewBody"),
+  overviewSummary: document.querySelector("#overviewSummary"),
+  overviewClassFilter: document.querySelector("#overviewClassFilter"),
   overviewStudentFilter: document.querySelector("#overviewStudentFilter"),
   overviewKindFilter: document.querySelector("#overviewKindFilter"),
   overviewStatusFilter: document.querySelector("#overviewStatusFilter"),
   overviewSupportFilter: document.querySelector("#overviewSupportFilter"),
   overviewSortButtons: document.querySelectorAll("[data-overview-sort]"),
   overviewViewButtons: document.querySelectorAll("[data-overview-view]"),
+  overviewDialog: document.querySelector("#overviewDialog"),
+  overviewOpenBtn: document.querySelector("#overviewOpenBtn"),
+  overviewCloseBtn: document.querySelector("#overviewCloseBtn"),
   overviewListView: document.querySelector("#overviewListView"),
   overviewMatrixView: document.querySelector("#overviewMatrixView"),
   overviewListTable: document.querySelector("#overviewListTable"),
@@ -97,6 +103,9 @@ const els = {
   activitySelect: document.querySelector("#activitySelect"),
   activityPath: document.querySelector("#activityPath"),
   outputName: document.querySelector("#outputName"),
+  classId: document.querySelector("#classId"),
+  classLabel: document.querySelector("#classLabel"),
+  githubTeam: document.querySelector("#githubTeam"),
   assignedAt: document.querySelector("#assignedAt"),
   dueAt: document.querySelector("#dueAt"),
   nowAt: document.querySelector("#nowAt"),
@@ -277,6 +286,31 @@ function formatDate(value) {
   });
 }
 
+function classValue(entity) {
+  return entity?.class_label || entity?.class_id || entity?.github_team || "classe non indicata";
+}
+
+function classBadge(entity) {
+  return `<span class="classBadge">${escapeHtml(classValue(entity))}</span>`;
+}
+
+function classKey(entity) {
+  return slugPathSegment(entity?.class_id || entity?.github_team || entity?.class_label || classValue(entity));
+}
+
+function hasExplicitClass(entity) {
+  return Boolean(entity?.class_id || entity?.github_team || entity?.class_label);
+}
+
+function slugPathSegment(value, fallback = "classe-non-indicata") {
+  return String(value || fallback)
+    .trim()
+    .toLowerCase()
+    .replaceAll("\\", "/")
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "") || fallback;
+}
+
 async function loadReports() {
   setStatus("Caricamento registri...");
   const payload = await api("/api/assignment-reports");
@@ -302,7 +336,7 @@ function renderReportSelect() {
     const option = document.createElement("option");
     option.value = report.name;
     const title = report.title || report.activity_id || report.name;
-    option.textContent = `${report.name} - ${title} - ${report.students} studenti`;
+    option.textContent = `${classValue(report)} - ${report.name} - ${title} - ${report.students} studenti`;
     els.reportSelect.append(option);
   }
   els.reportSelect.value = selected;
@@ -540,16 +574,23 @@ function renderActivitySelect() {
     const option = document.createElement("option");
     option.value = activity.path;
     option.dataset.activityId = activity.id;
-    option.textContent = `${activity.id} - ${activity.title || activity.path}`;
+    option.textContent = `${classValue(activity)} - ${activity.id} - ${activity.title || activity.path}`;
     els.activitySelect.append(option);
   }
   const current = els.activityPath.value.trim().replaceAll("\\", "/");
   els.activitySelect.value = state.activities.some((activity) => activity.path === current) ? current : "";
 }
 
-function reportsForActivity(activityId) {
+function activityCoverageKey(activity) {
+  return `${classKey(activity)}::${activity?.id || ""}`;
+}
+
+function reportsForActivity(activity) {
+  const activityId = activity?.id || "";
+  const activityClassKey = classKey(activity);
+  const activityHasClass = hasExplicitClass(activity);
   return state.reports
-    .filter((report) => report.activity_id === activityId)
+    .filter((report) => report.activity_id === activityId && (!activityHasClass || classKey(report) === activityClassKey))
     .sort((a, b) => {
       const first = Date.parse(a.updated_at || a.due_at || "");
       const second = Date.parse(b.updated_at || b.due_at || "");
@@ -559,17 +600,23 @@ function reportsForActivity(activityId) {
 
 function reportCoverageRows() {
   return [...state.activities].sort((a, b) => {
-    const aMissing = reportsForActivity(a.id).length === 0 ? 1 : 0;
-    const bMissing = reportsForActivity(b.id).length === 0 ? 1 : 0;
+    const aMissing = reportsForActivity(a).length === 0 ? 1 : 0;
+    const bMissing = reportsForActivity(b).length === 0 ? 1 : 0;
     const reportDelta = bMissing - aMissing;
     if (reportDelta !== 0) return reportDelta;
+    const classDelta = classValue(a).localeCompare(classValue(b), "it", { numeric: true, sensitivity: "base" });
+    if (classDelta !== 0) return classDelta;
     return String(a.id || "").localeCompare(String(b.id || ""), "it", { numeric: true, sensitivity: "base" });
   });
 }
 
+function currentClassId(activity = null) {
+  return els.classId.value.trim() || activity?.class_id || activity?.github_team || "classe-non-indicata";
+}
+
 function defaultOutputName(activity) {
   const id = activity?.id || "registro";
-  return `demo/${id}.json`;
+  return `${slugPathSegment(currentClassId(activity))}/${id}.json`;
 }
 
 function selectCoverageActivity(activityPath, outputName = "") {
@@ -670,13 +717,22 @@ function coverageGroupClass(reports) {
   }[coverageWorstKind(reports)] || "coverageGroupInProgress";
 }
 
-function coverageReportCell(report, isLatest = false) {
+function coverageReportCell(report) {
   if (!report) return '<span class="coverageReportMissing">nessun registro</span>';
   return `
     <div class="coverageReportCell">
       <button type="button" data-coverage-report="${escapeHtml(report.name)}" title="Apri il registro ${escapeHtml(report.name)} e caricalo nella dashboard.">${escapeHtml(report.name)} ${reportLock(report)}</button>
-      ${isLatest ? badge("ultimo", "muted") : ""}
       ${coverageReportCounts(report)}
+    </div>
+  `;
+}
+
+function coverageStatusCell(outcome, report, isLatest = false) {
+  const statusKind = outcome.kind === "muted" && !report ? "warn" : outcome.kind;
+  return `
+    <div class="coverageStatusCell">
+      ${badge(outcome.label, statusKind)}
+      ${isLatest ? badge("ultimo", "muted") : ""}
     </div>
   `;
 }
@@ -684,7 +740,7 @@ function coverageReportCell(report, isLatest = false) {
 function renderCoverage() {
   if (!els.coverageBody) return;
   const rows = reportCoverageRows();
-  const withReport = rows.filter((activity) => reportsForActivity(activity.id).length > 0).length;
+  const withReport = rows.filter((activity) => reportsForActivity(activity).length > 0).length;
   const withoutReport = rows.length - withReport;
   els.coverageStatus.textContent = rows.length
     ? `${withReport} activity con registro, ${withoutReport} senza registro.`
@@ -696,16 +752,17 @@ function renderCoverage() {
   `;
   els.coverageBody.innerHTML = "";
   if (!rows.length) {
-    els.coverageBody.innerHTML = '<tr><td colspan="7">Nessuna activity disponibile.</td></tr>';
+    els.coverageBody.innerHTML = '<tr><td colspan="8">Nessuna activity disponibile.</td></tr>';
     setupResizableTable(els.coverageTable, "coverage");
     return;
   }
   for (const activity of rows) {
-    const reports = reportsForActivity(activity.id);
+    const reports = reportsForActivity(activity);
     const hasReport = reports.length > 0;
     const reportRows = hasReport ? reports : [null];
     const canCollapse = reportRows.length > 1;
-    const isCollapsed = canCollapse && state.coverageCollapsedActivities.has(activity.id);
+    const coverageKey = activityCoverageKey(activity);
+    const isCollapsed = canCollapse && state.coverageCollapsedActivities.has(coverageKey);
     const visibleReportRows = isCollapsed ? [reportRows[0]] : reportRows;
     const groupClass = coverageGroupClass(reports);
     visibleReportRows.forEach((report, index) => {
@@ -722,17 +779,18 @@ function renderCoverage() {
         <td>
           <div class="coverageActivityCell">
             ${canCollapse && index === 0 ? `
-              <button type="button" class="coverageGroupToggle" data-coverage-toggle="${escapeHtml(activity.id)}" aria-expanded="${isCollapsed ? "false" : "true"}" title="${isCollapsed ? "Espandi i registri di questa activity." : "Collassa i registri di questa activity."}">${isCollapsed ? "+" : "-"}</button>
+              <button type="button" class="coverageGroupToggle" data-coverage-toggle="${escapeHtml(coverageKey)}" aria-expanded="${isCollapsed ? "false" : "true"}" title="${isCollapsed ? "Espandi i registri di questa activity." : "Collassa i registri di questa activity."}">${isCollapsed ? "+" : "-"}</button>
             ` : '<span class="coverageGroupToggleSpacer"></span>'}
             <strong class="coverageActivityName">${escapeHtml(activity.title || activity.id)}</strong>
           </div>
           <small>${escapeHtml(activity.id || "-")}</small><br>
           <small>${escapeHtml(activity.path || "-")}</small>
         </td>
+        <td>${report ? classBadge(report) : classBadge(activity)}</td>
         <td>${kindLabel(activity.kind)}</td>
         <td>${escapeHtml(activity.student_support_mode || "-")}</td>
-        <td>${badge(outcome.label, outcome.kind === "muted" && !report ? "warn" : outcome.kind)}</td>
-        <td>${coverageReportCell(report, index === 0)}</td>
+        <td>${coverageStatusCell(outcome, report, index === 0)}</td>
+        <td>${coverageReportCell(report)}</td>
         <td>${escapeHtml(formatDate(report?.updated_at || report?.due_at))}</td>
         <td>
           ${report ? `
@@ -769,10 +827,12 @@ function renderSelectOptions(select, values, currentValue, emptyLabel = "Tutti")
 
 function renderOverviewFilters() {
   const rows = state.overviewRows;
+  renderSelectOptions(els.overviewClassFilter, uniqueSorted(rows.map((row) => classValue(row))), state.overviewFilters.class, "Tutte");
   renderSelectOptions(els.overviewStudentFilter, uniqueSorted(rows.map((row) => row.student)), state.overviewFilters.student);
   renderSelectOptions(els.overviewKindFilter, uniqueSorted(rows.map((row) => row.kind || "tipo non indicato")), state.overviewFilters.kind);
   renderSelectOptions(els.overviewStatusFilter, uniqueSorted(rows.map((row) => row.status || "stato non indicato")), state.overviewFilters.status);
   renderSelectOptions(els.overviewSupportFilter, uniqueSorted(rows.map((row) => row.student_support_mode || "non indicata")), state.overviewFilters.support, "Tutte");
+  state.overviewFilters.class = els.overviewClassFilter.value;
   state.overviewFilters.student = els.overviewStudentFilter.value;
   state.overviewFilters.kind = els.overviewKindFilter.value;
   state.overviewFilters.status = els.overviewStatusFilter.value;
@@ -781,10 +841,12 @@ function renderOverviewFilters() {
 
 function filteredOverviewRows() {
   return state.overviewRows.filter((row) => {
+    const classLabel = classValue(row);
     const kind = row.kind || "tipo non indicato";
     const status = row.status || "stato non indicato";
     const support = row.student_support_mode || "non indicata";
-    return (!state.overviewFilters.student || row.student === state.overviewFilters.student)
+    return (!state.overviewFilters.class || classLabel === state.overviewFilters.class)
+      && (!state.overviewFilters.student || row.student === state.overviewFilters.student)
       && (!state.overviewFilters.kind || kind === state.overviewFilters.kind)
       && (!state.overviewFilters.status || status === state.overviewFilters.status)
       && (!state.overviewFilters.support || support === state.overviewFilters.support);
@@ -797,6 +859,7 @@ function orderIndex(order, value) {
 }
 
 function overviewSortValue(row, column) {
+  if (column === "class") return classValue(row);
   if (column === "student") return row.student || "";
   if (column === "activity") return `${row.title || ""} ${row.activity_id || ""}`.trim();
   if (column === "kind") return orderIndex(OVERVIEW_TYPE_ORDER, row.kind || "");
@@ -868,8 +931,29 @@ function renderOverviewViewTabs() {
   els.overviewMatrixView.hidden = state.overviewView !== "matrix";
 }
 
+function renderOverviewSummary(rows) {
+  if (!state.overviewRows.length) {
+    els.overviewSummary.innerHTML = '<p class="status">Genera o carica almeno un registro per vedere il quadro classe.</p>';
+    return;
+  }
+  const activeFilters = Object.values(state.overviewFilters).filter(Boolean).length;
+  const cards = [
+    ["Classi", uniqueSorted(rows.map((row) => classValue(row))).length],
+    ["Studenti", overviewStudents(rows).length],
+    ["Consegne", overviewActivities(rows).length],
+    ["Righe", `${rows.length}/${state.overviewRows.length}`],
+    ["Filtri", activeFilters ? `${activeFilters} attivi` : "nessuno"],
+  ];
+  els.overviewSummary.innerHTML = cards.map(([label, value]) => `
+    <article class="overviewSummaryItem">
+      <strong>${escapeHtml(label)}</strong>
+      <span>${escapeHtml(value)}</span>
+    </article>
+  `).join("");
+}
+
 function activityKey(row) {
-  return row.activity_id || row.title || row.report_name || "";
+  return `${classValue(row)}::${row.report_name || row.activity_id || row.title || ""}`;
 }
 
 function activityLabel(row) {
@@ -954,6 +1038,7 @@ function renderOverviewMatrix(rows) {
     ${activities.map((activity) => `
       <th class="matrixActivityHeader ${kindRowClass(activity.kind)}">
         <span>${escapeHtml(activityLabel(activity))}</span>
+        <small>${escapeHtml(classValue(activity))}</small>
         <small>${escapeHtml(activity.kind || "-")}</small>
       </th>
     `).join("")}
@@ -969,10 +1054,14 @@ function renderOverviewMatrix(rows) {
         const row = byStudentActivity.get(`${student}::${activityKey(activity)}`);
         const kind = matrixCellKind(row);
         const score = matrixScore(row);
+        const hasSubmission = row?.submitted || row?.status?.startsWith("submitted");
+        const submissionTitle = hasSubmission
+          ? `Apri la consegna di ${escapeHtml(row.student || "questo studente")} per questa activity.`
+          : "Consegna non disponibile: lo studente non ha ancora consegnato.";
         return `
           <td>
             ${row ? `
-              <button type="button" class="matrixCell matrixCell${kind}" data-overview-report="${escapeHtml(row.report_name)}" data-overview-student="${escapeHtml(row.student || "")}" title="Apri il registro ${escapeHtml(row.report_name)} e la consegna di ${escapeHtml(row.student || "questo studente")}.">
+              <button type="button" class="matrixCell matrixCell${kind}" data-overview-report="${escapeHtml(row.report_name)}" data-overview-student="${escapeHtml(row.student || "")}" title="${submissionTitle}" ${hasSubmission ? "" : "disabled"}>
                 <strong>${escapeHtml(matrixCellText(row))}</strong>
                 ${score !== "" ? `<small>${escapeHtml(score)}</small>` : ""}
               </button>
@@ -989,6 +1078,7 @@ function renderOverview() {
   const rows = sortedOverviewRows(filteredOverviewRows());
   renderOverviewSortButtons();
   renderOverviewViewTabs();
+  renderOverviewSummary(rows);
   if (!state.overviewRows.length) {
     els.overviewStatus.textContent = "Nessun registro salvato in teacher-reports.";
   } else if (state.overviewView === "matrix") {
@@ -998,13 +1088,13 @@ function renderOverview() {
   }
   els.overviewBody.innerHTML = "";
   if (!state.overviewRows.length) {
-    els.overviewBody.innerHTML = '<tr><td colspan="9">Genera o carica almeno un registro consegne.</td></tr>';
+    els.overviewBody.innerHTML = '<tr><td colspan="10">Genera o carica almeno un registro consegne.</td></tr>';
     renderOverviewMatrix(rows);
     setupResizableTables();
     return;
   }
   if (!rows.length) {
-    els.overviewBody.innerHTML = '<tr><td colspan="9">Nessuna activity per questi filtri.</td></tr>';
+    els.overviewBody.innerHTML = '<tr><td colspan="10">Nessuna activity per questi filtri.</td></tr>';
     renderOverviewMatrix(rows);
     setupResizableTables();
     return;
@@ -1012,9 +1102,14 @@ function renderOverview() {
   for (const row of rows) {
     const testText = row.tests_total == null ? "-" : `${row.tests_passed ?? "-"}/${row.tests_total}`;
     const grade = row.teacher_grade ?? row.score ?? "-";
+    const hasSubmission = row.submitted || row.status?.startsWith("submitted");
+    const submissionTitle = hasSubmission
+      ? `Apri la consegna di ${escapeHtml(row.student || "questo studente")} per questa activity.`
+      : "Consegna non disponibile: lo studente non ha ancora consegnato.";
     const tr = document.createElement("tr");
     tr.className = `overviewRow ${kindRowClass(row.kind)}`;
     tr.innerHTML = `
+      <td>${classBadge(row)}</td>
       <td>${studentLabel(row.student)}</td>
       <td>
         <strong>${escapeHtml(row.title || row.activity_id || "-")}</strong><br>
@@ -1030,10 +1125,10 @@ function renderOverview() {
       </td>
       <td><code>${escapeHtml(grade)}</code></td>
       <td>
-        <button type="button" class="smallButton" data-overview-report="${escapeHtml(row.report_name)}" data-overview-student="${escapeHtml(row.student || "")}" title="Apri il registro ${escapeHtml(row.report_name || "collegato")} e la consegna di ${escapeHtml(row.student || "questo studente")}.">
-          Apri
+        <button type="button" class="smallButton" data-overview-report="${escapeHtml(row.report_name)}" data-overview-student="${escapeHtml(row.student || "")}" title="${submissionTitle}" ${hasSubmission ? "" : "disabled"}>
+          Consegna
         </button><br>
-        <small>${escapeHtml(row.report_name || "-")}</small>
+        <small class="overviewReportName" title="${escapeHtml(row.report_name || "-")}">${escapeHtml(row.report_name || "-")}</small>
       </td>
     `;
     els.overviewBody.append(tr);
@@ -1051,6 +1146,9 @@ async function generateReport() {
       body: JSON.stringify({
         activity_path: els.activityPath.value,
         output_name: els.outputName.value,
+        class_id: els.classId.value,
+        class_label: els.classLabel.value,
+        github_team: els.githubTeam.value,
         assigned_at: els.assignedAt.value,
         due_at: els.dueAt.value,
         now: els.nowAt.value,
@@ -1181,6 +1279,7 @@ function renderSummary(students) {
   }
   const counts = summaryCounts(students);
   const cards = [
+    ["Classe", classValue(state.report)],
     ["Activity", state.report.activity_id || "-"],
     ["Scadenza", formatDate(state.report.due_at)],
     ["Studenti", counts.total],
@@ -1479,8 +1578,16 @@ function selectActivity(path) {
   els.activityPath.value = path;
   const activity = state.activities.find((candidate) => candidate.path === path);
   if (activity?.id) {
-    els.outputName.value = `demo/${activity.id}_assignment.json`;
+    els.classId.value = activity.class_id || activity.github_team || "";
+    els.classLabel.value = activity.class_label || activity.class_id || "";
+    els.githubTeam.value = activity.github_team || "";
+    els.outputName.value = defaultOutputName(activity);
   }
+}
+
+function updateOutputNameForCurrentActivity() {
+  const activity = state.activities.find((candidate) => candidate.path === els.activityPath.value.trim().replaceAll("\\", "/"));
+  if (activity?.id) els.outputName.value = defaultOutputName(activity);
 }
 
 function openCoverageDialog() {
@@ -1494,6 +1601,20 @@ function openCoverageDialog() {
 function closeCoverageDialog() {
   if (els.coverageDialog?.open) {
     els.coverageDialog.close();
+  }
+}
+
+function openOverviewDialog() {
+  if (els.overviewDialog && !els.overviewDialog.open) {
+    els.overviewDialog.showModal();
+  }
+  setupResizableTable(els.overviewListTable, "overview-list");
+  setupResizableTable(els.overviewMatrixTable, "overview-matrix");
+}
+
+function closeOverviewDialog() {
+  if (els.overviewDialog?.open) {
+    els.overviewDialog.close();
   }
 }
 
@@ -1520,6 +1641,8 @@ els.generateReportBtn.addEventListener("click", generateReport);
 els.reportSelect.addEventListener("change", loadSelectedReport);
 els.coverageOpenBtn.addEventListener("click", openCoverageDialog);
 els.coverageCloseBtn.addEventListener("click", closeCoverageDialog);
+els.overviewOpenBtn.addEventListener("click", openOverviewDialog);
+els.overviewCloseBtn.addEventListener("click", closeOverviewDialog);
 els.studentsOpenBtn.addEventListener("click", openStudentsDialog);
 els.studentsCloseBtn.addEventListener("click", closeStudentsDialog);
 els.reviewPrevBtn.addEventListener("click", () => openAdjacentSubmission(-1));
@@ -1529,6 +1652,7 @@ els.activitySelect.addEventListener("change", () => {
   if (els.activitySelect.value) selectActivity(els.activitySelect.value);
 });
 els.activityPath.addEventListener("input", renderActivitySelect);
+els.classId.addEventListener("change", updateOutputNameForCurrentActivity);
 els.coverageBody.addEventListener("click", async (event) => {
   const toggleButton = event.target.closest("[data-coverage-toggle]");
   const selectButton = event.target.closest("[data-coverage-select]");
@@ -1562,6 +1686,7 @@ els.coverageBody.addEventListener("click", async (event) => {
   }
 });
 [
+  [els.overviewClassFilter, "class"],
   [els.overviewStudentFilter, "student"],
   [els.overviewKindFilter, "kind"],
   [els.overviewStatusFilter, "status"],
@@ -1579,6 +1704,7 @@ els.overviewViewButtons.forEach((button) => {
   button.addEventListener("click", () => {
     state.overviewView = button.dataset.overviewView;
     renderOverview();
+    setupResizableTables();
   });
 });
 els.overviewBody.addEventListener("click", async (event) => {
@@ -1592,7 +1718,7 @@ els.overviewBody.addEventListener("click", async (event) => {
 });
 els.overviewMatrixBody.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-overview-report]");
-  if (!button) return;
+  if (!button || button.disabled) return;
   els.reportSelect.value = button.dataset.overviewReport;
   await loadSelectedReport();
   if (button.dataset.overviewStudent) {

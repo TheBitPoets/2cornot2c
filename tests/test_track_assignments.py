@@ -137,6 +137,43 @@ def test_track_assignments_marks_submitted_on_time(tmp_path) -> None:
     assert row["submission"]["files"][0]["role"] == "solution"
 
 
+def test_track_assignments_records_explicit_class_metadata(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+    student = target(tmp_path, "rossi-mario")
+
+    index = track_assignments.track_assignments(
+        activity_path=activity_path,
+        targets=[student],
+        class_id="3A-TPSI",
+        class_label="3A TPSI",
+        github_team="team-3a-tpsi",
+    )
+
+    assert index["class_id"] == "3A-TPSI"
+    assert index["class_label"] == "3A TPSI"
+    assert index["github_team"] == "team-3a-tpsi"
+
+
+def test_track_assignments_uses_activity_context_class_metadata(tmp_path) -> None:
+    payload = activity()
+    payload["contesto"] = {
+        "classe": "4A-INF",
+        "team_github": "team-4a-inf",
+    }
+    activity_path = tmp_path / "activity.json"
+    activity_path.write_text(json.dumps(payload), encoding="utf-8")
+    student = target(tmp_path, "rossi-mario")
+
+    index = track_assignments.track_assignments(
+        activity_path=activity_path,
+        targets=[student],
+    )
+
+    assert index["class_id"] == "4A-INF"
+    assert index["class_label"] == "4A-INF"
+    assert index["github_team"] == "team-4a-inf"
+
+
 def test_track_assignments_lists_multiple_submission_files(tmp_path) -> None:
     activity_path = write_activity(tmp_path)
     student = target(tmp_path, "rossi-mario")

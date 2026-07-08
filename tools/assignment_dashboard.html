@@ -56,6 +56,18 @@
           <input id="outputName" type="text" value="demo/demo_assignment.json">
         </label>
         <label>
+          <span>Classe</span>
+          <input id="classId" type="text" value="demo" placeholder="3A-TPSI">
+        </label>
+        <label>
+          <span>Etichetta classe</span>
+          <input id="classLabel" type="text" value="Classe demo" placeholder="3A TPSI">
+        </label>
+        <label>
+          <span>Team GitHub</span>
+          <input id="githubTeam" type="text" placeholder="3A-TPSI">
+        </label>
+        <label>
           <span>Assegnato il</span>
           <input id="assignedAt" type="text" value="2026-10-12T09:00:00+02:00">
         </label>
@@ -106,40 +118,81 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
           <p id="overviewStatus" class="status">Caricamento quadro classe...</p>
         </div>
       </div>
-      <div class="overviewFilters">
-        <label>
-          <span>Studente</span>
-          <select id="overviewStudentFilter" aria-label="Filtra quadro classe per studente">
-            <option value="">Tutti</option>
-          </select>
-        </label>
-        <label>
-          <span>Tipo</span>
-          <select id="overviewKindFilter" aria-label="Filtra quadro classe per tipo activity">
-            <option value="">Tutti</option>
-          </select>
-        </label>
-        <label>
-          <span>Stato</span>
-          <select id="overviewStatusFilter" aria-label="Filtra quadro classe per stato">
-            <option value="">Tutti</option>
-          </select>
-        </label>
-        <label>
-          <span>Modalita</span>
-          <select id="overviewSupportFilter" aria-label="Filtra quadro classe per modalita supporto">
-            <option value="">Tutte</option>
-          </select>
-        </label>
+      <div id="overviewSummary" class="overviewSummary" aria-live="polite">
+        <p class="status">Caricamento riepilogo quadro classe...</p>
       </div>
-      <div class="viewTabs" role="tablist" aria-label="Vista quadro classe">
-        <button type="button" class="isActive" data-overview-view="list" role="tab" aria-selected="true" title="Mostra il quadro classe come elenco ordinabile, una riga per studente e activity.">Elenco</button>
-        <button type="button" data-overview-view="matrix" role="tab" aria-selected="false" title="Mostra il quadro classe come matrice con studenti a sinistra e consegne in colonna.">Matrice</button>
+      <div class="overviewActions">
+        <button id="overviewOpenBtn" type="button" title="Apri elenco e matrice del quadro classe in un modal.">Apri quadro classe</button>
       </div>
+    </section>
+
+    <section class="panel" data-panel-key="students">
+      <div class="panelHead">
+        <div>
+          <h2>Studenti</h2>
+          <p id="tableStatus" class="status">Nessun registro caricato.</p>
+        </div>
+      </div>
+      <div id="studentsSummary" class="studentsSummary" aria-live="polite">
+        <p class="status">Carica un registro per vedere il riepilogo studenti.</p>
+      </div>
+      <div class="studentsActions">
+        <button id="studentsOpenBtn" type="button" title="Apri la tabella studenti del registro selezionato in un modal.">Apri studenti</button>
+      </div>
+    </section>
+
+  </main>
+
+  <dialog id="overviewDialog" class="overviewDialog" aria-labelledby="overviewDialogTitle">
+    <div class="overviewDialogHead">
+      <div>
+        <h2 id="overviewDialogTitle">Quadro classe</h2>
+        <p class="status">Elenco e matrice delle consegne filtrate.</p>
+      </div>
+      <button id="overviewCloseBtn" type="button" class="smallButton" title="Chiudi il quadro classe e torna alla dashboard.">Chiudi</button>
+    </div>
+    <div class="overviewFilters overviewDialogFilters">
+      <label>
+        <span>Classe</span>
+        <select id="overviewClassFilter" aria-label="Filtra quadro classe per classe">
+          <option value="">Tutte</option>
+        </select>
+      </label>
+      <label>
+        <span>Studente</span>
+        <select id="overviewStudentFilter" aria-label="Filtra quadro classe per studente">
+          <option value="">Tutti</option>
+        </select>
+      </label>
+      <label>
+        <span>Tipo</span>
+        <select id="overviewKindFilter" aria-label="Filtra quadro classe per tipo activity">
+          <option value="">Tutti</option>
+        </select>
+      </label>
+      <label>
+        <span>Stato</span>
+        <select id="overviewStatusFilter" aria-label="Filtra quadro classe per stato">
+          <option value="">Tutti</option>
+        </select>
+      </label>
+      <label>
+        <span>Modalita</span>
+        <select id="overviewSupportFilter" aria-label="Filtra quadro classe per modalita supporto">
+          <option value="">Tutte</option>
+        </select>
+      </label>
+    </div>
+    <div class="viewTabs" role="tablist" aria-label="Vista quadro classe">
+      <button type="button" class="isActive" data-overview-view="list" role="tab" aria-selected="true" title="Mostra il quadro classe come elenco ordinabile, una riga per studente e activity.">Elenco</button>
+      <button type="button" data-overview-view="matrix" role="tab" aria-selected="false" title="Mostra il quadro classe come matrice con studenti a sinistra e consegne in colonna.">Matrice</button>
+    </div>
+    <div class="overviewDialogBody">
       <div id="overviewListView" class="tableWrap">
         <table id="overviewListTable" class="resizableTable">
           <thead>
             <tr>
+              <th><button type="button" class="sortButton" data-overview-sort="class" title="Ordina le righe per classe.">Classe</button></th>
               <th><button type="button" class="sortButton" data-overview-sort="student" title="Ordina le righe per studente: crescente, decrescente, poi reset.">Studente</button></th>
               <th><button type="button" class="sortButton" data-overview-sort="activity" title="Ordina le righe per titolo o id activity: crescente, decrescente, poi reset.">Activity</button></th>
               <th><button type="button" class="sortButton" data-overview-sort="kind" title="Ordina le righe per tipo di consegna secondo l'ordine didattico.">Tipo</button></th>
@@ -160,24 +213,8 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
           <tbody id="overviewMatrixBody"></tbody>
         </table>
       </div>
-    </section>
-
-    <section class="panel" data-panel-key="students">
-      <div class="panelHead">
-        <div>
-          <h2>Studenti</h2>
-          <p id="tableStatus" class="status">Nessun registro caricato.</p>
-        </div>
-      </div>
-      <div id="studentsSummary" class="studentsSummary" aria-live="polite">
-        <p class="status">Carica un registro per vedere il riepilogo studenti.</p>
-      </div>
-      <div class="studentsActions">
-        <button id="studentsOpenBtn" type="button" title="Apri la tabella studenti del registro selezionato in un modal.">Apri studenti</button>
-      </div>
-    </section>
-
-  </main>
+    </div>
+  </dialog>
 
   <dialog id="reviewDialog" class="reviewDialog" aria-labelledby="reviewDialogTitle">
     <div class="reviewDialogHead">
@@ -211,6 +248,7 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
         <thead>
           <tr>
             <th>Activity</th>
+            <th>Classe</th>
             <th>Tipo</th>
             <th>Modalita</th>
             <th>Stato</th>

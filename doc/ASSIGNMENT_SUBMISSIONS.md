@@ -398,6 +398,9 @@ python scripts/track_assignments.py \
   --targets-file targets-3a.txt \
   --assigned-at 2026-10-12T09:00:00+02:00 \
   --due-at 2026-10-19T23:59:00+02:00 \
+  --class-id 3A-TPSI \
+  --class-label "3A TPSI" \
+  --github-team 3A-TPSI \
   --output teacher-reports/3A/c_sum_with_tests.json
 ```
 
@@ -498,6 +501,23 @@ La dashboard non ricalcola il grading: visualizza il formato prodotto da `script
 
 Il `Quadro classe` aggrega tutti i file JSON presenti in `teacher-reports`. Serve per avere una vista trasversale: tutte le consegne di tutti gli studenti, filtrabili per studente, tipo di activity, stato e modalita di supporto. Da ogni riga si puo aprire il registro collegato e, quando disponibile, la consegna dello studente.
 
+### Classe esplicita nel registro
+
+Un registro consegne deve indicare esplicitamente la classe a cui si riferisce. Non basta dedurla dal nome file o dai repository degli studenti, perche la stessa activity puo essere assegnata a classi diverse o alla stessa classe in momenti diversi.
+
+Campi del registro:
+
+```json
+{
+  "class_id": "3A-TPSI",
+  "class_label": "3A TPSI",
+  "github_team": "3A-TPSI",
+  "activity_id": "c-stringhe-contatore-001"
+}
+```
+
+La GUI usa questi campi in generazione registro, selettore registri, riepilogo del registro selezionato, copertura registri, filtri del quadro classe e matrice. Se la classe non viene indicata durante la generazione, il sistema prova a usare `contesto.classe` e `contesto.team_github` presenti nella activity.
+
 ### Generare il registro dalla GUI
 
 La pagina `Consegne` puo anche generare un registro senza usare direttamente la CLI.
@@ -508,6 +528,9 @@ Nel riquadro `Genera registro` compila:
 |---|---|
 | Activity JSON | Scheda activity da tracciare |
 | Output registro | Path relativo dentro `teacher-reports`, per esempio `3A/somma.json` |
+| Classe | Identificativo classe dell'assegnazione, per esempio `3A-TPSI` |
+| Etichetta classe | Nome leggibile mostrato in dashboard, per esempio `3A TPSI` |
+| Team GitHub | Team GitHub della classe, se disponibile |
 | Assegnato il | Data ISO di assegnazione |
 | Scadenza | Data ISO di scadenza |
 | Ora simulata opzionale | Data ISO usata per simulare il momento attuale |

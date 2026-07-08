@@ -16,6 +16,9 @@ def test_assignment_overview_lists_students_across_saved_reports(tmp_path, monke
             {
                 "activity_id": "python-base-somma-001",
                 "title": "Somma in Python",
+                "class_id": "3A-TPSI",
+                "class_label": "3A TPSI",
+                "github_team": "team-3a-tpsi",
                 "kind": "compito-casa",
                 "student_support_mode": "guidato",
                 "assigned_at": "2026-10-12T09:00:00+02:00",
@@ -62,6 +65,9 @@ def test_assignment_overview_lists_students_across_saved_reports(tmp_path, monke
     assert len(rows) == 2
     assert rows[0]["report_name"] == "demo/python-base-somma-001.json"
     assert rows[0]["activity_id"] == "python-base-somma-001"
+    assert rows[0]["class_id"] == "3A-TPSI"
+    assert rows[0]["class_label"] == "3A TPSI"
+    assert rows[0]["github_team"] == "team-3a-tpsi"
     assert rows[0]["kind"] == "compito-casa"
     assert rows[0]["student_support_mode"] == "guidato"
     assert rows[0]["student"] == "rossi-mario"
@@ -83,6 +89,9 @@ def test_list_assignment_reports_counts_late_only_for_submitted_students(tmp_pat
         json.dumps(
             {
                 "activity_id": "activity",
+                "class_id": "4A-INF",
+                "class_label": "4A INF",
+                "github_team": "team-4a-inf",
                 "students": [
                     {"student": "rossi-mario", "status": "submitted_late", "submitted": True, "late": True},
                     {"student": "bianchi-luca", "status": "missing", "submitted": False, "late": True},
@@ -95,6 +104,9 @@ def test_list_assignment_reports_counts_late_only_for_submitted_students(tmp_pat
 
     reports = course_board_server.list_assignment_reports()
 
+    assert reports[0]["class_id"] == "4A-INF"
+    assert reports[0]["class_label"] == "4A INF"
+    assert reports[0]["github_team"] == "team-4a-inf"
     assert reports[0]["students"] == 3
     assert reports[0]["submitted"] == 2
     assert reports[0]["not_submitted"] == 1

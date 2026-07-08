@@ -178,7 +178,7 @@ select {
 .viewTabs {
   display: flex;
   gap: .45rem;
-  padding: .85rem 1.1rem 0;
+  padding: .85rem 1.1rem;
 }
 
 .viewTabs button {
@@ -352,10 +352,12 @@ label {
 .coverageDialogTable {
   min-height: 0;
   overflow: auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
 }
 
 #coverageTable {
-  min-width: 72rem;
+  min-width: 82rem;
 }
 
 .coverageOk { background: #f5fbf7; }
@@ -490,6 +492,13 @@ label {
 }
 
 .coverageReportCell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+  align-items: center;
+}
+
+.coverageStatusCell {
   display: flex;
   flex-wrap: wrap;
   gap: .35rem;
@@ -636,6 +645,127 @@ label {
   overflow: hidden;
 }
 
+.overviewActions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 1.1rem 1.1rem;
+}
+
+.overviewSummary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: .75rem;
+  padding: 1.1rem;
+}
+
+.overviewSummary > .status {
+  grid-column: 1 / -1;
+}
+
+.overviewSummaryItem {
+  min-width: 0;
+  border: 1px solid rgba(17, 17, 17, .14);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: .75rem;
+}
+
+.overviewSummaryItem strong {
+  display: block;
+  margin-bottom: .35rem;
+  color: var(--muted);
+  font-size: .72rem;
+  text-transform: uppercase;
+}
+
+.overviewSummaryItem span {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 1.1rem;
+  font-weight: 900;
+}
+
+.overviewDialog {
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  width: min(96vw, 92rem);
+  height: min(90vh, 54rem);
+  min-width: min(92vw, 38rem);
+  min-height: 24rem;
+  max-width: 98vw;
+  max-height: 94vh;
+  margin: auto;
+  border: 1px solid rgba(17, 17, 17, .18);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 22px 70px rgba(17, 17, 17, .28);
+  color: var(--ink);
+  padding: 0;
+  resize: both;
+  overflow: hidden;
+}
+
+.overviewDialog[open] {
+  display: grid;
+}
+
+.overviewDialog::backdrop {
+  background: rgba(17, 17, 17, .42);
+}
+
+.overviewDialogHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid var(--line);
+  background: #ffffff;
+}
+
+.overviewDialogHead h2 {
+  margin-bottom: .25rem;
+  font-size: 1.2rem;
+}
+
+.overviewDialogFilters {
+  padding-bottom: .9rem;
+  border-bottom: 1px solid var(--line);
+  background: #ffffff;
+}
+
+.overviewDialog .viewTabs {
+  border-bottom: 1px solid var(--line);
+}
+
+.overviewDialogBody {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.overviewDialogBody > .tableWrap {
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+
+.overviewDialogBody > [hidden] {
+  display: none !important;
+}
+
+.overviewDialogBody thead th {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  background: #ffffff;
+  box-shadow: inset 0 -1px 0 var(--line);
+}
+
+#overviewListTable {
+  min-width: 82rem;
+}
+
 .studentsDialog[open] {
   display: grid;
 }
@@ -675,10 +805,21 @@ label {
 .studentsDialogTable {
   min-height: 0;
   overflow: auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
 }
 
 #studentsTable {
   min-width: 78rem;
+}
+
+.coverageDialogTable thead th,
+.studentsDialogTable thead th {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  background: #ffffff;
+  box-shadow: inset 0 -1px 0 var(--line);
 }
 
 .status {
@@ -689,7 +830,7 @@ label {
 
 .summaryGrid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
   gap: .8rem;
   padding: 1.1rem;
 }
@@ -860,6 +1001,16 @@ th.isResizableColumn:hover {
   border-left: 4px solid transparent;
 }
 
+.overviewReportName {
+  display: block;
+  max-width: 12rem;
+  margin-top: .25rem;
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .typeHomeworkRow { border-left-color: #2f6fed; }
 .typeLabRow { border-left-color: #16825d; }
 .typeClassworkRow { border-left-color: #b45f06; }
@@ -878,6 +1029,7 @@ th.isResizableColumn:hover {
 .typeUnknownRow td:first-child { border-left-color: #8a8a8a; }
 
 .typeBadge,
+.classBadge,
 .studentName {
   display: inline-flex;
   width: fit-content;
@@ -891,6 +1043,7 @@ th.isResizableColumn:hover {
   overflow-wrap: anywhere;
 }
 
+.classBadge { background: #eef4f8; color: #28506a; }
 .typeHomework { background: #eaf1ff; color: #1e4fa8; }
 .typeLab { background: #e5f6ef; color: #0f684a; }
 .typeClasswork { background: #fff1df; color: #81501a; }
@@ -1000,10 +1153,19 @@ button.matrixCell {
   cursor: pointer;
 }
 
+button.matrixCell:disabled {
+  cursor: not-allowed;
+}
+
 button.matrixCell:hover,
 button.matrixCell:focus-visible {
   outline: 2px solid rgba(17, 17, 17, .28);
   outline-offset: 2px;
+}
+
+button.matrixCell:disabled:hover,
+button.matrixCell:disabled:focus-visible {
+  outline: 0;
 }
 
 .matrixCell small {
@@ -1269,6 +1431,10 @@ code {
   }
 
   .studentsSummary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .overviewSummary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
