@@ -291,6 +291,40 @@ th {
   text-transform: uppercase;
 }
 
+.sortButton {
+  display: inline-flex;
+  min-height: 1.8rem;
+  align-items: center;
+  gap: .3rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 900;
+  text-transform: inherit;
+  padding: 0;
+  cursor: pointer;
+}
+
+.sortButton:hover,
+.sortButton:focus-visible {
+  color: var(--ink);
+}
+
+.sortButton.isSorted::after {
+  content: "";
+  font-size: .85rem;
+  line-height: 1;
+}
+
+.sortButton.isSorted[data-sort-direction="asc"]::after {
+  content: "↑";
+}
+
+.sortButton.isSorted[data-sort-direction="desc"]::after {
+  content: "↓";
+}
+
 .badge {
   display: inline-flex;
   border: 1px solid rgba(17, 17, 17, .14);

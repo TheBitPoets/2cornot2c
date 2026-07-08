@@ -2,6 +2,24 @@ const REVIEW_SPLIT_KEY = "2cornot2c.assignmentReviewSplit";
 const DEFAULT_REVIEW_SPLIT = 320;
 const MIN_REVIEW_SPLIT = 180;
 const MAX_REVIEW_SPLIT_RATIO = 0.65;
+const OVERVIEW_TYPE_ORDER = [
+  "studio-guidato",
+  "esercizio-classe",
+  "laboratorio",
+  "compito-casa",
+  "debug-didattico",
+  "verifica-pratica",
+  "verifica-scritta",
+];
+const OVERVIEW_SUPPORT_ORDER = ["senza-aiuto", "feedback-tecnico", "studio-guidato", "ai-assisted"];
+const OVERVIEW_STATUS_ORDER = [
+  "missing",
+  "pending",
+  "submitted_late",
+  "submitted_unknown_time",
+  "submitted_on_time",
+  "submitted_no_due_date",
+];
 
 const state = {
   activities: [],
@@ -15,6 +33,10 @@ const state = {
     kind: "",
     status: "",
     support: "",
+  },
+  overviewSort: {
+    column: "",
+    direction: "",
   },
   reviewStudent: null,
   reviewFilePath: "",
@@ -34,6 +56,7 @@ const els = {
   overviewKindFilter: document.querySelector("#overviewKindFilter"),
   overviewStatusFilter: document.querySelector("#overviewStatusFilter"),
   overviewSupportFilter: document.querySelector("#overviewSupportFilter"),
+  overviewSortButtons: document.querySelectorAll("[data-overview-sort]"),
   tableStatus: document.querySelector("#tableStatus"),
   studentsBody: document.querySelector("#studentsBody"),
   reviewStatus: document.querySelector("#reviewStatus"),
@@ -347,8 +370,76 @@ function filteredOverviewRows() {
   });
 }
 
+function orderIndex(order, value) {
+  const index = order.indexOf(value);
+  return index === -1 ? order.length : index;
+}
+
+function overviewSortValue(row, column) {
+  if (column === "student") return row.student || "";
+  if (column === "activity") return `${row.title || ""} ${row.activity_id || ""}`.trim();
+  if (column === "kind") return orderIndex(OVERVIEW_TYPE_ORDER, row.kind || "");
+  if (column === "support") return orderIndex(OVERVIEW_SUPPORT_ORDER, row.student_support_mode || "");
+  if (column === "due_at") {
+    const timestamp = Date.parse(row.due_at || "");
+    return Number.isNaN(timestamp) ? Number.MAX_SAFE_INTEGER : timestamp;
+  }
+  if (column === "status") return orderIndex(OVERVIEW_STATUS_ORDER, row.status || "");
+  if (column === "tests") {
+    if (row.tests_total == null || Number(row.tests_total) === 0) return -1;
+    return Number(row.tests_passed ?? 0) / Number(row.tests_total);
+  }
+  if (column === "grade") {
+    const grade = Number(row.teacher_grade ?? row.score);
+    return Number.isFinite(grade) ? grade : -1;
+  }
+  if (column === "report") return row.report_name || "";
+  return "";
+}
+
+function compareOverviewRows(a, b, column) {
+  const first = overviewSortValue(a, column);
+  const second = overviewSortValue(b, column);
+  if (typeof first === "number" && typeof second === "number") {
+    return first - second;
+  }
+  return String(first).localeCompare(String(second), "it", { numeric: true, sensitivity: "base" });
+}
+
+function sortedOverviewRows(rows) {
+  if (!state.overviewSort.column || !state.overviewSort.direction) return rows;
+  const direction = state.overviewSort.direction === "desc" ? -1 : 1;
+  return [...rows].sort((a, b) => {
+    const primary = compareOverviewRows(a, b, state.overviewSort.column) * direction;
+    if (primary !== 0) return primary;
+    return String(a.student || "").localeCompare(String(b.student || ""), "it", { sensitivity: "base" })
+      || String(a.activity_id || "").localeCompare(String(b.activity_id || ""), "it", { numeric: true, sensitivity: "base" });
+  });
+}
+
+function renderOverviewSortButtons() {
+  els.overviewSortButtons.forEach((button) => {
+    const isActive = button.dataset.overviewSort === state.overviewSort.column && state.overviewSort.direction;
+    button.classList.toggle("isSorted", Boolean(isActive));
+    button.dataset.sortDirection = isActive ? state.overviewSort.direction : "";
+    button.setAttribute("aria-sort", isActive ? (state.overviewSort.direction === "asc" ? "ascending" : "descending") : "none");
+  });
+}
+
+function cycleOverviewSort(column) {
+  if (state.overviewSort.column !== column) {
+    state.overviewSort = { column, direction: "asc" };
+  } else if (state.overviewSort.direction === "asc") {
+    state.overviewSort.direction = "desc";
+  } else {
+    state.overviewSort = { column: "", direction: "" };
+  }
+  renderOverview();
+}
+
 function renderOverview() {
-  const rows = filteredOverviewRows();
+  const rows = sortedOverviewRows(filteredOverviewRows());
+  renderOverviewSortButtons();
   els.overviewStatus.textContent = state.overviewRows.length
     ? `Mostrate ${rows.length}/${state.overviewRows.length} righe activity-studente.`
     : "Nessun registro salvato in teacher-reports.";
@@ -749,6 +840,9 @@ els.activityPath.addEventListener("input", renderActivitySelect);
     state.overviewFilters[key] = select.value;
     renderOverview();
   });
+});
+els.overviewSortButtons.forEach((button) => {
+  button.addEventListener("click", () => cycleOverviewSort(button.dataset.overviewSort));
 });
 els.overviewBody.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-overview-report]");
