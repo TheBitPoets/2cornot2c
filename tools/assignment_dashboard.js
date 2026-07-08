@@ -1167,17 +1167,6 @@ function summaryCounts(students) {
   };
 }
 
-function currentFilterLabel() {
-  return {
-    all: "Tutti",
-    pending: "Da consegnare",
-    missing: "Mancanti",
-    submitted: "Consegnati",
-    late: "In ritardo",
-    failed: "Test falliti",
-  }[state.filter] || "Tutti";
-}
-
 function renderDashboard() {
   const students = Array.isArray(state.report?.students) ? state.report.students : [];
   renderSummary(students);
@@ -1231,7 +1220,6 @@ function renderStudents(students) {
       ["Consegnati", counts.submitted],
       ["Mancanti", counts.missing],
       ["In ritardo", counts.late],
-      ["Filtro", `${currentFilterLabel()} (${visible.length})`],
     ];
     els.studentsSummary.innerHTML = summaryItems.map(([label, value]) => `
       <article class="studentsSummaryItem">
