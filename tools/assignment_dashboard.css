@@ -737,10 +737,24 @@ label {
   height: 100%;
   min-height: 0;
   overflow: auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
 }
 
 .overviewDialogBody > [hidden] {
   display: none !important;
+}
+
+.overviewDialogBody thead th {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  background: #ffffff;
+  box-shadow: inset 0 -1px 0 var(--line);
+}
+
+#overviewListTable {
+  min-width: 82rem;
 }
 
 .studentsDialog[open] {
