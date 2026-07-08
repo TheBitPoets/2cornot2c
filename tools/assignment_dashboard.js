@@ -223,7 +223,7 @@ function renderReportSelect() {
     const option = document.createElement("option");
     option.value = report.name;
     const title = report.title || report.activity_id || report.name;
-    option.textContent = `${report.name} · ${title} · ${report.students} studenti`;
+    option.textContent = `${report.name} - ${title} - ${report.students} studenti`;
     els.reportSelect.append(option);
   }
   els.reportSelect.value = selected;
@@ -277,7 +277,7 @@ function renderActivitySelect() {
     const option = document.createElement("option");
     option.value = activity.path;
     option.dataset.activityId = activity.id;
-    option.textContent = `${activity.id} · ${activity.title || activity.path}`;
+    option.textContent = `${activity.id} - ${activity.title || activity.path}`;
     els.activitySelect.append(option);
   }
   const current = els.activityPath.value.trim().replaceAll("\\", "/");
@@ -559,7 +559,7 @@ function renderReview(isError = false) {
           <strong>${escapeHtml(state.reviewFile?.path || state.reviewFilePath || "-")}</strong>
           ${currentFile.github_url ? externalLink(currentFile.github_url, "Apri su GitHub") : ""}
         </div>
-        <span>${escapeHtml(languageFromPath(state.reviewFile?.path || state.reviewFilePath))}${state.reviewFile?.size != null ? ` · ${escapeHtml(state.reviewFile.size)} byte` : ""}</span>
+        <span>${escapeHtml(languageFromPath(state.reviewFile?.path || state.reviewFilePath))}${state.reviewFile?.size != null ? ` - ${escapeHtml(state.reviewFile.size)} byte` : ""}</span>
       </div>
       <pre class="${isError ? "fileError" : ""}"><code>${highlightCode(state.reviewFile?.content ?? "Caricamento...", state.reviewFile?.path || state.reviewFilePath)}</code></pre>
     </section>

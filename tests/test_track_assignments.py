@@ -179,7 +179,11 @@ def test_track_assignments_uses_report_file_manifest_when_available(tmp_path) ->
         due_at="2026-10-19T23:59:00+02:00",
     )
 
-    assert index["students"][0]["submission"]["files"] == report["files"]
+    files = index["students"][0]["submission"]["files"]
+    assert [(file_entry["path"], file_entry["role"]) for file_entry in files] == [
+        ("assignments/python-base-somma-001/main.py", "solution"),
+        ("assignments/python-base-somma-001/utils.py", "support"),
+    ]
 
 
 def test_track_assignments_marks_pending_before_due_date(tmp_path) -> None:
