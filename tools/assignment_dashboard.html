@@ -77,6 +77,29 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
       <div class="generateActions">
         <button id="generateReportBtn" type="button" class="primary" title="Genera il registro, lo salva in teacher-reports e lo carica nella dashboard.">Genera registro</button>
       </div>
+      <div class="coverageBlock">
+        <div class="coverageHead">
+          <h3>Copertura registri</h3>
+          <p id="coverageStatus" class="status">Caricamento copertura...</p>
+        </div>
+        <div id="coverageSummary" class="coverageSummary"></div>
+        <div class="tableWrap">
+          <table id="coverageTable" class="resizableTable">
+            <thead>
+              <tr>
+                <th>Activity</th>
+                <th>Tipo</th>
+                <th>Modalita</th>
+                <th>Registro</th>
+                <th>Registri</th>
+                <th>Ultimo aggiornamento</th>
+                <th>Azioni</th>
+              </tr>
+            </thead>
+            <tbody id="coverageBody"></tbody>
+          </table>
+        </div>
+      </div>
     </section>
 
     <section class="panel" data-panel-key="selected-report">

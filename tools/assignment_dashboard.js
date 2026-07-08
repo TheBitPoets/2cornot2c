@@ -53,6 +53,10 @@ const els = {
   loadReportBtn: document.querySelector("#loadReportBtn"),
   reloadBtn: document.querySelector("#reloadBtn"),
   status: document.querySelector("#status"),
+  coverageStatus: document.querySelector("#coverageStatus"),
+  coverageSummary: document.querySelector("#coverageSummary"),
+  coverageBody: document.querySelector("#coverageBody"),
+  coverageTable: document.querySelector("#coverageTable"),
   reportSummary: document.querySelector("#reportSummary"),
   overviewStatus: document.querySelector("#overviewStatus"),
   overviewBody: document.querySelector("#overviewBody"),
@@ -262,6 +266,7 @@ async function loadReports() {
   const payload = await api("/api/assignment-reports");
   state.reports = payload.reports || [];
   renderReportSelect();
+  renderCoverage();
   setStatus(state.reports.length ? `Registri disponibili: ${state.reports.length}.` : "Nessun registro trovato in teacher-reports.");
 }
 
@@ -438,6 +443,7 @@ function setupResizableTable(table, tableId) {
 }
 
 function setupResizableTables() {
+  setupResizableTable(els.coverageTable, "coverage");
   setupResizableTable(els.overviewListTable, "overview-list");
   setupResizableTable(els.overviewMatrixTable, "overview-matrix");
   setupResizableTable(els.studentsTable, "students");
@@ -489,6 +495,7 @@ async function loadActivities() {
   const payload = await api("/api/activities");
   state.activities = payload.activities || [];
   renderActivitySelect();
+  renderCoverage();
 }
 
 function renderActivitySelect() {
@@ -502,6 +509,92 @@ function renderActivitySelect() {
   }
   const current = els.activityPath.value.trim().replaceAll("\\", "/");
   els.activitySelect.value = state.activities.some((activity) => activity.path === current) ? current : "";
+}
+
+function reportsForActivity(activityId) {
+  return state.reports
+    .filter((report) => report.activity_id === activityId)
+    .sort((a, b) => {
+      const first = Date.parse(a.updated_at || a.due_at || "");
+      const second = Date.parse(b.updated_at || b.due_at || "");
+      return (Number.isNaN(second) ? 0 : second) - (Number.isNaN(first) ? 0 : first);
+    });
+}
+
+function reportCoverageRows() {
+  return [...state.activities].sort((a, b) => {
+    const aMissing = reportsForActivity(a.id).length === 0 ? 1 : 0;
+    const bMissing = reportsForActivity(b.id).length === 0 ? 1 : 0;
+    const reportDelta = bMissing - aMissing;
+    if (reportDelta !== 0) return reportDelta;
+    return String(a.id || "").localeCompare(String(b.id || ""), "it", { numeric: true, sensitivity: "base" });
+  });
+}
+
+function defaultOutputName(activity) {
+  const id = activity?.id || "registro";
+  return `demo/${id}.json`;
+}
+
+function selectCoverageActivity(activityPath, outputName = "") {
+  els.activityPath.value = activityPath;
+  renderActivitySelect();
+  if (outputName) els.outputName.value = outputName;
+  els.activityPath.scrollIntoView({ behavior: "smooth", block: "center" });
+  els.activityPath.focus();
+}
+
+function renderCoverage() {
+  if (!els.coverageBody) return;
+  const rows = reportCoverageRows();
+  const withReport = rows.filter((activity) => reportsForActivity(activity.id).length > 0).length;
+  const withoutReport = rows.length - withReport;
+  els.coverageStatus.textContent = rows.length
+    ? `${withReport} activity con registro, ${withoutReport} senza registro.`
+    : "Nessuna activity trovata.";
+  els.coverageSummary.innerHTML = `
+    <article><strong>Activity</strong><span>${escapeHtml(rows.length)}</span></article>
+    <article><strong>Con registro</strong><span>${escapeHtml(withReport)}</span></article>
+    <article><strong>Senza registro</strong><span>${escapeHtml(withoutReport)}</span></article>
+  `;
+  els.coverageBody.innerHTML = "";
+  if (!rows.length) {
+    els.coverageBody.innerHTML = '<tr><td colspan="7">Nessuna activity disponibile.</td></tr>';
+    setupResizableTable(els.coverageTable, "coverage");
+    return;
+  }
+  for (const activity of rows) {
+    const reports = reportsForActivity(activity.id);
+    const latest = reports[0];
+    const hasReport = reports.length > 0;
+    const tr = document.createElement("tr");
+    tr.className = hasReport ? "coveragePresent" : "coverageMissing";
+    tr.innerHTML = `
+      <td>
+        <strong>${escapeHtml(activity.title || activity.id)}</strong><br>
+        <small>${escapeHtml(activity.id || "-")}</small><br>
+        <small>${escapeHtml(activity.path || "-")}</small>
+      </td>
+      <td>${kindLabel(activity.kind)}</td>
+      <td>${escapeHtml(activity.student_support_mode || "-")}</td>
+      <td>${badge(hasReport ? "presente" : "mancante", hasReport ? "ok" : "warn")}</td>
+      <td>
+        <code>${escapeHtml(reports.length)}</code>
+        ${reports.length > 1 ? `<br><small>${escapeHtml(reports.map((report) => report.name).join(", "))}</small>` : ""}
+      </td>
+      <td>
+        ${escapeHtml(formatDate(latest?.updated_at || latest?.due_at))}<br>
+        <small>${escapeHtml(latest?.name || "-")}</small>
+      </td>
+      <td>
+        <button type="button" class="smallButton" data-coverage-select="${escapeHtml(activity.path)}" data-coverage-output="${escapeHtml(defaultOutputName(activity))}">Seleziona</button>
+        <button type="button" class="smallButton" data-coverage-generate="${escapeHtml(activity.path)}" data-coverage-output="${escapeHtml(defaultOutputName(activity))}">Genera</button>
+        <button type="button" class="smallButton" data-coverage-report="${escapeHtml(latest?.name || "")}" ${latest ? "" : "disabled"}>Apri</button>
+      </td>
+    `;
+    els.coverageBody.append(tr);
+  }
+  setupResizableTable(els.coverageTable, "coverage");
 }
 
 function uniqueSorted(values) {
@@ -817,6 +910,7 @@ async function generateReport() {
     state.reports = payload.reports || [];
     renderReportSelect();
     els.reportSelect.value = payload.saved?.name || "";
+    renderCoverage();
     await loadOverview();
     clearReview();
     renderDashboard();
@@ -1147,6 +1241,24 @@ els.activitySelect.addEventListener("change", () => {
   if (els.activitySelect.value) selectActivity(els.activitySelect.value);
 });
 els.activityPath.addEventListener("input", renderActivitySelect);
+els.coverageBody.addEventListener("click", async (event) => {
+  const selectButton = event.target.closest("[data-coverage-select]");
+  const generateButton = event.target.closest("[data-coverage-generate]");
+  const reportButton = event.target.closest("[data-coverage-report]");
+  if (selectButton) {
+    selectCoverageActivity(selectButton.dataset.coverageSelect, selectButton.dataset.coverageOutput);
+    return;
+  }
+  if (generateButton) {
+    selectCoverageActivity(generateButton.dataset.coverageGenerate, generateButton.dataset.coverageOutput);
+    await generateReport();
+    return;
+  }
+  if (reportButton && reportButton.dataset.coverageReport) {
+    els.reportSelect.value = reportButton.dataset.coverageReport;
+    await loadSelectedReport();
+  }
+});
 [
   [els.overviewStudentFilter, "student"],
   [els.overviewKindFilter, "kind"],

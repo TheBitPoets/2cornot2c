@@ -25,6 +25,7 @@ import subprocess
 import sys
 import urllib.error
 import urllib.request
+from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlparse
@@ -256,6 +257,7 @@ def list_assignment_reports() -> list[dict]:
                 "title": payload.get("title", ""),
                 "due_at": payload.get("due_at", ""),
                 "students": len(payload.get("students", [])) if isinstance(payload.get("students"), list) else 0,
+                "updated_at": datetime.fromtimestamp(path.stat().st_mtime).isoformat(timespec="seconds"),
             }
         )
     return reports
@@ -344,6 +346,7 @@ def list_activities() -> list[dict]:
                     "id": payload.get("id", ""),
                     "title": payload.get("titolo", ""),
                     "kind": payload.get("tipo", ""),
+                    "student_support_mode": payload.get("student_support_mode") or payload.get("support_mode") or payload.get("modalita_studente") or "",
                     "language": payload.get("linguaggio") or payload.get("language", ""),
                     "path": str(path.relative_to(ROOT)).replace("\\", "/"),
                 }

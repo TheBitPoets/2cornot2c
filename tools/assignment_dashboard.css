@@ -211,6 +211,53 @@ label {
   padding: 0 1.1rem 1.1rem;
 }
 
+.coverageBlock {
+  border-top: 1px solid var(--line);
+}
+
+.coverageHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: baseline;
+  padding: 1.1rem 1.1rem 0;
+}
+
+.coverageHead h3 {
+  margin-bottom: 0;
+  font-size: 1rem;
+}
+
+.coverageSummary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .8rem;
+  padding: .85rem 1.1rem 0;
+}
+
+.coverageSummary article {
+  border: 1px solid rgba(17, 17, 17, .14);
+  border-radius: 14px;
+  background: #ffffff;
+  padding: .65rem .75rem;
+}
+
+.coverageSummary strong {
+  display: block;
+  color: var(--muted);
+  font-size: .68rem;
+  text-transform: uppercase;
+}
+
+.coverageSummary span {
+  font-size: 1.35rem;
+  font-weight: 900;
+}
+
+.coverageMissing {
+  background: #fffaf0;
+}
+
 .layout {
   display: grid;
   gap: 1rem;
@@ -787,6 +834,10 @@ code {
 
   .summaryGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .coverageSummary {
+    grid-template-columns: 1fr;
   }
 
   .generateGrid {
