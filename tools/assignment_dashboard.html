@@ -33,7 +33,63 @@
   </header>
 
   <main class="layout">
-    <section class="panel">
+    <section class="panel" data-panel-key="generate">
+      <div class="panelHead">
+        <div>
+          <h2>Genera registro</h2>
+          <p class="status">Crea o aggiorna un registro consegne partendo da activity, target locali e scadenza.</p>
+        </div>
+      </div>
+      <div class="generateGrid">
+        <label>
+          <span>Activity salvate</span>
+          <select id="activitySelect" aria-label="Activity salvate">
+            <option value="">Caricamento activity...</option>
+          </select>
+        </label>
+        <label>
+          <span>Activity JSON</span>
+          <input id="activityPath" type="text" value="examples/assignment_tracking/demo_activity.json">
+        </label>
+        <label>
+          <span>Output registro</span>
+          <input id="outputName" type="text" value="demo/demo_assignment.json">
+        </label>
+        <label>
+          <span>Assegnato il</span>
+          <input id="assignedAt" type="text" value="2026-10-12T09:00:00+02:00">
+        </label>
+        <label>
+          <span>Scadenza</span>
+          <input id="dueAt" type="text" value="2026-10-19T23:59:00+02:00">
+        </label>
+        <label>
+          <span>Ora simulata opzionale</span>
+          <input id="nowAt" type="text" placeholder="2026-10-18T12:00:00+02:00">
+        </label>
+        <label class="wideField">
+          <span>Repository studenti locali, uno per riga</span>
+          <textarea id="targetsText" rows="4">examples/assignment_tracking/student_repos/rossi-mario
+examples/assignment_tracking/student_repos/bianchi-luca
+examples/assignment_tracking/student_repos/verdi-anna</textarea>
+        </label>
+      </div>
+      <div class="generateActions">
+        <button id="generateReportBtn" type="button" class="primary" title="Genera il registro, lo salva in teacher-reports e lo carica nella dashboard.">Genera registro</button>
+      </div>
+      <div class="coverageBlock" data-panel-key="coverage-registers">
+        <div class="coverageHead">
+          <h3>Copertura registri</h3>
+          <p id="coverageStatus" class="status">Caricamento copertura...</p>
+        </div>
+        <div id="coverageSummary" class="coverageSummary"></div>
+        <div class="coverageActions">
+          <button id="coverageOpenBtn" type="button" title="Apri la tabella completa della copertura registri in un modal.">Apri copertura registri</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" data-panel-key="selected-report">
       <div class="panelHead">
         <div>
           <h2>Registro selezionato</h2>
@@ -43,48 +99,172 @@
       <div id="reportSummary" class="summaryGrid"></div>
     </section>
 
-    <section class="panel">
+    <section class="panel" data-panel-key="class-overview">
       <div class="panelHead">
         <div>
-          <h2>Filtro consegne</h2>
-          <p class="status">Usa i filtri per isolare mancanti, ritardi ed esiti di grading.</p>
+          <h2>Quadro classe</h2>
+          <p id="overviewStatus" class="status">Caricamento quadro classe...</p>
         </div>
       </div>
-      <div class="filterBar">
-        <button type="button" data-filter="all">Tutti</button>
-        <button type="button" data-filter="pending">Da consegnare</button>
-        <button type="button" data-filter="missing">Mancanti</button>
-        <button type="button" data-filter="submitted">Consegnati</button>
-        <button type="button" data-filter="late">In ritardo</button>
-        <button type="button" data-filter="failed">Test falliti</button>
+      <div class="overviewFilters">
+        <label>
+          <span>Studente</span>
+          <select id="overviewStudentFilter" aria-label="Filtra quadro classe per studente">
+            <option value="">Tutti</option>
+          </select>
+        </label>
+        <label>
+          <span>Tipo</span>
+          <select id="overviewKindFilter" aria-label="Filtra quadro classe per tipo activity">
+            <option value="">Tutti</option>
+          </select>
+        </label>
+        <label>
+          <span>Stato</span>
+          <select id="overviewStatusFilter" aria-label="Filtra quadro classe per stato">
+            <option value="">Tutti</option>
+          </select>
+        </label>
+        <label>
+          <span>Modalita</span>
+          <select id="overviewSupportFilter" aria-label="Filtra quadro classe per modalita supporto">
+            <option value="">Tutte</option>
+          </select>
+        </label>
+      </div>
+      <div class="viewTabs" role="tablist" aria-label="Vista quadro classe">
+        <button type="button" class="isActive" data-overview-view="list" role="tab" aria-selected="true" title="Mostra il quadro classe come elenco ordinabile, una riga per studente e activity.">Elenco</button>
+        <button type="button" data-overview-view="matrix" role="tab" aria-selected="false" title="Mostra il quadro classe come matrice con studenti a sinistra e consegne in colonna.">Matrice</button>
+      </div>
+      <div id="overviewListView" class="tableWrap">
+        <table id="overviewListTable" class="resizableTable">
+          <thead>
+            <tr>
+              <th><button type="button" class="sortButton" data-overview-sort="student" title="Ordina le righe per studente: crescente, decrescente, poi reset.">Studente</button></th>
+              <th><button type="button" class="sortButton" data-overview-sort="activity" title="Ordina le righe per titolo o id activity: crescente, decrescente, poi reset.">Activity</button></th>
+              <th><button type="button" class="sortButton" data-overview-sort="kind" title="Ordina le righe per tipo di consegna secondo l'ordine didattico.">Tipo</button></th>
+              <th><button type="button" class="sortButton" data-overview-sort="support" title="Ordina le righe per modalita di supporto allo studente.">Modalita</button></th>
+              <th><button type="button" class="sortButton" data-overview-sort="due_at" title="Ordina le righe per scadenza: prima crescente, poi decrescente, poi reset.">Scadenza</button></th>
+              <th><button type="button" class="sortButton" data-overview-sort="status" title="Ordina le righe per stato operativo della consegna.">Stato</button></th>
+              <th><button type="button" class="sortButton" data-overview-sort="tests" title="Ordina le righe per percentuale di test superati.">Test</button></th>
+              <th><button type="button" class="sortButton" data-overview-sort="grade" title="Ordina le righe per voto numerico.">Voto</button></th>
+              <th><button type="button" class="sortButton" data-overview-sort="report" title="Ordina le righe per nome del registro JSON.">Registro</button></th>
+            </tr>
+          </thead>
+          <tbody id="overviewBody"></tbody>
+        </table>
+      </div>
+      <div id="overviewMatrixView" class="tableWrap matrixWrap" hidden>
+        <table id="overviewMatrixTable" class="matrixTable resizableTable">
+          <thead id="overviewMatrixHead"></thead>
+          <tbody id="overviewMatrixBody"></tbody>
+        </table>
       </div>
     </section>
 
-    <section class="panel">
+    <section class="panel" data-panel-key="students">
       <div class="panelHead">
         <div>
           <h2>Studenti</h2>
           <p id="tableStatus" class="status">Nessun registro caricato.</p>
         </div>
       </div>
-      <div class="tableWrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Studente</th>
-              <th>Stato</th>
-              <th>Scadenza</th>
-              <th>Consegna</th>
-              <th>Grading</th>
-              <th>Voto</th>
-              <th>AI</th>
-            </tr>
-          </thead>
-          <tbody id="studentsBody"></tbody>
-        </table>
+      <div id="studentsSummary" class="studentsSummary" aria-live="polite">
+        <p class="status">Carica un registro per vedere il riepilogo studenti.</p>
+      </div>
+      <div class="studentsActions">
+        <button id="studentsOpenBtn" type="button" title="Apri la tabella studenti del registro selezionato in un modal.">Apri studenti</button>
       </div>
     </section>
+
   </main>
+
+  <dialog id="reviewDialog" class="reviewDialog" aria-labelledby="reviewDialogTitle">
+    <div class="reviewDialogHead">
+      <div>
+        <p id="reviewBreadcrumb" class="modalBreadcrumb" aria-label="Percorso modal">Dashboard &gt; Revisione consegna</p>
+        <h2 id="reviewDialogTitle">Revisione consegna</h2>
+        <p id="reviewStatus" class="status">Seleziona una consegna dalla tabella studenti.</p>
+      </div>
+      <div class="reviewDialogActions">
+        <button id="reviewPrevBtn" type="button" class="smallButton" title="Apri la consegna precedente tra gli studenti filtrati." disabled>Precedente</button>
+        <button id="reviewNextBtn" type="button" class="smallButton" title="Apri la consegna successiva tra gli studenti filtrati." disabled>Successiva</button>
+        <button id="reviewCloseBtn" type="button" class="smallButton" title="Chiudi la revisione consegna e torna alla dashboard.">Chiudi</button>
+      </div>
+    </div>
+    <div id="submissionReview" class="reviewEmpty">
+      Nessuna consegna selezionata.
+    </div>
+  </dialog>
+
+  <dialog id="coverageDialog" class="coverageDialog" aria-labelledby="coverageDialogTitle">
+    <div class="coverageDialogHead">
+      <div>
+        <p id="coverageBreadcrumb" class="modalBreadcrumb" aria-label="Percorso modal">Dashboard &gt; Copertura registri</p>
+        <h2 id="coverageDialogTitle">Copertura registri</h2>
+        <p class="status">Activity con registri generati, mancanti e ultimi output disponibili.</p>
+      </div>
+      <button id="coverageCloseBtn" type="button" class="smallButton" title="Chiudi la copertura registri e torna alla dashboard.">Chiudi</button>
+    </div>
+    <div class="tableWrap coverageDialogTable">
+      <table id="coverageTable" class="resizableTable">
+        <thead>
+          <tr>
+            <th>Activity</th>
+            <th>Tipo</th>
+            <th>Modalita</th>
+            <th>Stato</th>
+            <th>Registro</th>
+            <th>Aggiornamento</th>
+            <th>Azioni</th>
+          </tr>
+        </thead>
+        <tbody id="coverageBody"></tbody>
+      </table>
+    </div>
+  </dialog>
+
+  <dialog id="studentsDialog" class="studentsDialog" aria-labelledby="studentsDialogTitle">
+    <div class="studentsDialogHead">
+      <div>
+        <p id="studentsBreadcrumb" class="modalBreadcrumb" aria-label="Percorso modal">Dashboard &gt; Studenti</p>
+        <h2 id="studentsDialogTitle">Studenti</h2>
+        <p class="status">Stato, grading e consegne del registro selezionato.</p>
+      </div>
+      <button id="studentsCloseBtn" type="button" class="smallButton" title="Chiudi la tabella studenti e torna alla dashboard.">Chiudi</button>
+    </div>
+    <div class="studentsDialogFilters">
+      <div>
+        <strong>Filtro consegne</strong>
+        <p class="status">Isola mancanti, ritardi ed esiti di grading.</p>
+      </div>
+      <div class="filterBar">
+        <button type="button" data-filter="all" title="Mostra tutti gli studenti del registro selezionato.">Tutti</button>
+        <button type="button" data-filter="pending" title="Mostra gli studenti che devono ancora consegnare ma sono entro la scadenza.">Da consegnare</button>
+        <button type="button" data-filter="missing" title="Mostra gli studenti senza consegna dopo la scadenza.">Mancanti</button>
+        <button type="button" data-filter="submitted" title="Mostra gli studenti che hanno consegnato.">Consegnati</button>
+        <button type="button" data-filter="late" title="Mostra gli studenti che hanno consegnato oltre la scadenza.">In ritardo</button>
+        <button type="button" data-filter="failed" title="Mostra gli studenti con grading o test falliti.">Test falliti</button>
+      </div>
+    </div>
+    <div class="tableWrap studentsDialogTable">
+      <table id="studentsTable" class="resizableTable">
+        <thead>
+          <tr>
+            <th>Studente</th>
+            <th>Stato</th>
+            <th>Scadenza</th>
+            <th>Consegna</th>
+            <th>Grading</th>
+            <th>Voto</th>
+            <th>AI</th>
+            <th>Azioni</th>
+          </tr>
+        </thead>
+        <tbody id="studentsBody"></tbody>
+      </table>
+    </div>
+  </dialog>
 
   <script src="assignment_dashboard.js"></script>
 </body>

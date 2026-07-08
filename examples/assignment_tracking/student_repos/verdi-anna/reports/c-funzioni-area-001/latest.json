@@ -1,0 +1,30 @@
+{
+  "passed": true,
+  "status": "passed",
+  "activity_id": "c-funzioni-area-001",
+  "source": "examples/assignment_tracking/student_repos/verdi-anna/assignments/c-funzioni-area-001/geometry.c",
+  "submitted_at": "2026-10-25T10:58:00+02:00",
+  "commit": "practical333",
+  "summary": {
+    "passed": 3,
+    "total": 3
+  },
+  "teacher_grade": 8,
+  "tests": [
+    {
+      "name": "calcola area",
+      "passed": true,
+      "status": "passed"
+    },
+    {
+      "name": "calcola perimetro",
+      "passed": true,
+      "status": "passed"
+    },
+    {
+      "name": "usa double",
+      "passed": true,
+      "status": "passed"
+    }
+  ]
+}

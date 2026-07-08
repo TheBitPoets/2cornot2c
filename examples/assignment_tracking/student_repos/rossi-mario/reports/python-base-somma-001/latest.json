@@ -1,0 +1,25 @@
+{
+  "passed": true,
+  "status": "passed",
+  "activity_id": "python-base-somma-001",
+  "source": "examples/assignment_tracking/student_repos/rossi-mario/assignments/python-base-somma-001/main.py",
+  "submitted_at": "2026-10-18T18:22:10+02:00",
+  "commit": "demo111",
+  "summary": {
+    "passed": 2,
+    "total": 2
+  },
+  "teacher_grade": 8,
+  "tests": [
+    {
+      "name": "stampa risultato somma",
+      "passed": true,
+      "status": "passed"
+    },
+    {
+      "name": "termina senza errori",
+      "passed": true,
+      "status": "passed"
+    }
+  ]
+}

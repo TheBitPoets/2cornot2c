@@ -25,15 +25,22 @@ import subprocess
 import sys
 import urllib.error
 import urllib.request
+from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts import track_assignments
+
 DESIGN_PATH = ROOT / "doc" / "course_design.json"
 COURSE_DESIGNS_DIR = ROOT / "doc" / "course_designs"
 SCHOOL_CALENDARS_DIR = ROOT / "doc" / "calendars"
 TEACHER_REPORTS_DIR = ROOT / "teacher-reports"
+ACTIVITY_DIRS = [ROOT / "activities", ROOT / "examples" / "assignment_tracking"]
 COURSE_PLAN_MD_PATH = ROOT / "doc" / "PERCORSO_DIDATTICO.md"
 README_PATH = ROOT / "README.md"
 AI_PROVIDERS_PATH = ROOT / "config" / "ai_providers.yaml"
@@ -62,6 +69,7 @@ MAX_CATALOG_EXCERPT_CHARS = 400
 AI_FRAME_TIMEOUT_SECONDS = 120
 AI_COURSE_PLAN_TIMEOUT_SECONDS = 240
 COMPACT_TEXT_CHARS = 1200
+MAX_SUBMISSION_FILE_BYTES = 512 * 1024
 
 
 def github_anchor(title: str, seen: dict[str, int]) -> str:
@@ -241,6 +249,10 @@ def list_assignment_reports() -> list[dict]:
             payload = json.loads(path.read_text(encoding="utf-8-sig"))
         except Exception:  # noqa: BLE001
             payload = {}
+        students = payload.get("students", []) if isinstance(payload.get("students"), list) else []
+        submitted = sum(1 for student in students if isinstance(student, dict) and student.get("submitted"))
+        late = sum(1 for student in students if isinstance(student, dict) and student.get("submitted") and student.get("late"))
+        not_submitted = sum(1 for student in students if isinstance(student, dict) and not student.get("submitted"))
         reports.append(
             {
                 "name": str(path.relative_to(TEACHER_REPORTS_DIR)).replace("\\", "/"),
@@ -248,7 +260,11 @@ def list_assignment_reports() -> list[dict]:
                 "activity_id": payload.get("activity_id", ""),
                 "title": payload.get("title", ""),
                 "due_at": payload.get("due_at", ""),
-                "students": len(payload.get("students", [])) if isinstance(payload.get("students"), list) else 0,
+                "students": len(students),
+                "submitted": submitted,
+                "late": late,
+                "not_submitted": not_submitted,
+                "updated_at": datetime.fromtimestamp(path.stat().st_mtime).isoformat(timespec="seconds"),
             }
         )
     return reports
@@ -266,6 +282,181 @@ def read_assignment_report(name: str) -> dict:
     if not isinstance(payload.get("students"), list):
         raise ValueError("Registro consegne non valido: students deve essere una lista.")
     return payload
+
+
+def assignment_overview() -> list[dict]:
+    """Return one row per student/activity across all saved teacher reports."""
+
+    rows = []
+    for report in list_assignment_reports():
+        try:
+            payload = read_assignment_report(report["name"])
+        except Exception:  # noqa: BLE001
+            continue
+        for student in payload.get("students", []):
+            if not isinstance(student, dict):
+                continue
+            submission = student.get("submission") if isinstance(student.get("submission"), dict) else {}
+            grading = student.get("grading") if isinstance(student.get("grading"), dict) else {}
+            ai_feedback = student.get("ai_feedback") if isinstance(student.get("ai_feedback"), dict) else {}
+            rows.append(
+                {
+                    "report_name": report["name"],
+                    "report_path": report["path"],
+                    "activity_id": payload.get("activity_id", ""),
+                    "title": payload.get("title", ""),
+                    "kind": payload.get("kind", ""),
+                    "student_support_mode": payload.get("student_support_mode", ""),
+                    "assigned_at": payload.get("assigned_at", ""),
+                    "due_at": payload.get("due_at", ""),
+                    "student": student.get("student", ""),
+                    "repo": student.get("repo", ""),
+                    "status": student.get("status", ""),
+                    "submitted": bool(student.get("submitted", False)),
+                    "late": bool(student.get("late", False)),
+                    "submitted_at": submission.get("submitted_at"),
+                    "commit": submission.get("commit"),
+                    "source_path": submission.get("source_path"),
+                    "grading_status": grading.get("status", ""),
+                    "tests_passed": grading.get("tests_passed"),
+                    "tests_total": grading.get("tests_total"),
+                    "failed_tests": grading.get("failed_tests", []),
+                    "teacher_grade": grading.get("teacher_grade"),
+                    "score": grading.get("score"),
+                    "ai_status": ai_feedback.get("status", ""),
+                }
+            )
+    return rows
+
+
+def list_activities() -> list[dict]:
+    """List available activity JSON files for the assignment dashboard."""
+
+    activities = []
+    seen_paths = set()
+    for directory in ACTIVITY_DIRS:
+        if not directory.is_dir():
+            continue
+        for path in sorted(directory.rglob("*.json")):
+            resolved = path.resolve()
+            if resolved in seen_paths:
+                continue
+            seen_paths.add(resolved)
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8-sig"))
+            except Exception:  # noqa: BLE001
+                continue
+            if not isinstance(payload, dict) or not payload.get("id"):
+                continue
+            activities.append(
+                {
+                    "id": payload.get("id", ""),
+                    "title": payload.get("titolo", ""),
+                    "kind": payload.get("tipo", ""),
+                    "student_support_mode": payload.get("student_support_mode") or payload.get("support_mode") or payload.get("modalita_studente") or "",
+                    "language": payload.get("linguaggio") or payload.get("language", ""),
+                    "path": str(path.relative_to(ROOT)).replace("\\", "/"),
+                }
+            )
+    return activities
+
+
+def resolve_submission_file_path(student: dict, file_path: str) -> Path:
+    """Resolve a submitted file path while keeping reads inside the student repo."""
+
+    repo = Path(str(student.get("repo", "")).strip())
+    if not str(repo):
+        raise ValueError("Repository studente mancante nel registro.")
+    repo_path = repo if repo.is_absolute() else (ROOT / repo).resolve()
+    raw_path = Path(str(file_path).strip())
+    if not str(raw_path):
+        raise ValueError("File consegna non indicato.")
+    candidates = []
+    if raw_path.is_absolute():
+        candidates.append(raw_path.resolve())
+    else:
+        candidates.append((ROOT / raw_path).resolve())
+        candidates.append((repo_path / raw_path).resolve())
+    for candidate in candidates:
+        try:
+            candidate.relative_to(repo_path)
+        except ValueError:
+            continue
+        if candidate.is_file():
+            return candidate
+    raise FileNotFoundError(f"File consegna non trovato o non consentito: {file_path}")
+
+
+def read_submission_file(payload: dict) -> dict:
+    """Read one file from a submitted assignment for the teacher dashboard."""
+
+    report = read_assignment_report(payload.get("report_name", ""))
+    student_name = str(payload.get("student", "")).strip()
+    student = next((entry for entry in report.get("students", []) if entry.get("student") == student_name), None)
+    if student is None:
+        raise FileNotFoundError(f"Studente non trovato nel registro: {student_name}")
+    path = resolve_submission_file_path(student, payload.get("path", ""))
+    size = path.stat().st_size
+    if size > MAX_SUBMISSION_FILE_BYTES:
+        raise ValueError("File troppo grande per l'anteprima nella dashboard.")
+    text = path.read_text(encoding="utf-8-sig")
+    return {
+        "path": str(path.relative_to(ROOT)).replace("\\", "/") if path.is_relative_to(ROOT) else str(path),
+        "name": path.name,
+        "size": size,
+        "content": text,
+    }
+
+
+def resolve_local_path(path_value: str, field_name: str) -> Path:
+    """Resolve a user-provided local path from the repository root."""
+
+    raw_path = Path(str(path_value).strip())
+    if not str(raw_path):
+        raise ValueError(f"{field_name} obbligatorio.")
+    return raw_path if raw_path.is_absolute() else (ROOT / raw_path).resolve()
+
+
+def read_targets_from_text(targets_text: str) -> list[track_assignments.TrackingTarget]:
+    """Build tracking targets from one path per line."""
+
+    targets = []
+    for raw_line in targets_text.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        target_path = resolve_local_path(line, "target")
+        targets.append(track_assignments.TrackingTarget(student=target_path.name, repo=str(target_path), path=target_path))
+    if not targets:
+        raise ValueError("Inserisci almeno un repository studente nei target.")
+    return targets
+
+
+def generate_assignment_report(payload: dict) -> dict:
+    """Generate and persist an assignment tracking report from the local GUI."""
+
+    activity_path = resolve_local_path(payload.get("activity_path", ""), "activity_path")
+    if not activity_path.is_file():
+        raise FileNotFoundError(f"Activity non trovata: {activity_path}")
+    targets = read_targets_from_text(str(payload.get("targets_text", "")))
+    output_path = safe_teacher_report_path(payload.get("output_name", ""))
+    index = track_assignments.track_assignments(
+        activity_path=activity_path,
+        targets=targets,
+        assigned_at=payload.get("assigned_at") or None,
+        due_at=payload.get("due_at") or None,
+        now=payload.get("now") or None,
+    )
+    track_assignments.write_tracking_index(index, output_path)
+    return {
+        "ok": True,
+        "report": index,
+        "saved": {
+            "name": str(output_path.relative_to(TEACHER_REPORTS_DIR)).replace("\\", "/"),
+            "path": str(output_path.relative_to(ROOT)).replace("\\", "/"),
+        },
+        "reports": list_assignment_reports(),
+    }
 
 
 def read_school_calendar(name: str) -> dict:
@@ -1549,6 +1740,12 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/assignment-reports":
             self.write_json({"reports": list_assignment_reports()})
             return
+        if parsed.path == "/api/assignment-overview":
+            self.write_json({"rows": assignment_overview()})
+            return
+        if parsed.path == "/api/activities":
+            self.write_json({"activities": list_activities()})
+            return
         if parsed.path == "/api/ai-config":
             self.write_json(ai_config())
             return
@@ -1626,6 +1823,29 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 self.write_json({"report": read_assignment_report(payload.get("name", ""))})
             except Exception as error:  # noqa: BLE001
                 self.send_response(404)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+            return
+        if parsed.path == "/api/assignment-reports/generate":
+            try:
+                self.write_json(generate_assignment_report(payload))
+            except Exception as error:  # noqa: BLE001
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+            return
+        if parsed.path == "/api/assignment-submissions/read":
+            try:
+                self.write_json({"file": read_submission_file(payload)})
+            except FileNotFoundError as error:
+                self.send_response(404)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+            except Exception as error:  # noqa: BLE001
+                self.send_response(400)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))

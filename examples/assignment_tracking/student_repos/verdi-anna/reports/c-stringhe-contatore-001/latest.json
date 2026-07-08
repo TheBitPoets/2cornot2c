@@ -1,0 +1,30 @@
+{
+  "passed": true,
+  "status": "passed",
+  "activity_id": "c-stringhe-contatore-001",
+  "source": "examples/assignment_tracking/student_repos/verdi-anna/assignments/c-stringhe-contatore-001/main.c",
+  "submitted_at": "2026-10-18T17:30:00+02:00",
+  "commit": "demo444",
+  "summary": {
+    "passed": 3,
+    "total": 3
+  },
+  "teacher_grade": 8,
+  "tests": [
+    {
+      "name": "conta parole semplici",
+      "passed": true,
+      "status": "passed"
+    },
+    {
+      "name": "conta parole con spazi multipli",
+      "passed": true,
+      "status": "passed"
+    },
+    {
+      "name": "conta solo caratteri alfabetici",
+      "passed": true,
+      "status": "passed"
+    }
+  ]
+}

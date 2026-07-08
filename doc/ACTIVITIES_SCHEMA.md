@@ -108,13 +108,40 @@ Il campo `tipo` deve avere uno di questi valori:
 
 | Tipo | Uso |
 |---|---|
-| `studio-guidato` | Attivita di ripasso o studio interattivo |
-| `esercizio-classe` | Esercizio svolto durante la lezione |
-| `compito-casa` | Attivita assegnata per casa |
-| `laboratorio` | Esercizio pratico guidato o semi-guidato |
-| `verifica-pratica` | Prova valutativa basata su codice |
-| `verifica-scritta` | Prova teorica o mista |
-| `debug-didattico` | Attivita centrata su errore, bug o undefined behavior |
+| `studio-guidato` | Attivita di ripasso, teoria o preparazione svolta con domande guida, riferimenti alla dispensa e micro-esercizi. Non serve per valutare soprattutto il prodotto finale, ma il percorso di comprensione. |
+| `esercizio-classe` | Esercizio breve svolto durante la lezione. Serve per allenare un concetto appena visto, osservare difficolta immediate e dare feedback rapido. |
+| `compito-casa` | Attivita assegnata fuori dall'orario di lezione. Serve per consolidare autonomia, continuita di lavoro e capacita di consegnare un elaborato completo. |
+| `laboratorio` | Esercizio pratico svolto in ambiente controllato, spesso guidato o semi-guidato. Serve per collegare teoria, strumenti, codice, test e debugging. |
+| `verifica-pratica` | Prova valutativa basata su codice, configurazione, debugging o consegna eseguibile. Deve avere regole chiare su materiali ammessi, aiuti e criteri di voto. |
+| `verifica-scritta` | Prova teorica o mista, per esempio risposte in Markdown, domande aperte, analisi di codice o spiegazione di concetti. |
+| `debug-didattico` | Attivita centrata su errore, bug, comportamento inatteso o undefined behavior. Serve per allenare diagnosi, lettura degli errori e ragionamento sui casi limite. |
+
+## Modalita studente
+
+Il campo opzionale `student_support_mode` descrive quale livello di supporto e consentito allo studente durante lo svolgimento. La dashboard consegne lo usa nel `Quadro classe` per filtrare le activity per modalita.
+
+Valori previsti:
+
+| Modalita | Uso |
+|---|---|
+| `senza-aiuto` | Nessun suggerimento AI durante lo svolgimento. Sono ammessi solo consegna, materiali esplicitamente autorizzati e strumenti tecnici previsti dal docente. |
+| `feedback-tecnico` | Lo studente puo vedere feedback deterministico: compilazione, runtime, test falliti, stdout atteso/ottenuto, lint o messaggi simili. Non riceve spiegazioni generative. |
+| `ai-assisted` | Lo studente puo fare domande all'AI o ricevere suggerimenti sugli errori entro i limiti scelti dal docente. L'AI deve aiutare il ragionamento, non produrre direttamente la soluzione valutata. |
+| `studio-guidato` | L'AI o il sistema guidano soprattutto teoria, prerequisiti, richiami alla dispensa e domande progressive. E la modalita piu adatta ad attivita non strettamente valutative. |
+
+Matrice consigliata:
+
+| Tipo | Modalita consigliate | Note |
+|---|---|---|
+| `studio-guidato` | `studio-guidato`, `ai-assisted` | Utile quando l'obiettivo e richiamare teoria, prerequisiti e collegamenti con la dispensa. |
+| `esercizio-classe` | `feedback-tecnico`, `ai-assisted`, `senza-aiuto` | In classe si puo scegliere: allenamento assistito, feedback tecnico rapido o prova breve senza aiuto. |
+| `compito-casa` | `feedback-tecnico`, `ai-assisted`, `senza-aiuto` | Per esercizi di consolidamento l'aiuto puo essere ammesso; per compiti valutativi conviene dichiarare esplicitamente `senza-aiuto`. |
+| `laboratorio` | `feedback-tecnico`, `ai-assisted`, `studio-guidato` | Il laboratorio puo essere guidato, semi-guidato o assistito, soprattutto quando l'obiettivo e imparare strumenti e debugging. |
+| `verifica-pratica` | `senza-aiuto`, `feedback-tecnico` | Di default dovrebbe essere `senza-aiuto`. `feedback-tecnico` puo essere ammesso se la prova valuta anche la capacita di correggere errori visibili. |
+| `verifica-scritta` | `senza-aiuto` | Di norma non prevede AI durante la prova. Eventuali materiali ammessi vanno dichiarati fuori dal campo modalita. |
+| `debug-didattico` | `feedback-tecnico`, `ai-assisted`, `studio-guidato` | Puo partire da feedback tecnico puro oppure usare indizi progressivi se l'obiettivo e didattico e non valutativo. |
+
+La modalita scelta non sostituisce il campo `tipo`: il tipo dice che cosa e l'attivita, la modalita dice quanto aiuto e consentito durante lo svolgimento.
 
 ## Livelli di difficolta
 

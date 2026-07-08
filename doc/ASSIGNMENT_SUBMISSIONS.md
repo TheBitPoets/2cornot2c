@@ -489,10 +489,75 @@ La vista mostra:
 | Sezione | Cosa mostra |
 |---|---|
 | Registro selezionato | activity, scadenza, numero studenti, consegnati, mancanti, ritardi |
-| Filtro consegne | tutti, da consegnare, mancanti, consegnati, in ritardo, test falliti |
-| Studenti | stato, scadenza, data consegna, commit, sorgente, grading, voto, stato AI |
+| Quadro classe | tutte le activity salvate nei registri, per studente, con tipo, modalita, stato, test e voto |
+| Copertura registri | riepilogo activity con/senza registro e modal con una riga per registro generato |
+| Studenti | modal con filtri consegne, stato, scadenza, data consegna, commit, sorgente, grading, voto, stato AI |
+| Revisione consegna | modal per leggere i file consegnati, con navigazione tra studenti e syntax highlighting |
 
 La dashboard non ricalcola il grading: visualizza il formato prodotto da `scripts/track_assignments.py`. In questo modo CLI, test e GUI restano allineati allo stesso contratto JSON.
+
+Il `Quadro classe` aggrega tutti i file JSON presenti in `teacher-reports`. Serve per avere una vista trasversale: tutte le consegne di tutti gli studenti, filtrabili per studente, tipo di activity, stato e modalita di supporto. Da ogni riga si puo aprire il registro collegato e, quando disponibile, la consegna dello studente.
+
+### Generare il registro dalla GUI
+
+La pagina `Consegne` puo anche generare un registro senza usare direttamente la CLI.
+
+Nel riquadro `Genera registro` compila:
+
+| Campo | Significato |
+|---|---|
+| Activity JSON | Scheda activity da tracciare |
+| Output registro | Path relativo dentro `teacher-reports`, per esempio `3A/somma.json` |
+| Assegnato il | Data ISO di assegnazione |
+| Scadenza | Data ISO di scadenza |
+| Ora simulata opzionale | Data ISO usata per simulare il momento attuale |
+| Repository studenti locali | Un path per riga verso i repository/cartelle studente |
+
+Quando clicchi `Genera registro`, il server locale:
+
+1. legge la activity;
+2. costruisce i target studenti;
+3. cerca per ogni studente `reports/<activity_id>/latest.json`;
+4. calcola stato consegna, ritardi e grading disponibile;
+5. salva il JSON in `teacher-reports`;
+6. carica subito il risultato nella dashboard.
+
+### Classe demo per provare il flusso
+
+Questa PR aggiunge una classe finta in:
+
+```text
+examples/assignment_tracking/
+```
+
+Contiene:
+
+| Path | Uso |
+|---|---|
+| `demo_activity.json` | Activity `compito-casa` di esempio |
+| `multi_file_stats_activity.json` | Activity `compito-casa` multi-file Python |
+| `multi_file_c_activity.json` | Activity `laboratorio` multi-file C |
+| `class_discount_activity.json` | Activity `esercizio-classe` |
+| `guided_types_activity.json` | Activity `studio-guidato` |
+| `practical_functions_activity.json` | Activity `verifica-pratica` |
+| `written_variables_activity.json` | Activity `verifica-scritta` |
+| `debug_loop_activity.json` | Activity `debug-didattico` |
+| `targets_demo.txt` | Elenco dei repository studenti finti |
+| `student_repos/rossi-mario` | Studente con consegna in tempo e test superati |
+| `student_repos/bianchi-luca` | Studente con consegna in ritardo e test falliti |
+| `student_repos/verdi-anna` | Studente con esiti misti: scaffold, consegne corrette e una consegna parziale |
+
+La demo copre tutti i tipi ammessi dal validatore (`compito-casa`, `laboratorio`, `esercizio-classe`, `studio-guidato`, `verifica-pratica`, `verifica-scritta`, `debug-didattico`) per ciascuno studente. Le activity dichiarano anche modalita diverse (`senza-aiuto`, `feedback-tecnico`, `ai-assisted`, `studio-guidato`) cosi il `Quadro classe` puo essere provato con tutti i filtri principali.
+
+Per testare dalla GUI:
+
+1. avvia il server con `python scripts/course_board_server.py`;
+2. apri `http://localhost:8765/tools/assignment_dashboard.html`;
+3. scegli una activity demo dal menu;
+4. clicca `Genera registro`;
+5. ripeti per piu activity, usando un output diverso in `teacher-reports`;
+6. verifica che la dashboard mostri consegnati, mancanti, ritardi, test falliti e voti;
+7. usa i filtri del `Quadro classe` per controllare studente, tipo, stato e modalita.
 
 ## Regole di sicurezza
 
@@ -504,6 +569,71 @@ Regole minime:
 - i provider AI non devono ricevere token o dati personali non necessari;
 - eventuali classifiche devono essere progettate con visibilita diversa per docente e studenti.
 
+## Modalita studente e feedback assistito
+
+Questa parte non e ancora implementata nel flusso minimo, ma va prevista nel modello delle consegne.
+
+Ogni activity puo dichiarare due informazioni distinte:
+
+| Campo | Cosa indica | Esempio |
+|---|---|---|
+| `tipo` | La natura didattica della consegna | `compito-casa`, `laboratorio`, `verifica-pratica` |
+| `student_support_mode` | Il livello di aiuto consentito allo studente durante lo svolgimento | `senza-aiuto`, `feedback-tecnico`, `ai-assisted` |
+
+Il `Quadro classe` usa entrambe: `tipo` permette di filtrare per categoria di activity, `student_support_mode` permette di distinguere consegne guidate, assistite o senza aiuto.
+
+### Tipi di consegna
+
+| Tipo | Quando usarlo | Esempio di consegna |
+|---|---|---|
+| `studio-guidato` | Ripasso, teoria, prerequisiti, domande guida e studio con riferimenti alla dispensa. | Lettura guidata sui tipi C con domande e piccoli esempi. |
+| `esercizio-classe` | Esercizio breve durante la lezione, spesso su un concetto appena spiegato. | Funzione Python da completare in 20 minuti. |
+| `compito-casa` | Lavoro assegnato fuori lezione per consolidare autonomia e continuita. | Programma multi-file da consegnare entro una data. |
+| `laboratorio` | Attivita pratica in ambiente controllato, con strumenti, test, file e debugging. | Esercizio C con `main.c`, `.h` e modulo di supporto. |
+| `verifica-pratica` | Prova valutativa basata su codice o artefatto eseguibile. | Implementazione di funzioni con test automatici e voto. |
+| `verifica-scritta` | Prova teorica o mista, anche in Markdown o risposta testuale. | Spiegare variabili, memoria, tipi e assegnamento. |
+| `debug-didattico` | Attivita centrata sulla diagnosi di bug, errori o casi limite. | Correggere un ciclo con errore off-by-one. |
+
+### Modalita di supporto
+
+Ogni activity dovrebbe dichiarare una modalita di supporto allo studente:
+
+| Modalita | Significato |
+|---|---|
+| `senza-aiuto` | Lo studente lavora senza suggerimenti AI. Sono disponibili solo consegna, materiali autorizzati e feedback tecnico eventualmente consentito. |
+| `feedback-tecnico` | Lo studente vede errori di compilazione, runtime e test falliti, ma senza spiegazioni generative. |
+| `ai-assisted` | Lo studente puo fare domande all'AI e ricevere suggerimenti sugli errori, entro i limiti scelti dal docente. |
+| `studio-guidato` | L'AI aiuta soprattutto a richiamare teoria, prerequisiti e sezioni della dispensa collegate alla consegna. |
+
+### Modalita consigliate per tipo
+
+| Tipo | Modalita consigliate | Indicazione pratica |
+|---|---|---|
+| `studio-guidato` | `studio-guidato`, `ai-assisted` | L'aiuto e parte dell'attivita: deve orientare teoria e ragionamento, non produrre una soluzione da copiare. |
+| `esercizio-classe` | `feedback-tecnico`, `ai-assisted`, `senza-aiuto` | Puo essere un allenamento assistito oppure una prova breve senza aiuto, a seconda dell'obiettivo della lezione. |
+| `compito-casa` | `feedback-tecnico`, `ai-assisted`, `senza-aiuto` | Per consolidamento si puo ammettere aiuto; per valutazione individuale va dichiarato `senza-aiuto`. |
+| `laboratorio` | `feedback-tecnico`, `ai-assisted`, `studio-guidato` | Adatto a feedback tecnico e indizi progressivi, soprattutto su strumenti, compilazione e debugging. |
+| `verifica-pratica` | `senza-aiuto`, `feedback-tecnico` | Di norma `senza-aiuto`; `feedback-tecnico` e accettabile solo se previsto dalla prova. |
+| `verifica-scritta` | `senza-aiuto` | Di norma nessun aiuto AI durante la prova. Materiali ammessi vanno dichiarati separatamente. |
+| `debug-didattico` | `feedback-tecnico`, `ai-assisted`, `studio-guidato` | Se e didattico puo usare indizi; se e valutativo conviene limitarsi al feedback tecnico o a `senza-aiuto`. |
+
+La scelta deve appartenere al docente e puo dipendere da:
+
+- tipo di activity: laboratorio, compito, verifica, studio guidato;
+- fase di lavoro: durante lo svolgimento, dopo la consegna, dopo la correzione;
+- classe o singolo gruppo;
+- livello di autonomia desiderato.
+
+Il feedback allo studente dovrebbe distinguere tre piani:
+
+1. feedback deterministico: compilazione, runtime, test, stdout atteso e ottenuto;
+2. feedback didattico: spiegazione dell'errore, indizi progressivi, domande guida;
+3. richiami teorici: link a sezioni della dispensa, prerequisiti e argomenti collegati all'activity.
+
+I test possono essere scritti dal docente oppure proposti dall'AI, ma i test usati per la valutazione devono essere approvati dal docente. L'AI puo suggerire casi limite, input significativi e controlli aggiuntivi, ma non deve trasformare la valutazione in grading AI-only.
+
+I log degli aiuti richiesti vanno tenuti separati dal report di grading: possono essere utili per capire il processo di apprendimento, ma non devono alterare automaticamente voto o stato della consegna.
+
 ## Prossimi passi
 
 Le prossime PR possono introdurre:
@@ -513,6 +643,9 @@ Le prossime PR possono introdurre:
 3. Script per generare scaffold consegna.
 4. Integrazione GUI per assegnare activity a classi/team.
 5. Download artifact GitHub Actions e collegamento al registro consegne.
-6. Dashboard Markdown minima per docente.
+6. Modalita studente e feedback assistito.
+7. Dashboard Markdown minima per docente.
+8. Legenda/help della dashboard consegne: spiegare colori, badge, sigle della matrice, lucchetti, stati, filtri e azioni dei modal.
+9. Layout pannelli personalizzabile: drag and drop dei pannelli della pagina consegne, griglia a una/due colonne, persistenza in `localStorage` e valutazione dello stesso pattern per calendario, course board e altre pagine GUI.
 
 Il primo template repository studente e documentato in `STUDENT_REPOSITORY_TEMPLATE.md`.

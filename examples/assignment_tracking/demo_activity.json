@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "id": "python-base-somma-001",
+  "titolo": "Somma in Python",
+  "tipo": "compito-casa",
+  "student_support_mode": "feedback-tecnico",
+  "difficolta": "B",
+  "argomenti": [
+    "variabili",
+    "input-output"
+  ],
+  "linguaggio": "python",
+  "consegna": "Scrivi un programma Python che stampa una somma.",
+  "correzione": {
+    "compila": true,
+    "test": true,
+    "sandbox": true,
+    "ai_feedback": false
+  },
+  "metriche": {
+    "tempo_stimato_minuti": 20,
+    "traccia_tempo_dichiarato": true,
+    "traccia_sessioni_thebitlab": true,
+    "traccia_eventi_didattici": true,
+    "traccia_errori_compilazione": true
+  }
+}

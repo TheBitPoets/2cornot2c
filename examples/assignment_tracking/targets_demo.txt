@@ -1,0 +1,3 @@
+examples/assignment_tracking/student_repos/rossi-mario
+examples/assignment_tracking/student_repos/bianchi-luca
+examples/assignment_tracking/student_repos/verdi-anna

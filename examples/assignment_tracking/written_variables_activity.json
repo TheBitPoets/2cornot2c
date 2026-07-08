@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "id": "verifica-scritta-variabili-001",
+  "titolo": "Verifica scritta su variabili e memoria",
+  "tipo": "verifica-scritta",
+  "student_support_mode": "senza-aiuto",
+  "difficolta": "B",
+  "argomenti": [
+    "variabili",
+    "memoria",
+    "tipi"
+  ],
+  "consegna": "Rispondi in Markdown: differenza tra dichiarazione e assegnamento, ruolo del tipo e cosa succede in memoria quando cambia il valore di una variabile.",
+  "correzione": {
+    "compila": false,
+    "test": true,
+    "sandbox": true,
+    "ai_feedback": false
+  },
+  "metriche": {
+    "tempo_stimato_minuti": 30,
+    "traccia_tempo_dichiarato": true,
+    "traccia_sessioni_thebitlab": true,
+    "traccia_eventi_didattici": true,
+    "traccia_errori_compilazione": false
+  }
+}

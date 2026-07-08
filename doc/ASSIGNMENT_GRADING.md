@@ -155,3 +155,5 @@ Il flusso corretto resta:
 4. eventuale feedback AI in una fase separata.
 
 La futura sandbox Docker dovra eseguire questo stesso flusso in ambiente isolato.
+
+Il supporto AI durante lo svolgimento del compito, quando consentito dal docente, deve restare separato da questo report. Puo aiutare lo studente a leggere errori, richiamare teoria o ragionare sui test, ma non deve sostituire il risultato deterministico ne modificare automaticamente voto, stato o superamento della consegna.

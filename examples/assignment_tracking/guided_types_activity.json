@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "id": "studio-guidato-tipi-c-001",
+  "titolo": "Studio guidato sui tipi C",
+  "tipo": "studio-guidato",
+  "student_support_mode": "studio-guidato",
+  "difficolta": "A",
+  "argomenti": [
+    "tipi",
+    "range",
+    "printf"
+  ],
+  "linguaggio": "c",
+  "consegna": "Rispondi alle domande guida sui tipi interi in C e collega ogni risposta a un piccolo esempio di printf.",
+  "correzione": {
+    "compila": false,
+    "test": true,
+    "sandbox": true,
+    "ai_feedback": true
+  },
+  "metriche": {
+    "tempo_stimato_minuti": 20,
+    "traccia_tempo_dichiarato": true,
+    "traccia_sessioni_thebitlab": true,
+    "traccia_eventi_didattici": true,
+    "traccia_errori_compilazione": false
+  }
+}

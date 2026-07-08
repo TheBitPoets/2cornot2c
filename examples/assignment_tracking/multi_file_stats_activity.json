@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "id": "python-funzioni-statistiche-001",
+  "titolo": "Statistiche con funzioni Python",
+  "tipo": "compito-casa",
+  "student_support_mode": "ai-assisted",
+  "difficolta": "C",
+  "argomenti": [
+    "funzioni",
+    "liste",
+    "moduli"
+  ],
+  "linguaggio": "python",
+  "consegna": "Organizza un piccolo programma su piu file: main.py deve leggere una lista di numeri, stats.py deve calcolare minimo, massimo e media, formatters.py deve preparare una riga di output leggibile.",
+  "correzione": {
+    "compila": true,
+    "test": true,
+    "sandbox": true,
+    "ai_feedback": false
+  },
+  "metriche": {
+    "tempo_stimato_minuti": 35,
+    "traccia_tempo_dichiarato": true,
+    "traccia_sessioni_thebitlab": true,
+    "traccia_eventi_didattici": true,
+    "traccia_errori_compilazione": true
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "id": "c-stringhe-contatore-001",
+  "titolo": "Contatore parole in C",
+  "tipo": "laboratorio",
+  "student_support_mode": "feedback-tecnico",
+  "difficolta": "D",
+  "argomenti": [
+    "stringhe",
+    "funzioni",
+    "header"
+  ],
+  "linguaggio": "c",
+  "consegna": "Dividi il programma in piu file: main.c deve leggere una riga, text_utils.c deve contare parole e caratteri alfabetici, text_utils.h deve dichiarare le funzioni usate dal main.",
+  "correzione": {
+    "compila": true,
+    "test": true,
+    "sandbox": true,
+    "ai_feedback": false
+  },
+  "metriche": {
+    "tempo_stimato_minuti": 45,
+    "traccia_tempo_dichiarato": true,
+    "traccia_sessioni_thebitlab": true,
+    "traccia_eventi_didattici": true,
+    "traccia_errori_compilazione": true
+  }
+}
