@@ -352,6 +352,8 @@ label {
 .coverageDialogTable {
   min-height: 0;
   overflow: auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
 }
 
 #coverageTable {
@@ -796,10 +798,21 @@ label {
 .studentsDialogTable {
   min-height: 0;
   overflow: auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
 }
 
 #studentsTable {
   min-width: 78rem;
+}
+
+.coverageDialogTable thead th,
+.studentsDialogTable thead th {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  background: #ffffff;
+  box-shadow: inset 0 -1px 0 var(--line);
 }
 
 .status {
@@ -852,6 +865,7 @@ label {
 }
 
 .tableWrap {
+  box-sizing: border-box;
   overflow-x: auto;
   padding: 1.1rem;
 }
