@@ -364,6 +364,29 @@ label {
   transform: none;
 }
 
+.coverageReportCell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+  align-items: center;
+}
+
+.coverageReportCell button {
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  border-radius: 0;
+  background: transparent;
+  color: #2457a6;
+  box-shadow: none;
+  font-size: .72rem;
+  padding: 0;
+}
+
+.coverageReportCell button:hover {
+  color: #12346b;
+  transform: none;
+}
+
 .coverageReportCounts {
   color: #667085;
   font-size: .7rem;

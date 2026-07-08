@@ -652,19 +652,15 @@ function coverageActivityClass(reports) {
   }[coverageWorstKind(reports)] || "coverageInProgress";
 }
 
-function coverageReportDetails(reports) {
-  if (!reports.length) return '<span class="coverageReportItem coverageReportMissing">nessun registro</span>';
-  return reports.map((report, index) => {
-    const outcome = reportOutcome(report);
-    return `
-      <span class="coverageReportItem coverageReport${outcome.kind}">
-        <button type="button" data-coverage-report="${escapeHtml(report.name)}" title="Apri il registro ${escapeHtml(report.name)} e caricalo nella dashboard.">${escapeHtml(report.name)} ${reportLock(report)}</button>
-        ${index === 0 ? badge("ultimo", "muted") : ""}
-        ${badge(outcome.label, outcome.kind)}
-        ${coverageReportCounts(report)}
-      </span>
-    `;
-  }).join("");
+function coverageReportCell(report, isLatest = false) {
+  if (!report) return '<span class="coverageReportMissing">nessun registro</span>';
+  return `
+    <div class="coverageReportCell">
+      <button type="button" data-coverage-report="${escapeHtml(report.name)}" title="Apri il registro ${escapeHtml(report.name)} e caricalo nella dashboard.">${escapeHtml(report.name)} ${reportLock(report)}</button>
+      ${isLatest ? badge("ultimo", "muted") : ""}
+      ${coverageReportCounts(report)}
+    </div>
+  `;
 }
 
 function renderCoverage() {
@@ -688,35 +684,34 @@ function renderCoverage() {
   }
   for (const activity of rows) {
     const reports = reportsForActivity(activity.id);
-    const latest = reports[0];
     const hasReport = reports.length > 0;
-    const tr = document.createElement("tr");
-    tr.className = coverageActivityClass(reports);
-    tr.innerHTML = `
-      <td>
-        <strong class="coverageActivityName">${escapeHtml(activity.title || activity.id)}</strong><br>
-        <small>${escapeHtml(activity.id || "-")}</small><br>
-        <small>${escapeHtml(activity.path || "-")}</small>
-      </td>
-      <td>${kindLabel(activity.kind)}</td>
-      <td>${escapeHtml(activity.student_support_mode || "-")}</td>
-      <td>${badge(hasReport ? "presente" : "mancante", hasReport ? "ok" : "warn")}</td>
-      <td>
-        <code>${escapeHtml(reports.length)}</code>
-        <div class="coverageReportList">${coverageReportDetails(reports)}</div>
-      </td>
-      <td>
-        ${escapeHtml(formatDate(latest?.updated_at || latest?.due_at))}<br>
-        <small>${escapeHtml(latest?.name || "-")}</small>
-        ${latest ? `<br>${coverageReportCounts(latest)}` : ""}
-      </td>
-      <td>
-        <button type="button" class="smallButton" data-coverage-select="${escapeHtml(activity.path)}" data-coverage-output="${escapeHtml(defaultOutputName(activity))}" title="Compila i campi di generazione con questa activity senza generare il registro.">Seleziona</button>
-        <button type="button" class="smallButton" data-coverage-generate="${escapeHtml(activity.path)}" data-coverage-output="${escapeHtml(defaultOutputName(activity))}" title="Compila i campi e genera subito un registro per questa activity.">Genera</button>
-        <button type="button" class="smallButton" data-coverage-report="${escapeHtml(latest?.name || "")}" data-coverage-open-students="true" title="${latest ? `Apri l'ultimo registro generato per questa activity e mostra la tabella studenti: ${escapeHtml(latest.name)}.` : "Nessun registro disponibile da aprire per questa activity."}" ${latest ? "" : "disabled"}>Apri</button>
-      </td>
-    `;
-    els.coverageBody.append(tr);
+    const reportRows = hasReport ? reports : [null];
+    reportRows.forEach((report, index) => {
+      const tr = document.createElement("tr");
+      tr.className = report ? coverageActivityClass([report]) : coverageActivityClass([]);
+      const outcome = reportOutcome(report);
+      tr.innerHTML = `
+        <td>
+          <strong class="coverageActivityName">${escapeHtml(activity.title || activity.id)}</strong><br>
+          <small>${escapeHtml(activity.id || "-")}</small><br>
+          <small>${escapeHtml(activity.path || "-")}</small>
+        </td>
+        <td>${kindLabel(activity.kind)}</td>
+        <td>${escapeHtml(activity.student_support_mode || "-")}</td>
+        <td>${badge(outcome.label, outcome.kind === "muted" && !report ? "warn" : outcome.kind)}</td>
+        <td>${coverageReportCell(report, index === 0)}</td>
+        <td>${escapeHtml(formatDate(report?.updated_at || report?.due_at))}</td>
+        <td>
+          ${report ? `
+            <button type="button" class="smallButton" data-coverage-report="${escapeHtml(report.name)}" data-coverage-open-students="true" title="Apri il registro ${escapeHtml(report.name)} e mostra la tabella studenti.">Apri</button>
+          ` : `
+            <button type="button" class="smallButton" data-coverage-select="${escapeHtml(activity.path)}" data-coverage-output="${escapeHtml(defaultOutputName(activity))}" title="Compila i campi di generazione con questa activity senza generare il registro.">Seleziona</button>
+            <button type="button" class="smallButton" data-coverage-generate="${escapeHtml(activity.path)}" data-coverage-output="${escapeHtml(defaultOutputName(activity))}" title="Compila i campi e genera subito un registro per questa activity.">Genera</button>
+          `}
+        </td>
+      `;
+      els.coverageBody.append(tr);
+    });
   }
   setupResizableTable(els.coverageTable, "coverage");
 }
