@@ -39,6 +39,7 @@ DESIGN_PATH = ROOT / "doc" / "course_design.json"
 COURSE_DESIGNS_DIR = ROOT / "doc" / "course_designs"
 SCHOOL_CALENDARS_DIR = ROOT / "doc" / "calendars"
 TEACHER_REPORTS_DIR = ROOT / "teacher-reports"
+ACTIVITY_DIRS = [ROOT / "activities", ROOT / "examples" / "assignment_tracking"]
 COURSE_PLAN_MD_PATH = ROOT / "doc" / "PERCORSO_DIDATTICO.md"
 README_PATH = ROOT / "README.md"
 AI_PROVIDERS_PATH = ROOT / "config" / "ai_providers.yaml"
@@ -67,6 +68,7 @@ MAX_CATALOG_EXCERPT_CHARS = 400
 AI_FRAME_TIMEOUT_SECONDS = 120
 AI_COURSE_PLAN_TIMEOUT_SECONDS = 240
 COMPACT_TEXT_CHARS = 1200
+MAX_SUBMISSION_FILE_BYTES = 512 * 1024
 
 
 def github_anchor(title: str, seen: dict[str, int]) -> str:
@@ -271,6 +273,84 @@ def read_assignment_report(name: str) -> dict:
     if not isinstance(payload.get("students"), list):
         raise ValueError("Registro consegne non valido: students deve essere una lista.")
     return payload
+
+
+def list_activities() -> list[dict]:
+    """List available activity JSON files for the assignment dashboard."""
+
+    activities = []
+    seen_paths = set()
+    for directory in ACTIVITY_DIRS:
+        if not directory.is_dir():
+            continue
+        for path in sorted(directory.rglob("*.json")):
+            resolved = path.resolve()
+            if resolved in seen_paths:
+                continue
+            seen_paths.add(resolved)
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8-sig"))
+            except Exception:  # noqa: BLE001
+                continue
+            if not isinstance(payload, dict) or not payload.get("id"):
+                continue
+            activities.append(
+                {
+                    "id": payload.get("id", ""),
+                    "title": payload.get("titolo", ""),
+                    "kind": payload.get("tipo", ""),
+                    "language": payload.get("linguaggio") or payload.get("language", ""),
+                    "path": str(path.relative_to(ROOT)).replace("\\", "/"),
+                }
+            )
+    return activities
+
+
+def resolve_submission_file_path(student: dict, file_path: str) -> Path:
+    """Resolve a submitted file path while keeping reads inside the student repo."""
+
+    repo = Path(str(student.get("repo", "")).strip())
+    if not str(repo):
+        raise ValueError("Repository studente mancante nel registro.")
+    repo_path = repo if repo.is_absolute() else (ROOT / repo).resolve()
+    raw_path = Path(str(file_path).strip())
+    if not str(raw_path):
+        raise ValueError("File consegna non indicato.")
+    candidates = []
+    if raw_path.is_absolute():
+        candidates.append(raw_path.resolve())
+    else:
+        candidates.append((ROOT / raw_path).resolve())
+        candidates.append((repo_path / raw_path).resolve())
+    for candidate in candidates:
+        try:
+            candidate.relative_to(repo_path)
+        except ValueError:
+            continue
+        if candidate.is_file():
+            return candidate
+    raise FileNotFoundError(f"File consegna non trovato o non consentito: {file_path}")
+
+
+def read_submission_file(payload: dict) -> dict:
+    """Read one file from a submitted assignment for the teacher dashboard."""
+
+    report = read_assignment_report(payload.get("report_name", ""))
+    student_name = str(payload.get("student", "")).strip()
+    student = next((entry for entry in report.get("students", []) if entry.get("student") == student_name), None)
+    if student is None:
+        raise FileNotFoundError(f"Studente non trovato nel registro: {student_name}")
+    path = resolve_submission_file_path(student, payload.get("path", ""))
+    size = path.stat().st_size
+    if size > MAX_SUBMISSION_FILE_BYTES:
+        raise ValueError("File troppo grande per l'anteprima nella dashboard.")
+    text = path.read_text(encoding="utf-8-sig")
+    return {
+        "path": str(path.relative_to(ROOT)).replace("\\", "/") if path.is_relative_to(ROOT) else str(path),
+        "name": path.name,
+        "size": size,
+        "content": text,
+    }
 
 
 def resolve_local_path(path_value: str, field_name: str) -> Path:
@@ -1605,6 +1685,9 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/assignment-reports":
             self.write_json({"reports": list_assignment_reports()})
             return
+        if parsed.path == "/api/activities":
+            self.write_json({"activities": list_activities()})
+            return
         if parsed.path == "/api/ai-config":
             self.write_json(ai_config())
             return
@@ -1689,6 +1772,20 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/assignment-reports/generate":
             try:
                 self.write_json(generate_assignment_report(payload))
+            except Exception as error:  # noqa: BLE001
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+            return
+        if parsed.path == "/api/assignment-submissions/read":
+            try:
+                self.write_json({"file": read_submission_file(payload)})
+            except FileNotFoundError as error:
+                self.send_response(404)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
             except Exception as error:  # noqa: BLE001
                 self.send_response(400)
                 self.send_header("Content-Type", "application/json; charset=utf-8")

@@ -1,7 +1,18 @@
+const REVIEW_SPLIT_KEY = "2cornot2c.assignmentReviewSplit";
+const DEFAULT_REVIEW_SPLIT = 320;
+const MIN_REVIEW_SPLIT = 180;
+const MAX_REVIEW_SPLIT_RATIO = 0.65;
+
 const state = {
+  activities: [],
   reports: [],
   report: null,
+  reportName: "",
   filter: "all",
+  reviewStudent: null,
+  reviewFilePath: "",
+  reviewFile: null,
+  reviewSplit: readReviewSplit(),
 };
 
 const els = {
@@ -12,7 +23,10 @@ const els = {
   reportSummary: document.querySelector("#reportSummary"),
   tableStatus: document.querySelector("#tableStatus"),
   studentsBody: document.querySelector("#studentsBody"),
+  reviewStatus: document.querySelector("#reviewStatus"),
+  submissionReview: document.querySelector("#submissionReview"),
   filterButtons: document.querySelectorAll("[data-filter]"),
+  activitySelect: document.querySelector("#activitySelect"),
   activityPath: document.querySelector("#activityPath"),
   outputName: document.querySelector("#outputName"),
   assignedAt: document.querySelector("#assignedAt"),
@@ -50,6 +64,138 @@ function escapeHtml(value) {
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
+}
+
+function languageFromPath(path) {
+  const lowerPath = String(path || "").toLowerCase();
+  const extension = lowerPath.split(".").pop();
+  const byExtension = {
+    asm: "assembly",
+    c: "c",
+    cc: "cpp",
+    cpp: "cpp",
+    css: "css",
+    go: "go",
+    h: "c",
+    hpp: "cpp",
+    html: "html",
+    java: "java",
+    js: "javascript",
+    json: "json",
+    md: "markdown",
+    php: "php",
+    py: "python",
+    sql: "sql",
+  };
+  return byExtension[extension] || "text";
+}
+
+function tokenSpan(kind, value) {
+  return `<span class="tok ${kind}">${escapeHtml(value)}</span>`;
+}
+
+function highlightByPattern(code, pattern, classify) {
+  let html = "";
+  let lastIndex = 0;
+  for (const match of code.matchAll(pattern)) {
+    html += escapeHtml(code.slice(lastIndex, match.index));
+    html += tokenSpan(classify(match[0]), match[0]);
+    lastIndex = match.index + match[0].length;
+  }
+  html += escapeHtml(code.slice(lastIndex));
+  return html;
+}
+
+function keywordPattern(keywords) {
+  return new RegExp(
+    `(//.*|/\\*[\\s\\S]*?\\*/|#.*|'(?:\\\\.|[^'\\\\])*'|"(?:\\\\.|[^"\\\\])*"|\\b(?:${keywords.join("|")})\\b|\\b\\d+(?:\\.\\d+)?\\b)`,
+    "gm",
+  );
+}
+
+function highlightCode(code, path) {
+  const language = languageFromPath(path);
+  if (language === "json") {
+    return highlightByPattern(
+      code,
+      /("(?:\\.|[^"\\])*")(?=\s*:)|"(?:\\.|[^"\\])*"|\b(?:true|false|null)\b|-?\b\d+(?:\.\d+)?\b/g,
+      (token) => {
+        if (token.startsWith('"') && /"$/.test(token)) return /"\s*$/.test(token) ? "tokString" : "tokString";
+        if (/^(true|false|null)$/.test(token)) return "tokKeyword";
+        return "tokNumber";
+      },
+    );
+  }
+  if (language === "html") {
+    return highlightByPattern(
+      code,
+      /<!--[\s\S]*?-->|<\/?[A-Za-z][^>]*>|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g,
+      (token) => {
+        if (token.startsWith("<!--")) return "tokComment";
+        if (token.startsWith("<")) return "tokKeyword";
+        return "tokString";
+      },
+    );
+  }
+  if (language === "markdown") {
+    return highlightByPattern(
+      code,
+      /^#{1,6}\s.*$|`[^`]+`|\*\*[^*]+\*\*|\[[^\]]+\]\([^)]+\)/gm,
+      (token) => (token.startsWith("#") ? "tokKeyword" : "tokString"),
+    );
+  }
+  if (language === "python") {
+    const keywords = [
+      "and", "as", "assert", "break", "class", "continue", "def", "elif", "else", "except", "False", "finally",
+      "for", "from", "if", "import", "in", "is", "lambda", "None", "not", "or", "pass", "raise", "return",
+      "True", "try", "while", "with", "yield",
+    ];
+    return highlightByPattern(
+      code,
+      new RegExp(`(#.*|'''[\\s\\S]*?'''|"""[\\s\\S]*?"""|'(?:\\\\.|[^'\\\\])*'|"(?:\\\\.|[^"\\\\])*"|\\b(?:${keywords.join("|")})\\b|\\b\\d+(?:\\.\\d+)?\\b)`, "gm"),
+      (token) => {
+        if (token.startsWith("#")) return "tokComment";
+        if (token.startsWith('"') || token.startsWith("'")) return "tokString";
+        if (/^\d/.test(token)) return "tokNumber";
+        return "tokKeyword";
+      },
+    );
+  }
+  if (["c", "cpp", "java", "go", "javascript", "php"].includes(language)) {
+    const keywords = {
+      c: ["auto", "break", "case", "char", "const", "continue", "default", "do", "double", "else", "enum", "extern", "float", "for", "if", "include", "int", "long", "return", "short", "signed", "sizeof", "static", "struct", "switch", "typedef", "unsigned", "void", "while"],
+      cpp: ["auto", "bool", "break", "case", "class", "const", "continue", "double", "else", "false", "for", "if", "include", "int", "namespace", "new", "private", "public", "return", "std", "string", "true", "void", "while"],
+      java: ["boolean", "break", "case", "class", "else", "false", "for", "if", "import", "int", "new", "null", "private", "public", "return", "static", "String", "true", "void", "while"],
+      go: ["break", "case", "const", "defer", "else", "false", "for", "func", "if", "import", "nil", "package", "range", "return", "struct", "true", "type", "var"],
+      javascript: ["break", "case", "class", "const", "continue", "else", "false", "for", "function", "if", "import", "let", "new", "null", "return", "true", "undefined", "var", "while"],
+      php: ["class", "echo", "else", "false", "for", "function", "if", "namespace", "new", "null", "public", "private", "return", "true", "while"],
+    }[language];
+    return highlightByPattern(
+      code,
+      keywordPattern(keywords),
+      (token) => {
+        if (token.startsWith("//") || token.startsWith("/*")) return "tokComment";
+        if (token.startsWith("#")) return "tokKeyword";
+        if (token.startsWith('"') || token.startsWith("'")) return "tokString";
+        if (/^\d/.test(token)) return "tokNumber";
+        return "tokKeyword";
+      },
+    );
+  }
+  if (language === "sql") {
+    const keywords = ["SELECT", "FROM", "WHERE", "INSERT", "UPDATE", "DELETE", "CREATE", "TABLE", "JOIN", "LEFT", "RIGHT", "ON", "GROUP", "ORDER", "BY", "VALUES", "INTO", "NULL", "PRIMARY", "KEY"];
+    return highlightByPattern(
+      code,
+      new RegExp(`(--.*|'(?:''|[^'])*'|\\b(?:${keywords.join("|")})\\b|\\b\\d+(?:\\.\\d+)?\\b)`, "gim"),
+      (token) => {
+        if (token.startsWith("--")) return "tokComment";
+        if (token.startsWith("'")) return "tokString";
+        if (/^\d/.test(token)) return "tokNumber";
+        return "tokKeyword";
+      },
+    );
+  }
+  return escapeHtml(code);
 }
 
 function formatDate(value) {
@@ -95,8 +241,47 @@ async function loadSelectedReport() {
     body: JSON.stringify({ name }),
   });
   state.report = payload.report;
+  state.reportName = name;
+  clearReview();
   renderDashboard();
   setStatus(`Registro caricato: ${name}.`);
+}
+
+function readReviewSplit() {
+  const value = Number(localStorage.getItem(REVIEW_SPLIT_KEY));
+  return Number.isFinite(value) && value > 0 ? value : DEFAULT_REVIEW_SPLIT;
+}
+
+function clampReviewSplit(value, containerWidth) {
+  const max = Math.max(MIN_REVIEW_SPLIT, Math.floor(containerWidth * MAX_REVIEW_SPLIT_RATIO));
+  return Math.min(Math.max(value, MIN_REVIEW_SPLIT), max);
+}
+
+function applyReviewSplit() {
+  if (!els.submissionReview.classList.contains("reviewGrid")) return;
+  const width = els.submissionReview.getBoundingClientRect().width;
+  if (!width) return;
+  state.reviewSplit = clampReviewSplit(state.reviewSplit, width);
+  els.submissionReview.style.setProperty("--review-list-width", `${state.reviewSplit}px`);
+}
+
+async function loadActivities() {
+  const payload = await api("/api/activities");
+  state.activities = payload.activities || [];
+  renderActivitySelect();
+}
+
+function renderActivitySelect() {
+  els.activitySelect.innerHTML = '<option value="">Activity salvate</option>';
+  for (const activity of state.activities) {
+    const option = document.createElement("option");
+    option.value = activity.path;
+    option.dataset.activityId = activity.id;
+    option.textContent = `${activity.id} · ${activity.title || activity.path}`;
+    els.activitySelect.append(option);
+  }
+  const current = els.activityPath.value.trim().replaceAll("\\", "/");
+  els.activitySelect.value = state.activities.some((activity) => activity.path === current) ? current : "";
 }
 
 async function generateReport() {
@@ -115,9 +300,11 @@ async function generateReport() {
       }),
     });
     state.report = payload.report;
+    state.reportName = payload.saved?.name || "";
     state.reports = payload.reports || [];
     renderReportSelect();
     els.reportSelect.value = payload.saved?.name || "";
+    clearReview();
     renderDashboard();
     setStatus(`Registro generato e caricato: ${payload.saved?.path || payload.saved?.name}.`);
   } catch (error) {
@@ -144,6 +331,33 @@ function badge(text, kind = "muted") {
     muted: "badgeMuted",
   }[kind] || "badgeMuted";
   return `<span class="badge ${className}">${escapeHtml(text || "-")}</span>`;
+}
+
+function gradingDetails(grading) {
+  const failedTests = Array.isArray(grading.failed_tests) ? grading.failed_tests : [];
+  const tests = Array.isArray(grading.tests) ? grading.tests : [];
+  if (failedTests.length) {
+    return `
+      <div class="testDetails testDetailsBad">
+        <strong>Falliti:</strong>
+        ${failedTests.map((name) => `<span>${escapeHtml(name)}</span>`).join("")}
+      </div>
+    `;
+  }
+  if (grading.status === "graded_passed" && tests.length) {
+    return `
+      <div class="testDetails testDetailsOk">
+        <strong>OK:</strong>
+        ${tests.map((test) => `<span>${escapeHtml(test.name || "test")}</span>`).join("")}
+      </div>
+    `;
+  }
+  return "";
+}
+
+function externalLink(url, label = "GitHub") {
+  if (!url) return "";
+  return `<a class="externalLink" href="${escapeHtml(url)}" target="_blank" rel="noreferrer">${escapeHtml(label)}</a>`;
 }
 
 function summaryCounts(students) {
@@ -201,17 +415,19 @@ function renderStudents(students) {
     : "Nessun registro caricato.";
   els.studentsBody.innerHTML = "";
   if (!state.report) {
-    els.studentsBody.innerHTML = '<tr><td colspan="7">Carica un registro consegne.</td></tr>';
+    els.studentsBody.innerHTML = '<tr><td colspan="8">Carica un registro consegne.</td></tr>';
     return;
   }
   if (!visible.length) {
-    els.studentsBody.innerHTML = '<tr><td colspan="7">Nessuno studente per questo filtro.</td></tr>';
+    els.studentsBody.innerHTML = '<tr><td colspan="8">Nessuno studente per questo filtro.</td></tr>';
     return;
   }
   for (const student of visible) {
     const grading = student.grading || {};
     const ai = student.ai_feedback || {};
     const submission = student.submission || {};
+    const files = submissionFiles(student);
+    const canReview = student.submitted && files.length > 0;
     const row = document.createElement("tr");
     row.innerHTML = `
       <td>
@@ -224,19 +440,131 @@ function renderStudents(students) {
         ${escapeHtml(formatDate(submission.submitted_at))}<br>
         <small>${submission.commit ? `commit ${escapeHtml(submission.commit)}` : "commit non disponibile"}</small><br>
         <small>${submission.source_path ? escapeHtml(submission.source_path) : "sorgente non indicato"}</small>
+        ${submission.source_github_url ? `<br>${externalLink(submission.source_github_url, "Apri su GitHub")}` : ""}
       </td>
       <td>
         ${badge(grading.status, grading.status === "graded_passed" ? "ok" : grading.status === "graded_failed" ? "bad" : "muted")}<br>
         <small>Test: ${escapeHtml(grading.tests_passed ?? "-")}/${escapeHtml(grading.tests_total ?? "-")}</small>
+        ${gradingDetails(grading)}
       </td>
       <td><code>${escapeHtml(grading.teacher_grade ?? grading.score ?? "-")}</code></td>
       <td>
         ${badge(ai.status || "not_generated", ai.approved_by_teacher ? "ok" : "muted")}<br>
         <small>${ai.suggested_grade ? `Suggerito: ${escapeHtml(ai.suggested_grade)}` : "Nessun voto AI"}</small>
       </td>
+      <td>
+        <button type="button" class="smallButton" data-review-student="${escapeHtml(student.student)}" ${canReview ? "" : "disabled"}>
+          Apri consegna
+        </button><br>
+        <small>${canReview ? `${files.length} file` : "nessun file"}</small>
+      </td>
     `;
     els.studentsBody.append(row);
   }
+}
+
+function submissionFiles(student) {
+  const submission = student.submission || {};
+  const files = Array.isArray(submission.files) ? submission.files : [];
+  if (files.length) {
+    return files
+      .filter((file) => file && file.path)
+      .map((file) => ({
+        path: String(file.path).replaceAll("\\", "/"),
+        role: file.role || "support",
+        github_url: file.github_url || "",
+      }));
+  }
+  return submission.source_path
+    ? [{ path: String(submission.source_path).replaceAll("\\", "/"), role: "solution", github_url: submission.source_github_url || "" }]
+    : [];
+}
+
+function clearReview() {
+  state.reviewStudent = null;
+  state.reviewFilePath = "";
+  state.reviewFile = null;
+  els.reviewStatus.textContent = "Seleziona una consegna dalla tabella studenti.";
+  els.submissionReview.className = "reviewEmpty";
+  els.submissionReview.style.removeProperty("--review-list-width");
+  els.submissionReview.textContent = "Nessuna consegna selezionata.";
+}
+
+function studentByName(studentName) {
+  return (state.report?.students || []).find((student) => student.student === studentName);
+}
+
+async function openSubmission(studentName, preferredPath = "") {
+  const student = studentByName(studentName);
+  if (!student) return;
+  const files = submissionFiles(student);
+  if (!files.length) {
+    clearReview();
+    els.reviewStatus.textContent = `Nessun file consegnato per ${studentName}.`;
+    return;
+  }
+  state.reviewStudent = studentName;
+  const selectedPath = preferredPath || files[0].path;
+  await loadSubmissionFile(studentName, selectedPath);
+}
+
+async function loadSubmissionFile(studentName, filePath) {
+  state.reviewFilePath = filePath;
+  state.reviewFile = null;
+  renderReview();
+  els.reviewStatus.textContent = `Caricamento ${filePath}...`;
+  try {
+    const payload = await api("/api/assignment-submissions/read", {
+      method: "POST",
+      body: JSON.stringify({
+        report_name: state.reportName,
+        student: studentName,
+        path: filePath,
+      }),
+    });
+    state.reviewFile = payload.file;
+    renderReview();
+    els.reviewStatus.textContent = `Consegna di ${studentName}: ${payload.file.path}.`;
+  } catch (error) {
+    state.reviewFile = { path: filePath, content: `Errore apertura file: ${error.message}` };
+    renderReview(true);
+    els.reviewStatus.textContent = `File non aperto: ${error.message}`;
+  }
+}
+
+function renderReview(isError = false) {
+  const student = studentByName(state.reviewStudent);
+  if (!student) {
+    clearReview();
+    return;
+  }
+  const files = submissionFiles(student);
+  const currentFile = files.find((file) => file.path === state.reviewFilePath) || files[0] || {};
+  els.submissionReview.className = "reviewGrid";
+  els.submissionReview.innerHTML = `
+    <aside class="fileList">
+      <h3>${escapeHtml(student.student)}</h3>
+      ${files.map((file) => `
+        <button type="button" class="${file.path === state.reviewFilePath ? "isActive" : ""}" data-review-file="${escapeHtml(file.path)}">
+          <span>${escapeHtml(file.path.split("/").pop())}</span>
+          <small>${escapeHtml(file.role || "support")}</small>
+        </button>
+        ${file.github_url ? externalLink(file.github_url, "GitHub") : ""}
+      `).join("")}
+    </aside>
+    <div class="reviewSplitter" role="separator" aria-label="Ridimensiona lista file" aria-orientation="vertical" title="Trascina per ridimensionare. Doppio click per ripristinare."></div>
+    <section class="filePreview">
+      <div class="filePreviewHead">
+        <div>
+          <strong>${escapeHtml(state.reviewFile?.path || state.reviewFilePath || "-")}</strong>
+          ${currentFile.github_url ? externalLink(currentFile.github_url, "Apri su GitHub") : ""}
+        </div>
+        <span>${escapeHtml(languageFromPath(state.reviewFile?.path || state.reviewFilePath))}${state.reviewFile?.size != null ? ` · ${escapeHtml(state.reviewFile.size)} byte` : ""}</span>
+      </div>
+      <pre class="${isError ? "fileError" : ""}"><code>${highlightCode(state.reviewFile?.content ?? "Caricamento...", state.reviewFile?.path || state.reviewFilePath)}</code></pre>
+    </section>
+  `;
+  applyReviewSplit();
 }
 
 function setFilter(filter) {
@@ -247,13 +575,71 @@ function setFilter(filter) {
   renderDashboard();
 }
 
+function selectActivity(path) {
+  els.activityPath.value = path;
+  const activity = state.activities.find((candidate) => candidate.path === path);
+  if (activity?.id) {
+    els.outputName.value = `demo/${activity.id}_assignment.json`;
+  }
+}
+
 els.loadReportBtn.addEventListener("click", loadSelectedReport);
 els.reloadBtn.addEventListener("click", loadReports);
 els.generateReportBtn.addEventListener("click", generateReport);
 els.reportSelect.addEventListener("change", loadSelectedReport);
+els.activitySelect.addEventListener("change", () => {
+  if (els.activitySelect.value) selectActivity(els.activitySelect.value);
+});
+els.activityPath.addEventListener("input", renderActivitySelect);
+els.studentsBody.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-review-student]");
+  if (!button || button.disabled) return;
+  openSubmission(button.dataset.reviewStudent);
+});
+els.submissionReview.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-review-file]");
+  if (!button || !state.reviewStudent) return;
+  loadSubmissionFile(state.reviewStudent, button.dataset.reviewFile);
+});
+els.submissionReview.addEventListener("dblclick", (event) => {
+  if (!event.target.closest(".reviewSplitter")) return;
+  state.reviewSplit = DEFAULT_REVIEW_SPLIT;
+  localStorage.setItem(REVIEW_SPLIT_KEY, String(state.reviewSplit));
+  applyReviewSplit();
+});
+els.submissionReview.addEventListener("pointerdown", (event) => {
+  const splitter = event.target.closest(".reviewSplitter");
+  if (!splitter) return;
+  event.preventDefault();
+  const container = els.submissionReview;
+  const startX = event.clientX;
+  const startWidth = state.reviewSplit;
+  splitter.setPointerCapture(event.pointerId);
+  container.classList.add("isResizing");
+
+  function onPointerMove(moveEvent) {
+    const nextWidth = startWidth + moveEvent.clientX - startX;
+    state.reviewSplit = clampReviewSplit(nextWidth, container.getBoundingClientRect().width);
+    container.style.setProperty("--review-list-width", `${state.reviewSplit}px`);
+  }
+
+  function onPointerUp(upEvent) {
+    splitter.releasePointerCapture(upEvent.pointerId);
+    container.classList.remove("isResizing");
+    localStorage.setItem(REVIEW_SPLIT_KEY, String(state.reviewSplit));
+    splitter.removeEventListener("pointermove", onPointerMove);
+    splitter.removeEventListener("pointerup", onPointerUp);
+    splitter.removeEventListener("pointercancel", onPointerUp);
+  }
+
+  splitter.addEventListener("pointermove", onPointerMove);
+  splitter.addEventListener("pointerup", onPointerUp);
+  splitter.addEventListener("pointercancel", onPointerUp);
+});
+window.addEventListener("resize", applyReviewSplit);
 els.filterButtons.forEach((button) => {
   button.addEventListener("click", () => setFilter(button.dataset.filter));
 });
 
 setFilter("all");
-loadReports().catch((error) => setStatus(`Errore: ${error.message}`));
+Promise.all([loadReports(), loadActivities()]).catch((error) => setStatus(`Errore: ${error.message}`));

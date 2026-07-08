@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
+import subprocess
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -11,6 +13,11 @@ from scripts import assign_activity, create_submission_scaffold
 
 
 NO_DUE_DATE_STATUS = "no_due_date"
+EXCLUDED_SUBMISSION_DIRS = {".git", "__pycache__", ".pytest_cache", "node_modules", "bin", "build", "dist"}
+EXCLUDED_SUBMISSION_SUFFIXES = {".pyc", ".pyo", ".o", ".obj", ".exe", ".dll", ".so", ".dylib", ".class"}
+GITHUB_RE = re.compile(r"github\.com[:/](?P<owner>[^/\s]+)/(?P<repo>[^/\s]+?)(?:\.git)?/?$")
+OWNER_REPO_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
+COMMIT_RE = re.compile(r"^[0-9a-fA-F]{7,40}$")
 
 
 @dataclass(frozen=True)
@@ -55,6 +62,167 @@ def assignment_dir(target: TrackingTarget, activity_id: str) -> Path:
 def default_report_path(target: TrackingTarget, activity_id: str) -> Path:
     """Return the default local report path for an activity in a student repository."""
     return target.path / "reports" / activity_id / "latest.json"
+
+
+def relative_to_root_or_repo(path: Path, repo: Path) -> str:
+    """Return a stable relative path for JSON output."""
+    resolved = path.resolve()
+    try:
+        return str(resolved.relative_to(Path.cwd().resolve())).replace("\\", "/")
+    except ValueError:
+        try:
+            return str(resolved.relative_to(repo.resolve())).replace("\\", "/")
+        except ValueError:
+            return str(resolved)
+
+
+def git_stdout(args: list[str], cwd: Path) -> str:
+    """Run a small git query and return stdout, or an empty string."""
+    completed = subprocess.run(args, cwd=cwd, capture_output=True, text=True, check=False, timeout=5)
+    if completed.returncode:
+        return ""
+    return completed.stdout.strip()
+
+
+def github_url_from_remote(value: str) -> str | None:
+    """Normalize a GitHub remote or owner/repo string to a repository URL."""
+    clean_value = value.strip()
+    if OWNER_REPO_RE.match(clean_value):
+        return f"https://github.com/{clean_value}"
+    match = GITHUB_RE.search(clean_value)
+    if not match:
+        return None
+    return f"https://github.com/{match.group('owner')}/{match.group('repo')}"
+
+
+def git_root(path: Path) -> Path | None:
+    """Return the git root that contains path, if available."""
+    output = git_stdout(["git", "rev-parse", "--show-toplevel"], path)
+    return Path(output).resolve() if output else None
+
+
+def github_repo_url(target: TrackingTarget) -> str | None:
+    """Return a GitHub URL for a target repository when it can be discovered."""
+    direct_url = github_url_from_remote(target.repo)
+    if direct_url:
+        return direct_url
+    if not target.path.exists():
+        return None
+    remote = git_stdout(["git", "remote", "get-url", "origin"], target.path)
+    return github_url_from_remote(remote) if remote else None
+
+
+def github_ref(commit: str | None) -> str:
+    """Return a GitHub ref for file links."""
+    return commit if commit and COMMIT_RE.match(commit) else "main"
+
+
+def github_file_path(target: TrackingTarget, file_path: str | None) -> str | None:
+    """Return a repository-relative path suitable for GitHub blob links."""
+    if not file_path:
+        return None
+    raw_path = Path(file_path)
+    if raw_path.is_absolute():
+        resolved = raw_path.resolve()
+    else:
+        target_candidate = (target.path / raw_path).resolve()
+        resolved = target_candidate if target_candidate.exists() else (Path.cwd() / raw_path).resolve()
+    root = git_root(target.path) or target.path.resolve()
+    try:
+        return str(resolved.relative_to(root)).replace("\\", "/")
+    except ValueError:
+        try:
+            return str(resolved.relative_to(target.path.resolve())).replace("\\", "/")
+        except ValueError:
+            return str(raw_path).replace("\\", "/")
+
+
+def github_file_url(target: TrackingTarget, repo_url: str | None, file_path: str | None, commit: str | None) -> str | None:
+    """Build a GitHub blob URL for a submitted file."""
+    relative_path = github_file_path(target, file_path)
+    if not repo_url or not relative_path:
+        return None
+    return f"{repo_url}/blob/{github_ref(commit)}/{relative_path}"
+
+
+def submission_file_role(path: Path, source_path: Path | None) -> str:
+    """Classify a submitted file for the review UI."""
+    if source_path is not None and path.resolve() == source_path.resolve():
+        return "solution"
+    if path.name.lower() in {"readme.md", "notes.md"}:
+        return "notes"
+    return "support"
+
+
+def should_include_submission_file(path: Path) -> bool:
+    """Return True for source-like files worth showing in the teacher review."""
+    if any(part in EXCLUDED_SUBMISSION_DIRS for part in path.parts):
+        return False
+    if path.suffix.lower() in EXCLUDED_SUBMISSION_SUFFIXES:
+        return False
+    return path.is_file()
+
+
+def submission_files(
+    target: TrackingTarget,
+    activity_id: str,
+    report: dict[str, Any] | None,
+    repo_url: str | None = None,
+) -> list[dict[str, Any]]:
+    """Return the files that belong to a submitted assignment."""
+    if report is None:
+        return []
+    commit = report.get("commit")
+    report_files = report.get("files")
+    if isinstance(report_files, list):
+        normalized_files = []
+        for file_entry in report_files:
+            if isinstance(file_entry, str):
+                file_path = file_entry
+                role = "support"
+            elif isinstance(file_entry, dict):
+                file_path = file_entry.get("path") or file_entry.get("source_path")
+                role = file_entry.get("role") or "support"
+            else:
+                continue
+            if file_path:
+                normalized_path = str(file_path).replace("\\", "/")
+                normalized_files.append(
+                    {
+                        "path": normalized_path,
+                        "role": role,
+                        "github_url": github_file_url(target, repo_url, normalized_path, commit),
+                    }
+                )
+        if normalized_files:
+            return normalized_files
+
+    source_value = report.get("source")
+    source_path = Path(source_value).resolve() if source_value else None
+    base_dir = assignment_dir(target, activity_id)
+    files = []
+    resolved_files = set()
+    if base_dir.is_dir():
+        for path in sorted(candidate for candidate in base_dir.rglob("*") if should_include_submission_file(candidate)):
+            resolved_files.add(path.resolve())
+            files.append(
+                {
+                    "path": relative_to_root_or_repo(path, target.path),
+                    "role": submission_file_role(path, source_path),
+                    "github_url": github_file_url(target, repo_url, str(path), commit),
+                }
+            )
+    if source_value and source_path not in resolved_files:
+        normalized_source = str(source_value).replace("\\", "/")
+        files.insert(
+            0,
+            {
+                "path": normalized_source,
+                "role": "solution",
+                "github_url": github_file_url(target, repo_url, normalized_source, commit),
+            },
+        )
+    return files
 
 
 def load_report(path: Path) -> dict[str, Any] | None:
@@ -110,16 +278,36 @@ def grading_summary(report: dict[str, Any] | None) -> dict[str, Any]:
             "passed": None,
             "tests_passed": None,
             "tests_total": None,
+            "tests": [],
+            "failed_tests": [],
             "score": None,
             "teacher_grade": None,
             "report_status": None,
         }
     summary = report.get("summary") if isinstance(report.get("summary"), dict) else {}
+    tests = []
+    for index, test in enumerate(report.get("tests", []) if isinstance(report.get("tests"), list) else []):
+        if not isinstance(test, dict):
+            continue
+        name = str(test.get("name") or test.get("id") or f"test {index + 1}")
+        tests.append(
+            {
+                "name": name,
+                "passed": test.get("passed"),
+                "status": test.get("status"),
+                "message": test.get("message") or test.get("error") or "",
+                "expected_stdout": test.get("expected_stdout"),
+                "actual_stdout": test.get("actual_stdout"),
+            }
+        )
+    failed_tests = [test["name"] for test in tests if test.get("passed") is False]
     return {
         "status": "graded_passed" if report.get("passed") is True else "graded_failed",
         "passed": report.get("passed"),
         "tests_passed": summary.get("passed"),
         "tests_total": summary.get("total"),
+        "tests": tests,
+        "failed_tests": failed_tests,
         "score": report.get("score"),
         "teacher_grade": report.get("teacher_grade"),
         "report_status": report.get("status"),
@@ -154,6 +342,7 @@ def track_assignments(
 
     students: list[dict[str, Any]] = []
     for target in targets:
+        repo_url = github_repo_url(target)
         report_path = default_report_path(target, activity_id)
         report = load_report(report_path)
         if report is not None:
@@ -171,6 +360,7 @@ def track_assignments(
             {
                 "student": target.student,
                 "repo": target.repo,
+                "repo_github_url": repo_url,
                 "assigned": True,
                 "submitted": submitted,
                 "status": status,
@@ -179,6 +369,8 @@ def track_assignments(
                 "late": late,
                 "submission": {
                     "source_path": source_path,
+                    "source_github_url": github_file_url(target, repo_url, source_path, report.get("commit") if report else None),
+                    "files": submission_files(target, activity_id, report, repo_url),
                     "submitted_at": submitted_at,
                     "commit": report.get("commit") if report else None,
                 },

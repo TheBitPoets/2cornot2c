@@ -42,6 +42,12 @@
       </div>
       <div class="generateGrid">
         <label>
+          <span>Activity salvate</span>
+          <select id="activitySelect" aria-label="Activity salvate">
+            <option value="">Caricamento activity...</option>
+          </select>
+        </label>
+        <label>
           <span>Activity JSON</span>
           <input id="activityPath" type="text" value="examples/assignment_tracking/demo_activity.json">
         </label>
@@ -118,10 +124,23 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
               <th>Grading</th>
               <th>Voto</th>
               <th>AI</th>
+              <th>Azioni</th>
             </tr>
           </thead>
           <tbody id="studentsBody"></tbody>
         </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panelHead">
+        <div>
+          <h2>Revisione consegna</h2>
+          <p id="reviewStatus" class="status">Seleziona una consegna dalla tabella studenti.</p>
+        </div>
+      </div>
+      <div id="submissionReview" class="reviewEmpty">
+        Nessuna consegna selezionata.
       </div>
     </section>
   </main>

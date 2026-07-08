@@ -143,6 +143,19 @@ button.primary {
   color: #ffffff;
 }
 
+button:disabled {
+  cursor: not-allowed;
+  opacity: .45;
+  transform: none;
+}
+
+.smallButton {
+  border-radius: 999px;
+  padding: .45rem .7rem;
+  font-size: .72rem;
+  box-shadow: none;
+}
+
 select {
   min-width: 18rem;
   padding: .72rem .9rem;
@@ -287,10 +300,182 @@ th {
 .badgeBad { background: #fdecea; color: #8f1d14; }
 .badgeMuted { background: #eeeeee; color: #666666; }
 
+.testDetails {
+  display: grid;
+  gap: .25rem;
+  max-width: 18rem;
+  margin-top: .45rem;
+  font-size: .72rem;
+}
+
+.testDetails strong {
+  color: var(--muted);
+}
+
+.testDetails span {
+  display: inline-block;
+  width: fit-content;
+  max-width: 100%;
+  border-radius: 6px;
+  padding: .16rem .35rem;
+  overflow-wrap: anywhere;
+}
+
+.testDetailsBad span {
+  background: #fdecea;
+  color: #8f1d14;
+}
+
+.testDetailsOk span {
+  background: #eaf7ef;
+  color: #0f6b3d;
+}
+
+.externalLink {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: .28rem;
+  border-bottom: 1px solid currentColor;
+  color: #2457a6;
+  font-size: .72rem;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.externalLink:hover {
+  color: #12346b;
+}
+
 code {
   border-radius: .35rem;
   background: #eeeeee;
   padding: .1rem .25rem;
+}
+
+.reviewEmpty {
+  padding: 1.1rem;
+  color: var(--muted);
+}
+
+.reviewGrid {
+  display: grid;
+  grid-template-columns: minmax(11rem, var(--review-list-width, 20rem)) 8px minmax(0, 1fr);
+  min-height: 28rem;
+}
+
+.fileList {
+  background: #fbfbfb;
+  padding: 1rem;
+  overflow: auto;
+}
+
+.reviewSplitter {
+  position: relative;
+  border-inline: 1px solid var(--line);
+  background: #eeeeee;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.reviewSplitter::before {
+  content: "";
+  position: absolute;
+  inset: 0 2px;
+  border-inline: 1px solid rgba(17, 17, 17, .24);
+}
+
+.reviewSplitter:hover,
+.reviewGrid.isResizing .reviewSplitter {
+  background: #d8d8d8;
+}
+
+.reviewGrid.isResizing {
+  user-select: none;
+}
+
+.fileList h3 {
+  margin-bottom: .85rem;
+  font-size: 1rem;
+}
+
+.fileList button {
+  display: grid;
+  justify-items: start;
+  width: 100%;
+  margin-bottom: .45rem;
+  border-radius: 12px;
+  box-shadow: none;
+  text-align: left;
+}
+
+.fileList .externalLink {
+  margin: -.2rem 0 .55rem .55rem;
+}
+
+.fileList button.isActive {
+  background: #111111;
+  border-color: #111111;
+  color: #ffffff;
+}
+
+.fileList button span {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.fileList button small {
+  opacity: .75;
+}
+
+.filePreview {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.filePreviewHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .85rem 1rem;
+  border-bottom: 1px solid var(--line);
+  background: #ffffff;
+}
+
+.filePreviewHead strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.filePreviewHead span {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.filePreview pre {
+  margin: 0;
+  padding: 1rem;
+  overflow: auto;
+  background: #171717;
+  color: #f6f6f6;
+  font: 500 .86rem/1.55 var(--mono);
+}
+
+.filePreview code {
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+}
+
+.tokKeyword { color: #8ecbff; font-weight: 800; }
+.tokString { color: #b8e986; }
+.tokNumber { color: #f7c66b; }
+.tokComment { color: #8f9ba8; font-style: italic; }
+
+.filePreview pre.fileError {
+  background: #2b1412;
+  color: #ffe7e3;
 }
 
 @media (max-width: 950px) {
@@ -308,5 +493,17 @@ code {
 
   .generateGrid {
     grid-template-columns: 1fr;
+  }
+
+  .reviewGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .reviewSplitter {
+    display: none;
+  }
+
+  .fileList {
+    border-bottom: 1px solid var(--line);
   }
 }

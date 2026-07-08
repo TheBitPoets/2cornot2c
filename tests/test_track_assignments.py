@@ -133,6 +133,53 @@ def test_track_assignments_marks_submitted_on_time(tmp_path) -> None:
     assert row["grading"]["status"] == "graded_passed"
     assert row["grading"]["tests_passed"] == 2
     assert row["ai_feedback"]["status"] == "not_generated"
+    assert row["submission"]["files"][0]["path"].endswith("assignments/python-base-somma-001/main.py")
+    assert row["submission"]["files"][0]["role"] == "solution"
+
+
+def test_track_assignments_lists_multiple_submission_files(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+    student = target(tmp_path, "rossi-mario")
+    write_report(student.path, "2026-10-18T18:22:10+02:00")
+    assignment_dir = student.path / "assignments" / "python-base-somma-001"
+    (assignment_dir / "utils.py").write_text("def add(a, b):\n    return a + b\n", encoding="utf-8")
+    (assignment_dir / "README.md").write_text("# Note\n", encoding="utf-8")
+    (assignment_dir / "__pycache__").mkdir()
+    (assignment_dir / "__pycache__" / "utils.cpython-310.pyc").write_bytes(b"cache")
+
+    index = track_assignments.track_assignments(
+        activity_path=activity_path,
+        targets=[student],
+        due_at="2026-10-19T23:59:00+02:00",
+    )
+
+    files = index["students"][0]["submission"]["files"]
+    paths = [file_entry["path"] for file_entry in files]
+    assert any(path.endswith("assignments/python-base-somma-001/main.py") for path in paths)
+    assert any(path.endswith("assignments/python-base-somma-001/utils.py") for path in paths)
+    assert any(path.endswith("assignments/python-base-somma-001/README.md") for path in paths)
+    assert not any("__pycache__" in path for path in paths)
+
+
+def test_track_assignments_uses_report_file_manifest_when_available(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+    student = target(tmp_path, "rossi-mario")
+    write_report(student.path, "2026-10-18T18:22:10+02:00")
+    report_path = student.path / "reports" / "python-base-somma-001" / "latest.json"
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    report["files"] = [
+        {"path": "assignments/python-base-somma-001/main.py", "role": "solution"},
+        {"path": "assignments/python-base-somma-001/utils.py", "role": "support"},
+    ]
+    report_path.write_text(json.dumps(report), encoding="utf-8")
+
+    index = track_assignments.track_assignments(
+        activity_path=activity_path,
+        targets=[student],
+        due_at="2026-10-19T23:59:00+02:00",
+    )
+
+    assert index["students"][0]["submission"]["files"] == report["files"]
 
 
 def test_track_assignments_marks_pending_before_due_date(tmp_path) -> None:
