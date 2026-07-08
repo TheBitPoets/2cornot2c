@@ -55,6 +55,9 @@ const els = {
   status: document.querySelector("#status"),
   coverageStatus: document.querySelector("#coverageStatus"),
   coverageSummary: document.querySelector("#coverageSummary"),
+  coverageDialog: document.querySelector("#coverageDialog"),
+  coverageOpenBtn: document.querySelector("#coverageOpenBtn"),
+  coverageCloseBtn: document.querySelector("#coverageCloseBtn"),
   coverageBody: document.querySelector("#coverageBody"),
   coverageTable: document.querySelector("#coverageTable"),
   reportSummary: document.querySelector("#reportSummary"),
@@ -1366,6 +1369,19 @@ function selectActivity(path) {
   }
 }
 
+function openCoverageDialog() {
+  if (els.coverageDialog && !els.coverageDialog.open) {
+    els.coverageDialog.showModal();
+  }
+  setupResizableTable(els.coverageTable, "coverage");
+}
+
+function closeCoverageDialog() {
+  if (els.coverageDialog?.open) {
+    els.coverageDialog.close();
+  }
+}
+
 els.loadReportBtn.addEventListener("click", loadSelectedReport);
 els.reloadBtn.addEventListener("click", async () => {
   await loadReports();
@@ -1373,6 +1389,8 @@ els.reloadBtn.addEventListener("click", async () => {
 });
 els.generateReportBtn.addEventListener("click", generateReport);
 els.reportSelect.addEventListener("change", loadSelectedReport);
+els.coverageOpenBtn.addEventListener("click", openCoverageDialog);
+els.coverageCloseBtn.addEventListener("click", closeCoverageDialog);
 els.reviewCloseBtn.addEventListener("click", closeReviewDialog);
 els.activitySelect.addEventListener("change", () => {
   if (els.activitySelect.value) selectActivity(els.activitySelect.value);

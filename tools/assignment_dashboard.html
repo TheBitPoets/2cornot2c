@@ -83,21 +83,8 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
           <p id="coverageStatus" class="status">Caricamento copertura...</p>
         </div>
         <div id="coverageSummary" class="coverageSummary"></div>
-        <div class="tableWrap">
-          <table id="coverageTable" class="resizableTable">
-            <thead>
-              <tr>
-                <th>Activity</th>
-                <th>Tipo</th>
-                <th>Modalita</th>
-                <th>Registro</th>
-                <th>Registri</th>
-                <th>Ultimo aggiornamento</th>
-                <th>Azioni</th>
-              </tr>
-            </thead>
-            <tbody id="coverageBody"></tbody>
-          </table>
+        <div class="coverageActions">
+          <button id="coverageOpenBtn" type="button" title="Apri la tabella completa della copertura registri in un modal.">Apri copertura registri</button>
         </div>
       </div>
     </section>
@@ -230,6 +217,32 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
     </div>
     <div id="submissionReview" class="reviewEmpty">
       Nessuna consegna selezionata.
+    </div>
+  </dialog>
+
+  <dialog id="coverageDialog" class="coverageDialog" aria-labelledby="coverageDialogTitle">
+    <div class="coverageDialogHead">
+      <div>
+        <h2 id="coverageDialogTitle">Copertura registri</h2>
+        <p class="status">Activity con registri generati, mancanti e ultimi output disponibili.</p>
+      </div>
+      <button id="coverageCloseBtn" type="button" class="smallButton" title="Chiudi la copertura registri e torna alla dashboard.">Chiudi</button>
+    </div>
+    <div class="tableWrap coverageDialogTable">
+      <table id="coverageTable" class="resizableTable">
+        <thead>
+          <tr>
+            <th>Activity</th>
+            <th>Tipo</th>
+            <th>Modalita</th>
+            <th>Registro</th>
+            <th>Registri</th>
+            <th>Ultimo aggiornamento</th>
+            <th>Azioni</th>
+          </tr>
+        </thead>
+        <tbody id="coverageBody"></tbody>
+      </table>
     </div>
   </dialog>
 
