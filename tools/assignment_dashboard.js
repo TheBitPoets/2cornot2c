@@ -27,48 +27,48 @@ const LEGEND_SECTIONS = {
   overview: {
     title: "Quadro classe",
     rows: [
-      ["OK", "Consegna presente e in tempo.", "Matrice"],
-      ["RIT", "Consegna presente ma oltre la scadenza.", "Matrice"],
-      ["NP", "Consegna non presentata o mancante.", "Matrice"],
-      ["Consegna", "Apre la revisione dei file consegnati dallo studente per quella activity.", "Elenco"],
-      ["Pulsante disabilitato", "La consegna non e disponibile per quello studente.", "Elenco e matrice"],
-      ["Badge classe", "Indica la classe del registro o della consegna mostrata.", "Elenco e riepiloghi"],
+      ['<span class="matrixCell matrixCellOk"><strong>OK</strong></span>', "Consegna presente e in tempo.", "Matrice"],
+      ['<span class="matrixCell matrixCellWarn"><strong>RIT</strong></span>', "Consegna presente ma oltre la scadenza.", "Matrice"],
+      ['<span class="matrixCell matrixCellBad"><strong>NP</strong></span>', "Consegna non presentata o mancante.", "Matrice"],
+      ['<button type="button" class="smallButton">Consegna</button>', "Apre la revisione dei file consegnati dallo studente per quella activity.", "Elenco"],
+      ['<button type="button" class="smallButton" disabled>Consegna</button>', "La consegna non e disponibile per quello studente.", "Elenco e matrice"],
+      ['<span class="classBadge">3A TPSI</span>', "Indica la classe del registro o della consegna mostrata.", "Elenco e riepiloghi"],
     ],
   },
   coverage: {
     title: "Copertura registri",
     rows: [
-      ["+", "Espande i registri generati per la stessa activity.", "Copertura registri"],
-      ["-", "Collassa i registri generati per la stessa activity.", "Copertura registri"],
-      ["ultimo", "Indica il registro piu recente tra quelli disponibili per l'activity.", "Colonna Stato"],
-      ["lock chiuso", "La scadenza dell'activity o del registro e passata.", "Colonna Registro"],
-      ["lock aperto", "La scadenza non e ancora passata.", "Colonna Registro"],
-      ["Seleziona", "Compila i campi di generazione con l'activity scelta senza generare.", "Colonna Azioni"],
-      ["Genera", "Compila i campi e genera subito il registro per l'activity scelta.", "Colonna Azioni"],
+      ['<button type="button" class="coverageGroupToggle">+</button>', "Espande i registri generati per la stessa activity.", "Copertura registri"],
+      ['<button type="button" class="coverageGroupToggle">-</button>', "Collassa i registri generati per la stessa activity.", "Copertura registri"],
+      ['<span class="badge badgeMuted">ultimo</span>', "Indica il registro piu recente tra quelli disponibili per l'activity.", "Colonna Stato"],
+      ['<span class="legendIcon">&#128274;</span>', "La scadenza dell'activity o del registro e passata.", "Colonna Registro"],
+      ['<span class="legendIcon">&#128275;</span>', "La scadenza non e ancora passata.", "Colonna Registro"],
+      ['<button type="button" class="smallButton">Seleziona</button>', "Compila i campi di generazione con l'activity scelta senza generare.", "Colonna Azioni"],
+      ['<button type="button" class="smallButton">Genera</button>', "Compila i campi e genera subito il registro per l'activity scelta.", "Colonna Azioni"],
     ],
   },
   students: {
     title: "Studenti",
     rows: [
-      ["Tutti", "Mostra tutti gli studenti del registro selezionato.", "Filtro consegne"],
-      ["Da consegnare", "Mostra chi non ha ancora consegnato ma e entro la scadenza.", "Filtro consegne"],
-      ["Mancanti", "Mostra chi non ha consegnato dopo la scadenza.", "Filtro consegne"],
-      ["Consegnati", "Mostra gli studenti con una consegna presente.", "Filtro consegne"],
-      ["In ritardo", "Mostra le consegne oltre la scadenza.", "Filtro consegne"],
-      ["Test falliti", "Mostra gli studenti con grading o test falliti.", "Filtro consegne"],
-      ["Apri", "Apre la revisione dei file consegnati dallo studente.", "Colonna Azioni"],
+      ['<button type="button" class="isActive">Tutti</button>', "Mostra tutti gli studenti del registro selezionato.", "Filtro consegne"],
+      ['<button type="button">Da consegnare</button>', "Mostra chi non ha ancora consegnato ma e entro la scadenza.", "Filtro consegne"],
+      ['<button type="button">Mancanti</button>', "Mostra chi non ha consegnato dopo la scadenza.", "Filtro consegne"],
+      ['<button type="button">Consegnati</button>', "Mostra gli studenti con una consegna presente.", "Filtro consegne"],
+      ['<button type="button">In ritardo</button>', "Mostra le consegne oltre la scadenza.", "Filtro consegne"],
+      ['<button type="button">Test falliti</button>', "Mostra gli studenti con grading o test falliti.", "Filtro consegne"],
+      ['<button type="button" class="smallButton">Apri</button>', "Apre la revisione dei file consegnati dallo studente.", "Colonna Azioni"],
     ],
   },
   states: {
     title: "Stati e colori",
     rows: [
-      ["verde", "Tutti hanno consegnato in tempo o il grading e positivo.", "Copertura, elenco, matrice"],
-      ["giallo", "Sono presenti ritardi, dati parziali o elementi da controllare.", "Copertura, elenco, matrice"],
-      ["rosso", "Manca almeno una consegna o il grading e fallito.", "Copertura, elenco, matrice"],
-      ["blu", "Activity ancora in corso o consegna pendente.", "Copertura e matrice"],
-      ["grigio", "Informazione non disponibile o stato neutro.", "Badge e celle vuote"],
-      ["Colori studenti", "Aiutano a distinguere rapidamente gli studenti nelle tabelle dense.", "Elenco e studenti"],
-      ["Colori tipo", "Associano visivamente homework, laboratorio, verifiche e altri tipi di consegna.", "Elenco e matrice"],
+      ['<span class="badge badgeOk">ok</span>', "Tutti hanno consegnato in tempo o il grading e positivo.", "Copertura, elenco, matrice"],
+      ['<span class="badge badgeWarn">warn</span>', "Sono presenti ritardi, dati parziali o elementi da controllare.", "Copertura, elenco, matrice"],
+      ['<span class="badge badgeBad">bad</span>', "Manca almeno una consegna o il grading e fallito.", "Copertura, elenco, matrice"],
+      ['<span class="matrixCell matrixCellPending"><strong>...</strong></span>', "Activity ancora in corso o consegna pendente.", "Copertura e matrice"],
+      ['<span class="badge badgeMuted">info</span>', "Informazione non disponibile o stato neutro.", "Badge e celle vuote"],
+      ['<span class="studentName studentName1">rossi-mario</span>', "Aiutano a distinguere rapidamente gli studenti nelle tabelle dense.", "Elenco e studenti"],
+      ['<span class="typeBadge typeHomework">compito-casa</span>', "Associano visivamente homework, laboratorio, verifiche e altri tipi di consegna.", "Elenco e matrice"],
     ],
   },
 };
@@ -1667,7 +1667,7 @@ function renderLegend() {
         <tbody>
           ${section.rows.map(([mark, meaning, location]) => `
             <tr>
-              <td><span class="legendMark">${escapeHtml(mark)}</span></td>
+              <td><span class="legendMark">${mark}</span></td>
               <td>${escapeHtml(meaning)}</td>
               <td>${escapeHtml(location)}</td>
             </tr>

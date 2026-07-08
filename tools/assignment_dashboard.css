@@ -896,6 +896,16 @@ label {
   font-weight: 900;
 }
 
+.legendMark button,
+.legendMark .matrixCell {
+  pointer-events: none;
+}
+
+.legendIcon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
 .studentsDialogFilters {
   display: grid;
   gap: .65rem;
