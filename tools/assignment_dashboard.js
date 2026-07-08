@@ -652,6 +652,16 @@ function coverageActivityClass(reports) {
   }[coverageWorstKind(reports)] || "coverageInProgress";
 }
 
+function coverageGroupClass(reports) {
+  return {
+    bad: "coverageGroupBad",
+    warn: "coverageGroupWarn",
+    ok: "coverageGroupOk",
+    muted: "coverageGroupInProgress",
+    missing: "coverageGroupMissing",
+  }[coverageWorstKind(reports)] || "coverageGroupInProgress";
+}
+
 function coverageReportCell(report, isLatest = false) {
   if (!report) return '<span class="coverageReportMissing">nessun registro</span>';
   return `
@@ -686,9 +696,14 @@ function renderCoverage() {
     const reports = reportsForActivity(activity.id);
     const hasReport = reports.length > 0;
     const reportRows = hasReport ? reports : [null];
+    const groupClass = coverageGroupClass(reports);
     reportRows.forEach((report, index) => {
       const tr = document.createElement("tr");
-      tr.className = report ? coverageActivityClass([report]) : coverageActivityClass([]);
+      tr.className = [
+        report ? coverageActivityClass([report]) : coverageActivityClass([]),
+        groupClass,
+        index === 0 ? "coverageGroupStart" : "coverageGroupContinuation",
+      ].join(" ");
       const outcome = reportOutcome(report);
       tr.innerHTML = `
         <td>

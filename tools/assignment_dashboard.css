@@ -329,6 +329,39 @@ label {
 .coverageInProgress { background: #f7f9ff; }
 .coverageMissing { background: #fffaf0; }
 
+.coverageGroupStart td {
+  border-top: 3px solid rgba(17, 17, 17, .18);
+}
+
+.coverageGroupStart td:first-child,
+.coverageGroupContinuation td:first-child {
+  border-left: 5px solid rgba(17, 17, 17, .16);
+}
+
+.coverageGroupContinuation td:first-child {
+  padding-left: 1.35rem;
+}
+
+.coverageGroupContinuation .coverageActivityName {
+  font-size: .88rem;
+  opacity: .82;
+}
+
+.coverageGroupStart.coverageGroupOk td:first-child,
+.coverageGroupContinuation.coverageGroupOk td:first-child { border-left-color: #0f6b3d; }
+
+.coverageGroupStart.coverageGroupWarn td:first-child,
+.coverageGroupContinuation.coverageGroupWarn td:first-child { border-left-color: #b7791f; }
+
+.coverageGroupStart.coverageGroupBad td:first-child,
+.coverageGroupContinuation.coverageGroupBad td:first-child { border-left-color: #b3261e; }
+
+.coverageGroupStart.coverageGroupInProgress td:first-child,
+.coverageGroupContinuation.coverageGroupInProgress td:first-child { border-left-color: #2f6fed; }
+
+.coverageGroupStart.coverageGroupMissing td:first-child,
+.coverageGroupContinuation.coverageGroupMissing td:first-child { border-left-color: #8a5a00; }
+
 .coverageOk .coverageActivityName { color: #0f6b3d; }
 .coverageWarn .coverageActivityName { color: #8a5a00; }
 .coverageBad .coverageActivityName { color: #8f1d14; }
