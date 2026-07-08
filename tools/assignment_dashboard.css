@@ -283,7 +283,6 @@ label {
 }
 
 .coverageDialog {
-  position: relative;
   grid-template-rows: auto minmax(0, 1fr);
   width: min(96vw, 88rem);
   height: min(88vh, 50rem);
@@ -348,27 +347,6 @@ label {
 
 .modalBreadcrumbSeparator {
   color: #b8b8b8;
-}
-
-.modalResizeGrip {
-  position: absolute;
-  right: .55rem;
-  bottom: .55rem;
-  z-index: 5;
-  width: 1.2rem;
-  height: 1.2rem;
-  border-right: 3px solid rgba(17, 17, 17, .38);
-  border-bottom: 3px solid rgba(17, 17, 17, .38);
-  border-radius: 0 0 7px 0;
-  background:
-    linear-gradient(135deg, transparent 0 48%, rgba(17, 17, 17, .32) 50%, transparent 52%) right bottom / .95rem .95rem no-repeat;
-  pointer-events: none;
-}
-
-.coverageDialog:hover .modalResizeGrip,
-.studentsDialog:hover .modalResizeGrip,
-.reviewDialog:hover .modalResizeGrip {
-  border-color: rgba(17, 17, 17, .64);
 }
 
 .coverageDialogTable {
@@ -640,7 +618,6 @@ label {
 }
 
 .studentsDialog {
-  position: relative;
   grid-template-rows: auto auto minmax(0, 1fr);
   width: min(96vw, 88rem);
   height: min(88vh, 50rem);
@@ -1094,7 +1071,6 @@ code {
 }
 
 .reviewDialog {
-  position: relative;
   grid-template-rows: auto minmax(0, 1fr);
   width: min(96vw, 82rem);
   height: min(90vh, 52rem);
