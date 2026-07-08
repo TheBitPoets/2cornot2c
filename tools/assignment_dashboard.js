@@ -83,6 +83,8 @@ const els = {
   studentsTable: document.querySelector("#studentsTable"),
   studentsBody: document.querySelector("#studentsBody"),
   reviewDialog: document.querySelector("#reviewDialog"),
+  reviewPrevBtn: document.querySelector("#reviewPrevBtn"),
+  reviewNextBtn: document.querySelector("#reviewNextBtn"),
   reviewCloseBtn: document.querySelector("#reviewCloseBtn"),
   reviewStatus: document.querySelector("#reviewStatus"),
   submissionReview: document.querySelector("#submissionReview"),
@@ -1164,6 +1166,7 @@ function renderDashboard() {
   const students = Array.isArray(state.report?.students) ? state.report.students : [];
   renderSummary(students);
   renderStudents(students);
+  updateReviewNavigation();
 }
 
 function renderSummary(students) {
@@ -1283,6 +1286,7 @@ function clearReview() {
   els.submissionReview.className = "reviewEmpty";
   els.submissionReview.style.removeProperty("--review-list-width");
   els.submissionReview.textContent = "Nessuna consegna selezionata.";
+  updateReviewNavigation();
   closeReviewDialog();
 }
 
@@ -1303,6 +1307,32 @@ function closeReviewDialog() {
   }
 }
 
+function reviewableStudents() {
+  const students = Array.isArray(state.report?.students) ? state.report.students : [];
+  return filteredStudents(students).filter((student) => student.submitted && submissionFiles(student).length > 0);
+}
+
+function reviewStudentIndex() {
+  return reviewableStudents().findIndex((student) => student.student === state.reviewStudent);
+}
+
+function updateReviewNavigation() {
+  const index = reviewStudentIndex();
+  const hasCurrent = index >= 0;
+  const students = reviewableStudents();
+  els.reviewPrevBtn.disabled = !hasCurrent || index === 0;
+  els.reviewNextBtn.disabled = !hasCurrent || index === students.length - 1;
+}
+
+async function openAdjacentSubmission(direction) {
+  const students = reviewableStudents();
+  const index = reviewStudentIndex();
+  if (index < 0) return;
+  const nextStudent = students[index + direction];
+  if (!nextStudent) return;
+  await openSubmission(nextStudent.student);
+}
+
 async function openSubmission(studentName, preferredPath = "") {
   const student = studentByName(studentName);
   if (!student) return;
@@ -1315,6 +1345,7 @@ async function openSubmission(studentName, preferredPath = "") {
   state.reviewStudent = studentName;
   const selectedPath = preferredPath || files[0].path;
   openReviewDialog();
+  updateReviewNavigation();
   await loadSubmissionFile(studentName, selectedPath);
 }
 
@@ -1335,10 +1366,12 @@ async function loadSubmissionFile(studentName, filePath) {
     state.reviewFile = payload.file;
     renderReview();
     els.reviewStatus.textContent = `Consegna di ${studentName}: ${payload.file.path}.`;
+    updateReviewNavigation();
   } catch (error) {
     state.reviewFile = { path: filePath, content: `Errore apertura file: ${error.message}` };
     renderReview(true);
     els.reviewStatus.textContent = `File non aperto: ${error.message}`;
+    updateReviewNavigation();
   }
 }
 
@@ -1430,6 +1463,8 @@ els.coverageOpenBtn.addEventListener("click", openCoverageDialog);
 els.coverageCloseBtn.addEventListener("click", closeCoverageDialog);
 els.studentsOpenBtn.addEventListener("click", openStudentsDialog);
 els.studentsCloseBtn.addEventListener("click", closeStudentsDialog);
+els.reviewPrevBtn.addEventListener("click", () => openAdjacentSubmission(-1));
+els.reviewNextBtn.addEventListener("click", () => openAdjacentSubmission(1));
 els.reviewCloseBtn.addEventListener("click", closeReviewDialog);
 els.activitySelect.addEventListener("change", () => {
   if (els.activitySelect.value) selectActivity(els.activitySelect.value);

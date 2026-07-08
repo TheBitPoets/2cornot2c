@@ -199,7 +199,11 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
         <h2 id="reviewDialogTitle">Revisione consegna</h2>
         <p id="reviewStatus" class="status">Seleziona una consegna dalla tabella studenti.</p>
       </div>
-      <button id="reviewCloseBtn" type="button" class="smallButton" title="Chiudi la revisione consegna e torna alla dashboard.">Chiudi</button>
+      <div class="reviewDialogActions">
+        <button id="reviewPrevBtn" type="button" class="smallButton" title="Apri la consegna precedente tra gli studenti filtrati." disabled>Precedente</button>
+        <button id="reviewNextBtn" type="button" class="smallButton" title="Apri la consegna successiva tra gli studenti filtrati." disabled>Successiva</button>
+        <button id="reviewCloseBtn" type="button" class="smallButton" title="Chiudi la revisione consegna e torna alla dashboard.">Chiudi</button>
+      </div>
     </div>
     <div id="submissionReview" class="reviewEmpty">
       Nessuna consegna selezionata.
