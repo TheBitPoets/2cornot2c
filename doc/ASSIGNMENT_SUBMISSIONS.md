@@ -454,6 +454,46 @@ reports/<activity_id>/latest.json
 
 In futuro la stessa struttura potra essere alimentata scaricando gli artifact GitHub Actions dei repository studenti.
 
+## Dashboard consegne docente
+
+Il registro generato puo essere visualizzato dalla GUI locale del progetto.
+
+Avvia il server:
+
+```bash
+python scripts/course_board_server.py
+```
+
+Poi apri:
+
+```text
+http://localhost:8765/tools/assignment_dashboard.html
+```
+
+La dashboard legge i file JSON presenti in:
+
+```text
+teacher-reports/**/*.json
+```
+
+Per esempio, se hai generato:
+
+```text
+teacher-reports/3A/c_sum_with_tests.json
+```
+
+lo troverai nel menu dei registri disponibili.
+
+La vista mostra:
+
+| Sezione | Cosa mostra |
+|---|---|
+| Registro selezionato | activity, scadenza, numero studenti, consegnati, mancanti, ritardi |
+| Filtro consegne | tutti, da consegnare, mancanti, consegnati, in ritardo, test falliti |
+| Studenti | stato, scadenza, data consegna, commit, sorgente, grading, voto, stato AI |
+
+La dashboard non ricalcola il grading: visualizza il formato prodotto da `scripts/track_assignments.py`. In questo modo CLI, test e GUI restano allineati allo stesso contratto JSON.
+
 ## Regole di sicurezza
 
 Regole minime:

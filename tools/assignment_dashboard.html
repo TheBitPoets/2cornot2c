@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Assignment Dashboard</title>
+  <link rel="stylesheet" href="assignment_dashboard.css">
+</head>
+<body>
+  <nav class="topNav" aria-label="Navigazione strumenti">
+    <a class="topNavBrand" href="https://github.com/TheBitPoets" target="_blank" rel="noreferrer" aria-label="Apri TheBitPoets su GitHub">
+      <img src="https://github.com/TheBitPoets.png" alt="TheBitPoets">
+    </a>
+    <a href="course_board.html">Percorso</a>
+    <a href="school_calendar.html">Calendario</a>
+    <a href="assignment_dashboard.html" aria-current="page">Consegne</a>
+  </nav>
+
+  <header class="hero">
+    <div>
+      <h1>Assignment Dashboard</h1>
+      <p class="subtitle">Controlla chi ha consegnato, chi manca, ritardi, grading e placeholder AI partendo dai registri JSON docente.</p>
+    </div>
+    <div class="heroTools">
+      <div class="actions">
+        <select id="reportSelect" aria-label="Registri consegne salvati">
+          <option value="">Registri consegne</option>
+        </select>
+        <button id="loadReportBtn" type="button" title="Carica il registro consegne selezionato da teacher-reports.">Carica registro</button>
+        <button id="reloadBtn" type="button" title="Ricarica la lista dei registri disponibili.">Ricarica</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel">
+      <div class="panelHead">
+        <div>
+          <h2>Registro selezionato</h2>
+          <p id="status" class="status">Pronto.</p>
+        </div>
+      </div>
+      <div id="reportSummary" class="summaryGrid"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panelHead">
+        <div>
+          <h2>Filtro consegne</h2>
+          <p class="status">Usa i filtri per isolare mancanti, ritardi ed esiti di grading.</p>
+        </div>
+      </div>
+      <div class="filterBar">
+        <button type="button" data-filter="all">Tutti</button>
+        <button type="button" data-filter="pending">Da consegnare</button>
+        <button type="button" data-filter="missing">Mancanti</button>
+        <button type="button" data-filter="submitted">Consegnati</button>
+        <button type="button" data-filter="late">In ritardo</button>
+        <button type="button" data-filter="failed">Test falliti</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panelHead">
+        <div>
+          <h2>Studenti</h2>
+          <p id="tableStatus" class="status">Nessun registro caricato.</p>
+        </div>
+      </div>
+      <div class="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Studente</th>
+              <th>Stato</th>
+              <th>Scadenza</th>
+              <th>Consegna</th>
+              <th>Grading</th>
+              <th>Voto</th>
+              <th>AI</th>
+            </tr>
+          </thead>
+          <tbody id="studentsBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="assignment_dashboard.js"></script>
+</body>
+</html>

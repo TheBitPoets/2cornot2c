@@ -33,6 +33,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DESIGN_PATH = ROOT / "doc" / "course_design.json"
 COURSE_DESIGNS_DIR = ROOT / "doc" / "course_designs"
 SCHOOL_CALENDARS_DIR = ROOT / "doc" / "calendars"
+TEACHER_REPORTS_DIR = ROOT / "teacher-reports"
 COURSE_PLAN_MD_PATH = ROOT / "doc" / "PERCORSO_DIDATTICO.md"
 README_PATH = ROOT / "README.md"
 AI_PROVIDERS_PATH = ROOT / "config" / "ai_providers.yaml"
@@ -147,6 +148,17 @@ def school_calendar_path(name: str) -> Path:
     return SCHOOL_CALENDARS_DIR / safe_design_name(name)
 
 
+def safe_teacher_report_path(name: str) -> Path:
+    """Return a safe teacher-report path below teacher-reports."""
+
+    name = name.strip().replace("\\", "/")
+    if not name or name.startswith("/") or ".." in Path(name).parts or not name.endswith(".json"):
+        raise ValueError("Nome registro non valido. Usa un path relativo .json dentro teacher-reports.")
+    path = (TEACHER_REPORTS_DIR / name).resolve()
+    path.relative_to(TEACHER_REPORTS_DIR.resolve())
+    return path
+
+
 def list_saved_designs() -> list[dict]:
     """List saved course designs stored in doc/course_designs."""
 
@@ -217,6 +229,41 @@ def list_school_calendars() -> list[dict]:
             metadata["course_design_name"] = ""
         calendars.append(metadata)
     return calendars
+
+
+def list_assignment_reports() -> list[dict]:
+    """List assignment tracking reports stored in teacher-reports."""
+
+    TEACHER_REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    reports = []
+    for path in sorted(TEACHER_REPORTS_DIR.rglob("*.json")):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8-sig"))
+        except Exception:  # noqa: BLE001
+            payload = {}
+        reports.append(
+            {
+                "name": str(path.relative_to(TEACHER_REPORTS_DIR)).replace("\\", "/"),
+                "path": str(path.relative_to(ROOT)).replace("\\", "/"),
+                "activity_id": payload.get("activity_id", ""),
+                "title": payload.get("title", ""),
+                "due_at": payload.get("due_at", ""),
+                "students": len(payload.get("students", [])) if isinstance(payload.get("students"), list) else 0,
+            }
+        )
+    return reports
+
+
+def read_assignment_report(name: str) -> dict:
+    """Read one assignment tracking report from teacher-reports."""
+
+    path = safe_teacher_report_path(name)
+    if not path.is_file():
+        raise FileNotFoundError(f"Registro consegne non trovato: {name}")
+    payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"Registro consegne non valido: {name}")
+    return payload
 
 
 def read_school_calendar(name: str) -> dict:
@@ -1497,6 +1544,9 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/school-calendars":
             self.write_json({"calendars": list_school_calendars()})
             return
+        if parsed.path == "/api/assignment-reports":
+            self.write_json({"reports": list_assignment_reports()})
+            return
         if parsed.path == "/api/ai-config":
             self.write_json(ai_config())
             return
@@ -1563,6 +1613,15 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/school-calendars/load":
             try:
                 self.write_json({"calendar": read_school_calendar(payload.get("name", ""))})
+            except Exception as error:  # noqa: BLE001
+                self.send_response(404)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+            return
+        if parsed.path == "/api/assignment-reports/load":
+            try:
+                self.write_json({"report": read_assignment_report(payload.get("name", ""))})
             except Exception as error:  # noqa: BLE001
                 self.send_response(404)
                 self.send_header("Content-Type", "application/json; charset=utf-8")

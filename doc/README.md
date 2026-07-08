@@ -61,6 +61,22 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 | `scripts/validate_activity.py` | Valida le schede JSON di attivita TheBitLab | [`ACTIVITIES_SCHEMA.md`](ACTIVITIES_SCHEMA.md) |
 | `scripts/grade_activity.py` | Esegue il runner deterministico del linguaggio richiesto e produce un report, anche via Docker | [`ASSIGNMENT_GRADING.md`](ASSIGNMENT_GRADING.md) |
 
+## Pagine GUI locali
+
+Avvia il server locale con:
+
+```bash
+python scripts/course_board_server.py
+```
+
+Poi usa:
+
+| Pagina | Scopo |
+|---|---|
+| `tools/course_board.html` | Progettare percorsi, UDA e cornici didattiche |
+| `tools/school_calendar.html` | Gestire calendario scolastico, orari e Gantt |
+| `tools/assignment_dashboard.html` | Visualizzare registri consegne docente da `teacher-reports/**/*.json` |
+
 ## Test e controlli automatici
 
 Per sapere quali test e GitHub Actions sono attivi, cosa controllano e come lanciarli in locale, leggi:
