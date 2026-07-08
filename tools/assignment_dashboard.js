@@ -67,6 +67,7 @@ const els = {
   reportSummary: document.querySelector("#reportSummary"),
   overviewStatus: document.querySelector("#overviewStatus"),
   overviewBody: document.querySelector("#overviewBody"),
+  overviewSummary: document.querySelector("#overviewSummary"),
   overviewClassFilter: document.querySelector("#overviewClassFilter"),
   overviewStudentFilter: document.querySelector("#overviewStudentFilter"),
   overviewKindFilter: document.querySelector("#overviewKindFilter"),
@@ -903,6 +904,27 @@ function renderOverviewViewTabs() {
   els.overviewMatrixView.hidden = state.overviewView !== "matrix";
 }
 
+function renderOverviewSummary(rows) {
+  if (!state.overviewRows.length) {
+    els.overviewSummary.innerHTML = '<p class="status">Genera o carica almeno un registro per vedere il quadro classe.</p>';
+    return;
+  }
+  const activeFilters = Object.values(state.overviewFilters).filter(Boolean).length;
+  const cards = [
+    ["Classi", uniqueSorted(rows.map((row) => classValue(row))).length],
+    ["Studenti", overviewStudents(rows).length],
+    ["Consegne", overviewActivities(rows).length],
+    ["Righe", `${rows.length}/${state.overviewRows.length}`],
+    ["Filtri", activeFilters ? `${activeFilters} attivi` : "nessuno"],
+  ];
+  els.overviewSummary.innerHTML = cards.map(([label, value]) => `
+    <article class="overviewSummaryItem">
+      <strong>${escapeHtml(label)}</strong>
+      <span>${escapeHtml(value)}</span>
+    </article>
+  `).join("");
+}
+
 function activityKey(row) {
   return `${classValue(row)}::${row.report_name || row.activity_id || row.title || ""}`;
 }
@@ -1025,6 +1047,7 @@ function renderOverview() {
   const rows = sortedOverviewRows(filteredOverviewRows());
   renderOverviewSortButtons();
   renderOverviewViewTabs();
+  renderOverviewSummary(rows);
   if (!state.overviewRows.length) {
     els.overviewStatus.textContent = "Nessun registro salvato in teacher-reports.";
   } else if (state.overviewView === "matrix") {

@@ -642,6 +642,40 @@ label {
   padding: 0 1.1rem 1.1rem;
 }
 
+.overviewSummary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: .75rem;
+  padding: 1.1rem;
+}
+
+.overviewSummary > .status {
+  grid-column: 1 / -1;
+}
+
+.overviewSummaryItem {
+  min-width: 0;
+  border: 1px solid rgba(17, 17, 17, .14);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: .75rem;
+}
+
+.overviewSummaryItem strong {
+  display: block;
+  margin-bottom: .35rem;
+  color: var(--muted);
+  font-size: .72rem;
+  text-transform: uppercase;
+}
+
+.overviewSummaryItem span {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 1.1rem;
+  font-weight: 900;
+}
+
 .overviewDialog {
   grid-template-rows: auto auto minmax(0, 1fr);
   width: min(96vw, 92rem);
@@ -1348,6 +1382,10 @@ code {
   }
 
   .studentsSummary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .overviewSummary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
