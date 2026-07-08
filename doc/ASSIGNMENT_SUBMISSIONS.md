@@ -572,7 +572,30 @@ Regole minime:
 
 Questa parte non e ancora implementata nel flusso minimo, ma va prevista nel modello delle consegne.
 
-Ogni activity dovrebbe poter dichiarare una modalita di supporto allo studente:
+Ogni activity puo dichiarare due informazioni distinte:
+
+| Campo | Cosa indica | Esempio |
+|---|---|---|
+| `tipo` | La natura didattica della consegna | `compito-casa`, `laboratorio`, `verifica-pratica` |
+| `student_support_mode` | Il livello di aiuto consentito allo studente durante lo svolgimento | `senza-aiuto`, `feedback-tecnico`, `ai-assisted` |
+
+Il `Quadro classe` usa entrambe: `tipo` permette di filtrare per categoria di activity, `student_support_mode` permette di distinguere consegne guidate, assistite o senza aiuto.
+
+### Tipi di consegna
+
+| Tipo | Quando usarlo | Esempio di consegna |
+|---|---|---|
+| `studio-guidato` | Ripasso, teoria, prerequisiti, domande guida e studio con riferimenti alla dispensa. | Lettura guidata sui tipi C con domande e piccoli esempi. |
+| `esercizio-classe` | Esercizio breve durante la lezione, spesso su un concetto appena spiegato. | Funzione Python da completare in 20 minuti. |
+| `compito-casa` | Lavoro assegnato fuori lezione per consolidare autonomia e continuita. | Programma multi-file da consegnare entro una data. |
+| `laboratorio` | Attivita pratica in ambiente controllato, con strumenti, test, file e debugging. | Esercizio C con `main.c`, `.h` e modulo di supporto. |
+| `verifica-pratica` | Prova valutativa basata su codice o artefatto eseguibile. | Implementazione di funzioni con test automatici e voto. |
+| `verifica-scritta` | Prova teorica o mista, anche in Markdown o risposta testuale. | Spiegare variabili, memoria, tipi e assegnamento. |
+| `debug-didattico` | Attivita centrata sulla diagnosi di bug, errori o casi limite. | Correggere un ciclo con errore off-by-one. |
+
+### Modalita di supporto
+
+Ogni activity dovrebbe dichiarare una modalita di supporto allo studente:
 
 | Modalita | Significato |
 |---|---|
@@ -580,6 +603,18 @@ Ogni activity dovrebbe poter dichiarare una modalita di supporto allo studente:
 | `feedback-tecnico` | Lo studente vede errori di compilazione, runtime e test falliti, ma senza spiegazioni generative. |
 | `ai-assisted` | Lo studente puo fare domande all'AI e ricevere suggerimenti sugli errori, entro i limiti scelti dal docente. |
 | `studio-guidato` | L'AI aiuta soprattutto a richiamare teoria, prerequisiti e sezioni della dispensa collegate alla consegna. |
+
+### Modalita consigliate per tipo
+
+| Tipo | Modalita consigliate | Indicazione pratica |
+|---|---|---|
+| `studio-guidato` | `studio-guidato`, `ai-assisted` | L'aiuto e parte dell'attivita: deve orientare teoria e ragionamento, non produrre una soluzione da copiare. |
+| `esercizio-classe` | `feedback-tecnico`, `ai-assisted`, `senza-aiuto` | Puo essere un allenamento assistito oppure una prova breve senza aiuto, a seconda dell'obiettivo della lezione. |
+| `compito-casa` | `feedback-tecnico`, `ai-assisted`, `senza-aiuto` | Per consolidamento si puo ammettere aiuto; per valutazione individuale va dichiarato `senza-aiuto`. |
+| `laboratorio` | `feedback-tecnico`, `ai-assisted`, `studio-guidato` | Adatto a feedback tecnico e indizi progressivi, soprattutto su strumenti, compilazione e debugging. |
+| `verifica-pratica` | `senza-aiuto`, `feedback-tecnico` | Di norma `senza-aiuto`; `feedback-tecnico` e accettabile solo se previsto dalla prova. |
+| `verifica-scritta` | `senza-aiuto` | Di norma nessun aiuto AI durante la prova. Materiali ammessi vanno dichiarati separatamente. |
+| `debug-didattico` | `feedback-tecnico`, `ai-assisted`, `studio-guidato` | Se e didattico puo usare indizi; se e valutativo conviene limitarsi al feedback tecnico o a `senza-aiuto`. |
 
 La scelta deve appartenere al docente e puo dipendere da:
 
