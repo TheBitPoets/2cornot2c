@@ -74,6 +74,9 @@ const els = {
   overviewSupportFilter: document.querySelector("#overviewSupportFilter"),
   overviewSortButtons: document.querySelectorAll("[data-overview-sort]"),
   overviewViewButtons: document.querySelectorAll("[data-overview-view]"),
+  overviewDialog: document.querySelector("#overviewDialog"),
+  overviewOpenBtn: document.querySelector("#overviewOpenBtn"),
+  overviewCloseBtn: document.querySelector("#overviewCloseBtn"),
   overviewListView: document.querySelector("#overviewListView"),
   overviewMatrixView: document.querySelector("#overviewMatrixView"),
   overviewListTable: document.querySelector("#overviewListTable"),
@@ -1543,6 +1546,20 @@ function closeCoverageDialog() {
   }
 }
 
+function openOverviewDialog() {
+  if (els.overviewDialog && !els.overviewDialog.open) {
+    els.overviewDialog.showModal();
+  }
+  setupResizableTable(els.overviewListTable, "overview-list");
+  setupResizableTable(els.overviewMatrixTable, "overview-matrix");
+}
+
+function closeOverviewDialog() {
+  if (els.overviewDialog?.open) {
+    els.overviewDialog.close();
+  }
+}
+
 function openStudentsDialog() {
   if (els.studentsDialog && !els.studentsDialog.open) {
     els.studentsDialog.showModal();
@@ -1566,6 +1583,8 @@ els.generateReportBtn.addEventListener("click", generateReport);
 els.reportSelect.addEventListener("change", loadSelectedReport);
 els.coverageOpenBtn.addEventListener("click", openCoverageDialog);
 els.coverageCloseBtn.addEventListener("click", closeCoverageDialog);
+els.overviewOpenBtn.addEventListener("click", openOverviewDialog);
+els.overviewCloseBtn.addEventListener("click", closeOverviewDialog);
 els.studentsOpenBtn.addEventListener("click", openStudentsDialog);
 els.studentsCloseBtn.addEventListener("click", closeStudentsDialog);
 els.reviewPrevBtn.addEventListener("click", () => openAdjacentSubmission(-1));
@@ -1627,6 +1646,7 @@ els.overviewViewButtons.forEach((button) => {
   button.addEventListener("click", () => {
     state.overviewView = button.dataset.overviewView;
     renderOverview();
+    setupResizableTables();
   });
 });
 els.overviewBody.addEventListener("click", async (event) => {

@@ -150,10 +150,41 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
           </select>
         </label>
       </div>
-      <div class="viewTabs" role="tablist" aria-label="Vista quadro classe">
-        <button type="button" class="isActive" data-overview-view="list" role="tab" aria-selected="true" title="Mostra il quadro classe come elenco ordinabile, una riga per studente e activity.">Elenco</button>
-        <button type="button" data-overview-view="matrix" role="tab" aria-selected="false" title="Mostra il quadro classe come matrice con studenti a sinistra e consegne in colonna.">Matrice</button>
+      <div class="overviewActions">
+        <button id="overviewOpenBtn" type="button" title="Apri elenco e matrice del quadro classe in un modal.">Apri quadro classe</button>
       </div>
+    </section>
+
+    <section class="panel" data-panel-key="students">
+      <div class="panelHead">
+        <div>
+          <h2>Studenti</h2>
+          <p id="tableStatus" class="status">Nessun registro caricato.</p>
+        </div>
+      </div>
+      <div id="studentsSummary" class="studentsSummary" aria-live="polite">
+        <p class="status">Carica un registro per vedere il riepilogo studenti.</p>
+      </div>
+      <div class="studentsActions">
+        <button id="studentsOpenBtn" type="button" title="Apri la tabella studenti del registro selezionato in un modal.">Apri studenti</button>
+      </div>
+    </section>
+
+  </main>
+
+  <dialog id="overviewDialog" class="overviewDialog" aria-labelledby="overviewDialogTitle">
+    <div class="overviewDialogHead">
+      <div>
+        <h2 id="overviewDialogTitle">Quadro classe</h2>
+        <p class="status">Elenco e matrice delle consegne filtrate.</p>
+      </div>
+      <button id="overviewCloseBtn" type="button" class="smallButton" title="Chiudi il quadro classe e torna alla dashboard.">Chiudi</button>
+    </div>
+    <div class="viewTabs" role="tablist" aria-label="Vista quadro classe">
+      <button type="button" class="isActive" data-overview-view="list" role="tab" aria-selected="true" title="Mostra il quadro classe come elenco ordinabile, una riga per studente e activity.">Elenco</button>
+      <button type="button" data-overview-view="matrix" role="tab" aria-selected="false" title="Mostra il quadro classe come matrice con studenti a sinistra e consegne in colonna.">Matrice</button>
+    </div>
+    <div class="overviewDialogBody">
       <div id="overviewListView" class="tableWrap">
         <table id="overviewListTable" class="resizableTable">
           <thead>
@@ -179,24 +210,8 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
           <tbody id="overviewMatrixBody"></tbody>
         </table>
       </div>
-    </section>
-
-    <section class="panel" data-panel-key="students">
-      <div class="panelHead">
-        <div>
-          <h2>Studenti</h2>
-          <p id="tableStatus" class="status">Nessun registro caricato.</p>
-        </div>
-      </div>
-      <div id="studentsSummary" class="studentsSummary" aria-live="polite">
-        <p class="status">Carica un registro per vedere il riepilogo studenti.</p>
-      </div>
-      <div class="studentsActions">
-        <button id="studentsOpenBtn" type="button" title="Apri la tabella studenti del registro selezionato in un modal.">Apri studenti</button>
-      </div>
-    </section>
-
-  </main>
+    </div>
+  </dialog>
 
   <dialog id="reviewDialog" class="reviewDialog" aria-labelledby="reviewDialogTitle">
     <div class="reviewDialogHead">
