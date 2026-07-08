@@ -118,38 +118,6 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
           <p id="overviewStatus" class="status">Caricamento quadro classe...</p>
         </div>
       </div>
-      <div class="overviewFilters">
-        <label>
-          <span>Classe</span>
-          <select id="overviewClassFilter" aria-label="Filtra quadro classe per classe">
-            <option value="">Tutte</option>
-          </select>
-        </label>
-        <label>
-          <span>Studente</span>
-          <select id="overviewStudentFilter" aria-label="Filtra quadro classe per studente">
-            <option value="">Tutti</option>
-          </select>
-        </label>
-        <label>
-          <span>Tipo</span>
-          <select id="overviewKindFilter" aria-label="Filtra quadro classe per tipo activity">
-            <option value="">Tutti</option>
-          </select>
-        </label>
-        <label>
-          <span>Stato</span>
-          <select id="overviewStatusFilter" aria-label="Filtra quadro classe per stato">
-            <option value="">Tutti</option>
-          </select>
-        </label>
-        <label>
-          <span>Modalita</span>
-          <select id="overviewSupportFilter" aria-label="Filtra quadro classe per modalita supporto">
-            <option value="">Tutte</option>
-          </select>
-        </label>
-      </div>
       <div id="overviewSummary" class="overviewSummary" aria-live="polite">
         <p class="status">Caricamento riepilogo quadro classe...</p>
       </div>
@@ -182,6 +150,38 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
         <p class="status">Elenco e matrice delle consegne filtrate.</p>
       </div>
       <button id="overviewCloseBtn" type="button" class="smallButton" title="Chiudi il quadro classe e torna alla dashboard.">Chiudi</button>
+    </div>
+    <div class="overviewFilters overviewDialogFilters">
+      <label>
+        <span>Classe</span>
+        <select id="overviewClassFilter" aria-label="Filtra quadro classe per classe">
+          <option value="">Tutte</option>
+        </select>
+      </label>
+      <label>
+        <span>Studente</span>
+        <select id="overviewStudentFilter" aria-label="Filtra quadro classe per studente">
+          <option value="">Tutti</option>
+        </select>
+      </label>
+      <label>
+        <span>Tipo</span>
+        <select id="overviewKindFilter" aria-label="Filtra quadro classe per tipo activity">
+          <option value="">Tutti</option>
+        </select>
+      </label>
+      <label>
+        <span>Stato</span>
+        <select id="overviewStatusFilter" aria-label="Filtra quadro classe per stato">
+          <option value="">Tutti</option>
+        </select>
+      </label>
+      <label>
+        <span>Modalita</span>
+        <select id="overviewSupportFilter" aria-label="Filtra quadro classe per modalita supporto">
+          <option value="">Tutte</option>
+        </select>
+      </label>
     </div>
     <div class="viewTabs" role="tablist" aria-label="Vista quadro classe">
       <button type="button" class="isActive" data-overview-view="list" role="tab" aria-selected="true" title="Mostra il quadro classe come elenco ordinabile, una riga per studente e activity.">Elenco</button>
