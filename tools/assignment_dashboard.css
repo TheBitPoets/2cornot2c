@@ -1019,6 +1019,7 @@ code {
   grid-template-columns: minmax(11rem, var(--review-list-width, 20rem)) 8px minmax(0, 1fr);
   min-height: 28rem;
   height: calc(100% - 4.8rem);
+  overflow: hidden;
 }
 
 .fileList {
@@ -1087,6 +1088,7 @@ code {
 
 .filePreview {
   min-width: 0;
+  min-height: 0;
   display: grid;
   grid-template-rows: auto 1fr;
 }
@@ -1112,6 +1114,7 @@ code {
 
 .filePreview pre {
   margin: 0;
+  min-height: 0;
   padding: 1rem;
   overflow: auto;
   background: #171717;
