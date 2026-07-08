@@ -320,12 +320,18 @@ label {
 }
 
 .modalBreadcrumb {
-  display: flex;
+  display: inline-flex;
+  align-items: center;
   flex-wrap: wrap;
-  gap: .35rem;
-  margin: 0 0 .25rem;
-  color: var(--muted);
-  font-size: .78rem;
+  gap: .4rem;
+  max-width: 100%;
+  margin: 0 0 .45rem;
+  padding: .22rem .5rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #f7f7f7;
+  color: #555;
+  font-size: .76rem;
   line-height: 1.3;
 }
 
