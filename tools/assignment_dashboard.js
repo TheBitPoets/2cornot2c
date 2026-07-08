@@ -703,7 +703,8 @@ function renderCoverage() {
         report ? coverageActivityClass([report]) : coverageActivityClass([]),
         groupClass,
         index === 0 ? "coverageGroupStart" : "coverageGroupContinuation",
-      ].join(" ");
+        index === reportRows.length - 1 ? "coverageGroupEnd" : "",
+      ].filter(Boolean).join(" ");
       const outcome = reportOutcome(report);
       tr.innerHTML = `
         <td>
