@@ -23,6 +23,55 @@ const OVERVIEW_STATUS_ORDER = [
   "submitted_on_time",
   "submitted_no_due_date",
 ];
+const LEGEND_SECTIONS = {
+  overview: {
+    title: "Quadro classe",
+    rows: [
+      ["OK", "Consegna presente e in tempo.", "Matrice"],
+      ["RIT", "Consegna presente ma oltre la scadenza.", "Matrice"],
+      ["NP", "Consegna non presentata o mancante.", "Matrice"],
+      ["Consegna", "Apre la revisione dei file consegnati dallo studente per quella activity.", "Elenco"],
+      ["Pulsante disabilitato", "La consegna non e disponibile per quello studente.", "Elenco e matrice"],
+      ["Badge classe", "Indica la classe del registro o della consegna mostrata.", "Elenco e riepiloghi"],
+    ],
+  },
+  coverage: {
+    title: "Copertura registri",
+    rows: [
+      ["+", "Espande i registri generati per la stessa activity.", "Copertura registri"],
+      ["-", "Collassa i registri generati per la stessa activity.", "Copertura registri"],
+      ["ultimo", "Indica il registro piu recente tra quelli disponibili per l'activity.", "Colonna Stato"],
+      ["lock chiuso", "La scadenza dell'activity o del registro e passata.", "Colonna Registro"],
+      ["lock aperto", "La scadenza non e ancora passata.", "Colonna Registro"],
+      ["Seleziona", "Compila i campi di generazione con l'activity scelta senza generare.", "Colonna Azioni"],
+      ["Genera", "Compila i campi e genera subito il registro per l'activity scelta.", "Colonna Azioni"],
+    ],
+  },
+  students: {
+    title: "Studenti",
+    rows: [
+      ["Tutti", "Mostra tutti gli studenti del registro selezionato.", "Filtro consegne"],
+      ["Da consegnare", "Mostra chi non ha ancora consegnato ma e entro la scadenza.", "Filtro consegne"],
+      ["Mancanti", "Mostra chi non ha consegnato dopo la scadenza.", "Filtro consegne"],
+      ["Consegnati", "Mostra gli studenti con una consegna presente.", "Filtro consegne"],
+      ["In ritardo", "Mostra le consegne oltre la scadenza.", "Filtro consegne"],
+      ["Test falliti", "Mostra gli studenti con grading o test falliti.", "Filtro consegne"],
+      ["Apri", "Apre la revisione dei file consegnati dallo studente.", "Colonna Azioni"],
+    ],
+  },
+  states: {
+    title: "Stati e colori",
+    rows: [
+      ["verde", "Tutti hanno consegnato in tempo o il grading e positivo.", "Copertura, elenco, matrice"],
+      ["giallo", "Sono presenti ritardi, dati parziali o elementi da controllare.", "Copertura, elenco, matrice"],
+      ["rosso", "Manca almeno una consegna o il grading e fallito.", "Copertura, elenco, matrice"],
+      ["blu", "Activity ancora in corso o consegna pendente.", "Copertura e matrice"],
+      ["grigio", "Informazione non disponibile o stato neutro.", "Badge e celle vuote"],
+      ["Colori studenti", "Aiutano a distinguere rapidamente gli studenti nelle tabelle dense.", "Elenco e studenti"],
+      ["Colori tipo", "Associano visivamente homework, laboratorio, verifiche e altri tipi di consegna.", "Elenco e matrice"],
+    ],
+  },
+};
 
 const state = {
   activities: [],
@@ -43,6 +92,7 @@ const state = {
     direction: "",
   },
   overviewView: "list",
+  legendTopic: "overview",
   coverageCollapsedActivities: new Set(),
   reviewStudent: null,
   reviewSource: "",
@@ -99,6 +149,12 @@ const els = {
   reviewCloseBtn: document.querySelector("#reviewCloseBtn"),
   reviewStatus: document.querySelector("#reviewStatus"),
   submissionReview: document.querySelector("#submissionReview"),
+  legendDialog: document.querySelector("#legendDialog"),
+  legendCloseBtn: document.querySelector("#legendCloseBtn"),
+  legendStatus: document.querySelector("#legendDialogStatus"),
+  legendBody: document.querySelector("#legendBody"),
+  legendButtons: document.querySelectorAll("[data-legend-topic]"),
+  legendTabButtons: document.querySelectorAll("[data-legend-tab]"),
   filterButtons: document.querySelectorAll("[data-filter]"),
   activitySelect: document.querySelector("#activitySelect"),
   activityPath: document.querySelector("#activityPath"),
@@ -1590,6 +1646,52 @@ function updateOutputNameForCurrentActivity() {
   if (activity?.id) els.outputName.value = defaultOutputName(activity);
 }
 
+function renderLegend() {
+  const section = LEGEND_SECTIONS[state.legendTopic] || LEGEND_SECTIONS.overview;
+  els.legendStatus.textContent = section.title;
+  els.legendTabButtons.forEach((button) => {
+    const isActive = button.dataset.legendTab === state.legendTopic;
+    button.classList.toggle("isActive", isActive);
+    button.setAttribute("aria-selected", isActive ? "true" : "false");
+  });
+  els.legendBody.innerHTML = `
+    <div class="tableWrap">
+      <table class="legendTable">
+        <thead>
+          <tr>
+            <th>Elemento</th>
+            <th>Significato</th>
+            <th>Dove compare</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${section.rows.map(([mark, meaning, location]) => `
+            <tr>
+              <td><span class="legendMark">${escapeHtml(mark)}</span></td>
+              <td>${escapeHtml(meaning)}</td>
+              <td>${escapeHtml(location)}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function openLegendDialog(topic = "overview") {
+  state.legendTopic = LEGEND_SECTIONS[topic] ? topic : "overview";
+  renderLegend();
+  if (els.legendDialog && !els.legendDialog.open) {
+    els.legendDialog.showModal();
+  }
+}
+
+function closeLegendDialog() {
+  if (els.legendDialog?.open) {
+    els.legendDialog.close();
+  }
+}
+
 function openCoverageDialog() {
   if (els.coverageDialog && !els.coverageDialog.open) {
     els.coverageDialog.showModal();
@@ -1645,6 +1747,16 @@ els.overviewOpenBtn.addEventListener("click", openOverviewDialog);
 els.overviewCloseBtn.addEventListener("click", closeOverviewDialog);
 els.studentsOpenBtn.addEventListener("click", openStudentsDialog);
 els.studentsCloseBtn.addEventListener("click", closeStudentsDialog);
+els.legendCloseBtn.addEventListener("click", closeLegendDialog);
+els.legendButtons.forEach((button) => {
+  button.addEventListener("click", () => openLegendDialog(button.dataset.legendTopic));
+});
+els.legendTabButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    state.legendTopic = button.dataset.legendTab;
+    renderLegend();
+  });
+});
 els.reviewPrevBtn.addEventListener("click", () => openAdjacentSubmission(-1));
 els.reviewNextBtn.addEventListener("click", () => openAdjacentSubmission(1));
 els.reviewCloseBtn.addEventListener("click", closeReviewDialog);

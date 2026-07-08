@@ -97,6 +97,7 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
         <div id="coverageSummary" class="coverageSummary"></div>
         <div class="coverageActions">
           <button id="coverageOpenBtn" type="button" title="Apri la tabella completa della copertura registri in un modal.">Apri copertura registri</button>
+          <button type="button" data-legend-topic="coverage" title="Mostra la legenda dei simboli e degli stati della copertura registri.">Legenda</button>
         </div>
       </div>
     </section>
@@ -123,6 +124,7 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
       </div>
       <div class="overviewActions">
         <button id="overviewOpenBtn" type="button" title="Apri elenco e matrice del quadro classe in un modal.">Apri quadro classe</button>
+        <button type="button" data-legend-topic="overview" title="Mostra la legenda di elenco, matrice, colori e stati del quadro classe.">Legenda</button>
       </div>
     </section>
 
@@ -138,6 +140,7 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
       </div>
       <div class="studentsActions">
         <button id="studentsOpenBtn" type="button" title="Apri la tabella studenti del registro selezionato in un modal.">Apri studenti</button>
+        <button type="button" data-legend-topic="students" title="Mostra la legenda degli stati e dei bottoni nella tabella studenti.">Legenda</button>
       </div>
     </section>
 
@@ -149,7 +152,10 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
         <h2 id="overviewDialogTitle">Quadro classe</h2>
         <p class="status">Elenco e matrice delle consegne filtrate.</p>
       </div>
-      <button id="overviewCloseBtn" type="button" class="smallButton" title="Chiudi il quadro classe e torna alla dashboard.">Chiudi</button>
+      <div class="dialogActions">
+        <button id="overviewCloseBtn" type="button" class="smallButton" title="Chiudi il quadro classe e torna alla dashboard.">Chiudi</button>
+        <button type="button" class="smallButton" data-legend-topic="overview" title="Mostra la legenda di elenco, matrice, colori e stati del quadro classe.">Legenda</button>
+      </div>
     </div>
     <div class="overviewFilters overviewDialogFilters">
       <label>
@@ -241,7 +247,10 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
         <h2 id="coverageDialogTitle">Copertura registri</h2>
         <p class="status">Activity con registri generati, mancanti e ultimi output disponibili.</p>
       </div>
-      <button id="coverageCloseBtn" type="button" class="smallButton" title="Chiudi la copertura registri e torna alla dashboard.">Chiudi</button>
+      <div class="dialogActions">
+        <button id="coverageCloseBtn" type="button" class="smallButton" title="Chiudi la copertura registri e torna alla dashboard.">Chiudi</button>
+        <button type="button" class="smallButton" data-legend-topic="coverage" title="Mostra la legenda dei simboli e degli stati della copertura registri.">Legenda</button>
+      </div>
     </div>
     <div class="tableWrap coverageDialogTable">
       <table id="coverageTable" class="resizableTable">
@@ -269,7 +278,10 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
         <h2 id="studentsDialogTitle">Studenti</h2>
         <p class="status">Stato, grading e consegne del registro selezionato.</p>
       </div>
-      <button id="studentsCloseBtn" type="button" class="smallButton" title="Chiudi la tabella studenti e torna alla dashboard.">Chiudi</button>
+      <div class="dialogActions">
+        <button id="studentsCloseBtn" type="button" class="smallButton" title="Chiudi la tabella studenti e torna alla dashboard.">Chiudi</button>
+        <button type="button" class="smallButton" data-legend-topic="students" title="Mostra la legenda degli stati e dei bottoni nella tabella studenti.">Legenda</button>
+      </div>
     </div>
     <div class="studentsDialogFilters">
       <div>
@@ -302,6 +314,23 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
         <tbody id="studentsBody"></tbody>
       </table>
     </div>
+  </dialog>
+
+  <dialog id="legendDialog" class="legendDialog" aria-labelledby="legendDialogTitle">
+    <div class="legendDialogHead">
+      <div>
+        <h2 id="legendDialogTitle">Legenda</h2>
+        <p id="legendDialogStatus" class="status">Simboli, colori e stati della dashboard consegne.</p>
+      </div>
+      <button id="legendCloseBtn" type="button" class="smallButton" title="Chiudi la legenda e torna alla dashboard.">Chiudi</button>
+    </div>
+    <div class="legendTabs" role="tablist" aria-label="Sezioni legenda">
+      <button type="button" data-legend-tab="overview" role="tab" aria-selected="true">Quadro classe</button>
+      <button type="button" data-legend-tab="coverage" role="tab" aria-selected="false">Copertura registri</button>
+      <button type="button" data-legend-tab="students" role="tab" aria-selected="false">Studenti</button>
+      <button type="button" data-legend-tab="states" role="tab" aria-selected="false">Stati e colori</button>
+    </div>
+    <div id="legendBody" class="legendBody"></div>
   </dialog>
 
   <script src="assignment_dashboard.js"></script>
