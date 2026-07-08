@@ -713,7 +713,7 @@ function renderCoverage() {
       <td>
         <button type="button" class="smallButton" data-coverage-select="${escapeHtml(activity.path)}" data-coverage-output="${escapeHtml(defaultOutputName(activity))}" title="Compila i campi di generazione con questa activity senza generare il registro.">Seleziona</button>
         <button type="button" class="smallButton" data-coverage-generate="${escapeHtml(activity.path)}" data-coverage-output="${escapeHtml(defaultOutputName(activity))}" title="Compila i campi e genera subito un registro per questa activity.">Genera</button>
-        <button type="button" class="smallButton" data-coverage-report="${escapeHtml(latest?.name || "")}" title="${latest ? `Apri l'ultimo registro generato per questa activity: ${escapeHtml(latest.name)}.` : "Nessun registro disponibile da aprire per questa activity."}" ${latest ? "" : "disabled"}>Apri</button>
+        <button type="button" class="smallButton" data-coverage-report="${escapeHtml(latest?.name || "")}" data-coverage-open-students="true" title="${latest ? `Apri l'ultimo registro generato per questa activity e mostra la tabella studenti: ${escapeHtml(latest.name)}.` : "Nessun registro disponibile da aprire per questa activity."}" ${latest ? "" : "disabled"}>Apri</button>
       </td>
     `;
     els.coverageBody.append(tr);
@@ -1430,6 +1430,9 @@ els.coverageBody.addEventListener("click", async (event) => {
   if (reportButton && reportButton.dataset.coverageReport) {
     els.reportSelect.value = reportButton.dataset.coverageReport;
     await loadSelectedReport();
+    if (reportButton.dataset.coverageOpenStudents === "true") {
+      openStudentsDialog();
+    }
   }
 });
 [
