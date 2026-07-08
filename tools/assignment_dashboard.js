@@ -294,6 +294,10 @@ function classBadge(entity) {
   return `<span class="classBadge">${escapeHtml(classValue(entity))}</span>`;
 }
 
+function classKey(entity) {
+  return slugPathSegment(entity?.class_id || entity?.github_team || entity?.class_label || classValue(entity));
+}
+
 function slugPathSegment(value, fallback = "classe-non-indicata") {
   return String(value || fallback)
     .trim()
@@ -573,9 +577,15 @@ function renderActivitySelect() {
   els.activitySelect.value = state.activities.some((activity) => activity.path === current) ? current : "";
 }
 
-function reportsForActivity(activityId) {
+function activityCoverageKey(activity) {
+  return `${classKey(activity)}::${activity?.id || ""}`;
+}
+
+function reportsForActivity(activity) {
+  const activityId = activity?.id || "";
+  const activityClassKey = classKey(activity);
   return state.reports
-    .filter((report) => report.activity_id === activityId)
+    .filter((report) => report.activity_id === activityId && classKey(report) === activityClassKey)
     .sort((a, b) => {
       const first = Date.parse(a.updated_at || a.due_at || "");
       const second = Date.parse(b.updated_at || b.due_at || "");
@@ -585,10 +595,12 @@ function reportsForActivity(activityId) {
 
 function reportCoverageRows() {
   return [...state.activities].sort((a, b) => {
-    const aMissing = reportsForActivity(a.id).length === 0 ? 1 : 0;
-    const bMissing = reportsForActivity(b.id).length === 0 ? 1 : 0;
+    const aMissing = reportsForActivity(a).length === 0 ? 1 : 0;
+    const bMissing = reportsForActivity(b).length === 0 ? 1 : 0;
     const reportDelta = bMissing - aMissing;
     if (reportDelta !== 0) return reportDelta;
+    const classDelta = classValue(a).localeCompare(classValue(b), "it", { numeric: true, sensitivity: "base" });
+    if (classDelta !== 0) return classDelta;
     return String(a.id || "").localeCompare(String(b.id || ""), "it", { numeric: true, sensitivity: "base" });
   });
 }
@@ -723,7 +735,7 @@ function coverageStatusCell(outcome, report, isLatest = false) {
 function renderCoverage() {
   if (!els.coverageBody) return;
   const rows = reportCoverageRows();
-  const withReport = rows.filter((activity) => reportsForActivity(activity.id).length > 0).length;
+  const withReport = rows.filter((activity) => reportsForActivity(activity).length > 0).length;
   const withoutReport = rows.length - withReport;
   els.coverageStatus.textContent = rows.length
     ? `${withReport} activity con registro, ${withoutReport} senza registro.`
@@ -740,11 +752,12 @@ function renderCoverage() {
     return;
   }
   for (const activity of rows) {
-    const reports = reportsForActivity(activity.id);
+    const reports = reportsForActivity(activity);
     const hasReport = reports.length > 0;
     const reportRows = hasReport ? reports : [null];
     const canCollapse = reportRows.length > 1;
-    const isCollapsed = canCollapse && state.coverageCollapsedActivities.has(activity.id);
+    const coverageKey = activityCoverageKey(activity);
+    const isCollapsed = canCollapse && state.coverageCollapsedActivities.has(coverageKey);
     const visibleReportRows = isCollapsed ? [reportRows[0]] : reportRows;
     const groupClass = coverageGroupClass(reports);
     visibleReportRows.forEach((report, index) => {
@@ -761,7 +774,7 @@ function renderCoverage() {
         <td>
           <div class="coverageActivityCell">
             ${canCollapse && index === 0 ? `
-              <button type="button" class="coverageGroupToggle" data-coverage-toggle="${escapeHtml(activity.id)}" aria-expanded="${isCollapsed ? "false" : "true"}" title="${isCollapsed ? "Espandi i registri di questa activity." : "Collassa i registri di questa activity."}">${isCollapsed ? "+" : "-"}</button>
+              <button type="button" class="coverageGroupToggle" data-coverage-toggle="${escapeHtml(coverageKey)}" aria-expanded="${isCollapsed ? "false" : "true"}" title="${isCollapsed ? "Espandi i registri di questa activity." : "Collassa i registri di questa activity."}">${isCollapsed ? "+" : "-"}</button>
             ` : '<span class="coverageGroupToggleSpacer"></span>'}
             <strong class="coverageActivityName">${escapeHtml(activity.title || activity.id)}</strong>
           </div>
