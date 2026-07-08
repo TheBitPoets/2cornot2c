@@ -860,6 +860,16 @@ th.isResizableColumn:hover {
   border-left: 4px solid transparent;
 }
 
+.overviewReportName {
+  display: block;
+  max-width: 12rem;
+  margin-top: .25rem;
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .typeHomeworkRow { border-left-color: #2f6fed; }
 .typeLabRow { border-left-color: #16825d; }
 .typeClassworkRow { border-left-color: #b45f06; }

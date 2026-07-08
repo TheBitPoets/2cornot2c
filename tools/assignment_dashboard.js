@@ -1067,7 +1067,7 @@ function renderOverview() {
         <button type="button" class="smallButton" data-overview-report="${escapeHtml(row.report_name)}" data-overview-student="${escapeHtml(row.student || "")}" title="Apri il registro ${escapeHtml(row.report_name || "collegato")} e la consegna di ${escapeHtml(row.student || "questo studente")}.">
           Apri
         </button><br>
-        <small>${escapeHtml(row.report_name || "-")}</small>
+        <small class="overviewReportName" title="${escapeHtml(row.report_name || "-")}">${escapeHtml(row.report_name || "-")}</small>
       </td>
     `;
     els.overviewBody.append(tr);
