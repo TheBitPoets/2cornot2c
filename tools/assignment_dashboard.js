@@ -476,6 +476,25 @@ function setupCollapsiblePanels() {
       if (!panel.classList.contains("panelCollapsed")) applyReviewSplit();
     });
   });
+  document.querySelectorAll(".coverageBlock").forEach((block, index) => {
+    const title = block.querySelector(".coverageHead h3");
+    if (!title || title.dataset.collapseReady === "true") return;
+    const key = panelKey(block, index);
+    block.dataset.panelKey = key;
+    if (collapsed.has(key)) block.classList.add("coverageCollapsed");
+    title.dataset.collapseReady = "true";
+    title.title = "Apri o chiudi questa sezione.";
+    title.addEventListener("click", () => {
+      block.classList.toggle("coverageCollapsed");
+      const current = readCollapsedPanels();
+      if (block.classList.contains("coverageCollapsed")) {
+        current.add(key);
+      } else {
+        current.delete(key);
+      }
+      writeCollapsedPanels(current);
+    });
+  });
 }
 
 function clampReviewSplit(value, containerWidth) {
