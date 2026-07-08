@@ -93,6 +93,27 @@ def write_report_with_activity_id(root, activity_id: str) -> None:
     )
 
 
+def write_report_without_activity_id(root) -> None:
+    """Write a local grading report without activity id."""
+    report_path = root / "reports" / "python-base-somma-001" / "latest.json"
+    source_path = root / "assignments" / "python-base-somma-001" / "main.py"
+    report_path.parent.mkdir(parents=True)
+    source_path.parent.mkdir(parents=True)
+    source_path.write_text("print(3)\n", encoding="utf-8")
+    report_path.write_text(
+        json.dumps(
+            {
+                "passed": True,
+                "status": "passed",
+                "source": str(source_path),
+                "submitted_at": "2026-10-18T18:22:10+02:00",
+                "commit": "abc1234",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
 def test_track_assignments_marks_submitted_on_time(tmp_path) -> None:
     activity_path = write_activity(tmp_path)
     student = target(tmp_path, "rossi-mario")
@@ -236,6 +257,24 @@ def test_track_assignments_rejects_report_for_different_activity(tmp_path) -> No
         assert "altra-activity" in str(error)
     else:
         raise AssertionError("track_assignments should reject reports for a different activity")
+
+
+def test_track_assignments_rejects_report_without_activity_id(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+    student = target(tmp_path, "verdi-anna")
+    write_report_without_activity_id(student.path)
+
+    try:
+        track_assignments.track_assignments(
+            activity_path=activity_path,
+            targets=[student],
+            due_at="2026-10-19T23:59:00+02:00",
+        )
+    except ValueError as error:
+        assert "Report non coerente" in str(error)
+        assert "manca activity_id" in str(error)
+    else:
+        raise AssertionError("track_assignments should reject reports without activity_id")
 
 
 def test_write_tracking_index_creates_parent_directories(tmp_path) -> None:

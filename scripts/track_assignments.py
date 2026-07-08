@@ -70,7 +70,9 @@ def load_report(path: Path) -> dict[str, Any] | None:
 def validate_report_activity(report: dict[str, Any], expected_activity_id: str, report_path: Path) -> None:
     """Ensure a grading report belongs to the tracked activity."""
     report_activity_id = report.get("activity_id")
-    if report_activity_id is not None and report_activity_id != expected_activity_id:
+    if report_activity_id is None:
+        raise ValueError(f"Report non coerente per {report_path}: manca activity_id.")
+    if report_activity_id != expected_activity_id:
         raise ValueError(
             f"Report non coerente per {report_path}: atteso {expected_activity_id}, trovato {report_activity_id}."
         )
