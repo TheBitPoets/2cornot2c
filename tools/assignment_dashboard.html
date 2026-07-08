@@ -92,6 +92,59 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
     <section class="panel">
       <div class="panelHead">
         <div>
+          <h2>Quadro classe</h2>
+          <p id="overviewStatus" class="status">Caricamento quadro classe...</p>
+        </div>
+      </div>
+      <div class="overviewFilters">
+        <label>
+          <span>Studente</span>
+          <select id="overviewStudentFilter" aria-label="Filtra quadro classe per studente">
+            <option value="">Tutti</option>
+          </select>
+        </label>
+        <label>
+          <span>Tipo</span>
+          <select id="overviewKindFilter" aria-label="Filtra quadro classe per tipo activity">
+            <option value="">Tutti</option>
+          </select>
+        </label>
+        <label>
+          <span>Stato</span>
+          <select id="overviewStatusFilter" aria-label="Filtra quadro classe per stato">
+            <option value="">Tutti</option>
+          </select>
+        </label>
+        <label>
+          <span>Modalita</span>
+          <select id="overviewSupportFilter" aria-label="Filtra quadro classe per modalita supporto">
+            <option value="">Tutte</option>
+          </select>
+        </label>
+      </div>
+      <div class="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Studente</th>
+              <th>Activity</th>
+              <th>Tipo</th>
+              <th>Modalita</th>
+              <th>Scadenza</th>
+              <th>Stato</th>
+              <th>Test</th>
+              <th>Voto</th>
+              <th>Registro</th>
+            </tr>
+          </thead>
+          <tbody id="overviewBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panelHead">
+        <div>
           <h2>Filtro consegne</h2>
           <p class="status">Usa i filtri per isolare mancanti, ritardi ed esiti di grading.</p>
         </div>

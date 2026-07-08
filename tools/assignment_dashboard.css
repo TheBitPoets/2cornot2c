@@ -168,6 +168,13 @@ select {
   padding: 1.1rem;
 }
 
+.overviewFilters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .8rem;
+  padding: 1.1rem 1.1rem 0;
+}
+
 label {
   display: grid;
   gap: .32rem;
@@ -492,6 +499,10 @@ code {
   }
 
   .generateGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .overviewFilters {
     grid-template-columns: 1fr;
   }
 

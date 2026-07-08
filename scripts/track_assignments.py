@@ -384,6 +384,7 @@ def track_assignments(
         "activity_id": activity_id,
         "title": activity.get("titolo") or activity_id,
         "kind": activity.get("tipo"),
+        "student_support_mode": activity.get("student_support_mode") or activity.get("support_mode") or activity.get("modalita_studente") or "",
         "assigned_at": normalized_assigned_at,
         "due_at": normalized_due_at,
         "students": students,

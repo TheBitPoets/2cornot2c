@@ -6,9 +6,16 @@ const MAX_REVIEW_SPLIT_RATIO = 0.65;
 const state = {
   activities: [],
   reports: [],
+  overviewRows: [],
   report: null,
   reportName: "",
   filter: "all",
+  overviewFilters: {
+    student: "",
+    kind: "",
+    status: "",
+    support: "",
+  },
   reviewStudent: null,
   reviewFilePath: "",
   reviewFile: null,
@@ -21,6 +28,12 @@ const els = {
   reloadBtn: document.querySelector("#reloadBtn"),
   status: document.querySelector("#status"),
   reportSummary: document.querySelector("#reportSummary"),
+  overviewStatus: document.querySelector("#overviewStatus"),
+  overviewBody: document.querySelector("#overviewBody"),
+  overviewStudentFilter: document.querySelector("#overviewStudentFilter"),
+  overviewKindFilter: document.querySelector("#overviewKindFilter"),
+  overviewStatusFilter: document.querySelector("#overviewStatusFilter"),
+  overviewSupportFilter: document.querySelector("#overviewSupportFilter"),
   tableStatus: document.querySelector("#tableStatus"),
   studentsBody: document.querySelector("#studentsBody"),
   reviewStatus: document.querySelector("#reviewStatus"),
@@ -216,6 +229,14 @@ async function loadReports() {
   setStatus(state.reports.length ? `Registri disponibili: ${state.reports.length}.` : "Nessun registro trovato in teacher-reports.");
 }
 
+async function loadOverview() {
+  els.overviewStatus.textContent = "Caricamento quadro classe...";
+  const payload = await api("/api/assignment-overview");
+  state.overviewRows = payload.rows || [];
+  renderOverviewFilters();
+  renderOverview();
+}
+
 function renderReportSelect() {
   const selected = els.reportSelect.value;
   els.reportSelect.innerHTML = '<option value="">Registri consegne</option>';
@@ -284,6 +305,92 @@ function renderActivitySelect() {
   els.activitySelect.value = state.activities.some((activity) => activity.path === current) ? current : "";
 }
 
+function uniqueSorted(values) {
+  return [...new Set(values
+    .filter((value) => value !== null && value !== undefined && String(value).trim() !== "")
+    .map(String))]
+    .sort((a, b) => a.localeCompare(b, "it"));
+}
+
+function renderSelectOptions(select, values, currentValue, emptyLabel = "Tutti") {
+  select.innerHTML = `<option value="">${escapeHtml(emptyLabel)}</option>`;
+  for (const value of values) {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = value;
+    select.append(option);
+  }
+  select.value = values.includes(currentValue) ? currentValue : "";
+}
+
+function renderOverviewFilters() {
+  const rows = state.overviewRows;
+  renderSelectOptions(els.overviewStudentFilter, uniqueSorted(rows.map((row) => row.student)), state.overviewFilters.student);
+  renderSelectOptions(els.overviewKindFilter, uniqueSorted(rows.map((row) => row.kind || "tipo non indicato")), state.overviewFilters.kind);
+  renderSelectOptions(els.overviewStatusFilter, uniqueSorted(rows.map((row) => row.status || "stato non indicato")), state.overviewFilters.status);
+  renderSelectOptions(els.overviewSupportFilter, uniqueSorted(rows.map((row) => row.student_support_mode || "non indicata")), state.overviewFilters.support, "Tutte");
+  state.overviewFilters.student = els.overviewStudentFilter.value;
+  state.overviewFilters.kind = els.overviewKindFilter.value;
+  state.overviewFilters.status = els.overviewStatusFilter.value;
+  state.overviewFilters.support = els.overviewSupportFilter.value;
+}
+
+function filteredOverviewRows() {
+  return state.overviewRows.filter((row) => {
+    const kind = row.kind || "tipo non indicato";
+    const status = row.status || "stato non indicato";
+    const support = row.student_support_mode || "non indicata";
+    return (!state.overviewFilters.student || row.student === state.overviewFilters.student)
+      && (!state.overviewFilters.kind || kind === state.overviewFilters.kind)
+      && (!state.overviewFilters.status || status === state.overviewFilters.status)
+      && (!state.overviewFilters.support || support === state.overviewFilters.support);
+  });
+}
+
+function renderOverview() {
+  const rows = filteredOverviewRows();
+  els.overviewStatus.textContent = state.overviewRows.length
+    ? `Mostrate ${rows.length}/${state.overviewRows.length} righe activity-studente.`
+    : "Nessun registro salvato in teacher-reports.";
+  els.overviewBody.innerHTML = "";
+  if (!state.overviewRows.length) {
+    els.overviewBody.innerHTML = '<tr><td colspan="9">Genera o carica almeno un registro consegne.</td></tr>';
+    return;
+  }
+  if (!rows.length) {
+    els.overviewBody.innerHTML = '<tr><td colspan="9">Nessuna activity per questi filtri.</td></tr>';
+    return;
+  }
+  for (const row of rows) {
+    const testText = row.tests_total == null ? "-" : `${row.tests_passed ?? "-"}/${row.tests_total}`;
+    const grade = row.teacher_grade ?? row.score ?? "-";
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><strong>${escapeHtml(row.student || "-")}</strong></td>
+      <td>
+        <strong>${escapeHtml(row.title || row.activity_id || "-")}</strong><br>
+        <small>${escapeHtml(row.activity_id || "-")}</small>
+      </td>
+      <td>${escapeHtml(row.kind || "-")}</td>
+      <td>${escapeHtml(row.student_support_mode || "-")}</td>
+      <td>${escapeHtml(formatDate(row.due_at))}</td>
+      <td>${badge(row.status, statusKind(row.status, row.late, { status: row.grading_status }))}</td>
+      <td>
+        <code>${escapeHtml(testText)}</code>
+        ${row.failed_tests?.length ? gradingDetails({ status: row.grading_status, failed_tests: row.failed_tests, tests: [] }) : ""}
+      </td>
+      <td><code>${escapeHtml(grade)}</code></td>
+      <td>
+        <button type="button" class="smallButton" data-overview-report="${escapeHtml(row.report_name)}" data-overview-student="${escapeHtml(row.student || "")}">
+          Apri
+        </button><br>
+        <small>${escapeHtml(row.report_name || "-")}</small>
+      </td>
+    `;
+    els.overviewBody.append(tr);
+  }
+}
+
 async function generateReport() {
   els.generateReportBtn.disabled = true;
   setStatus("Generazione registro consegne...");
@@ -304,6 +411,7 @@ async function generateReport() {
     state.reports = payload.reports || [];
     renderReportSelect();
     els.reportSelect.value = payload.saved?.name || "";
+    await loadOverview();
     clearReview();
     renderDashboard();
     setStatus(`Registro generato e caricato: ${payload.saved?.path || payload.saved?.name}.`);
@@ -584,13 +692,36 @@ function selectActivity(path) {
 }
 
 els.loadReportBtn.addEventListener("click", loadSelectedReport);
-els.reloadBtn.addEventListener("click", loadReports);
+els.reloadBtn.addEventListener("click", async () => {
+  await loadReports();
+  await loadOverview();
+});
 els.generateReportBtn.addEventListener("click", generateReport);
 els.reportSelect.addEventListener("change", loadSelectedReport);
 els.activitySelect.addEventListener("change", () => {
   if (els.activitySelect.value) selectActivity(els.activitySelect.value);
 });
 els.activityPath.addEventListener("input", renderActivitySelect);
+[
+  [els.overviewStudentFilter, "student"],
+  [els.overviewKindFilter, "kind"],
+  [els.overviewStatusFilter, "status"],
+  [els.overviewSupportFilter, "support"],
+].forEach(([select, key]) => {
+  select.addEventListener("change", () => {
+    state.overviewFilters[key] = select.value;
+    renderOverview();
+  });
+});
+els.overviewBody.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-overview-report]");
+  if (!button) return;
+  els.reportSelect.value = button.dataset.overviewReport;
+  await loadSelectedReport();
+  if (button.dataset.overviewStudent) {
+    openSubmission(button.dataset.overviewStudent);
+  }
+});
 els.studentsBody.addEventListener("click", (event) => {
   const button = event.target.closest("[data-review-student]");
   if (!button || button.disabled) return;
@@ -642,4 +773,4 @@ els.filterButtons.forEach((button) => {
 });
 
 setFilter("all");
-Promise.all([loadReports(), loadActivities()]).catch((error) => setStatus(`Errore: ${error.message}`));
+Promise.all([loadReports(), loadActivities(), loadOverview()]).catch((error) => setStatus(`Errore: ${error.message}`));

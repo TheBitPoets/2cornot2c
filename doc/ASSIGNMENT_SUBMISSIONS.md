@@ -489,10 +489,13 @@ La vista mostra:
 | Sezione | Cosa mostra |
 |---|---|
 | Registro selezionato | activity, scadenza, numero studenti, consegnati, mancanti, ritardi |
+| Quadro classe | tutte le activity salvate nei registri, per studente, con tipo, modalita, stato, test e voto |
 | Filtro consegne | tutti, da consegnare, mancanti, consegnati, in ritardo, test falliti |
 | Studenti | stato, scadenza, data consegna, commit, sorgente, grading, voto, stato AI |
 
 La dashboard non ricalcola il grading: visualizza il formato prodotto da `scripts/track_assignments.py`. In questo modo CLI, test e GUI restano allineati allo stesso contratto JSON.
+
+Il `Quadro classe` aggrega tutti i file JSON presenti in `teacher-reports`. Serve per avere una vista trasversale: tutte le consegne di tutti gli studenti, filtrabili per studente, tipo di activity, stato e modalita di supporto. Da ogni riga si puo aprire il registro collegato e, quando disponibile, la consegna dello studente.
 
 ### Generare il registro dalla GUI
 
