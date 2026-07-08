@@ -355,7 +355,7 @@ label {
 }
 
 #coverageTable {
-  min-width: 72rem;
+  min-width: 82rem;
 }
 
 .coverageOk { background: #f5fbf7; }
@@ -689,7 +689,7 @@ label {
 
 .summaryGrid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
   gap: .8rem;
   padding: 1.1rem;
 }
@@ -878,6 +878,7 @@ th.isResizableColumn:hover {
 .typeUnknownRow td:first-child { border-left-color: #8a8a8a; }
 
 .typeBadge,
+.classBadge,
 .studentName {
   display: inline-flex;
   width: fit-content;
@@ -891,6 +892,7 @@ th.isResizableColumn:hover {
   overflow-wrap: anywhere;
 }
 
+.classBadge { background: #eef4f8; color: #28506a; }
 .typeHomework { background: #eaf1ff; color: #1e4fa8; }
 .typeLab { background: #e5f6ef; color: #0f684a; }
 .typeClasswork { background: #fff1df; color: #81501a; }

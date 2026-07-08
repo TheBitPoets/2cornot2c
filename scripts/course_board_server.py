@@ -259,6 +259,9 @@ def list_assignment_reports() -> list[dict]:
                 "path": str(path.relative_to(ROOT)).replace("\\", "/"),
                 "activity_id": payload.get("activity_id", ""),
                 "title": payload.get("title", ""),
+                "class_id": payload.get("class_id", ""),
+                "class_label": payload.get("class_label", ""),
+                "github_team": payload.get("github_team", ""),
                 "due_at": payload.get("due_at", ""),
                 "students": len(students),
                 "submitted": submitted,
@@ -305,6 +308,9 @@ def assignment_overview() -> list[dict]:
                     "report_path": report["path"],
                     "activity_id": payload.get("activity_id", ""),
                     "title": payload.get("title", ""),
+                    "class_id": payload.get("class_id", ""),
+                    "class_label": payload.get("class_label", ""),
+                    "github_team": payload.get("github_team", ""),
                     "kind": payload.get("kind", ""),
                     "student_support_mode": payload.get("student_support_mode", ""),
                     "assigned_at": payload.get("assigned_at", ""),
@@ -348,12 +354,16 @@ def list_activities() -> list[dict]:
                 continue
             if not isinstance(payload, dict) or not payload.get("id"):
                 continue
+            context = payload.get("contesto") if isinstance(payload.get("contesto"), dict) else {}
             activities.append(
                 {
                     "id": payload.get("id", ""),
                     "title": payload.get("titolo", ""),
                     "kind": payload.get("tipo", ""),
                     "student_support_mode": payload.get("student_support_mode") or payload.get("support_mode") or payload.get("modalita_studente") or "",
+                    "class_id": context.get("classe", ""),
+                    "class_label": context.get("classe", ""),
+                    "github_team": context.get("team_github", ""),
                     "language": payload.get("linguaggio") or payload.get("language", ""),
                     "path": str(path.relative_to(ROOT)).replace("\\", "/"),
                 }
@@ -446,6 +456,9 @@ def generate_assignment_report(payload: dict) -> dict:
         assigned_at=payload.get("assigned_at") or None,
         due_at=payload.get("due_at") or None,
         now=payload.get("now") or None,
+        class_id=payload.get("class_id") or None,
+        class_label=payload.get("class_label") or None,
+        github_team=payload.get("github_team") or None,
     )
     track_assignments.write_tracking_index(index, output_path)
     return {

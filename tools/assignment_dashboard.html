@@ -56,6 +56,18 @@
           <input id="outputName" type="text" value="demo/demo_assignment.json">
         </label>
         <label>
+          <span>Classe</span>
+          <input id="classId" type="text" value="demo" placeholder="3A-TPSI">
+        </label>
+        <label>
+          <span>Etichetta classe</span>
+          <input id="classLabel" type="text" value="Classe demo" placeholder="3A TPSI">
+        </label>
+        <label>
+          <span>Team GitHub</span>
+          <input id="githubTeam" type="text" placeholder="3A-TPSI">
+        </label>
+        <label>
           <span>Assegnato il</span>
           <input id="assignedAt" type="text" value="2026-10-12T09:00:00+02:00">
         </label>
@@ -108,6 +120,12 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
       </div>
       <div class="overviewFilters">
         <label>
+          <span>Classe</span>
+          <select id="overviewClassFilter" aria-label="Filtra quadro classe per classe">
+            <option value="">Tutte</option>
+          </select>
+        </label>
+        <label>
           <span>Studente</span>
           <select id="overviewStudentFilter" aria-label="Filtra quadro classe per studente">
             <option value="">Tutti</option>
@@ -140,6 +158,7 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
         <table id="overviewListTable" class="resizableTable">
           <thead>
             <tr>
+              <th><button type="button" class="sortButton" data-overview-sort="class" title="Ordina le righe per classe.">Classe</button></th>
               <th><button type="button" class="sortButton" data-overview-sort="student" title="Ordina le righe per studente: crescente, decrescente, poi reset.">Studente</button></th>
               <th><button type="button" class="sortButton" data-overview-sort="activity" title="Ordina le righe per titolo o id activity: crescente, decrescente, poi reset.">Activity</button></th>
               <th><button type="button" class="sortButton" data-overview-sort="kind" title="Ordina le righe per tipo di consegna secondo l'ordine didattico.">Tipo</button></th>
@@ -211,6 +230,7 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
         <thead>
           <tr>
             <th>Activity</th>
+            <th>Classe</th>
             <th>Tipo</th>
             <th>Modalita</th>
             <th>Stato</th>

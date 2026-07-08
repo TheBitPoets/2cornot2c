@@ -32,6 +32,7 @@ const state = {
   reportName: "",
   filter: "all",
   overviewFilters: {
+    class: "",
     student: "",
     kind: "",
     status: "",
@@ -66,6 +67,7 @@ const els = {
   reportSummary: document.querySelector("#reportSummary"),
   overviewStatus: document.querySelector("#overviewStatus"),
   overviewBody: document.querySelector("#overviewBody"),
+  overviewClassFilter: document.querySelector("#overviewClassFilter"),
   overviewStudentFilter: document.querySelector("#overviewStudentFilter"),
   overviewKindFilter: document.querySelector("#overviewKindFilter"),
   overviewStatusFilter: document.querySelector("#overviewStatusFilter"),
@@ -97,6 +99,9 @@ const els = {
   activitySelect: document.querySelector("#activitySelect"),
   activityPath: document.querySelector("#activityPath"),
   outputName: document.querySelector("#outputName"),
+  classId: document.querySelector("#classId"),
+  classLabel: document.querySelector("#classLabel"),
+  githubTeam: document.querySelector("#githubTeam"),
   assignedAt: document.querySelector("#assignedAt"),
   dueAt: document.querySelector("#dueAt"),
   nowAt: document.querySelector("#nowAt"),
@@ -277,6 +282,23 @@ function formatDate(value) {
   });
 }
 
+function classValue(entity) {
+  return entity?.class_label || entity?.class_id || entity?.github_team || "classe non indicata";
+}
+
+function classBadge(entity) {
+  return `<span class="classBadge">${escapeHtml(classValue(entity))}</span>`;
+}
+
+function slugPathSegment(value, fallback = "classe-non-indicata") {
+  return String(value || fallback)
+    .trim()
+    .toLowerCase()
+    .replaceAll("\\", "/")
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "") || fallback;
+}
+
 async function loadReports() {
   setStatus("Caricamento registri...");
   const payload = await api("/api/assignment-reports");
@@ -302,7 +324,7 @@ function renderReportSelect() {
     const option = document.createElement("option");
     option.value = report.name;
     const title = report.title || report.activity_id || report.name;
-    option.textContent = `${report.name} - ${title} - ${report.students} studenti`;
+    option.textContent = `${classValue(report)} - ${report.name} - ${title} - ${report.students} studenti`;
     els.reportSelect.append(option);
   }
   els.reportSelect.value = selected;
@@ -540,7 +562,7 @@ function renderActivitySelect() {
     const option = document.createElement("option");
     option.value = activity.path;
     option.dataset.activityId = activity.id;
-    option.textContent = `${activity.id} - ${activity.title || activity.path}`;
+    option.textContent = `${classValue(activity)} - ${activity.id} - ${activity.title || activity.path}`;
     els.activitySelect.append(option);
   }
   const current = els.activityPath.value.trim().replaceAll("\\", "/");
@@ -567,9 +589,13 @@ function reportCoverageRows() {
   });
 }
 
+function currentClassId(activity = null) {
+  return els.classId.value.trim() || activity?.class_id || activity?.github_team || "classe-non-indicata";
+}
+
 function defaultOutputName(activity) {
   const id = activity?.id || "registro";
-  return `demo/${id}.json`;
+  return `${slugPathSegment(currentClassId(activity))}/${id}.json`;
 }
 
 function selectCoverageActivity(activityPath, outputName = "") {
@@ -696,7 +722,7 @@ function renderCoverage() {
   `;
   els.coverageBody.innerHTML = "";
   if (!rows.length) {
-    els.coverageBody.innerHTML = '<tr><td colspan="7">Nessuna activity disponibile.</td></tr>';
+    els.coverageBody.innerHTML = '<tr><td colspan="8">Nessuna activity disponibile.</td></tr>';
     setupResizableTable(els.coverageTable, "coverage");
     return;
   }
@@ -729,6 +755,7 @@ function renderCoverage() {
           <small>${escapeHtml(activity.id || "-")}</small><br>
           <small>${escapeHtml(activity.path || "-")}</small>
         </td>
+        <td>${report ? classBadge(report) : classBadge(activity)}</td>
         <td>${kindLabel(activity.kind)}</td>
         <td>${escapeHtml(activity.student_support_mode || "-")}</td>
         <td>${badge(outcome.label, outcome.kind === "muted" && !report ? "warn" : outcome.kind)}</td>
@@ -769,10 +796,12 @@ function renderSelectOptions(select, values, currentValue, emptyLabel = "Tutti")
 
 function renderOverviewFilters() {
   const rows = state.overviewRows;
+  renderSelectOptions(els.overviewClassFilter, uniqueSorted(rows.map((row) => classValue(row))), state.overviewFilters.class, "Tutte");
   renderSelectOptions(els.overviewStudentFilter, uniqueSorted(rows.map((row) => row.student)), state.overviewFilters.student);
   renderSelectOptions(els.overviewKindFilter, uniqueSorted(rows.map((row) => row.kind || "tipo non indicato")), state.overviewFilters.kind);
   renderSelectOptions(els.overviewStatusFilter, uniqueSorted(rows.map((row) => row.status || "stato non indicato")), state.overviewFilters.status);
   renderSelectOptions(els.overviewSupportFilter, uniqueSorted(rows.map((row) => row.student_support_mode || "non indicata")), state.overviewFilters.support, "Tutte");
+  state.overviewFilters.class = els.overviewClassFilter.value;
   state.overviewFilters.student = els.overviewStudentFilter.value;
   state.overviewFilters.kind = els.overviewKindFilter.value;
   state.overviewFilters.status = els.overviewStatusFilter.value;
@@ -781,10 +810,12 @@ function renderOverviewFilters() {
 
 function filteredOverviewRows() {
   return state.overviewRows.filter((row) => {
+    const classLabel = classValue(row);
     const kind = row.kind || "tipo non indicato";
     const status = row.status || "stato non indicato";
     const support = row.student_support_mode || "non indicata";
-    return (!state.overviewFilters.student || row.student === state.overviewFilters.student)
+    return (!state.overviewFilters.class || classLabel === state.overviewFilters.class)
+      && (!state.overviewFilters.student || row.student === state.overviewFilters.student)
       && (!state.overviewFilters.kind || kind === state.overviewFilters.kind)
       && (!state.overviewFilters.status || status === state.overviewFilters.status)
       && (!state.overviewFilters.support || support === state.overviewFilters.support);
@@ -797,6 +828,7 @@ function orderIndex(order, value) {
 }
 
 function overviewSortValue(row, column) {
+  if (column === "class") return classValue(row);
   if (column === "student") return row.student || "";
   if (column === "activity") return `${row.title || ""} ${row.activity_id || ""}`.trim();
   if (column === "kind") return orderIndex(OVERVIEW_TYPE_ORDER, row.kind || "");
@@ -869,7 +901,7 @@ function renderOverviewViewTabs() {
 }
 
 function activityKey(row) {
-  return row.activity_id || row.title || row.report_name || "";
+  return `${classValue(row)}::${row.report_name || row.activity_id || row.title || ""}`;
 }
 
 function activityLabel(row) {
@@ -954,6 +986,7 @@ function renderOverviewMatrix(rows) {
     ${activities.map((activity) => `
       <th class="matrixActivityHeader ${kindRowClass(activity.kind)}">
         <span>${escapeHtml(activityLabel(activity))}</span>
+        <small>${escapeHtml(classValue(activity))}</small>
         <small>${escapeHtml(activity.kind || "-")}</small>
       </th>
     `).join("")}
@@ -998,13 +1031,13 @@ function renderOverview() {
   }
   els.overviewBody.innerHTML = "";
   if (!state.overviewRows.length) {
-    els.overviewBody.innerHTML = '<tr><td colspan="9">Genera o carica almeno un registro consegne.</td></tr>';
+    els.overviewBody.innerHTML = '<tr><td colspan="10">Genera o carica almeno un registro consegne.</td></tr>';
     renderOverviewMatrix(rows);
     setupResizableTables();
     return;
   }
   if (!rows.length) {
-    els.overviewBody.innerHTML = '<tr><td colspan="9">Nessuna activity per questi filtri.</td></tr>';
+    els.overviewBody.innerHTML = '<tr><td colspan="10">Nessuna activity per questi filtri.</td></tr>';
     renderOverviewMatrix(rows);
     setupResizableTables();
     return;
@@ -1015,6 +1048,7 @@ function renderOverview() {
     const tr = document.createElement("tr");
     tr.className = `overviewRow ${kindRowClass(row.kind)}`;
     tr.innerHTML = `
+      <td>${classBadge(row)}</td>
       <td>${studentLabel(row.student)}</td>
       <td>
         <strong>${escapeHtml(row.title || row.activity_id || "-")}</strong><br>
@@ -1051,6 +1085,9 @@ async function generateReport() {
       body: JSON.stringify({
         activity_path: els.activityPath.value,
         output_name: els.outputName.value,
+        class_id: els.classId.value,
+        class_label: els.classLabel.value,
+        github_team: els.githubTeam.value,
         assigned_at: els.assignedAt.value,
         due_at: els.dueAt.value,
         now: els.nowAt.value,
@@ -1181,6 +1218,7 @@ function renderSummary(students) {
   }
   const counts = summaryCounts(students);
   const cards = [
+    ["Classe", classValue(state.report)],
     ["Activity", state.report.activity_id || "-"],
     ["Scadenza", formatDate(state.report.due_at)],
     ["Studenti", counts.total],
@@ -1479,8 +1517,16 @@ function selectActivity(path) {
   els.activityPath.value = path;
   const activity = state.activities.find((candidate) => candidate.path === path);
   if (activity?.id) {
-    els.outputName.value = `demo/${activity.id}_assignment.json`;
+    if (activity.class_id) els.classId.value = activity.class_id;
+    if (activity.class_label) els.classLabel.value = activity.class_label;
+    if (activity.github_team) els.githubTeam.value = activity.github_team;
+    els.outputName.value = defaultOutputName(activity);
   }
+}
+
+function updateOutputNameForCurrentActivity() {
+  const activity = state.activities.find((candidate) => candidate.path === els.activityPath.value.trim().replaceAll("\\", "/"));
+  if (activity?.id) els.outputName.value = defaultOutputName(activity);
 }
 
 function openCoverageDialog() {
@@ -1529,6 +1575,7 @@ els.activitySelect.addEventListener("change", () => {
   if (els.activitySelect.value) selectActivity(els.activitySelect.value);
 });
 els.activityPath.addEventListener("input", renderActivitySelect);
+els.classId.addEventListener("change", updateOutputNameForCurrentActivity);
 els.coverageBody.addEventListener("click", async (event) => {
   const toggleButton = event.target.closest("[data-coverage-toggle]");
   const selectButton = event.target.closest("[data-coverage-select]");
@@ -1562,6 +1609,7 @@ els.coverageBody.addEventListener("click", async (event) => {
   }
 });
 [
+  [els.overviewClassFilter, "class"],
   [els.overviewStudentFilter, "student"],
   [els.overviewKindFilter, "kind"],
   [els.overviewStatusFilter, "status"],

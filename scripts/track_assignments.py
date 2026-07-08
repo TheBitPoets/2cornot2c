@@ -334,6 +334,17 @@ def ai_feedback_placeholder() -> dict[str, Any]:
     }
 
 
+def activity_context(activity: dict[str, Any]) -> dict[str, Any]:
+    """Return the optional didactic context from an activity."""
+    context = activity.get("contesto")
+    return context if isinstance(context, dict) else {}
+
+
+def clean_metadata(value: str | None) -> str:
+    """Normalize optional text metadata for JSON output."""
+    return str(value or "").strip()
+
+
 def track_assignments(
     *,
     activity_path: Path,
@@ -341,6 +352,9 @@ def track_assignments(
     assigned_at: str | None = None,
     due_at: str | None = None,
     now: str | None = None,
+    class_id: str | None = None,
+    class_label: str | None = None,
+    github_team: str | None = None,
 ) -> dict[str, Any]:
     """Build a teacher-facing tracking index for one activity."""
     activity = create_submission_scaffold.load_activity(activity_path)
@@ -349,6 +363,10 @@ def track_assignments(
     normalized_assigned_at = parse_datetime(assigned_at, "assigned_at")
     normalized_due_at = parse_datetime(due_at, "due_at")
     normalized_now = parse_datetime(now, "now")
+    context = activity_context(activity)
+    normalized_class_id = clean_metadata(class_id) or clean_metadata(context.get("classe"))
+    normalized_class_label = clean_metadata(class_label) or normalized_class_id
+    normalized_github_team = clean_metadata(github_team) or clean_metadata(context.get("team_github"))
 
     students: list[dict[str, Any]] = []
     for target in targets:
@@ -395,6 +413,9 @@ def track_assignments(
         "title": activity.get("titolo") or activity_id,
         "kind": activity.get("tipo"),
         "student_support_mode": activity.get("student_support_mode") or activity.get("support_mode") or activity.get("modalita_studente") or "",
+        "class_id": normalized_class_id,
+        "class_label": normalized_class_label,
+        "github_team": normalized_github_team,
         "assigned_at": normalized_assigned_at,
         "due_at": normalized_due_at,
         "students": students,
@@ -416,6 +437,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--assigned-at", help="Data ISO di assegnazione.")
     parser.add_argument("--due-at", help="Data ISO di scadenza.")
     parser.add_argument("--now", help="Data ISO da usare come riferimento temporale nei test o nelle simulazioni.")
+    parser.add_argument("--class-id", help="Identificativo classe dell'assegnazione, per esempio 3A-TPSI.")
+    parser.add_argument("--class-label", help="Etichetta leggibile della classe, per esempio 3A TPSI.")
+    parser.add_argument("--github-team", help="Team GitHub classe associato all'assegnazione.")
     parser.add_argument("--output", type=Path, required=True, help="Path JSON del registro generato.")
     return parser.parse_args()
 
@@ -431,6 +455,9 @@ def main() -> int:
             assigned_at=args.assigned_at,
             due_at=args.due_at,
             now=args.now,
+            class_id=args.class_id,
+            class_label=args.class_label,
+            github_team=args.github_team,
         )
         write_tracking_index(index, args.output)
     except ValueError as error:
