@@ -67,6 +67,15 @@ def load_report(path: Path) -> dict[str, Any] | None:
     return report
 
 
+def validate_report_activity(report: dict[str, Any], expected_activity_id: str, report_path: Path) -> None:
+    """Ensure a grading report belongs to the tracked activity."""
+    report_activity_id = report.get("activity_id")
+    if report_activity_id is not None and report_activity_id != expected_activity_id:
+        raise ValueError(
+            f"Report non coerente per {report_path}: atteso {expected_activity_id}, trovato {report_activity_id}."
+        )
+
+
 def submission_status(
     *,
     submitted: bool,
@@ -145,6 +154,8 @@ def track_assignments(
     for target in targets:
         report_path = default_report_path(target, activity_id)
         report = load_report(report_path)
+        if report is not None:
+            validate_report_activity(report, activity_id, report_path)
         source_path = report.get("source") if report else None
         submitted = report is not None
         submitted_at = report.get("submitted_at") if report else None
