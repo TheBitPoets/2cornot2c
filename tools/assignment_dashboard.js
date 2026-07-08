@@ -122,7 +122,7 @@ function summaryCounts(students) {
 }
 
 function renderDashboard() {
-  const students = state.report?.students || [];
+  const students = Array.isArray(state.report?.students) ? state.report.students : [];
   renderSummary(students);
   renderStudents(students);
 }

@@ -263,6 +263,8 @@ def read_assignment_report(name: str) -> dict:
     payload = json.loads(path.read_text(encoding="utf-8-sig"))
     if not isinstance(payload, dict):
         raise ValueError(f"Registro consegne non valido: {name}")
+    if not isinstance(payload.get("students"), list):
+        raise ValueError("Registro consegne non valido: students deve essere una lista.")
     return payload
 
 
