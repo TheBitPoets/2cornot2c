@@ -408,12 +408,14 @@ Per ogni studente contiene:
 | Campo | Significato |
 |---|---|
 | `assigned` | Lo studente era tra i destinatari della consegna |
-| `submitted` | Esiste una consegna o un report locale associato |
+| `submitted` | Esiste un report locale valido e coerente con l'activity corrente |
 | `status` | Stato sintetico: `missing`, `submitted_on_time`, `submitted_late`, `not_graded`, ecc. |
 | `due_at` | Scadenza della consegna |
 | `submission` | Dati della consegna: sorgente, data invio, commit se disponibile |
 | `grading` | Esito deterministico, test superati, voto docente se presente |
 | `ai_feedback` | Placeholder per feedback AI assisted approvabile dal docente |
+
+La cartella `assignments/<activity_id>/` non basta per considerare consegnata l'attivita: puo essere stata creata dal docente durante l'assegnazione.
 
 Esempio ridotto:
 
