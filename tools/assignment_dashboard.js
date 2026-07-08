@@ -365,13 +365,14 @@ function renderOverview() {
     const testText = row.tests_total == null ? "-" : `${row.tests_passed ?? "-"}/${row.tests_total}`;
     const grade = row.teacher_grade ?? row.score ?? "-";
     const tr = document.createElement("tr");
+    tr.className = `overviewRow ${kindRowClass(row.kind)}`;
     tr.innerHTML = `
-      <td><strong>${escapeHtml(row.student || "-")}</strong></td>
+      <td>${studentLabel(row.student)}</td>
       <td>
         <strong>${escapeHtml(row.title || row.activity_id || "-")}</strong><br>
         <small>${escapeHtml(row.activity_id || "-")}</small>
       </td>
-      <td>${escapeHtml(row.kind || "-")}</td>
+      <td>${kindLabel(row.kind)}</td>
       <td>${escapeHtml(row.student_support_mode || "-")}</td>
       <td>${escapeHtml(formatDate(row.due_at))}</td>
       <td>${badge(row.status, statusKind(row.status, row.late, { status: row.grading_status }))}</td>
@@ -429,6 +430,42 @@ function statusKind(status, late, grading) {
   if (grading?.status === "graded_failed") return "bad";
   if (status?.startsWith("submitted")) return "ok";
   return "muted";
+}
+
+function kindClass(kind) {
+  return {
+    "compito-casa": "typeHomework",
+    laboratorio: "typeLab",
+    "esercizio-classe": "typeClasswork",
+    "studio-guidato": "typeGuidedStudy",
+    "verifica-pratica": "typePracticalTest",
+    "verifica-scritta": "typeWrittenTest",
+    "debug-didattico": "typeDebug",
+  }[kind] || "typeUnknown";
+}
+
+function kindRowClass(kind) {
+  return `${kindClass(kind)}Row`;
+}
+
+function kindLabel(kind) {
+  return `<span class="typeBadge ${kindClass(kind)}">${escapeHtml(kind || "-")}</span>`;
+}
+
+function stableColorIndex(value, size) {
+  const text = String(value || "");
+  let hash = 0;
+  for (let index = 0; index < text.length; index += 1) {
+    hash = ((hash << 5) - hash) + text.charCodeAt(index);
+    hash |= 0;
+  }
+  return Math.abs(hash) % size;
+}
+
+function studentLabel(studentName) {
+  const name = studentName || "-";
+  const colorIndex = stableColorIndex(name, 7) + 1;
+  return `<span class="studentName studentName${colorIndex}">${escapeHtml(name)}</span>`;
 }
 
 function badge(text, kind = "muted") {
@@ -539,7 +576,7 @@ function renderStudents(students) {
     const row = document.createElement("tr");
     row.innerHTML = `
       <td>
-        <strong>${escapeHtml(student.student)}</strong><br>
+        ${studentLabel(student.student)}<br>
         <small>${escapeHtml(student.repo)}</small>
       </td>
       <td>${badge(student.status, statusKind(student.status, student.late, grading))}</td>

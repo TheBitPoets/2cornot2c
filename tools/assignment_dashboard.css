@@ -307,6 +307,62 @@ th {
 .badgeBad { background: #fdecea; color: #8f1d14; }
 .badgeMuted { background: #eeeeee; color: #666666; }
 
+.overviewRow {
+  border-left: 4px solid transparent;
+}
+
+.overviewRow td:first-child {
+  border-left: 4px solid transparent;
+}
+
+.typeHomeworkRow { border-left-color: #2f6fed; }
+.typeLabRow { border-left-color: #16825d; }
+.typeClassworkRow { border-left-color: #b45f06; }
+.typeGuidedStudyRow { border-left-color: #7a3db8; }
+.typePracticalTestRow { border-left-color: #b3261e; }
+.typeWrittenTestRow { border-left-color: #56616f; }
+.typeDebugRow { border-left-color: #00838f; }
+.typeUnknownRow { border-left-color: #8a8a8a; }
+.typeHomeworkRow td:first-child { border-left-color: #2f6fed; }
+.typeLabRow td:first-child { border-left-color: #16825d; }
+.typeClassworkRow td:first-child { border-left-color: #b45f06; }
+.typeGuidedStudyRow td:first-child { border-left-color: #7a3db8; }
+.typePracticalTestRow td:first-child { border-left-color: #b3261e; }
+.typeWrittenTestRow td:first-child { border-left-color: #56616f; }
+.typeDebugRow td:first-child { border-left-color: #00838f; }
+.typeUnknownRow td:first-child { border-left-color: #8a8a8a; }
+
+.typeBadge,
+.studentName {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  align-items: center;
+  border-radius: 999px;
+  font-size: .76rem;
+  font-weight: 900;
+  line-height: 1.15;
+  padding: .28rem .55rem;
+  overflow-wrap: anywhere;
+}
+
+.typeHomework { background: #eaf1ff; color: #1e4fa8; }
+.typeLab { background: #e5f6ef; color: #0f684a; }
+.typeClasswork { background: #fff1df; color: #81501a; }
+.typeGuidedStudy { background: #f0e7fb; color: #63329a; }
+.typePracticalTest { background: #fde9e7; color: #8f1d14; }
+.typeWrittenTest { background: #eceff3; color: #3f4854; }
+.typeDebug { background: #e1f5f7; color: #006c77; }
+.typeUnknown { background: #eeeeee; color: #666666; }
+
+.studentName1 { background: #eaf1ff; color: #1e4fa8; }
+.studentName2 { background: #e5f6ef; color: #0f684a; }
+.studentName3 { background: #fff1df; color: #81501a; }
+.studentName4 { background: #f0e7fb; color: #63329a; }
+.studentName5 { background: #fde9e7; color: #8f1d14; }
+.studentName6 { background: #e1f5f7; color: #006c77; }
+.studentName7 { background: #eceff3; color: #3f4854; }
+
 .testDetails {
   display: grid;
   gap: .25rem;
