@@ -563,6 +563,61 @@ function selectCoverageActivity(activityPath, outputName = "") {
   els.activityPath.focus();
 }
 
+function reportIsExpired(report) {
+  const due = Date.parse(report?.due_at || "");
+  return Number.isFinite(due) && Date.now() > due;
+}
+
+function reportLock(report) {
+  return reportIsExpired(report) ? "🔒" : "🔓";
+}
+
+function reportOutcome(report) {
+  if (!report) return { kind: "muted", label: "nessun registro" };
+  const expired = reportIsExpired(report);
+  const notSubmitted = Number(report.not_submitted || 0);
+  const late = Number(report.late || 0);
+  const submitted = Number(report.submitted || 0);
+  const total = Number(report.students || 0);
+  if (expired && notSubmitted > 0) return { kind: "bad", label: `${notSubmitted} mancanti` };
+  if (late > 0) return { kind: "warn", label: `${late} ritardi` };
+  if (total > 0 && submitted === total) return { kind: "ok", label: "tutti in tempo" };
+  if (!expired && notSubmitted > 0) return { kind: "muted", label: `${notSubmitted} in corso` };
+  return { kind: "muted", label: "dati parziali" };
+}
+
+function coverageWorstKind(reports) {
+  if (!reports.length) return "missing";
+  const kinds = reports.map((report) => reportOutcome(report).kind);
+  if (kinds.includes("bad")) return "bad";
+  if (kinds.includes("warn")) return "warn";
+  if (kinds.every((kind) => kind === "ok")) return "ok";
+  return "muted";
+}
+
+function coverageActivityClass(reports) {
+  return {
+    bad: "coverageBad",
+    warn: "coverageWarn",
+    ok: "coverageOk",
+    muted: "coverageInProgress",
+    missing: "coverageMissing",
+  }[coverageWorstKind(reports)] || "coverageInProgress";
+}
+
+function coverageReportDetails(reports) {
+  if (!reports.length) return '<span class="coverageReportItem coverageReportMissing">nessun registro</span>';
+  return reports.map((report) => {
+    const outcome = reportOutcome(report);
+    return `
+      <span class="coverageReportItem coverageReport${outcome.kind}">
+        <button type="button" data-coverage-report="${escapeHtml(report.name)}">${escapeHtml(report.name)} ${reportLock(report)}</button>
+        ${badge(outcome.label, outcome.kind)}
+      </span>
+    `;
+  }).join("");
+}
+
 function renderCoverage() {
   if (!els.coverageBody) return;
   const rows = reportCoverageRows();
@@ -587,10 +642,10 @@ function renderCoverage() {
     const latest = reports[0];
     const hasReport = reports.length > 0;
     const tr = document.createElement("tr");
-    tr.className = hasReport ? "coveragePresent" : "coverageMissing";
+    tr.className = coverageActivityClass(reports);
     tr.innerHTML = `
       <td>
-        <strong>${escapeHtml(activity.title || activity.id)}</strong><br>
+        <strong class="coverageActivityName">${escapeHtml(activity.title || activity.id)}</strong><br>
         <small>${escapeHtml(activity.id || "-")}</small><br>
         <small>${escapeHtml(activity.path || "-")}</small>
       </td>
@@ -599,7 +654,7 @@ function renderCoverage() {
       <td>${badge(hasReport ? "presente" : "mancante", hasReport ? "ok" : "warn")}</td>
       <td>
         <code>${escapeHtml(reports.length)}</code>
-        ${reports.length > 1 ? `<br><small>${escapeHtml(reports.map((report) => report.name).join(", "))}</small>` : ""}
+        <div class="coverageReportList">${coverageReportDetails(reports)}</div>
       </td>
       <td>
         ${escapeHtml(formatDate(latest?.updated_at || latest?.due_at))}<br>

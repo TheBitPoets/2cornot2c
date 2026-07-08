@@ -278,9 +278,52 @@ label {
   font-weight: 900;
 }
 
-.coverageMissing {
-  background: #fffaf0;
+.coverageOk { background: #f5fbf7; }
+.coverageWarn { background: #fffaf0; }
+.coverageBad { background: #fff7f5; }
+.coverageInProgress { background: #f7f9ff; }
+.coverageMissing { background: #fffaf0; }
+
+.coverageOk .coverageActivityName { color: #0f6b3d; }
+.coverageWarn .coverageActivityName { color: #8a5a00; }
+.coverageBad .coverageActivityName { color: #8f1d14; }
+.coverageInProgress .coverageActivityName { color: #244f9e; }
+.coverageMissing .coverageActivityName { color: #8a5a00; }
+
+.coverageReportList {
+  display: grid;
+  gap: .35rem;
+  margin-top: .4rem;
 }
+
+.coverageReportItem {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+  align-items: center;
+}
+
+.coverageReportItem button {
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  border-radius: 0;
+  background: transparent;
+  color: #2457a6;
+  box-shadow: none;
+  font-size: .72rem;
+  padding: 0;
+}
+
+.coverageReportItem button:hover {
+  color: #12346b;
+  transform: none;
+}
+
+.coverageReportok button { color: #0f6b3d; }
+.coverageReportwarn button { color: #8a5a00; }
+.coverageReportbad button { color: #8f1d14; }
+.coverageReportmuted button { color: #56616f; }
+.coverageReportMissing { color: #8a5a00; font-size: .72rem; font-weight: 800; }
 
 .layout {
   display: grid;

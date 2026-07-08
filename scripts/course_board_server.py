@@ -249,6 +249,10 @@ def list_assignment_reports() -> list[dict]:
             payload = json.loads(path.read_text(encoding="utf-8-sig"))
         except Exception:  # noqa: BLE001
             payload = {}
+        students = payload.get("students", []) if isinstance(payload.get("students"), list) else []
+        submitted = sum(1 for student in students if isinstance(student, dict) and student.get("submitted"))
+        late = sum(1 for student in students if isinstance(student, dict) and student.get("late"))
+        not_submitted = sum(1 for student in students if isinstance(student, dict) and not student.get("submitted"))
         reports.append(
             {
                 "name": str(path.relative_to(TEACHER_REPORTS_DIR)).replace("\\", "/"),
@@ -256,7 +260,10 @@ def list_assignment_reports() -> list[dict]:
                 "activity_id": payload.get("activity_id", ""),
                 "title": payload.get("title", ""),
                 "due_at": payload.get("due_at", ""),
-                "students": len(payload.get("students", [])) if isinstance(payload.get("students"), list) else 0,
+                "students": len(students),
+                "submitted": submitted,
+                "late": late,
+                "not_submitted": not_submitted,
                 "updated_at": datetime.fromtimestamp(path.stat().st_mtime).isoformat(timespec="seconds"),
             }
         )
