@@ -1,0 +1,52 @@
+{
+  "passed": false,
+  "status": "failed",
+  "activity_id": "python-funzioni-statistiche-001",
+  "source": "assignments/python-funzioni-statistiche-001/main.py",
+  "files": [
+    {
+      "path": "assignments/python-funzioni-statistiche-001/main.py",
+      "role": "solution"
+    },
+    {
+      "path": "assignments/python-funzioni-statistiche-001/stats.py",
+      "role": "support"
+    },
+    {
+      "path": "assignments/python-funzioni-statistiche-001/notes.md",
+      "role": "notes"
+    }
+  ],
+  "submitted_at": "2026-11-06T08:05:00+01:00",
+  "commit": "stats222",
+  "summary": {
+    "passed": 2,
+    "total": 4
+  },
+  "teacher_grade": 5,
+  "tests": [
+    {
+      "name": "parse numeri separati da spazio",
+      "passed": false,
+      "status": "failed",
+      "message": "Il programma accetta solo valori separati da virgola."
+    },
+    {
+      "name": "minimo e massimo",
+      "passed": true,
+      "status": "passed"
+    },
+    {
+      "name": "media con decimali",
+      "passed": false,
+      "status": "failed",
+      "expected_stdout": "avg=18.00",
+      "actual_stdout": "avg=18"
+    },
+    {
+      "name": "formattazione riepilogo",
+      "passed": true,
+      "status": "passed"
+    }
+  ]
+}

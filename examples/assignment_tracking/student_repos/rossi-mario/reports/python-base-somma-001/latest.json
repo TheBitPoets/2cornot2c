@@ -9,5 +9,17 @@
     "passed": 2,
     "total": 2
   },
-  "teacher_grade": 8
+  "teacher_grade": 8,
+  "tests": [
+    {
+      "name": "stampa risultato somma",
+      "passed": true,
+      "status": "passed"
+    },
+    {
+      "name": "termina senza errori",
+      "passed": true,
+      "status": "passed"
+    }
+  ]
 }

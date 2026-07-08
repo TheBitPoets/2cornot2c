@@ -1,0 +1,44 @@
+{
+  "passed": true,
+  "status": "passed",
+  "activity_id": "c-stringhe-contatore-001",
+  "source": "assignments/c-stringhe-contatore-001/main.c",
+  "files": [
+    {
+      "path": "assignments/c-stringhe-contatore-001/main.c",
+      "role": "solution"
+    },
+    {
+      "path": "assignments/c-stringhe-contatore-001/text_utils.c",
+      "role": "support"
+    },
+    {
+      "path": "assignments/c-stringhe-contatore-001/text_utils.h",
+      "role": "support"
+    }
+  ],
+  "submitted_at": "2026-12-02T16:50:00+01:00",
+  "commit": "words111",
+  "summary": {
+    "passed": 3,
+    "total": 3
+  },
+  "teacher_grade": 9,
+  "tests": [
+    {
+      "name": "conta parole con spazi singoli",
+      "passed": true,
+      "status": "passed"
+    },
+    {
+      "name": "conta parole con spazi multipli",
+      "passed": true,
+      "status": "passed"
+    },
+    {
+      "name": "conta solo caratteri alfabetici",
+      "passed": true,
+      "status": "passed"
+    }
+  ]
+}
