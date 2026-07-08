@@ -1013,6 +1013,7 @@ Obiettivo:
 - usare provider AI gia configurati nella board;
 - generare feedback didattico da test e codice;
 - mantenere separata la valutazione deterministica dal commento AI.
+- distinguere feedback docente, feedback automatico e suggerimenti AI non valutativi.
 
 File possibili:
 
@@ -1020,7 +1021,40 @@ File possibili:
 - `doc/AI_ASSIGNMENT_FEEDBACK.md`;
 - test su payload e parsing.
 
-### PR 8: Dashboard minima
+### PR 8: Modalita studente e supporto AI durante lo svolgimento
+
+Obiettivo:
+
+- definire le modalita disponibili per ogni consegna:
+  - `senza-aiuto`: nessun suggerimento AI, solo consegna, materiali autorizzati e test consentiti;
+  - `feedback-tecnico`: feedback deterministico su compilazione, runtime e test, senza spiegazione generativa;
+  - `ai-assisted`: domande all'AI, suggerimenti sugli errori e richiami teorici controllati;
+  - `studio-guidato`: AI orientata alla teoria e alle dispense, senza produrre direttamente la soluzione;
+- permettere al docente di scegliere la modalita per activity, classe o singola scadenza;
+- collegare i suggerimenti agli argomenti della activity, alle sezioni delle dispense e agli errori emersi durante lo svolgimento;
+- registrare quali aiuti sono stati richiesti, senza mescolarli alla valutazione deterministica;
+- separare chiaramente:
+  - test e report usati per valutare;
+  - feedback formativo mostrato allo studente;
+  - suggerimenti AI da approvare o limitare;
+- prevedere una policy esplicita per compiti, laboratori e verifiche, cosi lo studente sa quando puo chiedere aiuto e di che tipo.
+
+File possibili:
+
+- `doc/STUDENT_ASSIGNMENT_MODES.md`;
+- `doc/AI_ASSIGNMENT_FEEDBACK.md`;
+- estensioni allo schema activity per campi come `student_support_mode`, `allowed_ai_help`, `theory_refs`;
+- estensione dei report studente con log degli aiuti richiesti;
+- UI studente futura in CLI/TUI o pagina dedicata.
+
+Note:
+
+- l'AI non deve sostituire il grading deterministico;
+- i test generati dall'AI devono essere considerati proposte fino ad approvazione docente;
+- nei compiti valutativi deve esistere una modalita esplicita senza aiuto;
+- il feedback teorico deve citare o rimandare alle sezioni della dispensa invece di inventare un percorso parallelo.
+
+### PR 9: Dashboard minima
 
 Obiettivo:
 
@@ -1035,7 +1069,7 @@ File possibili:
 - report statico generato da JSON;
 - documentazione.
 
-### PR 9: Prime funzioni TheBitLab CLI/TUI
+### PR 10: Prime funzioni TheBitLab CLI/TUI
 
 Obiettivo:
 

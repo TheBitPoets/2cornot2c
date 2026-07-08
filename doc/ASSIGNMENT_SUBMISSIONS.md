@@ -555,6 +555,36 @@ Regole minime:
 - i provider AI non devono ricevere token o dati personali non necessari;
 - eventuali classifiche devono essere progettate con visibilita diversa per docente e studenti.
 
+## Modalita studente e feedback assistito
+
+Questa parte non e ancora implementata nel flusso minimo, ma va prevista nel modello delle consegne.
+
+Ogni activity dovrebbe poter dichiarare una modalita di supporto allo studente:
+
+| Modalita | Significato |
+|---|---|
+| `senza-aiuto` | Lo studente lavora senza suggerimenti AI. Sono disponibili solo consegna, materiali autorizzati e feedback tecnico eventualmente consentito. |
+| `feedback-tecnico` | Lo studente vede errori di compilazione, runtime e test falliti, ma senza spiegazioni generative. |
+| `ai-assisted` | Lo studente puo fare domande all'AI e ricevere suggerimenti sugli errori, entro i limiti scelti dal docente. |
+| `studio-guidato` | L'AI aiuta soprattutto a richiamare teoria, prerequisiti e sezioni della dispensa collegate alla consegna. |
+
+La scelta deve appartenere al docente e puo dipendere da:
+
+- tipo di activity: laboratorio, compito, verifica, studio guidato;
+- fase di lavoro: durante lo svolgimento, dopo la consegna, dopo la correzione;
+- classe o singolo gruppo;
+- livello di autonomia desiderato.
+
+Il feedback allo studente dovrebbe distinguere tre piani:
+
+1. feedback deterministico: compilazione, runtime, test, stdout atteso e ottenuto;
+2. feedback didattico: spiegazione dell'errore, indizi progressivi, domande guida;
+3. richiami teorici: link a sezioni della dispensa, prerequisiti e argomenti collegati all'activity.
+
+I test possono essere scritti dal docente oppure proposti dall'AI, ma i test usati per la valutazione devono essere approvati dal docente. L'AI puo suggerire casi limite, input significativi e controlli aggiuntivi, ma non deve trasformare la valutazione in grading AI-only.
+
+I log degli aiuti richiesti vanno tenuti separati dal report di grading: possono essere utili per capire il processo di apprendimento, ma non devono alterare automaticamente voto o stato della consegna.
+
 ## Prossimi passi
 
 Le prossime PR possono introdurre:
@@ -564,6 +594,7 @@ Le prossime PR possono introdurre:
 3. Script per generare scaffold consegna.
 4. Integrazione GUI per assegnare activity a classi/team.
 5. Download artifact GitHub Actions e collegamento al registro consegne.
-6. Dashboard Markdown minima per docente.
+6. Modalita studente e feedback assistito.
+7. Dashboard Markdown minima per docente.
 
 Il primo template repository studente e documentato in `STUDENT_REPOSITORY_TEMPLATE.md`.
