@@ -82,7 +82,7 @@ const els = {
   nowAt: document.querySelector("#nowAt"),
   targetsText: document.querySelector("#targetsText"),
   generateReportBtn: document.querySelector("#generateReportBtn"),
-  panels: document.querySelectorAll("[data-panel-id]"),
+  panels: document.querySelectorAll("main.layout > .panel"),
 };
 
 async function api(path, options = {}) {
@@ -443,37 +443,32 @@ function setupResizableTables() {
   setupResizableTable(els.studentsTable, "students");
 }
 
-function updatePanelToggle(panel, button, isCollapsed) {
-  panel.classList.toggle("isCollapsed", isCollapsed);
-  button.setAttribute("aria-expanded", String(!isCollapsed));
-  button.textContent = isCollapsed ? "Apri" : "Chiudi";
-  button.title = isCollapsed ? "Mostra questa sezione." : "Nascondi questa sezione.";
+function panelKey(panel, index) {
+  return panel.dataset.panelKey || panel.id || `panel-${index}`;
 }
 
-function initCollapsiblePanels() {
-  const collapsedPanels = readCollapsedPanels();
-  els.panels.forEach((panel) => {
-    const panelId = panel.dataset.panelId;
+function setupCollapsiblePanels() {
+  const collapsed = readCollapsedPanels();
+  els.panels.forEach((panel, index) => {
     const head = panel.querySelector(".panelHead");
-    if (!panelId || !head || head.querySelector("[data-panel-toggle]")) return;
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "panelToggle";
-    button.dataset.panelToggle = panelId;
-    const isCollapsed = collapsedPanels.has(panelId);
-    updatePanelToggle(panel, button, isCollapsed);
-    button.addEventListener("click", () => {
-      const nextCollapsed = !panel.classList.contains("isCollapsed");
-      if (nextCollapsed) {
-        collapsedPanels.add(panelId);
+    const title = head?.querySelector("h2");
+    if (!head || !title || title.dataset.collapseReady === "true") return;
+    const key = panelKey(panel, index);
+    panel.dataset.panelKey = key;
+    if (collapsed.has(key)) panel.classList.add("panelCollapsed");
+    title.dataset.collapseReady = "true";
+    title.title = "Apri o chiudi questa sezione.";
+    title.addEventListener("click", () => {
+      panel.classList.toggle("panelCollapsed");
+      const current = readCollapsedPanels();
+      if (panel.classList.contains("panelCollapsed")) {
+        current.add(key);
       } else {
-        collapsedPanels.delete(panelId);
+        current.delete(key);
       }
-      writeCollapsedPanels(collapsedPanels);
-      updatePanelToggle(panel, button, nextCollapsed);
-      if (!nextCollapsed) applyReviewSplit();
+      writeCollapsedPanels(current);
+      if (!panel.classList.contains("panelCollapsed")) applyReviewSplit();
     });
-    head.append(button);
   });
 }
 
@@ -1243,7 +1238,7 @@ els.filterButtons.forEach((button) => {
   button.addEventListener("click", () => setFilter(button.dataset.filter));
 });
 
-initCollapsiblePanels();
+setupCollapsiblePanels();
 setFilter("all");
 setupResizableTables();
 Promise.all([loadReports(), loadActivities(), loadOverview()]).catch((error) => setStatus(`Errore: ${error.message}`));
