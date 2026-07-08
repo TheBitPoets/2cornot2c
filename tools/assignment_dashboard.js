@@ -1080,6 +1080,10 @@ function renderOverview() {
   for (const row of rows) {
     const testText = row.tests_total == null ? "-" : `${row.tests_passed ?? "-"}/${row.tests_total}`;
     const grade = row.teacher_grade ?? row.score ?? "-";
+    const hasSubmission = row.submitted || row.status?.startsWith("submitted");
+    const submissionTitle = hasSubmission
+      ? `Apri la consegna di ${escapeHtml(row.student || "questo studente")} per questa activity.`
+      : "Consegna non disponibile: lo studente non ha ancora consegnato.";
     const tr = document.createElement("tr");
     tr.className = `overviewRow ${kindRowClass(row.kind)}`;
     tr.innerHTML = `
@@ -1099,7 +1103,7 @@ function renderOverview() {
       </td>
       <td><code>${escapeHtml(grade)}</code></td>
       <td>
-        <button type="button" class="smallButton" data-overview-report="${escapeHtml(row.report_name)}" data-overview-student="${escapeHtml(row.student || "")}" title="Apri la consegna di ${escapeHtml(row.student || "questo studente")} per questa activity.">
+        <button type="button" class="smallButton" data-overview-report="${escapeHtml(row.report_name)}" data-overview-student="${escapeHtml(row.student || "")}" title="${submissionTitle}" ${hasSubmission ? "" : "disabled"}>
           Consegna
         </button><br>
         <small class="overviewReportName" title="${escapeHtml(row.report_name || "-")}">${escapeHtml(row.report_name || "-")}</small>
