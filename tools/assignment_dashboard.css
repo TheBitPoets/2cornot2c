@@ -317,17 +317,56 @@ table {
   border-collapse: collapse;
 }
 
+.resizableTable {
+  table-layout: fixed;
+}
+
 th, td {
   border-bottom: 1px solid var(--line);
   padding: .65rem;
   text-align: left;
   vertical-align: top;
+  overflow-wrap: anywhere;
 }
 
 th {
+  position: relative;
   color: var(--muted);
   font-size: .75rem;
   text-transform: uppercase;
+}
+
+th.isResizableColumn {
+  padding-right: 1rem;
+}
+
+.columnResizeHandle {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  z-index: 5;
+  width: 8px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.columnResizeHandle::after {
+  content: "";
+  position: absolute;
+  top: .35rem;
+  right: 3px;
+  bottom: .35rem;
+  border-right: 2px solid transparent;
+}
+
+.columnResizeHandle:hover::after,
+.resizableTable.isResizingColumns .columnResizeHandle::after {
+  border-right-color: rgba(17, 17, 17, .38);
+}
+
+.resizableTable.isResizingColumns {
+  user-select: none;
 }
 
 .sortButton {

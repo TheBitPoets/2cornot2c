@@ -127,7 +127,7 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
         <button type="button" data-overview-view="matrix" role="tab" aria-selected="false">Matrice</button>
       </div>
       <div id="overviewListView" class="tableWrap">
-        <table>
+        <table id="overviewListTable" class="resizableTable">
           <thead>
             <tr>
               <th><button type="button" class="sortButton" data-overview-sort="student">Studente</button></th>
@@ -145,7 +145,7 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
         </table>
       </div>
       <div id="overviewMatrixView" class="tableWrap matrixWrap" hidden>
-        <table class="matrixTable">
+        <table id="overviewMatrixTable" class="matrixTable resizableTable">
           <thead id="overviewMatrixHead"></thead>
           <tbody id="overviewMatrixBody"></tbody>
         </table>
@@ -177,7 +177,7 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
         </div>
       </div>
       <div class="tableWrap">
-        <table>
+        <table id="studentsTable" class="resizableTable">
           <thead>
             <tr>
               <th>Studente</th>

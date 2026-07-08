@@ -1,8 +1,10 @@
 const REVIEW_SPLIT_KEY = "2cornot2c.assignmentReviewSplit";
 const COLLAPSED_PANELS_KEY = "2cornot2c.assignmentDashboardCollapsedPanels";
+const TABLE_WIDTHS_KEY = "2cornot2c.assignmentDashboardTableWidths";
 const DEFAULT_REVIEW_SPLIT = 320;
 const MIN_REVIEW_SPLIT = 180;
 const MAX_REVIEW_SPLIT_RATIO = 0.65;
+const MIN_TABLE_COLUMN_WIDTH = 64;
 const OVERVIEW_TYPE_ORDER = [
   "studio-guidato",
   "esercizio-classe",
@@ -62,9 +64,12 @@ const els = {
   overviewViewButtons: document.querySelectorAll("[data-overview-view]"),
   overviewListView: document.querySelector("#overviewListView"),
   overviewMatrixView: document.querySelector("#overviewMatrixView"),
+  overviewListTable: document.querySelector("#overviewListTable"),
+  overviewMatrixTable: document.querySelector("#overviewMatrixTable"),
   overviewMatrixHead: document.querySelector("#overviewMatrixHead"),
   overviewMatrixBody: document.querySelector("#overviewMatrixBody"),
   tableStatus: document.querySelector("#tableStatus"),
+  studentsTable: document.querySelector("#studentsTable"),
   studentsBody: document.querySelector("#studentsBody"),
   reviewStatus: document.querySelector("#reviewStatus"),
   submissionReview: document.querySelector("#submissionReview"),
@@ -315,6 +320,127 @@ function readCollapsedPanels() {
 
 function writeCollapsedPanels(collapsedPanels) {
   localStorage.setItem(COLLAPSED_PANELS_KEY, JSON.stringify([...collapsedPanels]));
+}
+
+function readTableWidths() {
+  try {
+    const value = JSON.parse(localStorage.getItem(TABLE_WIDTHS_KEY) || "{}");
+    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeTableWidths(tableId, widths) {
+  const allWidths = readTableWidths();
+  allWidths[tableId] = widths.map((width) => Math.max(MIN_TABLE_COLUMN_WIDTH, Math.round(width)));
+  localStorage.setItem(TABLE_WIDTHS_KEY, JSON.stringify(allWidths));
+}
+
+function storedTableWidths(tableId) {
+  const widths = readTableWidths()[tableId];
+  return Array.isArray(widths) ? widths.map(Number).filter(Number.isFinite) : [];
+}
+
+function ensureColGroup(table, columnCount) {
+  let colGroup = table.querySelector("colgroup");
+  if (!colGroup) {
+    colGroup = document.createElement("colgroup");
+    table.prepend(colGroup);
+  }
+  while (colGroup.children.length < columnCount) {
+    colGroup.append(document.createElement("col"));
+  }
+  while (colGroup.children.length > columnCount) {
+    colGroup.lastElementChild.remove();
+  }
+  return [...colGroup.children];
+}
+
+function currentColumnWidths(table, columns) {
+  return columns.map((column, index) => {
+    const header = table.tHead?.rows[0]?.cells[index];
+    const width = header?.getBoundingClientRect().width || Number(column.style.width.replace("px", ""));
+    return Math.max(MIN_TABLE_COLUMN_WIDTH, Math.round(width || MIN_TABLE_COLUMN_WIDTH));
+  });
+}
+
+function applyTableWidths(table, tableId, widths = storedTableWidths(tableId)) {
+  const headerCells = [...(table.tHead?.rows[0]?.cells || [])];
+  if (!headerCells.length) return;
+  const columns = ensureColGroup(table, headerCells.length);
+  const nextWidths = headerCells.map((header, index) => {
+    const fallback = header.getBoundingClientRect().width || MIN_TABLE_COLUMN_WIDTH;
+    return Math.max(MIN_TABLE_COLUMN_WIDTH, Number(widths[index]) || fallback);
+  });
+  columns.forEach((column, index) => {
+    column.style.width = `${Math.round(nextWidths[index])}px`;
+  });
+  const wrapperWidth = table.closest(".tableWrap")?.clientWidth || 0;
+  const totalWidth = nextWidths.reduce((sum, width) => sum + width, 0);
+  table.style.width = `${Math.max(wrapperWidth, totalWidth)}px`;
+}
+
+function resetTableWidths(table, tableId) {
+  const allWidths = readTableWidths();
+  delete allWidths[tableId];
+  localStorage.setItem(TABLE_WIDTHS_KEY, JSON.stringify(allWidths));
+  table.style.removeProperty("width");
+  table.querySelector("colgroup")?.remove();
+  requestAnimationFrame(() => setupResizableTable(table, tableId));
+}
+
+function setupResizableTable(table, tableId) {
+  if (!table) return;
+  applyTableWidths(table, tableId);
+  [...(table.tHead?.rows[0]?.cells || [])].forEach((header, index) => {
+    header.classList.add("isResizableColumn");
+    if (header.querySelector(".columnResizeHandle")) return;
+    const handle = document.createElement("span");
+    handle.className = "columnResizeHandle";
+    handle.title = "Trascina per ridimensionare la colonna. Doppio click per ripristinare.";
+    handle.addEventListener("dblclick", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      resetTableWidths(table, tableId);
+    });
+    handle.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const columns = ensureColGroup(table, table.tHead.rows[0].cells.length);
+      const startWidths = currentColumnWidths(table, columns);
+      const startX = event.clientX;
+      handle.setPointerCapture(event.pointerId);
+      table.classList.add("isResizingColumns");
+
+      function onPointerMove(moveEvent) {
+        const nextWidths = [...startWidths];
+        nextWidths[index] = Math.max(MIN_TABLE_COLUMN_WIDTH, startWidths[index] + moveEvent.clientX - startX);
+        applyTableWidths(table, tableId, nextWidths);
+      }
+
+      function onPointerUp(upEvent) {
+        handle.releasePointerCapture(upEvent.pointerId);
+        table.classList.remove("isResizingColumns");
+        const nextWidths = currentColumnWidths(table, ensureColGroup(table, table.tHead.rows[0].cells.length));
+        writeTableWidths(tableId, nextWidths);
+        handle.removeEventListener("pointermove", onPointerMove);
+        handle.removeEventListener("pointerup", onPointerUp);
+        handle.removeEventListener("pointercancel", onPointerUp);
+      }
+
+      handle.addEventListener("pointermove", onPointerMove);
+      handle.addEventListener("pointerup", onPointerUp);
+      handle.addEventListener("pointercancel", onPointerUp);
+    });
+    header.append(handle);
+  });
+}
+
+function setupResizableTables() {
+  setupResizableTable(els.overviewListTable, "overview-list");
+  setupResizableTable(els.overviewMatrixTable, "overview-matrix");
+  setupResizableTable(els.studentsTable, "students");
 }
 
 function updatePanelToggle(panel, button, isCollapsed) {
@@ -634,11 +760,13 @@ function renderOverview() {
   if (!state.overviewRows.length) {
     els.overviewBody.innerHTML = '<tr><td colspan="9">Genera o carica almeno un registro consegne.</td></tr>';
     renderOverviewMatrix(rows);
+    setupResizableTables();
     return;
   }
   if (!rows.length) {
     els.overviewBody.innerHTML = '<tr><td colspan="9">Nessuna activity per questi filtri.</td></tr>';
     renderOverviewMatrix(rows);
+    setupResizableTables();
     return;
   }
   for (const row of rows) {
@@ -671,6 +799,7 @@ function renderOverview() {
     els.overviewBody.append(tr);
   }
   renderOverviewMatrix(rows);
+  setupResizableTables();
 }
 
 async function generateReport() {
@@ -842,10 +971,12 @@ function renderStudents(students) {
   els.studentsBody.innerHTML = "";
   if (!state.report) {
     els.studentsBody.innerHTML = '<tr><td colspan="8">Carica un registro consegne.</td></tr>';
+    setupResizableTable(els.studentsTable, "students");
     return;
   }
   if (!visible.length) {
     els.studentsBody.innerHTML = '<tr><td colspan="8">Nessuno studente per questo filtro.</td></tr>';
+    setupResizableTable(els.studentsTable, "students");
     return;
   }
   for (const student of visible) {
@@ -887,6 +1018,7 @@ function renderStudents(students) {
     `;
     els.studentsBody.append(row);
   }
+  setupResizableTable(els.studentsTable, "students");
 }
 
 function submissionFiles(student) {
@@ -1103,11 +1235,15 @@ els.submissionReview.addEventListener("pointerdown", (event) => {
   splitter.addEventListener("pointerup", onPointerUp);
   splitter.addEventListener("pointercancel", onPointerUp);
 });
-window.addEventListener("resize", applyReviewSplit);
+window.addEventListener("resize", () => {
+  applyReviewSplit();
+  setupResizableTables();
+});
 els.filterButtons.forEach((button) => {
   button.addEventListener("click", () => setFilter(button.dataset.filter));
 });
 
 initCollapsiblePanels();
 setFilter("all");
+setupResizableTables();
 Promise.all([loadReports(), loadActivities(), loadOverview()]).catch((error) => setStatus(`Errore: ${error.message}`));
