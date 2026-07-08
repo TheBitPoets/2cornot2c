@@ -1560,9 +1560,9 @@ function selectActivity(path) {
   els.activityPath.value = path;
   const activity = state.activities.find((candidate) => candidate.path === path);
   if (activity?.id) {
-    if (activity.class_id) els.classId.value = activity.class_id;
-    if (activity.class_label) els.classLabel.value = activity.class_label;
-    if (activity.github_team) els.githubTeam.value = activity.github_team;
+    els.classId.value = activity.class_id || activity.github_team || "";
+    els.classLabel.value = activity.class_label || activity.class_id || "";
+    els.githubTeam.value = activity.github_team || "";
     els.outputName.value = defaultOutputName(activity);
   }
 }
