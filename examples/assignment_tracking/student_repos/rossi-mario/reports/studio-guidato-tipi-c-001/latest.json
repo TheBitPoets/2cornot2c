@@ -1,0 +1,30 @@
+{
+  "passed": true,
+  "status": "passed",
+  "activity_id": "studio-guidato-tipi-c-001",
+  "source": "examples/assignment_tracking/student_repos/rossi-mario/assignments/studio-guidato-tipi-c-001/answer.md",
+  "submitted_at": "2026-10-22T16:12:00+02:00",
+  "commit": "guided111",
+  "summary": {
+    "passed": 3,
+    "total": 3
+  },
+  "teacher_grade": 8,
+  "tests": [
+    {
+      "name": "spiega il ruolo del tipo",
+      "passed": true,
+      "status": "passed"
+    },
+    {
+      "name": "cita limits.h o range",
+      "passed": true,
+      "status": "passed"
+    },
+    {
+      "name": "include un esempio printf",
+      "passed": true,
+      "status": "passed"
+    }
+  ]
+}

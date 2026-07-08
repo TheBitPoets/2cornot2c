@@ -1,16 +1,17 @@
 {
   "schema_version": "1.0",
-  "id": "python-base-somma-001",
-  "titolo": "Somma in Python",
-  "tipo": "compito-casa",
+  "id": "python-sconto-classe-001",
+  "titolo": "Sconto in classe",
+  "tipo": "esercizio-classe",
   "student_support_mode": "feedback-tecnico",
   "difficolta": "B",
   "argomenti": [
-    "variabili",
+    "condizioni",
+    "operatori",
     "input-output"
   ],
   "linguaggio": "python",
-  "consegna": "Scrivi un programma Python che stampa una somma.",
+  "consegna": "Scrivi una funzione prezzo_finale(prezzo, tessera) che applica il 10% di sconto se tessera vale True e restituisce il prezzo arrotondato a due decimali.",
   "correzione": {
     "compila": true,
     "test": true,
@@ -18,7 +19,7 @@
     "ai_feedback": false
   },
   "metriche": {
-    "tempo_stimato_minuti": 20,
+    "tempo_stimato_minuti": 25,
     "traccia_tempo_dichiarato": true,
     "traccia_sessioni_thebitlab": true,
     "traccia_eventi_didattici": true,

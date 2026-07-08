@@ -1,0 +1,30 @@
+{
+  "passed": true,
+  "status": "passed",
+  "activity_id": "debug-didattico-loop-001",
+  "source": "examples/assignment_tracking/student_repos/rossi-mario/assignments/debug-didattico-loop-001/main.py",
+  "submitted_at": "2026-10-26T15:18:00+02:00",
+  "commit": "debug111",
+  "summary": {
+    "passed": 3,
+    "total": 3
+  },
+  "teacher_grade": 8,
+  "tests": [
+    {
+      "name": "somma da 1 a n inclusi",
+      "passed": true,
+      "status": "passed"
+    },
+    {
+      "name": "gestisce n uguale a zero",
+      "passed": true,
+      "status": "passed"
+    },
+    {
+      "name": "non usa formula hardcoded",
+      "passed": true,
+      "status": "passed"
+    }
+  ]
+}

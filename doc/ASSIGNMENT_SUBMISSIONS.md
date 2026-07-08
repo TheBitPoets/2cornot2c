@@ -533,20 +533,30 @@ Contiene:
 
 | Path | Uso |
 |---|---|
-| `demo_activity.json` | Activity di esempio |
+| `demo_activity.json` | Activity `compito-casa` di esempio |
+| `multi_file_stats_activity.json` | Activity `compito-casa` multi-file Python |
+| `multi_file_c_activity.json` | Activity `laboratorio` multi-file C |
+| `class_discount_activity.json` | Activity `esercizio-classe` |
+| `guided_types_activity.json` | Activity `studio-guidato` |
+| `practical_functions_activity.json` | Activity `verifica-pratica` |
+| `written_variables_activity.json` | Activity `verifica-scritta` |
+| `debug_loop_activity.json` | Activity `debug-didattico` |
 | `targets_demo.txt` | Elenco dei repository studenti finti |
 | `student_repos/rossi-mario` | Studente con consegna in tempo e test superati |
 | `student_repos/bianchi-luca` | Studente con consegna in ritardo e test falliti |
-| `student_repos/verdi-anna` | Studente con scaffold ma senza report, quindi non consegnato |
+| `student_repos/verdi-anna` | Studente con esiti misti: scaffold, consegne corrette e una consegna parziale |
+
+La demo copre tutti i tipi ammessi dal validatore (`compito-casa`, `laboratorio`, `esercizio-classe`, `studio-guidato`, `verifica-pratica`, `verifica-scritta`, `debug-didattico`) per ciascuno studente. Le activity dichiarano anche modalita diverse (`senza-aiuto`, `feedback-tecnico`, `ai-assisted`, `studio-guidato`) cosi il `Quadro classe` puo essere provato con tutti i filtri principali.
 
 Per testare dalla GUI:
 
 1. avvia il server con `python scripts/course_board_server.py`;
 2. apri `http://localhost:8765/tools/assignment_dashboard.html`;
-3. lascia i campi demo gia compilati;
+3. scegli una activity demo dal menu;
 4. clicca `Genera registro`;
-5. verifica che la dashboard mostri consegnati, mancanti, ritardi e test falliti;
-6. usa i filtri per controllare i diversi stati.
+5. ripeti per piu activity, usando un output diverso in `teacher-reports`;
+6. verifica che la dashboard mostri consegnati, mancanti, ritardi, test falliti e voti;
+7. usa i filtri del `Quadro classe` per controllare studente, tipo, stato e modalita.
 
 ## Regole di sicurezza
 

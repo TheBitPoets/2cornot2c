@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "id": "debug-didattico-loop-001",
+  "titolo": "Debug didattico su un ciclo",
+  "tipo": "debug-didattico",
+  "student_support_mode": "ai-assisted",
+  "difficolta": "C",
+  "argomenti": [
+    "cicli",
+    "debug",
+    "off-by-one"
+  ],
+  "linguaggio": "python",
+  "consegna": "Correggi la funzione somma_primi_n(n): deve sommare i numeri da 1 a n inclusi e gestire n=0 senza errori.",
+  "correzione": {
+    "compila": true,
+    "test": true,
+    "sandbox": true,
+    "ai_feedback": true
+  },
+  "metriche": {
+    "tempo_stimato_minuti": 25,
+    "traccia_tempo_dichiarato": true,
+    "traccia_sessioni_thebitlab": true,
+    "traccia_eventi_didattici": true,
+    "traccia_errori_compilazione": true
+  }
+}

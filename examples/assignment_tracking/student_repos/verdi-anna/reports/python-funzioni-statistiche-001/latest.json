@@ -1,0 +1,31 @@
+{
+  "passed": false,
+  "status": "failed",
+  "activity_id": "python-funzioni-statistiche-001",
+  "source": "examples/assignment_tracking/student_repos/verdi-anna/assignments/python-funzioni-statistiche-001/main.py",
+  "submitted_at": "2026-10-20T11:10:00+02:00",
+  "commit": "demo333",
+  "summary": {
+    "passed": 2,
+    "total": 3
+  },
+  "teacher_grade": 6,
+  "tests": [
+    {
+      "name": "calcola minimo massimo e media",
+      "passed": true,
+      "status": "passed"
+    },
+    {
+      "name": "usa funzioni separate nel modulo stats",
+      "passed": true,
+      "status": "passed"
+    },
+    {
+      "name": "usa formatters.py per l'output",
+      "passed": false,
+      "status": "failed",
+      "message": "Manca il modulo formatters.py richiesto dalla consegna."
+    }
+  ]
+}

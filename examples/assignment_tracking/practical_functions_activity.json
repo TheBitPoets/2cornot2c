@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "id": "c-funzioni-area-001",
+  "titolo": "Verifica pratica sulle funzioni",
+  "tipo": "verifica-pratica",
+  "student_support_mode": "senza-aiuto",
+  "difficolta": "C",
+  "argomenti": [
+    "funzioni",
+    "double",
+    "test"
+  ],
+  "linguaggio": "c",
+  "consegna": "Implementa area_rettangolo(base, altezza) e perimetro_rettangolo(base, altezza) in C, separando il calcolo dal main.",
+  "correzione": {
+    "compila": true,
+    "test": true,
+    "sandbox": true,
+    "ai_feedback": false
+  },
+  "metriche": {
+    "tempo_stimato_minuti": 40,
+    "traccia_tempo_dichiarato": true,
+    "traccia_sessioni_thebitlab": true,
+    "traccia_eventi_didattici": true,
+    "traccia_errori_compilazione": true
+  }
+}

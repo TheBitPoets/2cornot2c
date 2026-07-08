@@ -3,6 +3,7 @@
   "id": "c-stringhe-contatore-001",
   "titolo": "Contatore parole in C",
   "tipo": "laboratorio",
+  "student_support_mode": "feedback-tecnico",
   "difficolta": "D",
   "argomenti": [
     "stringhe",
