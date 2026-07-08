@@ -298,6 +298,10 @@ function classKey(entity) {
   return slugPathSegment(entity?.class_id || entity?.github_team || entity?.class_label || classValue(entity));
 }
 
+function hasExplicitClass(entity) {
+  return Boolean(entity?.class_id || entity?.github_team || entity?.class_label);
+}
+
 function slugPathSegment(value, fallback = "classe-non-indicata") {
   return String(value || fallback)
     .trim()
@@ -584,8 +588,9 @@ function activityCoverageKey(activity) {
 function reportsForActivity(activity) {
   const activityId = activity?.id || "";
   const activityClassKey = classKey(activity);
+  const activityHasClass = hasExplicitClass(activity);
   return state.reports
-    .filter((report) => report.activity_id === activityId && classKey(report) === activityClassKey)
+    .filter((report) => report.activity_id === activityId && (!activityHasClass || classKey(report) === activityClassKey))
     .sort((a, b) => {
       const first = Date.parse(a.updated_at || a.due_at || "");
       const second = Date.parse(b.updated_at || b.due_at || "");
