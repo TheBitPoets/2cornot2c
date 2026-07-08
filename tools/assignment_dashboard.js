@@ -75,6 +75,8 @@ const els = {
   tableStatus: document.querySelector("#tableStatus"),
   studentsTable: document.querySelector("#studentsTable"),
   studentsBody: document.querySelector("#studentsBody"),
+  reviewDialog: document.querySelector("#reviewDialog"),
+  reviewCloseBtn: document.querySelector("#reviewCloseBtn"),
   reviewStatus: document.querySelector("#reviewStatus"),
   submissionReview: document.querySelector("#submissionReview"),
   filterButtons: document.querySelectorAll("[data-filter]"),
@@ -1254,10 +1256,24 @@ function clearReview() {
   els.submissionReview.className = "reviewEmpty";
   els.submissionReview.style.removeProperty("--review-list-width");
   els.submissionReview.textContent = "Nessuna consegna selezionata.";
+  closeReviewDialog();
 }
 
 function studentByName(studentName) {
   return (state.report?.students || []).find((student) => student.student === studentName);
+}
+
+function openReviewDialog() {
+  if (els.reviewDialog && !els.reviewDialog.open) {
+    els.reviewDialog.showModal();
+  }
+  applyReviewSplit();
+}
+
+function closeReviewDialog() {
+  if (els.reviewDialog?.open) {
+    els.reviewDialog.close();
+  }
 }
 
 async function openSubmission(studentName, preferredPath = "") {
@@ -1271,6 +1287,7 @@ async function openSubmission(studentName, preferredPath = "") {
   }
   state.reviewStudent = studentName;
   const selectedPath = preferredPath || files[0].path;
+  openReviewDialog();
   await loadSubmissionFile(studentName, selectedPath);
 }
 
@@ -1356,6 +1373,7 @@ els.reloadBtn.addEventListener("click", async () => {
 });
 els.generateReportBtn.addEventListener("click", generateReport);
 els.reportSelect.addEventListener("change", loadSelectedReport);
+els.reviewCloseBtn.addEventListener("click", closeReviewDialog);
 els.activitySelect.addEventListener("change", () => {
   if (els.activitySelect.value) selectActivity(els.activitySelect.value);
 });

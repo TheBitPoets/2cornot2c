@@ -769,6 +769,40 @@ code {
   padding: .1rem .25rem;
 }
 
+.reviewDialog {
+  width: min(96vw, 82rem);
+  height: min(90vh, 52rem);
+  max-width: none;
+  max-height: none;
+  margin: auto;
+  border: 1px solid rgba(17, 17, 17, .18);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 22px 70px rgba(17, 17, 17, .28);
+  color: var(--ink);
+  padding: 0;
+  overflow: hidden;
+}
+
+.reviewDialog::backdrop {
+  background: rgba(17, 17, 17, .42);
+}
+
+.reviewDialogHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid var(--line);
+  background: #ffffff;
+}
+
+.reviewDialogHead h2 {
+  margin-bottom: .25rem;
+  font-size: 1.2rem;
+}
+
 .reviewEmpty {
   padding: 1.1rem;
   color: var(--muted);
@@ -778,6 +812,7 @@ code {
   display: grid;
   grid-template-columns: minmax(11rem, var(--review-list-width, 20rem)) 8px minmax(0, 1fr);
   min-height: 28rem;
+  height: calc(100% - 4.8rem);
 }
 
 .fileList {

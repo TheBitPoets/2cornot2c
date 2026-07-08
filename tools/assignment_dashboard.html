@@ -218,18 +218,20 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
       </div>
     </section>
 
-    <section class="panel" data-panel-key="review">
-      <div class="panelHead">
-        <div>
-          <h2>Revisione consegna</h2>
-          <p id="reviewStatus" class="status">Seleziona una consegna dalla tabella studenti.</p>
-        </div>
-      </div>
-      <div id="submissionReview" class="reviewEmpty">
-        Nessuna consegna selezionata.
-      </div>
-    </section>
   </main>
+
+  <dialog id="reviewDialog" class="reviewDialog" aria-labelledby="reviewDialogTitle">
+    <div class="reviewDialogHead">
+      <div>
+        <h2 id="reviewDialogTitle">Revisione consegna</h2>
+        <p id="reviewStatus" class="status">Seleziona una consegna dalla tabella studenti.</p>
+      </div>
+      <button id="reviewCloseBtn" type="button" class="smallButton" title="Chiudi la revisione consegna e torna alla dashboard.">Chiudi</button>
+    </div>
+    <div id="submissionReview" class="reviewEmpty">
+      Nessuna consegna selezionata.
+    </div>
+  </dialog>
 
   <script src="assignment_dashboard.js"></script>
 </body>
