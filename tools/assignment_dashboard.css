@@ -618,6 +618,7 @@ label {
 }
 
 .studentsDialog {
+  grid-template-rows: auto auto minmax(0, 1fr);
   width: min(96vw, 88rem);
   height: min(88vh, 50rem);
   min-width: min(92vw, 38rem);
@@ -633,6 +634,10 @@ label {
   padding: 0;
   resize: both;
   overflow: hidden;
+}
+
+.studentsDialog[open] {
+  display: grid;
 }
 
 .studentsDialog::backdrop {
@@ -668,7 +673,12 @@ label {
 }
 
 .studentsDialogTable {
-  height: calc(100% - 11.6rem);
+  min-height: 0;
+  overflow: auto;
+}
+
+#studentsTable {
+  min-width: 78rem;
 }
 
 .status {
