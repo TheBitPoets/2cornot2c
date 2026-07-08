@@ -38,6 +38,7 @@ const state = {
     column: "",
     direction: "",
   },
+  overviewView: "list",
   reviewStudent: null,
   reviewFilePath: "",
   reviewFile: null,
@@ -57,6 +58,11 @@ const els = {
   overviewStatusFilter: document.querySelector("#overviewStatusFilter"),
   overviewSupportFilter: document.querySelector("#overviewSupportFilter"),
   overviewSortButtons: document.querySelectorAll("[data-overview-sort]"),
+  overviewViewButtons: document.querySelectorAll("[data-overview-view]"),
+  overviewListView: document.querySelector("#overviewListView"),
+  overviewMatrixView: document.querySelector("#overviewMatrixView"),
+  overviewMatrixHead: document.querySelector("#overviewMatrixHead"),
+  overviewMatrixBody: document.querySelector("#overviewMatrixBody"),
   tableStatus: document.querySelector("#tableStatus"),
   studentsBody: document.querySelector("#studentsBody"),
   reviewStatus: document.querySelector("#reviewStatus"),
@@ -437,19 +443,153 @@ function cycleOverviewSort(column) {
   renderOverview();
 }
 
+function renderOverviewViewTabs() {
+  els.overviewViewButtons.forEach((button) => {
+    const isActive = button.dataset.overviewView === state.overviewView;
+    button.classList.toggle("isActive", isActive);
+    button.setAttribute("aria-selected", String(isActive));
+  });
+  els.overviewListView.hidden = state.overviewView !== "list";
+  els.overviewMatrixView.hidden = state.overviewView !== "matrix";
+}
+
+function activityKey(row) {
+  return row.activity_id || row.title || row.report_name || "";
+}
+
+function activityLabel(row) {
+  return row.title || row.activity_id || row.report_name || "-";
+}
+
+function overviewActivities(rows) {
+  const byActivity = new Map();
+  for (const row of rows) {
+    const key = activityKey(row);
+    if (!key || byActivity.has(key)) continue;
+    byActivity.set(key, row);
+  }
+  return [...byActivity.values()].sort((a, b) => {
+    const due = compareOverviewRows(a, b, "due_at");
+    if (due !== 0) return due;
+    const kind = compareOverviewRows(a, b, "kind");
+    if (kind !== 0) return kind;
+    return compareOverviewRows(a, b, "activity");
+  });
+}
+
+function overviewStudents(rows) {
+  return uniqueSorted(rows.map((row) => row.student));
+}
+
+function matrixCellKind(row) {
+  if (!row) return "Empty";
+  if (row.status === "missing") return "Bad";
+  if (row.status === "pending") return "Pending";
+  if (row.late) return "Warn";
+  if (row.grading_status === "graded_failed") return "Bad";
+  if (row.status?.startsWith("submitted")) return "Ok";
+  return "Muted";
+}
+
+function matrixCellText(row) {
+  if (!row) return "-";
+  if (row.status === "missing") return "NP";
+  if (row.status === "pending") return "...";
+  if (row.grading_status === "graded_failed") return "KO";
+  if (row.status?.startsWith("submitted")) return row.late ? "RIT" : "OK";
+  return row.status || "-";
+}
+
+function matrixScore(row) {
+  if (!row) return "";
+  const grade = row.teacher_grade ?? row.score;
+  if (grade != null) return grade;
+  if (row.tests_total != null) return `${row.tests_passed ?? "-"}/${row.tests_total}`;
+  return "";
+}
+
+function studentMatrixTotal(rows) {
+  return rows.reduce((total, row) => {
+    if (row.status?.startsWith("submitted")) return total + 1;
+    return total;
+  }, 0);
+}
+
+function renderOverviewMatrix(rows) {
+  const activities = overviewActivities(rows);
+  const students = overviewStudents(rows);
+  const byStudentActivity = new Map();
+  for (const row of rows) {
+    byStudentActivity.set(`${row.student}::${activityKey(row)}`, row);
+  }
+  els.overviewMatrixHead.innerHTML = "";
+  els.overviewMatrixBody.innerHTML = "";
+  if (!state.overviewRows.length) {
+    els.overviewMatrixBody.innerHTML = '<tr><td>Genera o carica almeno un registro consegne.</td></tr>';
+    return;
+  }
+  if (!rows.length) {
+    els.overviewMatrixBody.innerHTML = '<tr><td>Nessuna activity per questi filtri.</td></tr>';
+    return;
+  }
+  const head = document.createElement("tr");
+  head.innerHTML = `
+    <th class="matrixSticky matrixStudentHeader">Studente</th>
+    <th class="matrixScoreHeader">Totale</th>
+    ${activities.map((activity) => `
+      <th class="matrixActivityHeader ${kindRowClass(activity.kind)}">
+        <span>${escapeHtml(activityLabel(activity))}</span>
+        <small>${escapeHtml(activity.kind || "-")}</small>
+      </th>
+    `).join("")}
+  `;
+  els.overviewMatrixHead.append(head);
+  for (const student of students) {
+    const studentRows = rows.filter((row) => row.student === student);
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="matrixSticky">${studentLabel(student)}</td>
+      <td class="matrixTotal"><code>${escapeHtml(studentMatrixTotal(studentRows))}</code></td>
+      ${activities.map((activity) => {
+        const row = byStudentActivity.get(`${student}::${activityKey(activity)}`);
+        const kind = matrixCellKind(row);
+        const score = matrixScore(row);
+        return `
+          <td>
+            ${row ? `
+              <button type="button" class="matrixCell matrixCell${kind}" data-overview-report="${escapeHtml(row.report_name)}" data-overview-student="${escapeHtml(row.student || "")}">
+                <strong>${escapeHtml(matrixCellText(row))}</strong>
+                ${score !== "" ? `<small>${escapeHtml(score)}</small>` : ""}
+              </button>
+            ` : '<span class="matrixCell matrixCellEmpty">-</span>'}
+          </td>
+        `;
+      }).join("")}
+    `;
+    els.overviewMatrixBody.append(tr);
+  }
+}
+
 function renderOverview() {
   const rows = sortedOverviewRows(filteredOverviewRows());
   renderOverviewSortButtons();
-  els.overviewStatus.textContent = state.overviewRows.length
-    ? `Mostrate ${rows.length}/${state.overviewRows.length} righe activity-studente.`
-    : "Nessun registro salvato in teacher-reports.";
+  renderOverviewViewTabs();
+  if (!state.overviewRows.length) {
+    els.overviewStatus.textContent = "Nessun registro salvato in teacher-reports.";
+  } else if (state.overviewView === "matrix") {
+    els.overviewStatus.textContent = `Matrice: ${overviewStudents(rows).length} studenti x ${overviewActivities(rows).length} consegne filtrate.`;
+  } else {
+    els.overviewStatus.textContent = `Mostrate ${rows.length}/${state.overviewRows.length} righe activity-studente.`;
+  }
   els.overviewBody.innerHTML = "";
   if (!state.overviewRows.length) {
     els.overviewBody.innerHTML = '<tr><td colspan="9">Genera o carica almeno un registro consegne.</td></tr>';
+    renderOverviewMatrix(rows);
     return;
   }
   if (!rows.length) {
     els.overviewBody.innerHTML = '<tr><td colspan="9">Nessuna activity per questi filtri.</td></tr>';
+    renderOverviewMatrix(rows);
     return;
   }
   for (const row of rows) {
@@ -481,6 +621,7 @@ function renderOverview() {
     `;
     els.overviewBody.append(tr);
   }
+  renderOverviewMatrix(rows);
 }
 
 async function generateReport() {
@@ -844,7 +985,22 @@ els.activityPath.addEventListener("input", renderActivitySelect);
 els.overviewSortButtons.forEach((button) => {
   button.addEventListener("click", () => cycleOverviewSort(button.dataset.overviewSort));
 });
+els.overviewViewButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    state.overviewView = button.dataset.overviewView;
+    renderOverview();
+  });
+});
 els.overviewBody.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-overview-report]");
+  if (!button) return;
+  els.reportSelect.value = button.dataset.overviewReport;
+  await loadSelectedReport();
+  if (button.dataset.overviewStudent) {
+    openSubmission(button.dataset.overviewStudent);
+  }
+});
+els.overviewMatrixBody.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-overview-report]");
   if (!button) return;
   els.reportSelect.value = button.dataset.overviewReport;

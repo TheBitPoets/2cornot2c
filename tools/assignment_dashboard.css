@@ -175,6 +175,24 @@ select {
   padding: 1.1rem 1.1rem 0;
 }
 
+.viewTabs {
+  display: flex;
+  gap: .45rem;
+  padding: .85rem 1.1rem 0;
+}
+
+.viewTabs button {
+  border: 1px solid rgba(17, 17, 17, .14);
+  background: #ffffff;
+  color: var(--muted);
+  padding: .5rem .8rem;
+}
+
+.viewTabs button.isActive {
+  background: #111111;
+  color: #ffffff;
+}
+
 label {
   display: grid;
   gap: .32rem;
@@ -271,6 +289,11 @@ label {
 .tableWrap {
   overflow-x: auto;
   padding: 1.1rem;
+}
+
+.matrixWrap {
+  max-height: 70vh;
+  overflow: auto;
 }
 
 table {
@@ -396,6 +419,116 @@ th {
 .studentName5 { background: #fde9e7; color: #8f1d14; }
 .studentName6 { background: #e1f5f7; color: #006c77; }
 .studentName7 { background: #eceff3; color: #3f4854; }
+
+.matrixTable {
+  min-width: max-content;
+}
+
+.matrixTable th,
+.matrixTable td {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.matrixTable thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #ffffff;
+}
+
+.matrixSticky {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  min-width: 11rem;
+  background: #ffffff;
+  text-align: left !important;
+}
+
+.matrixTable thead .matrixSticky {
+  z-index: 4;
+}
+
+.matrixScoreHeader,
+.matrixTotal {
+  min-width: 4rem;
+  background: #fbfbfb;
+}
+
+.matrixActivityHeader {
+  min-width: 7.5rem;
+  max-width: 10rem;
+  border-top: 4px solid transparent;
+}
+
+.matrixActivityHeader.typeHomeworkRow { border-top-color: #2f6fed; border-left-color: transparent; }
+.matrixActivityHeader.typeLabRow { border-top-color: #16825d; border-left-color: transparent; }
+.matrixActivityHeader.typeClassworkRow { border-top-color: #b45f06; border-left-color: transparent; }
+.matrixActivityHeader.typeGuidedStudyRow { border-top-color: #7a3db8; border-left-color: transparent; }
+.matrixActivityHeader.typePracticalTestRow { border-top-color: #b3261e; border-left-color: transparent; }
+.matrixActivityHeader.typeWrittenTestRow { border-top-color: #56616f; border-left-color: transparent; }
+.matrixActivityHeader.typeDebugRow { border-top-color: #00838f; border-left-color: transparent; }
+.matrixActivityHeader.typeUnknownRow { border-top-color: #8a8a8a; border-left-color: transparent; }
+
+.matrixActivityHeader span,
+.matrixActivityHeader small {
+  display: block;
+  max-width: 9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.matrixActivityHeader span {
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.matrixActivityHeader small {
+  margin-top: .2rem;
+  color: var(--muted);
+  font-size: .66rem;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.matrixCell {
+  display: inline-grid;
+  min-width: 3.7rem;
+  min-height: 2.4rem;
+  place-items: center;
+  gap: .1rem;
+  border: 1px solid rgba(17, 17, 17, .14);
+  border-radius: 8px;
+  background: #f4f4f4;
+  color: var(--ink);
+  padding: .28rem .38rem;
+  font-size: .72rem;
+  font-weight: 900;
+  line-height: 1.05;
+}
+
+button.matrixCell {
+  cursor: pointer;
+}
+
+button.matrixCell:hover,
+button.matrixCell:focus-visible {
+  outline: 2px solid rgba(17, 17, 17, .28);
+  outline-offset: 2px;
+}
+
+.matrixCell small {
+  font-size: .66rem;
+  font-weight: 800;
+}
+
+.matrixCellOk { background: #eaf7ef; color: #0f6b3d; }
+.matrixCellWarn { background: #fff5df; color: #6b4700; }
+.matrixCellBad { background: #fdecea; color: #8f1d14; }
+.matrixCellPending { background: #eef3ff; color: #244f9e; }
+.matrixCellMuted { background: #eeeeee; color: #666666; }
+.matrixCellEmpty { background: #fafafa; color: #9a9a9a; }
 
 .testDetails {
   display: grid;
