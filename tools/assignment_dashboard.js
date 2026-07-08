@@ -1,4 +1,5 @@
 const REVIEW_SPLIT_KEY = "2cornot2c.assignmentReviewSplit";
+const COLLAPSED_PANELS_KEY = "2cornot2c.assignmentDashboardCollapsedPanels";
 const DEFAULT_REVIEW_SPLIT = 320;
 const MIN_REVIEW_SPLIT = 180;
 const MAX_REVIEW_SPLIT_RATIO = 0.65;
@@ -76,6 +77,7 @@ const els = {
   nowAt: document.querySelector("#nowAt"),
   targetsText: document.querySelector("#targetsText"),
   generateReportBtn: document.querySelector("#generateReportBtn"),
+  panels: document.querySelectorAll("[data-panel-id]"),
 };
 
 async function api(path, options = {}) {
@@ -300,6 +302,53 @@ async function loadSelectedReport() {
 function readReviewSplit() {
   const value = Number(localStorage.getItem(REVIEW_SPLIT_KEY));
   return Number.isFinite(value) && value > 0 ? value : DEFAULT_REVIEW_SPLIT;
+}
+
+function readCollapsedPanels() {
+  try {
+    const value = JSON.parse(localStorage.getItem(COLLAPSED_PANELS_KEY) || "[]");
+    return Array.isArray(value) ? new Set(value.map(String)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function writeCollapsedPanels(collapsedPanels) {
+  localStorage.setItem(COLLAPSED_PANELS_KEY, JSON.stringify([...collapsedPanels]));
+}
+
+function updatePanelToggle(panel, button, isCollapsed) {
+  panel.classList.toggle("isCollapsed", isCollapsed);
+  button.setAttribute("aria-expanded", String(!isCollapsed));
+  button.textContent = isCollapsed ? "Apri" : "Chiudi";
+  button.title = isCollapsed ? "Mostra questa sezione." : "Nascondi questa sezione.";
+}
+
+function initCollapsiblePanels() {
+  const collapsedPanels = readCollapsedPanels();
+  els.panels.forEach((panel) => {
+    const panelId = panel.dataset.panelId;
+    const head = panel.querySelector(".panelHead");
+    if (!panelId || !head || head.querySelector("[data-panel-toggle]")) return;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "panelToggle";
+    button.dataset.panelToggle = panelId;
+    const isCollapsed = collapsedPanels.has(panelId);
+    updatePanelToggle(panel, button, isCollapsed);
+    button.addEventListener("click", () => {
+      const nextCollapsed = !panel.classList.contains("isCollapsed");
+      if (nextCollapsed) {
+        collapsedPanels.add(panelId);
+      } else {
+        collapsedPanels.delete(panelId);
+      }
+      writeCollapsedPanels(collapsedPanels);
+      updatePanelToggle(panel, button, nextCollapsed);
+      if (!nextCollapsed) applyReviewSplit();
+    });
+    head.append(button);
+  });
 }
 
 function clampReviewSplit(value, containerWidth) {
@@ -1059,5 +1108,6 @@ els.filterButtons.forEach((button) => {
   button.addEventListener("click", () => setFilter(button.dataset.filter));
 });
 
+initCollapsiblePanels();
 setFilter("all");
 Promise.all([loadReports(), loadActivities(), loadOverview()]).catch((error) => setStatus(`Errore: ${error.message}`));

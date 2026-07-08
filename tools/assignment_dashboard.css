@@ -236,6 +236,22 @@ label {
   background: rgba(255, 255, 255, .72);
 }
 
+.panel.isCollapsed .panelHead {
+  border-bottom: 0;
+}
+
+.panel.isCollapsed > :not(.panelHead) {
+  display: none !important;
+}
+
+.panelToggle {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: .45rem .75rem;
+  font-size: .72rem;
+  box-shadow: none;
+}
+
 .panelHead h2 {
   margin-bottom: .2rem;
   font-size: 1.25rem;
