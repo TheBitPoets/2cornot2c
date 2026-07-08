@@ -498,6 +498,13 @@ label {
   align-items: center;
 }
 
+.coverageStatusCell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+  align-items: center;
+}
+
 .coverageReportCell button {
   border: 0;
   border-bottom: 1px solid currentColor;

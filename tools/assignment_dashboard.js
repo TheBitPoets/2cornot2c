@@ -700,13 +700,22 @@ function coverageGroupClass(reports) {
   }[coverageWorstKind(reports)] || "coverageGroupInProgress";
 }
 
-function coverageReportCell(report, isLatest = false) {
+function coverageReportCell(report) {
   if (!report) return '<span class="coverageReportMissing">nessun registro</span>';
   return `
     <div class="coverageReportCell">
       <button type="button" data-coverage-report="${escapeHtml(report.name)}" title="Apri il registro ${escapeHtml(report.name)} e caricalo nella dashboard.">${escapeHtml(report.name)} ${reportLock(report)}</button>
-      ${isLatest ? badge("ultimo", "muted") : ""}
       ${coverageReportCounts(report)}
+    </div>
+  `;
+}
+
+function coverageStatusCell(outcome, report, isLatest = false) {
+  const statusKind = outcome.kind === "muted" && !report ? "warn" : outcome.kind;
+  return `
+    <div class="coverageStatusCell">
+      ${badge(outcome.label, statusKind)}
+      ${isLatest ? badge("ultimo", "muted") : ""}
     </div>
   `;
 }
@@ -762,8 +771,8 @@ function renderCoverage() {
         <td>${report ? classBadge(report) : classBadge(activity)}</td>
         <td>${kindLabel(activity.kind)}</td>
         <td>${escapeHtml(activity.student_support_mode || "-")}</td>
-        <td>${badge(outcome.label, outcome.kind === "muted" && !report ? "warn" : outcome.kind)}</td>
-        <td>${coverageReportCell(report, index === 0)}</td>
+        <td>${coverageStatusCell(outcome, report, index === 0)}</td>
+        <td>${coverageReportCell(report)}</td>
         <td>${escapeHtml(formatDate(report?.updated_at || report?.due_at))}</td>
         <td>
           ${report ? `
