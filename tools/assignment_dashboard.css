@@ -351,6 +351,10 @@ label {
   overflow: auto;
 }
 
+#coverageTable {
+  min-width: 72rem;
+}
+
 .coverageOk { background: #f5fbf7; }
 .coverageWarn { background: #fffaf0; }
 .coverageBad { background: #fff7f5; }
