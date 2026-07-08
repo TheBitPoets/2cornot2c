@@ -1153,10 +1153,19 @@ button.matrixCell {
   cursor: pointer;
 }
 
+button.matrixCell:disabled {
+  cursor: not-allowed;
+}
+
 button.matrixCell:hover,
 button.matrixCell:focus-visible {
   outline: 2px solid rgba(17, 17, 17, .28);
   outline-offset: 2px;
+}
+
+button.matrixCell:disabled:hover,
+button.matrixCell:disabled:focus-visible {
+  outline: 0;
 }
 
 .matrixCell small {

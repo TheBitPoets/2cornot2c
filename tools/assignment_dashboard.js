@@ -1036,10 +1036,14 @@ function renderOverviewMatrix(rows) {
         const row = byStudentActivity.get(`${student}::${activityKey(activity)}`);
         const kind = matrixCellKind(row);
         const score = matrixScore(row);
+        const hasSubmission = row?.submitted || row?.status?.startsWith("submitted");
+        const submissionTitle = hasSubmission
+          ? `Apri la consegna di ${escapeHtml(row.student || "questo studente")} per questa activity.`
+          : "Consegna non disponibile: lo studente non ha ancora consegnato.";
         return `
           <td>
             ${row ? `
-              <button type="button" class="matrixCell matrixCell${kind}" data-overview-report="${escapeHtml(row.report_name)}" data-overview-student="${escapeHtml(row.student || "")}" title="Apri il registro ${escapeHtml(row.report_name)} e la consegna di ${escapeHtml(row.student || "questo studente")}.">
+              <button type="button" class="matrixCell matrixCell${kind}" data-overview-report="${escapeHtml(row.report_name)}" data-overview-student="${escapeHtml(row.student || "")}" title="${submissionTitle}" ${hasSubmission ? "" : "disabled"}>
                 <strong>${escapeHtml(matrixCellText(row))}</strong>
                 ${score !== "" ? `<small>${escapeHtml(score)}</small>` : ""}
               </button>
@@ -1696,7 +1700,7 @@ els.overviewBody.addEventListener("click", async (event) => {
 });
 els.overviewMatrixBody.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-overview-report]");
-  if (!button) return;
+  if (!button || button.disabled) return;
   els.reportSelect.value = button.dataset.overviewReport;
   await loadSelectedReport();
   if (button.dataset.overviewStudent) {
