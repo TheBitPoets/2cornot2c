@@ -547,8 +547,6 @@ label {
 }
 
 .studentsDialog {
-  display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
   width: min(96vw, 88rem);
   height: min(88vh, 50rem);
   min-width: min(92vw, 38rem);
@@ -599,8 +597,7 @@ label {
 }
 
 .studentsDialogTable {
-  min-height: 0;
-  overflow: auto;
+  height: calc(100% - 11.6rem);
 }
 
 .status {
