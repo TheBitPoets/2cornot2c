@@ -178,7 +178,7 @@ select {
 .viewTabs {
   display: flex;
   gap: .45rem;
-  padding: .85rem 1.1rem 0;
+  padding: .85rem 1.1rem;
 }
 
 .viewTabs button {
