@@ -276,6 +276,7 @@ async function loadOverview() {
   state.overviewRows = payload.rows || [];
   renderOverviewFilters();
   renderOverview();
+  renderCoverage();
 }
 
 function renderReportSelect() {
@@ -575,10 +576,11 @@ function reportLock(report) {
 function reportOutcome(report) {
   if (!report) return { kind: "muted", label: "nessun registro" };
   const expired = reportIsExpired(report);
-  const notSubmitted = Number(report.not_submitted || 0);
-  const late = Number(report.late || 0);
-  const submitted = Number(report.submitted || 0);
-  const total = Number(report.students || 0);
+  const counts = reportCounts(report);
+  const notSubmitted = counts.missing;
+  const late = counts.late;
+  const submitted = counts.submitted;
+  const total = counts.total;
   if (expired && notSubmitted > 0) return { kind: "bad", label: `${notSubmitted} mancanti` };
   if (late > 0) return { kind: "warn", label: `${late} ritardi` };
   if (total > 0 && submitted === total) return { kind: "ok", label: "tutti in tempo" };
@@ -586,18 +588,26 @@ function reportOutcome(report) {
   return { kind: "muted", label: "dati parziali" };
 }
 
+function reportOverviewRows(report) {
+  if (!report?.name) return [];
+  return state.overviewRows.filter((row) => row.report_name === report.name);
+}
+
 function reportCounts(report) {
   const students = Array.isArray(report?.students) ? report.students : [];
-  const total = students.length || Number(report?.students || 0);
-  const submitted = students.length
-    ? students.filter((student) => student.submitted).length
-    : Number(report?.submitted || 0);
-  const missing = students.length
-    ? students.filter((student) => student.status === "missing").length
-    : Number(report?.not_submitted || 0);
-  const late = students.length
-    ? students.filter((student) => student.submitted && student.late).length
-    : Number(report?.late || 0);
+  const overviewRows = students.length ? [] : reportOverviewRows(report);
+  const detailRows = students.length ? students : overviewRows;
+  const hasSummaryCounts = ["submitted", "not_submitted", "late"].some((key) => Object.prototype.hasOwnProperty.call(report || {}, key));
+  const total = detailRows.length || Number(report?.students || 0);
+  const submitted = detailRows.length
+    ? detailRows.filter((student) => student.submitted).length
+    : hasSummaryCounts ? Number(report?.submitted || 0) : 0;
+  const missing = detailRows.length
+    ? detailRows.filter((student) => student.status === "missing").length
+    : hasSummaryCounts ? Number(report?.not_submitted || 0) : 0;
+  const late = detailRows.length
+    ? detailRows.filter((student) => student.submitted && student.late).length
+    : hasSummaryCounts ? Number(report?.late || 0) : 0;
   return {
     total: Number.isFinite(total) ? total : 0,
     submitted: Number.isFinite(submitted) ? submitted : 0,
@@ -610,7 +620,7 @@ function coverageReportCounts(report) {
   const counts = reportCounts(report);
   return `
     <small class="coverageReportCounts">
-      ${escapeHtml(counts.total)} studenti · ${escapeHtml(counts.submitted)} consegnati · ${escapeHtml(counts.missing)} mancanti · ${escapeHtml(counts.late)} in ritardo
+      ${escapeHtml(counts.total)} studenti - ${escapeHtml(counts.submitted)} consegnati - ${escapeHtml(counts.missing)} mancanti - ${escapeHtml(counts.late)} in ritardo
     </small>
   `;
 }
