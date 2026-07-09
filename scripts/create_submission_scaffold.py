@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from scripts import validate_activity
+from scripts.thebitlab_contracts import normalize_activity
 
 
 DEFAULT_TARGET_DIR = Path(".")
@@ -75,6 +76,47 @@ def validate_activity_or_raise(activity: dict[str, Any], identifier: str) -> Non
     errors = validate_activity.validate_activity(activity, identifier)
     if errors:
         raise ValueError("\n".join(errors))
+
+
+def legacy_activity_validation_payload(activity: dict[str, Any], normalized_activity: dict[str, Any]) -> dict[str, Any]:
+    """Return a copy with legacy aliases filled from canonical activity fields."""
+
+    payload = dict(activity)
+    payload.setdefault("titolo", normalized_activity.get("title", ""))
+    payload.setdefault("tipo", normalized_activity.get("kind", ""))
+    payload.setdefault("difficolta", normalized_activity.get("difficulty", ""))
+    payload.setdefault("argomenti", normalized_activity.get("topics", []))
+    payload.setdefault("consegna", normalized_activity.get("instructions", ""))
+    payload.setdefault("correzione", normalized_activity.get("grading_policy", {}))
+    payload.setdefault(
+        "metriche",
+        {
+            "tempo_stimato_minuti": 0,
+            "traccia_tempo_dichiarato": False,
+            "traccia_sessioni_thebitlab": False,
+            "traccia_eventi_didattici": False,
+            "traccia_errori_compilazione": False,
+        },
+    )
+    return payload
+
+
+def validate_normalized_activity_or_raise(activity: dict[str, Any], identifier: str) -> None:
+    """Validate canonical activity fields used by the assignment scaffold."""
+
+    kind = str(activity.get("kind") or "").strip()
+    if kind and kind not in validate_activity.ALLOWED_TYPES:
+        raise ValueError(f"{identifier}: kind non ammesso: {kind}")
+
+
+def validate_activity_contract_or_raise(activity: dict[str, Any], identifier: str) -> dict[str, Any]:
+    """Validate legacy/canonical activity metadata and return canonical fields."""
+
+    normalized_activity = normalize_activity(activity)
+    validation_payload = legacy_activity_validation_payload(activity, normalized_activity)
+    validate_activity_or_raise(validation_payload, identifier)
+    validate_normalized_activity_or_raise(normalized_activity, identifier)
+    return normalized_activity
 
 
 def language_for(activity: dict[str, Any], explicit_language: str | None = None) -> str:
@@ -190,8 +232,9 @@ def starter_source(language: str) -> str:
 
 def assignment_readme(activity: dict[str, Any], identifier: str, source_name: str, language: str, thebitlab_ref: str) -> str:
     """Build the README for one student assignment scaffold."""
-    title = str(activity.get("titolo") or identifier)
-    prompt = str(activity.get("consegna") or "Segui le indicazioni del docente.")
+    normalized_activity = normalize_activity(activity)
+    title = str(normalized_activity.get("title") or identifier)
+    prompt = str(normalized_activity.get("instructions") or "Segui le indicazioni del docente.")
     return (
         f"# {title}\n\n"
         f"Activity ID: `{identifier}`\n\n"
@@ -223,8 +266,8 @@ def create_scaffold(
     """Create an assignment scaffold in a student repository."""
     activity = load_activity(activity_path)
     identifier = activity_id(activity)
-    validate_activity_or_raise(activity, identifier)
-    selected_language = language_for(activity, language)
+    normalized_activity = validate_activity_contract_or_raise(activity, identifier)
+    selected_language = language_for(normalized_activity, language)
     source_name = validate_source_name(
         source_name if source_name is not None else default_source_name_for(selected_language)
     )

@@ -39,6 +39,34 @@ def write_activity(tmp_path):
     return path
 
 
+def write_canonical_activity(tmp_path):
+    """Write a canonical activity JSON and return its path."""
+    path = tmp_path / "activity.json"
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "id": "python-base-somma-001",
+                "title": "Somma canonica",
+                "kind": "compito-casa",
+                "difficulty": "B",
+                "topics": ["variabili", "input-output"],
+                "language": "python",
+                "instructions": "Scrivi un programma Python che stampa una somma.",
+                "student_support_mode": "senza-aiuto",
+                "grading_policy": {
+                    "compila": True,
+                    "test": True,
+                    "sandbox": True,
+                    "ai_feedback": False,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
 def test_collect_targets_uses_direct_and_file_targets(tmp_path) -> None:
     targets_dir = tmp_path / "classes"
     targets_dir.mkdir()
@@ -82,6 +110,19 @@ def test_assign_activity_to_multiple_targets(tmp_path) -> None:
         assert (assignment_dir / "main.py").exists()
         readme = (assignment_dir / "README.md").read_text(encoding="utf-8")
         assert "source_path`: `assignments/python-base-somma-001/main.py`" in readme
+
+
+def test_assign_activity_supports_canonical_activity_metadata(tmp_path) -> None:
+    activity_path = write_canonical_activity(tmp_path)
+    target = tmp_path / "student-a"
+
+    assign_activity.assign_activity_to_targets(activity_path=activity_path, targets=[target])
+
+    assignment_dir = target / "assignments" / "python-base-somma-001"
+    assert (assignment_dir / "main.py").exists()
+    readme = (assignment_dir / "README.md").read_text(encoding="utf-8")
+    assert "# Somma canonica" in readme
+    assert "language`: `python`" in readme
 
 
 def test_assign_activity_preserves_existing_source_with_force(tmp_path) -> None:
