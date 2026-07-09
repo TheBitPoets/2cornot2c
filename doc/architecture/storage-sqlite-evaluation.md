@@ -107,7 +107,7 @@ Le porte devono parlare con contratti canonici, non con path fisici o dettagli G
 
 1. Estrarre protocolli/interfacce dai metodi gia usati da `CourseService` e `AssignmentService`.
 2. Spostare `assignment_overview()` nello storage o in un query service che non sappia se i dati arrivano da JSON o SQLite.
-3. Disegnare uno schema SQLite minimo per classi, studenti, assignment, register, submission, grading ed eventi.
+3. Disegnare uno schema SQLite minimo per classi, studenti, assignment, register, submission, grading ed eventi. Vedi [`adr-sqlite-storage-schema.md`](adr-sqlite-storage-schema.md).
 4. Aggiungere un prototipo SQLite isolato e ricostruibile dai JSON, senza cambiare il flusso principale.
 5. Misurare se il prototipo semplifica quadro classe, filtri, cancellazioni e storico.
 6. Solo dopo decidere quali entita diventano primarie in SQLite.
@@ -128,7 +128,7 @@ grading_results(id, submission_id, status, tests_passed, tests_total, score, tea
 events(id, entity_type, entity_id, event_type, payload_json, created_at)
 ```
 
-All'inizio `source_path`, `report_path` e `payload_json` permettono di collegare SQLite ai JSON senza perdere compatibilita.
+All'inizio `source_path`, `report_path` e `payload_json` permettono di collegare SQLite ai JSON senza perdere compatibilita. Lo schema dettagliato e in [`adr-sqlite-storage-schema.md`](adr-sqlite-storage-schema.md).
 
 Calendari: per l'MVP non viene proposta una tabella iniziale. `doc/calendars/*.json` resta sorgente primaria perche il calendario e ancora un artefatto piccolo, versionabile e collegato al percorso tramite `course_design_name`. Una tabella `school_calendars` o `calendar_links` andra valutata solo se serviranno query multi-anno, collegamenti molti-a-molti tra calendari e percorsi, oppure sincronizzazione applicativa non gestibile bene con i JSON.
 
@@ -161,6 +161,6 @@ Se invece il dato e un artefatto didattico leggibile, piccolo e revisionabile, i
 
 1. Estrarre protocolli `CourseStorage` e `AssignmentStorage` senza cambiare comportamento.
 2. Spostare le query derivate in un service dedicato o in una porta esplicita.
-3. Aggiungere ADR/schema SQLite minimo per classi, studenti e assignment.
+3. Aggiungere ADR/schema SQLite minimo per classi, studenti e assignment. Vedi [`adr-sqlite-storage-schema.md`](adr-sqlite-storage-schema.md).
 4. Implementare una spike SQLite ricostruibile dai JSON dei registri.
 5. Decidere se chiudere #286 con piano documentato o proseguire fino al prototipo.
