@@ -34,6 +34,20 @@ def first_dict(payload: dict[str, Any], *keys: str) -> dict[str, Any]:
     return {}
 
 
+def bool_value(value: Any, default: bool = False) -> bool:
+    """Return a conservative boolean value from bools or common string forms."""
+
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"true", "1", "yes", "y", "si", "s"}:
+            return True
+        if normalized in {"false", "0", "no", "n"}:
+            return False
+    return default
+
+
 def normalize_activity(payload: dict[str, Any]) -> dict[str, Any]:
     """Return an activity with canonical fields populated from legacy aliases."""
 
@@ -137,9 +151,9 @@ def normalize_register_student(payload: dict[str, Any]) -> dict[str, Any]:
     normalized["student"] = first_text(payload, "student")
     normalized["student_id"] = first_text(payload, "student_id") or normalized["student"]
     normalized["repo"] = first_text(payload, "repo")
-    normalized["submitted"] = bool(payload.get("submitted", False))
+    normalized["submitted"] = bool_value(payload.get("submitted", False))
     normalized["status"] = first_text(payload, "status")
-    normalized["late"] = bool(payload.get("late", False))
+    normalized["late"] = bool_value(payload.get("late", False))
     submission = payload.get("submission") if isinstance(payload.get("submission"), dict) else {}
     grading = payload.get("grading") if isinstance(payload.get("grading"), dict) else {}
     ai_feedback = payload.get("ai_feedback") if isinstance(payload.get("ai_feedback"), dict) else {}

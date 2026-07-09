@@ -102,3 +102,25 @@ def test_normalize_assignment_register_adds_nested_defaults() -> None:
     assert student["grading"]["failed_tests"] == []
     assert student["grading"]["teacher_grade"] is None
     assert student["ai_feedback"]["status"] == "not_generated"
+
+
+def test_normalize_register_student_parses_boolean_strings_conservatively() -> None:
+    student = thebitlab_contracts.normalize_register_student(
+        {
+            "student": "rossi-mario",
+            "submitted": "false",
+            "late": "0",
+        }
+    )
+    other_student = thebitlab_contracts.normalize_register_student(
+        {
+            "student": "bianchi-luca",
+            "submitted": "yes",
+            "late": "si",
+        }
+    )
+
+    assert student["submitted"] is False
+    assert student["late"] is False
+    assert other_student["submitted"] is True
+    assert other_student["late"] is True
