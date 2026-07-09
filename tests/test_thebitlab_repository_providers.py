@@ -158,6 +158,12 @@ def test_github_repository_provider_rejects_class_filter_and_invalid_refs() -> N
     with pytest.raises(ValueError, match="non valido"):
         GitHubRepositoryProvider(["not-a-repo"]).list_student_repositories()
 
+    with pytest.raises(ValueError, match="non valido"):
+        GitHubRepositoryProvider(["https://notgithub.com/TheBitPoets/rossi-mario"]).list_student_repositories()
+
+    with pytest.raises(ValueError, match="non valido"):
+        GitHubRepositoryProvider(["https://github.com/TheBitPoets/rossi-mario/issues"]).list_student_repositories()
+
 
 def test_normalize_github_repo_ref_accepts_supported_forms() -> None:
     assert normalize_github_repo_ref("TheBitPoets/rossi-mario") == ("TheBitPoets", "rossi-mario")

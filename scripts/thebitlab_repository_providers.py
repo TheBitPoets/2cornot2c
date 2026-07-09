@@ -6,8 +6,9 @@ import re
 from typing import Protocol
 
 
-GITHUB_RE = re.compile(r"github\.com[:/](?P<owner>[^/\s]+)/(?P<repo>[^/\s]+?)(?:\.git)?/?$")
 OWNER_REPO_RE = re.compile(r"^(?P<owner>[A-Za-z0-9_.-]+)/(?P<repo>[A-Za-z0-9_.-]+)$")
+GITHUB_HTTPS_RE = re.compile(r"^https://github\.com/(?P<owner>[A-Za-z0-9_.-]+)/(?P<repo>[A-Za-z0-9_.-]+?)(?:\.git)?/?$")
+GITHUB_SSH_RE = re.compile(r"^git@github\.com:(?P<owner>[A-Za-z0-9_.-]+)/(?P<repo>[A-Za-z0-9_.-]+?)(?:\.git)?$")
 
 
 @dataclass(frozen=True)
@@ -151,7 +152,7 @@ def normalize_github_repo_ref(ref: str) -> tuple[str, str]:
     clean_ref = ref.strip()
     if not clean_ref:
         raise ValueError("Repository GitHub vuoto.")
-    match = OWNER_REPO_RE.match(clean_ref) or GITHUB_RE.search(clean_ref)
+    match = OWNER_REPO_RE.match(clean_ref) or GITHUB_HTTPS_RE.match(clean_ref) or GITHUB_SSH_RE.match(clean_ref)
     if not match:
         raise ValueError(f"Repository GitHub non valido: {ref}")
     return match.group("owner"), match.group("repo")
