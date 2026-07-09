@@ -659,16 +659,16 @@ I log degli aiuti richiesti vanno tenuti separati dal report di grading: possono
 
 ## Prossimi passi
 
-Le prossime PR possono introdurre:
+La roadmap centrale e in [`ROADMAP.md`](ROADMAP.md).
 
-1. Template repository studente.
-2. Workflow grading riusabile per repository studente.
-3. Script per generare scaffold consegna.
-4. Integrazione GUI per assegnare activity a classi/team.
-5. Download artifact GitHub Actions e collegamento al registro consegne.
-6. Modalita studente e feedback assistito.
-7. Dashboard Markdown minima per docente.
-8. Legenda/help della dashboard consegne: spiegare colori, badge, sigle della matrice, lucchetti, stati, filtri e azioni dei modal.
-9. Layout pannelli personalizzabile: drag and drop dei pannelli della pagina consegne, griglia a una/due colonne, persistenza in `localStorage` e valutazione dello stesso pattern per calendario, course board e altre pagine GUI.
+Per il flusso consegne restano aperti soprattutto:
+
+1. pagina GUI per creare, modificare, duplicare e assegnare activity a classi/team;
+2. gestione classi da GitHub Team, con sincronizzazione studenti;
+3. download artifact GitHub Actions e collegamento automatico al registro consegne;
+4. modalita studente e feedback assistito;
+5. supporto completo a consegne multi-file, fixture e directory di progetto;
+6. archiviazione e cancellazione sicura di registri, activity e assegnazioni;
+7. valutazione dello stesso pattern di layout pannelli anche per calendario, course board e altre pagine GUI.
 
 Il primo template repository studente e documentato in `STUDENT_REPOSITORY_TEMPLATE.md`.

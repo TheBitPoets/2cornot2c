@@ -141,12 +141,16 @@ Qualunque fase di feedback AI deve essere separata dal grading.
 
 ## Prossimi passi
 
-Le prossime PR possono aggiungere:
+La roadmap centrale e in [`ROADMAP.md`](ROADMAP.md).
+
+Per i repository studente restano aperti soprattutto:
 
 1. trigger automatico su push;
 2. raccolta centralizzata degli artifact;
-3. dashboard docente minima;
-4. automazione GitHub per creare repository studenti da template.
+3. collegamento artifact e report al registro consegne;
+4. automazione GitHub per creare repository studenti da template;
+5. layer provider per non legare il modello solo a GitHub;
+6. eventuale supporto futuro a GitLab o provider interno.
 
 ## Scaffold consegna
 

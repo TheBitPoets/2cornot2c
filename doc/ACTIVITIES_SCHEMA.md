@@ -301,11 +301,13 @@ Il validatore non esegue codice e non valuta la qualita didattica dell'attivita.
 
 ## Prossimi passi
 
-Le PR successive potranno aggiungere:
+La roadmap centrale e in [`ROADMAP.md`](ROADMAP.md).
 
-- CLI guidata per creare attivita;
-- generazione AI assisted di consegne;
-- collegamento automatico a paragrafi del README;
-- correzione deterministica C;
-- sandbox Docker;
-- report e metriche.
+Per lo schema activity restano aperti soprattutto:
+
+- pagina GUI per creare, modificare, duplicare e validare activity;
+- collegamento automatico a paragrafi del README e alla cornice didattica;
+- generazione AI assisted di consegne con approvazione docente;
+- validazione piu forte del legame tra tipo, modalita, scadenza, classe e registri;
+- migrazione degli schemi quando il modello dati canonico verra consolidato;
+- estensione dei runner oltre C e supporto consegne multi-file.
