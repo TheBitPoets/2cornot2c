@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from scripts import assign_activity, create_submission_scaffold
+from scripts import assign_activity, create_submission_scaffold, validate_activity
 from scripts.thebitlab_contracts import normalize_activity
 
 
@@ -340,6 +340,14 @@ def clean_metadata(value: str | None) -> str:
     return str(value or "").strip()
 
 
+def validate_normalized_activity_or_raise(activity: dict[str, Any], identifier: str) -> None:
+    """Validate canonical activity fields used by the tracking register."""
+
+    kind = clean_metadata(activity.get("kind"))
+    if kind and kind not in validate_activity.ALLOWED_TYPES:
+        raise ValueError(f"{identifier}: kind non ammesso: {kind}")
+
+
 def track_assignments(
     *,
     activity_path: Path,
@@ -356,6 +364,7 @@ def track_assignments(
     normalized_activity = normalize_activity(activity)
     activity_id = create_submission_scaffold.activity_id(activity)
     create_submission_scaffold.validate_activity_or_raise(activity, activity_id)
+    validate_normalized_activity_or_raise(normalized_activity, activity_id)
     normalized_assigned_at = parse_datetime(assigned_at, "assigned_at")
     normalized_due_at = parse_datetime(due_at, "due_at")
     normalized_now = parse_datetime(now, "now")
