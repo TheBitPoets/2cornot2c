@@ -70,6 +70,14 @@ def test_local_repository_provider_resolves_one_student(tmp_path) -> None:
     assert repository.provider == "local"
 
 
+def test_local_repository_provider_rejects_class_filter_without_mapping(tmp_path) -> None:
+    (tmp_path / "rossi-mario").mkdir()
+    provider = LocalRepositoryProvider(tmp_path)
+
+    with pytest.raises(ValueError, match="Filtro classe"):
+        provider.list_student_repositories(class_ref="3A-INF")
+
+
 def test_local_repository_provider_rejects_missing_or_unsafe_paths(tmp_path) -> None:
     outside = tmp_path.parent / "outside-student-repo"
     outside.mkdir(exist_ok=True)

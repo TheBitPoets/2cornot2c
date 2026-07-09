@@ -14,6 +14,8 @@ Il contratto minimo e in `scripts/thebitlab_repository_providers.py`:
 - `StudentRepository`: riferimento normalizzato a un repository studente.
 - `LocalRepositoryProvider`: adapter iniziale basato su directory locali.
 
+Il parametro `class_ref` e parte della porta per GitHub/GitLab/team/classi, ma il provider locale lo rifiuta finche non esiste una mappa locale classe/studenti. Questo evita di restituire tutti i repository quando il chiamante si aspetta un filtro di classe.
+
 ## Dato normalizzato
 
 `StudentRepository` espone:

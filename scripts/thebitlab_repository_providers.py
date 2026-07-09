@@ -45,10 +45,13 @@ class LocalRepositoryProvider:
         """List local student repositories.
 
         `class_ref` is accepted to keep the signature aligned with future
-        team/class providers. The local implementation filters only when the
-        caller supplies explicit metadata through a future adapter.
+        team/class providers. The local implementation rejects it until a
+        local class/student mapping exists, so callers never receive an
+        unfiltered list by mistake.
         """
 
+        if class_ref:
+            raise ValueError("Filtro classe non supportato dal provider locale senza mappa studenti.")
         paths = self.student_dirs if self.student_dirs is not None else self._discover_student_dirs()
         repositories = [self._repository_from_path(path) for path in paths]
         return sorted(repositories, key=lambda repository: repository.student_id)
