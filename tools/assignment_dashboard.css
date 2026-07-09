@@ -566,8 +566,8 @@ label > textarea {
 }
 
 .panel {
-  flex: 1 1 24rem;
-  min-width: min(24rem, 100%);
+  flex: 1 1 clamp(14rem, 24vw, 24rem);
+  min-width: 0;
   border: 1px solid rgba(17, 17, 17, .16);
   border-radius: 28px;
   background: rgba(255, 255, 255, .92);
