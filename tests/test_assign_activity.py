@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 from scripts import assign_activity
+from scripts.thebitlab_repository_providers import LocalRepositoryProvider, StudentRepository
 
 
 def activity() -> dict:
@@ -67,6 +68,26 @@ def write_canonical_activity(tmp_path):
     return path
 
 
+class MissingPathProvider:
+    provider_name = "missing-path"
+
+    def list_student_repositories(self, class_ref: str | None = None) -> list[StudentRepository]:
+        return [StudentRepository(student_id="rossi-mario", repo_ref="TheBitPoets/rossi-mario", provider=self.provider_name)]
+
+    def resolve_student_repository(self, student_id: str) -> StudentRepository:
+        return self.list_student_repositories()[0]
+
+
+class EmptyProvider:
+    provider_name = "empty"
+
+    def list_student_repositories(self, class_ref: str | None = None) -> list[StudentRepository]:
+        return []
+
+    def resolve_student_repository(self, student_id: str) -> StudentRepository:
+        raise FileNotFoundError(student_id)
+
+
 def test_collect_targets_uses_direct_and_file_targets(tmp_path) -> None:
     targets_dir = tmp_path / "classes"
     targets_dir.mkdir()
@@ -86,6 +107,37 @@ def test_collect_targets_uses_direct_and_file_targets(tmp_path) -> None:
     targets = assign_activity.collect_targets([tmp_path / "student-a"], targets_file)
 
     assert targets == [tmp_path / "student-a", tmp_path / "student-b", tmp_path / "student-c"]
+
+
+def test_collect_targets_from_local_repository_provider(tmp_path) -> None:
+    (tmp_path / "rossi-mario").mkdir()
+    (tmp_path / "bianchi-luca").mkdir()
+    provider = LocalRepositoryProvider(tmp_path)
+
+    targets = assign_activity.collect_targets_from_provider(provider)
+
+    assert targets == [
+        (tmp_path / "bianchi-luca").resolve(),
+        (tmp_path / "rossi-mario").resolve(),
+    ]
+
+
+def test_collect_targets_from_provider_requires_local_paths() -> None:
+    try:
+        assign_activity.collect_targets_from_provider(MissingPathProvider())
+    except ValueError as error:
+        assert "Repository senza path locale" in str(error)
+    else:
+        raise AssertionError("collect_targets_from_provider should reject repositories without a local path")
+
+
+def test_collect_targets_from_provider_rejects_empty_provider() -> None:
+    try:
+        assign_activity.collect_targets_from_provider(EmptyProvider())
+    except ValueError as error:
+        assert "non ha restituito repository studenti" in str(error)
+    else:
+        raise AssertionError("collect_targets_from_provider should reject an empty provider")
 
 
 def test_collect_targets_requires_at_least_one_target() -> None:
