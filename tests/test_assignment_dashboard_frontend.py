@@ -216,6 +216,8 @@ def run_dashboard_js(assertions: str) -> None:
         reportsForActivity,
         activityCoverageKey,
         summaryTooltip,
+        renderCoverageSummaryCards,
+        renderOverviewSummaryCards,
         summaryCounts,
         renderStudentsSummaryCards,
         compactStudentsSummaryItems,
@@ -549,6 +551,20 @@ def test_students_summary_cards_include_tooltips() -> None:
         assert.match(html, /title="Numero di studenti che hanno effettuato una consegna\\."/);
         assert.match(html, /title="Numero di studenti con grading o test falliti\\."/);
         assert.equal(tested.summaryTooltip("Etichetta nuova"), "Valore riepilogativo: Etichetta nuova.");
+        """
+    )
+
+
+def test_modal_summary_helpers_include_tooltips() -> None:
+    run_dashboard_js(
+        """
+        const coverageHtml = tested.renderCoverageSummaryCards(5, 3, 2);
+        assert.match(coverageHtml, /title="Activity o numero di activity a cui si riferisce questo riepilogo\\."/);
+        assert.match(coverageHtml, /<strong>Con registro<\\/strong><span>3<\\/span>/);
+
+        const overviewHtml = tested.renderOverviewSummaryCards([["Classi", 2], ["Filtri", "nessuno"]]);
+        assert.match(overviewHtml, /title="Numero di classi diverse presenti nelle righe del quadro classe filtrato\\."/);
+        assert.match(overviewHtml, /title="Numero di filtri attivi nel quadro classe\\."/);
         """
     )
 

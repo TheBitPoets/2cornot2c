@@ -190,6 +190,9 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
         </select>
       </label>
     </div>
+    <div id="overviewDialogSummary" class="overviewSummary overviewDialogSummary" aria-live="polite">
+      <p class="status">Genera o carica almeno un registro per vedere il quadro classe.</p>
+    </div>
     <div class="viewTabs" role="tablist" aria-label="Vista quadro classe">
       <button type="button" class="isActive" data-overview-view="list" role="tab" aria-selected="true" title="Mostra il quadro classe come elenco ordinabile, una riga per studente e activity.">Elenco</button>
       <button type="button" data-overview-view="matrix" role="tab" aria-selected="false" title="Mostra il quadro classe come matrice con studenti a sinistra e consegne in colonna.">Matrice</button>
@@ -253,6 +256,7 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
         <button type="button" class="smallButton" data-legend-topic="coverage" title="Mostra la legenda dei simboli e degli stati della copertura registri.">Legenda</button>
       </div>
     </div>
+    <div id="coverageDialogSummary" class="coverageSummary coverageDialogSummary" aria-live="polite"></div>
     <div class="tableWrap coverageDialogTable">
       <table id="coverageTable" class="resizableTable">
         <thead>
