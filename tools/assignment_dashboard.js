@@ -583,15 +583,19 @@ function currentPanels() {
 function applyPanelOrder() {
   const layout = document.querySelector("main.layout");
   if (!layout) return;
-  currentPanels().forEach((panel, index) => {
+  const panels = currentPanels();
+  panels.forEach((panel, index) => {
     panel.dataset.panelKey = panelKey(panel, index);
   });
   const order = readPanelOrder();
   if (!order.length) return;
-  const byKey = new Map(currentPanels().map((panel, index) => [panelKey(panel, index), panel]));
-  order.forEach((key) => {
-    const panel = byKey.get(key);
-    if (panel) layout.append(panel);
+  const byKey = new Map(panels.map((panel, index) => [panelKey(panel, index), panel]));
+  const orderedPanels = order.map((key) => byKey.get(key)).filter(Boolean);
+  panels.forEach((panel) => {
+    if (!orderedPanels.includes(panel)) orderedPanels.push(panel);
+  });
+  orderedPanels.forEach((panel) => {
+    layout.append(panel);
   });
 }
 

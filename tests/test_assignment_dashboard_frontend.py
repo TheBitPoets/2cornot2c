@@ -255,3 +255,33 @@ def test_panel_order_is_applied_and_persisted() -> None:
         );
         """
     )
+
+
+def test_panel_order_keeps_missing_saved_panels_after_ordered_ones() -> None:
+    run_dashboard_js(
+        """
+        const generate = new tested.FakeElement("generate");
+        generate.dataset.panelKey = "generate";
+        const selected = new tested.FakeElement("selected-report");
+        selected.dataset.panelKey = "selected-report";
+        const overview = new tested.FakeElement("class-overview");
+        overview.dataset.panelKey = "class-overview";
+        const students = new tested.FakeElement("students");
+        students.dataset.panelKey = "students";
+        tested.layout.append(generate);
+        tested.layout.append(selected);
+        tested.layout.append(overview);
+        tested.layout.append(students);
+
+        tested.localStorage.setItem(
+          "2cornot2c.assignmentDashboardPanelOrder",
+          JSON.stringify(["students", "generate"]),
+        );
+
+        tested.applyPanelOrder();
+        assert.equal(
+          JSON.stringify(tested.currentPanels().map((panel) => panel.dataset.panelKey)),
+          JSON.stringify(["students", "generate", "selected-report", "class-overview"]),
+        );
+        """
+    )
