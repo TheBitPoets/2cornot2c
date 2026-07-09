@@ -44,6 +44,7 @@ COURSE_PLAN_MD_PATH = ROOT / "doc" / "PERCORSO_DIDATTICO.md"
 README_PATH = ROOT / "README.md"
 AI_PROVIDERS_PATH = ROOT / "config" / "ai_providers.yaml"
 AI_SECRET_PATH = ROOT / ".secrets" / "ai.secret"
+LEGACY_AI_SECRET_PATH = ROOT / "scripts" / ".secrets" / "ai.secret"
 DEFAULT_SOURCES = ["README.md", "LINUX_PROGRAMMING.md"]
 ACTIVE_AI_PROVIDER = os.environ.get("AI_PROVIDER", "openai").strip().lower()
 ACTIVE_AI_MODEL = os.environ.get("AI_MODEL", "").strip()
@@ -1536,6 +1537,41 @@ def ai_config() -> dict:
         "api_key_configured": active["api_key_configured"],
         "billing_note": active["billing_note"],
         "providers": list(providers.values()),
+        "secret_status": ai_secret_status(providers),
+    }
+
+
+def diagnostic_path(path: Path) -> str:
+    """Return a stable diagnostic path without exposing host-specific separators."""
+
+    display_path = path.relative_to(ROOT) if path.is_relative_to(ROOT) else path
+    return str(display_path).replace("\\", "/")
+
+
+def ai_secret_status(providers: dict | None = None) -> dict:
+    """Return safe diagnostics about AI secrets without exposing values."""
+
+    safe_providers = providers or ai_providers()
+    secret_keys = sorted(
+        {
+            provider.get("secret_key", "")
+            for provider in parse_ai_providers_yaml()["providers"].values()
+            if provider.get("secret_key", "")
+        }
+    )
+    return {
+        "path": diagnostic_path(AI_SECRET_PATH),
+        "exists": AI_SECRET_PATH.is_file(),
+        "legacy_path": diagnostic_path(LEGACY_AI_SECRET_PATH),
+        "legacy_exists": LEGACY_AI_SECRET_PATH.is_file(),
+        "configured_keys": {
+            key: bool(secret_value(key))
+            for key in secret_keys
+        },
+        "configured_providers": {
+            provider_id: bool(provider.get("api_key_configured"))
+            for provider_id, provider in safe_providers.items()
+        },
     }
 
 

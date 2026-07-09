@@ -111,3 +111,27 @@ def test_list_assignment_reports_counts_late_only_for_submitted_students(tmp_pat
     assert reports[0]["submitted"] == 2
     assert reports[0]["not_submitted"] == 1
     assert reports[0]["late"] == 1
+
+
+def test_ai_secret_status_reports_paths_and_configured_keys_without_values(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "AI_SECRET_PATH", tmp_path / ".secrets" / "ai.secret")
+    monkeypatch.setattr(course_board_server, "LEGACY_AI_SECRET_PATH", tmp_path / "scripts" / ".secrets" / "ai.secret")
+    monkeypatch.setattr(course_board_server, "AI_PROVIDERS_PATH", tmp_path / "config" / "ai_providers.yaml")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    (tmp_path / ".secrets").mkdir()
+    (tmp_path / ".secrets" / "ai.secret").write_text("OPENAI_API_KEY=secret-value\n", encoding="utf-8")
+    (tmp_path / "scripts" / ".secrets").mkdir(parents=True)
+    (tmp_path / "scripts" / ".secrets" / "ai.secret").write_text("GEMINI_API_KEY=legacy-secret\n", encoding="utf-8")
+
+    status = course_board_server.ai_secret_status()
+
+    assert status["path"] == ".secrets/ai.secret"
+    assert status["exists"] is True
+    assert status["legacy_path"] == "scripts/.secrets/ai.secret"
+    assert status["legacy_exists"] is True
+    assert status["configured_keys"]["OPENAI_API_KEY"] is True
+    assert status["configured_keys"]["GEMINI_API_KEY"] is False
+    assert "secret-value" not in json.dumps(status)
+    assert "legacy-secret" not in json.dumps(status)

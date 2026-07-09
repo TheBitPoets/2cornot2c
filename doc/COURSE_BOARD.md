@@ -968,6 +968,8 @@ La API key deve stare solo nella shell, in una variabile d'ambiente locale, oppu
 
 Il server legge prima le variabili d'ambiente e poi `.secrets/ai.secret`.
 
+Le versioni attuali della board non leggono piu il vecchio percorso `scripts/.secrets/ai.secret`. Se avevi configurato le chiavi li, spostale in `.secrets/ai.secret`: il server espone solo uno stato diagnostico sicuro, ma non legge ne mostra mai i valori del file legacy.
+
 Esempio:
 
 ```text
