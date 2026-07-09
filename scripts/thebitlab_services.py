@@ -3,7 +3,79 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from scripts.thebitlab_storage import JsonAssignmentStorage
+from scripts.thebitlab_storage import JsonAssignmentStorage, JsonCourseStorage
+
+
+class CourseService:
+    """Application service for course designs and school calendars."""
+
+    def __init__(self, storage: JsonCourseStorage) -> None:
+        self.storage = storage
+
+    def safe_design_name(self, name: str) -> str:
+        """Validate a JSON filename used by saved designs and calendars."""
+
+        return self.storage.safe_design_name(name)
+
+    def saved_design_path(self, name: str) -> Path:
+        """Return the safe path for a saved course design."""
+
+        return self.storage.saved_design_path(name)
+
+    def school_calendar_path(self, name: str) -> Path:
+        """Return the safe path for a saved school calendar."""
+
+        return self.storage.school_calendar_path(name)
+
+    def read_design(self) -> dict[str, Any]:
+        """Load the current course design."""
+
+        return self.storage.read_design()
+
+    def write_design(self, payload: dict[str, Any]) -> None:
+        """Persist the current course design."""
+
+        self.storage.write_design(payload)
+
+    def list_saved_designs(self) -> list[dict[str, str]]:
+        """List saved course designs."""
+
+        return self.storage.list_saved_designs()
+
+    def read_saved_design(self, name: str) -> dict[str, Any]:
+        """Read a saved course design by filename."""
+
+        return self.storage.read_saved_design(name)
+
+    def write_saved_design(self, name: str, payload: dict[str, Any]) -> dict[str, str]:
+        """Persist a named course design."""
+
+        return self.storage.write_saved_design(name, payload)
+
+    def delete_saved_design(
+        self,
+        name: str,
+        delete_calendars: bool = False,
+        calendars: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Delete an archived course design and, optionally, its linked calendars."""
+
+        return self.storage.delete_saved_design(name, delete_calendars, calendars)
+
+    def list_school_calendars(self) -> list[dict[str, str]]:
+        """List saved school calendars."""
+
+        return self.storage.list_school_calendars()
+
+    def read_school_calendar(self, name: str) -> dict[str, Any]:
+        """Read a saved school calendar by filename."""
+
+        return self.storage.read_school_calendar(name)
+
+    def write_school_calendar(self, name: str, payload: dict[str, Any]) -> dict[str, str]:
+        """Persist a named school calendar."""
+
+        return self.storage.write_school_calendar(name, payload)
 
 
 class AssignmentService:
