@@ -111,6 +111,8 @@ def test_execution_result_from_payload_accepts_runner_json() -> None:
         "{not-json",
         "[]",
         {"status": "unknown"},
+        {"status": "passed"},
+        {"status": "failed", "tests": []},
         {"status": "passed", "tests": {}},
         {"status": "passed", "tests": [{"name": "senza_esito"}]},
     ],

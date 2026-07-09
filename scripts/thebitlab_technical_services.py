@@ -188,6 +188,8 @@ def execution_result_from_payload(payload: str | dict[str, Any]) -> ExecutionRes
     tests_raw = raw.get("tests", [])
     if not isinstance(tests_raw, list):
         raise InvalidServicePayloadError("Payload runner con tests non validi.")
+    if status in {"passed", "failed"} and not tests_raw:
+        raise InvalidServicePayloadError("Payload runner conclusivo senza test eseguiti.")
 
     tests = []
     for item in tests_raw:
