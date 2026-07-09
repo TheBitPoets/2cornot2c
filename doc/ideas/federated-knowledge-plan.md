@@ -2344,8 +2344,9 @@ Permettere allo studente di chiedere spiegazioni in modalità Studio.
 
 ### ISSUE 10.1 — Implementare MarkdownExporter
 
-**Labels:** `type:feature`, `area:export`, `priority:p0`, `milestone:m8-export
-milestone:m9-knowledge-federation`
+**Labels:** `type:feature`, `area:export`, `priority:p0`, `milestone:m8-export`
+
+**Related future milestone:** `milestone:m9-knowledge-federation`
 
 #### Obiettivo
 
@@ -2363,8 +2364,9 @@ Esportare LearningContent in Markdown.
 
 ### ISSUE 10.2 — Implementare HTMLExporter
 
-**Labels:** `type:feature`, `area:export`, `priority:p1`, `milestone:m8-export
-milestone:m9-knowledge-federation`
+**Labels:** `type:feature`, `area:export`, `priority:p1`, `milestone:m8-export`
+
+**Related future milestone:** `milestone:m9-knowledge-federation`
 
 #### Obiettivo
 
@@ -2381,8 +2383,9 @@ Esportare LearningContent in HTML.
 
 ### ISSUE 10.3 — Esportare esercizio completo
 
-**Labels:** `type:feature`, `area:export`, `area:exercise`, `priority:p1`, `milestone:m8-export
-milestone:m9-knowledge-federation`
+**Labels:** `type:feature`, `area:export`, `area:exercise`, `priority:p1`, `milestone:m8-export`
+
+**Related future milestone:** `milestone:m9-knowledge-federation`
 
 #### Obiettivo
 
