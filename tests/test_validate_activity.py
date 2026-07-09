@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from scripts import validate_activity
+from scripts.thebitlab_contracts import ALLOWED_ACTIVITY_KINDS
 
 
 EXAMPLES = Path("activities/examples")
@@ -32,6 +33,10 @@ def valid_activity() -> dict:
             "traccia_errori_compilazione": True,
         },
     }
+
+
+def test_allowed_types_come_from_activity_contracts() -> None:
+    assert validate_activity.ALLOWED_TYPES is ALLOWED_ACTIVITY_KINDS
 
 
 def test_examples_are_valid() -> None:

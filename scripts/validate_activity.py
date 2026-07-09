@@ -5,16 +5,9 @@ import json
 from pathlib import Path
 from typing import Any
 
+from scripts.thebitlab_contracts import ALLOWED_ACTIVITY_KINDS
 
-ALLOWED_TYPES = {
-    "studio-guidato",
-    "esercizio-classe",
-    "compito-casa",
-    "laboratorio",
-    "verifica-pratica",
-    "verifica-scritta",
-    "debug-didattico",
-}
+ALLOWED_TYPES = ALLOWED_ACTIVITY_KINDS
 
 ALLOWED_DIFFICULTIES = {"A", "B", "C", "D", "E", "F"}
 SUPPORTED_SCHEMA_VERSION = "1.0"
