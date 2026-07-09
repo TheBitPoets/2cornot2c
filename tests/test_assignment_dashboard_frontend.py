@@ -215,7 +215,9 @@ def run_dashboard_js(assertions: str) -> None:
         hasExplicitClass,
         reportsForActivity,
         activityCoverageKey,
+        summaryTooltip,
         summaryCounts,
+        renderStudentsSummaryCards,
         compactStudentsSummaryItems,
         detailedStudentsSummaryItems,
         applyPanelOrder,
@@ -535,6 +537,17 @@ def test_students_summary_counts_include_grading_and_grades() -> None:
           ["Media voto", "6.5"],
           ["Voti mancanti", 2],
         ]));
+        """
+    )
+
+
+def test_students_summary_cards_include_tooltips() -> None:
+    run_dashboard_js(
+        """
+        const html = tested.renderStudentsSummaryCards([["Consegnati", 3], ["KO", 1]]);
+        assert.match(html, /title="Numero di studenti che hanno effettuato una consegna\\."/);
+        assert.match(html, /title="Numero di studenti con grading o test falliti\\."/);
+        assert.equal(tested.summaryTooltip("Etichetta nuova"), "Valore riepilogativo: Etichetta nuova.");
         """
     )
 

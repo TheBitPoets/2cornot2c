@@ -1172,9 +1172,9 @@ function renderCoverage() {
     ? `${withReport} activity con registro, ${withoutReport} senza registro.`
     : "Nessuna activity trovata.";
   els.coverageSummary.innerHTML = `
-    <article><strong>Activity</strong><span>${escapeHtml(rows.length)}</span></article>
-    <article><strong>Con registro</strong><span>${escapeHtml(withReport)}</span></article>
-    <article><strong>Senza registro</strong><span>${escapeHtml(withoutReport)}</span></article>
+    <article title="${escapeHtml(summaryTooltip("Activity"))}"><strong>Activity</strong><span>${escapeHtml(rows.length)}</span></article>
+    <article title="${escapeHtml(summaryTooltip("Con registro"))}"><strong>Con registro</strong><span>${escapeHtml(withReport)}</span></article>
+    <article title="${escapeHtml(summaryTooltip("Senza registro"))}"><strong>Senza registro</strong><span>${escapeHtml(withoutReport)}</span></article>
   `;
   els.coverageBody.innerHTML = "";
   if (!rows.length) {
@@ -1371,7 +1371,7 @@ function renderOverviewSummary(rows) {
     ["Filtri", activeFilters ? `${activeFilters} attivi` : "nessuno"],
   ];
   els.overviewSummary.innerHTML = cards.map(([label, value]) => `
-    <article class="overviewSummaryItem">
+    <article class="overviewSummaryItem" title="${escapeHtml(summaryTooltip(label))}">
       <strong>${escapeHtml(label)}</strong>
       <span>${escapeHtml(value)}</span>
     </article>
@@ -1680,6 +1680,33 @@ function externalLink(url, label = "GitHub") {
   return `<a class="externalLink" href="${escapeHtml(url)}" target="_blank" rel="noreferrer">${escapeHtml(label)}</a>`;
 }
 
+const SUMMARY_TOOLTIPS = {
+  Activity: "Activity o numero di activity a cui si riferisce questo riepilogo.",
+  "Con registro": "Numero di activity per cui esiste almeno un registro consegne generato.",
+  "Senza registro": "Numero di activity per cui non e' stato ancora trovato alcun registro consegne.",
+  Classi: "Numero di classi diverse presenti nelle righe del quadro classe filtrato.",
+  Studenti: "Numero di studenti considerati nel riepilogo.",
+  Consegne: "Numero di activity/consegne diverse presenti nel quadro classe filtrato.",
+  Righe: "Righe activity-studente mostrate rispetto al totale disponibile.",
+  Filtri: "Numero di filtri attivi nel quadro classe.",
+  Classe: "Classe associata al registro consegne selezionato.",
+  Scadenza: "Data e ora di scadenza del registro consegne selezionato.",
+  Consegnati: "Numero di studenti che hanno effettuato una consegna.",
+  Mancanti: "Numero di studenti senza consegna registrata.",
+  "In ritardo": "Numero di studenti che hanno consegnato oltre la scadenza.",
+  Ritardo: "Numero di studenti che hanno consegnato oltre la scadenza.",
+  KO: "Numero di studenti con grading o test falliti.",
+  Pending: "Numero di studenti ancora in attesa di consegna o valutazione definitiva.",
+  "Grading OK": "Numero di studenti con grading completato e superato.",
+  "Grading KO": "Numero di studenti con grading completato ma fallito.",
+  "Media voto": "Media dei voti numerici disponibili nel registro selezionato.",
+  "Voti mancanti": "Numero di studenti senza voto numerico disponibile.",
+};
+
+function summaryTooltip(label) {
+  return SUMMARY_TOOLTIPS[label] || `Valore riepilogativo: ${label}.`;
+}
+
 function gradingValue(student) {
   const grading = student.grading || {};
   const value = grading.teacher_grade ?? grading.score;
@@ -1704,7 +1731,7 @@ function summaryCounts(students) {
 
 function renderStudentsSummaryCards(items) {
   return items.map(([label, value]) => `
-    <article class="studentsSummaryItem">
+    <article class="studentsSummaryItem" title="${escapeHtml(summaryTooltip(label))}">
       <strong>${escapeHtml(label)}</strong>
       <span>${escapeHtml(value)}</span>
     </article>
@@ -1758,7 +1785,7 @@ function renderSummary(students) {
     ["In ritardo", counts.late],
   ];
   els.reportSummary.innerHTML = cards.map(([label, value]) => `
-    <article class="summaryCard">
+    <article class="summaryCard" title="${escapeHtml(summaryTooltip(label))}">
       <strong>${escapeHtml(label)}</strong>
       <span>${escapeHtml(value)}</span>
     </article>
