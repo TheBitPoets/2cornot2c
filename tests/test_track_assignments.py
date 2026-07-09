@@ -174,6 +174,61 @@ def test_track_assignments_uses_activity_context_class_metadata(tmp_path) -> Non
     assert index["github_team"] == "team-4a-inf"
 
 
+def test_track_assignments_uses_canonical_activity_metadata(tmp_path) -> None:
+    payload = {
+        "schema_version": "1.0",
+        "id": "python-base-somma-001",
+        "title": "Somma canonica",
+        "kind": "verifica-pratica",
+        "difficulty": "B",
+        "topics": ["variabili", "input-output"],
+        "language": "python",
+        "instructions": "Scrivi un programma Python che stampa una somma.",
+        "grading_policy": {
+            "compila": True,
+            "test": True,
+            "sandbox": True,
+            "ai_feedback": False,
+        },
+        "student_support_mode": "senza-aiuto",
+        "class_id": "5A-INF",
+        "github_team": "team-5a-inf",
+    }
+    activity_path = tmp_path / "activity.json"
+    activity_path.write_text(json.dumps(payload), encoding="utf-8")
+    student = target(tmp_path, "rossi-mario")
+
+    index = track_assignments.track_assignments(
+        activity_path=activity_path,
+        targets=[student],
+    )
+
+    assert index["title"] == "Somma canonica"
+    assert index["kind"] == "verifica-pratica"
+    assert index["student_support_mode"] == "senza-aiuto"
+    assert index["class_id"] == "5A-INF"
+    assert index["class_label"] == "5A-INF"
+    assert index["github_team"] == "team-5a-inf"
+
+
+def test_track_assignments_rejects_invalid_canonical_kind(tmp_path) -> None:
+    payload = activity()
+    payload["tipo"] = "compito-casa"
+    payload["kind"] = "compito-classe"
+    activity_path = tmp_path / "activity.json"
+    activity_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    try:
+        track_assignments.track_assignments(
+            activity_path=activity_path,
+            targets=[],
+        )
+    except ValueError as error:
+        assert "kind non ammesso: compito-classe" in str(error)
+    else:
+        raise AssertionError("track_assignments should reject invalid canonical kind")
+
+
 def test_track_assignments_lists_multiple_submission_files(tmp_path) -> None:
     activity_path = write_activity(tmp_path)
     student = target(tmp_path, "rossi-mario")
