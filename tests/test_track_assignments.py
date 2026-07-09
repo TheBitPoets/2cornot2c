@@ -76,6 +76,10 @@ def write_report(root, submitted_at: str, passed: bool = True) -> None:
                     "passed": 2 if passed else 1,
                     "total": 2,
                 },
+                "tests": [
+                    {"name": "somma positiva", "passed": True, "status": "passed"},
+                    {"name": "somma con negativo", "passed": passed, "status": "passed" if passed else "failed"},
+                ],
             }
         ),
         encoding="utf-8",
@@ -446,6 +450,44 @@ def test_track_assignments_marks_submitted_late(tmp_path) -> None:
     assert row["status"] == "submitted_late"
     assert row["late"] is True
     assert row["grading"]["status"] == "graded_failed"
+
+
+def test_track_assignments_uses_technical_grading_adapter_for_infrastructure_errors(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+    student = target(tmp_path, "rossi-mario")
+    report_path = student.path / "reports" / "python-base-somma-001" / "latest.json"
+    source_path = student.path / "assignments" / "python-base-somma-001" / "main.py"
+    report_path.parent.mkdir(parents=True)
+    source_path.parent.mkdir(parents=True)
+    source_path.write_text("print(3)\n", encoding="utf-8")
+    report_path.write_text(
+        json.dumps(
+            {
+                "activity_id": "python-base-somma-001",
+                "passed": False,
+                "status": "unsupported-language",
+                "language": "python",
+                "source": str(source_path),
+                "submitted_at": "2026-10-20T08:00:00+02:00",
+                "error": "Runner non ancora implementato per il linguaggio: python",
+                "tests": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    index = track_assignments.track_assignments(
+        activity_path=activity_path,
+        targets=[student],
+        due_at="2026-10-21T08:00:00+02:00",
+        now="2026-10-20T08:00:00+02:00",
+    )
+
+    grading = index["students"][0]["grading"]
+
+    assert grading["status"] == "not_run"
+    assert grading["passed"] is None
+    assert grading["report_status"] == "unsupported-language"
 
 
 def test_track_assignments_rejects_report_for_different_activity(tmp_path) -> None:

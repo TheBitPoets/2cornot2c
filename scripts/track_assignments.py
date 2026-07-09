@@ -16,6 +16,7 @@ from scripts.thebitlab_contracts import (
     validate_normalized_activity,
 )
 from scripts.thebitlab_repository_providers import RepositoryProvider
+from scripts.thebitlab_technical_services import grading_dict_from_grade_activity_report
 
 
 NO_DUE_DATE_STATUS = "no_due_date"
@@ -318,34 +319,7 @@ def grading_summary(report: dict[str, Any] | None) -> dict[str, Any]:
             "teacher_grade": None,
             "report_status": None,
         }
-    summary = report.get("summary") if isinstance(report.get("summary"), dict) else {}
-    tests = []
-    for index, test in enumerate(report.get("tests", []) if isinstance(report.get("tests"), list) else []):
-        if not isinstance(test, dict):
-            continue
-        name = str(test.get("name") or test.get("id") or f"test {index + 1}")
-        tests.append(
-            {
-                "name": name,
-                "passed": test.get("passed"),
-                "status": test.get("status"),
-                "message": test.get("message") or test.get("error") or "",
-                "expected_stdout": test.get("expected_stdout"),
-                "actual_stdout": test.get("actual_stdout"),
-            }
-        )
-    failed_tests = [test["name"] for test in tests if test.get("passed") is False]
-    return {
-        "status": "graded_passed" if report.get("passed") is True else "graded_failed",
-        "passed": report.get("passed"),
-        "tests_passed": summary.get("passed"),
-        "tests_total": summary.get("total"),
-        "tests": tests,
-        "failed_tests": failed_tests,
-        "score": report.get("score"),
-        "teacher_grade": report.get("teacher_grade"),
-        "report_status": report.get("status"),
-    }
+    return grading_dict_from_grade_activity_report(report)
 
 
 def ai_feedback_placeholder() -> dict[str, Any]:
