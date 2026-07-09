@@ -141,6 +141,7 @@ const els = {
   overviewMatrixBody: document.querySelector("#overviewMatrixBody"),
   tableStatus: document.querySelector("#tableStatus"),
   studentsSummary: document.querySelector("#studentsSummary"),
+  studentsDialogSummary: document.querySelector("#studentsDialogSummary"),
   studentsDialog: document.querySelector("#studentsDialog"),
   studentsBreadcrumb: document.querySelector("#studentsBreadcrumb"),
   studentsOpenBtn: document.querySelector("#studentsOpenBtn"),
@@ -1679,15 +1680,59 @@ function externalLink(url, label = "GitHub") {
   return `<a class="externalLink" href="${escapeHtml(url)}" target="_blank" rel="noreferrer">${escapeHtml(label)}</a>`;
 }
 
+function gradingValue(student) {
+  const grading = student.grading || {};
+  const value = grading.teacher_grade ?? grading.score;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
 function summaryCounts(students) {
+  const grades = students.map(gradingValue).filter((grade) => grade != null);
   return {
     total: students.length,
     pending: students.filter((student) => student.status === "pending").length,
     missing: students.filter((student) => student.status === "missing").length,
     submitted: students.filter((student) => student.submitted).length,
     late: students.filter((student) => student.submitted && student.late).length,
+    passed: students.filter((student) => student.grading?.status === "graded_passed").length,
     failed: students.filter((student) => student.grading?.status === "graded_failed").length,
+    averageGrade: grades.length ? grades.reduce((sum, grade) => sum + grade, 0) / grades.length : null,
+    missingGrades: students.length - grades.length,
   };
+}
+
+function renderStudentsSummaryCards(items) {
+  return items.map(([label, value]) => `
+    <article class="studentsSummaryItem">
+      <strong>${escapeHtml(label)}</strong>
+      <span>${escapeHtml(value)}</span>
+    </article>
+  `).join("");
+}
+
+function compactStudentsSummaryItems(counts) {
+  return [
+    ["Studenti", counts.total],
+    ["Consegnati", counts.submitted],
+    ["Mancanti", counts.missing],
+    ["Ritardo", counts.late],
+    ["KO", counts.failed],
+  ];
+}
+
+function detailedStudentsSummaryItems(counts) {
+  return [
+    ["Studenti", counts.total],
+    ["Consegnati", counts.submitted],
+    ["Mancanti", counts.missing],
+    ["Ritardo", counts.late],
+    ["Pending", counts.pending],
+    ["Grading OK", counts.passed],
+    ["Grading KO", counts.failed],
+    ["Media voto", counts.averageGrade == null ? "-" : counts.averageGrade.toFixed(1)],
+    ["Voti mancanti", counts.missingGrades],
+  ];
 }
 
 function renderDashboard() {
@@ -1737,20 +1782,11 @@ function renderStudents(students) {
   els.studentsOpenBtn.disabled = !state.report;
   if (!state.report) {
     els.studentsSummary.innerHTML = '<p class="status">Carica un registro per vedere il riepilogo studenti.</p>';
+    els.studentsDialogSummary.innerHTML = '<p class="status">Carica un registro per vedere il riepilogo studenti.</p>';
   } else {
     const counts = summaryCounts(students);
-    const summaryItems = [
-      ["Studenti", counts.total],
-      ["Consegnati", counts.submitted],
-      ["Mancanti", counts.missing],
-      ["In ritardo", counts.late],
-    ];
-    els.studentsSummary.innerHTML = summaryItems.map(([label, value]) => `
-      <article class="studentsSummaryItem">
-        <strong>${escapeHtml(label)}</strong>
-        <span>${escapeHtml(value)}</span>
-      </article>
-    `).join("");
+    els.studentsSummary.innerHTML = renderStudentsSummaryCards(compactStudentsSummaryItems(counts));
+    els.studentsDialogSummary.innerHTML = renderStudentsSummaryCards(detailedStudentsSummaryItems(counts));
   }
   els.studentsBody.innerHTML = "";
   if (!state.report) {

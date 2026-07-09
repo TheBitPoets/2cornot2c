@@ -215,6 +215,9 @@ def run_dashboard_js(assertions: str) -> None:
         hasExplicitClass,
         reportsForActivity,
         activityCoverageKey,
+        summaryCounts,
+        compactStudentsSummaryItems,
+        detailedStudentsSummaryItems,
         applyPanelOrder,
         currentPanels,
         currentPanelRows,
@@ -490,6 +493,48 @@ def test_panel_widths_can_be_persisted_and_reset_with_panel_order() -> None:
         tested.resetPanelOrder();
         assert.equal(tested.localStorage.getItem("2cornot2c.assignmentDashboardPanelWidths"), null);
         assert.equal(tested.window.location.reloaded, true);
+        """
+    )
+
+
+def test_students_summary_counts_include_grading_and_grades() -> None:
+    run_dashboard_js(
+        """
+        const counts = tested.summaryCounts([
+          { status: "pending", submitted: false, late: false, grading: {} },
+          { status: "missing", submitted: false, late: false, grading: { status: "not_run" } },
+          { status: "submitted", submitted: true, late: false, grading: { status: "graded_passed", score: 8 } },
+          { status: "submitted_late", submitted: true, late: true, grading: { status: "graded_failed", teacher_grade: 5 } },
+        ]);
+        assert.equal(JSON.stringify(counts), JSON.stringify({
+          total: 4,
+          pending: 1,
+          missing: 1,
+          submitted: 2,
+          late: 1,
+          passed: 1,
+          failed: 1,
+          averageGrade: 6.5,
+          missingGrades: 2,
+        }));
+        assert.equal(JSON.stringify(tested.compactStudentsSummaryItems(counts)), JSON.stringify([
+          ["Studenti", 4],
+          ["Consegnati", 2],
+          ["Mancanti", 1],
+          ["Ritardo", 1],
+          ["KO", 1],
+        ]));
+        assert.equal(JSON.stringify(tested.detailedStudentsSummaryItems(counts)), JSON.stringify([
+          ["Studenti", 4],
+          ["Consegnati", 2],
+          ["Mancanti", 1],
+          ["Ritardo", 1],
+          ["Pending", 1],
+          ["Grading OK", 1],
+          ["Grading KO", 1],
+          ["Media voto", "6.5"],
+          ["Voti mancanti", 2],
+        ]));
         """
     )
 
