@@ -13,6 +13,7 @@ Il contratto minimo e in `scripts/thebitlab_repository_providers.py`:
 - `RepositoryProvider`: interfaccia per elencare e risolvere repository studenti.
 - `StudentRepository`: riferimento normalizzato a un repository studente.
 - `LocalRepositoryProvider`: adapter iniziale basato su directory locali.
+- `GitHubRepositoryProvider`: adapter iniziale basato su riferimenti GitHub espliciti, senza chiamate API.
 
 Il parametro `class_ref` e parte della porta per GitHub/GitLab/team/classi, ma il provider locale lo rifiuta finche non esiste una mappa locale classe/studenti. Questo evita di restituire tutti i repository quando il chiamante si aspetta un filtro di classe.
 
@@ -26,12 +27,15 @@ Il parametro `class_ref` e parte della porta per GitHub/GitLab/team/classi, ma i
 - `path`: path locale quando disponibile.
 - `metadata`: metadati opzionali specifici del provider.
 
+Per GitHub, `path` resta `null` finche il repository non e clonato localmente. Questo e sufficiente per discovery, link e metadati; i flussi che leggono o scrivono file locali continuano a richiedere un provider con path locale.
+
 ## Strategia incrementale
 
 1. Stabilizzare provider locale e test unitari.
 2. Collegare un flusso reale al provider senza cambiare comportamento utente.
 3. Aggiungere adapter GitHub minimale dietro la stessa interfaccia.
-4. Progettare GitLab e provider interno senza far dipendere GUI e service dai dettagli esterni.
+4. Aggiungere discovery GitHub via team/API solo quando serve davvero.
+5. Progettare GitLab e provider interno senza far dipendere GUI e service dai dettagli esterni.
 
 I primi collegamenti operativi sono:
 

@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+import re
 from typing import Protocol
+
+
+GITHUB_RE = re.compile(r"github\.com[:/](?P<owner>[^/\s]+)/(?P<repo>[^/\s]+?)(?:\.git)?/?$")
+OWNER_REPO_RE = re.compile(r"^(?P<owner>[A-Za-z0-9_.-]+)/(?P<repo>[A-Za-z0-9_.-]+)$")
 
 
 @dataclass(frozen=True)
@@ -90,3 +95,63 @@ class LocalRepositoryProvider:
 
     def _repo_ref(self, path: Path) -> str:
         return str(path.relative_to(self.root)).replace("\\", "/")
+
+
+class GitHubRepositoryProvider:
+    """Repository provider backed by explicit GitHub repository references."""
+
+    provider_name = "github"
+
+    def __init__(self, repositories: list[str]) -> None:
+        self.repositories = repositories
+
+    def list_student_repositories(self, class_ref: str | None = None) -> list[StudentRepository]:
+        """List explicit GitHub repositories.
+
+        Team/class discovery through GitHub APIs is intentionally outside this
+        adapter: until it exists, `class_ref` must not silently return every
+        configured repository.
+        """
+
+        if class_ref:
+            raise ValueError("Filtro classe non supportato dal provider GitHub esplicito.")
+        repositories = [self._repository_from_ref(ref) for ref in self.repositories]
+        return sorted(repositories, key=lambda repository: repository.student_id)
+
+    def resolve_student_repository(self, student_id: str) -> StudentRepository:
+        """Return one GitHub repository by student identifier or repo ref."""
+
+        clean_student_id = student_id.strip()
+        if not clean_student_id:
+            raise ValueError("Identificativo studente vuoto.")
+        for repository in self.list_student_repositories():
+            if repository.student_id == clean_student_id or repository.repo_ref == clean_student_id:
+                return repository
+        raise FileNotFoundError(f"Repository GitHub studente non trovato: {clean_student_id}")
+
+    def _repository_from_ref(self, ref: str) -> StudentRepository:
+        owner, repo = normalize_github_repo_ref(ref)
+        repo_ref = f"{owner}/{repo}"
+        return StudentRepository(
+            student_id=repo,
+            repo_ref=repo_ref,
+            provider=self.provider_name,
+            path=None,
+            metadata={
+                "owner": owner,
+                "repo": repo,
+                "url": f"https://github.com/{repo_ref}",
+            },
+        )
+
+
+def normalize_github_repo_ref(ref: str) -> tuple[str, str]:
+    """Return owner/repo from a GitHub owner/repo, HTTPS URL or SSH URL."""
+
+    clean_ref = ref.strip()
+    if not clean_ref:
+        raise ValueError("Repository GitHub vuoto.")
+    match = OWNER_REPO_RE.match(clean_ref) or GITHUB_RE.search(clean_ref)
+    if not match:
+        raise ValueError(f"Repository GitHub non valido: {ref}")
+    return match.group("owner"), match.group("repo")
