@@ -232,6 +232,7 @@ assignment_id TEXT NOT NULL REFERENCES assignments(id)
 student_id TEXT NOT NULL REFERENCES students(id)
 register_id TEXT REFERENCES registers(id)
 status TEXT NOT NULL
+submitted INTEGER NOT NULL DEFAULT 0
 submitted_at TEXT
 late INTEGER NOT NULL DEFAULT 0
 repo_ref TEXT
@@ -248,6 +249,7 @@ Indici:
 idx_submissions_assignment_id(assignment_id)
 idx_submissions_student_id(student_id)
 idx_submissions_status(status)
+idx_submissions_submitted(submitted)
 idx_submissions_late(late)
 idx_submissions_submitted_at(submitted_at)
 ```

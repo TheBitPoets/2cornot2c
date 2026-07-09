@@ -123,7 +123,7 @@ class_memberships(class_id, student_id, role, active)
 activities(id, title, kind, support_mode, class_id, source_path, provider_ref)
 assignments(id, activity_id, class_id, assigned_at, due_at, status)
 registers(id, assignment_id, class_id, report_path, generated_at, updated_at)
-submissions(id, assignment_id, student_id, status, submitted_at, late, repo_ref, commit_sha)
+submissions(id, assignment_id, student_id, status, submitted, submitted_at, late, repo_ref, commit_sha)
 grading_results(id, submission_id, status, tests_passed, tests_total, score, teacher_grade)
 events(id, entity_type, entity_id, event_type, payload_json, created_at)
 ```
