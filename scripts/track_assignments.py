@@ -15,6 +15,7 @@ from scripts.thebitlab_contracts import (
     normalize_activity,
     validate_normalized_activity,
 )
+from scripts.thebitlab_repository_providers import RepositoryProvider
 
 
 NO_DUE_DATE_STATUS = "no_due_date"
@@ -57,6 +58,24 @@ def load_targets(targets: list[Path] | None = None, targets_file: Path | None = 
     """Load tracking targets from direct paths and an optional targets file."""
     paths = assign_activity.collect_targets(targets, targets_file)
     return [TrackingTarget(student=path.name, repo=str(path), path=path) for path in paths]
+
+
+def load_targets_from_provider(provider: RepositoryProvider, class_ref: str | None = None) -> list[TrackingTarget]:
+    """Load tracking targets from a repository provider."""
+
+    repositories = provider.list_student_repositories(class_ref=class_ref)
+    targets = []
+    for repository in repositories:
+        if repository.path is None:
+            raise ValueError(f"Repository senza path locale: {repository.repo_ref}")
+        targets.append(
+            TrackingTarget(
+                student=repository.student_id,
+                repo=repository.repo_ref,
+                path=repository.path,
+            )
+        )
+    return targets
 
 
 def assignment_dir(target: TrackingTarget, activity_id: str) -> Path:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 from scripts import track_assignments
+from scripts.thebitlab_repository_providers import LocalRepositoryProvider, StudentRepository
 
 
 def activity() -> dict:
@@ -43,6 +44,16 @@ def target(tmp_path, name: str) -> track_assignments.TrackingTarget:
     """Return a tracking target rooted in tmp_path."""
     root = tmp_path / name
     return track_assignments.TrackingTarget(student=name, repo=f"TheBitPoets/{name}", path=root)
+
+
+class MissingPathProvider:
+    provider_name = "missing-path"
+
+    def list_student_repositories(self, class_ref: str | None = None) -> list[StudentRepository]:
+        return [StudentRepository(student_id="rossi-mario", repo_ref="TheBitPoets/rossi-mario", provider=self.provider_name)]
+
+    def resolve_student_repository(self, student_id: str) -> StudentRepository:
+        return self.list_student_repositories()[0]
 
 
 def write_report(root, submitted_at: str, passed: bool = True) -> None:
@@ -112,6 +123,36 @@ def write_report_without_activity_id(root) -> None:
         ),
         encoding="utf-8",
     )
+
+
+def test_load_targets_from_local_repository_provider(tmp_path) -> None:
+    (tmp_path / "rossi-mario").mkdir()
+    (tmp_path / "bianchi-luca").mkdir()
+    provider = LocalRepositoryProvider(tmp_path)
+
+    targets = track_assignments.load_targets_from_provider(provider)
+
+    assert targets == [
+        track_assignments.TrackingTarget(
+            student="bianchi-luca",
+            repo="bianchi-luca",
+            path=(tmp_path / "bianchi-luca").resolve(),
+        ),
+        track_assignments.TrackingTarget(
+            student="rossi-mario",
+            repo="rossi-mario",
+            path=(tmp_path / "rossi-mario").resolve(),
+        ),
+    ]
+
+
+def test_load_targets_from_provider_requires_local_path() -> None:
+    try:
+        track_assignments.load_targets_from_provider(MissingPathProvider())
+    except ValueError as error:
+        assert "Repository senza path locale" in str(error)
+    else:
+        raise AssertionError("load_targets_from_provider should reject repositories without a local path")
 
 
 def test_track_assignments_marks_submitted_on_time(tmp_path) -> None:
