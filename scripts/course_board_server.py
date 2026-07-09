@@ -34,7 +34,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts import track_assignments
+from scripts import thebitlab_storage, track_assignments
 
 DESIGN_PATH = ROOT / "doc" / "course_design.json"
 COURSE_DESIGNS_DIR = ROOT / "doc" / "course_designs"
@@ -72,6 +72,12 @@ COMPACT_TEXT_CHARS = 1200
 MAX_SUBMISSION_FILE_BYTES = 512 * 1024
 
 
+def course_storage() -> thebitlab_storage.JsonCourseStorage:
+    """Return the JSON storage adapter for course designs and calendars."""
+
+    return thebitlab_storage.JsonCourseStorage(ROOT, DEFAULT_SOURCES)
+
+
 def github_anchor(title: str, seen: dict[str, int]) -> str:
     """Return a GitHub-like Markdown anchor for a heading title."""
 
@@ -89,16 +95,13 @@ def github_anchor(title: str, seen: dict[str, int]) -> str:
 def read_design() -> dict:
     """Load the course design JSON file, creating a minimal shape if missing."""
 
-    if DESIGN_PATH.exists():
-        return json.loads(DESIGN_PATH.read_text(encoding="utf-8-sig"))
-    return {"version": 1, "source_files": DEFAULT_SOURCES, "years": []}
+    return course_storage().read_design()
 
 
 def write_design(payload: dict) -> None:
     """Persist the course design JSON with stable formatting."""
 
-    DESIGN_PATH.parent.mkdir(parents=True, exist_ok=True)
-    DESIGN_PATH.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    course_storage().write_design(payload)
 
 
 def generate_course_plan_md(payload: dict) -> dict:
@@ -138,22 +141,19 @@ def update_readme_frames(payload: dict) -> dict:
 def safe_design_name(name: str) -> str:
     """Validate a saved course-design filename."""
 
-    name = name.strip()
-    if not DESIGN_NAME_RE.match(name):
-        raise ValueError("Nome non valido. Usa solo lettere, numeri, trattino, underscore, punto e suffisso .json.")
-    return name
+    return course_storage().safe_design_name(name)
 
 
 def saved_design_path(name: str) -> Path:
     """Return the safe path for a saved course design."""
 
-    return COURSE_DESIGNS_DIR / safe_design_name(name)
+    return course_storage().saved_design_path(name)
 
 
 def school_calendar_path(name: str) -> Path:
     """Return the safe path for a saved school calendar."""
 
-    return SCHOOL_CALENDARS_DIR / safe_design_name(name)
+    return course_storage().school_calendar_path(name)
 
 
 def safe_teacher_report_path(name: str) -> Path:
@@ -170,73 +170,31 @@ def safe_teacher_report_path(name: str) -> Path:
 def list_saved_designs() -> list[dict]:
     """List saved course designs stored in doc/course_designs."""
 
-    COURSE_DESIGNS_DIR.mkdir(parents=True, exist_ok=True)
-    designs = []
-    for path in sorted(COURSE_DESIGNS_DIR.glob("*.json")):
-        designs.append({"name": path.name, "path": str(path.relative_to(ROOT))})
-    return designs
+    return course_storage().list_saved_designs()
 
 
 def read_saved_design(name: str) -> dict:
     """Read a saved course design by filename."""
 
-    path = saved_design_path(name)
-    if not path.is_file():
-        raise FileNotFoundError(f"Percorso salvato non trovato: {name}")
-    return json.loads(path.read_text(encoding="utf-8-sig"))
+    return course_storage().read_saved_design(name)
 
 
 def write_saved_design(name: str, payload: dict) -> dict:
     """Persist a named course design in the archive folder."""
 
-    COURSE_DESIGNS_DIR.mkdir(parents=True, exist_ok=True)
-    path = saved_design_path(name)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    return {"name": path.name, "path": str(path.relative_to(ROOT))}
+    return course_storage().write_saved_design(name, payload)
 
 
 def delete_saved_design(name: str, delete_calendars: bool = False, calendars: list[str] | None = None) -> dict:
     """Delete an archived course design and, optionally, its linked calendars."""
 
-    safe_name = safe_design_name(name)
-    path = saved_design_path(safe_name)
-    if not path.is_file():
-        raise FileNotFoundError(f"Percorso salvato non trovato: {safe_name}")
-    path.unlink()
-    deleted_calendars = []
-    if delete_calendars:
-        for calendar_name in calendars or []:
-            safe_calendar_name = safe_design_name(calendar_name)
-            calendar_path = school_calendar_path(safe_calendar_name)
-            if not calendar_path.is_file():
-                continue
-            payload = json.loads(calendar_path.read_text(encoding="utf-8-sig"))
-            if payload.get("course_design_name", "") != safe_name:
-                continue
-            calendar_path.unlink()
-            deleted_calendars.append(safe_calendar_name)
-    return {
-        "name": safe_name,
-        "deleted_calendars": deleted_calendars,
-        "designs": list_saved_designs(),
-        "calendars": list_school_calendars(),
-    }
+    return course_storage().delete_saved_design(name, delete_calendars, calendars)
 
 
 def list_school_calendars() -> list[dict]:
     """List saved school calendars stored in doc/calendars."""
 
-    SCHOOL_CALENDARS_DIR.mkdir(parents=True, exist_ok=True)
-    calendars = []
-    for path in sorted(SCHOOL_CALENDARS_DIR.glob("*.json")):
-        metadata = {"name": path.name, "path": str(path.relative_to(ROOT)), "course_design_name": ""}
-        try:
-            payload = json.loads(path.read_text(encoding="utf-8-sig"))
-            metadata["course_design_name"] = payload.get("course_design_name", "")
-        except Exception:  # noqa: BLE001
-            metadata["course_design_name"] = ""
-        calendars.append(metadata)
-    return calendars
+    return course_storage().list_school_calendars()
 
 
 def list_assignment_reports() -> list[dict]:
@@ -475,19 +433,13 @@ def generate_assignment_report(payload: dict) -> dict:
 def read_school_calendar(name: str) -> dict:
     """Read a saved school calendar by filename."""
 
-    path = school_calendar_path(name)
-    if not path.is_file():
-        raise FileNotFoundError(f"Calendario scolastico non trovato: {name}")
-    return json.loads(path.read_text(encoding="utf-8-sig"))
+    return course_storage().read_school_calendar(name)
 
 
 def write_school_calendar(name: str, payload: dict) -> dict:
     """Persist a named school calendar in the calendars folder."""
 
-    SCHOOL_CALENDARS_DIR.mkdir(parents=True, exist_ok=True)
-    path = school_calendar_path(name)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    return {"name": path.name, "path": str(path.relative_to(ROOT))}
+    return course_storage().write_school_calendar(name, payload)
 
 
 def read_secret_env() -> dict[str, str]:
