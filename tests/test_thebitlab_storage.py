@@ -119,8 +119,8 @@ def test_assignment_reports_are_listed_with_counts(tmp_path) -> None:
                 "github_team": "team-4a-inf",
                 "students": [
                     {"student": "rossi-mario", "submitted": True, "late": True},
-                    {"student": "bianchi-luca", "submitted": False, "late": True},
-                    {"student": "verdi-anna", "submitted": True, "late": False},
+                    {"student": "bianchi-luca", "submitted": "false", "late": "true"},
+                    {"student": "verdi-anna", "submitted": "yes", "late": "false"},
                 ],
             }
         ),
@@ -137,6 +137,38 @@ def test_assignment_reports_are_listed_with_counts(tmp_path) -> None:
     assert reports[0]["not_submitted"] == 1
     assert reports[0]["late"] == 1
     assert reports[0]["updated_at"]
+
+
+def test_read_assignment_report_normalizes_student_booleans(tmp_path) -> None:
+    storage = JsonAssignmentStorage(tmp_path, tmp_path / "teacher-reports", [])
+    reports_dir = tmp_path / "teacher-reports"
+    reports_dir.mkdir(parents=True)
+    (reports_dir / "activity.json").write_text(
+        json.dumps(
+            {
+                "activity_id": "activity",
+                "students": [
+                    {
+                        "student": "rossi-mario",
+                        "submitted": "false",
+                        "late": "0",
+                        "submission": {"late": "yes"},
+                        "grading": {"passed": "false"},
+                        "ai_feedback": {"approved_by_teacher": "si"},
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    student = storage.read_assignment_report("activity.json")["students"][0]
+
+    assert student["submitted"] is False
+    assert student["late"] is False
+    assert student["submission"]["late"] is True
+    assert student["grading"]["passed"] is False
+    assert student["ai_feedback"]["approved_by_teacher"] is True
 
 
 def test_assignment_report_rejects_unsafe_or_invalid_reports(tmp_path) -> None:
