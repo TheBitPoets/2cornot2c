@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import json
 import argparse
+import shutil
 import subprocess
+
+import pytest
 
 from scripts import grade_activity
 
@@ -26,6 +29,7 @@ def activity() -> dict:
     }
 
 
+@pytest.mark.skipif(shutil.which("gcc") is None, reason="gcc non disponibile nell'ambiente di test")
 def test_grade_activity_passes_valid_c_program(tmp_path) -> None:
     source = tmp_path / "main.c"
     source.write_text(
