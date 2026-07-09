@@ -1,0 +1,58 @@
+{
+  "schema_version": "1.0",
+  "id": "register-3a-tpsi-python-base-somma-001",
+  "assignment_id": "assignment-3a-tpsi-python-base-somma-001",
+  "activity_id": "python-base-somma-001",
+  "title": "Somma in Python",
+  "kind": "compito-casa",
+  "student_support_mode": "feedback-tecnico",
+  "class_id": "3a-tpsi-2026",
+  "class_label": "3A TPSI",
+  "github_team": "team-3a-tpsi",
+  "assigned_at": "2026-10-12T09:00:00+02:00",
+  "due_at": "2026-10-19T23:59:00+02:00",
+  "students": [
+    {
+      "student": "rossi-mario",
+      "student_id": "rossi-mario",
+      "repo": "TheBitPoets/rossi-mario",
+      "repo_github_url": "https://github.com/TheBitPoets/rossi-mario",
+      "assigned": true,
+      "submitted": true,
+      "status": "submitted_on_time",
+      "late": false,
+      "submission": {
+        "id": "submission-rossi-mario-python-base-somma-001",
+        "assignment_id": "assignment-3a-tpsi-python-base-somma-001",
+        "activity_id": "python-base-somma-001",
+        "student_id": "rossi-mario",
+        "repo_ref": "TheBitPoets/rossi-mario",
+        "commit": "abc1234",
+        "submitted_at": "2026-10-18T18:22:10+02:00",
+        "status": "submitted_on_time",
+        "late": false,
+        "files": [
+          {
+            "path": "assignments/python-base-somma-001/main.py",
+            "role": "solution"
+          }
+        ]
+      },
+      "grading": {
+        "status": "graded_passed",
+        "passed": true,
+        "tests_passed": 1,
+        "tests_total": 1,
+        "failed_tests": [],
+        "score": 10,
+        "teacher_grade": null
+      },
+      "ai_feedback": {
+        "status": "not_generated",
+        "suggested_grade": null,
+        "summary": null,
+        "approved_by_teacher": false
+      }
+    }
+  ]
+}

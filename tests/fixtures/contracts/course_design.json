@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0",
+  "id": "course-2026-2027-tpsi",
+  "title": "Percorso TPSI 2026/2027",
+  "source_ids": [
+    "readme-main"
+  ],
+  "years": [
+    {
+      "id": "terzo",
+      "title": "Terzo anno",
+      "udas": [
+        {
+          "id": "uda-programmazione-base",
+          "title": "Programmazione di base",
+          "items": [
+            {
+              "id": "item-input-output",
+              "title": "Input e output",
+              "source_id": "readme-main",
+              "href": "README.md#input-e-output",
+              "activity_ids": [
+                "python-base-somma-001"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
