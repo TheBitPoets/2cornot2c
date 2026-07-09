@@ -132,3 +132,21 @@ def test_normalize_submission_parses_late_string_conservatively() -> None:
 
     assert submission["late"] is False
     assert other_submission["late"] is True
+
+
+def test_normalize_grading_parses_passed_string_without_losing_none() -> None:
+    failed_grading = thebitlab_contracts.normalize_grading({"passed": "false"})
+    passed_grading = thebitlab_contracts.normalize_grading({"passed": "yes"})
+    pending_grading = thebitlab_contracts.normalize_grading({})
+
+    assert failed_grading["passed"] is False
+    assert passed_grading["passed"] is True
+    assert pending_grading["passed"] is None
+
+
+def test_normalize_ai_feedback_parses_approval_string_conservatively() -> None:
+    feedback = thebitlab_contracts.normalize_ai_feedback({"approved_by_teacher": "false"})
+    other_feedback = thebitlab_contracts.normalize_ai_feedback({"approved_by_teacher": "si"})
+
+    assert feedback["approved_by_teacher"] is False
+    assert other_feedback["approved_by_teacher"] is True

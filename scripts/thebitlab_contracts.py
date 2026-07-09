@@ -80,7 +80,7 @@ def normalize_grading(payload: dict[str, Any]) -> dict[str, Any]:
 
     normalized = deepcopy(payload)
     normalized.setdefault("status", "")
-    normalized.setdefault("passed", None)
+    normalized["passed"] = None if payload.get("passed") is None else bool_value(payload.get("passed"))
     normalized.setdefault("tests_passed", None)
     normalized.setdefault("tests_total", None)
     normalized.setdefault("failed_tests", [])
@@ -96,7 +96,7 @@ def normalize_ai_feedback(payload: dict[str, Any]) -> dict[str, Any]:
     normalized.setdefault("status", "not_generated")
     normalized.setdefault("suggested_grade", None)
     normalized.setdefault("summary", None)
-    normalized.setdefault("approved_by_teacher", False)
+    normalized["approved_by_teacher"] = bool_value(payload.get("approved_by_teacher", False))
     return normalized
 
 
