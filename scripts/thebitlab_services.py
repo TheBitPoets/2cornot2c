@@ -107,6 +107,18 @@ class AssignmentService:
     def assignment_overview(self) -> list[dict[str, Any]]:
         """Return one row per student/activity across all saved teacher reports."""
 
+        return AssignmentOverviewService(self.storage).assignment_overview()
+
+
+class AssignmentOverviewService:
+    """Query service for derived assignment dashboard rows."""
+
+    def __init__(self, storage: AssignmentStorage) -> None:
+        self.storage = storage
+
+    def assignment_overview(self) -> list[dict[str, Any]]:
+        """Return one row per student/activity across all saved teacher reports."""
+
         rows = []
         for report in self.storage.list_assignment_reports():
             try:

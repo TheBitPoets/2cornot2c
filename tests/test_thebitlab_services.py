@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from scripts.thebitlab_services import AssignmentService, CourseService
+from scripts.thebitlab_services import AssignmentOverviewService, AssignmentService, CourseService
 from scripts.thebitlab_storage import JsonAssignmentStorage, JsonCourseStorage
 
 
@@ -15,6 +15,11 @@ def course_service(tmp_path) -> CourseService:
 def assignment_service(tmp_path) -> AssignmentService:
     storage = JsonAssignmentStorage(tmp_path, tmp_path / "teacher-reports", [])
     return AssignmentService(storage)
+
+
+def assignment_overview_service(tmp_path) -> AssignmentOverviewService:
+    storage = JsonAssignmentStorage(tmp_path, tmp_path / "teacher-reports", [])
+    return AssignmentOverviewService(storage)
 
 
 def test_course_service_delegates_design_and_calendar_storage(tmp_path) -> None:
@@ -120,7 +125,7 @@ def test_course_service_deletes_linked_calendars(tmp_path) -> None:
 
 
 def test_assignment_overview_lists_student_rows(tmp_path) -> None:
-    service = assignment_service(tmp_path)
+    service = assignment_overview_service(tmp_path)
     reports_dir = tmp_path / "teacher-reports"
     reports_dir.mkdir(parents=True)
     (reports_dir / "activity.json").write_text(
@@ -201,8 +206,27 @@ def test_assignment_service_accepts_protocol_compatible_storage(tmp_path) -> Non
     assert service.assignment_overview()[0]["student"] == "rossi-mario"
 
 
+def test_assignment_overview_service_accepts_protocol_compatible_storage(tmp_path) -> None:
+    class FakeAssignmentStorage:
+        def safe_teacher_report_path(self, name: str) -> Path:
+            return tmp_path / "teacher-reports" / name
+
+        def list_assignment_reports(self) -> list[dict[str, object]]:
+            return [{"name": "demo.json", "path": "teacher-reports/demo.json"}]
+
+        def read_assignment_report(self, name: str) -> dict[str, object]:
+            return {"activity_id": "demo", "students": [{"student": "rossi-mario"}]}
+
+        def list_activities(self) -> list[dict[str, object]]:
+            return []
+
+    service = AssignmentOverviewService(FakeAssignmentStorage())
+
+    assert service.assignment_overview()[0]["student"] == "rossi-mario"
+
+
 def test_assignment_overview_skips_invalid_reports(tmp_path) -> None:
-    service = assignment_service(tmp_path)
+    service = assignment_overview_service(tmp_path)
     reports_dir = tmp_path / "teacher-reports"
     reports_dir.mkdir(parents=True)
     (reports_dir / "invalid.json").write_text(json.dumps({"students": {}}), encoding="utf-8")
