@@ -1,11 +1,13 @@
 const REVIEW_SPLIT_KEY = "2cornot2c.assignmentReviewSplit";
 const COLLAPSED_PANELS_KEY = "2cornot2c.assignmentDashboardCollapsedPanels";
 const PANEL_ORDER_KEY = "2cornot2c.assignmentDashboardPanelOrder";
+const PANEL_WIDTHS_KEY = "2cornot2c.assignmentDashboardPanelWidths";
 const TABLE_WIDTHS_KEY = "2cornot2c.assignmentDashboardTableWidths";
 const DEFAULT_REVIEW_SPLIT = 320;
 const MIN_REVIEW_SPLIT = 180;
 const MAX_REVIEW_SPLIT_RATIO = 0.65;
 const MIN_TABLE_COLUMN_WIDTH = 64;
+const MIN_PANEL_WIDTH_PERCENT = 8;
 const OVERVIEW_TYPE_ORDER = [
   "studio-guidato",
   "esercizio-classe",
@@ -453,8 +455,22 @@ function writePanelOrder() {
   localStorage.setItem(PANEL_ORDER_KEY, JSON.stringify(rows.filter((row) => row.length)));
 }
 
+function readPanelWidths() {
+  try {
+    const value = JSON.parse(localStorage.getItem(PANEL_WIDTHS_KEY) || "{}");
+    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  } catch {
+    return {};
+  }
+}
+
+function writePanelWidths(widths) {
+  localStorage.setItem(PANEL_WIDTHS_KEY, JSON.stringify(widths));
+}
+
 function resetPanelOrder() {
   localStorage.removeItem(PANEL_ORDER_KEY);
+  localStorage.removeItem(PANEL_WIDTHS_KEY);
   window.location.reload();
 }
 
@@ -619,6 +635,41 @@ function removeEmptyPanelRows() {
   });
 }
 
+function rowPanels(row) {
+  return [...row.querySelectorAll(":scope > .panel")];
+}
+
+function rowWidthKey(row) {
+  return rowPanels(row).map((panel, index) => panelKey(panel, index)).join("|");
+}
+
+function normalizePanelPercents(values, count) {
+  const fallback = Array.from({ length: count }, () => 100 / Math.max(1, count));
+  if (!Array.isArray(values) || values.length !== count) return fallback;
+  const numeric = values.map(Number);
+  if (numeric.some((value) => !Number.isFinite(value) || value <= 0)) return fallback;
+  const total = numeric.reduce((sum, value) => sum + value, 0);
+  if (!total) return fallback;
+  return numeric.map((value) => (value / total) * 100);
+}
+
+function applyPanelWidths() {
+  const saved = readPanelWidths();
+  currentPanelRows().forEach((row) => {
+    const panels = rowPanels(row);
+    const percents = normalizePanelPercents(saved[rowWidthKey(row)], panels.length);
+    panels.forEach((panel, index) => {
+      panel.style.flex = panels.length > 1 ? `0 1 ${percents[index]}%` : "";
+    });
+  });
+}
+
+function writePanelRowWidths(row, percents) {
+  const saved = readPanelWidths();
+  saved[rowWidthKey(row)] = percents.map((value) => Math.round(value * 100) / 100);
+  writePanelWidths(saved);
+}
+
 function normalizedPanelLayoutRows(savedLayout, panels) {
   const byKey = new Map(panels.map((panel, index) => [panelKey(panel, index), panel]));
   const used = new Set();
@@ -652,6 +703,7 @@ function applyPanelOrder() {
     panelsInRow.forEach((panel) => row.append(panel));
     layout.append(row);
   });
+  applyPanelWidths();
 }
 
 function movePanel(panel, direction) {
@@ -667,7 +719,9 @@ function movePanel(panel, direction) {
   }
   removeEmptyPanelRows();
   writePanelOrder();
+  applyPanelWidths();
   updatePanelOrderControls();
+  setupPanelWidthResizers();
 }
 
 function updatePanelOrderControls() {
@@ -698,6 +752,85 @@ function movePanelInline(panel, targetPanel, after) {
   removeEmptyPanelRows();
 }
 
+function currentPanelPercents(row) {
+  const panels = rowPanels(row);
+  const widths = panels.map((panel) => panel.getBoundingClientRect().width || 0);
+  const total = widths.reduce((sum, width) => sum + width, 0) || 1;
+  return widths.map((width) => (width / total) * 100);
+}
+
+function setPanelPercents(row, percents) {
+  rowPanels(row).forEach((panel, index) => {
+    panel.style.flex = `0 1 ${percents[index]}%`;
+  });
+}
+
+function setupPanelWidthResizers() {
+  currentPanelRows().forEach((row) => {
+    const panels = rowPanels(row);
+    panels.forEach((panel, index) => {
+      let handle = panel.querySelector(".panelWidthHandle");
+      if (index >= panels.length - 1) {
+        handle?.remove();
+        return;
+      }
+      if (!handle) {
+        handle = document.createElement("span");
+        handle.className = "panelWidthHandle";
+        handle.title = "Trascina per ridimensionare i pannelli nella riga. Doppio click per ripristinare.";
+        handle.setAttribute("aria-label", "Ridimensiona pannelli nella riga.");
+        handle.addEventListener("dblclick", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const activeRow = panel.parentElement;
+          const saved = readPanelWidths();
+          delete saved[rowWidthKey(activeRow)];
+          writePanelWidths(saved);
+          applyPanelWidths();
+        });
+        handle.addEventListener("pointerdown", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const activeRow = panel.parentElement;
+          const activePanels = rowPanels(activeRow);
+          const activeIndex = activePanels.indexOf(panel);
+          if (activeIndex === -1 || activeIndex >= activePanels.length - 1) return;
+          const startPercents = currentPanelPercents(activeRow);
+          const rowWidth = activeRow.getBoundingClientRect().width || 1;
+          const startX = event.clientX;
+          handle.setPointerCapture(event.pointerId);
+          activeRow.classList.add("isResizingPanels");
+
+          function onPointerMove(moveEvent) {
+            const delta = ((moveEvent.clientX - startX) / rowWidth) * 100;
+            const pairTotal = startPercents[activeIndex] + startPercents[activeIndex + 1];
+            const left = Math.min(pairTotal - MIN_PANEL_WIDTH_PERCENT, Math.max(MIN_PANEL_WIDTH_PERCENT, startPercents[activeIndex] + delta));
+            const right = pairTotal - left;
+            const nextPercents = [...startPercents];
+            nextPercents[activeIndex] = left;
+            nextPercents[activeIndex + 1] = right;
+            setPanelPercents(activeRow, nextPercents);
+          }
+
+          function onPointerUp(upEvent) {
+            handle.releasePointerCapture(upEvent.pointerId);
+            activeRow.classList.remove("isResizingPanels");
+            writePanelRowWidths(activeRow, currentPanelPercents(activeRow));
+            handle.removeEventListener("pointermove", onPointerMove);
+            handle.removeEventListener("pointerup", onPointerUp);
+            handle.removeEventListener("pointercancel", onPointerUp);
+          }
+
+          handle.addEventListener("pointermove", onPointerMove);
+          handle.addEventListener("pointerup", onPointerUp);
+          handle.addEventListener("pointercancel", onPointerUp);
+        });
+        panel.append(handle);
+      }
+    });
+  });
+}
+
 function addPanelOrderControls(panel, key) {
   const head = panel.querySelector(".panelHead");
   if (!head || head.querySelector(".panelOrderControls")) return;
@@ -723,7 +856,9 @@ function addPanelOrderControls(panel, key) {
     panel.classList.remove("isDraggingPanel");
     clearPanelDropMarkers();
     writePanelOrder();
+    applyPanelWidths();
     updatePanelOrderControls();
+    setupPanelWidthResizers();
   });
   const up = document.createElement("button");
   up.type = "button";
@@ -785,10 +920,13 @@ function setupPanelDragAndDrop() {
       event.preventDefault();
       clearPanelDropMarkers();
       writePanelOrder();
+      applyPanelWidths();
       updatePanelOrderControls();
+      setupPanelWidthResizers();
     });
   });
   updatePanelOrderControls();
+  setupPanelWidthResizers();
 }
 
 function setupCollapsiblePanels() {

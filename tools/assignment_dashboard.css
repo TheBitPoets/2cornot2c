@@ -566,6 +566,7 @@ label > textarea {
 }
 
 .panel {
+  position: relative;
   flex: 1 1 clamp(14rem, 24vw, 24rem);
   min-width: 0;
   border: 1px solid rgba(17, 17, 17, .16);
@@ -628,6 +629,32 @@ label > textarea {
 .panelMoveButton:disabled {
   opacity: .38;
   cursor: not-allowed;
+}
+
+.panelWidthHandle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  width: 10px;
+  cursor: col-resize;
+}
+
+.panelWidthHandle::before {
+  position: absolute;
+  top: 1rem;
+  bottom: 1rem;
+  left: 4px;
+  width: 2px;
+  border-radius: 999px;
+  background: rgba(17, 17, 17, .18);
+  content: "";
+}
+
+.panelWidthHandle:hover::before,
+.isResizingPanels .panelWidthHandle::before {
+  background: rgba(17, 17, 17, .48);
 }
 
 .isDraggingPanel {
@@ -1658,6 +1685,10 @@ code {
   .panelRow {
     display: grid;
     grid-template-columns: 1fr;
+  }
+
+  .panelWidthHandle {
+    display: none;
   }
 
   .summaryGrid {
