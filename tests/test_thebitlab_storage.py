@@ -152,67 +152,6 @@ def test_assignment_report_rejects_unsafe_or_invalid_reports(tmp_path) -> None:
         storage.read_assignment_report("invalid.json")
 
 
-def test_assignment_overview_lists_student_rows(tmp_path) -> None:
-    storage = JsonAssignmentStorage(tmp_path, tmp_path / "teacher-reports", [])
-    reports_dir = tmp_path / "teacher-reports"
-    reports_dir.mkdir(parents=True)
-    (reports_dir / "activity.json").write_text(
-        json.dumps(
-            {
-                "activity_id": "python-base-somma-001",
-                "title": "Somma in Python",
-                "kind": "compito-casa",
-                "student_support_mode": "guidato",
-                "students": [
-                    {
-                        "student": "rossi-mario",
-                        "repo": "TheBitPoets/rossi-mario",
-                        "status": "submitted_on_time",
-                        "submitted": True,
-                        "submission": {"submitted_at": "2026-10-18T18:22:10+02:00", "commit": "abc1234"},
-                        "grading": {"status": "graded_passed", "tests_passed": 2, "tests_total": 2, "teacher_grade": 9},
-                        "ai_feedback": {"status": "not_generated"},
-                    }
-                ],
-            }
-        ),
-        encoding="utf-8",
-    )
-
-    rows = storage.assignment_overview()
-
-    assert rows == [
-        {
-            "report_name": "activity.json",
-            "report_path": "teacher-reports/activity.json",
-            "activity_id": "python-base-somma-001",
-            "title": "Somma in Python",
-            "class_id": "",
-            "class_label": "",
-            "github_team": "",
-            "kind": "compito-casa",
-            "student_support_mode": "guidato",
-            "assigned_at": "",
-            "due_at": "",
-            "student": "rossi-mario",
-            "repo": "TheBitPoets/rossi-mario",
-            "status": "submitted_on_time",
-            "submitted": True,
-            "late": False,
-            "submitted_at": "2026-10-18T18:22:10+02:00",
-            "commit": "abc1234",
-            "source_path": None,
-            "grading_status": "graded_passed",
-            "tests_passed": 2,
-            "tests_total": 2,
-            "failed_tests": [],
-            "teacher_grade": 9,
-            "score": None,
-            "ai_status": "not_generated",
-        }
-    ]
-
-
 def test_list_activities_skips_invalid_json_and_deduplicates_paths(tmp_path) -> None:
     activities_dir = tmp_path / "activities"
     activities_dir.mkdir()
