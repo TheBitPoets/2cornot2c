@@ -101,12 +101,21 @@ def legacy_activity_validation_payload(activity: dict[str, Any], normalized_acti
     return payload
 
 
+def validate_normalized_activity_or_raise(activity: dict[str, Any], identifier: str) -> None:
+    """Validate canonical activity fields used by the assignment scaffold."""
+
+    kind = str(activity.get("kind") or "").strip()
+    if kind and kind not in validate_activity.ALLOWED_TYPES:
+        raise ValueError(f"{identifier}: kind non ammesso: {kind}")
+
+
 def validate_activity_contract_or_raise(activity: dict[str, Any], identifier: str) -> dict[str, Any]:
     """Validate legacy/canonical activity metadata and return canonical fields."""
 
     normalized_activity = normalize_activity(activity)
     validation_payload = legacy_activity_validation_payload(activity, normalized_activity)
     validate_activity_or_raise(validation_payload, identifier)
+    validate_normalized_activity_or_raise(normalized_activity, identifier)
     return normalized_activity
 
 

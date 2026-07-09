@@ -84,6 +84,26 @@ def test_create_scaffold_supports_canonical_activity_metadata(tmp_path) -> None:
     assert "language`: `python`" in readme
 
 
+def test_create_scaffold_rejects_invalid_canonical_kind(tmp_path) -> None:
+    activity_path = write_activity(
+        tmp_path,
+        {
+            **activity(),
+            "tipo": "compito-casa",
+            "kind": "compito-classe",
+        },
+    )
+
+    try:
+        create_submission_scaffold.create_scaffold(activity_path=activity_path, target_dir=tmp_path)
+    except ValueError as error:
+        assert "kind non ammesso: compito-classe" in str(error)
+    else:
+        raise AssertionError("create_scaffold should reject invalid canonical kind")
+
+    assert not (tmp_path / "assignments").exists()
+
+
 def test_create_scaffold_rejects_unsafe_activity_id(tmp_path) -> None:
     activity_path = write_activity(tmp_path, {**activity(), "id": "Somma 001"})
 
