@@ -170,7 +170,7 @@ const els = {
   nowAt: document.querySelector("#nowAt"),
   targetsText: document.querySelector("#targetsText"),
   generateReportBtn: document.querySelector("#generateReportBtn"),
-  panels: document.querySelectorAll("main.layout > .panel"),
+  panels: document.querySelectorAll("main.layout .panel"),
 };
 
 async function api(path, options = {}) {
@@ -440,15 +440,17 @@ function writeCollapsedPanels(collapsedPanels) {
 function readPanelOrder() {
   try {
     const value = JSON.parse(localStorage.getItem(PANEL_ORDER_KEY) || "[]");
-    return Array.isArray(value) ? value.map(String) : [];
+    if (!Array.isArray(value)) return [];
+    if (value.every(Array.isArray)) return value.map((row) => row.map(String).filter(Boolean)).filter((row) => row.length);
+    return value.map(String).filter(Boolean);
   } catch {
     return [];
   }
 }
 
 function writePanelOrder() {
-  const panels = [...document.querySelectorAll("main.layout > .panel")];
-  localStorage.setItem(PANEL_ORDER_KEY, JSON.stringify(panels.map((panel, index) => panelKey(panel, index))));
+  const rows = currentPanelRows().map((row) => [...row.querySelectorAll(":scope > .panel")].map((panel, index) => panelKey(panel, index)));
+  localStorage.setItem(PANEL_ORDER_KEY, JSON.stringify(rows.filter((row) => row.length)));
 }
 
 function resetPanelOrder() {
@@ -583,25 +585,72 @@ function panelKey(panel, index) {
 }
 
 function currentPanels() {
-  return [...document.querySelectorAll("main.layout > .panel")];
+  return [...document.querySelectorAll("main.layout .panel")];
+}
+
+function currentPanelRows() {
+  return [...document.querySelectorAll("main.layout > .panelRow")];
+}
+
+function createPanelRow() {
+  const row = document.createElement("div");
+  row.className = "panelRow";
+  row.dataset.panelRow = "true";
+  return row;
+}
+
+function normalizePanelRows() {
+  const layout = document.querySelector("main.layout");
+  if (!layout) return;
+  [...layout.children].forEach((child) => {
+    if (!child.classList?.contains("panel")) return;
+    const row = createPanelRow();
+    layout.insertBefore(row, child);
+    row.append(child);
+  });
+  currentPanelRows().forEach((row) => {
+    if (!row.querySelector(":scope > .panel")) row.remove();
+  });
+}
+
+function removeEmptyPanelRows() {
+  currentPanelRows().forEach((row) => {
+    if (!row.querySelector(":scope > .panel")) row.remove();
+  });
+}
+
+function normalizedPanelLayoutRows(savedLayout, panels) {
+  const byKey = new Map(panels.map((panel, index) => [panelKey(panel, index), panel]));
+  const used = new Set();
+  const savedRows = Array.isArray(savedLayout[0]) ? savedLayout : savedLayout.map((key) => [key]);
+  const rows = savedRows
+    .map((savedRow) => savedRow.map((key) => byKey.get(key)).filter((panel) => {
+      if (!panel || used.has(panel)) return false;
+      used.add(panel);
+      return true;
+    }))
+    .filter((row) => row.length);
+  panels.forEach((panel) => {
+    if (!used.has(panel)) rows.push([panel]);
+  });
+  return rows;
 }
 
 function applyPanelOrder() {
   const layout = document.querySelector("main.layout");
   if (!layout) return;
+  normalizePanelRows();
   const panels = currentPanels();
   panels.forEach((panel, index) => {
     panel.dataset.panelKey = panelKey(panel, index);
   });
   const order = readPanelOrder();
-  if (!order.length) return;
-  const byKey = new Map(panels.map((panel, index) => [panelKey(panel, index), panel]));
-  const orderedPanels = order.map((key) => byKey.get(key)).filter(Boolean);
-  panels.forEach((panel) => {
-    if (!orderedPanels.includes(panel)) orderedPanels.push(panel);
-  });
-  orderedPanels.forEach((panel) => {
-    layout.append(panel);
+  const rows = normalizedPanelLayoutRows(order, panels);
+  currentPanelRows().forEach((row) => row.remove());
+  rows.forEach((panelsInRow) => {
+    const row = createPanelRow();
+    panelsInRow.forEach((panel) => row.append(panel));
+    layout.append(row);
   });
 }
 
@@ -612,10 +661,11 @@ function movePanel(panel, direction) {
   const target = panels[index + direction];
   if (!target) return;
   if (direction < 0) {
-    panel.parentElement.insertBefore(panel, target);
+    movePanelToNewRow(panel, target.parentElement, false);
   } else {
-    panel.parentElement.insertBefore(target, panel);
+    movePanelToNewRow(panel, target.parentElement, true);
   }
+  removeEmptyPanelRows();
   writePanelOrder();
   updatePanelOrderControls();
 }
@@ -630,8 +680,22 @@ function updatePanelOrderControls() {
 
 function clearPanelDropMarkers() {
   currentPanels().forEach((panel) => {
-    panel.classList.remove("isDragTarget", "dropBefore", "dropAfter");
+    panel.classList.remove("isDragTarget", "dropBefore", "dropAfter", "dropInlineBefore", "dropInlineAfter");
   });
+}
+
+function movePanelToNewRow(panel, targetRow, after) {
+  const layout = document.querySelector("main.layout");
+  if (!layout || !targetRow) return;
+  const row = createPanelRow();
+  row.append(panel);
+  layout.insertBefore(row, after ? targetRow.nextSibling : targetRow);
+  removeEmptyPanelRows();
+}
+
+function movePanelInline(panel, targetPanel, after) {
+  targetPanel.parentElement.insertBefore(panel, after ? targetPanel.nextSibling : targetPanel);
+  removeEmptyPanelRows();
 }
 
 function addPanelOrderControls(panel, key) {
@@ -686,6 +750,7 @@ function addPanelOrderControls(panel, key) {
 }
 
 function setupPanelDragAndDrop() {
+  normalizePanelRows();
   currentPanels().forEach((panel, index) => {
     const key = panelKey(panel, index);
     panel.dataset.panelKey = key;
@@ -697,12 +762,23 @@ function setupPanelDragAndDrop() {
       event.preventDefault();
       const dragged = currentPanels().find((candidate) => candidate.dataset.panelKey === state.draggedPanelKey);
       if (!dragged) return;
+      clearPanelDropMarkers();
       panel.classList.add("isDragTarget");
       const rect = panel.getBoundingClientRect();
-      const after = event.clientY > rect.top + rect.height / 2;
-      panel.classList.toggle("dropBefore", !after);
-      panel.classList.toggle("dropAfter", after);
-      panel.parentElement.insertBefore(dragged, after ? panel.nextSibling : panel);
+      const topBand = rect.top + rect.height * .24;
+      const bottomBand = rect.bottom - rect.height * .24;
+      if (event.clientY < topBand) {
+        panel.classList.add("dropBefore");
+        movePanelToNewRow(dragged, panel.parentElement, false);
+      } else if (event.clientY > bottomBand) {
+        panel.classList.add("dropAfter");
+        movePanelToNewRow(dragged, panel.parentElement, true);
+      } else {
+        const after = event.clientX > rect.left + rect.width / 2;
+        panel.classList.toggle("dropInlineBefore", !after);
+        panel.classList.toggle("dropInlineAfter", after);
+        movePanelInline(dragged, panel, after);
+      }
     });
     panel.addEventListener("dragleave", clearPanelDropMarkers);
     panel.addEventListener("drop", (event) => {
