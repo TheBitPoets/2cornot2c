@@ -37,6 +37,26 @@ def write_activity(tmp_path, payload: dict | None = None):
     return path
 
 
+def canonical_activity() -> dict:
+    return {
+        "schema_version": "1.0",
+        "id": "python-base-somma-001",
+        "title": "Somma canonica",
+        "kind": "compito-casa",
+        "difficulty": "B",
+        "topics": ["variabili", "operatori"],
+        "language": "python",
+        "instructions": "Scrivi un programma Python che stampa una somma.",
+        "student_support_mode": "senza-aiuto",
+        "grading_policy": {
+            "compila": True,
+            "test": True,
+            "sandbox": True,
+            "ai_feedback": False,
+        },
+    }
+
+
 def test_create_scaffold_writes_assignment_files(tmp_path) -> None:
     activity_path = write_activity(tmp_path)
 
@@ -49,6 +69,19 @@ def test_create_scaffold_writes_assignment_files(tmp_path) -> None:
     assert "activity_id`: `c-base-somma-001`" in readme
     assert "source_path`: `assignments/c-base-somma-001/main.c`" in readme
     assert "thebitlab_ref`: `main`" in readme
+
+
+def test_create_scaffold_supports_canonical_activity_metadata(tmp_path) -> None:
+    activity_path = write_activity(tmp_path, canonical_activity())
+
+    destination = create_submission_scaffold.create_scaffold(activity_path=activity_path, target_dir=tmp_path)
+
+    assert destination == tmp_path / "assignments" / "python-base-somma-001"
+    assert (destination / "main.py").exists()
+    readme = (destination / "README.md").read_text(encoding="utf-8")
+    assert "# Somma canonica" in readme
+    assert "Scrivi un programma Python che stampa una somma." in readme
+    assert "language`: `python`" in readme
 
 
 def test_create_scaffold_rejects_unsafe_activity_id(tmp_path) -> None:

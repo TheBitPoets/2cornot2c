@@ -51,8 +51,8 @@ def assign_activity_to_targets(
     """Create the activity scaffold in each target student repository."""
     activity = create_submission_scaffold.load_activity(activity_path)
     identifier = create_submission_scaffold.activity_id(activity)
-    create_submission_scaffold.validate_activity_or_raise(activity, identifier)
-    selected_language = create_submission_scaffold.language_for(activity, language)
+    normalized_activity = create_submission_scaffold.validate_activity_contract_or_raise(activity, identifier)
+    selected_language = create_submission_scaffold.language_for(normalized_activity, language)
     create_submission_scaffold.validate_source_name(
         source_name
         if source_name is not None
