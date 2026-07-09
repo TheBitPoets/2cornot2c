@@ -239,6 +239,7 @@ commit_sha TEXT
 source_path TEXT
 updated_at TEXT NOT NULL
 payload_json TEXT
+UNIQUE (assignment_id, student_id)
 ```
 
 Indici:
@@ -255,6 +256,7 @@ Note:
 
 - Deve essere ricalcolabile dai registri e dai provider repository nella fase iniziale.
 - `repo_ref` e provider-agnostico.
+- Eventuali tentativi multipli vanno modellati in una tabella separata `attempts`, non duplicando la riga logica studente/assegnazione.
 
 ### `grading_results`
 
@@ -367,4 +369,3 @@ Svantaggi:
 ## Prossimo passo
 
 Implementare una spike SQLite isolata e ricostruibile dai JSON dei registri, limitata alla lettura/indicizzazione della vista quadro consegne.
-
