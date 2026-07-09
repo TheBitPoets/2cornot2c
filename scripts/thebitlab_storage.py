@@ -6,6 +6,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from scripts.thebitlab_contracts import normalize_activity, normalize_assignment_register
+
 
 DESIGN_NAME_RE = re.compile(r"^[a-zA-Z0-9_.-]+\.json$")
 
@@ -198,6 +200,7 @@ class JsonAssignmentStorage:
                 payload = self.read_json(path)
             except Exception:  # noqa: BLE001
                 payload = {}
+            payload = normalize_assignment_register(payload)
             students = payload.get("students", []) if isinstance(payload.get("students"), list) else []
             submitted = sum(1 for student in students if isinstance(student, dict) and student.get("submitted"))
             late = sum(1 for student in students if isinstance(student, dict) and student.get("submitted") and student.get("late"))
@@ -211,7 +214,7 @@ class JsonAssignmentStorage:
                     "class_id": payload.get("class_id", ""),
                     "class_label": payload.get("class_label", ""),
                     "github_team": payload.get("github_team", ""),
-                    "due_at": payload.get("due_at", ""),
+                    "due_at": payload.get("due_at") or "",
                     "students": len(students),
                     "submitted": submitted,
                     "late": late,
@@ -230,7 +233,7 @@ class JsonAssignmentStorage:
         payload = self.read_json(path)
         if not isinstance(payload.get("students"), list):
             raise ValueError("Registro consegne non valido: students deve essere una lista.")
-        return payload
+        return normalize_assignment_register(payload)
 
     def list_activities(self) -> list[dict[str, Any]]:
         """List available activity JSON files for the assignment dashboard."""
@@ -249,19 +252,19 @@ class JsonAssignmentStorage:
                     payload = self.read_json(path)
                 except Exception:  # noqa: BLE001
                     continue
-                if not payload.get("id"):
+                activity = normalize_activity(payload)
+                if not activity.get("id"):
                     continue
-                context = payload.get("contesto") if isinstance(payload.get("contesto"), dict) else {}
                 activities.append(
                     {
-                        "id": payload.get("id", ""),
-                        "title": payload.get("titolo", ""),
-                        "kind": payload.get("tipo", ""),
-                        "student_support_mode": payload.get("student_support_mode") or payload.get("support_mode") or payload.get("modalita_studente") or "",
-                        "class_id": context.get("classe", ""),
-                        "class_label": context.get("classe", ""),
-                        "github_team": context.get("team_github", ""),
-                        "language": payload.get("linguaggio") or payload.get("language", ""),
+                        "id": activity.get("id", ""),
+                        "title": activity.get("title", ""),
+                        "kind": activity.get("kind", ""),
+                        "student_support_mode": activity.get("student_support_mode", ""),
+                        "class_id": activity.get("class_id", ""),
+                        "class_label": activity.get("class_id", ""),
+                        "github_team": activity.get("github_team", ""),
+                        "language": activity.get("language", ""),
                         "path": self.relative_path(path),
                     }
                 )
