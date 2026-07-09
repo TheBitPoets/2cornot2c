@@ -45,6 +45,7 @@ def run_dashboard_js(assertions: str) -> None:
         this.disabled = false;
         this.open = false;
         this.clientWidth = 960;
+        this.testWidth = 240;
         this.tHead = {{ rows: [{{ cells: [] }}] }};
       }}
       addEventListener() {{}}
@@ -117,6 +118,7 @@ def run_dashboard_js(assertions: str) -> None:
         if (selector === "h2") return this.titleElement || null;
         if (selector === ".panelOrderControls") return this.findDescendant((child) => child.className === "panelOrderControls");
         if (selector === ".panelDragHandle") return this.findDescendant((child) => child.className === "panelDragHandle");
+        if (selector === ".panelWidthHandle") return this.findDescendant((child) => child.className === "panelWidthHandle");
         if (selector === ".panelMoveUp") return this.findDescendant((child) => child.className === "panelMoveButton panelMoveUp");
         if (selector === ".panelMoveDown") return this.findDescendant((child) => child.className === "panelMoveButton panelMoveDown");
         return null;
@@ -126,7 +128,7 @@ def run_dashboard_js(assertions: str) -> None:
         return [];
       }}
       closest() {{ return {{ clientWidth: 960 }}; }}
-      getBoundingClientRect() {{ return {{ top: 0, bottom: 120, left: 0, right: 240, width: 240, height: 120 }}; }}
+      getBoundingClientRect() {{ return {{ top: 0, bottom: 120, left: 0, right: this.testWidth, width: this.testWidth, height: 120 }}; }}
       showModal() {{ this.open = true; }}
       close() {{ this.open = false; }}
       setPointerCapture() {{}}
@@ -217,6 +219,11 @@ def run_dashboard_js(assertions: str) -> None:
         currentPanels,
         currentPanelRows,
         writePanelOrder,
+        readPanelWidths,
+        writePanelWidths,
+        applyPanelWidths,
+        currentPanelPercents,
+        setupPanelWidthResizers,
         movePanel,
         resetPanelOrder,
         setupPanelDragAndDrop,
@@ -392,6 +399,97 @@ def test_panel_rows_are_applied_and_persisted() -> None:
           tested.localStorage.getItem("2cornot2c.assignmentDashboardPanelOrder"),
           JSON.stringify([["generate", "selected-report"], ["students"]]),
         );
+        """
+    )
+
+
+def test_panel_widths_are_applied_for_saved_rows() -> None:
+    run_dashboard_js(
+        """
+        const generate = new tested.FakeElement("generate");
+        generate.dataset.panelKey = "generate";
+        generate.classList.add("panel");
+        const selected = new tested.FakeElement("selected-report");
+        selected.dataset.panelKey = "selected-report";
+        selected.classList.add("panel");
+        tested.layout.append(generate);
+        tested.layout.append(selected);
+
+        tested.localStorage.setItem(
+          "2cornot2c.assignmentDashboardPanelOrder",
+          JSON.stringify([["generate", "selected-report"]]),
+        );
+        tested.localStorage.setItem(
+          "2cornot2c.assignmentDashboardPanelWidths",
+          JSON.stringify({ "generate|selected-report": [35, 65] }),
+        );
+
+        tested.applyPanelOrder();
+        assert.equal(generate.style.flex, "0 1 35%");
+        assert.equal(selected.style.flex, "0 1 65%");
+        """
+    )
+
+
+def test_panel_width_resizers_are_added_between_adjacent_panels() -> None:
+    run_dashboard_js(
+        """
+        const generate = new tested.FakeElement("generate");
+        generate.dataset.panelKey = "generate";
+        generate.classList.add("panel");
+        const selected = new tested.FakeElement("selected-report");
+        selected.dataset.panelKey = "selected-report";
+        selected.classList.add("panel");
+        const students = new tested.FakeElement("students");
+        students.dataset.panelKey = "students";
+        students.classList.add("panel");
+        tested.layout.append(generate);
+        tested.layout.append(selected);
+        tested.layout.append(students);
+
+        tested.localStorage.setItem(
+          "2cornot2c.assignmentDashboardPanelOrder",
+          JSON.stringify([["generate", "selected-report"], ["students"]]),
+        );
+
+        tested.applyPanelOrder();
+        tested.setupPanelWidthResizers();
+        assert.ok(generate.querySelector(".panelWidthHandle"));
+        assert.equal(selected.querySelector(".panelWidthHandle"), null);
+        assert.equal(students.querySelector(".panelWidthHandle"), null);
+        """
+    )
+
+
+def test_panel_widths_can_be_persisted_and_reset_with_panel_order() -> None:
+    run_dashboard_js(
+        """
+        const generate = new tested.FakeElement("generate");
+        generate.dataset.panelKey = "generate";
+        generate.classList.add("panel");
+        generate.testWidth = 300;
+        const selected = new tested.FakeElement("selected-report");
+        selected.dataset.panelKey = "selected-report";
+        selected.classList.add("panel");
+        selected.testWidth = 100;
+        tested.layout.append(generate);
+        tested.layout.append(selected);
+        tested.localStorage.setItem(
+          "2cornot2c.assignmentDashboardPanelOrder",
+          JSON.stringify([["generate", "selected-report"]]),
+        );
+
+        tested.applyPanelOrder();
+        const row = tested.currentPanelRows()[0];
+        tested.writePanelWidths({ "generate|selected-report": tested.currentPanelPercents(row) });
+        assert.equal(
+          tested.localStorage.getItem("2cornot2c.assignmentDashboardPanelWidths"),
+          JSON.stringify({ "generate|selected-report": [75, 25] }),
+        );
+
+        tested.resetPanelOrder();
+        assert.equal(tested.localStorage.getItem("2cornot2c.assignmentDashboardPanelWidths"), null);
+        assert.equal(tested.window.location.reloaded, true);
         """
     )
 
