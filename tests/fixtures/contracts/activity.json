@@ -1,0 +1,61 @@
+{
+  "schema_version": "1.0",
+  "id": "python-base-somma-001",
+  "title": "Somma in Python",
+  "titolo": "Somma in Python",
+  "kind": "compito-casa",
+  "tipo": "compito-casa",
+  "language": "python",
+  "linguaggio": "python",
+  "difficulty": "B",
+  "difficolta": "B",
+  "topics": [
+    "variabili",
+    "input-output"
+  ],
+  "argomenti": [
+    "variabili",
+    "input-output"
+  ],
+  "instructions": "Scrivi un programma che legge due numeri e stampa la somma.",
+  "consegna": "Scrivi un programma che legge due numeri e stampa la somma.",
+  "student_support_mode": "feedback-tecnico",
+  "grading_policy": {
+    "compila": true,
+    "test": true,
+    "sandbox": true,
+    "ai_feedback": false
+  },
+  "correzione": {
+    "compila": true,
+    "test": true,
+    "sandbox": true,
+    "ai_feedback": false
+  },
+  "metriche": {
+    "tempo_stimato_minuti": 25,
+    "traccia_tempo_dichiarato": true,
+    "traccia_sessioni_thebitlab": true,
+    "traccia_eventi_didattici": true,
+    "traccia_errori_compilazione": true
+  },
+  "test_cases": [
+    {
+      "name": "somma positiva",
+      "stdin": "2 3\n",
+      "expected_stdout": "5\n"
+    }
+  ],
+  "source_refs": [
+    {
+      "source_id": "readme-main",
+      "href": "README.md#input-e-output"
+    }
+  ],
+  "contesto": {
+    "classe": "3A-TPSI",
+    "team_github": "team-3a-tpsi",
+    "percorso": "terzo",
+    "uda": "uda-programmazione-base"
+  }
+}

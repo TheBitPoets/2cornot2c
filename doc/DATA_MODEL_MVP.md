@@ -4,6 +4,8 @@ Questo documento inventaria i dati JSON usati oggi da TheBitLab e definisce il m
 
 Non introduce ancora uno storage layer, SQLite o nuove migrazioni. Serve a fissare il lessico e a evitare che le prossime feature continuino ad aggiungere campi scollegati tra loro.
 
+Per i contratti operativi minimi, gli alias legacy e le fixture testabili vedi anche [`architecture/data-contracts.md`](architecture/data-contracts.md).
+
 ## Obiettivi
 
 Per l'MVP di inizio anno scolastico 2026-2027 il modello dati deve permettere questo flusso:

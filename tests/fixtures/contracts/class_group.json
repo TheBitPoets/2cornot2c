@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "id": "3a-tpsi-2026",
+  "label": "3A TPSI",
+  "school_year": "2026-2027",
+  "provider": "github",
+  "provider_ref": "team-3a-tpsi",
+  "github_team": "team-3a-tpsi",
+  "students": [
+    {
+      "schema_version": "1.0",
+      "id": "rossi-mario",
+      "display_name": "Mario Rossi",
+      "class_ids": [
+        "3a-tpsi-2026"
+      ],
+      "provider_accounts": {
+        "github": "rossi-mario"
+      },
+      "repo_refs": [
+        "TheBitPoets/rossi-mario"
+      ]
+    }
+  ]
+}
