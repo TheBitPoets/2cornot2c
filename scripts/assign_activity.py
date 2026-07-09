@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from scripts import create_submission_scaffold
+from scripts.thebitlab_repository_providers import RepositoryProvider
 
 
 @dataclass(frozen=True)
@@ -36,6 +37,20 @@ def collect_targets(targets: list[Path] | None = None, targets_file: Path | None
     if not collected:
         raise ValueError("Indica almeno un repository studente con --target o --targets-file.")
     return collected
+
+
+def collect_targets_from_provider(provider: RepositoryProvider, class_ref: str | None = None) -> list[Path]:
+    """Return local target paths exposed by a repository provider."""
+
+    repositories = provider.list_student_repositories(class_ref=class_ref)
+    paths = []
+    for repository in repositories:
+        if repository.path is None:
+            raise ValueError(f"Repository senza path locale: {repository.repo_ref}")
+        paths.append(repository.path)
+    if not paths:
+        raise ValueError("Il provider non ha restituito repository studenti.")
+    return paths
 
 
 def assign_activity_to_targets(

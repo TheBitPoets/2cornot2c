@@ -33,6 +33,11 @@ Il parametro `class_ref` e parte della porta per GitHub/GitLab/team/classi, ma i
 3. Aggiungere adapter GitHub minimale dietro la stessa interfaccia.
 4. Progettare GitLab e provider interno senza far dipendere GUI e service dai dettagli esterni.
 
-Il primo collegamento operativo e `track_assignments.load_targets_from_provider()`: converte repository forniti da `RepositoryProvider` in `TrackingTarget` locali. La CLI esistente resta invariata e continua a usare `--target` / `--targets-file`.
+I primi collegamenti operativi sono:
+
+- `track_assignments.load_targets_from_provider()`: converte repository forniti da `RepositoryProvider` in `TrackingTarget` locali.
+- `assign_activity.collect_targets_from_provider()`: converte repository forniti da `RepositoryProvider` in path locali assegnabili.
+
+Le CLI esistenti restano invariate e continuano a usare `--target` / `--targets-file`.
 
 Questa scelta mantiene piccoli i cambiamenti: rete, autenticazione e semantica team restano fuori dal primo passo.
