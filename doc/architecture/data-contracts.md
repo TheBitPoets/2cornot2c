@@ -223,5 +223,5 @@ Gia fatto:
 Prossimi passi:
 
 1. Collegare `AssignmentRegister` ad `assignment_id` quando l'entita Assignment sara disponibile.
-2. Introdurre il layer provider repository per GitHub/GitLab/local senza far dipendere la GUI dai dettagli provider.
+2. Introdurre il layer provider repository per GitHub/GitLab/local senza far dipendere la GUI dai dettagli provider. Vedi [`repository-providers.md`](repository-providers.md).
 3. Usare questi contratti per disegnare la valutazione SQLite/provider senza migrare subito.
