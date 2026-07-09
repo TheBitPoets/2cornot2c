@@ -1710,6 +1710,7 @@ function summaryTooltip(label) {
 function gradingValue(student) {
   const grading = student.grading || {};
   const value = grading.teacher_grade ?? grading.score;
+  if (value == null || String(value).trim() === "") return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 }

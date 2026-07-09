@@ -507,35 +507,36 @@ def test_students_summary_counts_include_grading_and_grades() -> None:
           { status: "missing", submitted: false, late: false, grading: { status: "not_run" } },
           { status: "submitted", submitted: true, late: false, grading: { status: "graded_passed", score: 8 } },
           { status: "submitted_late", submitted: true, late: true, grading: { status: "graded_failed", teacher_grade: 5 } },
+          { status: "submitted", submitted: true, late: false, grading: { status: "graded_passed", teacher_grade: "" } },
         ]);
         assert.equal(JSON.stringify(counts), JSON.stringify({
-          total: 4,
+          total: 5,
           pending: 1,
           missing: 1,
-          submitted: 2,
+          submitted: 3,
           late: 1,
-          passed: 1,
+          passed: 2,
           failed: 1,
           averageGrade: 6.5,
-          missingGrades: 2,
+          missingGrades: 3,
         }));
         assert.equal(JSON.stringify(tested.compactStudentsSummaryItems(counts)), JSON.stringify([
-          ["Studenti", 4],
-          ["Consegnati", 2],
+          ["Studenti", 5],
+          ["Consegnati", 3],
           ["Mancanti", 1],
           ["Ritardo", 1],
           ["KO", 1],
         ]));
         assert.equal(JSON.stringify(tested.detailedStudentsSummaryItems(counts)), JSON.stringify([
-          ["Studenti", 4],
-          ["Consegnati", 2],
+          ["Studenti", 5],
+          ["Consegnati", 3],
           ["Mancanti", 1],
           ["Ritardo", 1],
           ["Pending", 1],
-          ["Grading OK", 1],
+          ["Grading OK", 2],
           ["Grading KO", 1],
           ["Media voto", "6.5"],
-          ["Voti mancanti", 2],
+          ["Voti mancanti", 3],
         ]));
         """
     )
