@@ -32,8 +32,11 @@ def test_class_group_contract_fixture() -> None:
     payload = load_fixture("class_group.json")
 
     assert_required(payload, {"schema_version", "id", "label", "school_year", "provider", "provider_ref", "students"})
-    assert payload["students"][0]["id"] == "rossi-mario"
-    assert payload["students"][0]["provider_accounts"]["github"] == "rossi-mario"
+    student = payload["students"][0]
+    assert_required(student, {"schema_version", "id", "display_name", "class_ids", "provider_accounts", "repo_refs"})
+    assert student["id"] == "rossi-mario"
+    assert student["class_ids"] == ["3a-tpsi-2026"]
+    assert student["provider_accounts"]["github"] == "rossi-mario"
 
 
 def test_activity_contract_fixture_keeps_canonical_and_legacy_fields() -> None:

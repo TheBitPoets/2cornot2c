@@ -8,8 +8,12 @@
   "github_team": "team-3a-tpsi",
   "students": [
     {
+      "schema_version": "1.0",
       "id": "rossi-mario",
       "display_name": "Mario Rossi",
+      "class_ids": [
+        "3a-tpsi-2026"
+      ],
       "provider_accounts": {
         "github": "rossi-mario"
       },
