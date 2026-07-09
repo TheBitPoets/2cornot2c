@@ -365,7 +365,11 @@ Mappatura dai campi attuali:
 | `correzione` | `grading_policy` |
 | `student_support_mode`, `support_mode`, `modalita_studente` | `student_support_mode` |
 
-Per compatibilita, le prossime PR possono leggere entrambi i nomi ma dovrebbero scrivere il nome canonico.
+Fase di transizione:
+
+- finche `scripts/validate_activity.py` e gli script collegati richiedono i campi legacy italiani, le nuove activity devono continuare a scrivere `titolo`, `tipo`, `difficolta`, `argomenti`, `consegna` e `correzione`;
+- i campi canonici restano il target del modello dati e possono essere affiancati solo quando lettori, validatore e writer sono compatibili;
+- la scrittura dei soli campi canonici va rimandata a una PR di migrazione schema dedicata, con fallback per le activity esistenti.
 
 ### Assignment
 
