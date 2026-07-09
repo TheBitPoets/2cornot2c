@@ -112,7 +112,7 @@ def normalize_submission(payload: dict[str, Any]) -> dict[str, Any]:
     normalized.setdefault("commit", None)
     normalized.setdefault("submitted_at", None)
     normalized.setdefault("status", "")
-    normalized.setdefault("late", False)
+    normalized["late"] = bool_value(payload.get("late", False))
     normalized.setdefault("files", [])
     return normalized
 

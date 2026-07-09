@@ -124,3 +124,11 @@ def test_normalize_register_student_parses_boolean_strings_conservatively() -> N
     assert student["late"] is False
     assert other_student["submitted"] is True
     assert other_student["late"] is True
+
+
+def test_normalize_submission_parses_late_string_conservatively() -> None:
+    submission = thebitlab_contracts.normalize_submission({"late": "false"})
+    other_submission = thebitlab_contracts.normalize_submission({"late": "yes"})
+
+    assert submission["late"] is False
+    assert other_submission["late"] is True
