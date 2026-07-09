@@ -7,7 +7,11 @@ from pathlib import Path
 from typing import Any
 
 from scripts import validate_activity
-from scripts.thebitlab_contracts import normalize_activity
+from scripts.thebitlab_contracts import (
+    legacy_activity_validation_payload,
+    normalize_activity,
+    validate_normalized_activity,
+)
 
 
 DEFAULT_TARGET_DIR = Path(".")
@@ -78,44 +82,15 @@ def validate_activity_or_raise(activity: dict[str, Any], identifier: str) -> Non
         raise ValueError("\n".join(errors))
 
 
-def legacy_activity_validation_payload(activity: dict[str, Any], normalized_activity: dict[str, Any]) -> dict[str, Any]:
-    """Return a copy with legacy aliases filled from canonical activity fields."""
-
-    payload = dict(activity)
-    payload.setdefault("titolo", normalized_activity.get("title", ""))
-    payload.setdefault("tipo", normalized_activity.get("kind", ""))
-    payload.setdefault("difficolta", normalized_activity.get("difficulty", ""))
-    payload.setdefault("argomenti", normalized_activity.get("topics", []))
-    payload.setdefault("consegna", normalized_activity.get("instructions", ""))
-    payload.setdefault("correzione", normalized_activity.get("grading_policy", {}))
-    payload.setdefault(
-        "metriche",
-        {
-            "tempo_stimato_minuti": 0,
-            "traccia_tempo_dichiarato": False,
-            "traccia_sessioni_thebitlab": False,
-            "traccia_eventi_didattici": False,
-            "traccia_errori_compilazione": False,
-        },
-    )
-    return payload
-
-
-def validate_normalized_activity_or_raise(activity: dict[str, Any], identifier: str) -> None:
-    """Validate canonical activity fields used by the assignment scaffold."""
-
-    kind = str(activity.get("kind") or "").strip()
-    if kind and kind not in validate_activity.ALLOWED_TYPES:
-        raise ValueError(f"{identifier}: kind non ammesso: {kind}")
-
-
 def validate_activity_contract_or_raise(activity: dict[str, Any], identifier: str) -> dict[str, Any]:
     """Validate legacy/canonical activity metadata and return canonical fields."""
 
     normalized_activity = normalize_activity(activity)
     validation_payload = legacy_activity_validation_payload(activity, normalized_activity)
     validate_activity_or_raise(validation_payload, identifier)
-    validate_normalized_activity_or_raise(normalized_activity, identifier)
+    errors = validate_normalized_activity(normalized_activity, identifier)
+    if errors:
+        raise ValueError("\n".join(errors))
     return normalized_activity
 
 
