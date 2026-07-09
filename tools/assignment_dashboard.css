@@ -576,14 +576,25 @@ label {
   font-size: 1.25rem;
 }
 
-.panelDragHandle {
+.panelOrderControls {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  flex: 0 0 auto;
+}
+
+.panelDragHandle,
+.panelMoveButton {
   flex: 0 0 auto;
   border-radius: 999px;
   padding: .45rem .65rem;
   color: var(--muted);
   font-size: .8rem;
-  letter-spacing: .08em;
   box-shadow: none;
+}
+
+.panelDragHandle {
+  letter-spacing: .08em;
   cursor: grab;
 }
 
@@ -591,13 +602,41 @@ label {
   cursor: grabbing;
 }
 
+.panelMoveButton {
+  min-width: 3.2rem;
+}
+
+.panelMoveButton:disabled {
+  opacity: .38;
+  cursor: not-allowed;
+}
+
 .isDraggingPanel {
   opacity: .62;
 }
 
 .isDragTarget {
-  outline: 2px dashed rgba(17, 17, 17, .28);
-  outline-offset: 4px;
+  position: relative;
+}
+
+.isDragTarget::before,
+.isDragTarget::after {
+  position: absolute;
+  left: .9rem;
+  right: .9rem;
+  z-index: 2;
+  height: 4px;
+  border-radius: 999px;
+  background: #111111;
+  content: "";
+}
+
+.isDragTarget.dropBefore::before {
+  top: -2px;
+}
+
+.isDragTarget.dropAfter::after {
+  bottom: -2px;
 }
 
 .panelHead h2::before {

@@ -50,16 +50,25 @@ def run_dashboard_js(assertions: str) -> None:
       addEventListener() {{}}
       removeEventListener() {{}}
       setAttribute(name, value) {{ this[name] = value; }}
-      append(child) {{
-        this.children = this.children.filter((candidate) => candidate !== child);
-        child.parentElement = this;
-        this.children.push(child);
+      toggleAttribute(name, force) {{
+        const enabled = force === undefined ? !Boolean(this[name]) : Boolean(force);
+        this[name] = enabled;
+        return enabled;
+      }}
+      append(...children) {{
+        children.forEach((child) => {{
+          this.children = this.children.filter((candidate) => candidate !== child);
+          child.parentElement = this;
+          this.children.push(child);
+        }});
         this.syncSiblings();
       }}
-      prepend(child) {{
-        this.children = this.children.filter((candidate) => candidate !== child);
-        child.parentElement = this;
-        this.children.unshift(child);
+      prepend(...children) {{
+        children.reverse().forEach((child) => {{
+          this.children = this.children.filter((candidate) => candidate !== child);
+          child.parentElement = this;
+          this.children.unshift(child);
+        }});
         this.syncSiblings();
       }}
       insertBefore(child, reference) {{
@@ -75,10 +84,21 @@ def run_dashboard_js(assertions: str) -> None:
           child.nextSibling = this.children[index + 1] || null;
         }});
       }}
+      findDescendant(predicate) {{
+        for (const child of this.children) {{
+          if (predicate(child)) return child;
+          const descendant = child.findDescendant(predicate);
+          if (descendant) return descendant;
+        }}
+        return null;
+      }}
       querySelector(selector) {{
         if (selector === ".panelHead") return this.panelHead || null;
         if (selector === "h2") return this.titleElement || null;
-        if (selector === ".panelDragHandle") return this.children.find((child) => child.className === "panelDragHandle") || null;
+        if (selector === ".panelOrderControls") return this.findDescendant((child) => child.className === "panelOrderControls");
+        if (selector === ".panelDragHandle") return this.findDescendant((child) => child.className === "panelDragHandle");
+        if (selector === ".panelMoveUp") return this.findDescendant((child) => child.className === "panelMoveButton panelMoveUp");
+        if (selector === ".panelMoveDown") return this.findDescendant((child) => child.className === "panelMoveButton panelMoveDown");
         return null;
       }}
       querySelectorAll() {{ return []; }}
@@ -113,9 +133,14 @@ def run_dashboard_js(assertions: str) -> None:
         store: {{}},
         getItem(key) {{ return this.store[key] ?? null; }},
         setItem(key, value) {{ this.store[key] = String(value); }},
+        removeItem(key) {{ delete this.store[key]; }},
       }},
       window: {{
         addEventListener() {{}},
+        location: {{
+          reloaded: false,
+          reload() {{ this.reloaded = true; }},
+        }},
       }},
       document: {{
         createElement: (tag) => new FakeElement(tag),
@@ -155,11 +180,15 @@ def run_dashboard_js(assertions: str) -> None:
         applyPanelOrder,
         currentPanels,
         writePanelOrder,
+        movePanel,
+        resetPanelOrder,
+        setupPanelDragAndDrop,
         renderLegend,
         els,
         layout,
         FakeElement,
         localStorage,
+        window,
       }};
     `, context);
 
@@ -283,5 +312,57 @@ def test_panel_order_keeps_missing_saved_panels_after_ordered_ones() -> None:
           JSON.stringify(tested.currentPanels().map((panel) => panel.dataset.panelKey)),
           JSON.stringify(["students", "generate", "selected-report", "class-overview"]),
         );
+        """
+    )
+
+
+def test_panel_move_buttons_reorder_panels_and_update_disabled_state() -> None:
+    run_dashboard_js(
+        """
+        function panelWithHead(key) {
+          const panel = new tested.FakeElement(key);
+          panel.dataset.panelKey = key;
+          const head = new tested.FakeElement(`${key}-head`);
+          panel.panelHead = head;
+          panel.append(head);
+          return panel;
+        }
+        const generate = panelWithHead("generate");
+        const overview = panelWithHead("class-overview");
+        const students = panelWithHead("students");
+        tested.layout.append(generate);
+        tested.layout.append(overview);
+        tested.layout.append(students);
+
+        tested.setupPanelDragAndDrop();
+        assert.equal(generate.querySelector(".panelMoveUp").disabled, true);
+        assert.equal(students.querySelector(".panelMoveDown").disabled, true);
+
+        tested.movePanel(students, -1);
+        assert.equal(
+          JSON.stringify(tested.currentPanels().map((panel) => panel.dataset.panelKey)),
+          JSON.stringify(["generate", "students", "class-overview"]),
+        );
+        assert.equal(
+          tested.localStorage.getItem("2cornot2c.assignmentDashboardPanelOrder"),
+          JSON.stringify(["generate", "students", "class-overview"]),
+        );
+        assert.equal(students.querySelector(".panelMoveUp").disabled, false);
+        assert.equal(overview.querySelector(".panelMoveDown").disabled, true);
+        """
+    )
+
+
+def test_reset_panel_order_clears_saved_order_and_reloads() -> None:
+    run_dashboard_js(
+        """
+        tested.localStorage.setItem(
+          "2cornot2c.assignmentDashboardPanelOrder",
+          JSON.stringify(["students", "generate"]),
+        );
+
+        tested.resetPanelOrder();
+        assert.equal(tested.localStorage.getItem("2cornot2c.assignmentDashboardPanelOrder"), null);
+        assert.equal(tested.window.location.reloaded, true);
         """
     )
