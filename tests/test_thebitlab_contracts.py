@@ -60,6 +60,44 @@ def test_normalize_activity_reads_legacy_aliases() -> None:
     assert normalized["github_team"] == "team-4a-inf"
 
 
+def test_legacy_activity_validation_payload_fills_legacy_aliases() -> None:
+    payload = {
+        "schema_version": "1.0",
+        "id": "python-base-somma-001",
+        "title": "Somma canonica",
+        "kind": "compito-casa",
+        "difficulty": "B",
+        "topics": ["variabili"],
+        "instructions": "Scrivi una somma.",
+        "grading_policy": {
+            "compila": True,
+            "test": True,
+            "sandbox": True,
+            "ai_feedback": False,
+        },
+    }
+    normalized = thebitlab_contracts.normalize_activity(payload)
+
+    legacy_payload = thebitlab_contracts.legacy_activity_validation_payload(payload, normalized)
+
+    assert legacy_payload["titolo"] == "Somma canonica"
+    assert legacy_payload["tipo"] == "compito-casa"
+    assert legacy_payload["difficolta"] == "B"
+    assert legacy_payload["argomenti"] == ["variabili"]
+    assert legacy_payload["consegna"] == "Scrivi una somma."
+    assert legacy_payload["correzione"] == payload["grading_policy"]
+    assert legacy_payload["metriche"]["tempo_stimato_minuti"] == 0
+
+
+def test_validate_normalized_activity_rejects_invalid_kind() -> None:
+    errors = thebitlab_contracts.validate_normalized_activity(
+        {"kind": "compito-classe"},
+        "activity",
+    )
+
+    assert errors == ["activity: kind non ammesso: compito-classe"]
+
+
 def test_normalize_assignment_register_preserves_contract_fixture() -> None:
     payload = load_fixture("assignment_register.json")
 

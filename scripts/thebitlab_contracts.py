@@ -4,6 +4,17 @@ from copy import deepcopy
 from typing import Any
 
 
+ALLOWED_ACTIVITY_KINDS = {
+    "studio-guidato",
+    "esercizio-classe",
+    "compito-casa",
+    "laboratorio",
+    "verifica-pratica",
+    "verifica-scritta",
+    "debug-didattico",
+}
+
+
 def first_text(payload: dict[str, Any], *keys: str) -> str:
     """Return the first non-empty string value found in payload."""
 
@@ -73,6 +84,39 @@ def normalize_activity(payload: dict[str, Any]) -> dict[str, Any]:
     normalized["class_id"] = first_text(payload, "class_id") or first_text(context, "classe")
     normalized["github_team"] = first_text(payload, "github_team") or first_text(context, "team_github")
     return normalized
+
+
+def legacy_activity_validation_payload(activity: dict[str, Any], normalized_activity: dict[str, Any]) -> dict[str, Any]:
+    """Return a copy with legacy aliases filled from canonical activity fields."""
+
+    payload = dict(activity)
+    payload.setdefault("titolo", normalized_activity.get("title", ""))
+    payload.setdefault("tipo", normalized_activity.get("kind", ""))
+    payload.setdefault("difficolta", normalized_activity.get("difficulty", ""))
+    payload.setdefault("argomenti", normalized_activity.get("topics", []))
+    payload.setdefault("consegna", normalized_activity.get("instructions", ""))
+    payload.setdefault("correzione", normalized_activity.get("grading_policy", {}))
+    payload.setdefault(
+        "metriche",
+        {
+            "tempo_stimato_minuti": 0,
+            "traccia_tempo_dichiarato": False,
+            "traccia_sessioni_thebitlab": False,
+            "traccia_eventi_didattici": False,
+            "traccia_errori_compilazione": False,
+        },
+    )
+    return payload
+
+
+def validate_normalized_activity(activity: dict[str, Any], identifier: str) -> list[str]:
+    """Return validation errors for canonical activity fields used by readers."""
+
+    errors = []
+    kind = first_text(activity, "kind")
+    if kind and kind not in ALLOWED_ACTIVITY_KINDS:
+        errors.append(f"{identifier}: kind non ammesso: {kind}")
+    return errors
 
 
 def normalize_grading(payload: dict[str, Any]) -> dict[str, Any]:

@@ -9,8 +9,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from scripts import assign_activity, create_submission_scaffold, validate_activity
-from scripts.thebitlab_contracts import normalize_activity
+from scripts import assign_activity, create_submission_scaffold
+from scripts.thebitlab_contracts import (
+    legacy_activity_validation_payload,
+    normalize_activity,
+    validate_normalized_activity,
+)
 
 
 NO_DUE_DATE_STATUS = "no_due_date"
@@ -340,37 +344,6 @@ def clean_metadata(value: str | None) -> str:
     return str(value or "").strip()
 
 
-def validate_normalized_activity_or_raise(activity: dict[str, Any], identifier: str) -> None:
-    """Validate canonical activity fields used by the tracking register."""
-
-    kind = clean_metadata(activity.get("kind"))
-    if kind and kind not in validate_activity.ALLOWED_TYPES:
-        raise ValueError(f"{identifier}: kind non ammesso: {kind}")
-
-
-def legacy_activity_validation_payload(activity: dict[str, Any], normalized_activity: dict[str, Any]) -> dict[str, Any]:
-    """Return a copy with legacy aliases filled from canonical activity fields."""
-
-    payload = dict(activity)
-    payload.setdefault("titolo", normalized_activity.get("title", ""))
-    payload.setdefault("tipo", normalized_activity.get("kind", ""))
-    payload.setdefault("difficolta", normalized_activity.get("difficulty", ""))
-    payload.setdefault("argomenti", normalized_activity.get("topics", []))
-    payload.setdefault("consegna", normalized_activity.get("instructions", ""))
-    payload.setdefault("correzione", normalized_activity.get("grading_policy", {}))
-    payload.setdefault(
-        "metriche",
-        {
-            "tempo_stimato_minuti": 0,
-            "traccia_tempo_dichiarato": False,
-            "traccia_sessioni_thebitlab": False,
-            "traccia_eventi_didattici": False,
-            "traccia_errori_compilazione": False,
-        },
-    )
-    return payload
-
-
 def track_assignments(
     *,
     activity_path: Path,
@@ -388,7 +361,9 @@ def track_assignments(
     activity_id = create_submission_scaffold.activity_id(activity)
     validation_payload = legacy_activity_validation_payload(activity, normalized_activity)
     create_submission_scaffold.validate_activity_or_raise(validation_payload, activity_id)
-    validate_normalized_activity_or_raise(normalized_activity, activity_id)
+    normalized_errors = validate_normalized_activity(normalized_activity, activity_id)
+    if normalized_errors:
+        raise ValueError("\n".join(normalized_errors))
     normalized_assigned_at = parse_datetime(assigned_at, "assigned_at")
     normalized_due_at = parse_datetime(due_at, "due_at")
     normalized_now = parse_datetime(now, "now")
