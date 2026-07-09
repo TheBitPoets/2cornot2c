@@ -369,9 +369,10 @@ Mappatura dai campi attuali:
 
 Fase di transizione:
 
-- finche `scripts/validate_activity.py` e gli script collegati richiedono i campi legacy italiani, le nuove activity devono continuare a scrivere `titolo`, `tipo`, `difficolta`, `argomenti`, `consegna` e `correzione`;
-- i campi canonici restano il target del modello dati e possono essere affiancati solo quando lettori, validatore e writer sono compatibili;
-- la scrittura dei soli campi canonici va rimandata a una PR di migrazione schema dedicata, con fallback per le activity esistenti.
+- `scripts/thebitlab_contracts.py` contiene i normalizer e gli helper di compatibilita usati da scaffold, assegnazione, tracking e storage consegne;
+- `scripts/create_submission_scaffold.py`, `scripts/assign_activity.py` e `scripts/track_assignments.py` accettano activity con campi canonici, costruendo una vista legacy solo per il validatore esistente;
+- i writer attuali possono continuare a produrre campi legacy italiani, ma i nuovi lettori devono passare dai normalizer condivisi;
+- la migrazione completa dei writer verso soli campi canonici resta una PR separata, da fare quando GUI activity e validatore saranno allineati.
 
 ### Assignment
 

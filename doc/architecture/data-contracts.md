@@ -126,7 +126,8 @@ Alias legacy letti oggi:
 Fase di transizione:
 
 - I writer attuali possono continuare a produrre campi legacy italiani.
-- I service futuri dovrebbero normalizzare verso i campi canonici senza rompere i lettori esistenti.
+- I lettori operativi devono usare `scripts/thebitlab_contracts.py` per normalizzare verso i campi canonici senza rompere i dati esistenti.
+- Scaffold, assegnazione, tracking e storage consegne usano gia helper condivisi per activity canoniche/legacy.
 
 ### AssignmentRegister
 
@@ -210,8 +211,17 @@ tests/fixtures/contracts/
 
 Queste fixture non sono demo complete. Servono come esempi stabili per testare che i contratti minimi restino leggibili e coerenti mentre evolvono service, storage e provider.
 
-## Prossime PR suggerite
+## Stato implementativo e prossime PR
 
-1. Introdurre normalizer piccoli nei service, per esempio `normalize_activity` e `normalize_assignment_register`.
-2. Collegare `AssignmentRegister` ad `assignment_id` quando l'entita Assignment sara disponibile.
+Gia fatto:
+
+1. Fixture contrattuali per course, class group, student, activity e assignment register.
+2. Normalizer per activity e registri consegne.
+3. Integrazione dei normalizer in storage, scaffold, assegnazione e tracking.
+4. Helper condivisi per validazione canonico/legacy delle activity.
+
+Prossimi passi:
+
+1. Collegare `AssignmentRegister` ad `assignment_id` quando l'entita Assignment sara disponibile.
+2. Introdurre il layer provider repository per GitHub/GitLab/local senza far dipendere la GUI dai dettagli provider.
 3. Usare questi contratti per disegnare la valutazione SQLite/provider senza migrare subito.
