@@ -130,6 +130,8 @@ events(id, entity_type, entity_id, event_type, payload_json, created_at)
 
 All'inizio `source_path`, `report_path` e `payload_json` permettono di collegare SQLite ai JSON senza perdere compatibilita.
 
+Calendari: per l'MVP non viene proposta una tabella iniziale. `doc/calendars/*.json` resta sorgente primaria perche il calendario e ancora un artefatto piccolo, versionabile e collegato al percorso tramite `course_design_name`. Una tabella `school_calendars` o `calendar_links` andra valutata solo se serviranno query multi-anno, collegamenti molti-a-molti tra calendari e percorsi, oppure sincronizzazione applicativa non gestibile bene con i JSON.
+
 ## Rischi e mitigazioni
 
 | Rischio | Mitigazione |
@@ -162,4 +164,3 @@ Se invece il dato e un artefatto didattico leggibile, piccolo e revisionabile, i
 3. Aggiungere ADR/schema SQLite minimo per classi, studenti e assignment.
 4. Implementare una spike SQLite ricostruibile dai JSON dei registri.
 5. Decidere se chiudere #286 con piano documentato o proseguire fino al prototipo.
-
