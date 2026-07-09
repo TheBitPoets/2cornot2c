@@ -3,13 +3,13 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from scripts.thebitlab_storage import JsonAssignmentStorage, JsonCourseStorage
+from scripts.thebitlab_storage_ports import AssignmentStorage, CourseStorage
 
 
 class CourseService:
     """Application service for course designs and school calendars."""
 
-    def __init__(self, storage: JsonCourseStorage) -> None:
+    def __init__(self, storage: CourseStorage) -> None:
         self.storage = storage
 
     def safe_design_name(self, name: str) -> str:
@@ -81,7 +81,7 @@ class CourseService:
 class AssignmentService:
     """Application service for assignment dashboard data."""
 
-    def __init__(self, storage: JsonAssignmentStorage) -> None:
+    def __init__(self, storage: AssignmentStorage) -> None:
         self.storage = storage
 
     def safe_teacher_report_path(self, name: str) -> Path:

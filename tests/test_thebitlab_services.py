@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from scripts.thebitlab_services import AssignmentService, CourseService
 from scripts.thebitlab_storage import JsonAssignmentStorage, JsonCourseStorage
@@ -41,6 +42,58 @@ def test_course_service_delegates_design_and_calendar_storage(tmp_path) -> None:
             "course_design_name": "as_2026_2027.json",
         }
     ]
+
+
+def test_course_service_accepts_protocol_compatible_storage(tmp_path) -> None:
+    class FakeCourseStorage:
+        def safe_design_name(self, name: str) -> str:
+            return name
+
+        def saved_design_path(self, name: str) -> Path:
+            return tmp_path / "designs" / name
+
+        def school_calendar_path(self, name: str) -> Path:
+            return tmp_path / "calendars" / name
+
+        def read_design(self) -> dict[str, object]:
+            return {"years": []}
+
+        def write_design(self, payload: dict[str, object]) -> None:
+            self.design = payload
+
+        def list_saved_designs(self) -> list[dict[str, str]]:
+            return [{"name": "demo.json", "path": "doc/course_designs/demo.json"}]
+
+        def read_saved_design(self, name: str) -> dict[str, object]:
+            return {"name": name}
+
+        def write_saved_design(self, name: str, payload: dict[str, object]) -> dict[str, str]:
+            return {"name": name, "path": f"doc/course_designs/{name}"}
+
+        def delete_saved_design(
+            self,
+            name: str,
+            delete_calendars: bool = False,
+            calendars: list[str] | None = None,
+        ) -> dict[str, object]:
+            return {"name": name, "deleted_calendars": calendars or []}
+
+        def list_school_calendars(self) -> list[dict[str, str]]:
+            return []
+
+        def read_school_calendar(self, name: str) -> dict[str, object]:
+            return {"name": name}
+
+        def write_school_calendar(self, name: str, payload: dict[str, object]) -> dict[str, str]:
+            return {"name": name, "path": f"doc/calendars/{name}"}
+
+    service = CourseService(FakeCourseStorage())
+
+    assert service.read_design() == {"years": []}
+    assert service.write_saved_design("demo.json", {}) == {
+        "name": "demo.json",
+        "path": "doc/course_designs/demo.json",
+    }
 
 
 def test_course_service_deletes_linked_calendars(tmp_path) -> None:
@@ -126,6 +179,26 @@ def test_assignment_overview_lists_student_rows(tmp_path) -> None:
             "ai_status": "not_generated",
         }
     ]
+
+
+def test_assignment_service_accepts_protocol_compatible_storage(tmp_path) -> None:
+    class FakeAssignmentStorage:
+        def safe_teacher_report_path(self, name: str) -> Path:
+            return tmp_path / "teacher-reports" / name
+
+        def list_assignment_reports(self) -> list[dict[str, object]]:
+            return [{"name": "demo.json", "path": "teacher-reports/demo.json"}]
+
+        def read_assignment_report(self, name: str) -> dict[str, object]:
+            return {"activity_id": "demo", "students": [{"student": "rossi-mario"}]}
+
+        def list_activities(self) -> list[dict[str, object]]:
+            return [{"id": "demo"}]
+
+    service = AssignmentService(FakeAssignmentStorage())
+
+    assert service.list_activities() == [{"id": "demo"}]
+    assert service.assignment_overview()[0]["student"] == "rossi-mario"
 
 
 def test_assignment_overview_skips_invalid_reports(tmp_path) -> None:
