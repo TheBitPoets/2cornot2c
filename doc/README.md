@@ -18,8 +18,11 @@ Se devi lavorare sui blocchi lab nel README, leggi i documenti in questo ordine:
 Se devi lavorare sulla progettazione del corso, sui percorsi didattici o sul calendario scolastico, leggi:
 
 1. [`COURSE_BOARD.md`](COURSE_BOARD.md)
+2. [`ROADMAP.md`](ROADMAP.md)
 
 `COURSE_BOARD.md` spiega come usare la board, come salvare progetti didattici, come associarli al calendario e come rigenerare i Markdown prodotti dagli script.
+
+`ROADMAP.md` raccoglie il backlog centrale del progetto e l'ordine consigliato delle prossime PR, incluse fonti didattiche multiple, activity nel percorso, classi, consegne e dashboard.
 
 Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o metriche studenti, leggi:
 
@@ -36,6 +39,8 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 |---|---|
 | [`LAB_SNIPPETS.md`](LAB_SNIPPETS.md) | Quando devi modificare i blocchi lab nel README o nel template |
 | [`LAB_OUTPUTS.md`](LAB_OUTPUTS.md) | Quando devi aggiungere o aggiornare l'output di un laboratorio |
+| [`ROADMAP.md`](ROADMAP.md) | Quando devi decidere priorita, prossime PR o lavori ancora aperti |
+| [`ideas/federated-knowledge-plan.md`](ideas/federated-knowledge-plan.md) | Visione lunga per evolvere verso una piattaforma di conoscenza federata |
 | [`COURSE_BOARD.md`](COURSE_BOARD.md) | Quando devi usare la board dei progetti didattici, il calendario scolastico o le funzioni AI assisted |
 | [`ASSIGNMENTS.md`](ASSIGNMENTS.md) | Quando devi progettare esercizi, compiti, verifiche, correzioni automatiche o metriche di classe |
 | [`ACTIVITIES_SCHEMA.md`](ACTIVITIES_SCHEMA.md) | Quando devi creare o validare schede JSON di attivita TheBitLab |
