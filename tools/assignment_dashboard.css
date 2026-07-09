@@ -772,7 +772,7 @@ label > textarea {
 }
 
 .studentsDialog {
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto minmax(0, 1fr);
   width: min(96vw, 88rem);
   height: min(88vh, 50rem);
   min-width: min(92vw, 38rem);
@@ -1121,6 +1121,10 @@ label > textarea {
 
 .studentsDialogFilters .filterBar {
   padding: 0;
+}
+
+.studentsDialogSummary {
+  padding: .85rem 1rem;
 }
 
 .filterBar button.isActive {
