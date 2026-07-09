@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from scripts.thebitlab_storage import JsonCourseStorage
+from scripts.thebitlab_storage import JsonAssignmentStorage, JsonCourseStorage
 
 
 def test_read_design_returns_minimal_default_when_missing(tmp_path) -> None:
@@ -103,3 +103,145 @@ def test_read_json_rejects_non_object_payload(tmp_path) -> None:
 
     with pytest.raises(ValueError):
         storage.read_json(path)
+
+
+def test_assignment_reports_are_listed_with_counts(tmp_path) -> None:
+    storage = JsonAssignmentStorage(tmp_path, tmp_path / "teacher-reports", [])
+    report_dir = tmp_path / "teacher-reports" / "demo"
+    report_dir.mkdir(parents=True)
+    (report_dir / "activity.json").write_text(
+        json.dumps(
+            {
+                "activity_id": "activity",
+                "title": "Activity demo",
+                "class_id": "4A-INF",
+                "class_label": "4A INF",
+                "github_team": "team-4a-inf",
+                "students": [
+                    {"student": "rossi-mario", "submitted": True, "late": True},
+                    {"student": "bianchi-luca", "submitted": False, "late": True},
+                    {"student": "verdi-anna", "submitted": True, "late": False},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    reports = storage.list_assignment_reports()
+
+    assert reports[0]["name"] == "demo/activity.json"
+    assert reports[0]["path"] == "teacher-reports/demo/activity.json"
+    assert reports[0]["class_id"] == "4A-INF"
+    assert reports[0]["students"] == 3
+    assert reports[0]["submitted"] == 2
+    assert reports[0]["not_submitted"] == 1
+    assert reports[0]["late"] == 1
+    assert reports[0]["updated_at"]
+
+
+def test_assignment_report_rejects_unsafe_or_invalid_reports(tmp_path) -> None:
+    storage = JsonAssignmentStorage(tmp_path, tmp_path / "teacher-reports", [])
+    reports_dir = tmp_path / "teacher-reports"
+    reports_dir.mkdir(parents=True)
+    (reports_dir / "invalid.json").write_text(json.dumps({"students": {}}), encoding="utf-8")
+
+    with pytest.raises(ValueError):
+        storage.safe_teacher_report_path("../unsafe.json")
+
+    with pytest.raises(ValueError, match="students"):
+        storage.read_assignment_report("invalid.json")
+
+
+def test_assignment_overview_lists_student_rows(tmp_path) -> None:
+    storage = JsonAssignmentStorage(tmp_path, tmp_path / "teacher-reports", [])
+    reports_dir = tmp_path / "teacher-reports"
+    reports_dir.mkdir(parents=True)
+    (reports_dir / "activity.json").write_text(
+        json.dumps(
+            {
+                "activity_id": "python-base-somma-001",
+                "title": "Somma in Python",
+                "kind": "compito-casa",
+                "student_support_mode": "guidato",
+                "students": [
+                    {
+                        "student": "rossi-mario",
+                        "repo": "TheBitPoets/rossi-mario",
+                        "status": "submitted_on_time",
+                        "submitted": True,
+                        "submission": {"submitted_at": "2026-10-18T18:22:10+02:00", "commit": "abc1234"},
+                        "grading": {"status": "graded_passed", "tests_passed": 2, "tests_total": 2, "teacher_grade": 9},
+                        "ai_feedback": {"status": "not_generated"},
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rows = storage.assignment_overview()
+
+    assert rows == [
+        {
+            "report_name": "activity.json",
+            "report_path": "teacher-reports/activity.json",
+            "activity_id": "python-base-somma-001",
+            "title": "Somma in Python",
+            "class_id": "",
+            "class_label": "",
+            "github_team": "",
+            "kind": "compito-casa",
+            "student_support_mode": "guidato",
+            "assigned_at": "",
+            "due_at": "",
+            "student": "rossi-mario",
+            "repo": "TheBitPoets/rossi-mario",
+            "status": "submitted_on_time",
+            "submitted": True,
+            "late": False,
+            "submitted_at": "2026-10-18T18:22:10+02:00",
+            "commit": "abc1234",
+            "source_path": None,
+            "grading_status": "graded_passed",
+            "tests_passed": 2,
+            "tests_total": 2,
+            "failed_tests": [],
+            "teacher_grade": 9,
+            "score": None,
+            "ai_status": "not_generated",
+        }
+    ]
+
+
+def test_list_activities_skips_invalid_json_and_deduplicates_paths(tmp_path) -> None:
+    activities_dir = tmp_path / "activities"
+    activities_dir.mkdir()
+    valid = activities_dir / "activity.json"
+    valid.write_text(
+        json.dumps(
+            {
+                "id": "python-base-somma-001",
+                "titolo": "Somma in Python",
+                "tipo": "compito-casa",
+                "linguaggio": "python",
+                "contesto": {"classe": "3A-TPSI", "team_github": "team-3a-tpsi"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    (activities_dir / "broken.json").write_text("{", encoding="utf-8")
+    storage = JsonAssignmentStorage(tmp_path, tmp_path / "teacher-reports", [activities_dir, activities_dir])
+
+    assert storage.list_activities() == [
+        {
+            "id": "python-base-somma-001",
+            "title": "Somma in Python",
+            "kind": "compito-casa",
+            "student_support_mode": "",
+            "class_id": "3A-TPSI",
+            "class_label": "3A-TPSI",
+            "github_team": "team-3a-tpsi",
+            "language": "python",
+            "path": "activities/activity.json",
+        }
+    ]

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -154,3 +155,161 @@ class JsonCourseStorage:
             "designs": self.list_saved_designs(),
             "calendars": self.list_school_calendars(),
         }
+
+
+class JsonAssignmentStorage:
+    """JSON storage adapter for activities and assignment tracking reports."""
+
+    def __init__(self, root: Path, teacher_reports_dir: Path, activity_dirs: list[Path]) -> None:
+        self.root = root
+        self.teacher_reports_dir = teacher_reports_dir
+        self.activity_dirs = activity_dirs
+
+    def relative_path(self, path: Path) -> str:
+        """Return a repository-relative path with URL-style separators."""
+
+        return str(path.relative_to(self.root)).replace("\\", "/")
+
+    def safe_teacher_report_path(self, name: str) -> Path:
+        """Return a safe teacher-report path below teacher-reports."""
+
+        clean_name = name.strip().replace("\\", "/")
+        if not clean_name or clean_name.startswith("/") or ".." in Path(clean_name).parts or not clean_name.endswith(".json"):
+            raise ValueError("Nome registro non valido. Usa un path relativo .json dentro teacher-reports.")
+        path = (self.teacher_reports_dir / clean_name).resolve()
+        path.relative_to(self.teacher_reports_dir.resolve())
+        return path
+
+    def read_json(self, path: Path) -> dict[str, Any]:
+        """Read a JSON object from path."""
+
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
+        if not isinstance(payload, dict):
+            raise ValueError(f"JSON non valido: {path}")
+        return payload
+
+    def list_assignment_reports(self) -> list[dict[str, Any]]:
+        """List assignment tracking reports stored in teacher-reports."""
+
+        self.teacher_reports_dir.mkdir(parents=True, exist_ok=True)
+        reports = []
+        for path in sorted(self.teacher_reports_dir.rglob("*.json")):
+            try:
+                payload = self.read_json(path)
+            except Exception:  # noqa: BLE001
+                payload = {}
+            students = payload.get("students", []) if isinstance(payload.get("students"), list) else []
+            submitted = sum(1 for student in students if isinstance(student, dict) and student.get("submitted"))
+            late = sum(1 for student in students if isinstance(student, dict) and student.get("submitted") and student.get("late"))
+            not_submitted = sum(1 for student in students if isinstance(student, dict) and not student.get("submitted"))
+            reports.append(
+                {
+                    "name": str(path.relative_to(self.teacher_reports_dir)).replace("\\", "/"),
+                    "path": self.relative_path(path),
+                    "activity_id": payload.get("activity_id", ""),
+                    "title": payload.get("title", ""),
+                    "class_id": payload.get("class_id", ""),
+                    "class_label": payload.get("class_label", ""),
+                    "github_team": payload.get("github_team", ""),
+                    "due_at": payload.get("due_at", ""),
+                    "students": len(students),
+                    "submitted": submitted,
+                    "late": late,
+                    "not_submitted": not_submitted,
+                    "updated_at": datetime.fromtimestamp(path.stat().st_mtime).isoformat(timespec="seconds"),
+                }
+            )
+        return reports
+
+    def read_assignment_report(self, name: str) -> dict[str, Any]:
+        """Read one assignment tracking report from teacher-reports."""
+
+        path = self.safe_teacher_report_path(name)
+        if not path.is_file():
+            raise FileNotFoundError(f"Registro consegne non trovato: {name}")
+        payload = self.read_json(path)
+        if not isinstance(payload.get("students"), list):
+            raise ValueError("Registro consegne non valido: students deve essere una lista.")
+        return payload
+
+    def assignment_overview(self) -> list[dict[str, Any]]:
+        """Return one row per student/activity across all saved teacher reports."""
+
+        rows = []
+        for report in self.list_assignment_reports():
+            try:
+                payload = self.read_assignment_report(report["name"])
+            except Exception:  # noqa: BLE001
+                continue
+            for student in payload.get("students", []):
+                if not isinstance(student, dict):
+                    continue
+                submission = student.get("submission") if isinstance(student.get("submission"), dict) else {}
+                grading = student.get("grading") if isinstance(student.get("grading"), dict) else {}
+                ai_feedback = student.get("ai_feedback") if isinstance(student.get("ai_feedback"), dict) else {}
+                rows.append(
+                    {
+                        "report_name": report["name"],
+                        "report_path": report["path"],
+                        "activity_id": payload.get("activity_id", ""),
+                        "title": payload.get("title", ""),
+                        "class_id": payload.get("class_id", ""),
+                        "class_label": payload.get("class_label", ""),
+                        "github_team": payload.get("github_team", ""),
+                        "kind": payload.get("kind", ""),
+                        "student_support_mode": payload.get("student_support_mode", ""),
+                        "assigned_at": payload.get("assigned_at", ""),
+                        "due_at": payload.get("due_at", ""),
+                        "student": student.get("student", ""),
+                        "repo": student.get("repo", ""),
+                        "status": student.get("status", ""),
+                        "submitted": bool(student.get("submitted", False)),
+                        "late": bool(student.get("late", False)),
+                        "submitted_at": submission.get("submitted_at"),
+                        "commit": submission.get("commit"),
+                        "source_path": submission.get("source_path"),
+                        "grading_status": grading.get("status", ""),
+                        "tests_passed": grading.get("tests_passed"),
+                        "tests_total": grading.get("tests_total"),
+                        "failed_tests": grading.get("failed_tests", []),
+                        "teacher_grade": grading.get("teacher_grade"),
+                        "score": grading.get("score"),
+                        "ai_status": ai_feedback.get("status", ""),
+                    }
+                )
+        return rows
+
+    def list_activities(self) -> list[dict[str, Any]]:
+        """List available activity JSON files for the assignment dashboard."""
+
+        activities = []
+        seen_paths = set()
+        for directory in self.activity_dirs:
+            if not directory.is_dir():
+                continue
+            for path in sorted(directory.rglob("*.json")):
+                resolved = path.resolve()
+                if resolved in seen_paths:
+                    continue
+                seen_paths.add(resolved)
+                try:
+                    payload = self.read_json(path)
+                except Exception:  # noqa: BLE001
+                    continue
+                if not payload.get("id"):
+                    continue
+                context = payload.get("contesto") if isinstance(payload.get("contesto"), dict) else {}
+                activities.append(
+                    {
+                        "id": payload.get("id", ""),
+                        "title": payload.get("titolo", ""),
+                        "kind": payload.get("tipo", ""),
+                        "student_support_mode": payload.get("student_support_mode") or payload.get("support_mode") or payload.get("modalita_studente") or "",
+                        "class_id": context.get("classe", ""),
+                        "class_label": context.get("classe", ""),
+                        "github_team": context.get("team_github", ""),
+                        "language": payload.get("linguaggio") or payload.get("language", ""),
+                        "path": self.relative_path(path),
+                    }
+                )
+        return activities
