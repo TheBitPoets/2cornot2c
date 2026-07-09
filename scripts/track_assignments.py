@@ -358,6 +358,16 @@ def legacy_activity_validation_payload(activity: dict[str, Any], normalized_acti
     payload.setdefault("argomenti", normalized_activity.get("topics", []))
     payload.setdefault("consegna", normalized_activity.get("instructions", ""))
     payload.setdefault("correzione", normalized_activity.get("grading_policy", {}))
+    payload.setdefault(
+        "metriche",
+        {
+            "tempo_stimato_minuti": 0,
+            "traccia_tempo_dichiarato": False,
+            "traccia_sessioni_thebitlab": False,
+            "traccia_eventi_didattici": False,
+            "traccia_errori_compilazione": False,
+        },
+    )
     return payload
 
 

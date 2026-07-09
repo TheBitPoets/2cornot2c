@@ -190,13 +190,6 @@ def test_track_assignments_uses_canonical_activity_metadata(tmp_path) -> None:
             "sandbox": True,
             "ai_feedback": False,
         },
-        "metriche": {
-            "tempo_stimato_minuti": 20,
-            "traccia_tempo_dichiarato": True,
-            "traccia_sessioni_thebitlab": True,
-            "traccia_eventi_didattici": True,
-            "traccia_errori_compilazione": True,
-        },
         "student_support_mode": "senza-aiuto",
         "class_id": "5A-INF",
         "github_team": "team-5a-inf",
