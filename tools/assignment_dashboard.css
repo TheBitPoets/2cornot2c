@@ -296,7 +296,7 @@ label > textarea {
 }
 
 .coverageDialog {
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
   width: min(96vw, 88rem);
   height: min(88vh, 50rem);
   min-width: min(92vw, 38rem);
@@ -835,7 +835,7 @@ label > textarea {
 }
 
 .overviewDialog {
-  grid-template-rows: auto auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
   width: min(96vw, 92rem);
   height: min(90vh, 54rem);
   min-width: min(92vw, 38rem);
@@ -1124,6 +1124,11 @@ label > textarea {
 }
 
 .studentsDialogSummary {
+  padding: .85rem 1rem;
+}
+
+.coverageDialogSummary,
+.overviewDialogSummary {
   padding: .85rem 1rem;
 }
 

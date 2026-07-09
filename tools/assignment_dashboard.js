@@ -113,6 +113,7 @@ const els = {
   status: document.querySelector("#status"),
   coverageStatus: document.querySelector("#coverageStatus"),
   coverageSummary: document.querySelector("#coverageSummary"),
+  coverageDialogSummary: document.querySelector("#coverageDialogSummary"),
   coverageDialog: document.querySelector("#coverageDialog"),
   coverageBreadcrumb: document.querySelector("#coverageBreadcrumb"),
   coverageOpenBtn: document.querySelector("#coverageOpenBtn"),
@@ -123,6 +124,7 @@ const els = {
   overviewStatus: document.querySelector("#overviewStatus"),
   overviewBody: document.querySelector("#overviewBody"),
   overviewSummary: document.querySelector("#overviewSummary"),
+  overviewDialogSummary: document.querySelector("#overviewDialogSummary"),
   overviewClassFilter: document.querySelector("#overviewClassFilter"),
   overviewStudentFilter: document.querySelector("#overviewStudentFilter"),
   overviewKindFilter: document.querySelector("#overviewKindFilter"),
@@ -1163,6 +1165,14 @@ function coverageStatusCell(outcome, report, isLatest = false) {
   `;
 }
 
+function renderCoverageSummaryCards(total, withReport, withoutReport) {
+  return `
+    <article title="${escapeHtml(summaryTooltip("Activity"))}"><strong>Activity</strong><span>${escapeHtml(total)}</span></article>
+    <article title="${escapeHtml(summaryTooltip("Con registro"))}"><strong>Con registro</strong><span>${escapeHtml(withReport)}</span></article>
+    <article title="${escapeHtml(summaryTooltip("Senza registro"))}"><strong>Senza registro</strong><span>${escapeHtml(withoutReport)}</span></article>
+  `;
+}
+
 function renderCoverage() {
   if (!els.coverageBody) return;
   const rows = reportCoverageRows();
@@ -1171,11 +1181,9 @@ function renderCoverage() {
   els.coverageStatus.textContent = rows.length
     ? `${withReport} activity con registro, ${withoutReport} senza registro.`
     : "Nessuna activity trovata.";
-  els.coverageSummary.innerHTML = `
-    <article title="${escapeHtml(summaryTooltip("Activity"))}"><strong>Activity</strong><span>${escapeHtml(rows.length)}</span></article>
-    <article title="${escapeHtml(summaryTooltip("Con registro"))}"><strong>Con registro</strong><span>${escapeHtml(withReport)}</span></article>
-    <article title="${escapeHtml(summaryTooltip("Senza registro"))}"><strong>Senza registro</strong><span>${escapeHtml(withoutReport)}</span></article>
-  `;
+  const summaryHtml = renderCoverageSummaryCards(rows.length, withReport, withoutReport);
+  els.coverageSummary.innerHTML = summaryHtml;
+  els.coverageDialogSummary.innerHTML = summaryHtml;
   els.coverageBody.innerHTML = "";
   if (!rows.length) {
     els.coverageBody.innerHTML = '<tr><td colspan="8">Nessuna activity disponibile.</td></tr>';
@@ -1357,9 +1365,20 @@ function renderOverviewViewTabs() {
   els.overviewMatrixView.hidden = state.overviewView !== "matrix";
 }
 
+function renderOverviewSummaryCards(cards) {
+  return cards.map(([label, value]) => `
+    <article class="overviewSummaryItem" title="${escapeHtml(summaryTooltip(label))}">
+      <strong>${escapeHtml(label)}</strong>
+      <span>${escapeHtml(value)}</span>
+    </article>
+  `).join("");
+}
+
 function renderOverviewSummary(rows) {
   if (!state.overviewRows.length) {
-    els.overviewSummary.innerHTML = '<p class="status">Genera o carica almeno un registro per vedere il quadro classe.</p>';
+    const emptySummary = '<p class="status">Genera o carica almeno un registro per vedere il quadro classe.</p>';
+    els.overviewSummary.innerHTML = emptySummary;
+    els.overviewDialogSummary.innerHTML = emptySummary;
     return;
   }
   const activeFilters = Object.values(state.overviewFilters).filter(Boolean).length;
@@ -1370,12 +1389,9 @@ function renderOverviewSummary(rows) {
     ["Righe", `${rows.length}/${state.overviewRows.length}`],
     ["Filtri", activeFilters ? `${activeFilters} attivi` : "nessuno"],
   ];
-  els.overviewSummary.innerHTML = cards.map(([label, value]) => `
-    <article class="overviewSummaryItem" title="${escapeHtml(summaryTooltip(label))}">
-      <strong>${escapeHtml(label)}</strong>
-      <span>${escapeHtml(value)}</span>
-    </article>
-  `).join("");
+  const summaryHtml = renderOverviewSummaryCards(cards);
+  els.overviewSummary.innerHTML = summaryHtml;
+  els.overviewDialogSummary.innerHTML = summaryHtml;
 }
 
 function activityKey(row) {
