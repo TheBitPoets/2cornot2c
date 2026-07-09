@@ -2,13 +2,68 @@ from __future__ import annotations
 
 import json
 
-from scripts.thebitlab_services import AssignmentService
-from scripts.thebitlab_storage import JsonAssignmentStorage
+from scripts.thebitlab_services import AssignmentService, CourseService
+from scripts.thebitlab_storage import JsonAssignmentStorage, JsonCourseStorage
+
+
+def course_service(tmp_path) -> CourseService:
+    storage = JsonCourseStorage(tmp_path, ["README.md"])
+    return CourseService(storage)
 
 
 def assignment_service(tmp_path) -> AssignmentService:
     storage = JsonAssignmentStorage(tmp_path, tmp_path / "teacher-reports", [])
     return AssignmentService(storage)
+
+
+def test_course_service_delegates_design_and_calendar_storage(tmp_path) -> None:
+    service = course_service(tmp_path)
+    design = {"version": 1, "years": [{"id": "terzo"}]}
+
+    assert service.read_design() == {"version": 1, "source_files": ["README.md"], "years": []}
+
+    service.write_design(design)
+    saved_design = service.write_saved_design("as_2026_2027.json", design)
+    saved_calendar = service.write_school_calendar(
+        "as_2026_2027.json",
+        {"course_design_name": "as_2026_2027.json"},
+    )
+
+    assert service.read_design() == design
+    assert service.list_saved_designs() == [saved_design]
+    assert service.read_saved_design("as_2026_2027.json") == design
+    assert saved_calendar == {"name": "as_2026_2027.json", "path": "doc/calendars/as_2026_2027.json"}
+    assert service.read_school_calendar("as_2026_2027.json") == {"course_design_name": "as_2026_2027.json"}
+    assert service.list_school_calendars() == [
+        {
+            "name": "as_2026_2027.json",
+            "path": "doc/calendars/as_2026_2027.json",
+            "course_design_name": "as_2026_2027.json",
+        }
+    ]
+
+
+def test_course_service_deletes_linked_calendars(tmp_path) -> None:
+    service = course_service(tmp_path)
+    service.write_saved_design("as_2026_2027.json", {"title": "AS 2026/2027"})
+    service.write_school_calendar("linked.json", {"course_design_name": "as_2026_2027.json"})
+    service.write_school_calendar("other.json", {"course_design_name": "other.json"})
+
+    result = service.delete_saved_design(
+        "as_2026_2027.json",
+        delete_calendars=True,
+        calendars=["linked.json", "other.json"],
+    )
+
+    assert result["deleted_calendars"] == ["linked.json"]
+    assert service.list_saved_designs() == []
+    assert service.list_school_calendars() == [
+        {
+            "name": "other.json",
+            "path": "doc/calendars/other.json",
+            "course_design_name": "other.json",
+        }
+    ]
 
 
 def test_assignment_overview_lists_student_rows(tmp_path) -> None:

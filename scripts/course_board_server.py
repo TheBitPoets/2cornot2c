@@ -77,6 +77,12 @@ def course_storage() -> thebitlab_storage.JsonCourseStorage:
     return thebitlab_storage.JsonCourseStorage(ROOT, DEFAULT_SOURCES)
 
 
+def course_service() -> thebitlab_services.CourseService:
+    """Return the application service for course designs and calendars."""
+
+    return thebitlab_services.CourseService(course_storage())
+
+
 def assignment_storage() -> thebitlab_storage.JsonAssignmentStorage:
     """Return the JSON storage adapter for activities and assignment reports."""
 
@@ -106,13 +112,13 @@ def github_anchor(title: str, seen: dict[str, int]) -> str:
 def read_design() -> dict:
     """Load the course design JSON file, creating a minimal shape if missing."""
 
-    return course_storage().read_design()
+    return course_service().read_design()
 
 
 def write_design(payload: dict) -> None:
     """Persist the course design JSON with stable formatting."""
 
-    course_storage().write_design(payload)
+    course_service().write_design(payload)
 
 
 def generate_course_plan_md(payload: dict) -> dict:
@@ -152,19 +158,19 @@ def update_readme_frames(payload: dict) -> dict:
 def safe_design_name(name: str) -> str:
     """Validate a saved course-design filename."""
 
-    return course_storage().safe_design_name(name)
+    return course_service().safe_design_name(name)
 
 
 def saved_design_path(name: str) -> Path:
     """Return the safe path for a saved course design."""
 
-    return course_storage().saved_design_path(name)
+    return course_service().saved_design_path(name)
 
 
 def school_calendar_path(name: str) -> Path:
     """Return the safe path for a saved school calendar."""
 
-    return course_storage().school_calendar_path(name)
+    return course_service().school_calendar_path(name)
 
 
 def safe_teacher_report_path(name: str) -> Path:
@@ -176,31 +182,31 @@ def safe_teacher_report_path(name: str) -> Path:
 def list_saved_designs() -> list[dict]:
     """List saved course designs stored in doc/course_designs."""
 
-    return course_storage().list_saved_designs()
+    return course_service().list_saved_designs()
 
 
 def read_saved_design(name: str) -> dict:
     """Read a saved course design by filename."""
 
-    return course_storage().read_saved_design(name)
+    return course_service().read_saved_design(name)
 
 
 def write_saved_design(name: str, payload: dict) -> dict:
     """Persist a named course design in the archive folder."""
 
-    return course_storage().write_saved_design(name, payload)
+    return course_service().write_saved_design(name, payload)
 
 
 def delete_saved_design(name: str, delete_calendars: bool = False, calendars: list[str] | None = None) -> dict:
     """Delete an archived course design and, optionally, its linked calendars."""
 
-    return course_storage().delete_saved_design(name, delete_calendars, calendars)
+    return course_service().delete_saved_design(name, delete_calendars, calendars)
 
 
 def list_school_calendars() -> list[dict]:
     """List saved school calendars stored in doc/calendars."""
 
-    return course_storage().list_school_calendars()
+    return course_service().list_school_calendars()
 
 
 def list_assignment_reports() -> list[dict]:
@@ -331,13 +337,13 @@ def generate_assignment_report(payload: dict) -> dict:
 def read_school_calendar(name: str) -> dict:
     """Read a saved school calendar by filename."""
 
-    return course_storage().read_school_calendar(name)
+    return course_service().read_school_calendar(name)
 
 
 def write_school_calendar(name: str, payload: dict) -> dict:
     """Persist a named school calendar in the calendars folder."""
 
-    return course_storage().write_school_calendar(name, payload)
+    return course_service().write_school_calendar(name, payload)
 
 
 def read_secret_env() -> dict[str, str]:
