@@ -33,7 +33,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts import thebitlab_storage, track_assignments
+from scripts import thebitlab_services, thebitlab_storage, track_assignments
 
 DESIGN_PATH = ROOT / "doc" / "course_design.json"
 COURSE_DESIGNS_DIR = ROOT / "doc" / "course_designs"
@@ -81,6 +81,12 @@ def assignment_storage() -> thebitlab_storage.JsonAssignmentStorage:
     """Return the JSON storage adapter for activities and assignment reports."""
 
     return thebitlab_storage.JsonAssignmentStorage(ROOT, TEACHER_REPORTS_DIR, ACTIVITY_DIRS)
+
+
+def assignment_service() -> thebitlab_services.AssignmentService:
+    """Return the application service for assignment dashboard data."""
+
+    return thebitlab_services.AssignmentService(assignment_storage())
 
 
 def github_anchor(title: str, seen: dict[str, int]) -> str:
@@ -164,7 +170,7 @@ def school_calendar_path(name: str) -> Path:
 def safe_teacher_report_path(name: str) -> Path:
     """Return a safe teacher-report path below teacher-reports."""
 
-    return assignment_storage().safe_teacher_report_path(name)
+    return assignment_service().safe_teacher_report_path(name)
 
 
 def list_saved_designs() -> list[dict]:
@@ -200,25 +206,25 @@ def list_school_calendars() -> list[dict]:
 def list_assignment_reports() -> list[dict]:
     """List assignment tracking reports stored in teacher-reports."""
 
-    return assignment_storage().list_assignment_reports()
+    return assignment_service().list_assignment_reports()
 
 
 def read_assignment_report(name: str) -> dict:
     """Read one assignment tracking report from teacher-reports."""
 
-    return assignment_storage().read_assignment_report(name)
+    return assignment_service().read_assignment_report(name)
 
 
 def assignment_overview() -> list[dict]:
     """Return one row per student/activity across all saved teacher reports."""
 
-    return assignment_storage().assignment_overview()
+    return assignment_service().assignment_overview()
 
 
 def list_activities() -> list[dict]:
     """List available activity JSON files for the assignment dashboard."""
 
-    return assignment_storage().list_activities()
+    return assignment_service().list_activities()
 
 
 def resolve_submission_file_path(student: dict, file_path: str) -> Path:
