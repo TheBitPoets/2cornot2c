@@ -119,6 +119,7 @@ Rimandabile dopo l'MVP:
 
 Gia completato o sostanzialmente avviato:
 
+- inventario JSON e modello dati MVP in `DATA_MODEL_MVP.md`;
 - schema iniziale delle attivita in `ACTIVITIES_SCHEMA.md`;
 - validatore activity;
 - CLI iniziale per creare activity;
@@ -453,29 +454,27 @@ Passi progressivi:
    - importazione parziale;
    - fusione controllata con preview, conflitti, policy, licenze e rollback.
 
-## Prossime PR consigliate
+## Prossime PR consigliate dopo l'inventario dati
 
 Ordine consigliato:
 
-1. PR piccola per allineare i documenti specifici alla roadmap centrale.
-2. Inventario JSON e modello dati canonico minimo per MVP.
-3. Storage layer iniziale sopra JSON, con `schema_version` e root configurabile.
-4. Provider layer minimo: interfaccia comune e implementazione GitHub iniziale.
-5. Gestione classi MVP: import/sync da GitHub Team o import manuale controllato.
-6. Pagina creazione/generazione/modifica activity con validazione.
-7. Pagina assegnazione activity a classe e scaffold consegna.
-8. Interfaccia studente MVP per consegne, stato e feedback deterministico, web oppure TUI se piu rapida da rendere affidabile.
-9. Consolidamento grading Docker per flusso reale di consegna.
-10. Collegamento automatico report/artifact al registro consegne.
-11. Revisione dashboard docente contro il flusso MVP reale.
-12. Event log minimale e provenienza minima per activity/contenuti generati.
-13. Cornice didattica generale e guida operativa docente/studente.
-14. Inserimento activity nel percorso e visualizzazione calendario.
-15. Archiviazione/cancellazione sicura di registri e activity.
-16. Catalogo fonti e import paragrafi da piu repository.
-17. Estensione layout pannelli alle altre pagine.
-18. Feedback assistito avanzato lato studente.
-19. Source provider API, indicizzazione frammenti e playground knowledge lab.
+1. Storage layer iniziale sopra JSON, con `schema_version` e root configurabile.
+2. Provider layer minimo: interfaccia comune e implementazione GitHub iniziale.
+3. Gestione classi MVP: import/sync da GitHub Team o import manuale controllato.
+4. Pagina creazione/generazione/modifica activity con validazione.
+5. Pagina assegnazione activity a classe e scaffold consegna.
+6. Interfaccia studente MVP per consegne, stato e feedback deterministico, web oppure TUI se piu rapida da rendere affidabile.
+7. Consolidamento grading Docker per flusso reale di consegna.
+8. Collegamento automatico report/artifact al registro consegne.
+9. Revisione dashboard docente contro il flusso MVP reale.
+10. Event log minimale e provenienza minima per activity/contenuti generati.
+11. Cornice didattica generale e guida operativa docente/studente.
+12. Inserimento activity nel percorso e visualizzazione calendario.
+13. Archiviazione/cancellazione sicura di registri e activity.
+14. Catalogo fonti e import paragrafi da piu repository.
+15. Estensione layout pannelli alle altre pagine.
+16. Feedback assistito avanzato lato studente.
+17. Source provider API, indicizzazione frammenti e playground knowledge lab.
 
 ## Criterio di priorita
 

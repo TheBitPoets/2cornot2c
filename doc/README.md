@@ -28,10 +28,13 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 
 1. [`ASSIGNMENTS.md`](ASSIGNMENTS.md)
 2. [`ACTIVITIES_SCHEMA.md`](ACTIVITIES_SCHEMA.md)
+3. [`DATA_MODEL_MVP.md`](DATA_MODEL_MVP.md)
 
 `ASSIGNMENTS.md` descrive il modello leggero per attivita didattiche, uso dei team GitHub come classi, correzione automatica, sandbox, metriche e roadmap delle prossime PR.
 
 `ACTIVITIES_SCHEMA.md` descrive il primo schema JSON per rappresentare esercizi, compiti, laboratori e verifiche in TheBitLab.
+
+`DATA_MODEL_MVP.md` inventaria i JSON attuali e definisce il modello dati minimo per classi, activity, assegnazioni, consegne, registri, grading e vista studente.
 
 ## Mappa rapida
 
@@ -44,6 +47,7 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 | [`COURSE_BOARD.md`](COURSE_BOARD.md) | Quando devi usare la board dei progetti didattici, il calendario scolastico o le funzioni AI assisted |
 | [`ASSIGNMENTS.md`](ASSIGNMENTS.md) | Quando devi progettare esercizi, compiti, verifiche, correzioni automatiche o metriche di classe |
 | [`ACTIVITIES_SCHEMA.md`](ACTIVITIES_SCHEMA.md) | Quando devi creare o validare schede JSON di attivita TheBitLab |
+| [`DATA_MODEL_MVP.md`](DATA_MODEL_MVP.md) | Quando devi lavorare su dati JSON, storage, classi, assegnazioni, registri o compatibilita schema |
 | [`ASSIGNMENT_SUBMISSIONS.md`](ASSIGNMENT_SUBMISSIONS.md) | Quando devi progettare il flusso consegne studenti con GitHub, team classe e repository studente |
 | [`STUDENT_REPOSITORY_TEMPLATE.md`](STUDENT_REPOSITORY_TEMPLATE.md) | Quando devi creare o mantenere il template repository studente |
 | [`ASSIGNMENT_GRADING.md`](ASSIGNMENT_GRADING.md) | Quando devi correggere in modo deterministico una consegna TheBitLab |
