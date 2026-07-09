@@ -348,6 +348,19 @@ def validate_normalized_activity_or_raise(activity: dict[str, Any], identifier: 
         raise ValueError(f"{identifier}: kind non ammesso: {kind}")
 
 
+def legacy_activity_validation_payload(activity: dict[str, Any], normalized_activity: dict[str, Any]) -> dict[str, Any]:
+    """Return a copy with legacy aliases filled from canonical activity fields."""
+
+    payload = dict(activity)
+    payload.setdefault("titolo", normalized_activity.get("title", ""))
+    payload.setdefault("tipo", normalized_activity.get("kind", ""))
+    payload.setdefault("difficolta", normalized_activity.get("difficulty", ""))
+    payload.setdefault("argomenti", normalized_activity.get("topics", []))
+    payload.setdefault("consegna", normalized_activity.get("instructions", ""))
+    payload.setdefault("correzione", normalized_activity.get("grading_policy", {}))
+    return payload
+
+
 def track_assignments(
     *,
     activity_path: Path,
@@ -363,7 +376,8 @@ def track_assignments(
     activity = create_submission_scaffold.load_activity(activity_path)
     normalized_activity = normalize_activity(activity)
     activity_id = create_submission_scaffold.activity_id(activity)
-    create_submission_scaffold.validate_activity_or_raise(activity, activity_id)
+    validation_payload = legacy_activity_validation_payload(activity, normalized_activity)
+    create_submission_scaffold.validate_activity_or_raise(validation_payload, activity_id)
     validate_normalized_activity_or_raise(normalized_activity, activity_id)
     normalized_assigned_at = parse_datetime(assigned_at, "assigned_at")
     normalized_due_at = parse_datetime(due_at, "due_at")
