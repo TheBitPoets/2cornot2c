@@ -283,7 +283,7 @@ def _table_count(connection: sqlite3.Connection, table: str) -> int:
 
 
 def _assignment_id(payload: dict[str, Any]) -> str:
-    explicit_id = payload.get("assignment_id") or payload.get("id")
+    explicit_id = payload.get("assignment_id")
     if explicit_id:
         return str(explicit_id)
     return _stable_id(

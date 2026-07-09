@@ -111,3 +111,30 @@ def test_rebuild_assignment_index_keeps_one_submission_per_student_assignment(tm
 
     assert assignment_count == 1
     assert submission_count == 1
+
+
+def test_rebuild_assignment_index_derives_assignment_id_for_legacy_register_ids(tmp_path) -> None:
+    storage = JsonAssignmentStorage(tmp_path, tmp_path / "teacher-reports", [])
+    reports_dir = tmp_path / "teacher-reports"
+    reports_dir.mkdir(parents=True)
+    base_payload = {
+        "activity_id": "python-base-somma-001",
+        "class_id": "3A-INF",
+        "assigned_at": "2026-10-10T08:00:00+02:00",
+        "due_at": "2026-10-18T23:59:00+02:00",
+        "students": [{"student": "rossi-mario", "submitted": True}],
+    }
+    first_payload = {**base_payload, "id": "legacy-register-first"}
+    second_payload = {**base_payload, "id": "legacy-register-second"}
+    (reports_dir / "first.json").write_text(json.dumps(first_payload), encoding="utf-8")
+    (reports_dir / "second.json").write_text(json.dumps(second_payload), encoding="utf-8")
+
+    db_path = tmp_path / "assignment-index.sqlite"
+    rebuild_assignment_index_from_storage(storage, db_path)
+
+    with sqlite3.connect(db_path) as connection:
+        assignment_count = connection.execute("SELECT COUNT(*) FROM assignments").fetchone()[0]
+        register_count = connection.execute("SELECT COUNT(*) FROM registers").fetchone()[0]
+
+    assert assignment_count == 1
+    assert register_count == 2
