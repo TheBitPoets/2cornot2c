@@ -107,6 +107,7 @@ const els = {
   reportSelect: document.querySelector("#reportSelect"),
   loadReportBtn: document.querySelector("#loadReportBtn"),
   reloadBtn: document.querySelector("#reloadBtn"),
+  resetPanelOrderBtn: document.querySelector("#resetPanelOrderBtn"),
   status: document.querySelector("#status"),
   coverageStatus: document.querySelector("#coverageStatus"),
   coverageSummary: document.querySelector("#coverageSummary"),
@@ -450,6 +451,11 @@ function writePanelOrder() {
   localStorage.setItem(PANEL_ORDER_KEY, JSON.stringify(panels.map((panel, index) => panelKey(panel, index))));
 }
 
+function resetPanelOrder() {
+  localStorage.removeItem(PANEL_ORDER_KEY);
+  window.location.reload();
+}
+
 function readTableWidths() {
   try {
     const value = JSON.parse(localStorage.getItem(TABLE_WIDTHS_KEY) || "{}");
@@ -599,9 +605,41 @@ function applyPanelOrder() {
   });
 }
 
-function addPanelDragHandle(panel, key) {
+function movePanel(panel, direction) {
+  const panels = currentPanels();
+  const index = panels.indexOf(panel);
+  if (index === -1) return;
+  const target = panels[index + direction];
+  if (!target) return;
+  if (direction < 0) {
+    panel.parentElement.insertBefore(panel, target);
+  } else {
+    panel.parentElement.insertBefore(target, panel);
+  }
+  writePanelOrder();
+  updatePanelOrderControls();
+}
+
+function updatePanelOrderControls() {
+  const panels = currentPanels();
+  panels.forEach((panel, index) => {
+    panel.querySelector(".panelMoveUp")?.toggleAttribute("disabled", index === 0);
+    panel.querySelector(".panelMoveDown")?.toggleAttribute("disabled", index === panels.length - 1);
+  });
+}
+
+function clearPanelDropMarkers() {
+  currentPanels().forEach((panel) => {
+    panel.classList.remove("isDragTarget", "dropBefore", "dropAfter");
+  });
+}
+
+function addPanelOrderControls(panel, key) {
   const head = panel.querySelector(".panelHead");
-  if (!head || head.querySelector(".panelDragHandle")) return;
+  if (!head || head.querySelector(".panelOrderControls")) return;
+  const controls = document.createElement("div");
+  controls.className = "panelOrderControls";
+  controls.setAttribute("aria-label", "Riordina pannello");
   const handle = document.createElement("button");
   handle.type = "button";
   handle.className = "panelDragHandle";
@@ -619,17 +657,39 @@ function addPanelDragHandle(panel, key) {
   handle.addEventListener("dragend", () => {
     state.draggedPanelKey = "";
     panel.classList.remove("isDraggingPanel");
-    currentPanels().forEach((candidate) => candidate.classList.remove("isDragTarget"));
+    clearPanelDropMarkers();
     writePanelOrder();
+    updatePanelOrderControls();
   });
-  head.append(handle);
+  const up = document.createElement("button");
+  up.type = "button";
+  up.className = "panelMoveButton panelMoveUp";
+  up.textContent = "Su";
+  up.title = "Sposta questo pannello sopra.";
+  up.setAttribute("aria-label", "Sposta questo pannello sopra.");
+  up.addEventListener("click", (event) => {
+    event.stopPropagation();
+    movePanel(panel, -1);
+  });
+  const down = document.createElement("button");
+  down.type = "button";
+  down.className = "panelMoveButton panelMoveDown";
+  down.textContent = "Giu";
+  down.title = "Sposta questo pannello sotto.";
+  down.setAttribute("aria-label", "Sposta questo pannello sotto.");
+  down.addEventListener("click", (event) => {
+    event.stopPropagation();
+    movePanel(panel, 1);
+  });
+  controls.append(handle, up, down);
+  head.append(controls);
 }
 
 function setupPanelDragAndDrop() {
   currentPanels().forEach((panel, index) => {
     const key = panelKey(panel, index);
     panel.dataset.panelKey = key;
-    addPanelDragHandle(panel, key);
+    addPanelOrderControls(panel, key);
     if (panel.dataset.dragReady === "true") return;
     panel.dataset.dragReady = "true";
     panel.addEventListener("dragover", (event) => {
@@ -640,15 +700,19 @@ function setupPanelDragAndDrop() {
       panel.classList.add("isDragTarget");
       const rect = panel.getBoundingClientRect();
       const after = event.clientY > rect.top + rect.height / 2;
+      panel.classList.toggle("dropBefore", !after);
+      panel.classList.toggle("dropAfter", after);
       panel.parentElement.insertBefore(dragged, after ? panel.nextSibling : panel);
     });
-    panel.addEventListener("dragleave", () => panel.classList.remove("isDragTarget"));
+    panel.addEventListener("dragleave", clearPanelDropMarkers);
     panel.addEventListener("drop", (event) => {
       event.preventDefault();
-      panel.classList.remove("isDragTarget");
+      clearPanelDropMarkers();
       writePanelOrder();
+      updatePanelOrderControls();
     });
   });
+  updatePanelOrderControls();
 }
 
 function setupCollapsiblePanels() {
@@ -1830,6 +1894,7 @@ els.reloadBtn.addEventListener("click", async () => {
   await loadReports();
   await loadOverview();
 });
+els.resetPanelOrderBtn.addEventListener("click", resetPanelOrder);
 els.generateReportBtn.addEventListener("click", generateReport);
 els.reportSelect.addEventListener("change", loadSelectedReport);
 els.coverageOpenBtn.addEventListener("click", openCoverageDialog);
