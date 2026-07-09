@@ -84,6 +84,16 @@ def test_deterministic_grading_does_not_run_when_runner_is_missing() -> None:
     assert result.detail == "Docker non disponibile."
 
 
+def test_deterministic_grading_rejects_conclusive_execution_without_tests() -> None:
+    result = grade(ExecutionResult(status="passed"))
+
+    assert result.status == "error"
+    assert result.passed is False
+    assert result.tests_passed is None
+    assert result.tests_total == 0
+    assert result.detail == "Runner concluso senza test eseguiti."
+
+
 def test_execution_result_from_payload_accepts_runner_json() -> None:
     result = execution_result_from_payload(
         """

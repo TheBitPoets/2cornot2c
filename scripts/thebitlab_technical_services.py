@@ -161,6 +161,15 @@ class DeterministicGradingService:
         if execution.status not in {"passed", "failed"}:
             return GradingResult(status="error", passed=False, tests_passed=None, tests_total=None, detail=execution.detail)
 
+        if not execution.tests:
+            return GradingResult(
+                status="error",
+                passed=False,
+                tests_passed=None,
+                tests_total=0,
+                detail=execution.detail or "Runner concluso senza test eseguiti.",
+            )
+
         total = len(execution.tests)
         passed = sum(1 for test in execution.tests if test.passed)
         failed_tests = [test.name for test in execution.tests if not test.passed]
