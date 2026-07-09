@@ -14,8 +14,8 @@ def run_dashboard_js(assertions: str) -> None:
       constructor() {{
         this.values = new Set();
       }}
-      add(value) {{ this.values.add(value); }}
-      remove(value) {{ this.values.delete(value); }}
+      add(...values) {{ values.forEach((value) => this.values.add(value)); }}
+      remove(...values) {{ values.forEach((value) => this.values.delete(value)); }}
       contains(value) {{ return this.values.has(value); }}
       toggle(value, force) {{
         const shouldAdd = force === undefined ? !this.values.has(value) : Boolean(force);
@@ -57,6 +57,10 @@ def run_dashboard_js(assertions: str) -> None:
       }}
       append(...children) {{
         children.forEach((child) => {{
+          if (child.parentElement && child.parentElement !== this) {{
+            child.parentElement.children = child.parentElement.children.filter((candidate) => candidate !== child);
+            child.parentElement.syncSiblings();
+          }}
           this.children = this.children.filter((candidate) => candidate !== child);
           child.parentElement = this;
           this.children.push(child);
@@ -65,6 +69,10 @@ def run_dashboard_js(assertions: str) -> None:
       }}
       prepend(...children) {{
         children.reverse().forEach((child) => {{
+          if (child.parentElement && child.parentElement !== this) {{
+            child.parentElement.children = child.parentElement.children.filter((candidate) => candidate !== child);
+            child.parentElement.syncSiblings();
+          }}
           this.children = this.children.filter((candidate) => candidate !== child);
           child.parentElement = this;
           this.children.unshift(child);
@@ -72,12 +80,23 @@ def run_dashboard_js(assertions: str) -> None:
         this.syncSiblings();
       }}
       insertBefore(child, reference) {{
+        if (child.parentElement && child.parentElement !== this) {{
+          child.parentElement.children = child.parentElement.children.filter((candidate) => candidate !== child);
+          child.parentElement.syncSiblings();
+        }}
         this.children = this.children.filter((candidate) => candidate !== child);
         const index = reference ? this.children.indexOf(reference) : -1;
         child.parentElement = this;
         if (index === -1) this.children.push(child);
         else this.children.splice(index, 0, child);
         this.syncSiblings();
+      }}
+      remove() {{
+        if (!this.parentElement) return;
+        this.parentElement.children = this.parentElement.children.filter((child) => child !== this);
+        this.parentElement.syncSiblings();
+        this.parentElement = null;
+        this.nextSibling = null;
       }}
       syncSiblings() {{
         this.children.forEach((child, index) => {{
@@ -93,6 +112,7 @@ def run_dashboard_js(assertions: str) -> None:
         return null;
       }}
       querySelector(selector) {{
+        if (selector === ":scope > .panel") return this.children.find((child) => child.classList.contains("panel")) || null;
         if (selector === ".panelHead") return this.panelHead || null;
         if (selector === "h2") return this.titleElement || null;
         if (selector === ".panelOrderControls") return this.findDescendant((child) => child.className === "panelOrderControls");
@@ -101,9 +121,12 @@ def run_dashboard_js(assertions: str) -> None:
         if (selector === ".panelMoveDown") return this.findDescendant((child) => child.className === "panelMoveButton panelMoveDown");
         return null;
       }}
-      querySelectorAll() {{ return []; }}
+      querySelectorAll(selector) {{
+        if (selector === ":scope > .panel") return this.children.filter((child) => child.classList.contains("panel"));
+        return [];
+      }}
       closest() {{ return {{ clientWidth: 960 }}; }}
-      getBoundingClientRect() {{ return {{ width: 120 }}; }}
+      getBoundingClientRect() {{ return {{ top: 0, bottom: 120, left: 0, right: 240, width: 240, height: 120 }}; }}
       showModal() {{ this.open = true; }}
       close() {{ this.open = false; }}
       setPointerCapture() {{}}
@@ -112,6 +135,18 @@ def run_dashboard_js(assertions: str) -> None:
 
     const elements = new Map();
     const layout = new FakeElement("main.layout");
+    function collectPanels(root) {{
+      return root.children.flatMap((child) => [
+        ...(child.classList.contains("panel") ? [child] : []),
+        ...collectPanels(child),
+      ]);
+    }}
+    function collectRows(root) {{
+      return root.children.flatMap((child) => [
+        ...(child.className === "panelRow" ? [child] : []),
+        ...collectRows(child),
+      ]);
+    }}
     function elementFor(selector) {{
       if (selector === "main.layout") return layout;
       if (!elements.has(selector)) elements.set(selector, new FakeElement(selector));
@@ -147,7 +182,8 @@ def run_dashboard_js(assertions: str) -> None:
         querySelector: elementFor,
         querySelectorAll: (selector) => {{
           if (selector === "[data-legend-tab]") return legendTabs;
-          if (selector === "main.layout > .panel") return layout.children;
+          if (selector === "main.layout .panel") return collectPanels(layout);
+          if (selector === "main.layout > .panelRow") return collectRows(layout);
           return [];
         }},
       }},
@@ -179,6 +215,7 @@ def run_dashboard_js(assertions: str) -> None:
         activityCoverageKey,
         applyPanelOrder,
         currentPanels,
+        currentPanelRows,
         writePanelOrder,
         movePanel,
         resetPanelOrder,
@@ -258,10 +295,13 @@ def test_panel_order_is_applied_and_persisted() -> None:
         """
         const generate = new tested.FakeElement("generate");
         generate.dataset.panelKey = "generate";
+        generate.classList.add("panel");
         const overview = new tested.FakeElement("class-overview");
         overview.dataset.panelKey = "class-overview";
+        overview.classList.add("panel");
         const students = new tested.FakeElement("students");
         students.dataset.panelKey = "students";
+        students.classList.add("panel");
         tested.layout.append(generate);
         tested.layout.append(overview);
         tested.layout.append(students);
@@ -280,7 +320,7 @@ def test_panel_order_is_applied_and_persisted() -> None:
         tested.writePanelOrder();
         assert.equal(
           tested.localStorage.getItem("2cornot2c.assignmentDashboardPanelOrder"),
-          JSON.stringify(["students", "generate", "class-overview"]),
+          JSON.stringify([["students"], ["generate"], ["class-overview"]]),
         );
         """
     )
@@ -291,12 +331,16 @@ def test_panel_order_keeps_missing_saved_panels_after_ordered_ones() -> None:
         """
         const generate = new tested.FakeElement("generate");
         generate.dataset.panelKey = "generate";
+        generate.classList.add("panel");
         const selected = new tested.FakeElement("selected-report");
         selected.dataset.panelKey = "selected-report";
+        selected.classList.add("panel");
         const overview = new tested.FakeElement("class-overview");
         overview.dataset.panelKey = "class-overview";
+        overview.classList.add("panel");
         const students = new tested.FakeElement("students");
         students.dataset.panelKey = "students";
+        students.classList.add("panel");
         tested.layout.append(generate);
         tested.layout.append(selected);
         tested.layout.append(overview);
@@ -316,12 +360,49 @@ def test_panel_order_keeps_missing_saved_panels_after_ordered_ones() -> None:
     )
 
 
+def test_panel_rows_are_applied_and_persisted() -> None:
+    run_dashboard_js(
+        """
+        const generate = new tested.FakeElement("generate");
+        generate.dataset.panelKey = "generate";
+        generate.classList.add("panel");
+        const selected = new tested.FakeElement("selected-report");
+        selected.dataset.panelKey = "selected-report";
+        selected.classList.add("panel");
+        const students = new tested.FakeElement("students");
+        students.dataset.panelKey = "students";
+        students.classList.add("panel");
+        tested.layout.append(generate);
+        tested.layout.append(selected);
+        tested.layout.append(students);
+
+        tested.localStorage.setItem(
+          "2cornot2c.assignmentDashboardPanelOrder",
+          JSON.stringify([["generate", "selected-report"], ["students"]]),
+        );
+
+        tested.applyPanelOrder();
+        assert.equal(
+          JSON.stringify(tested.currentPanelRows().map((row) => row.querySelectorAll(":scope > .panel").map((panel) => panel.dataset.panelKey))),
+          JSON.stringify([["generate", "selected-report"], ["students"]]),
+        );
+
+        tested.writePanelOrder();
+        assert.equal(
+          tested.localStorage.getItem("2cornot2c.assignmentDashboardPanelOrder"),
+          JSON.stringify([["generate", "selected-report"], ["students"]]),
+        );
+        """
+    )
+
+
 def test_panel_move_buttons_reorder_panels_and_update_disabled_state() -> None:
     run_dashboard_js(
         """
         function panelWithHead(key) {
           const panel = new tested.FakeElement(key);
           panel.dataset.panelKey = key;
+          panel.classList.add("panel");
           const head = new tested.FakeElement(`${key}-head`);
           panel.panelHead = head;
           panel.append(head);
@@ -345,7 +426,7 @@ def test_panel_move_buttons_reorder_panels_and_update_disabled_state() -> None:
         );
         assert.equal(
           tested.localStorage.getItem("2cornot2c.assignmentDashboardPanelOrder"),
-          JSON.stringify(["generate", "students", "class-overview"]),
+          JSON.stringify([["generate"], ["students"], ["class-overview"]]),
         );
         assert.equal(students.querySelector(".panelMoveUp").disabled, false);
         assert.equal(overview.querySelector(".panelMoveDown").disabled, true);

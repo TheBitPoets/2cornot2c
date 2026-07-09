@@ -543,12 +543,22 @@ label {
 .coverageReportMissing { color: #8a5a00; font-size: .72rem; font-weight: 800; }
 
 .layout {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 1rem;
   padding: 0 clamp(1rem, 3vw, 3rem) 2rem;
 }
 
+.panelRow {
+  display: flex;
+  align-items: stretch;
+  gap: 1rem;
+  min-width: 0;
+}
+
 .panel {
+  flex: 1 1 24rem;
+  min-width: min(24rem, 100%);
   border: 1px solid rgba(17, 17, 17, .16);
   border-radius: 28px;
   background: rgba(255, 255, 255, .92);
@@ -628,15 +638,36 @@ label {
   height: 4px;
   border-radius: 999px;
   background: #111111;
-  content: "";
 }
 
 .isDragTarget.dropBefore::before {
   top: -2px;
+  content: "";
 }
 
 .isDragTarget.dropAfter::after {
   bottom: -2px;
+  content: "";
+}
+
+.isDragTarget.dropInlineBefore::before,
+.isDragTarget.dropInlineAfter::after {
+  top: .9rem;
+  bottom: .9rem;
+  width: 4px;
+  height: auto;
+  right: auto;
+}
+
+.isDragTarget.dropInlineBefore::before {
+  left: -2px;
+  content: "";
+}
+
+.isDragTarget.dropInlineAfter::after {
+  left: auto;
+  right: -2px;
+  content: "";
 }
 
 .panelHead h2::before {
@@ -1604,6 +1635,11 @@ code {
 
   .actions {
     justify-content: flex-start;
+  }
+
+  .panelRow {
+    display: grid;
+    grid-template-columns: 1fr;
   }
 
   .summaryGrid {
