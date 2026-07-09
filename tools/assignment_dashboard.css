@@ -633,23 +633,24 @@ label > textarea {
 
 .panelWidthHandle {
   position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
+  top: .85rem;
+  right: .25rem;
+  bottom: .85rem;
   z-index: 3;
-  width: 10px;
+  width: 12px;
   cursor: col-resize;
 }
 
 .panelWidthHandle::before {
   position: absolute;
-  top: 1rem;
-  bottom: 1rem;
-  left: 4px;
+  top: .35rem;
+  bottom: .35rem;
+  left: 50%;
   width: 2px;
   border-radius: 999px;
   background: rgba(17, 17, 17, .18);
   content: "";
+  transform: translateX(-50%);
 }
 
 .panelWidthHandle:hover::before,
