@@ -79,6 +79,8 @@ class LocalRepositoryProvider:
             resolved.relative_to(self.root)
         except ValueError as exc:
             raise ValueError(f"Repository fuori dalla radice locale: {path}") from exc
+        if not resolved.is_dir():
+            raise FileNotFoundError(f"Repository studente locale non trovato: {path}")
         return StudentRepository(
             student_id=resolved.name,
             repo_ref=self._repo_ref(resolved),

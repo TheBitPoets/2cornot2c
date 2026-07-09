@@ -89,6 +89,10 @@ def test_local_repository_provider_rejects_missing_or_unsafe_paths(tmp_path) -> 
     with pytest.raises(ValueError, match="vuoto"):
         provider.resolve_student_repository(" ")
 
+    missing_provider = LocalRepositoryProvider(tmp_path, student_dirs=[Path("rossi-mario")])
+    with pytest.raises(FileNotFoundError, match="locale non trovato"):
+        missing_provider.list_student_repositories()
+
     safe_provider = LocalRepositoryProvider(tmp_path)
     with pytest.raises(FileNotFoundError, match="non trovato"):
         safe_provider.resolve_student_repository("rossi-mario")
