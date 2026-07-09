@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from scripts import assign_activity, create_submission_scaffold
+from scripts.thebitlab_contracts import normalize_activity
 
 
 NO_DUE_DATE_STATUS = "no_due_date"
@@ -334,12 +335,6 @@ def ai_feedback_placeholder() -> dict[str, Any]:
     }
 
 
-def activity_context(activity: dict[str, Any]) -> dict[str, Any]:
-    """Return the optional didactic context from an activity."""
-    context = activity.get("contesto")
-    return context if isinstance(context, dict) else {}
-
-
 def clean_metadata(value: str | None) -> str:
     """Normalize optional text metadata for JSON output."""
     return str(value or "").strip()
@@ -358,15 +353,15 @@ def track_assignments(
 ) -> dict[str, Any]:
     """Build a teacher-facing tracking index for one activity."""
     activity = create_submission_scaffold.load_activity(activity_path)
+    normalized_activity = normalize_activity(activity)
     activity_id = create_submission_scaffold.activity_id(activity)
     create_submission_scaffold.validate_activity_or_raise(activity, activity_id)
     normalized_assigned_at = parse_datetime(assigned_at, "assigned_at")
     normalized_due_at = parse_datetime(due_at, "due_at")
     normalized_now = parse_datetime(now, "now")
-    context = activity_context(activity)
-    normalized_class_id = clean_metadata(class_id) or clean_metadata(context.get("classe"))
+    normalized_class_id = clean_metadata(class_id) or clean_metadata(normalized_activity.get("class_id"))
     normalized_class_label = clean_metadata(class_label) or normalized_class_id
-    normalized_github_team = clean_metadata(github_team) or clean_metadata(context.get("team_github"))
+    normalized_github_team = clean_metadata(github_team) or clean_metadata(normalized_activity.get("github_team"))
 
     students: list[dict[str, Any]] = []
     for target in targets:
@@ -410,9 +405,9 @@ def track_assignments(
 
     return {
         "activity_id": activity_id,
-        "title": activity.get("titolo") or activity_id,
-        "kind": activity.get("tipo"),
-        "student_support_mode": activity.get("student_support_mode") or activity.get("support_mode") or activity.get("modalita_studente") or "",
+        "title": normalized_activity.get("title") or activity_id,
+        "kind": normalized_activity.get("kind"),
+        "student_support_mode": normalized_activity.get("student_support_mode") or "",
         "class_id": normalized_class_id,
         "class_label": normalized_class_label,
         "github_team": normalized_github_team,
