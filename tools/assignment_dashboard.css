@@ -576,6 +576,30 @@ label {
   font-size: 1.25rem;
 }
 
+.panelDragHandle {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: .45rem .65rem;
+  color: var(--muted);
+  font-size: .8rem;
+  letter-spacing: .08em;
+  box-shadow: none;
+  cursor: grab;
+}
+
+.panelDragHandle:active {
+  cursor: grabbing;
+}
+
+.isDraggingPanel {
+  opacity: .62;
+}
+
+.isDragTarget {
+  outline: 2px dashed rgba(17, 17, 17, .28);
+  outline-offset: 4px;
+}
+
 .panelHead h2::before {
   content: "-";
   display: inline-grid;

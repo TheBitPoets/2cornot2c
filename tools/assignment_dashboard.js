@@ -1,5 +1,6 @@
 const REVIEW_SPLIT_KEY = "2cornot2c.assignmentReviewSplit";
 const COLLAPSED_PANELS_KEY = "2cornot2c.assignmentDashboardCollapsedPanels";
+const PANEL_ORDER_KEY = "2cornot2c.assignmentDashboardPanelOrder";
 const TABLE_WIDTHS_KEY = "2cornot2c.assignmentDashboardTableWidths";
 const DEFAULT_REVIEW_SPLIT = 320;
 const MIN_REVIEW_SPLIT = 180;
@@ -99,6 +100,7 @@ const state = {
   reviewFilePath: "",
   reviewFile: null,
   reviewSplit: readReviewSplit(),
+  draggedPanelKey: "",
 };
 
 const els = {
@@ -434,6 +436,20 @@ function writeCollapsedPanels(collapsedPanels) {
   localStorage.setItem(COLLAPSED_PANELS_KEY, JSON.stringify([...collapsedPanels]));
 }
 
+function readPanelOrder() {
+  try {
+    const value = JSON.parse(localStorage.getItem(PANEL_ORDER_KEY) || "[]");
+    return Array.isArray(value) ? value.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writePanelOrder() {
+  const panels = [...document.querySelectorAll("main.layout > .panel")];
+  localStorage.setItem(PANEL_ORDER_KEY, JSON.stringify(panels.map((panel, index) => panelKey(panel, index))));
+}
+
 function readTableWidths() {
   try {
     const value = JSON.parse(localStorage.getItem(TABLE_WIDTHS_KEY) || "{}");
@@ -560,9 +576,84 @@ function panelKey(panel, index) {
   return panel.dataset.panelKey || panel.id || `panel-${index}`;
 }
 
+function currentPanels() {
+  return [...document.querySelectorAll("main.layout > .panel")];
+}
+
+function applyPanelOrder() {
+  const layout = document.querySelector("main.layout");
+  if (!layout) return;
+  const panels = currentPanels();
+  panels.forEach((panel, index) => {
+    panel.dataset.panelKey = panelKey(panel, index);
+  });
+  const order = readPanelOrder();
+  if (!order.length) return;
+  const byKey = new Map(panels.map((panel, index) => [panelKey(panel, index), panel]));
+  const orderedPanels = order.map((key) => byKey.get(key)).filter(Boolean);
+  panels.forEach((panel) => {
+    if (!orderedPanels.includes(panel)) orderedPanels.push(panel);
+  });
+  orderedPanels.forEach((panel) => {
+    layout.append(panel);
+  });
+}
+
+function addPanelDragHandle(panel, key) {
+  const head = panel.querySelector(".panelHead");
+  if (!head || head.querySelector(".panelDragHandle")) return;
+  const handle = document.createElement("button");
+  handle.type = "button";
+  handle.className = "panelDragHandle";
+  handle.draggable = true;
+  handle.textContent = "::";
+  handle.title = "Trascina per riordinare il pannello.";
+  handle.setAttribute("aria-label", "Trascina per riordinare il pannello.");
+  handle.addEventListener("click", (event) => event.stopPropagation());
+  handle.addEventListener("dragstart", (event) => {
+    state.draggedPanelKey = key;
+    panel.classList.add("isDraggingPanel");
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", key);
+  });
+  handle.addEventListener("dragend", () => {
+    state.draggedPanelKey = "";
+    panel.classList.remove("isDraggingPanel");
+    currentPanels().forEach((candidate) => candidate.classList.remove("isDragTarget"));
+    writePanelOrder();
+  });
+  head.append(handle);
+}
+
+function setupPanelDragAndDrop() {
+  currentPanels().forEach((panel, index) => {
+    const key = panelKey(panel, index);
+    panel.dataset.panelKey = key;
+    addPanelDragHandle(panel, key);
+    if (panel.dataset.dragReady === "true") return;
+    panel.dataset.dragReady = "true";
+    panel.addEventListener("dragover", (event) => {
+      if (!state.draggedPanelKey || state.draggedPanelKey === panel.dataset.panelKey) return;
+      event.preventDefault();
+      const dragged = currentPanels().find((candidate) => candidate.dataset.panelKey === state.draggedPanelKey);
+      if (!dragged) return;
+      panel.classList.add("isDragTarget");
+      const rect = panel.getBoundingClientRect();
+      const after = event.clientY > rect.top + rect.height / 2;
+      panel.parentElement.insertBefore(dragged, after ? panel.nextSibling : panel);
+    });
+    panel.addEventListener("dragleave", () => panel.classList.remove("isDragTarget"));
+    panel.addEventListener("drop", (event) => {
+      event.preventDefault();
+      panel.classList.remove("isDragTarget");
+      writePanelOrder();
+    });
+  });
+}
+
 function setupCollapsiblePanels() {
   const collapsed = readCollapsedPanels();
-  els.panels.forEach((panel, index) => {
+  currentPanels().forEach((panel, index) => {
     const head = panel.querySelector(".panelHead");
     const title = head?.querySelector("h2");
     if (!head || !title || title.dataset.collapseReady === "true") return;
@@ -1890,7 +1981,9 @@ els.filterButtons.forEach((button) => {
   button.addEventListener("click", () => setFilter(button.dataset.filter));
 });
 
+applyPanelOrder();
 setupCollapsiblePanels();
+setupPanelDragAndDrop();
 setFilter("all");
 setupResizableTables();
 Promise.all([loadReports(), loadActivities(), loadOverview()]).catch((error) => setStatus(`Errore: ${error.message}`));

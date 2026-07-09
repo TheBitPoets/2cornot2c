@@ -29,6 +29,8 @@ def run_dashboard_js(assertions: str) -> None:
       constructor(selector = "") {{
         this.selector = selector;
         this.children = [];
+        this.parentElement = null;
+        this.nextSibling = null;
         this.dataset = {{}};
         this.classList = new FakeClassList();
         this.style = {{
@@ -48,9 +50,37 @@ def run_dashboard_js(assertions: str) -> None:
       addEventListener() {{}}
       removeEventListener() {{}}
       setAttribute(name, value) {{ this[name] = value; }}
-      append(child) {{ this.children.push(child); }}
-      prepend(child) {{ this.children.unshift(child); }}
-      querySelector() {{ return null; }}
+      append(child) {{
+        this.children = this.children.filter((candidate) => candidate !== child);
+        child.parentElement = this;
+        this.children.push(child);
+        this.syncSiblings();
+      }}
+      prepend(child) {{
+        this.children = this.children.filter((candidate) => candidate !== child);
+        child.parentElement = this;
+        this.children.unshift(child);
+        this.syncSiblings();
+      }}
+      insertBefore(child, reference) {{
+        this.children = this.children.filter((candidate) => candidate !== child);
+        const index = reference ? this.children.indexOf(reference) : -1;
+        child.parentElement = this;
+        if (index === -1) this.children.push(child);
+        else this.children.splice(index, 0, child);
+        this.syncSiblings();
+      }}
+      syncSiblings() {{
+        this.children.forEach((child, index) => {{
+          child.nextSibling = this.children[index + 1] || null;
+        }});
+      }}
+      querySelector(selector) {{
+        if (selector === ".panelHead") return this.panelHead || null;
+        if (selector === "h2") return this.titleElement || null;
+        if (selector === ".panelDragHandle") return this.children.find((child) => child.className === "panelDragHandle") || null;
+        return null;
+      }}
       querySelectorAll() {{ return []; }}
       closest() {{ return {{ clientWidth: 960 }}; }}
       getBoundingClientRect() {{ return {{ width: 120 }}; }}
@@ -61,7 +91,9 @@ def run_dashboard_js(assertions: str) -> None:
     }}
 
     const elements = new Map();
+    const layout = new FakeElement("main.layout");
     function elementFor(selector) {{
+      if (selector === "main.layout") return layout;
       if (!elements.has(selector)) elements.set(selector, new FakeElement(selector));
       return elements.get(selector);
     }}
@@ -90,6 +122,7 @@ def run_dashboard_js(assertions: str) -> None:
         querySelector: elementFor,
         querySelectorAll: (selector) => {{
           if (selector === "[data-legend-tab]") return legendTabs;
+          if (selector === "main.layout > .panel") return layout.children;
           return [];
         }},
       }},
@@ -107,6 +140,8 @@ def run_dashboard_js(assertions: str) -> None:
       }}),
     }};
     context.globalThis = context;
+    context.layout = layout;
+    context.FakeElement = FakeElement;
 
     const source = fs.readFileSync("tools/assignment_dashboard.js", "utf8");
     vm.runInNewContext(`${{source}}
@@ -117,8 +152,14 @@ def run_dashboard_js(assertions: str) -> None:
         hasExplicitClass,
         reportsForActivity,
         activityCoverageKey,
+        applyPanelOrder,
+        currentPanels,
+        writePanelOrder,
         renderLegend,
         els,
+        layout,
+        FakeElement,
+        localStorage,
       }};
     `, context);
 
@@ -179,5 +220,68 @@ def test_legend_renders_static_marks_but_escapes_descriptions() -> None:
         assert.match(html, /<button type="button" class="smallButton">Apri<\\/button>/);
         assert.match(html, /&lt;script&gt;alert\\(1\\)&lt;\\/script&gt;/);
         assert.doesNotMatch(html, /<td><script>alert\\(1\\)<\\/script><\\/td>/);
+        """
+    )
+
+
+def test_panel_order_is_applied_and_persisted() -> None:
+    run_dashboard_js(
+        """
+        const generate = new tested.FakeElement("generate");
+        generate.dataset.panelKey = "generate";
+        const overview = new tested.FakeElement("class-overview");
+        overview.dataset.panelKey = "class-overview";
+        const students = new tested.FakeElement("students");
+        students.dataset.panelKey = "students";
+        tested.layout.append(generate);
+        tested.layout.append(overview);
+        tested.layout.append(students);
+
+        tested.localStorage.setItem(
+          "2cornot2c.assignmentDashboardPanelOrder",
+          JSON.stringify(["students", "generate", "class-overview"]),
+        );
+
+        tested.applyPanelOrder();
+        assert.equal(
+          JSON.stringify(tested.currentPanels().map((panel) => panel.dataset.panelKey)),
+          JSON.stringify(["students", "generate", "class-overview"]),
+        );
+
+        tested.writePanelOrder();
+        assert.equal(
+          tested.localStorage.getItem("2cornot2c.assignmentDashboardPanelOrder"),
+          JSON.stringify(["students", "generate", "class-overview"]),
+        );
+        """
+    )
+
+
+def test_panel_order_keeps_missing_saved_panels_after_ordered_ones() -> None:
+    run_dashboard_js(
+        """
+        const generate = new tested.FakeElement("generate");
+        generate.dataset.panelKey = "generate";
+        const selected = new tested.FakeElement("selected-report");
+        selected.dataset.panelKey = "selected-report";
+        const overview = new tested.FakeElement("class-overview");
+        overview.dataset.panelKey = "class-overview";
+        const students = new tested.FakeElement("students");
+        students.dataset.panelKey = "students";
+        tested.layout.append(generate);
+        tested.layout.append(selected);
+        tested.layout.append(overview);
+        tested.layout.append(students);
+
+        tested.localStorage.setItem(
+          "2cornot2c.assignmentDashboardPanelOrder",
+          JSON.stringify(["students", "generate"]),
+        );
+
+        tested.applyPanelOrder();
+        assert.equal(
+          JSON.stringify(tested.currentPanels().map((panel) => panel.dataset.panelKey)),
+          JSON.stringify(["students", "generate", "selected-report", "class-overview"]),
+        );
         """
     )
