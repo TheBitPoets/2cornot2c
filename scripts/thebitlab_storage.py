@@ -101,7 +101,8 @@ class JsonCourseStorage:
             metadata = {"name": path.name, "path": self.relative_path(path), "course_design_name": ""}
             try:
                 payload = self.read_json(path)
-                metadata["course_design_name"] = str(payload.get("course_design_name", ""))
+                course_design_name = payload.get("course_design_name", "")
+                metadata["course_design_name"] = course_design_name if isinstance(course_design_name, str) else ""
             except Exception:  # noqa: BLE001
                 metadata["course_design_name"] = ""
             calendars.append(metadata)

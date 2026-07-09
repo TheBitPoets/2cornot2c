@@ -48,12 +48,18 @@ def test_school_calendar_metadata_tolerates_invalid_json(tmp_path) -> None:
     calendars_dir = tmp_path / "doc" / "calendars"
     calendars_dir.mkdir(parents=True)
     (calendars_dir / "broken.json").write_text("{", encoding="utf-8")
+    (calendars_dir / "empty-link.json").write_text(json.dumps({"course_design_name": None}), encoding="utf-8")
     storage.write_school_calendar("valid.json", {"course_design_name": "as_2026_2027.json"})
 
     assert storage.list_school_calendars() == [
         {
             "name": "broken.json",
             "path": "doc/calendars/broken.json",
+            "course_design_name": "",
+        },
+        {
+            "name": "empty-link.json",
+            "path": "doc/calendars/empty-link.json",
             "course_design_name": "",
         },
         {
