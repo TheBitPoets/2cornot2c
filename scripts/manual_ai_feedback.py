@@ -8,11 +8,14 @@ from typing import Any
 
 from scripts.thebitlab_technical_services import (
     AiFeedbackRequest,
+    GradingStatus,
     GradingResult,
     InvalidServicePayloadError,
     ai_feedback_result_from_payload,
     manual_ai_feedback_package,
 )
+
+ALLOWED_GRADING_STATUSES: set[GradingStatus] = {"graded_passed", "graded_failed", "not_run", "error"}
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -41,7 +44,7 @@ def request_from_payload(payload: dict[str, Any]) -> tuple[AiFeedbackRequest, di
     allowed_context = _optional_mapping(payload, "allowed_context")
 
     grading = GradingResult(
-        status=_required_text(grading_payload, "status"),
+        status=_required_grading_status(grading_payload),
         passed=_optional_bool(grading_payload, "passed"),
         tests_passed=_optional_int(grading_payload, "tests_passed"),
         tests_total=_optional_int(grading_payload, "tests_total"),
@@ -118,6 +121,14 @@ def _required_text(payload: dict[str, Any], key: str) -> str:
     value = payload.get(key)
     if not isinstance(value, str) or not value:
         raise ValueError(f"request: {key} deve essere una stringa non vuota")
+    return value
+
+
+def _required_grading_status(payload: dict[str, Any]) -> GradingStatus:
+    value = _required_text(payload, "status")
+    if value not in ALLOWED_GRADING_STATUSES:
+        allowed = ", ".join(sorted(ALLOWED_GRADING_STATUSES))
+        raise ValueError(f"request: grading.status non valido: {value}. Ammessi: {allowed}")
     return value
 
 

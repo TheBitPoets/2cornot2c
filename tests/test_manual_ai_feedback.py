@@ -71,3 +71,15 @@ def test_package_command_reports_invalid_request(tmp_path, capsys) -> None:
 
     assert exit_code == 1
     assert "grading mancante" in capsys.readouterr().err
+
+
+def test_package_command_rejects_invalid_grading_status(tmp_path, capsys) -> None:
+    payload = request_payload()
+    payload["grading"]["status"] = "approved"
+    request_path = tmp_path / "request.json"
+    request_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    exit_code = manual_ai_feedback.main(["package", str(request_path)])
+
+    assert exit_code == 1
+    assert "grading.status non valido" in capsys.readouterr().err
