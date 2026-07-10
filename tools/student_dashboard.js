@@ -7,6 +7,8 @@ const els = {
   summary: document.querySelector("#summary"),
   status: document.querySelector("#status"),
   assignments: document.querySelector("#assignments"),
+  coursePath: document.querySelector("#coursePath"),
+  coursePathStatus: document.querySelector("#coursePathStatus"),
   assignmentDetailModal: document.querySelector("#assignmentDetailModal"),
   assignmentDetailTitle: document.querySelector("#assignmentDetailTitle"),
   assignmentDetailBody: document.querySelector("#assignmentDetailBody"),
@@ -14,8 +16,11 @@ const els = {
 };
 
 const DEMO_STUDENTS = ["bianchi-luca", "rossi-mario", "verdi-anna", "neri-giulia"];
+const DEFAULT_COURSE_REPO_URL = "https://github.com/TheBitPoets/2cornot2c";
 let currentDashboardPayload = { student_id: "", assignments: [] };
 let currentClassLabel = "Dai registri consegne";
+let currentClassRoster = null;
+let currentCourseDesign = null;
 
 async function api(path, options = {}) {
   const response = await fetch(path, options);
@@ -87,12 +92,14 @@ function populateClassRosterOptions(rosters, preferredRosterName = "") {
     els.classRoster.value = "";
     els.classRoster.disabled = true;
     currentClassLabel = "Dai registri consegne";
+    currentClassRoster = null;
     return "";
   }
   const names = options.map((roster) => roster.name);
   const selected = names.includes(preferredRosterName) ? preferredRosterName : names[0];
   const selectedRoster = options.find((roster) => roster.name === selected);
   currentClassLabel = rosterLabel(selectedRoster);
+  currentClassRoster = selectedRoster || null;
   els.classRoster.disabled = false;
   els.classRoster.innerHTML = options.map((roster) => `
     <option value="${escapeHtml(roster.name)}"${roster.name === selected ? " selected" : ""}>${escapeHtml(rosterLabel(roster))}</option>
@@ -120,6 +127,7 @@ async function loadRosterDetailStudentOptions(rosters, preferredStudentId = "", 
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name: rosterName }),
   });
+  currentClassRoster = { ...(currentClassRoster || {}), ...(payload.roster || {}), name: rosterName };
   return populateStudentOptions(activeStudentsFromRoster(payload.roster), preferredStudentId);
 }
 
@@ -178,6 +186,32 @@ function safeExternalHref(url) {
     // Fall back to no clickable URL below.
   }
   return "";
+}
+
+function normalizeCoursePath(path) {
+  return String(path ?? "")
+    .trim()
+    .replaceAll("\\", "/")
+    .replace(/^(\.\/)+/, "")
+    .replace(/^(\.\.\/)+/, "")
+    .replace(/^\/+/, "");
+}
+
+function courseItemHref(item) {
+  const githubUrl = safeExternalHref(item?.github_url || item?.source_github_url);
+  if (githubUrl) return githubUrl;
+
+  const rawHref = String(item?.href || "").trim();
+  const absoluteHref = safeExternalHref(rawHref);
+  const currentOrigin = new URL(window.location.href).origin;
+  if (absoluteHref && !absoluteHref.startsWith(currentOrigin)) return absoluteHref;
+  if (/^[a-zA-Z][\w+.-]*:/.test(rawHref)) return "";
+
+  const [hrefPath, hrefAnchor = ""] = rawHref.split("#", 2);
+  const sourcePath = normalizeCoursePath(hrefPath || item?.source || item?.source_id);
+  if (!sourcePath) return "";
+  const anchor = hrefAnchor ? `#${hrefAnchor}` : "";
+  return `${DEFAULT_COURSE_REPO_URL}/blob/main/${sourcePath}${anchor}`;
 }
 
 function formatDate(value) {
@@ -250,6 +284,186 @@ function renderSummary(studentId, assignments) {
       <span>${escapeHtml(value)}</span>
     </article>
   `).join("");
+}
+
+function collectCourseItems(items, depth = 0) {
+  const rows = [];
+  for (const item of Array.isArray(items) ? items : []) {
+    if (!item || typeof item !== "object") continue;
+    rows.push({ item, depth });
+    rows.push(...collectCourseItems(item.children, depth + 1));
+  }
+  return rows;
+}
+
+function assignmentByActivityId(assignments) {
+  const byId = new Map();
+  for (const assignment of assignments) {
+    const activityId = String(assignment?.activity_id || "").trim();
+    if (activityId && !byId.has(activityId)) byId.set(activityId, assignment);
+  }
+  return byId;
+}
+
+function normalizedIdSet(values) {
+  const list = Array.isArray(values) ? values : values ? [values] : [];
+  return new Set(list.map((value) => String(value || "").trim()).filter(Boolean));
+}
+
+function visibilityValues(entity, key) {
+  const audience = entity?.audience && typeof entity.audience === "object" ? entity.audience : {};
+  return [
+    ...(Array.isArray(entity?.[key]) ? entity[key] : entity?.[key] ? [entity[key]] : []),
+    ...(Array.isArray(audience?.[key]) ? audience[key] : audience?.[key] ? [audience[key]] : []),
+  ];
+}
+
+function visibilityContext(studentId, assignments, roster = currentClassRoster) {
+  return {
+    studentIds: normalizedIdSet([studentId]),
+    classIds: normalizedIdSet([
+      roster?.id,
+      roster?.name,
+      roster?.label,
+      ...(assignments.flatMap((assignment) => [assignment?.class_id, assignment?.class_label])),
+    ]),
+  };
+}
+
+function hasVisibilityRule(entity) {
+  return visibilityValues(entity, "student_ids").length > 0
+    || visibilityValues(entity, "students").length > 0
+    || visibilityValues(entity, "class_ids").length > 0
+    || visibilityValues(entity, "classes").length > 0;
+}
+
+function matchesVisibility(entity, context) {
+  const studentIds = [
+    ...visibilityValues(entity, "student_ids"),
+    ...visibilityValues(entity, "students"),
+  ];
+  const classIds = [
+    ...visibilityValues(entity, "class_ids"),
+    ...visibilityValues(entity, "classes"),
+  ];
+  return studentIds.some((studentId) => context.studentIds.has(String(studentId).trim()))
+    || classIds.some((classId) => context.classIds.has(String(classId).trim()));
+}
+
+function courseSections(design) {
+  if (Array.isArray(design?.paths)) return design.paths;
+  if (Array.isArray(design?.sections)) return design.sections;
+  return Array.isArray(design?.years) ? design.years : [];
+}
+
+function visibleCourseSections(sections, context) {
+  return sections
+    .map((section) => {
+      const visibleUdas = (Array.isArray(section?.udas) ? section.udas : []).filter((uda) => (
+        matchesVisibility(uda, context)
+        || collectCourseItems(uda.items).some(({ item }) => matchesVisibility(item, context))
+      ));
+      if (matchesVisibility(section, context)) {
+        return { ...section, udas: Array.isArray(section?.udas) ? section.udas : [] };
+      }
+      return visibleUdas.length ? { ...section, udas: visibleUdas } : null;
+    })
+    .filter(Boolean);
+}
+
+function courseItemActivities(item) {
+  return Array.isArray(item?.activity_ids)
+    ? item.activity_ids.map((activityId) => String(activityId || "").trim()).filter(Boolean)
+    : [];
+}
+
+function courseActivityBadge(activityId, assignmentsById) {
+  const assignment = assignmentsById.get(activityId);
+  const label = assignment ? assignmentTitle(assignment) || activityId : activityId;
+  const kind = assignment?.status === "missing"
+    ? "badgeBad"
+    : assignment?.late
+      ? "badgeWarn"
+      : assignment?.submitted
+        ? "badgeOk"
+        : "";
+  return `<span class="badge ${kind}">${escapeHtml(label)}</span>`;
+}
+
+function renderCoursePath(design, assignments = [], studentId = currentDashboardPayload.student_id) {
+  if (!els.coursePath) return;
+  const sections = courseSections(design);
+  const context = visibilityContext(studentId, assignments);
+  const visibleSections = visibleCourseSections(sections, context);
+  const hasRules = sections.some((section) => hasVisibilityRule(section)
+    || (Array.isArray(section?.udas) ? section.udas : []).some((uda) => (
+      hasVisibilityRule(uda) || collectCourseItems(uda.items).some(({ item }) => hasVisibilityRule(item))
+    )));
+  if (!sections.length || !hasRules || !visibleSections.length) {
+    els.coursePath.innerHTML = '<p class="status">Percorso non associato a questo studente o al suo gruppo/classe.</p>';
+    if (els.coursePathStatus) els.coursePathStatus.textContent = "";
+    return;
+  }
+  const assignmentsById = assignmentByActivityId(assignments);
+  const sectionCards = visibleSections.map((section) => {
+    const udas = Array.isArray(section?.udas) ? section.udas : [];
+    const udaCards = udas.map((uda) => {
+      const items = collectCourseItems(uda.items);
+      const linkedActivities = [...new Set(items.flatMap(({ item }) => courseItemActivities(item)))];
+      return `
+        <article class="courseUda">
+          <header>
+            <div>
+              <h4>${escapeHtml(uda.title || uda.id || "UDA senza titolo")}</h4>
+              <p class="meta">
+                <span>${escapeHtml(uda.path || "percorso non indicato")}</span>
+                <span>${escapeHtml(uda.weeks ? `${uda.weeks} settimane` : "durata non indicata")}</span>
+                <span>${items.length} paragrafi</span>
+              </p>
+            </div>
+          </header>
+          <div class="courseLinkedActivities">
+            ${linkedActivities.length
+              ? linkedActivities.map((activityId) => courseActivityBadge(activityId, assignmentsById)).join("")
+              : '<span class="status">Nessuna attivita collegata.</span>'}
+          </div>
+          <ul class="courseItemList">
+            ${items.map(({ item, depth }) => `
+              <li style="--depth: ${escapeHtml(depth)}">
+                ${courseItemHref(item) ? safeExternalLink(courseItemHref(item), item.title || item.id || "-") : escapeHtml(item.title || item.id || "-")}
+                <span>${escapeHtml(item.source || item.source_id || "")}</span>
+              </li>
+            `).join("")}
+          </ul>
+        </article>
+      `;
+    }).join("");
+    return `
+      <article class="courseSection">
+        <h3>${escapeHtml(section.title || section.id || "Percorso senza titolo")}</h3>
+        ${section.description ? `<p>${escapeHtml(section.description)}</p>` : ""}
+        <div class="courseUdaGrid">${udaCards || '<p class="status">Nessuna UDA disponibile.</p>'}</div>
+      </article>
+    `;
+  }).join("");
+  els.coursePath.innerHTML = sectionCards;
+  if (els.coursePathStatus) {
+    const udaCount = visibleSections.reduce((total, section) => total + (Array.isArray(section?.udas) ? section.udas.length : 0), 0);
+    els.coursePathStatus.textContent = `${visibleSections.length} percorsi · ${udaCount} UDA`;
+  }
+}
+
+async function loadCoursePath() {
+  try {
+    currentCourseDesign = await api("/api/course-design");
+    renderCoursePath(currentCourseDesign, currentDashboardPayload.assignments, currentDashboardPayload.student_id);
+  } catch (error) {
+    currentCourseDesign = null;
+    if (els.coursePath) {
+      els.coursePath.innerHTML = '<p class="status">Percorso non disponibile.</p>';
+    }
+    if (els.coursePathStatus) els.coursePathStatus.textContent = `Errore: ${error.message}`;
+  }
 }
 
 function renderFeedback(feedback) {
@@ -469,6 +683,7 @@ function renderDashboard(payload) {
   const nextAssignment = nextOpenAssignment(assignments);
   const visibleAssignments = sortedAssignments(filteredAssignments(assignments, filterValue), sortValue);
   renderSummary(payload.student_id || "-", assignments);
+  renderCoursePath(currentCourseDesign, assignments, payload.student_id);
   els.status.textContent = visibleAssignments.length === assignments.length
     ? `${assignments.length} consegne trovate.`
     : `${visibleAssignments.length} di ${assignments.length} consegne visibili.`;
@@ -538,3 +753,5 @@ loadStudentOptions(els.studentId.value)
   .catch((error) => {
     els.status.textContent = `Errore: ${error.message}`;
   });
+
+loadCoursePath();

@@ -48,6 +48,7 @@ def run_student_dashboard_js(assertions: str) -> None:
     vm.runInNewContext(`${{source}}
       globalThis.__studentDashboardTest = {{
         renderSummary,
+        renderCoursePath,
         renderFeedback,
         renderAssignment,
         renderAssignmentDetail,
@@ -59,6 +60,8 @@ def run_student_dashboard_js(assertions: str) -> None:
         sortedAssignments,
         nextOpenAssignment,
         nextOpenDueAt,
+        collectCourseItems,
+        courseItemHref,
         safeExternalHref,
         safeExternalLink,
         studentLabel,
@@ -276,6 +279,120 @@ def test_student_dashboard_summarizes_next_open_due_date() -> None:
     )
 
 
+def test_student_dashboard_renders_readonly_course_path_panel() -> None:
+    run_student_dashboard_js(
+        """
+        const assignment = {
+          activity_id: "python-base-somma-001",
+          title: "Somma in Python",
+          class_id: "4A",
+          status: "submitted_on_time",
+          submitted: true,
+        };
+        tested.renderCoursePath({
+          paths: [{
+            id: "base-precedente",
+            title: "Percorso precedente",
+            class_ids: ["3A"],
+            udas: [{
+              id: "uda-precedente",
+              title: "Modulo precedente",
+              items: [],
+            }],
+          }, {
+            id: "base-corrente",
+            title: "Percorso corrente",
+            audience: { class_ids: ["4A"] },
+            description: "Programmazione di base.",
+            udas: [{
+              id: "uda-base",
+              title: "Programmazione di base",
+              path: "Base",
+              weeks: "3",
+              items: [{
+                id: "item-input-output",
+                title: "Input e output",
+                source_id: "readme-main",
+                href: "README.md#input-e-output",
+                activity_ids: ["python-base-somma-001"],
+                children: [{
+                  id: "item-somma",
+                  title: "Somma",
+                  source: "README.md",
+                }],
+              }],
+            }, {
+              id: "uda-completa",
+              title: "UDA completa",
+              path: "Base",
+              items: [
+                { id: "p-1", title: "Paragrafo 1" },
+                { id: "p-2", title: "Paragrafo 2" },
+                { id: "p-3", title: "Paragrafo 3" },
+                { id: "p-4", title: "Paragrafo 4" },
+                { id: "p-5", title: "Paragrafo 5" },
+                { id: "p-6", title: "Paragrafo 6" },
+                { id: "p-7", title: "Paragrafo 7" },
+              ],
+            }],
+          }],
+        }, [assignment]);
+
+        assert.doesNotMatch(tested.els.coursePath.innerHTML, /Percorso precedente/);
+        assert.match(tested.els.coursePath.innerHTML, /Percorso corrente/);
+        assert.match(tested.els.coursePath.innerHTML, /Programmazione di base/);
+        assert.match(tested.els.coursePath.innerHTML, /Input e output/);
+        assert.match(tested.els.coursePath.innerHTML, /href="https:\\/\\/github.com\\/TheBitPoets\\/2cornot2c\\/blob\\/main\\/README.md#input-e-output"/);
+        assert.match(tested.els.coursePath.innerHTML, /Paragrafo 7/);
+        assert.doesNotMatch(tested.els.coursePath.innerHTML, /Altri 1 paragrafi/);
+        assert.match(tested.els.coursePath.innerHTML, /Somma in Python/);
+        assert.match(tested.els.coursePathStatus.textContent, /1 percorsi .* 2 UDA/);
+        assert.equal(tested.collectCourseItems([{ title: "Padre", children: [{ title: "Figlio" }] }]).length, 2);
+        """
+    )
+
+
+def test_student_dashboard_renders_missing_course_path_message() -> None:
+    run_student_dashboard_js(
+        """
+        tested.renderCoursePath({ paths: [] }, []);
+
+        assert.match(tested.els.coursePath.innerHTML, /Percorso non associato/);
+        assert.equal(tested.els.coursePathStatus.textContent, "");
+        """
+    )
+
+
+def test_student_dashboard_uses_selected_roster_for_course_path_visibility() -> None:
+    run_student_dashboard_js(
+        """
+        tested.populateClassRosterOptions([{
+          name: "demo-3a.json",
+          id: "demo-3a",
+          label: "Classe demo 3A",
+          school_year: "2026-2027",
+        }], "demo-3a.json");
+
+        tested.renderCoursePath({
+          paths: [{
+            id: "percorso-demo-3a",
+            title: "Percorso demo 3A",
+            audience: { class_ids: ["demo-3a"] },
+            udas: [{
+              id: "uda-base",
+              title: "Fondamenti",
+              items: [{ id: "item-1", title: "Primo argomento" }],
+            }],
+          }],
+        }, [], "bianchi-luca");
+
+        assert.match(tested.els.coursePath.innerHTML, /Percorso demo 3A/);
+        assert.match(tested.els.coursePath.innerHTML, /Fondamenti/);
+        assert.match(tested.els.coursePathStatus.textContent, /1 percorsi .* 1 UDA/);
+        """
+    )
+
+
 def test_student_dashboard_rejects_unsafe_external_links() -> None:
     run_student_dashboard_js(
         """
@@ -287,6 +404,26 @@ def test_student_dashboard_rejects_unsafe_external_links() -> None:
         assert.match(unsafe, /repo-name/);
         assert.equal(tested.safeExternalHref("javascript:alert(1)"), "");
         assert.equal(tested.safeExternalHref("https://github.com/TheBitPoets/2cornot2c"), "https://github.com/TheBitPoets/2cornot2c");
+        """
+    )
+
+
+def test_student_dashboard_resolves_course_item_links_to_github_anchors() -> None:
+    run_student_dashboard_js(
+        """
+        assert.equal(
+          tested.courseItemHref({ href: "../README.md#introduzione", source: "README.md" }),
+          "https://github.com/TheBitPoets/2cornot2c/blob/main/README.md#introduzione",
+        );
+        assert.equal(
+          tested.courseItemHref({ href: "#laboratori", source: "README.md" }),
+          "https://github.com/TheBitPoets/2cornot2c/blob/main/README.md#laboratori",
+        );
+        assert.equal(
+          tested.courseItemHref({ github_url: "https://github.com/example/repo/blob/main/doc.md#x" }),
+          "https://github.com/example/repo/blob/main/doc.md#x",
+        );
+        assert.equal(tested.courseItemHref({ href: "javascript:alert(1)" }), "");
         """
     )
 

@@ -76,6 +76,10 @@ Screenshot previsto: `doc/images/dashboard-guides/studente-riepilogo.png`.
 
 La stessa consegna viene evidenziata nella lista con il badge **Prossima scadenza**. Se piu consegne aperte hanno la stessa prossima scadenza, il badge compare su tutte.
 
+## Percorso
+
+Il pannello **Percorso** mostra in sola lettura solo i percorsi associati allo studente o al suo gruppo/classe. Ogni percorso puo essere assegnato a un gruppo intero oppure personalizzato per uno studente specifico; se non ci sono associazioni esplicite, il pannello mostra che il percorso non e ancora associato.
+
 ## Consegne
 
 La sezione **Consegne** elenca le activity visibili allo studente.
