@@ -108,9 +108,17 @@ def test_student_dashboard_renders_summary_and_assignment_card() -> None:
           },
         };
 
-        tested.renderDashboard({ student_id: "rossi-mario", assignments: [assignment] });
+        tested.renderDashboard({
+          student_id: "rossi-mario",
+          assignments: [assignment, { activity_id: "python-loop-001", status: "missing", submitted: false, late: false }],
+        });
 
         assert.match(tested.els.summary.innerHTML, /rossi-mario/);
+        assert.match(tested.els.summary.innerHTML, /<strong>Consegne<\\/strong>\\s*<span>2<\\/span>/);
+        assert.match(tested.els.summary.innerHTML, /<strong>Consegnate<\\/strong>\\s*<span>1<\\/span>/);
+        assert.match(tested.els.summary.innerHTML, /<strong>Mancanti<\\/strong>\\s*<span>1<\\/span>/);
+        assert.match(tested.els.summary.innerHTML, /<strong>In ritardo<\\/strong>\\s*<span>0<\\/span>/);
+        assert.match(tested.els.summary.innerHTML, /<strong>Feedback<\\/strong>\\s*<span>1<\\/span>/);
         assert.match(tested.els.assignments.innerHTML, /Somma in Python/);
         assert.match(tested.els.assignments.innerHTML, /Feedback docente/);
         assert.match(tested.els.assignments.innerHTML, /Hai gestito correttamente/);

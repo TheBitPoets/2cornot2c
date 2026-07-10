@@ -194,12 +194,14 @@ function gradeValue(grading) {
 
 function renderSummary(studentId, assignments) {
   const submitted = assignments.filter((item) => item.submitted).length;
+  const missing = assignments.filter((item) => item.status === "missing").length;
   const late = assignments.filter((item) => item.late).length;
   const approvedFeedback = assignments.filter((item) => item.approved_feedback).length;
   const cards = [
     ["Studente", studentId],
     ["Consegne", assignments.length],
     ["Consegnate", submitted],
+    ["Mancanti", missing],
     ["In ritardo", late],
     ["Feedback", approvedFeedback],
   ];

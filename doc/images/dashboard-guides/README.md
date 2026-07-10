@@ -70,7 +70,7 @@ Pagina studente:
 |---|---|---|---|
 | `studente-panoramica.png` | da fare | Vista studente | Header, select classe/studente, riepilogo e lista consegne |
 | `studente-selezione.png` | da fare | Vista studente | Select **Classe** e **Studente** con dati demo caricati |
-| `studente-riepilogo.png` | da fare | Vista studente | Card riepilogo con studente, consegne, consegnate, in ritardo e feedback |
+| `studente-riepilogo.png` | da fare | Vista studente | Card riepilogo con studente, consegne, consegnate, mancanti, in ritardo e feedback |
 | `studente-consegne.png` | da fare | Vista studente | Lista consegne con stato, scadenza, grading e link |
 | `studente-grading.png` | da fare | Vista studente | Dettaglio grading/test visibile in una consegna |
 | `studente-feedback.png` | da fare | Vista studente | Feedback approvato visibile allo studente |
