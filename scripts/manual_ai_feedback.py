@@ -65,8 +65,54 @@ def request_from_payload(payload: dict[str, Any]) -> tuple[AiFeedbackRequest, di
     )
 
 
+def request_payload_from_register(register: dict[str, Any], student_id: str) -> dict[str, Any]:
+    """Build a manual AI feedback request payload from an assignment register row."""
+
+    students = register.get("students")
+    if not isinstance(students, list):
+        raise ValueError("register: campo students mancante o non valido")
+
+    student = _find_student(students, student_id)
+    grading = student.get("grading")
+    if not isinstance(grading, dict):
+        raise ValueError(f"register: grading mancante o non valido per {student_id}")
+
+    activity_id = _required_text(register, "activity_id")
+    resolved_student_id = _required_text(student, "student_id")
+    return {
+        "activity_id": activity_id,
+        "student_id": resolved_student_id,
+        "activity": {
+            "id": activity_id,
+            "title": register.get("title") or activity_id,
+            "kind": register.get("kind"),
+            "class_id": register.get("class_id"),
+            "class_label": register.get("class_label"),
+        },
+        "allowed_context": {
+            "assignment_id": register.get("assignment_id"),
+            "student_status": student.get("status"),
+            "late": student.get("late"),
+            "submission": student.get("submission") if isinstance(student.get("submission"), dict) else {},
+        },
+        "grading": grading,
+    }
+
+
 def package_command(args: argparse.Namespace) -> int:
     request, activity, policy = request_from_payload(load_json(args.request_json))
+    package = manual_ai_feedback_package(request, activity=activity, policy=policy)
+    output = {
+        "prompt": package.prompt,
+        "request_json": package.request_json,
+    }
+    print(json.dumps(output, ensure_ascii=False, indent=2, sort_keys=True))
+    return 0
+
+
+def package_from_register_command(args: argparse.Namespace) -> int:
+    payload = request_payload_from_register(load_json(args.register_json), args.student_id)
+    request, activity, policy = request_from_payload(payload)
     package = manual_ai_feedback_package(request, activity=activity, policy=policy)
     output = {
         "prompt": package.prompt,
@@ -99,6 +145,14 @@ def build_parser() -> argparse.ArgumentParser:
     package_parser = subparsers.add_parser("package", help="Genera prompt e JSON da copiare nel provider AI.")
     package_parser.add_argument("request_json", type=Path, help="File JSON con activity_id, student_id e grading.")
     package_parser.set_defaults(func=package_command)
+
+    register_parser = subparsers.add_parser(
+        "package-from-register",
+        help="Genera prompt e JSON partendo da un registro consegne e da uno studente.",
+    )
+    register_parser.add_argument("register_json", type=Path, help="File JSON del registro consegne.")
+    register_parser.add_argument("student_id", help="Studente da estrarre dal registro.")
+    register_parser.set_defaults(func=package_from_register_command)
 
     parse_parser = subparsers.add_parser("parse-response", help="Valida una risposta JSON del provider AI.")
     parse_parser.add_argument("response_json", type=Path, help="File JSON restituito/incollato dal provider AI.")
@@ -139,6 +193,15 @@ def _optional_mapping(payload: dict[str, Any], key: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ValueError(f"request: {key} deve essere un oggetto")
     return value
+
+
+def _find_student(students: list[Any], student_id: str) -> dict[str, Any]:
+    for student in students:
+        if not isinstance(student, dict):
+            continue
+        if student.get("student_id") == student_id or student.get("student") == student_id:
+            return student
+    raise ValueError(f"register: studente non trovato: {student_id}")
 
 
 def _optional_text(payload: dict[str, Any], key: str) -> str | None:

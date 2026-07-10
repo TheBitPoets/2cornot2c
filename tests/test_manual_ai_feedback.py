@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from scripts import manual_ai_feedback
+
+REGISTER_FIXTURE = Path("tests/fixtures/contracts/assignment_register.json")
 
 
 def request_payload() -> dict:
@@ -37,6 +40,32 @@ def test_package_command_prints_prompt_and_request_json(tmp_path, capsys) -> Non
     assert request_json["schema_version"] == "ai_feedback_request.v1"
     assert request_json["activity"]["id"] == "c-base-somma-001"
     assert request_json["student"] == {"id": "rossi-mario"}
+
+
+def test_package_from_register_command_prints_prompt_for_student(tmp_path, capsys) -> None:
+    register_path = tmp_path / "register.json"
+    register_path.write_text(REGISTER_FIXTURE.read_text(encoding="utf-8"), encoding="utf-8")
+
+    exit_code = manual_ai_feedback.main(["package-from-register", str(register_path), "rossi-mario"])
+
+    assert exit_code == 0
+    output = json.loads(capsys.readouterr().out)
+    request_json = json.loads(output["request_json"])
+    assert request_json["activity"]["id"] == "python-base-somma-001"
+    assert request_json["activity"]["class_id"] == "3a-tpsi-2026"
+    assert request_json["student"] == {"id": "rossi-mario"}
+    assert request_json["grading"]["status"] == "graded_passed"
+    assert request_json["context"]["student_status"] == "submitted_on_time"
+
+
+def test_package_from_register_command_reports_missing_student(tmp_path, capsys) -> None:
+    register_path = tmp_path / "register.json"
+    register_path.write_text(REGISTER_FIXTURE.read_text(encoding="utf-8"), encoding="utf-8")
+
+    exit_code = manual_ai_feedback.main(["package-from-register", str(register_path), "missing-student"])
+
+    assert exit_code == 1
+    assert "studente non trovato" in capsys.readouterr().err
 
 
 def test_parse_response_command_prints_normalized_feedback(tmp_path, capsys) -> None:

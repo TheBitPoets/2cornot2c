@@ -186,6 +186,7 @@ Per provarlo senza GUI e senza API key e disponibile anche lo script CLI:
 
 ```bash
 python -m scripts.manual_ai_feedback package request.json
+python -m scripts.manual_ai_feedback package-from-register teacher-reports/demo/register.json rossi-mario
 python -m scripts.manual_ai_feedback parse-response response.json
 ```
 
