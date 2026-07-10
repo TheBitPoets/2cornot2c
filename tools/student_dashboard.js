@@ -32,6 +32,20 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;");
 }
 
+function safeExternalLink(url, label, fallback = "-") {
+  const cleanUrl = String(url ?? "").trim();
+  if (!cleanUrl) return escapeHtml(fallback);
+  try {
+    const parsed = new URL(cleanUrl, window.location.href);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      return `<a href="${escapeHtml(parsed.href)}" target="_blank" rel="noreferrer">${escapeHtml(label)}</a>`;
+    }
+  } catch {
+    // Fall back to non-clickable text below.
+  }
+  return escapeHtml(fallback);
+}
+
 function formatDate(value) {
   if (!value) return "-";
   const date = new Date(value);
@@ -102,10 +116,10 @@ function renderAssignment(assignment) {
   const grading = assignment.grading || {};
   const failedTests = Array.isArray(grading.failed_tests) ? grading.failed_tests : [];
   const repoLink = assignment.repo_github_url
-    ? `<a href="${escapeHtml(assignment.repo_github_url)}" target="_blank" rel="noreferrer">Repository</a>`
+    ? safeExternalLink(assignment.repo_github_url, "Repository", assignment.repo || "-")
     : escapeHtml(assignment.repo || "-");
   const sourceLink = assignment.source_github_url
-    ? `<a href="${escapeHtml(assignment.source_github_url)}" target="_blank" rel="noreferrer">Consegna</a>`
+    ? safeExternalLink(assignment.source_github_url, "Consegna", assignment.source_path || "-")
     : escapeHtml(assignment.source_path || "-");
   return `
     <article class="assignmentCard">

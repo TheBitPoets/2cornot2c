@@ -28,6 +28,7 @@ def run_student_dashboard_js(assertions: str) -> None:
 
     const context = {{
       console,
+      URL,
       document: {{ querySelector: elementFor }},
       fetch: async () => ({{
         ok: true,
@@ -36,7 +37,7 @@ def run_student_dashboard_js(assertions: str) -> None:
         json: async () => ({{ student_id: "rossi-mario", assignments: [] }}),
         text: async () => "",
       }}),
-      window: {{}},
+      window: {{ location: {{ href: "http://localhost:8765/tools/student_dashboard.html" }} }},
     }};
     context.globalThis = context;
 
@@ -47,6 +48,7 @@ def run_student_dashboard_js(assertions: str) -> None:
         renderFeedback,
         renderAssignment,
         renderDashboard,
+        safeExternalLink,
         statusBadge,
         gradingBadge,
         gradeValue,
@@ -111,5 +113,18 @@ def test_student_dashboard_hides_unapproved_feedback_payloads() -> None:
         assert.equal(tested.gradeValue({ teacher_grade: null, score: 6 }), 6);
         assert.match(tested.statusBadge({ status: "missing", submitted: false, late: false }), /Mancante/);
         assert.match(tested.gradingBadge({ status: "graded_failed" }), /Test falliti/);
+        """
+    )
+
+
+def test_student_dashboard_rejects_unsafe_external_links() -> None:
+    run_student_dashboard_js(
+        """
+        const safe = tested.safeExternalLink("https://github.com/TheBitPoets/2cornot2c", "Repository", "repo");
+        assert.match(safe, /href="https:\\/\\/github.com\\/TheBitPoets\\/2cornot2c"/);
+
+        const unsafe = tested.safeExternalLink("javascript:alert(1)", "Repository", "repo-name");
+        assert.doesNotMatch(unsafe, /href=/);
+        assert.match(unsafe, /repo-name/);
         """
     )
