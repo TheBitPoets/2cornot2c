@@ -17,6 +17,14 @@ def run_student_dashboard_js(assertions: str) -> None:
         this.textContent = "";
         this.innerHTML = "";
         this.disabled = false;
+        this.classList = {{
+          values: new Set(),
+          toggle: (name, force) => {{
+            if (force) this.classList.values.add(name);
+            else this.classList.values.delete(name);
+          }},
+          contains: (name) => this.classList.values.has(name),
+        }};
       }}
       addEventListener() {{}}
     }}
@@ -319,9 +327,41 @@ def test_student_dashboard_renders_readonly_calendar_events() -> None:
         assert.match(tested.els.studentCalendar.innerHTML, /Loop in Python/);
         assert.match(tested.els.studentCalendar.innerHTML, /studentMonthGrid/);
         assert.match(tested.els.studentCalendar.innerHTML, /studentMonthMainCard/);
+        assert.match(tested.els.studentCalendar.innerHTML, /data-student-calendar-nav="previous"/);
+        assert.equal(tested.els.studentCalendarMonthField.classList.contains("isHidden"), false);
+        assert.equal(tested.els.studentCalendarWeekField.classList.contains("isHidden"), true);
         assert.equal((tested.els.studentCalendar.innerHTML.match(/Prossima scadenza/g) || []).length, 2);
         assert.match(tested.els.studentCalendarStatus.textContent, /6 eventi .* 3 scadenze/);
         assert.equal(tested.studentCalendarEvents([openSooner, sameDeadline, submitted]).at(-1).title, "Somma in Python");
+        """
+    )
+
+
+def test_student_dashboard_calendar_supports_week_and_year_modes() -> None:
+    run_student_dashboard_js(
+        """
+        const assignment = {
+          activity_id: "python-base-somma-001",
+          title: "Somma in Python",
+          assigned_at: "2026-10-10T08:00:00+02:00",
+          due_at: "2026-10-18T23:59:00+02:00",
+          status: "assigned",
+          submitted: false,
+        };
+
+        tested.els.studentCalendarViewMode.value = "week";
+        tested.renderStudentCalendar([assignment]);
+        assert.match(tested.els.studentCalendar.innerHTML, /Settimana:/);
+        assert.match(tested.els.studentCalendar.innerHTML, /data-student-calendar-nav="next"/);
+        assert.equal(tested.els.studentCalendarMonthField.classList.contains("isHidden"), true);
+        assert.equal(tested.els.studentCalendarWeekField.classList.contains("isHidden"), false);
+
+        tested.els.studentCalendarViewMode.value = "year";
+        tested.renderStudentCalendar([assignment]);
+        assert.match(tested.els.studentCalendar.innerHTML, /studentMonthGrid/);
+        assert.doesNotMatch(tested.els.studentCalendar.innerHTML, /data-student-calendar-nav="next"/);
+        assert.equal(tested.els.studentCalendarMonthField.classList.contains("isHidden"), true);
+        assert.equal(tested.els.studentCalendarWeekField.classList.contains("isHidden"), true);
         """
     )
 

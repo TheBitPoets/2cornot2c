@@ -48,8 +48,20 @@
       </div>
       <div class="studentCalendarControls">
         <label>
+          <span>Modalita</span>
+          <select id="studentCalendarViewMode" name="student_calendar_view_mode">
+            <option value="year">Anno</option>
+            <option value="month" selected>Mese</option>
+            <option value="week">Settimana</option>
+          </select>
+        </label>
+        <label id="studentCalendarMonthField">
           <span>Mese</span>
           <select id="studentCalendarMonth" name="student_calendar_month"></select>
+        </label>
+        <label id="studentCalendarWeekField" class="isHidden">
+          <span>Settimana</span>
+          <select id="studentCalendarWeek" name="student_calendar_week"></select>
         </label>
         <label>
           <span>Mostra</span>

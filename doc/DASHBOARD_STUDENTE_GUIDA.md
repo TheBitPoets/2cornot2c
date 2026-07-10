@@ -78,7 +78,9 @@ La stessa consegna viene evidenziata nella lista con il badge **Prossima scadenz
 
 ## Calendario
 
-Il pannello **Calendario** mostra in sola lettura una vista mensile simile a quella docente: mese centrale, mesi laterali di contesto e filtri per tipo di evento.
+Il pannello **Calendario** mostra in sola lettura una vista simile a quella docente.
+
+La modalità **Mese** mostra un mese centrale con i mesi laterali di contesto e le frecce per passare al mese precedente o successivo. La modalità **Settimana** mostra solo la settimana selezionata, anche qui con frecce avanti e indietro. La modalità **Anno** mostra tutti i mesi dell'intervallo pubblicato.
 
 La vista puo mostrare:
 
@@ -88,7 +90,7 @@ La vista puo mostrare:
 - badge **Prossima scadenza** sulle consegne aperte con la scadenza piu vicina.
 - UDA reali svolte, quando il percorso contiene date consuntive pubblicate.
 
-Il filtro **Mostra** permette di visualizzare tutto, solo consegne, solo UDA o solo scadenze. La vista resta in sola lettura: lo studente puo consultare la programmazione e le scadenze, ma non modificarle.
+I controlli **Mese** e **Settimana** compaiono solo quando servono alla modalità scelta. Il filtro **Mostra** permette di visualizzare tutto, solo consegne, solo UDA o solo scadenze. La vista resta in sola lettura: lo studente puo consultare la programmazione e le scadenze, ma non modificarle.
 
 ## Percorso
 

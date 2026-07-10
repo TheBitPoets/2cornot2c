@@ -9,7 +9,11 @@ const els = {
   assignments: document.querySelector("#assignments"),
   studentCalendar: document.querySelector("#studentCalendar"),
   studentCalendarStatus: document.querySelector("#studentCalendarStatus"),
+  studentCalendarViewMode: document.querySelector("#studentCalendarViewMode"),
   studentCalendarMonth: document.querySelector("#studentCalendarMonth"),
+  studentCalendarMonthField: document.querySelector("#studentCalendarMonthField"),
+  studentCalendarWeek: document.querySelector("#studentCalendarWeek"),
+  studentCalendarWeekField: document.querySelector("#studentCalendarWeekField"),
   studentCalendarFilter: document.querySelector("#studentCalendarFilter"),
   coursePath: document.querySelector("#coursePath"),
   coursePathStatus: document.querySelector("#coursePathStatus"),
@@ -26,6 +30,11 @@ let currentClassLabel = "Dai registri consegne";
 let currentClassRoster = null;
 let currentCourseDesign = null;
 let currentSchoolCalendar = null;
+let currentStudentCalendarView = {
+  mode: "month",
+  month: "",
+  week: "",
+};
 
 async function api(path, options = {}) {
   const response = await fetch(path, options);
@@ -305,6 +314,12 @@ function isoDate(date) {
   return `${year}-${month}-${day}`;
 }
 
+function addDays(date, days) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
 function monthKey(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
@@ -320,6 +335,21 @@ function calendarMonths(start, end) {
   return months;
 }
 
+function calendarWeeks(start, end) {
+  const weeks = [];
+  if (!start || !end || start > end) return weeks;
+  const cursor = new Date(start);
+  const offset = (cursor.getDay() + 6) % 7;
+  cursor.setDate(cursor.getDate() - offset);
+  while (cursor <= end) {
+    const weekStart = new Date(cursor);
+    const weekEnd = addDays(weekStart, 6);
+    weeks.push({ start: weekStart, end: weekEnd });
+    cursor.setDate(cursor.getDate() + 7);
+  }
+  return weeks;
+}
+
 function selectedStudentCalendarMonthContext(months, selectedMonth) {
   if (!months.length) return [];
   const selectedIndex = months.findIndex((month) => monthKey(month) === selectedMonth);
@@ -329,6 +359,40 @@ function selectedStudentCalendarMonthContext(months, selectedMonth) {
     months[index] ? { month: months[index], role: "main" } : null,
     months[index + 1] ? { month: months[index + 1], role: "context" } : { role: "placeholder" },
   ].filter(Boolean);
+}
+
+function selectedStudentCalendarWeek(weeks, selectedWeek) {
+  return weeks.find((week) => isoDate(week.start) === selectedWeek) || weeks[0] || null;
+}
+
+function studentCalendarViewValues(months, weeks) {
+  if (currentStudentCalendarView.mode === "month") return months.map(monthKey);
+  if (currentStudentCalendarView.mode === "week") return weeks.map((week) => isoDate(week.start));
+  return [];
+}
+
+function currentStudentCalendarViewValue() {
+  if (currentStudentCalendarView.mode === "month") return currentStudentCalendarView.month;
+  if (currentStudentCalendarView.mode === "week") return currentStudentCalendarView.week;
+  return "";
+}
+
+function moveStudentCalendarView(direction, months, weeks) {
+  const values = studentCalendarViewValues(months, weeks);
+  const current = currentStudentCalendarViewValue();
+  const index = values.indexOf(current);
+  const nextIndex = Math.max(0, Math.min(values.length - 1, index + direction));
+  const nextValue = values[nextIndex];
+  if (!nextValue || nextValue === current) return;
+  if (currentStudentCalendarView.mode === "month") currentStudentCalendarView.month = nextValue;
+  if (currentStudentCalendarView.mode === "week") currentStudentCalendarView.week = nextValue;
+  renderStudentCalendar(currentDashboardPayload.assignments || []);
+}
+
+function studentCalendarNavDisabled(direction, months, weeks) {
+  const values = studentCalendarViewValues(months, weeks);
+  const index = values.indexOf(currentStudentCalendarViewValue());
+  return direction < 0 ? index <= 0 : index < 0 || index >= values.length - 1;
 }
 
 function studentCalendarEvents(assignments) {
@@ -448,9 +512,48 @@ function renderCalendarEventPill(event) {
   `;
 }
 
-function renderStudentCalendarMonth(month, role, eventsByDate, range) {
+function renderStudentCalendarNavButton(direction, months, weeks, title) {
+  const disabled = studentCalendarNavDisabled(direction, months, weeks) ? " disabled" : "";
+  const action = direction < 0 ? "previous" : "next";
+  const label = direction < 0 ? "&larr;" : "&rarr;";
+  return `<button type="button" data-student-calendar-nav="${action}" title="${escapeHtml(title)}"${disabled}>${label}</button>`;
+}
+
+function renderStudentCalendarWeek(week, eventsByDate, range, months, weeks) {
+  const cells = [];
+  for (let offset = 0; offset < 7; offset += 1) {
+    const day = addDays(week.start, offset);
+    const iso = isoDate(day);
+    const dayEvents = eventsByDate.get(iso) || [];
+    const classes = ["studentDayCell"];
+    if (day < range.start || day > range.end) classes.push("studentDayOutsideRange");
+    if (dayEvents.length) classes.push("studentDayHasEvents");
+    cells.push(`
+      <div class="${classes.join(" ")}">
+        <span class="studentDayNumber">${day.getDate()}</span>
+        ${dayEvents.map(renderCalendarEventPill).join("")}
+      </div>
+    `);
+  }
+  return `
+    <article class="studentMonthCard studentWeekCard">
+      <div class="studentMonthTitle studentMonthTitleNav">
+        ${renderStudentCalendarNavButton(-1, months, weeks, "Vai alla settimana precedente.")}
+        <h3>Settimana: ${escapeHtml(week.start.toLocaleDateString("it-IT"))} - ${escapeHtml(week.end.toLocaleDateString("it-IT"))}</h3>
+        ${renderStudentCalendarNavButton(1, months, weeks, "Vai alla settimana successiva.")}
+      </div>
+      <div class="studentMonthWeekdays">
+        <span>Lun</span><span>Mar</span><span>Mer</span><span>Gio</span><span>Ven</span><span>Sab</span><span>Dom</span>
+      </div>
+      <div class="studentMonthDays studentWeekDays">${cells.join("")}</div>
+    </article>
+  `;
+}
+
+function renderStudentCalendarMonth(month, role, eventsByDate, range, months = [], weeks = []) {
   if (role === "placeholder") return '<div class="studentMonthPlaceholder"></div>';
   const title = month.toLocaleDateString("it-IT", { month: "long", year: "numeric" });
+  const isMonthFocus = currentStudentCalendarView.mode === "month" && role === "main";
   const first = new Date(month.getFullYear(), month.getMonth(), 1);
   const startOffset = (first.getDay() + 6) % 7;
   const cursor = new Date(first);
@@ -474,8 +577,10 @@ function renderStudentCalendarMonth(month, role, eventsByDate, range) {
   }
   return `
     <article class="studentMonthCard ${role === "context" ? "studentMonthContextCard" : "studentMonthMainCard"}">
-      <div class="studentMonthTitle">
+      <div class="studentMonthTitle ${isMonthFocus ? "studentMonthTitleNav" : ""}">
+        ${isMonthFocus ? renderStudentCalendarNavButton(-1, months, weeks, "Vai al mese precedente.") : ""}
         <h3>${escapeHtml(title)}</h3>
+        ${isMonthFocus ? renderStudentCalendarNavButton(1, months, weeks, "Vai al mese successivo.") : ""}
       </div>
       <div class="studentMonthWeekdays">
         <span>Lun</span><span>Mar</span><span>Mer</span><span>Gio</span><span>Ven</span><span>Sab</span><span>Dom</span>
@@ -502,21 +607,42 @@ function renderStudentCalendar(assignments) {
     ...studentCalendarEvents(assignments),
     ...udaDateEvents(assignments),
   ].sort((left, right) => left.timestamp - right.timestamp || left.title.localeCompare(right.title, "it", { numeric: true, sensitivity: "base" }));
+  const mode = els.studentCalendarViewMode?.value || currentStudentCalendarView.mode || "month";
+  currentStudentCalendarView.mode = ["year", "month", "week"].includes(mode) ? mode : "month";
   const filterValue = els.studentCalendarFilter?.value || "all";
   const events = filteredStudentCalendarEvents(baseEvents, filterValue);
   const range = calendarDateRange(baseEvents);
   const months = calendarMonths(range.start, range.end);
+  const weeks = calendarWeeks(range.start, range.end);
+  const firstEventMonth = monthKey(months.find((month) => events.some((event) => event.iso?.startsWith(monthKey(month)))) || months[0]);
+  if (!currentStudentCalendarView.month || !months.some((month) => monthKey(month) === currentStudentCalendarView.month)) {
+    currentStudentCalendarView.month = firstEventMonth;
+  }
+  const firstEventWeek = weeks.find((week) => events.some((event) => {
+    const eventDate = dateFromInput(event.iso);
+    return eventDate && eventDate >= week.start && eventDate <= week.end;
+  }));
+  if (!currentStudentCalendarView.week || !weeks.some((week) => isoDate(week.start) === currentStudentCalendarView.week)) {
+    currentStudentCalendarView.week = firstEventWeek ? isoDate(firstEventWeek.start) : isoDate(weeks[0]?.start || range.start);
+  }
+  if (els.studentCalendarViewMode) els.studentCalendarViewMode.value = currentStudentCalendarView.mode;
+  els.studentCalendarMonthField?.classList.toggle("isHidden", currentStudentCalendarView.mode !== "month");
+  els.studentCalendarWeekField?.classList.toggle("isHidden", currentStudentCalendarView.mode !== "week");
   if (els.studentCalendarMonth) {
-    const currentValue = els.studentCalendarMonth.value;
-    const selectedValue = currentValue && months.some((month) => monthKey(month) === currentValue)
-      ? currentValue
-      : monthKey(months.find((month) => events.some((event) => event.iso?.startsWith(monthKey(month)))) || months[0]);
     els.studentCalendarMonth.innerHTML = months.map((month) => {
       const value = monthKey(month);
       const label = month.toLocaleDateString("it-IT", { month: "long", year: "numeric" });
-      return `<option value="${value}"${value === selectedValue ? " selected" : ""}>${escapeHtml(label)}</option>`;
+      return `<option value="${value}"${value === currentStudentCalendarView.month ? " selected" : ""}>${escapeHtml(label)}</option>`;
     }).join("");
-    els.studentCalendarMonth.value = selectedValue;
+    els.studentCalendarMonth.value = currentStudentCalendarView.month;
+  }
+  if (els.studentCalendarWeek) {
+    els.studentCalendarWeek.innerHTML = weeks.map((week, index) => {
+      const value = isoDate(week.start);
+      const label = `Settimana ${index + 1}: ${week.start.toLocaleDateString("it-IT")} - ${week.end.toLocaleDateString("it-IT")}`;
+      return `<option value="${value}"${value === currentStudentCalendarView.week ? " selected" : ""}>${escapeHtml(label)}</option>`;
+    }).join("");
+    els.studentCalendarWeek.value = currentStudentCalendarView.week;
   }
   if (els.studentCalendarStatus) {
     const dueCount = baseEvents.filter((event) => event.kind === "due").length;
@@ -531,13 +657,21 @@ function renderStudentCalendar(assignments) {
     if (!eventsByDate.has(event.iso)) eventsByDate.set(event.iso, []);
     eventsByDate.get(event.iso).push(event);
   }
-  const contextMonths = selectedStudentCalendarMonthContext(months, els.studentCalendarMonth?.value || monthKey(months[0]));
+  const selectedWeek = selectedStudentCalendarWeek(weeks, currentStudentCalendarView.week);
+  const renderedCalendar = currentStudentCalendarView.mode === "week" && selectedWeek
+    ? renderStudentCalendarWeek(selectedWeek, eventsByDate, range, months, weeks)
+    : `
+      <div class="studentMonthGrid ${currentStudentCalendarView.mode === "month" ? "studentMonthFocusGrid" : ""}">
+        ${(currentStudentCalendarView.mode === "month"
+          ? selectedStudentCalendarMonthContext(months, currentStudentCalendarView.month)
+          : months.map((month) => ({ month, role: "main" }))
+        ).map((item) => renderStudentCalendarMonth(item.month, item.role, eventsByDate, range, months, weeks)).join("")}
+      </div>
+    `;
   els.studentCalendar.innerHTML = baseEvents.length
     ? `
       ${renderStudentCalendarLegend(baseEvents)}
-      <div class="studentMonthGrid">
-        ${contextMonths.map((item) => renderStudentCalendarMonth(item.month, item.role, eventsByDate, range)).join("")}
-      </div>
+      ${renderedCalendar}
     `
     : '<p class="status">Nessuna data disponibile per le consegne di questo studente.</p>';
 }
@@ -1010,12 +1144,34 @@ els.assignmentSort?.addEventListener("change", () => {
   renderDashboard(currentDashboardPayload);
 });
 
+els.studentCalendarViewMode?.addEventListener("change", () => {
+  currentStudentCalendarView.mode = els.studentCalendarViewMode.value;
+  renderStudentCalendar(currentDashboardPayload.assignments || []);
+});
+
 els.studentCalendarMonth?.addEventListener("change", () => {
+  currentStudentCalendarView.month = els.studentCalendarMonth.value;
+  renderStudentCalendar(currentDashboardPayload.assignments || []);
+});
+
+els.studentCalendarWeek?.addEventListener("change", () => {
+  currentStudentCalendarView.week = els.studentCalendarWeek.value;
   renderStudentCalendar(currentDashboardPayload.assignments || []);
 });
 
 els.studentCalendarFilter?.addEventListener("change", () => {
   renderStudentCalendar(currentDashboardPayload.assignments || []);
+});
+
+els.studentCalendar?.addEventListener("click", (event) => {
+  const navButton = event.target.closest?.("[data-student-calendar-nav]");
+  if (!navButton || navButton.disabled) return;
+  const direction = navButton.dataset.studentCalendarNav === "previous" ? -1 : 1;
+  const range = calendarDateRange([
+    ...studentCalendarEvents(currentDashboardPayload.assignments || []),
+    ...udaDateEvents(currentDashboardPayload.assignments || []),
+  ]);
+  moveStudentCalendarView(direction, calendarMonths(range.start, range.end), calendarWeeks(range.start, range.end));
 });
 
 els.assignments?.addEventListener("click", (event) => {

@@ -248,6 +248,10 @@ button:hover { transform: translateY(-1px); }
   border-bottom: 1px solid rgba(17, 17, 17, .12);
 }
 
+.studentCalendarControls label.isHidden {
+  display: none;
+}
+
 .studentCalendarControls select {
   min-width: min(16rem, 45vw);
 }
@@ -261,10 +265,14 @@ button:hover { transform: translateY(-1px); }
 
 .studentMonthGrid {
   display: grid;
-  grid-template-columns: minmax(10rem, .72fr) minmax(20rem, 1.35fr) minmax(10rem, .72fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
   align-items: start;
   min-width: 0;
+}
+
+.studentMonthGrid.studentMonthFocusGrid {
+  grid-template-columns: minmax(10rem, .72fr) minmax(20rem, 1.35fr) minmax(10rem, .72fr);
 }
 
 .studentMonthCard {
@@ -298,6 +306,30 @@ button:hover { transform: translateY(-1px); }
 .studentMonthTitle h3 {
   margin: 0;
   font-size: .9rem;
+}
+
+.studentMonthTitleNav {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .65rem;
+}
+
+.studentMonthTitleNav h3 {
+  text-align: center;
+}
+
+.studentMonthTitleNav button {
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 999px;
+  box-shadow: none;
+  font-size: 1rem;
+  padding: 0;
+}
+
+.studentWeekCard {
+  min-width: 0;
 }
 
 .studentMonthWeekdays,
@@ -348,6 +380,10 @@ button:hover { transform: translateY(-1px); }
 .studentMonthContextCard .studentDayCell {
   min-height: 2.55rem;
   padding: .22rem;
+}
+
+.studentWeekDays .studentDayCell {
+  min-height: 8rem;
 }
 
 .studentMonthContextCard .calendarPill {
@@ -799,7 +835,8 @@ button:hover { transform: translateY(-1px); }
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .studentMonthGrid {
+  .studentMonthGrid,
+  .studentMonthGrid.studentMonthFocusGrid {
     grid-template-columns: minmax(0, 1fr);
   }
 
