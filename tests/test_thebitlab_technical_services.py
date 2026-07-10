@@ -432,6 +432,8 @@ def test_ai_feedback_result_from_payload_normalizes_manual_response() -> None:
         "{not-json",
         [],
         {"schema_version": "wrong", "status": "draft"},
+        {"schema_version": "ai_feedback_response.v1", "status": "draft"},
+        {"schema_version": "ai_feedback_response.v1", "status": "error"},
         {"schema_version": "ai_feedback_response.v1", "status": "approved"},
         {
             "schema_version": "ai_feedback_response.v1",

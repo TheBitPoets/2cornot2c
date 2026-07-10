@@ -328,6 +328,13 @@ def ai_feedback_result_from_payload(payload: str | dict[str, Any]) -> AiFeedback
     if status not in {"draft", "error"}:
         raise InvalidServicePayloadError("Payload feedback AI senza status valido.")
 
+    summary = _optional_text(raw, "summary")
+    detail = str(raw.get("detail") or "")
+    if status == "draft" and not summary:
+        raise InvalidServicePayloadError("Payload feedback AI draft senza summary.")
+    if status == "error" and not (summary or detail):
+        raise InvalidServicePayloadError("Payload feedback AI error senza dettaglio.")
+
     suggested_grade = raw.get("suggested_grade")
     if suggested_grade is not None and (
         isinstance(suggested_grade, bool) or not isinstance(suggested_grade, (int, float))
@@ -336,13 +343,13 @@ def ai_feedback_result_from_payload(payload: str | dict[str, Any]) -> AiFeedback
 
     return AiFeedbackResult(
         status=status,
-        summary=_optional_text(raw, "summary"),
+        summary=summary,
         suggested_grade=None if suggested_grade is None else float(suggested_grade),
         student_feedback=_optional_text(raw, "student_feedback"),
         teacher_notes=_optional_text(raw, "teacher_notes"),
         confidence=_optional_text(raw, "confidence"),
         approved_by_teacher=False,
-        detail=str(raw.get("detail") or ""),
+        detail=detail,
     )
 
 
