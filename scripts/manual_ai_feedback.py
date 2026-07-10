@@ -129,8 +129,8 @@ def apply_feedback_to_register(
 def review_feedback_in_register(register: dict[str, Any], student_id: str, decision: str) -> dict[str, Any]:
     """Return a register copy with a teacher review decision applied to draft AI feedback."""
 
-    if decision not in {"approve", "reject"}:
-        raise ValueError("review: decision deve essere approve o reject")
+    if decision not in {"approve", "reject", "reopen"}:
+        raise ValueError("review: decision deve essere approve, reject o reopen")
     students = register.get("students")
     if not isinstance(students, list):
         raise ValueError("register: campo students mancante o non valido")
@@ -140,14 +140,20 @@ def review_feedback_in_register(register: dict[str, Any], student_id: str, decis
     feedback = updated_student.get("ai_feedback")
     if not isinstance(feedback, dict):
         raise ValueError(f"register: ai_feedback mancante o non valido per {student_id}")
-    if feedback.get("status") != "draft":
+    current_status = feedback.get("status")
+    if decision in {"approve", "reject"} and current_status != "draft":
         raise ValueError(f"register: ai_feedback per {student_id} non e una bozza")
+    if decision == "reopen" and current_status not in {"approved", "rejected"}:
+        raise ValueError(f"register: ai_feedback per {student_id} non e approvato o respinto")
 
     if decision == "approve":
         feedback["status"] = "approved"
         feedback["approved_by_teacher"] = True
-    else:
+    elif decision == "reject":
         feedback["status"] = "rejected"
+        feedback["approved_by_teacher"] = False
+    else:
+        feedback["status"] = "draft"
         feedback["approved_by_teacher"] = False
     return updated
 
@@ -256,7 +262,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     review_parser.add_argument("register_json", type=Path, help="File JSON del registro consegne.")
     review_parser.add_argument("student_id", help="Studente da aggiornare nel registro.")
-    review_parser.add_argument("decision", choices=["approve", "reject"], help="Decisione docente sulla bozza AI.")
+    review_parser.add_argument("decision", choices=["approve", "reject", "reopen"], help="Decisione docente sul feedback AI.")
     review_parser.add_argument("--output", required=True, type=Path, help="File registro aggiornato da scrivere.")
     review_parser.add_argument("--force", action="store_true", help="Sovrascrive --output se esiste gia.")
     review_parser.set_defaults(func=review_feedback_command)

@@ -33,7 +33,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts import thebitlab_services, thebitlab_storage, track_assignments
+from scripts import manual_ai_feedback, thebitlab_services, thebitlab_storage, track_assignments
 
 DESIGN_PATH = ROOT / "doc" / "course_design.json"
 COURSE_DESIGNS_DIR = ROOT / "doc" / "course_designs"
@@ -220,6 +220,15 @@ def read_assignment_report(name: str) -> dict:
     """Read one assignment tracking report from teacher-reports."""
 
     return assignment_service().read_assignment_report(name)
+
+
+def review_assignment_ai_feedback(name: str, student_id: str, decision: str) -> dict:
+    """Apply a teacher review decision to draft AI feedback in a report."""
+
+    storage = assignment_storage()
+    register = storage.read_assignment_report(name)
+    updated = manual_ai_feedback.review_feedback_in_register(register, student_id, decision)
+    return storage.write_assignment_report(name, updated)
 
 
 def assignment_overview() -> list[dict]:
@@ -1728,6 +1737,20 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 self.write_json({"report": read_assignment_report(payload.get("name", ""))})
             except Exception as error:  # noqa: BLE001
                 self.send_response(404)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+            return
+        if parsed.path == "/api/assignment-reports/ai-feedback/review":
+            try:
+                report = review_assignment_ai_feedback(
+                    payload.get("name", ""),
+                    payload.get("student_id", ""),
+                    payload.get("decision", ""),
+                )
+                self.write_json({"ok": True, "report": report})
+            except Exception as error:  # noqa: BLE001
+                self.send_response(400)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))

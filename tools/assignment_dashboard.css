@@ -1119,6 +1119,13 @@ label > textarea {
   text-align: justify;
 }
 
+.aiFeedbackActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+  margin-top: .55rem;
+}
+
 .status {
   margin: 0;
   color: var(--muted);
@@ -1170,6 +1177,10 @@ label > textarea {
 
 .studentsDialogSummary {
   padding: .85rem 1rem;
+}
+
+.studentsDialogStatus {
+  padding: 0 1rem .75rem;
 }
 
 .coverageDialogSummary,

@@ -154,6 +154,7 @@ const els = {
   studentsCloseBtn: document.querySelector("#studentsCloseBtn"),
   studentsTable: document.querySelector("#studentsTable"),
   studentsBody: document.querySelector("#studentsBody"),
+  studentsDialogStatus: document.querySelector("#studentsDialogStatus"),
   reviewDialog: document.querySelector("#reviewDialog"),
   reviewBreadcrumb: document.querySelector("#reviewBreadcrumb"),
   reviewPrevBtn: document.querySelector("#reviewPrevBtn"),
@@ -202,6 +203,10 @@ async function api(path, options = {}) {
 
 function setStatus(message) {
   els.status.textContent = message;
+}
+
+function setStudentsDialogStatus(message) {
+  if (els.studentsDialogStatus) els.studentsDialogStatus.textContent = message;
 }
 
 function escapeHtml(value) {
@@ -1736,8 +1741,8 @@ function aiFeedbackText(value) {
 function aiFeedbackTeacherAction(ai) {
   const status = ai?.status || "not_generated";
   if (status === "draft") return "Da controllare: approvare o respingere con il workflow manuale.";
-  if (status === "approved") return "Feedback controllato dal docente e pronto per la pubblicazione allo studente.";
-  if (status === "rejected") return "Feedback respinto: rigenerare o riscrivere prima di pubblicarlo.";
+  if (status === "approved") return "Feedback controllato dal docente. Puoi riaprirlo come bozza se devi cambiare decisione.";
+  if (status === "rejected") return "Feedback respinto. Puoi riaprirlo come bozza se vuoi rivederlo.";
   if (status === "error") return "Errore provider: controllare il dettaglio tecnico prima di riprovare.";
   return "Nessuna azione disponibile finche il feedback AI non viene generato.";
 }
@@ -1746,6 +1751,8 @@ function aiFeedbackReviewDetails(ai) {
   const hasFeedback = Boolean(ai && ai.status && ai.status !== "not_generated");
   if (!hasFeedback) return "";
   const confidence = aiFeedbackText(ai.confidence);
+  const canReview = ai.status === "draft";
+  const canReopen = ai.status === "approved" || ai.status === "rejected";
   return `
     <details class="aiFeedbackDetails">
       <summary>Dettaglio AI</summary>
@@ -1767,6 +1774,17 @@ function aiFeedbackReviewDetails(ai) {
           <dd>${escapeHtml(aiFeedbackTeacherAction(ai))}</dd>
         </div>
       </dl>
+      ${canReview ? `
+        <div class="aiFeedbackActions">
+          <button type="button" class="smallButton" data-ai-feedback-decision="approve">Approva</button>
+          <button type="button" class="smallButton" data-ai-feedback-decision="reject">Respingi</button>
+        </div>
+      ` : ""}
+      ${canReopen ? `
+        <div class="aiFeedbackActions">
+          <button type="button" class="smallButton" data-ai-feedback-decision="reopen">Riapri bozza</button>
+        </div>
+      ` : ""}
     </details>
   `;
 }
@@ -1975,7 +1993,9 @@ function renderStudents(students) {
       </td>
       <td><code>${escapeHtml(grading.teacher_grade ?? grading.score ?? "-")}</code></td>
       <td>
-        ${aiFeedbackDetails(ai)}
+        <div data-ai-feedback-student="${escapeHtml(student.student_id || student.student)}">
+          ${aiFeedbackDetails(ai)}
+        </div>
       </td>
       <td>
         <button type="button" class="smallButton" data-review-student="${escapeHtml(student.student)}" title="${escapeHtml(reviewTitle)}" ${canReview ? "" : "disabled"}>
@@ -1987,6 +2007,41 @@ function renderStudents(students) {
     els.studentsBody.append(row);
   }
   setupResizableTable(els.studentsTable, "students");
+}
+
+async function reviewAiFeedback(studentId, decision) {
+  if (!state.reportName) {
+    const message = "Carica un registro prima di revisionare il feedback AI.";
+    setStatus(message);
+    setStudentsDialogStatus(message);
+    return;
+  }
+  const label = {
+    approve: "approvazione",
+    reject: "respinta",
+    reopen: "riapertura bozza",
+  }[decision] || "revisione";
+  const progressMessage = `Salvataggio ${label} feedback AI per ${studentId}...`;
+  setStatus(progressMessage);
+  setStudentsDialogStatus(progressMessage);
+  const payload = await api("/api/assignment-reports/ai-feedback/review", {
+    method: "POST",
+    body: JSON.stringify({
+      name: state.reportName,
+      student_id: studentId,
+      decision,
+    }),
+  });
+  state.report = payload.report;
+  renderDashboard();
+  const outcome = {
+    approve: "approvato",
+    reject: "respinto",
+    reopen: "riaperto come bozza",
+  }[decision] || "revisionato";
+  const doneMessage = `Feedback AI ${outcome} per ${studentId}.`;
+  setStatus(doneMessage);
+  setStudentsDialogStatus(doneMessage);
 }
 
 function submissionFiles(student) {
@@ -2389,6 +2444,21 @@ els.overviewMatrixBody.addEventListener("click", async (event) => {
   }
 });
 els.studentsBody.addEventListener("click", (event) => {
+  const aiButton = event.target.closest("[data-ai-feedback-decision]");
+  if (aiButton && !aiButton.disabled) {
+    event.preventDefault();
+    event.stopPropagation();
+    const container = aiButton.closest("[data-ai-feedback-student]");
+    if (!container?.dataset.aiFeedbackStudent) return;
+    aiButton.disabled = true;
+    reviewAiFeedback(container.dataset.aiFeedbackStudent, aiButton.dataset.aiFeedbackDecision).catch((error) => {
+      aiButton.disabled = false;
+      const message = `Errore feedback AI: ${error.message}`;
+      setStatus(message);
+      setStudentsDialogStatus(message);
+    });
+    return;
+  }
   const button = event.target.closest("[data-review-student]");
   if (!button || button.disabled) return;
   openSubmission(button.dataset.reviewStudent, "", "students");

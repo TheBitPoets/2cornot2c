@@ -211,6 +211,29 @@ def test_review_feedback_command_rejects_draft_feedback(tmp_path) -> None:
     assert feedback["summary"] == "Feedback da respingere."
 
 
+def test_review_feedback_command_reopens_reviewed_feedback(tmp_path) -> None:
+    register = json.loads(REGISTER_FIXTURE.read_text(encoding="utf-8"))
+    register["students"][0]["ai_feedback"] = {
+        "status": "approved",
+        "summary": "Feedback da riaprire.",
+        "approved_by_teacher": True,
+    }
+    register_path = tmp_path / "register.json"
+    output_path = tmp_path / "draft-register.json"
+    register_path.write_text(json.dumps(register), encoding="utf-8")
+
+    exit_code = manual_ai_feedback.main(
+        ["review-feedback", str(register_path), "rossi-mario", "reopen", "--output", str(output_path)]
+    )
+
+    assert exit_code == 0
+    updated = json.loads(output_path.read_text(encoding="utf-8"))
+    feedback = updated["students"][0]["ai_feedback"]
+    assert feedback["status"] == "draft"
+    assert feedback["approved_by_teacher"] is False
+    assert feedback["summary"] == "Feedback da riaprire."
+
+
 def test_review_feedback_command_requires_draft_feedback(tmp_path, capsys) -> None:
     register_path = tmp_path / "register.json"
     output_path = tmp_path / "approved-register.json"
