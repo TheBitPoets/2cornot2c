@@ -140,6 +140,31 @@ def test_apply_response_command_refuses_existing_output_without_force(tmp_path, 
     assert "file gia esistente" in capsys.readouterr().err
 
 
+def test_apply_response_command_accepts_utf8_bom_response(tmp_path) -> None:
+    register_path = tmp_path / "register.json"
+    response_path = tmp_path / "response.json"
+    output_path = tmp_path / "updated-register.json"
+    register_path.write_text(REGISTER_FIXTURE.read_text(encoding="utf-8"), encoding="utf-8")
+    response_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "ai_feedback_response.v1",
+                "status": "draft",
+                "summary": "Feedback salvato da editor Windows.",
+            }
+        ),
+        encoding="utf-8-sig",
+    )
+
+    exit_code = manual_ai_feedback.main(
+        ["apply-response", str(register_path), "rossi-mario", str(response_path), "--output", str(output_path)]
+    )
+
+    assert exit_code == 0
+    updated = json.loads(output_path.read_text(encoding="utf-8"))
+    assert updated["students"][0]["ai_feedback"]["summary"] == "Feedback salvato da editor Windows."
+
+
 def test_parse_response_command_prints_normalized_feedback(tmp_path, capsys) -> None:
     response_path = tmp_path / "response.json"
     response_path.write_text(
