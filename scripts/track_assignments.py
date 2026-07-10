@@ -25,6 +25,7 @@ EXCLUDED_SUBMISSION_SUFFIXES = {".pyc", ".pyo", ".o", ".obj", ".exe", ".dll", ".
 GITHUB_RE = re.compile(r"github\.com[:/](?P<owner>[^/\s]+)/(?P<repo>[^/\s]+?)(?:\.git)?/?$")
 OWNER_REPO_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 COMMIT_RE = re.compile(r"^[0-9a-fA-F]{7,40}$")
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 @dataclass(frozen=True)
@@ -93,7 +94,7 @@ def relative_to_root_or_repo(path: Path, repo: Path) -> str:
     """Return a stable relative path for JSON output."""
     resolved = path.resolve()
     try:
-        return str(resolved.relative_to(Path.cwd().resolve())).replace("\\", "/")
+        return str(resolved.relative_to(PROJECT_ROOT)).replace("\\", "/")
     except ValueError:
         try:
             return str(resolved.relative_to(repo.resolve())).replace("\\", "/")
@@ -151,7 +152,7 @@ def github_file_path(target: TrackingTarget, file_path: str | None) -> str | Non
         resolved = raw_path.resolve()
     else:
         target_candidate = (target.path / raw_path).resolve()
-        resolved = target_candidate if target_candidate.exists() else (Path.cwd() / raw_path).resolve()
+        resolved = target_candidate if target_candidate.exists() else (PROJECT_ROOT / raw_path).resolve()
     root = git_root(target.path) or target.path.resolve()
     try:
         return str(resolved.relative_to(root)).replace("\\", "/")

@@ -205,7 +205,7 @@ class AssignmentOverviewService:
                         "submitted_at": submission.get("submitted_at"),
                         "commit": submission.get("commit"),
                         "source_path": submission.get("source_path"),
-                        "source_github_url": submission.get("source_github_url"),
+                        "source_github_url": _submission_source_github_url(submission),
                         "grading": {
                             "status": grading.get("status", ""),
                             "passed": grading.get("passed"),
@@ -225,6 +225,53 @@ class AssignmentOverviewService:
 
 def _matches_student(student: dict[str, Any], student_id: str) -> bool:
     return student.get("student_id") == student_id or student.get("student") == student_id
+
+
+def _submission_source_github_url(submission: dict[str, Any]) -> str | None:
+    source_url = _clean_optional_string(submission.get("source_github_url"))
+    file_urls = _submission_file_github_urls(submission)
+    if source_url and not _looks_like_broken_demo_url(source_url):
+        return source_url
+    for file_url in file_urls:
+        if not _looks_like_broken_demo_url(file_url):
+            return file_url
+    return source_url
+
+
+def _submission_file_github_urls(submission: dict[str, Any]) -> list[str]:
+    files = submission.get("files")
+    if not isinstance(files, list):
+        return []
+    source_path = _normalized_path(submission.get("source_path"))
+    urls = []
+    for file_entry in files:
+        if not isinstance(file_entry, dict):
+            continue
+        file_url = _clean_optional_string(file_entry.get("github_url"))
+        if not file_url:
+            continue
+        file_path = _normalized_path(file_entry.get("path"))
+        if (
+            not source_path
+            or file_path == source_path
+            or file_path.endswith(f"/{source_path}")
+            or source_path.endswith(f"/{file_path}")
+        ):
+            urls.append(file_url)
+    return urls
+
+
+def _normalized_path(value: Any) -> str:
+    return str(value or "").replace("\\", "/").lstrip("./")
+
+
+def _clean_optional_string(value: Any) -> str | None:
+    clean_value = str(value or "").strip()
+    return clean_value or None
+
+
+def _looks_like_broken_demo_url(url: str) -> bool:
+    return "/blob/main/scripts/examples/assignment_tracking/" in url or "/blob/master/scripts/examples/assignment_tracking/" in url
 
 
 def _approved_student_feedback(ai_feedback: dict[str, Any]) -> dict[str, Any] | None:
