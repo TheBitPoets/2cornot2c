@@ -173,7 +173,7 @@ function formatDate(value) {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" });
+  return date.toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Rome" });
 }
 
 function badge(text, kind = "") {
