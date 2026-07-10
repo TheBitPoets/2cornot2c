@@ -237,6 +237,7 @@ def run_dashboard_js(assertions: str) -> None:
         summaryTooltip,
         renderCoverageSummaryCards,
         renderOverviewSummaryCards,
+        focusOverviewClassFromReport,
         summaryCounts,
         renderStudentsSummaryCards,
         aiFeedbackState,
@@ -309,6 +310,24 @@ def test_reports_for_activity_keeps_legacy_activity_fallback() -> None:
         const matches = tested.reportsForActivity({ id: "somma" }).map((report) => report.name);
         assert.deepEqual(matches, ["demo/somma.json", "4A/somma.json"]);
         assert.equal(tested.hasExplicitClass({ id: "somma" }), false);
+        """
+    )
+
+
+def test_loading_report_focuses_overview_class_filter() -> None:
+    run_dashboard_js(
+        """
+        tested.els.overviewClassFilter.value = "";
+
+        assert.equal(tested.focusOverviewClassFromReport({ class_id: "3A", class_label: "3A TPSI" }), true);
+        assert.equal(tested.state.overviewFilters.class, "3A TPSI");
+        assert.equal(tested.els.overviewClassFilter.value, "3A TPSI");
+
+        tested.state.overviewFilters.class = "";
+        tested.els.overviewClassFilter.value = "";
+        assert.equal(tested.focusOverviewClassFromReport({ activity_id: "legacy" }), false);
+        assert.equal(tested.state.overviewFilters.class, "");
+        assert.equal(tested.els.overviewClassFilter.value, "");
         """
     )
 

@@ -472,6 +472,8 @@ async function loadSelectedReport() {
   state.report = payload.report;
   state.reportName = name;
   clearReview();
+  focusOverviewClassFromReport(state.report);
+  renderOverview();
   renderDashboard();
   setStatus(`Registro caricato: ${name}.`);
 }
@@ -1378,6 +1380,13 @@ function renderSelectOptions(select, values, currentValue, emptyLabel = "Tutti")
   select.value = values.includes(currentValue) ? currentValue : "";
 }
 
+function focusOverviewClassFromReport(report) {
+  if (!hasExplicitClass(report)) return false;
+  state.overviewFilters.class = classValue(report);
+  if (els.overviewClassFilter) els.overviewClassFilter.value = state.overviewFilters.class;
+  return true;
+}
+
 function renderOverviewFilters() {
   const rows = state.overviewRows;
   renderSelectOptions(els.overviewClassFilter, uniqueSorted(rows.map((row) => classValue(row))), state.overviewFilters.class, "Tutte");
@@ -1723,6 +1732,8 @@ async function generateReport() {
     els.reportSelect.value = payload.saved?.name || "";
     renderCoverage();
     await loadOverview();
+    focusOverviewClassFromReport(state.report);
+    renderOverview();
     clearReview();
     renderDashboard();
     setStatus(`Registro generato e caricato: ${payload.saved?.path || payload.saved?.name}.`);
