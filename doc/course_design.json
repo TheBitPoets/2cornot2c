@@ -8,6 +8,13 @@
     {
       "id": "terzo-anno",
       "title": "Terzo anno",
+      "audience": {
+        "class_ids": [
+          "demo-3a",
+          "demo-3a.json",
+          "Classe demo 3A"
+        ]
+      },
       "description": "Corso di C base e intermedio focalizzato sulla logica di programmazione e la gestione della memoria, con integrazione di attività di laboratorio.",
       "weekly_hours": 3,
       "weeks": 33,

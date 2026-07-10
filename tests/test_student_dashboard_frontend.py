@@ -346,6 +346,36 @@ def test_student_dashboard_renders_missing_course_path_message() -> None:
     )
 
 
+def test_student_dashboard_uses_selected_roster_for_course_path_visibility() -> None:
+    run_student_dashboard_js(
+        """
+        tested.populateClassRosterOptions([{
+          name: "demo-3a.json",
+          id: "demo-3a",
+          label: "Classe demo 3A",
+          school_year: "2026-2027",
+        }], "demo-3a.json");
+
+        tested.renderCoursePath({
+          paths: [{
+            id: "percorso-demo-3a",
+            title: "Percorso demo 3A",
+            audience: { class_ids: ["demo-3a"] },
+            udas: [{
+              id: "uda-base",
+              title: "Fondamenti",
+              items: [{ id: "item-1", title: "Primo argomento" }],
+            }],
+          }],
+        }, [], "bianchi-luca");
+
+        assert.match(tested.els.coursePath.innerHTML, /Percorso demo 3A/);
+        assert.match(tested.els.coursePath.innerHTML, /Fondamenti/);
+        assert.match(tested.els.coursePathStatus.textContent, /1 percorsi .* 1 UDA/);
+        """
+    )
+
+
 def test_student_dashboard_rejects_unsafe_external_links() -> None:
     run_student_dashboard_js(
         """

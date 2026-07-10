@@ -18,6 +18,7 @@ const els = {
 const DEMO_STUDENTS = ["bianchi-luca", "rossi-mario", "verdi-anna", "neri-giulia"];
 let currentDashboardPayload = { student_id: "", assignments: [] };
 let currentClassLabel = "Dai registri consegne";
+let currentClassRoster = null;
 let currentCourseDesign = null;
 
 async function api(path, options = {}) {
@@ -90,12 +91,14 @@ function populateClassRosterOptions(rosters, preferredRosterName = "") {
     els.classRoster.value = "";
     els.classRoster.disabled = true;
     currentClassLabel = "Dai registri consegne";
+    currentClassRoster = null;
     return "";
   }
   const names = options.map((roster) => roster.name);
   const selected = names.includes(preferredRosterName) ? preferredRosterName : names[0];
   const selectedRoster = options.find((roster) => roster.name === selected);
   currentClassLabel = rosterLabel(selectedRoster);
+  currentClassRoster = selectedRoster || null;
   els.classRoster.disabled = false;
   els.classRoster.innerHTML = options.map((roster) => `
     <option value="${escapeHtml(roster.name)}"${roster.name === selected ? " selected" : ""}>${escapeHtml(rosterLabel(roster))}</option>
@@ -123,6 +126,7 @@ async function loadRosterDetailStudentOptions(rosters, preferredStudentId = "", 
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name: rosterName }),
   });
+  currentClassRoster = { ...(currentClassRoster || {}), ...(payload.roster || {}), name: rosterName };
   return populateStudentOptions(activeStudentsFromRoster(payload.roster), preferredStudentId);
 }
 
@@ -287,10 +291,15 @@ function visibilityValues(entity, key) {
   ];
 }
 
-function visibilityContext(studentId, assignments) {
+function visibilityContext(studentId, assignments, roster = currentClassRoster) {
   return {
     studentIds: normalizedIdSet([studentId]),
-    classIds: normalizedIdSet(assignments.flatMap((assignment) => [assignment?.class_id, assignment?.class_label])),
+    classIds: normalizedIdSet([
+      roster?.id,
+      roster?.name,
+      roster?.label,
+      ...(assignments.flatMap((assignment) => [assignment?.class_id, assignment?.class_label])),
+    ]),
   };
 }
 
