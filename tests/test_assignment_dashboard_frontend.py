@@ -220,6 +220,8 @@ def run_dashboard_js(assertions: str) -> None:
         renderOverviewSummaryCards,
         summaryCounts,
         renderStudentsSummaryCards,
+        aiFeedbackState,
+        aiFeedbackDetails,
         compactStudentsSummaryItems,
         detailedStudentsSummaryItems,
         applyPanelOrder,
@@ -551,6 +553,38 @@ def test_students_summary_cards_include_tooltips() -> None:
         assert.match(html, /title="Numero di studenti che hanno effettuato una consegna\\."/);
         assert.match(html, /title="Numero di studenti con grading o test falliti\\."/);
         assert.equal(tested.summaryTooltip("Etichetta nuova"), "Valore riepilogativo: Etichetta nuova.");
+        """
+    )
+
+
+def test_ai_feedback_helpers_render_teacher_review_states() -> None:
+    run_dashboard_js(
+        """
+        assert.equal(JSON.stringify(tested.aiFeedbackState({ status: "draft" })), JSON.stringify({
+          label: "Bozza AI",
+          kind: "warn",
+          tooltip: "Feedback AI generato ma non ancora approvato dal docente.",
+        }));
+        assert.equal(JSON.stringify(tested.aiFeedbackState({ status: "approved", approved_by_teacher: true })), JSON.stringify({
+          label: "Approvato",
+          kind: "ok",
+          tooltip: "Feedback AI approvato dal docente.",
+        }));
+        assert.equal(JSON.stringify(tested.aiFeedbackState({ status: "rejected" })), JSON.stringify({
+          label: "Respinto",
+          kind: "bad",
+          tooltip: "Feedback AI respinto dal docente.",
+        }));
+
+        const html = tested.aiFeedbackDetails({
+          status: "draft",
+          suggested_grade: 7.5,
+          summary: "Correggere il caso limite.",
+        });
+        assert.match(html, /Bozza AI/);
+        assert.match(html, /Suggerito: 7.5/);
+        assert.match(html, /Correggere il caso limite\\./);
+        assert.match(html, /title="Feedback AI generato ma non ancora approvato dal docente\\."/);
         """
     )
 

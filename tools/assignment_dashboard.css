@@ -1327,6 +1327,17 @@ th.isResizableColumn:hover {
 .studentName6 { background: #e1f5f7; color: #006c77; }
 .studentName7 { background: #eceff3; color: #3f4854; }
 
+.aiFeedbackCell {
+  max-width: 14rem;
+}
+
+.aiFeedbackSummary {
+  display: block;
+  margin-top: .25rem;
+  color: #56616f;
+  overflow-wrap: anywhere;
+}
+
 .matrixTable {
   min-width: max-content;
 }

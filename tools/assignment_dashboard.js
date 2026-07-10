@@ -60,6 +60,10 @@ const LEGEND_SECTIONS = {
       ['<button type="button">In ritardo</button>', "Mostra le consegne oltre la scadenza.", "Filtro consegne"],
       ['<button type="button">Test falliti</button>', "Mostra gli studenti con grading o test falliti.", "Filtro consegne"],
       ['<button type="button" class="smallButton">Apri</button>', "Apre la revisione dei file consegnati dallo studente.", "Colonna Azioni"],
+      ['<span class="badge badgeWarn">Bozza AI</span>', "Feedback AI generato ma non ancora approvato dal docente.", "Colonna AI"],
+      ['<span class="badge badgeOk">Approvato</span>', "Feedback AI approvato dal docente.", "Colonna AI"],
+      ['<span class="badge badgeBad">Respinto</span>', "Feedback AI respinto dal docente.", "Colonna AI"],
+      ['<span class="badge badgeMuted">Non generato</span>', "Nessun feedback AI generato per questa consegna.", "Colonna AI"],
     ],
   },
   states: {
@@ -1669,6 +1673,60 @@ function badge(text, kind = "muted") {
   return `<span class="badge ${className}">${escapeHtml(text || "-")}</span>`;
 }
 
+const AI_FEEDBACK_STATES = {
+  not_generated: {
+    label: "Non generato",
+    kind: "muted",
+    tooltip: "Nessun feedback AI e stato ancora generato per questa consegna.",
+  },
+  draft: {
+    label: "Bozza AI",
+    kind: "warn",
+    tooltip: "Feedback AI generato ma non ancora approvato dal docente.",
+  },
+  approved: {
+    label: "Approvato",
+    kind: "ok",
+    tooltip: "Feedback AI approvato dal docente.",
+  },
+  rejected: {
+    label: "Respinto",
+    kind: "bad",
+    tooltip: "Feedback AI respinto dal docente.",
+  },
+  error: {
+    label: "Errore AI",
+    kind: "bad",
+    tooltip: "Il provider AI non ha prodotto un feedback utilizzabile.",
+  },
+};
+
+function aiFeedbackState(ai) {
+  const status = ai?.status || "not_generated";
+  return AI_FEEDBACK_STATES[status] || {
+    label: status,
+    kind: ai?.approved_by_teacher ? "ok" : "muted",
+    tooltip: `Stato feedback AI: ${status}.`,
+  };
+}
+
+function aiFeedbackDetails(ai) {
+  const state = aiFeedbackState(ai);
+  const grade = ai?.suggested_grade == null || String(ai.suggested_grade).trim() === ""
+    ? "Nessun voto AI"
+    : `Suggerito: ${escapeHtml(ai.suggested_grade)}`;
+  const summary = ai?.summary
+    ? `<small class="aiFeedbackSummary">${escapeHtml(ai.summary)}</small>`
+    : "";
+  return `
+    <div class="aiFeedbackCell" title="${escapeHtml(state.tooltip)}">
+      ${badge(state.label, state.kind)}<br>
+      <small>${grade}</small>
+      ${summary}
+    </div>
+  `;
+}
+
 function gradingDetails(grading) {
   const failedTests = Array.isArray(grading.failed_tests) ? grading.failed_tests : [];
   const tests = Array.isArray(grading.tests) ? grading.tests : [];
@@ -1873,8 +1931,7 @@ function renderStudents(students) {
       </td>
       <td><code>${escapeHtml(grading.teacher_grade ?? grading.score ?? "-")}</code></td>
       <td>
-        ${badge(ai.status || "not_generated", ai.approved_by_teacher ? "ok" : "muted")}<br>
-        <small>${ai.suggested_grade ? `Suggerito: ${escapeHtml(ai.suggested_grade)}` : "Nessun voto AI"}</small>
+        ${aiFeedbackDetails(ai)}
       </td>
       <td>
         <button type="button" class="smallButton" data-review-student="${escapeHtml(student.student)}" title="${escapeHtml(reviewTitle)}" ${canReview ? "" : "disabled"}>
