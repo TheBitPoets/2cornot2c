@@ -78,7 +78,7 @@ La stessa consegna viene evidenziata nella lista con il badge **Prossima scadenz
 
 ## Percorso
 
-Il pannello **Percorso** mostra in sola lettura solo i percorsi associati allo studente o alla sua classe. Ogni percorso puo essere assegnato a una classe intera oppure personalizzato per uno studente specifico; se non ci sono associazioni esplicite, il pannello mostra che il percorso non e ancora associato.
+Il pannello **Percorso** mostra in sola lettura solo i percorsi associati allo studente o al suo gruppo/classe. Ogni percorso puo essere assegnato a un gruppo intero oppure personalizzato per uno studente specifico; se non ci sono associazioni esplicite, il pannello mostra che il percorso non e ancora associato.
 
 ## Consegne
 

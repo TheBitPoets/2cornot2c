@@ -289,18 +289,18 @@ def test_student_dashboard_renders_readonly_course_path_panel() -> None:
           submitted: true,
         };
         tested.renderCoursePath({
-          years: [{
-            id: "terzo",
-            title: "Terzo anno",
+          paths: [{
+            id: "base-precedente",
+            title: "Percorso precedente",
             class_ids: ["3A"],
             udas: [{
-              id: "uda-terzo",
-              title: "Percorso precedente",
+              id: "uda-precedente",
+              title: "Modulo precedente",
               items: [],
             }],
           }, {
-            id: "quarto",
-            title: "Quarto anno",
+            id: "base-corrente",
+            title: "Percorso corrente",
             audience: { class_ids: ["4A"] },
             description: "Programmazione di base.",
             udas: [{
@@ -324,8 +324,8 @@ def test_student_dashboard_renders_readonly_course_path_panel() -> None:
           }],
         }, [assignment]);
 
-        assert.doesNotMatch(tested.els.coursePath.innerHTML, /Terzo anno/);
-        assert.match(tested.els.coursePath.innerHTML, /Quarto anno/);
+        assert.doesNotMatch(tested.els.coursePath.innerHTML, /Percorso precedente/);
+        assert.match(tested.els.coursePath.innerHTML, /Percorso corrente/);
         assert.match(tested.els.coursePath.innerHTML, /Programmazione di base/);
         assert.match(tested.els.coursePath.innerHTML, /Input e output/);
         assert.match(tested.els.coursePath.innerHTML, /Somma in Python/);
@@ -338,7 +338,7 @@ def test_student_dashboard_renders_readonly_course_path_panel() -> None:
 def test_student_dashboard_renders_missing_course_path_message() -> None:
     run_student_dashboard_js(
         """
-        tested.renderCoursePath({ years: [] }, []);
+        tested.renderCoursePath({ paths: [] }, []);
 
         assert.match(tested.els.coursePath.innerHTML, /Percorso non associato/);
         assert.equal(tested.els.coursePathStatus.textContent, "");

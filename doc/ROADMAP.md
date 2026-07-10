@@ -304,8 +304,8 @@ Da avere per la prima prova:
    - da revisionare.
 4. Vista studente in sola lettura per percorso e calendario:
    - mostrare il percorso didattico pubblicato dal docente con UDA e paragrafi pertinenti;
-   - mostrare solo percorsi esplicitamente associati allo studente o alla classe;
-   - prevedere lato docente l'associazione di un percorso a una classe intera e l'eventuale assegnazione personalizzata a un singolo studente;
+   - mostrare solo percorsi esplicitamente associati allo studente o al suo gruppo/classe;
+   - prevedere lato docente l'associazione di un percorso a un gruppo intero e l'eventuale assegnazione personalizzata a un singolo studente;
    - distinguere la programmazione prevista per UDA dalla programmazione reale svolta, evidenziando eventuali ritardi o slittamenti;
    - mostrare il calendario corrente con UDA, lezioni/lab, verifiche, compiti, consegne da fare, scadenze e finestre di lavoro;
    - aggiungere piu avanti un riepilogo delle priorita per lo studente, per esempio consegne in scadenza, verifiche vicine e attivita arretrate;

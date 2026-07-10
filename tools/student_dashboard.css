@@ -237,14 +237,14 @@ button:hover { transform: translateY(-1px); }
   padding: 1rem;
 }
 
-.courseYear {
+.courseSection {
   display: grid;
   gap: .85rem;
   min-width: 0;
 }
 
-.courseYear h3,
-.courseYear p,
+.courseSection h3,
+.courseSection p,
 .courseUda h4 {
   margin: 0;
 }
