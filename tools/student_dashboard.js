@@ -1,5 +1,6 @@
 const els = {
   form: document.querySelector("#studentForm"),
+  classRoster: document.querySelector("#classRoster"),
   studentId: document.querySelector("#studentId"),
   summary: document.querySelector("#summary"),
   status: document.querySelector("#status"),
@@ -8,8 +9,8 @@ const els = {
 
 const DEMO_STUDENTS = ["bianchi-luca", "rossi-mario", "verdi-anna", "neri-giulia"];
 
-async function api(path) {
-  const response = await fetch(path);
+async function api(path, options = {}) {
+  const response = await fetch(path, options);
   if (!response.ok) {
     const body = await response.text();
     let detail = body;
@@ -43,17 +44,94 @@ function uniqueStudentsFromOverview(rows) {
   return [...students].sort((a, b) => a.localeCompare(b, "it", { numeric: true, sensitivity: "base" }));
 }
 
+function rosterLabel(roster) {
+  const label = String(roster?.label || roster?.id || roster?.name || "").trim();
+  const year = String(roster?.school_year || "").trim();
+  return year ? `${label} (${year})` : label || "Classe senza nome";
+}
+
+function activeStudentsFromRoster(roster) {
+  const students = Array.isArray(roster?.students) ? roster.students : [];
+  return students
+    .filter((student) => student && student.active !== false && String(student.id || "").trim())
+    .map((student) => ({
+      id: String(student.id).trim(),
+      label: String(student.display_name || student.id).trim(),
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label, "it", { numeric: true, sensitivity: "base" }));
+}
+
+function studentOptionValue(student) {
+  if (typeof student === "string") return student;
+  return String(student?.id || "").trim();
+}
+
+function studentOptionLabel(student) {
+  if (typeof student === "string") return studentLabel(student);
+  return String(student?.label || student?.display_name || student?.id || "").trim() || "-";
+}
+
+function populateClassRosterOptions(rosters, preferredRosterName = "") {
+  const options = Array.isArray(rosters) ? rosters.filter((roster) => roster?.name) : [];
+  if (!els.classRoster) return "";
+  if (!options.length) {
+    els.classRoster.innerHTML = '<option value="">Dai registri consegne</option>';
+    els.classRoster.value = "";
+    els.classRoster.disabled = true;
+    return "";
+  }
+  const names = options.map((roster) => roster.name);
+  const selected = names.includes(preferredRosterName) ? preferredRosterName : names[0];
+  els.classRoster.disabled = false;
+  els.classRoster.innerHTML = options.map((roster) => `
+    <option value="${escapeHtml(roster.name)}"${roster.name === selected ? " selected" : ""}>${escapeHtml(rosterLabel(roster))}</option>
+  `).join("");
+  els.classRoster.value = selected;
+  return selected;
+}
+
 function populateStudentOptions(students, preferredStudentId = "") {
   const options = students.length ? students : DEMO_STUDENTS;
-  const selected = options.includes(preferredStudentId) ? preferredStudentId : options[0];
+  const values = options.map(studentOptionValue).filter(Boolean);
+  const selected = values.includes(preferredStudentId) ? preferredStudentId : values[0];
   els.studentId.innerHTML = options.map((student) => `
-    <option value="${escapeHtml(student)}"${student === selected ? " selected" : ""}>${escapeHtml(studentLabel(student))}</option>
+    <option value="${escapeHtml(studentOptionValue(student))}"${studentOptionValue(student) === selected ? " selected" : ""}>${escapeHtml(studentOptionLabel(student))}</option>
   `).join("");
   els.studentId.value = selected;
   return selected;
 }
 
-async function loadStudentOptions(preferredStudentId = "") {
+async function loadRosterDetailStudentOptions(rosters, preferredStudentId = "", preferredRosterName = "") {
+  const rosterName = populateClassRosterOptions(rosters || [], preferredRosterName);
+  if (!rosterName) return "";
+  const payload = await api("/api/class-rosters/load", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: rosterName }),
+  });
+  return populateStudentOptions(activeStudentsFromRoster(payload.roster), preferredStudentId);
+}
+
+async function loadStudentOptions(preferredStudentId = "", preferredRosterName = "") {
+  let rostersPayload;
+  try {
+    rostersPayload = await api("/api/class-rosters");
+  } catch {
+    populateClassRosterOptions([], "");
+    return loadOverviewStudentOptions(preferredStudentId);
+  }
+  const rosters = rostersPayload.rosters || [];
+  const rosterName = populateClassRosterOptions(rosters, preferredRosterName);
+  if (!rosterName) return loadOverviewStudentOptions(preferredStudentId);
+  try {
+    return await loadRosterDetailStudentOptions(rosters, preferredStudentId, rosterName);
+  } catch (error) {
+    els.status.textContent = `Errore roster classe: ${error.message}`;
+    throw error;
+  }
+}
+
+async function loadOverviewStudentOptions(preferredStudentId = "") {
   try {
     const payload = await api("/api/assignment-overview");
     return populateStudentOptions(uniqueStudentsFromOverview(payload.rows || []), preferredStudentId);
@@ -216,6 +294,14 @@ els.form.addEventListener("submit", (event) => {
   loadStudentDashboard(els.studentId.value).catch((error) => {
     els.status.textContent = `Errore: ${error.message}`;
   });
+});
+
+els.classRoster?.addEventListener("change", () => {
+  loadStudentOptions(els.studentId.value, els.classRoster.value)
+    .then((studentId) => loadStudentDashboard(studentId))
+    .catch((error) => {
+      els.status.textContent = `Errore: ${error.message}`;
+    });
 });
 
 loadStudentOptions(els.studentId.value)

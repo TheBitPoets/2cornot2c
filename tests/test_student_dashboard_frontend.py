@@ -16,6 +16,7 @@ def run_student_dashboard_js(assertions: str) -> None:
         this.value = selector === "#studentId" ? "rossi-mario" : "";
         this.textContent = "";
         this.innerHTML = "";
+        this.disabled = false;
       }}
       addEventListener() {{}}
     }}
@@ -41,7 +42,9 @@ def run_student_dashboard_js(assertions: str) -> None:
     }};
     context.globalThis = context;
 
-    const source = fs.readFileSync("tools/student_dashboard.js", "utf8");
+    let source = fs.readFileSync("tools/student_dashboard.js", "utf8");
+    const startupIndex = source.lastIndexOf("loadStudentOptions(els.studentId.value)");
+    if (startupIndex >= 0) source = source.slice(0, startupIndex);
     vm.runInNewContext(`${{source}}
       globalThis.__studentDashboardTest = {{
         renderSummary,
@@ -50,6 +53,10 @@ def run_student_dashboard_js(assertions: str) -> None:
         renderDashboard,
         safeExternalLink,
         studentLabel,
+        rosterLabel,
+        activeStudentsFromRoster,
+        populateClassRosterOptions,
+        loadStudentOptions,
         uniqueStudentsFromOverview,
         populateStudentOptions,
         statusBadge,
@@ -60,7 +67,12 @@ def run_student_dashboard_js(assertions: str) -> None:
     `, context);
 
     const tested = context.__studentDashboardTest;
-    {assertions}
+    (async () => {{
+      {assertions}
+    }})().catch((error) => {{
+      console.error(error);
+      process.exit(1);
+    }});
     """
     subprocess.run(["node", "-e", textwrap.dedent(script)], check=True)
 
@@ -149,6 +161,85 @@ def test_student_dashboard_populates_students_from_overview_rows() -> None:
         assert.equal(tested.els.studentId.value, "verdi-anna");
         assert.match(tested.els.studentId.innerHTML, /Rossi Mario/);
         assert.match(tested.els.studentId.innerHTML, /Verdi Anna/);
+        """
+    )
+
+
+def test_student_dashboard_populates_students_from_class_roster() -> None:
+    run_student_dashboard_js(
+        """
+        const selectedRoster = tested.populateClassRosterOptions([
+          { name: "demo-3a.json", label: "Classe demo 3A", school_year: "2026-2027" },
+        ], "");
+        const students = tested.activeStudentsFromRoster({
+          students: [
+            { id: "rossi-mario", display_name: "Rossi Mario", active: true },
+            { id: "bianchi-luca", display_name: "Bianchi Luca", active: true },
+            { id: "verdi-anna", display_name: "Verdi Anna", active: false },
+          ],
+        });
+        const selectedStudent = tested.populateStudentOptions(students, "rossi-mario");
+
+        assert.equal(selectedRoster, "demo-3a.json");
+        assert.equal(tested.els.classRoster.disabled, false);
+        assert.match(tested.els.classRoster.innerHTML, /Classe demo 3A \\(2026-2027\\)/);
+        assert.equal(JSON.stringify(students.map((student) => student.id)), JSON.stringify(["bianchi-luca", "rossi-mario"]));
+        assert.equal(selectedStudent, "rossi-mario");
+        assert.match(tested.els.studentId.innerHTML, /Bianchi Luca/);
+        assert.match(tested.els.studentId.innerHTML, /Rossi Mario/);
+        assert.doesNotMatch(tested.els.studentId.innerHTML, /Verdi Anna/);
+        assert.equal(tested.rosterLabel({ label: "4A", school_year: "2026-2027" }), "4A (2026-2027)");
+        """
+    )
+
+
+def test_student_dashboard_disables_class_roster_when_missing() -> None:
+    run_student_dashboard_js(
+        """
+        const selectedRoster = tested.populateClassRosterOptions([], "");
+
+        assert.equal(selectedRoster, "");
+        assert.equal(tested.els.classRoster.value, "");
+        assert.equal(tested.els.classRoster.disabled, true);
+        assert.match(tested.els.classRoster.innerHTML, /Dai registri consegne/);
+        """
+    )
+
+
+def test_student_dashboard_does_not_hide_selected_roster_load_errors() -> None:
+    run_student_dashboard_js(
+        """
+        const calls = [];
+        context.fetch = async (path) => {
+          calls.push(path);
+          if (path === "/api/class-rosters") {
+            return {
+              ok: true,
+              status: 200,
+              statusText: "OK",
+              json: async () => ({ rosters: [{ name: "broken.json", label: "Classe rotta" }] }),
+              text: async () => "",
+            };
+          }
+          if (path === "/api/class-rosters/load") {
+            return {
+              ok: false,
+              status: 404,
+              statusText: "Not Found",
+              json: async () => ({}),
+              text: async () => JSON.stringify({ error: "Roster classe non trovato: broken.json" }),
+            };
+          }
+          throw new Error(`Fallback non atteso: ${path}`);
+        };
+
+        await assert.rejects(
+          () => tested.loadStudentOptions("", "broken.json"),
+          /Roster classe non trovato/
+        );
+
+        assert.equal(calls.includes("/api/assignment-overview"), false);
+        assert.match(tested.els.status.textContent, /Errore roster classe/);
         """
     )
 
