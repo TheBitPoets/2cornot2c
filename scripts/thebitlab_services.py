@@ -271,7 +271,7 @@ def _clean_optional_string(value: Any) -> str | None:
 
 
 def _looks_like_broken_demo_url(url: str) -> bool:
-    return "/blob/main/scripts/examples/assignment_tracking/" in url or "/blob/master/scripts/examples/assignment_tracking/" in url
+    return "/blob/" in url and "/scripts/examples/assignment_tracking/" in url
 
 
 def _approved_student_feedback(ai_feedback: dict[str, Any]) -> dict[str, Any] | None:

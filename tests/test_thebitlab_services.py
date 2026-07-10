@@ -297,7 +297,7 @@ def test_student_dashboard_prefers_file_manifest_url_when_source_url_is_broken_d
                                 "assignments/python-base-somma-001/main.py"
                             ),
                             "source_github_url": (
-                                "https://github.com/TheBitPoets/2cornot2c/blob/main/scripts/"
+                                "https://github.com/TheBitPoets/2cornot2c/blob/abc1234/scripts/"
                                 "examples/assignment_tracking/student_repos/bianchi-luca/"
                                 "assignments/python-base-somma-001/main.py"
                             ),
