@@ -379,6 +379,10 @@ Il pattern della pagina consegne va reso riutilizzabile.
 Serve una guida d'uso pratica, separata dalla documentazione tecnica, che accompagni docente e studente in tutti gli scenari principali con passaggi espliciti e immagini.
 
 1. Creare una guida docente per la dashboard consegne:
+   - panoramica dei pannelli disponibili;
+   - a cosa serve ogni pannello;
+   - quando usare ciascun pannello nel flusso di lavoro docente;
+   - differenza tra pannelli di preparazione, monitoraggio, revisione e riepilogo;
    - avvio del server locale;
    - apertura della dashboard;
    - scelta activity;
