@@ -64,6 +64,7 @@ Dopo il caricamento, la pagina mostra un riepilogo dello studente.
 
 Usalo per capire rapidamente:
 
+- quale classe o fonte roster e attiva;
 - quante consegne risultano associate allo studente;
 - quante sono consegnate;
 - quante risultano mancanti;
