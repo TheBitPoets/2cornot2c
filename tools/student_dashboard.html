@@ -15,14 +15,13 @@
     <form id="studentForm" class="studentForm">
       <label>
         Studente
-        <input id="studentId" name="student_id" value="bianchi-luca" list="demoStudents" autocomplete="off">
+        <select id="studentId" name="student_id">
+          <option value="bianchi-luca" selected>Bianchi Luca</option>
+          <option value="rossi-mario">Rossi Mario</option>
+          <option value="verdi-anna">Verdi Anna</option>
+          <option value="neri-giulia">Neri Giulia</option>
+        </select>
       </label>
-      <datalist id="demoStudents">
-        <option value="rossi-mario"></option>
-        <option value="bianchi-luca"></option>
-        <option value="verdi-anna"></option>
-        <option value="neri-giulia"></option>
-      </datalist>
       <button type="submit">Carica</button>
     </form>
   </header>

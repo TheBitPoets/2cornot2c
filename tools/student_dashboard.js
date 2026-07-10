@@ -16,6 +16,9 @@ async function api(path) {
     } catch {
       detail = body;
     }
+    if (response.status === 404 && detail.includes("<!DOCTYPE")) {
+      detail = "endpoint non trovato. Avvia la pagina con python scripts/course_board_server.py e apri http://localhost:8765/tools/student_dashboard.html.";
+    }
     throw new Error(`${response.status} ${response.statusText}${detail ? `: ${detail}` : ""}`);
   }
   return response.json();

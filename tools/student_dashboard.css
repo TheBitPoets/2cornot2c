@@ -72,6 +72,7 @@ label {
 }
 
 input,
+select,
 button {
   min-height: 2.35rem;
   border: 1px solid var(--line);
@@ -79,7 +80,8 @@ button {
   font: inherit;
 }
 
-input {
+input,
+select {
   min-width: min(18rem, 50vw);
   padding: .45rem .65rem;
   background: #ffffff;
@@ -237,7 +239,8 @@ button {
     align-items: stretch;
   }
 
-  input {
+  input,
+  select {
     min-width: 0;
     width: 100%;
   }
