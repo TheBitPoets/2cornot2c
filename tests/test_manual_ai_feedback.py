@@ -82,6 +82,64 @@ def test_package_from_register_command_accepts_legacy_student_field(tmp_path, ca
     assert request_json["student"] == {"id": "rossi-mario"}
 
 
+def test_apply_response_command_writes_updated_register(tmp_path, capsys) -> None:
+    register_path = tmp_path / "register.json"
+    response_path = tmp_path / "response.json"
+    output_path = tmp_path / "updated-register.json"
+    register_path.write_text(REGISTER_FIXTURE.read_text(encoding="utf-8"), encoding="utf-8")
+    response_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "ai_feedback_response.v1",
+                "status": "draft",
+                "summary": "La consegna e corretta.",
+                "suggested_grade": 9,
+                "student_feedback": "Buon lavoro.",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    exit_code = manual_ai_feedback.main(
+        ["apply-response", str(register_path), "rossi-mario", str(response_path), "--output", str(output_path)]
+    )
+
+    assert exit_code == 0
+    assert str(output_path) in capsys.readouterr().out
+    updated = json.loads(output_path.read_text(encoding="utf-8"))
+    feedback = updated["students"][0]["ai_feedback"]
+    assert feedback["status"] == "draft"
+    assert feedback["summary"] == "La consegna e corretta."
+    assert feedback["suggested_grade"] == 9.0
+    assert feedback["student_feedback"] == "Buon lavoro."
+    assert feedback["approved_by_teacher"] is False
+
+
+def test_apply_response_command_refuses_existing_output_without_force(tmp_path, capsys) -> None:
+    register_path = tmp_path / "register.json"
+    response_path = tmp_path / "response.json"
+    output_path = tmp_path / "updated-register.json"
+    register_path.write_text(REGISTER_FIXTURE.read_text(encoding="utf-8"), encoding="utf-8")
+    response_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "ai_feedback_response.v1",
+                "status": "draft",
+                "summary": "Feedback valido.",
+            }
+        ),
+        encoding="utf-8",
+    )
+    output_path.write_text("{}", encoding="utf-8")
+
+    exit_code = manual_ai_feedback.main(
+        ["apply-response", str(register_path), "rossi-mario", str(response_path), "--output", str(output_path)]
+    )
+
+    assert exit_code == 1
+    assert "file gia esistente" in capsys.readouterr().err
+
+
 def test_parse_response_command_prints_normalized_feedback(tmp_path, capsys) -> None:
     response_path = tmp_path / "response.json"
     response_path.write_text(

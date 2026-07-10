@@ -188,6 +188,7 @@ Per provarlo senza GUI e senza API key e disponibile anche lo script CLI:
 python -m scripts.manual_ai_feedback package request.json
 python -m scripts.manual_ai_feedback package-from-register teacher-reports/demo/register.json rossi-mario
 python -m scripts.manual_ai_feedback parse-response response.json
+python -m scripts.manual_ai_feedback apply-response teacher-reports/demo/register.json rossi-mario response.json --output updated-register.json
 ```
 
 Se ChatGPT cambia stile di risposta, si modifica solo l'adapter del workflow manuale o il validatore dello schema, non il resto della dashboard. Lo stesso contratto JSON puo essere riusato anche dagli adapter automatici, che inviano e ricevono dati strutturati senza legarsi al testo libero del provider.

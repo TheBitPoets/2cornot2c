@@ -99,6 +99,33 @@ def request_payload_from_register(register: dict[str, Any], student_id: str) -> 
     }
 
 
+def apply_feedback_to_register(
+    register: dict[str, Any],
+    student_id: str,
+    feedback_payload: dict[str, Any],
+) -> dict[str, Any]:
+    """Return a register copy with validated AI feedback assigned to one student."""
+
+    students = register.get("students")
+    if not isinstance(students, list):
+        raise ValueError("register: campo students mancante o non valido")
+
+    feedback = ai_feedback_result_from_payload(feedback_payload)
+    updated = json.loads(json.dumps(register))
+    updated_student = _find_student(updated["students"], student_id)
+    updated_student["ai_feedback"] = {
+        "status": feedback.status,
+        "suggested_grade": feedback.suggested_grade,
+        "summary": feedback.summary,
+        "student_feedback": feedback.student_feedback,
+        "teacher_notes": feedback.teacher_notes,
+        "confidence": feedback.confidence,
+        "approved_by_teacher": False,
+        "detail": feedback.detail,
+    }
+    return updated
+
+
 def package_command(args: argparse.Namespace) -> int:
     request, activity, policy = request_from_payload(load_json(args.request_json))
     package = manual_ai_feedback_package(request, activity=activity, policy=policy)
@@ -119,6 +146,24 @@ def package_from_register_command(args: argparse.Namespace) -> int:
         "request_json": package.request_json,
     }
     print(json.dumps(output, ensure_ascii=False, indent=2, sort_keys=True))
+    return 0
+
+
+def apply_response_command(args: argparse.Namespace) -> int:
+    output_path = args.output
+    if output_path.exists() and not args.force:
+        raise ValueError(f"{output_path}: file gia esistente, usa --force per sovrascrivere")
+
+    updated = apply_feedback_to_register(
+        load_json(args.register_json),
+        args.student_id,
+        load_json(args.response_json),
+    )
+    output_path.write_text(
+        json.dumps(updated, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    print(str(output_path))
     return 0
 
 
@@ -153,6 +198,17 @@ def build_parser() -> argparse.ArgumentParser:
     register_parser.add_argument("register_json", type=Path, help="File JSON del registro consegne.")
     register_parser.add_argument("student_id", help="Studente da estrarre dal registro.")
     register_parser.set_defaults(func=package_from_register_command)
+
+    apply_parser = subparsers.add_parser(
+        "apply-response",
+        help="Applica una risposta AI validata a uno studente del registro, scrivendo un nuovo file.",
+    )
+    apply_parser.add_argument("register_json", type=Path, help="File JSON del registro consegne.")
+    apply_parser.add_argument("student_id", help="Studente da aggiornare nel registro.")
+    apply_parser.add_argument("response_json", type=Path, help="Risposta JSON del provider AI.")
+    apply_parser.add_argument("--output", required=True, type=Path, help="File registro aggiornato da scrivere.")
+    apply_parser.add_argument("--force", action="store_true", help="Sovrascrive --output se esiste gia.")
+    apply_parser.set_defaults(func=apply_response_command)
 
     parse_parser = subparsers.add_parser("parse-response", help="Valida una risposta JSON del provider AI.")
     parse_parser.add_argument("response_json", type=Path, help="File JSON restituito/incollato dal provider AI.")
