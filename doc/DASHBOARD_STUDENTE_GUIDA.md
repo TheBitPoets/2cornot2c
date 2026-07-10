@@ -104,7 +104,7 @@ Il selettore **Vista** permette di scegliere tra:
 - **Calendario**, utile per vedere la distribuzione nel tempo;
 - **Lista**, utile per leggere gli eventi in ordine cronologico.
 
-La modalità **Mese** mostra un mese centrale con i mesi laterali di contesto e le frecce per passare al mese precedente o successivo. La modalità **Settimana** mostra solo la settimana selezionata, anche qui con frecce avanti e indietro. La modalità **Anno** mostra tutti i mesi dell'intervallo pubblicato.
+La modalità **Mese** mostra un mese centrale con i mesi laterali di contesto e le frecce per passare al mese precedente o successivo. Le frecce sono presenti anche nei mesi laterali, come nella vista docente. La modalità **Settimana** mostra solo la settimana selezionata, anche qui con frecce avanti e indietro. La modalità **Anno** mostra tutti i mesi dell'intervallo pubblicato.
 
 La vista puo mostrare:
 
@@ -115,6 +115,8 @@ La vista puo mostrare:
 - UDA reali svolte, quando il percorso contiene date consuntive pubblicate.
 
 I controlli **Mese** e **Settimana** compaiono solo quando servono alla modalità scelta. Il filtro **Mostra** permette di visualizzare tutto, solo consegne, solo UDA o solo scadenze. La vista resta in sola lettura: lo studente puo consultare la programmazione e le scadenze, ma non modificarle.
+
+Il filtro **Percorsi visibili** permette di mostrare o nascondere gli eventi UDA dei percorsi associati allo studente o alla sua classe. Il comportamento ricalca il filtro dei percorsi nella vista calendario docente: **Tutti** mostra tutti i percorsi disponibili, **Nessuno** nasconde gli eventi dei percorsi lasciando visibili le consegne.
 
 Gli eventi collegati a una consegna sono cliccabili sia nella vista calendario sia nella vista lista. Il click apre lo stesso modal **Dettaglio** usato nel pannello **Consegne**, cosi lo studente vede sempre la stessa scheda completa: dati attivita, scadenze, stato, grading, link e feedback approvato. Gli eventi UDA o di percorso restano solo informativi finche non avranno una scheda dedicata.
 

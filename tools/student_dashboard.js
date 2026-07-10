@@ -36,6 +36,7 @@ let currentStudentCalendarView = {
   month: "",
   week: "",
 };
+let visibleStudentPathIds = null;
 
 async function api(path, options = {}) {
   const response = await fetch(path, options);
@@ -443,8 +444,7 @@ function studentCalendarEvents(assignments) {
 }
 
 function visibleUdasForStudent(assignments, studentId = currentDashboardPayload.student_id) {
-  const context = visibilityContext(studentId, assignments);
-  return visibleCourseSections(courseSections(currentCourseDesign), context)
+  return visibleStudentPathSections(assignments, studentId)
     .flatMap((section) => Array.isArray(section?.udas) ? section.udas : []);
 }
 
@@ -569,7 +569,7 @@ function renderStudentCalendarWeek(week, eventsByDate, range, months, weeks) {
 function renderStudentCalendarMonth(month, role, eventsByDate, range, months = [], weeks = []) {
   if (role === "placeholder") return '<div class="studentMonthPlaceholder"></div>';
   const title = month.toLocaleDateString("it-IT", { month: "long", year: "numeric" });
-  const isMonthFocus = currentStudentCalendarView.mode === "month" && role === "main";
+  const hasMonthNav = currentStudentCalendarView.mode === "month";
   const first = new Date(month.getFullYear(), month.getMonth(), 1);
   const startOffset = (first.getDay() + 6) % 7;
   const cursor = new Date(first);
@@ -593,10 +593,10 @@ function renderStudentCalendarMonth(month, role, eventsByDate, range, months = [
   }
   return `
     <article class="studentMonthCard ${role === "context" ? "studentMonthContextCard" : "studentMonthMainCard"}">
-      <div class="studentMonthTitle ${isMonthFocus ? "studentMonthTitleNav" : ""}">
-        ${isMonthFocus ? renderStudentCalendarNavButton(-1, months, weeks, "Vai al mese precedente.") : ""}
+      <div class="studentMonthTitle ${hasMonthNav ? "studentMonthTitleNav" : ""}">
+        ${hasMonthNav ? renderStudentCalendarNavButton(-1, months, weeks, "Vai al mese precedente.") : ""}
         <h3>${escapeHtml(title)}</h3>
-        ${isMonthFocus ? renderStudentCalendarNavButton(1, months, weeks, "Vai al mese successivo.") : ""}
+        ${hasMonthNav ? renderStudentCalendarNavButton(1, months, weeks, "Vai al mese successivo.") : ""}
       </div>
       <div class="studentMonthWeekdays">
         <span>Lun</span><span>Mar</span><span>Mer</span><span>Gio</span><span>Ven</span><span>Sab</span><span>Dom</span>
@@ -817,6 +817,84 @@ function visibleCourseSections(sections, context) {
     .filter(Boolean);
 }
 
+function studentPathId(section, index) {
+  return String(section?.id || section?.title || `path-${index}`).trim();
+}
+
+function visibleStudentPathOptions(assignments = currentDashboardPayload.assignments || [], studentId = currentDashboardPayload.student_id) {
+  const context = visibilityContext(studentId, assignments);
+  return visibleCourseSections(courseSections(currentCourseDesign), context)
+    .map((section, index) => ({
+      id: studentPathId(section, index),
+      label: section?.title || section?.id || "Percorso senza titolo",
+      section,
+    }));
+}
+
+function ensureVisibleStudentPathIds(options) {
+  const ids = new Set(options.map((option) => option.id));
+  if (!visibleStudentPathIds) {
+    visibleStudentPathIds = new Set(ids);
+    return;
+  }
+  for (const id of [...visibleStudentPathIds]) {
+    if (!ids.has(id)) visibleStudentPathIds.delete(id);
+  }
+}
+
+function visibleStudentPathSections(assignments = currentDashboardPayload.assignments || [], studentId = currentDashboardPayload.student_id) {
+  const options = visibleStudentPathOptions(assignments, studentId);
+  ensureVisibleStudentPathIds(options);
+  return options.filter((option) => visibleStudentPathIds.has(option.id)).map((option) => option.section);
+}
+
+function renderStudentPathFilters(assignments = currentDashboardPayload.assignments || [], studentId = currentDashboardPayload.student_id) {
+  const panel = document.querySelector("#studentPathFilters");
+  if (!panel) return;
+  const options = visibleStudentPathOptions(assignments, studentId);
+  ensureVisibleStudentPathIds(options);
+  if (!options.length) {
+    panel.innerHTML = "";
+    panel.hidden = true;
+    return;
+  }
+  panel.hidden = false;
+  panel.innerHTML = `
+    <div class="studentPathFiltersHead">
+      <strong>Percorsi visibili</strong>
+      <div class="studentPathFilterActions">
+        <button type="button" data-student-path-action="all" title="Mostra tutti i percorsi nel calendario.">Tutti</button>
+        <button type="button" data-student-path-action="none" title="Nasconde gli eventi UDA dei percorsi.">Nessuno</button>
+      </div>
+    </div>
+    <div class="studentPathFilterList">
+      ${options.map((option) => `
+        <label class="studentPathFilter">
+          <input type="checkbox" value="${escapeHtml(option.id)}"${visibleStudentPathIds.has(option.id) ? " checked" : ""}>
+          <span>${escapeHtml(option.label)}</span>
+        </label>
+      `).join("")}
+    </div>
+  `;
+  panel.querySelectorAll("input").forEach((input) => {
+    input.addEventListener("change", () => {
+      if (input.checked) visibleStudentPathIds.add(input.value);
+      else visibleStudentPathIds.delete(input.value);
+      renderStudentCalendar(currentDashboardPayload.assignments || []);
+    });
+  });
+  panel.querySelector('[data-student-path-action="all"]')?.addEventListener("click", () => {
+    visibleStudentPathIds = new Set(options.map((option) => option.id));
+    renderStudentPathFilters(assignments, studentId);
+    renderStudentCalendar(currentDashboardPayload.assignments || []);
+  });
+  panel.querySelector('[data-student-path-action="none"]')?.addEventListener("click", () => {
+    visibleStudentPathIds = new Set();
+    renderStudentPathFilters(assignments, studentId);
+    renderStudentCalendar(currentDashboardPayload.assignments || []);
+  });
+}
+
 function courseItemActivities(item) {
   return Array.isArray(item?.activity_ids)
     ? item.activity_ids.map((activityId) => String(activityId || "").trim()).filter(Boolean)
@@ -903,9 +981,12 @@ async function loadCoursePath() {
   try {
     currentCourseDesign = await api("/api/course-design");
     renderCoursePath(currentCourseDesign, currentDashboardPayload.assignments, currentDashboardPayload.student_id);
+    renderStudentPathFilters(currentDashboardPayload.assignments, currentDashboardPayload.student_id);
     renderStudentCalendar(currentDashboardPayload.assignments);
   } catch (error) {
     currentCourseDesign = null;
+    visibleStudentPathIds = null;
+    renderStudentPathFilters(currentDashboardPayload.assignments, currentDashboardPayload.student_id);
     if (els.coursePath) {
       els.coursePath.innerHTML = '<p class="status">Percorso non disponibile.</p>';
     }
@@ -1152,6 +1233,7 @@ function renderDashboard(payload) {
   renderSummary(payload.student_id || "-", assignments);
   renderStudentCalendar(assignments);
   renderCoursePath(currentCourseDesign, assignments, payload.student_id);
+  renderStudentPathFilters(assignments, payload.student_id);
   els.status.textContent = visibleAssignments.length === assignments.length
     ? `${assignments.length} consegne trovate.`
     : `${visibleAssignments.length} di ${assignments.length} consegne visibili.`;

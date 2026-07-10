@@ -296,6 +296,68 @@ button:hover { transform: translateY(-1px); }
   min-width: min(16rem, 45vw);
 }
 
+.studentPathFilters {
+  display: grid;
+  gap: .8rem;
+  min-width: 0;
+  margin: 1.1rem 1.1rem 0;
+  border: 1px solid rgba(17, 17, 17, .16);
+  border-radius: 18px;
+  background: #ffffff;
+  padding: .9rem;
+}
+
+.studentPathFilters[hidden] {
+  display: none;
+}
+
+.studentPathFiltersHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.studentPathFilterActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+}
+
+.studentPathFilterActions button {
+  min-height: 0;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  color: var(--ink);
+  box-shadow: none;
+  font-size: .72rem;
+  padding: .45rem .7rem;
+}
+
+.studentPathFilterList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.studentPathFilter {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  border: 1px solid rgba(17, 17, 17, .14);
+  border-radius: 999px;
+  background: #f8f8f8;
+  color: var(--ink);
+  font-size: .78rem;
+  font-weight: 800;
+  padding: .45rem .7rem;
+}
+
+.studentPathFilter input {
+  width: auto;
+  accent-color: #111111;
+}
+
 .studentCalendarLegend {
   display: flex;
   flex-wrap: wrap;

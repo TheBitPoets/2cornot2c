@@ -34,6 +34,8 @@ def run_student_dashboard_js(assertions: str) -> None:
       addEventListener() {{}}
       setAttribute(name, value) {{ this[name] = value; }}
       closest() {{ return this; }}
+      querySelector(selector) {{ return elementFor(`${{this.selector}} ${{selector}}`); }}
+      querySelectorAll() {{ return []; }}
     }}
 
     const elements = new Map();
@@ -97,7 +99,9 @@ def run_student_dashboard_js(assertions: str) -> None:
         gradingBadge,
         gradeValue,
         setCurrentCourseDesign: (design) => {{ currentCourseDesign = design; }},
+        setCurrentSchoolCalendar: (calendar) => {{ currentSchoolCalendar = calendar; }},
         setStudentCalendarDisplay: (display) => {{ currentStudentCalendarView.display = display; }},
+        setVisibleStudentPathIds: (ids) => {{ visibleStudentPathIds = new Set(ids); }},
         els,
       }};
     `, context);
@@ -333,6 +337,7 @@ def test_student_dashboard_renders_readonly_calendar_events() -> None:
           submitted: true,
         };
 
+        tested.setCurrentSchoolCalendar({ start_date: "2026-09-01", end_date: "2026-11-30" });
         tested.renderDashboard({ student_id: "rossi-mario", assignments: [openSooner, sameDeadline, submitted] });
 
         assert.match(tested.els.studentCalendar.innerHTML, /Stringhe in Python/);
@@ -341,6 +346,7 @@ def test_student_dashboard_renders_readonly_calendar_events() -> None:
         assert.match(tested.els.studentCalendar.innerHTML, /studentMonthGrid/);
         assert.match(tested.els.studentCalendar.innerHTML, /studentMonthMainCard/);
         assert.match(tested.els.studentCalendar.innerHTML, /data-student-calendar-nav="previous"/);
+        assert.equal((tested.els.studentCalendar.innerHTML.match(/data-student-calendar-nav="previous"/g) || []).length, 3);
         assert.match(tested.els.studentCalendar.innerHTML, /data-calendar-detail-index="0"/);
         assert.equal(tested.els.studentCalendarMonthField.classList.contains("isHidden"), false);
         assert.equal(tested.els.studentCalendarWeekField.classList.contains("isHidden"), true);
@@ -438,6 +444,41 @@ def test_student_dashboard_calendar_includes_actual_uda_events() -> None:
         assert.match(tested.els.studentCalendar.innerHTML, /UDA-1 Fondamenti/);
         assert.match(tested.els.studentCalendar.innerHTML, /UDA reale/);
         assert.match(tested.els.studentCalendarStatus.textContent, /2 eventi .* 0 scadenze .* 2 UDA/);
+        """
+    )
+
+
+def test_student_dashboard_calendar_filters_visible_paths() -> None:
+    run_student_dashboard_js(
+        """
+        tested.populateClassRosterOptions([{
+          name: "demo-3a.json",
+          id: "demo-3a",
+          label: "Classe demo 3A",
+        }], "demo-3a.json");
+        tested.setCurrentCourseDesign({
+          paths: [{
+            id: "percorso-demo",
+            title: "Percorso demo",
+            audience: { class_ids: ["demo-3a"] },
+            udas: [{
+              id: "uda-1",
+              title: "Fondamenti",
+              actual: {
+                status: "done",
+                start_date: "2026-10-07",
+              },
+              items: [],
+            }],
+          }],
+        });
+
+        tested.renderStudentCalendar([]);
+        assert.match(tested.els.studentCalendar.innerHTML, /UDA-1 Fondamenti/);
+
+        tested.setVisibleStudentPathIds([]);
+        tested.renderStudentCalendar([]);
+        assert.doesNotMatch(tested.els.studentCalendar.innerHTML, /UDA-1 Fondamenti/);
         """
     )
 
