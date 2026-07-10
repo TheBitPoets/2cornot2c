@@ -254,7 +254,7 @@ function renderFeedback(feedback) {
   `;
 }
 
-function renderAssignment(assignment) {
+function renderAssignment(assignment, isNext = false) {
   const grading = assignment.grading || {};
   const failedTests = Array.isArray(grading.failed_tests) ? grading.failed_tests : [];
   const repoLink = assignment.repo_github_url
@@ -274,7 +274,10 @@ function renderAssignment(assignment) {
             <span>Scadenza: ${escapeHtml(formatDate(assignment.due_at))}</span>
           </p>
         </div>
-        ${statusBadge(assignment)}
+        <div class="assignmentBadges">
+          ${isNext ? badge("Prossima scadenza", "badgePriority") : ""}
+          ${statusBadge(assignment)}
+        </div>
       </div>
       <p class="details">
         <span>${gradingBadge(grading)}</span>
@@ -345,13 +348,14 @@ function renderDashboard(payload) {
   currentDashboardPayload = { ...payload, assignments };
   const filterValue = els.assignmentFilter?.value || "all";
   const sortValue = els.assignmentSort?.value || "due_asc";
+  const nextAssignment = nextOpenAssignment(assignments);
   const visibleAssignments = sortedAssignments(filteredAssignments(assignments, filterValue), sortValue);
   renderSummary(payload.student_id || "-", assignments);
   els.status.textContent = visibleAssignments.length === assignments.length
     ? `${assignments.length} consegne trovate.`
     : `${visibleAssignments.length} di ${assignments.length} consegne visibili.`;
   els.assignments.innerHTML = visibleAssignments.length
-    ? visibleAssignments.map(renderAssignment).join("")
+    ? visibleAssignments.map((assignment) => renderAssignment(assignment, assignment === nextAssignment)).join("")
     : assignments.length
       ? '<p class="status">Nessuna consegna corrisponde al filtro selezionato.</p>'
       : '<p class="status">Nessuna consegna disponibile.</p>';

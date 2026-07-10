@@ -74,6 +74,8 @@ Usalo per capire rapidamente:
 
 Screenshot previsto: `doc/images/dashboard-guides/studente-riepilogo.png`.
 
+La stessa consegna viene evidenziata nella lista con il badge **Prossima scadenza**.
+
 ## Consegne
 
 La sezione **Consegne** elenca le activity visibili allo studente.

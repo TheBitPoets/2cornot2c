@@ -253,6 +253,14 @@ button:hover { transform: translateY(-1px); }
   min-width: 0;
 }
 
+.assignmentBadges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: .35rem;
+  min-width: 0;
+}
+
 .assignmentHead h3 {
   margin: 0 0 .25rem;
   overflow-wrap: anywhere;
@@ -302,6 +310,11 @@ button:hover { transform: translateY(-1px); }
 .badgeBad {
   background: #fde8e6;
   color: var(--bad);
+}
+
+.badgePriority {
+  background: #e8f0ff;
+  color: #164a9f;
 }
 
 .feedback {

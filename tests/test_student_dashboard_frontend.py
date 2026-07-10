@@ -253,6 +253,8 @@ def test_student_dashboard_summarizes_next_open_due_date() -> None:
         tested.renderDashboard({ student_id: "rossi-mario", assignments: [submitted, openLater, openSooner] });
         assert.match(tested.els.summary.innerHTML, /<strong>Prossima attivita<\\/strong>\\s*<span>c-array-001<\\/span>/);
         assert.match(tested.els.summary.innerHTML, /<strong>Prossima scadenza<\\/strong>\\s*<span>18\\/10\\/26, 23:59<\\/span>/);
+        assert.match(tested.els.assignments.innerHTML, /Prossima scadenza/);
+        assert.equal((tested.els.assignments.innerHTML.match(/Prossima scadenza/g) || []).length, 1);
         """
     )
 
