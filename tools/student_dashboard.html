@@ -44,7 +44,19 @@
     <section class="assignments">
       <div class="sectionHead">
         <h2>Consegne</h2>
-        <p id="status" class="status" aria-live="polite"></p>
+        <div class="assignmentTools">
+          <label>
+            <span>Filtro</span>
+            <select id="assignmentFilter" name="assignment_filter">
+              <option value="all">Tutte</option>
+              <option value="open">Da consegnare o mancanti</option>
+              <option value="submitted">Consegnate</option>
+              <option value="late">In ritardo</option>
+              <option value="feedback">Con feedback</option>
+            </select>
+          </label>
+          <p id="status" class="status" aria-live="polite"></p>
+        </div>
       </div>
       <div id="assignments" class="assignmentList"></div>
     </section>

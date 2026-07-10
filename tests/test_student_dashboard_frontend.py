@@ -51,6 +51,8 @@ def run_student_dashboard_js(assertions: str) -> None:
         renderFeedback,
         renderAssignment,
         renderDashboard,
+        assignmentMatchesFilter,
+        filteredAssignments,
         safeExternalLink,
         studentLabel,
         rosterLabel,
@@ -136,6 +138,41 @@ def test_student_dashboard_hides_unapproved_feedback_payloads() -> None:
         assert.equal(tested.gradeValue({ teacher_grade: null, score: 6 }), 6);
         assert.match(tested.statusBadge({ status: "missing", submitted: false, late: false }), /Mancante/);
         assert.match(tested.gradingBadge({ status: "graded_failed" }), /Test falliti/);
+        """
+    )
+
+
+def test_student_dashboard_filters_visible_assignments() -> None:
+    run_student_dashboard_js(
+        """
+        const submitted = {
+          activity_id: "python-base-somma-001",
+          title: "Somma in Python",
+          status: "submitted_on_time",
+          submitted: true,
+          late: false,
+          approved_feedback: { summary: "Ok" },
+        };
+        const missing = {
+          activity_id: "python-loop-001",
+          title: "Loop in Python",
+          status: "missing",
+          submitted: false,
+          late: false,
+        };
+
+        tested.els.assignmentFilter.value = "all";
+        tested.renderDashboard({ student_id: "rossi-mario", assignments: [submitted, missing] });
+        assert.match(tested.els.assignments.innerHTML, /Somma in Python/);
+        assert.match(tested.els.assignments.innerHTML, /Loop in Python/);
+        assert.match(tested.els.status.textContent, /2 consegne trovate/);
+
+        tested.els.assignmentFilter.value = "open";
+        tested.renderDashboard({ student_id: "rossi-mario", assignments: [submitted, missing] });
+        assert.doesNotMatch(tested.els.assignments.innerHTML, /Somma in Python/);
+        assert.match(tested.els.assignments.innerHTML, /Loop in Python/);
+        assert.match(tested.els.status.textContent, /1 di 2 consegne visibili/);
+        assert.equal(tested.filteredAssignments([submitted, missing], "feedback").length, 1);
         """
     )
 
