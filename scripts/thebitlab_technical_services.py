@@ -124,6 +124,14 @@ class AiFeedbackResult:
     detail: str = ""
 
 
+@dataclass(frozen=True)
+class ManualAiFeedbackPackage:
+    """Prompt and JSON payload prepared for manual AI provider workflows."""
+
+    prompt: str
+    request_json: str
+
+
 class ExecutionService(Protocol):
     """Port for Docker/local execution of untrusted student code."""
 
@@ -314,6 +322,32 @@ def ai_feedback_request_json(
         indent=2,
         sort_keys=True,
     )
+
+
+def manual_ai_feedback_package(
+    request: AiFeedbackRequest,
+    *,
+    activity: dict[str, Any] | None = None,
+    policy: dict[str, Any] | None = None,
+) -> ManualAiFeedbackPackage:
+    """Prepare copy/paste material for ChatGPT, Codex, or another manual provider."""
+
+    request_json = ai_feedback_request_json(request, activity=activity, policy=policy)
+    prompt = (
+        "Sei un assistente didattico per la correzione di esercizi di programmazione. "
+        "Leggi il JSON seguente e rispondi solo con JSON valido nello schema "
+        f"{AI_FEEDBACK_RESPONSE_SCHEMA_VERSION}. "
+        "Non approvare il feedback al posto del docente. "
+        "Per status draft includi almeno summary; per status error includi summary o detail.\n\n"
+        f"{request_json}"
+    )
+    return ManualAiFeedbackPackage(prompt=prompt, request_json=request_json)
+
+
+def manual_ai_feedback_result_from_response(payload: str | dict[str, Any]) -> AiFeedbackResult:
+    """Normalize a pasted manual-provider JSON response to AiFeedbackResult."""
+
+    return ai_feedback_result_from_payload(payload)
 
 
 def ai_feedback_result_from_payload(payload: str | dict[str, Any]) -> AiFeedbackResult:

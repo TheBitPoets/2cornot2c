@@ -12,12 +12,15 @@ from scripts.thebitlab_technical_services import (
     GradingResult,
     GradingRequest,
     InvalidServicePayloadError,
+    ManualAiFeedbackPackage,
     RunnerTestResult,
     ai_feedback_dict_from_grading,
     ai_feedback_request_payload,
     ai_feedback_result_from_payload,
     execution_result_from_payload,
     grading_dict_from_grade_activity_report,
+    manual_ai_feedback_package,
+    manual_ai_feedback_result_from_response,
 )
 
 
@@ -460,6 +463,48 @@ def test_ai_feedback_result_from_payload_normalizes_manual_response() -> None:
 def test_ai_feedback_result_from_payload_rejects_invalid_manual_responses(payload) -> None:
     with pytest.raises(InvalidServicePayloadError):
         ai_feedback_result_from_payload(payload)
+
+
+def test_manual_ai_feedback_package_prepares_prompt_and_json() -> None:
+    grading = GradingResult(
+        status="graded_failed",
+        passed=False,
+        tests_passed=1,
+        tests_total=2,
+        failed_tests=["somma_negativi"],
+        score=5,
+    )
+
+    package = manual_ai_feedback_package(
+        AiFeedbackRequest(
+            activity_id="c-base-somma-001",
+            student_id="rossi-mario",
+            grading=grading,
+            allowed_context={"teacher_notes": "Controllare il caso con negativi."},
+        ),
+        activity={"title": "Somma in C"},
+    )
+
+    assert isinstance(package, ManualAiFeedbackPackage)
+    assert "ai_feedback_response.v1" in package.prompt
+    assert "Non approvare il feedback al posto del docente" in package.prompt
+    assert package.request_json in package.prompt
+    assert '"schema_version": "ai_feedback_request.v1"' in package.request_json
+    assert '"id": "c-base-somma-001"' in package.request_json
+
+
+def test_manual_ai_feedback_result_from_response_uses_validated_contract() -> None:
+    feedback = manual_ai_feedback_result_from_response(
+        {
+            "schema_version": "ai_feedback_response.v1",
+            "status": "draft",
+            "summary": "La consegna fallisce un caso limite.",
+        }
+    )
+
+    assert feedback.status == "draft"
+    assert feedback.summary == "La consegna fallisce un caso limite."
+    assert feedback.approved_by_teacher is False
 
 
 @pytest.mark.parametrize(

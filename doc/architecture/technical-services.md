@@ -178,6 +178,8 @@ Nel codice questo contratto e gia rappresentato da helper puri:
 
 - `ai_feedback_request_payload()` costruisce il payload `ai_feedback_request.v1` partendo da `AiFeedbackRequest`, `GradingResult` e contesto consentito;
 - `ai_feedback_request_json()` serializza lo stesso payload con formato stabile, utile per copia/incolla o adapter CLI;
+- `manual_ai_feedback_package()` prepara prompt e JSON per workflow manuali con ChatGPT, Codex o provider equivalenti;
+- `manual_ai_feedback_result_from_response()` normalizza la risposta incollata dal provider manuale;
 - `ai_feedback_result_from_payload()` valida il JSON `ai_feedback_response.v1` e lo normalizza in `AiFeedbackResult`.
 
 Se ChatGPT cambia stile di risposta, si modifica solo l'adapter del workflow manuale o il validatore dello schema, non il resto della dashboard. Lo stesso contratto JSON puo essere riusato anche dagli adapter automatici, che inviano e ricevono dati strutturati senza legarsi al testo libero del provider.
