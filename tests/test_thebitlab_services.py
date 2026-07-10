@@ -3,8 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from scripts.thebitlab_services import AssignmentOverviewService, AssignmentService, CourseService
-from scripts.thebitlab_storage import JsonAssignmentStorage, JsonCourseStorage
+from scripts.thebitlab_services import AssignmentOverviewService, AssignmentService, ClassRosterService, CourseService
+from scripts.thebitlab_storage import JsonAssignmentStorage, JsonClassRosterStorage, JsonCourseStorage
 
 
 def course_service(tmp_path) -> CourseService:
@@ -20,6 +20,11 @@ def assignment_service(tmp_path) -> AssignmentService:
 def assignment_overview_service(tmp_path) -> AssignmentOverviewService:
     storage = JsonAssignmentStorage(tmp_path, tmp_path / "teacher-reports", [])
     return AssignmentOverviewService(storage)
+
+
+def class_roster_service(tmp_path) -> ClassRosterService:
+    storage = JsonClassRosterStorage(tmp_path)
+    return ClassRosterService(storage)
 
 
 def test_course_service_delegates_design_and_calendar_storage(tmp_path) -> None:
@@ -312,3 +317,34 @@ def test_assignment_service_delegates_storage_lists(tmp_path) -> None:
 
     assert service.list_activities()[0]["id"] == "activity"
     assert service.list_assignment_reports() == []
+
+
+def test_class_roster_service_delegates_local_roster_storage(tmp_path) -> None:
+    service = class_roster_service(tmp_path)
+    classes_dir = tmp_path / "doc" / "classes"
+    classes_dir.mkdir(parents=True)
+    (classes_dir / "3a.json").write_text(
+        json.dumps({"id": "3A", "label": "3A", "students": [{"id": "rossi-mario"}]}),
+        encoding="utf-8",
+    )
+
+    assert service.safe_roster_name("3a.json") == "3a.json"
+    assert service.list_class_rosters()[0]["id"] == "3A"
+    assert service.read_class_roster("3a.json")["students"][0]["id"] == "rossi-mario"
+
+
+def test_class_roster_service_accepts_protocol_compatible_storage() -> None:
+    class FakeClassRosterStorage:
+        def safe_roster_name(self, name: str) -> str:
+            return name
+
+        def list_class_rosters(self) -> list[dict[str, object]]:
+            return [{"name": "3a.json", "id": "3A"}]
+
+        def read_class_roster(self, name: str) -> dict[str, object]:
+            return {"id": "3A", "name": name, "students": []}
+
+    service = ClassRosterService(FakeClassRosterStorage())
+
+    assert service.list_class_rosters() == [{"name": "3a.json", "id": "3A"}]
+    assert service.read_class_roster("3a.json")["name"] == "3a.json"

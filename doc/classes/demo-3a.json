@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0",
+  "id": "demo-3a",
+  "label": "Classe demo 3A",
+  "school_year": "2026-2027",
+  "provider": "local",
+  "provider_ref": "",
+  "github_team": "",
+  "students": [
+    {
+      "id": "bianchi-luca",
+      "display_name": "Bianchi Luca",
+      "github_username": "",
+      "repo_ref": "TheBitPoets/bianchi-luca",
+      "active": true
+    },
+    {
+      "id": "neri-giulia",
+      "display_name": "Neri Giulia",
+      "github_username": "",
+      "repo_ref": "TheBitPoets/neri-giulia",
+      "active": true
+    },
+    {
+      "id": "rossi-mario",
+      "display_name": "Rossi Mario",
+      "github_username": "",
+      "repo_ref": "TheBitPoets/rossi-mario",
+      "active": true
+    },
+    {
+      "id": "verdi-anna",
+      "display_name": "Verdi Anna",
+      "github_username": "",
+      "repo_ref": "TheBitPoets/verdi-anna",
+      "active": true
+    }
+  ]
+}
