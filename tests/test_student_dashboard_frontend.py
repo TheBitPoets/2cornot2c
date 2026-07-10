@@ -284,6 +284,7 @@ def test_student_dashboard_renders_readonly_course_path_panel() -> None:
         const assignment = {
           activity_id: "python-base-somma-001",
           title: "Somma in Python",
+          class_id: "4A",
           status: "submitted_on_time",
           submitted: true,
         };
@@ -291,6 +292,16 @@ def test_student_dashboard_renders_readonly_course_path_panel() -> None:
           years: [{
             id: "terzo",
             title: "Terzo anno",
+            class_ids: ["3A"],
+            udas: [{
+              id: "uda-terzo",
+              title: "Percorso precedente",
+              items: [],
+            }],
+          }, {
+            id: "quarto",
+            title: "Quarto anno",
+            audience: { class_ids: ["4A"] },
             description: "Programmazione di base.",
             udas: [{
               id: "uda-base",
@@ -313,11 +324,12 @@ def test_student_dashboard_renders_readonly_course_path_panel() -> None:
           }],
         }, [assignment]);
 
-        assert.match(tested.els.coursePath.innerHTML, /Terzo anno/);
+        assert.doesNotMatch(tested.els.coursePath.innerHTML, /Terzo anno/);
+        assert.match(tested.els.coursePath.innerHTML, /Quarto anno/);
         assert.match(tested.els.coursePath.innerHTML, /Programmazione di base/);
         assert.match(tested.els.coursePath.innerHTML, /Input e output/);
         assert.match(tested.els.coursePath.innerHTML, /Somma in Python/);
-        assert.match(tested.els.coursePathStatus.textContent, /1 anni .* 1 UDA/);
+        assert.match(tested.els.coursePathStatus.textContent, /1 percorsi .* 1 UDA/);
         assert.equal(tested.collectCourseItems([{ title: "Padre", children: [{ title: "Figlio" }] }]).length, 2);
         """
     )
@@ -328,7 +340,7 @@ def test_student_dashboard_renders_missing_course_path_message() -> None:
         """
         tested.renderCoursePath({ years: [] }, []);
 
-        assert.match(tested.els.coursePath.innerHTML, /Percorso non disponibile/);
+        assert.match(tested.els.coursePath.innerHTML, /Percorso non associato/);
         assert.equal(tested.els.coursePathStatus.textContent, "");
         """
     )

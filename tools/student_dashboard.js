@@ -274,6 +274,61 @@ function assignmentByActivityId(assignments) {
   return byId;
 }
 
+function normalizedIdSet(values) {
+  const list = Array.isArray(values) ? values : values ? [values] : [];
+  return new Set(list.map((value) => String(value || "").trim()).filter(Boolean));
+}
+
+function visibilityValues(entity, key) {
+  const audience = entity?.audience && typeof entity.audience === "object" ? entity.audience : {};
+  return [
+    ...(Array.isArray(entity?.[key]) ? entity[key] : entity?.[key] ? [entity[key]] : []),
+    ...(Array.isArray(audience?.[key]) ? audience[key] : audience?.[key] ? [audience[key]] : []),
+  ];
+}
+
+function visibilityContext(studentId, assignments) {
+  return {
+    studentIds: normalizedIdSet([studentId]),
+    classIds: normalizedIdSet(assignments.flatMap((assignment) => [assignment?.class_id, assignment?.class_label])),
+  };
+}
+
+function hasVisibilityRule(entity) {
+  return visibilityValues(entity, "student_ids").length > 0
+    || visibilityValues(entity, "students").length > 0
+    || visibilityValues(entity, "class_ids").length > 0
+    || visibilityValues(entity, "classes").length > 0;
+}
+
+function matchesVisibility(entity, context) {
+  const studentIds = [
+    ...visibilityValues(entity, "student_ids"),
+    ...visibilityValues(entity, "students"),
+  ];
+  const classIds = [
+    ...visibilityValues(entity, "class_ids"),
+    ...visibilityValues(entity, "classes"),
+  ];
+  return studentIds.some((studentId) => context.studentIds.has(String(studentId).trim()))
+    || classIds.some((classId) => context.classIds.has(String(classId).trim()));
+}
+
+function visibleCourseYears(years, context) {
+  return years
+    .map((year) => {
+      const visibleUdas = (Array.isArray(year?.udas) ? year.udas : []).filter((uda) => (
+        matchesVisibility(uda, context)
+        || collectCourseItems(uda.items).some(({ item }) => matchesVisibility(item, context))
+      ));
+      if (matchesVisibility(year, context)) {
+        return { ...year, udas: Array.isArray(year?.udas) ? year.udas : [] };
+      }
+      return visibleUdas.length ? { ...year, udas: visibleUdas } : null;
+    })
+    .filter(Boolean);
+}
+
 function courseItemActivities(item) {
   return Array.isArray(item?.activity_ids)
     ? item.activity_ids.map((activityId) => String(activityId || "").trim()).filter(Boolean)
@@ -293,16 +348,22 @@ function courseActivityBadge(activityId, assignmentsById) {
   return `<span class="badge ${kind}">${escapeHtml(label)}</span>`;
 }
 
-function renderCoursePath(design, assignments = []) {
+function renderCoursePath(design, assignments = [], studentId = currentDashboardPayload.student_id) {
   if (!els.coursePath) return;
   const years = Array.isArray(design?.years) ? design.years : [];
-  if (!years.length) {
-    els.coursePath.innerHTML = '<p class="status">Percorso non disponibile per questa classe.</p>';
+  const context = visibilityContext(studentId, assignments);
+  const visibleYears = visibleCourseYears(years, context);
+  const hasRules = years.some((year) => hasVisibilityRule(year)
+    || (Array.isArray(year?.udas) ? year.udas : []).some((uda) => (
+      hasVisibilityRule(uda) || collectCourseItems(uda.items).some(({ item }) => hasVisibilityRule(item))
+    )));
+  if (!years.length || !hasRules || !visibleYears.length) {
+    els.coursePath.innerHTML = '<p class="status">Percorso non associato a questo studente o alla sua classe.</p>';
     if (els.coursePathStatus) els.coursePathStatus.textContent = "";
     return;
   }
   const assignmentsById = assignmentByActivityId(assignments);
-  const yearCards = years.map((year) => {
+  const yearCards = visibleYears.map((year) => {
     const udas = Array.isArray(year?.udas) ? year.udas : [];
     const udaCards = udas.map((uda) => {
       const items = collectCourseItems(uda.items);
@@ -347,15 +408,15 @@ function renderCoursePath(design, assignments = []) {
   }).join("");
   els.coursePath.innerHTML = yearCards;
   if (els.coursePathStatus) {
-    const udaCount = years.reduce((total, year) => total + (Array.isArray(year?.udas) ? year.udas.length : 0), 0);
-    els.coursePathStatus.textContent = `${years.length} anni · ${udaCount} UDA`;
+    const udaCount = visibleYears.reduce((total, year) => total + (Array.isArray(year?.udas) ? year.udas.length : 0), 0);
+    els.coursePathStatus.textContent = `${visibleYears.length} percorsi · ${udaCount} UDA`;
   }
 }
 
 async function loadCoursePath() {
   try {
     currentCourseDesign = await api("/api/course-design");
-    renderCoursePath(currentCourseDesign, currentDashboardPayload.assignments);
+    renderCoursePath(currentCourseDesign, currentDashboardPayload.assignments, currentDashboardPayload.student_id);
   } catch (error) {
     currentCourseDesign = null;
     if (els.coursePath) {
@@ -582,7 +643,7 @@ function renderDashboard(payload) {
   const nextAssignment = nextOpenAssignment(assignments);
   const visibleAssignments = sortedAssignments(filteredAssignments(assignments, filterValue), sortValue);
   renderSummary(payload.student_id || "-", assignments);
-  renderCoursePath(currentCourseDesign, assignments);
+  renderCoursePath(currentCourseDesign, assignments, payload.student_id);
   els.status.textContent = visibleAssignments.length === assignments.length
     ? `${assignments.length} consegne trovate.`
     : `${visibleAssignments.length} di ${assignments.length} consegne visibili.`;
