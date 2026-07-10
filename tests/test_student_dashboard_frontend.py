@@ -50,6 +50,9 @@ def run_student_dashboard_js(assertions: str) -> None:
         renderSummary,
         renderFeedback,
         renderAssignment,
+        renderAssignmentDetail,
+        openAssignmentDetail,
+        closeAssignmentDetail,
         renderDashboard,
         assignmentMatchesFilter,
         filteredAssignments,
@@ -133,6 +136,8 @@ def test_student_dashboard_renders_summary_and_assignment_card() -> None:
         assert.match(tested.els.assignments.innerHTML, /Hai gestito correttamente/);
         assert.match(tested.els.assignments.innerHTML, /Test superati/);
         assert.match(tested.els.assignments.innerHTML, /Apri consegna/);
+        assert.match(tested.els.assignments.innerHTML, /Dettaglio/);
+        assert.match(tested.els.assignments.innerHTML, /data-detail-index="0"/);
         assert.match(tested.els.assignments.innerHTML, /href="https:\\/\\/github.com\\/TheBitPoets\\/rossi-mario\\/blob\\/main\\/assignments\\/python-base-somma-001\\/main.py"/);
         """
     )
@@ -304,6 +309,90 @@ def test_student_dashboard_open_assignment_action_requires_source_link() -> None
         assert.match(tested.els.assignments.innerHTML, /disabled/);
         assert.match(tested.els.assignments.innerHTML, /Consegna mancante/);
         assert.match(tested.els.assignments.innerHTML, /Repository/);
+        """
+    )
+
+
+def test_student_dashboard_assignment_detail_modal_renders_selected_assignment() -> None:
+    run_student_dashboard_js(
+        """
+        tested.renderDashboard({
+          student_id: "rossi-mario",
+          assignments: [{
+            activity_id: "python-base-somma-001",
+            title: "Somma in Python",
+            kind: "compito-casa",
+            student_support_mode: "guidato",
+            class_label: "Classe demo 3A",
+            assigned_at: "2026-10-10T08:00:00+02:00",
+            due_at: "2026-10-19T23:59:00+02:00",
+            status: "submitted_late",
+            submitted: true,
+            late: true,
+            submitted_at: "2026-10-20T09:15:00+02:00",
+            source_path: "assignments/python-base-somma-001/main.py",
+            source_github_url: "https://github.com/TheBitPoets/rossi-mario/blob/main/assignments/python-base-somma-001/main.py",
+            repo: "TheBitPoets/rossi-mario",
+            repo_github_url: "https://github.com/TheBitPoets/rossi-mario",
+            commit: "abc1234",
+            grading: {
+              status: "graded_failed",
+              tests_passed: 1,
+              tests_total: 2,
+              teacher_grade: 6,
+              failed_tests: ["somma con negativo"],
+            },
+            approved_feedback: {
+              summary: "Controlla il secondo caso.",
+              student_feedback: "Hai impostato bene la struttura ma devi verificare i negativi.",
+              suggested_grade: 6,
+              confidence: "medium",
+            },
+          }],
+        });
+
+        tested.openAssignmentDetail(0);
+
+        assert.equal(tested.els.assignmentDetailModal.hidden, false);
+        assert.equal(tested.els.assignmentDetailTitle.textContent, "Somma in Python");
+        assert.match(tested.els.assignmentDetailBody.innerHTML, /Classe demo 3A/);
+        assert.match(tested.els.assignmentDetailBody.innerHTML, /submitted_late/);
+        assert.match(tested.els.assignmentDetailBody.innerHTML, /somma con negativo/);
+        assert.match(tested.els.assignmentDetailBody.innerHTML, /Controlla il secondo caso/);
+        assert.match(tested.els.assignmentDetailBody.innerHTML, /Apri consegna/);
+
+        tested.closeAssignmentDetail();
+        assert.equal(tested.els.assignmentDetailModal.hidden, true);
+        """
+    )
+
+
+def test_student_dashboard_closes_assignment_detail_when_dashboard_changes() -> None:
+    run_student_dashboard_js(
+        """
+        tested.renderDashboard({
+          student_id: "rossi-mario",
+          assignments: [{
+            activity_id: "python-base-somma-001",
+            title: "Somma in Python",
+            status: "submitted_on_time",
+            submitted: true,
+          }],
+        });
+        tested.openAssignmentDetail(0);
+        assert.equal(tested.els.assignmentDetailModal.hidden, false);
+
+        tested.renderDashboard({
+          student_id: "bianchi-luca",
+          assignments: [{
+            activity_id: "python-loop-001",
+            title: "Loop in Python",
+            status: "missing",
+            submitted: false,
+          }],
+        });
+
+        assert.equal(tested.els.assignmentDetailModal.hidden, true);
         """
     )
 

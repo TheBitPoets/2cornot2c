@@ -7,6 +7,10 @@ const els = {
   summary: document.querySelector("#summary"),
   status: document.querySelector("#status"),
   assignments: document.querySelector("#assignments"),
+  assignmentDetailModal: document.querySelector("#assignmentDetailModal"),
+  assignmentDetailTitle: document.querySelector("#assignmentDetailTitle"),
+  assignmentDetailBody: document.querySelector("#assignmentDetailBody"),
+  assignmentDetailClose: document.querySelector("#assignmentDetailClose"),
 };
 
 const DEMO_STUDENTS = ["bianchi-luca", "rossi-mario", "verdi-anna", "neri-giulia"];
@@ -265,13 +269,22 @@ function renderFeedback(feedback) {
   `;
 }
 
-function renderAssignment(assignment, isNext = false) {
-  const grading = assignment.grading || {};
-  const failedTests = Array.isArray(grading.failed_tests) ? grading.failed_tests : [];
-  const actionHref = safeExternalHref(assignment.source_github_url);
-  const unavailableLabel = assignment.status === "missing" || !assignment.submitted
+function actionUnavailableLabel(assignment) {
+  return assignment.status === "missing" || !assignment.submitted
     ? "Consegna mancante"
     : "File consegna non disponibile";
+}
+
+function assignmentOpenAction(assignment) {
+  const actionHref = safeExternalHref(assignment.source_github_url);
+  return actionHref
+    ? `<a class="actionButton" href="${escapeHtml(actionHref)}" target="_blank" rel="noreferrer">Apri consegna</a>`
+    : `<button type="button" class="actionButton actionButtonDisabled" disabled>Apri consegna</button><span class="actionUnavailable">${escapeHtml(actionUnavailableLabel(assignment))}</span>`;
+}
+
+function renderAssignment(assignment, isNext = false, assignmentIndex = -1) {
+  const grading = assignment.grading || {};
+  const failedTests = Array.isArray(grading.failed_tests) ? grading.failed_tests : [];
   const repoLink = assignment.repo_github_url
     ? safeExternalLink(assignment.repo_github_url, "Repository", assignment.repo || "-")
     : escapeHtml(assignment.repo || "-");
@@ -295,9 +308,8 @@ function renderAssignment(assignment, isNext = false) {
         </div>
       </div>
       <p class="assignmentActions">
-        ${actionHref
-          ? `<a class="actionButton" href="${escapeHtml(actionHref)}" target="_blank" rel="noreferrer">Apri consegna</a>`
-          : `<button type="button" class="actionButton actionButtonDisabled" disabled>Apri consegna</button><span class="actionUnavailable">${escapeHtml(unavailableLabel)}</span>`}
+        ${assignmentOpenAction(assignment)}
+        <button type="button" class="secondaryActionButton" data-detail-index="${escapeHtml(assignmentIndex)}">Dettaglio</button>
       </p>
       <p class="details">
         <span>${gradingBadge(grading)}</span>
@@ -314,6 +326,84 @@ function renderAssignment(assignment, isNext = false) {
       ${renderFeedback(assignment.approved_feedback)}
     </article>
   `;
+}
+
+function detailItem(label, value) {
+  return `
+    <article class="detailItem">
+      <strong>${escapeHtml(label)}</strong>
+      <span>${escapeHtml(value ?? "-")}</span>
+    </article>
+  `;
+}
+
+function renderAssignmentDetail(assignment) {
+  const grading = assignment.grading || {};
+  const failedTests = Array.isArray(grading.failed_tests) && grading.failed_tests.length
+    ? grading.failed_tests.join(", ")
+    : "-";
+  const repoLink = assignment.repo_github_url
+    ? safeExternalLink(assignment.repo_github_url, "Repository", assignment.repo || "-")
+    : escapeHtml(assignment.repo || "-");
+  const sourceLink = assignment.source_github_url
+    ? safeExternalLink(assignment.source_github_url, "Consegna", assignment.source_path || "-")
+    : escapeHtml(assignment.source_path || "-");
+  return `
+    <section class="detailSection">
+      <h3>Attivita</h3>
+      <div class="detailGrid">
+        ${detailItem("Titolo", assignment.title || assignment.activity_id)}
+        ${detailItem("Classe", assignment.class_label || assignment.class_id || currentClassLabel)}
+        ${detailItem("Tipo", assignment.kind || "tipo non indicato")}
+        ${detailItem("Modalita", assignment.student_support_mode || "modalita non indicata")}
+        ${detailItem("Assegnata", formatDate(assignment.assigned_at))}
+        ${detailItem("Scadenza", formatDate(assignment.due_at))}
+      </div>
+    </section>
+    <section class="detailSection">
+      <h3>Consegna</h3>
+      <div class="detailGrid">
+        ${detailItem("Stato", assignment.status || "-")}
+        ${detailItem("Consegnata", assignment.submitted ? "Si" : "No")}
+        ${detailItem("In ritardo", assignment.late ? "Si" : "No")}
+        ${detailItem("Consegnato il", formatDate(assignment.submitted_at))}
+        ${detailItem("Commit", assignment.commit || "-")}
+      </div>
+      <p class="assignmentActions">${assignmentOpenAction(assignment)}</p>
+      <p class="details">
+        <span>Repository: ${repoLink}</span>
+        <span>File: ${sourceLink}</span>
+      </p>
+    </section>
+    <section class="detailSection">
+      <h3>Grading</h3>
+      <div class="detailGrid">
+        ${detailItem("Stato test", grading.status || "Grading non disponibile")}
+        ${detailItem("Test", `${grading.tests_passed ?? "-"}/${grading.tests_total ?? "-"}`)}
+        ${detailItem("Voto", gradeValue(grading))}
+        ${detailItem("Test falliti", failedTests)}
+      </div>
+      ${grading.detail ? `<p class="details">${escapeHtml(grading.detail)}</p>` : ""}
+    </section>
+    ${renderFeedback(assignment.approved_feedback)}
+  `;
+}
+
+function openAssignmentDetail(assignmentIndex) {
+  const index = Number(assignmentIndex);
+  const assignment = currentDashboardPayload.assignments[index];
+  if (!assignment || !els.assignmentDetailModal || !els.assignmentDetailBody || !els.assignmentDetailTitle) return;
+  els.assignmentDetailTitle.textContent = assignment.title || assignment.activity_id || "Consegna";
+  els.assignmentDetailBody.innerHTML = renderAssignmentDetail(assignment);
+  els.assignmentDetailModal.hidden = false;
+  document.body?.classList?.add("modalOpen");
+  els.assignmentDetailClose?.focus?.();
+}
+
+function closeAssignmentDetail() {
+  if (!els.assignmentDetailModal) return;
+  els.assignmentDetailModal.hidden = true;
+  document.body?.classList?.remove("modalOpen");
 }
 
 function assignmentMatchesFilter(assignment, filterValue) {
@@ -371,6 +461,7 @@ function isNextDeadlineAssignment(assignment, nextAssignment) {
 }
 
 function renderDashboard(payload) {
+  closeAssignmentDetail();
   const assignments = Array.isArray(payload.assignments) ? payload.assignments : [];
   currentDashboardPayload = { ...payload, assignments };
   const filterValue = els.assignmentFilter?.value || "all";
@@ -382,7 +473,11 @@ function renderDashboard(payload) {
     ? `${assignments.length} consegne trovate.`
     : `${visibleAssignments.length} di ${assignments.length} consegne visibili.`;
   els.assignments.innerHTML = visibleAssignments.length
-    ? visibleAssignments.map((assignment) => renderAssignment(assignment, isNextDeadlineAssignment(assignment, nextAssignment))).join("")
+    ? visibleAssignments.map((assignment) => renderAssignment(
+      assignment,
+      isNextDeadlineAssignment(assignment, nextAssignment),
+      assignments.indexOf(assignment),
+    )).join("")
     : assignments.length
       ? '<p class="status">Nessuna consegna corrisponde al filtro selezionato.</p>'
       : '<p class="status">Nessuna consegna disponibile.</p>';
@@ -420,6 +515,22 @@ els.assignmentFilter?.addEventListener("change", () => {
 
 els.assignmentSort?.addEventListener("change", () => {
   renderDashboard(currentDashboardPayload);
+});
+
+els.assignments?.addEventListener("click", (event) => {
+  const detailButton = event.target.closest?.("[data-detail-index]");
+  if (!detailButton) return;
+  openAssignmentDetail(detailButton.dataset.detailIndex);
+});
+
+els.assignmentDetailClose?.addEventListener("click", closeAssignmentDetail);
+
+els.assignmentDetailModal?.addEventListener("click", (event) => {
+  if (event.target === els.assignmentDetailModal) closeAssignmentDetail();
+});
+
+document.addEventListener?.("keydown", (event) => {
+  if (event.key === "Escape") closeAssignmentDetail();
 });
 
 loadStudentOptions(els.studentId.value)
