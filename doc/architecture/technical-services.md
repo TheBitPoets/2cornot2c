@@ -189,6 +189,7 @@ python -m scripts.manual_ai_feedback package request.json
 python -m scripts.manual_ai_feedback package-from-register teacher-reports/demo/register.json rossi-mario
 python -m scripts.manual_ai_feedback parse-response response.json
 python -m scripts.manual_ai_feedback apply-response teacher-reports/demo/register.json rossi-mario response.json --output updated-register.json
+python -m scripts.manual_ai_feedback review-feedback updated-register.json rossi-mario approve --output approved-register.json
 ```
 
 Il flusso operativo completo e descritto in [`../MANUAL_AI_FEEDBACK_WORKFLOW.md`](../MANUAL_AI_FEEDBACK_WORKFLOW.md).

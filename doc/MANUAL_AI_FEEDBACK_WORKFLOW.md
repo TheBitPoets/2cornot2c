@@ -123,6 +123,42 @@ Usa `--force` solo se vuoi rigenerare esplicitamente lo stesso file:
 python -m scripts.manual_ai_feedback apply-response teacher-reports/demo/register.json rossi-mario response.json --output teacher-reports/demo/register-with-ai.json --force
 ```
 
+## 6. Approvare o respingere la bozza
+
+Il provider AI puo solo produrre una bozza. La decisione finale resta del docente.
+
+Per approvare una bozza:
+
+```bash
+python -m scripts.manual_ai_feedback review-feedback teacher-reports/demo/register-with-ai.json rossi-mario approve --output teacher-reports/demo/register-approved.json
+```
+
+Il feedback dello studente passa a:
+
+```json
+{
+  "status": "approved",
+  "approved_by_teacher": true
+}
+```
+
+Per respingere una bozza:
+
+```bash
+python -m scripts.manual_ai_feedback review-feedback teacher-reports/demo/register-with-ai.json rossi-mario reject --output teacher-reports/demo/register-rejected.json
+```
+
+Il feedback dello studente passa a:
+
+```json
+{
+  "status": "rejected",
+  "approved_by_teacher": false
+}
+```
+
+Il comando accetta solo feedback con `status: "draft"`. Se il feedback e gia approvato, respinto o non ancora generato, il registro non viene scritto.
+
 ## Errori comuni
 
 | Errore | Significato | Come risolvere |
@@ -132,6 +168,7 @@ python -m scripts.manual_ai_feedback apply-response teacher-reports/demo/registe
 | `suggested_grade non valido` | Il voto suggerito non e numerico o `null` | Usare un numero, per esempio `7.5`, oppure `null` |
 | `studente non trovato` | Lo studente non esiste nel registro | Controllare `student_id` o `student` nel registro |
 | `file gia esistente` | `--output` punta a un file presente | Cambiare output o usare `--force` |
+| `ai_feedback non e una bozza` | Si sta cercando di approvare o respingere un feedback non modificabile | Applicare prima una risposta AI valida o scegliere uno studente con bozza |
 
 ## Dove si collega alla GUI
 

@@ -126,6 +126,32 @@ def apply_feedback_to_register(
     return updated
 
 
+def review_feedback_in_register(register: dict[str, Any], student_id: str, decision: str) -> dict[str, Any]:
+    """Return a register copy with a teacher review decision applied to draft AI feedback."""
+
+    if decision not in {"approve", "reject"}:
+        raise ValueError("review: decision deve essere approve o reject")
+    students = register.get("students")
+    if not isinstance(students, list):
+        raise ValueError("register: campo students mancante o non valido")
+
+    updated = json.loads(json.dumps(register))
+    updated_student = _find_student(updated["students"], student_id)
+    feedback = updated_student.get("ai_feedback")
+    if not isinstance(feedback, dict):
+        raise ValueError(f"register: ai_feedback mancante o non valido per {student_id}")
+    if feedback.get("status") != "draft":
+        raise ValueError(f"register: ai_feedback per {student_id} non e una bozza")
+
+    if decision == "approve":
+        feedback["status"] = "approved"
+        feedback["approved_by_teacher"] = True
+    else:
+        feedback["status"] = "rejected"
+        feedback["approved_by_teacher"] = False
+    return updated
+
+
 def package_command(args: argparse.Namespace) -> int:
     request, activity, policy = request_from_payload(load_json(args.request_json))
     package = manual_ai_feedback_package(request, activity=activity, policy=policy)
@@ -159,6 +185,20 @@ def apply_response_command(args: argparse.Namespace) -> int:
         args.student_id,
         load_json(args.response_json),
     )
+    output_path.write_text(
+        json.dumps(updated, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    print(str(output_path))
+    return 0
+
+
+def review_feedback_command(args: argparse.Namespace) -> int:
+    output_path = args.output
+    if output_path.exists() and not args.force:
+        raise ValueError(f"{output_path}: file gia esistente, usa --force per sovrascrivere")
+
+    updated = review_feedback_in_register(load_json(args.register_json), args.student_id, args.decision)
     output_path.write_text(
         json.dumps(updated, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
@@ -209,6 +249,17 @@ def build_parser() -> argparse.ArgumentParser:
     apply_parser.add_argument("--output", required=True, type=Path, help="File registro aggiornato da scrivere.")
     apply_parser.add_argument("--force", action="store_true", help="Sovrascrive --output se esiste gia.")
     apply_parser.set_defaults(func=apply_response_command)
+
+    review_parser = subparsers.add_parser(
+        "review-feedback",
+        help="Approva o respinge una bozza di feedback AI gia applicata al registro.",
+    )
+    review_parser.add_argument("register_json", type=Path, help="File JSON del registro consegne.")
+    review_parser.add_argument("student_id", help="Studente da aggiornare nel registro.")
+    review_parser.add_argument("decision", choices=["approve", "reject"], help="Decisione docente sulla bozza AI.")
+    review_parser.add_argument("--output", required=True, type=Path, help="File registro aggiornato da scrivere.")
+    review_parser.add_argument("--force", action="store_true", help="Sovrascrive --output se esiste gia.")
+    review_parser.set_defaults(func=review_feedback_command)
 
     parse_parser = subparsers.add_parser("parse-response", help="Valida una risposta JSON del provider AI.")
     parse_parser.add_argument("response_json", type=Path, help="File JSON restituito/incollato dal provider AI.")

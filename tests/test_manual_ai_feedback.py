@@ -165,6 +165,66 @@ def test_apply_response_command_accepts_utf8_bom_response(tmp_path) -> None:
     assert updated["students"][0]["ai_feedback"]["summary"] == "Feedback salvato da editor Windows."
 
 
+def test_review_feedback_command_approves_draft_feedback(tmp_path) -> None:
+    register = json.loads(REGISTER_FIXTURE.read_text(encoding="utf-8"))
+    register["students"][0]["ai_feedback"] = {
+        "status": "draft",
+        "summary": "Feedback da approvare.",
+        "approved_by_teacher": False,
+    }
+    register_path = tmp_path / "register.json"
+    output_path = tmp_path / "approved-register.json"
+    register_path.write_text(json.dumps(register), encoding="utf-8")
+
+    exit_code = manual_ai_feedback.main(
+        ["review-feedback", str(register_path), "rossi-mario", "approve", "--output", str(output_path)]
+    )
+
+    assert exit_code == 0
+    updated = json.loads(output_path.read_text(encoding="utf-8"))
+    feedback = updated["students"][0]["ai_feedback"]
+    assert feedback["status"] == "approved"
+    assert feedback["approved_by_teacher"] is True
+    assert feedback["summary"] == "Feedback da approvare."
+
+
+def test_review_feedback_command_rejects_draft_feedback(tmp_path) -> None:
+    register = json.loads(REGISTER_FIXTURE.read_text(encoding="utf-8"))
+    register["students"][0]["ai_feedback"] = {
+        "status": "draft",
+        "summary": "Feedback da respingere.",
+        "approved_by_teacher": False,
+    }
+    register_path = tmp_path / "register.json"
+    output_path = tmp_path / "rejected-register.json"
+    register_path.write_text(json.dumps(register), encoding="utf-8")
+
+    exit_code = manual_ai_feedback.main(
+        ["review-feedback", str(register_path), "rossi-mario", "reject", "--output", str(output_path)]
+    )
+
+    assert exit_code == 0
+    updated = json.loads(output_path.read_text(encoding="utf-8"))
+    feedback = updated["students"][0]["ai_feedback"]
+    assert feedback["status"] == "rejected"
+    assert feedback["approved_by_teacher"] is False
+    assert feedback["summary"] == "Feedback da respingere."
+
+
+def test_review_feedback_command_requires_draft_feedback(tmp_path, capsys) -> None:
+    register_path = tmp_path / "register.json"
+    output_path = tmp_path / "approved-register.json"
+    register_path.write_text(REGISTER_FIXTURE.read_text(encoding="utf-8"), encoding="utf-8")
+
+    exit_code = manual_ai_feedback.main(
+        ["review-feedback", str(register_path), "rossi-mario", "approve", "--output", str(output_path)]
+    )
+
+    assert exit_code == 1
+    assert "non e una bozza" in capsys.readouterr().err
+    assert not output_path.exists()
+
+
 def test_parse_response_command_prints_normalized_feedback(tmp_path, capsys) -> None:
     response_path = tmp_path / "response.json"
     response_path.write_text(
