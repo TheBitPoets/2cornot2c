@@ -259,6 +259,7 @@ def test_class_roster_helpers_use_local_roster_storage(tmp_path, monkeypatch) ->
                         "id": "rossi-mario",
                         "display_name": "Rossi Mario",
                         "github_username": "rossi-mario-gh",
+                        "local_path": r"studenti\rossi-mario",
                     }
                 ],
             }
@@ -273,6 +274,7 @@ def test_class_roster_helpers_use_local_roster_storage(tmp_path, monkeypatch) ->
     assert rosters[0]["id"] == "3A"
     assert roster["students"][0]["id"] == "rossi-mario"
     assert roster["students"][0]["github_username"] == "rossi-mario-gh"
+    assert roster["students"][0]["local_path"] == "studenti/rossi-mario"
 
 
 def test_ai_secret_status_reports_paths_and_configured_keys_without_values(tmp_path, monkeypatch) -> None:
