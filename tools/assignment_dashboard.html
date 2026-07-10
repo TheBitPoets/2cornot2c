@@ -105,6 +105,33 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
       </div>
     </section>
 
+    <section class="panel" data-panel-key="class-roster">
+      <div class="panelHead">
+        <div>
+          <h2>Roster classe</h2>
+          <p id="rosterPanelStatus" class="status">Seleziona un roster in Genera registro per vedere studenti e target.</p>
+        </div>
+      </div>
+      <div id="rosterSummary" class="summaryGrid">
+        <p class="status">Nessun roster selezionato.</p>
+      </div>
+      <div class="tableWrap rosterTableWrap">
+        <table id="rosterTable" class="resizableTable">
+          <thead>
+            <tr>
+              <th>Studente</th>
+              <th>Account</th>
+              <th>Target registro</th>
+              <th>Stato</th>
+            </tr>
+          </thead>
+          <tbody id="rosterBody">
+            <tr><td colspan="4">Seleziona un roster per vedere gli studenti.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
     <section class="panel" data-panel-key="selected-report">
       <div class="panelHead">
         <div>

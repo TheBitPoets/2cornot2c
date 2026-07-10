@@ -266,6 +266,8 @@ def run_dashboard_js(assertions: str) -> None:
         rosterOptionLabel,
         localTargetFromStudent,
         rosterTargets,
+        rosterSummaryItems,
+        renderRosterPanel,
         applyRosterToGenerateForm,
         els,
         layout,
@@ -423,6 +425,36 @@ def test_class_roster_option_label_includes_year_and_students() -> None:
           JSON.stringify(tested.rosterTargets({ students: [{ id: "rossi-mario", active: false }] })),
           JSON.stringify({ targets: [], warnings: [] }),
         );
+        """
+    )
+
+
+def test_class_roster_panel_renders_selected_roster_students_and_targets() -> None:
+    run_dashboard_js(
+        """
+        tested.state.activities = [
+          { id: "somma", path: "activities/somma.json" },
+        ];
+        tested.els.activityPath.value = "activities/somma.json";
+        tested.applyRosterToGenerateForm({
+          id: "3A-TPSI",
+          label: "3A TPSI",
+          students: [
+            { id: "rossi-mario", display_name: "Rossi Mario", local_path: "studenti/rossi-mario", github_username: "rossi-gh", active: true },
+            { id: "bianchi-luca", display_name: "Bianchi Luca", repo_ref: "TheBitPoets/bianchi-luca", active: true },
+            { id: "verdi-anna", display_name: "Verdi Anna", repo_path: "studenti/verdi-anna", active: false },
+          ],
+        });
+
+        assert.match(tested.els.rosterPanelStatus.textContent, /3A TPSI - 3 studenti/);
+        assert.match(tested.els.rosterSummary.innerHTML, /<strong>Classe<\\/strong>\\s*<span>3A TPSI<\\/span>/);
+        assert.match(tested.els.rosterSummary.innerHTML, /<strong>Attivi<\\/strong>\\s*<span>2<\\/span>/);
+        assert.match(tested.els.rosterSummary.innerHTML, /<strong>Target locali<\\/strong>\\s*<span>1<\\/span>/);
+        assert.match(tested.els.rosterSummary.innerHTML, /<strong>Fallback demo<\\/strong>\\s*<span>1<\\/span>/);
+        assert.match(tested.els.rosterBody.innerHTML, /studenti\\/rossi-mario/);
+        assert.match(tested.els.rosterBody.innerHTML, /examples\\/assignment_tracking\\/student_repos\\/bianchi-luca/);
+        assert.match(tested.els.rosterBody.innerHTML, /Fallback demo/);
+        assert.match(tested.els.rosterBody.innerHTML, /Non attivo/);
         """
     )
 
@@ -770,6 +802,15 @@ def test_report_loader_controls_live_in_selected_report_panel() -> None:
     assert 'id="loadReportBtn"' in selected_report_section
     assert 'id="reloadBtn"' in selected_report_section
     assert 'id="reportSelect"' not in hero_section
+
+
+def test_class_roster_panel_is_available_on_assignment_dashboard() -> None:
+    html = open("tools/assignment_dashboard.html", encoding="utf-8").read()
+    roster_section = html.split('data-panel-key="class-roster"', 1)[1].split('data-panel-key="selected-report"', 1)[0]
+
+    assert 'id="rosterPanelStatus"' in roster_section
+    assert 'id="rosterSummary"' in roster_section
+    assert 'id="rosterBody"' in roster_section
 
 
 def test_review_ai_feedback_posts_decision_and_updates_modal_status() -> None:
