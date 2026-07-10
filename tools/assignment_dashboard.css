@@ -220,6 +220,18 @@ label > textarea {
   padding: 0 1.1rem 1.1rem;
 }
 
+.reportLoadControls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .55rem;
+  padding: 1.1rem 1.1rem 0;
+}
+
+.reportLoadControls select {
+  flex: 1 1 18rem;
+  min-width: min(18rem, 100%);
+}
+
 .coverageBlock {
   border-top: 1px solid var(--line);
 }

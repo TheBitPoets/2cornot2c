@@ -390,6 +390,9 @@ def _normalize_roster_student(payload: dict[str, Any]) -> dict[str, Any]:
         "email": _first_text(payload, "email"),
         "github_username": github_username,
         "repo_ref": repo_ref,
+        "local_path": _path_text(payload, "local_path"),
+        "repo_path": _path_text(payload, "repo_path"),
+        "path": _path_text(payload, "path"),
         "active": _bool_value(payload.get("active", True)),
         "provider_accounts": _list_of_dicts(payload.get("provider_accounts")),
     }
@@ -401,6 +404,10 @@ def _first_text(payload: dict[str, Any], *keys: str) -> str:
         if isinstance(value, str) and value.strip():
             return value.strip()
     return ""
+
+
+def _path_text(payload: dict[str, Any], key: str) -> str:
+    return _first_text(payload, key).replace("\\", "/")
 
 
 def _bool_value(value: Any) -> bool:

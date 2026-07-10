@@ -237,8 +237,12 @@ def run_dashboard_js(assertions: str) -> None:
         summaryTooltip,
         renderCoverageSummaryCards,
         renderOverviewSummaryCards,
+        renderOverviewFilters,
+        filteredOverviewRows,
+        focusOverviewClassFromReport,
         summaryCounts,
         renderStudentsSummaryCards,
+        activeStudentFilterLabel,
         aiFeedbackState,
         aiFeedbackDetails,
         aiFeedbackReviewDetails,
@@ -259,6 +263,10 @@ def run_dashboard_js(assertions: str) -> None:
         resetPanelOrder,
         setupPanelDragAndDrop,
         renderLegend,
+        rosterOptionLabel,
+        localTargetFromStudent,
+        rosterTargets,
+        applyRosterToGenerateForm,
         els,
         layout,
         FakeElement,
@@ -309,6 +317,43 @@ def test_reports_for_activity_keeps_legacy_activity_fallback() -> None:
     )
 
 
+def test_loading_report_focuses_overview_class_filter() -> None:
+    run_dashboard_js(
+        """
+        tested.els.overviewClassFilter.value = "";
+
+        assert.equal(tested.focusOverviewClassFromReport({ class_id: "3A", class_label: "3A TPSI" }), true);
+        assert.equal(tested.state.overviewFilters.class, "3A TPSI");
+        assert.equal(tested.els.overviewClassFilter.value, "3A TPSI");
+
+        tested.state.overviewFilters.class = "";
+        tested.els.overviewClassFilter.value = "";
+        assert.equal(tested.focusOverviewClassFromReport({ activity_id: "legacy" }), false);
+        assert.equal(tested.state.overviewFilters.class, "");
+        assert.equal(tested.els.overviewClassFilter.value, "");
+        """
+    )
+
+
+def test_overview_activity_filter_limits_rows() -> None:
+    run_dashboard_js(
+        """
+        tested.state.overviewRows = [
+          { student: "rossi-mario", title: "Somma base", activity_id: "somma", kind: "lab", status: "submitted" },
+          { student: "rossi-mario", title: "Array base", activity_id: "array", kind: "lab", status: "submitted" },
+        ];
+        tested.state.overviewFilters.activity = "Somma base";
+
+        tested.renderOverviewFilters();
+        assert.equal(tested.els.overviewActivityFilter.value, "Somma base");
+
+        const rows = tested.filteredOverviewRows();
+        assert.equal(rows.length, 1);
+        assert.equal(rows[0].activity_id, "somma");
+        """
+    )
+
+
 def test_legend_renders_static_marks_but_escapes_descriptions() -> None:
     run_dashboard_js(
         """
@@ -325,6 +370,59 @@ def test_legend_renders_static_marks_but_escapes_descriptions() -> None:
         assert.match(html, /<button type="button" class="smallButton">Apri<\\/button>/);
         assert.match(html, /&lt;script&gt;alert\\(1\\)&lt;\\/script&gt;/);
         assert.doesNotMatch(html, /<td><script>alert\\(1\\)<\\/script><\\/td>/);
+        """
+    )
+
+
+def test_class_roster_targets_fill_generate_form_with_demo_fallbacks() -> None:
+    run_dashboard_js(
+        """
+        tested.state.activities = [
+          { id: "somma", path: "activities/somma.json", class_id: "old-class" },
+        ];
+        tested.els.activityPath.value = "activities/somma.json";
+        const result = tested.applyRosterToGenerateForm({
+          id: "demo-3a",
+          label: "Classe demo 3A",
+          github_team: "team-demo-3a",
+          students: [
+            { id: "rossi-mario", display_name: "Rossi Mario", repo_ref: "TheBitPoets/rossi-mario", active: true },
+            { id: "bianchi-luca", local_path: "local/bianchi-luca", active: true },
+            { id: "verdi-anna", repo_ref: "examples/assignment_tracking/student_repos/verdi-anna", active: true },
+            { id: "neri-giulia", repo_ref: "TheBitPoets/neri-giulia", active: false },
+          ],
+        });
+
+        assert.equal(tested.els.classId.value, "demo-3a");
+        assert.equal(tested.els.classLabel.value, "Classe demo 3A");
+        assert.equal(tested.els.githubTeam.value, "team-demo-3a");
+        assert.equal(tested.els.outputName.value, "demo-3a/somma.json");
+        assert.equal(tested.els.targetsText.value, [
+          "examples/assignment_tracking/student_repos/rossi-mario",
+          "local/bianchi-luca",
+          "examples/assignment_tracking/student_repos/verdi-anna",
+        ].join("\\n"));
+        assert.equal(result.warnings.length, 1);
+        assert.match(tested.els.rosterStatus.textContent, /repo_ref GitHub convertito/);
+        assert.equal(
+          tested.localTargetFromStudent({ id: "demo", repo_path: "studenti/demo" }).target,
+          "studenti/demo",
+        );
+        """
+    )
+
+
+def test_class_roster_option_label_includes_year_and_students() -> None:
+    run_dashboard_js(
+        """
+        assert.equal(
+          tested.rosterOptionLabel({ label: "3A TPSI", school_year: "2026-2027", students: 4 }),
+          "3A TPSI (2026-2027 - 4 studenti)",
+        );
+        assert.equal(
+          JSON.stringify(tested.rosterTargets({ students: [{ id: "rossi-mario", active: false }] })),
+          JSON.stringify({ targets: [], warnings: [] }),
+        );
         """
     )
 
@@ -536,6 +634,9 @@ def test_students_summary_counts_include_grading_and_grades() -> None:
           { status: "submitted_late", submitted: true, late: true, grading: { status: "graded_failed", teacher_grade: 5 } },
           { status: "submitted", submitted: true, late: false, grading: { status: "graded_passed", teacher_grade: "" } },
         ]);
+        tested.state.report = { class_id: "3A-TPSI", class_label: "3A TPSI", activity_id: "somma", title: "Somma base" };
+        tested.state.reportName = "demo-3a/somma.json";
+        tested.state.filter = "late";
         assert.equal(JSON.stringify(counts), JSON.stringify({
           total: 5,
           pending: 1,
@@ -548,6 +649,10 @@ def test_students_summary_counts_include_grading_and_grades() -> None:
           missingGrades: 3,
         }));
         assert.equal(JSON.stringify(tested.compactStudentsSummaryItems(counts)), JSON.stringify([
+          ["Classe", "3A TPSI"],
+          ["Activity", "Somma base"],
+          ["Registro", "demo-3a/somma.json"],
+          ["Filtri", "In ritardo"],
           ["Studenti", 5],
           ["Consegnati", 3],
           ["Mancanti", 1],
@@ -555,6 +660,10 @@ def test_students_summary_counts_include_grading_and_grades() -> None:
           ["KO", 1],
         ]));
         assert.equal(JSON.stringify(tested.detailedStudentsSummaryItems(counts)), JSON.stringify([
+          ["Classe", "3A TPSI"],
+          ["Activity", "Somma base"],
+          ["Registro", "demo-3a/somma.json"],
+          ["Filtri", "In ritardo"],
           ["Studenti", 5],
           ["Consegnati", 3],
           ["Mancanti", 1],
@@ -565,6 +674,8 @@ def test_students_summary_counts_include_grading_and_grades() -> None:
           ["Media voto", "6.5"],
           ["Voti mancanti", 3],
         ]));
+        tested.state.filter = "all";
+        assert.equal(tested.activeStudentFilterLabel(), "nessuno");
         """
     )
 
@@ -572,7 +683,20 @@ def test_students_summary_counts_include_grading_and_grades() -> None:
 def test_students_summary_cards_include_tooltips() -> None:
     run_dashboard_js(
         """
-        const html = tested.renderStudentsSummaryCards([["Consegnati", 3], ["KO", 1]]);
+        const html = tested.renderStudentsSummaryCards([
+          ["Classe", "3A TPSI"],
+          ["Activity", "Somma base"],
+          ["Registro", "demo-3a/somma.json"],
+          ["Filtri", "In ritardo"],
+          ["Consegnati", 3],
+          ["KO", 1],
+        ]);
+        assert.match(html, /<strong>Classe<\\/strong>\\s*<span>3A TPSI<\\/span>/);
+        assert.match(html, /<strong>Activity<\\/strong>\\s*<span>Somma base<\\/span>/);
+        assert.match(html, /<strong>Registro<\\/strong>\\s*<span>demo-3a\\/somma.json<\\/span>/);
+        assert.match(html, /<strong>Filtri<\\/strong>\\s*<span>In ritardo<\\/span>/);
+        assert.match(html, /title="Classe associata al registro consegne selezionato\\."/);
+        assert.match(html, /title="Filtri attivi nella vista corrente\\."/);
         assert.match(html, /title="Numero di studenti che hanno effettuato una consegna\\."/);
         assert.match(html, /title="Numero di studenti con grading o test falliti\\."/);
         assert.equal(tested.summaryTooltip("Etichetta nuova"), "Valore riepilogativo: Etichetta nuova.");
@@ -637,6 +761,17 @@ def test_ai_feedback_details_css_limits_expanded_content_height() -> None:
     assert ".aiFeedbackActions" in css
 
 
+def test_report_loader_controls_live_in_selected_report_panel() -> None:
+    html = open("tools/assignment_dashboard.html", encoding="utf-8").read()
+    selected_report_section = html.split('data-panel-key="selected-report"', 1)[1].split('data-panel-key="class-overview"', 1)[0]
+    hero_section = html.split("<main", 1)[0]
+
+    assert 'id="reportSelect"' in selected_report_section
+    assert 'id="loadReportBtn"' in selected_report_section
+    assert 'id="reloadBtn"' in selected_report_section
+    assert 'id="reportSelect"' not in hero_section
+
+
 def test_review_ai_feedback_posts_decision_and_updates_modal_status() -> None:
     run_dashboard_js(
         """
@@ -668,7 +803,7 @@ def test_modal_summary_helpers_include_tooltips() -> None:
 
         const overviewHtml = tested.renderOverviewSummaryCards([["Classi", 2], ["Filtri", "nessuno"]]);
         assert.match(overviewHtml, /title="Numero di classi diverse presenti nelle righe del quadro classe filtrato\\."/);
-        assert.match(overviewHtml, /title="Numero di filtri attivi nel quadro classe\\."/);
+        assert.match(overviewHtml, /title="Filtri attivi nella vista corrente\\."/);
         """
     )
 

@@ -26,6 +26,14 @@ const OVERVIEW_STATUS_ORDER = [
   "submitted_on_time",
   "submitted_no_due_date",
 ];
+const STUDENT_FILTER_LABELS = {
+  all: "nessuno",
+  pending: "Da consegnare",
+  missing: "Mancanti",
+  submitted: "Consegnati",
+  late: "In ritardo",
+  failed: "Test falliti",
+};
 const LEGEND_SECTIONS = {
   overview: {
     title: "Quadro classe",
@@ -83,6 +91,7 @@ const LEGEND_SECTIONS = {
 const state = {
   activities: [],
   reports: [],
+  classRosters: [],
   overviewRows: [],
   report: null,
   reportName: "",
@@ -90,6 +99,7 @@ const state = {
   overviewFilters: {
     class: "",
     student: "",
+    activity: "",
     kind: "",
     status: "",
     support: "",
@@ -131,6 +141,7 @@ const els = {
   overviewDialogSummary: document.querySelector("#overviewDialogSummary"),
   overviewClassFilter: document.querySelector("#overviewClassFilter"),
   overviewStudentFilter: document.querySelector("#overviewStudentFilter"),
+  overviewActivityFilter: document.querySelector("#overviewActivityFilter"),
   overviewKindFilter: document.querySelector("#overviewKindFilter"),
   overviewStatusFilter: document.querySelector("#overviewStatusFilter"),
   overviewSupportFilter: document.querySelector("#overviewSupportFilter"),
@@ -171,6 +182,8 @@ const els = {
   filterButtons: document.querySelectorAll("[data-filter]"),
   activitySelect: document.querySelector("#activitySelect"),
   activityPath: document.querySelector("#activityPath"),
+  classRosterSelect: document.querySelector("#classRosterSelect"),
+  rosterStatus: document.querySelector("#rosterStatus"),
   outputName: document.querySelector("#outputName"),
   classId: document.querySelector("#classId"),
   classLabel: document.querySelector("#classLabel"),
@@ -402,6 +415,20 @@ async function loadOverview() {
   renderCoverage();
 }
 
+async function loadClassRosters() {
+  if (!els.classRosterSelect) return;
+  try {
+    const payload = await api("/api/class-rosters");
+    state.classRosters = payload.rosters || [];
+    renderClassRosterSelect();
+    setRosterStatus(state.classRosters.length ? `Roster disponibili: ${state.classRosters.length}.` : "Nessun roster locale disponibile.");
+  } catch (error) {
+    state.classRosters = [];
+    renderClassRosterSelect();
+    setRosterStatus(`Roster non disponibili: ${error.message}`);
+  }
+}
+
 function renderReportSelect() {
   const selected = els.reportSelect.value;
   els.reportSelect.innerHTML = '<option value="">Registri consegne</option>';
@@ -413,6 +440,32 @@ function renderReportSelect() {
     els.reportSelect.append(option);
   }
   els.reportSelect.value = selected;
+}
+
+function rosterOptionLabel(roster) {
+  const label = String(roster?.label || roster?.id || roster?.name || "").trim();
+  const year = String(roster?.school_year || "").trim();
+  const students = Number(roster?.students || 0);
+  const suffix = [year, students ? `${students} studenti` : ""].filter(Boolean).join(" - ");
+  return suffix ? `${label} (${suffix})` : label || "Roster senza nome";
+}
+
+function renderClassRosterSelect() {
+  if (!els.classRosterSelect) return;
+  const selected = els.classRosterSelect.value;
+  els.classRosterSelect.innerHTML = '<option value="">Seleziona roster</option>';
+  for (const roster of state.classRosters) {
+    const option = document.createElement("option");
+    option.value = roster.name;
+    option.textContent = rosterOptionLabel(roster);
+    els.classRosterSelect.append(option);
+  }
+  els.classRosterSelect.value = state.classRosters.some((roster) => roster.name === selected) ? selected : "";
+  els.classRosterSelect.disabled = state.classRosters.length === 0;
+}
+
+function setRosterStatus(message) {
+  if (els.rosterStatus) els.rosterStatus.textContent = message;
 }
 
 async function loadSelectedReport() {
@@ -429,6 +482,8 @@ async function loadSelectedReport() {
   state.report = payload.report;
   state.reportName = name;
   clearReview();
+  focusOverviewClassFromReport(state.report);
+  renderOverview();
   renderDashboard();
   setStatus(`Registro caricato: ${name}.`);
 }
@@ -1056,6 +1111,73 @@ function defaultOutputName(activity) {
   return `${slugPathSegment(currentClassId(activity))}/${id}.json`;
 }
 
+function currentActivity() {
+  return state.activities.find((candidate) => candidate.path === els.activityPath.value.trim().replaceAll("\\", "/"));
+}
+
+function localTargetFromStudent(student) {
+  const studentId = String(student?.id || "").trim();
+  const localPath = String(student?.local_path || student?.repo_path || student?.path || "").trim().replaceAll("\\", "/");
+  if (localPath) return { target: localPath, warning: "" };
+  const repoRef = String(student?.repo_ref || "").trim().replaceAll("\\", "/");
+  if (repoRef && !/^[^/]+\/[^/]+$/.test(repoRef) && !/^https?:\/\//i.test(repoRef)) {
+    return { target: repoRef, warning: "" };
+  }
+  if (studentId) {
+    return {
+      target: `examples/assignment_tracking/student_repos/${studentId}`,
+      warning: repoRef ? `${studentId}: repo_ref GitHub convertito in path demo locale.` : `${studentId}: repo_ref mancante, usato path demo locale.`,
+    };
+  }
+  return { target: "", warning: "Studente senza id ignorato." };
+}
+
+function rosterTargets(roster) {
+  const warnings = [];
+  const targets = [];
+  const students = Array.isArray(roster?.students) ? roster.students : [];
+  for (const student of students) {
+    if (!student || student.active === false) continue;
+    const result = localTargetFromStudent(student);
+    if (result.target) targets.push(result.target);
+    if (result.warning) warnings.push(result.warning);
+  }
+  return { targets, warnings };
+}
+
+function applyRosterToGenerateForm(roster) {
+  if (!roster) return { targets: [], warnings: ["Roster non valido."] };
+  els.classId.value = roster.id || "";
+  els.classLabel.value = roster.label || roster.id || "";
+  els.githubTeam.value = roster.github_team || "";
+  const result = rosterTargets(roster);
+  els.targetsText.value = result.targets.join("\n");
+  const activity = currentActivity();
+  if (activity?.id) els.outputName.value = defaultOutputName({ ...activity, class_id: roster.id, class_label: roster.label, github_team: roster.github_team });
+  setRosterStatus(result.warnings.length
+    ? `Roster applicato con avvisi: ${result.warnings.join(" ")}`
+    : `Roster applicato: ${result.targets.length} target studenti.`);
+  return result;
+}
+
+async function loadSelectedClassRoster() {
+  const name = els.classRosterSelect?.value || "";
+  if (!name) {
+    setRosterStatus("Seleziona un roster per compilare classe e target.");
+    return;
+  }
+  setRosterStatus(`Caricamento roster ${name}...`);
+  try {
+    const payload = await api("/api/class-rosters/load", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    });
+    applyRosterToGenerateForm(payload.roster);
+  } catch (error) {
+    setRosterStatus(`Roster non caricato: ${error.message}`);
+  }
+}
+
 function selectCoverageActivity(activityPath, outputName = "") {
   els.activityPath.value = activityPath;
   renderActivitySelect();
@@ -1268,15 +1390,24 @@ function renderSelectOptions(select, values, currentValue, emptyLabel = "Tutti")
   select.value = values.includes(currentValue) ? currentValue : "";
 }
 
+function focusOverviewClassFromReport(report) {
+  if (!hasExplicitClass(report)) return false;
+  state.overviewFilters.class = classValue(report);
+  if (els.overviewClassFilter) els.overviewClassFilter.value = state.overviewFilters.class;
+  return true;
+}
+
 function renderOverviewFilters() {
   const rows = state.overviewRows;
   renderSelectOptions(els.overviewClassFilter, uniqueSorted(rows.map((row) => classValue(row))), state.overviewFilters.class, "Tutte");
   renderSelectOptions(els.overviewStudentFilter, uniqueSorted(rows.map((row) => row.student)), state.overviewFilters.student);
+  renderSelectOptions(els.overviewActivityFilter, uniqueSorted(rows.map((row) => activityLabel(row))), state.overviewFilters.activity, "Tutte");
   renderSelectOptions(els.overviewKindFilter, uniqueSorted(rows.map((row) => row.kind || "tipo non indicato")), state.overviewFilters.kind);
   renderSelectOptions(els.overviewStatusFilter, uniqueSorted(rows.map((row) => row.status || "stato non indicato")), state.overviewFilters.status);
   renderSelectOptions(els.overviewSupportFilter, uniqueSorted(rows.map((row) => row.student_support_mode || "non indicata")), state.overviewFilters.support, "Tutte");
   state.overviewFilters.class = els.overviewClassFilter.value;
   state.overviewFilters.student = els.overviewStudentFilter.value;
+  state.overviewFilters.activity = els.overviewActivityFilter.value;
   state.overviewFilters.kind = els.overviewKindFilter.value;
   state.overviewFilters.status = els.overviewStatusFilter.value;
   state.overviewFilters.support = els.overviewSupportFilter.value;
@@ -1285,11 +1416,13 @@ function renderOverviewFilters() {
 function filteredOverviewRows() {
   return state.overviewRows.filter((row) => {
     const classLabel = classValue(row);
+    const activity = activityLabel(row);
     const kind = row.kind || "tipo non indicato";
     const status = row.status || "stato non indicato";
     const support = row.student_support_mode || "non indicata";
     return (!state.overviewFilters.class || classLabel === state.overviewFilters.class)
       && (!state.overviewFilters.student || row.student === state.overviewFilters.student)
+      && (!state.overviewFilters.activity || activity === state.overviewFilters.activity)
       && (!state.overviewFilters.kind || kind === state.overviewFilters.kind)
       && (!state.overviewFilters.status || status === state.overviewFilters.status)
       && (!state.overviewFilters.support || support === state.overviewFilters.support);
@@ -1613,6 +1746,8 @@ async function generateReport() {
     els.reportSelect.value = payload.saved?.name || "";
     renderCoverage();
     await loadOverview();
+    focusOverviewClassFromReport(state.report);
+    renderOverview();
     clearReview();
     renderDashboard();
     setStatus(`Registro generato e caricato: ${payload.saved?.path || payload.saved?.name}.`);
@@ -1818,13 +1953,14 @@ function externalLink(url, label = "GitHub") {
 
 const SUMMARY_TOOLTIPS = {
   Activity: "Activity o numero di activity a cui si riferisce questo riepilogo.",
+  Registro: "Registro consegne attualmente caricato.",
   "Con registro": "Numero di activity per cui esiste almeno un registro consegne generato.",
   "Senza registro": "Numero di activity per cui non e' stato ancora trovato alcun registro consegne.",
   Classi: "Numero di classi diverse presenti nelle righe del quadro classe filtrato.",
   Studenti: "Numero di studenti considerati nel riepilogo.",
   Consegne: "Numero di activity/consegne diverse presenti nel quadro classe filtrato.",
   Righe: "Righe activity-studente mostrate rispetto al totale disponibile.",
-  Filtri: "Numero di filtri attivi nel quadro classe.",
+  Filtri: "Filtri attivi nella vista corrente.",
   Classe: "Classe associata al registro consegne selezionato.",
   Scadenza: "Data e ora di scadenza del registro consegne selezionato.",
   Consegnati: "Numero di studenti che hanno effettuato una consegna.",
@@ -1875,8 +2011,16 @@ function renderStudentsSummaryCards(items) {
   `).join("");
 }
 
+function activeStudentFilterLabel() {
+  return STUDENT_FILTER_LABELS[state.filter] || state.filter || "nessuno";
+}
+
 function compactStudentsSummaryItems(counts) {
   return [
+    ["Classe", classValue(state.report)],
+    ["Activity", state.report?.title || state.report?.activity_id || "-"],
+    ["Registro", state.reportName || state.report?.report_name || "-"],
+    ["Filtri", activeStudentFilterLabel()],
     ["Studenti", counts.total],
     ["Consegnati", counts.submitted],
     ["Mancanti", counts.missing],
@@ -1887,6 +2031,10 @@ function compactStudentsSummaryItems(counts) {
 
 function detailedStudentsSummaryItems(counts) {
   return [
+    ["Classe", classValue(state.report)],
+    ["Activity", state.report?.title || state.report?.activity_id || "-"],
+    ["Registro", state.reportName || state.report?.report_name || "-"],
+    ["Filtri", activeStudentFilterLabel()],
     ["Studenti", counts.total],
     ["Consegnati", counts.submitted],
     ["Mancanti", counts.missing],
@@ -2369,6 +2517,7 @@ els.reviewCloseBtn.addEventListener("click", closeReviewDialog);
 els.activitySelect.addEventListener("change", () => {
   if (els.activitySelect.value) selectActivity(els.activitySelect.value);
 });
+els.classRosterSelect?.addEventListener("change", loadSelectedClassRoster);
 els.activityPath.addEventListener("input", renderActivitySelect);
 els.classId.addEventListener("change", updateOutputNameForCurrentActivity);
 els.coverageBody.addEventListener("click", async (event) => {
@@ -2406,6 +2555,7 @@ els.coverageBody.addEventListener("click", async (event) => {
 [
   [els.overviewClassFilter, "class"],
   [els.overviewStudentFilter, "student"],
+  [els.overviewActivityFilter, "activity"],
   [els.overviewKindFilter, "kind"],
   [els.overviewStatusFilter, "status"],
   [els.overviewSupportFilter, "support"],
@@ -2516,4 +2666,4 @@ setupCollapsiblePanels();
 setupPanelDragAndDrop();
 setFilter("all");
 setupResizableTables();
-Promise.all([loadReports(), loadActivities(), loadOverview()]).catch((error) => setStatus(`Errore: ${error.message}`));
+Promise.all([loadReports(), loadActivities(), loadOverview(), loadClassRosters()]).catch((error) => setStatus(`Errore: ${error.message}`));

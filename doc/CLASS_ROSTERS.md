@@ -64,9 +64,19 @@ POST /api/class-rosters/load
 { "name": "demo-3a.json" }
 ```
 
+## Uso nella GUI
+
+La vista studente usa il roster come fonte primaria della lista studenti.
+
+La dashboard consegne usa il roster nel pannello `Genera registro`:
+
+- compila `Classe`, `Etichetta classe` e `Team GitHub`;
+- genera la textarea dei target dagli studenti attivi;
+- usa `local_path`, `repo_path` o `path` quando disponibili;
+- se trova solo un `repo_ref` GitHub, usa il path demo locale `examples/assignment_tracking/student_repos/<student-id>` e mostra un avviso.
+
 ## Limiti MVP
 
-- I roster non sono ancora usati dalla vista studente o dalla dashboard docente.
-- La lista studenti della vista studente resta derivata dai registri finche non colleghiamo il roster service.
+- Il target locale per generare registri e ancora una convenzione MVP; il provider repository dovra risolvere GitHub/GitLab in modo esplicito.
 - GitHub Team non e ancora sincronizzato: `github_team` e `github_username` sono solo dati normalizzati.
 - Non esistono ancora scrittura, merge o gestione studenti da GUI.
