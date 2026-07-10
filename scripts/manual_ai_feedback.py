@@ -51,7 +51,7 @@ def request_from_payload(payload: dict[str, Any]) -> tuple[AiFeedbackRequest, di
         failed_tests=_optional_string_list(grading_payload, "failed_tests"),
         score=_optional_number(grading_payload, "score"),
         teacher_grade=_optional_number(grading_payload, "teacher_grade"),
-        detail=str(grading_payload.get("detail") or ""),
+        detail=_optional_text(grading_payload, "detail") or "",
     )
     return (
         AiFeedbackRequest(
@@ -138,6 +138,15 @@ def _optional_mapping(payload: dict[str, Any], key: str) -> dict[str, Any]:
         return {}
     if not isinstance(value, dict):
         raise ValueError(f"request: {key} deve essere un oggetto")
+    return value
+
+
+def _optional_text(payload: dict[str, Any], key: str) -> str | None:
+    value = payload.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError(f"request: grading.{key} deve essere una stringa o null")
     return value
 
 
