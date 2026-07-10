@@ -556,7 +556,14 @@ button:hover { transform: translateY(-1px); }
 }
 
 .calendarPillClosure {
-  background: rgba(154, 45, 35, .11);
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(154, 45, 35, .14) 0,
+      rgba(154, 45, 35, .14) 6px,
+      #ffffff 6px,
+      #ffffff 11px
+    );
   color: #8a2d24;
 }
 
