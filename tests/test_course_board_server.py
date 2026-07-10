@@ -113,6 +113,72 @@ def test_list_assignment_reports_counts_late_only_for_submitted_students(tmp_pat
     assert reports[0]["late"] == 1
 
 
+def test_review_assignment_ai_feedback_persists_teacher_decision(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
+
+    report_dir = tmp_path / "teacher-reports" / "demo"
+    report_dir.mkdir(parents=True)
+    report_path = report_dir / "activity.json"
+    report_path.write_text(
+        json.dumps(
+            {
+                "activity_id": "activity",
+                "students": [
+                    {
+                        "student": "rossi-mario",
+                        "student_id": "rossi-mario",
+                        "ai_feedback": {
+                            "status": "draft",
+                            "summary": "Bozza",
+                            "approved_by_teacher": False,
+                        },
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = course_board_server.review_assignment_ai_feedback("demo/activity.json", "rossi-mario", "approve")
+    saved = json.loads(report_path.read_text(encoding="utf-8"))
+
+    assert report["students"][0]["ai_feedback"]["status"] == "approved"
+    assert report["students"][0]["ai_feedback"]["approved_by_teacher"] is True
+    assert saved["students"][0]["ai_feedback"]["status"] == "approved"
+    assert saved["students"][0]["ai_feedback"]["approved_by_teacher"] is True
+
+
+def test_review_assignment_ai_feedback_rejects_non_draft_feedback(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
+
+    report_dir = tmp_path / "teacher-reports"
+    report_dir.mkdir(parents=True)
+    (report_dir / "activity.json").write_text(
+        json.dumps(
+            {
+                "activity_id": "activity",
+                "students": [
+                    {
+                        "student": "rossi-mario",
+                        "student_id": "rossi-mario",
+                        "ai_feedback": {"status": "approved", "approved_by_teacher": True},
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    try:
+        course_board_server.review_assignment_ai_feedback("activity.json", "rossi-mario", "reject")
+    except ValueError as error:
+        assert "non e una bozza" in str(error)
+    else:
+        raise AssertionError("La review deve rifiutare feedback AI non in bozza")
+
+
 def test_ai_secret_status_reports_paths_and_configured_keys_without_values(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "AI_SECRET_PATH", tmp_path / ".secrets" / "ai.secret")

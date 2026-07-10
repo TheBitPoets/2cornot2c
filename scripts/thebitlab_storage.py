@@ -190,6 +190,12 @@ class JsonAssignmentStorage:
             raise ValueError(f"JSON non valido: {path}")
         return payload
 
+    def write_json(self, path: Path, payload: dict[str, Any]) -> None:
+        """Write a JSON object with stable formatting."""
+
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
     def list_assignment_reports(self) -> list[dict[str, Any]]:
         """List assignment tracking reports stored in teacher-reports."""
 
@@ -233,6 +239,13 @@ class JsonAssignmentStorage:
         payload = self.read_json(path)
         if not isinstance(payload.get("students"), list):
             raise ValueError("Registro consegne non valido: students deve essere una lista.")
+        return normalize_assignment_register(payload)
+
+    def write_assignment_report(self, name: str, payload: dict[str, Any]) -> dict[str, Any]:
+        """Persist one assignment tracking report below teacher-reports."""
+
+        path = self.safe_teacher_report_path(name)
+        self.write_json(path, payload)
         return normalize_assignment_register(payload)
 
     def list_activities(self) -> list[dict[str, Any]]:

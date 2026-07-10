@@ -1746,6 +1746,7 @@ function aiFeedbackReviewDetails(ai) {
   const hasFeedback = Boolean(ai && ai.status && ai.status !== "not_generated");
   if (!hasFeedback) return "";
   const confidence = aiFeedbackText(ai.confidence);
+  const canReview = ai.status === "draft";
   return `
     <details class="aiFeedbackDetails">
       <summary>Dettaglio AI</summary>
@@ -1767,6 +1768,12 @@ function aiFeedbackReviewDetails(ai) {
           <dd>${escapeHtml(aiFeedbackTeacherAction(ai))}</dd>
         </div>
       </dl>
+      ${canReview ? `
+        <div class="aiFeedbackActions">
+          <button type="button" class="smallButton" data-ai-feedback-decision="approve">Approva</button>
+          <button type="button" class="smallButton" data-ai-feedback-decision="reject">Respingi</button>
+        </div>
+      ` : ""}
     </details>
   `;
 }
@@ -1975,7 +1982,9 @@ function renderStudents(students) {
       </td>
       <td><code>${escapeHtml(grading.teacher_grade ?? grading.score ?? "-")}</code></td>
       <td>
-        ${aiFeedbackDetails(ai)}
+        <div data-ai-feedback-student="${escapeHtml(student.student_id || student.student)}">
+          ${aiFeedbackDetails(ai)}
+        </div>
       </td>
       <td>
         <button type="button" class="smallButton" data-review-student="${escapeHtml(student.student)}" title="${escapeHtml(reviewTitle)}" ${canReview ? "" : "disabled"}>
@@ -1987,6 +1996,26 @@ function renderStudents(students) {
     els.studentsBody.append(row);
   }
   setupResizableTable(els.studentsTable, "students");
+}
+
+async function reviewAiFeedback(studentId, decision) {
+  if (!state.reportName) {
+    setStatus("Carica un registro prima di revisionare il feedback AI.");
+    return;
+  }
+  const label = decision === "approve" ? "approvazione" : "respinta";
+  setStatus(`Salvataggio ${label} feedback AI per ${studentId}...`);
+  const payload = await api("/api/assignment-reports/ai-feedback/review", {
+    method: "POST",
+    body: JSON.stringify({
+      name: state.reportName,
+      student_id: studentId,
+      decision,
+    }),
+  });
+  state.report = payload.report;
+  renderDashboard();
+  setStatus(`Feedback AI ${decision === "approve" ? "approvato" : "respinto"} per ${studentId}.`);
 }
 
 function submissionFiles(student) {
@@ -2389,6 +2418,17 @@ els.overviewMatrixBody.addEventListener("click", async (event) => {
   }
 });
 els.studentsBody.addEventListener("click", (event) => {
+  const aiButton = event.target.closest("[data-ai-feedback-decision]");
+  if (aiButton && !aiButton.disabled) {
+    const container = aiButton.closest("[data-ai-feedback-student]");
+    if (!container?.dataset.aiFeedbackStudent) return;
+    aiButton.disabled = true;
+    reviewAiFeedback(container.dataset.aiFeedbackStudent, aiButton.dataset.aiFeedbackDecision).catch((error) => {
+      aiButton.disabled = false;
+      setStatus(`Errore feedback AI: ${error.message}`);
+    });
+    return;
+  }
   const button = event.target.closest("[data-review-student]");
   if (!button || button.disabled) return;
   openSubmission(button.dataset.reviewStudent, "", "students");

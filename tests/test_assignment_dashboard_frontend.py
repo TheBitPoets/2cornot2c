@@ -224,6 +224,7 @@ def run_dashboard_js(assertions: str) -> None:
         aiFeedbackDetails,
         aiFeedbackReviewDetails,
         aiFeedbackTeacherAction,
+        reviewAiFeedback,
         compactStudentsSummaryItems,
         detailedStudentsSummaryItems,
         applyPanelOrder,
@@ -592,8 +593,11 @@ def test_ai_feedback_helpers_render_teacher_review_states() -> None:
         assert.match(html, /Dettaglio AI/);
         assert.match(html, /Rivedi il valore zero\\./);
         assert.match(html, /Bozza da controllare\\./);
+        assert.match(html, /data-ai-feedback-decision="approve"/);
+        assert.match(html, /data-ai-feedback-decision="reject"/);
         assert.match(html, /title="Feedback AI generato ma non ancora approvato dal docente\\."/);
         assert.equal(tested.aiFeedbackReviewDetails({ status: "not_generated" }), "");
+        assert.doesNotMatch(tested.aiFeedbackReviewDetails({ status: "approved" }), /data-ai-feedback-decision/);
         assert.match(
           tested.aiFeedbackTeacherAction({ status: "approved" }),
           /pronto per la pubblicazione allo studente/,
@@ -609,6 +613,7 @@ def test_ai_feedback_details_css_limits_expanded_content_height() -> None:
     assert "max-height: 14rem;" in css
     assert "overflow-y: auto;" in css
     assert "text-align: justify;" in css
+    assert ".aiFeedbackActions" in css
 
 
 def test_modal_summary_helpers_include_tooltips() -> None:
