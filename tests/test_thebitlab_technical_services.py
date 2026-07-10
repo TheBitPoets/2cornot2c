@@ -3,13 +3,17 @@
 import pytest
 
 from scripts.thebitlab_technical_services import (
+    AiFeedbackRequest,
     DeterministicGradingService,
+    DeterministicAiFeedbackService,
     ExecutionResult,
     ExecutionRequest,
     GradeActivityExecutionService,
+    GradingResult,
     GradingRequest,
     InvalidServicePayloadError,
     RunnerTestResult,
+    ai_feedback_dict_from_grading,
     execution_result_from_payload,
     grading_dict_from_grade_activity_report,
 )
@@ -305,6 +309,68 @@ def test_grade_activity_execution_service_returns_invalid_payload_for_bad_activi
 
     assert result.status == "invalid_payload"
     assert "Activity non caricata" in result.detail
+
+
+def test_deterministic_ai_feedback_summarizes_passed_grading() -> None:
+    grading = GradingResult(
+        status="graded_passed",
+        passed=True,
+        tests_passed=2,
+        tests_total=2,
+        failed_tests=[],
+        score=10,
+    )
+
+    feedback = DeterministicAiFeedbackService().generate_feedback(
+        AiFeedbackRequest(activity_id="activity", student_id="rossi-mario", grading=grading)
+    )
+
+    assert feedback.status == "draft"
+    assert feedback.summary == "Tutti i test deterministici risultano superati (2/2)."
+    assert feedback.suggested_grade == 10
+    assert feedback.approved_by_teacher is False
+
+
+def test_deterministic_ai_feedback_names_failed_tests() -> None:
+    grading = GradingResult(
+        status="graded_failed",
+        passed=False,
+        tests_passed=1,
+        tests_total=2,
+        failed_tests=["somma_negativi"],
+        score=5,
+        detail="Output errato",
+    )
+
+    feedback = DeterministicAiFeedbackService().generate_feedback(
+        AiFeedbackRequest(activity_id="activity", student_id="rossi-mario", grading=grading)
+    )
+
+    assert feedback.status == "draft"
+    assert "somma_negativi" in feedback.summary
+    assert feedback.suggested_grade == 5
+    assert feedback.detail == "Output errato"
+
+
+def test_ai_feedback_dict_from_grading_is_register_compatible() -> None:
+    grading = GradingResult(
+        status="not_run",
+        passed=None,
+        tests_passed=None,
+        tests_total=None,
+        failed_tests=[],
+        detail="Runner non disponibile",
+    )
+
+    feedback = ai_feedback_dict_from_grading(grading)
+
+    assert feedback == {
+        "status": "draft",
+        "suggested_grade": None,
+        "summary": "Correzione automatica non eseguita: serve verificare il runner o i dati della consegna.",
+        "approved_by_teacher": False,
+        "detail": "Runner non disponibile",
+    }
 
 
 @pytest.mark.parametrize(

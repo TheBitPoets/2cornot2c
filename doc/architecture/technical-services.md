@@ -109,3 +109,5 @@ Le prossime implementazioni concrete devono preservare questi casi:
 Durante la transizione, i report prodotti da `scripts/grade_activity.py` vengono convertiti nel contratto tecnico con `grading_dict_from_grade_activity_report()`. Questo permette al tracking delle consegne di usare `GradingService` senza cambiare subito il formato dei report gia prodotti.
 
 `GradeActivityExecutionService` espone inoltre `grade_activity.py` dietro la porta `ExecutionService`: i chiamanti passano `activity_path` e `source_path` nei metadati della richiesta e ricevono un `ExecutionResult`, senza dipendere dal formato legacy del report.
+
+`DeterministicAiFeedbackService` fornisce una prima implementazione mockabile di `AiFeedbackService`: genera bozze di feedback a partire dal `GradingResult` senza chiamare provider esterni. Serve per stabilizzare flussi, test e dashboard prima di collegare un adapter AI reale.
