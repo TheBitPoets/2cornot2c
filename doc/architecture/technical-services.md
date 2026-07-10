@@ -191,4 +191,6 @@ python -m scripts.manual_ai_feedback parse-response response.json
 python -m scripts.manual_ai_feedback apply-response teacher-reports/demo/register.json rossi-mario response.json --output updated-register.json
 ```
 
+Il flusso operativo completo e descritto in [`../MANUAL_AI_FEEDBACK_WORKFLOW.md`](../MANUAL_AI_FEEDBACK_WORKFLOW.md).
+
 Se ChatGPT cambia stile di risposta, si modifica solo l'adapter del workflow manuale o il validatore dello schema, non il resto della dashboard. Lo stesso contratto JSON puo essere riusato anche dagli adapter automatici, che inviano e ricevono dati strutturati senza legarsi al testo libero del provider.
