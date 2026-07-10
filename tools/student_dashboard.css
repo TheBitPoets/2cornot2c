@@ -317,6 +317,31 @@ button:hover { transform: translateY(-1px); }
   color: #164a9f;
 }
 
+.assignmentActions {
+  margin: 0;
+}
+
+.actionButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  max-width: 100%;
+  border: 1px solid #111111;
+  border-radius: 999px;
+  background: #111111;
+  color: #ffffff;
+  padding: .45rem .75rem;
+  font-size: .8rem;
+  font-weight: 800;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.actionButton:hover {
+  transform: translateY(-1px);
+}
+
 .feedback {
   min-width: 0;
   max-width: 70rem;

@@ -108,6 +108,8 @@ Per ogni consegna controlla:
 - link repository o file consegna quando disponibile;
 - feedback approvato.
 
+Quando il registro contiene un link valido, il pulsante **Apri consegna** apre il file della consegna; se il file non e disponibile ma il repository si, apre il repository.
+
 Screenshot previsto: `doc/images/dashboard-guides/studente-consegne.png`.
 
 ## Stati principali
