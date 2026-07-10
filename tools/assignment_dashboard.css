@@ -1179,6 +1179,10 @@ label > textarea {
   padding: .85rem 1rem;
 }
 
+.studentsDialogStatus {
+  padding: 0 1rem .75rem;
+}
+
 .coverageDialogSummary,
 .overviewDialogSummary {
   padding: .85rem 1rem;

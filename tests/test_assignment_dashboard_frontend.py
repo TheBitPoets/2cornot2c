@@ -161,6 +161,7 @@ def run_dashboard_js(assertions: str) -> None:
       return button;
     }});
 
+    const fetchCalls = [];
     const context = {{
       console,
       setTimeout,
@@ -189,7 +190,10 @@ def run_dashboard_js(assertions: str) -> None:
           return [];
         }},
       }},
-      fetch: async (path) => ({{
+      fetchCalls,
+      fetch: async (path, options = {{}}) => {{
+        fetchCalls.push({{ path, options }});
+        return {{
         ok: true,
         status: 200,
         statusText: "OK",
@@ -197,10 +201,25 @@ def run_dashboard_js(assertions: str) -> None:
           if (path === "/api/assignment-reports") return {{ reports: [] }};
           if (path === "/api/activities") return {{ activities: [] }};
           if (path === "/api/assignment-overview") return {{ rows: [] }};
+          if (path === "/api/assignment-reports/ai-feedback/review") {{
+            return {{
+              ok: true,
+              report: {{
+                students: [
+                  {{
+                    student: "rossi-mario",
+                    student_id: "rossi-mario",
+                    ai_feedback: {{ status: "approved", approved_by_teacher: true }},
+                  }},
+                ],
+              }},
+            }};
+          }}
           return {{}};
         }},
         text: async () => "",
-      }}),
+      }};
+      }},
     }};
     context.globalThis = context;
     context.layout = layout;
@@ -244,6 +263,7 @@ def run_dashboard_js(assertions: str) -> None:
         layout,
         FakeElement,
         localStorage,
+        fetchCalls,
         window,
       }};
     `, context);
@@ -614,6 +634,28 @@ def test_ai_feedback_details_css_limits_expanded_content_height() -> None:
     assert "overflow-y: auto;" in css
     assert "text-align: justify;" in css
     assert ".aiFeedbackActions" in css
+
+
+def test_review_ai_feedback_posts_decision_and_updates_modal_status() -> None:
+    run_dashboard_js(
+        """
+        tested.state.reportName = "demo/ai-feedback-states.json";
+        tested.state.report = { students: [] };
+
+        tested.reviewAiFeedback("rossi-mario", "approve").then(() => {
+          const call = tested.fetchCalls.find((item) => item.path === "/api/assignment-reports/ai-feedback/review");
+          assert.ok(call);
+          assert.equal(call.options.method, "POST");
+          assert.deepEqual(JSON.parse(call.options.body), {
+            name: "demo/ai-feedback-states.json",
+            student_id: "rossi-mario",
+            decision: "approve",
+          });
+          assert.equal(tested.state.report.students[0].ai_feedback.status, "approved");
+          assert.match(tested.els.studentsDialogStatus.textContent, /approvato per rossi-mario/);
+        });
+        """
+    )
 
 
 def test_modal_summary_helpers_include_tooltips() -> None:

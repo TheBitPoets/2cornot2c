@@ -154,6 +154,7 @@ const els = {
   studentsCloseBtn: document.querySelector("#studentsCloseBtn"),
   studentsTable: document.querySelector("#studentsTable"),
   studentsBody: document.querySelector("#studentsBody"),
+  studentsDialogStatus: document.querySelector("#studentsDialogStatus"),
   reviewDialog: document.querySelector("#reviewDialog"),
   reviewBreadcrumb: document.querySelector("#reviewBreadcrumb"),
   reviewPrevBtn: document.querySelector("#reviewPrevBtn"),
@@ -202,6 +203,10 @@ async function api(path, options = {}) {
 
 function setStatus(message) {
   els.status.textContent = message;
+}
+
+function setStudentsDialogStatus(message) {
+  if (els.studentsDialogStatus) els.studentsDialogStatus.textContent = message;
 }
 
 function escapeHtml(value) {
@@ -2000,11 +2005,15 @@ function renderStudents(students) {
 
 async function reviewAiFeedback(studentId, decision) {
   if (!state.reportName) {
-    setStatus("Carica un registro prima di revisionare il feedback AI.");
+    const message = "Carica un registro prima di revisionare il feedback AI.";
+    setStatus(message);
+    setStudentsDialogStatus(message);
     return;
   }
   const label = decision === "approve" ? "approvazione" : "respinta";
-  setStatus(`Salvataggio ${label} feedback AI per ${studentId}...`);
+  const progressMessage = `Salvataggio ${label} feedback AI per ${studentId}...`;
+  setStatus(progressMessage);
+  setStudentsDialogStatus(progressMessage);
   const payload = await api("/api/assignment-reports/ai-feedback/review", {
     method: "POST",
     body: JSON.stringify({
@@ -2015,7 +2024,9 @@ async function reviewAiFeedback(studentId, decision) {
   });
   state.report = payload.report;
   renderDashboard();
-  setStatus(`Feedback AI ${decision === "approve" ? "approvato" : "respinto"} per ${studentId}.`);
+  const doneMessage = `Feedback AI ${decision === "approve" ? "approvato" : "respinto"} per ${studentId}.`;
+  setStatus(doneMessage);
+  setStudentsDialogStatus(doneMessage);
 }
 
 function submissionFiles(student) {
@@ -2420,12 +2431,16 @@ els.overviewMatrixBody.addEventListener("click", async (event) => {
 els.studentsBody.addEventListener("click", (event) => {
   const aiButton = event.target.closest("[data-ai-feedback-decision]");
   if (aiButton && !aiButton.disabled) {
+    event.preventDefault();
+    event.stopPropagation();
     const container = aiButton.closest("[data-ai-feedback-student]");
     if (!container?.dataset.aiFeedbackStudent) return;
     aiButton.disabled = true;
     reviewAiFeedback(container.dataset.aiFeedbackStudent, aiButton.dataset.aiFeedbackDecision).catch((error) => {
       aiButton.disabled = false;
-      setStatus(`Errore feedback AI: ${error.message}`);
+      const message = `Errore feedback AI: ${error.message}`;
+      setStatus(message);
+      setStudentsDialogStatus(message);
     });
     return;
   }
