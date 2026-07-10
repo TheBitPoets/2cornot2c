@@ -593,6 +593,7 @@ def test_students_summary_counts_include_grading_and_grades() -> None:
           { status: "submitted_late", submitted: true, late: true, grading: { status: "graded_failed", teacher_grade: 5 } },
           { status: "submitted", submitted: true, late: false, grading: { status: "graded_passed", teacher_grade: "" } },
         ]);
+        tested.state.report = { class_id: "3A-TPSI", class_label: "3A TPSI" };
         assert.equal(JSON.stringify(counts), JSON.stringify({
           total: 5,
           pending: 1,
@@ -605,6 +606,7 @@ def test_students_summary_counts_include_grading_and_grades() -> None:
           missingGrades: 3,
         }));
         assert.equal(JSON.stringify(tested.compactStudentsSummaryItems(counts)), JSON.stringify([
+          ["Classe", "3A TPSI"],
           ["Studenti", 5],
           ["Consegnati", 3],
           ["Mancanti", 1],
@@ -612,6 +614,7 @@ def test_students_summary_counts_include_grading_and_grades() -> None:
           ["KO", 1],
         ]));
         assert.equal(JSON.stringify(tested.detailedStudentsSummaryItems(counts)), JSON.stringify([
+          ["Classe", "3A TPSI"],
           ["Studenti", 5],
           ["Consegnati", 3],
           ["Mancanti", 1],
@@ -629,7 +632,9 @@ def test_students_summary_counts_include_grading_and_grades() -> None:
 def test_students_summary_cards_include_tooltips() -> None:
     run_dashboard_js(
         """
-        const html = tested.renderStudentsSummaryCards([["Consegnati", 3], ["KO", 1]]);
+        const html = tested.renderStudentsSummaryCards([["Classe", "3A TPSI"], ["Consegnati", 3], ["KO", 1]]);
+        assert.match(html, /<strong>Classe<\\/strong>\\s*<span>3A TPSI<\\/span>/);
+        assert.match(html, /title="Classe associata al registro consegne selezionato\\."/);
         assert.match(html, /title="Numero di studenti che hanno effettuato una consegna\\."/);
         assert.match(html, /title="Numero di studenti con grading o test falliti\\."/);
         assert.equal(tested.summaryTooltip("Etichetta nuova"), "Valore riepilogativo: Etichetta nuova.");

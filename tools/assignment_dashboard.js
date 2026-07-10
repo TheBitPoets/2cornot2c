@@ -1987,6 +1987,7 @@ function renderStudentsSummaryCards(items) {
 
 function compactStudentsSummaryItems(counts) {
   return [
+    ["Classe", classValue(state.report)],
     ["Studenti", counts.total],
     ["Consegnati", counts.submitted],
     ["Mancanti", counts.missing],
@@ -1997,6 +1998,7 @@ function compactStudentsSummaryItems(counts) {
 
 function detailedStudentsSummaryItems(counts) {
   return [
+    ["Classe", classValue(state.report)],
     ["Studenti", counts.total],
     ["Consegnati", counts.submitted],
     ["Mancanti", counts.missing],
