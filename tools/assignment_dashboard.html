@@ -23,11 +23,6 @@
     </div>
     <div class="heroTools">
       <div class="actions">
-        <select id="reportSelect" aria-label="Registri consegne salvati">
-          <option value="">Registri consegne</option>
-        </select>
-        <button id="loadReportBtn" type="button" title="Carica il registro consegne selezionato da teacher-reports.">Carica registro</button>
-        <button id="reloadBtn" type="button" title="Ricarica la lista dei registri disponibili.">Ricarica</button>
         <button id="resetPanelOrderBtn" type="button" title="Ripristina l'ordine iniziale dei pannelli della dashboard.">Reset pannelli</button>
       </div>
     </div>
@@ -116,6 +111,13 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
           <h2>Registro selezionato</h2>
           <p id="status" class="status">Pronto.</p>
         </div>
+      </div>
+      <div class="reportLoadControls">
+        <select id="reportSelect" aria-label="Registri consegne salvati">
+          <option value="">Registri consegne</option>
+        </select>
+        <button id="loadReportBtn" type="button" title="Carica il registro consegne selezionato da teacher-reports.">Carica registro</button>
+        <button id="reloadBtn" type="button" title="Ricarica la lista dei registri disponibili.">Ricarica</button>
       </div>
       <div id="reportSummary" class="summaryGrid"></div>
     </section>

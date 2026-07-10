@@ -726,6 +726,17 @@ def test_ai_feedback_details_css_limits_expanded_content_height() -> None:
     assert ".aiFeedbackActions" in css
 
 
+def test_report_loader_controls_live_in_selected_report_panel() -> None:
+    html = open("tools/assignment_dashboard.html", encoding="utf-8").read()
+    selected_report_section = html.split('data-panel-key="selected-report"', 1)[1].split('data-panel-key="class-overview"', 1)[0]
+    hero_section = html.split("<main", 1)[0]
+
+    assert 'id="reportSelect"' in selected_report_section
+    assert 'id="loadReportBtn"' in selected_report_section
+    assert 'id="reloadBtn"' in selected_report_section
+    assert 'id="reportSelect"' not in hero_section
+
+
 def test_review_ai_feedback_posts_decision_and_updates_modal_status() -> None:
     run_dashboard_js(
         """
