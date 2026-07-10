@@ -518,6 +518,7 @@ Ordine consigliato:
 
 1. Storage layer iniziale sopra JSON, con `schema_version` e root configurabile.
    - chiarire e stabilizzare la relazione tra percorso didattico, calendario, consuntivi UDA e file fisici oggi separati (`doc/course_design.json`, `doc/course_designs/*.json`, `doc/calendars/*.json`);
+   - modellare la relazione percorso-calendario come molti-a-molti: lo stesso percorso puo essere associato a piu calendari, riproposto in periodi diversi, non coprire l'intero anno o ripetersi in finestre temporali diverse;
    - definire una vista dati canonica che possa essere salvata prima su JSON e poi su SQLite senza cambiare le dashboard;
    - evitare che docente e studente leggano versioni diverse dello stesso percorso/calendario.
 2. Provider layer minimo: interfaccia comune e implementazione GitHub iniziale.
