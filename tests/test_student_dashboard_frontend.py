@@ -61,6 +61,7 @@ def run_student_dashboard_js(assertions: str) -> None:
         nextOpenAssignment,
         nextOpenDueAt,
         collectCourseItems,
+        courseItemHref,
         safeExternalHref,
         safeExternalLink,
         studentLabel,
@@ -328,6 +329,7 @@ def test_student_dashboard_renders_readonly_course_path_panel() -> None:
         assert.match(tested.els.coursePath.innerHTML, /Percorso corrente/);
         assert.match(tested.els.coursePath.innerHTML, /Programmazione di base/);
         assert.match(tested.els.coursePath.innerHTML, /Input e output/);
+        assert.match(tested.els.coursePath.innerHTML, /href="https:\\/\\/github.com\\/TheBitPoets\\/2cornot2c\\/blob\\/main\\/README.md#input-e-output"/);
         assert.match(tested.els.coursePath.innerHTML, /Somma in Python/);
         assert.match(tested.els.coursePathStatus.textContent, /1 percorsi .* 1 UDA/);
         assert.equal(tested.collectCourseItems([{ title: "Padre", children: [{ title: "Figlio" }] }]).length, 2);
@@ -387,6 +389,26 @@ def test_student_dashboard_rejects_unsafe_external_links() -> None:
         assert.match(unsafe, /repo-name/);
         assert.equal(tested.safeExternalHref("javascript:alert(1)"), "");
         assert.equal(tested.safeExternalHref("https://github.com/TheBitPoets/2cornot2c"), "https://github.com/TheBitPoets/2cornot2c");
+        """
+    )
+
+
+def test_student_dashboard_resolves_course_item_links_to_github_anchors() -> None:
+    run_student_dashboard_js(
+        """
+        assert.equal(
+          tested.courseItemHref({ href: "../README.md#introduzione", source: "README.md" }),
+          "https://github.com/TheBitPoets/2cornot2c/blob/main/README.md#introduzione",
+        );
+        assert.equal(
+          tested.courseItemHref({ href: "#laboratori", source: "README.md" }),
+          "https://github.com/TheBitPoets/2cornot2c/blob/main/README.md#laboratori",
+        );
+        assert.equal(
+          tested.courseItemHref({ github_url: "https://github.com/example/repo/blob/main/doc.md#x" }),
+          "https://github.com/example/repo/blob/main/doc.md#x",
+        );
+        assert.equal(tested.courseItemHref({ href: "javascript:alert(1)" }), "");
         """
     )
 

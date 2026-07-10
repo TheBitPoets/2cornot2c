@@ -16,6 +16,7 @@ const els = {
 };
 
 const DEMO_STUDENTS = ["bianchi-luca", "rossi-mario", "verdi-anna", "neri-giulia"];
+const DEFAULT_COURSE_REPO_URL = "https://github.com/TheBitPoets/2cornot2c";
 let currentDashboardPayload = { student_id: "", assignments: [] };
 let currentClassLabel = "Dai registri consegne";
 let currentClassRoster = null;
@@ -185,6 +186,32 @@ function safeExternalHref(url) {
     // Fall back to no clickable URL below.
   }
   return "";
+}
+
+function normalizeCoursePath(path) {
+  return String(path ?? "")
+    .trim()
+    .replaceAll("\\", "/")
+    .replace(/^(\.\/)+/, "")
+    .replace(/^(\.\.\/)+/, "")
+    .replace(/^\/+/, "");
+}
+
+function courseItemHref(item) {
+  const githubUrl = safeExternalHref(item?.github_url || item?.source_github_url);
+  if (githubUrl) return githubUrl;
+
+  const rawHref = String(item?.href || "").trim();
+  const absoluteHref = safeExternalHref(rawHref);
+  const currentOrigin = new URL(window.location.href).origin;
+  if (absoluteHref && !absoluteHref.startsWith(currentOrigin)) return absoluteHref;
+  if (/^[a-zA-Z][\w+.-]*:/.test(rawHref)) return "";
+
+  const [hrefPath, hrefAnchor = ""] = rawHref.split("#", 2);
+  const sourcePath = normalizeCoursePath(hrefPath || item?.source || item?.source_id);
+  if (!sourcePath) return "";
+  const anchor = hrefAnchor ? `#${hrefAnchor}` : "";
+  return `${DEFAULT_COURSE_REPO_URL}/blob/main/${sourcePath}${anchor}`;
 }
 
 function formatDate(value) {
@@ -404,7 +431,7 @@ function renderCoursePath(design, assignments = [], studentId = currentDashboard
           <ul class="courseItemList">
             ${visibleItems.map(({ item, depth }) => `
               <li style="--depth: ${escapeHtml(depth)}">
-                ${item.href ? safeExternalLink(item.href, item.title || item.id || "-") : escapeHtml(item.title || item.id || "-")}
+                ${courseItemHref(item) ? safeExternalLink(courseItemHref(item), item.title || item.id || "-") : escapeHtml(item.title || item.id || "-")}
                 <span>${escapeHtml(item.source || item.source_id || "")}</span>
               </li>
             `).join("")}
