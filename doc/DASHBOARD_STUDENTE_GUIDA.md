@@ -113,8 +113,9 @@ La vista puo mostrare:
 - stato della consegna;
 - badge **Prossima scadenza** sulle consegne aperte con la scadenza piu vicina.
 - UDA reali svolte, quando il percorso contiene date consuntive pubblicate.
+- festivita, vacanze e interruzioni impostate dal docente nel calendario pubblicato.
 
-I controlli **Mese** e **Settimana** compaiono solo quando servono alla modalità scelta. Il filtro **Mostra** permette di visualizzare tutto, solo consegne, solo UDA o solo scadenze. La vista resta in sola lettura: lo studente puo consultare la programmazione e le scadenze, ma non modificarle.
+I controlli **Mese** e **Settimana** compaiono solo quando servono alla modalità scelta. Il filtro **Mostra** permette di visualizzare tutto, solo consegne, solo UDA, solo festivita/interruzioni o solo scadenze. La vista resta in sola lettura: lo studente puo consultare la programmazione e le scadenze, ma non modificarle.
 
 Il filtro **Percorsi visibili** permette di mostrare o nascondere gli eventi UDA dei percorsi associati allo studente o alla sua classe. Il comportamento ricalca il filtro dei percorsi nella vista calendario docente: **Tutti** mostra tutti i percorsi disponibili, **Nessuno** nasconde gli eventi dei percorsi lasciando visibili le consegne.
 

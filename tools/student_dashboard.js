@@ -483,6 +483,30 @@ function udaDateEvents(assignments, studentId = currentDashboardPayload.student_
   });
 }
 
+function closureDateEvents() {
+  return (Array.isArray(currentSchoolCalendar?.closures) ? currentSchoolCalendar.closures : []).flatMap((closure) => {
+    const from = dateFromInput(closure.from || "");
+    const to = dateFromInput(closure.to || closure.from || "");
+    if (!from || !to || from > to) return [];
+    const events = [];
+    for (const cursor = new Date(from); cursor <= to; cursor.setDate(cursor.getDate() + 1)) {
+      const day = new Date(cursor);
+      events.push({
+        kind: "closure",
+        category: "closures",
+        label: closure.label || closure.type || "Chiusura",
+        date: isoDate(day),
+        iso: isoDate(day),
+        timestamp: day.getTime(),
+        title: closure.label || closure.type || "Chiusura",
+        closure,
+        priority: false,
+      });
+    }
+    return events;
+  });
+}
+
 function calendarDateRange(events) {
   const eventDates = events.map((event) => dateFromInput(event.iso)).filter(Boolean);
   const calendarStart = dateFromInput(currentSchoolCalendar?.start_date || "");
@@ -497,6 +521,7 @@ function calendarDateRange(events) {
 function filteredStudentCalendarEvents(events, filterValue) {
   if (filterValue === "assignments") return events.filter((event) => event.category === "assignments");
   if (filterValue === "udas") return events.filter((event) => event.category === "udas");
+  if (filterValue === "closures") return events.filter((event) => event.category === "closures");
   if (filterValue === "due") return events.filter((event) => event.kind === "due");
   return events;
 }
@@ -506,7 +531,9 @@ function renderCalendarEventPill(event) {
     ? "calendarPillDue"
     : event.category === "udas"
       ? "calendarPillUda"
-      : "calendarPillAssigned";
+      : event.category === "closures"
+        ? "calendarPillClosure"
+        : "calendarPillAssigned";
   const content = `
     ${event.priority ? '<strong>!</strong><span class="calendarPriorityText">Prossima scadenza</span>' : ""}
     ${escapeHtml(event.title)}
@@ -613,6 +640,7 @@ function renderStudentCalendarLegend(events) {
       <span class="calendarPill calendarPillAssigned">Assegnata</span>
       <span class="calendarPill calendarPillDue">Scadenza</span>
       <span class="calendarPill calendarPillUda">UDA reale</span>
+      <span class="calendarPill calendarPillClosure">Festivita/interruzione</span>
     </div>
   `;
 }
@@ -628,7 +656,9 @@ function renderStudentCalendarList(events) {
           ? "calendarPillDue"
           : event.category === "udas"
             ? "calendarPillUda"
-            : "calendarPillAssigned";
+            : event.category === "closures"
+              ? "calendarPillClosure"
+              : "calendarPillAssigned";
         const detailAttrs = event.assignment && event.assignmentIndex != null
           ? ` role="button" tabindex="0" data-calendar-detail-index="${escapeHtml(event.assignmentIndex)}" title="${escapeHtml(`Apri dettaglio consegna: ${event.title}`)}"`
           : "";
@@ -654,6 +684,7 @@ function renderStudentCalendar(assignments) {
   const baseEvents = [
     ...studentCalendarEvents(assignments),
     ...udaDateEvents(assignments),
+    ...closureDateEvents(),
   ].sort((left, right) => left.timestamp - right.timestamp || left.title.localeCompare(right.title, "it", { numeric: true, sensitivity: "base" }));
   const mode = els.studentCalendarViewMode?.value || currentStudentCalendarView.mode || "month";
   currentStudentCalendarView.mode = ["year", "month", "week"].includes(mode) ? mode : "month";
@@ -701,8 +732,9 @@ function renderStudentCalendar(assignments) {
   if (els.studentCalendarStatus) {
     const dueCount = baseEvents.filter((event) => event.kind === "due").length;
     const udaCount = baseEvents.filter((event) => event.category === "udas").length;
+    const closureCount = baseEvents.filter((event) => event.category === "closures").length;
     els.studentCalendarStatus.textContent = baseEvents.length
-      ? `${baseEvents.length} eventi · ${dueCount} scadenze · ${udaCount} UDA`
+      ? `${baseEvents.length} eventi · ${dueCount} scadenze · ${udaCount} UDA · ${closureCount} chiusure`
       : "";
   }
   const eventsByDate = new Map();
@@ -1320,6 +1352,7 @@ els.studentCalendar?.addEventListener("click", (event) => {
   const range = calendarDateRange([
     ...studentCalendarEvents(currentDashboardPayload.assignments || []),
     ...udaDateEvents(currentDashboardPayload.assignments || []),
+    ...closureDateEvents(),
   ]);
   moveStudentCalendarView(direction, calendarMonths(range.start, range.end), calendarWeeks(range.start, range.end));
 });

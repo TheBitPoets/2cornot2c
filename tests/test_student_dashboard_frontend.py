@@ -337,12 +337,17 @@ def test_student_dashboard_renders_readonly_calendar_events() -> None:
           submitted: true,
         };
 
-        tested.setCurrentSchoolCalendar({ start_date: "2026-09-01", end_date: "2026-11-30" });
+        tested.setCurrentSchoolCalendar({
+          start_date: "2026-09-01",
+          end_date: "2026-11-30",
+          closures: [{ label: "Ognissanti", from: "2026-11-01", to: "2026-11-01" }],
+        });
         tested.renderDashboard({ student_id: "rossi-mario", assignments: [openSooner, sameDeadline, submitted] });
 
         assert.match(tested.els.studentCalendar.innerHTML, /Stringhe in Python/);
         assert.match(tested.els.studentCalendar.innerHTML, /Somma in Python/);
         assert.match(tested.els.studentCalendar.innerHTML, /Loop in Python/);
+        assert.match(tested.els.studentCalendar.innerHTML, /Ognissanti/);
         assert.match(tested.els.studentCalendar.innerHTML, /studentMonthGrid/);
         assert.match(tested.els.studentCalendar.innerHTML, /studentMonthMainCard/);
         assert.match(tested.els.studentCalendar.innerHTML, /data-student-calendar-nav="previous"/);
@@ -352,7 +357,7 @@ def test_student_dashboard_renders_readonly_calendar_events() -> None:
         assert.equal(tested.els.studentCalendarWeekField.classList.contains("isHidden"), true);
         assert.equal(tested.els.studentCalendarViewMode.closest().classList.contains("isHidden"), false);
         assert.equal((tested.els.studentCalendar.innerHTML.match(/Prossima scadenza/g) || []).length, 2);
-        assert.match(tested.els.studentCalendarStatus.textContent, /6 eventi .* 3 scadenze/);
+        assert.match(tested.els.studentCalendarStatus.textContent, /7 eventi .* 3 scadenze .* 1 chiusure/);
         assert.equal(tested.studentCalendarEvents([openSooner, sameDeadline, submitted]).at(-1).title, "Somma in Python");
         """
     )
@@ -479,6 +484,29 @@ def test_student_dashboard_calendar_filters_visible_paths() -> None:
         tested.setVisibleStudentPathIds([]);
         tested.renderStudentCalendar([]);
         assert.doesNotMatch(tested.els.studentCalendar.innerHTML, /UDA-1 Fondamenti/);
+        """
+    )
+
+
+def test_student_dashboard_calendar_can_filter_closures() -> None:
+    run_student_dashboard_js(
+        """
+        tested.setCurrentSchoolCalendar({
+          start_date: "2026-10-01",
+          end_date: "2026-11-30",
+          closures: [{ label: "Ognissanti", from: "2026-11-01", to: "2026-11-01" }],
+        });
+        tested.els.studentCalendarFilter.value = "closures";
+        tested.renderStudentCalendar([{
+          title: "Somma in Python",
+          assigned_at: "2026-10-10T08:00:00+02:00",
+          due_at: "2026-10-18T23:59:00+02:00",
+          status: "assigned",
+          submitted: false,
+        }]);
+
+        assert.match(tested.els.studentCalendar.innerHTML, /Ognissanti/);
+        assert.doesNotMatch(tested.els.studentCalendar.innerHTML, /Somma in Python/);
         """
     )
 

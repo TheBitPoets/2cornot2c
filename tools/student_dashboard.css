@@ -555,6 +555,11 @@ button:hover { transform: translateY(-1px); }
   color: var(--ok);
 }
 
+.calendarPillClosure {
+  background: rgba(63, 63, 70, .12);
+  color: #3f3f46;
+}
+
 .studentCalendarList {
   display: grid;
   gap: .65rem;
