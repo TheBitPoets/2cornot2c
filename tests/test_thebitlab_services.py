@@ -272,6 +272,55 @@ def test_student_dashboard_filters_student_and_only_approved_feedback(tmp_path) 
     }
 
 
+def test_student_dashboard_prefers_file_manifest_url_when_source_url_is_broken_demo_path(tmp_path) -> None:
+    service = assignment_overview_service(tmp_path)
+    reports_dir = tmp_path / "teacher-reports"
+    reports_dir.mkdir(parents=True)
+    good_url = (
+        "https://github.com/TheBitPoets/2cornot2c/blob/main/"
+        "examples/assignment_tracking/student_repos/bianchi-luca/assignments/python-base-somma-001/main.py"
+    )
+    (reports_dir / "activity.json").write_text(
+        json.dumps(
+            {
+                "activity_id": "python-base-somma-001",
+                "title": "Somma in Python",
+                "students": [
+                    {
+                        "student": "bianchi-luca",
+                        "student_id": "bianchi-luca",
+                        "status": "submitted_on_time",
+                        "submitted": True,
+                        "submission": {
+                            "source_path": (
+                                "examples/assignment_tracking/student_repos/bianchi-luca/"
+                                "assignments/python-base-somma-001/main.py"
+                            ),
+                            "source_github_url": (
+                                "https://github.com/TheBitPoets/2cornot2c/blob/abc1234/scripts/"
+                                "examples/assignment_tracking/student_repos/bianchi-luca/"
+                                "assignments/python-base-somma-001/main.py"
+                            ),
+                            "files": [
+                                {
+                                    "path": "assignments/python-base-somma-001/main.py",
+                                    "role": "solution",
+                                    "github_url": good_url,
+                                }
+                            ],
+                        },
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    dashboard = service.student_dashboard("bianchi-luca")
+
+    assert dashboard["assignments"][0]["source_github_url"] == good_url
+
+
 def test_assignment_overview_service_accepts_protocol_compatible_storage(tmp_path) -> None:
     class FakeAssignmentStorage:
         def safe_teacher_report_path(self, name: str) -> Path:

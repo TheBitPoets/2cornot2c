@@ -56,6 +56,7 @@ def run_student_dashboard_js(assertions: str) -> None:
         sortedAssignments,
         nextOpenAssignment,
         nextOpenDueAt,
+        safeExternalHref,
         safeExternalLink,
         studentLabel,
         rosterLabel,
@@ -96,7 +97,9 @@ def test_student_dashboard_renders_summary_and_assignment_card() -> None:
           late: false,
           submitted_at: "2026-10-18T18:22:10+02:00",
           repo: "TheBitPoets/rossi-mario",
+          repo_github_url: "https://github.com/TheBitPoets/rossi-mario",
           source_path: "assignments/python-base-somma-001/main.py",
+          source_github_url: "https://github.com/TheBitPoets/rossi-mario/blob/main/assignments/python-base-somma-001/main.py",
           commit: "abc1234",
           grading: {
             status: "graded_passed",
@@ -129,6 +132,8 @@ def test_student_dashboard_renders_summary_and_assignment_card() -> None:
         assert.match(tested.els.assignments.innerHTML, /Feedback docente/);
         assert.match(tested.els.assignments.innerHTML, /Hai gestito correttamente/);
         assert.match(tested.els.assignments.innerHTML, /Test superati/);
+        assert.match(tested.els.assignments.innerHTML, /Apri consegna/);
+        assert.match(tested.els.assignments.innerHTML, /href="https:\\/\\/github.com\\/TheBitPoets\\/rossi-mario\\/blob\\/main\\/assignments\\/python-base-somma-001\\/main.py"/);
         """
     )
 
@@ -275,6 +280,30 @@ def test_student_dashboard_rejects_unsafe_external_links() -> None:
         const unsafe = tested.safeExternalLink("javascript:alert(1)", "Repository", "repo-name");
         assert.doesNotMatch(unsafe, /href=/);
         assert.match(unsafe, /repo-name/);
+        assert.equal(tested.safeExternalHref("javascript:alert(1)"), "");
+        assert.equal(tested.safeExternalHref("https://github.com/TheBitPoets/2cornot2c"), "https://github.com/TheBitPoets/2cornot2c");
+        """
+    )
+
+
+def test_student_dashboard_open_assignment_action_requires_source_link() -> None:
+    run_student_dashboard_js(
+        """
+        tested.renderDashboard({
+          student_id: "rossi-mario",
+          assignments: [{
+            activity_id: "python-base-somma-001",
+            title: "Somma in Python",
+            status: "assigned",
+            submitted: false,
+            repo_github_url: "https://github.com/TheBitPoets/2cornot2c",
+          }],
+        });
+
+        assert.match(tested.els.assignments.innerHTML, /Apri consegna/);
+        assert.match(tested.els.assignments.innerHTML, /disabled/);
+        assert.match(tested.els.assignments.innerHTML, /Consegna mancante/);
+        assert.match(tested.els.assignments.innerHTML, /Repository/);
         """
     )
 

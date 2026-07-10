@@ -46,6 +46,39 @@ def target(tmp_path, name: str) -> track_assignments.TrackingTarget:
     return track_assignments.TrackingTarget(student=name, repo=f"TheBitPoets/{name}", path=root)
 
 
+def test_github_file_path_uses_project_root_for_repo_relative_paths(tmp_path, monkeypatch) -> None:
+    project_root = tmp_path / "project"
+    source_path = (
+        project_root
+        / "examples"
+        / "assignment_tracking"
+        / "student_repos"
+        / "bianchi-luca"
+        / "assignments"
+        / "python-base-somma-001"
+        / "main.py"
+    )
+    scripts_dir = project_root / "scripts"
+    source_path.parent.mkdir(parents=True)
+    scripts_dir.mkdir()
+    source_path.write_text("print(3)\n", encoding="utf-8")
+    student = track_assignments.TrackingTarget(
+        student="bianchi-luca",
+        repo="TheBitPoets/2cornot2c",
+        path=project_root / "examples" / "assignment_tracking" / "student_repos" / "bianchi-luca",
+    )
+    monkeypatch.setattr(track_assignments, "PROJECT_ROOT", project_root)
+    monkeypatch.setattr(track_assignments, "git_root", lambda path: project_root)
+    monkeypatch.chdir(scripts_dir)
+
+    path = track_assignments.github_file_path(
+        student,
+        "examples/assignment_tracking/student_repos/bianchi-luca/assignments/python-base-somma-001/main.py",
+    )
+
+    assert path == "examples/assignment_tracking/student_repos/bianchi-luca/assignments/python-base-somma-001/main.py"
+
+
 class MissingPathProvider:
     provider_name = "missing-path"
 

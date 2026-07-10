@@ -156,17 +156,24 @@ function escapeHtml(value) {
 }
 
 function safeExternalLink(url, label, fallback = "-") {
+  const href = safeExternalHref(url);
+  return href
+    ? `<a href="${escapeHtml(href)}" target="_blank" rel="noreferrer">${escapeHtml(label)}</a>`
+    : escapeHtml(fallback);
+}
+
+function safeExternalHref(url) {
   const cleanUrl = String(url ?? "").trim();
-  if (!cleanUrl) return escapeHtml(fallback);
+  if (!cleanUrl) return "";
   try {
     const parsed = new URL(cleanUrl, window.location.href);
     if (parsed.protocol === "http:" || parsed.protocol === "https:") {
-      return `<a href="${escapeHtml(parsed.href)}" target="_blank" rel="noreferrer">${escapeHtml(label)}</a>`;
+      return parsed.href;
     }
   } catch {
-    // Fall back to non-clickable text below.
+    // Fall back to no clickable URL below.
   }
-  return escapeHtml(fallback);
+  return "";
 }
 
 function formatDate(value) {
@@ -261,6 +268,10 @@ function renderFeedback(feedback) {
 function renderAssignment(assignment, isNext = false) {
   const grading = assignment.grading || {};
   const failedTests = Array.isArray(grading.failed_tests) ? grading.failed_tests : [];
+  const actionHref = safeExternalHref(assignment.source_github_url);
+  const unavailableLabel = assignment.status === "missing" || !assignment.submitted
+    ? "Consegna mancante"
+    : "File consegna non disponibile";
   const repoLink = assignment.repo_github_url
     ? safeExternalLink(assignment.repo_github_url, "Repository", assignment.repo || "-")
     : escapeHtml(assignment.repo || "-");
@@ -283,6 +294,11 @@ function renderAssignment(assignment, isNext = false) {
           ${statusBadge(assignment)}
         </div>
       </div>
+      <p class="assignmentActions">
+        ${actionHref
+          ? `<a class="actionButton" href="${escapeHtml(actionHref)}" target="_blank" rel="noreferrer">Apri consegna</a>`
+          : `<button type="button" class="actionButton actionButtonDisabled" disabled>Apri consegna</button><span class="actionUnavailable">${escapeHtml(unavailableLabel)}</span>`}
+      </p>
       <p class="details">
         <span>${gradingBadge(grading)}</span>
         <span>Test: ${escapeHtml(grading.tests_passed ?? "-")}/${escapeHtml(grading.tests_total ?? "-")}</span>

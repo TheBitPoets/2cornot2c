@@ -317,6 +317,53 @@ button:hover { transform: translateY(-1px); }
   color: #164a9f;
 }
 
+.assignmentActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .45rem;
+  min-width: 0;
+  margin: 0;
+}
+
+.actionButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  max-width: 100%;
+  border: 1px solid #111111;
+  border-radius: 999px;
+  background: #111111;
+  color: #ffffff;
+  padding: .45rem .75rem;
+  font-size: .8rem;
+  font-weight: 800;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.actionButton:hover {
+  transform: translateY(-1px);
+}
+
+.actionButtonDisabled,
+.actionButtonDisabled:hover {
+  border-color: rgba(17, 17, 17, .18);
+  background: #eeeeee;
+  color: #777777;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.actionUnavailable {
+  color: var(--bad);
+  font-size: .78rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
 .feedback {
   min-width: 0;
   max-width: 70rem;
