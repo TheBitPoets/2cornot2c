@@ -2,12 +2,14 @@ const els = {
   form: document.querySelector("#studentForm"),
   classRoster: document.querySelector("#classRoster"),
   studentId: document.querySelector("#studentId"),
+  assignmentFilter: document.querySelector("#assignmentFilter"),
   summary: document.querySelector("#summary"),
   status: document.querySelector("#status"),
   assignments: document.querySelector("#assignments"),
 };
 
 const DEMO_STUDENTS = ["bianchi-luca", "rossi-mario", "verdi-anna", "neri-giulia"];
+let currentDashboardPayload = { student_id: "", assignments: [] };
 
 async function api(path, options = {}) {
   const response = await fetch(path, options);
@@ -269,15 +271,32 @@ function renderAssignment(assignment) {
   `;
 }
 
+function assignmentMatchesFilter(assignment, filterValue) {
+  if (filterValue === "open") return assignment.status === "missing" || !assignment.submitted;
+  if (filterValue === "submitted") return Boolean(assignment.submitted);
+  if (filterValue === "late") return Boolean(assignment.late);
+  if (filterValue === "feedback") return Boolean(assignment.approved_feedback);
+  return true;
+}
+
+function filteredAssignments(assignments, filterValue) {
+  return assignments.filter((assignment) => assignmentMatchesFilter(assignment, filterValue));
+}
+
 function renderDashboard(payload) {
   const assignments = Array.isArray(payload.assignments) ? payload.assignments : [];
+  currentDashboardPayload = { ...payload, assignments };
+  const filterValue = els.assignmentFilter?.value || "all";
+  const visibleAssignments = filteredAssignments(assignments, filterValue);
   renderSummary(payload.student_id || "-", assignments);
-  els.status.textContent = assignments.length
+  els.status.textContent = visibleAssignments.length === assignments.length
     ? `${assignments.length} consegne trovate.`
-    : "Nessuna consegna trovata per questo studente.";
-  els.assignments.innerHTML = assignments.length
-    ? assignments.map(renderAssignment).join("")
-    : '<p class="status">Nessuna consegna disponibile.</p>';
+    : `${visibleAssignments.length} di ${assignments.length} consegne visibili.`;
+  els.assignments.innerHTML = visibleAssignments.length
+    ? visibleAssignments.map(renderAssignment).join("")
+    : assignments.length
+      ? '<p class="status">Nessuna consegna corrisponde al filtro selezionato.</p>'
+      : '<p class="status">Nessuna consegna disponibile.</p>';
 }
 
 async function loadStudentDashboard(studentId) {
@@ -304,6 +323,10 @@ els.classRoster?.addEventListener("change", () => {
     .catch((error) => {
       els.status.textContent = `Errore: ${error.message}`;
     });
+});
+
+els.assignmentFilter?.addEventListener("change", () => {
+  renderDashboard(currentDashboardPayload);
 });
 
 loadStudentOptions(els.studentId.value)

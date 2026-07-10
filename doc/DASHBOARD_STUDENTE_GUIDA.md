@@ -76,6 +76,14 @@ Screenshot previsto: `doc/images/dashboard-guides/studente-riepilogo.png`.
 
 La sezione **Consegne** elenca le activity visibili allo studente.
 
+Il filtro **Filtro** permette di restringere la lista senza cambiare lo studente selezionato:
+
+- **Tutte** mostra tutte le consegne trovate;
+- **Da consegnare o mancanti** mostra le consegne non ancora consegnate o segnate come mancanti;
+- **Consegnate** mostra solo le consegne presenti nel registro;
+- **In ritardo** mostra solo le consegne consegnate oltre la scadenza;
+- **Con feedback** mostra solo le consegne con feedback approvato dal docente.
+
 Per ogni consegna controlla:
 
 - titolo o id activity;

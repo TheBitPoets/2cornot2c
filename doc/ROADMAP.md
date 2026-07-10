@@ -304,7 +304,9 @@ Da avere per la prima prova:
    - da revisionare.
 4. Vista studente in sola lettura per percorso e calendario:
    - mostrare il percorso didattico pubblicato dal docente con UDA e paragrafi pertinenti;
-   - mostrare il calendario corrente con lab, verifiche, scadenze e finestre di lavoro;
+   - distinguere la programmazione prevista per UDA dalla programmazione reale svolta, evidenziando eventuali ritardi o slittamenti;
+   - mostrare il calendario corrente con UDA, lezioni/lab, verifiche, compiti, consegne da fare, scadenze e finestre di lavoro;
+   - aggiungere piu avanti un riepilogo delle priorita per lo studente, per esempio consegne in scadenza, verifiche vicine e attivita arretrate;
    - non esporre azioni o pagine docente nella navigazione studente;
    - derivare queste viste dai dati docente senza duplicare percorso e calendario.
 5. Profilo studente:
