@@ -222,6 +222,8 @@ def run_dashboard_js(assertions: str) -> None:
         renderStudentsSummaryCards,
         aiFeedbackState,
         aiFeedbackDetails,
+        aiFeedbackReviewDetails,
+        aiFeedbackTeacherAction,
         compactStudentsSummaryItems,
         detailedStudentsSummaryItems,
         applyPanelOrder,
@@ -580,13 +582,33 @@ def test_ai_feedback_helpers_render_teacher_review_states() -> None:
           status: "draft",
           suggested_grade: 7.5,
           summary: "Correggere il caso limite.",
+          student_feedback: "Rivedi il valore zero.",
+          teacher_notes: "Bozza da controllare.",
+          confidence: "medium",
         });
         assert.match(html, /Bozza AI/);
         assert.match(html, /Suggerito: 7.5/);
         assert.match(html, /Correggere il caso limite\\./);
+        assert.match(html, /Dettaglio AI/);
+        assert.match(html, /Rivedi il valore zero\\./);
+        assert.match(html, /Bozza da controllare\\./);
         assert.match(html, /title="Feedback AI generato ma non ancora approvato dal docente\\."/);
+        assert.equal(tested.aiFeedbackReviewDetails({ status: "not_generated" }), "");
+        assert.match(
+          tested.aiFeedbackTeacherAction({ status: "approved" }),
+          /pronto per la pubblicazione allo studente/,
+        );
         """
     )
+
+
+def test_ai_feedback_details_css_limits_expanded_content_height() -> None:
+    css = open("tools/assignment_dashboard.css", encoding="utf-8").read()
+
+    assert ".aiFeedbackDetails dl" in css
+    assert "max-height: 14rem;" in css
+    assert "overflow-y: auto;" in css
+    assert "text-align: justify;" in css
 
 
 def test_modal_summary_helpers_include_tooltips() -> None:

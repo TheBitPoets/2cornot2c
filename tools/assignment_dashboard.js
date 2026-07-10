@@ -1723,7 +1723,51 @@ function aiFeedbackDetails(ai) {
       ${badge(state.label, state.kind)}<br>
       <small>${grade}</small>
       ${summary}
+      ${aiFeedbackReviewDetails(ai)}
     </div>
+  `;
+}
+
+function aiFeedbackText(value) {
+  if (value == null || String(value).trim() === "") return "-";
+  return String(value);
+}
+
+function aiFeedbackTeacherAction(ai) {
+  const status = ai?.status || "not_generated";
+  if (status === "draft") return "Da controllare: approvare o respingere con il workflow manuale.";
+  if (status === "approved") return "Feedback controllato dal docente e pronto per la pubblicazione allo studente.";
+  if (status === "rejected") return "Feedback respinto: rigenerare o riscrivere prima di pubblicarlo.";
+  if (status === "error") return "Errore provider: controllare il dettaglio tecnico prima di riprovare.";
+  return "Nessuna azione disponibile finche il feedback AI non viene generato.";
+}
+
+function aiFeedbackReviewDetails(ai) {
+  const hasFeedback = Boolean(ai && ai.status && ai.status !== "not_generated");
+  if (!hasFeedback) return "";
+  const confidence = aiFeedbackText(ai.confidence);
+  return `
+    <details class="aiFeedbackDetails">
+      <summary>Dettaglio AI</summary>
+      <dl>
+        <div>
+          <dt>Feedback studente</dt>
+          <dd>${escapeHtml(aiFeedbackText(ai.student_feedback))}</dd>
+        </div>
+        <div>
+          <dt>Note docente</dt>
+          <dd>${escapeHtml(aiFeedbackText(ai.teacher_notes))}</dd>
+        </div>
+        <div>
+          <dt>Affidabilita</dt>
+          <dd>${escapeHtml(confidence)}</dd>
+        </div>
+        <div>
+          <dt>Azione docente</dt>
+          <dd>${escapeHtml(aiFeedbackTeacherAction(ai))}</dd>
+        </div>
+      </dl>
+    </details>
   `;
 }
 
