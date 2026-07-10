@@ -3,6 +3,7 @@ const els = {
   classRoster: document.querySelector("#classRoster"),
   studentId: document.querySelector("#studentId"),
   assignmentFilter: document.querySelector("#assignmentFilter"),
+  assignmentSort: document.querySelector("#assignmentSort"),
   summary: document.querySelector("#summary"),
   status: document.querySelector("#status"),
   assignments: document.querySelector("#assignments"),
@@ -288,11 +289,47 @@ function filteredAssignments(assignments, filterValue) {
   return assignments.filter((assignment) => assignmentMatchesFilter(assignment, filterValue));
 }
 
+function timestampOrInfinity(value) {
+  if (!value) return Number.POSITIVE_INFINITY;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? Number.POSITIVE_INFINITY : date.getTime();
+}
+
+function statusRank(assignment) {
+  if (assignment.status === "missing") return 0;
+  if (assignment.late) return 1;
+  if (!assignment.submitted) return 2;
+  return 3;
+}
+
+function assignmentTitle(assignment) {
+  return String(assignment.title || assignment.activity_id || "");
+}
+
+function sortedAssignments(assignments, sortValue) {
+  return [...assignments].sort((left, right) => {
+    if (sortValue === "due_desc") {
+      return timestampOrInfinity(right.due_at) - timestampOrInfinity(left.due_at);
+    }
+    if (sortValue === "status") {
+      return statusRank(left) - statusRank(right)
+        || timestampOrInfinity(left.due_at) - timestampOrInfinity(right.due_at)
+        || assignmentTitle(left).localeCompare(assignmentTitle(right), "it", { numeric: true, sensitivity: "base" });
+    }
+    if (sortValue === "title") {
+      return assignmentTitle(left).localeCompare(assignmentTitle(right), "it", { numeric: true, sensitivity: "base" });
+    }
+    return timestampOrInfinity(left.due_at) - timestampOrInfinity(right.due_at)
+      || assignmentTitle(left).localeCompare(assignmentTitle(right), "it", { numeric: true, sensitivity: "base" });
+  });
+}
+
 function renderDashboard(payload) {
   const assignments = Array.isArray(payload.assignments) ? payload.assignments : [];
   currentDashboardPayload = { ...payload, assignments };
   const filterValue = els.assignmentFilter?.value || "all";
-  const visibleAssignments = filteredAssignments(assignments, filterValue);
+  const sortValue = els.assignmentSort?.value || "due_asc";
+  const visibleAssignments = sortedAssignments(filteredAssignments(assignments, filterValue), sortValue);
   renderSummary(payload.student_id || "-", assignments);
   els.status.textContent = visibleAssignments.length === assignments.length
     ? `${assignments.length} consegne trovate.`
@@ -331,6 +368,10 @@ els.classRoster?.addEventListener("change", () => {
 });
 
 els.assignmentFilter?.addEventListener("change", () => {
+  renderDashboard(currentDashboardPayload);
+});
+
+els.assignmentSort?.addEventListener("change", () => {
   renderDashboard(currentDashboardPayload);
 });
 
