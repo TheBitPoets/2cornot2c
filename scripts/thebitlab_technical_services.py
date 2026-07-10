@@ -229,12 +229,12 @@ def execution_result_from_grade_activity_report(report: dict[str, Any]) -> Execu
         for index, test in enumerate(report.get("tests", []) if isinstance(report.get("tests"), list) else [])
         if isinstance(test, dict) and isinstance(test.get("passed"), bool)
     ]
-    if status == "compile-error" and not tests:
+    if status in {"compile-error", "compile-timeout"} and not tests:
         tests.append(RunnerTestResult(name="compilazione", passed=False, detail=_grade_activity_report_detail(report)))
 
     if report.get("passed") is True:
         execution_status: ExecutionStatus = "passed"
-    elif status in {"timeout", "compile-timeout"}:
+    elif status == "timeout":
         execution_status = "timeout"
     elif status in {"invalid-activity"}:
         execution_status = "invalid_payload"

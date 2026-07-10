@@ -179,6 +179,26 @@ def test_grading_dict_from_grade_activity_report_marks_compile_error_as_failed_g
     assert result["report_status"] == "compile-error"
 
 
+def test_grading_dict_from_grade_activity_report_marks_compile_timeout_as_failed_grading() -> None:
+    result = grading_dict_from_grade_activity_report(
+        {
+            "activity_id": "c-base-somma-001",
+            "passed": False,
+            "status": "compile-timeout",
+            "compile": {"stderr": "Compilazione interrotta per timeout"},
+            "tests": [],
+        }
+    )
+
+    assert result["status"] == "graded_failed"
+    assert result["passed"] is False
+    assert result["tests_passed"] == 0
+    assert result["tests_total"] == 1
+    assert result["failed_tests"] == ["compilazione"]
+    assert result["detail"] == "Compilazione interrotta per timeout"
+    assert result["report_status"] == "compile-timeout"
+
+
 @pytest.mark.parametrize(
     "payload",
     [
