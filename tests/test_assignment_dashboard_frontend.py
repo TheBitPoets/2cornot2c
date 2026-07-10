@@ -457,6 +457,10 @@ def test_class_roster_panel_renders_selected_roster_students_and_targets() -> No
         assert.match(tested.els.rosterBody.innerHTML, /examples\\/assignment_tracking\\/student_repos\\/bianchi-luca/);
         assert.match(tested.els.rosterBody.innerHTML, /Fallback demo/);
         assert.match(tested.els.rosterBody.innerHTML, /Non attivo/);
+
+        tested.els.outputName.value = "3a-tpsi/somma-personalizzato.json";
+        tested.renderRosterPanel();
+        assert.match(tested.els.rosterSummary.innerHTML, /<strong>Output registro<\\/strong>\\s*<span>3a-tpsi\\/somma-personalizzato.json<\\/span>/);
         """
     )
 

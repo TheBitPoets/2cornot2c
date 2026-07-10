@@ -2620,6 +2620,7 @@ els.activityPath.addEventListener("input", () => {
   renderActivitySelect();
   renderRosterPanel();
 });
+els.outputName.addEventListener("input", renderRosterPanel);
 els.classId.addEventListener("change", updateOutputNameForCurrentActivity);
 els.coverageBody.addEventListener("click", async (event) => {
   const toggleButton = event.target.closest("[data-coverage-toggle]");
