@@ -233,50 +233,170 @@ button:hover { transform: translateY(-1px); }
 
 .studentCalendarBody {
   display: grid;
-  gap: .65rem;
+  gap: .85rem;
   min-width: 0;
   padding: 1rem;
 }
 
-.calendarEvent {
-  display: grid;
-  grid-template-columns: minmax(8.5rem, auto) minmax(0, 1fr) auto;
-  align-items: start;
-  gap: .85rem;
+.studentCalendarControls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .75rem;
+  align-items: end;
   min-width: 0;
-  border: 1px solid rgba(17, 17, 17, .1);
-  border-left: 4px solid var(--line);
+  padding: 1rem;
+  border-bottom: 1px solid rgba(17, 17, 17, .12);
+}
+
+.studentCalendarControls select {
+  min-width: min(16rem, 45vw);
+}
+
+.studentCalendarLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+  min-width: 0;
+}
+
+.studentMonthGrid {
+  display: grid;
+  grid-template-columns: minmax(10rem, .72fr) minmax(20rem, 1.35fr) minmax(10rem, .72fr);
+  gap: 1rem;
+  align-items: start;
+  min-width: 0;
+}
+
+.studentMonthCard {
+  min-width: 0;
+  border: 1px solid rgba(17, 17, 17, .12);
   border-radius: 8px;
   background: #ffffff;
-  padding: .85rem;
+  overflow: hidden;
 }
 
-.calendarEventDue {
-  border-left-color: var(--bad);
+.studentMonthMainCard {
+  box-shadow: 0 14px 32px rgba(0, 0, 0, .08);
 }
 
-.calendarEventAssigned {
-  border-left-color: var(--accent);
+.studentMonthContextCard {
+  opacity: .74;
+  transform: scale(.94);
+  transform-origin: top center;
 }
 
-.calendarEvent time {
+.studentMonthPlaceholder {
+  min-height: 1px;
+}
+
+.studentMonthTitle {
+  border-bottom: 1px solid rgba(17, 17, 17, .12);
+  background: rgba(255, 255, 255, .82);
+  padding: .75rem;
+}
+
+.studentMonthTitle h3 {
+  margin: 0;
+  font-size: .9rem;
+}
+
+.studentMonthWeekdays,
+.studentMonthDays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.studentMonthWeekdays span {
   color: var(--muted);
-  font-size: .78rem;
+  font-size: .64rem;
+  font-weight: 900;
+  padding: .42rem .25rem;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.studentDayCell {
+  min-height: 4.2rem;
+  border-top: 1px solid rgba(17, 17, 17, .08);
+  border-left: 1px solid rgba(17, 17, 17, .08);
+  background: #ffffff;
+  padding: .32rem;
+  overflow: hidden;
+}
+
+.studentDayCell:nth-child(7n + 1) {
+  border-left: 0;
+}
+
+.studentDayOutsideMonth,
+.studentDayOutsideRange {
+  background: #f3f3f3;
+  color: #999999;
+}
+
+.studentDayHasEvents {
+  background: #f9fbf8;
+}
+
+.studentDayNumber {
+  display: block;
+  margin-bottom: .18rem;
+  font-size: .72rem;
   font-weight: 900;
 }
 
-.calendarEvent h3 {
-  margin: 0 0 .28rem;
-  overflow-wrap: anywhere;
-  font-size: .98rem;
+.studentMonthContextCard .studentDayCell {
+  min-height: 2.55rem;
+  padding: .22rem;
 }
 
-.calendarEventBadges {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: .35rem;
-  min-width: 0;
+.studentMonthContextCard .calendarPill {
+  max-height: 1.6rem;
+  overflow: hidden;
+}
+
+.calendarPill {
+  display: block;
+  margin-top: .16rem;
+  border-radius: 6px;
+  background: rgba(17, 17, 17, .07);
+  color: var(--ink);
+  font-size: .62rem;
+  font-weight: 800;
+  line-height: 1.18;
+  overflow-wrap: anywhere;
+  padding: .18rem .22rem;
+}
+
+.calendarPill strong {
+  display: inline-grid;
+  place-items: center;
+  width: .9rem;
+  height: .9rem;
+  margin-right: .15rem;
+  border-radius: 999px;
+  background: var(--bad);
+  color: #ffffff;
+  font-size: .62rem;
+}
+
+.calendarPriorityText {
+  margin-right: .2rem;
+  font-weight: 900;
+}
+
+.calendarPillDue {
+  background: rgba(180, 35, 24, .09);
+  color: var(--bad);
+}
+
+.calendarPillAssigned {
+  background: rgba(17, 17, 17, .07);
+}
+
+.calendarPillUda {
+  background: rgba(20, 122, 66, .1);
+  color: var(--ok);
 }
 
 .coursePathBody {
@@ -679,12 +799,12 @@ button:hover { transform: translateY(-1px); }
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .calendarEvent {
+  .studentMonthGrid {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .calendarEventBadges {
-    justify-content: flex-start;
+  .studentMonthContextCard {
+    transform: none;
   }
 
   h1 {

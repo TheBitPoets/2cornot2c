@@ -78,14 +78,17 @@ La stessa consegna viene evidenziata nella lista con il badge **Prossima scadenz
 
 ## Calendario
 
-Il pannello **Calendario** mostra in sola lettura le date ricavate dalle consegne dello studente:
+Il pannello **Calendario** mostra in sola lettura una vista mensile simile a quella docente: mese centrale, mesi laterali di contesto e filtri per tipo di evento.
+
+La vista puo mostrare:
 
 - data di assegnazione, quando disponibile;
 - data di scadenza, quando disponibile;
 - stato della consegna;
 - badge **Prossima scadenza** sulle consegne aperte con la scadenza piu vicina.
+- UDA reali svolte, quando il percorso contiene date consuntive pubblicate.
 
-Questa prima versione non sostituisce il calendario docente completo: serve a dare allo studente una timeline semplice delle consegne gia associate al suo profilo. In una PR successiva il pannello potra integrare anche eventi del calendario pubblicato, UDA, laboratori, verifiche e priorita.
+Il filtro **Mostra** permette di visualizzare tutto, solo consegne, solo UDA o solo scadenze. La vista resta in sola lettura: lo studente puo consultare la programmazione e le scadenze, ma non modificarle.
 
 ## Percorso
 

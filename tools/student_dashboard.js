@@ -9,6 +9,8 @@ const els = {
   assignments: document.querySelector("#assignments"),
   studentCalendar: document.querySelector("#studentCalendar"),
   studentCalendarStatus: document.querySelector("#studentCalendarStatus"),
+  studentCalendarMonth: document.querySelector("#studentCalendarMonth"),
+  studentCalendarFilter: document.querySelector("#studentCalendarFilter"),
   coursePath: document.querySelector("#coursePath"),
   coursePathStatus: document.querySelector("#coursePathStatus"),
   assignmentDetailModal: document.querySelector("#assignmentDetailModal"),
@@ -23,6 +25,7 @@ let currentDashboardPayload = { student_id: "", assignments: [] };
 let currentClassLabel = "Dai registri consegne";
 let currentClassRoster = null;
 let currentCourseDesign = null;
+let currentSchoolCalendar = null;
 
 async function api(path, options = {}) {
   const response = await fetch(path, options);
@@ -288,40 +291,80 @@ function renderSummary(studentId, assignments) {
   `).join("");
 }
 
-function calendarEventTimestamp(value) {
+function dateFromInput(value) {
   if (!value) return null;
-  const timestamp = Date.parse(value);
-  return Number.isNaN(timestamp) ? null : timestamp;
+  const [year, month, day] = String(value || "").slice(0, 10).split("-").map(Number);
+  if (!year || !month || !day) return null;
+  return new Date(year, month - 1, day);
+}
+
+function isoDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function monthKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function calendarMonths(start, end) {
+  const months = [];
+  const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+  const last = new Date(end.getFullYear(), end.getMonth(), 1);
+  while (cursor <= last) {
+    months.push(new Date(cursor));
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+  return months;
+}
+
+function selectedStudentCalendarMonthContext(months, selectedMonth) {
+  if (!months.length) return [];
+  const selectedIndex = months.findIndex((month) => monthKey(month) === selectedMonth);
+  const index = selectedIndex >= 0 ? selectedIndex : 0;
+  return [
+    months[index - 1] ? { month: months[index - 1], role: "context" } : { role: "placeholder" },
+    months[index] ? { month: months[index], role: "main" } : null,
+    months[index + 1] ? { month: months[index + 1], role: "context" } : { role: "placeholder" },
+  ].filter(Boolean);
 }
 
 function studentCalendarEvents(assignments) {
   const nextAssignment = nextOpenAssignment(assignments);
-  const nextDue = nextAssignment ? timestampOrInfinity(nextAssignment.due_at) : Number.POSITIVE_INFINITY;
+  const nextDueDate = dateFromInput(nextAssignment?.due_at || "");
+  const nextDueIso = nextDueDate ? isoDate(nextDueDate) : "";
   return assignments.flatMap((assignment) => {
     const title = assignmentTitle(assignment) || "-";
     const events = [];
-    const assignedTimestamp = calendarEventTimestamp(assignment.assigned_at);
-    if (assignedTimestamp != null) {
+    const assignedDate = dateFromInput(assignment.assigned_at);
+    if (assignedDate) {
       events.push({
         kind: "assigned",
+        category: "assignments",
         label: "Assegnata",
         date: assignment.assigned_at,
-        timestamp: assignedTimestamp,
+        iso: isoDate(assignedDate),
+        timestamp: assignedDate.getTime(),
         title,
         assignment,
         priority: false,
       });
     }
-    const dueTimestamp = calendarEventTimestamp(assignment.due_at);
-    if (dueTimestamp != null) {
+    const dueDate = dateFromInput(assignment.due_at);
+    if (dueDate) {
+      const dueTimestamp = dueDate.getTime();
       events.push({
         kind: "due",
+        category: "assignments",
         label: "Scadenza",
         date: assignment.due_at,
+        iso: isoDate(dueDate),
         timestamp: dueTimestamp,
         title,
         assignment,
-        priority: isOpenAssignment(assignment) && dueTimestamp === nextDue,
+        priority: isOpenAssignment(assignment) && isoDate(dueDate) === nextDueIso,
       });
     }
     return events;
@@ -332,38 +375,170 @@ function studentCalendarEvents(assignments) {
   ));
 }
 
-function renderCalendarEvent(event) {
-  const kindClass = event.kind === "due" ? "calendarEventDue" : "calendarEventAssigned";
+function visibleUdasForStudent(assignments, studentId = currentDashboardPayload.student_id) {
+  const context = visibilityContext(studentId, assignments);
+  return visibleCourseSections(courseSections(currentCourseDesign), context)
+    .flatMap((section) => Array.isArray(section?.udas) ? section.udas : []);
+}
+
+function udaDateEvents(assignments, studentId = currentDashboardPayload.student_id) {
+  return visibleUdasForStudent(assignments, studentId).flatMap((uda) => {
+    const actual = uda.actual || {};
+    const start = dateFromInput(actual.start_date || "");
+    const end = dateFromInput(actual.end_date || actual.start_date || "");
+    if (!start) return [];
+    const title = `${String(uda.id || "").toUpperCase()} ${uda.title || "UDA senza titolo"}`.trim();
+    const events = [{
+      kind: "uda_actual_start",
+      category: "udas",
+      label: actual.status === "done" ? "UDA svolta" : "UDA reale",
+      date: actual.start_date,
+      iso: isoDate(start),
+      timestamp: start.getTime(),
+      title,
+      uda,
+      priority: false,
+    }];
+    if (end && isoDate(end) !== isoDate(start)) {
+      events.push({
+        kind: "uda_actual_end",
+        category: "udas",
+        label: "Fine UDA reale",
+        date: actual.end_date || actual.start_date,
+        iso: isoDate(end),
+        timestamp: end.getTime(),
+        title,
+        uda,
+        priority: false,
+      });
+    }
+    return events;
+  });
+}
+
+function calendarDateRange(events) {
+  const eventDates = events.map((event) => dateFromInput(event.iso)).filter(Boolean);
+  const calendarStart = dateFromInput(currentSchoolCalendar?.start_date || "");
+  const calendarEnd = dateFromInput(currentSchoolCalendar?.end_date || "");
+  const start = calendarStart || eventDates.reduce((min, date) => (!min || date < min ? date : min), null);
+  const end = calendarEnd || eventDates.reduce((max, date) => (!max || date > max ? date : max), null);
+  if (start && end) return { start, end };
+  const today = new Date();
+  return { start: new Date(today.getFullYear(), today.getMonth(), 1), end: new Date(today.getFullYear(), today.getMonth() + 1, 0) };
+}
+
+function filteredStudentCalendarEvents(events, filterValue) {
+  if (filterValue === "assignments") return events.filter((event) => event.category === "assignments");
+  if (filterValue === "udas") return events.filter((event) => event.category === "udas");
+  if (filterValue === "due") return events.filter((event) => event.kind === "due");
+  return events;
+}
+
+function renderCalendarEventPill(event) {
+  const kindClass = event.kind === "due"
+    ? "calendarPillDue"
+    : event.category === "udas"
+      ? "calendarPillUda"
+      : "calendarPillAssigned";
   return `
-    <article class="calendarEvent ${kindClass}">
-      <time datetime="${escapeHtml(event.date)}">${escapeHtml(formatDate(event.date))}</time>
-      <div>
-        <h3>${escapeHtml(event.title)}</h3>
-        <p class="meta">
-          <span>${escapeHtml(event.label)}</span>
-          <span>${escapeHtml(event.assignment.kind || "tipo non indicato")}</span>
-          <span>${escapeHtml(event.assignment.student_support_mode || "modalita non indicata")}</span>
-        </p>
+    <span class="calendarPill ${kindClass}" title="${escapeHtml(`${event.label}: ${event.title}`)}">
+      ${event.priority ? '<strong>!</strong><span class="calendarPriorityText">Prossima scadenza</span>' : ""}
+      ${escapeHtml(event.title)}
+    </span>
+  `;
+}
+
+function renderStudentCalendarMonth(month, role, eventsByDate, range) {
+  if (role === "placeholder") return '<div class="studentMonthPlaceholder"></div>';
+  const title = month.toLocaleDateString("it-IT", { month: "long", year: "numeric" });
+  const first = new Date(month.getFullYear(), month.getMonth(), 1);
+  const startOffset = (first.getDay() + 6) % 7;
+  const cursor = new Date(first);
+  cursor.setDate(cursor.getDate() - startOffset);
+  const cells = [];
+  for (let index = 0; index < 42; index += 1) {
+    const day = new Date(cursor);
+    const iso = isoDate(day);
+    const dayEvents = eventsByDate.get(iso) || [];
+    const classes = ["studentDayCell"];
+    if (day.getMonth() !== month.getMonth()) classes.push("studentDayOutsideMonth");
+    if (day < range.start || day > range.end) classes.push("studentDayOutsideRange");
+    if (dayEvents.length) classes.push("studentDayHasEvents");
+    cells.push(`
+      <div class="${classes.join(" ")}">
+        <span class="studentDayNumber">${day.getDate()}</span>
+        ${dayEvents.map(renderCalendarEventPill).join("")}
       </div>
-      <div class="calendarEventBadges">
-        ${event.priority ? badge("Prossima scadenza", "badgePriority") : ""}
-        ${event.kind === "due" ? statusBadge(event.assignment) : badge("Finestra di lavoro")}
+    `);
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return `
+    <article class="studentMonthCard ${role === "context" ? "studentMonthContextCard" : "studentMonthMainCard"}">
+      <div class="studentMonthTitle">
+        <h3>${escapeHtml(title)}</h3>
       </div>
+      <div class="studentMonthWeekdays">
+        <span>Lun</span><span>Mar</span><span>Mer</span><span>Gio</span><span>Ven</span><span>Sab</span><span>Dom</span>
+      </div>
+      <div class="studentMonthDays">${cells.join("")}</div>
     </article>
+  `;
+}
+
+function renderStudentCalendarLegend(events) {
+  if (!events.length) return "";
+  return `
+    <div class="studentCalendarLegend">
+      <span class="calendarPill calendarPillAssigned">Assegnata</span>
+      <span class="calendarPill calendarPillDue">Scadenza</span>
+      <span class="calendarPill calendarPillUda">UDA reale</span>
+    </div>
   `;
 }
 
 function renderStudentCalendar(assignments) {
   if (!els.studentCalendar) return;
-  const events = studentCalendarEvents(assignments);
+  const baseEvents = [
+    ...studentCalendarEvents(assignments),
+    ...udaDateEvents(assignments),
+  ].sort((left, right) => left.timestamp - right.timestamp || left.title.localeCompare(right.title, "it", { numeric: true, sensitivity: "base" }));
+  const filterValue = els.studentCalendarFilter?.value || "all";
+  const events = filteredStudentCalendarEvents(baseEvents, filterValue);
+  const range = calendarDateRange(baseEvents);
+  const months = calendarMonths(range.start, range.end);
+  if (els.studentCalendarMonth) {
+    const currentValue = els.studentCalendarMonth.value;
+    const selectedValue = currentValue && months.some((month) => monthKey(month) === currentValue)
+      ? currentValue
+      : monthKey(months.find((month) => events.some((event) => event.iso?.startsWith(monthKey(month)))) || months[0]);
+    els.studentCalendarMonth.innerHTML = months.map((month) => {
+      const value = monthKey(month);
+      const label = month.toLocaleDateString("it-IT", { month: "long", year: "numeric" });
+      return `<option value="${value}"${value === selectedValue ? " selected" : ""}>${escapeHtml(label)}</option>`;
+    }).join("");
+    els.studentCalendarMonth.value = selectedValue;
+  }
   if (els.studentCalendarStatus) {
-    const dueCount = events.filter((event) => event.kind === "due").length;
-    els.studentCalendarStatus.textContent = events.length
-      ? `${events.length} eventi · ${dueCount} scadenze`
+    const dueCount = baseEvents.filter((event) => event.kind === "due").length;
+    const udaCount = baseEvents.filter((event) => event.category === "udas").length;
+    els.studentCalendarStatus.textContent = baseEvents.length
+      ? `${baseEvents.length} eventi · ${dueCount} scadenze · ${udaCount} UDA`
       : "";
   }
-  els.studentCalendar.innerHTML = events.length
-    ? events.map(renderCalendarEvent).join("")
+  const eventsByDate = new Map();
+  for (const event of events) {
+    if (!event.iso) continue;
+    if (!eventsByDate.has(event.iso)) eventsByDate.set(event.iso, []);
+    eventsByDate.get(event.iso).push(event);
+  }
+  const contextMonths = selectedStudentCalendarMonthContext(months, els.studentCalendarMonth?.value || monthKey(months[0]));
+  els.studentCalendar.innerHTML = baseEvents.length
+    ? `
+      ${renderStudentCalendarLegend(baseEvents)}
+      <div class="studentMonthGrid">
+        ${contextMonths.map((item) => renderStudentCalendarMonth(item.month, item.role, eventsByDate, range)).join("")}
+      </div>
+    `
     : '<p class="status">Nessuna data disponibile per le consegne di questo studente.</p>';
 }
 
@@ -538,12 +713,33 @@ async function loadCoursePath() {
   try {
     currentCourseDesign = await api("/api/course-design");
     renderCoursePath(currentCourseDesign, currentDashboardPayload.assignments, currentDashboardPayload.student_id);
+    renderStudentCalendar(currentDashboardPayload.assignments);
   } catch (error) {
     currentCourseDesign = null;
     if (els.coursePath) {
       els.coursePath.innerHTML = '<p class="status">Percorso non disponibile.</p>';
     }
     if (els.coursePathStatus) els.coursePathStatus.textContent = `Errore: ${error.message}`;
+  }
+}
+
+async function loadSchoolCalendar() {
+  try {
+    const payload = await api("/api/school-calendars");
+    const calendars = Array.isArray(payload.calendars) ? payload.calendars : [];
+    const selected = calendars.find((calendar) => calendar.course_design_name)
+      || calendars.find((calendar) => calendar.name)
+      || null;
+    if (!selected?.name) return;
+    const detail = await api("/api/school-calendars/load", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: selected.name }),
+    });
+    currentSchoolCalendar = detail.calendar || null;
+    renderStudentCalendar(currentDashboardPayload.assignments);
+  } catch {
+    currentSchoolCalendar = null;
   }
 }
 
@@ -814,6 +1010,14 @@ els.assignmentSort?.addEventListener("change", () => {
   renderDashboard(currentDashboardPayload);
 });
 
+els.studentCalendarMonth?.addEventListener("change", () => {
+  renderStudentCalendar(currentDashboardPayload.assignments || []);
+});
+
+els.studentCalendarFilter?.addEventListener("change", () => {
+  renderStudentCalendar(currentDashboardPayload.assignments || []);
+});
+
 els.assignments?.addEventListener("click", (event) => {
   const detailButton = event.target.closest?.("[data-detail-index]");
   if (!detailButton) return;
@@ -837,3 +1041,4 @@ loadStudentOptions(els.studentId.value)
   });
 
 loadCoursePath();
+loadSchoolCalendar();

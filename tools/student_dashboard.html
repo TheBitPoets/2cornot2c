@@ -46,6 +46,21 @@
         <h2>Calendario</h2>
         <p id="studentCalendarStatus" class="status" aria-live="polite"></p>
       </div>
+      <div class="studentCalendarControls">
+        <label>
+          <span>Mese</span>
+          <select id="studentCalendarMonth" name="student_calendar_month"></select>
+        </label>
+        <label>
+          <span>Mostra</span>
+          <select id="studentCalendarFilter" name="student_calendar_filter">
+            <option value="all">Tutto</option>
+            <option value="assignments">Consegne</option>
+            <option value="udas">UDA</option>
+            <option value="due">Scadenze</option>
+          </select>
+        </label>
+      </div>
       <div id="studentCalendar" class="studentCalendarBody">
         <p class="status">Carica uno studente per vedere scadenze e finestre di lavoro.</p>
       </div>

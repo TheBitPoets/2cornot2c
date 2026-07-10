@@ -76,6 +76,7 @@ def run_student_dashboard_js(assertions: str) -> None:
         statusBadge,
         gradingBadge,
         gradeValue,
+        setCurrentCourseDesign: (design) => {{ currentCourseDesign = design; }},
         els,
       }};
     `, context);
@@ -316,9 +317,46 @@ def test_student_dashboard_renders_readonly_calendar_events() -> None:
         assert.match(tested.els.studentCalendar.innerHTML, /Stringhe in Python/);
         assert.match(tested.els.studentCalendar.innerHTML, /Somma in Python/);
         assert.match(tested.els.studentCalendar.innerHTML, /Loop in Python/);
+        assert.match(tested.els.studentCalendar.innerHTML, /studentMonthGrid/);
+        assert.match(tested.els.studentCalendar.innerHTML, /studentMonthMainCard/);
         assert.equal((tested.els.studentCalendar.innerHTML.match(/Prossima scadenza/g) || []).length, 2);
         assert.match(tested.els.studentCalendarStatus.textContent, /6 eventi .* 3 scadenze/);
         assert.equal(tested.studentCalendarEvents([openSooner, sameDeadline, submitted]).at(-1).title, "Somma in Python");
+        """
+    )
+
+
+def test_student_dashboard_calendar_includes_actual_uda_events() -> None:
+    run_student_dashboard_js(
+        """
+        tested.populateClassRosterOptions([{
+          name: "demo-3a.json",
+          id: "demo-3a",
+          label: "Classe demo 3A",
+        }], "demo-3a.json");
+        tested.setCurrentCourseDesign({
+          paths: [{
+            id: "percorso-demo",
+            title: "Percorso demo",
+            audience: { class_ids: ["demo-3a"] },
+            udas: [{
+              id: "uda-1",
+              title: "Fondamenti",
+              actual: {
+                status: "done",
+                start_date: "2026-10-07",
+                end_date: "2026-10-09",
+              },
+              items: [],
+            }],
+          }],
+        });
+
+        tested.renderStudentCalendar([]);
+
+        assert.match(tested.els.studentCalendar.innerHTML, /UDA-1 Fondamenti/);
+        assert.match(tested.els.studentCalendar.innerHTML, /UDA reale/);
+        assert.match(tested.els.studentCalendarStatus.textContent, /2 eventi .* 0 scadenze .* 2 UDA/);
         """
     )
 
