@@ -14,6 +14,8 @@ from scripts.thebitlab_technical_services import (
     InvalidServicePayloadError,
     RunnerTestResult,
     ai_feedback_dict_from_grading,
+    ai_feedback_request_payload,
+    ai_feedback_result_from_payload,
     execution_result_from_payload,
     grading_dict_from_grade_activity_report,
 )
@@ -371,6 +373,93 @@ def test_ai_feedback_dict_from_grading_is_register_compatible() -> None:
         "approved_by_teacher": False,
         "detail": "Runner non disponibile",
     }
+
+
+def test_ai_feedback_request_payload_uses_stable_manual_contract() -> None:
+    grading = GradingResult(
+        status="graded_failed",
+        passed=False,
+        tests_passed=1,
+        tests_total=2,
+        failed_tests=["somma_negativi"],
+        score=5,
+        detail="Output errato",
+    )
+
+    payload = ai_feedback_request_payload(
+        AiFeedbackRequest(
+            activity_id="c-base-somma-001",
+            student_id="rossi-mario",
+            grading=grading,
+            allowed_context={"teacher_notes": "Controllare il caso con negativi."},
+        ),
+        activity={"id": "activity-sbagliata", "title": "Somma in C"},
+    )
+
+    assert payload["schema_version"] == "ai_feedback_request.v1"
+    assert payload["activity"] == {"id": "c-base-somma-001", "title": "Somma in C"}
+    assert payload["student"] == {"id": "rossi-mario"}
+    assert payload["grading"]["failed_tests"] == ["somma_negativi"]
+    assert payload["policy"]["mode"] == "bozza_docente"
+    assert payload["policy"]["allowed_context"] == ["teacher_notes"]
+
+
+def test_ai_feedback_result_from_payload_normalizes_manual_response() -> None:
+    feedback = ai_feedback_result_from_payload(
+        {
+            "schema_version": "ai_feedback_response.v1",
+            "status": "draft",
+            "summary": "La soluzione fallisce con numeri negativi.",
+            "suggested_grade": 5,
+            "student_feedback": "Rivedi il caso con addendi negativi.",
+            "teacher_notes": "Errore probabilmente nel parsing del segno.",
+            "confidence": "medium",
+        }
+    )
+
+    assert feedback.status == "draft"
+    assert feedback.summary == "La soluzione fallisce con numeri negativi."
+    assert feedback.suggested_grade == 5.0
+    assert feedback.student_feedback == "Rivedi il caso con addendi negativi."
+    assert feedback.teacher_notes == "Errore probabilmente nel parsing del segno."
+    assert feedback.confidence == "medium"
+    assert feedback.approved_by_teacher is False
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        "{not-json",
+        [],
+        {"schema_version": "wrong", "status": "draft"},
+        {"schema_version": "ai_feedback_response.v1", "status": "draft"},
+        {"schema_version": "ai_feedback_response.v1", "status": "error"},
+        {"schema_version": "ai_feedback_response.v1", "status": "approved"},
+        {
+            "schema_version": "ai_feedback_response.v1",
+            "status": "draft",
+            "suggested_grade": "cinque",
+        },
+        {
+            "schema_version": "ai_feedback_response.v1",
+            "status": "draft",
+            "suggested_grade": True,
+        },
+        {
+            "schema_version": "ai_feedback_response.v1",
+            "status": "draft",
+            "student_feedback": ["non", "testo"],
+        },
+        {
+            "schema_version": "ai_feedback_response.v1",
+            "status": "error",
+            "detail": {"message": "errore"},
+        },
+    ],
+)
+def test_ai_feedback_result_from_payload_rejects_invalid_manual_responses(payload) -> None:
+    with pytest.raises(InvalidServicePayloadError):
+        ai_feedback_result_from_payload(payload)
 
 
 @pytest.mark.parametrize(

@@ -9,6 +9,8 @@ from typing import Any, Literal, Protocol
 ExecutionStatus = Literal["passed", "failed", "timeout", "runner_unavailable", "invalid_payload"]
 GradingStatus = Literal["graded_passed", "graded_failed", "not_run", "error"]
 AiFeedbackStatus = Literal["not_generated", "draft", "error"]
+AI_FEEDBACK_REQUEST_SCHEMA_VERSION = "ai_feedback_request.v1"
+AI_FEEDBACK_RESPONSE_SCHEMA_VERSION = "ai_feedback_response.v1"
 
 
 class TechnicalServiceError(RuntimeError):
@@ -115,6 +117,9 @@ class AiFeedbackResult:
     status: AiFeedbackStatus
     summary: str | None = None
     suggested_grade: float | None = None
+    student_feedback: str | None = None
+    teacher_notes: str | None = None
+    confidence: str | None = None
     approved_by_teacher: bool = False
     detail: str = ""
 
@@ -272,6 +277,82 @@ def ai_feedback_dict_from_grading(grading: GradingResult) -> dict[str, Any]:
     }
 
 
+def ai_feedback_request_payload(
+    request: AiFeedbackRequest,
+    *,
+    activity: dict[str, Any] | None = None,
+    policy: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Return the JSON exchange payload for manual or provider-backed feedback."""
+
+    return {
+        "schema_version": AI_FEEDBACK_REQUEST_SCHEMA_VERSION,
+        "activity": {**(activity or {}), "id": request.activity_id},
+        "student": {"id": request.student_id},
+        "grading": request.grading.to_dashboard_dict(),
+        "context": request.allowed_context,
+        "policy": {
+            "mode": "bozza_docente",
+            "allow_grade_suggestion": True,
+            "allowed_context": sorted(request.allowed_context.keys()),
+            **(policy or {}),
+        },
+    }
+
+
+def ai_feedback_request_json(
+    request: AiFeedbackRequest,
+    *,
+    activity: dict[str, Any] | None = None,
+    policy: dict[str, Any] | None = None,
+) -> str:
+    """Serialize the AI feedback request payload with stable formatting."""
+
+    return json.dumps(
+        ai_feedback_request_payload(request, activity=activity, policy=policy),
+        ensure_ascii=False,
+        indent=2,
+        sort_keys=True,
+    )
+
+
+def ai_feedback_result_from_payload(payload: str | dict[str, Any]) -> AiFeedbackResult:
+    """Validate a provider/manual JSON response and normalize it to AiFeedbackResult."""
+
+    raw = _decode_ai_feedback_payload(payload)
+    schema_version = raw.get("schema_version")
+    if schema_version != AI_FEEDBACK_RESPONSE_SCHEMA_VERSION:
+        raise InvalidServicePayloadError("Payload feedback AI con schema_version non valido.")
+
+    status = raw.get("status")
+    if status not in {"draft", "error"}:
+        raise InvalidServicePayloadError("Payload feedback AI senza status valido.")
+
+    summary = _optional_text(raw, "summary")
+    detail = _optional_text(raw, "detail") or ""
+    if status == "draft" and not summary:
+        raise InvalidServicePayloadError("Payload feedback AI draft senza summary.")
+    if status == "error" and not (summary or detail):
+        raise InvalidServicePayloadError("Payload feedback AI error senza dettaglio.")
+
+    suggested_grade = raw.get("suggested_grade")
+    if suggested_grade is not None and (
+        isinstance(suggested_grade, bool) or not isinstance(suggested_grade, (int, float))
+    ):
+        raise InvalidServicePayloadError("Payload feedback AI con suggested_grade non valido.")
+
+    return AiFeedbackResult(
+        status=status,
+        summary=summary,
+        suggested_grade=None if suggested_grade is None else float(suggested_grade),
+        student_feedback=_optional_text(raw, "student_feedback"),
+        teacher_notes=_optional_text(raw, "teacher_notes"),
+        confidence=_optional_text(raw, "confidence"),
+        approved_by_teacher=False,
+        detail=detail,
+    )
+
+
 def execution_result_from_payload(payload: str | dict[str, Any]) -> ExecutionResult:
     """Parse a runner payload into an ExecutionResult."""
 
@@ -389,3 +470,26 @@ def _decode_payload(payload: str | dict[str, Any]) -> dict[str, Any]:
     if not isinstance(decoded, dict):
         raise InvalidServicePayloadError("Payload runner JSON non e un oggetto.")
     return decoded
+
+
+def _decode_ai_feedback_payload(payload: str | dict[str, Any]) -> dict[str, Any]:
+    if isinstance(payload, dict):
+        return payload
+    if not isinstance(payload, str):
+        raise InvalidServicePayloadError("Payload feedback AI JSON non e un oggetto.")
+    try:
+        decoded = json.loads(payload)
+    except json.JSONDecodeError as exc:
+        raise InvalidServicePayloadError("Payload feedback AI non e JSON valido.") from exc
+    if not isinstance(decoded, dict):
+        raise InvalidServicePayloadError("Payload feedback AI JSON non e un oggetto.")
+    return decoded
+
+
+def _optional_text(payload: dict[str, Any], key: str) -> str | None:
+    value = payload.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise InvalidServicePayloadError(f"Payload feedback AI con {key} non valido.")
+    return value
