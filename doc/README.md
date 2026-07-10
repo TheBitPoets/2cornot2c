@@ -31,7 +31,8 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 3. [`DATA_MODEL_MVP.md`](DATA_MODEL_MVP.md)
 4. [`CLASS_ROSTERS.md`](CLASS_ROSTERS.md)
 5. [`MANUAL_AI_FEEDBACK_WORKFLOW.md`](MANUAL_AI_FEEDBACK_WORKFLOW.md)
-6. [`STUDENT_DASHBOARD.md`](STUDENT_DASHBOARD.md)
+6. [`DASHBOARD_DOCENTE_GUIDA.md`](DASHBOARD_DOCENTE_GUIDA.md)
+7. [`STUDENT_DASHBOARD.md`](STUDENT_DASHBOARD.md)
 
 `ASSIGNMENTS.md` descrive il modello leggero per attivita didattiche, uso dei team GitHub come classi, correzione automatica, sandbox, metriche e roadmap delle prossime PR.
 
@@ -42,6 +43,8 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 `CLASS_ROSTERS.md` descrive il primo contratto JSON locale per classi e studenti, in attesa di GitHub Team o roster locali sincronizzati.
 
 `MANUAL_AI_FEEDBACK_WORKFLOW.md` spiega il flusso manuale completo per generare un pacchetto AI da registro, validare la risposta e applicarla come bozza non approvata.
+
+`DASHBOARD_DOCENTE_GUIDA.md` raccoglie la guida operativa docente per usare la dashboard consegne, con pannelli, scenari e placeholder per screenshot dettagliati.
 
 `STUDENT_DASHBOARD.md` spiega la prima vista studente MVP per vedere consegne, grading e solo feedback approvato dal docente.
 
@@ -60,6 +63,7 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 | [`CLASS_ROSTERS.md`](CLASS_ROSTERS.md) | Quando devi lavorare su classi, studenti, roster locali o futuro mapping GitHub Team |
 | [`ASSIGNMENT_SUBMISSIONS.md`](ASSIGNMENT_SUBMISSIONS.md) | Quando devi progettare il flusso consegne studenti con GitHub, team classe e repository studente |
 | [`MANUAL_AI_FEEDBACK_WORKFLOW.md`](MANUAL_AI_FEEDBACK_WORKFLOW.md) | Quando devi provare il feedback AI manuale da registro senza API key o GUI dedicata |
+| [`DASHBOARD_DOCENTE_GUIDA.md`](DASHBOARD_DOCENTE_GUIDA.md) | Quando devi usare o documentare la dashboard consegne docente passo dopo passo |
 | [`STUDENT_DASHBOARD.md`](STUDENT_DASHBOARD.md) | Quando devi provare la vista studente minima su consegne, grading e feedback approvato |
 | [`STUDENT_REPOSITORY_TEMPLATE.md`](STUDENT_REPOSITORY_TEMPLATE.md) | Quando devi creare o mantenere il template repository studente |
 | [`ASSIGNMENT_GRADING.md`](ASSIGNMENT_GRADING.md) | Quando devi correggere in modo deterministico una consegna TheBitLab |
