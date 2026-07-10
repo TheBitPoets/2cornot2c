@@ -68,6 +68,20 @@ def test_package_from_register_command_reports_missing_student(tmp_path, capsys)
     assert "studente non trovato" in capsys.readouterr().err
 
 
+def test_package_from_register_command_accepts_legacy_student_field(tmp_path, capsys) -> None:
+    register = json.loads(REGISTER_FIXTURE.read_text(encoding="utf-8"))
+    del register["students"][0]["student_id"]
+    register_path = tmp_path / "register.json"
+    register_path.write_text(json.dumps(register), encoding="utf-8")
+
+    exit_code = manual_ai_feedback.main(["package-from-register", str(register_path), "rossi-mario"])
+
+    assert exit_code == 0
+    output = json.loads(capsys.readouterr().out)
+    request_json = json.loads(output["request_json"])
+    assert request_json["student"] == {"id": "rossi-mario"}
+
+
 def test_parse_response_command_prints_normalized_feedback(tmp_path, capsys) -> None:
     response_path = tmp_path / "response.json"
     response_path.write_text(

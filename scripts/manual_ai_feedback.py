@@ -78,7 +78,7 @@ def request_payload_from_register(register: dict[str, Any], student_id: str) -> 
         raise ValueError(f"register: grading mancante o non valido per {student_id}")
 
     activity_id = _required_text(register, "activity_id")
-    resolved_student_id = _required_text(student, "student_id")
+    resolved_student_id = _student_identifier(student)
     return {
         "activity_id": activity_id,
         "student_id": resolved_student_id,
@@ -202,6 +202,13 @@ def _find_student(students: list[Any], student_id: str) -> dict[str, Any]:
         if student.get("student_id") == student_id or student.get("student") == student_id:
             return student
     raise ValueError(f"register: studente non trovato: {student_id}")
+
+
+def _student_identifier(student: dict[str, Any]) -> str:
+    value = student.get("student_id") or student.get("student")
+    if not isinstance(value, str) or not value:
+        raise ValueError("register: student_id o student deve essere una stringa non vuota")
+    return value
 
 
 def _optional_text(payload: dict[str, Any], key: str) -> str | None:
