@@ -1,0 +1,244 @@
+:root {
+  color-scheme: light;
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --ink: #171717;
+  --muted: #68707c;
+  --line: #d9dee7;
+  --ok: #147a42;
+  --warn: #9a6500;
+  --bad: #b42318;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.topbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem clamp(1rem, 3vw, 2rem);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.eyebrow {
+  margin: 0 0 .15rem;
+  color: var(--muted);
+  font-size: .75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 0;
+  font-size: clamp(1.45rem, 3vw, 2.1rem);
+}
+
+main {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem clamp(1rem, 3vw, 2rem) 2rem;
+}
+
+.studentForm {
+  display: flex;
+  align-items: end;
+  gap: .65rem;
+}
+
+label {
+  display: grid;
+  gap: .25rem;
+  color: var(--muted);
+  font-size: .75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+input,
+button {
+  min-height: 2.35rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+}
+
+input {
+  min-width: min(18rem, 50vw);
+  padding: .45rem .65rem;
+  background: #ffffff;
+}
+
+button {
+  padding: .45rem .85rem;
+  background: #111111;
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.summary,
+.assignments {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: .8rem;
+  padding: 1rem;
+}
+
+.summaryCard {
+  min-width: 0;
+}
+
+.summaryCard strong {
+  display: block;
+  color: var(--muted);
+  font-size: .72rem;
+  text-transform: uppercase;
+}
+
+.summaryCard span {
+  display: block;
+  margin-top: .2rem;
+  overflow-wrap: anywhere;
+  font-size: 1.35rem;
+  font-weight: 900;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.sectionHead h2 {
+  margin-bottom: 0;
+}
+
+.assignmentList {
+  display: grid;
+}
+
+.assignmentCard {
+  display: grid;
+  gap: .85rem;
+  padding: 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.assignmentCard:last-child {
+  border-bottom: 0;
+}
+
+.assignmentHead {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.assignmentHead h3 {
+  margin: 0 0 .2rem;
+  overflow-wrap: anywhere;
+}
+
+.meta,
+.details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem .8rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: .86rem;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  width: max-content;
+  border-radius: 999px;
+  padding: .2rem .55rem;
+  background: #eef1f5;
+  color: #343a40;
+  font-size: .78rem;
+  font-weight: 800;
+}
+
+.badgeOk {
+  background: #e7f6ec;
+  color: var(--ok);
+}
+
+.badgeWarn {
+  background: #fff3d8;
+  color: var(--warn);
+}
+
+.badgeBad {
+  background: #fde8e6;
+  color: var(--bad);
+}
+
+.feedback {
+  max-width: 70rem;
+  border-left: 4px solid var(--ok);
+  padding: .75rem .85rem;
+  background: #f7fbf8;
+}
+
+.feedback h4 {
+  margin: 0 0 .35rem;
+}
+
+.feedback p {
+  margin-bottom: .45rem;
+  text-align: justify;
+}
+
+.emptyFeedback {
+  color: var(--muted);
+}
+
+.status {
+  margin-bottom: 0;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 720px) {
+  .topbar,
+  .studentForm,
+  .assignmentHead {
+    display: grid;
+    align-items: stretch;
+  }
+
+  input {
+    min-width: 0;
+    width: 100%;
+  }
+}

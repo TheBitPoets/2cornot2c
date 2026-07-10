@@ -109,6 +109,11 @@ class AssignmentService:
 
         return AssignmentOverviewService(self.storage).assignment_overview()
 
+    def student_dashboard(self, student_id: str) -> dict[str, Any]:
+        """Return the minimal student-facing assignment dashboard."""
+
+        return AssignmentOverviewService(self.storage).student_dashboard(student_id)
+
 
 class AssignmentOverviewService:
     """Query service for derived assignment dashboard rows."""
@@ -162,3 +167,72 @@ class AssignmentOverviewService:
                     }
                 )
         return rows
+
+    def student_dashboard(self, student_id: str) -> dict[str, Any]:
+        """Return assignment rows visible to one student."""
+
+        clean_student_id = student_id.strip()
+        if not clean_student_id:
+            raise ValueError("student_id mancante.")
+        assignments = []
+        for report in self.storage.list_assignment_reports():
+            try:
+                payload = self.storage.read_assignment_report(report["name"])
+            except Exception:  # noqa: BLE001
+                continue
+            for student in payload.get("students", []):
+                if not isinstance(student, dict) or not _matches_student(student, clean_student_id):
+                    continue
+                submission = student.get("submission") if isinstance(student.get("submission"), dict) else {}
+                grading = student.get("grading") if isinstance(student.get("grading"), dict) else {}
+                ai_feedback = student.get("ai_feedback") if isinstance(student.get("ai_feedback"), dict) else {}
+                assignments.append(
+                    {
+                        "report_name": report["name"],
+                        "activity_id": payload.get("activity_id", ""),
+                        "title": payload.get("title", "") or payload.get("activity_id", ""),
+                        "kind": payload.get("kind", ""),
+                        "student_support_mode": payload.get("student_support_mode", ""),
+                        "class_id": payload.get("class_id", ""),
+                        "class_label": payload.get("class_label", ""),
+                        "assigned_at": payload.get("assigned_at") or "",
+                        "due_at": payload.get("due_at") or "",
+                        "status": student.get("status", ""),
+                        "submitted": bool(student.get("submitted", False)),
+                        "late": bool(student.get("late", False)),
+                        "repo": student.get("repo", ""),
+                        "repo_github_url": student.get("repo_github_url", ""),
+                        "submitted_at": submission.get("submitted_at"),
+                        "commit": submission.get("commit"),
+                        "source_path": submission.get("source_path"),
+                        "source_github_url": submission.get("source_github_url"),
+                        "grading": {
+                            "status": grading.get("status", ""),
+                            "passed": grading.get("passed"),
+                            "tests_passed": grading.get("tests_passed"),
+                            "tests_total": grading.get("tests_total"),
+                            "failed_tests": grading.get("failed_tests", []),
+                            "teacher_grade": grading.get("teacher_grade"),
+                            "score": grading.get("score"),
+                            "detail": grading.get("detail", ""),
+                        },
+                        "approved_feedback": _approved_student_feedback(ai_feedback),
+                    }
+                )
+        assignments.sort(key=lambda row: (row.get("due_at") or "", row.get("activity_id") or ""))
+        return {"student_id": clean_student_id, "assignments": assignments}
+
+
+def _matches_student(student: dict[str, Any], student_id: str) -> bool:
+    return student.get("student_id") == student_id or student.get("student") == student_id
+
+
+def _approved_student_feedback(ai_feedback: dict[str, Any]) -> dict[str, Any] | None:
+    if ai_feedback.get("status") != "approved" or ai_feedback.get("approved_by_teacher") is not True:
+        return None
+    return {
+        "summary": ai_feedback.get("summary"),
+        "student_feedback": ai_feedback.get("student_feedback"),
+        "suggested_grade": ai_feedback.get("suggested_grade"),
+        "confidence": ai_feedback.get("confidence"),
+    }

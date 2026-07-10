@@ -27,7 +27,7 @@ import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import unquote, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -235,6 +235,12 @@ def assignment_overview() -> list[dict]:
     """Return one row per student/activity across all saved teacher reports."""
 
     return assignment_service().assignment_overview()
+
+
+def student_dashboard(student_id: str) -> dict:
+    """Return the minimal student-facing assignment dashboard."""
+
+    return assignment_service().student_dashboard(student_id)
 
 
 def list_activities() -> list[dict]:
@@ -1656,6 +1662,16 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/assignment-overview":
             self.write_json({"rows": assignment_overview()})
+            return
+        if parsed.path == "/api/student-dashboard":
+            try:
+                query = parse_qs(parsed.query)
+                self.write_json(student_dashboard(query.get("student_id", [""])[0]))
+            except Exception as error:  # noqa: BLE001
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
             return
         if parsed.path == "/api/activities":
             self.write_json({"activities": list_activities()})

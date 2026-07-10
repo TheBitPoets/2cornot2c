@@ -207,6 +207,44 @@ def test_review_assignment_ai_feedback_rejects_approve_on_non_draft_feedback(tmp
         raise AssertionError("La review deve rifiutare approve su feedback AI non in bozza")
 
 
+def test_student_dashboard_endpoint_filters_to_requested_student(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
+
+    report_dir = tmp_path / "teacher-reports"
+    report_dir.mkdir(parents=True)
+    (report_dir / "activity.json").write_text(
+        json.dumps(
+            {
+                "activity_id": "activity",
+                "students": [
+                    {
+                        "student": "rossi-mario",
+                        "student_id": "rossi-mario",
+                        "ai_feedback": {
+                            "status": "approved",
+                            "approved_by_teacher": True,
+                            "student_feedback": "Feedback visibile.",
+                        },
+                    },
+                    {
+                        "student": "bianchi-luca",
+                        "student_id": "bianchi-luca",
+                        "ai_feedback": {"status": "approved", "approved_by_teacher": True},
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    dashboard = course_board_server.student_dashboard("rossi-mario")
+
+    assert dashboard["student_id"] == "rossi-mario"
+    assert len(dashboard["assignments"]) == 1
+    assert dashboard["assignments"][0]["approved_feedback"]["student_feedback"] == "Feedback visibile."
+
+
 def test_ai_secret_status_reports_paths_and_configured_keys_without_values(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "AI_SECRET_PATH", tmp_path / ".secrets" / "ai.secret")
