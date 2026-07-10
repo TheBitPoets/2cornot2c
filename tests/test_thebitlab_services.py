@@ -206,6 +206,67 @@ def test_assignment_service_accepts_protocol_compatible_storage(tmp_path) -> Non
     assert service.assignment_overview()[0]["student"] == "rossi-mario"
 
 
+def test_student_dashboard_filters_student_and_only_approved_feedback(tmp_path) -> None:
+    service = assignment_overview_service(tmp_path)
+    reports_dir = tmp_path / "teacher-reports"
+    reports_dir.mkdir(parents=True)
+    (reports_dir / "activity.json").write_text(
+        json.dumps(
+            {
+                "activity_id": "python-base-somma-001",
+                "title": "Somma in Python",
+                "kind": "compito-casa",
+                "student_support_mode": "guidato",
+                "due_at": "2026-10-19T23:59:00+02:00",
+                "students": [
+                    {
+                        "student": "rossi-mario",
+                        "student_id": "rossi-mario",
+                        "status": "submitted_on_time",
+                        "submitted": True,
+                        "submission": {"submitted_at": "2026-10-18T18:22:10+02:00", "commit": "abc1234"},
+                        "grading": {"status": "graded_passed", "tests_passed": 2, "tests_total": 2, "teacher_grade": 9},
+                        "ai_feedback": {
+                            "status": "approved",
+                            "approved_by_teacher": True,
+                            "summary": "Buon lavoro.",
+                            "student_feedback": "Hai gestito correttamente i casi base.",
+                            "suggested_grade": 9,
+                            "confidence": "high",
+                        },
+                    },
+                    {
+                        "student": "bianchi-luca",
+                        "student_id": "bianchi-luca",
+                        "status": "submitted_on_time",
+                        "submitted": True,
+                        "ai_feedback": {
+                            "status": "draft",
+                            "approved_by_teacher": False,
+                            "summary": "Bozza non visibile.",
+                        },
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    dashboard = service.student_dashboard("rossi-mario")
+
+    assert dashboard["student_id"] == "rossi-mario"
+    assert len(dashboard["assignments"]) == 1
+    assignment = dashboard["assignments"][0]
+    assert assignment["activity_id"] == "python-base-somma-001"
+    assert assignment["grading"]["teacher_grade"] == 9
+    assert assignment["approved_feedback"] == {
+        "summary": "Buon lavoro.",
+        "student_feedback": "Hai gestito correttamente i casi base.",
+        "suggested_grade": 9,
+        "confidence": "high",
+    }
+
+
 def test_assignment_overview_service_accepts_protocol_compatible_storage(tmp_path) -> None:
     class FakeAssignmentStorage:
         def safe_teacher_report_path(self, name: str) -> Path:

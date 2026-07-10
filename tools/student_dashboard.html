@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TheBitLab - Vista studente</title>
+  <link rel="stylesheet" href="student_dashboard.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">TheBitLab</p>
+      <h1>Vista studente</h1>
+    </div>
+    <form id="studentForm" class="studentForm">
+      <label>
+        Studente
+        <select id="studentId" name="student_id">
+          <option value="bianchi-luca" selected>Caricamento studenti...</option>
+        </select>
+      </label>
+      <button type="submit">Carica</button>
+    </form>
+  </header>
+
+  <main>
+    <section class="summary" id="summary" aria-live="polite">
+      <p class="status">Carica uno studente per vedere consegne, stato e feedback approvato.</p>
+    </section>
+
+    <section class="assignments">
+      <div class="sectionHead">
+        <h2>Consegne</h2>
+        <p id="status" class="status" aria-live="polite"></p>
+      </div>
+      <div id="assignments" class="assignmentList"></div>
+    </section>
+  </main>
+
+  <script src="student_dashboard.js"></script>
+</body>
+</html>

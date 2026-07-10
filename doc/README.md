@@ -30,6 +30,7 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 2. [`ACTIVITIES_SCHEMA.md`](ACTIVITIES_SCHEMA.md)
 3. [`DATA_MODEL_MVP.md`](DATA_MODEL_MVP.md)
 4. [`MANUAL_AI_FEEDBACK_WORKFLOW.md`](MANUAL_AI_FEEDBACK_WORKFLOW.md)
+5. [`STUDENT_DASHBOARD.md`](STUDENT_DASHBOARD.md)
 
 `ASSIGNMENTS.md` descrive il modello leggero per attivita didattiche, uso dei team GitHub come classi, correzione automatica, sandbox, metriche e roadmap delle prossime PR.
 
@@ -38,6 +39,8 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 `DATA_MODEL_MVP.md` inventaria i JSON attuali e definisce il modello dati minimo per classi, activity, assegnazioni, consegne, registri, grading e vista studente.
 
 `MANUAL_AI_FEEDBACK_WORKFLOW.md` spiega il flusso manuale completo per generare un pacchetto AI da registro, validare la risposta e applicarla come bozza non approvata.
+
+`STUDENT_DASHBOARD.md` spiega la prima vista studente MVP per vedere consegne, grading e solo feedback approvato dal docente.
 
 ## Mappa rapida
 
@@ -53,6 +56,7 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 | [`DATA_MODEL_MVP.md`](DATA_MODEL_MVP.md) | Quando devi lavorare su dati JSON, storage, classi, assegnazioni, registri o compatibilita schema |
 | [`ASSIGNMENT_SUBMISSIONS.md`](ASSIGNMENT_SUBMISSIONS.md) | Quando devi progettare il flusso consegne studenti con GitHub, team classe e repository studente |
 | [`MANUAL_AI_FEEDBACK_WORKFLOW.md`](MANUAL_AI_FEEDBACK_WORKFLOW.md) | Quando devi provare il feedback AI manuale da registro senza API key o GUI dedicata |
+| [`STUDENT_DASHBOARD.md`](STUDENT_DASHBOARD.md) | Quando devi provare la vista studente minima su consegne, grading e feedback approvato |
 | [`STUDENT_REPOSITORY_TEMPLATE.md`](STUDENT_REPOSITORY_TEMPLATE.md) | Quando devi creare o mantenere il template repository studente |
 | [`ASSIGNMENT_GRADING.md`](ASSIGNMENT_GRADING.md) | Quando devi correggere in modo deterministico una consegna TheBitLab |
 | [`ASSIGNMENT_SANDBOX.md`](ASSIGNMENT_SANDBOX.md) | Quando devi eseguire il grading in una sandbox Docker |
@@ -90,6 +94,7 @@ Poi usa:
 | `tools/course_board.html` | Progettare percorsi, UDA e cornici didattiche |
 | `tools/school_calendar.html` | Gestire calendario scolastico, orari e Gantt |
 | `tools/assignment_dashboard.html` | Visualizzare registri consegne docente da `teacher-reports/**/*.json` |
+| `tools/student_dashboard.html` | Vista studente MVP con consegne, grading e feedback approvato |
 
 ## Test e controlli automatici
 
