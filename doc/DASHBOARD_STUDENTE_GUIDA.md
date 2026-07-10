@@ -58,6 +58,25 @@ Screenshot previsto: `doc/images/dashboard-guides/studente-selezione.png`.
 
 Con dati reali, la selezione manuale sara sostituita o limitata da login, profilo studente o provider classe.
 
+## Nomenclatura: attivita e consegna
+
+Nella vista studente e importante distinguere due concetti.
+
+**Attivita** indica cio che il docente progetta o assegna: titolo, testo, tipo, modalita di supporto, scadenza, test, rubrica e collegamento al percorso.
+
+**Consegna** indica la relazione tra uno studente e una specifica attivita assegnata: stato personale, file caricati, commit, data di consegna, ritardo, grading, voto e feedback.
+
+Quando un'attivita viene assegnata a una classe o a uno studente, per ogni studente nasce gia una consegna attesa, anche se non sono ancora stati caricati file. Nella GUI studente questa situazione viene mostrata come **Da consegnare**. Dopo la scadenza, se non arriva nessun file, diventa **Mancante**.
+
+Quindi il calendario studente mostra:
+
+- consegne gia inviate;
+- consegne da fare, cioe attivita assegnate ma non ancora consegnate;
+- consegne future programmate, se hanno una data di assegnazione o una scadenza;
+- UDA o eventi del percorso, quando pubblicati.
+
+In sintesi: lato docente si parla spesso di **attivita**; lato studente si parla soprattutto di **consegne**, anche quando la consegna e ancora attesa.
+
 ## Riepilogo studente
 
 Dopo il caricamento, la pagina mostra un riepilogo dello studente.

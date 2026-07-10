@@ -85,6 +85,29 @@ Le alternative restano possibili, ma non sono la strada iniziale.
 
 La CLI futura di TheBitLab potra automatizzare la creazione dei repository studenti a partire da classe, team GitHub e template scelto.
 
+## Nomenclatura: attivita, assegnazione e consegna
+
+Per evitare ambiguita tra modello dati, dashboard docente e vista studente, TheBitLab usa questi concetti.
+
+**Attivita** e il template didattico preparato dal docente. Descrive cosa bisogna fare: titolo, testo, tipo, obiettivi, argomenti, modalita di supporto, test, rubrica e collegamenti a percorso o UDA.
+
+**Assegnazione** e l'atto di associare una attivita a una classe, a un gruppo o a uno studente. Contiene dati come classe, data di assegnazione, scadenza e regole applicate a quella pubblicazione.
+
+**Consegna** e la relazione tra uno studente e una assegnazione. Contiene stato personale, file, commit, data di consegna, ritardo, grading, voto e feedback.
+
+Una consegna puo esistere anche prima che lo studente carichi file: in quel caso rappresenta una consegna attesa o **da consegnare**. Se la scadenza passa senza file, diventa **mancante**. Se lo studente carica file, diventa **consegnata** o **consegnata in ritardo**.
+
+Quindi:
+
+```text
+attivita progettata dal docente
+-> assegnazione a classe/gruppo/studente
+-> consegne attese per gli studenti coinvolti
+-> consegne effettive quando arrivano file, commit o report
+```
+
+Nella GUI docente conviene mostrare sia il livello attivita/assegnazione sia il quadro delle consegne. Nella GUI studente conviene parlare soprattutto di consegne, anche quando derivano da attivita future assegnate e non ancora svolte.
+
 ## Tipi di attivita
 
 Il sistema dovrebbe distinguere almeno questi tipi di attivita.
