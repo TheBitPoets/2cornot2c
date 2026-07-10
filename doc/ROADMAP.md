@@ -238,9 +238,11 @@ La pagina del percorso deve poter costruire UDA e argomenti usando paragrafi pro
 5. Aggiungere activity nel percorso:
    - come elementi autonomi tra gli argomenti;
    - dentro una UDA;
+   - agganciate a una lezione/UDA programmata o reale, per collegare lab, prove pratiche, prove scritte ed esercitazioni al momento didattico in cui vengono svolte;
    - come verifiche o prove collegate alla UDA;
    - come esercizi di laboratorio, casa o classe collegati a uno o piu argomenti.
 6. Mostrare le activity anche nel calendario quando hanno data, finestra temporale o scadenza.
+   - lato studente, visualizzare come consegne le activity agganciate alla lezione/UDA e mantenere anche consegne autonome fuori lezione, per esempio compiti a casa o recuperi.
 7. Decidere come visualizzare nel calendario:
    - le lezioni teoriche;
    - i laboratori;
