@@ -29,12 +29,15 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 1. [`ASSIGNMENTS.md`](ASSIGNMENTS.md)
 2. [`ACTIVITIES_SCHEMA.md`](ACTIVITIES_SCHEMA.md)
 3. [`DATA_MODEL_MVP.md`](DATA_MODEL_MVP.md)
+4. [`MANUAL_AI_FEEDBACK_WORKFLOW.md`](MANUAL_AI_FEEDBACK_WORKFLOW.md)
 
 `ASSIGNMENTS.md` descrive il modello leggero per attivita didattiche, uso dei team GitHub come classi, correzione automatica, sandbox, metriche e roadmap delle prossime PR.
 
 `ACTIVITIES_SCHEMA.md` descrive il primo schema JSON per rappresentare esercizi, compiti, laboratori e verifiche in TheBitLab.
 
 `DATA_MODEL_MVP.md` inventaria i JSON attuali e definisce il modello dati minimo per classi, activity, assegnazioni, consegne, registri, grading e vista studente.
+
+`MANUAL_AI_FEEDBACK_WORKFLOW.md` spiega il flusso manuale completo per generare un pacchetto AI da registro, validare la risposta e applicarla come bozza non approvata.
 
 ## Mappa rapida
 
@@ -49,6 +52,7 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 | [`ACTIVITIES_SCHEMA.md`](ACTIVITIES_SCHEMA.md) | Quando devi creare o validare schede JSON di attivita TheBitLab |
 | [`DATA_MODEL_MVP.md`](DATA_MODEL_MVP.md) | Quando devi lavorare su dati JSON, storage, classi, assegnazioni, registri o compatibilita schema |
 | [`ASSIGNMENT_SUBMISSIONS.md`](ASSIGNMENT_SUBMISSIONS.md) | Quando devi progettare il flusso consegne studenti con GitHub, team classe e repository studente |
+| [`MANUAL_AI_FEEDBACK_WORKFLOW.md`](MANUAL_AI_FEEDBACK_WORKFLOW.md) | Quando devi provare il feedback AI manuale da registro senza API key o GUI dedicata |
 | [`STUDENT_REPOSITORY_TEMPLATE.md`](STUDENT_REPOSITORY_TEMPLATE.md) | Quando devi creare o mantenere il template repository studente |
 | [`ASSIGNMENT_GRADING.md`](ASSIGNMENT_GRADING.md) | Quando devi correggere in modo deterministico una consegna TheBitLab |
 | [`ASSIGNMENT_SANDBOX.md`](ASSIGNMENT_SANDBOX.md) | Quando devi eseguire il grading in una sandbox Docker |
@@ -67,6 +71,7 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 | `scripts/create_submission_scaffold.py` | Crea una cartella consegna in un repository studente a partire da una activity JSON | [`STUDENT_REPOSITORY_TEMPLATE.md`](STUDENT_REPOSITORY_TEMPLATE.md) |
 | `scripts/assign_activity.py` | Assegna una activity a uno o piu repository studente usando lo scaffold consegna | [`ASSIGNMENT_SUBMISSIONS.md`](ASSIGNMENT_SUBMISSIONS.md) |
 | `scripts/track_assignments.py` | Genera un registro consegne con scadenza, stato consegna, grading e placeholder AI | [`ASSIGNMENT_SUBMISSIONS.md`](ASSIGNMENT_SUBMISSIONS.md) |
+| `scripts/manual_ai_feedback.py` | Genera pacchetti AI manuali, valida risposte e applica feedback in bozza ai registri | [`MANUAL_AI_FEEDBACK_WORKFLOW.md`](MANUAL_AI_FEEDBACK_WORKFLOW.md) |
 | `scripts/validate_activity.py` | Valida le schede JSON di attivita TheBitLab | [`ACTIVITIES_SCHEMA.md`](ACTIVITIES_SCHEMA.md) |
 | `scripts/grade_activity.py` | Esegue il runner deterministico del linguaggio richiesto e produce un report, anche via Docker | [`ASSIGNMENT_GRADING.md`](ASSIGNMENT_GRADING.md) |
 
