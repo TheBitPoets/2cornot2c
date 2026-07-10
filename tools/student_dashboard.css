@@ -329,7 +329,10 @@ button:hover { transform: translateY(-1px); }
 .studentMonthTitleNav button {
   width: 2.1rem;
   height: 2.1rem;
+  border: 1px solid var(--line);
   border-radius: 999px;
+  background: #ffffff;
+  color: var(--ink);
   box-shadow: none;
   font-size: 1rem;
   padding: 0;
