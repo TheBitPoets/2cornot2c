@@ -410,7 +410,6 @@ function renderCoursePath(design, assignments = [], studentId = currentDashboard
     const udaCards = udas.map((uda) => {
       const items = collectCourseItems(uda.items);
       const linkedActivities = [...new Set(items.flatMap(({ item }) => courseItemActivities(item)))];
-      const visibleItems = items.slice(0, 6);
       return `
         <article class="courseUda">
           <header>
@@ -429,14 +428,13 @@ function renderCoursePath(design, assignments = [], studentId = currentDashboard
               : '<span class="status">Nessuna attivita collegata.</span>'}
           </div>
           <ul class="courseItemList">
-            ${visibleItems.map(({ item, depth }) => `
+            ${items.map(({ item, depth }) => `
               <li style="--depth: ${escapeHtml(depth)}">
                 ${courseItemHref(item) ? safeExternalLink(courseItemHref(item), item.title || item.id || "-") : escapeHtml(item.title || item.id || "-")}
                 <span>${escapeHtml(item.source || item.source_id || "")}</span>
               </li>
             `).join("")}
           </ul>
-          ${items.length > visibleItems.length ? `<p class="status">Altri ${items.length - visibleItems.length} paragrafi nel percorso.</p>` : ""}
         </article>
       `;
     }).join("");

@@ -321,6 +321,19 @@ def test_student_dashboard_renders_readonly_course_path_panel() -> None:
                   source: "README.md",
                 }],
               }],
+            }, {
+              id: "uda-completa",
+              title: "UDA completa",
+              path: "Base",
+              items: [
+                { id: "p-1", title: "Paragrafo 1" },
+                { id: "p-2", title: "Paragrafo 2" },
+                { id: "p-3", title: "Paragrafo 3" },
+                { id: "p-4", title: "Paragrafo 4" },
+                { id: "p-5", title: "Paragrafo 5" },
+                { id: "p-6", title: "Paragrafo 6" },
+                { id: "p-7", title: "Paragrafo 7" },
+              ],
             }],
           }],
         }, [assignment]);
@@ -330,8 +343,10 @@ def test_student_dashboard_renders_readonly_course_path_panel() -> None:
         assert.match(tested.els.coursePath.innerHTML, /Programmazione di base/);
         assert.match(tested.els.coursePath.innerHTML, /Input e output/);
         assert.match(tested.els.coursePath.innerHTML, /href="https:\\/\\/github.com\\/TheBitPoets\\/2cornot2c\\/blob\\/main\\/README.md#input-e-output"/);
+        assert.match(tested.els.coursePath.innerHTML, /Paragrafo 7/);
+        assert.doesNotMatch(tested.els.coursePath.innerHTML, /Altri 1 paragrafi/);
         assert.match(tested.els.coursePath.innerHTML, /Somma in Python/);
-        assert.match(tested.els.coursePathStatus.textContent, /1 percorsi .* 1 UDA/);
+        assert.match(tested.els.coursePathStatus.textContent, /1 percorsi .* 2 UDA/);
         assert.equal(tested.collectCourseItems([{ title: "Padre", children: [{ title: "Figlio" }] }]).length, 2);
         """
     )

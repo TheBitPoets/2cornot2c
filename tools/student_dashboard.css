@@ -277,8 +277,11 @@ button:hover { transform: translateY(-1px); }
   display: grid;
   gap: .35rem;
   min-width: 0;
+  max-height: 14rem;
   margin: 0;
   padding: 0;
+  padding-right: .35rem;
+  overflow-y: auto;
   list-style: none;
 }
 
