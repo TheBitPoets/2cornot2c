@@ -237,6 +237,8 @@ def run_dashboard_js(assertions: str) -> None:
         summaryTooltip,
         renderCoverageSummaryCards,
         renderOverviewSummaryCards,
+        renderOverviewFilters,
+        filteredOverviewRows,
         focusOverviewClassFromReport,
         summaryCounts,
         renderStudentsSummaryCards,
@@ -329,6 +331,25 @@ def test_loading_report_focuses_overview_class_filter() -> None:
         assert.equal(tested.focusOverviewClassFromReport({ activity_id: "legacy" }), false);
         assert.equal(tested.state.overviewFilters.class, "");
         assert.equal(tested.els.overviewClassFilter.value, "");
+        """
+    )
+
+
+def test_overview_activity_filter_limits_rows() -> None:
+    run_dashboard_js(
+        """
+        tested.state.overviewRows = [
+          { student: "rossi-mario", title: "Somma base", activity_id: "somma", kind: "lab", status: "submitted" },
+          { student: "rossi-mario", title: "Array base", activity_id: "array", kind: "lab", status: "submitted" },
+        ];
+        tested.state.overviewFilters.activity = "Somma base";
+
+        tested.renderOverviewFilters();
+        assert.equal(tested.els.overviewActivityFilter.value, "Somma base");
+
+        const rows = tested.filteredOverviewRows();
+        assert.equal(rows.length, 1);
+        assert.equal(rows[0].activity_id, "somma");
         """
     )
 

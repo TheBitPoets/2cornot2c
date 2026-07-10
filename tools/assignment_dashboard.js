@@ -99,6 +99,7 @@ const state = {
   overviewFilters: {
     class: "",
     student: "",
+    activity: "",
     kind: "",
     status: "",
     support: "",
@@ -140,6 +141,7 @@ const els = {
   overviewDialogSummary: document.querySelector("#overviewDialogSummary"),
   overviewClassFilter: document.querySelector("#overviewClassFilter"),
   overviewStudentFilter: document.querySelector("#overviewStudentFilter"),
+  overviewActivityFilter: document.querySelector("#overviewActivityFilter"),
   overviewKindFilter: document.querySelector("#overviewKindFilter"),
   overviewStatusFilter: document.querySelector("#overviewStatusFilter"),
   overviewSupportFilter: document.querySelector("#overviewSupportFilter"),
@@ -1399,11 +1401,13 @@ function renderOverviewFilters() {
   const rows = state.overviewRows;
   renderSelectOptions(els.overviewClassFilter, uniqueSorted(rows.map((row) => classValue(row))), state.overviewFilters.class, "Tutte");
   renderSelectOptions(els.overviewStudentFilter, uniqueSorted(rows.map((row) => row.student)), state.overviewFilters.student);
+  renderSelectOptions(els.overviewActivityFilter, uniqueSorted(rows.map((row) => activityLabel(row))), state.overviewFilters.activity, "Tutte");
   renderSelectOptions(els.overviewKindFilter, uniqueSorted(rows.map((row) => row.kind || "tipo non indicato")), state.overviewFilters.kind);
   renderSelectOptions(els.overviewStatusFilter, uniqueSorted(rows.map((row) => row.status || "stato non indicato")), state.overviewFilters.status);
   renderSelectOptions(els.overviewSupportFilter, uniqueSorted(rows.map((row) => row.student_support_mode || "non indicata")), state.overviewFilters.support, "Tutte");
   state.overviewFilters.class = els.overviewClassFilter.value;
   state.overviewFilters.student = els.overviewStudentFilter.value;
+  state.overviewFilters.activity = els.overviewActivityFilter.value;
   state.overviewFilters.kind = els.overviewKindFilter.value;
   state.overviewFilters.status = els.overviewStatusFilter.value;
   state.overviewFilters.support = els.overviewSupportFilter.value;
@@ -1412,11 +1416,13 @@ function renderOverviewFilters() {
 function filteredOverviewRows() {
   return state.overviewRows.filter((row) => {
     const classLabel = classValue(row);
+    const activity = activityLabel(row);
     const kind = row.kind || "tipo non indicato";
     const status = row.status || "stato non indicato";
     const support = row.student_support_mode || "non indicata";
     return (!state.overviewFilters.class || classLabel === state.overviewFilters.class)
       && (!state.overviewFilters.student || row.student === state.overviewFilters.student)
+      && (!state.overviewFilters.activity || activity === state.overviewFilters.activity)
       && (!state.overviewFilters.kind || kind === state.overviewFilters.kind)
       && (!state.overviewFilters.status || status === state.overviewFilters.status)
       && (!state.overviewFilters.support || support === state.overviewFilters.support);
@@ -2549,6 +2555,7 @@ els.coverageBody.addEventListener("click", async (event) => {
 [
   [els.overviewClassFilter, "class"],
   [els.overviewStudentFilter, "student"],
+  [els.overviewActivityFilter, "activity"],
   [els.overviewKindFilter, "kind"],
   [els.overviewStatusFilter, "status"],
   [els.overviewSupportFilter, "support"],
