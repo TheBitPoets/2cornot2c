@@ -240,6 +240,7 @@ def run_dashboard_js(assertions: str) -> None:
         focusOverviewClassFromReport,
         summaryCounts,
         renderStudentsSummaryCards,
+        activeStudentFilterLabel,
         aiFeedbackState,
         aiFeedbackDetails,
         aiFeedbackReviewDetails,
@@ -613,6 +614,7 @@ def test_students_summary_counts_include_grading_and_grades() -> None:
           { status: "submitted", submitted: true, late: false, grading: { status: "graded_passed", teacher_grade: "" } },
         ]);
         tested.state.report = { class_id: "3A-TPSI", class_label: "3A TPSI" };
+        tested.state.filter = "late";
         assert.equal(JSON.stringify(counts), JSON.stringify({
           total: 5,
           pending: 1,
@@ -626,6 +628,7 @@ def test_students_summary_counts_include_grading_and_grades() -> None:
         }));
         assert.equal(JSON.stringify(tested.compactStudentsSummaryItems(counts)), JSON.stringify([
           ["Classe", "3A TPSI"],
+          ["Filtri", "In ritardo"],
           ["Studenti", 5],
           ["Consegnati", 3],
           ["Mancanti", 1],
@@ -634,6 +637,7 @@ def test_students_summary_counts_include_grading_and_grades() -> None:
         ]));
         assert.equal(JSON.stringify(tested.detailedStudentsSummaryItems(counts)), JSON.stringify([
           ["Classe", "3A TPSI"],
+          ["Filtri", "In ritardo"],
           ["Studenti", 5],
           ["Consegnati", 3],
           ["Mancanti", 1],
@@ -644,6 +648,8 @@ def test_students_summary_counts_include_grading_and_grades() -> None:
           ["Media voto", "6.5"],
           ["Voti mancanti", 3],
         ]));
+        tested.state.filter = "all";
+        assert.equal(tested.activeStudentFilterLabel(), "nessuno");
         """
     )
 
@@ -651,9 +657,11 @@ def test_students_summary_counts_include_grading_and_grades() -> None:
 def test_students_summary_cards_include_tooltips() -> None:
     run_dashboard_js(
         """
-        const html = tested.renderStudentsSummaryCards([["Classe", "3A TPSI"], ["Consegnati", 3], ["KO", 1]]);
+        const html = tested.renderStudentsSummaryCards([["Classe", "3A TPSI"], ["Filtri", "In ritardo"], ["Consegnati", 3], ["KO", 1]]);
         assert.match(html, /<strong>Classe<\\/strong>\\s*<span>3A TPSI<\\/span>/);
+        assert.match(html, /<strong>Filtri<\\/strong>\\s*<span>In ritardo<\\/span>/);
         assert.match(html, /title="Classe associata al registro consegne selezionato\\."/);
+        assert.match(html, /title="Filtri attivi nella vista corrente\\."/);
         assert.match(html, /title="Numero di studenti che hanno effettuato una consegna\\."/);
         assert.match(html, /title="Numero di studenti con grading o test falliti\\."/);
         assert.equal(tested.summaryTooltip("Etichetta nuova"), "Valore riepilogativo: Etichetta nuova.");
@@ -749,7 +757,7 @@ def test_modal_summary_helpers_include_tooltips() -> None:
 
         const overviewHtml = tested.renderOverviewSummaryCards([["Classi", 2], ["Filtri", "nessuno"]]);
         assert.match(overviewHtml, /title="Numero di classi diverse presenti nelle righe del quadro classe filtrato\\."/);
-        assert.match(overviewHtml, /title="Numero di filtri attivi nel quadro classe\\."/);
+        assert.match(overviewHtml, /title="Filtri attivi nella vista corrente\\."/);
         """
     )
 

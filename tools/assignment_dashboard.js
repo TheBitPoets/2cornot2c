@@ -26,6 +26,14 @@ const OVERVIEW_STATUS_ORDER = [
   "submitted_on_time",
   "submitted_no_due_date",
 ];
+const STUDENT_FILTER_LABELS = {
+  all: "nessuno",
+  pending: "Da consegnare",
+  missing: "Mancanti",
+  submitted: "Consegnati",
+  late: "In ritardo",
+  failed: "Test falliti",
+};
 const LEGEND_SECTIONS = {
   overview: {
     title: "Quadro classe",
@@ -1945,7 +1953,7 @@ const SUMMARY_TOOLTIPS = {
   Studenti: "Numero di studenti considerati nel riepilogo.",
   Consegne: "Numero di activity/consegne diverse presenti nel quadro classe filtrato.",
   Righe: "Righe activity-studente mostrate rispetto al totale disponibile.",
-  Filtri: "Numero di filtri attivi nel quadro classe.",
+  Filtri: "Filtri attivi nella vista corrente.",
   Classe: "Classe associata al registro consegne selezionato.",
   Scadenza: "Data e ora di scadenza del registro consegne selezionato.",
   Consegnati: "Numero di studenti che hanno effettuato una consegna.",
@@ -1996,9 +2004,14 @@ function renderStudentsSummaryCards(items) {
   `).join("");
 }
 
+function activeStudentFilterLabel() {
+  return STUDENT_FILTER_LABELS[state.filter] || state.filter || "nessuno";
+}
+
 function compactStudentsSummaryItems(counts) {
   return [
     ["Classe", classValue(state.report)],
+    ["Filtri", activeStudentFilterLabel()],
     ["Studenti", counts.total],
     ["Consegnati", counts.submitted],
     ["Mancanti", counts.missing],
@@ -2010,6 +2023,7 @@ function compactStudentsSummaryItems(counts) {
 function detailedStudentsSummaryItems(counts) {
   return [
     ["Classe", classValue(state.report)],
+    ["Filtri", activeStudentFilterLabel()],
     ["Studenti", counts.total],
     ["Consegnati", counts.submitted],
     ["Mancanti", counts.missing],
