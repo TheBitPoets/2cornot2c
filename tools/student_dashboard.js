@@ -199,9 +199,13 @@ function gradeValue(grading) {
   return grade == null || String(grade).trim() === "" ? "-" : grade;
 }
 
+function isOpenAssignment(assignment) {
+  return !assignment.submitted || assignment.status === "missing";
+}
+
 function nextOpenAssignment(assignments) {
   const upcoming = assignments
-    .filter((item) => !item.submitted || item.status === "missing")
+    .filter(isOpenAssignment)
     .map((item) => ({ assignment: item, timestamp: timestampOrInfinity(item.due_at) }))
     .filter((item) => Number.isFinite(item.timestamp))
     .sort((left, right) => left.timestamp - right.timestamp);
@@ -254,7 +258,7 @@ function renderFeedback(feedback) {
   `;
 }
 
-function renderAssignment(assignment) {
+function renderAssignment(assignment, isNext = false) {
   const grading = assignment.grading || {};
   const failedTests = Array.isArray(grading.failed_tests) ? grading.failed_tests : [];
   const repoLink = assignment.repo_github_url
@@ -274,7 +278,10 @@ function renderAssignment(assignment) {
             <span>Scadenza: ${escapeHtml(formatDate(assignment.due_at))}</span>
           </p>
         </div>
-        ${statusBadge(assignment)}
+        <div class="assignmentBadges">
+          ${isNext ? badge("Prossima scadenza", "badgePriority") : ""}
+          ${statusBadge(assignment)}
+        </div>
       </div>
       <p class="details">
         <span>${gradingBadge(grading)}</span>
@@ -294,7 +301,7 @@ function renderAssignment(assignment) {
 }
 
 function assignmentMatchesFilter(assignment, filterValue) {
-  if (filterValue === "open") return assignment.status === "missing" || !assignment.submitted;
+  if (filterValue === "open") return isOpenAssignment(assignment);
   if (filterValue === "submitted") return Boolean(assignment.submitted);
   if (filterValue === "late") return Boolean(assignment.late);
   if (filterValue === "feedback") return Boolean(assignment.approved_feedback);
@@ -335,9 +342,16 @@ function sortedAssignments(assignments, sortValue) {
     if (sortValue === "title") {
       return assignmentTitle(left).localeCompare(assignmentTitle(right), "it", { numeric: true, sensitivity: "base" });
     }
-    return timestampOrInfinity(left.due_at) - timestampOrInfinity(right.due_at)
+    return Number(isOpenAssignment(right)) - Number(isOpenAssignment(left))
+      || timestampOrInfinity(left.due_at) - timestampOrInfinity(right.due_at)
       || assignmentTitle(left).localeCompare(assignmentTitle(right), "it", { numeric: true, sensitivity: "base" });
   });
+}
+
+function isNextDeadlineAssignment(assignment, nextAssignment) {
+  if (!nextAssignment || !isOpenAssignment(assignment)) return false;
+  const nextTimestamp = timestampOrInfinity(nextAssignment.due_at);
+  return Number.isFinite(nextTimestamp) && timestampOrInfinity(assignment.due_at) === nextTimestamp;
 }
 
 function renderDashboard(payload) {
@@ -345,13 +359,14 @@ function renderDashboard(payload) {
   currentDashboardPayload = { ...payload, assignments };
   const filterValue = els.assignmentFilter?.value || "all";
   const sortValue = els.assignmentSort?.value || "due_asc";
+  const nextAssignment = nextOpenAssignment(assignments);
   const visibleAssignments = sortedAssignments(filteredAssignments(assignments, filterValue), sortValue);
   renderSummary(payload.student_id || "-", assignments);
   els.status.textContent = visibleAssignments.length === assignments.length
     ? `${assignments.length} consegne trovate.`
     : `${visibleAssignments.length} di ${assignments.length} consegne visibili.`;
   els.assignments.innerHTML = visibleAssignments.length
-    ? visibleAssignments.map(renderAssignment).join("")
+    ? visibleAssignments.map((assignment) => renderAssignment(assignment, isNextDeadlineAssignment(assignment, nextAssignment))).join("")
     : assignments.length
       ? '<p class="status">Nessuna consegna corrisponde al filtro selezionato.</p>'
       : '<p class="status">Nessuna consegna disponibile.</p>';
