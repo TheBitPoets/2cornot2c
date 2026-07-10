@@ -182,4 +182,11 @@ Nel codice questo contratto e gia rappresentato da helper puri:
 - `manual_ai_feedback_result_from_response()` normalizza la risposta incollata dal provider manuale;
 - `ai_feedback_result_from_payload()` valida il JSON `ai_feedback_response.v1` e lo normalizza in `AiFeedbackResult`.
 
+Per provarlo senza GUI e senza API key e disponibile anche lo script CLI:
+
+```bash
+python -m scripts.manual_ai_feedback package request.json
+python -m scripts.manual_ai_feedback parse-response response.json
+```
+
 Se ChatGPT cambia stile di risposta, si modifica solo l'adapter del workflow manuale o il validatore dello schema, non il resto della dashboard. Lo stesso contratto JSON puo essere riusato anche dagli adapter automatici, che inviano e ricevono dati strutturati senza legarsi al testo libero del provider.
