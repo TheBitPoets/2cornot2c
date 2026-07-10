@@ -231,6 +231,8 @@ def execution_result_from_grade_activity_report(report: dict[str, Any]) -> Execu
     ]
     if status in {"compile-error", "compile-timeout"} and not tests:
         tests.append(RunnerTestResult(name="compilazione", passed=False, detail=_grade_activity_report_detail(report)))
+    if status == "source-not-found" and not tests:
+        tests.append(RunnerTestResult(name="sorgente", passed=False, detail=_grade_activity_report_detail(report)))
 
     if report.get("passed") is True:
         execution_status: ExecutionStatus = "passed"
@@ -238,7 +240,7 @@ def execution_result_from_grade_activity_report(report: dict[str, Any]) -> Execu
         execution_status = "timeout"
     elif status in {"invalid-activity"}:
         execution_status = "invalid_payload"
-    elif status in {"compiler-not-found", "unsupported-language", "unknown-language", "source-not-found"}:
+    elif status in {"compiler-not-found", "unsupported-language", "unknown-language"}:
         execution_status = "runner_unavailable"
     else:
         execution_status = "failed"
