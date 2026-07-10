@@ -203,7 +203,7 @@ def test_student_dashboard_sorts_visible_assignments() -> None:
         const submitted = {
           activity_id: "python-base-somma-001",
           title: "Somma in Python",
-          due_at: "2026-10-19T23:59:00+02:00",
+          due_at: "2026-10-10T23:59:00+02:00",
           status: "submitted_on_time",
           submitted: true,
           late: false,
@@ -222,6 +222,7 @@ def test_student_dashboard_sorts_visible_assignments() -> None:
           "c-array-001",
           "python-base-somma-001",
         ]));
+
         """
     )
 
@@ -247,14 +248,20 @@ def test_student_dashboard_summarizes_next_open_due_date() -> None:
           status: "assigned",
           submitted: false,
         };
+        const sameDeadline = {
+          activity_id: "python-stringhe-001",
+          due_at: "2026-10-18T23:59:00+02:00",
+          status: "assigned",
+          submitted: false,
+        };
 
-        assert.equal(tested.nextOpenAssignment([submitted, openLater, openSooner]).activity_id, "c-array-001");
-        assert.equal(tested.nextOpenDueAt([submitted, openLater, openSooner]), "2026-10-18T23:59:00+02:00");
-        tested.renderDashboard({ student_id: "rossi-mario", assignments: [submitted, openLater, openSooner] });
+        assert.equal(tested.nextOpenAssignment([submitted, openLater, openSooner, sameDeadline]).activity_id, "c-array-001");
+        assert.equal(tested.nextOpenDueAt([submitted, openLater, openSooner, sameDeadline]), "2026-10-18T23:59:00+02:00");
+        tested.renderDashboard({ student_id: "rossi-mario", assignments: [submitted, openLater, openSooner, sameDeadline] });
         assert.match(tested.els.summary.innerHTML, /<strong>Prossima attivita<\\/strong>\\s*<span>c-array-001<\\/span>/);
         assert.match(tested.els.summary.innerHTML, /<strong>Prossima scadenza<\\/strong>\\s*<span>18\\/10\\/26, 23:59<\\/span>/);
         assert.match(tested.els.assignments.innerHTML, /Prossima scadenza/);
-        assert.equal((tested.els.assignments.innerHTML.match(/Prossima scadenza/g) || []).length, 1);
+        assert.equal((tested.els.assignments.innerHTML.match(/Prossima scadenza/g) || []).length, 2);
         """
     )
 

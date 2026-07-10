@@ -74,7 +74,7 @@ Usalo per capire rapidamente:
 
 Screenshot previsto: `doc/images/dashboard-guides/studente-riepilogo.png`.
 
-La stessa consegna viene evidenziata nella lista con il badge **Prossima scadenza**.
+La stessa consegna viene evidenziata nella lista con il badge **Prossima scadenza**. Se piu consegne aperte hanno la stessa prossima scadenza, il badge compare su tutte.
 
 ## Consegne
 
