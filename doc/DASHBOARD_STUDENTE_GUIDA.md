@@ -80,6 +80,11 @@ La stessa consegna viene evidenziata nella lista con il badge **Prossima scadenz
 
 Il pannello **Calendario** mostra in sola lettura una vista simile a quella docente.
 
+Il selettore **Vista** permette di scegliere tra:
+
+- **Calendario**, utile per vedere la distribuzione nel tempo;
+- **Lista**, utile per leggere gli eventi in ordine cronologico.
+
 La modalità **Mese** mostra un mese centrale con i mesi laterali di contesto e le frecce per passare al mese precedente o successivo. La modalità **Settimana** mostra solo la settimana selezionata, anche qui con frecce avanti e indietro. La modalità **Anno** mostra tutti i mesi dell'intervallo pubblicato.
 
 La vista puo mostrare:

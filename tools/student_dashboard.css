@@ -259,6 +259,39 @@ button:hover { transform: translateY(-1px); }
   display: none;
 }
 
+.studentCalendarDisplayToggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .35rem;
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.studentCalendarDisplayToggle legend {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 700;
+  padding: 0;
+}
+
+.studentCalendarDisplayToggle button {
+  min-height: 2.35rem;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  color: var(--ink);
+  box-shadow: none;
+  padding: .45rem .7rem;
+}
+
+.studentCalendarDisplayToggle button[aria-pressed="true"] {
+  border-color: #111111;
+  background: #111111;
+  color: #ffffff;
+}
+
 .studentCalendarControls select {
   min-width: min(16rem, 45vw);
 }
@@ -443,6 +476,37 @@ button:hover { transform: translateY(-1px); }
 .calendarPillUda {
   background: rgba(20, 122, 66, .1);
   color: var(--ok);
+}
+
+.studentCalendarList {
+  display: grid;
+  gap: .65rem;
+  min-width: 0;
+}
+
+.studentCalendarListItem {
+  display: grid;
+  grid-template-columns: minmax(8.5rem, auto) minmax(0, 1fr);
+  gap: .85rem;
+  align-items: start;
+  min-width: 0;
+  border: 1px solid rgba(17, 17, 17, .16);
+  border-left: 4px solid var(--line);
+  border-radius: 18px;
+  background: #ffffff;
+  padding: .85rem;
+}
+
+.studentCalendarListItem time {
+  color: var(--muted);
+  font-size: .78rem;
+  font-weight: 900;
+}
+
+.studentCalendarListItem h3 {
+  margin: 0 0 .28rem;
+  overflow-wrap: anywhere;
+  font-size: .98rem;
 }
 
 .coursePathBody {
@@ -856,6 +920,10 @@ button:hover { transform: translateY(-1px); }
 
   .studentMonthContextCard {
     transform: none;
+  }
+
+  .studentCalendarListItem {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   h1 {

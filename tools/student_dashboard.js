@@ -31,6 +31,7 @@ let currentClassRoster = null;
 let currentCourseDesign = null;
 let currentSchoolCalendar = null;
 let currentStudentCalendarView = {
+  display: "calendar",
   mode: "month",
   month: "",
   week: "",
@@ -601,6 +602,35 @@ function renderStudentCalendarLegend(events) {
   `;
 }
 
+function renderStudentCalendarList(events) {
+  if (!events.length) {
+    return '<p class="status">Nessun evento corrisponde ai filtri selezionati.</p>';
+  }
+  return `
+    <div class="studentCalendarList">
+      ${events.map((event) => {
+        const badgeClass = event.kind === "due"
+          ? "calendarPillDue"
+          : event.category === "udas"
+            ? "calendarPillUda"
+            : "calendarPillAssigned";
+        return `
+          <article class="studentCalendarListItem">
+            <time datetime="${escapeHtml(event.iso || event.date || "")}">${escapeHtml(formatDate(event.date || event.iso))}</time>
+            <div>
+              <h3>${escapeHtml(event.title)}</h3>
+              <p class="meta">
+                <span class="calendarPill ${badgeClass}">${escapeHtml(event.label)}</span>
+                ${event.priority ? '<span class="calendarPill calendarPillDue"><strong>!</strong><span class="calendarPriorityText">Prossima scadenza</span></span>' : ""}
+              </p>
+            </div>
+          </article>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
 function renderStudentCalendar(assignments) {
   if (!els.studentCalendar) return;
   const baseEvents = [
@@ -609,6 +639,7 @@ function renderStudentCalendar(assignments) {
   ].sort((left, right) => left.timestamp - right.timestamp || left.title.localeCompare(right.title, "it", { numeric: true, sensitivity: "base" }));
   const mode = els.studentCalendarViewMode?.value || currentStudentCalendarView.mode || "month";
   currentStudentCalendarView.mode = ["year", "month", "week"].includes(mode) ? mode : "month";
+  currentStudentCalendarView.display = currentStudentCalendarView.display === "list" ? "list" : "calendar";
   const filterValue = els.studentCalendarFilter?.value || "all";
   const events = filteredStudentCalendarEvents(baseEvents, filterValue);
   const range = calendarDateRange(baseEvents);
@@ -626,8 +657,13 @@ function renderStudentCalendar(assignments) {
     currentStudentCalendarView.week = firstEventWeek ? isoDate(firstEventWeek.start) : isoDate(weeks[0]?.start || range.start);
   }
   if (els.studentCalendarViewMode) els.studentCalendarViewMode.value = currentStudentCalendarView.mode;
-  els.studentCalendarMonthField?.classList.toggle("isHidden", currentStudentCalendarView.mode !== "month");
-  els.studentCalendarWeekField?.classList.toggle("isHidden", currentStudentCalendarView.mode !== "week");
+  const showCalendarControls = currentStudentCalendarView.display === "calendar";
+  els.studentCalendarMonthField?.classList.toggle("isHidden", !showCalendarControls || currentStudentCalendarView.mode !== "month");
+  els.studentCalendarWeekField?.classList.toggle("isHidden", !showCalendarControls || currentStudentCalendarView.mode !== "week");
+  els.studentCalendarViewMode?.closest?.("label")?.classList.toggle("isHidden", !showCalendarControls);
+  document.querySelectorAll?.("[data-student-calendar-display]").forEach((button) => {
+    button.setAttribute("aria-pressed", String(button.dataset.studentCalendarDisplay === currentStudentCalendarView.display));
+  });
   if (els.studentCalendarMonth) {
     els.studentCalendarMonth.innerHTML = months.map((month) => {
       const value = monthKey(month);
@@ -658,7 +694,9 @@ function renderStudentCalendar(assignments) {
     eventsByDate.get(event.iso).push(event);
   }
   const selectedWeek = selectedStudentCalendarWeek(weeks, currentStudentCalendarView.week);
-  const renderedCalendar = currentStudentCalendarView.mode === "week" && selectedWeek
+  const renderedCalendar = currentStudentCalendarView.display === "list"
+    ? renderStudentCalendarList(events)
+    : currentStudentCalendarView.mode === "week" && selectedWeek
     ? renderStudentCalendarWeek(selectedWeek, eventsByDate, range, months, weeks)
     : `
       <div class="studentMonthGrid ${currentStudentCalendarView.mode === "month" ? "studentMonthFocusGrid" : ""}">
@@ -1161,6 +1199,13 @@ els.studentCalendarWeek?.addEventListener("change", () => {
 
 els.studentCalendarFilter?.addEventListener("change", () => {
   renderStudentCalendar(currentDashboardPayload.assignments || []);
+});
+
+document.querySelectorAll?.("[data-student-calendar-display]").forEach((button) => {
+  button.addEventListener("click", () => {
+    currentStudentCalendarView.display = button.dataset.studentCalendarDisplay === "list" ? "list" : "calendar";
+    renderStudentCalendar(currentDashboardPayload.assignments || []);
+  });
 });
 
 els.studentCalendar?.addEventListener("click", (event) => {

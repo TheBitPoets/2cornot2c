@@ -17,6 +17,11 @@ def run_student_dashboard_js(assertions: str) -> None:
         this.textContent = "";
         this.innerHTML = "";
         this.disabled = false;
+        this.dataset = selector.includes("list")
+          ? {{ studentCalendarDisplay: "list" }}
+          : selector.includes("calendar")
+            ? {{ studentCalendarDisplay: "calendar" }}
+            : {{}};
         this.classList = {{
           values: new Set(),
           toggle: (name, force) => {{
@@ -27,6 +32,8 @@ def run_student_dashboard_js(assertions: str) -> None:
         }};
       }}
       addEventListener() {{}}
+      setAttribute(name, value) {{ this[name] = value; }}
+      closest() {{ return this; }}
     }}
 
     const elements = new Map();
@@ -38,7 +45,12 @@ def run_student_dashboard_js(assertions: str) -> None:
     const context = {{
       console,
       URL,
-      document: {{ querySelector: elementFor }},
+      document: {{
+        querySelector: elementFor,
+        querySelectorAll: (selector) => selector === "[data-student-calendar-display]"
+          ? [elementFor("[data-student-calendar-display=calendar]"), elementFor("[data-student-calendar-display=list]")]
+          : [],
+      }},
       fetch: async () => ({{
         ok: true,
         status: 200,
@@ -85,6 +97,7 @@ def run_student_dashboard_js(assertions: str) -> None:
         gradingBadge,
         gradeValue,
         setCurrentCourseDesign: (design) => {{ currentCourseDesign = design; }},
+        setStudentCalendarDisplay: (display) => {{ currentStudentCalendarView.display = display; }},
         els,
       }};
     `, context);
@@ -330,9 +343,35 @@ def test_student_dashboard_renders_readonly_calendar_events() -> None:
         assert.match(tested.els.studentCalendar.innerHTML, /data-student-calendar-nav="previous"/);
         assert.equal(tested.els.studentCalendarMonthField.classList.contains("isHidden"), false);
         assert.equal(tested.els.studentCalendarWeekField.classList.contains("isHidden"), true);
+        assert.equal(tested.els.studentCalendarViewMode.closest().classList.contains("isHidden"), false);
         assert.equal((tested.els.studentCalendar.innerHTML.match(/Prossima scadenza/g) || []).length, 2);
         assert.match(tested.els.studentCalendarStatus.textContent, /6 eventi .* 3 scadenze/);
         assert.equal(tested.studentCalendarEvents([openSooner, sameDeadline, submitted]).at(-1).title, "Somma in Python");
+        """
+    )
+
+
+def test_student_dashboard_calendar_can_render_list_view() -> None:
+    run_student_dashboard_js(
+        """
+        const assignment = {
+          activity_id: "python-base-somma-001",
+          title: "Somma in Python",
+          assigned_at: "2026-10-10T08:00:00+02:00",
+          due_at: "2026-10-18T23:59:00+02:00",
+          status: "assigned",
+          submitted: false,
+        };
+
+        tested.setStudentCalendarDisplay("list");
+        tested.renderStudentCalendar([assignment]);
+
+        assert.match(tested.els.studentCalendar.innerHTML, /studentCalendarList/);
+        assert.match(tested.els.studentCalendar.innerHTML, /Somma in Python/);
+        assert.doesNotMatch(tested.els.studentCalendar.innerHTML, /studentMonthGrid/);
+        assert.equal(tested.els.studentCalendarMonthField.classList.contains("isHidden"), true);
+        assert.equal(tested.els.studentCalendarWeekField.classList.contains("isHidden"), true);
+        assert.equal(tested.els.studentCalendarViewMode.closest().classList.contains("isHidden"), true);
         """
     )
 
