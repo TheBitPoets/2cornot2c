@@ -181,3 +181,30 @@ Questo workflow e intenzionalmente CLI-first. La GUI docente potra riusare lo st
 5. far approvare o modificare il feedback al docente.
 
 La stessa forma JSON puo essere usata anche dagli adapter automatici futuri.
+
+## Verifica visuale nella dashboard
+
+Per provare la visualizzazione degli stati AI senza chiamare provider esterni, il repository contiene un registro demo:
+
+```text
+teacher-reports/demo/ai-feedback-states.json
+```
+
+Avvia il server locale:
+
+```bash
+python scripts/course_board_server.py
+```
+
+Poi apri `tools/assignment_dashboard.html`, carica il registro `demo/ai-feedback-states.json` e apri la tabella studenti.
+
+La colonna `AI` deve mostrare:
+
+| Studente | Stato atteso | Significato |
+|---|---|---|
+| `rossi-mario` | `Bozza AI` | Feedback generato ma non ancora approvato |
+| `bianchi-luca` | `Approvato` | Feedback controllato e approvato dal docente |
+| `verdi-anna` | `Respinto` | Feedback respinto dal docente |
+| `neri-giulia` | `Non generato` | Nessun feedback AI disponibile |
+
+La legenda della tabella studenti contiene gli stessi badge, cosi la GUI resta coerente anche quando non si conosce il workflow CLI.

@@ -1,0 +1,200 @@
+{
+  "schema_version": "1.0",
+  "id": "register-demo-ai-feedback-states",
+  "assignment_id": "assignment-demo-ai-feedback-states",
+  "activity_id": "demo-ai-feedback-states",
+  "title": "Demo stati feedback AI",
+  "kind": "debug-didattico",
+  "student_support_mode": "feedback-tecnico",
+  "class_id": "demo-ai",
+  "class_label": "Demo AI",
+  "github_team": "team-demo-ai",
+  "assigned_at": "2026-10-20T09:00:00+02:00",
+  "due_at": "2026-10-27T23:59:00+01:00",
+  "students": [
+    {
+      "student": "rossi-mario",
+      "student_id": "rossi-mario",
+      "repo": "TheBitPoets/rossi-mario",
+      "repo_github_url": "https://github.com/TheBitPoets/rossi-mario",
+      "assigned": true,
+      "submitted": true,
+      "status": "submitted_on_time",
+      "late": false,
+      "submission": {
+        "id": "submission-rossi-mario-demo-ai-feedback-states",
+        "assignment_id": "assignment-demo-ai-feedback-states",
+        "activity_id": "demo-ai-feedback-states",
+        "student_id": "rossi-mario",
+        "repo_ref": "TheBitPoets/rossi-mario",
+        "commit": "abc1234",
+        "submitted_at": "2026-10-24T16:35:00+02:00",
+        "status": "submitted_on_time",
+        "late": false,
+        "files": [
+          {
+            "path": "assignments/demo-ai-feedback-states/main.py",
+            "role": "solution"
+          }
+        ]
+      },
+      "grading": {
+        "status": "graded_failed",
+        "passed": false,
+        "tests_passed": 2,
+        "tests_total": 3,
+        "failed_tests": [
+          "caso_zero"
+        ],
+        "score": 6,
+        "teacher_grade": null,
+        "detail": "La soluzione fallisce il caso limite con zero."
+      },
+      "ai_feedback": {
+        "status": "draft",
+        "suggested_grade": 6,
+        "summary": "La soluzione e quasi corretta, ma deve gestire meglio il caso con zero.",
+        "student_feedback": "Rivedi il test sul valore zero e confronta l'output atteso con quello prodotto.",
+        "teacher_notes": "Controllare se lo studente ha gestito solo valori positivi.",
+        "confidence": "medium",
+        "approved_by_teacher": false,
+        "detail": ""
+      }
+    },
+    {
+      "student": "bianchi-luca",
+      "student_id": "bianchi-luca",
+      "repo": "TheBitPoets/bianchi-luca",
+      "repo_github_url": "https://github.com/TheBitPoets/bianchi-luca",
+      "assigned": true,
+      "submitted": true,
+      "status": "submitted_late",
+      "late": true,
+      "submission": {
+        "id": "submission-bianchi-luca-demo-ai-feedback-states",
+        "assignment_id": "assignment-demo-ai-feedback-states",
+        "activity_id": "demo-ai-feedback-states",
+        "student_id": "bianchi-luca",
+        "repo_ref": "TheBitPoets/bianchi-luca",
+        "commit": "def5678",
+        "submitted_at": "2026-10-28T08:10:00+01:00",
+        "status": "submitted_late",
+        "late": true,
+        "files": [
+          {
+            "path": "assignments/demo-ai-feedback-states/main.py",
+            "role": "solution"
+          }
+        ]
+      },
+      "grading": {
+        "status": "graded_passed",
+        "passed": true,
+        "tests_passed": 3,
+        "tests_total": 3,
+        "failed_tests": [],
+        "score": 8,
+        "teacher_grade": 8,
+        "detail": "Tutti i test sono stati superati."
+      },
+      "ai_feedback": {
+        "status": "approved",
+        "suggested_grade": 8,
+        "summary": "Feedback approvato: soluzione corretta, consegnata pero oltre la scadenza.",
+        "student_feedback": "Buon lavoro sui casi di test. Fai attenzione alla gestione dei tempi di consegna.",
+        "teacher_notes": "Feedback controllato e approvato dal docente.",
+        "confidence": "high",
+        "approved_by_teacher": true,
+        "detail": ""
+      }
+    },
+    {
+      "student": "verdi-anna",
+      "student_id": "verdi-anna",
+      "repo": "TheBitPoets/verdi-anna",
+      "repo_github_url": "https://github.com/TheBitPoets/verdi-anna",
+      "assigned": true,
+      "submitted": true,
+      "status": "submitted_on_time",
+      "late": false,
+      "submission": {
+        "id": "submission-verdi-anna-demo-ai-feedback-states",
+        "assignment_id": "assignment-demo-ai-feedback-states",
+        "activity_id": "demo-ai-feedback-states",
+        "student_id": "verdi-anna",
+        "repo_ref": "TheBitPoets/verdi-anna",
+        "commit": "987abcd",
+        "submitted_at": "2026-10-25T11:20:00+02:00",
+        "status": "submitted_on_time",
+        "late": false,
+        "files": [
+          {
+            "path": "assignments/demo-ai-feedback-states/main.py",
+            "role": "solution"
+          }
+        ]
+      },
+      "grading": {
+        "status": "graded_failed",
+        "passed": false,
+        "tests_passed": 1,
+        "tests_total": 3,
+        "failed_tests": [
+          "caso_negativi",
+          "caso_grande"
+        ],
+        "score": 4,
+        "teacher_grade": null,
+        "detail": "La soluzione fallisce due casi limite."
+      },
+      "ai_feedback": {
+        "status": "rejected",
+        "suggested_grade": 4,
+        "summary": "Feedback respinto: la spiegazione generata era troppo generica per essere pubblicata.",
+        "student_feedback": "Rivedi i casi limite segnalati dai test.",
+        "teacher_notes": "Bozza respinta dal docente perche non abbastanza specifica.",
+        "confidence": "low",
+        "approved_by_teacher": false,
+        "detail": ""
+      }
+    },
+    {
+      "student": "neri-giulia",
+      "student_id": "neri-giulia",
+      "repo": "TheBitPoets/neri-giulia",
+      "repo_github_url": "https://github.com/TheBitPoets/neri-giulia",
+      "assigned": true,
+      "submitted": false,
+      "status": "missing",
+      "late": false,
+      "submission": {
+        "id": "",
+        "assignment_id": "assignment-demo-ai-feedback-states",
+        "activity_id": "demo-ai-feedback-states",
+        "student_id": "neri-giulia",
+        "repo_ref": "TheBitPoets/neri-giulia",
+        "commit": null,
+        "submitted_at": null,
+        "status": "missing",
+        "late": false,
+        "files": []
+      },
+      "grading": {
+        "status": "not_run",
+        "passed": null,
+        "tests_passed": null,
+        "tests_total": null,
+        "failed_tests": [],
+        "score": null,
+        "teacher_grade": null,
+        "detail": "Nessuna consegna disponibile."
+      },
+      "ai_feedback": {
+        "status": "not_generated",
+        "suggested_grade": null,
+        "summary": null,
+        "approved_by_teacher": false
+      }
+    }
+  ]
+}
