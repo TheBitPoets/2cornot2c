@@ -66,7 +66,7 @@ Usalo per capire rapidamente:
 
 - quante consegne risultano associate allo studente;
 - quante sono consegnate;
-- quante sono mancanti o in ritardo;
+- quante risultano in ritardo;
 - se ci sono feedback approvati visibili.
 
 Screenshot previsto: `doc/images/dashboard-guides/studente-riepilogo.png`.
