@@ -110,6 +110,8 @@ Per ogni consegna controlla:
 
 Quando il registro contiene un link valido al file, il pulsante **Apri consegna** apre il file della consegna. Se il file non e disponibile, il pulsante resta visibile ma disabilitato e mostra il motivo, per esempio **Consegna mancante**.
 
+Il pulsante **Dettaglio** apre un modal con il quadro completo della consegna selezionata: dati dell'attivita, classe, scadenze, stato della consegna, link al repository o al file, esito del grading, test falliti e feedback approvato dal docente.
+
 Screenshot previsto: `doc/images/dashboard-guides/studente-consegne.png`.
 
 ## Stati principali

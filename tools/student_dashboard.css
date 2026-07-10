@@ -347,6 +347,27 @@ button:hover { transform: translateY(-1px); }
   transform: translateY(-1px);
 }
 
+.secondaryActionButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  max-width: 100%;
+  border: 1px solid rgba(17, 17, 17, .24);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--ink);
+  padding: .45rem .75rem;
+  font-size: .8rem;
+  font-weight: 800;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.secondaryActionButton:hover {
+  transform: translateY(-1px);
+}
+
 .actionButtonDisabled,
 .actionButtonDisabled:hover {
   border-color: rgba(17, 17, 17, .18);
@@ -392,6 +413,112 @@ button:hover { transform: translateY(-1px); }
   overflow-wrap: anywhere;
 }
 
+.modalOpen {
+  overflow: hidden;
+}
+
+.modalOverlay[hidden] {
+  display: none;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: clamp(1rem, 3vw, 2rem);
+  background: rgba(17, 17, 17, .46);
+}
+
+.detailModal {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(72rem, 100%);
+  max-height: min(46rem, calc(100vh - 2rem));
+  min-width: min(100%, 18rem);
+  border: 1px solid rgba(17, 17, 17, .16);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .22);
+  overflow: hidden;
+  resize: both;
+}
+
+.detailModalHead {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+  min-width: 0;
+  padding: 1rem;
+  border-bottom: 1px solid rgba(17, 17, 17, .12);
+}
+
+.detailModalHead > div {
+  min-width: 0;
+}
+
+.modalEyebrow {
+  margin: 0 0 .25rem;
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.detailModalHead h2 {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.detailModalBody {
+  display: grid;
+  gap: 1rem;
+  min-height: 0;
+  overflow: auto;
+  padding: 1rem;
+}
+
+.detailSection {
+  display: grid;
+  gap: .75rem;
+  min-width: 0;
+}
+
+.detailSection h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: .65rem;
+  min-width: 0;
+}
+
+.detailItem {
+  min-width: 0;
+  border: 1px solid rgba(17, 17, 17, .1);
+  border-radius: 8px;
+  padding: .75rem;
+  background: #fafafa;
+}
+
+.detailItem strong {
+  display: block;
+  color: var(--muted);
+  font-size: .72rem;
+}
+
+.detailItem span {
+  display: block;
+  margin-top: .25rem;
+  overflow-wrap: anywhere;
+  font-weight: 800;
+}
+
 @media (max-width: 720px) {
   .topNav {
     overflow-x: auto;
@@ -427,5 +554,19 @@ button:hover { transform: translateY(-1px); }
 
   .badge {
     width: fit-content;
+  }
+
+  .modalOverlay {
+    place-items: stretch;
+  }
+
+  .detailModal {
+    width: 100%;
+    max-height: calc(100vh - 2rem);
+    resize: none;
+  }
+
+  .detailModalHead {
+    display: grid;
   }
 }
