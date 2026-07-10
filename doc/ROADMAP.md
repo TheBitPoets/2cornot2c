@@ -517,6 +517,9 @@ Passi progressivi:
 Ordine consigliato:
 
 1. Storage layer iniziale sopra JSON, con `schema_version` e root configurabile.
+   - chiarire e stabilizzare la relazione tra percorso didattico, calendario, consuntivi UDA e file fisici oggi separati (`doc/course_design.json`, `doc/course_designs/*.json`, `doc/calendars/*.json`);
+   - definire una vista dati canonica che possa essere salvata prima su JSON e poi su SQLite senza cambiare le dashboard;
+   - evitare che docente e studente leggano versioni diverse dello stesso percorso/calendario.
 2. Provider layer minimo: interfaccia comune e implementazione GitHub iniziale.
 3. Gestione classi MVP: import/sync da GitHub Team o import manuale controllato.
 4. Pagina creazione/generazione/modifica activity con validazione.
