@@ -207,4 +207,6 @@ La colonna `AI` deve mostrare:
 | `verdi-anna` | `Respinto` | Feedback respinto dal docente |
 | `neri-giulia` | `Non generato` | Nessun feedback AI disponibile |
 
+Per gli stati diversi da `Non generato`, nella stessa cella e disponibile il dettaglio espandibile `Dettaglio AI`: mostra il feedback per lo studente, le note docente, l'affidabilita dichiarata e l'azione operativa suggerita al docente. Le azioni restano informative nella GUI: approvazione e respinta sono ancora gestite dal workflow manuale `review-feedback`.
+
 La legenda della tabella studenti contiene gli stessi badge, cosi la GUI resta coerente anche quando non si conosce il workflow CLI.
