@@ -42,7 +42,9 @@ def run_student_dashboard_js(assertions: str) -> None:
     }};
     context.globalThis = context;
 
-    const source = fs.readFileSync("tools/student_dashboard.js", "utf8");
+    let source = fs.readFileSync("tools/student_dashboard.js", "utf8");
+    const startupIndex = source.lastIndexOf("loadStudentOptions(els.studentId.value)");
+    if (startupIndex >= 0) source = source.slice(0, startupIndex);
     vm.runInNewContext(`${{source}}
       globalThis.__studentDashboardTest = {{
         renderSummary,
@@ -54,6 +56,7 @@ def run_student_dashboard_js(assertions: str) -> None:
         rosterLabel,
         activeStudentsFromRoster,
         populateClassRosterOptions,
+        loadStudentOptions,
         uniqueStudentsFromOverview,
         populateStudentOptions,
         statusBadge,
@@ -64,7 +67,12 @@ def run_student_dashboard_js(assertions: str) -> None:
     `, context);
 
     const tested = context.__studentDashboardTest;
-    {assertions}
+    (async () => {{
+      {assertions}
+    }})().catch((error) => {{
+      console.error(error);
+      process.exit(1);
+    }});
     """
     subprocess.run(["node", "-e", textwrap.dedent(script)], check=True)
 
@@ -194,6 +202,44 @@ def test_student_dashboard_disables_class_roster_when_missing() -> None:
         assert.equal(tested.els.classRoster.value, "");
         assert.equal(tested.els.classRoster.disabled, true);
         assert.match(tested.els.classRoster.innerHTML, /Dai registri consegne/);
+        """
+    )
+
+
+def test_student_dashboard_does_not_hide_selected_roster_load_errors() -> None:
+    run_student_dashboard_js(
+        """
+        const calls = [];
+        context.fetch = async (path) => {
+          calls.push(path);
+          if (path === "/api/class-rosters") {
+            return {
+              ok: true,
+              status: 200,
+              statusText: "OK",
+              json: async () => ({ rosters: [{ name: "broken.json", label: "Classe rotta" }] }),
+              text: async () => "",
+            };
+          }
+          if (path === "/api/class-rosters/load") {
+            return {
+              ok: false,
+              status: 404,
+              statusText: "Not Found",
+              json: async () => ({}),
+              text: async () => JSON.stringify({ error: "Roster classe non trovato: broken.json" }),
+            };
+          }
+          throw new Error(`Fallback non atteso: ${path}`);
+        };
+
+        await assert.rejects(
+          () => tested.loadStudentOptions("", "broken.json"),
+          /Roster classe non trovato/
+        );
+
+        assert.equal(calls.includes("/api/assignment-overview"), false);
+        assert.match(tested.els.status.textContent, /Errore roster classe/);
         """
     )
 

@@ -101,9 +101,8 @@ function populateStudentOptions(students, preferredStudentId = "") {
   return selected;
 }
 
-async function loadRosterStudentOptions(preferredStudentId = "", preferredRosterName = "") {
-  const rostersPayload = await api("/api/class-rosters");
-  const rosterName = populateClassRosterOptions(rostersPayload.rosters || [], preferredRosterName);
+async function loadRosterDetailStudentOptions(rosters, preferredStudentId = "", preferredRosterName = "") {
+  const rosterName = populateClassRosterOptions(rosters || [], preferredRosterName);
   if (!rosterName) return "";
   const payload = await api("/api/class-rosters/load", {
     method: "POST",
@@ -114,12 +113,25 @@ async function loadRosterStudentOptions(preferredStudentId = "", preferredRoster
 }
 
 async function loadStudentOptions(preferredStudentId = "", preferredRosterName = "") {
+  let rostersPayload;
   try {
-    const rosterStudentId = await loadRosterStudentOptions(preferredStudentId, preferredRosterName);
-    if (rosterStudentId) return rosterStudentId;
+    rostersPayload = await api("/api/class-rosters");
   } catch {
     populateClassRosterOptions([], "");
+    return loadOverviewStudentOptions(preferredStudentId);
   }
+  const rosters = rostersPayload.rosters || [];
+  const rosterName = populateClassRosterOptions(rosters, preferredRosterName);
+  if (!rosterName) return loadOverviewStudentOptions(preferredStudentId);
+  try {
+    return await loadRosterDetailStudentOptions(rosters, preferredStudentId, rosterName);
+  } catch (error) {
+    els.status.textContent = `Errore roster classe: ${error.message}`;
+    throw error;
+  }
+}
+
+async function loadOverviewStudentOptions(preferredStudentId = "") {
   try {
     const payload = await api("/api/assignment-overview");
     return populateStudentOptions(uniqueStudentsFromOverview(payload.rows || []), preferredStudentId);
