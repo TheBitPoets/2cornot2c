@@ -602,6 +602,14 @@ def test_ai_feedback_helpers_render_teacher_review_states() -> None:
     )
 
 
+def test_ai_feedback_details_css_limits_expanded_content_height() -> None:
+    css = open("tools/assignment_dashboard.css", encoding="utf-8").read()
+
+    assert ".aiFeedbackDetails dl" in css
+    assert "max-height: 14rem;" in css
+    assert "overflow-y: auto;" in css
+
+
 def test_modal_summary_helpers_include_tooltips() -> None:
     run_dashboard_js(
         """
