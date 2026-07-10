@@ -7,14 +7,24 @@
   <link rel="stylesheet" href="student_dashboard.css">
 </head>
 <body>
-  <header class="topbar">
+  <nav class="topNav" aria-label="Navigazione strumenti">
+    <a class="topNavBrand" href="https://github.com/TheBitPoets" target="_blank" rel="noreferrer" aria-label="Apri TheBitPoets su GitHub">
+      <img src="https://github.com/TheBitPoets.png" alt="TheBitPoets">
+    </a>
+    <a href="course_board.html">Percorso</a>
+    <a href="school_calendar.html">Calendario</a>
+    <a href="assignment_dashboard.html">Consegne</a>
+    <a href="student_dashboard.html" aria-current="page">Studente</a>
+  </nav>
+
+  <header class="hero">
     <div>
-      <p class="eyebrow">TheBitLab</p>
       <h1>Vista studente</h1>
+      <p class="subtitle">Consulta consegne, stato, grading e feedback approvato dal docente.</p>
     </div>
     <form id="studentForm" class="studentForm">
       <label>
-        Studente
+        <span>Studente</span>
         <select id="studentId" name="student_id">
           <option value="bianchi-luca" selected>Caricamento studenti...</option>
         </select>
