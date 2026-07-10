@@ -287,7 +287,7 @@ def ai_feedback_request_payload(
 
     return {
         "schema_version": AI_FEEDBACK_REQUEST_SCHEMA_VERSION,
-        "activity": {"id": request.activity_id, **(activity or {})},
+        "activity": {**(activity or {}), "id": request.activity_id},
         "student": {"id": request.student_id},
         "grading": request.grading.to_dashboard_dict(),
         "context": request.allowed_context,
@@ -329,7 +329,9 @@ def ai_feedback_result_from_payload(payload: str | dict[str, Any]) -> AiFeedback
         raise InvalidServicePayloadError("Payload feedback AI senza status valido.")
 
     suggested_grade = raw.get("suggested_grade")
-    if suggested_grade is not None and not isinstance(suggested_grade, (int, float)):
+    if suggested_grade is not None and (
+        isinstance(suggested_grade, bool) or not isinstance(suggested_grade, (int, float))
+    ):
         raise InvalidServicePayloadError("Payload feedback AI con suggested_grade non valido.")
 
     return AiFeedbackResult(

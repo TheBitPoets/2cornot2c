@@ -393,7 +393,7 @@ def test_ai_feedback_request_payload_uses_stable_manual_contract() -> None:
             grading=grading,
             allowed_context={"teacher_notes": "Controllare il caso con negativi."},
         ),
-        activity={"title": "Somma in C"},
+        activity={"id": "activity-sbagliata", "title": "Somma in C"},
     )
 
     assert payload["schema_version"] == "ai_feedback_request.v1"
@@ -437,6 +437,11 @@ def test_ai_feedback_result_from_payload_normalizes_manual_response() -> None:
             "schema_version": "ai_feedback_response.v1",
             "status": "draft",
             "suggested_grade": "cinque",
+        },
+        {
+            "schema_version": "ai_feedback_response.v1",
+            "status": "draft",
+            "suggested_grade": True,
         },
         {
             "schema_version": "ai_feedback_response.v1",
