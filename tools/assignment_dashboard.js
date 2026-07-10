@@ -1947,6 +1947,7 @@ function externalLink(url, label = "GitHub") {
 
 const SUMMARY_TOOLTIPS = {
   Activity: "Activity o numero di activity a cui si riferisce questo riepilogo.",
+  Registro: "Registro consegne attualmente caricato.",
   "Con registro": "Numero di activity per cui esiste almeno un registro consegne generato.",
   "Senza registro": "Numero di activity per cui non e' stato ancora trovato alcun registro consegne.",
   Classi: "Numero di classi diverse presenti nelle righe del quadro classe filtrato.",
@@ -2011,6 +2012,8 @@ function activeStudentFilterLabel() {
 function compactStudentsSummaryItems(counts) {
   return [
     ["Classe", classValue(state.report)],
+    ["Activity", state.report?.title || state.report?.activity_id || "-"],
+    ["Registro", state.reportName || state.report?.report_name || "-"],
     ["Filtri", activeStudentFilterLabel()],
     ["Studenti", counts.total],
     ["Consegnati", counts.submitted],
@@ -2023,6 +2026,8 @@ function compactStudentsSummaryItems(counts) {
 function detailedStudentsSummaryItems(counts) {
   return [
     ["Classe", classValue(state.report)],
+    ["Activity", state.report?.title || state.report?.activity_id || "-"],
+    ["Registro", state.reportName || state.report?.report_name || "-"],
     ["Filtri", activeStudentFilterLabel()],
     ["Studenti", counts.total],
     ["Consegnati", counts.submitted],

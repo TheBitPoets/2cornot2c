@@ -613,7 +613,8 @@ def test_students_summary_counts_include_grading_and_grades() -> None:
           { status: "submitted_late", submitted: true, late: true, grading: { status: "graded_failed", teacher_grade: 5 } },
           { status: "submitted", submitted: true, late: false, grading: { status: "graded_passed", teacher_grade: "" } },
         ]);
-        tested.state.report = { class_id: "3A-TPSI", class_label: "3A TPSI" };
+        tested.state.report = { class_id: "3A-TPSI", class_label: "3A TPSI", activity_id: "somma", title: "Somma base" };
+        tested.state.reportName = "demo-3a/somma.json";
         tested.state.filter = "late";
         assert.equal(JSON.stringify(counts), JSON.stringify({
           total: 5,
@@ -628,6 +629,8 @@ def test_students_summary_counts_include_grading_and_grades() -> None:
         }));
         assert.equal(JSON.stringify(tested.compactStudentsSummaryItems(counts)), JSON.stringify([
           ["Classe", "3A TPSI"],
+          ["Activity", "Somma base"],
+          ["Registro", "demo-3a/somma.json"],
           ["Filtri", "In ritardo"],
           ["Studenti", 5],
           ["Consegnati", 3],
@@ -637,6 +640,8 @@ def test_students_summary_counts_include_grading_and_grades() -> None:
         ]));
         assert.equal(JSON.stringify(tested.detailedStudentsSummaryItems(counts)), JSON.stringify([
           ["Classe", "3A TPSI"],
+          ["Activity", "Somma base"],
+          ["Registro", "demo-3a/somma.json"],
           ["Filtri", "In ritardo"],
           ["Studenti", 5],
           ["Consegnati", 3],
@@ -657,8 +662,17 @@ def test_students_summary_counts_include_grading_and_grades() -> None:
 def test_students_summary_cards_include_tooltips() -> None:
     run_dashboard_js(
         """
-        const html = tested.renderStudentsSummaryCards([["Classe", "3A TPSI"], ["Filtri", "In ritardo"], ["Consegnati", 3], ["KO", 1]]);
+        const html = tested.renderStudentsSummaryCards([
+          ["Classe", "3A TPSI"],
+          ["Activity", "Somma base"],
+          ["Registro", "demo-3a/somma.json"],
+          ["Filtri", "In ritardo"],
+          ["Consegnati", 3],
+          ["KO", 1],
+        ]);
         assert.match(html, /<strong>Classe<\\/strong>\\s*<span>3A TPSI<\\/span>/);
+        assert.match(html, /<strong>Activity<\\/strong>\\s*<span>Somma base<\\/span>/);
+        assert.match(html, /<strong>Registro<\\/strong>\\s*<span>demo-3a\\/somma.json<\\/span>/);
         assert.match(html, /<strong>Filtri<\\/strong>\\s*<span>In ritardo<\\/span>/);
         assert.match(html, /title="Classe associata al registro consegne selezionato\\."/);
         assert.match(html, /title="Filtri attivi nella vista corrente\\."/);
