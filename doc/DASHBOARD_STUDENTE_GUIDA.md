@@ -85,6 +85,13 @@ Il filtro **Filtro** permette di restringere la lista senza cambiare lo studente
 - **In ritardo** mostra solo le consegne consegnate oltre la scadenza;
 - **Con feedback** mostra solo le consegne con feedback approvato dal docente.
 
+Il selettore **Ordina** cambia l'ordine della lista:
+
+- **Scadenza vicina** porta in alto le consegne con scadenza piu prossima;
+- **Scadenza lontana** mostra prima le scadenze piu lontane;
+- **Stato** raggruppa prima mancanti, poi in ritardo, poi da consegnare e infine consegnate;
+- **Titolo** ordina alfabeticamente.
+
 Per ogni consegna controlla:
 
 - titolo o id activity;

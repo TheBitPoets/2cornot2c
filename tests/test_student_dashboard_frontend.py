@@ -53,6 +53,7 @@ def run_student_dashboard_js(assertions: str) -> None:
         renderDashboard,
         assignmentMatchesFilter,
         filteredAssignments,
+        sortedAssignments,
         safeExternalLink,
         studentLabel,
         rosterLabel,
@@ -173,6 +174,51 @@ def test_student_dashboard_filters_visible_assignments() -> None:
         assert.match(tested.els.assignments.innerHTML, /Loop in Python/);
         assert.match(tested.els.status.textContent, /1 di 2 consegne visibili/);
         assert.equal(tested.filteredAssignments([submitted, missing], "feedback").length, 1);
+        """
+    )
+
+
+def test_student_dashboard_sorts_visible_assignments() -> None:
+    run_student_dashboard_js(
+        """
+        const late = {
+          activity_id: "c-array-001",
+          title: "Array in C",
+          due_at: "2026-10-20T23:59:00+02:00",
+          status: "submitted_late",
+          submitted: true,
+          late: true,
+        };
+        const missing = {
+          activity_id: "python-loop-001",
+          title: "Loop in Python",
+          due_at: "2026-10-18T23:59:00+02:00",
+          status: "missing",
+          submitted: false,
+          late: false,
+        };
+        const submitted = {
+          activity_id: "python-base-somma-001",
+          title: "Somma in Python",
+          due_at: "2026-10-19T23:59:00+02:00",
+          status: "submitted_on_time",
+          submitted: true,
+          late: false,
+        };
+
+        const byDue = tested.sortedAssignments([late, submitted, missing], "due_asc");
+        assert.equal(JSON.stringify(byDue.map((assignment) => assignment.activity_id)), JSON.stringify([
+          "python-loop-001",
+          "python-base-somma-001",
+          "c-array-001",
+        ]));
+
+        const byStatus = tested.sortedAssignments([submitted, late, missing], "status");
+        assert.equal(JSON.stringify(byStatus.map((assignment) => assignment.activity_id)), JSON.stringify([
+          "python-loop-001",
+          "c-array-001",
+          "python-base-somma-001",
+        ]));
         """
     )
 
