@@ -66,6 +66,7 @@ Usalo per capire rapidamente:
 
 - quante consegne risultano associate allo studente;
 - quante sono consegnate;
+- quante risultano mancanti;
 - quante risultano in ritardo;
 - se ci sono feedback approvati visibili.
 
