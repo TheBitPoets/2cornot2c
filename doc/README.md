@@ -49,6 +49,8 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 
 `DASHBOARD_STUDENTE_GUIDA.md` raccoglie la guida operativa studente per leggere consegne, stato, grading e feedback approvato.
 
+`images/dashboard-guides/README.md` contiene la checklist degli screenshot da produrre per le guide docente e studente.
+
 `STUDENT_DASHBOARD.md` spiega la prima vista studente MVP per vedere consegne, grading e solo feedback approvato dal docente.
 
 ## Mappa rapida
@@ -68,6 +70,7 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 | [`MANUAL_AI_FEEDBACK_WORKFLOW.md`](MANUAL_AI_FEEDBACK_WORKFLOW.md) | Quando devi provare il feedback AI manuale da registro senza API key o GUI dedicata |
 | [`DASHBOARD_DOCENTE_GUIDA.md`](DASHBOARD_DOCENTE_GUIDA.md) | Quando devi usare o documentare la dashboard consegne docente passo dopo passo |
 | [`DASHBOARD_STUDENTE_GUIDA.md`](DASHBOARD_STUDENTE_GUIDA.md) | Quando devi usare o documentare la vista studente passo dopo passo |
+| [`images/dashboard-guides/README.md`](images/dashboard-guides/README.md) | Quando devi catturare o aggiornare gli screenshot delle guide dashboard |
 | [`STUDENT_DASHBOARD.md`](STUDENT_DASHBOARD.md) | Quando devi provare la vista studente minima su consegne, grading e feedback approvato |
 | [`STUDENT_REPOSITORY_TEMPLATE.md`](STUDENT_REPOSITORY_TEMPLATE.md) | Quando devi creare o mantenere il template repository studente |
 | [`ASSIGNMENT_GRADING.md`](ASSIGNMENT_GRADING.md) | Quando devi correggere in modo deterministico una consegna TheBitLab |
