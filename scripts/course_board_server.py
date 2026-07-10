@@ -96,6 +96,18 @@ def assignment_service() -> thebitlab_services.AssignmentService:
     return thebitlab_services.AssignmentService(assignment_storage())
 
 
+def class_roster_storage() -> thebitlab_storage.JsonClassRosterStorage:
+    """Return the JSON storage adapter for local class rosters."""
+
+    return thebitlab_storage.JsonClassRosterStorage(ROOT)
+
+
+def class_roster_service() -> thebitlab_services.ClassRosterService:
+    """Return the application service for class/student rosters."""
+
+    return thebitlab_services.ClassRosterService(class_roster_storage())
+
+
 def github_anchor(title: str, seen: dict[str, int]) -> str:
     """Return a GitHub-like Markdown anchor for a heading title."""
 
@@ -214,6 +226,18 @@ def list_assignment_reports() -> list[dict]:
     """List assignment tracking reports stored in teacher-reports."""
 
     return assignment_service().list_assignment_reports()
+
+
+def list_class_rosters() -> list[dict]:
+    """List local class rosters stored in doc/classes."""
+
+    return class_roster_service().list_class_rosters()
+
+
+def read_class_roster(name: str) -> dict:
+    """Read one local class roster from doc/classes."""
+
+    return class_roster_service().read_class_roster(name)
 
 
 def read_assignment_report(name: str) -> dict:
@@ -1663,6 +1687,9 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/assignment-overview":
             self.write_json({"rows": assignment_overview()})
             return
+        if parsed.path == "/api/class-rosters":
+            self.write_json({"rosters": list_class_rosters()})
+            return
         if parsed.path == "/api/student-dashboard":
             try:
                 query = parse_qs(parsed.query)
@@ -1751,6 +1778,15 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/assignment-reports/load":
             try:
                 self.write_json({"report": read_assignment_report(payload.get("name", ""))})
+            except Exception as error:  # noqa: BLE001
+                self.send_response(404)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+            return
+        if parsed.path == "/api/class-rosters/load":
+            try:
+                self.write_json({"roster": read_class_roster(payload.get("name", ""))})
             except Exception as error:  # noqa: BLE001
                 self.send_response(404)
                 self.send_header("Content-Type", "application/json; charset=utf-8")

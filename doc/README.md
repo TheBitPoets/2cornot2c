@@ -29,14 +29,17 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 1. [`ASSIGNMENTS.md`](ASSIGNMENTS.md)
 2. [`ACTIVITIES_SCHEMA.md`](ACTIVITIES_SCHEMA.md)
 3. [`DATA_MODEL_MVP.md`](DATA_MODEL_MVP.md)
-4. [`MANUAL_AI_FEEDBACK_WORKFLOW.md`](MANUAL_AI_FEEDBACK_WORKFLOW.md)
-5. [`STUDENT_DASHBOARD.md`](STUDENT_DASHBOARD.md)
+4. [`CLASS_ROSTERS.md`](CLASS_ROSTERS.md)
+5. [`MANUAL_AI_FEEDBACK_WORKFLOW.md`](MANUAL_AI_FEEDBACK_WORKFLOW.md)
+6. [`STUDENT_DASHBOARD.md`](STUDENT_DASHBOARD.md)
 
 `ASSIGNMENTS.md` descrive il modello leggero per attivita didattiche, uso dei team GitHub come classi, correzione automatica, sandbox, metriche e roadmap delle prossime PR.
 
 `ACTIVITIES_SCHEMA.md` descrive il primo schema JSON per rappresentare esercizi, compiti, laboratori e verifiche in TheBitLab.
 
 `DATA_MODEL_MVP.md` inventaria i JSON attuali e definisce il modello dati minimo per classi, activity, assegnazioni, consegne, registri, grading e vista studente.
+
+`CLASS_ROSTERS.md` descrive il primo contratto JSON locale per classi e studenti, in attesa di GitHub Team o roster locali sincronizzati.
 
 `MANUAL_AI_FEEDBACK_WORKFLOW.md` spiega il flusso manuale completo per generare un pacchetto AI da registro, validare la risposta e applicarla come bozza non approvata.
 
@@ -54,6 +57,7 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 | [`ASSIGNMENTS.md`](ASSIGNMENTS.md) | Quando devi progettare esercizi, compiti, verifiche, correzioni automatiche o metriche di classe |
 | [`ACTIVITIES_SCHEMA.md`](ACTIVITIES_SCHEMA.md) | Quando devi creare o validare schede JSON di attivita TheBitLab |
 | [`DATA_MODEL_MVP.md`](DATA_MODEL_MVP.md) | Quando devi lavorare su dati JSON, storage, classi, assegnazioni, registri o compatibilita schema |
+| [`CLASS_ROSTERS.md`](CLASS_ROSTERS.md) | Quando devi lavorare su classi, studenti, roster locali o futuro mapping GitHub Team |
 | [`ASSIGNMENT_SUBMISSIONS.md`](ASSIGNMENT_SUBMISSIONS.md) | Quando devi progettare il flusso consegne studenti con GitHub, team classe e repository studente |
 | [`MANUAL_AI_FEEDBACK_WORKFLOW.md`](MANUAL_AI_FEEDBACK_WORKFLOW.md) | Quando devi provare il feedback AI manuale da registro senza API key o GUI dedicata |
 | [`STUDENT_DASHBOARD.md`](STUDENT_DASHBOARD.md) | Quando devi provare la vista studente minima su consegne, grading e feedback approvato |

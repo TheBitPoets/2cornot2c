@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts.thebitlab_storage import JsonAssignmentStorage, JsonCourseStorage
+from scripts.thebitlab_storage import JsonAssignmentStorage, JsonClassRosterStorage, JsonCourseStorage
 
 
 def test_read_design_returns_minimal_default_when_missing(tmp_path) -> None:
@@ -240,3 +240,81 @@ def test_list_activities_skips_invalid_json_and_deduplicates_paths(tmp_path) -> 
             "path": "activities/activity.json",
         }
     ]
+
+
+def test_class_rosters_are_normalized_and_listed(tmp_path) -> None:
+    storage = JsonClassRosterStorage(tmp_path)
+    classes_dir = tmp_path / "doc" / "classes"
+    classes_dir.mkdir(parents=True)
+    (classes_dir / "3a.json").write_text(
+        json.dumps(
+            {
+                "class_id": "3A-TPSI",
+                "class_label": "3A TPSI",
+                "year": "2026-2027",
+                "github_team": "team-3a-tpsi",
+                "students": [
+                    {"student_id": "rossi-mario", "student": "Rossi Mario", "repo": "TheBitPoets/rossi-mario"},
+                    {"id": "bianchi-luca", "display_name": "Bianchi Luca", "active": "false"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rosters = storage.list_class_rosters()
+    roster = storage.read_class_roster("3a.json")
+
+    assert rosters[0]["name"] == "3a.json"
+    assert rosters[0]["path"] == "doc/classes/3a.json"
+    assert rosters[0]["id"] == "3A-TPSI"
+    assert rosters[0]["label"] == "3A TPSI"
+    assert rosters[0]["students"] == 2
+    assert roster == {
+        "schema_version": "1.0",
+        "id": "3A-TPSI",
+        "label": "3A TPSI",
+        "school_year": "2026-2027",
+        "provider": "local",
+        "provider_ref": "",
+        "github_team": "team-3a-tpsi",
+        "students": [
+            {
+                "id": "bianchi-luca",
+                "display_name": "Bianchi Luca",
+                "email": "",
+                "github_username": "",
+                "repo_ref": "",
+                "active": False,
+                "provider_accounts": [],
+            },
+            {
+                "id": "rossi-mario",
+                "display_name": "Rossi Mario",
+                "email": "",
+                "github_username": "",
+                "repo_ref": "TheBitPoets/rossi-mario",
+                "active": True,
+                "provider_accounts": [],
+            },
+        ],
+    }
+
+
+def test_class_roster_rejects_unsafe_name_and_invalid_shape(tmp_path) -> None:
+    storage = JsonClassRosterStorage(tmp_path)
+    classes_dir = tmp_path / "doc" / "classes"
+    classes_dir.mkdir(parents=True)
+    (classes_dir / "invalid.json").write_text(json.dumps({"id": "3A", "students": {}}), encoding="utf-8")
+    (classes_dir / "invalid-student.json").write_text(
+        json.dumps({"id": "3A", "students": ["rossi-mario"]}),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError):
+        storage.safe_roster_name("../3a.json")
+
+    with pytest.raises(ValueError, match="students"):
+        storage.read_class_roster("invalid.json")
+    with pytest.raises(ValueError, match="ogni studente"):
+        storage.read_class_roster("invalid-student.json")

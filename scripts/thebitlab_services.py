@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from scripts.thebitlab_storage_ports import AssignmentStorage, CourseStorage
+from scripts.thebitlab_storage_ports import AssignmentStorage, ClassRosterStorage, CourseStorage
 
 
 class CourseService:
@@ -236,3 +236,25 @@ def _approved_student_feedback(ai_feedback: dict[str, Any]) -> dict[str, Any] | 
         "suggested_grade": ai_feedback.get("suggested_grade"),
         "confidence": ai_feedback.get("confidence"),
     }
+
+
+class ClassRosterService:
+    """Application service for local class/student rosters."""
+
+    def __init__(self, storage: ClassRosterStorage) -> None:
+        self.storage = storage
+
+    def safe_roster_name(self, name: str) -> str:
+        """Validate a local roster filename."""
+
+        return self.storage.safe_roster_name(name)
+
+    def list_class_rosters(self) -> list[dict[str, Any]]:
+        """List available class rosters."""
+
+        return self.storage.list_class_rosters()
+
+    def read_class_roster(self, name: str) -> dict[str, Any]:
+        """Read one class roster."""
+
+        return self.storage.read_class_roster(name)

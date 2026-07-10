@@ -26,6 +26,7 @@ Per l'MVP di inizio anno scolastico 2026-2027 il modello dati deve permettere qu
 | Progetto didattico corrente | `doc/course_design.json` | `scripts/course_board_server.py`, `scripts/generate_course_plan.py`, `scripts/update_course_frames.py`, `tools/course_board.js`, `tools/school_calendar.js` | Dato sorgente corrente |
 | Progetti didattici archiviati | `doc/course_designs/*.json` | `scripts/course_board_server.py`, `tools/course_board.js`, `tools/school_calendar.js` | Dato sorgente archiviato |
 | Calendari scolastici | `doc/calendars/*.json` | `scripts/course_board_server.py`, `tools/school_calendar.js` | Dato sorgente archiviato |
+| Roster classi locale | `doc/classes/*.json` | `scripts/thebitlab_storage.py`, `scripts/course_board_server.py` | Dato sorgente classi/studenti |
 | Activity | `activities/**/*.json`, `examples/assignment_tracking/**/*.json` | `scripts/create_activity.py`, `scripts/validate_activity.py`, `scripts/create_submission_scaffold.py`, `scripts/assign_activity.py`, `scripts/track_assignments.py`, `scripts/course_board_server.py`, `tools/assignment_dashboard.js` | Dato sorgente didattico |
 | Registro consegne docente | `teacher-reports/**/*.json` | `scripts/track_assignments.py`, `scripts/course_board_server.py`, `tools/assignment_dashboard.js` | Dato aggregato docente |
 | Report grading studente | `*/reports/<activity_id>/latest.json` nei repository studenti/demo | `scripts/grade_activity.py`, `scripts/track_assignments.py` | Dato tecnico per tentativo/consegna |
@@ -216,6 +217,7 @@ Note:
 
 - `id` deve essere stabile, per esempio `3A-TPSI-2026`.
 - `github_team` e un dettaglio del provider GitHub, non l'identita della classe.
+- Il primo storage locale usa `doc/classes/*.json`; GitHub Team o roster sincronizzati dovranno alimentare lo stesso contratto canonico.
 
 ### Student
 

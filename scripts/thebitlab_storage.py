@@ -282,3 +282,136 @@ class JsonAssignmentStorage:
                     }
                 )
         return activities
+
+
+class JsonClassRosterStorage:
+    """JSON storage adapter for local class/student rosters."""
+
+    def __init__(self, root: Path, classes_dir: Path | None = None) -> None:
+        self.root = root
+        self.classes_dir = classes_dir or root / "doc" / "classes"
+
+    def relative_path(self, path: Path) -> str:
+        """Return a repository-relative path with URL-style separators."""
+
+        return str(path.relative_to(self.root)).replace("\\", "/")
+
+    def safe_roster_name(self, name: str) -> str:
+        """Validate a class roster JSON filename."""
+
+        clean_name = name.strip().replace("\\", "/")
+        if "/" in clean_name or not DESIGN_NAME_RE.match(clean_name):
+            raise ValueError("Nome roster non valido. Usa un file .json dentro doc/classes.")
+        return clean_name
+
+    def roster_path(self, name: str) -> Path:
+        """Return the safe path for one class roster."""
+
+        return self.classes_dir / self.safe_roster_name(name)
+
+    def read_json(self, path: Path) -> dict[str, Any]:
+        """Read a JSON object from path."""
+
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
+        if not isinstance(payload, dict):
+            raise ValueError(f"JSON non valido: {path}")
+        return payload
+
+    def list_class_rosters(self) -> list[dict[str, Any]]:
+        """List local class rosters stored in doc/classes."""
+
+        self.classes_dir.mkdir(parents=True, exist_ok=True)
+        rosters = []
+        for path in sorted(self.classes_dir.glob("*.json")):
+            try:
+                payload = self.read_json(path)
+                roster = normalize_class_roster(payload)
+            except Exception:  # noqa: BLE001
+                continue
+            rosters.append(
+                {
+                    "name": path.name,
+                    "path": self.relative_path(path),
+                    "id": roster.get("id", ""),
+                    "label": roster.get("label", ""),
+                    "school_year": roster.get("school_year", ""),
+                    "provider": roster.get("provider", "local"),
+                    "provider_ref": roster.get("provider_ref", ""),
+                    "github_team": roster.get("github_team", ""),
+                    "students": len(roster.get("students", [])),
+                    "updated_at": datetime.fromtimestamp(path.stat().st_mtime).isoformat(timespec="seconds"),
+                }
+            )
+        return rosters
+
+    def read_class_roster(self, name: str) -> dict[str, Any]:
+        """Read and normalize one local class roster."""
+
+        path = self.roster_path(name)
+        if not path.is_file():
+            raise FileNotFoundError(f"Roster classe non trovato: {name}")
+        return normalize_class_roster(self.read_json(path))
+
+
+def normalize_class_roster(payload: dict[str, Any]) -> dict[str, Any]:
+    """Return the canonical MVP shape for a class roster."""
+
+    roster_id = _first_text(payload, "id", "class_id")
+    label = _first_text(payload, "label", "class_label", "name")
+    students = payload.get("students")
+    if not roster_id:
+        raise ValueError("Roster classe non valido: id mancante.")
+    if not isinstance(students, list):
+        raise ValueError("Roster classe non valido: students deve essere una lista.")
+    if any(not isinstance(student, dict) for student in students):
+        raise ValueError("Roster classe non valido: ogni studente deve essere un oggetto.")
+    normalized_students = [_normalize_roster_student(student) for student in students]
+    return {
+        "schema_version": _first_text(payload, "schema_version") or "1.0",
+        "id": roster_id,
+        "label": label or roster_id,
+        "school_year": _first_text(payload, "school_year", "year"),
+        "provider": _first_text(payload, "provider") or "local",
+        "provider_ref": _first_text(payload, "provider_ref"),
+        "github_team": _first_text(payload, "github_team"),
+        "students": sorted(normalized_students, key=lambda student: student["id"]),
+    }
+
+
+def _normalize_roster_student(payload: dict[str, Any]) -> dict[str, Any]:
+    student_id = _first_text(payload, "id", "student_id", "student")
+    if not student_id:
+        raise ValueError("Roster classe non valido: studente senza id.")
+    github_username = _first_text(payload, "github_username", "github")
+    repo_ref = _first_text(payload, "repo_ref", "repo")
+    return {
+        "id": student_id,
+        "display_name": _first_text(payload, "display_name", "name", "student") or student_id,
+        "email": _first_text(payload, "email"),
+        "github_username": github_username,
+        "repo_ref": repo_ref,
+        "active": _bool_value(payload.get("active", True)),
+        "provider_accounts": _list_of_dicts(payload.get("provider_accounts")),
+    }
+
+
+def _first_text(payload: dict[str, Any], *keys: str) -> str:
+    for key in keys:
+        value = payload.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
+
+
+def _bool_value(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() not in {"false", "0", "no", "n", "off", ""}
+    return bool(value)
+
+
+def _list_of_dicts(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]

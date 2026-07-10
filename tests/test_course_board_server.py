@@ -245,6 +245,36 @@ def test_student_dashboard_endpoint_filters_to_requested_student(tmp_path, monke
     assert dashboard["assignments"][0]["approved_feedback"]["student_feedback"] == "Feedback visibile."
 
 
+def test_class_roster_helpers_use_local_roster_storage(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    classes_dir = tmp_path / "doc" / "classes"
+    classes_dir.mkdir(parents=True)
+    (classes_dir / "3a.json").write_text(
+        json.dumps(
+            {
+                "id": "3A",
+                "label": "3A TPSI",
+                "students": [
+                    {
+                        "id": "rossi-mario",
+                        "display_name": "Rossi Mario",
+                        "github_username": "rossi-mario-gh",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rosters = course_board_server.list_class_rosters()
+    roster = course_board_server.read_class_roster("3a.json")
+
+    assert rosters[0]["name"] == "3a.json"
+    assert rosters[0]["id"] == "3A"
+    assert roster["students"][0]["id"] == "rossi-mario"
+    assert roster["students"][0]["github_username"] == "rossi-mario-gh"
+
+
 def test_ai_secret_status_reports_paths_and_configured_keys_without_values(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "AI_SECRET_PATH", tmp_path / ".secrets" / "ai.secret")
