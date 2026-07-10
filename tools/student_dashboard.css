@@ -107,6 +107,7 @@ h1 {
 main {
   display: grid;
   gap: 1rem;
+  min-width: 0;
   padding: 0 clamp(1rem, 3vw, 3rem) 2rem;
 }
 
@@ -160,6 +161,7 @@ button:hover { transform: translateY(-1px); }
 
 .summary,
 .assignments {
+  min-width: 0;
   border: 1px solid rgba(17, 17, 17, .12);
   border-radius: 8px;
   background: rgba(255, 255, 255, .94);
@@ -200,6 +202,7 @@ button:hover { transform: translateY(-1px); }
   align-items: baseline;
   justify-content: space-between;
   gap: 1rem;
+  min-width: 0;
   padding: 1rem;
   border-bottom: 1px solid rgba(17, 17, 17, .12);
 }
@@ -210,11 +213,13 @@ button:hover { transform: translateY(-1px); }
 
 .assignmentList {
   display: grid;
+  min-width: 0;
 }
 
 .assignmentCard {
   display: grid;
   gap: .85rem;
+  min-width: 0;
   padding: 1rem;
   border-bottom: 1px solid rgba(17, 17, 17, .12);
 }
@@ -228,6 +233,11 @@ button:hover { transform: translateY(-1px); }
   align-items: start;
   justify-content: space-between;
   gap: 1rem;
+  min-width: 0;
+}
+
+.assignmentHead > div {
+  min-width: 0;
 }
 
 .assignmentHead h3 {
@@ -240,21 +250,30 @@ button:hover { transform: translateY(-1px); }
   display: flex;
   flex-wrap: wrap;
   gap: .45rem .8rem;
+  min-width: 0;
   margin: 0;
   color: var(--muted);
   font-size: .86rem;
 }
 
+.details > span,
+.meta > span {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
 .badge {
   display: inline-flex;
   align-items: center;
-  width: max-content;
+  max-width: 100%;
   border-radius: 999px;
   padding: .2rem .55rem;
   background: #f1f1f1;
   color: #333333;
   font-size: .78rem;
   font-weight: 800;
+  overflow-wrap: anywhere;
 }
 
 .badgeOk {
@@ -273,6 +292,7 @@ button:hover { transform: translateY(-1px); }
 }
 
 .feedback {
+  min-width: 0;
   max-width: 70rem;
   border-left: 4px solid var(--ok);
   border-radius: 0 8px 8px 0;
@@ -304,11 +324,20 @@ button:hover { transform: translateY(-1px); }
     overflow-x: auto;
   }
 
+  main {
+    padding-inline: 1rem;
+  }
+
   .hero,
   .studentForm,
+  .sectionHead,
   .assignmentHead {
     display: grid;
     align-items: stretch;
+  }
+
+  .summary {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   h1 {
@@ -320,5 +349,9 @@ button:hover { transform: translateY(-1px); }
   button {
     min-width: 0;
     width: 100%;
+  }
+
+  .badge {
+    width: fit-content;
   }
 }
