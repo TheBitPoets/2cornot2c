@@ -173,7 +173,7 @@ function formatDate(value) {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" });
+  return date.toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Rome" });
 }
 
 function badge(text, kind = "") {
@@ -199,7 +199,21 @@ function gradeValue(grading) {
   return grade == null || String(grade).trim() === "" ? "-" : grade;
 }
 
+function nextOpenAssignment(assignments) {
+  const upcoming = assignments
+    .filter((item) => !item.submitted || item.status === "missing")
+    .map((item) => ({ assignment: item, timestamp: timestampOrInfinity(item.due_at) }))
+    .filter((item) => Number.isFinite(item.timestamp))
+    .sort((left, right) => left.timestamp - right.timestamp);
+  return upcoming[0]?.assignment || null;
+}
+
+function nextOpenDueAt(assignments) {
+  return nextOpenAssignment(assignments)?.due_at || "";
+}
+
 function renderSummary(studentId, assignments) {
+  const nextAssignment = nextOpenAssignment(assignments);
   const submitted = assignments.filter((item) => item.submitted).length;
   const missing = assignments.filter((item) => item.status === "missing").length;
   const late = assignments.filter((item) => item.late).length;
@@ -212,6 +226,8 @@ function renderSummary(studentId, assignments) {
     ["Mancanti", missing],
     ["In ritardo", late],
     ["Feedback", approvedFeedback],
+    ["Prossima attivita", nextAssignment ? assignmentTitle(nextAssignment) : "-"],
+    ["Prossima scadenza", formatDate(nextAssignment?.due_at)],
   ];
   els.summary.innerHTML = cards.map(([label, value]) => `
     <article class="summaryCard">
