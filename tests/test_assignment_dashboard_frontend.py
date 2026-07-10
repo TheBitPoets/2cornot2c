@@ -446,8 +446,10 @@ def test_class_roster_panel_renders_selected_roster_students_and_targets() -> No
           ],
         });
 
-        assert.match(tested.els.rosterPanelStatus.textContent, /3A TPSI - 3 studenti/);
+        assert.match(tested.els.rosterPanelStatus.textContent, /3A TPSI - somma - 3 studenti/);
         assert.match(tested.els.rosterSummary.innerHTML, /<strong>Classe<\\/strong>\\s*<span>3A TPSI<\\/span>/);
+        assert.match(tested.els.rosterSummary.innerHTML, /<strong>Activity<\\/strong>\\s*<span>somma<\\/span>/);
+        assert.match(tested.els.rosterSummary.innerHTML, /<strong>Output registro<\\/strong>\\s*<span>3a-tpsi\\/somma.json<\\/span>/);
         assert.match(tested.els.rosterSummary.innerHTML, /<strong>Attivi<\\/strong>\\s*<span>2<\\/span>/);
         assert.match(tested.els.rosterSummary.innerHTML, /<strong>Target locali<\\/strong>\\s*<span>1<\\/span>/);
         assert.match(tested.els.rosterSummary.innerHTML, /<strong>Fallback demo<\\/strong>\\s*<span>1<\\/span>/);

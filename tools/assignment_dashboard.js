@@ -489,6 +489,8 @@ function rosterSummaryItems(roster) {
   const targets = activeStudents.map(localTargetFromStudent);
   return [
     ["Classe", rosterClassValue(roster)],
+    ["Activity", currentActivityLabel()],
+    ["Output registro", els.outputName.value.trim() || "-"],
     ["Studenti", students.length],
     ["Attivi", activeStudents.length],
     ["Target locali", targets.filter((target) => target.target && !target.warning).length],
@@ -528,7 +530,7 @@ function renderRosterPanel() {
     return;
   }
   const students = Array.isArray(roster.students) ? roster.students : [];
-  setRosterPanelStatus(`${rosterClassValue(roster)} - ${students.length} studenti nel roster.`);
+  setRosterPanelStatus(`${rosterClassValue(roster)} - ${currentActivityLabel()} - ${students.length} studenti nel roster.`);
   els.rosterSummary.innerHTML = renderRosterSummaryCards(rosterSummaryItems(roster));
   if (!students.length) {
     els.rosterBody.innerHTML = '<tr><td colspan="4">Roster senza studenti.</td></tr>';
@@ -1194,6 +1196,11 @@ function defaultOutputName(activity) {
 
 function currentActivity() {
   return state.activities.find((candidate) => candidate.path === els.activityPath.value.trim().replaceAll("\\", "/"));
+}
+
+function currentActivityLabel() {
+  const activity = currentActivity();
+  return activity?.title || activity?.id || els.activityPath.value.trim() || "-";
 }
 
 function localTargetFromStudent(student) {
@@ -2048,6 +2055,7 @@ const SUMMARY_TOOLTIPS = {
   Filtri: "Filtri attivi nella vista corrente.",
   Classe: "Classe associata al registro consegne selezionato.",
   Attivi: "Numero di studenti attivi nel roster e inclusi nella generazione del registro.",
+  "Output registro": "Nome del file JSON che verra generato per l'activity e la classe selezionate.",
   "Target locali": "Numero di studenti attivi con un target locale o repo path gia disponibile.",
   "Fallback demo": "Numero di studenti attivi per cui la GUI usera temporaneamente il path demo locale.",
   Scadenza: "Data e ora di scadenza del registro consegne selezionato.",
@@ -2479,12 +2487,14 @@ function selectActivity(path) {
     els.classLabel.value = activity.class_label || activity.class_id || "";
     els.githubTeam.value = activity.github_team || "";
     els.outputName.value = defaultOutputName(activity);
+    renderRosterPanel();
   }
 }
 
 function updateOutputNameForCurrentActivity() {
   const activity = state.activities.find((candidate) => candidate.path === els.activityPath.value.trim().replaceAll("\\", "/"));
   if (activity?.id) els.outputName.value = defaultOutputName(activity);
+  renderRosterPanel();
 }
 
 function renderLegend() {
@@ -2606,7 +2616,10 @@ els.activitySelect.addEventListener("change", () => {
   if (els.activitySelect.value) selectActivity(els.activitySelect.value);
 });
 els.classRosterSelect?.addEventListener("change", loadSelectedClassRoster);
-els.activityPath.addEventListener("input", renderActivitySelect);
+els.activityPath.addEventListener("input", () => {
+  renderActivitySelect();
+  renderRosterPanel();
+});
 els.classId.addEventListener("change", updateOutputNameForCurrentActivity);
 els.coverageBody.addEventListener("click", async (event) => {
   const toggleButton = event.target.closest("[data-coverage-toggle]");
