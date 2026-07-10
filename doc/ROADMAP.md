@@ -374,6 +374,50 @@ Il pattern della pagina consegne va reso riutilizzabile.
 6. Evitare duplicazione CSS/JS tra pagine.
 7. Migliorare accessibilita di drag/drop e resize.
 
+## Priorita 5.5 - Guide operative dashboard docente e studente
+
+Serve una guida d'uso pratica, separata dalla documentazione tecnica, che accompagni docente e studente in tutti gli scenari principali con passaggi espliciti e immagini.
+
+1. Creare una guida docente per la dashboard consegne:
+   - panoramica dei pannelli disponibili;
+   - a cosa serve ogni pannello;
+   - quando usare ciascun pannello nel flusso di lavoro docente;
+   - differenza tra pannelli di preparazione, monitoraggio, revisione e riepilogo;
+   - avvio del server locale;
+   - apertura della dashboard;
+   - scelta activity;
+   - scelta classe/roster;
+   - controllo del pannello roster classe;
+   - generazione registro;
+   - caricamento registro esistente;
+   - lettura riepiloghi;
+   - uso di quadro classe, elenco e matrice;
+   - apertura consegne studenti;
+   - revisione file consegnati;
+   - lettura grading, test falliti, voti e feedback AI;
+   - approvazione, respinta e riapertura bozze AI;
+   - uso di copertura registri;
+   - gestione dei casi mancanti, in ritardo, senza grading o senza feedback.
+2. Creare una guida studente per la vista studente:
+   - apertura della vista;
+   - scelta/riconoscimento dello studente;
+   - lettura consegne aperte e scadute;
+   - lettura stato, scadenze, grading e feedback approvato;
+   - differenza tra feedback visibile, bozza docente e feedback non generato;
+   - collegamento futuro a repository/profilo GitHub;
+   - vista futura del percorso didattico e calendario in sola lettura.
+3. Per ogni scenario includere:
+   - obiettivo dello scenario;
+   - prerequisiti;
+   - dati demo da caricare;
+   - passaggi numerati;
+   - screenshot dettagliati;
+   - cosa controllare a schermo;
+   - errori comuni e come interpretarli;
+   - differenza tra stato demo/MVP e comportamento previsto con dati reali.
+4. Salvare screenshot e immagini in una cartella dedicata, per esempio `doc/images/dashboard-guides/`.
+5. Collegare le guide da `doc/README.md`, `STUDENT_DASHBOARD.md`, `CLASS_ROSTERS.md` e dalla futura cornice didattica.
+
 ## Priorita 6 - Cornice didattica
 
 Serve un documento leggibile che spieghi il progetto dal punto di vista didattico, non solo tecnico.

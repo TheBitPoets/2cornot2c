@@ -92,6 +92,7 @@ const state = {
   activities: [],
   reports: [],
   classRosters: [],
+  selectedClassRoster: null,
   overviewRows: [],
   report: null,
   reportName: "",
@@ -184,6 +185,9 @@ const els = {
   activityPath: document.querySelector("#activityPath"),
   classRosterSelect: document.querySelector("#classRosterSelect"),
   rosterStatus: document.querySelector("#rosterStatus"),
+  rosterPanelStatus: document.querySelector("#rosterPanelStatus"),
+  rosterSummary: document.querySelector("#rosterSummary"),
+  rosterBody: document.querySelector("#rosterBody"),
   outputName: document.querySelector("#outputName"),
   classId: document.querySelector("#classId"),
   classLabel: document.querySelector("#classLabel"),
@@ -376,6 +380,10 @@ function classValue(entity) {
   return entity?.class_label || entity?.class_id || entity?.github_team || "classe non indicata";
 }
 
+function rosterClassValue(roster) {
+  return roster?.label || roster?.id || classValue(roster);
+}
+
 function classBadge(entity) {
   return `<span class="classBadge">${escapeHtml(classValue(entity))}</span>`;
 }
@@ -421,10 +429,13 @@ async function loadClassRosters() {
     const payload = await api("/api/class-rosters");
     state.classRosters = payload.rosters || [];
     renderClassRosterSelect();
+    renderRosterPanel();
     setRosterStatus(state.classRosters.length ? `Roster disponibili: ${state.classRosters.length}.` : "Nessun roster locale disponibile.");
   } catch (error) {
     state.classRosters = [];
+    state.selectedClassRoster = null;
     renderClassRosterSelect();
+    renderRosterPanel();
     setRosterStatus(`Roster non disponibili: ${error.message}`);
   }
 }
@@ -466,6 +477,78 @@ function renderClassRosterSelect() {
 
 function setRosterStatus(message) {
   if (els.rosterStatus) els.rosterStatus.textContent = message;
+}
+
+function setRosterPanelStatus(message) {
+  if (els.rosterPanelStatus) els.rosterPanelStatus.textContent = message;
+}
+
+function rosterSummaryItems(roster) {
+  const students = Array.isArray(roster?.students) ? roster.students : [];
+  const activeStudents = students.filter((student) => student?.active !== false);
+  const targets = activeStudents.map(localTargetFromStudent);
+  return [
+    ["Classe", rosterClassValue(roster)],
+    ["Activity", currentActivityLabel()],
+    ["Output registro", els.outputName.value.trim() || "-"],
+    ["Studenti", students.length],
+    ["Attivi", activeStudents.length],
+    ["Target locali", targets.filter((target) => target.target && !target.warning).length],
+    ["Fallback demo", targets.filter((target) => target.warning).length],
+  ];
+}
+
+function renderRosterSummaryCards(items) {
+  return items.map(([label, value]) => `
+    <article class="summaryCard" title="${escapeHtml(summaryTooltip(label))}">
+      <strong>${escapeHtml(label)}</strong>
+      <span>${escapeHtml(value)}</span>
+    </article>
+  `).join("");
+}
+
+function studentAccountLabel(student) {
+  const github = student?.github_username ? `GitHub: ${student.github_username}` : "";
+  const repoRef = student?.repo_ref ? `Repo: ${student.repo_ref}` : "";
+  return [github, repoRef].filter(Boolean).join(" - ") || "-";
+}
+
+function targetBadgeForStudent(student, target) {
+  if (student?.active === false) return badge("Non attivo", "muted");
+  if (!target.target) return badge("Target mancante", "bad");
+  if (target.warning) return badge("Fallback demo", "warn");
+  return badge("Pronto", "ok");
+}
+
+function renderRosterPanel() {
+  const roster = state.selectedClassRoster;
+  if (!els.rosterSummary || !els.rosterBody) return;
+  if (!roster) {
+    setRosterPanelStatus(state.classRosters.length ? "Seleziona un roster in Genera registro per vedere studenti e target." : "Nessun roster locale disponibile.");
+    els.rosterSummary.innerHTML = '<p class="status">Nessun roster selezionato.</p>';
+    els.rosterBody.innerHTML = '<tr><td colspan="4">Seleziona un roster per vedere gli studenti.</td></tr>';
+    return;
+  }
+  const students = Array.isArray(roster.students) ? roster.students : [];
+  setRosterPanelStatus(`${rosterClassValue(roster)} - ${currentActivityLabel()} - ${students.length} studenti nel roster.`);
+  els.rosterSummary.innerHTML = renderRosterSummaryCards(rosterSummaryItems(roster));
+  if (!students.length) {
+    els.rosterBody.innerHTML = '<tr><td colspan="4">Roster senza studenti.</td></tr>';
+    return;
+  }
+  els.rosterBody.innerHTML = students.map((student) => {
+    const target = localTargetFromStudent(student);
+    const studentName = student.display_name || student.id || "-";
+    const statusTitle = student.active === false ? "Studente escluso dalla generazione del registro." : (target.warning || "Target disponibile per la generazione del registro.");
+    return `
+      <tr>
+        <td>${studentLabel(studentName)}<br><small>${escapeHtml(student.id || "-")}</small></td>
+        <td>${escapeHtml(studentAccountLabel(student))}</td>
+        <td><code>${escapeHtml(target.target || "-")}</code></td>
+        <td title="${escapeHtml(statusTitle)}">${targetBadgeForStudent(student, target)}</td>
+      </tr>
+    `;
+  }).join("");
 }
 
 async function loadSelectedReport() {
@@ -1115,6 +1198,11 @@ function currentActivity() {
   return state.activities.find((candidate) => candidate.path === els.activityPath.value.trim().replaceAll("\\", "/"));
 }
 
+function currentActivityLabel() {
+  const activity = currentActivity();
+  return activity?.title || activity?.id || els.activityPath.value.trim() || "-";
+}
+
 function localTargetFromStudent(student) {
   const studentId = String(student?.id || "").trim();
   const localPath = String(student?.local_path || student?.repo_path || student?.path || "").trim().replaceAll("\\", "/");
@@ -1147,6 +1235,7 @@ function rosterTargets(roster) {
 
 function applyRosterToGenerateForm(roster) {
   if (!roster) return { targets: [], warnings: ["Roster non valido."] };
+  state.selectedClassRoster = roster;
   els.classId.value = roster.id || "";
   els.classLabel.value = roster.label || roster.id || "";
   els.githubTeam.value = roster.github_team || "";
@@ -1157,12 +1246,15 @@ function applyRosterToGenerateForm(roster) {
   setRosterStatus(result.warnings.length
     ? `Roster applicato con avvisi: ${result.warnings.join(" ")}`
     : `Roster applicato: ${result.targets.length} target studenti.`);
+  renderRosterPanel();
   return result;
 }
 
 async function loadSelectedClassRoster() {
   const name = els.classRosterSelect?.value || "";
   if (!name) {
+    state.selectedClassRoster = null;
+    renderRosterPanel();
     setRosterStatus("Seleziona un roster per compilare classe e target.");
     return;
   }
@@ -1962,6 +2054,10 @@ const SUMMARY_TOOLTIPS = {
   Righe: "Righe activity-studente mostrate rispetto al totale disponibile.",
   Filtri: "Filtri attivi nella vista corrente.",
   Classe: "Classe associata al registro consegne selezionato.",
+  Attivi: "Numero di studenti attivi nel roster e inclusi nella generazione del registro.",
+  "Output registro": "Nome del file JSON che verra generato per l'activity e la classe selezionate.",
+  "Target locali": "Numero di studenti attivi con un target locale o repo path gia disponibile.",
+  "Fallback demo": "Numero di studenti attivi per cui la GUI usera temporaneamente il path demo locale.",
   Scadenza: "Data e ora di scadenza del registro consegne selezionato.",
   Consegnati: "Numero di studenti che hanno effettuato una consegna.",
   Mancanti: "Numero di studenti senza consegna registrata.",
@@ -2391,12 +2487,14 @@ function selectActivity(path) {
     els.classLabel.value = activity.class_label || activity.class_id || "";
     els.githubTeam.value = activity.github_team || "";
     els.outputName.value = defaultOutputName(activity);
+    renderRosterPanel();
   }
 }
 
 function updateOutputNameForCurrentActivity() {
   const activity = state.activities.find((candidate) => candidate.path === els.activityPath.value.trim().replaceAll("\\", "/"));
   if (activity?.id) els.outputName.value = defaultOutputName(activity);
+  renderRosterPanel();
 }
 
 function renderLegend() {
@@ -2518,7 +2616,11 @@ els.activitySelect.addEventListener("change", () => {
   if (els.activitySelect.value) selectActivity(els.activitySelect.value);
 });
 els.classRosterSelect?.addEventListener("change", loadSelectedClassRoster);
-els.activityPath.addEventListener("input", renderActivitySelect);
+els.activityPath.addEventListener("input", () => {
+  renderActivitySelect();
+  renderRosterPanel();
+});
+els.outputName.addEventListener("input", renderRosterPanel);
 els.classId.addEventListener("change", updateOutputNameForCurrentActivity);
 els.coverageBody.addEventListener("click", async (event) => {
   const toggleButton = event.target.closest("[data-coverage-toggle]");

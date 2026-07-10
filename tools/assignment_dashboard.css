@@ -232,6 +232,10 @@ label > textarea {
   min-width: min(18rem, 100%);
 }
 
+.rosterTableWrap {
+  padding-top: 0;
+}
+
 .coverageBlock {
   border-top: 1px solid var(--line);
 }
