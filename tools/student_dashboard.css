@@ -92,9 +92,9 @@ p {
 
 h1 {
   margin-bottom: .35rem;
-  font-size: 3.2rem;
+  font-size: clamp(2rem, 5vw, 4.6rem);
   line-height: .92;
-  letter-spacing: 0;
+  letter-spacing: -.06em;
 }
 
 .subtitle {
@@ -164,10 +164,12 @@ button:hover { transform: translateY(-1px); }
 .coursePath,
 .assignments {
   min-width: 0;
-  border: 1px solid rgba(17, 17, 17, .12);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, .94);
+  border: 1px solid rgba(17, 17, 17, .16);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, .92);
   box-shadow: var(--shadow);
+  backdrop-filter: blur(10px);
+  overflow: hidden;
 }
 
 .summary {
@@ -179,10 +181,10 @@ button:hover { transform: translateY(-1px); }
 
 .summaryCard {
   min-width: 0;
-  border: 1px solid rgba(17, 17, 17, .1);
-  border-radius: 8px;
+  border: 1px solid rgba(17, 17, 17, .16);
+  border-radius: 18px;
   background: #ffffff;
-  padding: .8rem;
+  padding: .9rem;
 }
 
 .summaryCard strong {
@@ -201,16 +203,18 @@ button:hover { transform: translateY(-1px); }
 
 .sectionHead {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 1rem;
   min-width: 0;
-  padding: 1rem;
-  border-bottom: 1px solid rgba(17, 17, 17, .12);
+  padding: 1.1rem;
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, .72);
 }
 
 .sectionHead h2 {
   margin-bottom: 0;
+  font-size: 1.25rem;
 }
 
 .assignmentTools {
@@ -235,17 +239,20 @@ button:hover { transform: translateY(-1px); }
   display: grid;
   gap: .85rem;
   min-width: 0;
-  padding: 1rem;
+  padding: 1.1rem;
 }
 
 .studentCalendarControls {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: .75rem;
   align-items: end;
   min-width: 0;
-  padding: 1rem;
-  border-bottom: 1px solid rgba(17, 17, 17, .12);
+  margin: 1.1rem 1.1rem 0;
+  border: 1px solid rgba(17, 17, 17, .16);
+  border-radius: 18px;
+  background: #ffffff;
+  padding: .9rem;
 }
 
 .studentCalendarControls label.isHidden {
@@ -277,14 +284,14 @@ button:hover { transform: translateY(-1px); }
 
 .studentMonthCard {
   min-width: 0;
-  border: 1px solid rgba(17, 17, 17, .12);
-  border-radius: 8px;
+  border: 1px solid rgba(17, 17, 17, .16);
+  border-radius: 18px;
   background: #ffffff;
   overflow: hidden;
 }
 
 .studentMonthMainCard {
-  box-shadow: 0 14px 32px rgba(0, 0, 0, .08);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, .1);
 }
 
 .studentMonthContextCard {
@@ -298,8 +305,8 @@ button:hover { transform: translateY(-1px); }
 }
 
 .studentMonthTitle {
-  border-bottom: 1px solid rgba(17, 17, 17, .12);
-  background: rgba(255, 255, 255, .82);
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, .78);
   padding: .75rem;
 }
 
@@ -394,7 +401,7 @@ button:hover { transform: translateY(-1px); }
 .calendarPill {
   display: block;
   margin-top: .16rem;
-  border-radius: 6px;
+  border-radius: 8px;
   background: rgba(17, 17, 17, .07);
   color: var(--ink);
   font-size: .62rem;
@@ -439,7 +446,7 @@ button:hover { transform: translateY(-1px); }
   display: grid;
   gap: 1rem;
   min-width: 0;
-  padding: 1rem;
+  padding: 1.1rem;
 }
 
 .courseSection {
@@ -465,8 +472,8 @@ button:hover { transform: translateY(-1px); }
   display: grid;
   gap: .75rem;
   min-width: 0;
-  border: 1px solid rgba(17, 17, 17, .1);
-  border-radius: 8px;
+  border: 1px solid rgba(17, 17, 17, .16);
+  border-radius: 18px;
   background: #ffffff;
   padding: .9rem;
 }
@@ -786,8 +793,8 @@ button:hover { transform: translateY(-1px); }
 
 .detailItem {
   min-width: 0;
-  border: 1px solid rgba(17, 17, 17, .1);
-  border-radius: 8px;
+  border: 1px solid rgba(17, 17, 17, .16);
+  border-radius: 18px;
   padding: .75rem;
   background: #fafafa;
 }
@@ -832,6 +839,10 @@ button:hover { transform: translateY(-1px); }
   }
 
   .courseItemList li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .studentCalendarControls {
     grid-template-columns: minmax(0, 1fr);
   }
 
