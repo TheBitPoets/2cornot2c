@@ -341,6 +341,7 @@ def test_student_dashboard_renders_readonly_calendar_events() -> None:
         assert.match(tested.els.studentCalendar.innerHTML, /studentMonthGrid/);
         assert.match(tested.els.studentCalendar.innerHTML, /studentMonthMainCard/);
         assert.match(tested.els.studentCalendar.innerHTML, /data-student-calendar-nav="previous"/);
+        assert.match(tested.els.studentCalendar.innerHTML, /data-calendar-detail-index="0"/);
         assert.equal(tested.els.studentCalendarMonthField.classList.contains("isHidden"), false);
         assert.equal(tested.els.studentCalendarWeekField.classList.contains("isHidden"), true);
         assert.equal(tested.els.studentCalendarViewMode.closest().classList.contains("isHidden"), false);
@@ -368,6 +369,7 @@ def test_student_dashboard_calendar_can_render_list_view() -> None:
 
         assert.match(tested.els.studentCalendar.innerHTML, /studentCalendarList/);
         assert.match(tested.els.studentCalendar.innerHTML, /Somma in Python/);
+        assert.match(tested.els.studentCalendar.innerHTML, /data-calendar-detail-index="0"/);
         assert.doesNotMatch(tested.els.studentCalendar.innerHTML, /studentMonthGrid/);
         assert.equal(tested.els.studentCalendarMonthField.classList.contains("isHidden"), true);
         assert.equal(tested.els.studentCalendarWeekField.classList.contains("isHidden"), true);

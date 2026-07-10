@@ -116,6 +116,8 @@ La vista puo mostrare:
 
 I controlli **Mese** e **Settimana** compaiono solo quando servono alla modalità scelta. Il filtro **Mostra** permette di visualizzare tutto, solo consegne, solo UDA o solo scadenze. La vista resta in sola lettura: lo studente puo consultare la programmazione e le scadenze, ma non modificarle.
 
+Gli eventi collegati a una consegna sono cliccabili sia nella vista calendario sia nella vista lista. Il click apre lo stesso modal **Dettaglio** usato nel pannello **Consegne**, cosi lo studente vede sempre la stessa scheda completa: dati attivita, scadenze, stato, grading, link e feedback approvato. Gli eventi UDA o di percorso restano solo informativi finche non avranno una scheda dedicata.
+
 ## Percorso
 
 Il pannello **Percorso** mostra in sola lettura solo i percorsi associati allo studente o al suo gruppo/classe. Ogni percorso puo essere assegnato a un gruppo intero oppure personalizzato per uno studente specifico; se non ci sono associazioni esplicite, il pannello mostra che il percorso non e ancora associato.

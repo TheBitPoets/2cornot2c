@@ -400,7 +400,7 @@ function studentCalendarEvents(assignments) {
   const nextAssignment = nextOpenAssignment(assignments);
   const nextDueDate = dateFromInput(nextAssignment?.due_at || "");
   const nextDueIso = nextDueDate ? isoDate(nextDueDate) : "";
-  return assignments.flatMap((assignment) => {
+  return assignments.flatMap((assignment, assignmentIndex) => {
     const title = assignmentTitle(assignment) || "-";
     const events = [];
     const assignedDate = dateFromInput(assignment.assigned_at);
@@ -414,6 +414,7 @@ function studentCalendarEvents(assignments) {
         timestamp: assignedDate.getTime(),
         title,
         assignment,
+        assignmentIndex,
         priority: false,
       });
     }
@@ -429,6 +430,7 @@ function studentCalendarEvents(assignments) {
         timestamp: dueTimestamp,
         title,
         assignment,
+        assignmentIndex,
         priority: isOpenAssignment(assignment) && isoDate(dueDate) === nextDueIso,
       });
     }
@@ -505,10 +507,23 @@ function renderCalendarEventPill(event) {
     : event.category === "udas"
       ? "calendarPillUda"
       : "calendarPillAssigned";
+  const content = `
+    ${event.priority ? '<strong>!</strong><span class="calendarPriorityText">Prossima scadenza</span>' : ""}
+    ${escapeHtml(event.title)}
+  `;
+  if (event.assignment && event.assignmentIndex != null) {
+    return `
+      <button
+        type="button"
+        class="calendarPill calendarPillButton ${kindClass}"
+        data-calendar-detail-index="${escapeHtml(event.assignmentIndex)}"
+        title="${escapeHtml(`Apri dettaglio consegna: ${event.title}`)}"
+      >${content}</button>
+    `;
+  }
   return `
     <span class="calendarPill ${kindClass}" title="${escapeHtml(`${event.label}: ${event.title}`)}">
-      ${event.priority ? '<strong>!</strong><span class="calendarPriorityText">Prossima scadenza</span>' : ""}
-      ${escapeHtml(event.title)}
+      ${content}
     </span>
   `;
 }
@@ -614,8 +629,11 @@ function renderStudentCalendarList(events) {
           : event.category === "udas"
             ? "calendarPillUda"
             : "calendarPillAssigned";
+        const detailAttrs = event.assignment && event.assignmentIndex != null
+          ? ` role="button" tabindex="0" data-calendar-detail-index="${escapeHtml(event.assignmentIndex)}" title="${escapeHtml(`Apri dettaglio consegna: ${event.title}`)}"`
+          : "";
         return `
-          <article class="studentCalendarListItem">
+          <article class="studentCalendarListItem${detailAttrs ? " studentCalendarListItemButton" : ""}"${detailAttrs}>
             <time datetime="${escapeHtml(event.iso || event.date || "")}">${escapeHtml(formatDate(event.date || event.iso))}</time>
             <div>
               <h3>${escapeHtml(event.title)}</h3>
@@ -1209,6 +1227,11 @@ document.querySelectorAll?.("[data-student-calendar-display]").forEach((button) 
 });
 
 els.studentCalendar?.addEventListener("click", (event) => {
+  const detailTarget = event.target.closest?.("[data-calendar-detail-index]");
+  if (detailTarget) {
+    openAssignmentDetail(detailTarget.dataset.calendarDetailIndex);
+    return;
+  }
   const navButton = event.target.closest?.("[data-student-calendar-nav]");
   if (!navButton || navButton.disabled) return;
   const direction = navButton.dataset.studentCalendarNav === "previous" ? -1 : 1;
@@ -1217,6 +1240,14 @@ els.studentCalendar?.addEventListener("click", (event) => {
     ...udaDateEvents(currentDashboardPayload.assignments || []),
   ]);
   moveStudentCalendarView(direction, calendarMonths(range.start, range.end), calendarWeeks(range.start, range.end));
+});
+
+els.studentCalendar?.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  const detailTarget = event.target.closest?.("[data-calendar-detail-index]");
+  if (!detailTarget) return;
+  event.preventDefault();
+  openAssignmentDetail(detailTarget.dataset.calendarDetailIndex);
 });
 
 els.assignments?.addEventListener("click", (event) => {

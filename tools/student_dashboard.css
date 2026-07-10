@@ -447,6 +447,21 @@ button:hover { transform: translateY(-1px); }
   padding: .18rem .22rem;
 }
 
+.calendarPillButton {
+  width: 100%;
+  min-height: 0;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.calendarPillButton:hover,
+.studentCalendarListItemButton:hover {
+  outline: 2px solid rgba(17, 17, 17, .18);
+  transform: none;
+}
+
 .calendarPill strong {
   display: inline-grid;
   place-items: center;
@@ -507,6 +522,10 @@ button:hover { transform: translateY(-1px); }
   margin: 0 0 .28rem;
   overflow-wrap: anywhere;
   font-size: .98rem;
+}
+
+.studentCalendarListItemButton {
+  cursor: pointer;
 }
 
 .coursePathBody {
