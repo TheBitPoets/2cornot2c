@@ -76,6 +76,17 @@ Screenshot previsto: `doc/images/dashboard-guides/studente-riepilogo.png`.
 
 La stessa consegna viene evidenziata nella lista con il badge **Prossima scadenza**. Se piu consegne aperte hanno la stessa prossima scadenza, il badge compare su tutte.
 
+## Calendario
+
+Il pannello **Calendario** mostra in sola lettura le date ricavate dalle consegne dello studente:
+
+- data di assegnazione, quando disponibile;
+- data di scadenza, quando disponibile;
+- stato della consegna;
+- badge **Prossima scadenza** sulle consegne aperte con la scadenza piu vicina.
+
+Questa prima versione non sostituisce il calendario docente completo: serve a dare allo studente una timeline semplice delle consegne gia associate al suo profilo. In una PR successiva il pannello potra integrare anche eventi del calendario pubblicato, UDA, laboratori, verifiche e priorita.
+
 ## Percorso
 
 Il pannello **Percorso** mostra in sola lettura solo i percorsi associati allo studente o al suo gruppo/classe. Ogni percorso puo essere assegnato a un gruppo intero oppure personalizzato per uno studente specifico; se non ci sono associazioni esplicite, il pannello mostra che il percorso non e ancora associato.

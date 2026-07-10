@@ -48,6 +48,7 @@ def run_student_dashboard_js(assertions: str) -> None:
     vm.runInNewContext(`${{source}}
       globalThis.__studentDashboardTest = {{
         renderSummary,
+        renderStudentCalendar,
         renderCoursePath,
         renderFeedback,
         renderAssignment,
@@ -60,6 +61,7 @@ def run_student_dashboard_js(assertions: str) -> None:
         sortedAssignments,
         nextOpenAssignment,
         nextOpenDueAt,
+        studentCalendarEvents,
         collectCourseItems,
         courseItemHref,
         safeExternalHref,
@@ -275,6 +277,59 @@ def test_student_dashboard_summarizes_next_open_due_date() -> None:
         assert.match(tested.els.summary.innerHTML, /<strong>Prossima scadenza<\\/strong>\\s*<span>18\\/10\\/26, 23:59<\\/span>/);
         assert.match(tested.els.assignments.innerHTML, /Prossima scadenza/);
         assert.equal((tested.els.assignments.innerHTML.match(/Prossima scadenza/g) || []).length, 2);
+        """
+    )
+
+
+def test_student_dashboard_renders_readonly_calendar_events() -> None:
+    run_student_dashboard_js(
+        """
+        const openSooner = {
+          activity_id: "python-base-somma-001",
+          title: "Somma in Python",
+          kind: "compito-casa",
+          student_support_mode: "feedback-tecnico",
+          assigned_at: "2026-10-10T08:00:00+02:00",
+          due_at: "2026-10-18T23:59:00+02:00",
+          status: "assigned",
+          submitted: false,
+        };
+        const sameDeadline = {
+          activity_id: "python-loop-001",
+          title: "Loop in Python",
+          assigned_at: "2026-10-12T08:00:00+02:00",
+          due_at: "2026-10-18T23:59:00+02:00",
+          status: "missing",
+          submitted: false,
+        };
+        const submitted = {
+          activity_id: "python-stringhe-001",
+          title: "Stringhe in Python",
+          assigned_at: "2026-10-01T08:00:00+02:00",
+          due_at: "2026-10-15T23:59:00+02:00",
+          status: "submitted_on_time",
+          submitted: true,
+        };
+
+        tested.renderDashboard({ student_id: "rossi-mario", assignments: [openSooner, sameDeadline, submitted] });
+
+        assert.match(tested.els.studentCalendar.innerHTML, /Stringhe in Python/);
+        assert.match(tested.els.studentCalendar.innerHTML, /Somma in Python/);
+        assert.match(tested.els.studentCalendar.innerHTML, /Loop in Python/);
+        assert.equal((tested.els.studentCalendar.innerHTML.match(/Prossima scadenza/g) || []).length, 2);
+        assert.match(tested.els.studentCalendarStatus.textContent, /6 eventi .* 3 scadenze/);
+        assert.equal(tested.studentCalendarEvents([openSooner, sameDeadline, submitted]).at(-1).title, "Somma in Python");
+        """
+    )
+
+
+def test_student_dashboard_renders_empty_calendar_message() -> None:
+    run_student_dashboard_js(
+        """
+        tested.renderStudentCalendar([{ title: "Senza date" }]);
+
+        assert.match(tested.els.studentCalendar.innerHTML, /Nessuna data disponibile/);
+        assert.equal(tested.els.studentCalendarStatus.textContent, "");
         """
     )
 

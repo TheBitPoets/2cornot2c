@@ -7,6 +7,8 @@ const els = {
   summary: document.querySelector("#summary"),
   status: document.querySelector("#status"),
   assignments: document.querySelector("#assignments"),
+  studentCalendar: document.querySelector("#studentCalendar"),
+  studentCalendarStatus: document.querySelector("#studentCalendarStatus"),
   coursePath: document.querySelector("#coursePath"),
   coursePathStatus: document.querySelector("#coursePathStatus"),
   assignmentDetailModal: document.querySelector("#assignmentDetailModal"),
@@ -284,6 +286,85 @@ function renderSummary(studentId, assignments) {
       <span>${escapeHtml(value)}</span>
     </article>
   `).join("");
+}
+
+function calendarEventTimestamp(value) {
+  if (!value) return null;
+  const timestamp = Date.parse(value);
+  return Number.isNaN(timestamp) ? null : timestamp;
+}
+
+function studentCalendarEvents(assignments) {
+  const nextAssignment = nextOpenAssignment(assignments);
+  const nextDue = nextAssignment ? timestampOrInfinity(nextAssignment.due_at) : Number.POSITIVE_INFINITY;
+  return assignments.flatMap((assignment) => {
+    const title = assignmentTitle(assignment) || "-";
+    const events = [];
+    const assignedTimestamp = calendarEventTimestamp(assignment.assigned_at);
+    if (assignedTimestamp != null) {
+      events.push({
+        kind: "assigned",
+        label: "Assegnata",
+        date: assignment.assigned_at,
+        timestamp: assignedTimestamp,
+        title,
+        assignment,
+        priority: false,
+      });
+    }
+    const dueTimestamp = calendarEventTimestamp(assignment.due_at);
+    if (dueTimestamp != null) {
+      events.push({
+        kind: "due",
+        label: "Scadenza",
+        date: assignment.due_at,
+        timestamp: dueTimestamp,
+        title,
+        assignment,
+        priority: isOpenAssignment(assignment) && dueTimestamp === nextDue,
+      });
+    }
+    return events;
+  }).sort((left, right) => (
+    left.timestamp - right.timestamp
+    || left.title.localeCompare(right.title, "it", { numeric: true, sensitivity: "base" })
+    || left.label.localeCompare(right.label, "it", { numeric: true, sensitivity: "base" })
+  ));
+}
+
+function renderCalendarEvent(event) {
+  const kindClass = event.kind === "due" ? "calendarEventDue" : "calendarEventAssigned";
+  return `
+    <article class="calendarEvent ${kindClass}">
+      <time datetime="${escapeHtml(event.date)}">${escapeHtml(formatDate(event.date))}</time>
+      <div>
+        <h3>${escapeHtml(event.title)}</h3>
+        <p class="meta">
+          <span>${escapeHtml(event.label)}</span>
+          <span>${escapeHtml(event.assignment.kind || "tipo non indicato")}</span>
+          <span>${escapeHtml(event.assignment.student_support_mode || "modalita non indicata")}</span>
+        </p>
+      </div>
+      <div class="calendarEventBadges">
+        ${event.priority ? badge("Prossima scadenza", "badgePriority") : ""}
+        ${event.kind === "due" ? statusBadge(event.assignment) : badge("Finestra di lavoro")}
+      </div>
+    </article>
+  `;
+}
+
+function renderStudentCalendar(assignments) {
+  if (!els.studentCalendar) return;
+  const events = studentCalendarEvents(assignments);
+  if (els.studentCalendarStatus) {
+    const dueCount = events.filter((event) => event.kind === "due").length;
+    els.studentCalendarStatus.textContent = events.length
+      ? `${events.length} eventi · ${dueCount} scadenze`
+      : "";
+  }
+  els.studentCalendar.innerHTML = events.length
+    ? events.map(renderCalendarEvent).join("")
+    : '<p class="status">Nessuna data disponibile per le consegne di questo studente.</p>';
 }
 
 function collectCourseItems(items, depth = 0) {
@@ -683,6 +764,7 @@ function renderDashboard(payload) {
   const nextAssignment = nextOpenAssignment(assignments);
   const visibleAssignments = sortedAssignments(filteredAssignments(assignments, filterValue), sortValue);
   renderSummary(payload.student_id || "-", assignments);
+  renderStudentCalendar(assignments);
   renderCoursePath(currentCourseDesign, assignments, payload.student_id);
   els.status.textContent = visibleAssignments.length === assignments.length
     ? `${assignments.length} consegne trovate.`

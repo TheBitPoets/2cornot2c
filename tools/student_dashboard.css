@@ -160,6 +160,7 @@ button {
 button:hover { transform: translateY(-1px); }
 
 .summary,
+.studentCalendar,
 .coursePath,
 .assignments {
   min-width: 0;
@@ -227,6 +228,54 @@ button:hover { transform: translateY(-1px); }
 
 .assignmentList {
   display: grid;
+  min-width: 0;
+}
+
+.studentCalendarBody {
+  display: grid;
+  gap: .65rem;
+  min-width: 0;
+  padding: 1rem;
+}
+
+.calendarEvent {
+  display: grid;
+  grid-template-columns: minmax(8.5rem, auto) minmax(0, 1fr) auto;
+  align-items: start;
+  gap: .85rem;
+  min-width: 0;
+  border: 1px solid rgba(17, 17, 17, .1);
+  border-left: 4px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: .85rem;
+}
+
+.calendarEventDue {
+  border-left-color: var(--bad);
+}
+
+.calendarEventAssigned {
+  border-left-color: var(--accent);
+}
+
+.calendarEvent time {
+  color: var(--muted);
+  font-size: .78rem;
+  font-weight: 900;
+}
+
+.calendarEvent h3 {
+  margin: 0 0 .28rem;
+  overflow-wrap: anywhere;
+  font-size: .98rem;
+}
+
+.calendarEventBadges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: .35rem;
   min-width: 0;
 }
 
@@ -628,6 +677,14 @@ button:hover { transform: translateY(-1px); }
 
   .courseItemList li {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .calendarEvent {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .calendarEventBadges {
+    justify-content: flex-start;
   }
 
   h1 {
