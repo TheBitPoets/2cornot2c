@@ -556,8 +556,8 @@ button:hover { transform: translateY(-1px); }
 }
 
 .calendarPillClosure {
-  background: rgba(63, 63, 70, .12);
-  color: #3f3f46;
+  background: rgba(154, 45, 35, .11);
+  color: #8a2d24;
 }
 
 .studentCalendarList {
