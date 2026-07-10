@@ -528,11 +528,15 @@ Ordine consigliato:
 10. Event log minimale e provenienza minima per activity/contenuti generati.
 11. Cornice didattica generale e guida operativa docente/studente.
 12. Inserimento activity nel percorso e visualizzazione calendario.
-13. Archiviazione/cancellazione sicura di registri e activity.
-14. Catalogo fonti e import paragrafi da piu repository.
-15. Estensione layout pannelli alle altre pagine.
-16. Feedback assistito avanzato lato studente.
-17. Source provider API, indicizzazione frammenti e playground knowledge lab.
+13. Gestione consuntivi UDA reali:
+   - cancellare una UDA reale gia salvata dal calendario docente;
+   - ripristinare lo stato pianificato quando il consuntivo e stato inserito per errore;
+   - confermare prima della cancellazione e registrare provenienza/eventuale audit log.
+14. Archiviazione/cancellazione sicura di registri e activity.
+15. Catalogo fonti e import paragrafi da piu repository.
+16. Estensione layout pannelli alle altre pagine.
+17. Feedback assistito avanzato lato studente.
+18. Source provider API, indicizzazione frammenti e playground knowledge lab.
 
 ## Criterio di priorita
 
