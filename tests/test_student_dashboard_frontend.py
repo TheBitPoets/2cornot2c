@@ -228,6 +228,8 @@ def test_student_dashboard_populates_students_from_class_roster() -> None:
         assert.equal(selectedRoster, "demo-3a.json");
         assert.equal(tested.els.classRoster.disabled, false);
         assert.match(tested.els.classRoster.innerHTML, /Classe demo 3A \\(2026-2027\\)/);
+        tested.renderDashboard({ student_id: "rossi-mario", assignments: [] });
+        assert.match(tested.els.summary.innerHTML, /<strong>Classe<\\/strong>\\s*<span>Classe demo 3A \\(2026-2027\\)<\\/span>/);
         assert.equal(JSON.stringify(students.map((student) => student.id)), JSON.stringify(["bianchi-luca", "rossi-mario"]));
         assert.equal(selectedStudent, "rossi-mario");
         assert.match(tested.els.studentId.innerHTML, /Bianchi Luca/);
@@ -247,6 +249,8 @@ def test_student_dashboard_disables_class_roster_when_missing() -> None:
         assert.equal(tested.els.classRoster.value, "");
         assert.equal(tested.els.classRoster.disabled, true);
         assert.match(tested.els.classRoster.innerHTML, /Dai registri consegne/);
+        tested.renderDashboard({ student_id: "rossi-mario", assignments: [] });
+        assert.match(tested.els.summary.innerHTML, /<strong>Classe<\\/strong>\\s*<span>Dai registri consegne<\\/span>/);
         """
     )
 

@@ -10,6 +10,7 @@ const els = {
 
 const DEMO_STUDENTS = ["bianchi-luca", "rossi-mario", "verdi-anna", "neri-giulia"];
 let currentDashboardPayload = { student_id: "", assignments: [] };
+let currentClassLabel = "Dai registri consegne";
 
 async function api(path, options = {}) {
   const response = await fetch(path, options);
@@ -80,10 +81,13 @@ function populateClassRosterOptions(rosters, preferredRosterName = "") {
     els.classRoster.innerHTML = '<option value="">Dai registri consegne</option>';
     els.classRoster.value = "";
     els.classRoster.disabled = true;
+    currentClassLabel = "Dai registri consegne";
     return "";
   }
   const names = options.map((roster) => roster.name);
   const selected = names.includes(preferredRosterName) ? preferredRosterName : names[0];
+  const selectedRoster = options.find((roster) => roster.name === selected);
+  currentClassLabel = rosterLabel(selectedRoster);
   els.classRoster.disabled = false;
   els.classRoster.innerHTML = options.map((roster) => `
     <option value="${escapeHtml(roster.name)}"${roster.name === selected ? " selected" : ""}>${escapeHtml(rosterLabel(roster))}</option>
@@ -201,6 +205,7 @@ function renderSummary(studentId, assignments) {
   const approvedFeedback = assignments.filter((item) => item.approved_feedback).length;
   const cards = [
     ["Studente", studentId],
+    ["Classe", currentClassLabel],
     ["Consegne", assignments.length],
     ["Consegnate", submitted],
     ["Mancanti", missing],
