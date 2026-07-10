@@ -302,6 +302,11 @@ Da avere per la prima prova:
    - in ritardo;
    - corretta automaticamente;
    - da revisionare.
+4. Vista studente in sola lettura per percorso e calendario:
+   - mostrare il percorso didattico pubblicato dal docente con UDA e paragrafi pertinenti;
+   - mostrare il calendario corrente con lab, verifiche, scadenze e finestre di lavoro;
+   - non esporre azioni o pagine docente nella navigazione studente;
+   - derivare queste viste dai dati docente senza duplicare percorso e calendario.
 
 ### Feedback assistito
 
