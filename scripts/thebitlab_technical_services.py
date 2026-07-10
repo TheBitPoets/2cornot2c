@@ -203,7 +203,11 @@ class GradeActivityExecutionService:
                 detail="ExecutionRequest.metadata deve includere activity_path e source_path.",
             )
 
-        activity = grade_activity.load_activity(Path(str(activity_path)))
+        try:
+            activity = grade_activity.load_activity(Path(str(activity_path)))
+        except (OSError, json.JSONDecodeError) as error:
+            return ExecutionResult(status="invalid_payload", detail=f"Activity non caricata: {error}")
+
         report = grade_activity.grade_activity(
             activity,
             Path(str(source_path)),

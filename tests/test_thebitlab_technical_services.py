@@ -274,6 +274,39 @@ def test_grade_activity_execution_service_rejects_missing_paths() -> None:
     assert "activity_path" in result.detail
 
 
+def test_grade_activity_execution_service_returns_invalid_payload_for_missing_activity(tmp_path) -> None:
+    result = GradeActivityExecutionService().run(
+        ExecutionRequest(
+            activity_id="c-base-somma-001",
+            student_id="rossi-mario",
+            files={},
+            language="c",
+            metadata={"activity_path": tmp_path / "missing.json", "source_path": tmp_path / "main.c"},
+        )
+    )
+
+    assert result.status == "invalid_payload"
+    assert "Activity non caricata" in result.detail
+
+
+def test_grade_activity_execution_service_returns_invalid_payload_for_bad_activity_json(tmp_path) -> None:
+    activity_path = tmp_path / "activity.json"
+    activity_path.write_text("{not-json", encoding="utf-8")
+
+    result = GradeActivityExecutionService().run(
+        ExecutionRequest(
+            activity_id="c-base-somma-001",
+            student_id="rossi-mario",
+            files={},
+            language="c",
+            metadata={"activity_path": activity_path, "source_path": tmp_path / "main.c"},
+        )
+    )
+
+    assert result.status == "invalid_payload"
+    assert "Activity non caricata" in result.detail
+
+
 @pytest.mark.parametrize(
     "payload",
     [
