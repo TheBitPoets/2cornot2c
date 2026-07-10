@@ -1741,8 +1741,8 @@ function aiFeedbackText(value) {
 function aiFeedbackTeacherAction(ai) {
   const status = ai?.status || "not_generated";
   if (status === "draft") return "Da controllare: approvare o respingere con il workflow manuale.";
-  if (status === "approved") return "Feedback controllato dal docente e pronto per la pubblicazione allo studente.";
-  if (status === "rejected") return "Feedback respinto: rigenerare o riscrivere prima di pubblicarlo.";
+  if (status === "approved") return "Feedback controllato dal docente. Puoi riaprirlo come bozza se devi cambiare decisione.";
+  if (status === "rejected") return "Feedback respinto. Puoi riaprirlo come bozza se vuoi rivederlo.";
   if (status === "error") return "Errore provider: controllare il dettaglio tecnico prima di riprovare.";
   return "Nessuna azione disponibile finche il feedback AI non viene generato.";
 }
@@ -1752,6 +1752,7 @@ function aiFeedbackReviewDetails(ai) {
   if (!hasFeedback) return "";
   const confidence = aiFeedbackText(ai.confidence);
   const canReview = ai.status === "draft";
+  const canReopen = ai.status === "approved" || ai.status === "rejected";
   return `
     <details class="aiFeedbackDetails">
       <summary>Dettaglio AI</summary>
@@ -1777,6 +1778,11 @@ function aiFeedbackReviewDetails(ai) {
         <div class="aiFeedbackActions">
           <button type="button" class="smallButton" data-ai-feedback-decision="approve">Approva</button>
           <button type="button" class="smallButton" data-ai-feedback-decision="reject">Respingi</button>
+        </div>
+      ` : ""}
+      ${canReopen ? `
+        <div class="aiFeedbackActions">
+          <button type="button" class="smallButton" data-ai-feedback-decision="reopen">Riapri bozza</button>
         </div>
       ` : ""}
     </details>
@@ -2010,7 +2016,11 @@ async function reviewAiFeedback(studentId, decision) {
     setStudentsDialogStatus(message);
     return;
   }
-  const label = decision === "approve" ? "approvazione" : "respinta";
+  const label = {
+    approve: "approvazione",
+    reject: "respinta",
+    reopen: "riapertura bozza",
+  }[decision] || "revisione";
   const progressMessage = `Salvataggio ${label} feedback AI per ${studentId}...`;
   setStatus(progressMessage);
   setStudentsDialogStatus(progressMessage);
@@ -2024,7 +2034,12 @@ async function reviewAiFeedback(studentId, decision) {
   });
   state.report = payload.report;
   renderDashboard();
-  const doneMessage = `Feedback AI ${decision === "approve" ? "approvato" : "respinto"} per ${studentId}.`;
+  const outcome = {
+    approve: "approvato",
+    reject: "respinto",
+    reopen: "riaperto come bozza",
+  }[decision] || "revisionato";
+  const doneMessage = `Feedback AI ${outcome} per ${studentId}.`;
   setStatus(doneMessage);
   setStudentsDialogStatus(doneMessage);
 }

@@ -617,10 +617,11 @@ def test_ai_feedback_helpers_render_teacher_review_states() -> None:
         assert.match(html, /data-ai-feedback-decision="reject"/);
         assert.match(html, /title="Feedback AI generato ma non ancora approvato dal docente\\."/);
         assert.equal(tested.aiFeedbackReviewDetails({ status: "not_generated" }), "");
-        assert.doesNotMatch(tested.aiFeedbackReviewDetails({ status: "approved" }), /data-ai-feedback-decision/);
+        assert.match(tested.aiFeedbackReviewDetails({ status: "approved" }), /data-ai-feedback-decision="reopen"/);
+        assert.match(tested.aiFeedbackReviewDetails({ status: "rejected" }), /data-ai-feedback-decision="reopen"/);
         assert.match(
           tested.aiFeedbackTeacherAction({ status: "approved" }),
-          /pronto per la pubblicazione allo studente/,
+          /riaprirlo come bozza/,
         );
         """
     )

@@ -157,7 +157,22 @@ Il feedback dello studente passa a:
 }
 ```
 
-Il comando accetta solo feedback con `status: "draft"`. Se il feedback e gia approvato, respinto o non ancora generato, il registro non viene scritto.
+Il comando accetta `approve` e `reject` solo su feedback con `status: "draft"`. Se il feedback e gia approvato, respinto o non ancora generato, il registro non viene scritto.
+
+Se la decisione e stata presa per errore, puoi riaprire il feedback come bozza:
+
+```bash
+python -m scripts.manual_ai_feedback review-feedback teacher-reports/demo/register-approved.json rossi-mario reopen --output teacher-reports/demo/register-draft.json
+```
+
+La riapertura e consentita solo da `approved` o `rejected` e riporta:
+
+```json
+{
+  "status": "draft",
+  "approved_by_teacher": false
+}
+```
 
 ## Errori comuni
 
@@ -209,6 +224,6 @@ La colonna `AI` deve mostrare:
 
 Per gli stati diversi da `Non generato`, nella stessa cella e disponibile il dettaglio espandibile `Dettaglio AI`: mostra il feedback per lo studente, le note docente, l'affidabilita dichiarata e l'azione operativa suggerita al docente.
 
-Quando lo stato e `Bozza AI`, il dettaglio mostra anche i bottoni `Approva` e `Respingi`: aggiornano il registro JSON selezionato usando la stessa regola del comando CLI `review-feedback`. Gli stati gia approvati, respinti o non generati non mostrano azioni di review.
+Quando lo stato e `Bozza AI`, il dettaglio mostra anche i bottoni `Approva` e `Respingi`: aggiornano il registro JSON selezionato usando la stessa regola del comando CLI `review-feedback`. Quando lo stato e `Approvato` o `Respinto`, il dettaglio mostra `Riapri bozza`, utile per correggere una decisione docente presa per errore. Gli stati non generati non mostrano azioni di review.
 
 La legenda della tabella studenti contiene gli stessi badge, cosi la GUI resta coerente anche quando non si conosce il workflow CLI.
