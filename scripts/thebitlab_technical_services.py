@@ -329,7 +329,7 @@ def ai_feedback_result_from_payload(payload: str | dict[str, Any]) -> AiFeedback
         raise InvalidServicePayloadError("Payload feedback AI senza status valido.")
 
     summary = _optional_text(raw, "summary")
-    detail = str(raw.get("detail") or "")
+    detail = _optional_text(raw, "detail") or ""
     if status == "draft" and not summary:
         raise InvalidServicePayloadError("Payload feedback AI draft senza summary.")
     if status == "error" and not (summary or detail):

@@ -450,6 +450,11 @@ def test_ai_feedback_result_from_payload_normalizes_manual_response() -> None:
             "status": "draft",
             "student_feedback": ["non", "testo"],
         },
+        {
+            "schema_version": "ai_feedback_response.v1",
+            "status": "error",
+            "detail": {"message": "errore"},
+        },
     ],
 )
 def test_ai_feedback_result_from_payload_rejects_invalid_manual_responses(payload) -> None:
