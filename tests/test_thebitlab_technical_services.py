@@ -9,6 +9,7 @@ from scripts.thebitlab_technical_services import (
     InvalidServicePayloadError,
     RunnerTestResult,
     execution_result_from_payload,
+    grading_dict_from_grade_activity_report,
 )
 
 
@@ -113,6 +114,110 @@ def test_execution_result_from_payload_accepts_runner_json() -> None:
     assert result.status == "failed"
     assert result.tests[1] == RunnerTestResult("somma_negativi", False, "Output errato")
     assert result.duration_ms == 42
+
+
+def test_grading_dict_from_grade_activity_report_keeps_failed_tests_visible() -> None:
+    result = grading_dict_from_grade_activity_report(
+        {
+            "activity_id": "c-base-somma-001",
+            "passed": False,
+            "status": "failed",
+            "teacher_grade": 5.5,
+            "tests": [
+                {"name": "somma_positivi", "passed": True, "status": "passed"},
+                {"name": "somma_negativi", "passed": False, "status": "failed", "stderr": "Output errato"},
+            ],
+        }
+    )
+
+    assert result["status"] == "graded_failed"
+    assert result["passed"] is False
+    assert result["tests_passed"] == 1
+    assert result["tests_total"] == 2
+    assert result["failed_tests"] == ["somma_negativi"]
+    assert result["score"] == 5
+    assert result["teacher_grade"] == 5.5
+    assert result["report_status"] == "failed"
+
+
+def test_grading_dict_from_grade_activity_report_marks_infrastructure_errors_not_run() -> None:
+    result = grading_dict_from_grade_activity_report(
+        {
+            "activity_id": "python-001",
+            "passed": False,
+            "status": "unsupported-language",
+            "tests": [],
+            "error": "Runner non ancora implementato per il linguaggio: python",
+        }
+    )
+
+    assert result["status"] == "not_run"
+    assert result["passed"] is None
+    assert result["tests_passed"] is None
+    assert result["tests_total"] is None
+    assert result["detail"] == "Runner non ancora implementato per il linguaggio: python"
+    assert result["report_status"] == "unsupported-language"
+
+
+def test_grading_dict_from_grade_activity_report_marks_compile_error_as_failed_grading() -> None:
+    result = grading_dict_from_grade_activity_report(
+        {
+            "activity_id": "c-base-somma-001",
+            "passed": False,
+            "status": "compile-error",
+            "compile": {"stderr": "main.c: errore di sintassi"},
+            "tests": [],
+        }
+    )
+
+    assert result["status"] == "graded_failed"
+    assert result["passed"] is False
+    assert result["tests_passed"] == 0
+    assert result["tests_total"] == 1
+    assert result["failed_tests"] == ["compilazione"]
+    assert result["detail"] == "main.c: errore di sintassi"
+    assert result["report_status"] == "compile-error"
+
+
+def test_grading_dict_from_grade_activity_report_marks_compile_timeout_as_failed_grading() -> None:
+    result = grading_dict_from_grade_activity_report(
+        {
+            "activity_id": "c-base-somma-001",
+            "passed": False,
+            "status": "compile-timeout",
+            "compile": {"stderr": "Compilazione interrotta per timeout"},
+            "tests": [],
+        }
+    )
+
+    assert result["status"] == "graded_failed"
+    assert result["passed"] is False
+    assert result["tests_passed"] == 0
+    assert result["tests_total"] == 1
+    assert result["failed_tests"] == ["compilazione"]
+    assert result["detail"] == "Compilazione interrotta per timeout"
+    assert result["report_status"] == "compile-timeout"
+
+
+def test_grading_dict_from_grade_activity_report_marks_missing_source_as_failed_grading() -> None:
+    result = grading_dict_from_grade_activity_report(
+        {
+            "activity_id": "c-base-somma-001",
+            "passed": False,
+            "status": "source-not-found",
+            "source": "assignments/c-base-somma-001/main.c",
+            "error": "Sorgente non trovato: assignments/c-base-somma-001/main.c",
+            "tests": [],
+        }
+    )
+
+    assert result["status"] == "graded_failed"
+    assert result["passed"] is False
+    assert result["tests_passed"] == 0
+    assert result["tests_total"] == 1
+    assert result["failed_tests"] == ["sorgente"]
+    assert result["detail"] == "Sorgente non trovato: assignments/c-base-somma-001/main.c"
+    assert result["report_status"] == "source-not-found"
 
 
 @pytest.mark.parametrize(

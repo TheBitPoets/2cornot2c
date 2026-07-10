@@ -216,6 +216,83 @@ def execution_result_from_payload(payload: str | dict[str, Any]) -> ExecutionRes
     )
 
 
+def execution_result_from_grade_activity_report(report: dict[str, Any]) -> ExecutionResult:
+    """Convert the legacy grade_activity.py report into an ExecutionResult."""
+
+    status = str(report.get("status", ""))
+    tests = [
+        RunnerTestResult(
+            name=str(test.get("name") or test.get("id") or f"test {index + 1}"),
+            passed=bool(test.get("passed")),
+            detail=str(test.get("message") or test.get("error") or test.get("stderr") or ""),
+        )
+        for index, test in enumerate(report.get("tests", []) if isinstance(report.get("tests"), list) else [])
+        if isinstance(test, dict) and isinstance(test.get("passed"), bool)
+    ]
+    if status in {"compile-error", "compile-timeout"} and not tests:
+        tests.append(RunnerTestResult(name="compilazione", passed=False, detail=_grade_activity_report_detail(report)))
+    if status == "source-not-found" and not tests:
+        tests.append(RunnerTestResult(name="sorgente", passed=False, detail=_grade_activity_report_detail(report)))
+
+    if report.get("passed") is True:
+        execution_status: ExecutionStatus = "passed"
+    elif status == "timeout":
+        execution_status = "timeout"
+    elif status in {"invalid-activity"}:
+        execution_status = "invalid_payload"
+    elif status in {"compiler-not-found", "unsupported-language", "unknown-language"}:
+        execution_status = "runner_unavailable"
+    else:
+        execution_status = "failed"
+
+    detail = _grade_activity_report_detail(report)
+    return ExecutionResult(status=execution_status, tests=tests, detail=detail)
+
+
+def grading_dict_from_grade_activity_report(report: dict[str, Any]) -> dict[str, Any]:
+    """Return dashboard-ready grading fields from a legacy grade_activity.py report."""
+
+    execution = execution_result_from_grade_activity_report(report)
+    grading = DeterministicGradingService().grade(
+        GradingRequest(
+            activity_id=str(report.get("activity_id") or ""),
+            student_id=str(report.get("student_id") or ""),
+            execution=execution,
+        )
+    )
+    result = grading.to_dashboard_dict()
+    result["score"] = report.get("score", result["score"])
+    result["teacher_grade"] = report.get("teacher_grade", result["teacher_grade"])
+    result["tests"] = _grade_activity_report_tests(report)
+    result["report_status"] = report.get("status")
+    return result
+
+
+def _grade_activity_report_tests(report: dict[str, Any]) -> list[dict[str, Any]]:
+    tests = []
+    for index, test in enumerate(report.get("tests", []) if isinstance(report.get("tests"), list) else []):
+        if not isinstance(test, dict):
+            continue
+        tests.append(
+            {
+                "name": str(test.get("name") or test.get("id") or f"test {index + 1}"),
+                "passed": test.get("passed"),
+                "status": test.get("status"),
+                "message": test.get("message") or test.get("error") or "",
+                "expected_stdout": test.get("expected_stdout"),
+                "actual_stdout": test.get("actual_stdout"),
+            }
+        )
+    return tests
+
+
+def _grade_activity_report_detail(report: dict[str, Any]) -> str:
+    if isinstance(report.get("errors"), list):
+        return "; ".join(str(error) for error in report["errors"])
+    compile_result = report.get("compile") if isinstance(report.get("compile"), dict) else {}
+    return str(report.get("error") or compile_result.get("stderr") or report.get("status") or "")
+
+
 def _decode_payload(payload: str | dict[str, Any]) -> dict[str, Any]:
     if isinstance(payload, dict):
         return payload

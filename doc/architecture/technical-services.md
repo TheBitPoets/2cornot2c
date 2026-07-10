@@ -103,3 +103,7 @@ Le prossime implementazioni concrete devono preservare questi casi:
 2. Spostare la logica di `grade_activity.py` dietro `GradingService`.
 3. Aggiungere un `AiFeedbackService` mockabile per feedback docente/studente.
 4. Salvare i risultati nei registri e, in futuro, nell'indice SQLite senza cambiare la GUI.
+
+## Bridge con i report esistenti
+
+Durante la transizione, i report prodotti da `scripts/grade_activity.py` vengono convertiti nel contratto tecnico con `grading_dict_from_grade_activity_report()`. Questo permette al tracking delle consegne di usare `GradingService` senza cambiare subito il formato dei report gia prodotti.
