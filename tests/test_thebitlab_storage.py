@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -169,6 +170,29 @@ def test_read_assignment_report_normalizes_student_booleans(tmp_path) -> None:
     assert student["submission"]["late"] is True
     assert student["grading"]["passed"] is False
     assert student["ai_feedback"]["approved_by_teacher"] is True
+
+
+def test_ai_feedback_demo_report_exposes_teacher_review_states() -> None:
+    root = Path(__file__).resolve().parents[1]
+    storage = JsonAssignmentStorage(root, root / "teacher-reports", [])
+
+    report = storage.read_assignment_report("demo/ai-feedback-states.json")
+    statuses = {student["student"]: student["ai_feedback"]["status"] for student in report["students"]}
+    approvals = {student["student"]: student["ai_feedback"]["approved_by_teacher"] for student in report["students"]}
+
+    assert report["activity_id"] == "demo-ai-feedback-states"
+    assert statuses == {
+        "rossi-mario": "draft",
+        "bianchi-luca": "approved",
+        "verdi-anna": "rejected",
+        "neri-giulia": "not_generated",
+    }
+    assert approvals == {
+        "rossi-mario": False,
+        "bianchi-luca": True,
+        "verdi-anna": False,
+        "neri-giulia": False,
+    }
 
 
 def test_assignment_report_rejects_unsafe_or_invalid_reports(tmp_path) -> None:
