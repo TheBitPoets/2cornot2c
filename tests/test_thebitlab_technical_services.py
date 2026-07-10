@@ -488,6 +488,9 @@ def test_manual_ai_feedback_package_prepares_prompt_and_json() -> None:
     assert isinstance(package, ManualAiFeedbackPackage)
     assert "ai_feedback_response.v1" in package.prompt
     assert "Non approvare il feedback al posto del docente" in package.prompt
+    assert "Non aggiungere testo fuori dal JSON" in package.prompt
+    assert '"student_feedback": "Feedback comprensibile per lo studente."' in package.prompt
+    assert '"schema_version": "ai_feedback_response.v1"' in package.prompt
     assert package.request_json in package.prompt
     assert '"schema_version": "ai_feedback_request.v1"' in package.request_json
     assert '"id": "c-base-somma-001"' in package.request_json

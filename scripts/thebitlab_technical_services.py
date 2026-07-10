@@ -333,12 +333,31 @@ def manual_ai_feedback_package(
     """Prepare copy/paste material for ChatGPT, Codex, or another manual provider."""
 
     request_json = ai_feedback_request_json(request, activity=activity, policy=policy)
+    response_template = json.dumps(
+        {
+            "schema_version": AI_FEEDBACK_RESPONSE_SCHEMA_VERSION,
+            "status": "draft",
+            "summary": "Sintesi breve per il docente.",
+            "suggested_grade": None,
+            "student_feedback": "Feedback comprensibile per lo studente.",
+            "teacher_notes": "Note operative per il docente.",
+            "confidence": "medium",
+            "detail": "",
+        },
+        ensure_ascii=False,
+        indent=2,
+        sort_keys=True,
+    )
     prompt = (
         "Sei un assistente didattico per la correzione di esercizi di programmazione. "
         "Leggi il JSON seguente e rispondi solo con JSON valido nello schema "
         f"{AI_FEEDBACK_RESPONSE_SCHEMA_VERSION}. "
         "Non approvare il feedback al posto del docente. "
-        "Per status draft includi almeno summary; per status error includi summary o detail.\n\n"
+        "Per status draft includi almeno summary; per status error includi summary o detail. "
+        "Non aggiungere testo fuori dal JSON. "
+        "Usa questa forma di risposta:\n\n"
+        f"{response_template}\n\n"
+        "Richiesta da valutare:\n\n"
         f"{request_json}"
     )
     return ManualAiFeedbackPackage(prompt=prompt, request_json=request_json)
