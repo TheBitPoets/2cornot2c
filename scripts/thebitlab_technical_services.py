@@ -217,6 +217,61 @@ class GradeActivityExecutionService:
         return execution_result_from_grade_activity_report(report)
 
 
+class DeterministicAiFeedbackService:
+    """Mockable AI feedback service that never calls external providers."""
+
+    def generate_feedback(self, request: AiFeedbackRequest) -> AiFeedbackResult:
+        """Generate a deterministic teacher-reviewable feedback draft."""
+
+        grading = request.grading
+        if grading.status == "not_run":
+            return AiFeedbackResult(
+                status="draft",
+                summary="Correzione automatica non eseguita: serve verificare il runner o i dati della consegna.",
+                suggested_grade=None,
+                detail=grading.detail,
+            )
+        if grading.status == "error":
+            return AiFeedbackResult(
+                status="draft",
+                summary="La correzione ha incontrato un errore tecnico: controlla il dettaglio prima di dare feedback allo studente.",
+                suggested_grade=None,
+                detail=grading.detail,
+            )
+        if grading.status == "graded_passed":
+            return AiFeedbackResult(
+                status="draft",
+                summary=f"Tutti i test deterministici risultano superati ({grading.tests_passed}/{grading.tests_total}).",
+                suggested_grade=grading.score,
+            )
+
+        failed = ", ".join(grading.failed_tests) if grading.failed_tests else "nessun nome test disponibile"
+        return AiFeedbackResult(
+            status="draft",
+            summary=(
+                f"La consegna non supera tutti i test deterministici "
+                f"({grading.tests_passed}/{grading.tests_total}). Test da rivedere: {failed}."
+            ),
+            suggested_grade=grading.score,
+            detail=grading.detail,
+        )
+
+
+def ai_feedback_dict_from_grading(grading: GradingResult) -> dict[str, Any]:
+    """Return register-compatible AI feedback fields from deterministic feedback."""
+
+    feedback = DeterministicAiFeedbackService().generate_feedback(
+        AiFeedbackRequest(activity_id="", student_id="", grading=grading)
+    )
+    return {
+        "status": feedback.status,
+        "suggested_grade": feedback.suggested_grade,
+        "summary": feedback.summary,
+        "approved_by_teacher": feedback.approved_by_teacher,
+        "detail": feedback.detail,
+    }
+
+
 def execution_result_from_payload(payload: str | dict[str, Any]) -> ExecutionResult:
     """Parse a runner payload into an ExecutionResult."""
 

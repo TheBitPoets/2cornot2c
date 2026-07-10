@@ -109,3 +109,69 @@ Le prossime implementazioni concrete devono preservare questi casi:
 Durante la transizione, i report prodotti da `scripts/grade_activity.py` vengono convertiti nel contratto tecnico con `grading_dict_from_grade_activity_report()`. Questo permette al tracking delle consegne di usare `GradingService` senza cambiare subito il formato dei report gia prodotti.
 
 `GradeActivityExecutionService` espone inoltre `grade_activity.py` dietro la porta `ExecutionService`: i chiamanti passano `activity_path` e `source_path` nei metadati della richiesta e ricevono un `ExecutionResult`, senza dipendere dal formato legacy del report.
+
+`DeterministicAiFeedbackService` fornisce una prima implementazione mockabile di `AiFeedbackService`: genera bozze di feedback a partire dal `GradingResult` senza chiamare provider esterni. Serve per stabilizzare flussi, test e dashboard prima di collegare un adapter AI reale.
+
+## Provider AI e workflow ChatGPT
+
+`AiFeedbackService` deve restare indipendente dal modo concreto con cui viene prodotto il feedback. Non tutti gli scenari avranno una API key disponibile: una scuola potrebbe avere ChatGPT Edu/Team, Codex, un provider API diverso o nessun servizio AI automatico.
+
+Per questo il confine architetturale resta unico, ma gli adapter possono essere diversi:
+
+- `DeterministicAiFeedbackService`: mock/fallback locale, nessun provider esterno.
+- `OpenAiApiFeedbackService`: chiamata automatica via OpenAI API key.
+- `CodexCliFeedbackService`: chiamata locale via Codex CLI, se autorizzata nel contesto del docente o della scuola.
+- `ChatGptManualFeedbackWorkflow`: flusso manuale assistito per ChatGPT web/app, senza scraping o automazione fragile dell'interfaccia.
+- adapter futuri per Gemini, Groq, OpenRouter, GitLab/GitHub AI o provider interno.
+
+Il workflow manuale ChatGPT non deve essere trattato come una API stabile. Deve invece preparare un pacchetto JSON di scambio controllato dal nostro sistema:
+
+```json
+{
+  "schema_version": "ai_feedback_request.v1",
+  "activity": {
+    "id": "c-base-somma-001",
+    "title": "Somma in C",
+    "instructions": "..."
+  },
+  "student": {
+    "id": "rossi-mario"
+  },
+  "grading": {
+    "status": "graded_failed",
+    "tests_passed": 1,
+    "tests_total": 2,
+    "failed_tests": ["somma_negativi"],
+    "detail": "Output errato"
+  },
+  "policy": {
+    "mode": "bozza_docente",
+    "allow_grade_suggestion": true,
+    "allowed_context": ["instructions", "grading", "teacher_notes"]
+  }
+}
+```
+
+L'output atteso deve essere un altro JSON validabile:
+
+```json
+{
+  "schema_version": "ai_feedback_response.v1",
+  "status": "draft",
+  "summary": "La soluzione gestisce il caso base ma fallisce con numeri negativi.",
+  "suggested_grade": 5,
+  "student_feedback": "Rivedi il caso con addendi negativi e confronta l'output atteso.",
+  "teacher_notes": "Verificare se l'errore dipende da sottrazione invece che somma.",
+  "confidence": "medium"
+}
+```
+
+L'adapter del workflow manuale deve:
+
+1. generare il JSON di richiesta e un prompt breve per ChatGPT;
+2. permettere al docente di incollare la risposta JSON;
+3. validare schema e campi obbligatori;
+4. normalizzare la risposta in `AiFeedbackResult`;
+5. salvare solo bozze non approvate finche il docente non conferma.
+
+Se ChatGPT cambia stile di risposta, si modifica solo l'adapter del workflow manuale o il validatore dello schema, non il resto della dashboard. Lo stesso contratto JSON puo essere riusato anche dagli adapter automatici, che inviano e ricevono dati strutturati senza legarsi al testo libero del provider.
