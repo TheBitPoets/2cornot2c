@@ -307,6 +307,10 @@ Da avere per la prima prova:
    - mostrare il calendario corrente con lab, verifiche, scadenze e finestre di lavoro;
    - non esporre azioni o pagine docente nella navigazione studente;
    - derivare queste viste dai dati docente senza duplicare percorso e calendario.
+5. Profilo studente:
+   - collegare `student_id`, nominativo locale, username GitHub e repository studente;
+   - mostrare avatar/profilo studente solo quando la fonte autorevole arriva da GitHub Team o roster locale;
+   - evitare link esterni generici nella navigazione studente.
 
 ### Feedback assistito
 
