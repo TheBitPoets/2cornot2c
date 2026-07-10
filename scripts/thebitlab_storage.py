@@ -363,7 +363,9 @@ def normalize_class_roster(payload: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("Roster classe non valido: id mancante.")
     if not isinstance(students, list):
         raise ValueError("Roster classe non valido: students deve essere una lista.")
-    normalized_students = [_normalize_roster_student(student) for student in students if isinstance(student, dict)]
+    if any(not isinstance(student, dict) for student in students):
+        raise ValueError("Roster classe non valido: ogni studente deve essere un oggetto.")
+    normalized_students = [_normalize_roster_student(student) for student in students]
     return {
         "schema_version": _first_text(payload, "schema_version") or "1.0",
         "id": roster_id,

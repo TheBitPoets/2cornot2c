@@ -306,9 +306,15 @@ def test_class_roster_rejects_unsafe_name_and_invalid_shape(tmp_path) -> None:
     classes_dir = tmp_path / "doc" / "classes"
     classes_dir.mkdir(parents=True)
     (classes_dir / "invalid.json").write_text(json.dumps({"id": "3A", "students": {}}), encoding="utf-8")
+    (classes_dir / "invalid-student.json").write_text(
+        json.dumps({"id": "3A", "students": ["rossi-mario"]}),
+        encoding="utf-8",
+    )
 
     with pytest.raises(ValueError):
         storage.safe_roster_name("../3a.json")
 
     with pytest.raises(ValueError, match="students"):
         storage.read_class_roster("invalid.json")
+    with pytest.raises(ValueError, match="ogni studente"):
+        storage.read_class_roster("invalid-student.json")
