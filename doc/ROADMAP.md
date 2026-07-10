@@ -533,6 +533,8 @@ Ordine consigliato:
 11. Cornice didattica generale e guida operativa docente/studente.
 12. Inserimento activity nel percorso e visualizzazione calendario.
 13. Gestione consuntivi UDA reali:
+   - mostrare le UDA reali anche nella vista calendario docente;
+   - aggiungere un filtro calendario per scegliere tra UDA programmate, UDA reali o entrambe;
    - rendere cliccabili le UDA reali nei calendari docente/studente e aprire un modal di dettaglio coerente;
    - cancellare una UDA reale gia salvata dal calendario docente;
    - ripristinare lo stato pianificato quando il consuntivo e stato inserito per errore;
