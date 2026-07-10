@@ -160,6 +160,7 @@ button {
 button:hover { transform: translateY(-1px); }
 
 .summary,
+.coursePath,
 .assignments {
   min-width: 0;
   border: 1px solid rgba(17, 17, 17, .12);
@@ -227,6 +228,83 @@ button:hover { transform: translateY(-1px); }
 .assignmentList {
   display: grid;
   min-width: 0;
+}
+
+.coursePathBody {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+  padding: 1rem;
+}
+
+.courseYear {
+  display: grid;
+  gap: .85rem;
+  min-width: 0;
+}
+
+.courseYear h3,
+.courseYear p,
+.courseUda h4 {
+  margin: 0;
+}
+
+.courseUdaGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: .75rem;
+  min-width: 0;
+}
+
+.courseUda {
+  display: grid;
+  gap: .75rem;
+  min-width: 0;
+  border: 1px solid rgba(17, 17, 17, .1);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: .9rem;
+}
+
+.courseLinkedActivities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+  min-width: 0;
+}
+
+.courseItemList {
+  display: grid;
+  gap: .35rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.courseItemList li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .5rem;
+  min-width: 0;
+  padding-left: calc(var(--depth, 0) * .85rem);
+  color: var(--ink);
+  font-size: .84rem;
+}
+
+.courseItemList a,
+.courseItemList span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.courseItemList a {
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.courseItemList span {
+  color: var(--muted);
 }
 
 .assignmentCard {
@@ -538,6 +616,14 @@ button:hover { transform: translateY(-1px); }
   }
 
   .summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .courseUdaGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .courseItemList li {
     grid-template-columns: minmax(0, 1fr);
   }
 

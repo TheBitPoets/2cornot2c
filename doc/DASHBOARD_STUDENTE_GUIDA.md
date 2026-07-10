@@ -76,6 +76,10 @@ Screenshot previsto: `doc/images/dashboard-guides/studente-riepilogo.png`.
 
 La stessa consegna viene evidenziata nella lista con il badge **Prossima scadenza**. Se piu consegne aperte hanno la stessa prossima scadenza, il badge compare su tutte.
 
+## Percorso
+
+Il pannello **Percorso** mostra in sola lettura una sintesi del percorso didattico corrente: anni, UDA, paragrafi principali e attivita collegate alle consegne dello studente quando il registro usa gli stessi identificativi.
+
 ## Consegne
 
 La sezione **Consegne** elenca le activity visibili allo studente.

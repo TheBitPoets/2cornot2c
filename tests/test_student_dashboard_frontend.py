@@ -48,6 +48,7 @@ def run_student_dashboard_js(assertions: str) -> None:
     vm.runInNewContext(`${{source}}
       globalThis.__studentDashboardTest = {{
         renderSummary,
+        renderCoursePath,
         renderFeedback,
         renderAssignment,
         renderAssignmentDetail,
@@ -59,6 +60,7 @@ def run_student_dashboard_js(assertions: str) -> None:
         sortedAssignments,
         nextOpenAssignment,
         nextOpenDueAt,
+        collectCourseItems,
         safeExternalHref,
         safeExternalLink,
         studentLabel,
@@ -272,6 +274,62 @@ def test_student_dashboard_summarizes_next_open_due_date() -> None:
         assert.match(tested.els.summary.innerHTML, /<strong>Prossima scadenza<\\/strong>\\s*<span>18\\/10\\/26, 23:59<\\/span>/);
         assert.match(tested.els.assignments.innerHTML, /Prossima scadenza/);
         assert.equal((tested.els.assignments.innerHTML.match(/Prossima scadenza/g) || []).length, 2);
+        """
+    )
+
+
+def test_student_dashboard_renders_readonly_course_path_panel() -> None:
+    run_student_dashboard_js(
+        """
+        const assignment = {
+          activity_id: "python-base-somma-001",
+          title: "Somma in Python",
+          status: "submitted_on_time",
+          submitted: true,
+        };
+        tested.renderCoursePath({
+          years: [{
+            id: "terzo",
+            title: "Terzo anno",
+            description: "Programmazione di base.",
+            udas: [{
+              id: "uda-base",
+              title: "Programmazione di base",
+              path: "Base",
+              weeks: "3",
+              items: [{
+                id: "item-input-output",
+                title: "Input e output",
+                source_id: "readme-main",
+                href: "README.md#input-e-output",
+                activity_ids: ["python-base-somma-001"],
+                children: [{
+                  id: "item-somma",
+                  title: "Somma",
+                  source: "README.md",
+                }],
+              }],
+            }],
+          }],
+        }, [assignment]);
+
+        assert.match(tested.els.coursePath.innerHTML, /Terzo anno/);
+        assert.match(tested.els.coursePath.innerHTML, /Programmazione di base/);
+        assert.match(tested.els.coursePath.innerHTML, /Input e output/);
+        assert.match(tested.els.coursePath.innerHTML, /Somma in Python/);
+        assert.match(tested.els.coursePathStatus.textContent, /1 anni .* 1 UDA/);
+        assert.equal(tested.collectCourseItems([{ title: "Padre", children: [{ title: "Figlio" }] }]).length, 2);
+        """
+    )
+
+
+def test_student_dashboard_renders_missing_course_path_message() -> None:
+    run_student_dashboard_js(
+        """
+        tested.renderCoursePath({ years: [] }, []);
+
+        assert.match(tested.els.coursePath.innerHTML, /Percorso non disponibile/);
+        assert.equal(tested.els.coursePathStatus.textContent, "");
         """
     )
 

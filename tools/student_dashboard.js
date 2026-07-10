@@ -7,6 +7,8 @@ const els = {
   summary: document.querySelector("#summary"),
   status: document.querySelector("#status"),
   assignments: document.querySelector("#assignments"),
+  coursePath: document.querySelector("#coursePath"),
+  coursePathStatus: document.querySelector("#coursePathStatus"),
   assignmentDetailModal: document.querySelector("#assignmentDetailModal"),
   assignmentDetailTitle: document.querySelector("#assignmentDetailTitle"),
   assignmentDetailBody: document.querySelector("#assignmentDetailBody"),
@@ -16,6 +18,7 @@ const els = {
 const DEMO_STUDENTS = ["bianchi-luca", "rossi-mario", "verdi-anna", "neri-giulia"];
 let currentDashboardPayload = { student_id: "", assignments: [] };
 let currentClassLabel = "Dai registri consegne";
+let currentCourseDesign = null;
 
 async function api(path, options = {}) {
   const response = await fetch(path, options);
@@ -252,6 +255,116 @@ function renderSummary(studentId, assignments) {
   `).join("");
 }
 
+function collectCourseItems(items, depth = 0) {
+  const rows = [];
+  for (const item of Array.isArray(items) ? items : []) {
+    if (!item || typeof item !== "object") continue;
+    rows.push({ item, depth });
+    rows.push(...collectCourseItems(item.children, depth + 1));
+  }
+  return rows;
+}
+
+function assignmentByActivityId(assignments) {
+  const byId = new Map();
+  for (const assignment of assignments) {
+    const activityId = String(assignment?.activity_id || "").trim();
+    if (activityId && !byId.has(activityId)) byId.set(activityId, assignment);
+  }
+  return byId;
+}
+
+function courseItemActivities(item) {
+  return Array.isArray(item?.activity_ids)
+    ? item.activity_ids.map((activityId) => String(activityId || "").trim()).filter(Boolean)
+    : [];
+}
+
+function courseActivityBadge(activityId, assignmentsById) {
+  const assignment = assignmentsById.get(activityId);
+  const label = assignment ? assignmentTitle(assignment) || activityId : activityId;
+  const kind = assignment?.status === "missing"
+    ? "badgeBad"
+    : assignment?.late
+      ? "badgeWarn"
+      : assignment?.submitted
+        ? "badgeOk"
+        : "";
+  return `<span class="badge ${kind}">${escapeHtml(label)}</span>`;
+}
+
+function renderCoursePath(design, assignments = []) {
+  if (!els.coursePath) return;
+  const years = Array.isArray(design?.years) ? design.years : [];
+  if (!years.length) {
+    els.coursePath.innerHTML = '<p class="status">Percorso non disponibile per questa classe.</p>';
+    if (els.coursePathStatus) els.coursePathStatus.textContent = "";
+    return;
+  }
+  const assignmentsById = assignmentByActivityId(assignments);
+  const yearCards = years.map((year) => {
+    const udas = Array.isArray(year?.udas) ? year.udas : [];
+    const udaCards = udas.map((uda) => {
+      const items = collectCourseItems(uda.items);
+      const linkedActivities = [...new Set(items.flatMap(({ item }) => courseItemActivities(item)))];
+      const visibleItems = items.slice(0, 6);
+      return `
+        <article class="courseUda">
+          <header>
+            <div>
+              <h4>${escapeHtml(uda.title || uda.id || "UDA senza titolo")}</h4>
+              <p class="meta">
+                <span>${escapeHtml(uda.path || "percorso non indicato")}</span>
+                <span>${escapeHtml(uda.weeks ? `${uda.weeks} settimane` : "durata non indicata")}</span>
+                <span>${items.length} paragrafi</span>
+              </p>
+            </div>
+          </header>
+          <div class="courseLinkedActivities">
+            ${linkedActivities.length
+              ? linkedActivities.map((activityId) => courseActivityBadge(activityId, assignmentsById)).join("")
+              : '<span class="status">Nessuna attivita collegata.</span>'}
+          </div>
+          <ul class="courseItemList">
+            ${visibleItems.map(({ item, depth }) => `
+              <li style="--depth: ${escapeHtml(depth)}">
+                ${item.href ? safeExternalLink(item.href, item.title || item.id || "-") : escapeHtml(item.title || item.id || "-")}
+                <span>${escapeHtml(item.source || item.source_id || "")}</span>
+              </li>
+            `).join("")}
+          </ul>
+          ${items.length > visibleItems.length ? `<p class="status">Altri ${items.length - visibleItems.length} paragrafi nel percorso.</p>` : ""}
+        </article>
+      `;
+    }).join("");
+    return `
+      <article class="courseYear">
+        <h3>${escapeHtml(year.title || year.id || "Anno senza titolo")}</h3>
+        ${year.description ? `<p>${escapeHtml(year.description)}</p>` : ""}
+        <div class="courseUdaGrid">${udaCards || '<p class="status">Nessuna UDA disponibile.</p>'}</div>
+      </article>
+    `;
+  }).join("");
+  els.coursePath.innerHTML = yearCards;
+  if (els.coursePathStatus) {
+    const udaCount = years.reduce((total, year) => total + (Array.isArray(year?.udas) ? year.udas.length : 0), 0);
+    els.coursePathStatus.textContent = `${years.length} anni · ${udaCount} UDA`;
+  }
+}
+
+async function loadCoursePath() {
+  try {
+    currentCourseDesign = await api("/api/course-design");
+    renderCoursePath(currentCourseDesign, currentDashboardPayload.assignments);
+  } catch (error) {
+    currentCourseDesign = null;
+    if (els.coursePath) {
+      els.coursePath.innerHTML = '<p class="status">Percorso non disponibile per questa classe.</p>';
+    }
+    if (els.coursePathStatus) els.coursePathStatus.textContent = `Errore: ${error.message}`;
+  }
+}
+
 function renderFeedback(feedback) {
   if (!feedback) {
     return '<p class="emptyFeedback">Nessun feedback approvato dal docente per questa consegna.</p>';
@@ -469,6 +582,7 @@ function renderDashboard(payload) {
   const nextAssignment = nextOpenAssignment(assignments);
   const visibleAssignments = sortedAssignments(filteredAssignments(assignments, filterValue), sortValue);
   renderSummary(payload.student_id || "-", assignments);
+  renderCoursePath(currentCourseDesign, assignments);
   els.status.textContent = visibleAssignments.length === assignments.length
     ? `${assignments.length} consegne trovate.`
     : `${visibleAssignments.length} di ${assignments.length} consegne visibili.`;
@@ -538,3 +652,5 @@ loadStudentOptions(els.studentId.value)
   .catch((error) => {
     els.status.textContent = `Errore: ${error.message}`;
   });
+
+loadCoursePath();
