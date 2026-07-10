@@ -2,6 +2,7 @@
 
 import json
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Literal, Protocol
 
 
@@ -184,6 +185,36 @@ class DeterministicGradingService:
             score=score,
             detail=execution.detail,
         )
+
+
+class GradeActivityExecutionService:
+    """ExecutionService adapter backed by scripts.grade_activity."""
+
+    def run(self, request: ExecutionRequest) -> ExecutionResult:
+        """Run the existing grade_activity runner and return an ExecutionResult."""
+
+        from scripts import grade_activity
+
+        activity_path = request.metadata.get("activity_path")
+        source_path = request.metadata.get("source_path")
+        if not activity_path or not source_path:
+            return ExecutionResult(
+                status="invalid_payload",
+                detail="ExecutionRequest.metadata deve includere activity_path e source_path.",
+            )
+
+        try:
+            activity = grade_activity.load_activity(Path(str(activity_path)))
+        except (OSError, json.JSONDecodeError) as error:
+            return ExecutionResult(status="invalid_payload", detail=f"Activity non caricata: {error}")
+
+        report = grade_activity.grade_activity(
+            activity,
+            Path(str(source_path)),
+            timeout_seconds=request.timeout_seconds,
+            language=request.language,
+        )
+        return execution_result_from_grade_activity_report(report)
 
 
 def execution_result_from_payload(payload: str | dict[str, Any]) -> ExecutionResult:
