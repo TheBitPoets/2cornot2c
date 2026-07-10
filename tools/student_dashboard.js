@@ -199,6 +199,15 @@ function gradeValue(grading) {
   return grade == null || String(grade).trim() === "" ? "-" : grade;
 }
 
+function nextOpenDueAt(assignments) {
+  const upcoming = assignments
+    .filter((item) => !item.submitted || item.status === "missing")
+    .map((item) => ({ dueAt: item.due_at, timestamp: timestampOrInfinity(item.due_at) }))
+    .filter((item) => Number.isFinite(item.timestamp))
+    .sort((left, right) => left.timestamp - right.timestamp);
+  return upcoming[0]?.dueAt || "";
+}
+
 function renderSummary(studentId, assignments) {
   const submitted = assignments.filter((item) => item.submitted).length;
   const missing = assignments.filter((item) => item.status === "missing").length;
@@ -212,6 +221,7 @@ function renderSummary(studentId, assignments) {
     ["Mancanti", missing],
     ["In ritardo", late],
     ["Feedback", approvedFeedback],
+    ["Prossima scadenza", formatDate(nextOpenDueAt(assignments))],
   ];
   els.summary.innerHTML = cards.map(([label, value]) => `
     <article class="summaryCard">

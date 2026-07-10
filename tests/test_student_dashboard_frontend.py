@@ -54,6 +54,7 @@ def run_student_dashboard_js(assertions: str) -> None:
         assignmentMatchesFilter,
         filteredAssignments,
         sortedAssignments,
+        nextOpenDueAt,
         safeExternalLink,
         studentLabel,
         rosterLabel,
@@ -122,6 +123,7 @@ def test_student_dashboard_renders_summary_and_assignment_card() -> None:
         assert.match(tested.els.summary.innerHTML, /<strong>Mancanti<\\/strong>\\s*<span>1<\\/span>/);
         assert.match(tested.els.summary.innerHTML, /<strong>In ritardo<\\/strong>\\s*<span>0<\\/span>/);
         assert.match(tested.els.summary.innerHTML, /<strong>Feedback<\\/strong>\\s*<span>1<\\/span>/);
+        assert.match(tested.els.summary.innerHTML, /<strong>Prossima scadenza<\\/strong>/);
         assert.match(tested.els.assignments.innerHTML, /Somma in Python/);
         assert.match(tested.els.assignments.innerHTML, /Feedback docente/);
         assert.match(tested.els.assignments.innerHTML, /Hai gestito correttamente/);
@@ -219,6 +221,35 @@ def test_student_dashboard_sorts_visible_assignments() -> None:
           "c-array-001",
           "python-base-somma-001",
         ]));
+        """
+    )
+
+
+def test_student_dashboard_summarizes_next_open_due_date() -> None:
+    run_student_dashboard_js(
+        """
+        const submitted = {
+          activity_id: "python-base-somma-001",
+          due_at: "2026-10-12T23:59:00+02:00",
+          status: "submitted_on_time",
+          submitted: true,
+        };
+        const openLater = {
+          activity_id: "python-loop-001",
+          due_at: "2026-10-20T23:59:00+02:00",
+          status: "assigned",
+          submitted: false,
+        };
+        const openSooner = {
+          activity_id: "c-array-001",
+          due_at: "2026-10-18T23:59:00+02:00",
+          status: "assigned",
+          submitted: false,
+        };
+
+        assert.equal(tested.nextOpenDueAt([submitted, openLater, openSooner]), "2026-10-18T23:59:00+02:00");
+        tested.renderDashboard({ student_id: "rossi-mario", assignments: [submitted, openLater, openSooner] });
+        assert.match(tested.els.summary.innerHTML, /<strong>Prossima scadenza<\\/strong>\\s*<span>18\\/10\\/26, 23:59<\\/span>/);
         """
     )
 
