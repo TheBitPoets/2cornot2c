@@ -16,7 +16,7 @@ Poi apri:
 tools/student_dashboard.html
 ```
 
-Per la demo puoi usare `bianchi-luca` come `student_id`: nel registro demo degli stati AI ha un feedback gia approvato e quindi visibile nella vista studente.
+Per la demo puoi usare `bianchi-luca`: nel registro demo degli stati AI ha un feedback gia approvato e quindi visibile nella vista studente.
 
 ## Cosa mostra
 
@@ -25,6 +25,14 @@ La pagina legge i registri in `teacher-reports/**/*.json` tramite:
 ```text
 /api/student-dashboard?student_id=<id>
 ```
+
+La lista studenti della UI viene popolata dai dati gia disponibili in:
+
+```text
+/api/assignment-overview
+```
+
+Questo e un compromesso MVP: evita una nuova fonte dati mentre stiamo stabilizzando i registri. Quando passeremo a classi reali, la fonte autorevole degli studenti dovra essere il provider classe, per esempio GitHub Team oppure un roster locale importato/sincronizzato.
 
 Per ogni consegna dello studente mostra:
 
@@ -57,7 +65,8 @@ Questo mantiene separato il lavoro di revisione docente dalla comunicazione allo
 Questa e una vista MVP:
 
 - non ha login;
-- lo studente viene scelto manualmente tramite campo `student_id`;
+- lo studente viene scelto da una lista derivata dai registri, con fallback demo;
+- la lista studenti non arriva ancora da GitHub Team o da un roster locale autorevole;
 - non permette ancora consegna file o esecuzione test;
 - non distingue ancora tentativi multipli;
 - non applica permessi reali lato server.

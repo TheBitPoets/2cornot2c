@@ -6,6 +6,8 @@ const els = {
   assignments: document.querySelector("#assignments"),
 };
 
+const DEMO_STUDENTS = ["bianchi-luca", "rossi-mario", "verdi-anna", "neri-giulia"];
+
 async function api(path) {
   const response = await fetch(path);
   if (!response.ok) {
@@ -22,6 +24,42 @@ async function api(path) {
     throw new Error(`${response.status} ${response.statusText}${detail ? `: ${detail}` : ""}`);
   }
   return response.json();
+}
+
+function studentLabel(studentId) {
+  return String(studentId ?? "")
+    .split("-")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toLocaleUpperCase("it-IT") + part.slice(1))
+    .join(" ") || "-";
+}
+
+function uniqueStudentsFromOverview(rows) {
+  const students = new Set();
+  for (const row of rows) {
+    const student = String(row?.student_id || row?.student || "").trim();
+    if (student) students.add(student);
+  }
+  return [...students].sort((a, b) => a.localeCompare(b, "it", { numeric: true, sensitivity: "base" }));
+}
+
+function populateStudentOptions(students, preferredStudentId = "") {
+  const options = students.length ? students : DEMO_STUDENTS;
+  const selected = options.includes(preferredStudentId) ? preferredStudentId : options[0];
+  els.studentId.innerHTML = options.map((student) => `
+    <option value="${escapeHtml(student)}"${student === selected ? " selected" : ""}>${escapeHtml(studentLabel(student))}</option>
+  `).join("");
+  els.studentId.value = selected;
+  return selected;
+}
+
+async function loadStudentOptions(preferredStudentId = "") {
+  try {
+    const payload = await api("/api/assignment-overview");
+    return populateStudentOptions(uniqueStudentsFromOverview(payload.rows || []), preferredStudentId);
+  } catch {
+    return populateStudentOptions([], preferredStudentId);
+  }
 }
 
 function escapeHtml(value) {
@@ -180,6 +218,8 @@ els.form.addEventListener("submit", (event) => {
   });
 });
 
-loadStudentDashboard(els.studentId.value).catch((error) => {
-  els.status.textContent = `Errore: ${error.message}`;
-});
+loadStudentOptions(els.studentId.value)
+  .then((studentId) => loadStudentDashboard(studentId))
+  .catch((error) => {
+    els.status.textContent = `Errore: ${error.message}`;
+  });

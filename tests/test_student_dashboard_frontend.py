@@ -49,6 +49,9 @@ def run_student_dashboard_js(assertions: str) -> None:
         renderAssignment,
         renderDashboard,
         safeExternalLink,
+        studentLabel,
+        uniqueStudentsFromOverview,
+        populateStudentOptions,
         statusBadge,
         gradingBadge,
         gradeValue,
@@ -126,5 +129,38 @@ def test_student_dashboard_rejects_unsafe_external_links() -> None:
         const unsafe = tested.safeExternalLink("javascript:alert(1)", "Repository", "repo-name");
         assert.doesNotMatch(unsafe, /href=/);
         assert.match(unsafe, /repo-name/);
+        """
+    )
+
+
+def test_student_dashboard_populates_students_from_overview_rows() -> None:
+    run_student_dashboard_js(
+        """
+        const students = tested.uniqueStudentsFromOverview([
+          { student: "verdi-anna" },
+          { student_id: "rossi-mario", student: "legacy-name" },
+          { student: "verdi-anna" },
+          { student: "" },
+        ]);
+
+        assert.equal(JSON.stringify(students), JSON.stringify(["rossi-mario", "verdi-anna"]));
+        const selected = tested.populateStudentOptions(students, "verdi-anna");
+        assert.equal(selected, "verdi-anna");
+        assert.equal(tested.els.studentId.value, "verdi-anna");
+        assert.match(tested.els.studentId.innerHTML, /Rossi Mario/);
+        assert.match(tested.els.studentId.innerHTML, /Verdi Anna/);
+        """
+    )
+
+
+def test_student_dashboard_uses_demo_students_when_overview_is_empty() -> None:
+    run_student_dashboard_js(
+        """
+        const selected = tested.populateStudentOptions([], "bianchi-luca");
+
+        assert.equal(selected, "bianchi-luca");
+        assert.match(tested.els.studentId.innerHTML, /Bianchi Luca/);
+        assert.match(tested.els.studentId.innerHTML, /Rossi Mario/);
+        assert.equal(tested.studentLabel("neri-giulia"), "Neri Giulia");
         """
     )

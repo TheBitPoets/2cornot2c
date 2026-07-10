@@ -209,6 +209,7 @@ Questa fase serve a togliere al docente la gestione manuale di file e repository
    - sincronizzazione studenti;
    - studenti nuovi, rimossi o non riconosciuti;
    - stato collegamento GitHub.
+   - usare GitHub Team o roster locale come fonte autorevole per la lista studenti, sostituendo i fallback MVP derivati dai registri.
 7. Aggiungere una pagina creazione e modifica activity:
    - creazione da GUI;
    - modifica activity;
