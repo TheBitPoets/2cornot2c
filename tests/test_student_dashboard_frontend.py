@@ -300,7 +300,9 @@ def test_student_dashboard_open_assignment_action_requires_source_link() -> None
           }],
         });
 
-        assert.doesNotMatch(tested.els.assignments.innerHTML, /Apri consegna/);
+        assert.match(tested.els.assignments.innerHTML, /Apri consegna/);
+        assert.match(tested.els.assignments.innerHTML, /disabled/);
+        assert.match(tested.els.assignments.innerHTML, /Consegna mancante/);
         assert.match(tested.els.assignments.innerHTML, /Repository/);
         """
     )

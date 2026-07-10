@@ -269,6 +269,9 @@ function renderAssignment(assignment, isNext = false) {
   const grading = assignment.grading || {};
   const failedTests = Array.isArray(grading.failed_tests) ? grading.failed_tests : [];
   const actionHref = safeExternalHref(assignment.source_github_url);
+  const unavailableLabel = assignment.status === "missing" || !assignment.submitted
+    ? "Consegna mancante"
+    : "File consegna non disponibile";
   const repoLink = assignment.repo_github_url
     ? safeExternalLink(assignment.repo_github_url, "Repository", assignment.repo || "-")
     : escapeHtml(assignment.repo || "-");
@@ -291,7 +294,11 @@ function renderAssignment(assignment, isNext = false) {
           ${statusBadge(assignment)}
         </div>
       </div>
-      ${actionHref ? `<p class="assignmentActions"><a class="actionButton" href="${escapeHtml(actionHref)}" target="_blank" rel="noreferrer">Apri consegna</a></p>` : ""}
+      <p class="assignmentActions">
+        ${actionHref
+          ? `<a class="actionButton" href="${escapeHtml(actionHref)}" target="_blank" rel="noreferrer">Apri consegna</a>`
+          : `<button type="button" class="actionButton actionButtonDisabled" disabled>Apri consegna</button><span class="actionUnavailable">${escapeHtml(unavailableLabel)}</span>`}
+      </p>
       <p class="details">
         <span>${gradingBadge(grading)}</span>
         <span>Test: ${escapeHtml(grading.tests_passed ?? "-")}/${escapeHtml(grading.tests_total ?? "-")}</span>

@@ -318,6 +318,11 @@ button:hover { transform: translateY(-1px); }
 }
 
 .assignmentActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .45rem;
+  min-width: 0;
   margin: 0;
 }
 
@@ -340,6 +345,23 @@ button:hover { transform: translateY(-1px); }
 
 .actionButton:hover {
   transform: translateY(-1px);
+}
+
+.actionButtonDisabled,
+.actionButtonDisabled:hover {
+  border-color: rgba(17, 17, 17, .18);
+  background: #eeeeee;
+  color: #777777;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.actionUnavailable {
+  color: var(--bad);
+  font-size: .78rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
 }
 
 .feedback {
