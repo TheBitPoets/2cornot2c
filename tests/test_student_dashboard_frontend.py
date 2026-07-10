@@ -286,6 +286,26 @@ def test_student_dashboard_rejects_unsafe_external_links() -> None:
     )
 
 
+def test_student_dashboard_open_assignment_action_requires_source_link() -> None:
+    run_student_dashboard_js(
+        """
+        tested.renderDashboard({
+          student_id: "rossi-mario",
+          assignments: [{
+            activity_id: "python-base-somma-001",
+            title: "Somma in Python",
+            status: "assigned",
+            submitted: false,
+            repo_github_url: "https://github.com/TheBitPoets/2cornot2c",
+          }],
+        });
+
+        assert.doesNotMatch(tested.els.assignments.innerHTML, /Apri consegna/);
+        assert.match(tested.els.assignments.innerHTML, /Repository/);
+        """
+    )
+
+
 def test_student_dashboard_populates_students_from_overview_rows() -> None:
     run_student_dashboard_js(
         """

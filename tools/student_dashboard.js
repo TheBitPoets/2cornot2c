@@ -268,7 +268,7 @@ function renderFeedback(feedback) {
 function renderAssignment(assignment, isNext = false) {
   const grading = assignment.grading || {};
   const failedTests = Array.isArray(grading.failed_tests) ? grading.failed_tests : [];
-  const actionHref = safeExternalHref(assignment.source_github_url || assignment.repo_github_url);
+  const actionHref = safeExternalHref(assignment.source_github_url);
   const repoLink = assignment.repo_github_url
     ? safeExternalLink(assignment.repo_github_url, "Repository", assignment.repo || "-")
     : escapeHtml(assignment.repo || "-");

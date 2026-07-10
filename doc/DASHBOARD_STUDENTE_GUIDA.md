@@ -108,7 +108,7 @@ Per ogni consegna controlla:
 - link repository o file consegna quando disponibile;
 - feedback approvato.
 
-Quando il registro contiene un link valido, il pulsante **Apri consegna** apre il file della consegna; se il file non e disponibile ma il repository si, apre il repository.
+Quando il registro contiene un link valido al file, il pulsante **Apri consegna** apre il file della consegna. Se il file non e disponibile, il repository resta indicato nei dettagli ma il pulsante non viene mostrato.
 
 Screenshot previsto: `doc/images/dashboard-guides/studente-consegne.png`.
 
