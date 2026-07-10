@@ -5,6 +5,8 @@ import pytest
 from scripts.thebitlab_technical_services import (
     DeterministicGradingService,
     ExecutionResult,
+    ExecutionRequest,
+    GradeActivityExecutionService,
     GradingRequest,
     InvalidServicePayloadError,
     RunnerTestResult,
@@ -218,6 +220,58 @@ def test_grading_dict_from_grade_activity_report_marks_missing_source_as_failed_
     assert result["failed_tests"] == ["sorgente"]
     assert result["detail"] == "Sorgente non trovato: assignments/c-base-somma-001/main.c"
     assert result["report_status"] == "source-not-found"
+
+
+def test_grade_activity_execution_service_runs_existing_runner(monkeypatch, tmp_path) -> None:
+    activity_path = tmp_path / "activity.json"
+    source_path = tmp_path / "main.c"
+    activity_path.write_text('{"id": "c-base-somma-001"}', encoding="utf-8")
+    source_path.write_text("int main(void){return 0;}", encoding="utf-8")
+
+    from scripts import grade_activity
+
+    def fake_grade_activity(activity, source, *, timeout_seconds, language):
+        assert activity == {"id": "c-base-somma-001"}
+        assert source == source_path
+        assert timeout_seconds == 7
+        assert language == "c"
+        return {
+            "activity_id": activity["id"],
+            "passed": True,
+            "status": "passed",
+            "tests": [{"name": "base", "passed": True, "status": "passed"}],
+        }
+
+    monkeypatch.setattr(grade_activity, "grade_activity", fake_grade_activity)
+
+    result = GradeActivityExecutionService().run(
+        ExecutionRequest(
+            activity_id="c-base-somma-001",
+            student_id="rossi-mario",
+            files={"main.c": str(source_path)},
+            language="c",
+            timeout_seconds=7,
+            metadata={"activity_path": activity_path, "source_path": source_path},
+        )
+    )
+
+    assert result.status == "passed"
+    assert result.tests == [RunnerTestResult("base", True)]
+
+
+def test_grade_activity_execution_service_rejects_missing_paths() -> None:
+    result = GradeActivityExecutionService().run(
+        ExecutionRequest(
+            activity_id="c-base-somma-001",
+            student_id="rossi-mario",
+            files={},
+            language="c",
+            metadata={},
+        )
+    )
+
+    assert result.status == "invalid_payload"
+    assert "activity_path" in result.detail
 
 
 @pytest.mark.parametrize(
