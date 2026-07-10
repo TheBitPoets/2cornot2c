@@ -367,6 +367,36 @@ def test_student_dashboard_assignment_detail_modal_renders_selected_assignment()
     )
 
 
+def test_student_dashboard_closes_assignment_detail_when_dashboard_changes() -> None:
+    run_student_dashboard_js(
+        """
+        tested.renderDashboard({
+          student_id: "rossi-mario",
+          assignments: [{
+            activity_id: "python-base-somma-001",
+            title: "Somma in Python",
+            status: "submitted_on_time",
+            submitted: true,
+          }],
+        });
+        tested.openAssignmentDetail(0);
+        assert.equal(tested.els.assignmentDetailModal.hidden, false);
+
+        tested.renderDashboard({
+          student_id: "bianchi-luca",
+          assignments: [{
+            activity_id: "python-loop-001",
+            title: "Loop in Python",
+            status: "missing",
+            submitted: false,
+          }],
+        });
+
+        assert.equal(tested.els.assignmentDetailModal.hidden, true);
+        """
+    )
+
+
 def test_student_dashboard_populates_students_from_overview_rows() -> None:
     run_student_dashboard_js(
         """
