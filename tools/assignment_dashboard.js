@@ -83,6 +83,7 @@ const LEGEND_SECTIONS = {
 const state = {
   activities: [],
   reports: [],
+  classRosters: [],
   overviewRows: [],
   report: null,
   reportName: "",
@@ -171,6 +172,8 @@ const els = {
   filterButtons: document.querySelectorAll("[data-filter]"),
   activitySelect: document.querySelector("#activitySelect"),
   activityPath: document.querySelector("#activityPath"),
+  classRosterSelect: document.querySelector("#classRosterSelect"),
+  rosterStatus: document.querySelector("#rosterStatus"),
   outputName: document.querySelector("#outputName"),
   classId: document.querySelector("#classId"),
   classLabel: document.querySelector("#classLabel"),
@@ -402,6 +405,20 @@ async function loadOverview() {
   renderCoverage();
 }
 
+async function loadClassRosters() {
+  if (!els.classRosterSelect) return;
+  try {
+    const payload = await api("/api/class-rosters");
+    state.classRosters = payload.rosters || [];
+    renderClassRosterSelect();
+    setRosterStatus(state.classRosters.length ? `Roster disponibili: ${state.classRosters.length}.` : "Nessun roster locale disponibile.");
+  } catch (error) {
+    state.classRosters = [];
+    renderClassRosterSelect();
+    setRosterStatus(`Roster non disponibili: ${error.message}`);
+  }
+}
+
 function renderReportSelect() {
   const selected = els.reportSelect.value;
   els.reportSelect.innerHTML = '<option value="">Registri consegne</option>';
@@ -413,6 +430,32 @@ function renderReportSelect() {
     els.reportSelect.append(option);
   }
   els.reportSelect.value = selected;
+}
+
+function rosterOptionLabel(roster) {
+  const label = String(roster?.label || roster?.id || roster?.name || "").trim();
+  const year = String(roster?.school_year || "").trim();
+  const students = Number(roster?.students || 0);
+  const suffix = [year, students ? `${students} studenti` : ""].filter(Boolean).join(" - ");
+  return suffix ? `${label} (${suffix})` : label || "Roster senza nome";
+}
+
+function renderClassRosterSelect() {
+  if (!els.classRosterSelect) return;
+  const selected = els.classRosterSelect.value;
+  els.classRosterSelect.innerHTML = '<option value="">Seleziona roster</option>';
+  for (const roster of state.classRosters) {
+    const option = document.createElement("option");
+    option.value = roster.name;
+    option.textContent = rosterOptionLabel(roster);
+    els.classRosterSelect.append(option);
+  }
+  els.classRosterSelect.value = state.classRosters.some((roster) => roster.name === selected) ? selected : "";
+  els.classRosterSelect.disabled = state.classRosters.length === 0;
+}
+
+function setRosterStatus(message) {
+  if (els.rosterStatus) els.rosterStatus.textContent = message;
 }
 
 async function loadSelectedReport() {
@@ -1054,6 +1097,73 @@ function currentClassId(activity = null) {
 function defaultOutputName(activity) {
   const id = activity?.id || "registro";
   return `${slugPathSegment(currentClassId(activity))}/${id}.json`;
+}
+
+function currentActivity() {
+  return state.activities.find((candidate) => candidate.path === els.activityPath.value.trim().replaceAll("\\", "/"));
+}
+
+function localTargetFromStudent(student) {
+  const studentId = String(student?.id || "").trim();
+  const localPath = String(student?.local_path || student?.repo_path || student?.path || "").trim().replaceAll("\\", "/");
+  if (localPath) return { target: localPath, warning: "" };
+  const repoRef = String(student?.repo_ref || "").trim().replaceAll("\\", "/");
+  if (repoRef && !/^[^/]+\/[^/]+$/.test(repoRef) && !/^https?:\/\//i.test(repoRef)) {
+    return { target: repoRef, warning: "" };
+  }
+  if (studentId) {
+    return {
+      target: `examples/assignment_tracking/student_repos/${studentId}`,
+      warning: repoRef ? `${studentId}: repo_ref GitHub convertito in path demo locale.` : `${studentId}: repo_ref mancante, usato path demo locale.`,
+    };
+  }
+  return { target: "", warning: "Studente senza id ignorato." };
+}
+
+function rosterTargets(roster) {
+  const warnings = [];
+  const targets = [];
+  const students = Array.isArray(roster?.students) ? roster.students : [];
+  for (const student of students) {
+    if (!student || student.active === false) continue;
+    const result = localTargetFromStudent(student);
+    if (result.target) targets.push(result.target);
+    if (result.warning) warnings.push(result.warning);
+  }
+  return { targets, warnings };
+}
+
+function applyRosterToGenerateForm(roster) {
+  if (!roster) return { targets: [], warnings: ["Roster non valido."] };
+  els.classId.value = roster.id || "";
+  els.classLabel.value = roster.label || roster.id || "";
+  els.githubTeam.value = roster.github_team || "";
+  const result = rosterTargets(roster);
+  els.targetsText.value = result.targets.join("\n");
+  const activity = currentActivity();
+  if (activity?.id) els.outputName.value = defaultOutputName({ ...activity, class_id: roster.id, class_label: roster.label, github_team: roster.github_team });
+  setRosterStatus(result.warnings.length
+    ? `Roster applicato con avvisi: ${result.warnings.join(" ")}`
+    : `Roster applicato: ${result.targets.length} target studenti.`);
+  return result;
+}
+
+async function loadSelectedClassRoster() {
+  const name = els.classRosterSelect?.value || "";
+  if (!name) {
+    setRosterStatus("Seleziona un roster per compilare classe e target.");
+    return;
+  }
+  setRosterStatus(`Caricamento roster ${name}...`);
+  try {
+    const payload = await api("/api/class-rosters/load", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    });
+    applyRosterToGenerateForm(payload.roster);
+  } catch (error) {
+    setRosterStatus(`Roster non caricato: ${error.message}`);
+  }
 }
 
 function selectCoverageActivity(activityPath, outputName = "") {
@@ -2369,6 +2479,7 @@ els.reviewCloseBtn.addEventListener("click", closeReviewDialog);
 els.activitySelect.addEventListener("change", () => {
   if (els.activitySelect.value) selectActivity(els.activitySelect.value);
 });
+els.classRosterSelect?.addEventListener("change", loadSelectedClassRoster);
 els.activityPath.addEventListener("input", renderActivitySelect);
 els.classId.addEventListener("change", updateOutputNameForCurrentActivity);
 els.coverageBody.addEventListener("click", async (event) => {
@@ -2516,4 +2627,4 @@ setupCollapsiblePanels();
 setupPanelDragAndDrop();
 setFilter("all");
 setupResizableTables();
-Promise.all([loadReports(), loadActivities(), loadOverview()]).catch((error) => setStatus(`Errore: ${error.message}`));
+Promise.all([loadReports(), loadActivities(), loadOverview(), loadClassRosters()]).catch((error) => setStatus(`Errore: ${error.message}`));

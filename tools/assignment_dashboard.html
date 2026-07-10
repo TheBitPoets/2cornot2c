@@ -53,6 +53,12 @@
           <input id="activityPath" type="text" value="examples/assignment_tracking/demo_activity.json">
         </label>
         <label>
+          <span>Classe da roster</span>
+          <select id="classRosterSelect" aria-label="Roster classi locali">
+            <option value="">Caricamento roster...</option>
+          </select>
+        </label>
+        <label>
           <span>Output registro</span>
           <input id="outputName" type="text" value="demo/demo_assignment.json">
         </label>
@@ -86,6 +92,7 @@
 examples/assignment_tracking/student_repos/bianchi-luca
 examples/assignment_tracking/student_repos/verdi-anna</textarea>
         </label>
+        <p id="rosterStatus" class="status wideField" aria-live="polite"></p>
       </div>
       <div class="generateActions">
         <button id="generateReportBtn" type="button" class="primary" title="Genera il registro, lo salva in teacher-reports e lo carica nella dashboard.">Genera registro</button>

@@ -259,6 +259,10 @@ def run_dashboard_js(assertions: str) -> None:
         resetPanelOrder,
         setupPanelDragAndDrop,
         renderLegend,
+        rosterOptionLabel,
+        localTargetFromStudent,
+        rosterTargets,
+        applyRosterToGenerateForm,
         els,
         layout,
         FakeElement,
@@ -325,6 +329,59 @@ def test_legend_renders_static_marks_but_escapes_descriptions() -> None:
         assert.match(html, /<button type="button" class="smallButton">Apri<\\/button>/);
         assert.match(html, /&lt;script&gt;alert\\(1\\)&lt;\\/script&gt;/);
         assert.doesNotMatch(html, /<td><script>alert\\(1\\)<\\/script><\\/td>/);
+        """
+    )
+
+
+def test_class_roster_targets_fill_generate_form_with_demo_fallbacks() -> None:
+    run_dashboard_js(
+        """
+        tested.state.activities = [
+          { id: "somma", path: "activities/somma.json", class_id: "old-class" },
+        ];
+        tested.els.activityPath.value = "activities/somma.json";
+        const result = tested.applyRosterToGenerateForm({
+          id: "demo-3a",
+          label: "Classe demo 3A",
+          github_team: "team-demo-3a",
+          students: [
+            { id: "rossi-mario", display_name: "Rossi Mario", repo_ref: "TheBitPoets/rossi-mario", active: true },
+            { id: "bianchi-luca", local_path: "local/bianchi-luca", active: true },
+            { id: "verdi-anna", repo_ref: "examples/assignment_tracking/student_repos/verdi-anna", active: true },
+            { id: "neri-giulia", repo_ref: "TheBitPoets/neri-giulia", active: false },
+          ],
+        });
+
+        assert.equal(tested.els.classId.value, "demo-3a");
+        assert.equal(tested.els.classLabel.value, "Classe demo 3A");
+        assert.equal(tested.els.githubTeam.value, "team-demo-3a");
+        assert.equal(tested.els.outputName.value, "demo-3a/somma.json");
+        assert.equal(tested.els.targetsText.value, [
+          "examples/assignment_tracking/student_repos/rossi-mario",
+          "local/bianchi-luca",
+          "examples/assignment_tracking/student_repos/verdi-anna",
+        ].join("\\n"));
+        assert.equal(result.warnings.length, 1);
+        assert.match(tested.els.rosterStatus.textContent, /repo_ref GitHub convertito/);
+        assert.equal(
+          tested.localTargetFromStudent({ id: "demo", repo_path: "studenti/demo" }).target,
+          "studenti/demo",
+        );
+        """
+    )
+
+
+def test_class_roster_option_label_includes_year_and_students() -> None:
+    run_dashboard_js(
+        """
+        assert.equal(
+          tested.rosterOptionLabel({ label: "3A TPSI", school_year: "2026-2027", students: 4 }),
+          "3A TPSI (2026-2027 - 4 studenti)",
+        );
+        assert.equal(
+          JSON.stringify(tested.rosterTargets({ students: [{ id: "rossi-mario", active: false }] })),
+          JSON.stringify({ targets: [], warnings: [] }),
+        );
         """
     )
 
