@@ -608,6 +608,7 @@ def test_ai_feedback_details_css_limits_expanded_content_height() -> None:
     assert ".aiFeedbackDetails dl" in css
     assert "max-height: 14rem;" in css
     assert "overflow-y: auto;" in css
+    assert "text-align: justify;" in css
 
 
 def test_modal_summary_helpers_include_tooltips() -> None:

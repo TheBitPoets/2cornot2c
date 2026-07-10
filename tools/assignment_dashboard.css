@@ -1116,6 +1116,7 @@ label > textarea {
 .aiFeedbackDetails dd {
   margin: .12rem 0 0;
   overflow-wrap: anywhere;
+  text-align: justify;
 }
 
 .status {
