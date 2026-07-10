@@ -70,7 +70,7 @@ Usalo per capire rapidamente:
 - quante risultano mancanti;
 - quante risultano in ritardo;
 - se ci sono feedback approvati visibili.
-- qual e la prossima scadenza tra le consegne non ancora consegnate o mancanti.
+- qual e la prossima attivita da gestire e quando scade.
 
 Screenshot previsto: `doc/images/dashboard-guides/studente-riepilogo.png`.
 

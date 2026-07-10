@@ -54,6 +54,7 @@ def run_student_dashboard_js(assertions: str) -> None:
         assignmentMatchesFilter,
         filteredAssignments,
         sortedAssignments,
+        nextOpenAssignment,
         nextOpenDueAt,
         safeExternalLink,
         studentLabel,
@@ -247,8 +248,10 @@ def test_student_dashboard_summarizes_next_open_due_date() -> None:
           submitted: false,
         };
 
+        assert.equal(tested.nextOpenAssignment([submitted, openLater, openSooner]).activity_id, "c-array-001");
         assert.equal(tested.nextOpenDueAt([submitted, openLater, openSooner]), "2026-10-18T23:59:00+02:00");
         tested.renderDashboard({ student_id: "rossi-mario", assignments: [submitted, openLater, openSooner] });
+        assert.match(tested.els.summary.innerHTML, /<strong>Prossima attivita<\\/strong>\\s*<span>c-array-001<\\/span>/);
         assert.match(tested.els.summary.innerHTML, /<strong>Prossima scadenza<\\/strong>\\s*<span>18\\/10\\/26, 23:59<\\/span>/);
         """
     )
