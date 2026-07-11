@@ -17,8 +17,25 @@ def run_student_dashboard_js(assertions: str) -> None:
         this.textContent = "";
         this.innerHTML = "";
         this.disabled = false;
+        this.dataset = selector.includes("list")
+          ? {{ studentCalendarDisplay: "list" }}
+          : selector.includes("calendar")
+            ? {{ studentCalendarDisplay: "calendar" }}
+            : {{}};
+        this.classList = {{
+          values: new Set(),
+          toggle: (name, force) => {{
+            if (force) this.classList.values.add(name);
+            else this.classList.values.delete(name);
+          }},
+          contains: (name) => this.classList.values.has(name),
+        }};
       }}
       addEventListener() {{}}
+      setAttribute(name, value) {{ this[name] = value; }}
+      closest() {{ return this; }}
+      querySelector(selector) {{ return elementFor(`${{this.selector}} ${{selector}}`); }}
+      querySelectorAll() {{ return []; }}
     }}
 
     const elements = new Map();
@@ -30,7 +47,12 @@ def run_student_dashboard_js(assertions: str) -> None:
     const context = {{
       console,
       URL,
-      document: {{ querySelector: elementFor }},
+      document: {{
+        querySelector: elementFor,
+        querySelectorAll: (selector) => selector === "[data-student-calendar-display]"
+          ? [elementFor("[data-student-calendar-display=calendar]"), elementFor("[data-student-calendar-display=list]")]
+          : [],
+      }},
       fetch: async () => ({{
         ok: true,
         status: 200,
@@ -48,6 +70,7 @@ def run_student_dashboard_js(assertions: str) -> None:
     vm.runInNewContext(`${{source}}
       globalThis.__studentDashboardTest = {{
         renderSummary,
+        renderStudentCalendar,
         renderCoursePath,
         renderFeedback,
         renderAssignment,
@@ -60,6 +83,7 @@ def run_student_dashboard_js(assertions: str) -> None:
         sortedAssignments,
         nextOpenAssignment,
         nextOpenDueAt,
+        studentCalendarEvents,
         collectCourseItems,
         courseItemHref,
         safeExternalHref,
@@ -74,6 +98,10 @@ def run_student_dashboard_js(assertions: str) -> None:
         statusBadge,
         gradingBadge,
         gradeValue,
+        setCurrentCourseDesign: (design) => {{ currentCourseDesign = design; }},
+        setCurrentSchoolCalendar: (calendar) => {{ currentSchoolCalendar = calendar; }},
+        setStudentCalendarDisplay: (display) => {{ currentStudentCalendarView.display = display; }},
+        setVisibleStudentPathIds: (ids) => {{ visibleStudentPathIds = new Set(ids); }},
         els,
       }};
     `, context);
@@ -275,6 +303,221 @@ def test_student_dashboard_summarizes_next_open_due_date() -> None:
         assert.match(tested.els.summary.innerHTML, /<strong>Prossima scadenza<\\/strong>\\s*<span>18\\/10\\/26, 23:59<\\/span>/);
         assert.match(tested.els.assignments.innerHTML, /Prossima scadenza/);
         assert.equal((tested.els.assignments.innerHTML.match(/Prossima scadenza/g) || []).length, 2);
+        """
+    )
+
+
+def test_student_dashboard_renders_readonly_calendar_events() -> None:
+    run_student_dashboard_js(
+        """
+        const openSooner = {
+          activity_id: "python-base-somma-001",
+          title: "Somma in Python",
+          kind: "compito-casa",
+          student_support_mode: "feedback-tecnico",
+          assigned_at: "2026-10-10T08:00:00+02:00",
+          due_at: "2026-10-18T23:59:00+02:00",
+          status: "assigned",
+          submitted: false,
+        };
+        const sameDeadline = {
+          activity_id: "python-loop-001",
+          title: "Loop in Python",
+          assigned_at: "2026-10-12T08:00:00+02:00",
+          due_at: "2026-10-18T23:59:00+02:00",
+          status: "missing",
+          submitted: false,
+        };
+        const submitted = {
+          activity_id: "python-stringhe-001",
+          title: "Stringhe in Python",
+          assigned_at: "2026-10-01T08:00:00+02:00",
+          due_at: "2026-10-15T23:59:00+02:00",
+          status: "submitted_on_time",
+          submitted: true,
+        };
+
+        tested.setCurrentSchoolCalendar({
+          start_date: "2026-09-01",
+          end_date: "2026-11-30",
+          closures: [{ label: "Ognissanti", from: "2026-11-01", to: "2026-11-01" }],
+        });
+        tested.renderDashboard({ student_id: "rossi-mario", assignments: [openSooner, sameDeadline, submitted] });
+
+        assert.match(tested.els.studentCalendar.innerHTML, /Stringhe in Python/);
+        assert.match(tested.els.studentCalendar.innerHTML, /Somma in Python/);
+        assert.match(tested.els.studentCalendar.innerHTML, /Loop in Python/);
+        assert.match(tested.els.studentCalendar.innerHTML, /Ognissanti/);
+        assert.match(tested.els.studentCalendar.innerHTML, /studentMonthGrid/);
+        assert.match(tested.els.studentCalendar.innerHTML, /studentMonthMainCard/);
+        assert.match(tested.els.studentCalendar.innerHTML, /data-student-calendar-nav="previous"/);
+        assert.equal((tested.els.studentCalendar.innerHTML.match(/data-student-calendar-nav="previous"/g) || []).length, 3);
+        assert.match(tested.els.studentCalendar.innerHTML, /data-calendar-detail-index="0"/);
+        assert.equal(tested.els.studentCalendarMonthField.classList.contains("isHidden"), false);
+        assert.equal(tested.els.studentCalendarWeekField.classList.contains("isHidden"), true);
+        assert.equal(tested.els.studentCalendarViewMode.closest().classList.contains("isHidden"), false);
+        assert.equal((tested.els.studentCalendar.innerHTML.match(/Prossima scadenza/g) || []).length, 2);
+        assert.match(tested.els.studentCalendarStatus.textContent, /7 eventi .* 3 scadenze .* 1 chiusure/);
+        assert.equal(tested.studentCalendarEvents([openSooner, sameDeadline, submitted]).at(-1).title, "Somma in Python");
+        """
+    )
+
+
+def test_student_dashboard_calendar_can_render_list_view() -> None:
+    run_student_dashboard_js(
+        """
+        const assignment = {
+          activity_id: "python-base-somma-001",
+          title: "Somma in Python",
+          assigned_at: "2026-10-10T08:00:00+02:00",
+          due_at: "2026-10-18T23:59:00+02:00",
+          status: "assigned",
+          submitted: false,
+        };
+
+        tested.setStudentCalendarDisplay("list");
+        tested.renderStudentCalendar([assignment]);
+
+        assert.match(tested.els.studentCalendar.innerHTML, /studentCalendarList/);
+        assert.match(tested.els.studentCalendar.innerHTML, /Somma in Python/);
+        assert.match(tested.els.studentCalendar.innerHTML, /data-calendar-detail-index="0"/);
+        assert.doesNotMatch(tested.els.studentCalendar.innerHTML, /studentMonthGrid/);
+        assert.equal(tested.els.studentCalendarMonthField.classList.contains("isHidden"), true);
+        assert.equal(tested.els.studentCalendarWeekField.classList.contains("isHidden"), true);
+        assert.equal(tested.els.studentCalendarViewMode.closest().classList.contains("isHidden"), true);
+        """
+    )
+
+
+def test_student_dashboard_calendar_supports_week_and_year_modes() -> None:
+    run_student_dashboard_js(
+        """
+        const assignment = {
+          activity_id: "python-base-somma-001",
+          title: "Somma in Python",
+          assigned_at: "2026-10-10T08:00:00+02:00",
+          due_at: "2026-10-18T23:59:00+02:00",
+          status: "assigned",
+          submitted: false,
+        };
+
+        tested.els.studentCalendarViewMode.value = "week";
+        tested.renderStudentCalendar([assignment]);
+        assert.match(tested.els.studentCalendar.innerHTML, /Settimana:/);
+        assert.match(tested.els.studentCalendar.innerHTML, /data-student-calendar-nav="next"/);
+        assert.equal(tested.els.studentCalendarMonthField.classList.contains("isHidden"), true);
+        assert.equal(tested.els.studentCalendarWeekField.classList.contains("isHidden"), false);
+
+        tested.els.studentCalendarViewMode.value = "year";
+        tested.renderStudentCalendar([assignment]);
+        assert.match(tested.els.studentCalendar.innerHTML, /studentMonthGrid/);
+        assert.doesNotMatch(tested.els.studentCalendar.innerHTML, /data-student-calendar-nav="next"/);
+        assert.equal(tested.els.studentCalendarMonthField.classList.contains("isHidden"), true);
+        assert.equal(tested.els.studentCalendarWeekField.classList.contains("isHidden"), true);
+        """
+    )
+
+
+def test_student_dashboard_calendar_includes_actual_uda_events() -> None:
+    run_student_dashboard_js(
+        """
+        tested.populateClassRosterOptions([{
+          name: "demo-3a.json",
+          id: "demo-3a",
+          label: "Classe demo 3A",
+        }], "demo-3a.json");
+        tested.setCurrentCourseDesign({
+          paths: [{
+            id: "percorso-demo",
+            title: "Percorso demo",
+            audience: { class_ids: ["demo-3a"] },
+            udas: [{
+              id: "uda-1",
+              title: "Fondamenti",
+              actual: {
+                status: "done",
+                start_date: "2026-10-07",
+                end_date: "2026-10-09",
+              },
+              items: [],
+            }],
+          }],
+        });
+
+        tested.renderStudentCalendar([]);
+
+        assert.match(tested.els.studentCalendar.innerHTML, /UDA-1 Fondamenti/);
+        assert.match(tested.els.studentCalendar.innerHTML, /UDA reale/);
+        assert.match(tested.els.studentCalendarStatus.textContent, /2 eventi .* 0 scadenze .* 2 UDA/);
+        """
+    )
+
+
+def test_student_dashboard_calendar_filters_visible_paths() -> None:
+    run_student_dashboard_js(
+        """
+        tested.populateClassRosterOptions([{
+          name: "demo-3a.json",
+          id: "demo-3a",
+          label: "Classe demo 3A",
+        }], "demo-3a.json");
+        tested.setCurrentCourseDesign({
+          paths: [{
+            id: "percorso-demo",
+            title: "Percorso demo",
+            audience: { class_ids: ["demo-3a"] },
+            udas: [{
+              id: "uda-1",
+              title: "Fondamenti",
+              actual: {
+                status: "done",
+                start_date: "2026-10-07",
+              },
+              items: [],
+            }],
+          }],
+        });
+
+        tested.renderStudentCalendar([]);
+        assert.match(tested.els.studentCalendar.innerHTML, /UDA-1 Fondamenti/);
+
+        tested.setVisibleStudentPathIds([]);
+        tested.renderStudentCalendar([]);
+        assert.doesNotMatch(tested.els.studentCalendar.innerHTML, /UDA-1 Fondamenti/);
+        """
+    )
+
+
+def test_student_dashboard_calendar_can_filter_closures() -> None:
+    run_student_dashboard_js(
+        """
+        tested.setCurrentSchoolCalendar({
+          start_date: "2026-10-01",
+          end_date: "2026-11-30",
+          closures: [{ label: "Ognissanti", from: "2026-11-01", to: "2026-11-01" }],
+        });
+        tested.els.studentCalendarFilter.value = "closures";
+        tested.renderStudentCalendar([{
+          title: "Somma in Python",
+          assigned_at: "2026-10-10T08:00:00+02:00",
+          due_at: "2026-10-18T23:59:00+02:00",
+          status: "assigned",
+          submitted: false,
+        }]);
+
+        assert.match(tested.els.studentCalendar.innerHTML, /Ognissanti/);
+        assert.doesNotMatch(tested.els.studentCalendar.innerHTML, /Somma in Python/);
+        """
+    )
+
+
+def test_student_dashboard_renders_empty_calendar_message() -> None:
+    run_student_dashboard_js(
+        """
+        tested.renderStudentCalendar([{ title: "Senza date" }]);
+
+        assert.match(tested.els.studentCalendar.innerHTML, /Nessuna data disponibile/);
+        assert.equal(tested.els.studentCalendarStatus.textContent, "");
         """
     )
 

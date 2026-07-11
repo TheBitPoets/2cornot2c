@@ -41,6 +41,50 @@
       <p class="status">Carica uno studente per vedere consegne, stato e feedback approvato.</p>
     </section>
 
+    <section class="studentCalendar">
+      <div class="sectionHead">
+        <h2>Calendario</h2>
+        <p id="studentCalendarStatus" class="status" aria-live="polite"></p>
+      </div>
+      <div class="studentCalendarControls">
+        <fieldset class="studentCalendarDisplayToggle" aria-label="Vista calendario">
+          <legend>Vista</legend>
+          <button type="button" data-student-calendar-display="calendar" aria-pressed="true">Calendario</button>
+          <button type="button" data-student-calendar-display="list" aria-pressed="false">Lista</button>
+        </fieldset>
+        <label>
+          <span>Modalita</span>
+          <select id="studentCalendarViewMode" name="student_calendar_view_mode">
+            <option value="year">Anno</option>
+            <option value="month" selected>Mese</option>
+            <option value="week">Settimana</option>
+          </select>
+        </label>
+        <label id="studentCalendarMonthField">
+          <span>Mese</span>
+          <select id="studentCalendarMonth" name="student_calendar_month"></select>
+        </label>
+        <label id="studentCalendarWeekField" class="isHidden">
+          <span>Settimana</span>
+          <select id="studentCalendarWeek" name="student_calendar_week"></select>
+        </label>
+        <label>
+          <span>Mostra</span>
+          <select id="studentCalendarFilter" name="student_calendar_filter">
+            <option value="all">Tutto</option>
+            <option value="assignments">Consegne</option>
+            <option value="udas">UDA</option>
+            <option value="closures">Festivita e interruzioni</option>
+            <option value="due">Scadenze</option>
+          </select>
+        </label>
+      </div>
+      <section id="studentPathFilters" class="studentPathFilters" hidden></section>
+      <div id="studentCalendar" class="studentCalendarBody">
+        <p class="status">Carica uno studente per vedere scadenze e finestre di lavoro.</p>
+      </div>
+    </section>
+
     <section class="coursePath">
       <div class="sectionHead">
         <h2>Percorso</h2>

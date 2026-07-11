@@ -92,9 +92,9 @@ p {
 
 h1 {
   margin-bottom: .35rem;
-  font-size: 3.2rem;
+  font-size: clamp(2rem, 5vw, 4.6rem);
   line-height: .92;
-  letter-spacing: 0;
+  letter-spacing: -.06em;
 }
 
 .subtitle {
@@ -160,13 +160,16 @@ button {
 button:hover { transform: translateY(-1px); }
 
 .summary,
+.studentCalendar,
 .coursePath,
 .assignments {
   min-width: 0;
-  border: 1px solid rgba(17, 17, 17, .12);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, .94);
+  border: 1px solid rgba(17, 17, 17, .16);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, .92);
   box-shadow: var(--shadow);
+  backdrop-filter: blur(10px);
+  overflow: hidden;
 }
 
 .summary {
@@ -178,10 +181,10 @@ button:hover { transform: translateY(-1px); }
 
 .summaryCard {
   min-width: 0;
-  border: 1px solid rgba(17, 17, 17, .1);
-  border-radius: 8px;
+  border: 1px solid rgba(17, 17, 17, .16);
+  border-radius: 18px;
   background: #ffffff;
-  padding: .8rem;
+  padding: .9rem;
 }
 
 .summaryCard strong {
@@ -200,16 +203,18 @@ button:hover { transform: translateY(-1px); }
 
 .sectionHead {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 1rem;
   min-width: 0;
-  padding: 1rem;
-  border-bottom: 1px solid rgba(17, 17, 17, .12);
+  padding: 1.1rem;
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, .72);
 }
 
 .sectionHead h2 {
   margin-bottom: 0;
+  font-size: 1.25rem;
 }
 
 .assignmentTools {
@@ -230,11 +235,378 @@ button:hover { transform: translateY(-1px); }
   min-width: 0;
 }
 
+.studentCalendarBody {
+  display: grid;
+  gap: .85rem;
+  min-width: 0;
+  padding: 1.1rem;
+}
+
+.studentCalendarControls {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .75rem;
+  align-items: end;
+  min-width: 0;
+  margin: 1.1rem 1.1rem 0;
+  border: 1px solid rgba(17, 17, 17, .16);
+  border-radius: 18px;
+  background: #ffffff;
+  padding: .9rem;
+}
+
+.studentCalendarControls label.isHidden {
+  display: none;
+}
+
+.studentCalendarDisplayToggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .35rem;
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.studentCalendarDisplayToggle legend {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 700;
+  padding: 0;
+}
+
+.studentCalendarDisplayToggle button {
+  min-height: 2.35rem;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  color: var(--ink);
+  box-shadow: none;
+  padding: .45rem .7rem;
+}
+
+.studentCalendarDisplayToggle button[aria-pressed="true"] {
+  border-color: #111111;
+  background: #111111;
+  color: #ffffff;
+}
+
+.studentCalendarControls select {
+  min-width: min(16rem, 45vw);
+}
+
+.studentPathFilters {
+  display: grid;
+  gap: .8rem;
+  min-width: 0;
+  margin: 1.1rem 1.1rem 0;
+  border: 1px solid rgba(17, 17, 17, .16);
+  border-radius: 18px;
+  background: #ffffff;
+  padding: .9rem;
+}
+
+.studentPathFilters[hidden] {
+  display: none;
+}
+
+.studentPathFiltersHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.studentPathFilterActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+}
+
+.studentPathFilterActions button {
+  min-height: 0;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  color: var(--ink);
+  box-shadow: none;
+  font-size: .72rem;
+  padding: .45rem .7rem;
+}
+
+.studentPathFilterList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.studentPathFilter {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  border: 1px solid rgba(17, 17, 17, .14);
+  border-radius: 999px;
+  background: #f8f8f8;
+  color: var(--ink);
+  font-size: .78rem;
+  font-weight: 800;
+  padding: .45rem .7rem;
+}
+
+.studentPathFilter input {
+  width: auto;
+  accent-color: #111111;
+}
+
+.studentCalendarLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+  min-width: 0;
+}
+
+.studentMonthGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: start;
+  min-width: 0;
+}
+
+.studentMonthGrid.studentMonthFocusGrid {
+  grid-template-columns: minmax(10rem, .72fr) minmax(20rem, 1.35fr) minmax(10rem, .72fr);
+}
+
+.studentMonthCard {
+  min-width: 0;
+  border: 1px solid rgba(17, 17, 17, .16);
+  border-radius: 18px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.studentMonthMainCard {
+  box-shadow: 0 18px 42px rgba(0, 0, 0, .1);
+}
+
+.studentMonthContextCard {
+  opacity: .74;
+  transform: scale(.94);
+  transform-origin: top center;
+}
+
+.studentMonthPlaceholder {
+  min-height: 1px;
+}
+
+.studentMonthTitle {
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, .78);
+  padding: .75rem;
+}
+
+.studentMonthTitle h3 {
+  margin: 0;
+  font-size: .9rem;
+}
+
+.studentMonthTitleNav {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .65rem;
+}
+
+.studentMonthTitleNav h3 {
+  text-align: center;
+}
+
+.studentMonthTitleNav button {
+  width: 2.1rem;
+  height: 2.1rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--ink);
+  box-shadow: none;
+  font-size: 1rem;
+  padding: 0;
+}
+
+.studentWeekCard {
+  min-width: 0;
+}
+
+.studentMonthWeekdays,
+.studentMonthDays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.studentMonthWeekdays span {
+  color: var(--muted);
+  font-size: .64rem;
+  font-weight: 900;
+  padding: .42rem .25rem;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.studentDayCell {
+  min-height: 4.2rem;
+  border-top: 1px solid rgba(17, 17, 17, .08);
+  border-left: 1px solid rgba(17, 17, 17, .08);
+  background: #ffffff;
+  padding: .32rem;
+  overflow: hidden;
+}
+
+.studentDayCell:nth-child(7n + 1) {
+  border-left: 0;
+}
+
+.studentDayOutsideMonth,
+.studentDayOutsideRange {
+  background: #f3f3f3;
+  color: #999999;
+}
+
+.studentDayHasEvents {
+  background: #f9fbf8;
+}
+
+.studentDayNumber {
+  display: block;
+  margin-bottom: .18rem;
+  font-size: .72rem;
+  font-weight: 900;
+}
+
+.studentMonthContextCard .studentDayCell {
+  min-height: 2.55rem;
+  padding: .22rem;
+}
+
+.studentWeekDays .studentDayCell {
+  min-height: 8rem;
+}
+
+.studentMonthContextCard .calendarPill {
+  max-height: 1.6rem;
+  overflow: hidden;
+}
+
+.calendarPill {
+  display: block;
+  margin-top: .16rem;
+  border-radius: 8px;
+  background: rgba(17, 17, 17, .07);
+  color: var(--ink);
+  font-size: .62rem;
+  font-weight: 800;
+  line-height: 1.18;
+  overflow-wrap: anywhere;
+  padding: .18rem .22rem;
+}
+
+.calendarPillButton {
+  width: 100%;
+  min-height: 0;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.calendarPillButton:hover,
+.studentCalendarListItemButton:hover {
+  outline: 2px solid rgba(17, 17, 17, .18);
+  transform: none;
+}
+
+.calendarPill strong {
+  display: inline-grid;
+  place-items: center;
+  width: .9rem;
+  height: .9rem;
+  margin-right: .15rem;
+  border-radius: 999px;
+  background: var(--bad);
+  color: #ffffff;
+  font-size: .62rem;
+}
+
+.calendarPriorityText {
+  margin-right: .2rem;
+  font-weight: 900;
+}
+
+.calendarPillDue {
+  background: rgba(180, 35, 24, .09);
+  color: var(--bad);
+}
+
+.calendarPillAssigned {
+  background: rgba(17, 17, 17, .07);
+}
+
+.calendarPillUda {
+  background: rgba(20, 122, 66, .1);
+  color: var(--ok);
+}
+
+.calendarPillClosure {
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(154, 45, 35, .14) 0,
+      rgba(154, 45, 35, .14) 6px,
+      #ffffff 6px,
+      #ffffff 11px
+    );
+  color: #8a2d24;
+}
+
+.studentCalendarList {
+  display: grid;
+  gap: .65rem;
+  min-width: 0;
+}
+
+.studentCalendarListItem {
+  display: grid;
+  grid-template-columns: minmax(8.5rem, auto) minmax(0, 1fr);
+  gap: .85rem;
+  align-items: start;
+  min-width: 0;
+  border: 1px solid rgba(17, 17, 17, .16);
+  border-left: 4px solid var(--line);
+  border-radius: 18px;
+  background: #ffffff;
+  padding: .85rem;
+}
+
+.studentCalendarListItem time {
+  color: var(--muted);
+  font-size: .78rem;
+  font-weight: 900;
+}
+
+.studentCalendarListItem h3 {
+  margin: 0 0 .28rem;
+  overflow-wrap: anywhere;
+  font-size: .98rem;
+}
+
+.studentCalendarListItemButton {
+  cursor: pointer;
+}
+
 .coursePathBody {
   display: grid;
   gap: 1rem;
   min-width: 0;
-  padding: 1rem;
+  padding: 1.1rem;
 }
 
 .courseSection {
@@ -260,8 +632,8 @@ button:hover { transform: translateY(-1px); }
   display: grid;
   gap: .75rem;
   min-width: 0;
-  border: 1px solid rgba(17, 17, 17, .1);
-  border-radius: 8px;
+  border: 1px solid rgba(17, 17, 17, .16);
+  border-radius: 18px;
   background: #ffffff;
   padding: .9rem;
 }
@@ -581,8 +953,8 @@ button:hover { transform: translateY(-1px); }
 
 .detailItem {
   min-width: 0;
-  border: 1px solid rgba(17, 17, 17, .1);
-  border-radius: 8px;
+  border: 1px solid rgba(17, 17, 17, .16);
+  border-radius: 18px;
   padding: .75rem;
   background: #fafafa;
 }
@@ -627,6 +999,23 @@ button:hover { transform: translateY(-1px); }
   }
 
   .courseItemList li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .studentCalendarControls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .studentMonthGrid,
+  .studentMonthGrid.studentMonthFocusGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .studentMonthContextCard {
+    transform: none;
+  }
+
+  .studentCalendarListItem {
     grid-template-columns: minmax(0, 1fr);
   }
 

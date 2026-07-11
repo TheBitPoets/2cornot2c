@@ -58,6 +58,25 @@ Screenshot previsto: `doc/images/dashboard-guides/studente-selezione.png`.
 
 Con dati reali, la selezione manuale sara sostituita o limitata da login, profilo studente o provider classe.
 
+## Nomenclatura: attivita e consegna
+
+Nella vista studente e importante distinguere due concetti.
+
+**Attivita** indica cio che il docente progetta o assegna: titolo, testo, tipo, modalita di supporto, scadenza, test, rubrica e collegamento al percorso.
+
+**Consegna** indica la relazione tra uno studente e una specifica attivita assegnata: stato personale, file caricati, commit, data di consegna, ritardo, grading, voto e feedback.
+
+Quando un'attivita viene assegnata a una classe o a uno studente, per ogni studente nasce gia una consegna attesa, anche se non sono ancora stati caricati file. Nella GUI studente questa situazione viene mostrata come **Da consegnare**. Dopo la scadenza, se non arriva nessun file, diventa **Mancante**.
+
+Quindi il calendario studente mostra:
+
+- consegne gia inviate;
+- consegne da fare, cioe attivita assegnate ma non ancora consegnate;
+- consegne future programmate, se hanno una data di assegnazione o una scadenza;
+- UDA o eventi del percorso, quando pubblicati.
+
+In sintesi: lato docente si parla spesso di **attivita**; lato studente si parla soprattutto di **consegne**, anche quando la consegna e ancora attesa.
+
 ## Riepilogo studente
 
 Dopo il caricamento, la pagina mostra un riepilogo dello studente.
@@ -75,6 +94,32 @@ Usalo per capire rapidamente:
 Screenshot previsto: `doc/images/dashboard-guides/studente-riepilogo.png`.
 
 La stessa consegna viene evidenziata nella lista con il badge **Prossima scadenza**. Se piu consegne aperte hanno la stessa prossima scadenza, il badge compare su tutte.
+
+## Calendario
+
+Il pannello **Calendario** mostra in sola lettura una vista simile a quella docente.
+
+Il selettore **Vista** permette di scegliere tra:
+
+- **Calendario**, utile per vedere la distribuzione nel tempo;
+- **Lista**, utile per leggere gli eventi in ordine cronologico.
+
+La modalità **Mese** mostra un mese centrale con i mesi laterali di contesto e le frecce per passare al mese precedente o successivo. Le frecce sono presenti anche nei mesi laterali, come nella vista docente. La modalità **Settimana** mostra solo la settimana selezionata, anche qui con frecce avanti e indietro. La modalità **Anno** mostra tutti i mesi dell'intervallo pubblicato.
+
+La vista puo mostrare:
+
+- data di assegnazione, quando disponibile;
+- data di scadenza, quando disponibile;
+- stato della consegna;
+- badge **Prossima scadenza** sulle consegne aperte con la scadenza piu vicina.
+- UDA reali svolte, quando il percorso contiene date consuntive pubblicate.
+- festivita, vacanze e interruzioni impostate dal docente nel calendario pubblicato.
+
+I controlli **Mese** e **Settimana** compaiono solo quando servono alla modalità scelta. Il filtro **Mostra** permette di visualizzare tutto, solo consegne, solo UDA, solo festivita/interruzioni o solo scadenze. La vista resta in sola lettura: lo studente puo consultare la programmazione e le scadenze, ma non modificarle.
+
+Il filtro **Percorsi visibili** permette di mostrare o nascondere gli eventi UDA dei percorsi associati allo studente o alla sua classe. Il comportamento ricalca il filtro dei percorsi nella vista calendario docente: **Tutti** mostra tutti i percorsi disponibili, **Nessuno** nasconde gli eventi dei percorsi lasciando visibili le consegne.
+
+Gli eventi collegati a una consegna sono cliccabili sia nella vista calendario sia nella vista lista. Il click apre lo stesso modal **Dettaglio** usato nel pannello **Consegne**, cosi lo studente vede sempre la stessa scheda completa: dati attivita, scadenze, stato, grading, link e feedback approvato. Gli eventi UDA o di percorso restano solo informativi finche non avranno una scheda dedicata.
 
 ## Percorso
 

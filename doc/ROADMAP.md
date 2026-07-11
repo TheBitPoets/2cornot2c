@@ -238,9 +238,11 @@ La pagina del percorso deve poter costruire UDA e argomenti usando paragrafi pro
 5. Aggiungere activity nel percorso:
    - come elementi autonomi tra gli argomenti;
    - dentro una UDA;
+   - agganciate a una lezione/UDA programmata o reale, per collegare lab, prove pratiche, prove scritte ed esercitazioni al momento didattico in cui vengono svolte;
    - come verifiche o prove collegate alla UDA;
    - come esercizi di laboratorio, casa o classe collegati a uno o piu argomenti.
 6. Mostrare le activity anche nel calendario quando hanno data, finestra temporale o scadenza.
+   - lato studente, visualizzare come consegne le activity agganciate alla lezione/UDA e mantenere anche consegne autonome fuori lezione, per esempio compiti a casa o recuperi.
 7. Decidere come visualizzare nel calendario:
    - le lezioni teoriche;
    - i laboratori;
@@ -307,6 +309,7 @@ Da avere per la prima prova:
    - mostrare solo percorsi esplicitamente associati allo studente o al suo gruppo/classe;
    - prevedere lato docente l'associazione di un percorso a un gruppo intero e l'eventuale assegnazione personalizzata a un singolo studente;
    - distinguere la programmazione prevista per UDA dalla programmazione reale svolta, evidenziando eventuali ritardi o slittamenti;
+   - mostrare allo studente, in sola lettura, il diagramma di Gantt della programmazione prevista e quello della programmazione reale del docente;
    - mostrare il calendario corrente con UDA, lezioni/lab, verifiche, compiti, consegne da fare, scadenze e finestre di lavoro;
    - aggiungere piu avanti un riepilogo delle priorita per lo studente, per esempio consegne in scadenza, verifiche vicine e attivita arretrate;
    - non esporre azioni o pagine docente nella navigazione studente;
@@ -373,7 +376,7 @@ Il pattern della pagina consegne va reso riutilizzabile.
    - course board;
    - pagina classi;
    - pagina activity;
-   - dashboard studente.
+   - dashboard studente, con pannelli spostabili via drag and drop come nella pagina consegne docente.
 5. Mantenere una colonna su smartphone.
 6. Evitare duplicazione CSS/JS tra pagine.
 7. Migliorare accessibilita di drag/drop e resize.
@@ -517,6 +520,10 @@ Passi progressivi:
 Ordine consigliato:
 
 1. Storage layer iniziale sopra JSON, con `schema_version` e root configurabile.
+   - chiarire e stabilizzare la relazione tra percorso didattico, calendario, consuntivi UDA e file fisici oggi separati (`doc/course_design.json`, `doc/course_designs/*.json`, `doc/calendars/*.json`);
+   - modellare la relazione percorso-calendario come molti-a-molti: lo stesso percorso puo essere associato a piu calendari, riproposto in periodi diversi, non coprire l'intero anno o ripetersi in finestre temporali diverse;
+   - definire una vista dati canonica che possa essere salvata prima su JSON e poi su SQLite senza cambiare le dashboard;
+   - evitare che docente e studente leggano versioni diverse dello stesso percorso/calendario.
 2. Provider layer minimo: interfaccia comune e implementazione GitHub iniziale.
 3. Gestione classi MVP: import/sync da GitHub Team o import manuale controllato.
 4. Pagina creazione/generazione/modifica activity con validazione.
@@ -528,11 +535,18 @@ Ordine consigliato:
 10. Event log minimale e provenienza minima per activity/contenuti generati.
 11. Cornice didattica generale e guida operativa docente/studente.
 12. Inserimento activity nel percorso e visualizzazione calendario.
-13. Archiviazione/cancellazione sicura di registri e activity.
-14. Catalogo fonti e import paragrafi da piu repository.
-15. Estensione layout pannelli alle altre pagine.
-16. Feedback assistito avanzato lato studente.
-17. Source provider API, indicizzazione frammenti e playground knowledge lab.
+13. Gestione consuntivi UDA reali:
+   - mostrare le UDA reali anche nella vista calendario docente;
+   - aggiungere un filtro calendario per scegliere tra UDA programmate, UDA reali o entrambe;
+   - rendere cliccabili le UDA reali nei calendari docente/studente e aprire un modal di dettaglio coerente;
+   - cancellare una UDA reale gia salvata dal calendario docente;
+   - ripristinare lo stato pianificato quando il consuntivo e stato inserito per errore;
+   - confermare prima della cancellazione e registrare provenienza/eventuale audit log.
+14. Archiviazione/cancellazione sicura di registri e activity.
+15. Catalogo fonti e import paragrafi da piu repository.
+16. Estensione layout pannelli alle altre pagine.
+17. Feedback assistito avanzato lato studente.
+18. Source provider API, indicizzazione frammenti e playground knowledge lab.
 
 ## Criterio di priorita
 
