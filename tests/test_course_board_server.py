@@ -277,6 +277,36 @@ def test_class_roster_helpers_use_local_roster_storage(tmp_path, monkeypatch) ->
     assert roster["students"][0]["local_path"] == "studenti/rossi-mario"
 
 
+def test_save_activity_builds_valid_draft_from_gui_payload(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "ACTIVITY_DIRS", [tmp_path / "activities"])
+    monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
+
+    result = course_board_server.save_activity({
+        "title": "Somma in Python",
+        "kind": "compito-casa",
+        "difficulty": "B",
+        "topics": "variabili, operatori",
+        "prompt": "Scrivi un programma che somma due numeri.",
+        "estimated_minutes": "25",
+        "class_id": "3A-TPSI",
+        "github_team": "team-3a",
+        "uda_id": "uda-1",
+    })
+
+    activity_path = tmp_path / "activities" / "drafts" / "somma-in-python.json"
+    saved_payload = json.loads(activity_path.read_text(encoding="utf-8"))
+    assert result["ok"] is True
+    assert result["activity"]["path"] == "activities/drafts/somma-in-python.json"
+    assert result["activities"] == [result["activity"]]
+    assert saved_payload["id"] == "somma-in-python"
+    assert saved_payload["titolo"] == "Somma in Python"
+    assert saved_payload["tipo"] == "compito-casa"
+    assert saved_payload["argomenti"] == ["variabili", "operatori"]
+    assert saved_payload["metriche"]["tempo_stimato_minuti"] == 25
+    assert saved_payload["contesto"] == {"classe": "3A-TPSI", "team_github": "team-3a", "uda": "uda-1"}
+
+
 def test_ai_secret_status_reports_paths_and_configured_keys_without_values(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "AI_SECRET_PATH", tmp_path / ".secrets" / "ai.secret")

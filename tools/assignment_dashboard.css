@@ -216,8 +216,22 @@ label > textarea {
 
 .generateActions {
   display: flex;
+  align-items: center;
+  gap: .75rem;
   justify-content: flex-end;
   padding: 0 1.1rem 1.1rem;
+}
+
+.inlineCheck {
+  display: inline-flex;
+  grid-template-columns: none;
+  align-items: center;
+  gap: .4rem;
+  margin-right: auto;
+}
+
+.inlineCheck input {
+  width: auto;
 }
 
 .reportLoadControls {

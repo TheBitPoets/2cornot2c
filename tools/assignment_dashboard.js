@@ -181,6 +181,20 @@ const els = {
   legendButtons: document.querySelectorAll("[data-legend-topic]"),
   legendTabButtons: document.querySelectorAll("[data-legend-tab]"),
   filterButtons: document.querySelectorAll("[data-filter]"),
+  activityAuthorStatus: document.querySelector("#activityAuthorStatus"),
+  activityAuthorTitle: document.querySelector("#activityAuthorTitle"),
+  activityAuthorId: document.querySelector("#activityAuthorId"),
+  activityAuthorKind: document.querySelector("#activityAuthorKind"),
+  activityAuthorDifficulty: document.querySelector("#activityAuthorDifficulty"),
+  activityAuthorTopics: document.querySelector("#activityAuthorTopics"),
+  activityAuthorMinutes: document.querySelector("#activityAuthorMinutes"),
+  activityAuthorClass: document.querySelector("#activityAuthorClass"),
+  activityAuthorTeam: document.querySelector("#activityAuthorTeam"),
+  activityAuthorPath: document.querySelector("#activityAuthorPath"),
+  activityAuthorUda: document.querySelector("#activityAuthorUda"),
+  activityAuthorPrompt: document.querySelector("#activityAuthorPrompt"),
+  activityAuthorOverwrite: document.querySelector("#activityAuthorOverwrite"),
+  saveActivityBtn: document.querySelector("#saveActivityBtn"),
   activitySelect: document.querySelector("#activitySelect"),
   activityPath: document.querySelector("#activityPath"),
   classRosterSelect: document.querySelector("#classRosterSelect"),
@@ -1141,6 +1155,44 @@ async function loadActivities() {
   state.activities = payload.activities || [];
   renderActivitySelect();
   renderCoverage();
+}
+
+async function saveActivityDraft() {
+  if (!els.saveActivityBtn) return;
+  els.saveActivityBtn.disabled = true;
+  if (els.activityAuthorStatus) els.activityAuthorStatus.textContent = "Salvataggio activity...";
+  try {
+    const payload = await api("/api/activities/save", {
+      method: "POST",
+      body: JSON.stringify({
+        title: els.activityAuthorTitle?.value || "",
+        id: els.activityAuthorId?.value || "",
+        kind: els.activityAuthorKind?.value || "",
+        difficulty: els.activityAuthorDifficulty?.value || "",
+        topics: els.activityAuthorTopics?.value || "",
+        prompt: els.activityAuthorPrompt?.value || "",
+        estimated_minutes: els.activityAuthorMinutes?.value || "30",
+        class_id: els.activityAuthorClass?.value || "",
+        github_team: els.activityAuthorTeam?.value || "",
+        path_id: els.activityAuthorPath?.value || "",
+        uda_id: els.activityAuthorUda?.value || "",
+        overwrite: Boolean(els.activityAuthorOverwrite?.checked),
+      }),
+    });
+    state.activities = payload.activities || [];
+    renderActivitySelect();
+    renderCoverage();
+    if (payload.activity?.path) selectActivity(payload.activity.path);
+    if (els.activityAuthorStatus) {
+      els.activityAuthorStatus.textContent = `Activity salvata: ${payload.activity?.path || "-"}.`;
+    }
+    setStatus(`Activity salvata: ${payload.activity?.title || payload.activity?.id || "-"}.`);
+  } catch (error) {
+    if (els.activityAuthorStatus) els.activityAuthorStatus.textContent = `Errore: ${error.message}`;
+    setStatus(`Errore salvataggio activity: ${error.message}`);
+  } finally {
+    els.saveActivityBtn.disabled = false;
+  }
 }
 
 function renderActivitySelect() {
@@ -2615,6 +2667,7 @@ els.reviewCloseBtn.addEventListener("click", closeReviewDialog);
 els.activitySelect.addEventListener("change", () => {
   if (els.activitySelect.value) selectActivity(els.activitySelect.value);
 });
+els.saveActivityBtn?.addEventListener("click", saveActivityDraft);
 els.classRosterSelect?.addEventListener("change", loadSelectedClassRoster);
 els.activityPath.addEventListener("input", () => {
   renderActivitySelect();

@@ -48,6 +48,8 @@ class AssignmentStorage(Protocol):
 
     def list_activities(self) -> list[dict[str, Any]]: ...
 
+    def save_activity(self, payload: dict[str, Any], overwrite: bool = False) -> dict[str, Any]: ...
+
 
 class ClassRosterStorage(Protocol):
     """Storage port used by class and student roster services."""

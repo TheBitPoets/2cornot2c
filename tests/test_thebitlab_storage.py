@@ -242,6 +242,41 @@ def test_list_activities_skips_invalid_json_and_deduplicates_paths(tmp_path) -> 
     ]
 
 
+def test_save_activity_persists_valid_draft_and_lists_it(tmp_path) -> None:
+    storage = JsonAssignmentStorage(tmp_path, tmp_path / "teacher-reports", [tmp_path / "activities"])
+    activity = {
+        "schema_version": "1.0",
+        "id": "python-base-somma-001",
+        "titolo": "Somma in Python",
+        "tipo": "compito-casa",
+        "difficolta": "B",
+        "argomenti": ["variabili", "operatori"],
+        "consegna": "Scrivi un programma che somma due numeri.",
+        "correzione": {
+            "compila": True,
+            "test": True,
+            "sandbox": True,
+            "ai_feedback": True,
+        },
+        "metriche": {
+            "tempo_stimato_minuti": 30,
+            "traccia_tempo_dichiarato": True,
+            "traccia_sessioni_thebitlab": True,
+            "traccia_eventi_didattici": True,
+            "traccia_errori_compilazione": True,
+        },
+        "contesto": {"classe": "3A-TPSI", "team_github": "team-3a"},
+    }
+
+    saved = storage.save_activity(activity)
+
+    assert saved["path"] == "activities/drafts/python-base-somma-001.json"
+    assert (tmp_path / "activities" / "drafts" / "python-base-somma-001.json").is_file()
+    assert storage.list_activities() == [saved]
+    with pytest.raises(ValueError, match="gia esistente"):
+        storage.save_activity(activity)
+
+
 def test_class_rosters_are_normalized_and_listed(tmp_path) -> None:
     storage = JsonClassRosterStorage(tmp_path)
     classes_dir = tmp_path / "doc" / "classes"

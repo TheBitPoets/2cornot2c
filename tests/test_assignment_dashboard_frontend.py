@@ -200,6 +200,21 @@ def run_dashboard_js(assertions: str) -> None:
         json: async () => {{
           if (path === "/api/assignment-reports") return {{ reports: [] }};
           if (path === "/api/activities") return {{ activities: [] }};
+          if (path === "/api/activities/save") return {{
+            ok: true,
+            activity: {{
+              id: "somma-in-python",
+              title: "Somma in Python",
+              kind: "compito-casa",
+              path: "activities/drafts/somma-in-python.json",
+            }},
+            activities: [{{
+              id: "somma-in-python",
+              title: "Somma in Python",
+              kind: "compito-casa",
+              path: "activities/drafts/somma-in-python.json",
+            }}],
+          }};
           if (path === "/api/assignment-overview") return {{ rows: [] }};
           if (path === "/api/assignment-reports/ai-feedback/review") {{
             return {{
@@ -263,6 +278,7 @@ def run_dashboard_js(assertions: str) -> None:
         resetPanelOrder,
         setupPanelDragAndDrop,
         renderLegend,
+        saveActivityDraft,
         rosterOptionLabel,
         localTargetFromStudent,
         rosterTargets,
@@ -352,6 +368,38 @@ def test_overview_activity_filter_limits_rows() -> None:
         const rows = tested.filteredOverviewRows();
         assert.equal(rows.length, 1);
         assert.equal(rows[0].activity_id, "somma");
+        """
+    )
+
+
+def test_save_activity_draft_posts_form_and_selects_saved_activity() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.els.activityAuthorTitle.value = "Somma in Python";
+          tested.els.activityAuthorId.value = "";
+          tested.els.activityAuthorKind.value = "compito-casa";
+          tested.els.activityAuthorDifficulty.value = "B";
+          tested.els.activityAuthorTopics.value = "variabili, operatori";
+          tested.els.activityAuthorMinutes.value = "25";
+          tested.els.activityAuthorClass.value = "3A-TPSI";
+          tested.els.activityAuthorTeam.value = "team-3a";
+          tested.els.activityAuthorPath.value = "base";
+          tested.els.activityAuthorUda.value = "uda-1";
+          tested.els.activityAuthorPrompt.value = "Scrivi un programma che somma due numeri.";
+
+          await tested.saveActivityDraft();
+
+          const call = tested.fetchCalls.find((entry) => entry.path === "/api/activities/save");
+          const body = JSON.parse(call.options.body);
+          assert.equal(call.options.method, "POST");
+          assert.equal(body.title, "Somma in Python");
+          assert.equal(body.topics, "variabili, operatori");
+          assert.equal(body.class_id, "3A-TPSI");
+          assert.equal(tested.state.activities.length, 1);
+          assert.equal(tested.els.activityPath.value, "activities/drafts/somma-in-python.json");
+          assert.match(tested.els.activityAuthorStatus.textContent, /Activity salvata/);
+        })();
         """
     )
 

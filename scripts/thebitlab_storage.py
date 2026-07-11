@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from scripts import create_activity, validate_activity
 from scripts.thebitlab_contracts import normalize_activity, normalize_assignment_register
 
 
@@ -182,6 +183,19 @@ class JsonAssignmentStorage:
         path.relative_to(self.teacher_reports_dir.resolve())
         return path
 
+    def activity_drafts_dir(self) -> Path:
+        """Return the folder used for teacher-authored draft activities."""
+
+        return self.root / "activities" / "drafts"
+
+    def safe_activity_draft_path(self, activity_id: str) -> Path:
+        """Return a safe draft activity path below activities/drafts."""
+
+        filename = f"{create_activity.slugify(activity_id)}.json"
+        path = (self.activity_drafts_dir() / filename).resolve()
+        path.relative_to(self.activity_drafts_dir().resolve())
+        return path
+
     def read_json(self, path: Path) -> dict[str, Any]:
         """Read a JSON object from path."""
 
@@ -195,6 +209,30 @@ class JsonAssignmentStorage:
 
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    def save_activity(self, payload: dict[str, Any], overwrite: bool = False) -> dict[str, Any]:
+        """Validate and persist a teacher-authored activity draft."""
+
+        activity_id = str(payload.get("id", "")).strip()
+        errors = validate_activity.validate_activity(payload, activity_id or "<activity>")
+        if errors:
+            raise ValueError("\n".join(errors))
+        path = self.safe_activity_draft_path(activity_id)
+        if path.exists() and not overwrite:
+            raise ValueError(f"Activity gia esistente: {self.relative_path(path)}")
+        self.write_json(path, payload)
+        activity = normalize_activity(payload)
+        return {
+            "id": activity.get("id", ""),
+            "title": activity.get("title", ""),
+            "kind": activity.get("kind", ""),
+            "student_support_mode": activity.get("student_support_mode", ""),
+            "class_id": activity.get("class_id", ""),
+            "class_label": activity.get("class_id", ""),
+            "github_team": activity.get("github_team", ""),
+            "language": activity.get("language", ""),
+            "path": self.relative_path(path),
+        }
 
     def list_assignment_reports(self) -> list[dict[str, Any]]:
         """List assignment tracking reports stored in teacher-reports."""
