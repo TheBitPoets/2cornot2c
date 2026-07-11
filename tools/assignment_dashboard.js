@@ -119,6 +119,7 @@ const state = {
   reviewFile: null,
   reviewSplit: readReviewSplit(),
   draggedPanelKey: "",
+  activityAuthorLastSuggestedId: "",
 };
 
 const els = {
@@ -425,6 +426,10 @@ function slugPathSegment(value, fallback = "classe-non-indicata") {
     .replace(/^-+|-+$/g, "") || fallback;
 }
 
+function suggestedActivityId(title) {
+  return slugPathSegment(title, "");
+}
+
 async function loadReports() {
   setStatus("Caricamento registri...");
   const payload = await api("/api/assignment-reports");
@@ -672,6 +677,16 @@ function renderActivityAuthorMetadataSelects() {
     "Nessun team",
     els.activityAuthorTeamCount,
   );
+}
+
+function syncActivityAuthorIdSuggestion() {
+  if (!els.activityAuthorTitle || !els.activityAuthorId) return;
+  const suggestion = suggestedActivityId(els.activityAuthorTitle.value);
+  const current = els.activityAuthorId.value.trim();
+  if (!current || current === state.activityAuthorLastSuggestedId) {
+    els.activityAuthorId.value = suggestion;
+    state.activityAuthorLastSuggestedId = suggestion;
+  }
 }
 
 function setRosterStatus(message) {
@@ -2854,6 +2869,11 @@ els.activitySelect.addEventListener("change", () => {
   if (els.activitySelect.value) selectActivity(els.activitySelect.value);
 });
 els.saveActivityBtn?.addEventListener("click", saveActivityDraft);
+els.activityAuthorTitle?.addEventListener("input", syncActivityAuthorIdSuggestion);
+els.activityAuthorId?.addEventListener("input", () => {
+  const current = els.activityAuthorId.value.trim();
+  if (!current) state.activityAuthorLastSuggestedId = "";
+});
 els.activityAuthorPath?.addEventListener("change", () => {
   renderActivityAuthorMetadataSelects();
 });

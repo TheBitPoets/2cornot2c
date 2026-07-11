@@ -283,6 +283,8 @@ def run_dashboard_js(assertions: str) -> None:
         setupPanelDragAndDrop,
         renderLegend,
         saveActivityDraft,
+        suggestedActivityId,
+        syncActivityAuthorIdSuggestion,
         renderActivityAuthorMetadataSelects,
         rosterOptionLabel,
         localTargetFromStudent,
@@ -405,6 +407,31 @@ def test_save_activity_draft_posts_form_and_selects_saved_activity() -> None:
           assert.equal(tested.els.activityPath.value, "activities/drafts/somma-in-python.json");
           assert.match(tested.els.activityAuthorStatus.textContent, /Activity salvata/);
         })();
+        """
+    )
+
+
+def test_activity_author_id_is_suggested_from_title_but_editable() -> None:
+    run_dashboard_js(
+        """
+        tested.els.activityAuthorTitle.value = "Somma in Python!";
+        tested.els.activityAuthorId.value = "";
+        tested.syncActivityAuthorIdSuggestion();
+
+        assert.equal(tested.els.activityAuthorId.value, "somma-in-python");
+        assert.equal(tested.suggestedActivityId("Array e stringhe"), "array-e-stringhe");
+
+        tested.els.activityAuthorId.value = "id-personalizzato";
+        tested.els.activityAuthorTitle.value = "Titolo cambiato";
+        tested.syncActivityAuthorIdSuggestion();
+
+        assert.equal(tested.els.activityAuthorId.value, "id-personalizzato");
+
+        tested.els.activityAuthorId.value = "";
+        tested.els.activityAuthorTitle.value = "Titolo finale";
+        tested.syncActivityAuthorIdSuggestion();
+
+        assert.equal(tested.els.activityAuthorId.value, "titolo-finale");
         """
     )
 
