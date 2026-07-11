@@ -458,16 +458,31 @@ def test_activity_authoring_filters_metadata_by_path_and_uda() -> None:
         tested.renderActivityAuthorMetadataSelects();
 
         assert.deepEqual(tested.els.activityAuthorClass.children.map(optionValue), ["3A"]);
+        assert.equal(tested.els.activityAuthorClassCount.textContent, "1");
         assert.deepEqual(tested.els.activityAuthorTeam.children.map(optionValue), ["team-3a"]);
+        assert.equal(tested.els.activityAuthorTeamCount.textContent, "1");
         assert.deepEqual(tested.els.activityAuthorUda.children.map(optionValue), ["uda-a1", "uda-a2"]);
+        assert.equal(tested.els.activityAuthorUdaCount.textContent, "2");
         assert.deepEqual(tested.els.activityAuthorTopics.children.map(optionValue), ["a-array", "a-intro", "a-loop"]);
+        assert.equal(tested.els.activityAuthorTopicsCount.textContent, "3");
 
         tested.els.activityAuthorUda.value = "uda-a1";
         tested.renderActivityAuthorMetadataSelects();
 
         assert.deepEqual(tested.els.activityAuthorTopics.children.map(optionValue), ["a-intro", "a-loop"]);
+        assert.equal(tested.els.activityAuthorTopicsCount.textContent, "2");
       """
     )
+
+
+def test_activity_authoring_selects_show_option_count_badges() -> None:
+    html = open("tools/assignment_dashboard.html", encoding="utf-8").read()
+
+    assert 'id="activityAuthorTopicsCount"' in html
+    assert 'id="activityAuthorClassCount"' in html
+    assert 'id="activityAuthorTeamCount"' in html
+    assert 'id="activityAuthorPathCount"' in html
+    assert 'id="activityAuthorUdaCount"' in html
 
 
 def test_legend_renders_static_marks_but_escapes_descriptions() -> None:

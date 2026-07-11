@@ -188,11 +188,16 @@ const els = {
   activityAuthorKind: document.querySelector("#activityAuthorKind"),
   activityAuthorDifficulty: document.querySelector("#activityAuthorDifficulty"),
   activityAuthorTopics: document.querySelector("#activityAuthorTopics"),
+  activityAuthorTopicsCount: document.querySelector("#activityAuthorTopicsCount"),
   activityAuthorMinutes: document.querySelector("#activityAuthorMinutes"),
   activityAuthorClass: document.querySelector("#activityAuthorClass"),
+  activityAuthorClassCount: document.querySelector("#activityAuthorClassCount"),
   activityAuthorTeam: document.querySelector("#activityAuthorTeam"),
+  activityAuthorTeamCount: document.querySelector("#activityAuthorTeamCount"),
   activityAuthorPath: document.querySelector("#activityAuthorPath"),
+  activityAuthorPathCount: document.querySelector("#activityAuthorPathCount"),
   activityAuthorUda: document.querySelector("#activityAuthorUda"),
+  activityAuthorUdaCount: document.querySelector("#activityAuthorUdaCount"),
   activityAuthorPrompt: document.querySelector("#activityAuthorPrompt"),
   activityAuthorOverwrite: document.querySelector("#activityAuthorOverwrite"),
   saveActivityBtn: document.querySelector("#saveActivityBtn"),
@@ -628,7 +633,7 @@ function activityAuthorTopicOptions(pathId = els.activityAuthorPath?.value || ""
     .sort((a, b) => a.label.localeCompare(b.label, "it", { numeric: true, sensitivity: "base" }));
 }
 
-function renderCompactSelect(select, options, placeholder) {
+function renderCompactSelect(select, options, placeholder, countBadge = null) {
   if (!select) return;
   const selected = select.value;
   select.replaceChildren?.();
@@ -640,25 +645,32 @@ function renderCompactSelect(select, options, placeholder) {
     select.append(option);
   }
   select.value = options.some((option) => option.value === selected) ? selected : "";
+  if (countBadge) {
+    countBadge.textContent = String(options.length);
+    countBadge.title = `${options.length} valori disponibili con i filtri correnti.`;
+  }
 }
 
 function renderActivityAuthorMetadataSelects() {
-  renderCompactSelect(els.activityAuthorPath, activityAuthorPathOptions(), "Nessun percorso");
-  renderCompactSelect(els.activityAuthorUda, activityAuthorUdaOptions(), "Nessuna UDA");
+  renderCompactSelect(els.activityAuthorPath, activityAuthorPathOptions(), "Nessun percorso", els.activityAuthorPathCount);
+  renderCompactSelect(els.activityAuthorUda, activityAuthorUdaOptions(), "Nessuna UDA", els.activityAuthorUdaCount);
   renderCompactSelect(
     els.activityAuthorTopics,
     activityAuthorTopicOptions(),
     "Scegli argomento",
+    els.activityAuthorTopicsCount,
   );
   renderCompactSelect(
     els.activityAuthorClass,
     activityAuthorClassOptions(),
     "Nessuna classe",
+    els.activityAuthorClassCount,
   );
   renderCompactSelect(
     els.activityAuthorTeam,
     activityAuthorTeamOptions(),
     "Nessun team",
+    els.activityAuthorTeamCount,
   );
 }
 
@@ -2846,7 +2858,7 @@ els.activityAuthorPath?.addEventListener("change", () => {
   renderActivityAuthorMetadataSelects();
 });
 els.activityAuthorUda?.addEventListener("change", () => {
-  renderCompactSelect(els.activityAuthorTopics, activityAuthorTopicOptions(), "Scegli argomento");
+  renderCompactSelect(els.activityAuthorTopics, activityAuthorTopicOptions(), "Scegli argomento", els.activityAuthorTopicsCount);
 });
 els.activityAuthorClass?.addEventListener("change", () => {
   const roster = state.classRosters.find((candidate) => (

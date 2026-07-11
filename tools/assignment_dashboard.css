@@ -210,6 +210,32 @@ label > textarea {
   min-width: 0;
 }
 
+.selectWithCount {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .35rem;
+  min-width: 0;
+}
+
+.selectWithCount > select {
+  width: 100%;
+  min-width: 0;
+}
+
+.selectCountBadge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.55rem;
+  height: 1.55rem;
+  padding: 0 .35rem;
+  border: 1px solid rgba(17, 17, 17, .16);
+  border-radius: 999px;
+  background: #111111;
+  color: #ffffff;
+  font: 800 .68rem/1 var(--mono);
+}
+
 .wideField {
   grid-column: 1 / -1;
 }
