@@ -527,7 +527,7 @@ Ordine consigliato:
 2. Provider layer minimo: interfaccia comune e implementazione GitHub iniziale.
 3. Gestione classi MVP: import/sync da GitHub Team o import manuale controllato.
 4. Pagina creazione/generazione/modifica activity con validazione.
-5. Pagina assegnazione activity a classe e scaffold consegna.
+5. Pagina assegnazione activity a classe, gruppo o singolo studente e scaffold consegna.
 6. Interfaccia studente MVP per consegne, stato e feedback deterministico, web oppure TUI se piu rapida da rendere affidabile.
 7. Consolidamento grading Docker per flusso reale di consegna.
 8. Collegamento automatico report/artifact al registro consegne.

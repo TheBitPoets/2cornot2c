@@ -6,3 +6,9 @@
 *.log
 .secrets/
 *.secret
+
+# Local dashboard data generated while testing.
+doc/calendars/*.json
+!doc/calendars/.gitkeep
+teacher-reports/**/*.json
+!teacher-reports/demo/ai-feedback-states.json
