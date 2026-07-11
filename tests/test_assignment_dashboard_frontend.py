@@ -519,6 +519,15 @@ def test_activity_authoring_filters_metadata_by_path_and_uda() -> None:
 
         tested.renderTopicSearch(tested.activityAuthorTopicOptions("percorso-a", "", "compilazione"), true);
         assert.deepEqual(tested.els.activityAuthorTopicsList.children.map(optionValue), ["Il processo di compilazione"]);
+
+        tested.els.activityAuthorPath.value = "percorso-b";
+        tested.els.activityAuthorUda.value = "";
+        tested.els.activityAuthorTopics.value = "A intro";
+        tested.renderActivityAuthorMetadataSelects();
+
+        assert.equal(tested.els.activityAuthorTopics.value, "");
+        assert.deepEqual(tested.els.activityAuthorUda.children.map(optionValue), ["uda-b1"]);
+        assert.equal(tested.els.activityAuthorUdaCount.textContent, "1");
       """
     )
 

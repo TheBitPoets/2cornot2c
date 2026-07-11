@@ -737,8 +737,9 @@ function activityAuthorTopicValue() {
 
 function renderActivityAuthorMetadataSelects() {
   renderCompactSelect(els.activityAuthorPath, activityAuthorPathOptions(), "Nessun percorso", els.activityAuthorPathCount);
-  renderCompactSelect(els.activityAuthorUda, activityAuthorUdaOptions(), "Nessuna UDA", els.activityAuthorUdaCount);
+  renderCompactSelect(els.activityAuthorUda, activityAuthorUdaOptions(els.activityAuthorPath?.value || "", ""), "Nessuna UDA", els.activityAuthorUdaCount);
   renderTopicSearch(activityAuthorTopicOptions());
+  renderCompactSelect(els.activityAuthorUda, activityAuthorUdaOptions(), "Nessuna UDA", els.activityAuthorUdaCount);
   renderCompactSelect(
     els.activityAuthorClass,
     activityAuthorClassOptions(),
