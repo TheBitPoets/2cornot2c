@@ -532,6 +532,28 @@ function selectOptionsFromValues(values) {
     .map((value) => ({ value, label: value }));
 }
 
+function normalizedSearchText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function topicAliases(item) {
+  return [
+    item?.id,
+    item?.title,
+    item?.href,
+  ].map((value) => String(value || "").trim()).filter(Boolean);
+}
+
+function topicMatchesQuery(option, query) {
+  const normalizedQuery = normalizedSearchText(query);
+  if (!normalizedQuery) return true;
+  return [option?.value, option?.label, option?.search]
+    .some((value) => normalizedSearchText(value).includes(normalizedQuery));
+}
+
 function activityAuthorPathOptions() {
   return courseSections()
     .map((section) => ({
@@ -605,12 +627,11 @@ function activityAuthorTeamOptions() {
 
 function itemMatchesTopic(item, topicValue) {
   if (!topicValue) return true;
-  const aliases = [
-    item?.id,
-    item?.title,
-    item?.href,
-  ].map((value) => String(value || "").trim()).filter(Boolean);
-  return aliases.includes(topicValue);
+  const normalizedTopic = normalizedSearchText(topicValue);
+  return topicAliases(item).some((alias) => {
+    const normalizedAlias = normalizedSearchText(alias);
+    return normalizedAlias === normalizedTopic || normalizedAlias.includes(normalizedTopic);
+  });
 }
 
 function udaHasTopic(uda, topicValue) {
@@ -630,7 +651,11 @@ function activityAuthorUdaOptions(pathId = els.activityAuthorPath?.value || "", 
     .filter((option) => option.value);
 }
 
-function activityAuthorTopicOptions(pathId = els.activityAuthorPath?.value || "", udaId = els.activityAuthorUda?.value || "") {
+function activityAuthorTopicOptions(
+  pathId = els.activityAuthorPath?.value || "",
+  udaId = els.activityAuthorUda?.value || "",
+  query = "",
+) {
   const topics = new Map();
   for (const section of courseSections().filter((candidate) => (
     !pathId || String(candidate?.id || candidate?.title || "").trim() === pathId
@@ -639,7 +664,13 @@ function activityAuthorTopicOptions(pathId = els.activityAuthorPath?.value || ""
       if (udaId && String(uda?.id || uda?.title || "").trim() !== udaId) continue;
       for (const item of collectCourseItems(uda.items)) {
         const value = String(item?.id || item?.title || "").trim();
-        if (value && !topics.has(value)) topics.set(value, item?.title || value);
+        if (value && !topics.has(value)) {
+          topics.set(value, {
+            value,
+            label: item?.title || value,
+            search: topicAliases(item).join(" "),
+          });
+        }
       }
     }
   }
@@ -647,12 +678,12 @@ function activityAuthorTopicOptions(pathId = els.activityAuthorPath?.value || ""
     for (const activity of state.activities) {
       for (const topic of Array.isArray(activity?.topics) ? activity.topics : []) {
         const value = String(topic || "").trim();
-        if (value && !topics.has(value)) topics.set(value, value);
+        if (value && !topics.has(value)) topics.set(value, { value, label: value, search: value });
       }
     }
   }
-  return [...topics.entries()]
-    .map(([value, label]) => ({ value, label }))
+  return [...topics.values()]
+    .filter((option) => topicMatchesQuery(option, query))
     .sort((a, b) => a.label.localeCompare(b.label, "it", { numeric: true, sensitivity: "base" }));
 }
 
@@ -674,7 +705,7 @@ function renderCompactSelect(select, options, placeholder, countBadge = null) {
   }
 }
 
-function renderTopicSearch(options) {
+function renderTopicSearch(options, preservePartial = false) {
   if (!els.activityAuthorTopics || !els.activityAuthorTopicsList) return;
   const selected = els.activityAuthorTopics.value;
   els.activityAuthorTopicsList.replaceChildren?.();
@@ -685,7 +716,7 @@ function renderTopicSearch(options) {
     option.dataset.topicValue = optionData.value;
     els.activityAuthorTopicsList.append(option);
   }
-  if (!options.some((option) => option.label === selected || option.value === selected)) {
+  if (!preservePartial && !options.some((option) => option.label === selected || option.value === selected)) {
     els.activityAuthorTopics.value = "";
   }
   if (els.activityAuthorTopicsCount) {
@@ -2924,6 +2955,10 @@ els.activityAuthorUda?.addEventListener("change", () => {
   renderTopicSearch(activityAuthorTopicOptions());
 });
 els.activityAuthorTopics?.addEventListener("input", () => {
+  renderTopicSearch(
+    activityAuthorTopicOptions(els.activityAuthorPath?.value || "", els.activityAuthorUda?.value || "", els.activityAuthorTopics.value),
+    true,
+  );
   renderCompactSelect(els.activityAuthorUda, activityAuthorUdaOptions(), "Nessuna UDA", els.activityAuthorUdaCount);
 });
 els.activityAuthorClass?.addEventListener("change", () => {

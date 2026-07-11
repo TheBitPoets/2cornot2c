@@ -284,6 +284,8 @@ def run_dashboard_js(assertions: str) -> None:
         renderLegend,
         saveActivityDraft,
         activityAuthorTopicValue,
+        activityAuthorTopicOptions,
+        renderTopicSearch,
         suggestedActivityId,
         syncActivityAuthorIdSuggestion,
         renderActivityAuthorMetadataSelects,
@@ -462,6 +464,7 @@ def test_activity_authoring_filters_metadata_by_path_and_uda() -> None:
                   items: [
                     { id: "a-intro", title: "A intro" },
                     { id: "a-loop", title: "A loop" },
+                    { id: "README.md#il-processo-di-compilazione", title: "Il processo di compilazione", href: "../README.md#il-processo-di-compilazione" },
                   ],
                 },
                 {
@@ -495,14 +498,14 @@ def test_activity_authoring_filters_metadata_by_path_and_uda() -> None:
         assert.equal(tested.els.activityAuthorTeamCount.textContent, "1");
         assert.deepEqual(tested.els.activityAuthorUda.children.map(optionValue), ["uda-a1", "uda-a2"]);
         assert.equal(tested.els.activityAuthorUdaCount.textContent, "2");
-        assert.deepEqual(tested.els.activityAuthorTopicsList.children.map(optionValue), ["A array", "A intro", "A loop"]);
-        assert.equal(tested.els.activityAuthorTopicsCount.textContent, "3");
+        assert.deepEqual(tested.els.activityAuthorTopicsList.children.map(optionValue), ["A array", "A intro", "A loop", "Il processo di compilazione"]);
+        assert.equal(tested.els.activityAuthorTopicsCount.textContent, "4");
 
         tested.els.activityAuthorUda.value = "uda-a1";
         tested.renderActivityAuthorMetadataSelects();
 
-        assert.deepEqual(tested.els.activityAuthorTopicsList.children.map(optionValue), ["A intro", "A loop"]);
-        assert.equal(tested.els.activityAuthorTopicsCount.textContent, "2");
+        assert.deepEqual(tested.els.activityAuthorTopicsList.children.map(optionValue), ["A intro", "A loop", "Il processo di compilazione"]);
+        assert.equal(tested.els.activityAuthorTopicsCount.textContent, "3");
 
         tested.els.activityAuthorUda.value = "";
         tested.els.activityAuthorTopics.value = "A intro";
@@ -510,6 +513,12 @@ def test_activity_authoring_filters_metadata_by_path_and_uda() -> None:
 
         assert.deepEqual(tested.els.activityAuthorUda.children.map(optionValue), ["uda-a1"]);
         assert.equal(tested.els.activityAuthorUdaCount.textContent, "1");
+
+        tested.renderTopicSearch(tested.activityAuthorTopicOptions("percorso-a", "", "processo"), true);
+        assert.deepEqual(tested.els.activityAuthorTopicsList.children.map(optionValue), ["Il processo di compilazione"]);
+
+        tested.renderTopicSearch(tested.activityAuthorTopicOptions("percorso-a", "", "compilazione"), true);
+        assert.deepEqual(tested.els.activityAuthorTopicsList.children.map(optionValue), ["Il processo di compilazione"]);
       """
     )
 
