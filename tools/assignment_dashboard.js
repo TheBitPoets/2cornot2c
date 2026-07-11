@@ -1196,7 +1196,7 @@ async function saveActivityDraft() {
 }
 
 function renderActivitySelect() {
-  els.activitySelect.innerHTML = '<option value="">Activity salvate</option>';
+  els.activitySelect.innerHTML = '<option value="">Scegli activity</option>';
   for (const activity of state.activities) {
     const option = document.createElement("option");
     option.value = activity.path;
