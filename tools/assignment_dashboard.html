@@ -71,7 +71,8 @@
         <label>
           <span>Argomenti</span>
           <span class="selectWithCount">
-            <select id="activityAuthorTopics" aria-label="Argomenti"></select>
+            <input id="activityAuthorTopics" type="search" list="activityAuthorTopicsList" placeholder="Cerca argomento" autocomplete="off" aria-label="Argomenti">
+            <datalist id="activityAuthorTopicsList"></datalist>
             <span id="activityAuthorTopicsCount" class="selectCountBadge" title="Numero di argomenti disponibili con i filtri correnti.">0</span>
           </span>
         </label>

@@ -283,6 +283,7 @@ def run_dashboard_js(assertions: str) -> None:
         setupPanelDragAndDrop,
         renderLegend,
         saveActivityDraft,
+        activityAuthorTopicValue,
         suggestedActivityId,
         syncActivityAuthorIdSuggestion,
         renderActivityAuthorMetadataSelects,
@@ -387,7 +388,11 @@ def test_save_activity_draft_posts_form_and_selects_saved_activity() -> None:
           tested.els.activityAuthorId.value = "";
           tested.els.activityAuthorKind.value = "compito-casa";
           tested.els.activityAuthorDifficulty.value = "B";
-          tested.els.activityAuthorTopics.value = "variabili, operatori";
+          tested.els.activityAuthorTopics.value = "Variabili";
+          const topicOption = new tested.FakeElement("option");
+          topicOption.value = "Variabili";
+          topicOption.dataset.topicValue = "variabili";
+          tested.els.activityAuthorTopicsList.append(topicOption);
           tested.els.activityAuthorMinutes.value = "25";
           tested.els.activityAuthorClass.value = "3A-TPSI";
           tested.els.activityAuthorTeam.value = "team-3a";
@@ -401,7 +406,7 @@ def test_save_activity_draft_posts_form_and_selects_saved_activity() -> None:
           const body = JSON.parse(call.options.body);
           assert.equal(call.options.method, "POST");
           assert.equal(body.title, "Somma in Python");
-          assert.equal(body.topics, "variabili, operatori");
+          assert.equal(body.topics, "variabili");
           assert.equal(body.class_id, "3A-TPSI");
           assert.equal(tested.state.activities.length, 1);
           assert.equal(tested.els.activityPath.value, "activities/drafts/somma-in-python.json");
@@ -490,21 +495,40 @@ def test_activity_authoring_filters_metadata_by_path_and_uda() -> None:
         assert.equal(tested.els.activityAuthorTeamCount.textContent, "1");
         assert.deepEqual(tested.els.activityAuthorUda.children.map(optionValue), ["uda-a1", "uda-a2"]);
         assert.equal(tested.els.activityAuthorUdaCount.textContent, "2");
-        assert.deepEqual(tested.els.activityAuthorTopics.children.map(optionValue), ["a-array", "a-intro", "a-loop"]);
+        assert.deepEqual(tested.els.activityAuthorTopicsList.children.map(optionValue), ["A array", "A intro", "A loop"]);
         assert.equal(tested.els.activityAuthorTopicsCount.textContent, "3");
 
         tested.els.activityAuthorUda.value = "uda-a1";
         tested.renderActivityAuthorMetadataSelects();
 
-        assert.deepEqual(tested.els.activityAuthorTopics.children.map(optionValue), ["a-intro", "a-loop"]);
+        assert.deepEqual(tested.els.activityAuthorTopicsList.children.map(optionValue), ["A intro", "A loop"]);
         assert.equal(tested.els.activityAuthorTopicsCount.textContent, "2");
       """
+    )
+
+
+def test_activity_authoring_topic_search_maps_labels_to_topic_values() -> None:
+    run_dashboard_js(
+        """
+        const topicOption = new tested.FakeElement("option");
+        topicOption.value = "Variabili";
+        topicOption.dataset.topicValue = "README.md#variabili";
+        tested.els.activityAuthorTopicsList.append(topicOption);
+
+        tested.els.activityAuthorTopics.value = "Variabili";
+        assert.equal(tested.activityAuthorTopicValue(), "README.md#variabili");
+
+        tested.els.activityAuthorTopics.value = "argomento nuovo";
+        assert.equal(tested.activityAuthorTopicValue(), "argomento nuovo");
+        """
     )
 
 
 def test_activity_authoring_selects_show_option_count_badges() -> None:
     html = open("tools/assignment_dashboard.html", encoding="utf-8").read()
 
+    assert 'list="activityAuthorTopicsList"' in html
+    assert 'id="activityAuthorTopicsList"' in html
     assert 'id="activityAuthorTopicsCount"' in html
     assert 'id="activityAuthorClassCount"' in html
     assert 'id="activityAuthorTeamCount"' in html

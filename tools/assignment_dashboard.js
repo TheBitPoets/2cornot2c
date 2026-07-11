@@ -189,6 +189,7 @@ const els = {
   activityAuthorKind: document.querySelector("#activityAuthorKind"),
   activityAuthorDifficulty: document.querySelector("#activityAuthorDifficulty"),
   activityAuthorTopics: document.querySelector("#activityAuthorTopics"),
+  activityAuthorTopicsList: document.querySelector("#activityAuthorTopicsList"),
   activityAuthorTopicsCount: document.querySelector("#activityAuthorTopicsCount"),
   activityAuthorMinutes: document.querySelector("#activityAuthorMinutes"),
   activityAuthorClass: document.querySelector("#activityAuthorClass"),
@@ -656,15 +657,40 @@ function renderCompactSelect(select, options, placeholder, countBadge = null) {
   }
 }
 
+function renderTopicSearch(options) {
+  if (!els.activityAuthorTopics || !els.activityAuthorTopicsList) return;
+  const selected = els.activityAuthorTopics.value;
+  els.activityAuthorTopicsList.replaceChildren?.();
+  els.activityAuthorTopicsList.innerHTML = "";
+  for (const optionData of options) {
+    const option = document.createElement("option");
+    option.value = optionData.label;
+    option.dataset.topicValue = optionData.value;
+    els.activityAuthorTopicsList.append(option);
+  }
+  if (!options.some((option) => option.label === selected || option.value === selected)) {
+    els.activityAuthorTopics.value = "";
+  }
+  if (els.activityAuthorTopicsCount) {
+    els.activityAuthorTopicsCount.textContent = String(options.length);
+    els.activityAuthorTopicsCount.title = `${options.length} argomenti disponibili con i filtri correnti.`;
+  }
+}
+
+function activityAuthorTopicValue() {
+  const rawValue = String(els.activityAuthorTopics?.value || "").trim();
+  if (!rawValue) return "";
+  const options = Array.from(els.activityAuthorTopicsList?.children || []);
+  const match = options.find((option) => (
+    option.value === rawValue || option.dataset.topicValue === rawValue
+  ));
+  return match?.dataset.topicValue || rawValue;
+}
+
 function renderActivityAuthorMetadataSelects() {
   renderCompactSelect(els.activityAuthorPath, activityAuthorPathOptions(), "Nessun percorso", els.activityAuthorPathCount);
   renderCompactSelect(els.activityAuthorUda, activityAuthorUdaOptions(), "Nessuna UDA", els.activityAuthorUdaCount);
-  renderCompactSelect(
-    els.activityAuthorTopics,
-    activityAuthorTopicOptions(),
-    "Scegli argomento",
-    els.activityAuthorTopicsCount,
-  );
+  renderTopicSearch(activityAuthorTopicOptions());
   renderCompactSelect(
     els.activityAuthorClass,
     activityAuthorClassOptions(),
@@ -1370,7 +1396,7 @@ async function saveActivityDraft() {
         id: els.activityAuthorId?.value || "",
         kind: els.activityAuthorKind?.value || "",
         difficulty: els.activityAuthorDifficulty?.value || "",
-        topics: els.activityAuthorTopics?.value || "",
+        topics: activityAuthorTopicValue(),
         prompt: els.activityAuthorPrompt?.value || "",
         estimated_minutes: els.activityAuthorMinutes?.value || "30",
         class_id: els.activityAuthorClass?.value || "",
@@ -2878,7 +2904,7 @@ els.activityAuthorPath?.addEventListener("change", () => {
   renderActivityAuthorMetadataSelects();
 });
 els.activityAuthorUda?.addEventListener("change", () => {
-  renderCompactSelect(els.activityAuthorTopics, activityAuthorTopicOptions(), "Scegli argomento", els.activityAuthorTopicsCount);
+  renderTopicSearch(activityAuthorTopicOptions());
 });
 els.activityAuthorClass?.addEventListener("change", () => {
   const roster = state.classRosters.find((candidate) => (

@@ -216,7 +216,8 @@ label > textarea {
   min-width: 0;
 }
 
-.selectWithCount > select {
+.selectWithCount > select,
+.selectWithCount > input {
   width: 100%;
   min-width: 0;
   padding-right: 4.2rem;
