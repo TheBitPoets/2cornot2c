@@ -512,6 +512,14 @@ def test_activity_authoring_selects_show_option_count_badges() -> None:
     assert 'id="activityAuthorUdaCount"' in html
 
 
+def test_activity_authoring_difficulty_options_include_readable_labels() -> None:
+    html = open("tools/assignment_dashboard.html", encoding="utf-8").read()
+    difficulty_section = html.split('id="activityAuthorDifficulty"', 1)[1].split("</select>", 1)[0]
+
+    assert '<option value="B" selected>B - facile: modifica piccola</option>' in difficulty_section
+    assert '<option value="F">F - ninja: produzione</option>' in difficulty_section
+
+
 def test_legend_renders_static_marks_but_escapes_descriptions() -> None:
     run_dashboard_js(
         """
