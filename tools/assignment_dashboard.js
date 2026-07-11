@@ -92,6 +92,7 @@ const state = {
   activities: [],
   reports: [],
   classRosters: [],
+  courseDesign: null,
   selectedClassRoster: null,
   overviewRows: [],
   report: null,
@@ -443,15 +444,26 @@ async function loadClassRosters() {
     const payload = await api("/api/class-rosters");
     state.classRosters = payload.rosters || [];
     renderClassRosterSelect();
+    renderActivityAuthorMetadataSelects();
     renderRosterPanel();
     setRosterStatus(state.classRosters.length ? `Roster disponibili: ${state.classRosters.length}.` : "Nessun roster locale disponibile.");
   } catch (error) {
     state.classRosters = [];
     state.selectedClassRoster = null;
     renderClassRosterSelect();
+    renderActivityAuthorMetadataSelects();
     renderRosterPanel();
     setRosterStatus(`Roster non disponibili: ${error.message}`);
   }
+}
+
+async function loadCourseDesignForActivityAuthoring() {
+  try {
+    state.courseDesign = await api("/api/course-design");
+  } catch {
+    state.courseDesign = null;
+  }
+  renderActivityAuthorMetadataSelects();
 }
 
 function renderReportSelect() {
@@ -487,6 +499,102 @@ function renderClassRosterSelect() {
   }
   els.classRosterSelect.value = state.classRosters.some((roster) => roster.name === selected) ? selected : "";
   els.classRosterSelect.disabled = state.classRosters.length === 0;
+}
+
+function courseSections(design = state.courseDesign) {
+  if (Array.isArray(design?.paths)) return design.paths;
+  if (Array.isArray(design?.sections)) return design.sections;
+  return Array.isArray(design?.years) ? design.years : [];
+}
+
+function collectCourseItems(items, rows = []) {
+  for (const item of Array.isArray(items) ? items : []) {
+    if (!item || typeof item !== "object") continue;
+    rows.push(item);
+    collectCourseItems(item.children, rows);
+  }
+  return rows;
+}
+
+function selectOptionsFromValues(values) {
+  return [...new Set(values.map((value) => String(value || "").trim()).filter(Boolean))]
+    .map((value) => ({ value, label: value }));
+}
+
+function activityAuthorPathOptions() {
+  return courseSections()
+    .map((section) => ({
+      value: String(section?.id || section?.title || "").trim(),
+      label: String(section?.title || section?.id || "Percorso senza titolo").trim(),
+    }))
+    .filter((option) => option.value);
+}
+
+function activityAuthorUdaOptions(pathId = els.activityAuthorPath?.value || "") {
+  return courseSections()
+    .filter((section) => !pathId || String(section?.id || section?.title || "").trim() === pathId)
+    .flatMap((section) => (Array.isArray(section?.udas) ? section.udas : []).map((uda) => ({
+      value: String(uda?.id || uda?.title || "").trim(),
+      label: String(uda?.title || uda?.id || "UDA senza titolo").trim(),
+    })))
+    .filter((option) => option.value);
+}
+
+function activityAuthorTopicOptions() {
+  const topics = new Map();
+  for (const section of courseSections()) {
+    for (const uda of Array.isArray(section?.udas) ? section.udas : []) {
+      for (const item of collectCourseItems(uda.items)) {
+        const value = String(item?.id || item?.title || "").trim();
+        if (value && !topics.has(value)) topics.set(value, item?.title || value);
+      }
+    }
+  }
+  for (const activity of state.activities) {
+    for (const topic of Array.isArray(activity?.topics) ? activity.topics : []) {
+      const value = String(topic || "").trim();
+      if (value && !topics.has(value)) topics.set(value, value);
+    }
+  }
+  return [...topics.entries()]
+    .map(([value, label]) => ({ value, label }))
+    .sort((a, b) => a.label.localeCompare(b.label, "it", { numeric: true, sensitivity: "base" }));
+}
+
+function renderCompactSelect(select, options, placeholder) {
+  if (!select) return;
+  const selected = select.value;
+  select.innerHTML = `<option value="">${escapeHtml(placeholder)}</option>`;
+  for (const optionData of options) {
+    const option = document.createElement("option");
+    option.value = optionData.value;
+    option.textContent = optionData.label;
+    select.append(option);
+  }
+  select.value = options.some((option) => option.value === selected) ? selected : "";
+}
+
+function renderActivityAuthorMetadataSelects() {
+  renderCompactSelect(
+    els.activityAuthorTopics,
+    activityAuthorTopicOptions(),
+    "Scegli argomento",
+  );
+  renderCompactSelect(
+    els.activityAuthorClass,
+    state.classRosters.map((roster) => ({
+      value: String(roster.id || roster.label || roster.name || "").trim(),
+      label: rosterOptionLabel(roster),
+    })).filter((option) => option.value),
+    "Nessuna classe",
+  );
+  renderCompactSelect(
+    els.activityAuthorTeam,
+    selectOptionsFromValues(state.classRosters.map((roster) => roster.github_team)),
+    "Nessun team",
+  );
+  renderCompactSelect(els.activityAuthorPath, activityAuthorPathOptions(), "Nessun percorso");
+  renderCompactSelect(els.activityAuthorUda, activityAuthorUdaOptions(), "Nessuna UDA");
 }
 
 function setRosterStatus(message) {
@@ -1154,6 +1262,7 @@ async function loadActivities() {
   const payload = await api("/api/activities");
   state.activities = payload.activities || [];
   renderActivitySelect();
+  renderActivityAuthorMetadataSelects();
   renderCoverage();
 }
 
@@ -2668,6 +2777,15 @@ els.activitySelect.addEventListener("change", () => {
   if (els.activitySelect.value) selectActivity(els.activitySelect.value);
 });
 els.saveActivityBtn?.addEventListener("click", saveActivityDraft);
+els.activityAuthorPath?.addEventListener("change", () => {
+  renderCompactSelect(els.activityAuthorUda, activityAuthorUdaOptions(), "Nessuna UDA");
+});
+els.activityAuthorClass?.addEventListener("change", () => {
+  const roster = state.classRosters.find((candidate) => (
+    String(candidate.id || candidate.label || candidate.name || "").trim() === els.activityAuthorClass.value
+  ));
+  if (roster?.github_team && els.activityAuthorTeam) els.activityAuthorTeam.value = roster.github_team;
+});
 els.classRosterSelect?.addEventListener("change", loadSelectedClassRoster);
 els.activityPath.addEventListener("input", () => {
   renderActivitySelect();
@@ -2821,4 +2939,10 @@ setupCollapsiblePanels();
 setupPanelDragAndDrop();
 setFilter("all");
 setupResizableTables();
-Promise.all([loadReports(), loadActivities(), loadOverview(), loadClassRosters()]).catch((error) => setStatus(`Errore: ${error.message}`));
+Promise.all([
+  loadReports(),
+  loadActivities(),
+  loadOverview(),
+  loadClassRosters(),
+  loadCourseDesignForActivityAuthoring(),
+]).catch((error) => setStatus(`Errore: ${error.message}`));
