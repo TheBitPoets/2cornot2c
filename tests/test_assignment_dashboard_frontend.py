@@ -99,6 +99,10 @@ def run_dashboard_js(assertions: str) -> None:
         this.parentElement = null;
         this.nextSibling = null;
       }}
+      replaceChildren(...children) {{
+        this.children = [];
+        this.append(...children);
+      }}
       syncSiblings() {{
         this.children.forEach((child, index) => {{
           child.nextSibling = this.children[index + 1] || null;
@@ -279,6 +283,7 @@ def run_dashboard_js(assertions: str) -> None:
         setupPanelDragAndDrop,
         renderLegend,
         saveActivityDraft,
+        renderActivityAuthorMetadataSelects,
         rosterOptionLabel,
         localTargetFromStudent,
         rosterTargets,
@@ -401,6 +406,67 @@ def test_save_activity_draft_posts_form_and_selects_saved_activity() -> None:
           assert.match(tested.els.activityAuthorStatus.textContent, /Activity salvata/);
         })();
         """
+    )
+
+
+def test_activity_authoring_filters_metadata_by_path_and_uda() -> None:
+    run_dashboard_js(
+        """
+        const optionValue = (option) => typeof option.value === "object" ? option.value.value : option.value;
+        tested.state.classRosters = [
+          { id: "3A", label: "Classe 3A", name: "3a.json", github_team: "team-3a", students: 3 },
+          { id: "4A", label: "Classe 4A", name: "4a.json", github_team: "team-4a", students: 2 },
+        ];
+        tested.state.courseDesign = {
+          years: [
+            {
+              id: "percorso-a",
+              title: "Percorso A",
+              audience: { class_ids: ["3A"], github_teams: ["team-3a"] },
+              udas: [
+                {
+                  id: "uda-a1",
+                  title: "UDA A1",
+                  items: [
+                    { id: "a-intro", title: "A intro" },
+                    { id: "a-loop", title: "A loop" },
+                  ],
+                },
+                {
+                  id: "uda-a2",
+                  title: "UDA A2",
+                  items: [{ id: "a-array", title: "A array" }],
+                },
+              ],
+            },
+            {
+              id: "percorso-b",
+              title: "Percorso B",
+              audience: { class_ids: ["4A"], github_teams: ["team-4a"] },
+              udas: [
+                {
+                  id: "uda-b1",
+                  title: "UDA B1",
+                  items: [{ id: "b-file", title: "B file" }],
+                },
+              ],
+            },
+          ],
+        };
+
+        tested.els.activityAuthorPath.value = "percorso-a";
+        tested.renderActivityAuthorMetadataSelects();
+
+        assert.deepEqual(tested.els.activityAuthorClass.children.map(optionValue), ["3A"]);
+        assert.deepEqual(tested.els.activityAuthorTeam.children.map(optionValue), ["team-3a"]);
+        assert.deepEqual(tested.els.activityAuthorUda.children.map(optionValue), ["uda-a1", "uda-a2"]);
+        assert.deepEqual(tested.els.activityAuthorTopics.children.map(optionValue), ["a-array", "a-intro", "a-loop"]);
+
+        tested.els.activityAuthorUda.value = "uda-a1";
+        tested.renderActivityAuthorMetadataSelects();
+
+        assert.deepEqual(tested.els.activityAuthorTopics.children.map(optionValue), ["a-intro", "a-loop"]);
+      """
     )
 
 

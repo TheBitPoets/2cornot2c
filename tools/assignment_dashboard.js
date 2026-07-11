@@ -530,6 +530,68 @@ function activityAuthorPathOptions() {
     .filter((option) => option.value);
 }
 
+function selectedActivityAuthorPath() {
+  const pathId = els.activityAuthorPath?.value || "";
+  return courseSections().find((section) => (
+    String(section?.id || section?.title || "").trim() === pathId
+  )) || null;
+}
+
+function pathAudienceValues(section, keys) {
+  const audience = section?.audience || {};
+  const values = [];
+  for (const source of [section, audience]) {
+    for (const key of keys) {
+      const value = source?.[key];
+      if (Array.isArray(value)) values.push(...value);
+      else if (value) values.push(value);
+    }
+  }
+  return [...new Set(values.map((value) => String(value || "").trim()).filter(Boolean))];
+}
+
+function pathClassIds(section = selectedActivityAuthorPath()) {
+  return pathAudienceValues(section, ["class_ids", "classes", "class_id", "class"]);
+}
+
+function pathTeams(section = selectedActivityAuthorPath()) {
+  return pathAudienceValues(section, ["github_teams", "teams", "github_team", "team_github", "team"]);
+}
+
+function rosterMatchesPath(roster, classIds) {
+  if (!classIds.length) return true;
+  const aliases = [
+    roster?.id,
+    roster?.label,
+    roster?.name,
+    roster?.path,
+    roster?.github_team,
+  ].map((value) => String(value || "").trim()).filter(Boolean);
+  return aliases.some((alias) => classIds.includes(alias));
+}
+
+function activityAuthorClassOptions() {
+  const classIds = pathClassIds();
+  return state.classRosters
+    .filter((roster) => rosterMatchesPath(roster, classIds))
+    .map((roster) => ({
+      value: String(roster.id || roster.label || roster.name || "").trim(),
+      label: rosterOptionLabel(roster),
+    }))
+    .filter((option) => option.value);
+}
+
+function activityAuthorTeamOptions() {
+  const section = selectedActivityAuthorPath();
+  const explicitTeams = pathTeams(section);
+  if (explicitTeams.length) return selectOptionsFromValues(explicitTeams);
+  return selectOptionsFromValues(
+    state.classRosters
+      .filter((roster) => rosterMatchesPath(roster, pathClassIds(section)))
+      .map((roster) => roster.github_team),
+  );
+}
+
 function activityAuthorUdaOptions(pathId = els.activityAuthorPath?.value || "") {
   return courseSections()
     .filter((section) => !pathId || String(section?.id || section?.title || "").trim() === pathId)
@@ -540,20 +602,25 @@ function activityAuthorUdaOptions(pathId = els.activityAuthorPath?.value || "") 
     .filter((option) => option.value);
 }
 
-function activityAuthorTopicOptions() {
+function activityAuthorTopicOptions(pathId = els.activityAuthorPath?.value || "", udaId = els.activityAuthorUda?.value || "") {
   const topics = new Map();
-  for (const section of courseSections()) {
+  for (const section of courseSections().filter((candidate) => (
+    !pathId || String(candidate?.id || candidate?.title || "").trim() === pathId
+  ))) {
     for (const uda of Array.isArray(section?.udas) ? section.udas : []) {
+      if (udaId && String(uda?.id || uda?.title || "").trim() !== udaId) continue;
       for (const item of collectCourseItems(uda.items)) {
         const value = String(item?.id || item?.title || "").trim();
         if (value && !topics.has(value)) topics.set(value, item?.title || value);
       }
     }
   }
-  for (const activity of state.activities) {
-    for (const topic of Array.isArray(activity?.topics) ? activity.topics : []) {
-      const value = String(topic || "").trim();
-      if (value && !topics.has(value)) topics.set(value, value);
+  if (!pathId && !udaId) {
+    for (const activity of state.activities) {
+      for (const topic of Array.isArray(activity?.topics) ? activity.topics : []) {
+        const value = String(topic || "").trim();
+        if (value && !topics.has(value)) topics.set(value, value);
+      }
     }
   }
   return [...topics.entries()]
@@ -564,6 +631,7 @@ function activityAuthorTopicOptions() {
 function renderCompactSelect(select, options, placeholder) {
   if (!select) return;
   const selected = select.value;
+  select.replaceChildren?.();
   select.innerHTML = `<option value="">${escapeHtml(placeholder)}</option>`;
   for (const optionData of options) {
     const option = document.createElement("option");
@@ -575,6 +643,8 @@ function renderCompactSelect(select, options, placeholder) {
 }
 
 function renderActivityAuthorMetadataSelects() {
+  renderCompactSelect(els.activityAuthorPath, activityAuthorPathOptions(), "Nessun percorso");
+  renderCompactSelect(els.activityAuthorUda, activityAuthorUdaOptions(), "Nessuna UDA");
   renderCompactSelect(
     els.activityAuthorTopics,
     activityAuthorTopicOptions(),
@@ -582,19 +652,14 @@ function renderActivityAuthorMetadataSelects() {
   );
   renderCompactSelect(
     els.activityAuthorClass,
-    state.classRosters.map((roster) => ({
-      value: String(roster.id || roster.label || roster.name || "").trim(),
-      label: rosterOptionLabel(roster),
-    })).filter((option) => option.value),
+    activityAuthorClassOptions(),
     "Nessuna classe",
   );
   renderCompactSelect(
     els.activityAuthorTeam,
-    selectOptionsFromValues(state.classRosters.map((roster) => roster.github_team)),
+    activityAuthorTeamOptions(),
     "Nessun team",
   );
-  renderCompactSelect(els.activityAuthorPath, activityAuthorPathOptions(), "Nessun percorso");
-  renderCompactSelect(els.activityAuthorUda, activityAuthorUdaOptions(), "Nessuna UDA");
 }
 
 function setRosterStatus(message) {
@@ -2778,7 +2843,10 @@ els.activitySelect.addEventListener("change", () => {
 });
 els.saveActivityBtn?.addEventListener("click", saveActivityDraft);
 els.activityAuthorPath?.addEventListener("change", () => {
-  renderCompactSelect(els.activityAuthorUda, activityAuthorUdaOptions(), "Nessuna UDA");
+  renderActivityAuthorMetadataSelects();
+});
+els.activityAuthorUda?.addEventListener("change", () => {
+  renderCompactSelect(els.activityAuthorTopics, activityAuthorTopicOptions(), "Scegli argomento");
 });
 els.activityAuthorClass?.addEventListener("change", () => {
   const roster = state.classRosters.find((candidate) => (
