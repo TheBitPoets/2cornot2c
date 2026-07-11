@@ -206,13 +206,38 @@ def run_dashboard_js(assertions: str) -> None:
               id: "somma-in-python",
               title: "Somma in Python",
               kind: "compito-casa",
+              topics: ["variabili", "operatori"],
               path: "activities/drafts/somma-in-python.json",
             }},
             activities: [{{
               id: "somma-in-python",
               title: "Somma in Python",
               kind: "compito-casa",
+              topics: ["variabili", "operatori"],
               path: "activities/drafts/somma-in-python.json",
+            }}],
+          }};
+          if (path === "/api/class-rosters") return {{
+            rosters: [{{
+              id: "3A-TPSI",
+              label: "3A TPSI",
+              school_year: "2026-2027",
+              github_team: "team-3a",
+              students: 3,
+            }}],
+          }};
+          if (path === "/api/course-design") return {{
+            years: [{{
+              id: "base",
+              title: "Percorso base",
+              udas: [{{
+                id: "uda-1",
+                title: "Input e variabili",
+                items: [
+                  {{ id: "variabili", title: "Variabili" }},
+                  {{ id: "operatori", title: "Operatori" }},
+                ],
+              }}],
             }}],
           }};
           if (path === "/api/assignment-overview") return {{ rows: [] }};
@@ -279,6 +304,7 @@ def run_dashboard_js(assertions: str) -> None:
         setupPanelDragAndDrop,
         renderLegend,
         saveActivityDraft,
+        renderActivityAuthorOptions,
         rosterOptionLabel,
         localTargetFromStudent,
         rosterTargets,
@@ -400,6 +426,55 @@ def test_save_activity_draft_posts_form_and_selects_saved_activity() -> None:
           assert.equal(tested.els.activityPath.value, "activities/drafts/somma-in-python.json");
           assert.match(tested.els.activityAuthorStatus.textContent, /Activity salvata/);
         })();
+        """
+    )
+
+
+def test_activity_authoring_metadata_selects_use_available_values() -> None:
+    run_dashboard_js(
+        """
+        tested.state.classRosters = [
+          {
+            id: "3A-TPSI",
+            label: "3A TPSI",
+            school_year: "2026-2027",
+            github_team: "team-3a",
+            students: 3,
+          },
+        ];
+        tested.state.activities = [
+          { id: "somma", topics: ["liste"] },
+        ];
+        tested.state.courseDesign = {
+          years: [
+            {
+              id: "base",
+              title: "Percorso base",
+              udas: [
+                {
+                  id: "uda-1",
+                  title: "Input e variabili",
+                  items: [
+                    { id: "variabili", title: "Variabili" },
+                    { id: "operatori", title: "Operatori" },
+                  ],
+                },
+              ],
+            },
+          ],
+        };
+
+        tested.renderActivityAuthorOptions();
+        const optionValue = (option) => typeof option.value === "object" ? option.value.value : option.value;
+
+        assert.equal(optionValue(tested.els.activityAuthorClass.children[0]), "3A-TPSI");
+        assert.equal(optionValue(tested.els.activityAuthorTeam.children[0]), "team-3a");
+        assert.equal(optionValue(tested.els.activityAuthorPath.children[0]), "base");
+        assert.equal(optionValue(tested.els.activityAuthorUda.children[0]), "uda-1");
+        assert.deepEqual(
+          tested.els.activityAuthorTopics.children.map(optionValue),
+          ["liste", "operatori", "variabili"],
+        );
         """
     )
 

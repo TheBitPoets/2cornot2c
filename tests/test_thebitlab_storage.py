@@ -237,6 +237,7 @@ def test_list_activities_skips_invalid_json_and_deduplicates_paths(tmp_path) -> 
             "class_label": "3A-TPSI",
             "github_team": "team-3a-tpsi",
             "language": "python",
+            "topics": [],
             "path": "activities/activity.json",
         }
     ]
@@ -271,6 +272,7 @@ def test_save_activity_persists_valid_draft_and_lists_it(tmp_path) -> None:
     saved = storage.save_activity(activity)
 
     assert saved["path"] == "activities/drafts/python-base-somma-001.json"
+    assert saved["topics"] == ["variabili", "operatori"]
     assert (tmp_path / "activities" / "drafts" / "python-base-somma-001.json").is_file()
     assert storage.list_activities() == [saved]
     with pytest.raises(ValueError, match="gia esistente"):
