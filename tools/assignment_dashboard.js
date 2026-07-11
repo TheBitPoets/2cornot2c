@@ -603,13 +603,30 @@ function activityAuthorTeamOptions() {
   );
 }
 
-function activityAuthorUdaOptions(pathId = els.activityAuthorPath?.value || "") {
+function itemMatchesTopic(item, topicValue) {
+  if (!topicValue) return true;
+  const aliases = [
+    item?.id,
+    item?.title,
+    item?.href,
+  ].map((value) => String(value || "").trim()).filter(Boolean);
+  return aliases.includes(topicValue);
+}
+
+function udaHasTopic(uda, topicValue) {
+  if (!topicValue) return true;
+  return collectCourseItems(uda?.items).some((item) => itemMatchesTopic(item, topicValue));
+}
+
+function activityAuthorUdaOptions(pathId = els.activityAuthorPath?.value || "", topicValue = activityAuthorTopicValue()) {
   return courseSections()
     .filter((section) => !pathId || String(section?.id || section?.title || "").trim() === pathId)
-    .flatMap((section) => (Array.isArray(section?.udas) ? section.udas : []).map((uda) => ({
-      value: String(uda?.id || uda?.title || "").trim(),
-      label: String(uda?.title || uda?.id || "UDA senza titolo").trim(),
-    })))
+    .flatMap((section) => (Array.isArray(section?.udas) ? section.udas : [])
+      .filter((uda) => udaHasTopic(uda, topicValue))
+      .map((uda) => ({
+        value: String(uda?.id || uda?.title || "").trim(),
+        label: String(uda?.title || uda?.id || "UDA senza titolo").trim(),
+      })))
     .filter((option) => option.value);
 }
 
@@ -2905,6 +2922,9 @@ els.activityAuthorPath?.addEventListener("change", () => {
 });
 els.activityAuthorUda?.addEventListener("change", () => {
   renderTopicSearch(activityAuthorTopicOptions());
+});
+els.activityAuthorTopics?.addEventListener("input", () => {
+  renderCompactSelect(els.activityAuthorUda, activityAuthorUdaOptions(), "Nessuna UDA", els.activityAuthorUdaCount);
 });
 els.activityAuthorClass?.addEventListener("change", () => {
   const roster = state.classRosters.find((candidate) => (

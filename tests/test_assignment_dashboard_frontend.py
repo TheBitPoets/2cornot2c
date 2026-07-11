@@ -503,6 +503,13 @@ def test_activity_authoring_filters_metadata_by_path_and_uda() -> None:
 
         assert.deepEqual(tested.els.activityAuthorTopicsList.children.map(optionValue), ["A intro", "A loop"]);
         assert.equal(tested.els.activityAuthorTopicsCount.textContent, "2");
+
+        tested.els.activityAuthorUda.value = "";
+        tested.els.activityAuthorTopics.value = "A intro";
+        tested.renderActivityAuthorMetadataSelects();
+
+        assert.deepEqual(tested.els.activityAuthorUda.children.map(optionValue), ["uda-a1"]);
+        assert.equal(tested.els.activityAuthorUdaCount.textContent, "1");
       """
     )
 
