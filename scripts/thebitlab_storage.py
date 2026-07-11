@@ -231,7 +231,6 @@ class JsonAssignmentStorage:
             "class_label": activity.get("class_id", ""),
             "github_team": activity.get("github_team", ""),
             "language": activity.get("language", ""),
-            "topics": activity.get("topics", []),
             "path": self.relative_path(path),
         }
 
@@ -317,7 +316,6 @@ class JsonAssignmentStorage:
                         "class_label": activity.get("class_id", ""),
                         "github_team": activity.get("github_team", ""),
                         "language": activity.get("language", ""),
-                        "topics": activity.get("topics", []),
                         "path": self.relative_path(path),
                     }
                 )

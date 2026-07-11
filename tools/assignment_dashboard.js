@@ -92,7 +92,6 @@ const state = {
   activities: [],
   reports: [],
   classRosters: [],
-  courseDesign: null,
   selectedClassRoster: null,
   overviewRows: [],
   report: null,
@@ -444,26 +443,15 @@ async function loadClassRosters() {
     const payload = await api("/api/class-rosters");
     state.classRosters = payload.rosters || [];
     renderClassRosterSelect();
-    renderActivityAuthorOptions();
     renderRosterPanel();
     setRosterStatus(state.classRosters.length ? `Roster disponibili: ${state.classRosters.length}.` : "Nessun roster locale disponibile.");
   } catch (error) {
     state.classRosters = [];
     state.selectedClassRoster = null;
     renderClassRosterSelect();
-    renderActivityAuthorOptions();
     renderRosterPanel();
     setRosterStatus(`Roster non disponibili: ${error.message}`);
   }
-}
-
-async function loadCourseDesignForActivityAuthoring() {
-  try {
-    state.courseDesign = await api("/api/course-design");
-  } catch {
-    state.courseDesign = null;
-  }
-  renderActivityAuthorOptions();
 }
 
 function renderReportSelect() {
@@ -499,98 +487,6 @@ function renderClassRosterSelect() {
   }
   els.classRosterSelect.value = state.classRosters.some((roster) => roster.name === selected) ? selected : "";
   els.classRosterSelect.disabled = state.classRosters.length === 0;
-}
-
-function courseSections(design = state.courseDesign) {
-  if (Array.isArray(design?.paths)) return design.paths;
-  if (Array.isArray(design?.sections)) return design.sections;
-  return Array.isArray(design?.years) ? design.years : [];
-}
-
-function collectCourseItems(items, rows = []) {
-  for (const item of Array.isArray(items) ? items : []) {
-    if (!item || typeof item !== "object") continue;
-    rows.push(item);
-    collectCourseItems(item.children, rows);
-  }
-  return rows;
-}
-
-function activityAuthorPathOptions() {
-  return courseSections().map((section) => ({
-    value: String(section?.id || section?.title || "").trim(),
-    label: String(section?.title || section?.id || "Percorso senza titolo").trim(),
-  })).filter((option) => option.value);
-}
-
-function activityAuthorUdaOptions(pathId = els.activityAuthorPath?.value || "") {
-  return courseSections()
-    .filter((section) => !pathId || String(section?.id || section?.title || "").trim() === pathId)
-    .flatMap((section) => (Array.isArray(section?.udas) ? section.udas : []).map((uda) => ({
-      value: String(uda?.id || uda?.title || "").trim(),
-      label: `${section?.title || section?.id || "Percorso"} - ${uda?.title || uda?.id || "UDA senza titolo"}`,
-    })))
-    .filter((option) => option.value);
-}
-
-function activityAuthorTopicOptions() {
-  const topics = new Map();
-  for (const section of courseSections()) {
-    for (const uda of Array.isArray(section?.udas) ? section.udas : []) {
-      for (const item of collectCourseItems(uda.items)) {
-        const value = String(item?.id || item?.title || "").trim();
-        if (value && !topics.has(value)) topics.set(value, item?.title || value);
-      }
-    }
-  }
-  for (const activity of state.activities) {
-    for (const topic of Array.isArray(activity?.topics) ? activity.topics : []) {
-      const value = String(topic || "").trim();
-      if (value && !topics.has(value)) topics.set(value, value);
-    }
-  }
-  return [...topics.entries()]
-    .map(([value, label]) => ({ value, label }))
-    .sort((a, b) => a.label.localeCompare(b.label, "it", { numeric: true, sensitivity: "base" }));
-}
-
-function selectedSelectValues(select) {
-  const selected = Array.from(select?.selectedOptions || []).map((option) => option.value).filter(Boolean);
-  if (selected.length) return selected;
-  return String(select?.value || "").split(",").map((value) => value.trim()).filter(Boolean);
-}
-
-function renderSelectOptions(select, options, placeholder, selectedValues = []) {
-  if (!select) return;
-  const selected = new Set(selectedValues.length ? selectedValues : selectedSelectValues(select));
-  select.innerHTML = placeholder === null ? "" : `<option value="">${escapeHtml(placeholder)}</option>`;
-  for (const optionData of options) {
-    const option = document.createElement("option");
-    option.value = optionData.value;
-    option.textContent = optionData.label;
-    if (selected.has(option.value)) option.selected = true;
-    select.append(option);
-  }
-}
-
-function renderActivityAuthorOptions() {
-  renderSelectOptions(
-    els.activityAuthorClass,
-    state.classRosters.map((roster) => ({
-      value: String(roster.id || roster.label || roster.name || "").trim(),
-      label: rosterOptionLabel(roster),
-    })).filter((option) => option.value),
-    "Nessuna classe",
-  );
-  renderSelectOptions(
-    els.activityAuthorTeam,
-    [...new Set(state.classRosters.map((roster) => String(roster.github_team || "").trim()).filter(Boolean))]
-      .map((team) => ({ value: team, label: team })),
-    "Nessun team",
-  );
-  renderSelectOptions(els.activityAuthorPath, activityAuthorPathOptions(), "Nessun percorso");
-  renderSelectOptions(els.activityAuthorUda, activityAuthorUdaOptions(), "Nessuna UDA");
-  renderSelectOptions(els.activityAuthorTopics, activityAuthorTopicOptions(), null);
 }
 
 function setRosterStatus(message) {
@@ -1258,7 +1154,6 @@ async function loadActivities() {
   const payload = await api("/api/activities");
   state.activities = payload.activities || [];
   renderActivitySelect();
-  renderActivityAuthorOptions();
   renderCoverage();
 }
 
@@ -1274,7 +1169,7 @@ async function saveActivityDraft() {
         id: els.activityAuthorId?.value || "",
         kind: els.activityAuthorKind?.value || "",
         difficulty: els.activityAuthorDifficulty?.value || "",
-        topics: selectedSelectValues(els.activityAuthorTopics).join(", "),
+        topics: els.activityAuthorTopics?.value || "",
         prompt: els.activityAuthorPrompt?.value || "",
         estimated_minutes: els.activityAuthorMinutes?.value || "30",
         class_id: els.activityAuthorClass?.value || "",
@@ -2773,15 +2668,6 @@ els.activitySelect.addEventListener("change", () => {
   if (els.activitySelect.value) selectActivity(els.activitySelect.value);
 });
 els.saveActivityBtn?.addEventListener("click", saveActivityDraft);
-els.activityAuthorPath?.addEventListener("change", () => {
-  renderSelectOptions(els.activityAuthorUda, activityAuthorUdaOptions(), "Nessuna UDA");
-});
-els.activityAuthorClass?.addEventListener("change", () => {
-  const roster = state.classRosters.find((candidate) => (
-    String(candidate.id || candidate.label || candidate.name || "").trim() === els.activityAuthorClass.value
-  ));
-  if (roster?.github_team && els.activityAuthorTeam) els.activityAuthorTeam.value = roster.github_team;
-});
 els.classRosterSelect?.addEventListener("change", loadSelectedClassRoster);
 els.activityPath.addEventListener("input", () => {
   renderActivitySelect();
@@ -2935,10 +2821,4 @@ setupCollapsiblePanels();
 setupPanelDragAndDrop();
 setFilter("all");
 setupResizableTables();
-Promise.all([
-  loadReports(),
-  loadActivities(),
-  loadOverview(),
-  loadClassRosters(),
-  loadCourseDesignForActivityAuthoring(),
-]).catch((error) => setStatus(`Errore: ${error.message}`));
+Promise.all([loadReports(), loadActivities(), loadOverview(), loadClassRosters()]).catch((error) => setStatus(`Errore: ${error.message}`));
