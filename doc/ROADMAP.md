@@ -376,7 +376,7 @@ Il pattern della pagina consegne va reso riutilizzabile.
    - course board;
    - pagina classi;
    - pagina activity;
-   - dashboard studente.
+   - dashboard studente, con pannelli spostabili via drag and drop come nella pagina consegne docente.
 5. Mantenere una colonna su smartphone.
 6. Evitare duplicazione CSS/JS tra pagine.
 7. Migliorare accessibilita di drag/drop e resize.
