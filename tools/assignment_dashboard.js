@@ -2220,6 +2220,14 @@ function renderAssignmentPlan(plan) {
   `;
 }
 
+function assignmentPlanErrorMessage(error) {
+  const message = error?.message || String(error);
+  if (message.startsWith("404 ") && message.includes("Nothing matches the given URI")) {
+    return "endpoint non trovato. Riavvia il server con python scripts/course_board_server.py dalla branch aggiornata.";
+  }
+  return message;
+}
+
 async function previewAssignmentPlan() {
   if (!els.previewAssignmentBtn) return;
   els.previewAssignmentBtn.disabled = true;
@@ -2237,10 +2245,11 @@ async function previewAssignmentPlan() {
       ? "Anteprima assegnazione pronta."
       : "Anteprima pronta: alcuni target sono gia assegnati.");
   } catch (error) {
+    const message = assignmentPlanErrorMessage(error);
     if (els.assignmentPlanPreview) {
-      els.assignmentPlanPreview.innerHTML = `<p class="status">Anteprima non disponibile: ${escapeHtml(error.message)}</p>`;
+      els.assignmentPlanPreview.innerHTML = `<p class="status">Anteprima non disponibile: ${escapeHtml(message)}</p>`;
     }
-    setStatus(`Anteprima assegnazione non disponibile: ${error.message}`);
+    setStatus(`Anteprima assegnazione non disponibile: ${message}`);
   } finally {
     els.previewAssignmentBtn.disabled = false;
   }

@@ -199,12 +199,14 @@ def run_dashboard_js(assertions: str) -> None:
       fetchResponses,
       fetch: async (path, options = {{}}) => {{
         fetchCalls.push({{ path, options }});
+        const fakeResponse = fetchResponses[path];
         return {{
-        ok: true,
-        status: 200,
-        statusText: "OK",
+        ok: fakeResponse?.ok ?? true,
+        status: fakeResponse?.status ?? 200,
+        statusText: fakeResponse?.statusText ?? "OK",
         json: async () => {{
-          if (fetchResponses[path]) return fetchResponses[path];
+          if (fakeResponse?.json) return fakeResponse.json;
+          if (fakeResponse) return fakeResponse;
           if (path === "/api/assignment-reports") return {{ reports: [] }};
           if (path === "/api/activities") return {{ activities: [] }};
           if (path === "/api/activities/save") return {{
@@ -239,7 +241,7 @@ def run_dashboard_js(assertions: str) -> None:
           }}
           return {{}};
         }},
-        text: async () => "",
+        text: async () => fakeResponse?.text ?? "",
       }};
       }},
     }};
@@ -296,6 +298,7 @@ def run_dashboard_js(assertions: str) -> None:
         renderAssignmentAssetList,
         renderAssignmentTargetList,
         renderAssignmentPlan,
+        assignmentPlanErrorMessage,
         previewAssignmentPlan,
         rosterOptionLabel,
         localTargetFromStudent,
@@ -486,6 +489,29 @@ def test_assignment_preview_posts_plan_and_renders_assets() -> None:
           assert.match(tested.els.assignmentPlanPreview.innerHTML, /tests\\/test_hidden.py/);
           assert.match(tested.els.assignmentPlanPreview.innerHTML, /target bloccati/);
           assert.match(tested.els.status.textContent, /alcuni target/);
+        })();
+        """
+    )
+
+
+def test_assignment_preview_explains_missing_server_endpoint() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.els.activityPath.value = "activities/examples/python_assets_scaffold/activity.json";
+          tested.els.targetsText.value = "students/rossi-mario";
+          tested.fetchResponses["/api/activities/assignment-plan"] = {
+            ok: false,
+            status: 404,
+            statusText: "Not Found",
+            text: '<html><body><p>Nothing matches the given URI.</p></body></html>',
+          };
+
+          await tested.previewAssignmentPlan();
+
+          assert.match(tested.els.assignmentPlanPreview.innerHTML, /endpoint non trovato/);
+          assert.match(tested.els.assignmentPlanPreview.innerHTML, /course_board_server.py/);
+          assert.match(tested.els.status.textContent, /endpoint non trovato/);
         })();
         """
     )
