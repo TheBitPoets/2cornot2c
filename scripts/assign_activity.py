@@ -92,6 +92,12 @@ def collect_targets_from_provider(provider: RepositoryProvider, class_ref: str |
     return paths
 
 
+def normalize_targets(targets: list[Path]) -> list[Path]:
+    """Return stable absolute target paths without requiring them to exist."""
+
+    return [target.resolve(strict=False) for target in targets]
+
+
 def assignment_asset_summary(activity: dict[str, Any]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Return student-visible and teacher/grader assets for an activity preview."""
 
@@ -135,6 +141,7 @@ def build_assignment_plan(
 
     if not targets:
         raise ValueError("Indica almeno un repository studente.")
+    normalized_targets = normalize_targets(targets)
     activity = create_submission_scaffold.load_activity(activity_path)
     identifier = create_submission_scaffold.activity_id(activity)
     normalized_activity = create_submission_scaffold.validate_activity_contract_or_raise(activity, identifier)
@@ -148,7 +155,7 @@ def build_assignment_plan(
     create_submission_scaffold.student_asset_copy_plan(activity_path, activity)
     blocked_targets = [
         str(target)
-        for target in targets
+        for target in normalized_targets
         if create_submission_scaffold.scaffold_dir(target, identifier).exists()
         and any(create_submission_scaffold.scaffold_dir(target, identifier).iterdir())
     ]
@@ -166,7 +173,7 @@ def build_assignment_plan(
                 "assignment_dir": str(create_submission_scaffold.scaffold_dir(target, identifier)),
                 "exists": str(target) in blocked_targets,
             }
-            for target in targets
+            for target in normalized_targets
         ],
         blocked_targets=blocked_targets,
         overwrite=overwrite,
@@ -197,7 +204,7 @@ def assign_activity_to_targets(
         raise ValueError(f"Consegna gia esistente in questi repository:\n{blocked}\nUsa --force per aggiornare.")
 
     results: list[AssignmentResult] = []
-    for target in targets:
+    for target in normalize_targets(targets):
         assignment_dir = create_submission_scaffold.create_scaffold(
             activity_path=activity_path,
             target_dir=target,

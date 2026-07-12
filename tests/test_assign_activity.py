@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from scripts import assign_activity
 from scripts.thebitlab_repository_providers import LocalRepositoryProvider, StudentRepository
@@ -218,8 +219,23 @@ def test_build_assignment_plan_reports_blocked_targets(tmp_path) -> None:
     plan = assign_activity.build_assignment_plan(activity_path=activity_path, targets=[target])
 
     assert plan.can_assign is False
-    assert plan.blocked_targets == [str(target)]
+    assert plan.blocked_targets == [str(target.resolve())]
     assert plan.targets[0]["exists"] is True
+
+
+def test_build_assignment_plan_normalizes_relative_targets(tmp_path, monkeypatch) -> None:
+    activity_path = write_activity(tmp_path)
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    monkeypatch.chdir(workspace)
+
+    plan = assign_activity.build_assignment_plan(
+        activity_path=activity_path,
+        targets=[Path("student-a")],
+    )
+
+    assert plan.targets[0]["target"] == str((workspace / "student-a").resolve())
+    assert plan.targets[0]["assignment_dir"] == str((workspace / "student-a" / "assignments" / "python-base-somma-001").resolve())
 
 
 def test_assign_activity_supports_canonical_activity_metadata(tmp_path) -> None:
