@@ -210,6 +210,7 @@ const els = {
   rosterPanelStatus: document.querySelector("#rosterPanelStatus"),
   rosterSummary: document.querySelector("#rosterSummary"),
   rosterBody: document.querySelector("#rosterBody"),
+  reportAssignmentSummary: document.querySelector("#reportAssignmentSummary"),
   outputName: document.querySelector("#outputName"),
   classId: document.querySelector("#classId"),
   classLabel: document.querySelector("#classLabel"),
@@ -789,6 +790,21 @@ function rosterSummaryItems(roster) {
   ];
 }
 
+function targetLineCount() {
+  return els.targetsText.value.split(/\r?\n/).filter((line) => line.trim() && !line.trim().startsWith("#")).length;
+}
+
+function reportAssignmentSummaryItems() {
+  return [
+    ["Activity", currentActivityLabel()],
+    ["Classe", els.classId.value.trim() || "-"],
+    ["Team", els.githubTeam.value.trim() || "-"],
+    ["Scadenza", els.dueAt.value.trim() ? formatDate(els.dueAt.value) : "-"],
+    ["Target", targetLineCount()],
+    ["Output registro", els.outputName.value.trim() || "-"],
+  ];
+}
+
 function renderRosterSummaryCards(items) {
   return items.map(([label, value]) => `
     <article class="summaryCard" title="${escapeHtml(summaryTooltip(label))}">
@@ -796,6 +812,16 @@ function renderRosterSummaryCards(items) {
       <span>${escapeHtml(value)}</span>
     </article>
   `).join("");
+}
+
+function renderReportAssignmentSummary() {
+  if (!els.reportAssignmentSummary) return;
+  els.reportAssignmentSummary.innerHTML = renderRosterSummaryCards(reportAssignmentSummaryItems());
+}
+
+function renderAssignmentContext() {
+  renderRosterPanel();
+  renderReportAssignmentSummary();
 }
 
 function studentAccountLabel(student) {
@@ -818,11 +844,13 @@ function renderRosterPanel() {
     setRosterPanelStatus(state.classRosters.length ? "Seleziona un roster in Assegna activity per vedere studenti e target." : "Nessun roster locale disponibile.");
     els.rosterSummary.innerHTML = '<p class="status">Nessun roster selezionato.</p>';
     els.rosterBody.innerHTML = '<tr><td colspan="4">Seleziona un roster per vedere gli studenti.</td></tr>';
+    renderReportAssignmentSummary();
     return;
   }
   const students = Array.isArray(roster.students) ? roster.students : [];
   setRosterPanelStatus(`${rosterClassValue(roster)} - ${currentActivityLabel()} - ${students.length} studenti nel roster.`);
   els.rosterSummary.innerHTML = renderRosterSummaryCards(rosterSummaryItems(roster));
+  renderReportAssignmentSummary();
   if (!students.length) {
     els.rosterBody.innerHTML = '<tr><td colspan="4">Roster senza studenti.</td></tr>';
     return;
@@ -2496,6 +2524,8 @@ const SUMMARY_TOOLTIPS = {
   Righe: "Righe activity-studente mostrate rispetto al totale disponibile.",
   Filtri: "Filtri attivi nella vista corrente.",
   Classe: "Classe associata al registro consegne selezionato.",
+  Team: "Team GitHub o gruppo associato ai destinatari correnti.",
+  Target: "Numero di repository o cartelle studente indicati come destinatari correnti.",
   Attivi: "Numero di studenti attivi nel roster e inclusi nella generazione del registro.",
   "Output registro": "Nome del file JSON che verra generato per l'activity e la classe selezionate.",
   "Target locali": "Numero di studenti attivi con un target locale o repo path gia disponibile.",
@@ -3086,9 +3116,15 @@ els.activityAuthorClass?.addEventListener("change", () => {
 els.classRosterSelect?.addEventListener("change", loadSelectedClassRoster);
 els.activityPath.addEventListener("input", () => {
   renderActivitySelect();
-  renderRosterPanel();
+  renderAssignmentContext();
 });
-els.outputName.addEventListener("input", renderRosterPanel);
+els.outputName.addEventListener("input", renderAssignmentContext);
+els.classId.addEventListener("input", renderReportAssignmentSummary);
+els.classLabel.addEventListener("input", renderAssignmentContext);
+els.githubTeam.addEventListener("input", renderAssignmentContext);
+els.assignedAt.addEventListener("input", renderReportAssignmentSummary);
+els.dueAt.addEventListener("input", renderReportAssignmentSummary);
+els.targetsText.addEventListener("input", renderAssignmentContext);
 els.classId.addEventListener("change", updateOutputNameForCurrentActivity);
 els.coverageBody.addEventListener("click", async (event) => {
   const toggleButton = event.target.closest("[data-coverage-toggle]");
