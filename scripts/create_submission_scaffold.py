@@ -240,15 +240,9 @@ def student_assets(activity: dict[str, Any]) -> list[dict[str, Any]]:
     ]
 
 
-def copy_student_assets(
-    *,
-    activity_path: Path,
-    destination: Path,
-    activity: dict[str, Any],
-    overwrite_source: bool,
-) -> list[Path]:
-    """Copy student-visible assets from the activity bundle into the scaffold."""
-    copied_paths: list[Path] = []
+def student_asset_copy_plan(activity_path: Path, activity: dict[str, Any]) -> list[tuple[Path, Path]]:
+    """Validate student-visible assets and return source/target relative paths."""
+    planned_assets: list[tuple[Path, Path]] = []
     activity_root = activity_path.parent
     for index, asset in enumerate(student_assets(activity)):
         source_rel = validate_relative_path(asset.get("path"), f"assets[{index}].path")
@@ -260,6 +254,19 @@ def copy_student_assets(
         if not source_path.is_file():
             raise ValueError(f"Asset non trovato: {source_path}")
 
+        planned_assets.append((source_path, target_rel))
+    return planned_assets
+
+
+def copy_student_assets(
+    *,
+    destination: Path,
+    asset_plan: list[tuple[Path, Path]],
+    overwrite_source: bool,
+) -> list[Path]:
+    """Copy a validated set of student-visible assets into the scaffold."""
+    copied_paths: list[Path] = []
+    for source_path, target_rel in asset_plan:
         target_path = destination / target_rel
         target_path.parent.mkdir(parents=True, exist_ok=True)
         if target_path.exists() and not overwrite_source:
@@ -321,6 +328,7 @@ def create_scaffold(
     )
     thebitlab_ref = validate_thebitlab_ref(thebitlab_ref)
     destination = scaffold_dir(target_dir, identifier)
+    asset_plan = student_asset_copy_plan(activity_path, activity)
 
     if destination.exists() and any(destination.iterdir()) and not overwrite:
         raise ValueError(f"Consegna gia esistente: {destination}. Usa --force per sovrascrivere.")
@@ -333,9 +341,8 @@ def create_scaffold(
     )
 
     copy_student_assets(
-        activity_path=activity_path,
         destination=destination,
-        activity=activity,
+        asset_plan=asset_plan,
         overwrite_source=overwrite_source,
     )
 

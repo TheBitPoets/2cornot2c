@@ -134,6 +134,8 @@ def test_create_scaffold_rejects_missing_student_asset(tmp_path) -> None:
     else:
         raise AssertionError("create_scaffold should reject missing student assets")
 
+    assert not (tmp_path / "assignments").exists()
+
 
 def test_create_scaffold_rejects_invalid_canonical_kind(tmp_path) -> None:
     activity_path = write_activity(
