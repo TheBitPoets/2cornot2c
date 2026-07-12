@@ -113,6 +113,58 @@ def test_list_assignment_reports_counts_late_only_for_submitted_students(tmp_pat
     assert reports[0]["late"] == 1
 
 
+def test_preview_activity_assignment_returns_plan_without_writing(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    activities_dir = tmp_path / "activities"
+    activities_dir.mkdir()
+    (activities_dir / "starter").mkdir()
+    (activities_dir / "starter" / "main.py").write_text("print('starter')\n", encoding="utf-8")
+    activity_path = activities_dir / "activity.json"
+    activity_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "id": "python-base-somma-001",
+                "titolo": "Somma in Python",
+                "tipo": "compito-casa",
+                "difficolta": "B",
+                "argomenti": ["variabili"],
+                "linguaggio": "python",
+                "consegna": "Completa main.py.",
+                "assets": [{"type": "starter", "path": "starter/main.py", "target_path": "main.py"}],
+                "correzione": {
+                    "compila": True,
+                    "test": True,
+                    "sandbox": True,
+                    "ai_feedback": False,
+                },
+                "metriche": {
+                    "tempo_stimato_minuti": 20,
+                    "traccia_tempo_dichiarato": True,
+                    "traccia_sessioni_thebitlab": True,
+                    "traccia_eventi_didattici": True,
+                    "traccia_errori_compilazione": True,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    target = tmp_path / "students" / "rossi-mario"
+
+    response = course_board_server.preview_activity_assignment(
+        {
+            "activity_path": "activities/activity.json",
+            "targets_text": "students/rossi-mario",
+        }
+    )
+
+    assert response["ok"] is True
+    assert response["plan"]["activity_id"] == "python-base-somma-001"
+    assert response["plan"]["student_assets"][0]["target_path"] == "main.py"
+    assert response["plan"]["targets"][0]["target"] == str(target.resolve())
+    assert not (target / "assignments").exists()
+
+
 def test_review_assignment_ai_feedback_persists_teacher_decision(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")

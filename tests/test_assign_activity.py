@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from scripts import assign_activity
 from scripts.thebitlab_repository_providers import LocalRepositoryProvider, StudentRepository
@@ -33,10 +34,10 @@ def activity() -> dict:
     }
 
 
-def write_activity(tmp_path):
+def write_activity(tmp_path, payload: dict | None = None):
     """Write a valid activity JSON and return its path."""
     path = tmp_path / "activity.json"
-    path.write_text(json.dumps(activity()), encoding="utf-8")
+    path.write_text(json.dumps(activity() if payload is None else payload), encoding="utf-8")
     return path
 
 
@@ -162,6 +163,79 @@ def test_assign_activity_to_multiple_targets(tmp_path) -> None:
         assert (assignment_dir / "main.py").exists()
         readme = (assignment_dir / "README.md").read_text(encoding="utf-8")
         assert "source_path`: `assignments/python-base-somma-001/main.py`" in readme
+
+
+def test_build_assignment_plan_summarizes_assets_without_writing(tmp_path) -> None:
+    (tmp_path / "starter").mkdir()
+    (tmp_path / "starter" / "main.py").write_text("print('starter')\n", encoding="utf-8")
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "test_public.py").write_text("def test_public():\n    assert True\n", encoding="utf-8")
+    (tmp_path / "tests" / "test_hidden.py").write_text("def test_hidden():\n    assert True\n", encoding="utf-8")
+    activity_path = write_activity(
+        tmp_path,
+        {
+            **activity(),
+            "linguaggio": "python",
+            "assets": [
+                {"type": "starter", "path": "starter/main.py", "target_path": "main.py"},
+                {"type": "visible_test", "path": "tests/test_public.py", "target_path": "tests/test_public.py"},
+                {"type": "hidden_test", "path": "tests/test_hidden.py", "visibility": "teacher"},
+            ],
+        },
+    )
+    target = tmp_path / "student-a"
+
+    plan = assign_activity.build_assignment_plan(activity_path=activity_path, targets=[target])
+
+    assert plan.activity_id == "python-base-somma-001"
+    assert plan.source_name == "main.py"
+    assert plan.can_assign is True
+    assert plan.student_assets == [
+        {
+            "type": "starter",
+            "path": "starter/main.py",
+            "target_path": "main.py",
+            "visibility": "student",
+            "description": "",
+        },
+        {
+            "type": "visible_test",
+            "path": "tests/test_public.py",
+            "target_path": "tests/test_public.py",
+            "visibility": "student",
+            "description": "",
+        },
+    ]
+    assert plan.teacher_assets[0]["type"] == "hidden_test"
+    assert plan.targets[0]["assignment_dir"] == str(target / "assignments" / "python-base-somma-001")
+    assert not (target / "assignments").exists()
+
+
+def test_build_assignment_plan_reports_blocked_targets(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+    target = tmp_path / "student-a"
+    assign_activity.assign_activity_to_targets(activity_path=activity_path, targets=[target])
+
+    plan = assign_activity.build_assignment_plan(activity_path=activity_path, targets=[target])
+
+    assert plan.can_assign is False
+    assert plan.blocked_targets == [str(target.resolve())]
+    assert plan.targets[0]["exists"] is True
+
+
+def test_build_assignment_plan_normalizes_relative_targets(tmp_path, monkeypatch) -> None:
+    activity_path = write_activity(tmp_path)
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    monkeypatch.chdir(workspace)
+
+    plan = assign_activity.build_assignment_plan(
+        activity_path=activity_path,
+        targets=[Path("student-a")],
+    )
+
+    assert plan.targets[0]["target"] == str((workspace / "student-a").resolve())
+    assert plan.targets[0]["assignment_dir"] == str((workspace / "student-a" / "assignments" / "python-base-somma-001").resolve())
 
 
 def test_assign_activity_supports_canonical_activity_metadata(tmp_path) -> None:

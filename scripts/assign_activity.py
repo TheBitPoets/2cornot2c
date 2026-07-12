@@ -1,8 +1,15 @@
 from __future__ import annotations
 
 import argparse
+import json
+import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from scripts import create_submission_scaffold
 from scripts.thebitlab_repository_providers import RepositoryProvider
@@ -14,6 +21,43 @@ class AssignmentResult:
 
     target: Path
     assignment_dir: Path
+
+
+@dataclass(frozen=True)
+class AssignmentPlan:
+    """Preview of assigning one activity to a set of target repositories."""
+
+    activity_id: str
+    title: str
+    language: str
+    source_name: str
+    student_assets: list[dict[str, Any]]
+    teacher_assets: list[dict[str, Any]]
+    targets: list[dict[str, Any]]
+    blocked_targets: list[str]
+    overwrite: bool
+
+    @property
+    def can_assign(self) -> bool:
+        """Return whether the plan can be executed without force."""
+
+        return self.overwrite or not self.blocked_targets
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable plan for CLI/API consumers."""
+
+        return {
+            "activity_id": self.activity_id,
+            "title": self.title,
+            "language": self.language,
+            "source_name": self.source_name,
+            "student_assets": self.student_assets,
+            "teacher_assets": self.teacher_assets,
+            "targets": self.targets,
+            "blocked_targets": self.blocked_targets,
+            "overwrite": self.overwrite,
+            "can_assign": self.can_assign,
+        }
 
 
 def load_targets_file(path: Path) -> list[Path]:
@@ -53,6 +97,94 @@ def collect_targets_from_provider(provider: RepositoryProvider, class_ref: str |
     return paths
 
 
+def normalize_targets(targets: list[Path]) -> list[Path]:
+    """Return stable absolute target paths without requiring them to exist."""
+
+    return [target.resolve(strict=False) for target in targets]
+
+
+def assignment_asset_summary(activity: dict[str, Any]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Return student-visible and teacher/grader assets for an activity preview."""
+
+    student_assets = []
+    teacher_assets = []
+    assets = activity.get("assets")
+    if not isinstance(assets, list):
+        return student_assets, teacher_assets
+    student_asset_ids = {id(asset) for asset in create_submission_scaffold.student_assets(activity)}
+    for asset in assets:
+        if not isinstance(asset, dict):
+            continue
+        asset_type = str(asset.get("type", ""))
+        path = str(asset.get("path", ""))
+        target_path = str(asset.get("target_path", path))
+        visibility = create_submission_scaffold.asset_visibility(asset)
+        summary = {
+            "type": asset_type,
+            "path": path,
+            "target_path": target_path,
+            "visibility": visibility,
+            "description": str(asset.get("description", "")),
+        }
+        if id(asset) in student_asset_ids:
+            student_assets.append(summary)
+        else:
+            teacher_assets.append(summary)
+    return student_assets, teacher_assets
+
+
+def build_assignment_plan(
+    *,
+    activity_path: Path,
+    targets: list[Path],
+    source_name: str | None = None,
+    language: str | None = None,
+    thebitlab_ref: str = create_submission_scaffold.DEFAULT_THEBITLAB_REF,
+    overwrite: bool = False,
+) -> AssignmentPlan:
+    """Validate an assignment request and return a write-free execution preview."""
+
+    if not targets:
+        raise ValueError("Indica almeno un repository studente.")
+    normalized_targets = normalize_targets(targets)
+    activity = create_submission_scaffold.load_activity(activity_path)
+    identifier = create_submission_scaffold.activity_id(activity)
+    normalized_activity = create_submission_scaffold.validate_activity_contract_or_raise(activity, identifier)
+    selected_language = create_submission_scaffold.language_for(normalized_activity, language)
+    selected_source_name = create_submission_scaffold.validate_source_name(
+        source_name
+        if source_name is not None
+        else create_submission_scaffold.default_source_name_for(selected_language)
+    )
+    create_submission_scaffold.validate_thebitlab_ref(thebitlab_ref)
+    create_submission_scaffold.student_asset_copy_plan(activity_path, activity)
+    blocked_targets = [
+        str(target)
+        for target in normalized_targets
+        if create_submission_scaffold.scaffold_dir(target, identifier).exists()
+        and any(create_submission_scaffold.scaffold_dir(target, identifier).iterdir())
+    ]
+    student_assets, teacher_assets = assignment_asset_summary(activity)
+    return AssignmentPlan(
+        activity_id=identifier,
+        title=str(normalized_activity.get("title") or identifier),
+        language=selected_language,
+        source_name=selected_source_name,
+        student_assets=student_assets,
+        teacher_assets=teacher_assets,
+        targets=[
+            {
+                "target": str(target),
+                "assignment_dir": str(create_submission_scaffold.scaffold_dir(target, identifier)),
+                "exists": str(target) in blocked_targets,
+            }
+            for target in normalized_targets
+        ],
+        blocked_targets=blocked_targets,
+        overwrite=overwrite,
+    )
+
+
 def assign_activity_to_targets(
     *,
     activity_path: Path,
@@ -64,29 +196,20 @@ def assign_activity_to_targets(
     overwrite_source: bool = False,
 ) -> list[AssignmentResult]:
     """Create the activity scaffold in each target student repository."""
-    activity = create_submission_scaffold.load_activity(activity_path)
-    identifier = create_submission_scaffold.activity_id(activity)
-    normalized_activity = create_submission_scaffold.validate_activity_contract_or_raise(activity, identifier)
-    selected_language = create_submission_scaffold.language_for(normalized_activity, language)
-    create_submission_scaffold.validate_source_name(
-        source_name
-        if source_name is not None
-        else create_submission_scaffold.default_source_name_for(selected_language)
+    plan = build_assignment_plan(
+        activity_path=activity_path,
+        targets=targets,
+        source_name=source_name,
+        language=language,
+        thebitlab_ref=thebitlab_ref,
+        overwrite=overwrite,
     )
-    create_submission_scaffold.validate_thebitlab_ref(thebitlab_ref)
-    blocked_targets = [
-        target
-        for target in targets
-        if create_submission_scaffold.scaffold_dir(target, identifier).exists()
-        and any(create_submission_scaffold.scaffold_dir(target, identifier).iterdir())
-        and not overwrite
-    ]
-    if blocked_targets:
-        blocked = "\n".join(str(target) for target in blocked_targets)
+    if not plan.can_assign:
+        blocked = "\n".join(plan.blocked_targets)
         raise ValueError(f"Consegna gia esistente in questi repository:\n{blocked}\nUsa --force per aggiornare.")
 
     results: list[AssignmentResult] = []
-    for target in targets:
+    for target in normalize_targets(targets):
         assignment_dir = create_submission_scaffold.create_scaffold(
             activity_path=activity_path,
             target_dir=target,
@@ -124,6 +247,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--force", action="store_true", help="Aggiorna una consegna gia esistente.")
     parser.add_argument("--overwrite-source", action="store_true", help="Sovrascrive anche il sorgente se esiste.")
+    parser.add_argument("--dry-run", action="store_true", help="Mostra il piano di assegnazione senza scrivere nei repository.")
     return parser.parse_args()
 
 
@@ -132,6 +256,17 @@ def main() -> int:
     args = parse_args()
     try:
         targets = collect_targets(args.target, args.targets_file)
+        if args.dry_run:
+            plan = build_assignment_plan(
+                activity_path=args.activity,
+                targets=targets,
+                source_name=args.source_name,
+                language=args.language,
+                thebitlab_ref=args.thebitlab_ref,
+                overwrite=args.force,
+            )
+            print(json.dumps(plan.to_dict(), ensure_ascii=False, indent=2))
+            return 0
         results = assign_activity_to_targets(
             activity_path=args.activity,
             targets=targets,

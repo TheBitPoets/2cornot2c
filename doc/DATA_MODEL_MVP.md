@@ -112,6 +112,8 @@ Per l'MVP questa copia va vista come snapshot assegnato allo studente, non come 
 
 Gli asset della activity definiscono quali file entrano nello scaffold. Solo asset con visibilita effettiva `student` e tipo `starter`, `example`, `fixture` o `visible_test` vengono copiati nel repository studente. Test nascosti, runner e file `teacher_only` restano materiale docente/grader.
 
+Prima dell'assegnazione effettiva, il backend puo produrre un piano di assegnazione senza scrivere nei repository: activity, linguaggio, sorgente principale, target, asset visibili allo studente, asset riservati e target gia bloccati. La GUI docente deve usare questo piano per mostrare chiaramente cosa verra copiato e cosa resta riservato.
+
 Campi da preservare nel collegamento:
 
 - `activity_id`;

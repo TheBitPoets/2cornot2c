@@ -33,7 +33,15 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts import create_activity, manual_ai_feedback, thebitlab_services, thebitlab_storage, track_assignments
+from scripts import (
+    assign_activity,
+    create_activity,
+    create_submission_scaffold,
+    manual_ai_feedback,
+    thebitlab_services,
+    thebitlab_storage,
+    track_assignments,
+)
 
 DESIGN_PATH = ROOT / "doc" / "course_design.json"
 COURSE_DESIGNS_DIR = ROOT / "doc" / "course_designs"
@@ -367,6 +375,38 @@ def read_targets_from_text(targets_text: str) -> list[track_assignments.Tracking
     if not targets:
         raise ValueError("Inserisci almeno un repository studente nei target.")
     return targets
+
+
+def read_assignment_target_paths_from_text(targets_text: str) -> list[Path]:
+    """Build assignment target repository paths from one path per line."""
+
+    targets = []
+    for raw_line in targets_text.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        targets.append(resolve_local_path(line, "target"))
+    if not targets:
+        raise ValueError("Inserisci almeno un repository studente nei target.")
+    return targets
+
+
+def preview_activity_assignment(payload: dict) -> dict:
+    """Return a write-free assignment plan for the local GUI."""
+
+    activity_path = resolve_local_path(payload.get("activity_path", ""), "activity_path")
+    if not activity_path.is_file():
+        raise FileNotFoundError(f"Activity non trovata: {activity_path}")
+    targets = read_assignment_target_paths_from_text(str(payload.get("targets_text", "")))
+    plan = assign_activity.build_assignment_plan(
+        activity_path=activity_path,
+        targets=targets,
+        source_name=payload.get("source_name") or None,
+        language=payload.get("language") or None,
+        thebitlab_ref=payload.get("thebitlab_ref") or create_submission_scaffold.DEFAULT_THEBITLAB_REF,
+        overwrite=bool(payload.get("overwrite", False)),
+    )
+    return {"ok": True, "plan": plan.to_dict()}
 
 
 def generate_assignment_report(payload: dict) -> dict:
@@ -1835,6 +1875,20 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/assignment-reports/generate":
             try:
                 self.write_json(generate_assignment_report(payload))
+            except Exception as error:  # noqa: BLE001
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+            return
+        if parsed.path == "/api/activities/assignment-plan":
+            try:
+                self.write_json(preview_activity_assignment(payload))
+            except FileNotFoundError as error:
+                self.send_response(404)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
             except Exception as error:  # noqa: BLE001
                 self.send_response(400)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
