@@ -522,12 +522,11 @@ La GUI usa questi campi in creazione registro consegne, selettore registri, riep
 
 La pagina `Consegne` puo anche creare un registro consegne senza usare direttamente la CLI.
 
-Nel riquadro `Assegnazione e registro` compila:
+Nel riquadro `Assegna activity` compila i dati che identificano activity, destinatari e date:
 
 | Campo | Significato |
 |---|---|
 | Activity JSON | Scheda activity da tracciare |
-| Output registro | Path relativo dentro `teacher-reports`, per esempio `3A/somma.json` |
 | Classe | Identificativo classe dell'assegnazione, per esempio `3A-TPSI` |
 | Etichetta classe | Nome leggibile mostrato in dashboard, per esempio `3A TPSI` |
 | Team GitHub | Team GitHub della classe, se disponibile |
@@ -535,6 +534,12 @@ Nel riquadro `Assegnazione e registro` compila:
 | Scadenza | Data ISO di scadenza |
 | Ora simulata opzionale | Data ISO usata per simulare il momento attuale |
 | Repository studenti locali | Un path per riga verso i repository/cartelle studente |
+
+Nel riquadro `Registro consegne` compila:
+
+| Campo | Significato |
+|---|---|
+| Output registro | Path relativo dentro `teacher-reports`, per esempio `3A/somma.json` |
 
 Nota: questa azione crea o aggiorna il registro consegne per tracciare stato, ritardi e grading. Non distribuisce ancora gli asset agli studenti; l'assegnazione reale dell'activity avra un flusso dedicato.
 

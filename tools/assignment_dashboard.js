@@ -815,7 +815,7 @@ function renderRosterPanel() {
   const roster = state.selectedClassRoster;
   if (!els.rosterSummary || !els.rosterBody) return;
   if (!roster) {
-    setRosterPanelStatus(state.classRosters.length ? "Seleziona un roster in Assegnazione e registro per vedere studenti e target." : "Nessun roster locale disponibile.");
+    setRosterPanelStatus(state.classRosters.length ? "Seleziona un roster in Assegna activity per vedere studenti e target." : "Nessun roster locale disponibile.");
     els.rosterSummary.innerHTML = '<p class="status">Nessun roster selezionato.</p>';
     els.rosterBody.innerHTML = '<tr><td colspan="4">Seleziona un roster per vedere gli studenti.</td></tr>';
     return;

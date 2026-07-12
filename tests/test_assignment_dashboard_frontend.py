@@ -1122,6 +1122,26 @@ def test_report_loader_controls_live_in_selected_report_panel() -> None:
     assert 'id="reportSelect"' not in hero_section
 
 
+def test_assignment_and_report_panels_are_separated() -> None:
+    html = open("tools/assignment_dashboard.html", encoding="utf-8").read()
+    assignment_section = html.split('data-panel-key="assignment"', 1)[1].split('data-panel-key="generate"', 1)[0]
+    report_section = html.split('data-panel-key="generate"', 1)[1].split('data-panel-key="coverage-registers"', 1)[0]
+
+    assert "Assegna activity" in assignment_section
+    assert 'id="activitySelect"' in assignment_section
+    assert 'id="classRosterSelect"' in assignment_section
+    assert 'id="targetsText"' in assignment_section
+    assert 'id="previewAssignmentBtn"' in assignment_section
+    assert 'id="outputName"' not in assignment_section
+    assert 'id="generateReportBtn"' not in assignment_section
+
+    assert "Registro consegne" in report_section
+    assert 'id="outputName"' in report_section
+    assert 'id="generateReportBtn"' in report_section
+    assert 'id="activitySelect"' not in report_section
+    assert 'id="targetsText"' not in report_section
+
+
 def test_class_roster_panel_is_available_on_assignment_dashboard() -> None:
     html = open("tools/assignment_dashboard.html", encoding="utf-8").read()
     roster_section = html.split('data-panel-key="class-roster"', 1)[1].split('data-panel-key="selected-report"', 1)[0]

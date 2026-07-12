@@ -20,21 +20,34 @@ http://localhost:8765/tools/assignment_dashboard.html
 
 ## Pannelli
 
-### Assegnazione e registro
+### Assegna activity
 
-Serve a preparare l'associazione tra una activity, i destinatari e le date, poi creare o aggiornare il registro consegne.
+Serve a preparare l'associazione tra una activity, i destinatari e le date.
 
-Nota di nomenclatura: il registro non e l'assegnazione completa dell'activity e non assegna voti. Il registro e il documento di tracciamento che permette di vedere consegne attese, mancanti, in ritardo, grading, voti e feedback per una activity associata a una classe, un team o uno studente. La distribuzione reale degli asset agli studenti avra un flusso dedicato.
+Nota di nomenclatura: l'assegnazione e la pubblicazione della activity verso classe, team o studenti. In questa fase MVP la distribuzione reale degli asset agli studenti non e ancora attiva dalla GUI: il pannello mostra l'anteprima e prepara i dati usati dal registro.
 
 Usalo quando devi:
 
 - scegliere una activity;
 - scegliere la classe tramite roster;
-- controllare o modificare il nome del registro JSON;
 - impostare classe, team, assegnazione e scadenza;
-- creare il registro in `teacher-reports`.
+- verificare destinatari e asset con **Anteprima assegnazione**.
 
 Screenshot previsto: `doc/images/dashboard-guides/docente-genera-registro.png`.
+
+### Registro consegne
+
+Serve a creare o aggiornare il registro che traccia consegne attese, mancanti, in ritardo, grading, voti e feedback per l'activity selezionata.
+
+Il registro non assegna voti da solo e non distribuisce asset agli studenti: e il documento di monitoraggio che alimenta dashboard docente, studenti, quadro classe e copertura registri.
+
+Usalo quando devi:
+
+- controllare o modificare il nome del registro JSON;
+- creare il registro in `teacher-reports`;
+- aggiornare il tracking dopo consegne, grading o feedback.
+
+Screenshot previsto: `doc/images/dashboard-guides/docente-registro-consegne.png`.
 
 ### Roster classe
 
@@ -127,7 +140,7 @@ Prerequisiti:
 Passaggi:
 
 1. Apri la dashboard consegne.
-2. Nel pannello **Assegnazione e registro**, scegli una activity da **Scegli activity**.
+2. Nel pannello **Assegna activity**, scegli una activity da **Scegli activity**.
 3. Scegli una classe da **Classe da roster**.
 4. Controlla il pannello **Roster classe**:
    - classe;
@@ -136,8 +149,8 @@ Passaggi:
    - studenti attivi;
    - target locali;
    - fallback demo.
-5. Se serve, modifica **Output registro**.
-6. Controlla scadenza e data di assegnazione.
+5. Controlla scadenza e data di assegnazione.
+6. Nel pannello **Registro consegne**, se serve, modifica **Output registro**.
 7. Premi **Crea registro consegne**.
 8. Verifica il pannello **Registro selezionato**.
 9. Apri **Studenti** o **Quadro classe** per controllare il risultato.

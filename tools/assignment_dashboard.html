@@ -122,11 +122,11 @@
       </div>
     </section>
 
-    <section class="panel" data-panel-key="generate">
+    <section class="panel" data-panel-key="assignment">
       <div class="panelHead">
         <div>
-          <h2>Assegnazione e registro</h2>
-          <p class="status">Prepara l'associazione tra activity, destinatari e scadenza, poi crea il registro consegne per tracciarne lo stato.</p>
+          <h2>Assegna activity</h2>
+          <p class="status">Prepara activity, destinatari e scadenza. Per ora l'assegnazione reale e' solo in anteprima e non scrive nei repository studenti.</p>
         </div>
       </div>
       <div class="generateGrid">
@@ -145,10 +145,6 @@
           <select id="classRosterSelect" aria-label="Roster classi locali">
             <option value="">Caricamento roster...</option>
           </select>
-        </label>
-        <label>
-          <span>Output registro</span>
-          <input id="outputName" type="text" value="demo/demo_assignment.json">
         </label>
         <label>
           <span>Classe</span>
@@ -184,10 +180,28 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
       </div>
       <div class="generateActions">
         <button id="previewAssignmentBtn" type="button" title="Mostra cosa verrebbe assegnato agli studenti senza scrivere nei repository.">Anteprima assegnazione</button>
-        <button id="generateReportBtn" type="button" class="primary" title="Crea il registro consegne, lo salva in teacher-reports e lo carica nella dashboard. Non distribuisce ancora gli asset agli studenti.">Crea registro consegne</button>
+        <button type="button" disabled title="In arrivo: distribuira gli asset della activity nei repository degli studenti.">Assegna activity</button>
       </div>
       <div id="assignmentPlanPreview" class="assignmentPlanPreview" aria-live="polite">
         <p class="status">Usa l'anteprima per verificare target e asset prima di assegnare una activity.</p>
+      </div>
+    </section>
+
+    <section class="panel" data-panel-key="generate">
+      <div class="panelHead">
+        <div>
+          <h2>Registro consegne</h2>
+          <p class="status">Crea o aggiorna il registro che traccia consegne, ritardi, grading, voti e feedback per l'activity selezionata.</p>
+        </div>
+      </div>
+      <div class="generateGrid">
+        <label class="wideField">
+          <span>Output registro</span>
+          <input id="outputName" type="text" value="demo/demo_assignment.json">
+        </label>
+      </div>
+      <div class="generateActions">
+        <button id="generateReportBtn" type="button" class="primary" title="Crea il registro consegne, lo salva in teacher-reports e lo carica nella dashboard. Non distribuisce ancora gli asset agli studenti.">Crea registro consegne</button>
       </div>
       <div class="coverageBlock" data-panel-key="coverage-registers">
         <div class="coverageHead">
@@ -206,7 +220,7 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
       <div class="panelHead">
         <div>
           <h2>Roster classe</h2>
-          <p id="rosterPanelStatus" class="status">Seleziona un roster in Assegnazione e registro per vedere studenti e target.</p>
+          <p id="rosterPanelStatus" class="status">Seleziona un roster in Assegna activity per vedere studenti e target.</p>
         </div>
       </div>
       <div id="rosterSummary" class="summaryGrid">
