@@ -10,6 +10,16 @@ from scripts.thebitlab_contracts import ALLOWED_ACTIVITY_KINDS
 ALLOWED_TYPES = ALLOWED_ACTIVITY_KINDS
 
 ALLOWED_DIFFICULTIES = {"A", "B", "C", "D", "E", "F"}
+ALLOWED_ASSET_TYPES = {
+    "starter",
+    "example",
+    "fixture",
+    "visible_test",
+    "hidden_test",
+    "runner",
+    "teacher_only",
+}
+ALLOWED_ASSET_VISIBILITIES = {"student", "teacher", "grading"}
 SUPPORTED_SCHEMA_VERSION = "1.0"
 
 REQUIRED_FIELDS = {
@@ -101,6 +111,57 @@ def validate_activity(data: dict[str, Any], source: str = "<activity>") -> list[
     rubric = data.get("rubrica")
     if rubric is not None:
         errors.extend(validate_rubric(rubric, source))
+
+    assets = data.get("assets")
+    if assets is not None:
+        errors.extend(validate_assets(assets, source))
+
+    return errors
+
+
+def is_safe_relative_path(value: Any) -> bool:
+    """Return whether a path stays relative and inside the activity bundle."""
+    if not isinstance(value, str) or not value.strip():
+        return False
+    if value.startswith(("/", "\\")):
+        return False
+    path = Path(value)
+    return (
+        not path.is_absolute()
+        and path.drive == ""
+        and all(part not in {"", ".", ".."} for part in path.parts)
+    )
+
+
+def validate_assets(assets: Any, source: str) -> list[str]:
+    """Validate optional files attached to an activity."""
+    if not isinstance(assets, list):
+        return [f"{source}: assets deve essere una lista"]
+
+    errors: list[str] = []
+    for index, asset in enumerate(assets):
+        prefix = f"{source}: assets[{index}]"
+        if not isinstance(asset, dict):
+            errors.append(f"{prefix} deve essere un oggetto")
+            continue
+
+        asset_type = asset.get("type")
+        if asset_type not in ALLOWED_ASSET_TYPES:
+            errors.append(f"{prefix}.type non ammesso: {asset_type}")
+
+        if not is_safe_relative_path(asset.get("path")):
+            errors.append(f"{prefix}.path deve essere un path relativo sicuro")
+
+        if "target_path" in asset and not is_safe_relative_path(asset.get("target_path")):
+            errors.append(f"{prefix}.target_path deve essere un path relativo sicuro")
+
+        visibility = asset.get("visibility")
+        if visibility is not None and visibility not in ALLOWED_ASSET_VISIBILITIES:
+            errors.append(f"{prefix}.visibility non ammessa: {visibility}")
+
+        description = asset.get("description")
+        if description is not None and not isinstance(description, str):
+            errors.append(f"{prefix}.description deve essere una stringa")
 
     return errors
 

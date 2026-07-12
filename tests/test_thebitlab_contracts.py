@@ -27,6 +27,7 @@ def test_normalize_activity_preserves_contract_fixture() -> None:
     assert normalized["topics"] == ["variabili", "input-output"]
     assert normalized["instructions"] == "Scrivi un programma che legge due numeri e stampa la somma."
     assert normalized["grading_policy"] == payload["correzione"]
+    assert normalized["assets"] == payload["assets"]
     assert normalized["class_id"] == "3A-TPSI"
     assert normalized["github_team"] == "team-3a-tpsi"
 

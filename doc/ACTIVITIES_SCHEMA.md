@@ -203,6 +203,7 @@ Esempio ridotto:
 | `contesto` | No | Collegamento a classe, percorso, UDA e team |
 | `vincoli` | No | Regole tecniche o didattiche |
 | `materiali` | No | File, link o paragrafi collegati |
+| `assets` | No | File allegati alla activity e usati per creare lo scaffold studente o per il grading |
 | `soluzione_attesa` | No | Descrizione della soluzione o output atteso |
 | `correzione` | Si | Regole minime di grading |
 | `metriche` | Si | Metriche da raccogliere |
@@ -226,6 +227,59 @@ Esempio:
 ```
 
 Questi campi non sono obbligatori perche TheBitLab deve poter descrivere anche attivita non scolastiche o non ancora associate a un corso.
+
+## Asset e scaffold
+
+Il campo opzionale `assets` descrive i file collegati alla activity. Serve per distinguere in modo esplicito:
+
+- file da consegnare allo studente, come scheletri, esempi, fixture e test pubblici;
+- file riservati al docente o al grader, come test nascosti, runner e soluzioni.
+
+Esempio:
+
+```json
+{
+  "assets": [
+    {
+      "type": "starter",
+      "path": "starter/main.py",
+      "target_path": "main.py",
+      "visibility": "student",
+      "description": "Scheletro iniziale da completare"
+    },
+    {
+      "type": "visible_test",
+      "path": "tests/test_public.py",
+      "target_path": "tests/test_public.py",
+      "visibility": "student"
+    },
+    {
+      "type": "hidden_test",
+      "path": "tests/test_hidden.py",
+      "visibility": "teacher"
+    }
+  ]
+}
+```
+
+Tipi ammessi:
+
+| Tipo | Uso previsto |
+|---|---|
+| `starter` | File iniziale modificabile dallo studente |
+| `example` | Esempio o materiale di supporto copiato nello scaffold |
+| `fixture` | Dati di input o file necessari per provare l'esercizio |
+| `visible_test` | Test pubblico copiato nello scaffold studente |
+| `hidden_test` | Test riservato a docente/grader |
+| `runner` | Script o configurazione di esecuzione riservata al grading |
+| `teacher_only` | Soluzioni, note o file non destinati allo studente |
+
+Regole dello scaffold:
+
+- `path` e `target_path` devono essere path relativi sicuri, senza `..` e senza path assoluti;
+- se `target_path` manca, il file viene copiato nello stesso path dichiarato in `path`;
+- lo scaffold studente copia solo asset con visibilita effettiva `student` e tipo `starter`, `example`, `fixture` o `visible_test`;
+- `hidden_test`, `runner` e `teacher_only` restano fuori dal repository studente.
 
 ## Correzione
 
@@ -295,6 +349,7 @@ Il validatore controlla:
 - valori booleani in `correzione`;
 - oggetto `metriche` completo;
 - campi obbligatori e tipi in `metriche`;
+- tipi, visibilita e path degli `assets`;
 - rubrica ben formata quando presente.
 
 Il validatore non esegue codice e non valuta la qualita didattica dell'attivita.

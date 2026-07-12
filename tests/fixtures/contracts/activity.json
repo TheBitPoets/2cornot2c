@@ -52,6 +52,21 @@
       "href": "README.md#input-e-output"
     }
   ],
+  "assets": [
+    {
+      "type": "starter",
+      "path": "starter/main.py",
+      "target_path": "main.py",
+      "visibility": "student",
+      "description": "Scheletro iniziale consegnato allo studente"
+    },
+    {
+      "type": "hidden_test",
+      "path": "tests/test_hidden.py",
+      "visibility": "teacher",
+      "description": "Test riservato al docente"
+    }
+  ],
   "contesto": {
     "classe": "3A-TPSI",
     "team_github": "team-3a-tpsi",
