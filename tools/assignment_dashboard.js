@@ -218,6 +218,8 @@ const els = {
   dueAt: document.querySelector("#dueAt"),
   nowAt: document.querySelector("#nowAt"),
   targetsText: document.querySelector("#targetsText"),
+  previewAssignmentBtn: document.querySelector("#previewAssignmentBtn"),
+  assignmentPlanPreview: document.querySelector("#assignmentPlanPreview"),
   generateReportBtn: document.querySelector("#generateReportBtn"),
   panels: document.querySelectorAll("main.layout .panel"),
 };
@@ -2141,6 +2143,109 @@ function renderOverview() {
   setupResizableTables();
 }
 
+function assignmentPlanPayload() {
+  return {
+    activity_path: els.activityPath.value,
+    targets_text: els.targetsText.value,
+    language: "",
+    source_name: "",
+    thebitlab_ref: "",
+    overwrite: false,
+  };
+}
+
+function renderAssignmentAssetList(assets, emptyLabel) {
+  const items = Array.isArray(assets) ? assets : [];
+  if (!items.length) return `<p class="status">${escapeHtml(emptyLabel)}</p>`;
+  return `
+    <ul class="assignmentPlanList">
+      ${items.map((asset) => `
+        <li>
+          <strong>${escapeHtml(asset.target_path || asset.path || "-")}</strong>
+          ${badge(asset.type || "-", asset.visibility === "student" ? "ok" : "muted")}
+          <small>${escapeHtml(asset.description || asset.path || "")}</small>
+        </li>
+      `).join("")}
+    </ul>
+  `;
+}
+
+function renderAssignmentTargetList(targets) {
+  const rows = Array.isArray(targets) ? targets : [];
+  if (!rows.length) return '<p class="status">Nessun target indicato.</p>';
+  return `
+    <ul class="assignmentPlanList">
+      ${rows.map((target) => `
+        <li>
+          <strong>${escapeHtml(target.target || "-")}</strong>
+          ${badge(target.exists ? "gia presente" : "pronto", target.exists ? "warn" : "ok")}
+          <small>${escapeHtml(target.assignment_dir || "")}</small>
+        </li>
+      `).join("")}
+    </ul>
+  `;
+}
+
+function renderAssignmentPlan(plan) {
+  if (!els.assignmentPlanPreview) return;
+  if (!plan) {
+    els.assignmentPlanPreview.innerHTML = `<p class="status">Usa l'anteprima per verificare target e asset prima di assegnare una activity.</p>`;
+    return;
+  }
+  const status = plan.can_assign
+    ? badge("pronta", "ok")
+    : badge("target bloccati", "warn");
+  els.assignmentPlanPreview.innerHTML = `
+    <div class="assignmentPlanHeader">
+      <div>
+        <strong>${escapeHtml(plan.title || plan.activity_id || "-")}</strong>
+        <small>${escapeHtml(plan.activity_id || "-")} - ${escapeHtml(plan.language || "-")} - ${escapeHtml(plan.source_name || "-")}</small>
+      </div>
+      ${status}
+    </div>
+    <div class="assignmentPlanGrid">
+      <section>
+        <h3>Target</h3>
+        ${renderAssignmentTargetList(plan.targets)}
+      </section>
+      <section>
+        <h3>Asset studente</h3>
+        ${renderAssignmentAssetList(plan.student_assets, "Nessun asset studente dichiarato.")}
+      </section>
+      <section>
+        <h3>Riservati docente</h3>
+        ${renderAssignmentAssetList(plan.teacher_assets, "Nessun asset riservato dichiarato.")}
+      </section>
+    </div>
+  `;
+}
+
+async function previewAssignmentPlan() {
+  if (!els.previewAssignmentBtn) return;
+  els.previewAssignmentBtn.disabled = true;
+  setStatus("Calcolo anteprima assegnazione...");
+  if (els.assignmentPlanPreview) {
+    els.assignmentPlanPreview.innerHTML = '<p class="status">Calcolo anteprima assegnazione...</p>';
+  }
+  try {
+    const payload = await api("/api/activities/assignment-plan", {
+      method: "POST",
+      body: JSON.stringify(assignmentPlanPayload()),
+    });
+    renderAssignmentPlan(payload.plan);
+    setStatus(payload.plan?.can_assign
+      ? "Anteprima assegnazione pronta."
+      : "Anteprima pronta: alcuni target sono gia assegnati.");
+  } catch (error) {
+    if (els.assignmentPlanPreview) {
+      els.assignmentPlanPreview.innerHTML = `<p class="status">Anteprima non disponibile: ${escapeHtml(error.message)}</p>`;
+    }
+    setStatus(`Anteprima assegnazione non disponibile: ${error.message}`);
+  } finally {
+    els.previewAssignmentBtn.disabled = false;
+  }
+}
+
 async function generateReport() {
   els.generateReportBtn.disabled = true;
   setStatus("Generazione registro consegne...");
@@ -2919,6 +3024,7 @@ els.reloadBtn.addEventListener("click", async () => {
   await loadOverview();
 });
 els.resetPanelOrderBtn.addEventListener("click", resetPanelOrder);
+els.previewAssignmentBtn?.addEventListener("click", previewAssignmentPlan);
 els.generateReportBtn.addEventListener("click", generateReport);
 els.reportSelect.addEventListener("change", loadSelectedReport);
 els.coverageOpenBtn.addEventListener("click", openCoverageDialog);

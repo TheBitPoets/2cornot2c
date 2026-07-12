@@ -183,7 +183,11 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
         <p id="rosterStatus" class="status wideField" aria-live="polite"></p>
       </div>
       <div class="generateActions">
+        <button id="previewAssignmentBtn" type="button" title="Mostra cosa verrebbe assegnato agli studenti senza scrivere nei repository.">Anteprima assegnazione</button>
         <button id="generateReportBtn" type="button" class="primary" title="Genera il registro, lo salva in teacher-reports e lo carica nella dashboard.">Genera registro</button>
+      </div>
+      <div id="assignmentPlanPreview" class="assignmentPlanPreview" aria-live="polite">
+        <p class="status">Usa l'anteprima per verificare target e asset prima di assegnare una activity.</p>
       </div>
       <div class="coverageBlock" data-panel-key="coverage-registers">
         <div class="coverageHead">

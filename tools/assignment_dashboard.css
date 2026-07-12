@@ -253,6 +253,81 @@ label > textarea {
   padding: 0 1.1rem 1.1rem;
 }
 
+.assignmentPlanPreview {
+  border-top: 1px solid var(--line);
+  padding: .85rem 1.1rem 1.1rem;
+}
+
+.assignmentPlanHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: .75rem;
+  margin-bottom: .75rem;
+}
+
+.assignmentPlanHeader strong,
+.assignmentPlanHeader small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.assignmentPlanHeader small {
+  color: var(--muted);
+  margin-top: .18rem;
+}
+
+.assignmentPlanGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .75rem;
+}
+
+.assignmentPlanGrid section {
+  min-width: 0;
+  border: 1px solid rgba(17, 17, 17, .14);
+  border-radius: 14px;
+  background: #ffffff;
+  padding: .75rem;
+}
+
+.assignmentPlanGrid h3 {
+  margin-bottom: .55rem;
+  color: var(--muted);
+  font-size: .8rem;
+  text-transform: uppercase;
+}
+
+.assignmentPlanList {
+  display: grid;
+  gap: .55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.assignmentPlanList li {
+  min-width: 0;
+  padding-bottom: .55rem;
+  border-bottom: 1px solid rgba(17, 17, 17, .08);
+}
+
+.assignmentPlanList li:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.assignmentPlanList strong,
+.assignmentPlanList small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.assignmentPlanList small {
+  margin-top: .25rem;
+  color: var(--muted);
+}
+
 .inlineCheck {
   display: inline-flex;
   grid-template-columns: none;
@@ -1838,6 +1913,10 @@ code {
   }
 
   .generateGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .assignmentPlanGrid {
     grid-template-columns: 1fr;
   }
 

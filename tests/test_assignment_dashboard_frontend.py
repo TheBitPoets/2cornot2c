@@ -166,6 +166,7 @@ def run_dashboard_js(assertions: str) -> None:
     }});
 
     const fetchCalls = [];
+    const fetchResponses = {{}};
     const context = {{
       console,
       setTimeout,
@@ -195,6 +196,7 @@ def run_dashboard_js(assertions: str) -> None:
         }},
       }},
       fetchCalls,
+      fetchResponses,
       fetch: async (path, options = {{}}) => {{
         fetchCalls.push({{ path, options }});
         return {{
@@ -202,6 +204,7 @@ def run_dashboard_js(assertions: str) -> None:
         status: 200,
         statusText: "OK",
         json: async () => {{
+          if (fetchResponses[path]) return fetchResponses[path];
           if (path === "/api/assignment-reports") return {{ reports: [] }};
           if (path === "/api/activities") return {{ activities: [] }};
           if (path === "/api/activities/save") return {{
@@ -289,6 +292,11 @@ def run_dashboard_js(assertions: str) -> None:
         suggestedActivityId,
         syncActivityAuthorIdSuggestion,
         renderActivityAuthorMetadataSelects,
+        assignmentPlanPayload,
+        renderAssignmentAssetList,
+        renderAssignmentTargetList,
+        renderAssignmentPlan,
+        previewAssignmentPlan,
         rosterOptionLabel,
         localTargetFromStudent,
         rosterTargets,
@@ -300,6 +308,7 @@ def run_dashboard_js(assertions: str) -> None:
         FakeElement,
         localStorage,
         fetchCalls,
+        fetchResponses,
         window,
       }};
     `, context);
@@ -413,6 +422,70 @@ def test_save_activity_draft_posts_form_and_selects_saved_activity() -> None:
           assert.equal(tested.state.activities.length, 1);
           assert.equal(tested.els.activityPath.value, "activities/drafts/somma-in-python.json");
           assert.match(tested.els.activityAuthorStatus.textContent, /Activity salvata/);
+        })();
+        """
+    )
+
+
+def test_assignment_preview_posts_plan_and_renders_assets() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.els.activityPath.value = "activities/examples/python_assets_scaffold/activity.json";
+          tested.els.targetsText.value = "students/rossi-mario\\nstudents/bianchi-luca";
+          tested.fetchResponses["/api/activities/assignment-plan"] = {
+            ok: true,
+            plan: {
+              activity_id: "python-assets-scaffold-001",
+              title: "Somma con scaffold Python",
+              language: "python",
+              source_name: "main.py",
+              can_assign: false,
+              student_assets: [
+                {
+                  type: "starter",
+                  target_path: "main.py",
+                  path: "starter/main.py",
+                  visibility: "student",
+                  description: "Scheletro",
+                },
+              ],
+              teacher_assets: [
+                {
+                  type: "hidden_test",
+                  target_path: "tests/test_hidden.py",
+                  path: "tests/test_hidden.py",
+                  visibility: "teacher",
+                  description: "Riservato",
+                },
+              ],
+              targets: [
+                {
+                  target: "students/rossi-mario",
+                  assignment_dir: "students/rossi-mario/assignments/python-assets-scaffold-001",
+                  exists: false,
+                },
+                {
+                  target: "students/bianchi-luca",
+                  assignment_dir: "students/bianchi-luca/assignments/python-assets-scaffold-001",
+                  exists: true,
+                },
+              ],
+            },
+          };
+
+          await tested.previewAssignmentPlan();
+
+          const call = tested.fetchCalls.find((entry) => entry.path === "/api/activities/assignment-plan");
+          const body = JSON.parse(call.options.body);
+          assert.equal(call.options.method, "POST");
+          assert.equal(body.activity_path, "activities/examples/python_assets_scaffold/activity.json");
+          assert.equal(body.targets_text, "students/rossi-mario\\nstudents/bianchi-luca");
+          assert.match(tested.els.assignmentPlanPreview.innerHTML, /Somma con scaffold Python/);
+          assert.match(tested.els.assignmentPlanPreview.innerHTML, /main.py/);
+          assert.match(tested.els.assignmentPlanPreview.innerHTML, /tests\\/test_hidden.py/);
+          assert.match(tested.els.assignmentPlanPreview.innerHTML, /target bloccati/);
+          assert.match(tested.els.status.textContent, /alcuni target/);
         })();
         """
     )
