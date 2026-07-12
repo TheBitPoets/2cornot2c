@@ -568,6 +568,8 @@ Ordine consigliato:
    - lasciare al docente controllo completo: accetta, modifica, scarta, rigenera o crea manualmente;
    - registrare provenienza della generazione e policy AI usata.
 7. Pagina assegnazione activity a classe, gruppo o singolo studente e scaffold consegna.
+   - separare esplicitamente i flussi GUI: `Assegna activity` distribuisce/aggancia asset e destinatari, `Crea/Aggiorna registro consegne` traccia lo stato delle consegne, `Valuta consegne` gestisce grading, voti e feedback;
+   - evitare che il registro venga percepito come il comando che assegna l'activity o attribuisce voti definitivi.
 8. Interfaccia studente MVP per consegne, stato e feedback deterministico, web oppure TUI se piu rapida da rendere affidabile.
 9. Consolidamento grading Docker per flusso reale di consegna.
 10. Collegamento automatico report/artifact al registro consegne.

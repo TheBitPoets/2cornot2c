@@ -815,7 +815,7 @@ function renderRosterPanel() {
   const roster = state.selectedClassRoster;
   if (!els.rosterSummary || !els.rosterBody) return;
   if (!roster) {
-    setRosterPanelStatus(state.classRosters.length ? "Seleziona un roster in Genera registro per vedere studenti e target." : "Nessun roster locale disponibile.");
+    setRosterPanelStatus(state.classRosters.length ? "Seleziona un roster in Assegnazione e registro per vedere studenti e target." : "Nessun roster locale disponibile.");
     els.rosterSummary.innerHTML = '<p class="status">Nessun roster selezionato.</p>';
     els.rosterBody.innerHTML = '<tr><td colspan="4">Seleziona un roster per vedere gli studenti.</td></tr>';
     return;
@@ -2257,7 +2257,7 @@ async function previewAssignmentPlan() {
 
 async function generateReport() {
   els.generateReportBtn.disabled = true;
-  setStatus("Generazione registro consegne...");
+  setStatus("Creazione registro consegne...");
   try {
     const payload = await api("/api/assignment-reports/generate", {
       method: "POST",
@@ -2284,9 +2284,9 @@ async function generateReport() {
     renderOverview();
     clearReview();
     renderDashboard();
-    setStatus(`Registro generato e caricato: ${payload.saved?.path || payload.saved?.name}.`);
+    setStatus(`Registro consegne creato e caricato: ${payload.saved?.path || payload.saved?.name}.`);
   } catch (error) {
-    setStatus(`Registro non generato: ${error.message}`);
+    setStatus(`Registro consegne non creato: ${error.message}`);
   } finally {
     els.generateReportBtn.disabled = false;
   }

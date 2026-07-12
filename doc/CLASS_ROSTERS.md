@@ -68,7 +68,7 @@ POST /api/class-rosters/load
 
 La vista studente usa il roster come fonte primaria della lista studenti.
 
-La dashboard consegne usa il roster nel pannello `Genera registro`:
+La dashboard consegne usa il roster nel pannello `Assegnazione e registro`:
 
 - compila `Classe`, `Etichetta classe` e `Team GitHub`;
 - genera la textarea dei target dagli studenti attivi;

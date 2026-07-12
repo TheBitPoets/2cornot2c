@@ -20,9 +20,11 @@ http://localhost:8765/tools/assignment_dashboard.html
 
 ## Pannelli
 
-### Genera registro
+### Assegnazione e registro
 
-Serve a preparare o aggiornare un registro consegne.
+Serve a preparare l'associazione tra una activity, i destinatari e le date, poi creare o aggiornare il registro consegne.
+
+Nota di nomenclatura: il registro non e l'assegnazione completa dell'activity e non assegna voti. Il registro e il documento di tracciamento che permette di vedere consegne attese, mancanti, in ritardo, grading, voti e feedback per una activity associata a una classe, un team o uno studente. La distribuzione reale degli asset agli studenti avra un flusso dedicato.
 
 Usalo quando devi:
 
@@ -30,7 +32,7 @@ Usalo quando devi:
 - scegliere la classe tramite roster;
 - controllare o modificare il nome del registro JSON;
 - impostare classe, team, assegnazione e scadenza;
-- generare il registro in `teacher-reports`.
+- creare il registro in `teacher-reports`.
 
 Screenshot previsto: `doc/images/dashboard-guides/docente-genera-registro.png`.
 
@@ -38,7 +40,7 @@ Screenshot previsto: `doc/images/dashboard-guides/docente-genera-registro.png`.
 
 Serve a controllare quali studenti saranno usati per generare il registro della activity selezionata.
 
-Usalo prima di premere **Genera registro**, soprattutto quando:
+Usalo prima di premere **Crea registro consegne**, soprattutto quando:
 
 - vuoi verificare che la classe selezionata sia corretta;
 - vuoi controllare gli studenti attivi;
@@ -111,7 +113,7 @@ Usalo quando:
 
 Screenshot previsto: `doc/images/dashboard-guides/docente-revisione-consegna.png`.
 
-## Scenario 1 - Generare un registro per activity e classe
+## Scenario 1 - Creare un registro per activity e classe
 
 Obiettivo: creare un registro consegne per una activity assegnata a una classe.
 
@@ -125,7 +127,7 @@ Prerequisiti:
 Passaggi:
 
 1. Apri la dashboard consegne.
-2. Nel pannello **Genera registro**, scegli una activity da **Scegli activity**.
+2. Nel pannello **Assegnazione e registro**, scegli una activity da **Scegli activity**.
 3. Scegli una classe da **Classe da roster**.
 4. Controlla il pannello **Roster classe**:
    - classe;
@@ -136,7 +138,7 @@ Passaggi:
    - fallback demo.
 5. Se serve, modifica **Output registro**.
 6. Controlla scadenza e data di assegnazione.
-7. Premi **Genera registro**.
+7. Premi **Crea registro consegne**.
 8. Verifica il pannello **Registro selezionato**.
 9. Apri **Studenti** o **Quadro classe** per controllare il risultato.
 
