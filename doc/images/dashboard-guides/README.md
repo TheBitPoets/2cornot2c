@@ -44,7 +44,7 @@ Pagina studente:
 
 | File | Stato | Pagina | Cosa deve mostrare |
 |---|---|---|---|
-| `docente-genera-registro.png` | da fare | Dashboard docente | Pannello **Genera registro** con activity, roster, output registro, scadenza e target studenti visibili |
+| `docente-genera-registro.png` | da fare | Dashboard docente | Pannello **Assegnazione e registro** con activity, roster, output registro, scadenza e target studenti visibili |
 | `docente-roster-classe.png` | da fare | Dashboard docente | Pannello **Roster classe** con classe, activity, output registro, studenti attivi, target locali e fallback demo |
 | `docente-registro-selezionato.png` | da fare | Dashboard docente | Pannello **Registro selezionato** con registro caricato e riepilogo compilato |
 | `docente-quadro-classe.png` | da fare | Dashboard docente | Pannello **Quadro classe** con riepilogo e bottone per aprire il modal |
@@ -56,9 +56,9 @@ Pagina studente:
 
 | File | Stato | Scenario | Cosa deve mostrare |
 |---|---|---|---|
-| `scenario-genera-registro-01.png` | da fare | Generazione registro | Activity e roster selezionati prima della generazione |
-| `scenario-genera-registro-02.png` | da fare | Generazione registro | Pannello roster classe con target verificabili |
-| `scenario-genera-registro-03.png` | da fare | Generazione registro | Registro generato e caricato in **Registro selezionato** |
+| `scenario-genera-registro-01.png` | da fare | Creazione registro consegne | Activity e roster selezionati prima della creazione del registro |
+| `scenario-genera-registro-02.png` | da fare | Creazione registro consegne | Pannello roster classe con target verificabili |
+| `scenario-genera-registro-03.png` | da fare | Creazione registro consegne | Registro creato e caricato in **Registro selezionato** |
 | `scenario-carica-registro.png` | da fare | Caricare registro | Select registri, registro scelto e riepilogo dopo caricamento |
 | `scenario-quadro-classe.png` | da fare | Quadro classe | Modal quadro classe con filtri, elenco o matrice visibili |
 | `scenario-revisione-consegna.png` | da fare | Revisione consegna | Modal revisione con file consegnati e contenuto syntax-highlighted |

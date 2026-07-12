@@ -218,6 +218,8 @@ const els = {
   dueAt: document.querySelector("#dueAt"),
   nowAt: document.querySelector("#nowAt"),
   targetsText: document.querySelector("#targetsText"),
+  previewAssignmentBtn: document.querySelector("#previewAssignmentBtn"),
+  assignmentPlanPreview: document.querySelector("#assignmentPlanPreview"),
   generateReportBtn: document.querySelector("#generateReportBtn"),
   panels: document.querySelectorAll("main.layout .panel"),
 };
@@ -813,7 +815,7 @@ function renderRosterPanel() {
   const roster = state.selectedClassRoster;
   if (!els.rosterSummary || !els.rosterBody) return;
   if (!roster) {
-    setRosterPanelStatus(state.classRosters.length ? "Seleziona un roster in Genera registro per vedere studenti e target." : "Nessun roster locale disponibile.");
+    setRosterPanelStatus(state.classRosters.length ? "Seleziona un roster in Assegnazione e registro per vedere studenti e target." : "Nessun roster locale disponibile.");
     els.rosterSummary.innerHTML = '<p class="status">Nessun roster selezionato.</p>';
     els.rosterBody.innerHTML = '<tr><td colspan="4">Seleziona un roster per vedere gli studenti.</td></tr>';
     return;
@@ -2141,9 +2143,121 @@ function renderOverview() {
   setupResizableTables();
 }
 
+function assignmentPlanPayload() {
+  return {
+    activity_path: els.activityPath.value,
+    targets_text: els.targetsText.value,
+    language: "",
+    source_name: "",
+    thebitlab_ref: "",
+    overwrite: false,
+  };
+}
+
+function renderAssignmentAssetList(assets, emptyLabel) {
+  const items = Array.isArray(assets) ? assets : [];
+  if (!items.length) return `<p class="status">${escapeHtml(emptyLabel)}</p>`;
+  return `
+    <ul class="assignmentPlanList">
+      ${items.map((asset) => `
+        <li>
+          <strong>${escapeHtml(asset.target_path || asset.path || "-")}</strong>
+          ${badge(asset.type || "-", asset.visibility === "student" ? "ok" : "muted")}
+          <small>${escapeHtml(asset.description || asset.path || "")}</small>
+        </li>
+      `).join("")}
+    </ul>
+  `;
+}
+
+function renderAssignmentTargetList(targets) {
+  const rows = Array.isArray(targets) ? targets : [];
+  if (!rows.length) return '<p class="status">Nessun target indicato.</p>';
+  return `
+    <ul class="assignmentPlanList">
+      ${rows.map((target) => `
+        <li>
+          <strong>${escapeHtml(target.target || "-")}</strong>
+          ${badge(target.exists ? "gia presente" : "pronto", target.exists ? "warn" : "ok")}
+          <small>${escapeHtml(target.assignment_dir || "")}</small>
+        </li>
+      `).join("")}
+    </ul>
+  `;
+}
+
+function renderAssignmentPlan(plan) {
+  if (!els.assignmentPlanPreview) return;
+  if (!plan) {
+    els.assignmentPlanPreview.innerHTML = `<p class="status">Usa l'anteprima per verificare target e asset prima di assegnare una activity.</p>`;
+    return;
+  }
+  const status = plan.can_assign
+    ? badge("pronta", "ok")
+    : badge("target bloccati", "warn");
+  els.assignmentPlanPreview.innerHTML = `
+    <div class="assignmentPlanHeader">
+      <div>
+        <strong>${escapeHtml(plan.title || plan.activity_id || "-")}</strong>
+        <small>${escapeHtml(plan.activity_id || "-")} - ${escapeHtml(plan.language || "-")} - ${escapeHtml(plan.source_name || "-")}</small>
+      </div>
+      ${status}
+    </div>
+    <div class="assignmentPlanGrid">
+      <section>
+        <h3>Target</h3>
+        ${renderAssignmentTargetList(plan.targets)}
+      </section>
+      <section>
+        <h3>Asset studente</h3>
+        ${renderAssignmentAssetList(plan.student_assets, "Nessun asset studente dichiarato.")}
+      </section>
+      <section>
+        <h3>Riservati docente</h3>
+        ${renderAssignmentAssetList(plan.teacher_assets, "Nessun asset riservato dichiarato.")}
+      </section>
+    </div>
+  `;
+}
+
+function assignmentPlanErrorMessage(error) {
+  const message = error?.message || String(error);
+  if (message.startsWith("404 ") && message.includes("Nothing matches the given URI")) {
+    return "endpoint non trovato. Riavvia il server con python scripts/course_board_server.py dalla branch aggiornata.";
+  }
+  return message;
+}
+
+async function previewAssignmentPlan() {
+  if (!els.previewAssignmentBtn) return;
+  els.previewAssignmentBtn.disabled = true;
+  setStatus("Calcolo anteprima assegnazione...");
+  if (els.assignmentPlanPreview) {
+    els.assignmentPlanPreview.innerHTML = '<p class="status">Calcolo anteprima assegnazione...</p>';
+  }
+  try {
+    const payload = await api("/api/activities/assignment-plan", {
+      method: "POST",
+      body: JSON.stringify(assignmentPlanPayload()),
+    });
+    renderAssignmentPlan(payload.plan);
+    setStatus(payload.plan?.can_assign
+      ? "Anteprima assegnazione pronta."
+      : "Anteprima pronta: alcuni target sono gia assegnati.");
+  } catch (error) {
+    const message = assignmentPlanErrorMessage(error);
+    if (els.assignmentPlanPreview) {
+      els.assignmentPlanPreview.innerHTML = `<p class="status">Anteprima non disponibile: ${escapeHtml(message)}</p>`;
+    }
+    setStatus(`Anteprima assegnazione non disponibile: ${message}`);
+  } finally {
+    els.previewAssignmentBtn.disabled = false;
+  }
+}
+
 async function generateReport() {
   els.generateReportBtn.disabled = true;
-  setStatus("Generazione registro consegne...");
+  setStatus("Creazione registro consegne...");
   try {
     const payload = await api("/api/assignment-reports/generate", {
       method: "POST",
@@ -2170,9 +2284,9 @@ async function generateReport() {
     renderOverview();
     clearReview();
     renderDashboard();
-    setStatus(`Registro generato e caricato: ${payload.saved?.path || payload.saved?.name}.`);
+    setStatus(`Registro consegne creato e caricato: ${payload.saved?.path || payload.saved?.name}.`);
   } catch (error) {
-    setStatus(`Registro non generato: ${error.message}`);
+    setStatus(`Registro consegne non creato: ${error.message}`);
   } finally {
     els.generateReportBtn.disabled = false;
   }
@@ -2919,6 +3033,7 @@ els.reloadBtn.addEventListener("click", async () => {
   await loadOverview();
 });
 els.resetPanelOrderBtn.addEventListener("click", resetPanelOrder);
+els.previewAssignmentBtn?.addEventListener("click", previewAssignmentPlan);
 els.generateReportBtn.addEventListener("click", generateReport);
 els.reportSelect.addEventListener("change", loadSelectedReport);
 els.coverageOpenBtn.addEventListener("click", openCoverageDialog);
