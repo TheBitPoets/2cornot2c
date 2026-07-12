@@ -125,7 +125,7 @@ Prerequisiti:
 Passaggi:
 
 1. Apri la dashboard consegne.
-2. Nel pannello **Genera registro**, scegli una activity da **Activity salvate**.
+2. Nel pannello **Genera registro**, scegli una activity da **Scegli activity**.
 3. Scegli una classe da **Classe da roster**.
 4. Controlla il pannello **Roster classe**:
    - classe;

@@ -33,7 +33,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts import manual_ai_feedback, thebitlab_services, thebitlab_storage, track_assignments
+from scripts import create_activity, manual_ai_feedback, thebitlab_services, thebitlab_storage, track_assignments
 
 DESIGN_PATH = ROOT / "doc" / "course_design.json"
 COURSE_DESIGNS_DIR = ROOT / "doc" / "course_designs"
@@ -271,6 +271,31 @@ def list_activities() -> list[dict]:
     """List available activity JSON files for the assignment dashboard."""
 
     return assignment_service().list_activities()
+
+
+def save_activity(payload: dict) -> dict:
+    """Create and persist a teacher-authored activity draft."""
+
+    title = str(payload.get("title", "")).strip()
+    activity_id = str(payload.get("id", "")).strip() or create_activity.slugify(title)
+    topics = create_activity.parse_topics(str(payload.get("topics", "")))
+    activity = create_activity.build_activity(
+        activity_id=activity_id,
+        title=title,
+        activity_type=str(payload.get("kind", "")).strip(),
+        difficulty=str(payload.get("difficulty", "")).strip(),
+        topics=topics,
+        prompt=str(payload.get("prompt", "")).strip(),
+        estimated_minutes=create_activity.positive_int(str(payload.get("estimated_minutes", "30"))),
+        context={
+            "classe": str(payload.get("class_id", "")).strip(),
+            "team_github": str(payload.get("github_team", "")).strip(),
+            "percorso": str(payload.get("path_id", "")).strip(),
+            "uda": str(payload.get("uda_id", "")).strip(),
+        },
+    )
+    saved = assignment_service().save_activity(activity, bool(payload.get("overwrite", False)))
+    return {"ok": True, "activity": saved, "activities": list_activities()}
 
 
 def resolve_submission_file_path(student: dict, file_path: str) -> Path:
@@ -1810,6 +1835,15 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/assignment-reports/generate":
             try:
                 self.write_json(generate_assignment_report(payload))
+            except Exception as error:  # noqa: BLE001
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+            return
+        if parsed.path == "/api/activities/save":
+            try:
+                self.write_json(save_activity(payload))
             except Exception as error:  # noqa: BLE001
                 self.send_response(400)
                 self.send_header("Content-Type", "application/json; charset=utf-8")

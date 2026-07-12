@@ -31,7 +31,7 @@ Pagina docente:
 
 - URL: `http://localhost:8765/tools/assignment_dashboard.html`
 - Roster: `doc/classes/demo-3a.json`
-- Activity: una activity demo disponibile nella select **Activity salvate**
+- Activity: una activity demo disponibile nella select **Scegli activity**
 - Registro: un registro demo in `teacher-reports/demo` o `teacher-reports/demo-3a`
 
 Pagina studente:

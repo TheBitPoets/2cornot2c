@@ -29,6 +29,99 @@
   </header>
 
   <main class="layout">
+    <section class="panel" data-panel-key="activity-authoring">
+      <div class="panelHead">
+        <div>
+          <h2>Activity</h2>
+          <p id="activityAuthorStatus" class="status">Crea una bozza activity locale da validare e poi assegnare.</p>
+        </div>
+      </div>
+      <div class="generateGrid">
+        <label>
+          <span>Titolo</span>
+          <input id="activityAuthorTitle" type="text" placeholder="Somma in Python">
+        </label>
+        <label>
+          <span>ID opzionale</span>
+          <input id="activityAuthorId" type="text" placeholder="somma-in-python">
+        </label>
+        <label>
+          <span>Tipo</span>
+          <select id="activityAuthorKind">
+            <option value="compito-casa">compito-casa</option>
+            <option value="laboratorio">laboratorio</option>
+            <option value="esercizio-classe">esercizio-classe</option>
+            <option value="studio-guidato">studio-guidato</option>
+            <option value="verifica-pratica">verifica-pratica</option>
+            <option value="verifica-scritta">verifica-scritta</option>
+            <option value="debug-didattico">debug-didattico</option>
+          </select>
+        </label>
+        <label>
+          <span>Difficolta</span>
+          <select id="activityAuthorDifficulty">
+            <option value="A">A - base: copia e osserva</option>
+            <option value="B" selected>B - facile: modifica piccola</option>
+            <option value="C">C - medio: scrivi da zero</option>
+            <option value="D">D - debug: trova il bug</option>
+            <option value="E">E - difficile: mini-progetto</option>
+            <option value="F">F - ninja: produzione</option>
+          </select>
+        </label>
+        <label>
+          <span>Argomenti</span>
+          <span class="selectWithCount">
+            <input id="activityAuthorTopics" type="search" list="activityAuthorTopicsList" placeholder="Cerca argomento" autocomplete="off" aria-label="Argomenti">
+            <datalist id="activityAuthorTopicsList"></datalist>
+            <span id="activityAuthorTopicsCount" class="selectCountBadge" title="Numero di argomenti disponibili con i filtri correnti.">0</span>
+          </span>
+        </label>
+        <label>
+          <span>Tempo stimato</span>
+          <input id="activityAuthorMinutes" type="number" min="1" step="1" value="30">
+        </label>
+        <label>
+          <span>Classe opzionale</span>
+          <span class="selectWithCount">
+            <select id="activityAuthorClass" aria-label="Classe opzionale"></select>
+            <span id="activityAuthorClassCount" class="selectCountBadge" title="Numero di classi disponibili con i filtri correnti.">0</span>
+          </span>
+        </label>
+        <label>
+          <span>Team GitHub opzionale</span>
+          <span class="selectWithCount">
+            <select id="activityAuthorTeam" aria-label="Team GitHub opzionale"></select>
+            <span id="activityAuthorTeamCount" class="selectCountBadge" title="Numero di team disponibili con i filtri correnti.">0</span>
+          </span>
+        </label>
+        <label>
+          <span>Percorso opzionale</span>
+          <span class="selectWithCount">
+            <select id="activityAuthorPath" aria-label="Percorso opzionale"></select>
+            <span id="activityAuthorPathCount" class="selectCountBadge" title="Numero di percorsi disponibili.">0</span>
+          </span>
+        </label>
+        <label>
+          <span>UDA opzionale</span>
+          <span class="selectWithCount">
+            <select id="activityAuthorUda" aria-label="UDA opzionale"></select>
+            <span id="activityAuthorUdaCount" class="selectCountBadge" title="Numero di UDA disponibili con i filtri correnti.">0</span>
+          </span>
+        </label>
+        <label class="wideField">
+          <span>Consegna</span>
+          <textarea id="activityAuthorPrompt" rows="4" placeholder="Scrivi la traccia che vedra lo studente."></textarea>
+        </label>
+      </div>
+      <div class="generateActions">
+        <label class="inlineCheck">
+          <input id="activityAuthorOverwrite" type="checkbox">
+          <span>Sovrascrivi bozza esistente</span>
+        </label>
+        <button id="saveActivityBtn" type="button" class="primary" title="Valida e salva la bozza activity in activities/drafts.">Salva activity</button>
+      </div>
+    </section>
+
     <section class="panel" data-panel-key="generate">
       <div class="panelHead">
         <div>
@@ -38,8 +131,8 @@
       </div>
       <div class="generateGrid">
         <label>
-          <span>Activity salvate</span>
-          <select id="activitySelect" aria-label="Activity salvate">
+          <span>Scegli activity</span>
+          <select id="activitySelect" aria-label="Scegli activity">
             <option value="">Caricamento activity...</option>
           </select>
         </label>

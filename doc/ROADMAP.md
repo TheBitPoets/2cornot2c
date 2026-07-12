@@ -216,7 +216,34 @@ Questa fase serve a togliere al docente la gestione manuale di file e repository
    - duplicazione;
    - validazione prima del salvataggio;
    - collegamento a percorso, UDA e argomenti;
-   - scelta tipo, modalita, scadenza e visibilita.
+   - scelta tipo, modalita, scadenza e visibilita;
+   - authoring assistito da AI, includendo anche provider diversi e Codex quando disponibile:
+     - generazione traccia;
+     - generazione esempi e casi d'uso;
+     - generazione scheletri di codice da completare;
+     - generazione codice con bug intenzionali da diagnosticare;
+     - generazione fixture input/output;
+     - generazione test visibili e nascosti;
+     - generazione soluzione o soluzione di riferimento riservata al docente;
+     - generazione rubrica, criteri di valutazione e feedback attesi;
+     - generazione eventuali Makefile, runner o configurazioni Docker;
+   - mostrare ogni proposta AI come bozza revisionabile:
+     - accettare singole parti;
+     - modificarle manualmente;
+     - scartarle;
+     - rigenerare con istruzioni diverse;
+     - confrontare versioni alternative;
+     - registrare provider/modello/prompt/provenienza quando la bozza viene salvata;
+   - permettere sempre la modalita manuale completa, senza AI;
+   - gestione asset dell'activity:
+     - file di esempio allegati alla traccia;
+     - scheletri di codice da completare;
+     - fixture di input/output;
+     - test visibili e test nascosti;
+     - eventuali Makefile, script runner o configurazioni Docker;
+     - materiali di supporto opzionali, come README, immagini o dataset piccoli;
+   - definire quali asset vengono mostrati allo studente, quali copiati nello scaffold consegna e quali restano solo al docente/grading;
+   - supportare almeno una cartella sorgente per activity, versionata e validabile insieme al JSON.
 8. Aggiungere assegnazione activity a classi/team da GUI.
 
 ## Priorita 1.5 - Percorso, fonti e calendario didattico
@@ -345,12 +372,17 @@ Il grading attuale e una base, ma il flusso reale richiede altri passi.
 
 1. Supportare consegne multi-file.
 2. Gestire header, fixture, Makefile e directory di progetto.
-3. Aggiungere runner per altri linguaggi previsti dallo schema.
-4. Rendere configurabili limiti di memoria, CPU, timeout, filesystem e file generati.
-5. Integrare GitHub Actions dedicate alle consegne studenti.
-6. Scaricare artifact/report GitHub Actions e collegarli ai registri.
-7. Garantire che i job che eseguono codice studente non abbiano segreti.
-8. Modellare i tentativi (`Attempt`) separatamente dalla consegna finale (`Submission`), cosi lo storico tecnico puo alimentare feedback, analytics e modalita esame senza confondere voto e processo.
+3. Collegare gli asset dell'activity allo scaffold consegna:
+   - copiare scheletri e file di esempio nei repository studenti;
+   - copiare fixture/test visibili quando consentito;
+   - mantenere test nascosti e soluzioni fuori dallo scaffold studente;
+   - registrare nel JSON della consegna quali asset sono stati pubblicati e da quale versione derivano.
+4. Aggiungere runner per altri linguaggi previsti dallo schema.
+5. Rendere configurabili limiti di memoria, CPU, timeout, filesystem e file generati.
+6. Integrare GitHub Actions dedicate alle consegne studenti.
+7. Scaricare artifact/report GitHub Actions e collegarli ai registri.
+8. Garantire che i job che eseguono codice studente non abbiano segreti.
+9. Modellare i tentativi (`Attempt`) separatamente dalla consegna finale (`Submission`), cosi lo storico tecnico puo alimentare feedback, analytics e modalita esame senza confondere voto e processo.
 
 ## Priorita 5 - UI comune e pagine nuove
 
@@ -527,26 +559,34 @@ Ordine consigliato:
 2. Provider layer minimo: interfaccia comune e implementazione GitHub iniziale.
 3. Gestione classi MVP: import/sync da GitHub Team o import manuale controllato.
 4. Pagina creazione/generazione/modifica activity con validazione.
-5. Pagina assegnazione activity a classe, gruppo o singolo studente e scaffold consegna.
-6. Interfaccia studente MVP per consegne, stato e feedback deterministico, web oppure TUI se piu rapida da rendere affidabile.
-7. Consolidamento grading Docker per flusso reale di consegna.
-8. Collegamento automatico report/artifact al registro consegne.
-9. Revisione dashboard docente contro il flusso MVP reale.
-10. Event log minimale e provenienza minima per activity/contenuti generati.
-11. Cornice didattica generale e guida operativa docente/studente.
-12. Inserimento activity nel percorso e visualizzazione calendario.
-13. Gestione consuntivi UDA reali:
+5. Asset activity e scaffold:
+   - allegare o selezionare file di esempio, scheletri, fixture, test e runner;
+   - distinguere asset pubblici per lo studente, asset riservati al grading e asset solo docente;
+   - copiare gli asset corretti nello scaffold consegna durante l'assegnazione.
+6. Generazione AI/Codex di activity e asset:
+   - proporre traccia, esempi, starter code, bug da correggere, soluzione, test e rubrica;
+   - lasciare al docente controllo completo: accetta, modifica, scarta, rigenera o crea manualmente;
+   - registrare provenienza della generazione e policy AI usata.
+7. Pagina assegnazione activity a classe, gruppo o singolo studente e scaffold consegna.
+8. Interfaccia studente MVP per consegne, stato e feedback deterministico, web oppure TUI se piu rapida da rendere affidabile.
+9. Consolidamento grading Docker per flusso reale di consegna.
+10. Collegamento automatico report/artifact al registro consegne.
+11. Revisione dashboard docente contro il flusso MVP reale.
+12. Event log minimale e provenienza minima per activity/contenuti generati.
+13. Cornice didattica generale e guida operativa docente/studente.
+14. Inserimento activity nel percorso e visualizzazione calendario.
+15. Gestione consuntivi UDA reali:
    - mostrare le UDA reali anche nella vista calendario docente;
    - aggiungere un filtro calendario per scegliere tra UDA programmate, UDA reali o entrambe;
    - rendere cliccabili le UDA reali nei calendari docente/studente e aprire un modal di dettaglio coerente;
    - cancellare una UDA reale gia salvata dal calendario docente;
    - ripristinare lo stato pianificato quando il consuntivo e stato inserito per errore;
    - confermare prima della cancellazione e registrare provenienza/eventuale audit log.
-14. Archiviazione/cancellazione sicura di registri e activity.
-15. Catalogo fonti e import paragrafi da piu repository.
-16. Estensione layout pannelli alle altre pagine.
-17. Feedback assistito avanzato lato studente.
-18. Source provider API, indicizzazione frammenti e playground knowledge lab.
+16. Archiviazione/cancellazione sicura di registri e activity.
+17. Catalogo fonti e import paragrafi da piu repository.
+18. Estensione layout pannelli alle altre pagine.
+19. Feedback assistito avanzato lato studente.
+20. Source provider API, indicizzazione frammenti e playground knowledge lab.
 
 ## Criterio di priorita
 

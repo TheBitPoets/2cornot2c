@@ -92,6 +92,7 @@ const state = {
   activities: [],
   reports: [],
   classRosters: [],
+  courseDesign: null,
   selectedClassRoster: null,
   overviewRows: [],
   report: null,
@@ -118,6 +119,7 @@ const state = {
   reviewFile: null,
   reviewSplit: readReviewSplit(),
   draggedPanelKey: "",
+  activityAuthorLastSuggestedId: "",
 };
 
 const els = {
@@ -181,6 +183,26 @@ const els = {
   legendButtons: document.querySelectorAll("[data-legend-topic]"),
   legendTabButtons: document.querySelectorAll("[data-legend-tab]"),
   filterButtons: document.querySelectorAll("[data-filter]"),
+  activityAuthorStatus: document.querySelector("#activityAuthorStatus"),
+  activityAuthorTitle: document.querySelector("#activityAuthorTitle"),
+  activityAuthorId: document.querySelector("#activityAuthorId"),
+  activityAuthorKind: document.querySelector("#activityAuthorKind"),
+  activityAuthorDifficulty: document.querySelector("#activityAuthorDifficulty"),
+  activityAuthorTopics: document.querySelector("#activityAuthorTopics"),
+  activityAuthorTopicsList: document.querySelector("#activityAuthorTopicsList"),
+  activityAuthorTopicsCount: document.querySelector("#activityAuthorTopicsCount"),
+  activityAuthorMinutes: document.querySelector("#activityAuthorMinutes"),
+  activityAuthorClass: document.querySelector("#activityAuthorClass"),
+  activityAuthorClassCount: document.querySelector("#activityAuthorClassCount"),
+  activityAuthorTeam: document.querySelector("#activityAuthorTeam"),
+  activityAuthorTeamCount: document.querySelector("#activityAuthorTeamCount"),
+  activityAuthorPath: document.querySelector("#activityAuthorPath"),
+  activityAuthorPathCount: document.querySelector("#activityAuthorPathCount"),
+  activityAuthorUda: document.querySelector("#activityAuthorUda"),
+  activityAuthorUdaCount: document.querySelector("#activityAuthorUdaCount"),
+  activityAuthorPrompt: document.querySelector("#activityAuthorPrompt"),
+  activityAuthorOverwrite: document.querySelector("#activityAuthorOverwrite"),
+  saveActivityBtn: document.querySelector("#saveActivityBtn"),
   activitySelect: document.querySelector("#activitySelect"),
   activityPath: document.querySelector("#activityPath"),
   classRosterSelect: document.querySelector("#classRosterSelect"),
@@ -405,6 +427,10 @@ function slugPathSegment(value, fallback = "classe-non-indicata") {
     .replace(/^-+|-+$/g, "") || fallback;
 }
 
+function suggestedActivityId(title) {
+  return slugPathSegment(title, "");
+}
+
 async function loadReports() {
   setStatus("Caricamento registri...");
   const payload = await api("/api/assignment-reports");
@@ -429,15 +455,26 @@ async function loadClassRosters() {
     const payload = await api("/api/class-rosters");
     state.classRosters = payload.rosters || [];
     renderClassRosterSelect();
+    renderActivityAuthorMetadataSelects();
     renderRosterPanel();
     setRosterStatus(state.classRosters.length ? `Roster disponibili: ${state.classRosters.length}.` : "Nessun roster locale disponibile.");
   } catch (error) {
     state.classRosters = [];
     state.selectedClassRoster = null;
     renderClassRosterSelect();
+    renderActivityAuthorMetadataSelects();
     renderRosterPanel();
     setRosterStatus(`Roster non disponibili: ${error.message}`);
   }
+}
+
+async function loadCourseDesignForActivityAuthoring() {
+  try {
+    state.courseDesign = await api("/api/course-design");
+  } catch {
+    state.courseDesign = null;
+  }
+  renderActivityAuthorMetadataSelects();
 }
 
 function renderReportSelect() {
@@ -473,6 +510,258 @@ function renderClassRosterSelect() {
   }
   els.classRosterSelect.value = state.classRosters.some((roster) => roster.name === selected) ? selected : "";
   els.classRosterSelect.disabled = state.classRosters.length === 0;
+}
+
+function courseSections(design = state.courseDesign) {
+  if (Array.isArray(design?.paths)) return design.paths;
+  if (Array.isArray(design?.sections)) return design.sections;
+  return Array.isArray(design?.years) ? design.years : [];
+}
+
+function collectCourseItems(items, rows = []) {
+  for (const item of Array.isArray(items) ? items : []) {
+    if (!item || typeof item !== "object") continue;
+    rows.push(item);
+    collectCourseItems(item.children, rows);
+  }
+  return rows;
+}
+
+function selectOptionsFromValues(values) {
+  return [...new Set(values.map((value) => String(value || "").trim()).filter(Boolean))]
+    .map((value) => ({ value, label: value }));
+}
+
+function normalizedSearchText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function topicAliases(item) {
+  return [
+    item?.id,
+    item?.title,
+    item?.href,
+  ].map((value) => String(value || "").trim()).filter(Boolean);
+}
+
+function topicMatchesQuery(option, query) {
+  const normalizedQuery = normalizedSearchText(query);
+  if (!normalizedQuery) return true;
+  return [option?.value, option?.label, option?.search]
+    .some((value) => normalizedSearchText(value).includes(normalizedQuery));
+}
+
+function activityAuthorPathOptions() {
+  return courseSections()
+    .map((section) => ({
+      value: String(section?.id || section?.title || "").trim(),
+      label: String(section?.title || section?.id || "Percorso senza titolo").trim(),
+    }))
+    .filter((option) => option.value);
+}
+
+function selectedActivityAuthorPath() {
+  const pathId = els.activityAuthorPath?.value || "";
+  return courseSections().find((section) => (
+    String(section?.id || section?.title || "").trim() === pathId
+  )) || null;
+}
+
+function pathAudienceValues(section, keys) {
+  const audience = section?.audience || {};
+  const values = [];
+  for (const source of [section, audience]) {
+    for (const key of keys) {
+      const value = source?.[key];
+      if (Array.isArray(value)) values.push(...value);
+      else if (value) values.push(value);
+    }
+  }
+  return [...new Set(values.map((value) => String(value || "").trim()).filter(Boolean))];
+}
+
+function pathClassIds(section = selectedActivityAuthorPath()) {
+  return pathAudienceValues(section, ["class_ids", "classes", "class_id", "class"]);
+}
+
+function pathTeams(section = selectedActivityAuthorPath()) {
+  return pathAudienceValues(section, ["github_teams", "teams", "github_team", "team_github", "team"]);
+}
+
+function rosterMatchesPath(roster, classIds) {
+  if (!classIds.length) return true;
+  const aliases = [
+    roster?.id,
+    roster?.label,
+    roster?.name,
+    roster?.path,
+    roster?.github_team,
+  ].map((value) => String(value || "").trim()).filter(Boolean);
+  return aliases.some((alias) => classIds.includes(alias));
+}
+
+function activityAuthorClassOptions() {
+  const classIds = pathClassIds();
+  return state.classRosters
+    .filter((roster) => rosterMatchesPath(roster, classIds))
+    .map((roster) => ({
+      value: String(roster.id || roster.label || roster.name || "").trim(),
+      label: rosterOptionLabel(roster),
+    }))
+    .filter((option) => option.value);
+}
+
+function activityAuthorTeamOptions() {
+  const section = selectedActivityAuthorPath();
+  const explicitTeams = pathTeams(section);
+  if (explicitTeams.length) return selectOptionsFromValues(explicitTeams);
+  return selectOptionsFromValues(
+    state.classRosters
+      .filter((roster) => rosterMatchesPath(roster, pathClassIds(section)))
+      .map((roster) => roster.github_team),
+  );
+}
+
+function itemMatchesTopic(item, topicValue) {
+  if (!topicValue) return true;
+  const normalizedTopic = normalizedSearchText(topicValue);
+  return topicAliases(item).some((alias) => {
+    const normalizedAlias = normalizedSearchText(alias);
+    return normalizedAlias === normalizedTopic || normalizedAlias.includes(normalizedTopic);
+  });
+}
+
+function udaHasTopic(uda, topicValue) {
+  if (!topicValue) return true;
+  return collectCourseItems(uda?.items).some((item) => itemMatchesTopic(item, topicValue));
+}
+
+function activityAuthorUdaOptions(pathId = els.activityAuthorPath?.value || "", topicValue = activityAuthorTopicValue()) {
+  return courseSections()
+    .filter((section) => !pathId || String(section?.id || section?.title || "").trim() === pathId)
+    .flatMap((section) => (Array.isArray(section?.udas) ? section.udas : [])
+      .filter((uda) => udaHasTopic(uda, topicValue))
+      .map((uda) => ({
+        value: String(uda?.id || uda?.title || "").trim(),
+        label: String(uda?.title || uda?.id || "UDA senza titolo").trim(),
+      })))
+    .filter((option) => option.value);
+}
+
+function activityAuthorTopicOptions(
+  pathId = els.activityAuthorPath?.value || "",
+  udaId = els.activityAuthorUda?.value || "",
+  query = "",
+) {
+  const topics = new Map();
+  for (const section of courseSections().filter((candidate) => (
+    !pathId || String(candidate?.id || candidate?.title || "").trim() === pathId
+  ))) {
+    for (const uda of Array.isArray(section?.udas) ? section.udas : []) {
+      if (udaId && String(uda?.id || uda?.title || "").trim() !== udaId) continue;
+      for (const item of collectCourseItems(uda.items)) {
+        const value = String(item?.id || item?.title || "").trim();
+        if (value && !topics.has(value)) {
+          topics.set(value, {
+            value,
+            label: item?.title || value,
+            search: topicAliases(item).join(" "),
+          });
+        }
+      }
+    }
+  }
+  if (!pathId && !udaId) {
+    for (const activity of state.activities) {
+      for (const topic of Array.isArray(activity?.topics) ? activity.topics : []) {
+        const value = String(topic || "").trim();
+        if (value && !topics.has(value)) topics.set(value, { value, label: value, search: value });
+      }
+    }
+  }
+  return [...topics.values()]
+    .filter((option) => topicMatchesQuery(option, query))
+    .sort((a, b) => a.label.localeCompare(b.label, "it", { numeric: true, sensitivity: "base" }));
+}
+
+function renderCompactSelect(select, options, placeholder, countBadge = null) {
+  if (!select) return;
+  const selected = select.value;
+  select.replaceChildren?.();
+  select.innerHTML = `<option value="">${escapeHtml(placeholder)}</option>`;
+  for (const optionData of options) {
+    const option = document.createElement("option");
+    option.value = optionData.value;
+    option.textContent = optionData.label;
+    select.append(option);
+  }
+  select.value = options.some((option) => option.value === selected) ? selected : "";
+  if (countBadge) {
+    countBadge.textContent = String(options.length);
+    countBadge.title = `${options.length} valori disponibili con i filtri correnti.`;
+  }
+}
+
+function renderTopicSearch(options, preservePartial = false) {
+  if (!els.activityAuthorTopics || !els.activityAuthorTopicsList) return;
+  const selected = els.activityAuthorTopics.value;
+  els.activityAuthorTopicsList.replaceChildren?.();
+  els.activityAuthorTopicsList.innerHTML = "";
+  for (const optionData of options) {
+    const option = document.createElement("option");
+    option.value = optionData.label;
+    option.dataset.topicValue = optionData.value;
+    els.activityAuthorTopicsList.append(option);
+  }
+  if (!preservePartial && !options.some((option) => option.label === selected || option.value === selected)) {
+    els.activityAuthorTopics.value = "";
+  }
+  if (els.activityAuthorTopicsCount) {
+    els.activityAuthorTopicsCount.textContent = String(options.length);
+    els.activityAuthorTopicsCount.title = `${options.length} argomenti disponibili con i filtri correnti.`;
+  }
+}
+
+function activityAuthorTopicValue() {
+  const rawValue = String(els.activityAuthorTopics?.value || "").trim();
+  if (!rawValue) return "";
+  const options = Array.from(els.activityAuthorTopicsList?.children || []);
+  const match = options.find((option) => (
+    option.value === rawValue || option.dataset.topicValue === rawValue
+  ));
+  return match?.dataset.topicValue || rawValue;
+}
+
+function renderActivityAuthorMetadataSelects() {
+  renderCompactSelect(els.activityAuthorPath, activityAuthorPathOptions(), "Nessun percorso", els.activityAuthorPathCount);
+  renderCompactSelect(els.activityAuthorUda, activityAuthorUdaOptions(els.activityAuthorPath?.value || "", ""), "Nessuna UDA", els.activityAuthorUdaCount);
+  renderTopicSearch(activityAuthorTopicOptions());
+  renderCompactSelect(els.activityAuthorUda, activityAuthorUdaOptions(), "Nessuna UDA", els.activityAuthorUdaCount);
+  renderCompactSelect(
+    els.activityAuthorClass,
+    activityAuthorClassOptions(),
+    "Nessuna classe",
+    els.activityAuthorClassCount,
+  );
+  renderCompactSelect(
+    els.activityAuthorTeam,
+    activityAuthorTeamOptions(),
+    "Nessun team",
+    els.activityAuthorTeamCount,
+  );
+}
+
+function syncActivityAuthorIdSuggestion() {
+  if (!els.activityAuthorTitle || !els.activityAuthorId) return;
+  const suggestion = suggestedActivityId(els.activityAuthorTitle.value);
+  const current = els.activityAuthorId.value.trim();
+  if (!current || current === state.activityAuthorLastSuggestedId) {
+    els.activityAuthorId.value = suggestion;
+    state.activityAuthorLastSuggestedId = suggestion;
+  }
 }
 
 function setRosterStatus(message) {
@@ -1140,11 +1429,50 @@ async function loadActivities() {
   const payload = await api("/api/activities");
   state.activities = payload.activities || [];
   renderActivitySelect();
+  renderActivityAuthorMetadataSelects();
   renderCoverage();
 }
 
+async function saveActivityDraft() {
+  if (!els.saveActivityBtn) return;
+  els.saveActivityBtn.disabled = true;
+  if (els.activityAuthorStatus) els.activityAuthorStatus.textContent = "Salvataggio activity...";
+  try {
+    const payload = await api("/api/activities/save", {
+      method: "POST",
+      body: JSON.stringify({
+        title: els.activityAuthorTitle?.value || "",
+        id: els.activityAuthorId?.value || "",
+        kind: els.activityAuthorKind?.value || "",
+        difficulty: els.activityAuthorDifficulty?.value || "",
+        topics: activityAuthorTopicValue(),
+        prompt: els.activityAuthorPrompt?.value || "",
+        estimated_minutes: els.activityAuthorMinutes?.value || "30",
+        class_id: els.activityAuthorClass?.value || "",
+        github_team: els.activityAuthorTeam?.value || "",
+        path_id: els.activityAuthorPath?.value || "",
+        uda_id: els.activityAuthorUda?.value || "",
+        overwrite: Boolean(els.activityAuthorOverwrite?.checked),
+      }),
+    });
+    state.activities = payload.activities || [];
+    renderActivitySelect();
+    renderCoverage();
+    if (payload.activity?.path) selectActivity(payload.activity.path);
+    if (els.activityAuthorStatus) {
+      els.activityAuthorStatus.textContent = `Activity salvata: ${payload.activity?.path || "-"}.`;
+    }
+    setStatus(`Activity salvata: ${payload.activity?.title || payload.activity?.id || "-"}.`);
+  } catch (error) {
+    if (els.activityAuthorStatus) els.activityAuthorStatus.textContent = `Errore: ${error.message}`;
+    setStatus(`Errore salvataggio activity: ${error.message}`);
+  } finally {
+    els.saveActivityBtn.disabled = false;
+  }
+}
+
 function renderActivitySelect() {
-  els.activitySelect.innerHTML = '<option value="">Activity salvate</option>';
+  els.activitySelect.innerHTML = '<option value="">Scegli activity</option>';
   for (const activity of state.activities) {
     const option = document.createElement("option");
     option.value = activity.path;
@@ -2615,6 +2943,31 @@ els.reviewCloseBtn.addEventListener("click", closeReviewDialog);
 els.activitySelect.addEventListener("change", () => {
   if (els.activitySelect.value) selectActivity(els.activitySelect.value);
 });
+els.saveActivityBtn?.addEventListener("click", saveActivityDraft);
+els.activityAuthorTitle?.addEventListener("input", syncActivityAuthorIdSuggestion);
+els.activityAuthorId?.addEventListener("input", () => {
+  const current = els.activityAuthorId.value.trim();
+  if (!current) state.activityAuthorLastSuggestedId = "";
+});
+els.activityAuthorPath?.addEventListener("change", () => {
+  renderActivityAuthorMetadataSelects();
+});
+els.activityAuthorUda?.addEventListener("change", () => {
+  renderTopicSearch(activityAuthorTopicOptions());
+});
+els.activityAuthorTopics?.addEventListener("input", () => {
+  renderTopicSearch(
+    activityAuthorTopicOptions(els.activityAuthorPath?.value || "", els.activityAuthorUda?.value || "", els.activityAuthorTopics.value),
+    true,
+  );
+  renderCompactSelect(els.activityAuthorUda, activityAuthorUdaOptions(), "Nessuna UDA", els.activityAuthorUdaCount);
+});
+els.activityAuthorClass?.addEventListener("change", () => {
+  const roster = state.classRosters.find((candidate) => (
+    String(candidate.id || candidate.label || candidate.name || "").trim() === els.activityAuthorClass.value
+  ));
+  if (roster?.github_team && els.activityAuthorTeam) els.activityAuthorTeam.value = roster.github_team;
+});
 els.classRosterSelect?.addEventListener("change", loadSelectedClassRoster);
 els.activityPath.addEventListener("input", () => {
   renderActivitySelect();
@@ -2768,4 +3121,10 @@ setupCollapsiblePanels();
 setupPanelDragAndDrop();
 setFilter("all");
 setupResizableTables();
-Promise.all([loadReports(), loadActivities(), loadOverview(), loadClassRosters()]).catch((error) => setStatus(`Errore: ${error.message}`));
+Promise.all([
+  loadReports(),
+  loadActivities(),
+  loadOverview(),
+  loadClassRosters(),
+  loadCourseDesignForActivityAuthoring(),
+]).catch((error) => setStatus(`Errore: ${error.message}`));

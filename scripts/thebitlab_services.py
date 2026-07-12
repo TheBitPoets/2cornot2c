@@ -104,6 +104,11 @@ class AssignmentService:
 
         return self.storage.list_activities()
 
+    def save_activity(self, payload: dict[str, Any], overwrite: bool = False) -> dict[str, Any]:
+        """Persist one teacher-authored activity draft."""
+
+        return self.storage.save_activity(payload, overwrite)
+
     def assignment_overview(self) -> list[dict[str, Any]]:
         """Return one row per student/activity across all saved teacher reports."""
 

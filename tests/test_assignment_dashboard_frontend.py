@@ -99,6 +99,10 @@ def run_dashboard_js(assertions: str) -> None:
         this.parentElement = null;
         this.nextSibling = null;
       }}
+      replaceChildren(...children) {{
+        this.children = [];
+        this.append(...children);
+      }}
       syncSiblings() {{
         this.children.forEach((child, index) => {{
           child.nextSibling = this.children[index + 1] || null;
@@ -200,6 +204,21 @@ def run_dashboard_js(assertions: str) -> None:
         json: async () => {{
           if (path === "/api/assignment-reports") return {{ reports: [] }};
           if (path === "/api/activities") return {{ activities: [] }};
+          if (path === "/api/activities/save") return {{
+            ok: true,
+            activity: {{
+              id: "somma-in-python",
+              title: "Somma in Python",
+              kind: "compito-casa",
+              path: "activities/drafts/somma-in-python.json",
+            }},
+            activities: [{{
+              id: "somma-in-python",
+              title: "Somma in Python",
+              kind: "compito-casa",
+              path: "activities/drafts/somma-in-python.json",
+            }}],
+          }};
           if (path === "/api/assignment-overview") return {{ rows: [] }};
           if (path === "/api/assignment-reports/ai-feedback/review") {{
             return {{
@@ -263,6 +282,13 @@ def run_dashboard_js(assertions: str) -> None:
         resetPanelOrder,
         setupPanelDragAndDrop,
         renderLegend,
+        saveActivityDraft,
+        activityAuthorTopicValue,
+        activityAuthorTopicOptions,
+        renderTopicSearch,
+        suggestedActivityId,
+        syncActivityAuthorIdSuggestion,
+        renderActivityAuthorMetadataSelects,
         rosterOptionLabel,
         localTargetFromStudent,
         rosterTargets,
@@ -354,6 +380,193 @@ def test_overview_activity_filter_limits_rows() -> None:
         assert.equal(rows[0].activity_id, "somma");
         """
     )
+
+
+def test_save_activity_draft_posts_form_and_selects_saved_activity() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.els.activityAuthorTitle.value = "Somma in Python";
+          tested.els.activityAuthorId.value = "";
+          tested.els.activityAuthorKind.value = "compito-casa";
+          tested.els.activityAuthorDifficulty.value = "B";
+          tested.els.activityAuthorTopics.value = "Variabili";
+          const topicOption = new tested.FakeElement("option");
+          topicOption.value = "Variabili";
+          topicOption.dataset.topicValue = "variabili";
+          tested.els.activityAuthorTopicsList.append(topicOption);
+          tested.els.activityAuthorMinutes.value = "25";
+          tested.els.activityAuthorClass.value = "3A-TPSI";
+          tested.els.activityAuthorTeam.value = "team-3a";
+          tested.els.activityAuthorPath.value = "base";
+          tested.els.activityAuthorUda.value = "uda-1";
+          tested.els.activityAuthorPrompt.value = "Scrivi un programma che somma due numeri.";
+
+          await tested.saveActivityDraft();
+
+          const call = tested.fetchCalls.find((entry) => entry.path === "/api/activities/save");
+          const body = JSON.parse(call.options.body);
+          assert.equal(call.options.method, "POST");
+          assert.equal(body.title, "Somma in Python");
+          assert.equal(body.topics, "variabili");
+          assert.equal(body.class_id, "3A-TPSI");
+          assert.equal(tested.state.activities.length, 1);
+          assert.equal(tested.els.activityPath.value, "activities/drafts/somma-in-python.json");
+          assert.match(tested.els.activityAuthorStatus.textContent, /Activity salvata/);
+        })();
+        """
+    )
+
+
+def test_activity_author_id_is_suggested_from_title_but_editable() -> None:
+    run_dashboard_js(
+        """
+        tested.els.activityAuthorTitle.value = "Somma in Python!";
+        tested.els.activityAuthorId.value = "";
+        tested.syncActivityAuthorIdSuggestion();
+
+        assert.equal(tested.els.activityAuthorId.value, "somma-in-python");
+        assert.equal(tested.suggestedActivityId("Array e stringhe"), "array-e-stringhe");
+
+        tested.els.activityAuthorId.value = "id-personalizzato";
+        tested.els.activityAuthorTitle.value = "Titolo cambiato";
+        tested.syncActivityAuthorIdSuggestion();
+
+        assert.equal(tested.els.activityAuthorId.value, "id-personalizzato");
+
+        tested.els.activityAuthorId.value = "";
+        tested.els.activityAuthorTitle.value = "Titolo finale";
+        tested.syncActivityAuthorIdSuggestion();
+
+        assert.equal(tested.els.activityAuthorId.value, "titolo-finale");
+        """
+    )
+
+
+def test_activity_authoring_filters_metadata_by_path_and_uda() -> None:
+    run_dashboard_js(
+        """
+        const optionValue = (option) => typeof option.value === "object" ? option.value.value : option.value;
+        tested.state.classRosters = [
+          { id: "3A", label: "Classe 3A", name: "3a.json", github_team: "team-3a", students: 3 },
+          { id: "4A", label: "Classe 4A", name: "4a.json", github_team: "team-4a", students: 2 },
+        ];
+        tested.state.courseDesign = {
+          years: [
+            {
+              id: "percorso-a",
+              title: "Percorso A",
+              audience: { class_ids: ["3A"], github_teams: ["team-3a"] },
+              udas: [
+                {
+                  id: "uda-a1",
+                  title: "UDA A1",
+                  items: [
+                    { id: "a-intro", title: "A intro" },
+                    { id: "a-loop", title: "A loop" },
+                    { id: "README.md#il-processo-di-compilazione", title: "Il processo di compilazione", href: "../README.md#il-processo-di-compilazione" },
+                  ],
+                },
+                {
+                  id: "uda-a2",
+                  title: "UDA A2",
+                  items: [{ id: "a-array", title: "A array" }],
+                },
+              ],
+            },
+            {
+              id: "percorso-b",
+              title: "Percorso B",
+              audience: { class_ids: ["4A"], github_teams: ["team-4a"] },
+              udas: [
+                {
+                  id: "uda-b1",
+                  title: "UDA B1",
+                  items: [{ id: "b-file", title: "B file" }],
+                },
+              ],
+            },
+          ],
+        };
+
+        tested.els.activityAuthorPath.value = "percorso-a";
+        tested.renderActivityAuthorMetadataSelects();
+
+        assert.deepEqual(tested.els.activityAuthorClass.children.map(optionValue), ["3A"]);
+        assert.equal(tested.els.activityAuthorClassCount.textContent, "1");
+        assert.deepEqual(tested.els.activityAuthorTeam.children.map(optionValue), ["team-3a"]);
+        assert.equal(tested.els.activityAuthorTeamCount.textContent, "1");
+        assert.deepEqual(tested.els.activityAuthorUda.children.map(optionValue), ["uda-a1", "uda-a2"]);
+        assert.equal(tested.els.activityAuthorUdaCount.textContent, "2");
+        assert.deepEqual(tested.els.activityAuthorTopicsList.children.map(optionValue), ["A array", "A intro", "A loop", "Il processo di compilazione"]);
+        assert.equal(tested.els.activityAuthorTopicsCount.textContent, "4");
+
+        tested.els.activityAuthorUda.value = "uda-a1";
+        tested.renderActivityAuthorMetadataSelects();
+
+        assert.deepEqual(tested.els.activityAuthorTopicsList.children.map(optionValue), ["A intro", "A loop", "Il processo di compilazione"]);
+        assert.equal(tested.els.activityAuthorTopicsCount.textContent, "3");
+
+        tested.els.activityAuthorUda.value = "";
+        tested.els.activityAuthorTopics.value = "A intro";
+        tested.renderActivityAuthorMetadataSelects();
+
+        assert.deepEqual(tested.els.activityAuthorUda.children.map(optionValue), ["uda-a1"]);
+        assert.equal(tested.els.activityAuthorUdaCount.textContent, "1");
+
+        tested.renderTopicSearch(tested.activityAuthorTopicOptions("percorso-a", "", "processo"), true);
+        assert.deepEqual(tested.els.activityAuthorTopicsList.children.map(optionValue), ["Il processo di compilazione"]);
+
+        tested.renderTopicSearch(tested.activityAuthorTopicOptions("percorso-a", "", "compilazione"), true);
+        assert.deepEqual(tested.els.activityAuthorTopicsList.children.map(optionValue), ["Il processo di compilazione"]);
+
+        tested.els.activityAuthorPath.value = "percorso-b";
+        tested.els.activityAuthorUda.value = "";
+        tested.els.activityAuthorTopics.value = "A intro";
+        tested.renderActivityAuthorMetadataSelects();
+
+        assert.equal(tested.els.activityAuthorTopics.value, "");
+        assert.deepEqual(tested.els.activityAuthorUda.children.map(optionValue), ["uda-b1"]);
+        assert.equal(tested.els.activityAuthorUdaCount.textContent, "1");
+      """
+    )
+
+
+def test_activity_authoring_topic_search_maps_labels_to_topic_values() -> None:
+    run_dashboard_js(
+        """
+        const topicOption = new tested.FakeElement("option");
+        topicOption.value = "Variabili";
+        topicOption.dataset.topicValue = "README.md#variabili";
+        tested.els.activityAuthorTopicsList.append(topicOption);
+
+        tested.els.activityAuthorTopics.value = "Variabili";
+        assert.equal(tested.activityAuthorTopicValue(), "README.md#variabili");
+
+        tested.els.activityAuthorTopics.value = "argomento nuovo";
+        assert.equal(tested.activityAuthorTopicValue(), "argomento nuovo");
+        """
+    )
+
+
+def test_activity_authoring_selects_show_option_count_badges() -> None:
+    html = open("tools/assignment_dashboard.html", encoding="utf-8").read()
+
+    assert 'list="activityAuthorTopicsList"' in html
+    assert 'id="activityAuthorTopicsList"' in html
+    assert 'id="activityAuthorTopicsCount"' in html
+    assert 'id="activityAuthorClassCount"' in html
+    assert 'id="activityAuthorTeamCount"' in html
+    assert 'id="activityAuthorPathCount"' in html
+    assert 'id="activityAuthorUdaCount"' in html
+
+
+def test_activity_authoring_difficulty_options_include_readable_labels() -> None:
+    html = open("tools/assignment_dashboard.html", encoding="utf-8").read()
+    difficulty_section = html.split('id="activityAuthorDifficulty"', 1)[1].split("</select>", 1)[0]
+
+    assert '<option value="B" selected>B - facile: modifica piccola</option>' in difficulty_section
+    assert '<option value="F">F - ninja: produzione</option>' in difficulty_section
 
 
 def test_legend_renders_static_marks_but_escapes_descriptions() -> None:
