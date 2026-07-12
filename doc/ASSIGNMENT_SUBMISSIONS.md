@@ -516,13 +516,13 @@ Campi del registro:
 }
 ```
 
-La GUI usa questi campi in generazione registro, selettore registri, riepilogo del registro selezionato, copertura registri, filtri del quadro classe e matrice. Se la classe non viene indicata durante la generazione, il sistema prova a usare `contesto.classe` e `contesto.team_github` presenti nella activity.
+La GUI usa questi campi in creazione registro consegne, selettore registri, riepilogo del registro selezionato, copertura registri, filtri del quadro classe e matrice. Se la classe non viene indicata durante la creazione, il sistema prova a usare `contesto.classe` e `contesto.team_github` presenti nella activity.
 
-### Generare il registro dalla GUI
+### Creare il registro consegne dalla GUI
 
-La pagina `Consegne` puo anche generare un registro senza usare direttamente la CLI.
+La pagina `Consegne` puo anche creare un registro consegne senza usare direttamente la CLI.
 
-Nel riquadro `Genera registro` compila:
+Nel riquadro `Assegnazione e registro` compila:
 
 | Campo | Significato |
 |---|---|
@@ -536,7 +536,9 @@ Nel riquadro `Genera registro` compila:
 | Ora simulata opzionale | Data ISO usata per simulare il momento attuale |
 | Repository studenti locali | Un path per riga verso i repository/cartelle studente |
 
-Quando clicchi `Genera registro`, il server locale:
+Nota: questa azione crea o aggiorna il registro consegne per tracciare stato, ritardi e grading. Non distribuisce ancora gli asset agli studenti; l'assegnazione reale dell'activity avra un flusso dedicato.
+
+Quando clicchi `Crea registro consegne`, il server locale:
 
 1. legge la activity;
 2. costruisce i target studenti;
@@ -577,7 +579,7 @@ Per testare dalla GUI:
 1. avvia il server con `python scripts/course_board_server.py`;
 2. apri `http://localhost:8765/tools/assignment_dashboard.html`;
 3. scegli una activity demo dal menu;
-4. clicca `Genera registro`;
+4. clicca `Crea registro consegne`;
 5. ripeti per piu activity, usando un output diverso in `teacher-reports`;
 6. verifica che la dashboard mostri consegnati, mancanti, ritardi, test falliti e voti;
 7. usa i filtri del `Quadro classe` per controllare studente, tipo, stato e modalita.
