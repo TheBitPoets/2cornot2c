@@ -276,20 +276,29 @@ def copy_student_assets(
     return copied_paths
 
 
+def assignment_file_lines(activity: dict[str, Any], source_name: str) -> list[str]:
+    """Return README lines for files the student should notice in the scaffold."""
+    assets = student_assets(activity)
+    asset_targets = [
+        str(asset.get("target_path", asset.get("path")))
+        for asset in assets
+    ]
+    lines: list[str] = []
+    if source_name not in asset_targets:
+        lines.append(f"- `{source_name}`")
+    lines.extend(
+        f"- `{target}` ({asset.get('type')})"
+        for target, asset in zip(asset_targets, assets)
+    )
+    return lines
+
+
 def assignment_readme(activity: dict[str, Any], identifier: str, source_name: str, language: str, thebitlab_ref: str) -> str:
     """Build the README for one student assignment scaffold."""
     normalized_activity = normalize_activity(activity)
     title = str(normalized_activity.get("title") or identifier)
     prompt = str(normalized_activity.get("instructions") or "Segui le indicazioni del docente.")
-    assets = student_assets(activity)
-    asset_lines = ""
-    if assets:
-        asset_lines = "\n".join(
-            f"- `{asset.get('target_path', asset.get('path'))}` ({asset.get('type')})"
-            for asset in assets
-        )
-    else:
-        asset_lines = f"- `{source_name}`"
+    file_lines = "\n".join(assignment_file_lines(activity, source_name))
     return (
         f"# {title}\n\n"
         f"Activity ID: `{identifier}`\n\n"
@@ -297,7 +306,7 @@ def assignment_readme(activity: dict[str, Any], identifier: str, source_name: st
         "## Consegna\n\n"
         f"{prompt}\n\n"
         "## File da modificare\n\n"
-        f"{asset_lines}\n\n"
+        f"{file_lines}\n\n"
         "## Grading manuale\n\n"
         "Apri la scheda **Actions**, scegli **TheBitLab grading** e usa questi valori:\n\n"
         f"- `activity_id`: `{identifier}`\n"

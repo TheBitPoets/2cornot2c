@@ -118,6 +118,28 @@ def test_create_scaffold_copies_student_assets_only(tmp_path) -> None:
     assert "`tests/test_public.py` (visible_test)" in readme
 
 
+def test_create_scaffold_readme_keeps_default_source_when_assets_are_support_files(tmp_path) -> None:
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "test_public.py").write_text("def test_public():\n    assert True\n", encoding="utf-8")
+    activity_path = write_activity(
+        tmp_path,
+        {
+            **activity(),
+            "id": "python-public-test-001",
+            "linguaggio": "python",
+            "assets": [
+                {"type": "visible_test", "path": "tests/test_public.py", "target_path": "tests/test_public.py"},
+            ],
+        },
+    )
+
+    destination = create_submission_scaffold.create_scaffold(activity_path=activity_path, target_dir=tmp_path)
+
+    readme = (destination / "README.md").read_text(encoding="utf-8")
+    assert "- `main.py`" in readme
+    assert "- `tests/test_public.py` (visible_test)" in readme
+
+
 def test_create_scaffold_rejects_missing_student_asset(tmp_path) -> None:
     activity_path = write_activity(
         tmp_path,
