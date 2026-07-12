@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -50,6 +51,8 @@ LANGUAGE_ALIASES = {
     "node": "nodejs",
     "py": "python",
 }
+STUDENT_ASSET_TYPES = {"starter", "example", "fixture", "visible_test"}
+TEACHER_ASSET_TYPES = {"hidden_test", "runner", "teacher_only"}
 
 
 def is_safe_slug(value: str) -> bool:
@@ -149,6 +152,13 @@ def validate_source_name(source_name: str) -> str:
     return value
 
 
+def validate_relative_path(value: Any, field_name: str) -> Path:
+    """Validate a relative asset path used inside an activity bundle or scaffold."""
+    if not validate_activity.is_safe_relative_path(value):
+        raise ValueError(f"{field_name} deve essere un path relativo sicuro.")
+    return Path(str(value))
+
+
 def validate_thebitlab_ref(value: str) -> str:
     """Validate a TheBitLab git ref for README usage."""
     clean_value = value.strip()
@@ -205,11 +215,90 @@ def starter_source(language: str) -> str:
     return ""
 
 
+def asset_visibility(asset: dict[str, Any]) -> str:
+    """Return the effective visibility for an activity asset."""
+    explicit_visibility = asset.get("visibility")
+    if isinstance(explicit_visibility, str) and explicit_visibility:
+        return explicit_visibility
+    asset_type = asset.get("type")
+    if asset_type in TEACHER_ASSET_TYPES:
+        return "teacher"
+    return "student"
+
+
+def student_assets(activity: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return assets that must be copied to the student assignment scaffold."""
+    assets = activity.get("assets")
+    if not isinstance(assets, list):
+        return []
+    return [
+        asset
+        for asset in assets
+        if isinstance(asset, dict)
+        and asset.get("type") in STUDENT_ASSET_TYPES
+        and asset_visibility(asset) == "student"
+    ]
+
+
+def student_asset_copy_plan(activity_path: Path, activity: dict[str, Any]) -> list[tuple[Path, Path]]:
+    """Validate student-visible assets and return source/target relative paths."""
+    planned_assets: list[tuple[Path, Path]] = []
+    activity_root = activity_path.parent
+    for index, asset in enumerate(student_assets(activity)):
+        source_rel = validate_relative_path(asset.get("path"), f"assets[{index}].path")
+        target_rel = validate_relative_path(
+            asset.get("target_path", asset.get("path")),
+            f"assets[{index}].target_path",
+        )
+        source_path = activity_root / source_rel
+        if not source_path.is_file():
+            raise ValueError(f"Asset non trovato: {source_path}")
+
+        planned_assets.append((source_path, target_rel))
+    return planned_assets
+
+
+def copy_student_assets(
+    *,
+    destination: Path,
+    asset_plan: list[tuple[Path, Path]],
+    overwrite_source: bool,
+) -> list[Path]:
+    """Copy a validated set of student-visible assets into the scaffold."""
+    copied_paths: list[Path] = []
+    for source_path, target_rel in asset_plan:
+        target_path = destination / target_rel
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        if target_path.exists() and not overwrite_source:
+            continue
+        shutil.copyfile(source_path, target_path)
+        copied_paths.append(target_path)
+    return copied_paths
+
+
+def assignment_file_lines(activity: dict[str, Any], source_name: str) -> list[str]:
+    """Return README lines for files the student should notice in the scaffold."""
+    assets = student_assets(activity)
+    asset_targets = [
+        str(asset.get("target_path", asset.get("path")))
+        for asset in assets
+    ]
+    lines: list[str] = []
+    if source_name not in asset_targets:
+        lines.append(f"- `{source_name}`")
+    lines.extend(
+        f"- `{target}` ({asset.get('type')})"
+        for target, asset in zip(asset_targets, assets)
+    )
+    return lines
+
+
 def assignment_readme(activity: dict[str, Any], identifier: str, source_name: str, language: str, thebitlab_ref: str) -> str:
     """Build the README for one student assignment scaffold."""
     normalized_activity = normalize_activity(activity)
     title = str(normalized_activity.get("title") or identifier)
     prompt = str(normalized_activity.get("instructions") or "Segui le indicazioni del docente.")
+    file_lines = "\n".join(assignment_file_lines(activity, source_name))
     return (
         f"# {title}\n\n"
         f"Activity ID: `{identifier}`\n\n"
@@ -217,7 +306,7 @@ def assignment_readme(activity: dict[str, Any], identifier: str, source_name: st
         "## Consegna\n\n"
         f"{prompt}\n\n"
         "## File da modificare\n\n"
-        f"- `{source_name}`\n\n"
+        f"{file_lines}\n\n"
         "## Grading manuale\n\n"
         "Apri la scheda **Actions**, scegli **TheBitLab grading** e usa questi valori:\n\n"
         f"- `activity_id`: `{identifier}`\n"
@@ -248,6 +337,7 @@ def create_scaffold(
     )
     thebitlab_ref = validate_thebitlab_ref(thebitlab_ref)
     destination = scaffold_dir(target_dir, identifier)
+    asset_plan = student_asset_copy_plan(activity_path, activity)
 
     if destination.exists() and any(destination.iterdir()) and not overwrite:
         raise ValueError(f"Consegna gia esistente: {destination}. Usa --force per sovrascrivere.")
@@ -257,6 +347,12 @@ def create_scaffold(
         json.dumps(activity, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
         newline="\n",
+    )
+
+    copy_student_assets(
+        destination=destination,
+        asset_plan=asset_plan,
+        overwrite_source=overwrite_source,
     )
 
     source_path = destination / source_name

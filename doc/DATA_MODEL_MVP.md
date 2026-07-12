@@ -86,6 +86,7 @@ Campi gia importanti:
 - `correzione`;
 - `metriche`;
 - `test_cases`;
+- `assets`, per file starter, esempi, fixture, test pubblici/nascosti, runner e materiali riservati;
 - `contesto`, quando presente;
 - modalita studente in varianti legacy: `student_support_mode`, `support_mode`, `modalita_studente`.
 
@@ -103,10 +104,13 @@ Lo scaffold crea:
 assignments/<activity_id>/
   activity.json
   <source-file>
+  <student-visible-assets>
   README.md
 ```
 
 Per l'MVP questa copia va vista come snapshot assegnato allo studente, non come sorgente unica dell'activity.
+
+Gli asset della activity definiscono quali file entrano nello scaffold. Solo asset con visibilita effettiva `student` e tipo `starter`, `example`, `fixture` o `visible_test` vengono copiati nel repository studente. Test nascosti, runner e file `teacher_only` restano materiale docente/grader.
 
 Campi da preservare nel collegamento:
 

@@ -81,6 +81,7 @@ def normalize_activity(payload: dict[str, Any]) -> dict[str, Any]:
     normalized["grading_policy"] = first_dict(payload, "grading_policy", "correzione")
     normalized["test_cases"] = first_list(payload, "test_cases")
     normalized["source_refs"] = first_list(payload, "source_refs")
+    normalized["assets"] = first_list(payload, "assets")
     normalized["class_id"] = first_text(payload, "class_id") or first_text(context, "classe")
     normalized["github_team"] = first_text(payload, "github_team") or first_text(context, "team_github")
     return normalized

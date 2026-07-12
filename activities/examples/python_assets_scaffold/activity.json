@@ -1,0 +1,55 @@
+{
+  "schema_version": "1.0",
+  "id": "python-assets-scaffold-001",
+  "titolo": "Somma con scaffold Python",
+  "tipo": "laboratorio",
+  "difficolta": "B",
+  "argomenti": [
+    "input-output",
+    "funzioni",
+    "test"
+  ],
+  "linguaggio": "python",
+  "consegna": "Completa la funzione somma nel file main.py e verifica il comportamento con il test pubblico.",
+  "assets": [
+    {
+      "type": "starter",
+      "path": "starter/main.py",
+      "target_path": "main.py",
+      "visibility": "student",
+      "description": "Scheletro iniziale da completare"
+    },
+    {
+      "type": "visible_test",
+      "path": "tests/test_public.py",
+      "target_path": "tests/test_public.py",
+      "visibility": "student",
+      "description": "Test pubblico eseguibile dallo studente"
+    },
+    {
+      "type": "hidden_test",
+      "path": "tests/test_hidden.py",
+      "visibility": "teacher",
+      "description": "Test nascosto usato dal docente o dal grader"
+    },
+    {
+      "type": "teacher_only",
+      "path": "solution/main.py",
+      "visibility": "teacher",
+      "description": "Soluzione di riferimento"
+    }
+  ],
+  "correzione": {
+    "compila": true,
+    "test": true,
+    "sandbox": true,
+    "ai_feedback": false
+  },
+  "metriche": {
+    "tempo_stimato_minuti": 30,
+    "traccia_tempo_dichiarato": true,
+    "traccia_sessioni_thebitlab": true,
+    "traccia_eventi_didattici": true,
+    "traccia_errori_compilazione": true
+  }
+}

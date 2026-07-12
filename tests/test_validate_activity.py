@@ -120,6 +120,49 @@ def test_rubric_points_must_not_be_boolean() -> None:
     assert "activity.json: rubrica[0].punti deve essere un numero non negativo" in errors
 
 
+def test_activity_assets_are_validated() -> None:
+    activity = valid_activity()
+    activity["assets"] = [
+        {
+            "type": "starter",
+            "path": "starter/main.c",
+            "target_path": "main.c",
+            "visibility": "student",
+            "description": "Scheletro iniziale",
+        },
+        {
+            "type": "hidden_test",
+            "path": "tests/test_hidden.py",
+            "visibility": "teacher",
+        },
+    ]
+
+    errors = validate_activity.validate_activity(activity, "activity.json")
+
+    assert errors == []
+
+
+def test_activity_assets_reject_unknown_type_and_unsafe_paths() -> None:
+    activity = valid_activity()
+    activity["assets"] = [
+        {
+            "type": "soluzione-magica",
+            "path": "../solution/main.c",
+            "target_path": "/tmp/main.c",
+            "visibility": "pubblica",
+        },
+        "non-oggetto",
+    ]
+
+    errors = validate_activity.validate_activity(activity, "activity.json")
+
+    assert "activity.json: assets[0].type non ammesso: soluzione-magica" in errors
+    assert "activity.json: assets[0].path deve essere un path relativo sicuro" in errors
+    assert "activity.json: assets[0].target_path deve essere un path relativo sicuro" in errors
+    assert "activity.json: assets[0].visibility non ammessa: pubblica" in errors
+    assert "activity.json: assets[1] deve essere un oggetto" in errors
+
+
 def test_cli_validation_fails_on_invalid_file(tmp_path, monkeypatch) -> None:
     invalid_file = tmp_path / "invalid.json"
     invalid_file.write_text(json.dumps({"id": "troppo-poco"}), encoding="utf-8")

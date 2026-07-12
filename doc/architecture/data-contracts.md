@@ -107,6 +107,7 @@ Campi minimi canonici:
 | `grading_policy` | object | Regole correzione. |
 | `test_cases` | array | Test deterministici, se presenti. |
 | `source_refs` | array | Fonti/paragrafi collegati. |
+| `assets` | array | File allegati alla activity, con tipo, path, target e visibilita. |
 
 Alias legacy letti oggi:
 
@@ -128,6 +129,7 @@ Fase di transizione:
 - I writer attuali possono continuare a produrre campi legacy italiani.
 - I lettori operativi devono usare `scripts/thebitlab_contracts.py` per normalizzare verso i campi canonici senza rompere i dati esistenti.
 - Scaffold, assegnazione, tracking e storage consegne usano gia helper condivisi per activity canoniche/legacy.
+- Gli asset con visibilita studente entrano nello scaffold; asset nascosti, runner e `teacher_only` restano riservati a docente/grader.
 
 ### AssignmentRegister
 
