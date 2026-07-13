@@ -114,6 +114,36 @@ def test_assignment_record_validation_rejects_missing_or_bad_fields() -> None:
         assignment_records.build_assignment_record(**sample_assignment(targets=[]))
 
 
+def test_assignment_record_validation_rejects_incoherent_target_shape() -> None:
+    with pytest.raises(ValueError, match="class_id"):
+        assignment_records.build_assignment_record(**sample_assignment(class_id=""))
+    with pytest.raises(ValueError, match="github_team"):
+        assignment_records.build_assignment_record(**sample_assignment(target_type="team", github_team=""))
+    with pytest.raises(ValueError, match="esattamente un target"):
+        assignment_records.build_assignment_record(
+            **sample_assignment(
+                target_type="student",
+                class_id="",
+                class_label="",
+                github_team="",
+                targets=[
+                    {"student_id": "rossi-mario"},
+                    {"student_id": "bianchi-luca"},
+                ],
+            ),
+        )
+    with pytest.raises(ValueError, match="almeno due target"):
+        assignment_records.build_assignment_record(
+            **sample_assignment(
+                target_type="group",
+                class_id="",
+                class_label="",
+                github_team="",
+                targets=[{"student_id": "rossi-mario"}],
+            ),
+        )
+
+
 def test_validate_assignment_record_rejects_unsupported_schema_version() -> None:
     payload = assignment_records.build_assignment_record(**sample_assignment())
     payload["schema_version"] = "2.0"

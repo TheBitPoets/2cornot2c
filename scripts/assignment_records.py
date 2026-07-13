@@ -119,6 +119,25 @@ def assignment_target_ref(
     return target_type or "target"
 
 
+def validate_target_shape(
+    *,
+    target_type: str,
+    class_id: str,
+    github_team: str,
+    targets: list[dict[str, str]],
+) -> None:
+    """Validate target fields against the declared target type."""
+
+    if target_type == "class" and not class_id:
+        raise ValueError("class_id obbligatorio per target_type class.")
+    if target_type == "team" and not github_team:
+        raise ValueError("github_team obbligatorio per target_type team.")
+    if target_type == "student" and len(targets) != 1:
+        raise ValueError("target_type student richiede esattamente un target.")
+    if target_type == "group" and len(targets) < 2:
+        raise ValueError("target_type group richiede almeno due target.")
+
+
 def build_assignment_id(activity_id: str, target_ref: str, assigned_at: str) -> str:
     """Build a stable filesystem-friendly assignment id."""
 
@@ -154,12 +173,20 @@ def build_assignment_record(
     normalized_targets = [normalize_target(target) for target in targets]
     if not normalized_targets:
         raise ValueError("targets obbligatorio.")
+    clean_class_id = str(class_id or "").strip()
+    clean_github_team = str(github_team or "").strip()
+    validate_target_shape(
+        target_type=clean_target_type,
+        class_id=clean_class_id,
+        github_team=clean_github_team,
+        targets=normalized_targets,
+    )
     parse_iso_datetime(assigned_at, "assigned_at")
     parse_iso_datetime(due_at, "due_at")
     target_ref = assignment_target_ref(
         target_type=clean_target_type,
-        class_id=str(class_id or "").strip(),
-        github_team=str(github_team or "").strip(),
+        class_id=clean_class_id,
+        github_team=clean_github_team,
         targets=normalized_targets,
     )
     clean_assignment_id = str(assignment_id or "").strip() or build_assignment_id(
@@ -173,9 +200,9 @@ def build_assignment_record(
         "activity_id": clean_activity_id,
         "activity_path": clean_activity_path,
         "target_type": clean_target_type,
-        "class_id": str(class_id or "").strip(),
+        "class_id": clean_class_id,
         "class_label": str(class_label or "").strip(),
-        "github_team": str(github_team or "").strip(),
+        "github_team": clean_github_team,
         "assigned_at": str(assigned_at).strip(),
         "due_at": str(due_at).strip(),
         "targets": normalized_targets,
