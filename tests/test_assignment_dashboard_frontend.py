@@ -209,6 +209,15 @@ def run_dashboard_js(assertions: str) -> None:
           if (fakeResponse) return fakeResponse;
           if (path === "/api/assignment-reports") return {{ reports: [] }};
           if (path === "/api/assignments") return {{ assignments: [], due_without_register: [] }};
+          if (path === "/api/assignments/save") return {{
+            ok: true,
+            assignment: {{
+              id: "assignment-python-base-somma-001-3a-tpsi-2026-10-12t09-00-00-02-00",
+              activity_id: "python-base-somma-001",
+            }},
+            assignments: [],
+            due_without_register: [],
+          }};
           if (path === "/api/activities") return {{ activities: [] }};
           if (path === "/api/activities/save") return {{
             ok: true,
@@ -296,11 +305,13 @@ def run_dashboard_js(assertions: str) -> None:
         syncActivityAuthorIdSuggestion,
         renderActivityAuthorMetadataSelects,
         assignmentPlanPayload,
+        assignmentRecordPayload,
         renderAssignmentAssetList,
         renderAssignmentTargetList,
         renderAssignmentPlan,
         assignmentPlanErrorMessage,
         previewAssignmentPlan,
+        saveAssignmentRecord,
         generateReport,
         loadAssignments,
         renderAssignmentSelect,
@@ -520,6 +531,64 @@ def test_assignment_preview_explains_missing_server_endpoint() -> None:
           assert.match(tested.els.assignmentPlanPreview.innerHTML, /endpoint non trovato/);
           assert.match(tested.els.assignmentPlanPreview.innerHTML, /course_board_server.py/);
           assert.match(tested.els.status.textContent, /endpoint non trovato/);
+        })();
+        """
+    )
+
+
+def test_save_assignment_record_posts_form_and_refreshes_due_assignments() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.els.activityPath.value = "activities/python-base-somma-001.json";
+          tested.els.classId.value = "3A-TPSI";
+          tested.els.classLabel.value = "3A TPSI";
+          tested.els.githubTeam.value = "team-3a-tpsi";
+          tested.els.assignedAt.value = "2026-10-12T09:00:00+02:00";
+          tested.els.dueAt.value = "2026-10-19T23:59:00+02:00";
+          tested.els.nowAt.value = "2026-10-20T08:00:00+02:00";
+          tested.els.targetsText.value = "students/rossi-mario\\nstudents/bianchi-luca";
+          tested.fetchResponses["/api/assignments/save"] = {
+            ok: true,
+            assignment: {
+              id: "assignment-python-base-somma-001-3a-tpsi-2026-10-12t09-00-00-02-00",
+              activity_id: "python-base-somma-001",
+            },
+            assignments: [{
+              id: "assignment-python-base-somma-001-3a-tpsi-2026-10-12t09-00-00-02-00",
+              activity_id: "python-base-somma-001",
+            }],
+            due_without_register: [{
+              assignment: {
+                id: "assignment-python-base-somma-001-3a-tpsi-2026-10-12t09-00-00-02-00",
+                activity_id: "python-base-somma-001",
+                class_label: "3A TPSI",
+                due_at: "2026-10-19T23:59:00+02:00",
+              },
+            }],
+          };
+
+          await tested.saveAssignmentRecord();
+
+          const call = tested.fetchCalls.find((entry) => entry.path === "/api/assignments/save");
+          assert.ok(call);
+          assert.equal(call.options.method, "POST");
+          const body = JSON.parse(call.options.body);
+          assert.deepEqual(body, {
+            activity_path: "activities/python-base-somma-001.json",
+            class_id: "3A-TPSI",
+            class_label: "3A TPSI",
+            github_team: "team-3a-tpsi",
+            assigned_at: "2026-10-12T09:00:00+02:00",
+            due_at: "2026-10-19T23:59:00+02:00",
+            now: "2026-10-20T08:00:00+02:00",
+            targets_text: "students/rossi-mario\\nstudents/bianchi-luca",
+            overwrite: false,
+          });
+          assert.equal(tested.state.assignments.length, 1);
+          assert.equal(tested.state.dueAssignments.length, 1);
+          assert.match(tested.els.assignmentStatus.textContent, /1 assegnazioni scadute senza registro/);
+          assert.match(tested.els.status.textContent, /Assegnazione salvata/);
         })();
         """
     )
@@ -1169,6 +1238,7 @@ def test_assignment_and_report_panels_are_separated() -> None:
     assert 'id="classRosterSelect"' in assignment_section
     assert 'id="targetsText"' in assignment_section
     assert 'id="previewAssignmentBtn"' in assignment_section
+    assert 'id="saveAssignmentBtn"' in assignment_section
     assert 'id="outputName"' not in assignment_section
     assert 'id="reportAssignmentSummary"' not in assignment_section
     assert 'id="generateReportBtn"' not in assignment_section
@@ -1177,6 +1247,7 @@ def test_assignment_and_report_panels_are_separated() -> None:
     assert 'id="outputName"' in report_section
     assert 'id="reportAssignmentSummary"' in report_section
     assert 'id="generateReportBtn"' in report_section
+    assert 'id="saveAssignmentBtn"' not in report_section
     assert 'id="activitySelect"' not in report_section
     assert 'id="targetsText"' not in report_section
 

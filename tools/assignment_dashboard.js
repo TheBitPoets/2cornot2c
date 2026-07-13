@@ -225,6 +225,7 @@ const els = {
   nowAt: document.querySelector("#nowAt"),
   targetsText: document.querySelector("#targetsText"),
   previewAssignmentBtn: document.querySelector("#previewAssignmentBtn"),
+  saveAssignmentBtn: document.querySelector("#saveAssignmentBtn"),
   assignmentPlanPreview: document.querySelector("#assignmentPlanPreview"),
   generateReportBtn: document.querySelector("#generateReportBtn"),
   panels: document.querySelectorAll("main.layout .panel"),
@@ -2269,6 +2270,20 @@ function assignmentPlanPayload() {
   };
 }
 
+function assignmentRecordPayload() {
+  return {
+    activity_path: els.activityPath.value,
+    class_id: els.classId.value,
+    class_label: els.classLabel.value,
+    github_team: els.githubTeam.value,
+    assigned_at: els.assignedAt.value,
+    due_at: els.dueAt.value,
+    now: els.nowAt.value,
+    targets_text: els.targetsText.value,
+    overwrite: false,
+  };
+}
+
 function renderAssignmentAssetList(assets, emptyLabel) {
   const items = Array.isArray(assets) ? assets : [];
   if (!items.length) return `<p class="status">${escapeHtml(emptyLabel)}</p>`;
@@ -2367,6 +2382,27 @@ async function previewAssignmentPlan() {
     setStatus(`Anteprima assegnazione non disponibile: ${message}`);
   } finally {
     els.previewAssignmentBtn.disabled = false;
+  }
+}
+
+async function saveAssignmentRecord() {
+  if (!els.saveAssignmentBtn) return;
+  els.saveAssignmentBtn.disabled = true;
+  setStatus("Salvataggio assegnazione...");
+  try {
+    const payload = await api("/api/assignments/save", {
+      method: "POST",
+      body: JSON.stringify(assignmentRecordPayload()),
+    });
+    state.assignments = payload.assignments || [];
+    state.dueAssignments = (payload.due_without_register || []).map((item) => item.assignment || item);
+    state.selectedAssignmentId = "";
+    renderAssignmentSelect();
+    setStatus(`Assegnazione salvata: ${payload.assignment?.id || "-"}.`);
+  } catch (error) {
+    setStatus(`Assegnazione non salvata: ${assignmentPlanErrorMessage(error)}`);
+  } finally {
+    els.saveAssignmentBtn.disabled = false;
   }
 }
 
@@ -3154,6 +3190,7 @@ els.reloadBtn.addEventListener("click", async () => {
 });
 els.resetPanelOrderBtn.addEventListener("click", resetPanelOrder);
 els.previewAssignmentBtn?.addEventListener("click", previewAssignmentPlan);
+els.saveAssignmentBtn?.addEventListener("click", saveAssignmentRecord);
 els.generateReportBtn.addEventListener("click", generateReport);
 els.reportSelect.addEventListener("change", loadSelectedReport);
 els.coverageOpenBtn.addEventListener("click", openCoverageDialog);
