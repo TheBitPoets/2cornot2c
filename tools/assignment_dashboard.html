@@ -178,6 +178,28 @@
                 <label><input type="checkbox" checked disabled> Destinatari, classe/team e scadenze</label>
                 <label><input type="checkbox" checked disabled> Asset, starter file, test e soluzione quando disponibili</label>
               </div>
+              <div class="assignmentAiContext wideField" aria-label="Pacchetto file previsto per la generazione AI">
+                <strong>Pacchetto file activity</strong>
+                <label><input type="checkbox" checked disabled> Traccia e README studente</label>
+                <label><input type="checkbox" checked disabled> Starter code, esempi e fixture modificabili dal docente</label>
+                <label><input type="checkbox" checked disabled> Test pubblici per lo studente</label>
+                <label><input type="checkbox" checked disabled> Test riservati, runner e soluzione solo docente</label>
+                <label><input type="checkbox" disabled> File aggiuntivi liberi scelti da repository o caricati dal docente</label>
+              </div>
+              <div class="assignmentAiPolicy wideField">
+                <label>
+                  <span>Budget AI per studente</span>
+                  <input id="assignmentAiStudentBudget" type="number" min="0" step="1" value="5" disabled>
+                </label>
+                <label>
+                  <span>Modalita verifica</span>
+                  <select id="assignmentIntegrityMode" disabled aria-label="Modalita verifica e integrita">
+                    <option value="normal">Normale</option>
+                    <option value="controlled">Controllata: log focus e blocco copia/incolla nella GUI</option>
+                    <option value="kiosk">Kiosk/lab gestito futuro</option>
+                  </select>
+                </label>
+              </div>
               <div class="generateActions wideField">
                 <button id="assignmentAiAskBtn" type="button" disabled title="Inviera prompt e contesto al provider AI selezionato quando l'adapter sara collegato.">Chiedi modifica</button>
               </div>

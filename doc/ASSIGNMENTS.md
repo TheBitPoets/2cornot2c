@@ -826,6 +826,66 @@ Feedback AI assisted:
 
 Questa separazione rende chiaro cosa e stato verificato automaticamente e cosa invece e una spiegazione didattica generata o supportata dall'AI.
 
+### Budget, token e audit AI
+
+TheBitLab deve poter limitare l'uso dell'AI per evitare consumo incontrollato di crediti o saturazione dell'abbonamento della scuola.
+
+I budget dovrebbero esistere a piu livelli:
+
+| Livello | Esempio di limite |
+|---|---|
+| Organizzazione/scuola | tetto mensile globale di richieste, token o costo stimato |
+| Classe/team | quota massima condivisa dal gruppo |
+| Studente | numero richieste giornaliere, settimanali o per activity |
+| Activity/assegnazione | massimo tentativi AI consentiti per quella consegna |
+| Modalita AI | output breve, solo hint, feedback tecnico, tutor completo |
+
+Ogni richiesta AI dovrebbe produrre un record di audit separato dal voto:
+
+```json
+{
+  "student_id": "student-042",
+  "assignment_id": "assignment-python-base-somma-001-3a",
+  "provider": "openai",
+  "model": "provider-model",
+  "purpose": "student_hint",
+  "tokens_input": 1200,
+  "tokens_output": 350,
+  "estimated_cost": 0.003,
+  "created_at": "2026-10-14T10:12:00+02:00"
+}
+```
+
+La GUI studente dovrebbe mostrare un'indicazione semplice, per esempio richieste rimaste o modalita AI attiva. La GUI docente dovrebbe mostrare consumi aggregati per classe, studente e activity.
+
+Quando il budget e esaurito, la piattaforma dovrebbe poter degradare il supporto:
+
+- da `ai-assisted` a feedback tecnico;
+- da risposta lunga a hint breve;
+- da chat libera a richiami teorici precompilati;
+- oppure bloccare temporaneamente nuove richieste.
+
+### Integrita prove e copia/incolla
+
+Per le verifiche o le attivita controllate, TheBitLab puo prevedere una modalita di integrita limitata alla propria GUI.
+
+Controlli ragionevoli in una normale pagina web:
+
+- bloccare o intercettare `copy`, `paste` e `cut` dentro la GUI;
+- registrare tentativi di copia/incolla;
+- registrare cambio tab, perdita focus o uscita dal fullscreen;
+- disabilitare upload o drag/drop non autorizzati;
+- mostrare avvisi chiari allo studente;
+- salvare gli eventi in un audit log della consegna.
+
+Limite importante: una pagina web non puo monitorare tutto lo schermo o altre applicazioni dello studente. Per controlli piu forti servono strumenti dedicati, come browser kiosk, postazioni gestite, estensioni autorizzate o integrazioni di proctoring.
+
+Questa modalita deve essere trasparente:
+
+- lo studente deve sapere quali eventi vengono registrati;
+- non vanno raccolti dati non necessari;
+- i log devono aiutare il docente a valutare il contesto, non produrre automaticamente un voto o una sanzione.
+
 ## TheBitLab
 
 Il laboratorio interattivo del progetto prende il nome di **TheBitLab**.

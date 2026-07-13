@@ -281,6 +281,84 @@ Regole dello scaffold:
 - lo scaffold studente copia solo asset con visibilita effettiva `student` e tipo `starter`, `example`, `fixture` o `visible_test`;
 - `hidden_test`, `runner` e `teacher_only` restano fuori dal repository studente.
 
+## Activity package e generazione AI
+
+La generazione AI/Codex non deve produrre solo testo libero. Deve produrre un **activity package** revisionabile dal docente, cioe un insieme coerente di metadati, consegna, file e policy.
+
+Un package generato o modificato dall'AI dovrebbe contenere:
+
+- metadati activity: titolo, tipo, difficolta, argomenti, percorso/UDA quando disponibili;
+- traccia o README per lo studente;
+- file studente: starter code, esempi, fixture e test pubblici;
+- file docente: test nascosti, runner, soluzione, note e rubrica;
+- policy di supporto studente: modalita AI, materiali ammessi, limiti di aiuto;
+- provenienza: prompt, provider, modello o adapter, timestamp e revisione docente.
+
+La GUI puo proporre scheletri diversi per tipo di activity, ma il docente deve sempre poter:
+
+- aggiungere file liberi;
+- rimuovere o rinominare file proposti;
+- cambiare ruolo e visibilita dei file;
+- modificare qualsiasi contenuto generato;
+- chiedere all'AI una nuova iterazione partendo dal package corrente;
+- scartare la bozza e proseguire manualmente.
+
+### Scheletri minimi consigliati
+
+Gli scheletri non sono vincoli rigidi: servono a dare una forma iniziale coerente al docente, all'AI e al backend.
+
+| Tipo | Elementi fondamentali | Elementi consigliati |
+|---|---|---|
+| `studio-guidato` | traccia, obiettivi, paragrafi collegati, domande guida | micro-esercizi, criteri di autovalutazione |
+| `esercizio-classe` | traccia, file attesi, criteri minimi | starter code, test pubblici, soluzione docente |
+| `compito-casa` | traccia, consegna attesa, scadenza, rubrica | starter code, esempi, test pubblici |
+| `laboratorio` | traccia, starter code, fixture, test pubblici | test nascosti, runner, note docente |
+| `verifica-pratica` | traccia, vincoli, test riservati, rubrica | soluzione docente, runner, materiali ammessi |
+| `verifica-scritta` | domande, criteri, materiali ammessi | griglia correzione, soluzione attesa |
+| `debug-didattico` | codice con bug, descrizione comportamento, criteri | indizi progressivi, soluzione, test che espongono il bug |
+
+### Bundle di contesto per provider AI/Codex
+
+Prima di chiamare un provider AI, TheBitLab dovrebbe costruire un bundle esplicito e ispezionabile:
+
+```json
+{
+  "task": "generate_activity",
+  "provider": "codex",
+  "prompt": "Rendi l'esercizio piu guidato e aggiungi test sui casi limite.",
+  "activity": {
+    "id": "python-base-somma-001",
+    "tipo": "laboratorio",
+    "difficolta": "B"
+  },
+  "course_context": {
+    "percorso": "terzo-anno",
+    "uda": "input-output",
+    "argomenti": ["variabili", "operatori"]
+  },
+  "files": [
+    {
+      "path": "README.md",
+      "role": "student_instructions",
+      "visibility": "student",
+      "content": "..."
+    },
+    {
+      "path": "tests/test_hidden.py",
+      "role": "hidden_test",
+      "visibility": "teacher",
+      "content": "..."
+    }
+  ],
+  "teacher_review": {
+    "status": "draft",
+    "required": true
+  }
+}
+```
+
+Lo stesso bundle deve poter essere usato da adapter diversi: API provider, Codex locale, workflow manuale copia/incolla o provider futuri.
+
 ## Correzione
 
 Il campo `correzione` indica quali controlli sono previsti.

@@ -692,6 +692,10 @@ def test_assignment_wizard_contains_teacher_editable_ai_step() -> None:
     assert 'id="assignmentAiDraftText"' in assignment_section
     assert "Contesto da inviare" in assignment_section
     assert "Asset, starter file, test e soluzione" in assignment_section
+    assert "Pacchetto file activity" in assignment_section
+    assert "File aggiuntivi liberi" in assignment_section
+    assert 'id="assignmentAiStudentBudget"' in assignment_section
+    assert 'id="assignmentIntegrityMode"' in assignment_section
 
 
 def test_assignment_wizard_uses_calendar_date_time_inputs() -> None:
