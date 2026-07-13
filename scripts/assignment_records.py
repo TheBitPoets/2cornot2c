@@ -52,6 +52,15 @@ def parse_iso_datetime(value: str, field_name: str) -> datetime:
         raise ValueError(f"{field_name} non valido: {clean}") from error
 
 
+def require_same_timezone_kind(left: datetime, right: datetime, left_name: str, right_name: str) -> None:
+    """Reject comparisons between offset-aware and naive datetimes."""
+
+    left_has_timezone = left.tzinfo is not None and left.utcoffset() is not None
+    right_has_timezone = right.tzinfo is not None and right.utcoffset() is not None
+    if left_has_timezone != right_has_timezone:
+        raise ValueError(f"{left_name} e {right_name} devono usare timezone coerenti.")
+
+
 def normalize_target(target: dict[str, Any] | str) -> dict[str, str]:
     """Normalize a target entry into the assignment target shape."""
 
@@ -201,6 +210,7 @@ def assignment_status(
     normalized = validate_assignment_record(assignment)
     current_time = now if isinstance(now, datetime) else parse_iso_datetime(str(now), "now")
     due_at = parse_iso_datetime(normalized["due_at"], "due_at")
+    require_same_timezone_kind(current_time, due_at, "now", "due_at")
     has_register = any(assignment_matches_register(normalized, register) for register in registers)
     return AssignmentStatus(assignment=normalized, due=current_time >= due_at, has_register=has_register)
 

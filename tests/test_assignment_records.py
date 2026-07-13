@@ -80,6 +80,13 @@ def test_assignment_status_matches_legacy_register_without_assignment_id() -> No
     assert covered.needs_register is False
 
 
+def test_assignment_status_rejects_mixed_timezone_awareness() -> None:
+    assignment = assignment_records.build_assignment_record(**sample_assignment(due_at="2026-10-19T23:59:00"))
+
+    with pytest.raises(ValueError, match="timezone"):
+        assignment_records.assignment_status(assignment, [], "2026-10-20T08:00:00+02:00")
+
+
 def test_assignment_record_storage_writes_lists_and_filters_due_without_register(tmp_path) -> None:
     storage = assignment_records.JsonAssignmentRecordStorage(tmp_path)
     saved = storage.write_assignment(sample_assignment())
