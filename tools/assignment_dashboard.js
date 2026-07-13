@@ -1514,6 +1514,13 @@ function renderAssignmentSelect() {
   }
 }
 
+function clearSelectedAssignment() {
+  if (!state.selectedAssignmentId && !els.assignmentSelect?.value) return;
+  state.selectedAssignmentId = "";
+  if (els.assignmentSelect) els.assignmentSelect.value = "";
+  renderReportAssignmentSummary();
+}
+
 function applyAssignmentToGenerateForm(assignmentId) {
   const assignment = state.dueAssignments.find((candidate) => candidate.id === assignmentId)
     || state.assignments.find((candidate) => candidate.id === assignmentId);
@@ -3168,7 +3175,10 @@ els.reviewPrevBtn.addEventListener("click", () => openAdjacentSubmission(-1));
 els.reviewNextBtn.addEventListener("click", () => openAdjacentSubmission(1));
 els.reviewCloseBtn.addEventListener("click", closeReviewDialog);
 els.activitySelect.addEventListener("change", () => {
-  if (els.activitySelect.value) selectActivity(els.activitySelect.value);
+  if (els.activitySelect.value) {
+    clearSelectedAssignment();
+    selectActivity(els.activitySelect.value);
+  }
 });
 els.assignmentSelect?.addEventListener("change", () => {
   const assignment = applyAssignmentToGenerateForm(els.assignmentSelect.value);
@@ -3201,17 +3211,36 @@ els.activityAuthorClass?.addEventListener("change", () => {
 });
 els.classRosterSelect?.addEventListener("change", loadSelectedClassRoster);
 els.activityPath.addEventListener("input", () => {
+  clearSelectedAssignment();
   renderActivitySelect();
   renderAssignmentContext();
 });
 els.outputName.addEventListener("input", renderAssignmentContext);
-els.classId.addEventListener("input", renderReportAssignmentSummary);
-els.classLabel.addEventListener("input", renderAssignmentContext);
-els.githubTeam.addEventListener("input", renderAssignmentContext);
-els.assignedAt.addEventListener("input", renderReportAssignmentSummary);
-els.dueAt.addEventListener("input", renderReportAssignmentSummary);
+els.classId.addEventListener("input", () => {
+  clearSelectedAssignment();
+  renderReportAssignmentSummary();
+});
+els.classLabel.addEventListener("input", () => {
+  clearSelectedAssignment();
+  renderAssignmentContext();
+});
+els.githubTeam.addEventListener("input", () => {
+  clearSelectedAssignment();
+  renderAssignmentContext();
+});
+els.assignedAt.addEventListener("input", () => {
+  clearSelectedAssignment();
+  renderReportAssignmentSummary();
+});
+els.dueAt.addEventListener("input", () => {
+  clearSelectedAssignment();
+  renderReportAssignmentSummary();
+});
 els.nowAt.addEventListener("change", () => loadAssignments().catch((error) => setStatus(`Assegnazioni non aggiornate: ${error.message}`)));
-els.targetsText.addEventListener("input", renderAssignmentContext);
+els.targetsText.addEventListener("input", () => {
+  clearSelectedAssignment();
+  renderAssignmentContext();
+});
 els.classId.addEventListener("change", updateOutputNameForCurrentActivity);
 els.coverageBody.addEventListener("click", async (event) => {
   const toggleButton = event.target.closest("[data-coverage-toggle]");

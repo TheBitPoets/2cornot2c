@@ -304,6 +304,7 @@ def run_dashboard_js(assertions: str) -> None:
         generateReport,
         loadAssignments,
         renderAssignmentSelect,
+        clearSelectedAssignment,
         applyAssignmentToGenerateForm,
         rosterOptionLabel,
         localTargetFromStudent,
@@ -1240,6 +1241,59 @@ def test_assignment_records_fill_generate_form_and_payload() -> None:
           assert.ok(call);
           const body = JSON.parse(call.options.body);
           assert.equal(body.assignment_id, "assignment-python-base-somma-001-3a");
+        })();
+        """
+    )
+
+
+def test_manual_report_edit_clears_selected_assignment_id() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.fetchResponses["/api/assignments"] = {
+            assignments: [{
+              id: "assignment-python-base-somma-001-3a",
+              activity_id: "python-base-somma-001",
+              activity_path: "activities/python-base-somma-001.json",
+              target_type: "class",
+              class_id: "3A-TPSI",
+              class_label: "3A TPSI",
+              assigned_at: "2026-10-12T09:00:00+02:00",
+              due_at: "2026-10-19T23:59:00+02:00",
+              targets: [{ student_id: "rossi-mario", path: "studenti/rossi-mario" }],
+            }],
+            due_without_register: [{
+              assignment: {
+                id: "assignment-python-base-somma-001-3a",
+                activity_id: "python-base-somma-001",
+                activity_path: "activities/python-base-somma-001.json",
+                target_type: "class",
+                class_id: "3A-TPSI",
+                class_label: "3A TPSI",
+                assigned_at: "2026-10-12T09:00:00+02:00",
+                due_at: "2026-10-19T23:59:00+02:00",
+                targets: [{ student_id: "rossi-mario", path: "studenti/rossi-mario" }],
+              },
+            }],
+          };
+          tested.fetchResponses["/api/assignment-reports/generate"] = {
+            report: { students: [] },
+            saved: { name: "manuale/report.json", path: "teacher-reports/manuale/report.json" },
+            reports: [],
+          };
+
+          await tested.loadAssignments();
+          tested.applyAssignmentToGenerateForm("assignment-python-base-somma-001-3a");
+          assert.equal(tested.state.selectedAssignmentId, "assignment-python-base-somma-001-3a");
+
+          tested.clearSelectedAssignment();
+          assert.equal(tested.state.selectedAssignmentId, "");
+
+          await tested.generateReport();
+          const call = tested.fetchCalls.find((entry) => entry.path === "/api/assignment-reports/generate");
+          assert.ok(call);
+          const body = JSON.parse(call.options.body);
+          assert.equal(body.assignment_id, "");
         })();
         """
     )
