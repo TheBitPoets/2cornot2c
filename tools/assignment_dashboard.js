@@ -235,6 +235,7 @@ const els = {
   assignmentAiStudentBudget: document.querySelector("#assignmentAiStudentBudget"),
   assignmentIntegrityMode: document.querySelector("#assignmentIntegrityMode"),
   assignmentAiAskBtn: document.querySelector("#assignmentAiAskBtn"),
+  assignmentAiCodexBtn: document.querySelector("#assignmentAiCodexBtn"),
   assignmentAiDraftText: document.querySelector("#assignmentAiDraftText"),
   assignmentAiPackagePreview: document.querySelector("#assignmentAiPackagePreview"),
   generateReportBtn: document.querySelector("#generateReportBtn"),
@@ -2364,6 +2365,40 @@ function renderAssignmentAiPackage(aiPackage) {
   `;
 }
 
+function renderAssignmentCodexDraft(response) {
+  if (!response?.draft) return;
+  if (els.assignmentAiDraftText) {
+    els.assignmentAiDraftText.value = JSON.stringify(response.draft, null, 2);
+  }
+  if (!els.assignmentAiPackagePreview) return;
+  const files = Array.isArray(response.draft.files) ? response.draft.files : [];
+  const questions = Array.isArray(response.draft.questions) ? response.draft.questions : [];
+  const warnings = Array.isArray(response.draft.warnings) ? response.draft.warnings : [];
+  els.assignmentAiPackagePreview.innerHTML = `
+    <div class="assignmentPlanHeader">
+      <div>
+        <strong>Bozza Codex pronta</strong>
+        <small>${escapeHtml(response.draft.summary || "Bozza generata localmente sulla macchina docente.")}</small>
+      </div>
+      ${badge("revisione docente", "ok")}
+    </div>
+    <div class="assignmentPlanGrid">
+      <section>
+        <h3>File proposti</h3>
+        ${renderAssignmentAssetList(files, "Nessun file proposto da Codex.")}
+      </section>
+      <section>
+        <h3>Note docente</h3>
+        <ul class="assignmentPlanList">
+          <li><strong>Note</strong><small>${escapeHtml(response.draft.teacher_notes || "Nessuna nota.")}</small></li>
+          <li><strong>Domande</strong><small>${escapeHtml(questions.join(" | ") || "Nessuna domanda.")}</small></li>
+          <li><strong>Avvisi</strong><small>${escapeHtml(warnings.join(" | ") || "Nessun avviso.")}</small></li>
+        </ul>
+      </section>
+    </div>
+  `;
+}
+
 function setAssignmentWizardStep(step) {
   const selectedStep = step || "activity";
   els.assignmentStepTabs.forEach((button) => {
@@ -2514,6 +2549,31 @@ async function previewAssignmentAiPackage() {
     setStatus(`Pacchetto AI non disponibile: ${message}`);
   } finally {
     els.assignmentAiAskBtn.disabled = false;
+  }
+}
+
+async function previewAssignmentCodexDraft() {
+  if (!els.assignmentAiCodexBtn) return;
+  els.assignmentAiCodexBtn.disabled = true;
+  setStatus("Richiesta bozza a Codex locale...");
+  if (els.assignmentAiPackagePreview) {
+    els.assignmentAiPackagePreview.innerHTML = '<p class="status">Codex locale sta generando una bozza...</p>';
+  }
+  try {
+    const payload = await api("/api/activities/ai-codex-draft", {
+      method: "POST",
+      body: JSON.stringify(assignmentAiPackagePayload()),
+    });
+    renderAssignmentCodexDraft(payload);
+    setStatus("Bozza Codex pronta: controlla e modifica prima di salvare.");
+  } catch (error) {
+    const message = assignmentPlanErrorMessage(error);
+    if (els.assignmentAiPackagePreview) {
+      els.assignmentAiPackagePreview.innerHTML = `<p class="status">Bozza Codex non disponibile: ${escapeHtml(message)}</p>`;
+    }
+    setStatus(`Bozza Codex non disponibile: ${message}`);
+  } finally {
+    els.assignmentAiCodexBtn.disabled = false;
   }
 }
 
@@ -3351,6 +3411,7 @@ els.assignmentStepTabs.forEach((button) => {
 });
 els.previewAssignmentBtn?.addEventListener("click", previewAssignmentPlan);
 els.assignmentAiAskBtn?.addEventListener("click", previewAssignmentAiPackage);
+els.assignmentAiCodexBtn?.addEventListener("click", previewAssignmentCodexDraft);
 els.saveAssignmentBtn?.addEventListener("click", saveAssignmentRecord);
 els.distributeAssignmentBtn?.addEventListener("click", distributeAssignment);
 els.generateReportBtn.addEventListener("click", generateReport);

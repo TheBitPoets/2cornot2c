@@ -330,6 +330,78 @@ def test_preview_activity_ai_package_returns_context_files_and_policy(tmp_path, 
     assert not (target / "assignments").exists()
 
 
+def test_preview_activity_ai_codex_draft_uses_local_adapter(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setenv("CODEX_COMMAND", "codex-test")
+    activities_dir = tmp_path / "activities"
+    activities_dir.mkdir()
+    activity_path = activities_dir / "activity.json"
+    activity_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "id": "python-base-somma-001",
+                "titolo": "Somma in Python",
+                "tipo": "laboratorio",
+                "difficolta": "B",
+                "argomenti": ["variabili"],
+                "linguaggio": "python",
+                "consegna": "Completa main.py.",
+                "correzione": {
+                    "compila": True,
+                    "test": True,
+                    "sandbox": True,
+                    "ai_feedback": False,
+                },
+                "metriche": {
+                    "tempo_stimato_minuti": 20,
+                    "traccia_tempo_dichiarato": True,
+                    "traccia_sessioni_thebitlab": True,
+                    "traccia_eventi_didattici": True,
+                    "traccia_errori_compilazione": True,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    captured = {}
+
+    def fake_run_codex_activity_draft(package, *, cwd, codex_command="codex"):
+        captured["package"] = package
+        captured["cwd"] = cwd
+        captured["codex_command"] = codex_command
+        return {
+            "adapter": "codex_exec",
+            "draft": {
+                "summary": "Bozza pronta",
+                "teacher_notes": "Controllare i test.",
+                "activity_patch": {"titolo": "Somma con negativi"},
+                "files": [{"path": "main.py", "role": "starter", "content": "print(0)\n"}],
+                "questions": [],
+                "warnings": [],
+            },
+            "raw": {"summary": "Bozza pronta"},
+        }
+
+    monkeypatch.setattr(course_board_server.codex_activity_adapter, "run_codex_activity_draft", fake_run_codex_activity_draft)
+
+    response = course_board_server.preview_activity_ai_codex_draft(
+        {
+            "activity_path": "activities/activity.json",
+            "targets_text": "students/rossi-mario",
+            "prompt": "Aggiungi test sui negativi",
+            "provider": "codex",
+        }
+    )
+
+    assert response["ok"] is True
+    assert response["adapter"] == "codex_exec"
+    assert response["draft"]["activity_patch"]["titolo"] == "Somma con negativi"
+    assert captured["package"]["prompt"] == "Aggiungi test sui negativi"
+    assert captured["cwd"] == tmp_path
+    assert captured["codex_command"] == "codex-test"
+
+
 def test_save_assignment_record_persists_dashboard_assignment(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "TEACHER_ASSIGNMENTS_DIR", tmp_path / "teacher-assignments")
