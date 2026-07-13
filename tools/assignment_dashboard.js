@@ -1679,6 +1679,7 @@ function rosterTargets(roster) {
 
 function applyRosterToGenerateForm(roster) {
   if (!roster) return { targets: [], warnings: ["Roster non valido."] };
+  clearSelectedAssignment();
   state.selectedClassRoster = roster;
   els.classId.value = roster.id || "";
   els.classLabel.value = roster.label || roster.id || "";

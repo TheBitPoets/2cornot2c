@@ -1299,6 +1299,68 @@ def test_manual_report_edit_clears_selected_assignment_id() -> None:
     )
 
 
+def test_roster_application_clears_selected_assignment_id() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.fetchResponses["/api/assignments"] = {
+            assignments: [{
+              id: "assignment-python-base-somma-001-3a",
+              activity_id: "python-base-somma-001",
+              activity_path: "activities/python-base-somma-001.json",
+              target_type: "class",
+              class_id: "3A-TPSI",
+              class_label: "3A TPSI",
+              assigned_at: "2026-10-12T09:00:00+02:00",
+              due_at: "2026-10-19T23:59:00+02:00",
+              targets: [{ student_id: "rossi-mario", path: "studenti/rossi-mario" }],
+            }],
+            due_without_register: [{
+              assignment: {
+                id: "assignment-python-base-somma-001-3a",
+                activity_id: "python-base-somma-001",
+                activity_path: "activities/python-base-somma-001.json",
+                target_type: "class",
+                class_id: "3A-TPSI",
+                class_label: "3A TPSI",
+                assigned_at: "2026-10-12T09:00:00+02:00",
+                due_at: "2026-10-19T23:59:00+02:00",
+                targets: [{ student_id: "rossi-mario", path: "studenti/rossi-mario" }],
+              },
+            }],
+          };
+          tested.fetchResponses["/api/assignment-reports/generate"] = {
+            report: { students: [] },
+            saved: { name: "roster/report.json", path: "teacher-reports/roster/report.json" },
+            reports: [],
+          };
+
+          await tested.loadAssignments();
+          tested.applyAssignmentToGenerateForm("assignment-python-base-somma-001-3a");
+          assert.equal(tested.state.selectedAssignmentId, "assignment-python-base-somma-001-3a");
+
+          tested.applyRosterToGenerateForm({
+            id: "4A-TPSI",
+            label: "4A TPSI",
+            github_team: "team-4a-tpsi",
+            students: [
+              { id: "verdi-anna", display_name: "Verdi Anna", local_path: "studenti/verdi-anna" },
+            ],
+          });
+          assert.equal(tested.state.selectedAssignmentId, "");
+
+          await tested.generateReport();
+          const call = tested.fetchCalls.find((entry) => entry.path === "/api/assignment-reports/generate");
+          assert.ok(call);
+          const body = JSON.parse(call.options.body);
+          assert.equal(body.assignment_id, "");
+          assert.equal(body.class_id, "4A-TPSI");
+          assert.equal(body.targets_text, "studenti/verdi-anna");
+        })();
+        """
+    )
+
+
 def test_class_roster_panel_is_available_on_assignment_dashboard() -> None:
     html = open("tools/assignment_dashboard.html", encoding="utf-8").read()
     roster_section = html.split('data-panel-key="class-roster"', 1)[1].split('data-panel-key="selected-report"', 1)[0]
