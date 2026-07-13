@@ -74,6 +74,35 @@ def test_build_assignment_record_uses_group_members_to_avoid_count_collisions() 
     assert "group-2" not in second_group["id"]
 
 
+def test_build_assignment_record_keeps_group_id_stable_when_targets_are_reordered() -> None:
+    first_order = assignment_records.build_assignment_record(
+        **sample_assignment(
+            target_type="group",
+            class_id="",
+            class_label="",
+            github_team="",
+            targets=[
+                {"student_id": "rossi-mario"},
+                {"student_id": "bianchi-luca"},
+            ],
+        ),
+    )
+    reversed_order = assignment_records.build_assignment_record(
+        **sample_assignment(
+            target_type="group",
+            class_id="",
+            class_label="",
+            github_team="",
+            targets=[
+                {"student_id": "bianchi-luca"},
+                {"student_id": "rossi-mario"},
+            ],
+        ),
+    )
+
+    assert first_order["id"] == reversed_order["id"]
+
+
 def test_assignment_record_validation_rejects_missing_or_bad_fields() -> None:
     with pytest.raises(ValueError, match="activity_id"):
         assignment_records.build_assignment_record(**sample_assignment(activity_id=""))

@@ -62,6 +62,19 @@ def require_same_timezone_kind(left: datetime, right: datetime, left_name: str, 
         raise ValueError(f"{left_name} e {right_name} devono usare timezone coerenti.")
 
 
+def target_sort_key(target: dict[str, str]) -> tuple[str, str, str, str, str]:
+    """Return a stable sort key for assignment targets."""
+
+    serialized = json.dumps(target, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return (
+        target.get("student_id", ""),
+        target.get("target", ""),
+        target.get("repo_ref", ""),
+        target.get("path", ""),
+        serialized,
+    )
+
+
 def normalize_target(target: dict[str, Any] | str) -> dict[str, str]:
     """Normalize a target entry into the assignment target shape."""
 
@@ -99,7 +112,8 @@ def assignment_target_ref(
     if target_type == "student" and len(targets) == 1:
         return targets[0].get("student_id") or targets[0].get("target") or targets[0].get("path") or "student"
     if target_type == "group" and targets:
-        target_fingerprint = json.dumps(targets, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        canonical_targets = sorted(targets, key=target_sort_key)
+        target_fingerprint = json.dumps(canonical_targets, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
         digest = hashlib.sha1(target_fingerprint.encode("utf-8")).hexdigest()[:10]
         return f"group-{digest}"
     return target_type or "target"
