@@ -282,6 +282,26 @@ def run_dashboard_js(assertions: str) -> None:
               teacher_review: {{ status: "draft", required: true }},
             }},
           }};
+          if (path === "/api/activities/ai-codex-draft") return {{
+            ok: true,
+            adapter: "codex_exec",
+            package: {{ schema_version: "activity_ai_package.v1" }},
+            draft: {{
+              summary: "Bozza pronta",
+              teacher_notes: "Controllare i test prima di salvare.",
+              activity_patch: {{ titolo: "Somma con negativi" }},
+              files: [
+                {{
+                  path: "main.py",
+                  role: "starter",
+                  visibility: "student",
+                  content: "print(0)\\n",
+                }},
+              ],
+              questions: [],
+              warnings: [],
+            }},
+          }};
           if (path === "/api/activities") return {{ activities: [] }};
           if (path === "/api/activities/save") return {{
             ok: true,
@@ -377,10 +397,12 @@ def run_dashboard_js(assertions: str) -> None:
         renderAssignmentTargetList,
         renderAssignmentPlan,
         renderAssignmentAiPackage,
+        renderAssignmentCodexDraft,
         setAssignmentWizardStep,
         assignmentPlanErrorMessage,
         previewAssignmentPlan,
         previewAssignmentAiPackage,
+        generateAssignmentAiDraft,
         saveAssignmentRecord,
         distributeAssignment,
         generateReport,
@@ -724,6 +746,8 @@ def test_assignment_wizard_contains_teacher_editable_ai_step() -> None:
     assert 'id="assignmentAiProvider"' in assignment_section
     assert 'id="assignmentAiPrompt"' in assignment_section
     assert 'id="assignmentAiDraftText"' in assignment_section
+    assert 'id="assignmentAiGenerateBtn"' in assignment_section
+    assert "Genera bozza" in assignment_section
     assert "Contesto da inviare" in assignment_section
     assert "Asset, starter file, test e soluzione" in assignment_section
     assert "Pacchetto file activity" in assignment_section
@@ -811,6 +835,48 @@ def test_preview_assignment_ai_package_posts_bundle_request_and_renders_json() -
           assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /starter/);
           assert.equal(tested.els.assignmentAiDraftText.value, "");
           assert.match(tested.els.status.textContent, /nessuna chiamata provider/);
+        })();
+        """
+    )
+
+
+def test_generate_assignment_ai_draft_with_codex_posts_request_and_fills_teacher_draft() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.els.activityPath.value = "activities/python-base-somma-001.json";
+          tested.els.targetsText.value = "students/rossi-mario";
+          tested.els.assignmentAiProvider.value = "codex";
+          tested.els.assignmentAiPrompt.value = "Aggiungi test sui negativi";
+
+          await tested.generateAssignmentAiDraft();
+
+          const call = tested.fetchCalls.find((entry) => entry.path === "/api/activities/ai-codex-draft");
+          assert.ok(call);
+          assert.equal(call.options.method, "POST");
+          const body = JSON.parse(call.options.body);
+          assert.equal(body.prompt, "Aggiungi test sui negativi");
+          assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /Bozza Codex pronta/);
+          assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /File proposti/);
+          assert.match(tested.els.assignmentAiDraftText.value, /Somma con negativi/);
+          assert.match(tested.els.status.textContent, /Bozza Codex pronta/);
+        })();
+        """
+    )
+
+
+def test_generate_assignment_ai_draft_warns_when_provider_is_not_connected() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.els.assignmentAiProvider.value = "openai";
+
+          await tested.generateAssignmentAiDraft();
+
+          const call = tested.fetchCalls.find((entry) => entry.path === "/api/activities/ai-codex-draft");
+          assert.equal(call, undefined);
+          assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /Provider non ancora collegato/);
+          assert.match(tested.els.status.textContent, /Provider non ancora collegato/);
         })();
         """
     )

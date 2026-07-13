@@ -361,6 +361,8 @@ Lo stesso bundle deve poter essere usato da adapter diversi: API provider, Codex
 
 Nella dashboard docente il primo passo operativo e l'anteprima del pacchetto: il backend costruisce il JSON con prompt, contesto, target e contenuti dei file dichiarati negli asset, ma non chiama ancora provider reali e non consuma token. Questo permette di verificare quali dati uscirebbero dalla piattaforma prima di collegare adapter AI/Codex.
 
+L'adapter Codex locale usa lo stesso pacchetto sul backend della macchina docente: la dashboard invia la richiesta al server locale, il server esegue `codex exec` in modalita non interattiva e restituisce una bozza JSON modificabile dal docente. Le credenziali Codex non devono essere esposte nel browser o alle postazioni studente; l'output resta una bozza da rivedere, non una activity approvata automaticamente.
+
 ## Correzione
 
 Il campo `correzione` indica quali controlli sono previsti.
