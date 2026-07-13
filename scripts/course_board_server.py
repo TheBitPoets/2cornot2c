@@ -35,6 +35,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts import (
+    activity_ai_package,
     assignment_records,
     assign_activity,
     create_activity,
@@ -507,6 +508,27 @@ def preview_activity_assignment(payload: dict) -> dict:
         overwrite=bool(payload.get("overwrite", False)),
     )
     return {"ok": True, "plan": plan.to_dict()}
+
+
+def preview_activity_ai_package(payload: dict) -> dict:
+    """Return the write-free AI package for the selected activity and targets."""
+
+    activity_path = resolve_local_path(payload.get("activity_path", ""), "activity_path")
+    if not activity_path.is_file():
+        raise FileNotFoundError(f"Activity non trovata: {activity_path}")
+    targets = read_assignment_target_paths_from_text(str(payload.get("targets_text", "")))
+    package = activity_ai_package.build_activity_ai_package(
+        activity_path=activity_path,
+        targets=targets,
+        prompt=str(payload.get("prompt", "")),
+        provider=str(payload.get("provider", "codex")),
+        student_budget=int(payload.get("student_budget", 0) or 0),
+        integrity_mode=str(payload.get("integrity_mode", "normal")),
+        source_name=payload.get("source_name") or None,
+        language=payload.get("language") or None,
+        thebitlab_ref=payload.get("thebitlab_ref") or create_submission_scaffold.DEFAULT_THEBITLAB_REF,
+    )
+    return {"ok": True, "package": package}
 
 
 def distribute_activity_assignment(payload: dict) -> dict:
@@ -2028,6 +2050,20 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/activities/assignment-plan":
             try:
                 self.write_json(preview_activity_assignment(payload))
+            except FileNotFoundError as error:
+                self.send_response(404)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+            except Exception as error:  # noqa: BLE001
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+            return
+        if parsed.path == "/api/activities/ai-package":
+            try:
+                self.write_json(preview_activity_ai_package(payload))
             except FileNotFoundError as error:
                 self.send_response(404)
                 self.send_header("Content-Type", "application/json; charset=utf-8")

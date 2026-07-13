@@ -189,11 +189,11 @@
               <div class="assignmentAiPolicy wideField">
                 <label>
                   <span>Budget AI per studente</span>
-                  <input id="assignmentAiStudentBudget" type="number" min="0" step="1" value="5" disabled>
+                  <input id="assignmentAiStudentBudget" type="number" min="0" step="1" value="5">
                 </label>
                 <label>
                   <span>Modalita verifica</span>
-                  <select id="assignmentIntegrityMode" disabled aria-label="Modalita verifica e integrita">
+                  <select id="assignmentIntegrityMode" aria-label="Modalita verifica e integrita">
                     <option value="normal">Normale</option>
                     <option value="controlled">Controllata: log focus e blocco copia/incolla nella GUI</option>
                     <option value="kiosk">Kiosk/lab gestito futuro</option>
@@ -201,12 +201,15 @@
                 </label>
               </div>
               <div class="generateActions wideField">
-                <button id="assignmentAiAskBtn" type="button" disabled title="Inviera prompt e contesto al provider AI selezionato quando l'adapter sara collegato.">Chiedi modifica</button>
+                <button id="assignmentAiAskBtn" type="button" title="Prepara il pacchetto JSON con prompt, contesto e file che verra inviato al provider AI quando l'adapter sara collegato.">Prepara pacchetto AI</button>
               </div>
               <label class="wideField">
                 <span>Bozza AI modificabile dal docente</span>
                 <textarea id="assignmentAiDraftText" rows="6" placeholder="Qui comparira la proposta AI. Il docente potra modificarla prima di salvare l'activity o distribuirla."></textarea>
               </label>
+              <div id="assignmentAiPackagePreview" class="assignmentPlanPreview wideField" aria-live="polite">
+                <p class="status">Prepara il pacchetto AI per controllare prompt, contesto e file prima di chiamare provider o Codex.</p>
+              </div>
             </div>
           </div>
         </section>

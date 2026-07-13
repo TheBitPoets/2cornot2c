@@ -249,6 +249,79 @@ def test_preview_activity_assignment_returns_plan_without_writing(tmp_path, monk
     assert not (target / "assignments").exists()
 
 
+def test_preview_activity_ai_package_returns_context_files_and_policy(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    activities_dir = tmp_path / "activities"
+    activities_dir.mkdir()
+    (activities_dir / "starter").mkdir()
+    (activities_dir / "tests").mkdir()
+    (activities_dir / "starter" / "main.py").write_text("print('starter')\n", encoding="utf-8")
+    (activities_dir / "tests" / "hidden.py").write_text("assert True\n", encoding="utf-8")
+    activity_path = activities_dir / "activity.json"
+    activity_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "id": "python-base-somma-001",
+                "titolo": "Somma in Python",
+                "tipo": "laboratorio",
+                "difficolta": "B",
+                "argomenti": ["variabili", "operatori"],
+                "linguaggio": "python",
+                "consegna": "Completa main.py.",
+                "contesto": {"percorso": "terzo-anno", "uda": "uda-input"},
+                "assets": [
+                    {"type": "starter", "path": "starter/main.py", "target_path": "main.py", "visibility": "student"},
+                    {"type": "hidden_test", "path": "tests/hidden.py", "visibility": "teacher"},
+                ],
+                "correzione": {
+                    "compila": True,
+                    "test": True,
+                    "sandbox": True,
+                    "ai_feedback": False,
+                },
+                "metriche": {
+                    "tempo_stimato_minuti": 20,
+                    "traccia_tempo_dichiarato": True,
+                    "traccia_sessioni_thebitlab": True,
+                    "traccia_eventi_didattici": True,
+                    "traccia_errori_compilazione": True,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    target = tmp_path / "students" / "rossi-mario"
+
+    response = course_board_server.preview_activity_ai_package(
+        {
+            "activity_path": "activities/activity.json",
+            "targets_text": "students/rossi-mario",
+            "prompt": "Aggiungi test sui negativi",
+            "provider": "codex",
+            "student_budget": 5,
+            "integrity_mode": "controlled",
+        }
+    )
+
+    package = response["package"]
+    assert response["ok"] is True
+    assert package["schema_version"] == "activity_ai_package.v1"
+    assert package["provider"] == "codex"
+    assert package["prompt"] == "Aggiungi test sui negativi"
+    assert package["activity"]["id"] == "python-base-somma-001"
+    assert package["course_context"]["uda"] == "uda-input"
+    assert package["assignment"]["targets"][0]["target"] == str(target.resolve())
+    assert package["files"][0]["path"] == "starter/main.py"
+    assert package["files"][0]["included"] is True
+    assert "starter" in package["files"][0]["content"]
+    assert package["files"][1]["visibility"] == "teacher"
+    assert package["policy"]["student_budget"] == 5
+    assert package["policy"]["integrity_mode"] == "controlled"
+    assert package["policy"]["no_provider_call"] is True
+    assert not (target / "assignments").exists()
+
+
 def test_save_assignment_record_persists_dashboard_assignment(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "TEACHER_ASSIGNMENTS_DIR", tmp_path / "teacher-assignments")
