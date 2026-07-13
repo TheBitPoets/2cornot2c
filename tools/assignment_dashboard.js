@@ -226,6 +226,7 @@ const els = {
   targetsText: document.querySelector("#targetsText"),
   previewAssignmentBtn: document.querySelector("#previewAssignmentBtn"),
   saveAssignmentBtn: document.querySelector("#saveAssignmentBtn"),
+  distributeAssignmentBtn: document.querySelector("#distributeAssignmentBtn"),
   assignmentPlanPreview: document.querySelector("#assignmentPlanPreview"),
   generateReportBtn: document.querySelector("#generateReportBtn"),
   panels: document.querySelectorAll("main.layout .panel"),
@@ -2406,6 +2407,31 @@ async function saveAssignmentRecord() {
   }
 }
 
+async function distributeAssignment() {
+  if (!els.distributeAssignmentBtn) return;
+  els.distributeAssignmentBtn.disabled = true;
+  setStatus("Distribuzione assegnazione ai target...");
+  if (els.assignmentPlanPreview) {
+    els.assignmentPlanPreview.innerHTML = '<p class="status">Distribuzione assegnazione ai target...</p>';
+  }
+  try {
+    const payload = await api("/api/assignments/distribute", {
+      method: "POST",
+      body: JSON.stringify(assignmentPlanPayload()),
+    });
+    renderAssignmentPlan(payload.plan);
+    setStatus(`Assegnazione distribuita a ${payload.results?.length || 0} target.`);
+  } catch (error) {
+    const message = assignmentPlanErrorMessage(error);
+    if (els.assignmentPlanPreview) {
+      els.assignmentPlanPreview.innerHTML = `<p class="status">Distribuzione non completata: ${escapeHtml(message)}</p>`;
+    }
+    setStatus(`Distribuzione non completata: ${message}`);
+  } finally {
+    els.distributeAssignmentBtn.disabled = false;
+  }
+}
+
 async function generateReport() {
   els.generateReportBtn.disabled = true;
   setStatus("Creazione registro consegne...");
@@ -3191,6 +3217,7 @@ els.reloadBtn.addEventListener("click", async () => {
 els.resetPanelOrderBtn.addEventListener("click", resetPanelOrder);
 els.previewAssignmentBtn?.addEventListener("click", previewAssignmentPlan);
 els.saveAssignmentBtn?.addEventListener("click", saveAssignmentRecord);
+els.distributeAssignmentBtn?.addEventListener("click", distributeAssignment);
 els.generateReportBtn.addEventListener("click", generateReport);
 els.reportSelect.addEventListener("change", loadSelectedReport);
 els.coverageOpenBtn.addEventListener("click", openCoverageDialog);
