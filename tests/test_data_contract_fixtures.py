@@ -91,3 +91,24 @@ def test_assignment_register_contract_fixture() -> None:
     assert student["submission"]["files"][0]["path"] == "assignments/python-base-somma-001/main.py"
     assert student["grading"]["failed_tests"] == []
     assert student["ai_feedback"]["status"] == "not_generated"
+
+
+def test_assignment_contract_fixture() -> None:
+    payload = load_fixture("assignment.json")
+
+    assert_required(
+        payload,
+        {
+            "schema_version",
+            "id",
+            "activity_id",
+            "activity_path",
+            "target_type",
+            "assigned_at",
+            "due_at",
+            "targets",
+        },
+    )
+    assert payload["target_type"] == "class"
+    assert payload["targets"][0]["student_id"] == "rossi-mario"
+    assert payload["targets"][0]["repo_ref"] == "TheBitPoets/rossi-mario"
