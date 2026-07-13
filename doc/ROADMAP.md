@@ -562,9 +562,13 @@ Ordine consigliato:
 5. Asset activity e scaffold:
    - allegare o selezionare file di esempio, scheletri, fixture, test e runner;
    - distinguere asset pubblici per lo studente, asset riservati al grading e asset solo docente;
+   - definire un `activity package` composto da metadati, traccia, file studente, file docente, test, soluzione, rubrica e provenienza;
+   - prevedere scheletri minimi per tipo di activity, lasciando sempre al docente la possibilita di aggiungere file liberi;
    - copiare gli asset corretti nello scaffold consegna durante l'assegnazione.
 6. Generazione AI/Codex di activity e asset:
    - proporre traccia, esempi, starter code, bug da correggere, soluzione, test e rubrica;
+   - inviare ai provider un bundle esplicito con prompt, metadati, contesto didattico e file selezionati;
+   - supportare iterazioni docente-AI sul package corrente: modifica, richiesta aggiustamenti, confronto, nuova bozza;
    - lasciare al docente controllo completo: accetta, modifica, scarta, rigenera o crea manualmente;
    - registrare provenienza della generazione e policy AI usata.
 7. Pagina assegnazione activity a classe, gruppo o singolo studente e scaffold consegna.
@@ -588,7 +592,12 @@ Ordine consigliato:
 17. Catalogo fonti e import paragrafi da piu repository.
 18. Estensione layout pannelli alle altre pagine.
 19. Feedback assistito avanzato lato studente.
-20. Source provider API, indicizzazione frammenti e playground knowledge lab.
+20. Governance AI e integrita prove:
+   - budget token/richieste per scuola, classe, studente e activity;
+   - audit log separato dal voto per chiamate AI, costi stimati e policy applicata;
+   - modalita verifica controllata nella GUI con blocco/log copia-incolla, focus/tab e fullscreen;
+   - informativa chiara allo studente e minimizzazione dei dati raccolti.
+21. Source provider API, indicizzazione frammenti e playground knowledge lab.
 
 ## Criterio di priorita
 

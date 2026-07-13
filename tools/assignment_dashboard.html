@@ -126,65 +126,157 @@
       <div class="panelHead">
         <div>
           <h2>Assegna activity</h2>
-          <p class="status">Prepara activity, destinatari e scadenza. Per ora l'assegnazione reale e' solo in anteprima e non scrive nei repository studenti.</p>
+          <p class="status">Segui gli step per scegliere activity, destinatari, date, anteprima e conferma. Le proposte AI saranno sempre modificabili dal docente prima della pubblicazione.</p>
         </div>
       </div>
-      <div class="generateGrid">
-        <label>
-          <span>Scegli activity</span>
-          <select id="activitySelect" aria-label="Scegli activity">
-            <option value="">Caricamento activity...</option>
-          </select>
-        </label>
-        <label>
-          <span>Activity JSON</span>
-          <input id="activityPath" type="text" value="examples/assignment_tracking/demo_activity.json">
-        </label>
-        <label>
-          <span>Classe da roster</span>
-          <select id="classRosterSelect" aria-label="Roster classi locali">
-            <option value="">Caricamento roster...</option>
-          </select>
-        </label>
-        <label>
-          <span>Classe</span>
-          <input id="classId" type="text" value="demo" placeholder="3A-TPSI">
-        </label>
-        <label>
-          <span>Etichetta classe</span>
-          <input id="classLabel" type="text" value="Classe demo" placeholder="3A TPSI">
-        </label>
-        <label>
-          <span>Team GitHub</span>
-          <input id="githubTeam" type="text" placeholder="3A-TPSI">
-        </label>
-        <label>
-          <span>Assegnato il</span>
-          <input id="assignedAt" type="text" value="2026-10-12T09:00:00+02:00">
-        </label>
-        <label>
-          <span>Scadenza</span>
-          <input id="dueAt" type="text" value="2026-10-19T23:59:00+02:00">
-        </label>
-        <label>
-          <span>Ora simulata opzionale</span>
-          <input id="nowAt" type="text" placeholder="2026-10-18T12:00:00+02:00">
-        </label>
-        <label class="wideField">
-          <span>Repository studenti locali, uno per riga</span>
-          <textarea id="targetsText" rows="4">examples/assignment_tracking/student_repos/rossi-mario
+      <div class="assignmentWizard" data-assignment-wizard>
+        <div class="assignmentWizardSteps" role="tablist" aria-label="Step assegnazione activity">
+          <button type="button" class="isActive" data-assignment-step-tab="activity" aria-selected="true">1 Activity</button>
+          <button type="button" data-assignment-step-tab="ai" aria-selected="false">2 AI</button>
+          <button type="button" data-assignment-step-tab="targets" aria-selected="false">3 Destinatari</button>
+          <button type="button" data-assignment-step-tab="dates" aria-selected="false">4 Date</button>
+          <button type="button" data-assignment-step-tab="preview" aria-selected="false">5 Anteprima</button>
+          <button type="button" data-assignment-step-tab="confirm" aria-selected="false">6 Conferma</button>
+        </div>
+
+        <section class="assignmentWizardStep isActive" data-assignment-step="activity">
+          <div class="generateGrid">
+            <label>
+              <span>Scegli activity</span>
+              <select id="activitySelect" aria-label="Scegli activity">
+                <option value="">Caricamento activity...</option>
+              </select>
+            </label>
+            <label class="wideField">
+              <span>Activity JSON</span>
+              <input id="activityPath" type="text" value="examples/assignment_tracking/demo_activity.json">
+            </label>
+          </div>
+        </section>
+
+        <section class="assignmentWizardStep" data-assignment-step="ai" hidden>
+          <div class="assignmentAiDraft">
+            <strong>Generazione AI assistita</strong>
+            <p>In arrivo: genera traccia, starter code, test, soluzione e rubric tramite provider AI o Codex. La proposta resta una bozza: il docente potra modificarla, rigenerare sezioni o scartarla prima di salvare e distribuire.</p>
+            <div class="assignmentAiChat">
+              <label>
+                <span>Provider</span>
+                <select id="assignmentAiProvider" aria-label="Provider AI per la bozza activity">
+                  <option value="codex">Codex</option>
+                  <option value="openai">OpenAI API provider</option>
+                  <option value="manual">Solo bozza manuale</option>
+                </select>
+              </label>
+              <label class="wideField">
+                <span>Prompt docente</span>
+                <textarea id="assignmentAiPrompt" rows="4" placeholder="Chiedi una traccia, una variante piu semplice, test aggiuntivi, codice da debuggare o una rubric diversa."></textarea>
+              </label>
+              <div class="assignmentAiContext wideField" aria-label="Contesto che verra inviato all'AI">
+                <strong>Contesto da inviare</strong>
+                <label><input type="checkbox" checked disabled> Activity selezionata e metadati</label>
+                <label><input type="checkbox" checked disabled> Percorso, UDA e argomenti collegati</label>
+                <label><input type="checkbox" checked disabled> Destinatari, classe/team e scadenze</label>
+                <label><input type="checkbox" checked disabled> Asset, starter file, test e soluzione quando disponibili</label>
+              </div>
+              <div class="assignmentAiContext wideField" aria-label="Pacchetto file previsto per la generazione AI">
+                <strong>Pacchetto file activity</strong>
+                <label><input type="checkbox" checked disabled> Traccia e README studente</label>
+                <label><input type="checkbox" checked disabled> Starter code, esempi e fixture modificabili dal docente</label>
+                <label><input type="checkbox" checked disabled> Test pubblici per lo studente</label>
+                <label><input type="checkbox" checked disabled> Test riservati, runner e soluzione solo docente</label>
+                <label><input type="checkbox" disabled> File aggiuntivi liberi scelti da repository o caricati dal docente</label>
+              </div>
+              <div class="assignmentAiPolicy wideField">
+                <label>
+                  <span>Budget AI per studente</span>
+                  <input id="assignmentAiStudentBudget" type="number" min="0" step="1" value="5" disabled>
+                </label>
+                <label>
+                  <span>Modalita verifica</span>
+                  <select id="assignmentIntegrityMode" disabled aria-label="Modalita verifica e integrita">
+                    <option value="normal">Normale</option>
+                    <option value="controlled">Controllata: log focus e blocco copia/incolla nella GUI</option>
+                    <option value="kiosk">Kiosk/lab gestito futuro</option>
+                  </select>
+                </label>
+              </div>
+              <div class="generateActions wideField">
+                <button id="assignmentAiAskBtn" type="button" disabled title="Inviera prompt e contesto al provider AI selezionato quando l'adapter sara collegato.">Chiedi modifica</button>
+              </div>
+              <label class="wideField">
+                <span>Bozza AI modificabile dal docente</span>
+                <textarea id="assignmentAiDraftText" rows="6" placeholder="Qui comparira la proposta AI. Il docente potra modificarla prima di salvare l'activity o distribuirla."></textarea>
+              </label>
+            </div>
+          </div>
+        </section>
+
+        <section class="assignmentWizardStep" data-assignment-step="targets" hidden>
+          <div class="generateGrid">
+            <label>
+              <span>Classe da roster</span>
+              <select id="classRosterSelect" aria-label="Roster classi locali">
+                <option value="">Caricamento roster...</option>
+              </select>
+            </label>
+            <label>
+              <span>Classe</span>
+              <input id="classId" type="text" value="demo" placeholder="3A-TPSI">
+            </label>
+            <label>
+              <span>Etichetta classe</span>
+              <input id="classLabel" type="text" value="Classe demo" placeholder="3A TPSI">
+            </label>
+            <label>
+              <span>Team GitHub</span>
+              <input id="githubTeam" type="text" placeholder="3A-TPSI">
+            </label>
+            <label class="wideField">
+              <span>Repository studenti locali, uno per riga</span>
+              <textarea id="targetsText" rows="4">examples/assignment_tracking/student_repos/rossi-mario
 examples/assignment_tracking/student_repos/bianchi-luca
 examples/assignment_tracking/student_repos/verdi-anna</textarea>
-        </label>
-        <p id="rosterStatus" class="status wideField" aria-live="polite"></p>
-      </div>
-      <div class="generateActions">
-        <button id="previewAssignmentBtn" type="button" title="Mostra cosa verrebbe assegnato agli studenti senza scrivere nei repository.">Anteprima assegnazione</button>
-        <button id="saveAssignmentBtn" type="button" class="primary" title="Salva la consegna per classe, team o studenti senza distribuire ancora asset nei repository.">Salva assegnazione</button>
-        <button id="distributeAssignmentBtn" type="button" title="Copia traccia, README e asset studente nelle cartelle dei repository target.">Distribuisci ai target</button>
-      </div>
-      <div id="assignmentPlanPreview" class="assignmentPlanPreview" aria-live="polite">
-        <p class="status">Usa l'anteprima per verificare target e asset prima di assegnare una activity.</p>
+            </label>
+            <p id="rosterStatus" class="status wideField" aria-live="polite"></p>
+          </div>
+        </section>
+
+        <section class="assignmentWizardStep" data-assignment-step="dates" hidden>
+          <div class="generateGrid">
+            <label>
+              <span>Assegnato il</span>
+              <input id="assignedAt" type="datetime-local" value="2026-10-12T09:00">
+            </label>
+            <label>
+              <span>Scadenza</span>
+              <input id="dueAt" type="datetime-local" value="2026-10-19T23:59">
+            </label>
+            <label>
+              <span>Ora simulata opzionale</span>
+              <input id="nowAt" type="datetime-local">
+            </label>
+          </div>
+        </section>
+
+        <section class="assignmentWizardStep" data-assignment-step="preview" hidden>
+          <div class="generateActions">
+            <button id="previewAssignmentBtn" type="button" class="primary" title="Mostra cosa verrebbe assegnato agli studenti senza scrivere nei repository.">Anteprima assegnazione</button>
+          </div>
+          <div id="assignmentPlanPreview" class="assignmentPlanPreview" aria-live="polite">
+            <p class="status">Usa l'anteprima per verificare target e asset prima di assegnare una activity.</p>
+          </div>
+        </section>
+
+        <section class="assignmentWizardStep" data-assignment-step="confirm" hidden>
+          <div class="assignmentAiDraft">
+            <strong>Conferma docente</strong>
+            <p>Salva la consegna nel registro docente e distribuisci gli asset solo dopo aver controllato activity, destinatari, date e anteprima.</p>
+          </div>
+          <div class="generateActions">
+            <button id="saveAssignmentBtn" type="button" class="primary" title="Salva la consegna per classe, team o studenti senza distribuire ancora asset nei repository.">Salva assegnazione</button>
+            <button id="distributeAssignmentBtn" type="button" title="Copia traccia, README e asset studente nelle cartelle dei repository target.">Distribuisci ai target</button>
+          </div>
+        </section>
       </div>
     </section>
 

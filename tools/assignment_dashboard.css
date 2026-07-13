@@ -169,6 +169,100 @@ select {
   padding: 1.1rem;
 }
 
+.assignmentWizard {
+  border-top: 1px solid rgba(17, 17, 17, .08);
+}
+
+.assignmentWizardSteps {
+  display: flex;
+  gap: .45rem;
+  flex-wrap: wrap;
+  padding: 1rem 1.1rem 0;
+}
+
+.assignmentWizardSteps button {
+  box-shadow: none;
+  padding: .5rem .75rem;
+  color: var(--muted);
+}
+
+.assignmentWizardSteps button.isActive {
+  background: #111111;
+  border-color: #111111;
+  color: #ffffff;
+}
+
+.assignmentWizardStep {
+  min-height: 8rem;
+}
+
+.assignmentAiDraft {
+  margin: 1.1rem;
+  padding: 1rem;
+  border: 1px solid rgba(17, 17, 17, .12);
+  border-radius: 8px;
+  background: #fbfbfb;
+}
+
+.assignmentAiDraft strong {
+  display: block;
+  margin-bottom: .45rem;
+}
+
+.assignmentAiDraft p {
+  margin-bottom: 0;
+  color: var(--muted);
+  font-size: .82rem;
+  line-height: 1.55;
+}
+
+.assignmentAiChat {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .8rem;
+  margin-top: 1rem;
+}
+
+.assignmentAiContext {
+  display: grid;
+  gap: .45rem;
+  padding: .8rem;
+  border: 1px solid rgba(17, 17, 17, .1);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.assignmentAiContext strong {
+  margin-bottom: .15rem;
+}
+
+.assignmentAiContext label {
+  display: grid;
+  grid-template-columns: 1rem minmax(0, 1fr);
+  align-items: start;
+  gap: .45rem;
+  color: var(--muted);
+  font-size: .82rem;
+  line-height: 1.35;
+}
+
+.assignmentAiContext input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  margin: .08rem 0 0;
+  accent-color: #111111;
+}
+
+.assignmentAiContext input[type="checkbox"]:disabled {
+  opacity: .7;
+}
+
+.assignmentAiPolicy {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .8rem;
+}
+
 .overviewFilters {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

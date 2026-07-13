@@ -164,6 +164,17 @@ def run_dashboard_js(assertions: str) -> None:
       button.dataset.legendTab = topic;
       return button;
     }});
+    const assignmentStepNames = ["activity", "ai", "targets", "dates", "preview", "confirm"];
+    const assignmentStepTabs = assignmentStepNames.map((step) => {{
+      const button = new FakeElement(`[data-assignment-step-tab="${{step}}"]`);
+      button.dataset.assignmentStepTab = step;
+      return button;
+    }});
+    const assignmentSteps = assignmentStepNames.map((step) => {{
+      const section = new FakeElement(`[data-assignment-step="${{step}}"]`);
+      section.dataset.assignmentStep = step;
+      return section;
+    }});
 
     const fetchCalls = [];
     const fetchResponses = {{}};
@@ -190,6 +201,8 @@ def run_dashboard_js(assertions: str) -> None:
         querySelector: elementFor,
         querySelectorAll: (selector) => {{
           if (selector === "[data-legend-tab]") return legendTabs;
+          if (selector === "[data-assignment-step-tab]") return assignmentStepTabs;
+          if (selector === "[data-assignment-step]") return assignmentSteps;
           if (selector === "main.layout .panel") return collectPanels(layout);
           if (selector === "main.layout > .panelRow") return collectRows(layout);
           return [];
@@ -302,6 +315,8 @@ def run_dashboard_js(assertions: str) -> None:
         aiFeedbackReviewDetails,
         aiFeedbackTeacherAction,
         reviewAiFeedback,
+        dateTimeInputToIso,
+        isoToDateTimeInput,
         compactStudentsSummaryItems,
         detailedStudentsSummaryItems,
         applyPanelOrder,
@@ -329,6 +344,7 @@ def run_dashboard_js(assertions: str) -> None:
         renderAssignmentAssetList,
         renderAssignmentTargetList,
         renderAssignmentPlan,
+        setAssignmentWizardStep,
         assignmentPlanErrorMessage,
         previewAssignmentPlan,
         saveAssignmentRecord,
@@ -656,6 +672,81 @@ def test_distribute_assignment_posts_plan_and_renders_written_targets() -> None:
           assert.match(tested.els.assignmentPlanPreview.innerHTML, /gia presente/);
           assert.match(tested.els.status.textContent, /distribuita a 1 target/);
         })();
+        """
+    )
+
+
+def test_assignment_wizard_contains_teacher_editable_ai_step() -> None:
+    html = open("tools/assignment_dashboard.html", encoding="utf-8").read()
+    assignment_section = html.split('data-panel-key="assignment"', 1)[1].split('data-panel-key="generate"', 1)[0]
+
+    assert 'data-assignment-step-tab="activity"' in assignment_section
+    assert 'data-assignment-step-tab="ai"' in assignment_section
+    assert 'data-assignment-step-tab="confirm"' in assignment_section
+    assert 'data-assignment-step="ai"' in assignment_section
+    assert "Generazione AI assistita" in assignment_section
+    assert "provider AI o Codex" in assignment_section
+    assert "modificarla" in assignment_section
+    assert 'id="assignmentAiProvider"' in assignment_section
+    assert 'id="assignmentAiPrompt"' in assignment_section
+    assert 'id="assignmentAiDraftText"' in assignment_section
+    assert "Contesto da inviare" in assignment_section
+    assert "Asset, starter file, test e soluzione" in assignment_section
+    assert "Pacchetto file activity" in assignment_section
+    assert "File aggiuntivi liberi" in assignment_section
+    assert 'id="assignmentAiStudentBudget"' in assignment_section
+    assert 'id="assignmentIntegrityMode"' in assignment_section
+
+
+def test_assignment_wizard_uses_calendar_date_time_inputs() -> None:
+    html = open("tools/assignment_dashboard.html", encoding="utf-8").read()
+    assignment_section = html.split('data-panel-key="assignment"', 1)[1].split('data-panel-key="generate"', 1)[0]
+
+    assert 'id="assignedAt" type="datetime-local"' in assignment_section
+    assert 'id="dueAt" type="datetime-local"' in assignment_section
+    assert 'id="nowAt" type="datetime-local"' in assignment_section
+
+
+def test_assignment_ai_context_checkboxes_use_fixed_alignment() -> None:
+    css = open("tools/assignment_dashboard.css", encoding="utf-8").read()
+
+    assert ".assignmentAiContext label" in css
+    assert "grid-template-columns: 1rem minmax(0, 1fr);" in css
+    assert '.assignmentAiContext input[type="checkbox"]' in css
+
+
+def test_assignment_date_time_inputs_are_serialized_as_iso() -> None:
+    run_dashboard_js(
+        """
+        tested.els.assignedAt.value = "2026-10-12T09:00";
+        tested.els.dueAt.value = "2026-10-19T23:59";
+        tested.els.nowAt.value = "2026-10-20T08:00";
+
+        const payload = tested.assignmentRecordPayload();
+        assert.match(payload.assigned_at, /^2026-10-12T09:00:00[+-]\\d{2}:\\d{2}$/);
+        assert.match(payload.due_at, /^2026-10-19T23:59:00[+-]\\d{2}:\\d{2}$/);
+        assert.match(payload.now, /^2026-10-20T08:00:00[+-]\\d{2}:\\d{2}$/);
+        assert.equal(tested.dateTimeInputToIso("2026-10-12T09:00:00+02:00"), "2026-10-12T09:00:00+02:00");
+        """
+    )
+
+
+def test_assignment_wizard_switches_visible_step() -> None:
+    run_dashboard_js(
+        """
+        tested.setAssignmentWizardStep("ai");
+
+        const aiTab = tested.els.assignmentStepTabs.find((button) => button.dataset.assignmentStepTab === "ai");
+        const activityTab = tested.els.assignmentStepTabs.find((button) => button.dataset.assignmentStepTab === "activity");
+        const aiStep = tested.els.assignmentSteps.find((section) => section.dataset.assignmentStep === "ai");
+        const activityStep = tested.els.assignmentSteps.find((section) => section.dataset.assignmentStep === "activity");
+
+        assert.equal(aiTab.classList.contains("isActive"), true);
+        assert.equal(aiTab["aria-selected"], "true");
+        assert.equal(activityTab.classList.contains("isActive"), false);
+        assert.equal(activityTab["aria-selected"], "false");
+        assert.equal(aiStep.hidden, false);
+        assert.equal(activityStep.hidden, true);
         """
     )
 
