@@ -54,6 +54,7 @@ def test_run_codex_activity_draft_invokes_codex_exec_with_schema(tmp_path, monke
     assert captured["timeout"] == 12
     assert captured["args"][0] == "codex"
     assert captured["args"][1:3] == ["exec", "--ephemeral"]
+    assert captured["args"][3:5] == ["--sandbox", "read-only"]
     assert "--output-schema" in captured["args"]
     assert "activity_ai_package.v1" in captured["input"]
 

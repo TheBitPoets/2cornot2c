@@ -105,6 +105,8 @@ def run_codex_activity_draft(
                 codex_path,
                 "exec",
                 "--ephemeral",
+                "--sandbox",
+                "read-only",
                 "--output-schema",
                 str(schema_path),
                 codex_activity_prompt(),
