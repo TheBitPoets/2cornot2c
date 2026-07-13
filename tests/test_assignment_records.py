@@ -194,6 +194,34 @@ def test_assignment_status_matches_legacy_register_without_assignment_id() -> No
     assert covered.needs_register is False
 
 
+def test_assignment_status_does_not_match_legacy_register_for_non_class_assignment() -> None:
+    assignment = assignment_records.build_assignment_record(
+        **sample_assignment(
+            target_type="group",
+            class_id="",
+            class_label="",
+            github_team="",
+            targets=[
+                {"student_id": "rossi-mario"},
+                {"student_id": "bianchi-luca"},
+            ],
+        ),
+    )
+
+    status = assignment_records.assignment_status(
+        assignment,
+        [{
+            "activity_id": "python-base-somma-001",
+            "class_id": "",
+            "due_at": "2026-10-19T23:59:00+02:00",
+        }],
+        "2026-10-20T08:00:00+02:00",
+    )
+
+    assert status.has_register is False
+    assert status.needs_register is True
+
+
 def test_assignment_status_rejects_mixed_timezone_awareness() -> None:
     assignment = assignment_records.build_assignment_record(**sample_assignment(due_at="2026-10-19T23:59:00"))
 

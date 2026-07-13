@@ -240,6 +240,10 @@ def assignment_matches_register(assignment: dict[str, Any], register: dict[str, 
     register_assignment_id = str(register.get("assignment_id", "")).strip()
     if assignment_id and register_assignment_id:
         return assignment_id == register_assignment_id
+    if str(assignment.get("target_type", "")).strip() != "class":
+        return False
+    if not str(assignment.get("class_id", "")).strip():
+        return False
     return (
         str(assignment.get("activity_id", "")).strip() == str(register.get("activity_id", "")).strip()
         and str(assignment.get("class_id", "")).strip() == str(register.get("class_id", "")).strip()
