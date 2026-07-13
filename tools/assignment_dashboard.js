@@ -235,7 +235,7 @@ const els = {
   assignmentAiStudentBudget: document.querySelector("#assignmentAiStudentBudget"),
   assignmentIntegrityMode: document.querySelector("#assignmentIntegrityMode"),
   assignmentAiAskBtn: document.querySelector("#assignmentAiAskBtn"),
-  assignmentAiCodexBtn: document.querySelector("#assignmentAiCodexBtn"),
+  assignmentAiGenerateBtn: document.querySelector("#assignmentAiGenerateBtn"),
   assignmentAiDraftText: document.querySelector("#assignmentAiDraftText"),
   assignmentAiPackagePreview: document.querySelector("#assignmentAiPackagePreview"),
   generateReportBtn: document.querySelector("#generateReportBtn"),
@@ -2552,14 +2552,21 @@ async function previewAssignmentAiPackage() {
   }
 }
 
-async function previewAssignmentCodexDraft() {
-  if (!els.assignmentAiCodexBtn) return;
-  els.assignmentAiCodexBtn.disabled = true;
-  setStatus("Richiesta bozza a Codex locale...");
+async function generateAssignmentAiDraft() {
+  if (!els.assignmentAiGenerateBtn) return;
+  const provider = els.assignmentAiProvider?.value || "codex";
+  els.assignmentAiGenerateBtn.disabled = true;
+  setStatus(`Generazione bozza con provider ${provider}...`);
   if (els.assignmentAiPackagePreview) {
-    els.assignmentAiPackagePreview.innerHTML = '<p class="status">Codex locale sta generando una bozza...</p>';
+    els.assignmentAiPackagePreview.innerHTML = '<p class="status">Generazione bozza in corso...</p>';
   }
   try {
+    if (provider === "manual") {
+      throw new Error("Modalita manuale: scrivi direttamente la bozza nel campo dedicato.");
+    }
+    if (provider !== "codex") {
+      throw new Error("Provider non ancora collegato: per ora e attivo solo Codex locale.");
+    }
     const payload = await api("/api/activities/ai-codex-draft", {
       method: "POST",
       body: JSON.stringify(assignmentAiPackagePayload()),
@@ -2569,11 +2576,11 @@ async function previewAssignmentCodexDraft() {
   } catch (error) {
     const message = assignmentPlanErrorMessage(error);
     if (els.assignmentAiPackagePreview) {
-      els.assignmentAiPackagePreview.innerHTML = `<p class="status">Bozza Codex non disponibile: ${escapeHtml(message)}</p>`;
+      els.assignmentAiPackagePreview.innerHTML = `<p class="status">Bozza AI non disponibile: ${escapeHtml(message)}</p>`;
     }
-    setStatus(`Bozza Codex non disponibile: ${message}`);
+    setStatus(`Bozza AI non disponibile: ${message}`);
   } finally {
-    els.assignmentAiCodexBtn.disabled = false;
+    els.assignmentAiGenerateBtn.disabled = false;
   }
 }
 
@@ -3411,7 +3418,7 @@ els.assignmentStepTabs.forEach((button) => {
 });
 els.previewAssignmentBtn?.addEventListener("click", previewAssignmentPlan);
 els.assignmentAiAskBtn?.addEventListener("click", previewAssignmentAiPackage);
-els.assignmentAiCodexBtn?.addEventListener("click", previewAssignmentCodexDraft);
+els.assignmentAiGenerateBtn?.addEventListener("click", generateAssignmentAiDraft);
 els.saveAssignmentBtn?.addEventListener("click", saveAssignmentRecord);
 els.distributeAssignmentBtn?.addEventListener("click", distributeAssignment);
 els.generateReportBtn.addEventListener("click", generateReport);

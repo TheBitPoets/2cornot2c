@@ -402,7 +402,7 @@ def run_dashboard_js(assertions: str) -> None:
         assignmentPlanErrorMessage,
         previewAssignmentPlan,
         previewAssignmentAiPackage,
-        previewAssignmentCodexDraft,
+        generateAssignmentAiDraft,
         saveAssignmentRecord,
         distributeAssignment,
         generateReport,
@@ -746,7 +746,8 @@ def test_assignment_wizard_contains_teacher_editable_ai_step() -> None:
     assert 'id="assignmentAiProvider"' in assignment_section
     assert 'id="assignmentAiPrompt"' in assignment_section
     assert 'id="assignmentAiDraftText"' in assignment_section
-    assert 'id="assignmentAiCodexBtn"' in assignment_section
+    assert 'id="assignmentAiGenerateBtn"' in assignment_section
+    assert "Genera bozza" in assignment_section
     assert "Contesto da inviare" in assignment_section
     assert "Asset, starter file, test e soluzione" in assignment_section
     assert "Pacchetto file activity" in assignment_section
@@ -839,7 +840,7 @@ def test_preview_assignment_ai_package_posts_bundle_request_and_renders_json() -
     )
 
 
-def test_preview_assignment_codex_draft_posts_request_and_fills_teacher_draft() -> None:
+def test_generate_assignment_ai_draft_with_codex_posts_request_and_fills_teacher_draft() -> None:
     run_dashboard_js(
         """
         (async () => {
@@ -848,7 +849,7 @@ def test_preview_assignment_codex_draft_posts_request_and_fills_teacher_draft() 
           tested.els.assignmentAiProvider.value = "codex";
           tested.els.assignmentAiPrompt.value = "Aggiungi test sui negativi";
 
-          await tested.previewAssignmentCodexDraft();
+          await tested.generateAssignmentAiDraft();
 
           const call = tested.fetchCalls.find((entry) => entry.path === "/api/activities/ai-codex-draft");
           assert.ok(call);
@@ -859,6 +860,23 @@ def test_preview_assignment_codex_draft_posts_request_and_fills_teacher_draft() 
           assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /File proposti/);
           assert.match(tested.els.assignmentAiDraftText.value, /Somma con negativi/);
           assert.match(tested.els.status.textContent, /Bozza Codex pronta/);
+        })();
+        """
+    )
+
+
+def test_generate_assignment_ai_draft_warns_when_provider_is_not_connected() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.els.assignmentAiProvider.value = "openai";
+
+          await tested.generateAssignmentAiDraft();
+
+          const call = tested.fetchCalls.find((entry) => entry.path === "/api/activities/ai-codex-draft");
+          assert.equal(call, undefined);
+          assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /Provider non ancora collegato/);
+          assert.match(tested.els.status.textContent, /Provider non ancora collegato/);
         })();
         """
     )
