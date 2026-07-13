@@ -2362,9 +2362,6 @@ function renderAssignmentAiPackage(aiPackage) {
       <pre>${escapeHtml(JSON.stringify(aiPackage, null, 2))}</pre>
     </details>
   `;
-  if (els.assignmentAiDraftText) {
-    els.assignmentAiDraftText.value = JSON.stringify(aiPackage, null, 2);
-  }
 }
 
 function setAssignmentWizardStep(step) {
