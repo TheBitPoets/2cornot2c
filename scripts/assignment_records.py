@@ -170,6 +170,9 @@ def validate_assignment_record(payload: dict[str, Any]) -> dict[str, Any]:
 
     if not isinstance(payload, dict):
         raise ValueError("Assegnazione non valida.")
+    schema_version = str(payload.get("schema_version", "")).strip()
+    if schema_version != ASSIGNMENT_SCHEMA_VERSION:
+        raise ValueError(f"schema_version non supportata: {schema_version or 'mancante'}")
     return build_assignment_record(
         assignment_id=str(payload.get("id", "")).strip(),
         activity_id=str(payload.get("activity_id", "")).strip(),

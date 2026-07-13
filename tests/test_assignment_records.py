@@ -46,6 +46,22 @@ def test_assignment_record_validation_rejects_missing_or_bad_fields() -> None:
         assignment_records.build_assignment_record(**sample_assignment(targets=[]))
 
 
+def test_validate_assignment_record_rejects_unsupported_schema_version() -> None:
+    payload = assignment_records.build_assignment_record(**sample_assignment())
+    payload["schema_version"] = "2.0"
+
+    with pytest.raises(ValueError, match="schema_version"):
+        assignment_records.validate_assignment_record(payload)
+
+
+def test_validate_assignment_record_rejects_missing_schema_version() -> None:
+    payload = assignment_records.build_assignment_record(**sample_assignment())
+    del payload["schema_version"]
+
+    with pytest.raises(ValueError, match="schema_version"):
+        assignment_records.validate_assignment_record(payload)
+
+
 def test_assignment_status_detects_due_without_register_and_existing_register() -> None:
     assignment = assignment_records.build_assignment_record(**sample_assignment())
 
@@ -89,7 +105,7 @@ def test_assignment_status_rejects_mixed_timezone_awareness() -> None:
 
 def test_assignment_record_storage_writes_lists_and_filters_due_without_register(tmp_path) -> None:
     storage = assignment_records.JsonAssignmentRecordStorage(tmp_path)
-    saved = storage.write_assignment(sample_assignment())
+    saved = storage.write_assignment(assignment_records.build_assignment_record(**sample_assignment()))
 
     assert saved["name"] == "assignment-python-base-somma-001-3a-tpsi-2026-10-12.json"
     assert saved["path"] == "teacher-assignments/assignment-python-base-somma-001-3a-tpsi-2026-10-12.json"
@@ -105,10 +121,13 @@ def test_assignment_record_storage_writes_lists_and_filters_due_without_register
 
 def test_assignment_record_storage_rejects_duplicate_without_overwrite(tmp_path) -> None:
     storage = assignment_records.JsonAssignmentRecordStorage(tmp_path)
-    storage.write_assignment(sample_assignment())
+    storage.write_assignment(assignment_records.build_assignment_record(**sample_assignment()))
 
     with pytest.raises(ValueError, match="gia esistente"):
-        storage.write_assignment(sample_assignment())
+        storage.write_assignment(assignment_records.build_assignment_record(**sample_assignment()))
 
-    overwritten = storage.write_assignment(sample_assignment(class_label="3A TPSI aggiornata"), overwrite=True)
+    overwritten = storage.write_assignment(
+        assignment_records.build_assignment_record(**sample_assignment(class_label="3A TPSI aggiornata")),
+        overwrite=True,
+    )
     assert overwritten["class_label"] == "3A TPSI aggiornata"
