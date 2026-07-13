@@ -98,3 +98,49 @@ def test_validate_codex_activity_draft_normalizes_relative_file_paths() -> None:
     )
 
     assert draft["files"][0]["path"] == "starter/main.py"
+
+
+def test_validate_codex_activity_draft_normalizes_activity_patch_asset_paths() -> None:
+    draft = codex_activity_adapter.validate_codex_activity_draft(
+        {
+            "summary": "Bozza",
+            "teacher_notes": "Note",
+            "activity_patch": {
+                "assets": [
+                    {
+                        "type": "starter",
+                        "path": "starter\\main.py",
+                        "target_path": "src\\main.py",
+                    }
+                ]
+            },
+            "files": [],
+        }
+    )
+
+    assert draft["activity_patch"]["assets"][0]["path"] == "starter/main.py"
+    assert draft["activity_patch"]["assets"][0]["target_path"] == "src/main.py"
+
+
+def test_validate_codex_activity_draft_rejects_unsafe_activity_patch_asset_paths() -> None:
+    for field in ["path", "target_path"]:
+        try:
+            codex_activity_adapter.validate_codex_activity_draft(
+                {
+                    "summary": "Bozza",
+                    "teacher_notes": "Note",
+                    "activity_patch": {
+                        "assets": [
+                            {
+                                "type": "starter",
+                                field: "../secret.py",
+                            }
+                        ]
+                    },
+                    "files": [],
+                }
+            )
+        except ValueError as error:
+            assert "path file non consentito" in str(error)
+        else:
+            raise AssertionError(f"unsafe activity_patch asset {field} should fail")

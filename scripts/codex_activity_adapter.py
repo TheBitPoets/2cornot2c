@@ -70,6 +70,29 @@ def safe_draft_file_path(path: str) -> str:
     return posix_path.as_posix()
 
 
+def normalize_activity_patch(activity_patch: dict[str, Any]) -> dict[str, Any]:
+    """Return an activity patch with safe asset paths when present."""
+
+    patch = dict(activity_patch)
+    assets = patch.get("assets")
+    if assets is None:
+        return patch
+    if not isinstance(assets, list):
+        raise ValueError("La risposta Codex contiene `activity_patch.assets` non valido.")
+    normalized_assets = []
+    for asset in assets:
+        if not isinstance(asset, dict):
+            raise ValueError("La risposta Codex contiene un asset non valido.")
+        normalized_asset = dict(asset)
+        if "path" in normalized_asset:
+            normalized_asset["path"] = safe_draft_file_path(str(normalized_asset.get("path", "")))
+        if "target_path" in normalized_asset:
+            normalized_asset["target_path"] = safe_draft_file_path(str(normalized_asset.get("target_path", "")))
+        normalized_assets.append(normalized_asset)
+    patch["assets"] = normalized_assets
+    return patch
+
+
 def validate_codex_activity_draft(payload: dict[str, Any]) -> dict[str, Any]:
     """Return a normalized Codex activity draft or raise ValueError."""
 
@@ -77,6 +100,7 @@ def validate_codex_activity_draft(payload: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("La risposta Codex non e un oggetto JSON.")
     if not isinstance(payload.get("activity_patch"), dict):
         raise ValueError("La risposta Codex non contiene `activity_patch` valido.")
+    activity_patch = normalize_activity_patch(payload["activity_patch"])
     files = payload.get("files", [])
     if files is None:
         files = []
@@ -91,7 +115,7 @@ def validate_codex_activity_draft(payload: dict[str, Any]) -> dict[str, Any]:
     return {
         "summary": str(payload.get("summary", "")).strip(),
         "teacher_notes": str(payload.get("teacher_notes", "")).strip(),
-        "activity_patch": payload["activity_patch"],
+        "activity_patch": activity_patch,
         "files": files,
         "questions": payload.get("questions", []) if isinstance(payload.get("questions", []), list) else [],
         "warnings": payload.get("warnings", []) if isinstance(payload.get("warnings", []), list) else [],
