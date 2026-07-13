@@ -208,6 +208,7 @@ def run_dashboard_js(assertions: str) -> None:
           if (fakeResponse?.json) return fakeResponse.json;
           if (fakeResponse) return fakeResponse;
           if (path === "/api/assignment-reports") return {{ reports: [] }};
+          if (path === "/api/assignments") return {{ assignments: [], due_without_register: [] }};
           if (path === "/api/activities") return {{ activities: [] }};
           if (path === "/api/activities/save") return {{
             ok: true,
@@ -300,6 +301,10 @@ def run_dashboard_js(assertions: str) -> None:
         renderAssignmentPlan,
         assignmentPlanErrorMessage,
         previewAssignmentPlan,
+        generateReport,
+        loadAssignments,
+        renderAssignmentSelect,
+        applyAssignmentToGenerateForm,
         rosterOptionLabel,
         localTargetFromStudent,
         rosterTargets,
@@ -1173,6 +1178,71 @@ def test_assignment_and_report_panels_are_separated() -> None:
     assert 'id="generateReportBtn"' in report_section
     assert 'id="activitySelect"' not in report_section
     assert 'id="targetsText"' not in report_section
+
+
+def test_assignment_records_fill_generate_form_and_payload() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.fetchResponses["/api/assignments"] = {
+            assignments: [{
+              id: "assignment-python-base-somma-001-3a",
+              activity_id: "python-base-somma-001",
+              activity_path: "activities/python-base-somma-001.json",
+              target_type: "class",
+              class_id: "3A-TPSI",
+              class_label: "3A TPSI",
+              github_team: "team-3a-tpsi",
+              assigned_at: "2026-10-12T09:00:00+02:00",
+              due_at: "2026-10-19T23:59:00+02:00",
+              targets: [
+                { student_id: "rossi-mario", path: "studenti/rossi-mario" },
+                { student_id: "bianchi-luca", path: "studenti/bianchi-luca" },
+              ],
+            }],
+            due_without_register: [{
+              assignment: {
+                id: "assignment-python-base-somma-001-3a",
+                activity_id: "python-base-somma-001",
+                activity_path: "activities/python-base-somma-001.json",
+                target_type: "class",
+                class_id: "3A-TPSI",
+                class_label: "3A TPSI",
+                github_team: "team-3a-tpsi",
+                assigned_at: "2026-10-12T09:00:00+02:00",
+                due_at: "2026-10-19T23:59:00+02:00",
+                targets: [
+                  { student_id: "rossi-mario", path: "studenti/rossi-mario" },
+                  { student_id: "bianchi-luca", path: "studenti/bianchi-luca" },
+                ],
+              },
+            }],
+          };
+          tested.fetchResponses["/api/assignment-reports/generate"] = {
+            report: { students: [] },
+            saved: {
+              name: "3a-tpsi/python-base-somma-001.json",
+              path: "teacher-reports/3a-tpsi/python-base-somma-001.json",
+            },
+            reports: [],
+          };
+
+          await tested.loadAssignments();
+          tested.applyAssignmentToGenerateForm("assignment-python-base-somma-001-3a");
+
+          assert.equal(tested.els.activityPath.value, "activities/python-base-somma-001.json");
+          assert.equal(tested.els.classId.value, "3A-TPSI");
+          assert.equal(tested.els.githubTeam.value, "team-3a-tpsi");
+          assert.equal(tested.els.targetsText.value, "studenti/rossi-mario\\nstudenti/bianchi-luca");
+
+          await tested.generateReport();
+          const call = tested.fetchCalls.find((entry) => entry.path === "/api/assignment-reports/generate");
+          assert.ok(call);
+          const body = JSON.parse(call.options.body);
+          assert.equal(body.assignment_id, "assignment-python-base-somma-001-3a");
+        })();
+        """
+    )
 
 
 def test_class_roster_panel_is_available_on_assignment_dashboard() -> None:
