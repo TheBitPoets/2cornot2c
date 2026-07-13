@@ -311,7 +311,15 @@ def test_preview_activity_ai_package_returns_context_files_and_policy(tmp_path, 
     assert package["prompt"] == "Aggiungi test sui negativi"
     assert package["activity"]["id"] == "python-base-somma-001"
     assert package["course_context"]["uda"] == "uda-input"
-    assert package["assignment"]["targets"][0]["target"] == str(target.resolve())
+    target_entry = package["assignment"]["targets"][0]
+    assert target_entry == {
+        "target_id": "target-001",
+        "display_name": "rossi-mario",
+        "exists": False,
+    }
+    assert "target" not in target_entry
+    assert "assignment_dir" not in target_entry
+    assert str(tmp_path) not in json.dumps(package["assignment"]["targets"])
     assert package["files"][0]["path"] == "starter/main.py"
     assert package["files"][0]["included"] is True
     assert "starter" in package["files"][0]["content"]

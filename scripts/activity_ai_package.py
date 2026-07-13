@@ -9,6 +9,28 @@ from scripts.thebitlab_contracts import normalize_activity
 MAX_AI_PACKAGE_FILE_BYTES = 128 * 1024
 
 
+def ai_target_id(index: int) -> str:
+    """Return a stable pseudonymous target id for AI package previews."""
+
+    return f"target-{index + 1:03d}"
+
+
+def minimize_assignment_targets(targets: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Return target metadata without local filesystem details."""
+
+    minimized = []
+    for index, target in enumerate(targets):
+        target_id = ai_target_id(index)
+        raw_target = str(target.get("target", "")).strip()
+        display_name = Path(raw_target).name if raw_target else target_id
+        minimized.append({
+            "target_id": target_id,
+            "display_name": display_name or target_id,
+            "exists": bool(target.get("exists", False)),
+        })
+    return minimized
+
+
 def safe_asset_path(activity_path: Path, asset_path: str) -> Path:
     """Return a safe path for an activity asset below the activity folder."""
 
@@ -124,7 +146,7 @@ def build_activity_ai_package(
         },
         "course_context": course_context,
         "assignment": {
-            "targets": plan.targets,
+            "targets": minimize_assignment_targets(plan.targets),
             "student_assets": plan.student_assets,
             "teacher_assets": plan.teacher_assets,
             "language": plan.language,
