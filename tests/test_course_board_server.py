@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from scripts import course_board_server
+from scripts import assignment_records, course_board_server
 
 
 def test_assignment_overview_lists_students_across_saved_reports(tmp_path, monkeypatch) -> None:
@@ -111,6 +111,90 @@ def test_list_assignment_reports_counts_late_only_for_submitted_students(tmp_pat
     assert reports[0]["submitted"] == 2
     assert reports[0]["not_submitted"] == 1
     assert reports[0]["late"] == 1
+
+
+def test_list_assignment_records_marks_due_without_register(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
+    monkeypatch.setattr(course_board_server, "TEACHER_ASSIGNMENTS_DIR", tmp_path / "teacher-assignments")
+
+    storage = assignment_records.JsonAssignmentRecordStorage(tmp_path, tmp_path / "teacher-assignments")
+    assignment = storage.write_assignment(
+        assignment_records.build_assignment_record(
+            activity_id="python-base-somma-001",
+            activity_path="activities/python-base-somma-001.json",
+            target_type="class",
+            class_id="3A-TPSI",
+            class_label="3A TPSI",
+            github_team="team-3a-tpsi",
+            assigned_at="2026-10-12T09:00:00+02:00",
+            due_at="2026-10-19T23:59:00+02:00",
+            targets=[
+                {"student_id": "rossi-mario", "path": "studenti/rossi-mario"},
+                {"student_id": "bianchi-luca", "path": "studenti/bianchi-luca"},
+            ],
+        ),
+    )
+
+    payload = course_board_server.list_assignment_records("2026-10-20T08:00:00+02:00")
+
+    assert payload["assignments"][0]["id"] == assignment["id"]
+    assert payload["due_without_register"][0]["assignment"]["id"] == assignment["id"]
+    assert payload["due_without_register"][0]["needs_register"] is True
+
+
+def test_generate_assignment_report_preserves_assignment_id(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
+
+    activity_path = tmp_path / "activity.json"
+    activity_path.write_text(
+        json.dumps({
+            "schema_version": "1.0",
+            "id": "python-base-somma-001",
+            "titolo": "Somma in Python",
+            "linguaggio": "python",
+            "tipo": "compito-casa",
+            "difficolta": "B",
+            "argomenti": ["variabili"],
+            "consegna": "Somma due numeri.",
+            "correzione": {
+                "compila": True,
+                "test": True,
+                "sandbox": True,
+                "ai_feedback": False,
+            },
+            "metriche": {
+                "tempo_stimato_minuti": 20,
+                "traccia_tempo_dichiarato": True,
+                "traccia_sessioni_thebitlab": True,
+                "traccia_eventi_didattici": True,
+                "traccia_errori_compilazione": True,
+            },
+            "student_support_mode": "senza-aiuto",
+        }),
+        encoding="utf-8",
+    )
+    student_repo = tmp_path / "studenti" / "rossi-mario"
+    (student_repo / "assignments" / "python-base-somma-001").mkdir(parents=True)
+    (student_repo / "assignments" / "python-base-somma-001" / "main.py").write_text("print(3)\n", encoding="utf-8")
+
+    result = course_board_server.generate_assignment_report({
+        "activity_path": str(activity_path),
+        "output_name": "demo/report.json",
+        "class_id": "3A-TPSI",
+        "class_label": "3A TPSI",
+        "github_team": "team-3a-tpsi",
+        "assigned_at": "2026-10-12T09:00:00+02:00",
+        "due_at": "2026-10-19T23:59:00+02:00",
+        "now": "2026-10-20T08:00:00+02:00",
+        "targets_text": str(student_repo),
+        "assignment_id": "assignment-python-base-somma-001-3a",
+    })
+
+    assert result["report"]["assignment_id"] == "assignment-python-base-somma-001-3a"
+    saved_payload = json.loads((tmp_path / "teacher-reports" / "demo" / "report.json").read_text(encoding="utf-8"))
+    assert saved_payload["assignment_id"] == "assignment-python-base-somma-001-3a"
 
 
 def test_preview_activity_assignment_returns_plan_without_writing(tmp_path, monkeypatch) -> None:

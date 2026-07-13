@@ -196,6 +196,13 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
       </div>
       <div class="generateGrid">
         <label class="wideField">
+          <span>Assegnazione da tracciare</span>
+          <select id="assignmentSelect" aria-label="Assegnazioni scadute senza registro">
+            <option value="">Caricamento assegnazioni...</option>
+          </select>
+        </label>
+        <p id="assignmentStatus" class="status wideField" aria-live="polite"></p>
+        <label class="wideField">
           <span>Output registro</span>
           <input id="outputName" type="text" value="demo/demo_assignment.json">
         </label>

@@ -90,6 +90,8 @@ const LEGEND_SECTIONS = {
 
 const state = {
   activities: [],
+  assignments: [],
+  dueAssignments: [],
   reports: [],
   classRosters: [],
   courseDesign: null,
@@ -120,6 +122,7 @@ const state = {
   reviewSplit: readReviewSplit(),
   draggedPanelKey: "",
   activityAuthorLastSuggestedId: "",
+  selectedAssignmentId: "",
 };
 
 const els = {
@@ -205,6 +208,8 @@ const els = {
   saveActivityBtn: document.querySelector("#saveActivityBtn"),
   activitySelect: document.querySelector("#activitySelect"),
   activityPath: document.querySelector("#activityPath"),
+  assignmentSelect: document.querySelector("#assignmentSelect"),
+  assignmentStatus: document.querySelector("#assignmentStatus"),
   classRosterSelect: document.querySelector("#classRosterSelect"),
   rosterStatus: document.querySelector("#rosterStatus"),
   rosterPanelStatus: document.querySelector("#rosterPanelStatus"),
@@ -795,7 +800,10 @@ function targetLineCount() {
 }
 
 function reportAssignmentSummaryItems() {
+  const assignment = state.assignments.find((candidate) => candidate.id === state.selectedAssignmentId)
+    || state.dueAssignments.find((candidate) => candidate.id === state.selectedAssignmentId);
   return [
+    ["Assegnazione", assignment?.id || "-"],
     ["Activity", currentActivityLabel()],
     ["Classe", els.classId.value.trim() || "-"],
     ["Team", els.githubTeam.value.trim() || "-"],
@@ -1463,6 +1471,84 @@ async function loadActivities() {
   renderCoverage();
 }
 
+async function loadAssignments() {
+  const query = els.nowAt?.value.trim() ? `?now=${encodeURIComponent(els.nowAt.value.trim())}` : "";
+  const payload = await api(`/api/assignments${query}`);
+  state.assignments = payload.assignments || [];
+  state.dueAssignments = (payload.due_without_register || []).map((item) => item.assignment || item);
+  renderAssignmentSelect();
+}
+
+function assignmentLabel(assignment) {
+  const target = assignment.class_label || assignment.class_id || assignment.github_team || assignment.target_type || "target";
+  const activity = assignment.activity_id || assignment.activity_path || "activity";
+  return `${target} - ${activity} - ${formatDate(assignment.due_at)}`;
+}
+
+function assignmentTargetLine(target) {
+  return String(target?.path || target?.target || target?.repo_ref || target?.student_id || "").trim().replaceAll("\\", "/");
+}
+
+function assignmentOutputName(assignment) {
+  const classPart = assignment.class_id || assignment.github_team || assignment.class_label || assignment.target_type || "target";
+  return `${slugPathSegment(classPart)}/${slugPathSegment(assignment.activity_id || assignment.id || "registro")}.json`;
+}
+
+function renderAssignmentSelect() {
+  if (!els.assignmentSelect) return;
+  const selected = state.selectedAssignmentId || els.assignmentSelect.value;
+  els.assignmentSelect.innerHTML = '<option value="">Nessuna assegnazione selezionata</option>';
+  for (const assignment of state.dueAssignments) {
+    const option = document.createElement("option");
+    option.value = assignment.id || "";
+    option.textContent = assignmentLabel(assignment);
+    option.title = assignment.id || "";
+    els.assignmentSelect.append(option);
+  }
+  els.assignmentSelect.value = state.dueAssignments.some((assignment) => assignment.id === selected) ? selected : "";
+  state.selectedAssignmentId = els.assignmentSelect.value;
+  if (els.assignmentStatus) {
+    els.assignmentStatus.textContent = state.dueAssignments.length
+      ? `${state.dueAssignments.length} assegnazioni scadute senza registro.`
+      : "Nessuna assegnazione scaduta senza registro.";
+  }
+}
+
+function clearSelectedAssignment() {
+  if (!state.selectedAssignmentId && !els.assignmentSelect?.value) return;
+  state.selectedAssignmentId = "";
+  if (els.assignmentSelect) els.assignmentSelect.value = "";
+  renderReportAssignmentSummary();
+}
+
+function applyAssignmentToGenerateForm(assignmentId) {
+  const assignment = state.dueAssignments.find((candidate) => candidate.id === assignmentId)
+    || state.assignments.find((candidate) => candidate.id === assignmentId);
+  state.selectedAssignmentId = assignment?.id || "";
+  if (!assignment) {
+    renderAssignmentSelect();
+    renderReportAssignmentSummary();
+    return null;
+  }
+  els.activityPath.value = assignment.activity_path || "";
+  els.classId.value = assignment.class_id || "";
+  els.classLabel.value = assignment.class_label || assignment.class_id || "";
+  els.githubTeam.value = assignment.github_team || "";
+  els.assignedAt.value = assignment.assigned_at || "";
+  els.dueAt.value = assignment.due_at || "";
+  els.outputName.value = assignmentOutputName(assignment);
+  const targetLines = (Array.isArray(assignment.targets) ? assignment.targets : [])
+    .map(assignmentTargetLine)
+    .filter(Boolean);
+  if (targetLines.length) {
+    els.targetsText.value = targetLines.join("\n");
+  }
+  renderActivitySelect();
+  renderAssignmentContext();
+  renderAssignmentSelect();
+  return assignment;
+}
+
 async function saveActivityDraft() {
   if (!els.saveActivityBtn) return;
   els.saveActivityBtn.disabled = true;
@@ -1593,6 +1679,7 @@ function rosterTargets(roster) {
 
 function applyRosterToGenerateForm(roster) {
   if (!roster) return { targets: [], warnings: ["Roster non valido."] };
+  clearSelectedAssignment();
   state.selectedClassRoster = roster;
   els.classId.value = roster.id || "";
   els.classLabel.value = roster.label || roster.id || "";
@@ -2299,6 +2386,7 @@ async function generateReport() {
         due_at: els.dueAt.value,
         now: els.nowAt.value,
         targets_text: els.targetsText.value,
+        assignment_id: state.selectedAssignmentId,
       }),
     });
     state.report = payload.report;
@@ -2306,6 +2394,7 @@ async function generateReport() {
     state.reports = payload.reports || [];
     renderReportSelect();
     els.reportSelect.value = payload.saved?.name || "";
+    await loadAssignments();
     renderCoverage();
     await loadOverview();
     focusOverviewClassFromReport(state.report);
@@ -3060,6 +3149,7 @@ function closeStudentsDialog() {
 els.loadReportBtn.addEventListener("click", loadSelectedReport);
 els.reloadBtn.addEventListener("click", async () => {
   await loadReports();
+  await loadAssignments();
   await loadOverview();
 });
 els.resetPanelOrderBtn.addEventListener("click", resetPanelOrder);
@@ -3086,7 +3176,14 @@ els.reviewPrevBtn.addEventListener("click", () => openAdjacentSubmission(-1));
 els.reviewNextBtn.addEventListener("click", () => openAdjacentSubmission(1));
 els.reviewCloseBtn.addEventListener("click", closeReviewDialog);
 els.activitySelect.addEventListener("change", () => {
-  if (els.activitySelect.value) selectActivity(els.activitySelect.value);
+  if (els.activitySelect.value) {
+    clearSelectedAssignment();
+    selectActivity(els.activitySelect.value);
+  }
+});
+els.assignmentSelect?.addEventListener("change", () => {
+  const assignment = applyAssignmentToGenerateForm(els.assignmentSelect.value);
+  setStatus(assignment ? `Assegnazione selezionata: ${assignment.id}.` : "Nessuna assegnazione selezionata.");
 });
 els.saveActivityBtn?.addEventListener("click", saveActivityDraft);
 els.activityAuthorTitle?.addEventListener("input", syncActivityAuthorIdSuggestion);
@@ -3115,16 +3212,36 @@ els.activityAuthorClass?.addEventListener("change", () => {
 });
 els.classRosterSelect?.addEventListener("change", loadSelectedClassRoster);
 els.activityPath.addEventListener("input", () => {
+  clearSelectedAssignment();
   renderActivitySelect();
   renderAssignmentContext();
 });
 els.outputName.addEventListener("input", renderAssignmentContext);
-els.classId.addEventListener("input", renderReportAssignmentSummary);
-els.classLabel.addEventListener("input", renderAssignmentContext);
-els.githubTeam.addEventListener("input", renderAssignmentContext);
-els.assignedAt.addEventListener("input", renderReportAssignmentSummary);
-els.dueAt.addEventListener("input", renderReportAssignmentSummary);
-els.targetsText.addEventListener("input", renderAssignmentContext);
+els.classId.addEventListener("input", () => {
+  clearSelectedAssignment();
+  renderReportAssignmentSummary();
+});
+els.classLabel.addEventListener("input", () => {
+  clearSelectedAssignment();
+  renderAssignmentContext();
+});
+els.githubTeam.addEventListener("input", () => {
+  clearSelectedAssignment();
+  renderAssignmentContext();
+});
+els.assignedAt.addEventListener("input", () => {
+  clearSelectedAssignment();
+  renderReportAssignmentSummary();
+});
+els.dueAt.addEventListener("input", () => {
+  clearSelectedAssignment();
+  renderReportAssignmentSummary();
+});
+els.nowAt.addEventListener("change", () => loadAssignments().catch((error) => setStatus(`Assegnazioni non aggiornate: ${error.message}`)));
+els.targetsText.addEventListener("input", () => {
+  clearSelectedAssignment();
+  renderAssignmentContext();
+});
 els.classId.addEventListener("change", updateOutputNameForCurrentActivity);
 els.coverageBody.addEventListener("click", async (event) => {
   const toggleButton = event.target.closest("[data-coverage-toggle]");
@@ -3275,6 +3392,7 @@ setupResizableTables();
 Promise.all([
   loadReports(),
   loadActivities(),
+  loadAssignments(),
   loadOverview(),
   loadClassRosters(),
   loadCourseDesignForActivityAuthoring(),

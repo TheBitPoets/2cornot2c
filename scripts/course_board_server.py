@@ -25,6 +25,7 @@ import subprocess
 import sys
 import urllib.error
 import urllib.request
+from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
@@ -34,6 +35,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts import (
+    assignment_records,
     assign_activity,
     create_activity,
     create_submission_scaffold,
@@ -47,6 +49,7 @@ DESIGN_PATH = ROOT / "doc" / "course_design.json"
 COURSE_DESIGNS_DIR = ROOT / "doc" / "course_designs"
 SCHOOL_CALENDARS_DIR = ROOT / "doc" / "calendars"
 TEACHER_REPORTS_DIR = ROOT / "teacher-reports"
+TEACHER_ASSIGNMENTS_DIR = ROOT / "teacher-assignments"
 ACTIVITY_DIRS = [ROOT / "activities", ROOT / "examples" / "assignment_tracking"]
 COURSE_PLAN_MD_PATH = ROOT / "doc" / "PERCORSO_DIDATTICO.md"
 README_PATH = ROOT / "README.md"
@@ -102,6 +105,12 @@ def assignment_service() -> thebitlab_services.AssignmentService:
     """Return the application service for assignment dashboard data."""
 
     return thebitlab_services.AssignmentService(assignment_storage())
+
+
+def assignment_record_storage() -> assignment_records.JsonAssignmentRecordStorage:
+    """Return the JSON storage adapter for explicit assignment records."""
+
+    return assignment_records.JsonAssignmentRecordStorage(ROOT, TEACHER_ASSIGNMENTS_DIR)
 
 
 def class_roster_storage() -> thebitlab_storage.JsonClassRosterStorage:
@@ -194,6 +203,12 @@ def school_calendar_path(name: str) -> Path:
     return course_service().school_calendar_path(name)
 
 
+def datetime_now_iso() -> str:
+    """Return the current local datetime with timezone for assignment status checks."""
+
+    return datetime.now().astimezone().isoformat(timespec="seconds")
+
+
 def safe_teacher_report_path(name: str) -> Path:
     """Return a safe teacher-report path below teacher-reports."""
 
@@ -234,6 +249,27 @@ def list_assignment_reports() -> list[dict]:
     """List assignment tracking reports stored in teacher-reports."""
 
     return assignment_service().list_assignment_reports()
+
+
+def list_assignment_records(now: str | None = None) -> dict:
+    """Return explicit assignment records and those due without register."""
+
+    storage = assignment_storage()
+    record_storage = assignment_record_storage()
+    registers = []
+    for report in storage.list_assignment_reports():
+        try:
+            registers.append(storage.read_assignment_report(str(report.get("name", ""))))
+        except Exception:  # noqa: BLE001
+            continue
+    current_time = now or datetime_now_iso()
+    assignments = record_storage.list_assignments()
+    due_without_register = record_storage.assignments_due_without_register(registers, current_time)
+    return {
+        "assignments": assignments,
+        "due_without_register": due_without_register,
+        "now": current_time,
+    }
 
 
 def list_class_rosters() -> list[dict]:
@@ -427,6 +463,9 @@ def generate_assignment_report(payload: dict) -> dict:
         class_label=payload.get("class_label") or None,
         github_team=payload.get("github_team") or None,
     )
+    assignment_id = str(payload.get("assignment_id", "")).strip()
+    if assignment_id:
+        index["assignment_id"] = assignment_id
     track_assignments.write_tracking_index(index, output_path)
     return {
         "ok": True,
@@ -1748,6 +1787,10 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/assignment-reports":
             self.write_json({"reports": list_assignment_reports()})
+            return
+        if parsed.path == "/api/assignments":
+            query = parse_qs(parsed.query)
+            self.write_json(list_assignment_records(query.get("now", [""])[0] or None))
             return
         if parsed.path == "/api/assignment-overview":
             self.write_json({"rows": assignment_overview()})
