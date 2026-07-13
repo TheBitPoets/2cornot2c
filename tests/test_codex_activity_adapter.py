@@ -68,3 +68,33 @@ def test_run_codex_activity_draft_reports_missing_cli(monkeypatch, tmp_path) -> 
         assert "Codex CLI non trovato" in str(error)
     else:
         raise AssertionError("missing Codex CLI should fail")
+
+
+def test_validate_codex_activity_draft_rejects_unsafe_file_paths() -> None:
+    for unsafe_path in ["../secrets.txt", "/tmp/secret.txt", "C:/Users/docente/secret.txt"]:
+        try:
+            codex_activity_adapter.validate_codex_activity_draft(
+                {
+                    "summary": "Bozza",
+                    "teacher_notes": "Note",
+                    "activity_patch": {},
+                    "files": [{"path": unsafe_path, "role": "starter", "content": "print(0)\n"}],
+                }
+            )
+        except ValueError as error:
+            assert "path file non consentito" in str(error)
+        else:
+            raise AssertionError(f"unsafe path should fail: {unsafe_path}")
+
+
+def test_validate_codex_activity_draft_normalizes_relative_file_paths() -> None:
+    draft = codex_activity_adapter.validate_codex_activity_draft(
+        {
+            "summary": "Bozza",
+            "teacher_notes": "Note",
+            "activity_patch": {},
+            "files": [{"path": "starter\\main.py", "role": "starter", "content": "print(0)\n"}],
+        }
+    )
+
+    assert draft["files"][0]["path"] == "starter/main.py"

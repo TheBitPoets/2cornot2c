@@ -4,7 +4,7 @@ import json
 import shutil
 import subprocess
 import tempfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
 
@@ -57,6 +57,19 @@ def codex_activity_prompt() -> str:
     )
 
 
+def safe_draft_file_path(path: str) -> str:
+    """Return a normalized relative draft file path or raise ValueError."""
+
+    raw_path = str(path).strip()
+    if not raw_path:
+        raise ValueError("La risposta Codex contiene un file senza path.")
+    windows_path = PureWindowsPath(raw_path)
+    posix_path = PurePosixPath(raw_path.replace("\\", "/"))
+    if windows_path.is_absolute() or windows_path.drive or posix_path.is_absolute() or ".." in posix_path.parts:
+        raise ValueError(f"La risposta Codex contiene un path file non consentito: {path}")
+    return posix_path.as_posix()
+
+
 def validate_codex_activity_draft(payload: dict[str, Any]) -> dict[str, Any]:
     """Return a normalized Codex activity draft or raise ValueError."""
 
@@ -70,8 +83,9 @@ def validate_codex_activity_draft(payload: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(files, list):
         raise ValueError("La risposta Codex contiene `files` non valido.")
     for file in files:
-        if not isinstance(file, dict) or not str(file.get("path", "")).strip():
+        if not isinstance(file, dict):
             raise ValueError("La risposta Codex contiene un file senza path.")
+        file["path"] = safe_draft_file_path(str(file.get("path", "")))
         if not str(file.get("content", "")).strip():
             raise ValueError(f"La risposta Codex contiene il file `{file.get('path')}` senza contenuto.")
     return {
