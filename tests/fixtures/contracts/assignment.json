@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "id": "assignment-python-base-somma-001-3a-tpsi-2026-10-12",
+  "activity_id": "python-base-somma-001",
+  "activity_path": "activities/python-base-somma-001.json",
+  "target_type": "class",
+  "class_id": "3A-TPSI",
+  "class_label": "3A TPSI",
+  "github_team": "team-3a-tpsi",
+  "assigned_at": "2026-10-12T09:00:00+02:00",
+  "due_at": "2026-10-19T23:59:00+02:00",
+  "targets": [
+    {
+      "student_id": "rossi-mario",
+      "display_name": "Rossi Mario",
+      "repo_ref": "TheBitPoets/rossi-mario"
+    },
+    {
+      "student_id": "bianchi-luca",
+      "display_name": "Bianchi Luca",
+      "path": "studenti/bianchi-luca"
+    }
+  ]
+}

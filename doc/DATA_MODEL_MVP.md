@@ -384,7 +384,7 @@ Fase di transizione:
 
 ### Assignment
 
-Rappresenta l'assegnazione di una activity a una classe.
+Rappresenta l'assegnazione di una activity a una classe, team, gruppo o singolo studente.
 
 Campi minimi:
 
@@ -392,18 +392,31 @@ Campi minimi:
 schema_version
 id
 activity_id
-class_id
+activity_path
+target_type
 assigned_at
 due_at
-student_support_mode
-provider
-provider_ref
-status
+targets
 ```
 
-Questa entita oggi e implicita dentro il registro docente e nei parametri di `track_assignments.py`.
+Campi opzionali MVP:
 
-Va resa esplicita prima della GUI di creazione/assegnazione activity.
+```text
+class_id
+class_label
+github_team
+```
+
+`target_type` deve distinguere almeno `class`, `team`, `group`, `student`.
+
+Questa entita oggi e implicita dentro il registro docente e nei parametri di `track_assignments.py`. Il primo storage JSON esplicito usa `teacher-assignments/*.json`, con un helper dedicato per:
+
+- creare un id stabile dell'assegnazione;
+- validare i campi minimi;
+- salvare e leggere record JSON;
+- individuare assegnazioni scadute senza registro.
+
+La GUI successiva dovra usare questa entita per scegliere una vera `Assegnazione da tracciare`, invece di ricostruire il registro partendo da campi sparsi.
 
 ### Submission
 
