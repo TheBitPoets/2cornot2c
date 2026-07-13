@@ -44,6 +44,7 @@ from scripts import (
     thebitlab_storage,
     track_assignments,
 )
+from scripts.thebitlab_contracts import normalize_activity
 
 DESIGN_PATH = ROOT / "doc" / "course_design.json"
 COURSE_DESIGNS_DIR = ROOT / "doc" / "course_designs"
@@ -425,6 +426,69 @@ def read_assignment_target_paths_from_text(targets_text: str) -> list[Path]:
     if not targets:
         raise ValueError("Inserisci almeno un repository studente nei target.")
     return targets
+
+
+def assignment_record_targets_from_text(targets_text: str) -> list[dict]:
+    """Build explicit assignment targets from one local repository path per line."""
+
+    targets = []
+    for target_path in read_assignment_target_paths_from_text(targets_text):
+        try:
+            clean_path = str(target_path.relative_to(ROOT)).replace("\\", "/")
+        except ValueError:
+            clean_path = str(target_path)
+        targets.append({
+            "student_id": target_path.name,
+            "display_name": target_path.name,
+            "path": clean_path,
+        })
+    return targets
+
+
+def infer_assignment_target_type(class_id: str, github_team: str, targets: list[dict]) -> str:
+    """Infer the assignment target type from the current dashboard fields."""
+
+    if class_id:
+        return "class"
+    if github_team:
+        return "team"
+    if len(targets) == 1:
+        return "student"
+    return "group"
+
+
+def save_assignment_record(payload: dict) -> dict:
+    """Persist an explicit assignment record from the teacher dashboard."""
+
+    activity_path_value = str(payload.get("activity_path", "")).strip()
+    activity_path = resolve_local_path(activity_path_value, "activity_path")
+    if not activity_path.is_file():
+        raise FileNotFoundError(f"Activity non trovata: {activity_path}")
+    activity = normalize_activity(assignment_storage().read_json(activity_path))
+    activity_id = str(activity.get("id", "")).strip()
+    if not activity_id:
+        raise ValueError("Activity senza id.")
+    targets = assignment_record_targets_from_text(str(payload.get("targets_text", "")))
+    class_id = str(payload.get("class_id", "")).strip()
+    github_team = str(payload.get("github_team", "")).strip()
+    assignment = assignment_records.build_assignment_record(
+        activity_id=activity_id,
+        activity_path=activity_path_value.replace("\\", "/"),
+        target_type=str(payload.get("target_type", "")).strip() or infer_assignment_target_type(class_id, github_team, targets),
+        class_id=class_id,
+        class_label=str(payload.get("class_label", "")).strip(),
+        github_team=github_team,
+        assigned_at=str(payload.get("assigned_at", "")).strip(),
+        due_at=str(payload.get("due_at", "")).strip(),
+        targets=targets,
+    )
+    saved = assignment_record_storage().write_assignment(assignment, bool(payload.get("overwrite", False)))
+    records = list_assignment_records(str(payload.get("now", "")).strip() or None)
+    return {
+        "ok": True,
+        "assignment": saved,
+        **records,
+    }
 
 
 def preview_activity_assignment(payload: dict) -> dict:
@@ -1927,6 +1991,20 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/activities/assignment-plan":
             try:
                 self.write_json(preview_activity_assignment(payload))
+            except FileNotFoundError as error:
+                self.send_response(404)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+            except Exception as error:  # noqa: BLE001
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+            return
+        if parsed.path == "/api/assignments/save":
+            try:
+                self.write_json(save_assignment_record(payload))
             except FileNotFoundError as error:
                 self.send_response(404)
                 self.send_header("Content-Type", "application/json; charset=utf-8")

@@ -249,6 +249,64 @@ def test_preview_activity_assignment_returns_plan_without_writing(tmp_path, monk
     assert not (target / "assignments").exists()
 
 
+def test_save_assignment_record_persists_dashboard_assignment(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "TEACHER_ASSIGNMENTS_DIR", tmp_path / "teacher-assignments")
+    monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
+
+    activities_dir = tmp_path / "activities"
+    activities_dir.mkdir()
+    activity_path = activities_dir / "activity.json"
+    activity_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "id": "python-base-somma-001",
+                "titolo": "Somma in Python",
+                "tipo": "compito-casa",
+                "difficolta": "B",
+                "argomenti": ["variabili"],
+                "linguaggio": "python",
+                "consegna": "Completa main.py.",
+                "correzione": {
+                    "compila": True,
+                    "test": True,
+                    "sandbox": True,
+                    "ai_feedback": False,
+                },
+                "metriche": {
+                    "tempo_stimato_minuti": 20,
+                    "traccia_tempo_dichiarato": True,
+                    "traccia_sessioni_thebitlab": True,
+                    "traccia_eventi_didattici": True,
+                    "traccia_errori_compilazione": True,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    (tmp_path / "students" / "rossi-mario").mkdir(parents=True)
+    (tmp_path / "students" / "bianchi-luca").mkdir(parents=True)
+
+    response = course_board_server.save_assignment_record({
+        "activity_path": "activities/activity.json",
+        "class_id": "3A-TPSI",
+        "class_label": "3A TPSI",
+        "assigned_at": "2026-10-12T09:00:00+02:00",
+        "due_at": "2026-10-19T23:59:00+02:00",
+        "now": "2026-10-20T08:00:00+02:00",
+        "targets_text": "students/rossi-mario\nstudents/bianchi-luca",
+    })
+
+    assert response["ok"] is True
+    assert response["assignment"]["activity_id"] == "python-base-somma-001"
+    assert response["assignment"]["target_type"] == "class"
+    assert response["assignment"]["targets"][0]["path"] == "students/rossi-mario"
+    assert response["due_without_register"][0]["assignment"]["id"] == response["assignment"]["id"]
+    saved_path = tmp_path / response["assignment"]["path"]
+    assert saved_path.is_file()
+
+
 def test_review_assignment_ai_feedback_persists_teacher_decision(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
