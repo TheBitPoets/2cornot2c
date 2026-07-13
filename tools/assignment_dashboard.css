@@ -263,6 +263,26 @@ select {
   gap: .8rem;
 }
 
+.assignmentPackageJson {
+  margin-top: .9rem;
+}
+
+.assignmentPackageJson summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: .84rem;
+}
+
+.assignmentPackageJson pre {
+  max-height: 18rem;
+  overflow: auto;
+  padding: .85rem;
+  border-radius: 8px;
+  background: #111111;
+  color: #f7f7f7;
+  font-size: .78rem;
+}
+
 .overviewFilters {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

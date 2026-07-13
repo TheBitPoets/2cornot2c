@@ -251,6 +251,37 @@ def run_dashboard_js(assertions: str) -> None:
               can_assign: false,
             }},
           }};
+          if (path === "/api/activities/ai-package") return {{
+            ok: true,
+            package: {{
+              schema_version: "activity_ai_package.v1",
+              provider: "codex",
+              prompt: "Aggiungi test sui negativi",
+              activity: {{
+                id: "python-base-somma-001",
+                title: "Somma in Python",
+                kind: "compito-casa",
+              }},
+              files: [
+                {{
+                  path: "starter/main.py",
+                  target_path: "main.py",
+                  role: "starter",
+                  visibility: "student",
+                  included: true,
+                  content: "print('starter')\\n",
+                  size: 17,
+                }},
+              ],
+              policy: {{
+                student_budget: 5,
+                integrity_mode: "normal",
+                teacher_review_required: true,
+                no_provider_call: true,
+              }},
+              teacher_review: {{ status: "draft", required: true }},
+            }},
+          }};
           if (path === "/api/activities") return {{ activities: [] }};
           if (path === "/api/activities/save") return {{
             ok: true,
@@ -340,13 +371,16 @@ def run_dashboard_js(assertions: str) -> None:
         syncActivityAuthorIdSuggestion,
         renderActivityAuthorMetadataSelects,
         assignmentPlanPayload,
+        assignmentAiPackagePayload,
         assignmentRecordPayload,
         renderAssignmentAssetList,
         renderAssignmentTargetList,
         renderAssignmentPlan,
+        renderAssignmentAiPackage,
         setAssignmentWizardStep,
         assignmentPlanErrorMessage,
         previewAssignmentPlan,
+        previewAssignmentAiPackage,
         saveAssignmentRecord,
         distributeAssignment,
         generateReport,
@@ -727,6 +761,57 @@ def test_assignment_date_time_inputs_are_serialized_as_iso() -> None:
         assert.match(payload.due_at, /^2026-10-19T23:59:00[+-]\\d{2}:\\d{2}$/);
         assert.match(payload.now, /^2026-10-20T08:00:00[+-]\\d{2}:\\d{2}$/);
         assert.equal(tested.dateTimeInputToIso("2026-10-12T09:00:00+02:00"), "2026-10-12T09:00:00+02:00");
+        """
+    )
+
+
+def test_assignment_ai_package_payload_includes_prompt_policy_and_targets() -> None:
+    run_dashboard_js(
+        """
+        tested.els.activityPath.value = "activities/python-base-somma-001.json";
+        tested.els.targetsText.value = "students/rossi-mario";
+        tested.els.assignmentAiProvider.value = "codex";
+        tested.els.assignmentAiPrompt.value = "Aggiungi test sui negativi";
+        tested.els.assignmentAiStudentBudget.value = "7";
+        tested.els.assignmentIntegrityMode.value = "controlled";
+
+        const payload = tested.assignmentAiPackagePayload();
+
+        assert.equal(payload.activity_path, "activities/python-base-somma-001.json");
+        assert.equal(payload.targets_text, "students/rossi-mario");
+        assert.equal(payload.provider, "codex");
+        assert.equal(payload.prompt, "Aggiungi test sui negativi");
+        assert.equal(payload.student_budget, 7);
+        assert.equal(payload.integrity_mode, "controlled");
+        """
+    )
+
+
+def test_preview_assignment_ai_package_posts_bundle_request_and_renders_json() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.els.activityPath.value = "activities/python-base-somma-001.json";
+          tested.els.targetsText.value = "students/rossi-mario";
+          tested.els.assignmentAiProvider.value = "codex";
+          tested.els.assignmentAiPrompt.value = "Aggiungi test sui negativi";
+          tested.els.assignmentAiStudentBudget.value = "5";
+          tested.els.assignmentIntegrityMode.value = "normal";
+
+          await tested.previewAssignmentAiPackage();
+
+          const call = tested.fetchCalls.find((entry) => entry.path === "/api/activities/ai-package");
+          assert.ok(call);
+          assert.equal(call.options.method, "POST");
+          const body = JSON.parse(call.options.body);
+          assert.equal(body.prompt, "Aggiungi test sui negativi");
+          assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /Somma in Python/);
+          assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /nessuna chiamata AI/);
+          assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /JSON pacchetto/);
+          assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /starter/);
+          assert.equal(tested.els.assignmentAiDraftText.value, "");
+          assert.match(tested.els.status.textContent, /nessuna chiamata provider/);
+        })();
         """
     )
 

@@ -230,6 +230,13 @@ const els = {
   assignmentPlanPreview: document.querySelector("#assignmentPlanPreview"),
   assignmentStepTabs: document.querySelectorAll("[data-assignment-step-tab]"),
   assignmentSteps: document.querySelectorAll("[data-assignment-step]"),
+  assignmentAiProvider: document.querySelector("#assignmentAiProvider"),
+  assignmentAiPrompt: document.querySelector("#assignmentAiPrompt"),
+  assignmentAiStudentBudget: document.querySelector("#assignmentAiStudentBudget"),
+  assignmentIntegrityMode: document.querySelector("#assignmentIntegrityMode"),
+  assignmentAiAskBtn: document.querySelector("#assignmentAiAskBtn"),
+  assignmentAiDraftText: document.querySelector("#assignmentAiDraftText"),
+  assignmentAiPackagePreview: document.querySelector("#assignmentAiPackagePreview"),
   generateReportBtn: document.querySelector("#generateReportBtn"),
   panels: document.querySelectorAll("main.layout .panel"),
 };
@@ -2304,6 +2311,59 @@ function assignmentPlanPayload() {
   };
 }
 
+function assignmentAiPackagePayload() {
+  return {
+    ...assignmentPlanPayload(),
+    provider: els.assignmentAiProvider?.value || "codex",
+    prompt: els.assignmentAiPrompt?.value || "",
+    student_budget: Number(els.assignmentAiStudentBudget?.value || 0),
+    integrity_mode: els.assignmentIntegrityMode?.value || "normal",
+  };
+}
+
+function renderAssignmentAiPackage(aiPackage) {
+  if (!els.assignmentAiPackagePreview) return;
+  if (!aiPackage) {
+    els.assignmentAiPackagePreview.innerHTML = '<p class="status">Prepara il pacchetto AI per controllare prompt, contesto e file prima di chiamare provider o Codex.</p>';
+    return;
+  }
+  const files = Array.isArray(aiPackage.files) ? aiPackage.files : [];
+  const includedFiles = files.filter((file) => file.included);
+  const skippedFiles = files.filter((file) => !file.included);
+  const promptStatus = aiPackage.prompt?.trim() ? "prompt incluso" : "prompt vuoto";
+  els.assignmentAiPackagePreview.innerHTML = `
+    <div class="assignmentPlanHeader">
+      <div>
+        <strong>${escapeHtml(aiPackage.activity?.title || aiPackage.activity?.id || "Pacchetto AI")}</strong>
+        <small>${escapeHtml(aiPackage.provider || "-")} - ${escapeHtml(aiPackage.schema_version || "-")} - ${escapeHtml(promptStatus)}</small>
+      </div>
+      ${badge("nessuna chiamata AI", "muted")}
+    </div>
+    <div class="assignmentPlanGrid">
+      <section>
+        <h3>File inclusi</h3>
+        ${renderAssignmentAssetList(includedFiles, "Nessun file incluso nel pacchetto.")}
+      </section>
+      <section>
+        <h3>File esclusi o mancanti</h3>
+        ${renderAssignmentAssetList(skippedFiles.map((file) => ({ ...file, description: file.error || file.description })), "Nessun file escluso.")}
+      </section>
+      <section>
+        <h3>Policy</h3>
+        <ul class="assignmentPlanList">
+          <li><strong>Budget studente</strong><small>${escapeHtml(aiPackage.policy?.student_budget ?? 0)} richieste</small></li>
+          <li><strong>Modalita verifica</strong><small>${escapeHtml(aiPackage.policy?.integrity_mode || "normal")}</small></li>
+          <li><strong>Revisione docente</strong><small>${aiPackage.teacher_review?.required ? "obbligatoria" : "non richiesta"}</small></li>
+        </ul>
+      </section>
+    </div>
+    <details class="assignmentPackageJson">
+      <summary>JSON pacchetto</summary>
+      <pre>${escapeHtml(JSON.stringify(aiPackage, null, 2))}</pre>
+    </details>
+  `;
+}
+
 function setAssignmentWizardStep(step) {
   const selectedStep = step || "activity";
   els.assignmentStepTabs.forEach((button) => {
@@ -2339,7 +2399,7 @@ function renderAssignmentAssetList(assets, emptyLabel) {
       ${items.map((asset) => `
         <li>
           <strong>${escapeHtml(asset.target_path || asset.path || "-")}</strong>
-          ${badge(asset.type || "-", asset.visibility === "student" ? "ok" : "muted")}
+          ${badge(asset.type || asset.role || "-", asset.visibility === "student" ? "ok" : "muted")}
           <small>${escapeHtml(asset.description || asset.path || "")}</small>
         </li>
       `).join("")}
@@ -2429,6 +2489,31 @@ async function previewAssignmentPlan() {
     setStatus(`Anteprima assegnazione non disponibile: ${message}`);
   } finally {
     els.previewAssignmentBtn.disabled = false;
+  }
+}
+
+async function previewAssignmentAiPackage() {
+  if (!els.assignmentAiAskBtn) return;
+  els.assignmentAiAskBtn.disabled = true;
+  setStatus("Preparazione pacchetto AI...");
+  if (els.assignmentAiPackagePreview) {
+    els.assignmentAiPackagePreview.innerHTML = '<p class="status">Preparazione pacchetto AI...</p>';
+  }
+  try {
+    const payload = await api("/api/activities/ai-package", {
+      method: "POST",
+      body: JSON.stringify(assignmentAiPackagePayload()),
+    });
+    renderAssignmentAiPackage(payload.package);
+    setStatus("Pacchetto AI pronto: nessuna chiamata provider eseguita.");
+  } catch (error) {
+    const message = assignmentPlanErrorMessage(error);
+    if (els.assignmentAiPackagePreview) {
+      els.assignmentAiPackagePreview.innerHTML = `<p class="status">Pacchetto AI non disponibile: ${escapeHtml(message)}</p>`;
+    }
+    setStatus(`Pacchetto AI non disponibile: ${message}`);
+  } finally {
+    els.assignmentAiAskBtn.disabled = false;
   }
 }
 
@@ -3265,6 +3350,7 @@ els.assignmentStepTabs.forEach((button) => {
   button.addEventListener("click", () => setAssignmentWizardStep(button.dataset.assignmentStepTab));
 });
 els.previewAssignmentBtn?.addEventListener("click", previewAssignmentPlan);
+els.assignmentAiAskBtn?.addEventListener("click", previewAssignmentAiPackage);
 els.saveAssignmentBtn?.addEventListener("click", saveAssignmentRecord);
 els.distributeAssignmentBtn?.addEventListener("click", distributeAssignment);
 els.generateReportBtn.addEventListener("click", generateReport);

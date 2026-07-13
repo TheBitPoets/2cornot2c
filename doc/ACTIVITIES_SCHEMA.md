@@ -359,6 +359,8 @@ Prima di chiamare un provider AI, TheBitLab dovrebbe costruire un bundle esplici
 
 Lo stesso bundle deve poter essere usato da adapter diversi: API provider, Codex locale, workflow manuale copia/incolla o provider futuri.
 
+Nella dashboard docente il primo passo operativo e l'anteprima del pacchetto: il backend costruisce il JSON con prompt, contesto, target e contenuti dei file dichiarati negli asset, ma non chiama ancora provider reali e non consuma token. Questo permette di verificare quali dati uscirebbero dalla piattaforma prima di collegare adapter AI/Codex.
+
 ## Correzione
 
 Il campo `correzione` indica quali controlli sono previsti.
