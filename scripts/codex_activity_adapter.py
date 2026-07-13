@@ -167,5 +167,4 @@ def run_codex_activity_draft(
     return {
         "adapter": "codex_exec",
         "draft": draft,
-        "raw": raw_payload,
     }

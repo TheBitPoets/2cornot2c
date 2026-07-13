@@ -380,7 +380,6 @@ def test_preview_activity_ai_codex_draft_uses_local_adapter(tmp_path, monkeypatc
                 "questions": [],
                 "warnings": [],
             },
-            "raw": {"summary": "Bozza pronta"},
         }
 
     monkeypatch.setattr(course_board_server.codex_activity_adapter, "run_codex_activity_draft", fake_run_codex_activity_draft)
@@ -397,6 +396,7 @@ def test_preview_activity_ai_codex_draft_uses_local_adapter(tmp_path, monkeypatc
     assert response["ok"] is True
     assert response["adapter"] == "codex_exec"
     assert response["draft"]["activity_patch"]["titolo"] == "Somma con negativi"
+    assert "raw" not in response
     assert captured["package"]["prompt"] == "Aggiungi test sui negativi"
     assert captured["cwd"] == tmp_path
     assert captured["codex_command"] == "codex-test"
