@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
-  "id": "assignment-demo-python-base-somma-001-demo-3a-scaduta",
-  "activity_id": "python-base-somma-001",
-  "activity_path": "examples/assignment_tracking/demo_activity.json",
+  "id": "assignment-demo-python-sconto-classe-001-demo-3a-scaduta",
+  "activity_id": "python-sconto-classe-001",
+  "activity_path": "examples/assignment_tracking/class_discount_activity.json",
   "target_type": "class",
   "class_id": "demo-3a",
   "class_label": "Classe demo 3A",
