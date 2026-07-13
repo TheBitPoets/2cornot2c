@@ -237,11 +237,24 @@ select {
 }
 
 .assignmentAiContext label {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: 1rem minmax(0, 1fr);
+  align-items: start;
   gap: .45rem;
   color: var(--muted);
   font-size: .82rem;
+  line-height: 1.35;
+}
+
+.assignmentAiContext input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  margin: .08rem 0 0;
+  accent-color: #111111;
+}
+
+.assignmentAiContext input[type="checkbox"]:disabled {
+  opacity: .7;
 }
 
 .assignmentAiPolicy {

@@ -707,6 +707,14 @@ def test_assignment_wizard_uses_calendar_date_time_inputs() -> None:
     assert 'id="nowAt" type="datetime-local"' in assignment_section
 
 
+def test_assignment_ai_context_checkboxes_use_fixed_alignment() -> None:
+    css = open("tools/assignment_dashboard.css", encoding="utf-8").read()
+
+    assert ".assignmentAiContext label" in css
+    assert "grid-template-columns: 1rem minmax(0, 1fr);" in css
+    assert '.assignmentAiContext input[type="checkbox"]' in css
+
+
 def test_assignment_date_time_inputs_are_serialized_as_iso() -> None:
     run_dashboard_js(
         """
