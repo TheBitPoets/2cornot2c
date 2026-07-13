@@ -304,6 +304,8 @@ def run_dashboard_js(assertions: str) -> None:
         localTargetFromStudent,
         rosterTargets,
         rosterSummaryItems,
+        reportAssignmentSummaryItems,
+        renderReportAssignmentSummary,
         renderRosterPanel,
         applyRosterToGenerateForm,
         els,
@@ -777,6 +779,35 @@ def test_class_roster_panel_renders_selected_roster_students_and_targets() -> No
     )
 
 
+def test_report_assignment_summary_shows_current_assignment_context() -> None:
+    run_dashboard_js(
+        """
+        tested.state.activities = [
+          { id: "somma", title: "Somma in Python", path: "activities/somma.json" },
+        ];
+        tested.els.activityPath.value = "activities/somma.json";
+        tested.els.classId.value = "3A-TPSI";
+        tested.els.githubTeam.value = "team-3a";
+        tested.els.dueAt.value = "2026-10-19T23:59:00+02:00";
+        tested.els.outputName.value = "3a-tpsi/somma.json";
+        tested.els.targetsText.value = [
+          "studenti/rossi-mario",
+          "# commento",
+          "studenti/bianchi-luca",
+        ].join("\\n");
+
+        tested.renderReportAssignmentSummary();
+
+        const html = tested.els.reportAssignmentSummary.innerHTML;
+        assert.match(html, /<strong>Activity<\\/strong>\\s*<span>Somma in Python<\\/span>/);
+        assert.match(html, /<strong>Classe<\\/strong>\\s*<span>3A-TPSI<\\/span>/);
+        assert.match(html, /<strong>Team<\\/strong>\\s*<span>team-3a<\\/span>/);
+        assert.match(html, /<strong>Target<\\/strong>\\s*<span>2<\\/span>/);
+        assert.match(html, /<strong>Output registro<\\/strong>\\s*<span>3a-tpsi\\/somma.json<\\/span>/);
+      """
+    )
+
+
 def test_panel_order_is_applied_and_persisted() -> None:
     run_dashboard_js(
         """
@@ -1120,6 +1151,28 @@ def test_report_loader_controls_live_in_selected_report_panel() -> None:
     assert 'id="loadReportBtn"' in selected_report_section
     assert 'id="reloadBtn"' in selected_report_section
     assert 'id="reportSelect"' not in hero_section
+
+
+def test_assignment_and_report_panels_are_separated() -> None:
+    html = open("tools/assignment_dashboard.html", encoding="utf-8").read()
+    assignment_section = html.split('data-panel-key="assignment"', 1)[1].split('data-panel-key="generate"', 1)[0]
+    report_section = html.split('data-panel-key="generate"', 1)[1].split('data-panel-key="coverage-registers"', 1)[0]
+
+    assert "Assegna activity" in assignment_section
+    assert 'id="activitySelect"' in assignment_section
+    assert 'id="classRosterSelect"' in assignment_section
+    assert 'id="targetsText"' in assignment_section
+    assert 'id="previewAssignmentBtn"' in assignment_section
+    assert 'id="outputName"' not in assignment_section
+    assert 'id="reportAssignmentSummary"' not in assignment_section
+    assert 'id="generateReportBtn"' not in assignment_section
+
+    assert "Registro consegne" in report_section
+    assert 'id="outputName"' in report_section
+    assert 'id="reportAssignmentSummary"' in report_section
+    assert 'id="generateReportBtn"' in report_section
+    assert 'id="activitySelect"' not in report_section
+    assert 'id="targetsText"' not in report_section
 
 
 def test_class_roster_panel_is_available_on_assignment_dashboard() -> None:

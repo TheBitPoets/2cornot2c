@@ -44,7 +44,8 @@ Pagina studente:
 
 | File | Stato | Pagina | Cosa deve mostrare |
 |---|---|---|---|
-| `docente-genera-registro.png` | da fare | Dashboard docente | Pannello **Assegnazione e registro** con activity, roster, output registro, scadenza e target studenti visibili |
+| `docente-genera-registro.png` | da fare | Dashboard docente | Pannello **Assegna activity** con activity, roster, scadenza, target studenti e anteprima assegnazione visibili |
+| `docente-registro-consegne.png` | da fare | Dashboard docente | Pannello **Registro consegne** con output registro e bottone di creazione visibili |
 | `docente-roster-classe.png` | da fare | Dashboard docente | Pannello **Roster classe** con classe, activity, output registro, studenti attivi, target locali e fallback demo |
 | `docente-registro-selezionato.png` | da fare | Dashboard docente | Pannello **Registro selezionato** con registro caricato e riepilogo compilato |
 | `docente-quadro-classe.png` | da fare | Dashboard docente | Pannello **Quadro classe** con riepilogo e bottone per aprire il modal |
