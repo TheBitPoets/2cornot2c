@@ -26,13 +26,52 @@ def test_build_assignment_record_generates_stable_id_and_targets() -> None:
     assignment = assignment_records.build_assignment_record(**sample_assignment())
 
     assert assignment["schema_version"] == "1.0"
-    assert assignment["id"] == "assignment-python-base-somma-001-3a-tpsi-2026-10-12"
+    assert assignment["id"] == "assignment-python-base-somma-001-3a-tpsi-2026-10-12t09-00-00-02-00"
     assert assignment["activity_id"] == "python-base-somma-001"
     assert assignment["target_type"] == "class"
     assert assignment["targets"] == [
         {"student_id": "rossi-mario", "repo_ref": "TheBitPoets/rossi-mario"},
         {"student_id": "bianchi-luca", "path": "studenti/bianchi-luca"},
     ]
+
+
+def test_build_assignment_record_uses_time_to_avoid_same_day_collisions() -> None:
+    morning = assignment_records.build_assignment_record(**sample_assignment(assigned_at="2026-10-12T09:00:00+02:00"))
+    afternoon = assignment_records.build_assignment_record(**sample_assignment(assigned_at="2026-10-12T15:30:00+02:00"))
+
+    assert morning["id"] != afternoon["id"]
+    assert afternoon["id"] == "assignment-python-base-somma-001-3a-tpsi-2026-10-12t15-30-00-02-00"
+
+
+def test_build_assignment_record_uses_group_members_to_avoid_count_collisions() -> None:
+    first_group = assignment_records.build_assignment_record(
+        **sample_assignment(
+            target_type="group",
+            class_id="",
+            class_label="",
+            github_team="",
+            targets=[
+                {"student_id": "rossi-mario"},
+                {"student_id": "bianchi-luca"},
+            ],
+        ),
+    )
+    second_group = assignment_records.build_assignment_record(
+        **sample_assignment(
+            target_type="group",
+            class_id="",
+            class_label="",
+            github_team="",
+            targets=[
+                {"student_id": "verdi-anna"},
+                {"student_id": "neri-paolo"},
+            ],
+        ),
+    )
+
+    assert first_group["id"] != second_group["id"]
+    assert "group-2" not in first_group["id"]
+    assert "group-2" not in second_group["id"]
 
 
 def test_assignment_record_validation_rejects_missing_or_bad_fields() -> None:
@@ -107,8 +146,8 @@ def test_assignment_record_storage_writes_lists_and_filters_due_without_register
     storage = assignment_records.JsonAssignmentRecordStorage(tmp_path)
     saved = storage.write_assignment(assignment_records.build_assignment_record(**sample_assignment()))
 
-    assert saved["name"] == "assignment-python-base-somma-001-3a-tpsi-2026-10-12.json"
-    assert saved["path"] == "teacher-assignments/assignment-python-base-somma-001-3a-tpsi-2026-10-12.json"
+    assert saved["name"] == "assignment-python-base-somma-001-3a-tpsi-2026-10-12t09-00-00-02-00.json"
+    assert saved["path"] == "teacher-assignments/assignment-python-base-somma-001-3a-tpsi-2026-10-12t09-00-00-02-00.json"
     assert storage.read_assignment(saved["id"])["id"] == saved["id"]
     assert [assignment["id"] for assignment in storage.list_assignments()] == [saved["id"]]
 

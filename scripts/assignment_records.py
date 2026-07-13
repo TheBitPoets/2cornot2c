@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import dataclass
 from datetime import datetime
@@ -98,15 +99,17 @@ def assignment_target_ref(
     if target_type == "student" and len(targets) == 1:
         return targets[0].get("student_id") or targets[0].get("target") or targets[0].get("path") or "student"
     if target_type == "group" and targets:
-        return f"group-{len(targets)}"
+        target_fingerprint = json.dumps(targets, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        digest = hashlib.sha1(target_fingerprint.encode("utf-8")).hexdigest()[:10]
+        return f"group-{digest}"
     return target_type or "target"
 
 
 def build_assignment_id(activity_id: str, target_ref: str, assigned_at: str) -> str:
     """Build a stable filesystem-friendly assignment id."""
 
-    date_part = parse_iso_datetime(assigned_at, "assigned_at").date().isoformat()
-    slug = create_activity.slugify(f"{activity_id}-{target_ref}-{date_part}")
+    assigned_timestamp = parse_iso_datetime(assigned_at, "assigned_at").isoformat()
+    slug = create_activity.slugify(f"{activity_id}-{target_ref}-{assigned_timestamp}")
     return f"assignment-{slug}"
 
 
