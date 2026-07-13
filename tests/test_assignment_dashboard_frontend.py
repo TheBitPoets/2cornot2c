@@ -218,6 +218,26 @@ def run_dashboard_js(assertions: str) -> None:
             assignments: [],
             due_without_register: [],
           }};
+          if (path === "/api/assignments/distribute") return {{
+            ok: true,
+            results: [{{ target: "students/rossi-mario", assignment_dir: "students/rossi-mario/assignments/python-base-somma-001" }}],
+            plan: {{
+              activity_id: "python-base-somma-001",
+              title: "Somma in Python",
+              language: "python",
+              source_name: "main.py",
+              student_assets: [],
+              teacher_assets: [],
+              targets: [{{
+                target: "students/rossi-mario",
+                assignment_dir: "students/rossi-mario/assignments/python-base-somma-001",
+                exists: true,
+              }}],
+              blocked_targets: ["students/rossi-mario"],
+              overwrite: false,
+              can_assign: false,
+            }},
+          }};
           if (path === "/api/activities") return {{ activities: [] }};
           if (path === "/api/activities/save") return {{
             ok: true,
@@ -312,6 +332,7 @@ def run_dashboard_js(assertions: str) -> None:
         assignmentPlanErrorMessage,
         previewAssignmentPlan,
         saveAssignmentRecord,
+        distributeAssignment,
         generateReport,
         loadAssignments,
         renderAssignmentSelect,
@@ -589,6 +610,51 @@ def test_save_assignment_record_posts_form_and_refreshes_due_assignments() -> No
           assert.equal(tested.state.dueAssignments.length, 1);
           assert.match(tested.els.assignmentStatus.textContent, /1 assegnazioni scadute senza registro/);
           assert.match(tested.els.status.textContent, /Assegnazione salvata/);
+        })();
+        """
+    )
+
+
+def test_distribute_assignment_posts_plan_and_renders_written_targets() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.els.activityPath.value = "activities/python-base-somma-001.json";
+          tested.els.targetsText.value = "students/rossi-mario";
+          tested.fetchResponses["/api/assignments/distribute"] = {
+            ok: true,
+            results: [
+              { target: "students/rossi-mario", assignment_dir: "students/rossi-mario/assignments/python-base-somma-001" },
+            ],
+            plan: {
+              activity_id: "python-base-somma-001",
+              title: "Somma in Python",
+              language: "python",
+              source_name: "main.py",
+              student_assets: [],
+              teacher_assets: [],
+              targets: [{
+                target: "students/rossi-mario",
+                assignment_dir: "students/rossi-mario/assignments/python-base-somma-001",
+                exists: true,
+              }],
+              blocked_targets: ["students/rossi-mario"],
+              overwrite: false,
+              can_assign: false,
+            },
+          };
+
+          await tested.distributeAssignment();
+
+          const call = tested.fetchCalls.find((entry) => entry.path === "/api/assignments/distribute");
+          assert.ok(call);
+          assert.equal(call.options.method, "POST");
+          const body = JSON.parse(call.options.body);
+          assert.equal(body.activity_path, "activities/python-base-somma-001.json");
+          assert.equal(body.targets_text, "students/rossi-mario");
+          assert.match(tested.els.assignmentPlanPreview.innerHTML, /Somma in Python/);
+          assert.match(tested.els.assignmentPlanPreview.innerHTML, /gia presente/);
+          assert.match(tested.els.status.textContent, /distribuita a 1 target/);
         })();
         """
     )
@@ -1239,6 +1305,7 @@ def test_assignment_and_report_panels_are_separated() -> None:
     assert 'id="targetsText"' in assignment_section
     assert 'id="previewAssignmentBtn"' in assignment_section
     assert 'id="saveAssignmentBtn"' in assignment_section
+    assert 'id="distributeAssignmentBtn"' in assignment_section
     assert 'id="outputName"' not in assignment_section
     assert 'id="reportAssignmentSummary"' not in assignment_section
     assert 'id="generateReportBtn"' not in assignment_section
@@ -1248,6 +1315,7 @@ def test_assignment_and_report_panels_are_separated() -> None:
     assert 'id="reportAssignmentSummary"' in report_section
     assert 'id="generateReportBtn"' in report_section
     assert 'id="saveAssignmentBtn"' not in report_section
+    assert 'id="distributeAssignmentBtn"' not in report_section
     assert 'id="activitySelect"' not in report_section
     assert 'id="targetsText"' not in report_section
 

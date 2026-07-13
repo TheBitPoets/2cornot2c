@@ -509,6 +509,43 @@ def preview_activity_assignment(payload: dict) -> dict:
     return {"ok": True, "plan": plan.to_dict()}
 
 
+def distribute_activity_assignment(payload: dict) -> dict:
+    """Create activity scaffolds in the selected local target repositories."""
+
+    activity_path = resolve_local_path(payload.get("activity_path", ""), "activity_path")
+    if not activity_path.is_file():
+        raise FileNotFoundError(f"Activity non trovata: {activity_path}")
+    targets = read_assignment_target_paths_from_text(str(payload.get("targets_text", "")))
+    results = assign_activity.assign_activity_to_targets(
+        activity_path=activity_path,
+        targets=targets,
+        source_name=payload.get("source_name") or None,
+        language=payload.get("language") or None,
+        thebitlab_ref=payload.get("thebitlab_ref") or create_submission_scaffold.DEFAULT_THEBITLAB_REF,
+        overwrite=bool(payload.get("overwrite", False)),
+        overwrite_source=bool(payload.get("overwrite_source", False)),
+    )
+    plan = assign_activity.build_assignment_plan(
+        activity_path=activity_path,
+        targets=targets,
+        source_name=payload.get("source_name") or None,
+        language=payload.get("language") or None,
+        thebitlab_ref=payload.get("thebitlab_ref") or create_submission_scaffold.DEFAULT_THEBITLAB_REF,
+        overwrite=bool(payload.get("overwrite", False)),
+    )
+    return {
+        "ok": True,
+        "results": [
+            {
+                "target": str(result.target),
+                "assignment_dir": str(result.assignment_dir),
+            }
+            for result in results
+        ],
+        "plan": plan.to_dict(),
+    }
+
+
 def generate_assignment_report(payload: dict) -> dict:
     """Generate and persist an assignment tracking report from the local GUI."""
 
@@ -2005,6 +2042,20 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/assignments/save":
             try:
                 self.write_json(save_assignment_record(payload))
+            except FileNotFoundError as error:
+                self.send_response(404)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+            except Exception as error:  # noqa: BLE001
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+            return
+        if parsed.path == "/api/assignments/distribute":
+            try:
+                self.write_json(distribute_activity_assignment(payload))
             except FileNotFoundError as error:
                 self.send_response(404)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
