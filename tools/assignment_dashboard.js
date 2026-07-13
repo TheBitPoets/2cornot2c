@@ -228,6 +228,8 @@ const els = {
   saveAssignmentBtn: document.querySelector("#saveAssignmentBtn"),
   distributeAssignmentBtn: document.querySelector("#distributeAssignmentBtn"),
   assignmentPlanPreview: document.querySelector("#assignmentPlanPreview"),
+  assignmentStepTabs: document.querySelectorAll("[data-assignment-step-tab]"),
+  assignmentSteps: document.querySelectorAll("[data-assignment-step]"),
   generateReportBtn: document.querySelector("#generateReportBtn"),
   panels: document.querySelectorAll("main.layout .panel"),
 };
@@ -2271,6 +2273,19 @@ function assignmentPlanPayload() {
   };
 }
 
+function setAssignmentWizardStep(step) {
+  const selectedStep = step || "activity";
+  els.assignmentStepTabs.forEach((button) => {
+    const isActive = button.dataset.assignmentStepTab === selectedStep;
+    button.classList.toggle("isActive", isActive);
+    button.setAttribute("aria-selected", isActive ? "true" : "false");
+  });
+  els.assignmentSteps.forEach((section) => {
+    section.hidden = section.dataset.assignmentStep !== selectedStep;
+    section.classList.toggle("isActive", section.dataset.assignmentStep === selectedStep);
+  });
+}
+
 function assignmentRecordPayload() {
   return {
     activity_path: els.activityPath.value,
@@ -3215,6 +3230,9 @@ els.reloadBtn.addEventListener("click", async () => {
   await loadOverview();
 });
 els.resetPanelOrderBtn.addEventListener("click", resetPanelOrder);
+els.assignmentStepTabs.forEach((button) => {
+  button.addEventListener("click", () => setAssignmentWizardStep(button.dataset.assignmentStepTab));
+});
 els.previewAssignmentBtn?.addEventListener("click", previewAssignmentPlan);
 els.saveAssignmentBtn?.addEventListener("click", saveAssignmentRecord);
 els.distributeAssignmentBtn?.addEventListener("click", distributeAssignment);

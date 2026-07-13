@@ -164,6 +164,17 @@ def run_dashboard_js(assertions: str) -> None:
       button.dataset.legendTab = topic;
       return button;
     }});
+    const assignmentStepNames = ["activity", "ai", "targets", "dates", "preview", "confirm"];
+    const assignmentStepTabs = assignmentStepNames.map((step) => {{
+      const button = new FakeElement(`[data-assignment-step-tab="${{step}}"]`);
+      button.dataset.assignmentStepTab = step;
+      return button;
+    }});
+    const assignmentSteps = assignmentStepNames.map((step) => {{
+      const section = new FakeElement(`[data-assignment-step="${{step}}"]`);
+      section.dataset.assignmentStep = step;
+      return section;
+    }});
 
     const fetchCalls = [];
     const fetchResponses = {{}};
@@ -190,6 +201,8 @@ def run_dashboard_js(assertions: str) -> None:
         querySelector: elementFor,
         querySelectorAll: (selector) => {{
           if (selector === "[data-legend-tab]") return legendTabs;
+          if (selector === "[data-assignment-step-tab]") return assignmentStepTabs;
+          if (selector === "[data-assignment-step]") return assignmentSteps;
           if (selector === "main.layout .panel") return collectPanels(layout);
           if (selector === "main.layout > .panelRow") return collectRows(layout);
           return [];
@@ -329,6 +342,7 @@ def run_dashboard_js(assertions: str) -> None:
         renderAssignmentAssetList,
         renderAssignmentTargetList,
         renderAssignmentPlan,
+        setAssignmentWizardStep,
         assignmentPlanErrorMessage,
         previewAssignmentPlan,
         saveAssignmentRecord,
@@ -656,6 +670,39 @@ def test_distribute_assignment_posts_plan_and_renders_written_targets() -> None:
           assert.match(tested.els.assignmentPlanPreview.innerHTML, /gia presente/);
           assert.match(tested.els.status.textContent, /distribuita a 1 target/);
         })();
+        """
+    )
+
+
+def test_assignment_wizard_contains_teacher_editable_ai_step() -> None:
+    html = open("tools/assignment_dashboard.html", encoding="utf-8").read()
+    assignment_section = html.split('data-panel-key="assignment"', 1)[1].split('data-panel-key="generate"', 1)[0]
+
+    assert 'data-assignment-step-tab="activity"' in assignment_section
+    assert 'data-assignment-step-tab="ai"' in assignment_section
+    assert 'data-assignment-step-tab="confirm"' in assignment_section
+    assert 'data-assignment-step="ai"' in assignment_section
+    assert "Generazione AI assistita" in assignment_section
+    assert "provider AI o Codex" in assignment_section
+    assert "modificarla" in assignment_section
+
+
+def test_assignment_wizard_switches_visible_step() -> None:
+    run_dashboard_js(
+        """
+        tested.setAssignmentWizardStep("ai");
+
+        const aiTab = tested.els.assignmentStepTabs.find((button) => button.dataset.assignmentStepTab === "ai");
+        const activityTab = tested.els.assignmentStepTabs.find((button) => button.dataset.assignmentStepTab === "activity");
+        const aiStep = tested.els.assignmentSteps.find((section) => section.dataset.assignmentStep === "ai");
+        const activityStep = tested.els.assignmentSteps.find((section) => section.dataset.assignmentStep === "activity");
+
+        assert.equal(aiTab.classList.contains("isActive"), true);
+        assert.equal(aiTab["aria-selected"], "true");
+        assert.equal(activityTab.classList.contains("isActive"), false);
+        assert.equal(activityTab["aria-selected"], "false");
+        assert.equal(aiStep.hidden, false);
+        assert.equal(activityStep.hidden, true);
         """
     )
 
