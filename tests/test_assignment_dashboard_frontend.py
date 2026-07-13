@@ -315,6 +315,8 @@ def run_dashboard_js(assertions: str) -> None:
         aiFeedbackReviewDetails,
         aiFeedbackTeacherAction,
         reviewAiFeedback,
+        dateTimeInputToIso,
+        isoToDateTimeInput,
         compactStudentsSummaryItems,
         detailedStudentsSummaryItems,
         applyPanelOrder,
@@ -685,6 +687,36 @@ def test_assignment_wizard_contains_teacher_editable_ai_step() -> None:
     assert "Generazione AI assistita" in assignment_section
     assert "provider AI o Codex" in assignment_section
     assert "modificarla" in assignment_section
+    assert 'id="assignmentAiProvider"' in assignment_section
+    assert 'id="assignmentAiPrompt"' in assignment_section
+    assert 'id="assignmentAiDraftText"' in assignment_section
+    assert "Contesto da inviare" in assignment_section
+    assert "Asset, starter file, test e soluzione" in assignment_section
+
+
+def test_assignment_wizard_uses_calendar_date_time_inputs() -> None:
+    html = open("tools/assignment_dashboard.html", encoding="utf-8").read()
+    assignment_section = html.split('data-panel-key="assignment"', 1)[1].split('data-panel-key="generate"', 1)[0]
+
+    assert 'id="assignedAt" type="datetime-local"' in assignment_section
+    assert 'id="dueAt" type="datetime-local"' in assignment_section
+    assert 'id="nowAt" type="datetime-local"' in assignment_section
+
+
+def test_assignment_date_time_inputs_are_serialized_as_iso() -> None:
+    run_dashboard_js(
+        """
+        tested.els.assignedAt.value = "2026-10-12T09:00";
+        tested.els.dueAt.value = "2026-10-19T23:59";
+        tested.els.nowAt.value = "2026-10-20T08:00";
+
+        const payload = tested.assignmentRecordPayload();
+        assert.match(payload.assigned_at, /^2026-10-12T09:00:00[+-]\\d{2}:\\d{2}$/);
+        assert.match(payload.due_at, /^2026-10-19T23:59:00[+-]\\d{2}:\\d{2}$/);
+        assert.match(payload.now, /^2026-10-20T08:00:00[+-]\\d{2}:\\d{2}$/);
+        assert.equal(tested.dateTimeInputToIso("2026-10-12T09:00:00+02:00"), "2026-10-12T09:00:00+02:00");
+        """
+    )
 
 
 def test_assignment_wizard_switches_visible_step() -> None:

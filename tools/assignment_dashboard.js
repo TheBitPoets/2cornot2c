@@ -410,6 +410,36 @@ function formatDate(value) {
   });
 }
 
+function timezoneOffset(date) {
+  const offset = -date.getTimezoneOffset();
+  const sign = offset >= 0 ? "+" : "-";
+  const absolute = Math.abs(offset);
+  const hours = String(Math.floor(absolute / 60)).padStart(2, "0");
+  const minutes = String(absolute % 60).padStart(2, "0");
+  return `${sign}${hours}:${minutes}`;
+}
+
+function dateTimeInputToIso(value) {
+  const trimmed = String(value || "").trim();
+  if (!trimmed) return "";
+  if (/[zZ]|[+-]\d{2}:\d{2}$/.test(trimmed)) return trimmed;
+  const withSeconds = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(trimmed) ? `${trimmed}:00` : trimmed;
+  const date = new Date(withSeconds);
+  if (Number.isNaN(date.getTime())) return trimmed;
+  return `${withSeconds}${timezoneOffset(date)}`;
+}
+
+function isoToDateTimeInput(value) {
+  const date = new Date(value || "");
+  if (Number.isNaN(date.getTime())) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
 function classValue(entity) {
   return entity?.class_label || entity?.class_id || entity?.github_team || "classe non indicata";
 }
@@ -811,7 +841,7 @@ function reportAssignmentSummaryItems() {
     ["Activity", currentActivityLabel()],
     ["Classe", els.classId.value.trim() || "-"],
     ["Team", els.githubTeam.value.trim() || "-"],
-    ["Scadenza", els.dueAt.value.trim() ? formatDate(els.dueAt.value) : "-"],
+    ["Scadenza", els.dueAt.value.trim() ? formatDate(dateTimeInputToIso(els.dueAt.value)) : "-"],
     ["Target", targetLineCount()],
     ["Output registro", els.outputName.value.trim() || "-"],
   ];
@@ -1476,7 +1506,8 @@ async function loadActivities() {
 }
 
 async function loadAssignments() {
-  const query = els.nowAt?.value.trim() ? `?now=${encodeURIComponent(els.nowAt.value.trim())}` : "";
+  const now = dateTimeInputToIso(els.nowAt?.value);
+  const query = now ? `?now=${encodeURIComponent(now)}` : "";
   const payload = await api(`/api/assignments${query}`);
   state.assignments = payload.assignments || [];
   state.dueAssignments = (payload.due_without_register || []).map((item) => item.assignment || item);
@@ -1538,8 +1569,8 @@ function applyAssignmentToGenerateForm(assignmentId) {
   els.classId.value = assignment.class_id || "";
   els.classLabel.value = assignment.class_label || assignment.class_id || "";
   els.githubTeam.value = assignment.github_team || "";
-  els.assignedAt.value = assignment.assigned_at || "";
-  els.dueAt.value = assignment.due_at || "";
+  els.assignedAt.value = isoToDateTimeInput(assignment.assigned_at);
+  els.dueAt.value = isoToDateTimeInput(assignment.due_at);
   els.outputName.value = assignmentOutputName(assignment);
   const targetLines = (Array.isArray(assignment.targets) ? assignment.targets : [])
     .map(assignmentTargetLine)
@@ -2292,9 +2323,9 @@ function assignmentRecordPayload() {
     class_id: els.classId.value,
     class_label: els.classLabel.value,
     github_team: els.githubTeam.value,
-    assigned_at: els.assignedAt.value,
-    due_at: els.dueAt.value,
-    now: els.nowAt.value,
+    assigned_at: dateTimeInputToIso(els.assignedAt.value),
+    due_at: dateTimeInputToIso(els.dueAt.value),
+    now: dateTimeInputToIso(els.nowAt.value),
     targets_text: els.targetsText.value,
     overwrite: false,
   };
@@ -2459,9 +2490,9 @@ async function generateReport() {
         class_id: els.classId.value,
         class_label: els.classLabel.value,
         github_team: els.githubTeam.value,
-        assigned_at: els.assignedAt.value,
-        due_at: els.dueAt.value,
-        now: els.nowAt.value,
+        assigned_at: dateTimeInputToIso(els.assignedAt.value),
+        due_at: dateTimeInputToIso(els.dueAt.value),
+        now: dateTimeInputToIso(els.nowAt.value),
         targets_text: els.targetsText.value,
         assignment_id: state.selectedAssignmentId,
       }),

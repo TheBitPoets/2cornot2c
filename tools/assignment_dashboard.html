@@ -158,6 +158,34 @@
           <div class="assignmentAiDraft">
             <strong>Generazione AI assistita</strong>
             <p>In arrivo: genera traccia, starter code, test, soluzione e rubric tramite provider AI o Codex. La proposta resta una bozza: il docente potra modificarla, rigenerare sezioni o scartarla prima di salvare e distribuire.</p>
+            <div class="assignmentAiChat">
+              <label>
+                <span>Provider</span>
+                <select id="assignmentAiProvider" aria-label="Provider AI per la bozza activity">
+                  <option value="codex">Codex</option>
+                  <option value="openai">OpenAI API provider</option>
+                  <option value="manual">Solo bozza manuale</option>
+                </select>
+              </label>
+              <label class="wideField">
+                <span>Prompt docente</span>
+                <textarea id="assignmentAiPrompt" rows="4" placeholder="Chiedi una traccia, una variante piu semplice, test aggiuntivi, codice da debuggare o una rubric diversa."></textarea>
+              </label>
+              <div class="assignmentAiContext wideField" aria-label="Contesto che verra inviato all'AI">
+                <strong>Contesto da inviare</strong>
+                <label><input type="checkbox" checked disabled> Activity selezionata e metadati</label>
+                <label><input type="checkbox" checked disabled> Percorso, UDA e argomenti collegati</label>
+                <label><input type="checkbox" checked disabled> Destinatari, classe/team e scadenze</label>
+                <label><input type="checkbox" checked disabled> Asset, starter file, test e soluzione quando disponibili</label>
+              </div>
+              <div class="generateActions wideField">
+                <button id="assignmentAiAskBtn" type="button" disabled title="Inviera prompt e contesto al provider AI selezionato quando l'adapter sara collegato.">Chiedi modifica</button>
+              </div>
+              <label class="wideField">
+                <span>Bozza AI modificabile dal docente</span>
+                <textarea id="assignmentAiDraftText" rows="6" placeholder="Qui comparira la proposta AI. Il docente potra modificarla prima di salvare l'activity o distribuirla."></textarea>
+              </label>
+            </div>
           </div>
         </section>
 
@@ -195,15 +223,15 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
           <div class="generateGrid">
             <label>
               <span>Assegnato il</span>
-              <input id="assignedAt" type="text" value="2026-10-12T09:00:00+02:00">
+              <input id="assignedAt" type="datetime-local" value="2026-10-12T09:00">
             </label>
             <label>
               <span>Scadenza</span>
-              <input id="dueAt" type="text" value="2026-10-19T23:59:00+02:00">
+              <input id="dueAt" type="datetime-local" value="2026-10-19T23:59">
             </label>
             <label>
               <span>Ora simulata opzionale</span>
-              <input id="nowAt" type="text" placeholder="2026-10-18T12:00:00+02:00">
+              <input id="nowAt" type="datetime-local">
             </label>
           </div>
         </section>
