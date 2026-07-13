@@ -2402,7 +2402,7 @@ function renderAssignmentAssetList(assets, emptyLabel) {
       ${items.map((asset) => `
         <li>
           <strong>${escapeHtml(asset.target_path || asset.path || "-")}</strong>
-          ${badge(asset.type || "-", asset.visibility === "student" ? "ok" : "muted")}
+          ${badge(asset.type || asset.role || "-", asset.visibility === "student" ? "ok" : "muted")}
           <small>${escapeHtml(asset.description || asset.path || "")}</small>
         </li>
       `).join("")}

@@ -808,6 +808,7 @@ def test_preview_assignment_ai_package_posts_bundle_request_and_renders_json() -
           assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /Somma in Python/);
           assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /nessuna chiamata AI/);
           assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /JSON pacchetto/);
+          assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /starter/);
           assert.match(tested.els.assignmentAiDraftText.value, /activity_ai_package\\.v1/);
           assert.match(tested.els.status.textContent, /nessuna chiamata provider/);
         })();
