@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "id": "assignment-demo-python-base-somma-001-demo-3a-scaduta",
+  "activity_id": "python-base-somma-001",
+  "activity_path": "examples/assignment_tracking/demo_activity.json",
+  "target_type": "class",
+  "class_id": "demo-3a",
+  "class_label": "Classe demo 3A",
+  "github_team": "",
+  "assigned_at": "2026-10-10T09:00:00+02:00",
+  "due_at": "2026-10-18T23:59:00+02:00",
+  "targets": [
+    {
+      "student_id": "bianchi-luca",
+      "display_name": "Bianchi Luca",
+      "path": "examples/assignment_tracking/student_repos/bianchi-luca"
+    },
+    {
+      "student_id": "rossi-mario",
+      "display_name": "Rossi Mario",
+      "path": "examples/assignment_tracking/student_repos/rossi-mario"
+    },
+    {
+      "student_id": "verdi-anna",
+      "display_name": "Verdi Anna",
+      "path": "examples/assignment_tracking/student_repos/verdi-anna"
+    }
+  ]
+}
