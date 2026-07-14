@@ -171,6 +171,7 @@ def run_codex_activity_draft(
             input=json.dumps(package, ensure_ascii=False, indent=2),
             capture_output=True,
             text=True,
+            encoding="utf-8",
             timeout=timeout_seconds,
             check=False,
         )
