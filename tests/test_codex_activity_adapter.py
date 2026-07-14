@@ -64,6 +64,9 @@ def test_codex_activity_draft_schema_is_closed_for_structured_outputs() -> None:
 
     assert schema["additionalProperties"] is False
     assert schema["properties"]["files"]["items"]["additionalProperties"] is False
+    assert set(schema["properties"]["files"]["items"]["required"]) == set(
+        schema["properties"]["files"]["items"]["properties"]
+    )
     assert "activity_patch_json" in schema["required"]
     assert "activity_patch" not in schema["properties"]
 

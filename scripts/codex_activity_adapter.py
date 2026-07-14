@@ -27,7 +27,7 @@ CODEX_ACTIVITY_DRAFT_SCHEMA: dict[str, Any] = {
                     "visibility": {"type": "string"},
                     "description": {"type": "string"},
                 },
-                "required": ["path", "role", "content"],
+                "required": ["path", "role", "content", "visibility", "description"],
                 "additionalProperties": False,
             },
         },
