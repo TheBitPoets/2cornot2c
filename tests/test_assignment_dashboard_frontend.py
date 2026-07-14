@@ -384,6 +384,9 @@ def run_dashboard_js(assertions: str) -> None:
         setupPanelDragAndDrop,
         renderLegend,
         saveActivityDraft,
+        openActivityEditor,
+        closeActivityEditor,
+        renderActivityPanelSummary,
         activityAuthorTopicValue,
         activityAuthorTopicOptions,
         renderTopicSearch,
@@ -538,8 +541,33 @@ def test_save_activity_draft_posts_form_and_selects_saved_activity() -> None:
           assert.equal(tested.state.activities.length, 1);
           assert.equal(tested.els.activityPath.value, "activities/drafts/somma-in-python.json");
           assert.match(tested.els.activityAuthorStatus.textContent, /Activity salvata/);
+          assert.match(tested.els.activityPanelStatus.textContent, /Activity salvata/);
         })();
         """
+    )
+
+
+def test_activity_editor_modal_is_shared_by_panel_and_wizard() -> None:
+    html = open("tools/assignment_dashboard.html", encoding="utf-8").read()
+
+    assert 'id="activityEditorDialog"' in html
+    assert 'id="openActivityEditorBtn"' in html
+    assert 'id="wizardOpenActivityEditorBtn"' in html
+    assert 'id="activityAuthorTitle"' in html.split('id="activityEditorDialog"', 1)[1]
+
+
+def test_activity_editor_modal_opens_and_closes() -> None:
+    run_dashboard_js(
+        """
+        tested.openActivityEditor("wizard");
+
+        assert.equal(tested.els.activityEditorDialog.open, true);
+        assert.match(tested.els.activityPanelStatus.textContent, /wizard assegnazione/);
+
+        tested.closeActivityEditor();
+
+        assert.equal(tested.els.activityEditorDialog.open, false);
+      """
     )
 
 
@@ -934,6 +962,7 @@ def test_apply_assignment_ai_draft_to_activity_form_keeps_teacher_in_control() -
         assert.match(tested.els.activityAuthorStatus.textContent, /Bozza AI applicata/);
         assert.match(tested.els.activityAuthorStatus.textContent, /Gli asset non vengono ancora salvati automaticamente/);
         assert.match(tested.els.status.textContent, /docente puo ancora modificare tutto/);
+        assert.equal(tested.els.activityEditorDialog.open, true);
       """
     )
 

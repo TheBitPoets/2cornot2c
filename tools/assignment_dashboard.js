@@ -186,6 +186,12 @@ const els = {
   legendButtons: document.querySelectorAll("[data-legend-topic]"),
   legendTabButtons: document.querySelectorAll("[data-legend-tab]"),
   filterButtons: document.querySelectorAll("[data-filter]"),
+  activityEditorDialog: document.querySelector("#activityEditorDialog"),
+  activityEditorCloseBtn: document.querySelector("#activityEditorCloseBtn"),
+  openActivityEditorBtn: document.querySelector("#openActivityEditorBtn"),
+  wizardOpenActivityEditorBtn: document.querySelector("#wizardOpenActivityEditorBtn"),
+  activityPanelStatus: document.querySelector("#activityPanelStatus"),
+  activityPanelSummary: document.querySelector("#activityPanelSummary"),
   activityAuthorStatus: document.querySelector("#activityAuthorStatus"),
   activityAuthorTitle: document.querySelector("#activityAuthorTitle"),
   activityAuthorId: document.querySelector("#activityAuthorId"),
@@ -786,10 +792,10 @@ function activityAuthorTopicValue() {
   return match?.dataset.topicValue || rawValue;
 }
 
-function renderActivityAuthorMetadataSelects() {
+function renderActivityAuthorMetadataSelects(preserveTopicPartial = false) {
   renderCompactSelect(els.activityAuthorPath, activityAuthorPathOptions(), "Nessun percorso", els.activityAuthorPathCount);
   renderCompactSelect(els.activityAuthorUda, activityAuthorUdaOptions(els.activityAuthorPath?.value || "", ""), "Nessuna UDA", els.activityAuthorUdaCount);
-  renderTopicSearch(activityAuthorTopicOptions());
+  renderTopicSearch(activityAuthorTopicOptions(), preserveTopicPartial);
   renderCompactSelect(els.activityAuthorUda, activityAuthorUdaOptions(), "Nessuna UDA", els.activityAuthorUdaCount);
   renderCompactSelect(
     els.activityAuthorClass,
@@ -1593,6 +1599,55 @@ function applyAssignmentToGenerateForm(assignmentId) {
   return assignment;
 }
 
+function activityEditorSummaryItems() {
+  const current = state.activities.find((activity) => activity.path === (els.activityPath?.value || "").trim());
+  return [
+    {
+      label: "Activity selezionata",
+      value: current?.title || current?.id || els.activityAuthorTitle?.value || "Nessuna",
+      tooltip: "Activity attualmente selezionata o bozza in modifica nell'editor.",
+    },
+    {
+      label: "Tipo",
+      value: current?.kind || els.activityAuthorKind?.value || "-",
+      tooltip: "Tipo didattico della activity corrente.",
+    },
+    {
+      label: "Percorso/UDA",
+      value: [els.activityAuthorPath?.value, els.activityAuthorUda?.value].filter(Boolean).join(" / ") || "-",
+      tooltip: "Contesto didattico associato alla bozza o activity.",
+    },
+  ];
+}
+
+function renderActivityPanelSummary() {
+  if (!els.activityPanelSummary) return;
+  els.activityPanelSummary.innerHTML = activityEditorSummaryItems().map((item) => `
+    <div class="studentsSummaryItem" title="${escapeHtml(item.tooltip)}">
+      <strong>${escapeHtml(item.label)}</strong>
+      <span>${escapeHtml(item.value)}</span>
+    </div>
+  `).join("");
+}
+
+function openActivityEditor(source = "panel") {
+  renderActivityAuthorMetadataSelects(true);
+  renderActivityPanelSummary();
+  if (els.activityPanelStatus) {
+    els.activityPanelStatus.textContent = source === "wizard"
+      ? "Editor activity aperto dal wizard assegnazione."
+      : "Editor activity aperto dalla libreria.";
+  }
+  if (els.activityEditorDialog?.showModal) {
+    els.activityEditorDialog.showModal();
+  }
+}
+
+function closeActivityEditor() {
+  els.activityEditorDialog?.close?.();
+  renderActivityPanelSummary();
+}
+
 async function saveActivityDraft() {
   if (!els.saveActivityBtn) return;
   els.saveActivityBtn.disabled = true;
@@ -1622,6 +1677,10 @@ async function saveActivityDraft() {
     if (els.activityAuthorStatus) {
       els.activityAuthorStatus.textContent = `Activity salvata: ${payload.activity?.path || "-"}.`;
     }
+    if (els.activityPanelStatus) {
+      els.activityPanelStatus.textContent = `Activity salvata: ${payload.activity?.title || payload.activity?.id || "-"}.`;
+    }
+    renderActivityPanelSummary();
     setStatus(`Activity salvata: ${payload.activity?.title || payload.activity?.id || "-"}.`);
   } catch (error) {
     if (els.activityAuthorStatus) els.activityAuthorStatus.textContent = `Errore: ${error.message}`;
@@ -2492,6 +2551,7 @@ function applyAssignmentAiDraftToActivityForm() {
     }
     setStatus("Bozza AI applicata al form activity: il docente puo ancora modificare tutto.");
     setAssignmentWizardStep("activity");
+    openActivityEditor("wizard");
     return true;
   } catch (error) {
     if (els.activityAuthorStatus) els.activityAuthorStatus.textContent = `Bozza AI non applicata: ${error.message}`;
@@ -3411,6 +3471,7 @@ function selectActivity(path) {
     els.outputName.value = defaultOutputName(activity);
     renderRosterPanel();
   }
+  renderActivityPanelSummary();
 }
 
 function updateOutputNameForCurrentActivity() {
@@ -3521,6 +3582,9 @@ els.previewAssignmentBtn?.addEventListener("click", previewAssignmentPlan);
 els.assignmentAiAskBtn?.addEventListener("click", previewAssignmentAiPackage);
 els.assignmentAiGenerateBtn?.addEventListener("click", generateAssignmentAiDraft);
 els.assignmentAiApplyDraftBtn?.addEventListener("click", applyAssignmentAiDraftToActivityForm);
+els.openActivityEditorBtn?.addEventListener("click", () => openActivityEditor("panel"));
+els.wizardOpenActivityEditorBtn?.addEventListener("click", () => openActivityEditor("wizard"));
+els.activityEditorCloseBtn?.addEventListener("click", closeActivityEditor);
 els.saveAssignmentBtn?.addEventListener("click", saveAssignmentRecord);
 els.distributeAssignmentBtn?.addEventListener("click", distributeAssignment);
 els.generateReportBtn.addEventListener("click", generateReport);
