@@ -363,6 +363,8 @@ Nella dashboard docente il primo passo operativo e l'anteprima del pacchetto: il
 
 L'adapter Codex locale usa lo stesso pacchetto sul backend della macchina docente: la dashboard invia la richiesta al server locale, il server esegue `codex exec` in modalita non interattiva e restituisce una bozza JSON modificabile dal docente. Le credenziali Codex non devono essere esposte nel browser o alle postazioni studente; l'output resta una bozza da rivedere, non una activity approvata automaticamente.
 
+Nel wizard docente la bozza AI/Codex puo essere applicata ai campi editabili della activity: titolo, id, tipo, difficolta, argomenti, consegna, tempo stimato e contesto quando presenti nel patch. Il docente deve controllare e salvare esplicitamente. I file e gli asset proposti dalla bozza restano visibili come proposta: il salvataggio automatico dei file generati, il caricamento da repository e l'upload verso GitHub/GitLab sono step successivi separati.
+
 ## Correzione
 
 Il campo `correzione` indica quali controlli sono previsti.
