@@ -330,6 +330,53 @@ def test_preview_activity_ai_package_returns_context_files_and_policy(tmp_path, 
     assert not (target / "assignments").exists()
 
 
+def test_preview_activity_ai_package_tolerates_empty_draft_language(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    activities_dir = tmp_path / "activities"
+    activities_dir.mkdir()
+    activity_path = activities_dir / "activity.json"
+    activity_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "id": "activity-senza-linguaggio",
+                "titolo": "Bozza senza linguaggio",
+                "tipo": "laboratorio",
+                "difficolta": "B",
+                "argomenti": ["variabili"],
+                "linguaggio": "",
+                "consegna": "Completa la bozza.",
+                "correzione": {
+                    "compila": True,
+                    "test": True,
+                    "sandbox": True,
+                    "ai_feedback": False,
+                },
+                "metriche": {
+                    "tempo_stimato_minuti": 20,
+                    "traccia_tempo_dichiarato": True,
+                    "traccia_sessioni_thebitlab": True,
+                    "traccia_eventi_didattici": True,
+                    "traccia_errori_compilazione": True,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    response = course_board_server.preview_activity_ai_package(
+        {
+            "activity_path": "activities/activity.json",
+            "targets_text": "students/rossi-mario",
+            "prompt": "Genera starter file",
+            "provider": "codex",
+        }
+    )
+
+    assert response["ok"] is True
+    assert response["package"]["assignment"]["language"] == "c"
+
+
 def test_preview_activity_ai_codex_draft_uses_local_adapter(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setenv("CODEX_COMMAND", "codex-test")
