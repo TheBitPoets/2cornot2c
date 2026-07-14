@@ -365,6 +365,8 @@ L'adapter Codex locale usa lo stesso pacchetto sul backend della macchina docent
 
 Nel wizard docente la bozza AI/Codex puo essere applicata ai campi editabili della activity: titolo, id, tipo, difficolta, argomenti, consegna, tempo stimato e contesto quando presenti nel patch. Il docente deve controllare e salvare esplicitamente. I file e gli asset proposti dalla bozza restano visibili come proposta: il salvataggio automatico dei file generati, il caricamento da repository e l'upload verso GitHub/GitLab sono step successivi separati.
 
+Le iterazioni successive con AI/Codex non dipendono da una memoria implicita del provider. Se la textarea contiene una bozza JSON valida, la dashboard la invia nel campo `current_draft` insieme al nuovo prompt docente. L'adapter deve quindi rifinire la bozza corrente, conservando le parti non coinvolte dalla richiesta e modificando solo cio che il docente chiede.
+
 ## Correzione
 
 Il campo `correzione` indica quali controlli sono previsti.

@@ -529,6 +529,9 @@ def preview_activity_ai_package(payload: dict) -> dict:
         language=payload.get("language") or None,
         thebitlab_ref=payload.get("thebitlab_ref") or create_submission_scaffold.DEFAULT_THEBITLAB_REF,
     )
+    current_draft = payload.get("current_draft")
+    if isinstance(current_draft, dict):
+        package["current_draft"] = current_draft
     return {"ok": True, "package": package}
 
 

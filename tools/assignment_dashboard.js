@@ -2314,13 +2314,18 @@ function assignmentPlanPayload() {
 }
 
 function assignmentAiPackagePayload() {
-  return {
+  const payload = {
     ...assignmentPlanPayload(),
     provider: els.assignmentAiProvider?.value || "codex",
     prompt: els.assignmentAiPrompt?.value || "",
     student_budget: Number(els.assignmentAiStudentBudget?.value || 0),
     integrity_mode: els.assignmentIntegrityMode?.value || "normal",
   };
+  const draftText = String(els.assignmentAiDraftText?.value || "").trim();
+  if (draftText) {
+    payload.current_draft = parseAssignmentAiDraftText();
+  }
+  return payload;
 }
 
 function renderAssignmentAiPackage(aiPackage) {
@@ -2333,11 +2338,12 @@ function renderAssignmentAiPackage(aiPackage) {
   const includedFiles = files.filter((file) => file.included);
   const skippedFiles = files.filter((file) => !file.included);
   const promptStatus = aiPackage.prompt?.trim() ? "prompt incluso" : "prompt vuoto";
+  const draftStatus = aiPackage.current_draft ? "bozza corrente inclusa" : "nessuna bozza corrente";
   els.assignmentAiPackagePreview.innerHTML = `
     <div class="assignmentPlanHeader">
       <div>
         <strong>${escapeHtml(aiPackage.activity?.title || aiPackage.activity?.id || "Pacchetto AI")}</strong>
-        <small>${escapeHtml(aiPackage.provider || "-")} - ${escapeHtml(aiPackage.schema_version || "-")} - ${escapeHtml(promptStatus)}</small>
+        <small>${escapeHtml(aiPackage.provider || "-")} - ${escapeHtml(aiPackage.schema_version || "-")} - ${escapeHtml(promptStatus)} - ${escapeHtml(draftStatus)}</small>
       </div>
       ${badge("nessuna chiamata AI", "muted")}
     </div>

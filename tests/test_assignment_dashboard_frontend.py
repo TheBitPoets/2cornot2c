@@ -813,6 +813,23 @@ def test_assignment_ai_package_payload_includes_prompt_policy_and_targets() -> N
     )
 
 
+def test_assignment_ai_package_payload_includes_current_teacher_draft() -> None:
+    run_dashboard_js(
+        """
+        tested.els.assignmentAiDraftText.value = JSON.stringify({
+          summary: "Prima bozza",
+          activity_patch: { titolo: "Somma guidata" },
+          files: [],
+        });
+
+        const payload = tested.assignmentAiPackagePayload();
+
+        assert.equal(payload.current_draft.summary, "Prima bozza");
+        assert.equal(payload.current_draft.activity_patch.titolo, "Somma guidata");
+        """
+    )
+
+
 def test_preview_assignment_ai_package_posts_bundle_request_and_renders_json() -> None:
     run_dashboard_js(
         """
@@ -837,6 +854,24 @@ def test_preview_assignment_ai_package_posts_bundle_request_and_renders_json() -
           assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /starter/);
           assert.equal(tested.els.assignmentAiDraftText.value, "");
           assert.match(tested.els.status.textContent, /nessuna chiamata provider/);
+        })();
+        """
+    )
+
+
+def test_generate_assignment_ai_draft_blocks_invalid_current_draft_json() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.els.assignmentAiProvider.value = "codex";
+          tested.els.assignmentAiDraftText.value = "{";
+
+          await tested.generateAssignmentAiDraft();
+
+          const call = tested.fetchCalls.find((entry) => entry.path === "/api/activities/ai-codex-draft");
+          assert.equal(call, undefined);
+          assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /Bozza AI non valida/);
+          assert.match(tested.els.status.textContent, /Bozza AI non valida/);
         })();
         """
     )

@@ -53,6 +53,8 @@ def codex_activity_prompt() -> str:
         "Riceverai su stdin un JSON `activity_ai_package.v1` con prompt docente, contesto, policy e file. "
         "Non modificare file sul filesystem. Restituisci solo una bozza JSON conforme allo schema richiesto. "
         "La bozza deve essere modificabile dal docente e non deve dare per approvata nessuna decisione. "
+        "Se il pacchetto contiene current_draft, usalo come bozza corrente da rifinire: applica la nuova richiesta "
+        "del docente e conserva metadati e file non coinvolti dalla modifica. "
         "Quando proponi file, includi path relativo, ruolo, visibilita, descrizione e contenuto. "
         "Il campo activity_patch_json deve contenere una stringa JSON valida con le modifiche proposte alla activity."
     )

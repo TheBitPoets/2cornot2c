@@ -437,6 +437,11 @@ def test_preview_activity_ai_codex_draft_uses_local_adapter(tmp_path, monkeypatc
             "targets_text": "students/rossi-mario",
             "prompt": "Aggiungi test sui negativi",
             "provider": "codex",
+            "current_draft": {
+                "summary": "Prima bozza",
+                "activity_patch": {"titolo": "Somma guidata"},
+                "files": [],
+            },
         }
     )
 
@@ -444,6 +449,7 @@ def test_preview_activity_ai_codex_draft_uses_local_adapter(tmp_path, monkeypatc
     assert response["adapter"] == "codex_exec"
     assert response["draft"]["activity_patch"]["titolo"] == "Somma con negativi"
     assert "raw" not in response
+    assert captured["package"]["current_draft"]["summary"] == "Prima bozza"
     assert captured["package"]["prompt"] == "Aggiungi test sui negativi"
     assert captured["cwd"] == tmp_path
     assert captured["codex_command"] == "codex-test"
