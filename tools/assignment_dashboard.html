@@ -424,6 +424,26 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
           <input id="activityAuthorMinutes" type="number" min="1" step="1" value="30" required>
         </label>
         <label>
+          <span>Linguaggio</span>
+          <select id="activityAuthorLanguage" required>
+            <option value="c" selected>C</option>
+            <option value="cpp">C++</option>
+            <option value="python">Python</option>
+            <option value="java">Java</option>
+            <option value="javascript">JavaScript</option>
+            <option value="nodejs">Node.js</option>
+            <option value="go">Go</option>
+            <option value="html">HTML</option>
+            <option value="php">PHP</option>
+            <option value="sql">SQL</option>
+            <option value="assembly">Assembly</option>
+          </select>
+        </label>
+        <label>
+          <span>File sorgente</span>
+          <input id="activityAuthorSourceName" type="text" value="main.c" placeholder="main.c" required>
+        </label>
+        <label>
           <span>Classe opzionale</span>
           <span class="selectWithCount">
             <select id="activityAuthorClass" aria-label="Classe opzionale"></select>

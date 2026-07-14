@@ -392,11 +392,15 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         mountActivityEditorInWizard,
         mountActivityEditorInDialog,
         renderActivityPanelSummary,
+        selectActivity,
         activityAuthorTopicValue,
         activityAuthorTopicOptions,
         renderTopicSearch,
         suggestedActivityId,
         syncActivityAuthorIdSuggestion,
+        defaultSourceNameForLanguage,
+        languageFromSourceName,
+        syncSourceNameForLanguage,
         renderActivityAuthorMetadataSelects,
         assignmentPlanPayload,
         assignmentAiPackagePayload,
@@ -537,6 +541,8 @@ def test_save_activity_draft_posts_form_and_selects_saved_activity() -> None:
           topicOption.dataset.topicValue = "variabili";
           tested.els.activityAuthorTopicsList.append(topicOption);
           tested.els.activityAuthorMinutes.value = "25";
+          tested.els.activityAuthorLanguage.value = "python";
+          tested.els.activityAuthorSourceName.value = "main.py";
           tested.els.activityAuthorClass.value = "3A-TPSI";
           tested.els.activityAuthorTeam.value = "team-3a";
           tested.els.activityAuthorPath.value = "base";
@@ -550,6 +556,8 @@ def test_save_activity_draft_posts_form_and_selects_saved_activity() -> None:
           assert.equal(call.options.method, "POST");
           assert.equal(body.title, "Somma in Python");
           assert.equal(body.topics, "variabili");
+          assert.equal(body.language, "python");
+          assert.equal(body.source_name, "main.py");
           assert.equal(body.class_id, "3A-TPSI");
           assert.equal(tested.state.activities.length, 1);
           assert.equal(tested.els.activityPath.value, "activities/drafts/somma-in-python.json");
@@ -558,6 +566,31 @@ def test_save_activity_draft_posts_form_and_selects_saved_activity() -> None:
           assert.match(tested.els.activityPanelStatus.textContent, /Activity salvata/);
         })();
         """
+    )
+
+
+def test_select_activity_restores_language_and_source_name() -> None:
+    run_dashboard_js(
+        """
+        tested.state.activities = [{
+          id: "python-base-somma-001",
+          title: "Somma in Python",
+          path: "activities/drafts/python-base-somma-001.json",
+          class_id: "3A-TPSI",
+          github_team: "team-3a",
+          language: "python",
+          source_name: "main.py",
+        }];
+        tested.els.activityAuthorLanguage.value = "c";
+        tested.els.activityAuthorSourceName.value = "main.c";
+
+        tested.selectActivity("activities/drafts/python-base-somma-001.json");
+
+        assert.equal(tested.els.activityPath.value, "activities/drafts/python-base-somma-001.json");
+        assert.equal(tested.els.activityAuthorLanguage.value, "python");
+        assert.equal(tested.els.activityAuthorSourceName.value, "main.py");
+        assert.equal(tested.els.classId.value, "3A-TPSI");
+      """
     )
 
 
@@ -615,6 +648,8 @@ def test_save_activity_from_review_enables_wizard_next() -> None:
           tested.els.activityAuthorDifficulty.value = "B";
           tested.els.activityAuthorTopics.value = "variabili";
           tested.els.activityAuthorMinutes.value = "30";
+          tested.els.activityAuthorLanguage.value = "python";
+          tested.els.activityAuthorSourceName.value = "main.py";
           tested.els.activityAuthorPrompt.value = "Scrivi un programma che somma due numeri.";
           tested.state.activityReviewSaved = false;
           tested.setAssignmentWizardStep("review");
@@ -640,6 +675,8 @@ def test_assignment_preview_posts_plan_and_renders_assets() -> None:
         (async () => {
           tested.els.activityPath.value = "activities/examples/python_assets_scaffold/activity.json";
           tested.els.targetsText.value = "students/rossi-mario\\nstudents/bianchi-luca";
+          tested.els.activityAuthorLanguage.value = "python";
+          tested.els.activityAuthorSourceName.value = "main.py";
           tested.fetchResponses["/api/activities/assignment-plan"] = {
             ok: true,
             plan: {
@@ -688,6 +725,8 @@ def test_assignment_preview_posts_plan_and_renders_assets() -> None:
           assert.equal(call.options.method, "POST");
           assert.equal(body.activity_path, "activities/examples/python_assets_scaffold/activity.json");
           assert.equal(body.targets_text, "students/rossi-mario\\nstudents/bianchi-luca");
+          assert.equal(body.language, "python");
+          assert.equal(body.source_name, "main.py");
           assert.match(tested.els.assignmentPlanPreview.innerHTML, /Somma con scaffold Python/);
           assert.match(tested.els.assignmentPlanPreview.innerHTML, /main.py/);
           assert.match(tested.els.assignmentPlanPreview.innerHTML, /tests\\/test_hidden.py/);
@@ -704,6 +743,8 @@ def test_assignment_preview_explains_missing_server_endpoint() -> None:
         (async () => {
           tested.els.activityPath.value = "activities/examples/python_assets_scaffold/activity.json";
           tested.els.targetsText.value = "students/rossi-mario";
+          tested.els.activityAuthorLanguage.value = "python";
+          tested.els.activityAuthorSourceName.value = "main.py";
           tested.fetchResponses["/api/activities/assignment-plan"] = {
             ok: false,
             status: 404,
@@ -785,6 +826,8 @@ def test_distribute_assignment_posts_plan_and_renders_written_targets() -> None:
         (async () => {
           tested.els.activityPath.value = "activities/python-base-somma-001.json";
           tested.els.targetsText.value = "students/rossi-mario";
+          tested.els.activityAuthorLanguage.value = "python";
+          tested.els.activityAuthorSourceName.value = "main.py";
           tested.fetchResponses["/api/assignments/distribute"] = {
             ok: true,
             results: [
@@ -816,6 +859,8 @@ def test_distribute_assignment_posts_plan_and_renders_written_targets() -> None:
           const body = JSON.parse(call.options.body);
           assert.equal(body.activity_path, "activities/python-base-somma-001.json");
           assert.equal(body.targets_text, "students/rossi-mario");
+          assert.equal(body.language, "python");
+          assert.equal(body.source_name, "main.py");
           assert.match(tested.els.assignmentPlanPreview.innerHTML, /Somma in Python/);
           assert.match(tested.els.assignmentPlanPreview.innerHTML, /gia presente/);
           assert.match(tested.els.status.textContent, /distribuita a 1 target/);
@@ -1094,6 +1139,8 @@ def test_apply_assignment_ai_draft_to_activity_form_keeps_teacher_in_control() -
             titolo: "Somma con numeri negativi",
             tipo: "laboratorio",
             difficolta: "C",
+            linguaggio: "python",
+            source_name: "main.py",
             argomenti: ["variabili", "input"],
             consegna: "Scrivi un programma che somma due interi anche negativi.",
             metriche: { tempo_stimato_minuti: 35 },
@@ -1113,6 +1160,8 @@ def test_apply_assignment_ai_draft_to_activity_form_keeps_teacher_in_control() -
         assert.equal(tested.els.activityAuthorTopics.value, "variabili, input");
         assert.equal(tested.els.activityAuthorPrompt.value, "Scrivi un programma che somma due interi anche negativi.");
         assert.equal(tested.els.activityAuthorMinutes.value, "35");
+        assert.equal(tested.els.activityAuthorLanguage.value, "python");
+        assert.equal(tested.els.activityAuthorSourceName.value, "main.py");
         assert.match(tested.els.activityAuthorStatus.innerHTML, /Bozza AI applicata/);
         assert.match(tested.els.activityAuthorStatus.innerHTML, /Gli asset non vengono ancora salvati automaticamente/);
         assert.match(tested.els.status.textContent, /Revisione activity/);
@@ -1120,6 +1169,50 @@ def test_apply_assignment_ai_draft_to_activity_form_keeps_teacher_in_control() -
         assert.equal(tested.els.activityEditorBody.parentElement, tested.els.activityWizardEditorMount);
         const reviewStep = tested.els.assignmentSteps.find((section) => section.dataset.assignmentStep === "review");
         assert.equal(reviewStep.hidden, false);
+      """
+    )
+
+
+def test_apply_assignment_ai_draft_infers_language_from_proposed_file() -> None:
+    run_dashboard_js(
+        """
+        tested.els.assignmentAiDraftText.value = JSON.stringify({
+          summary: "Bozza Codex pronta",
+          activity_patch: {
+            titolo: "Somma in Python",
+            tipo: "laboratorio",
+            difficolta: "B",
+            argomenti: ["liste"],
+            consegna: "Completa il programma Python.",
+          },
+          files: [{ path: "starter/main.py", role: "starter", content: "print(0)\\n" }],
+        });
+
+        const applied = tested.applyAssignmentAiDraftToActivityForm();
+
+        assert.equal(applied, true);
+        assert.equal(tested.els.activityAuthorLanguage.value, "python");
+        assert.equal(tested.els.activityAuthorSourceName.value, "main.py");
+      """
+    )
+
+
+def test_activity_author_language_updates_default_source_name_only_when_safe() -> None:
+    run_dashboard_js(
+        """
+        tested.els.activityAuthorLanguage.value = "python";
+        tested.els.activityAuthorSourceName.value = "main.c";
+
+        tested.syncSourceNameForLanguage();
+
+        assert.equal(tested.els.activityAuthorSourceName.value, "main.py");
+
+        tested.els.activityAuthorSourceName.value = "soluzione_personale.py";
+        tested.els.activityAuthorLanguage.value = "c";
+
+        tested.syncSourceNameForLanguage();
+
+        assert.equal(tested.els.activityAuthorSourceName.value, "soluzione_personale.py");
       """
     )
 
@@ -1155,6 +1248,8 @@ def test_save_activity_draft_requires_prompt_before_posting() -> None:
           tested.els.activityAuthorDifficulty.value = "B";
           tested.els.activityAuthorTopics.value = "array";
           tested.els.activityAuthorMinutes.value = "30";
+          tested.els.activityAuthorLanguage.value = "c";
+          tested.els.activityAuthorSourceName.value = "main.c";
           tested.els.activityAuthorPrompt.value = "";
 
           await tested.saveActivityDraft();
@@ -1186,6 +1281,8 @@ def test_save_activity_draft_shows_backend_errors_in_review_status() -> None:
           tested.els.activityAuthorDifficulty.value = "B";
           tested.els.activityAuthorTopics.value = "array";
           tested.els.activityAuthorMinutes.value = "30";
+          tested.els.activityAuthorLanguage.value = "c";
+          tested.els.activityAuthorSourceName.value = "main.c";
           tested.els.activityAuthorPrompt.value = "Completa il programma.";
 
           await tested.saveActivityDraft();
@@ -1208,24 +1305,30 @@ def test_activity_author_required_fields_show_and_clear_invalid_state() -> None:
         tested.els.activityAuthorDifficulty.value = "B";
         tested.els.activityAuthorTopics.value = "";
         tested.els.activityAuthorMinutes.value = "0";
+        tested.els.activityAuthorLanguage.value = "";
+        tested.els.activityAuthorSourceName.value = "";
         tested.els.activityAuthorPrompt.value = "";
 
         let missing = tested.validateActivityAuthorRequiredFields({ showMessage: true });
 
-        assert.equal(JSON.stringify(missing), JSON.stringify(["Titolo", "Tipo", "Argomenti", "Tempo stimato", "Consegna"]));
+        assert.equal(JSON.stringify(missing), JSON.stringify(["Titolo", "Tipo", "Argomenti", "Tempo stimato", "Linguaggio", "File sorgente", "Consegna"]));
         assert.equal(tested.els.activityAuthorTitle["aria-invalid"], "true");
         assert.equal(tested.els.activityAuthorKind["aria-invalid"], "true");
         assert.equal(tested.els.activityAuthorDifficulty["aria-invalid"], "false");
         assert.equal(tested.els.activityAuthorTopics["aria-invalid"], "true");
         assert.equal(tested.els.activityAuthorMinutes["aria-invalid"], "true");
+        assert.equal(tested.els.activityAuthorLanguage["aria-invalid"], "true");
+        assert.equal(tested.els.activityAuthorSourceName["aria-invalid"], "true");
         assert.equal(tested.els.activityAuthorPrompt["aria-invalid"], "true");
         assert.equal(tested.els.activityAuthorStatus.classList.contains("isError"), true);
-        assert.match(tested.els.activityAuthorStatus.innerHTML, /Titolo, Tipo, Argomenti, Tempo stimato, Consegna/);
+        assert.match(tested.els.activityAuthorStatus.innerHTML, /Titolo, Tipo, Argomenti, Tempo stimato, Linguaggio, File sorgente, Consegna/);
 
         tested.els.activityAuthorTitle.value = "Array in C";
         tested.els.activityAuthorKind.value = "laboratorio";
         tested.els.activityAuthorTopics.value = "array";
         tested.els.activityAuthorMinutes.value = "30";
+        tested.els.activityAuthorLanguage.value = "c";
+        tested.els.activityAuthorSourceName.value = "main.c";
         tested.els.activityAuthorPrompt.value = "Completa il programma.";
 
         missing = tested.validateActivityAuthorRequiredFields({ showMessage: true });
@@ -1235,6 +1338,8 @@ def test_activity_author_required_fields_show_and_clear_invalid_state() -> None:
         assert.equal(tested.els.activityAuthorKind["aria-invalid"], "false");
         assert.equal(tested.els.activityAuthorTopics["aria-invalid"], "false");
         assert.equal(tested.els.activityAuthorMinutes["aria-invalid"], "false");
+        assert.equal(tested.els.activityAuthorLanguage["aria-invalid"], "false");
+        assert.equal(tested.els.activityAuthorSourceName["aria-invalid"], "false");
         assert.equal(tested.els.activityAuthorPrompt["aria-invalid"], "false");
       """
     )
@@ -1498,6 +1603,8 @@ def test_activity_authoring_required_fields_are_marked_in_markup_and_css() -> No
         "activityAuthorDifficulty",
         "activityAuthorTopics",
         "activityAuthorMinutes",
+        "activityAuthorLanguage",
+        "activityAuthorSourceName",
         "activityAuthorPrompt",
     ]:
         field_markup = html.split(f'id="{field_id}"', 1)[1].split(">", 1)[0]

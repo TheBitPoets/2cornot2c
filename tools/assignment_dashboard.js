@@ -158,6 +158,20 @@ const state = {
   selectedAssignmentId: "",
 };
 
+const DEFAULT_SOURCE_NAMES = {
+  assembly: "main.asm",
+  c: "main.c",
+  cpp: "main.cpp",
+  go: "main.go",
+  html: "index.html",
+  java: "Main.java",
+  javascript: "main.js",
+  nodejs: "main.js",
+  php: "main.php",
+  python: "main.py",
+  sql: "main.sql",
+};
+
 const els = {
   reportSelect: document.querySelector("#reportSelect"),
   loadReportBtn: document.querySelector("#loadReportBtn"),
@@ -236,6 +250,8 @@ const els = {
   activityAuthorTopicsList: document.querySelector("#activityAuthorTopicsList"),
   activityAuthorTopicsCount: document.querySelector("#activityAuthorTopicsCount"),
   activityAuthorMinutes: document.querySelector("#activityAuthorMinutes"),
+  activityAuthorLanguage: document.querySelector("#activityAuthorLanguage"),
+  activityAuthorSourceName: document.querySelector("#activityAuthorSourceName"),
   activityAuthorClass: document.querySelector("#activityAuthorClass"),
   activityAuthorClassCount: document.querySelector("#activityAuthorClassCount"),
   activityAuthorTeam: document.querySelector("#activityAuthorTeam"),
@@ -1819,8 +1835,39 @@ function activityAuthorRequiredFields() {
       label: "Tempo stimato",
       isValid: (value) => Number(value) > 0,
     },
+    { field: els.activityAuthorLanguage, label: "Linguaggio" },
+    { field: els.activityAuthorSourceName, label: "File sorgente" },
     { field: els.activityAuthorPrompt, label: "Consegna" },
   ];
+}
+
+function defaultSourceNameForLanguage(language) {
+  return DEFAULT_SOURCE_NAMES[String(language || "").trim().toLowerCase()] || "main.c";
+}
+
+function languageFromSourceName(sourceName) {
+  const value = String(sourceName || "").trim().toLowerCase();
+  if (value.endsWith(".py")) return "python";
+  if (value.endsWith(".cpp") || value.endsWith(".cc") || value.endsWith(".cxx")) return "cpp";
+  if (value.endsWith(".c")) return "c";
+  if (value.endsWith(".go")) return "go";
+  if (value.endsWith(".html") || value.endsWith(".htm")) return "html";
+  if (value.endsWith(".java")) return "java";
+  if (value.endsWith(".js")) return "javascript";
+  if (value.endsWith(".php")) return "php";
+  if (value.endsWith(".sql")) return "sql";
+  if (value.endsWith(".asm") || value.endsWith(".s")) return "assembly";
+  return "";
+}
+
+function syncSourceNameForLanguage(force = false) {
+  if (!els.activityAuthorLanguage || !els.activityAuthorSourceName) return;
+  const nextSource = defaultSourceNameForLanguage(els.activityAuthorLanguage.value);
+  const currentSource = String(els.activityAuthorSourceName.value || "").trim();
+  const defaultSources = new Set(Object.values(DEFAULT_SOURCE_NAMES));
+  if (force || !currentSource || defaultSources.has(currentSource)) {
+    els.activityAuthorSourceName.value = nextSource;
+  }
 }
 
 function markActivityAuthorFieldInvalid(field, invalid) {
@@ -1864,6 +1911,8 @@ async function saveActivityDraft() {
         topics: activityAuthorTopicValue(),
         prompt: els.activityAuthorPrompt?.value || "",
         estimated_minutes: els.activityAuthorMinutes?.value || "30",
+        language: els.activityAuthorLanguage?.value || "",
+        source_name: els.activityAuthorSourceName?.value || "",
         class_id: els.activityAuthorClass?.value || "",
         github_team: els.activityAuthorTeam?.value || "",
         path_id: els.activityAuthorPath?.value || "",
@@ -2572,8 +2621,8 @@ function assignmentPlanPayload() {
   return {
     activity_path: els.activityPath.value,
     targets_text: els.targetsText.value,
-    language: "",
-    source_name: "",
+    language: els.activityAuthorLanguage?.value || "",
+    source_name: els.activityAuthorSourceName?.value || "",
     thebitlab_ref: "",
     overwrite: false,
   };
@@ -2820,6 +2869,18 @@ function applyAssignmentAiDraftToActivityForm() {
     if (prompt && els.activityAuthorPrompt) els.activityAuthorPrompt.value = prompt;
     const minutes = firstDraftValue(metriche, ["tempo_stimato_minuti"]) || firstDraftValue(patch, ["estimated_minutes"]);
     if (minutes && els.activityAuthorMinutes) els.activityAuthorMinutes.value = minutes;
+    const files = Array.isArray(draft.files) ? draft.files : [];
+    const firstSourceFile = files.find((file) => file && typeof file === "object" && String(file.path || "").trim());
+    const sourceName = firstDraftValue(patch, ["source_name", "sourceName", "file_sorgente", "nome_file"])
+      || (firstSourceFile ? String(firstSourceFile.path || "").split(/[\\/]/).pop() : "");
+    const language = firstDraftValue(patch, ["linguaggio", "language", "lingua"])
+      || languageFromSourceName(sourceName);
+    setSelectValueIfAvailable(els.activityAuthorLanguage, language);
+    if (sourceName && els.activityAuthorSourceName) {
+      els.activityAuthorSourceName.value = sourceName;
+    } else {
+      syncSourceNameForLanguage();
+    }
     setSelectValueIfAvailable(els.activityAuthorPath, firstDraftValue(contesto, ["percorso", "path_id"]));
     renderActivityAuthorMetadataSelects();
     setSelectValueIfAvailable(els.activityAuthorUda, firstDraftValue(contesto, ["uda", "uda_id"]));
@@ -2828,7 +2889,7 @@ function applyAssignmentAiDraftToActivityForm() {
     const topics = firstDraftValue(patch, ["argomenti", "topics"]);
     if (topics && els.activityAuthorTopics) els.activityAuthorTopics.value = topics;
 
-    const fileCount = Array.isArray(draft.files) ? draft.files.length : 0;
+    const fileCount = files.length;
     const assetCount = Array.isArray(patch.assets) ? patch.assets.length : 0;
     const suffix = fileCount || assetCount
       ? ` File proposti: ${fileCount}; asset dichiarati: ${assetCount}. Gli asset non vengono ancora salvati automaticamente.`
@@ -3833,6 +3894,11 @@ function selectActivity(path) {
   const activity = state.activities.find((candidate) => candidate.path === path);
   if (activity) state.activityReviewSaved = true;
   if (activity?.id) {
+    const language = activity.language || activity.linguaggio || "";
+    if (language) setSelectValueIfAvailable(els.activityAuthorLanguage, language);
+    if (els.activityAuthorSourceName) {
+      els.activityAuthorSourceName.value = activity.source_name || activity.sourceName || defaultSourceNameForLanguage(language || els.activityAuthorLanguage?.value);
+    }
     els.classId.value = activity.class_id || activity.github_team || "";
     els.classLabel.value = activity.class_label || activity.class_id || "";
     els.githubTeam.value = activity.github_team || "";
@@ -4015,6 +4081,10 @@ els.activityAuthorTopics?.addEventListener("input", () => {
   renderCompactSelect(els.activityAuthorUda, activityAuthorUdaOptions(), "Nessuna UDA", els.activityAuthorUdaCount);
   markActivityReviewDirty();
 });
+els.activityAuthorLanguage?.addEventListener("change", () => {
+  syncSourceNameForLanguage();
+  markActivityReviewDirty();
+});
 els.activityAuthorClass?.addEventListener("change", () => {
   const roster = state.classRosters.find((candidate) => (
     String(candidate.id || candidate.label || candidate.name || "").trim() === els.activityAuthorClass.value
@@ -4026,6 +4096,7 @@ els.activityAuthorClass?.addEventListener("change", () => {
   els.activityAuthorKind,
   els.activityAuthorDifficulty,
   els.activityAuthorTeam,
+  els.activityAuthorSourceName,
   els.activityAuthorPrompt,
   els.activityAuthorMinutes,
   els.activityAuthorOverwrite,
