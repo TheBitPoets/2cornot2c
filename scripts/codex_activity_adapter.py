@@ -15,7 +15,7 @@ CODEX_ACTIVITY_DRAFT_SCHEMA: dict[str, Any] = {
     "properties": {
         "summary": {"type": "string"},
         "teacher_notes": {"type": "string"},
-        "activity_patch": {"type": "object"},
+        "activity_patch_json": {"type": "string"},
         "files": {
             "type": "array",
             "items": {
@@ -28,7 +28,7 @@ CODEX_ACTIVITY_DRAFT_SCHEMA: dict[str, Any] = {
                     "description": {"type": "string"},
                 },
                 "required": ["path", "role", "content"],
-                "additionalProperties": True,
+                "additionalProperties": False,
             },
         },
         "questions": {
@@ -40,8 +40,8 @@ CODEX_ACTIVITY_DRAFT_SCHEMA: dict[str, Any] = {
             "items": {"type": "string"},
         },
     },
-    "required": ["summary", "activity_patch", "files", "teacher_notes"],
-    "additionalProperties": True,
+    "required": ["summary", "activity_patch_json", "files", "teacher_notes", "questions", "warnings"],
+    "additionalProperties": False,
 }
 
 
@@ -53,7 +53,8 @@ def codex_activity_prompt() -> str:
         "Riceverai su stdin un JSON `activity_ai_package.v1` con prompt docente, contesto, policy e file. "
         "Non modificare file sul filesystem. Restituisci solo una bozza JSON conforme allo schema richiesto. "
         "La bozza deve essere modificabile dal docente e non deve dare per approvata nessuna decisione. "
-        "Quando proponi file, includi path relativo, ruolo, visibilita, descrizione e contenuto."
+        "Quando proponi file, includi path relativo, ruolo, visibilita, descrizione e contenuto. "
+        "Il campo activity_patch_json deve contenere una stringa JSON valida con le modifiche proposte alla activity."
     )
 
 
@@ -93,14 +94,29 @@ def normalize_activity_patch(activity_patch: dict[str, Any]) -> dict[str, Any]:
     return patch
 
 
+def activity_patch_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """Return the activity patch from structured Codex output."""
+
+    if isinstance(payload.get("activity_patch"), dict):
+        return payload["activity_patch"]
+    patch_json = payload.get("activity_patch_json")
+    if not isinstance(patch_json, str) or not patch_json.strip():
+        raise ValueError("La risposta Codex non contiene `activity_patch_json` valido.")
+    try:
+        patch = json.loads(patch_json)
+    except json.JSONDecodeError as error:
+        raise ValueError(f"`activity_patch_json` non e JSON valido: {error}") from error
+    if not isinstance(patch, dict):
+        raise ValueError("`activity_patch_json` deve contenere un oggetto JSON.")
+    return patch
+
+
 def validate_codex_activity_draft(payload: dict[str, Any]) -> dict[str, Any]:
     """Return a normalized Codex activity draft or raise ValueError."""
 
     if not isinstance(payload, dict):
         raise ValueError("La risposta Codex non e un oggetto JSON.")
-    if not isinstance(payload.get("activity_patch"), dict):
-        raise ValueError("La risposta Codex non contiene `activity_patch` valido.")
-    activity_patch = normalize_activity_patch(payload["activity_patch"])
+    activity_patch = normalize_activity_patch(activity_patch_from_payload(payload))
     files = payload.get("files", [])
     if files is None:
         files = []
