@@ -225,6 +225,10 @@ select {
   overflow: visible;
 }
 
+.activityEditorStatus {
+  margin: 1rem 1.1rem 0;
+}
+
 .assignmentAiDraft {
   margin: 1.1rem;
   padding: 1rem;

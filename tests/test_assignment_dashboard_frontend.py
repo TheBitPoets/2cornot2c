@@ -596,6 +596,30 @@ def test_activity_review_step_mounts_shared_editor_inside_wizard() -> None:
     )
 
 
+def test_save_activity_from_review_enables_wizard_next() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.openActivityReviewStep();
+          tested.els.activityAuthorTitle.value = "Somma in Python";
+          tested.els.activityAuthorId.value = "somma-in-python";
+          tested.els.activityAuthorPrompt.value = "Scrivi un programma che somma due numeri.";
+          tested.state.activityReviewSaved = false;
+          tested.setAssignmentWizardStep("review");
+
+          assert.equal(tested.els.assignmentWizardNextBtn.disabled, true);
+
+          await tested.saveActivityDraft();
+
+          assert.equal(tested.state.activityReviewSaved, true);
+          assert.equal(tested.els.activityPath.value, "activities/drafts/somma-in-python.json");
+          assert.match(tested.els.activityAuthorStatus.textContent, /Activity salvata/);
+          assert.equal(tested.els.assignmentWizardNextBtn.disabled, false);
+        })();
+        """
+    )
+
+
 def test_assignment_preview_posts_plan_and_renders_assets() -> None:
     run_dashboard_js(
         """
