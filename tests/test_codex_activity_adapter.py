@@ -28,7 +28,7 @@ def test_run_codex_activity_draft_invokes_codex_exec_with_schema(tmp_path, monke
                 {
                     "summary": "Bozza pronta",
                     "teacher_notes": "Controllare rubric.",
-                    "activity_patch": {"titolo": "Somma con negativi"},
+                    "activity_patch_json": json.dumps({"titolo": "Somma con negativi"}),
                     "files": [{"path": "main.py", "role": "starter", "content": "print(0)\n"}],
                     "questions": [],
                     "warnings": [],
@@ -57,6 +57,18 @@ def test_run_codex_activity_draft_invokes_codex_exec_with_schema(tmp_path, monke
     assert captured["args"][3:5] == ["--sandbox", "read-only"]
     assert "--output-schema" in captured["args"]
     assert "activity_ai_package.v1" in captured["input"]
+
+
+def test_codex_activity_draft_schema_is_closed_for_structured_outputs() -> None:
+    schema = codex_activity_adapter.CODEX_ACTIVITY_DRAFT_SCHEMA
+
+    assert schema["additionalProperties"] is False
+    assert schema["properties"]["files"]["items"]["additionalProperties"] is False
+    assert set(schema["properties"]["files"]["items"]["required"]) == set(
+        schema["properties"]["files"]["items"]["properties"]
+    )
+    assert "activity_patch_json" in schema["required"]
+    assert "activity_patch" not in schema["properties"]
 
 
 def test_run_codex_activity_draft_reports_missing_cli(monkeypatch, tmp_path) -> None:
@@ -98,6 +110,22 @@ def test_validate_codex_activity_draft_normalizes_relative_file_paths() -> None:
     )
 
     assert draft["files"][0]["path"] == "starter/main.py"
+
+
+def test_validate_codex_activity_draft_decodes_activity_patch_json() -> None:
+    draft = codex_activity_adapter.validate_codex_activity_draft(
+        {
+            "summary": "Bozza",
+            "teacher_notes": "Note",
+            "activity_patch_json": json.dumps({"titolo": "Somma", "argomenti": ["array"]}),
+            "files": [],
+            "questions": [],
+            "warnings": [],
+        }
+    )
+
+    assert draft["activity_patch"]["titolo"] == "Somma"
+    assert draft["activity_patch"]["argomenti"] == ["array"]
 
 
 def test_validate_codex_activity_draft_normalizes_activity_patch_asset_paths() -> None:

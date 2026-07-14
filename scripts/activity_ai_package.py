@@ -99,6 +99,18 @@ def activity_files_for_ai(activity_path: Path, activity: dict[str, Any]) -> list
     return files
 
 
+def ai_package_language(activity: dict[str, Any], explicit_language: str | None = None) -> str:
+    """Return a supported language for AI packaging, tolerating empty draft metadata."""
+
+    if explicit_language and str(explicit_language).strip():
+        return create_submission_scaffold.validate_language(explicit_language)
+    for key in ("linguaggio", "language"):
+        value = activity.get(key)
+        if value is not None and str(value).strip():
+            return create_submission_scaffold.validate_language(value)
+    return create_submission_scaffold.validate_language("c")
+
+
 def build_activity_ai_package(
     *,
     activity_path: Path,
@@ -126,7 +138,7 @@ def build_activity_ai_package(
         activity_path=activity_path,
         targets=targets,
         source_name=source_name,
-        language=language,
+        language=ai_package_language(activity, language),
         thebitlab_ref=thebitlab_ref,
         overwrite=False,
     )

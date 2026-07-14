@@ -398,6 +398,7 @@ def run_dashboard_js(assertions: str) -> None:
         renderAssignmentPlan,
         renderAssignmentAiPackage,
         renderAssignmentCodexDraft,
+        applyAssignmentAiDraftToActivityForm,
         setAssignmentWizardStep,
         assignmentPlanErrorMessage,
         previewAssignmentPlan,
@@ -747,6 +748,7 @@ def test_assignment_wizard_contains_teacher_editable_ai_step() -> None:
     assert 'id="assignmentAiPrompt"' in assignment_section
     assert 'id="assignmentAiDraftText"' in assignment_section
     assert 'id="assignmentAiGenerateBtn"' in assignment_section
+    assert 'id="assignmentAiApplyDraftBtn"' in assignment_section
     assert "Genera bozza" in assignment_section
     assert "Contesto da inviare" in assignment_section
     assert "Asset, starter file, test e soluzione" in assignment_section
@@ -811,6 +813,23 @@ def test_assignment_ai_package_payload_includes_prompt_policy_and_targets() -> N
     )
 
 
+def test_assignment_ai_package_payload_includes_current_teacher_draft() -> None:
+    run_dashboard_js(
+        """
+        tested.els.assignmentAiDraftText.value = JSON.stringify({
+          summary: "Prima bozza",
+          activity_patch: { titolo: "Somma guidata" },
+          files: [],
+        });
+
+        const payload = tested.assignmentAiPackagePayload();
+
+        assert.equal(payload.current_draft.summary, "Prima bozza");
+        assert.equal(payload.current_draft.activity_patch.titolo, "Somma guidata");
+        """
+    )
+
+
 def test_preview_assignment_ai_package_posts_bundle_request_and_renders_json() -> None:
     run_dashboard_js(
         """
@@ -840,6 +859,24 @@ def test_preview_assignment_ai_package_posts_bundle_request_and_renders_json() -
     )
 
 
+def test_generate_assignment_ai_draft_blocks_invalid_current_draft_json() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.els.assignmentAiProvider.value = "codex";
+          tested.els.assignmentAiDraftText.value = "{";
+
+          await tested.generateAssignmentAiDraft();
+
+          const call = tested.fetchCalls.find((entry) => entry.path === "/api/activities/ai-codex-draft");
+          assert.equal(call, undefined);
+          assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /Bozza AI non valida/);
+          assert.match(tested.els.status.textContent, /Bozza AI non valida/);
+        })();
+        """
+    )
+
+
 def test_generate_assignment_ai_draft_with_codex_posts_request_and_fills_teacher_draft() -> None:
     run_dashboard_js(
         """
@@ -862,6 +899,56 @@ def test_generate_assignment_ai_draft_with_codex_posts_request_and_fills_teacher
           assert.match(tested.els.status.textContent, /Bozza Codex pronta/);
         })();
         """
+    )
+
+
+def test_apply_assignment_ai_draft_to_activity_form_keeps_teacher_in_control() -> None:
+    run_dashboard_js(
+        """
+        tested.els.assignmentAiDraftText.value = JSON.stringify({
+          summary: "Bozza Codex pronta",
+          activity_patch: {
+            id: "somma-negativi-python",
+            titolo: "Somma con numeri negativi",
+            tipo: "laboratorio",
+            difficolta: "C",
+            argomenti: ["variabili", "input"],
+            consegna: "Scrivi un programma che somma due interi anche negativi.",
+            metriche: { tempo_stimato_minuti: 35 },
+            assets: [{ type: "starter", path: "starter/main.py", target_path: "main.py" }],
+          },
+          files: [{ path: "starter/main.py", role: "starter", content: "print(0)\\n" }],
+          teacher_notes: "Controllare la rubric.",
+        });
+
+        const applied = tested.applyAssignmentAiDraftToActivityForm();
+
+        assert.equal(applied, true);
+        assert.equal(tested.els.activityAuthorTitle.value, "Somma con numeri negativi");
+        assert.equal(tested.els.activityAuthorId.value, "somma-negativi-python");
+        assert.equal(tested.els.activityAuthorKind.value, "laboratorio");
+        assert.equal(tested.els.activityAuthorDifficulty.value, "C");
+        assert.equal(tested.els.activityAuthorTopics.value, "variabili, input");
+        assert.equal(tested.els.activityAuthorPrompt.value, "Scrivi un programma che somma due interi anche negativi.");
+        assert.equal(tested.els.activityAuthorMinutes.value, "35");
+        assert.match(tested.els.activityAuthorStatus.textContent, /Bozza AI applicata/);
+        assert.match(tested.els.activityAuthorStatus.textContent, /Gli asset non vengono ancora salvati automaticamente/);
+        assert.match(tested.els.status.textContent, /docente puo ancora modificare tutto/);
+      """
+    )
+
+
+def test_apply_assignment_ai_draft_reports_invalid_json() -> None:
+    run_dashboard_js(
+        """
+        tested.els.assignmentAiDraftText.value = "{";
+
+        const applied = tested.applyAssignmentAiDraftToActivityForm();
+
+        assert.equal(applied, false);
+        assert.match(tested.els.activityAuthorStatus.textContent, /Bozza AI non applicata/);
+        assert.match(tested.els.status.textContent, /Bozza AI non valida/);
+      """
     )
 
 
