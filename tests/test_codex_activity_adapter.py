@@ -13,13 +13,15 @@ def test_run_codex_activity_draft_invokes_codex_exec_with_schema(tmp_path, monke
         captured["which"] = command
         return "codex"
 
-    def fake_run(args, *, cwd, input, capture_output, text, timeout, check):
+    def fake_run(args, *, cwd, input, capture_output, text, encoding, timeout, check):
         captured["args"] = args
         captured["cwd"] = cwd
         captured["input"] = input
+        captured["encoding"] = encoding
         captured["timeout"] = timeout
         assert capture_output is True
         assert text is True
+        assert encoding == "utf-8"
         assert check is False
         return subprocess.CompletedProcess(
             args,
@@ -41,7 +43,7 @@ def test_run_codex_activity_draft_invokes_codex_exec_with_schema(tmp_path, monke
     monkeypatch.setattr(codex_activity_adapter.subprocess, "run", fake_run)
 
     result = codex_activity_adapter.run_codex_activity_draft(
-        {"schema_version": "activity_ai_package.v1", "prompt": "Crea una variante"},
+        {"schema_version": "activity_ai_package.v1", "prompt": "Rendila un po' più complessa"},
         cwd=tmp_path,
         codex_command="codex-test",
         timeout_seconds=12,
@@ -51,12 +53,14 @@ def test_run_codex_activity_draft_invokes_codex_exec_with_schema(tmp_path, monke
     assert result["draft"]["activity_patch"]["titolo"] == "Somma con negativi"
     assert captured["which"] == "codex-test"
     assert captured["cwd"] == tmp_path
+    assert captured["encoding"] == "utf-8"
     assert captured["timeout"] == 12
     assert captured["args"][0] == "codex"
     assert captured["args"][1:3] == ["exec", "--ephemeral"]
     assert captured["args"][3:5] == ["--sandbox", "read-only"]
     assert "--output-schema" in captured["args"]
     assert "activity_ai_package.v1" in captured["input"]
+    assert "più complessa" in captured["input"]
 
 
 def test_codex_activity_draft_schema_is_closed_for_structured_outputs() -> None:

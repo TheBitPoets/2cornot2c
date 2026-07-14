@@ -196,6 +196,23 @@ select {
   min-height: 8rem;
 }
 
+.assignmentWizardNav {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .8rem;
+  margin: 0 1.1rem 1.1rem;
+  padding: .85rem;
+  border: 1px solid rgba(17, 17, 17, .1);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.assignmentWizardNav .status {
+  margin: 0;
+  text-align: center;
+}
+
 .assignmentAiDraft {
   margin: 1.1rem;
   padding: 1rem;
@@ -265,6 +282,10 @@ select {
 
 .assignmentPackageJson {
   margin-top: .9rem;
+}
+
+.assignmentPackageJson.wideField {
+  margin-top: 0;
 }
 
 .assignmentPackageJson summary {
@@ -1038,6 +1059,55 @@ label > textarea {
   padding: 0;
   resize: both;
   overflow: hidden;
+}
+
+.activityEditorDialog {
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(96vw, 76rem);
+  height: min(88vh, 44rem);
+  min-width: min(92vw, 34rem);
+  min-height: 24rem;
+  max-width: 98vw;
+  max-height: 94vh;
+  margin: auto;
+  border: 1px solid rgba(17, 17, 17, .18);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 22px 70px rgba(17, 17, 17, .28);
+  color: var(--ink);
+  padding: 0;
+  resize: both;
+  overflow: hidden;
+}
+
+.activityEditorDialog[open] {
+  display: grid;
+}
+
+.activityEditorDialog::backdrop {
+  background: rgba(17, 17, 17, .42);
+}
+
+.activityEditorDialogHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid var(--line);
+  background: #ffffff;
+}
+
+.activityEditorDialogHead h2 {
+  margin-bottom: .25rem;
+  font-size: 1.2rem;
+}
+
+.activityEditorBody {
+  min-height: 0;
+  overflow: auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
 }
 
 .overviewActions {
@@ -2032,6 +2102,14 @@ code {
 
   .assignmentPlanGrid {
     grid-template-columns: 1fr;
+  }
+
+  .assignmentWizardNav {
+    grid-template-columns: 1fr;
+  }
+
+  .assignmentWizardNav .status {
+    text-align: left;
   }
 
   .overviewFilters {

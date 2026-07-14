@@ -384,6 +384,9 @@ def run_dashboard_js(assertions: str) -> None:
         setupPanelDragAndDrop,
         renderLegend,
         saveActivityDraft,
+        openActivityEditor,
+        closeActivityEditor,
+        renderActivityPanelSummary,
         activityAuthorTopicValue,
         activityAuthorTopicOptions,
         renderTopicSearch,
@@ -398,8 +401,10 @@ def run_dashboard_js(assertions: str) -> None:
         renderAssignmentPlan,
         renderAssignmentAiPackage,
         renderAssignmentCodexDraft,
+        updateAssignmentAiApplyState,
         applyAssignmentAiDraftToActivityForm,
         setAssignmentWizardStep,
+        moveAssignmentWizardStep,
         assignmentPlanErrorMessage,
         previewAssignmentPlan,
         previewAssignmentAiPackage,
@@ -538,8 +543,33 @@ def test_save_activity_draft_posts_form_and_selects_saved_activity() -> None:
           assert.equal(tested.state.activities.length, 1);
           assert.equal(tested.els.activityPath.value, "activities/drafts/somma-in-python.json");
           assert.match(tested.els.activityAuthorStatus.textContent, /Activity salvata/);
+          assert.match(tested.els.activityPanelStatus.textContent, /Activity salvata/);
         })();
         """
+    )
+
+
+def test_activity_editor_modal_is_shared_by_panel_and_wizard() -> None:
+    html = open("tools/assignment_dashboard.html", encoding="utf-8").read()
+
+    assert 'id="activityEditorDialog"' in html
+    assert 'id="openActivityEditorBtn"' in html
+    assert 'id="wizardOpenActivityEditorBtn"' in html
+    assert 'id="activityAuthorTitle"' in html.split('id="activityEditorDialog"', 1)[1]
+
+
+def test_activity_editor_modal_opens_and_closes() -> None:
+    run_dashboard_js(
+        """
+        tested.openActivityEditor("wizard");
+
+        assert.equal(tested.els.activityEditorDialog.open, true);
+        assert.match(tested.els.activityPanelStatus.textContent, /wizard assegnazione/);
+
+        tested.closeActivityEditor();
+
+        assert.equal(tested.els.activityEditorDialog.open, false);
+      """
     )
 
 
@@ -749,7 +779,14 @@ def test_assignment_wizard_contains_teacher_editable_ai_step() -> None:
     assert 'id="assignmentAiDraftText"' in assignment_section
     assert 'id="assignmentAiGenerateBtn"' in assignment_section
     assert 'id="assignmentAiApplyDraftBtn"' in assignment_section
-    assert "Genera bozza" in assignment_section
+    assert 'id="assignmentAiApplyDraftBtn" type="button" disabled' in assignment_section
+    assert "Genera proposta AI" in assignment_section
+    assert "Usa questa proposta" in assignment_section
+    assert "Dettagli tecnici del pacchetto AI" in assignment_section
+    assert "Mostra pacchetto tecnico" in assignment_section
+    assert 'id="assignmentWizardPrevBtn"' in assignment_section
+    assert 'id="assignmentWizardNextBtn"' in assignment_section
+    assert 'id="assignmentWizardHint"' in assignment_section
     assert "Contesto da inviare" in assignment_section
     assert "Asset, starter file, test e soluzione" in assignment_section
     assert "Pacchetto file activity" in assignment_section
@@ -896,8 +933,29 @@ def test_generate_assignment_ai_draft_with_codex_posts_request_and_fills_teacher
           assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /Bozza Codex pronta/);
           assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /File proposti/);
           assert.match(tested.els.assignmentAiDraftText.value, /Somma con negativi/);
+          assert.equal(tested.els.assignmentAiApplyDraftBtn.disabled, false);
           assert.match(tested.els.status.textContent, /Bozza Codex pronta/);
         })();
+        """
+    )
+
+
+def test_assignment_ai_apply_button_tracks_valid_draft_text() -> None:
+    run_dashboard_js(
+        """
+        assert.equal(tested.els.assignmentAiApplyDraftBtn.disabled, false);
+
+        tested.els.assignmentAiDraftText.value = "";
+        tested.updateAssignmentAiApplyState();
+        assert.equal(tested.els.assignmentAiApplyDraftBtn.disabled, true);
+
+        tested.els.assignmentAiDraftText.value = "{";
+        tested.updateAssignmentAiApplyState();
+        assert.equal(tested.els.assignmentAiApplyDraftBtn.disabled, true);
+
+        tested.els.assignmentAiDraftText.value = JSON.stringify({ activity_patch: { titolo: "Somma" }, files: [] });
+        tested.updateAssignmentAiApplyState();
+        assert.equal(tested.els.assignmentAiApplyDraftBtn.disabled, false);
         """
     )
 
@@ -934,6 +992,7 @@ def test_apply_assignment_ai_draft_to_activity_form_keeps_teacher_in_control() -
         assert.match(tested.els.activityAuthorStatus.textContent, /Bozza AI applicata/);
         assert.match(tested.els.activityAuthorStatus.textContent, /Gli asset non vengono ancora salvati automaticamente/);
         assert.match(tested.els.status.textContent, /docente puo ancora modificare tutto/);
+        assert.equal(tested.els.activityEditorDialog.open, true);
       """
     )
 
@@ -985,6 +1044,33 @@ def test_assignment_wizard_switches_visible_step() -> None:
         assert.equal(activityTab["aria-selected"], "false");
         assert.equal(aiStep.hidden, false);
         assert.equal(activityStep.hidden, true);
+        assert.match(tested.els.assignmentWizardHint.textContent, /Step 2 di 6/);
+        assert.equal(tested.els.assignmentWizardPrevBtn.disabled, false);
+        assert.equal(tested.els.assignmentWizardNextBtn.disabled, false);
+        """
+    )
+
+
+def test_assignment_wizard_prev_next_guides_the_flow() -> None:
+    run_dashboard_js(
+        """
+        tested.setAssignmentWizardStep("activity");
+
+        assert.equal(tested.els.assignmentWizardPrevBtn.disabled, true);
+        assert.match(tested.els.assignmentWizardHint.textContent, /Step 1 di 6/);
+
+        tested.moveAssignmentWizardStep(1);
+        assert.match(tested.els.assignmentWizardHint.textContent, /Step 2 di 6/);
+
+        tested.moveAssignmentWizardStep(10);
+        assert.match(tested.els.assignmentWizardHint.textContent, /Step 6 di 6/);
+        assert.equal(tested.els.assignmentWizardNextBtn.disabled, true);
+        assert.equal(tested.els.assignmentWizardNextBtn.textContent, "Fine percorso");
+
+        tested.moveAssignmentWizardStep(-1);
+        assert.match(tested.els.assignmentWizardHint.textContent, /Step 5 di 6/);
+        assert.equal(tested.els.assignmentWizardNextBtn.disabled, false);
+        assert.equal(tested.els.assignmentWizardNextBtn.textContent, "Avanti");
         """
     )
 

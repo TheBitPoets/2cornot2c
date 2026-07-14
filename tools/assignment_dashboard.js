@@ -18,6 +18,32 @@ const OVERVIEW_TYPE_ORDER = [
   "verifica-scritta",
 ];
 const OVERVIEW_SUPPORT_ORDER = ["senza-aiuto", "feedback-tecnico", "studio-guidato", "ai-assisted"];
+const ASSIGNMENT_WIZARD_STEPS = [
+  {
+    id: "activity",
+    hint: "Step 1 di 6: scegli una activity salvata oppure apri l'editor per crearla o modificarla.",
+  },
+  {
+    id: "ai",
+    hint: "Step 2 di 6: genera o rifinisci una proposta AI, poi usala nell'editor activity.",
+  },
+  {
+    id: "targets",
+    hint: "Step 3 di 6: scegli classe, team o studenti destinatari della consegna.",
+  },
+  {
+    id: "dates",
+    hint: "Step 4 di 6: imposta data di assegnazione, scadenza e ora simulata se serve.",
+  },
+  {
+    id: "preview",
+    hint: "Step 5 di 6: controlla anteprima, target e asset prima di salvare o distribuire.",
+  },
+  {
+    id: "confirm",
+    hint: "Step 6 di 6: salva la consegna e, quando sei pronto, distribuisci gli asset ai target.",
+  },
+];
 const OVERVIEW_STATUS_ORDER = [
   "missing",
   "pending",
@@ -186,6 +212,12 @@ const els = {
   legendButtons: document.querySelectorAll("[data-legend-topic]"),
   legendTabButtons: document.querySelectorAll("[data-legend-tab]"),
   filterButtons: document.querySelectorAll("[data-filter]"),
+  activityEditorDialog: document.querySelector("#activityEditorDialog"),
+  activityEditorCloseBtn: document.querySelector("#activityEditorCloseBtn"),
+  openActivityEditorBtn: document.querySelector("#openActivityEditorBtn"),
+  wizardOpenActivityEditorBtn: document.querySelector("#wizardOpenActivityEditorBtn"),
+  activityPanelStatus: document.querySelector("#activityPanelStatus"),
+  activityPanelSummary: document.querySelector("#activityPanelSummary"),
   activityAuthorStatus: document.querySelector("#activityAuthorStatus"),
   activityAuthorTitle: document.querySelector("#activityAuthorTitle"),
   activityAuthorId: document.querySelector("#activityAuthorId"),
@@ -230,6 +262,9 @@ const els = {
   assignmentPlanPreview: document.querySelector("#assignmentPlanPreview"),
   assignmentStepTabs: document.querySelectorAll("[data-assignment-step-tab]"),
   assignmentSteps: document.querySelectorAll("[data-assignment-step]"),
+  assignmentWizardPrevBtn: document.querySelector("#assignmentWizardPrevBtn"),
+  assignmentWizardNextBtn: document.querySelector("#assignmentWizardNextBtn"),
+  assignmentWizardHint: document.querySelector("#assignmentWizardHint"),
   assignmentAiProvider: document.querySelector("#assignmentAiProvider"),
   assignmentAiPrompt: document.querySelector("#assignmentAiPrompt"),
   assignmentAiStudentBudget: document.querySelector("#assignmentAiStudentBudget"),
@@ -786,10 +821,10 @@ function activityAuthorTopicValue() {
   return match?.dataset.topicValue || rawValue;
 }
 
-function renderActivityAuthorMetadataSelects() {
+function renderActivityAuthorMetadataSelects(preserveTopicPartial = false) {
   renderCompactSelect(els.activityAuthorPath, activityAuthorPathOptions(), "Nessun percorso", els.activityAuthorPathCount);
   renderCompactSelect(els.activityAuthorUda, activityAuthorUdaOptions(els.activityAuthorPath?.value || "", ""), "Nessuna UDA", els.activityAuthorUdaCount);
-  renderTopicSearch(activityAuthorTopicOptions());
+  renderTopicSearch(activityAuthorTopicOptions(), preserveTopicPartial);
   renderCompactSelect(els.activityAuthorUda, activityAuthorUdaOptions(), "Nessuna UDA", els.activityAuthorUdaCount);
   renderCompactSelect(
     els.activityAuthorClass,
@@ -1593,6 +1628,55 @@ function applyAssignmentToGenerateForm(assignmentId) {
   return assignment;
 }
 
+function activityEditorSummaryItems() {
+  const current = state.activities.find((activity) => activity.path === (els.activityPath?.value || "").trim());
+  return [
+    {
+      label: "Activity selezionata",
+      value: current?.title || current?.id || els.activityAuthorTitle?.value || "Nessuna",
+      tooltip: "Activity attualmente selezionata o bozza in modifica nell'editor.",
+    },
+    {
+      label: "Tipo",
+      value: current?.kind || els.activityAuthorKind?.value || "-",
+      tooltip: "Tipo didattico della activity corrente.",
+    },
+    {
+      label: "Percorso/UDA",
+      value: [els.activityAuthorPath?.value, els.activityAuthorUda?.value].filter(Boolean).join(" / ") || "-",
+      tooltip: "Contesto didattico associato alla bozza o activity.",
+    },
+  ];
+}
+
+function renderActivityPanelSummary() {
+  if (!els.activityPanelSummary) return;
+  els.activityPanelSummary.innerHTML = activityEditorSummaryItems().map((item) => `
+    <div class="studentsSummaryItem" title="${escapeHtml(item.tooltip)}">
+      <strong>${escapeHtml(item.label)}</strong>
+      <span>${escapeHtml(item.value)}</span>
+    </div>
+  `).join("");
+}
+
+function openActivityEditor(source = "panel") {
+  renderActivityAuthorMetadataSelects(true);
+  renderActivityPanelSummary();
+  if (els.activityPanelStatus) {
+    els.activityPanelStatus.textContent = source === "wizard"
+      ? "Editor activity aperto dal wizard assegnazione."
+      : "Editor activity aperto dalla libreria.";
+  }
+  if (els.activityEditorDialog?.showModal) {
+    els.activityEditorDialog.showModal();
+  }
+}
+
+function closeActivityEditor() {
+  els.activityEditorDialog?.close?.();
+  renderActivityPanelSummary();
+}
+
 async function saveActivityDraft() {
   if (!els.saveActivityBtn) return;
   els.saveActivityBtn.disabled = true;
@@ -1622,6 +1706,10 @@ async function saveActivityDraft() {
     if (els.activityAuthorStatus) {
       els.activityAuthorStatus.textContent = `Activity salvata: ${payload.activity?.path || "-"}.`;
     }
+    if (els.activityPanelStatus) {
+      els.activityPanelStatus.textContent = `Activity salvata: ${payload.activity?.title || payload.activity?.id || "-"}.`;
+    }
+    renderActivityPanelSummary();
     setStatus(`Activity salvata: ${payload.activity?.title || payload.activity?.id || "-"}.`);
   } catch (error) {
     if (els.activityAuthorStatus) els.activityAuthorStatus.textContent = `Errore: ${error.message}`;
@@ -2377,6 +2465,7 @@ function renderAssignmentCodexDraft(response) {
   if (els.assignmentAiDraftText) {
     els.assignmentAiDraftText.value = JSON.stringify(response.draft, null, 2);
   }
+  updateAssignmentAiApplyState();
   if (!els.assignmentAiPackagePreview) return;
   const files = Array.isArray(response.draft.files) ? response.draft.files : [];
   const questions = Array.isArray(response.draft.questions) ? response.draft.questions : [];
@@ -2404,6 +2493,20 @@ function renderAssignmentCodexDraft(response) {
       </section>
     </div>
   `;
+}
+
+function updateAssignmentAiApplyState() {
+  if (!els.assignmentAiApplyDraftBtn) return false;
+  try {
+    parseAssignmentAiDraftText();
+    els.assignmentAiApplyDraftBtn.disabled = false;
+    els.assignmentAiApplyDraftBtn.title = "Usa la proposta AI nell'editor activity. Il docente puo modificarla prima di salvare.";
+    return true;
+  } catch (error) {
+    els.assignmentAiApplyDraftBtn.disabled = true;
+    els.assignmentAiApplyDraftBtn.title = "Genera una proposta AI valida prima di usarla nell'editor activity.";
+    return false;
+  }
 }
 
 function parseAssignmentAiDraftText() {
@@ -2492,6 +2595,7 @@ function applyAssignmentAiDraftToActivityForm() {
     }
     setStatus("Bozza AI applicata al form activity: il docente puo ancora modificare tutto.");
     setAssignmentWizardStep("activity");
+    openActivityEditor("wizard");
     return true;
   } catch (error) {
     if (els.activityAuthorStatus) els.activityAuthorStatus.textContent = `Bozza AI non applicata: ${error.message}`;
@@ -2501,7 +2605,7 @@ function applyAssignmentAiDraftToActivityForm() {
 }
 
 function setAssignmentWizardStep(step) {
-  const selectedStep = step || "activity";
+  const selectedStep = ASSIGNMENT_WIZARD_STEPS.some((candidate) => candidate.id === step) ? step : "activity";
   els.assignmentStepTabs.forEach((button) => {
     const isActive = button.dataset.assignmentStepTab === selectedStep;
     button.classList.toggle("isActive", isActive);
@@ -2511,6 +2615,22 @@ function setAssignmentWizardStep(step) {
     section.hidden = section.dataset.assignmentStep !== selectedStep;
     section.classList.toggle("isActive", section.dataset.assignmentStep === selectedStep);
   });
+  const index = ASSIGNMENT_WIZARD_STEPS.findIndex((candidate) => candidate.id === selectedStep);
+  const current = ASSIGNMENT_WIZARD_STEPS[index] || ASSIGNMENT_WIZARD_STEPS[0];
+  if (els.assignmentWizardHint) els.assignmentWizardHint.textContent = current.hint;
+  if (els.assignmentWizardPrevBtn) els.assignmentWizardPrevBtn.disabled = index <= 0;
+  if (els.assignmentWizardNextBtn) {
+    const isLast = index >= ASSIGNMENT_WIZARD_STEPS.length - 1;
+    els.assignmentWizardNextBtn.disabled = isLast;
+    els.assignmentWizardNextBtn.textContent = isLast ? "Fine percorso" : "Avanti";
+  }
+}
+
+function moveAssignmentWizardStep(offset) {
+  const current = Array.from(els.assignmentSteps).find((section) => !section.hidden)?.dataset.assignmentStep || "activity";
+  const index = ASSIGNMENT_WIZARD_STEPS.findIndex((candidate) => candidate.id === current);
+  const next = ASSIGNMENT_WIZARD_STEPS[Math.min(Math.max(index + offset, 0), ASSIGNMENT_WIZARD_STEPS.length - 1)];
+  setAssignmentWizardStep(next?.id || "activity");
 }
 
 function assignmentRecordPayload() {
@@ -2657,6 +2777,7 @@ async function generateAssignmentAiDraft() {
   if (!els.assignmentAiGenerateBtn) return;
   const provider = els.assignmentAiProvider?.value || "codex";
   els.assignmentAiGenerateBtn.disabled = true;
+  if (els.assignmentAiApplyDraftBtn) els.assignmentAiApplyDraftBtn.disabled = true;
   setStatus(`Generazione bozza con provider ${provider}...`);
   if (els.assignmentAiPackagePreview) {
     els.assignmentAiPackagePreview.innerHTML = '<p class="status">Generazione bozza in corso...</p>';
@@ -2679,6 +2800,7 @@ async function generateAssignmentAiDraft() {
     if (els.assignmentAiPackagePreview) {
       els.assignmentAiPackagePreview.innerHTML = `<p class="status">Bozza AI non disponibile: ${escapeHtml(message)}</p>`;
     }
+    updateAssignmentAiApplyState();
     setStatus(`Bozza AI non disponibile: ${message}`);
   } finally {
     els.assignmentAiGenerateBtn.disabled = false;
@@ -3411,6 +3533,7 @@ function selectActivity(path) {
     els.outputName.value = defaultOutputName(activity);
     renderRosterPanel();
   }
+  renderActivityPanelSummary();
 }
 
 function updateOutputNameForCurrentActivity() {
@@ -3517,10 +3640,17 @@ els.resetPanelOrderBtn.addEventListener("click", resetPanelOrder);
 els.assignmentStepTabs.forEach((button) => {
   button.addEventListener("click", () => setAssignmentWizardStep(button.dataset.assignmentStepTab));
 });
+els.assignmentWizardPrevBtn?.addEventListener("click", () => moveAssignmentWizardStep(-1));
+els.assignmentWizardNextBtn?.addEventListener("click", () => moveAssignmentWizardStep(1));
+setAssignmentWizardStep("activity");
 els.previewAssignmentBtn?.addEventListener("click", previewAssignmentPlan);
 els.assignmentAiAskBtn?.addEventListener("click", previewAssignmentAiPackage);
 els.assignmentAiGenerateBtn?.addEventListener("click", generateAssignmentAiDraft);
 els.assignmentAiApplyDraftBtn?.addEventListener("click", applyAssignmentAiDraftToActivityForm);
+els.assignmentAiDraftText?.addEventListener("input", updateAssignmentAiApplyState);
+els.openActivityEditorBtn?.addEventListener("click", () => openActivityEditor("panel"));
+els.wizardOpenActivityEditorBtn?.addEventListener("click", () => openActivityEditor("wizard"));
+els.activityEditorCloseBtn?.addEventListener("click", closeActivityEditor);
 els.saveAssignmentBtn?.addEventListener("click", saveAssignmentRecord);
 els.distributeAssignmentBtn?.addEventListener("click", distributeAssignment);
 els.generateReportBtn.addEventListener("click", generateReport);
