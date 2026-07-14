@@ -156,6 +156,9 @@ const state = {
   assignmentAiGenerating: false,
   assignmentAiPromptLocked: false,
   assignmentAiDraftFilePath: "",
+  assignmentAiPreviewView: "draft",
+  assignmentAiDraftHtml: "",
+  assignmentAiContextHtml: "",
   selectedRosterTargetIds: new Set(),
   selectedAssignmentId: "",
 };
@@ -305,6 +308,7 @@ const els = {
   assignmentAiDraftText: document.querySelector("#assignmentAiDraftText"),
   assignmentAiProgress: document.querySelector("#assignmentAiProgress"),
   assignmentAiPackagePreview: document.querySelector("#assignmentAiPackagePreview"),
+  assignmentAiPreviewButtons: document.querySelectorAll("[data-ai-preview-view]"),
   assignmentAiFilesDialog: document.querySelector("#assignmentAiFilesDialog"),
   assignmentAiFilesCloseBtn: document.querySelector("#assignmentAiFilesCloseBtn"),
   assignmentAiFilesStatus: document.querySelector("#assignmentAiFilesStatus"),
@@ -2649,10 +2653,28 @@ function assignmentAiPackagePayload() {
   return payload;
 }
 
-function renderAssignmentAiPackage(aiPackage) {
+function setAssignmentAiPreviewView(view) {
+  state.assignmentAiPreviewView = view === "context" ? "context" : "draft";
+  els.assignmentAiPreviewButtons?.forEach((button) => {
+    const isActive = button.dataset.aiPreviewView === state.assignmentAiPreviewView;
+    button.classList.toggle("isActive", isActive);
+    button.setAttribute("aria-selected", isActive ? "true" : "false");
+  });
   if (!els.assignmentAiPackagePreview) return;
+  const html = state.assignmentAiPreviewView === "context"
+    ? state.assignmentAiContextHtml
+    : state.assignmentAiDraftHtml;
+  els.assignmentAiPackagePreview.innerHTML = html || (
+    state.assignmentAiPreviewView === "context"
+      ? '<p class="status">Clicca Aggiorna controllo dati per vedere prompt, metadati e file di contesto inviati all\'AI.</p>'
+      : '<p class="status">Qui comparira la proposta generata dall\'AI. I dati inviati all\'AI restano disponibili nella vista dedicata.</p>'
+  );
+}
+
+function renderAssignmentAiPackage(aiPackage) {
   if (!aiPackage) {
-    els.assignmentAiPackagePreview.innerHTML = '<p class="status">Prepara il pacchetto AI per controllare prompt, contesto e file prima di chiamare provider o Codex.</p>';
+    state.assignmentAiContextHtml = '<p class="status">Clicca Aggiorna controllo dati per vedere prompt, metadati e file di contesto inviati all\'AI.</p>';
+    setAssignmentAiPreviewView("context");
     return;
   }
   const files = Array.isArray(aiPackage.files) ? aiPackage.files : [];
@@ -2660,7 +2682,7 @@ function renderAssignmentAiPackage(aiPackage) {
   const skippedFiles = files.filter((file) => !file.included);
   const promptStatus = aiPackage.prompt?.trim() ? "prompt incluso" : "prompt vuoto";
   const draftStatus = aiPackage.current_draft ? "bozza corrente inclusa" : "nessuna bozza corrente";
-  els.assignmentAiPackagePreview.innerHTML = `
+  state.assignmentAiContextHtml = `
     <div class="assignmentPlanHeader">
       <div>
         <strong>${escapeHtml(aiPackage.activity?.title || aiPackage.activity?.id || "Controllo dati AI")}</strong>
@@ -2691,6 +2713,7 @@ function renderAssignmentAiPackage(aiPackage) {
       <pre>${escapeHtml(JSON.stringify(aiPackage, null, 2))}</pre>
     </details>
   `;
+  setAssignmentAiPreviewView("context");
 }
 
 function renderAssignmentCodexDraft(response) {
@@ -2699,11 +2722,10 @@ function renderAssignmentCodexDraft(response) {
     els.assignmentAiDraftText.value = JSON.stringify(response.draft, null, 2);
   }
   updateAssignmentAiApplyState();
-  if (!els.assignmentAiPackagePreview) return;
   const files = Array.isArray(response.draft.files) ? response.draft.files : [];
   const questions = Array.isArray(response.draft.questions) ? response.draft.questions : [];
   const warnings = Array.isArray(response.draft.warnings) ? response.draft.warnings : [];
-  els.assignmentAiPackagePreview.innerHTML = `
+  state.assignmentAiDraftHtml = `
     <div class="assignmentPlanHeader">
       <div>
         <strong>Bozza Codex pronta</strong>
@@ -2726,6 +2748,7 @@ function renderAssignmentCodexDraft(response) {
       </section>
     </div>
   `;
+  setAssignmentAiPreviewView("draft");
 }
 
 function updateAssignmentAiApplyState() {
@@ -3196,9 +3219,8 @@ async function previewAssignmentAiPackage() {
   if (!els.assignmentAiAskBtn) return;
   els.assignmentAiAskBtn.disabled = true;
   setStatus("Aggiornamento controllo dati inviati all'AI...");
-  if (els.assignmentAiPackagePreview) {
-    els.assignmentAiPackagePreview.innerHTML = '<p class="status">Aggiornamento controllo dati inviati all\'AI...</p>';
-  }
+  state.assignmentAiContextHtml = '<p class="status">Aggiornamento controllo dati inviati all\'AI...</p>';
+  setAssignmentAiPreviewView("context");
   try {
     const payload = await api("/api/activities/ai-package", {
       method: "POST",
@@ -3208,9 +3230,8 @@ async function previewAssignmentAiPackage() {
     setStatus("Controllo dati AI pronto: nessuna chiamata provider eseguita.");
   } catch (error) {
     const message = assignmentPlanErrorMessage(error);
-    if (els.assignmentAiPackagePreview) {
-      els.assignmentAiPackagePreview.innerHTML = `<p class="status">Controllo dati AI non disponibile: ${escapeHtml(message)}</p>`;
-    }
+    state.assignmentAiContextHtml = `<p class="status">Controllo dati AI non disponibile: ${escapeHtml(message)}</p>`;
+    setAssignmentAiPreviewView("context");
     setStatus(`Controllo dati AI non disponibile: ${message}`);
   } finally {
     els.assignmentAiAskBtn.disabled = false;
@@ -3230,9 +3251,8 @@ async function generateAssignmentAiDraft() {
   }
   setStatus(`Generazione bozza con provider ${provider}...`);
   setAssignmentAiProgress(true, "Generazione proposta AI in corso", `Provider: ${provider}. Attendi il completamento prima di avanzare.`);
-  if (els.assignmentAiPackagePreview) {
-    els.assignmentAiPackagePreview.innerHTML = '<p class="status">Generazione bozza in corso...</p>';
-  }
+  state.assignmentAiDraftHtml = '<p class="status">Generazione bozza in corso...</p>';
+  setAssignmentAiPreviewView("draft");
   try {
     if (provider === "manual") {
       throw new Error("Modalita manuale: scrivi direttamente la bozza nel campo dedicato.");
@@ -3249,9 +3269,8 @@ async function generateAssignmentAiDraft() {
   } catch (error) {
     const message = assignmentPlanErrorMessage(error);
     failedMessage = message;
-    if (els.assignmentAiPackagePreview) {
-      els.assignmentAiPackagePreview.innerHTML = `<p class="status">Bozza AI non disponibile: ${escapeHtml(message)}</p>`;
-    }
+    state.assignmentAiDraftHtml = `<p class="status">Bozza AI non disponibile: ${escapeHtml(message)}</p>`;
+    setAssignmentAiPreviewView("draft");
     updateAssignmentAiApplyState();
     setStatus(`Bozza AI non disponibile: ${message}`);
   } finally {
@@ -4111,6 +4130,9 @@ setAssignmentWizardStep("activity");
 els.previewAssignmentBtn?.addEventListener("click", previewAssignmentPlan);
 els.assignmentAiAskBtn?.addEventListener("click", previewAssignmentAiPackage);
 els.assignmentAiGenerateBtn?.addEventListener("click", generateAssignmentAiDraft);
+els.assignmentAiPreviewButtons?.forEach((button) => {
+  button.addEventListener("click", () => setAssignmentAiPreviewView(button.dataset.aiPreviewView));
+});
 els.assignmentAiPrompt?.addEventListener("focus", unlockAssignmentAiPrompt);
 els.assignmentAiPrompt?.addEventListener("click", unlockAssignmentAiPrompt);
 els.assignmentAiPrompt?.addEventListener("input", unlockAssignmentAiPrompt);

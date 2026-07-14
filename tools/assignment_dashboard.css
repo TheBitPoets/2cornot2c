@@ -271,6 +271,25 @@ textarea[aria-invalid="true"]:focus {
   color: #ffffff;
 }
 
+.segmentedTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+  margin: .65rem 0;
+}
+
+.segmentedTabs button {
+  box-shadow: none;
+  padding: .42rem .7rem;
+  color: var(--muted);
+}
+
+.segmentedTabs button.isActive {
+  background: #111111;
+  border-color: #111111;
+  color: #ffffff;
+}
+
 .assignmentWizardStep {
   min-height: 8rem;
 }

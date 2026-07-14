@@ -145,6 +145,10 @@
                 <div class="generateActions">
                   <button id="assignmentAiAskBtn" type="button" class="smallButton" title="Aggiorna la preview di prompt, metadati e file di contesto senza chiamare il provider AI.">Aggiorna controllo dati</button>
                 </div>
+                <div class="segmentedTabs" role="tablist" aria-label="Vista risultati AI">
+                  <button type="button" data-ai-preview-view="draft" aria-selected="true">Proposta AI</button>
+                  <button type="button" data-ai-preview-view="context" aria-selected="false">Dati inviati all'AI</button>
+                </div>
                 <div id="assignmentAiPackagePreview" class="assignmentPlanPreview" aria-live="polite">
                   <p class="status">Qui vedrai prompt, metadati e file di contesto che saranno inviati al provider o a Codex.</p>
                 </div>

@@ -413,6 +413,7 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         renderAssignmentPlan,
         renderAssignmentAiPackage,
         renderAssignmentCodexDraft,
+        setAssignmentAiPreviewView,
         assignmentAiDraftFiles,
         renderAssignmentAiFilesReview,
         openAssignmentAiFilesDialog,
@@ -898,6 +899,8 @@ def test_assignment_wizard_contains_teacher_editable_ai_step() -> None:
     assert "Generazione proposta AI in corso" in assignment_section
     assert "Controllo dati inviati all'AI" in assignment_section
     assert "Aggiorna controllo dati" in assignment_section
+    assert 'data-ai-preview-view="draft"' in assignment_section
+    assert 'data-ai-preview-view="context"' in assignment_section
     assert 'id="assignmentWizardPrevBtn"' in assignment_section
     assert 'id="assignmentWizardNextBtn"' in assignment_section
     assert 'id="assignmentWizardHint"' in assignment_section
@@ -1093,6 +1096,41 @@ def test_generate_assignment_ai_draft_with_codex_posts_request_and_fills_teacher
           assert.match(tested.els.assignmentAiGenerateBtn.title, /Hai gia inviato questo prompt/);
         })();
         """
+    )
+
+
+def test_assignment_ai_preview_switches_between_draft_and_context_without_losing_content() -> None:
+    run_dashboard_js(
+        """
+        tested.renderAssignmentCodexDraft({
+          draft: {
+            summary: "Bozza pronta da mantenere",
+            activity_patch: { titolo: "Somma" },
+            files: [{ path: "starter/main.py", role: "starter", content: "print(1)\\n" }],
+          },
+        });
+        assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /Bozza Codex pronta/);
+        assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /starter\\/main.py/);
+
+        tested.renderAssignmentAiPackage({
+          schema_version: "activity_ai_package.v1",
+          provider: "codex",
+          prompt: "Crea una traccia",
+          activity: { id: "demo", title: "Demo" },
+          files: [],
+          policy: { student_budget: 5, integrity_mode: "normal" },
+          teacher_review: { required: true },
+        });
+        assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /File di contesto inviati all'AI/);
+        assert.doesNotMatch(tested.els.assignmentAiPackagePreview.innerHTML, /Bozza Codex pronta/);
+
+        tested.setAssignmentAiPreviewView("draft");
+        assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /Bozza Codex pronta/);
+        assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /starter\\/main.py/);
+
+        tested.setAssignmentAiPreviewView("context");
+        assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /File di contesto inviati all'AI/);
+      """
     )
 
 
