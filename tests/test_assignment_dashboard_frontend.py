@@ -385,6 +385,7 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         renderLegend,
         saveActivityDraft,
         validateActivityAuthorRequiredFields,
+        setActivityAuthorStatus,
         openActivityEditor,
         closeActivityEditor,
         openActivityReviewStep,
@@ -552,7 +553,8 @@ def test_save_activity_draft_posts_form_and_selects_saved_activity() -> None:
           assert.equal(body.class_id, "3A-TPSI");
           assert.equal(tested.state.activities.length, 1);
           assert.equal(tested.els.activityPath.value, "activities/drafts/somma-in-python.json");
-          assert.match(tested.els.activityAuthorStatus.textContent, /Activity salvata/);
+          assert.equal(tested.els.activityAuthorStatus.classList.contains("isSuccess"), true);
+          assert.match(tested.els.activityAuthorStatus.innerHTML, /Activity salvata/);
           assert.match(tested.els.activityPanelStatus.textContent, /Activity salvata/);
         })();
         """
@@ -623,7 +625,9 @@ def test_save_activity_from_review_enables_wizard_next() -> None:
 
           assert.equal(tested.state.activityReviewSaved, true);
           assert.equal(tested.els.activityPath.value, "activities/drafts/somma-in-python.json");
-          assert.match(tested.els.activityAuthorStatus.textContent, /Activity salvata/);
+          assert.equal(tested.els.activityAuthorStatus.classList.contains("isSuccess"), true);
+          assert.match(tested.els.activityAuthorStatus.innerHTML, /Activity salvata/);
+          assert.match(tested.els.activityAuthorStatus.innerHTML, /punto 4 Destinatari/);
           assert.equal(tested.els.assignmentWizardNextBtn.disabled, false);
         })();
         """
@@ -1109,8 +1113,8 @@ def test_apply_assignment_ai_draft_to_activity_form_keeps_teacher_in_control() -
         assert.equal(tested.els.activityAuthorTopics.value, "variabili, input");
         assert.equal(tested.els.activityAuthorPrompt.value, "Scrivi un programma che somma due interi anche negativi.");
         assert.equal(tested.els.activityAuthorMinutes.value, "35");
-        assert.match(tested.els.activityAuthorStatus.textContent, /Bozza AI applicata/);
-        assert.match(tested.els.activityAuthorStatus.textContent, /Gli asset non vengono ancora salvati automaticamente/);
+        assert.match(tested.els.activityAuthorStatus.innerHTML, /Bozza AI applicata/);
+        assert.match(tested.els.activityAuthorStatus.innerHTML, /Gli asset non vengono ancora salvati automaticamente/);
         assert.match(tested.els.status.textContent, /Revisione activity/);
         assert.equal(tested.els.activityEditorDialog.open, false);
         assert.equal(tested.els.activityEditorBody.parentElement, tested.els.activityWizardEditorMount);
@@ -1157,9 +1161,40 @@ def test_save_activity_draft_requires_prompt_before_posting() -> None:
 
           const call = tested.fetchCalls.find((entry) => entry.path === "/api/activities/save");
           assert.equal(call, undefined);
-          assert.match(tested.els.activityAuthorStatus.textContent, /Completa i campi obbligatori: Consegna/);
+          assert.equal(tested.els.activityAuthorStatus.classList.contains("isError"), true);
+          assert.match(tested.els.activityAuthorStatus.innerHTML, /Completa i campi obbligatori: Consegna/);
           assert.match(tested.els.status.textContent, /Completa i campi obbligatori: Consegna/);
           assert.equal(tested.els.activityAuthorPrompt["aria-invalid"], "true");
+        })();
+      """
+    )
+
+
+def test_save_activity_draft_shows_backend_errors_in_review_status() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.fetchResponses["/api/activities/save"] = {
+            ok: false,
+            status: 400,
+            statusText: "Bad Request",
+            text: JSON.stringify({ error: "File gia esistente: activities/drafts/array-c.json." }),
+          };
+          tested.els.activityAuthorTitle.value = "Array in C";
+          tested.els.activityAuthorId.value = "array-c";
+          tested.els.activityAuthorKind.value = "laboratorio";
+          tested.els.activityAuthorDifficulty.value = "B";
+          tested.els.activityAuthorTopics.value = "array";
+          tested.els.activityAuthorMinutes.value = "30";
+          tested.els.activityAuthorPrompt.value = "Completa il programma.";
+
+          await tested.saveActivityDraft();
+
+          assert.equal(tested.state.activityReviewSaved, false);
+          assert.equal(tested.els.activityAuthorStatus.classList.contains("isError"), true);
+          assert.match(tested.els.activityAuthorStatus.innerHTML, /Activity non salvata/);
+          assert.match(tested.els.activityAuthorStatus.innerHTML, /File gia esistente/);
+          assert.match(tested.els.status.textContent, /Errore salvataggio activity/);
         })();
       """
     )
@@ -1184,7 +1219,8 @@ def test_activity_author_required_fields_show_and_clear_invalid_state() -> None:
         assert.equal(tested.els.activityAuthorTopics["aria-invalid"], "true");
         assert.equal(tested.els.activityAuthorMinutes["aria-invalid"], "true");
         assert.equal(tested.els.activityAuthorPrompt["aria-invalid"], "true");
-        assert.match(tested.els.activityAuthorStatus.textContent, /Titolo, Tipo, Argomenti, Tempo stimato, Consegna/);
+        assert.equal(tested.els.activityAuthorStatus.classList.contains("isError"), true);
+        assert.match(tested.els.activityAuthorStatus.innerHTML, /Titolo, Tipo, Argomenti, Tempo stimato, Consegna/);
 
         tested.els.activityAuthorTitle.value = "Array in C";
         tested.els.activityAuthorKind.value = "laboratorio";
@@ -1212,7 +1248,8 @@ def test_apply_assignment_ai_draft_reports_invalid_json() -> None:
         const applied = tested.applyAssignmentAiDraftToActivityForm();
 
         assert.equal(applied, false);
-        assert.match(tested.els.activityAuthorStatus.textContent, /Bozza AI non applicata/);
+        assert.equal(tested.els.activityAuthorStatus.classList.contains("isError"), true);
+        assert.match(tested.els.activityAuthorStatus.innerHTML, /Bozza AI non applicata/);
         assert.match(tested.els.status.textContent, /Bozza AI non valida/);
       """
     )

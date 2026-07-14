@@ -1795,10 +1795,17 @@ function closeActivityEditor() {
 function openActivityReviewStep(statusMessage = "Controlla la bozza activity, modifica se serve e salva prima di proseguire.") {
   mountActivityEditorInWizard();
   setAssignmentWizardStep("review");
-  if (els.activityAuthorStatus) {
-    els.activityAuthorStatus.textContent = statusMessage;
-  }
+  setActivityAuthorStatus("info", "Revisione activity", statusMessage);
   renderActivityPanelSummary();
+}
+
+function setActivityAuthorStatus(type, title, message) {
+  if (!els.activityAuthorStatus) return;
+  els.activityAuthorStatus.classList.remove("isSaving", "isSuccess", "isError");
+  if (type === "saving") els.activityAuthorStatus.classList.add("isSaving");
+  if (type === "success") els.activityAuthorStatus.classList.add("isSuccess");
+  if (type === "error") els.activityAuthorStatus.classList.add("isError");
+  els.activityAuthorStatus.innerHTML = `<strong>${escapeHtml(title)}</strong><span>${escapeHtml(message)}</span>`;
 }
 
 function activityAuthorRequiredFields() {
@@ -1832,7 +1839,7 @@ function validateActivityAuthorRequiredFields({ showMessage = false } = {}) {
   }
   if (showMessage && missing.length) {
     const message = `Completa i campi obbligatori: ${missing.join(", ")}.`;
-    if (els.activityAuthorStatus) els.activityAuthorStatus.textContent = message;
+    setActivityAuthorStatus("error", "Activity non salvata", `${message} Correggi i campi evidenziati in rosso.`);
     setStatus(message);
   }
   return missing;
@@ -1845,7 +1852,7 @@ async function saveActivityDraft() {
     return;
   }
   els.saveActivityBtn.disabled = true;
-  if (els.activityAuthorStatus) els.activityAuthorStatus.textContent = "Salvataggio activity...";
+  setActivityAuthorStatus("saving", "Salvataggio activity", "Validazione e scrittura della bozza in corso...");
   try {
     const payload = await api("/api/activities/save", {
       method: "POST",
@@ -1869,16 +1876,18 @@ async function saveActivityDraft() {
     renderCoverage();
     if (payload.activity?.path) selectActivity(payload.activity.path);
     markActivityReviewSaved();
-    if (els.activityAuthorStatus) {
-      els.activityAuthorStatus.textContent = `Activity salvata: ${payload.activity?.path || "-"}.`;
-    }
+    setActivityAuthorStatus(
+      "success",
+      "Activity salvata",
+      `Puoi passare al punto 4 Destinatari. File: ${payload.activity?.path || "-"}.`,
+    );
     if (els.activityPanelStatus) {
       els.activityPanelStatus.textContent = `Activity salvata: ${payload.activity?.title || payload.activity?.id || "-"}.`;
     }
     renderActivityPanelSummary();
     setStatus(`Activity salvata: ${payload.activity?.title || payload.activity?.id || "-"}.`);
   } catch (error) {
-    if (els.activityAuthorStatus) els.activityAuthorStatus.textContent = `Errore: ${error.message}`;
+    setActivityAuthorStatus("error", "Activity non salvata", error.message);
     setStatus(`Errore salvataggio activity: ${error.message}`);
   } finally {
     els.saveActivityBtn.disabled = false;
@@ -2830,7 +2839,7 @@ function applyAssignmentAiDraftToActivityForm() {
     validateActivityAuthorRequiredFields();
     return true;
   } catch (error) {
-    if (els.activityAuthorStatus) els.activityAuthorStatus.textContent = `Bozza AI non applicata: ${error.message}`;
+    setActivityAuthorStatus("error", "Bozza AI non applicata", error.message);
     setStatus(`Bozza AI non applicata: ${error.message}`);
     return false;
   }

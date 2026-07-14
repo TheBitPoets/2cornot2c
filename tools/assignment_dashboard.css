@@ -306,6 +306,46 @@ textarea[aria-invalid="true"]:focus {
 
 .activityEditorStatus {
   margin: 1rem 1.1rem 0;
+  padding: .85rem;
+  border: 1px solid rgba(17, 17, 17, .12);
+  border-radius: 8px;
+  background: #fbfbfb;
+  color: var(--muted);
+}
+
+.activityEditorStatus strong,
+.activityEditorStatus span {
+  display: block;
+}
+
+.activityEditorStatus strong {
+  margin-bottom: .2rem;
+  color: var(--text);
+}
+
+.activityEditorStatus.isSaving {
+  border-color: rgba(17, 17, 17, .22);
+  background: #ffffff;
+}
+
+.activityEditorStatus.isSuccess {
+  border-color: rgba(21, 128, 61, .35);
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.activityEditorStatus.isError {
+  border-color: rgba(185, 28, 28, .35);
+  background: #fff7f7;
+  color: #7f1d1d;
+}
+
+.activityEditorStatus.isSuccess strong {
+  color: #166534;
+}
+
+.activityEditorStatus.isError strong {
+  color: #991b1b;
 }
 
 .assignmentAiDraft {
