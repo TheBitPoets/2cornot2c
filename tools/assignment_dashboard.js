@@ -152,6 +152,7 @@ const state = {
   reviewSplit: readReviewSplit(),
   draggedPanelKey: "",
   activityAuthorLastSuggestedId: "",
+  activityReviewSaved: false,
   selectedAssignmentId: "",
 };
 
@@ -1738,6 +1739,7 @@ async function saveActivityDraft() {
     renderActivitySelect();
     renderCoverage();
     if (payload.activity?.path) selectActivity(payload.activity.path);
+    markActivityReviewSaved();
     if (els.activityAuthorStatus) {
       els.activityAuthorStatus.textContent = `Activity salvata: ${payload.activity?.path || "-"}.`;
     }
@@ -2531,16 +2533,41 @@ function renderAssignmentCodexDraft(response) {
 }
 
 function updateAssignmentAiApplyState() {
-  if (!els.assignmentAiApplyDraftBtn) return false;
+  let isValid = false;
   try {
     parseAssignmentAiDraftText();
-    els.assignmentAiApplyDraftBtn.disabled = false;
-    els.assignmentAiApplyDraftBtn.title = "Porta la proposta AI nello step Revisione activity. Il docente puo modificarla prima di salvare.";
-    return true;
+    isValid = true;
   } catch (error) {
-    els.assignmentAiApplyDraftBtn.disabled = true;
-    els.assignmentAiApplyDraftBtn.title = "Genera una proposta AI valida prima di preparare la revisione activity.";
-    return false;
+    isValid = false;
+  }
+  if (els.assignmentAiApplyDraftBtn) {
+    els.assignmentAiApplyDraftBtn.disabled = !isValid;
+    els.assignmentAiApplyDraftBtn.title = isValid
+      ? "Porta la proposta AI nello step Revisione activity. Il docente puo modificarla prima di salvare."
+      : "Genera una proposta AI valida prima di preparare la revisione activity.";
+  }
+  if (currentAssignmentWizardStep() === "ai") {
+    const current = currentAssignmentWizardStep();
+    const index = assignmentWizardStepIndex(current);
+    if (els.assignmentWizardNextBtn && index >= 0 && index < ASSIGNMENT_WIZARD_STEPS.length - 1) {
+      els.assignmentWizardNextBtn.disabled = !isValid;
+      els.assignmentWizardNextBtn.textContent = assignmentWizardNextLabel(current);
+    }
+  }
+  return isValid;
+}
+
+function markActivityReviewDirty() {
+  state.activityReviewSaved = false;
+  if (currentAssignmentWizardStep() === "review") {
+    setAssignmentWizardStep("review");
+  }
+}
+
+function markActivityReviewSaved() {
+  state.activityReviewSaved = true;
+  if (currentAssignmentWizardStep() === "review") {
+    setAssignmentWizardStep("review");
   }
 }
 
@@ -2626,6 +2653,7 @@ function applyAssignmentAiDraftToActivityForm() {
       ? ` File proposti: ${fileCount}; asset dichiarati: ${assetCount}. Gli asset non vengono ancora salvati automaticamente.`
       : "";
     setStatus("Bozza AI pronta nello step Revisione activity: il docente puo ancora modificare tutto.");
+    markActivityReviewDirty();
     openActivityReviewStep(`Bozza AI applicata alla revisione activity. Controlla e salva quando e pronta.${suffix}`);
     return true;
   } catch (error) {
@@ -2633,6 +2661,42 @@ function applyAssignmentAiDraftToActivityForm() {
     setStatus(`Bozza AI non applicata: ${error.message}`);
     return false;
   }
+}
+
+function currentAssignmentWizardStep() {
+  return Array.from(els.assignmentSteps).find((section) => !section.hidden)?.dataset.assignmentStep || "activity";
+}
+
+function assignmentWizardStepIndex(step) {
+  return ASSIGNMENT_WIZARD_STEPS.findIndex((candidate) => candidate.id === step);
+}
+
+function nextAssignmentWizardStep(step) {
+  const index = assignmentWizardStepIndex(step);
+  return ASSIGNMENT_WIZARD_STEPS[Math.min(index + 1, ASSIGNMENT_WIZARD_STEPS.length - 1)] || null;
+}
+
+function assignmentWizardStepComplete(step) {
+  if (step === "activity") return Boolean(String(els.activityPath?.value || "").trim());
+  if (step === "ai") return updateAssignmentAiApplyState();
+  if (step === "review") return Boolean(state.activityReviewSaved && String(els.activityPath?.value || "").trim());
+  return true;
+}
+
+function assignmentWizardNextLabel(step) {
+  const next = nextAssignmentWizardStep(step);
+  if (!next || next.id === step) return "Fine percorso";
+  if (step === "ai") return "Avanti: 3 Prepara revisione";
+  const index = assignmentWizardStepIndex(next.id);
+  const label = {
+    ai: "AI",
+    review: "Revisione",
+    targets: "Destinatari",
+    dates: "Date",
+    preview: "Anteprima",
+    confirm: "Conferma",
+  }[next.id] || next.id;
+  return `Avanti: ${index + 1} ${label}`;
 }
 
 function setAssignmentWizardStep(step) {
@@ -2655,14 +2719,24 @@ function setAssignmentWizardStep(step) {
   if (els.assignmentWizardPrevBtn) els.assignmentWizardPrevBtn.disabled = index <= 0;
   if (els.assignmentWizardNextBtn) {
     const isLast = index >= ASSIGNMENT_WIZARD_STEPS.length - 1;
-    els.assignmentWizardNextBtn.disabled = isLast;
-    els.assignmentWizardNextBtn.textContent = isLast ? "Fine percorso" : "Avanti";
+    els.assignmentWizardNextBtn.disabled = isLast || !assignmentWizardStepComplete(selectedStep);
+    els.assignmentWizardNextBtn.textContent = isLast ? "Fine percorso" : assignmentWizardNextLabel(selectedStep);
   }
 }
 
 function moveAssignmentWizardStep(offset) {
-  const current = Array.from(els.assignmentSteps).find((section) => !section.hidden)?.dataset.assignmentStep || "activity";
-  const index = ASSIGNMENT_WIZARD_STEPS.findIndex((candidate) => candidate.id === current);
+  const current = currentAssignmentWizardStep();
+  if (offset > 0) {
+    if (current === "ai") {
+      applyAssignmentAiDraftToActivityForm();
+      return;
+    }
+    if (!assignmentWizardStepComplete(current)) {
+      setAssignmentWizardStep(current);
+      return;
+    }
+  }
+  const index = assignmentWizardStepIndex(current);
   const next = ASSIGNMENT_WIZARD_STEPS[Math.min(Math.max(index + offset, 0), ASSIGNMENT_WIZARD_STEPS.length - 1)];
   setAssignmentWizardStep(next?.id || "activity");
 }
@@ -3560,6 +3634,7 @@ function setFilter(filter) {
 function selectActivity(path) {
   els.activityPath.value = path;
   const activity = state.activities.find((candidate) => candidate.path === path);
+  if (activity) state.activityReviewSaved = true;
   if (activity?.id) {
     els.classId.value = activity.class_id || activity.github_team || "";
     els.classLabel.value = activity.class_label || activity.class_id || "";
@@ -3680,7 +3755,6 @@ setAssignmentWizardStep("activity");
 els.previewAssignmentBtn?.addEventListener("click", previewAssignmentPlan);
 els.assignmentAiAskBtn?.addEventListener("click", previewAssignmentAiPackage);
 els.assignmentAiGenerateBtn?.addEventListener("click", generateAssignmentAiDraft);
-els.assignmentAiApplyDraftBtn?.addEventListener("click", applyAssignmentAiDraftToActivityForm);
 els.assignmentAiDraftText?.addEventListener("input", updateAssignmentAiApplyState);
 els.openActivityEditorBtn?.addEventListener("click", () => openActivityEditor("panel"));
 els.wizardOpenActivityEditorBtn?.addEventListener("click", openActivityReviewStep);
@@ -3719,16 +3793,22 @@ els.assignmentSelect?.addEventListener("change", () => {
   setStatus(assignment ? `Assegnazione selezionata: ${assignment.id}.` : "Nessuna assegnazione selezionata.");
 });
 els.saveActivityBtn?.addEventListener("click", saveActivityDraft);
-els.activityAuthorTitle?.addEventListener("input", syncActivityAuthorIdSuggestion);
+els.activityAuthorTitle?.addEventListener("input", () => {
+  syncActivityAuthorIdSuggestion();
+  markActivityReviewDirty();
+});
 els.activityAuthorId?.addEventListener("input", () => {
   const current = els.activityAuthorId.value.trim();
   if (!current) state.activityAuthorLastSuggestedId = "";
+  markActivityReviewDirty();
 });
 els.activityAuthorPath?.addEventListener("change", () => {
   renderActivityAuthorMetadataSelects();
+  markActivityReviewDirty();
 });
 els.activityAuthorUda?.addEventListener("change", () => {
   renderTopicSearch(activityAuthorTopicOptions());
+  markActivityReviewDirty();
 });
 els.activityAuthorTopics?.addEventListener("input", () => {
   renderTopicSearch(
@@ -3736,12 +3816,25 @@ els.activityAuthorTopics?.addEventListener("input", () => {
     true,
   );
   renderCompactSelect(els.activityAuthorUda, activityAuthorUdaOptions(), "Nessuna UDA", els.activityAuthorUdaCount);
+  markActivityReviewDirty();
 });
 els.activityAuthorClass?.addEventListener("change", () => {
   const roster = state.classRosters.find((candidate) => (
     String(candidate.id || candidate.label || candidate.name || "").trim() === els.activityAuthorClass.value
   ));
   if (roster?.github_team && els.activityAuthorTeam) els.activityAuthorTeam.value = roster.github_team;
+  markActivityReviewDirty();
+});
+[
+  els.activityAuthorKind,
+  els.activityAuthorDifficulty,
+  els.activityAuthorTeam,
+  els.activityAuthorPrompt,
+  els.activityAuthorMinutes,
+  els.activityAuthorOverwrite,
+].forEach((field) => {
+  field?.addEventListener("input", markActivityReviewDirty);
+  field?.addEventListener("change", markActivityReviewDirty);
 });
 els.classRosterSelect?.addEventListener("change", loadSelectedClassRoster);
 els.activityPath.addEventListener("input", () => {

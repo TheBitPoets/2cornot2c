@@ -404,8 +404,9 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         renderAssignmentPlan,
         renderAssignmentAiPackage,
         renderAssignmentCodexDraft,
-        updateAssignmentAiApplyState,
         applyAssignmentAiDraftToActivityForm,
+        updateAssignmentAiApplyState,
+        assignmentWizardStepComplete,
         setAssignmentWizardStep,
         moveAssignmentWizardStep,
         assignmentPlanErrorMessage,
@@ -803,10 +804,7 @@ def test_assignment_wizard_contains_teacher_editable_ai_step() -> None:
     assert 'id="assignmentAiPrompt"' in assignment_section
     assert 'id="assignmentAiDraftText"' in assignment_section
     assert 'id="assignmentAiGenerateBtn"' in assignment_section
-    assert 'id="assignmentAiApplyDraftBtn"' in assignment_section
-    assert 'id="assignmentAiApplyDraftBtn" type="button" disabled' in assignment_section
     assert "Genera proposta AI" in assignment_section
-    assert "Prepara revisione" in assignment_section
     assert "Dettagli tecnici del pacchetto AI" in assignment_section
     assert "Mostra pacchetto tecnico" in assignment_section
     assert 'id="assignmentWizardPrevBtn"' in assignment_section
@@ -958,29 +956,34 @@ def test_generate_assignment_ai_draft_with_codex_posts_request_and_fills_teacher
           assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /Bozza Codex pronta/);
           assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /File proposti/);
           assert.match(tested.els.assignmentAiDraftText.value, /Somma con negativi/);
-          assert.equal(tested.els.assignmentAiApplyDraftBtn.disabled, false);
+          tested.setAssignmentWizardStep("ai");
+          assert.equal(tested.assignmentWizardStepComplete("ai"), true);
+          assert.equal(tested.els.assignmentWizardNextBtn.disabled, false);
+          assert.equal(tested.els.assignmentWizardNextBtn.textContent, "Avanti: 3 Prepara revisione");
           assert.match(tested.els.status.textContent, /Bozza Codex pronta/);
         })();
         """
     )
 
 
-def test_assignment_ai_apply_button_tracks_valid_draft_text() -> None:
+def test_assignment_ai_next_button_tracks_valid_draft_text() -> None:
     run_dashboard_js(
         """
-        assert.equal(tested.els.assignmentAiApplyDraftBtn.disabled, false);
+        tested.setAssignmentWizardStep("ai");
+        assert.equal(tested.els.assignmentWizardNextBtn.disabled, true);
 
         tested.els.assignmentAiDraftText.value = "";
         tested.updateAssignmentAiApplyState();
-        assert.equal(tested.els.assignmentAiApplyDraftBtn.disabled, true);
+        assert.equal(tested.els.assignmentWizardNextBtn.disabled, true);
 
         tested.els.assignmentAiDraftText.value = "{";
         tested.updateAssignmentAiApplyState();
-        assert.equal(tested.els.assignmentAiApplyDraftBtn.disabled, true);
+        assert.equal(tested.els.assignmentWizardNextBtn.disabled, true);
 
         tested.els.assignmentAiDraftText.value = JSON.stringify({ activity_patch: { titolo: "Somma" }, files: [] });
         tested.updateAssignmentAiApplyState();
-        assert.equal(tested.els.assignmentAiApplyDraftBtn.disabled, false);
+        assert.equal(tested.els.assignmentWizardNextBtn.disabled, false);
+        assert.equal(tested.els.assignmentWizardNextBtn.textContent, "Avanti: 3 Prepara revisione");
         """
     )
 
@@ -1074,7 +1077,7 @@ def test_assignment_wizard_switches_visible_step() -> None:
         assert.equal(activityStep.hidden, true);
         assert.match(tested.els.assignmentWizardHint.textContent, /Step 2 di 7/);
         assert.equal(tested.els.assignmentWizardPrevBtn.disabled, false);
-        assert.equal(tested.els.assignmentWizardNextBtn.disabled, false);
+        assert.equal(tested.els.assignmentWizardNextBtn.disabled, true);
         """
     )
 
@@ -1083,16 +1086,30 @@ def test_assignment_wizard_prev_next_guides_the_flow() -> None:
     run_dashboard_js(
         """
         tested.setAssignmentWizardStep("activity");
+        tested.els.activityPath.value = "activities/python-base-somma-001.json";
+        tested.setAssignmentWizardStep("activity");
 
         assert.equal(tested.els.assignmentWizardPrevBtn.disabled, true);
         assert.match(tested.els.assignmentWizardHint.textContent, /Step 1 di 7/);
 
         tested.moveAssignmentWizardStep(1);
         assert.match(tested.els.assignmentWizardHint.textContent, /Step 2 di 7/);
+        assert.equal(tested.els.assignmentWizardNextBtn.disabled, true);
 
+        tested.moveAssignmentWizardStep(1);
+        assert.match(tested.els.assignmentWizardHint.textContent, /Step 2 di 7/);
+
+        tested.els.assignmentAiDraftText.value = JSON.stringify({ activity_patch: { titolo: "Somma" }, files: [] });
+        tested.updateAssignmentAiApplyState();
         tested.moveAssignmentWizardStep(1);
         assert.match(tested.els.assignmentWizardHint.textContent, /Step 3 di 7/);
         assert.equal(tested.els.activityEditorBody.parentElement, tested.els.activityWizardEditorMount);
+        assert.equal(tested.els.assignmentWizardNextBtn.disabled, true);
+
+        tested.state.activityReviewSaved = true;
+        tested.els.activityPath.value = "activities/drafts/somma.json";
+        tested.setAssignmentWizardStep("review");
+        assert.equal(tested.els.assignmentWizardNextBtn.disabled, false);
 
         tested.moveAssignmentWizardStep(10);
         assert.match(tested.els.assignmentWizardHint.textContent, /Step 7 di 7/);
@@ -1102,7 +1119,7 @@ def test_assignment_wizard_prev_next_guides_the_flow() -> None:
         tested.moveAssignmentWizardStep(-1);
         assert.match(tested.els.assignmentWizardHint.textContent, /Step 6 di 7/);
         assert.equal(tested.els.assignmentWizardNextBtn.disabled, false);
-        assert.equal(tested.els.assignmentWizardNextBtn.textContent, "Avanti");
+        assert.equal(tested.els.assignmentWizardNextBtn.textContent, "Avanti: 7 Conferma");
         """
     )
 
