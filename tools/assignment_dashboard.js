@@ -2465,6 +2465,7 @@ function renderAssignmentCodexDraft(response) {
   if (els.assignmentAiDraftText) {
     els.assignmentAiDraftText.value = JSON.stringify(response.draft, null, 2);
   }
+  updateAssignmentAiApplyState();
   if (!els.assignmentAiPackagePreview) return;
   const files = Array.isArray(response.draft.files) ? response.draft.files : [];
   const questions = Array.isArray(response.draft.questions) ? response.draft.questions : [];
@@ -2492,6 +2493,20 @@ function renderAssignmentCodexDraft(response) {
       </section>
     </div>
   `;
+}
+
+function updateAssignmentAiApplyState() {
+  if (!els.assignmentAiApplyDraftBtn) return false;
+  try {
+    parseAssignmentAiDraftText();
+    els.assignmentAiApplyDraftBtn.disabled = false;
+    els.assignmentAiApplyDraftBtn.title = "Usa la proposta AI nell'editor activity. Il docente puo modificarla prima di salvare.";
+    return true;
+  } catch (error) {
+    els.assignmentAiApplyDraftBtn.disabled = true;
+    els.assignmentAiApplyDraftBtn.title = "Genera una proposta AI valida prima di usarla nell'editor activity.";
+    return false;
+  }
 }
 
 function parseAssignmentAiDraftText() {
@@ -2762,6 +2777,7 @@ async function generateAssignmentAiDraft() {
   if (!els.assignmentAiGenerateBtn) return;
   const provider = els.assignmentAiProvider?.value || "codex";
   els.assignmentAiGenerateBtn.disabled = true;
+  if (els.assignmentAiApplyDraftBtn) els.assignmentAiApplyDraftBtn.disabled = true;
   setStatus(`Generazione bozza con provider ${provider}...`);
   if (els.assignmentAiPackagePreview) {
     els.assignmentAiPackagePreview.innerHTML = '<p class="status">Generazione bozza in corso...</p>';
@@ -2784,6 +2800,7 @@ async function generateAssignmentAiDraft() {
     if (els.assignmentAiPackagePreview) {
       els.assignmentAiPackagePreview.innerHTML = `<p class="status">Bozza AI non disponibile: ${escapeHtml(message)}</p>`;
     }
+    updateAssignmentAiApplyState();
     setStatus(`Bozza AI non disponibile: ${message}`);
   } finally {
     els.assignmentAiGenerateBtn.disabled = false;
@@ -3630,6 +3647,7 @@ els.previewAssignmentBtn?.addEventListener("click", previewAssignmentPlan);
 els.assignmentAiAskBtn?.addEventListener("click", previewAssignmentAiPackage);
 els.assignmentAiGenerateBtn?.addEventListener("click", generateAssignmentAiDraft);
 els.assignmentAiApplyDraftBtn?.addEventListener("click", applyAssignmentAiDraftToActivityForm);
+els.assignmentAiDraftText?.addEventListener("input", updateAssignmentAiApplyState);
 els.openActivityEditorBtn?.addEventListener("click", () => openActivityEditor("panel"));
 els.wizardOpenActivityEditorBtn?.addEventListener("click", () => openActivityEditor("wizard"));
 els.activityEditorCloseBtn?.addEventListener("click", closeActivityEditor);

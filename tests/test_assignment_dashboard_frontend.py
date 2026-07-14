@@ -401,6 +401,7 @@ def run_dashboard_js(assertions: str) -> None:
         renderAssignmentPlan,
         renderAssignmentAiPackage,
         renderAssignmentCodexDraft,
+        updateAssignmentAiApplyState,
         applyAssignmentAiDraftToActivityForm,
         setAssignmentWizardStep,
         moveAssignmentWizardStep,
@@ -778,6 +779,7 @@ def test_assignment_wizard_contains_teacher_editable_ai_step() -> None:
     assert 'id="assignmentAiDraftText"' in assignment_section
     assert 'id="assignmentAiGenerateBtn"' in assignment_section
     assert 'id="assignmentAiApplyDraftBtn"' in assignment_section
+    assert 'id="assignmentAiApplyDraftBtn" type="button" disabled' in assignment_section
     assert "Genera proposta AI" in assignment_section
     assert "Usa questa proposta" in assignment_section
     assert "Dettagli tecnici del pacchetto AI" in assignment_section
@@ -931,8 +933,29 @@ def test_generate_assignment_ai_draft_with_codex_posts_request_and_fills_teacher
           assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /Bozza Codex pronta/);
           assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /File proposti/);
           assert.match(tested.els.assignmentAiDraftText.value, /Somma con negativi/);
+          assert.equal(tested.els.assignmentAiApplyDraftBtn.disabled, false);
           assert.match(tested.els.status.textContent, /Bozza Codex pronta/);
         })();
+        """
+    )
+
+
+def test_assignment_ai_apply_button_tracks_valid_draft_text() -> None:
+    run_dashboard_js(
+        """
+        assert.equal(tested.els.assignmentAiApplyDraftBtn.disabled, false);
+
+        tested.els.assignmentAiDraftText.value = "";
+        tested.updateAssignmentAiApplyState();
+        assert.equal(tested.els.assignmentAiApplyDraftBtn.disabled, true);
+
+        tested.els.assignmentAiDraftText.value = "{";
+        tested.updateAssignmentAiApplyState();
+        assert.equal(tested.els.assignmentAiApplyDraftBtn.disabled, true);
+
+        tested.els.assignmentAiDraftText.value = JSON.stringify({ activity_patch: { titolo: "Somma" }, files: [] });
+        tested.updateAssignmentAiApplyState();
+        assert.equal(tested.els.assignmentAiApplyDraftBtn.disabled, false);
         """
     )
 
