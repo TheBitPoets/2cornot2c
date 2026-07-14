@@ -162,6 +162,20 @@ select {
   padding: .72rem .9rem;
 }
 
+input[aria-invalid="true"],
+select[aria-invalid="true"],
+textarea[aria-invalid="true"] {
+  border-color: #b91c1c;
+  background: #fff7f7;
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, .12);
+}
+
+input[aria-invalid="true"]:focus,
+select[aria-invalid="true"]:focus,
+textarea[aria-invalid="true"]:focus {
+  outline-color: #b91c1c;
+}
+
 .generateGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

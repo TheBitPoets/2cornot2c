@@ -384,6 +384,7 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         setupPanelDragAndDrop,
         renderLegend,
         saveActivityDraft,
+        validateActivityAuthorRequiredFields,
         openActivityEditor,
         closeActivityEditor,
         openActivityReviewStep,
@@ -608,6 +609,10 @@ def test_save_activity_from_review_enables_wizard_next() -> None:
           tested.openActivityReviewStep();
           tested.els.activityAuthorTitle.value = "Somma in Python";
           tested.els.activityAuthorId.value = "somma-in-python";
+          tested.els.activityAuthorKind.value = "compito-casa";
+          tested.els.activityAuthorDifficulty.value = "B";
+          tested.els.activityAuthorTopics.value = "variabili";
+          tested.els.activityAuthorMinutes.value = "30";
           tested.els.activityAuthorPrompt.value = "Scrivi un programma che somma due numeri.";
           tested.state.activityReviewSaved = false;
           tested.setAssignmentWizardStep("review");
@@ -1142,15 +1147,59 @@ def test_save_activity_draft_requires_prompt_before_posting() -> None:
         (async () => {
           tested.els.activityAuthorTitle.value = "Array in C";
           tested.els.activityAuthorId.value = "array-c";
+          tested.els.activityAuthorKind.value = "laboratorio";
+          tested.els.activityAuthorDifficulty.value = "B";
+          tested.els.activityAuthorTopics.value = "array";
+          tested.els.activityAuthorMinutes.value = "30";
           tested.els.activityAuthorPrompt.value = "";
 
           await tested.saveActivityDraft();
 
           const call = tested.fetchCalls.find((entry) => entry.path === "/api/activities/save");
           assert.equal(call, undefined);
-          assert.match(tested.els.activityAuthorStatus.textContent, /Completa il campo Consegna/);
-          assert.match(tested.els.status.textContent, /Completa il campo Consegna/);
+          assert.match(tested.els.activityAuthorStatus.textContent, /Completa i campi obbligatori: Consegna/);
+          assert.match(tested.els.status.textContent, /Completa i campi obbligatori: Consegna/);
+          assert.equal(tested.els.activityAuthorPrompt["aria-invalid"], "true");
         })();
+      """
+    )
+
+
+def test_activity_author_required_fields_show_and_clear_invalid_state() -> None:
+    run_dashboard_js(
+        """
+        tested.els.activityAuthorTitle.value = "";
+        tested.els.activityAuthorKind.value = "";
+        tested.els.activityAuthorDifficulty.value = "B";
+        tested.els.activityAuthorTopics.value = "";
+        tested.els.activityAuthorMinutes.value = "0";
+        tested.els.activityAuthorPrompt.value = "";
+
+        let missing = tested.validateActivityAuthorRequiredFields({ showMessage: true });
+
+        assert.equal(JSON.stringify(missing), JSON.stringify(["Titolo", "Tipo", "Argomenti", "Tempo stimato", "Consegna"]));
+        assert.equal(tested.els.activityAuthorTitle["aria-invalid"], "true");
+        assert.equal(tested.els.activityAuthorKind["aria-invalid"], "true");
+        assert.equal(tested.els.activityAuthorDifficulty["aria-invalid"], "false");
+        assert.equal(tested.els.activityAuthorTopics["aria-invalid"], "true");
+        assert.equal(tested.els.activityAuthorMinutes["aria-invalid"], "true");
+        assert.equal(tested.els.activityAuthorPrompt["aria-invalid"], "true");
+        assert.match(tested.els.activityAuthorStatus.textContent, /Titolo, Tipo, Argomenti, Tempo stimato, Consegna/);
+
+        tested.els.activityAuthorTitle.value = "Array in C";
+        tested.els.activityAuthorKind.value = "laboratorio";
+        tested.els.activityAuthorTopics.value = "array";
+        tested.els.activityAuthorMinutes.value = "30";
+        tested.els.activityAuthorPrompt.value = "Completa il programma.";
+
+        missing = tested.validateActivityAuthorRequiredFields({ showMessage: true });
+
+        assert.equal(JSON.stringify(missing), JSON.stringify([]));
+        assert.equal(tested.els.activityAuthorTitle["aria-invalid"], "false");
+        assert.equal(tested.els.activityAuthorKind["aria-invalid"], "false");
+        assert.equal(tested.els.activityAuthorTopics["aria-invalid"], "false");
+        assert.equal(tested.els.activityAuthorMinutes["aria-invalid"], "false");
+        assert.equal(tested.els.activityAuthorPrompt["aria-invalid"], "false");
       """
     )
 
@@ -1400,6 +1449,25 @@ def test_activity_authoring_difficulty_options_include_readable_labels() -> None
 
     assert '<option value="B" selected>B - facile: modifica piccola</option>' in difficulty_section
     assert '<option value="F">F - ninja: produzione</option>' in difficulty_section
+
+
+def test_activity_authoring_required_fields_are_marked_in_markup_and_css() -> None:
+    html = open("tools/assignment_dashboard.html", encoding="utf-8").read()
+    css = open("tools/assignment_dashboard.css", encoding="utf-8").read()
+
+    for field_id in [
+        "activityAuthorTitle",
+        "activityAuthorKind",
+        "activityAuthorDifficulty",
+        "activityAuthorTopics",
+        "activityAuthorMinutes",
+        "activityAuthorPrompt",
+    ]:
+        field_markup = html.split(f'id="{field_id}"', 1)[1].split(">", 1)[0]
+        assert "required" in field_markup
+
+    assert '[aria-invalid="true"]' in css
+    assert "#b91c1c" in css
 
 
 def test_legend_renders_static_marks_but_escapes_descriptions() -> None:

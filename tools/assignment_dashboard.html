@@ -382,7 +382,7 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
       <div class="generateGrid">
         <label>
           <span>Titolo</span>
-          <input id="activityAuthorTitle" type="text" placeholder="Somma in Python">
+          <input id="activityAuthorTitle" type="text" placeholder="Somma in Python" required>
         </label>
         <label>
           <span>ID opzionale</span>
@@ -390,7 +390,7 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
         </label>
         <label>
           <span>Tipo</span>
-          <select id="activityAuthorKind">
+          <select id="activityAuthorKind" required>
             <option value="compito-casa">compito-casa</option>
             <option value="laboratorio">laboratorio</option>
             <option value="esercizio-classe">esercizio-classe</option>
@@ -402,7 +402,7 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
         </label>
         <label>
           <span>Difficolta</span>
-          <select id="activityAuthorDifficulty">
+          <select id="activityAuthorDifficulty" required>
             <option value="A">A - base: copia e osserva</option>
             <option value="B" selected>B - facile: modifica piccola</option>
             <option value="C">C - medio: scrivi da zero</option>
@@ -414,14 +414,14 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
         <label>
           <span>Argomenti</span>
           <span class="selectWithCount">
-            <input id="activityAuthorTopics" type="search" list="activityAuthorTopicsList" placeholder="Cerca argomento" autocomplete="off" aria-label="Argomenti">
+            <input id="activityAuthorTopics" type="search" list="activityAuthorTopicsList" placeholder="Cerca argomento" autocomplete="off" aria-label="Argomenti" required>
             <datalist id="activityAuthorTopicsList"></datalist>
             <span id="activityAuthorTopicsCount" class="selectCountBadge" title="Numero di argomenti disponibili con i filtri correnti.">0</span>
           </span>
         </label>
         <label>
           <span>Tempo stimato</span>
-          <input id="activityAuthorMinutes" type="number" min="1" step="1" value="30">
+          <input id="activityAuthorMinutes" type="number" min="1" step="1" value="30" required>
         </label>
         <label>
           <span>Classe opzionale</span>
@@ -453,7 +453,7 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
         </label>
         <label class="wideField">
           <span>Consegna</span>
-          <textarea id="activityAuthorPrompt" rows="4" placeholder="Scrivi la traccia che vedra lo studente."></textarea>
+          <textarea id="activityAuthorPrompt" rows="4" placeholder="Scrivi la traccia che vedra lo studente." required></textarea>
         </label>
       </div>
       <div class="generateActions">

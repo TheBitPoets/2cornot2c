@@ -1801,12 +1801,47 @@ function openActivityReviewStep(statusMessage = "Controlla la bozza activity, mo
   renderActivityPanelSummary();
 }
 
-async function saveActivityDraft() {
-  if (!els.saveActivityBtn) return;
-  if (!String(els.activityAuthorPrompt?.value || "").trim()) {
-    const message = "Completa il campo Consegna prima di salvare l'activity.";
+function activityAuthorRequiredFields() {
+  return [
+    { field: els.activityAuthorTitle, label: "Titolo" },
+    { field: els.activityAuthorKind, label: "Tipo" },
+    { field: els.activityAuthorDifficulty, label: "Difficolta" },
+    { field: els.activityAuthorTopics, label: "Argomenti" },
+    {
+      field: els.activityAuthorMinutes,
+      label: "Tempo stimato",
+      isValid: (value) => Number(value) > 0,
+    },
+    { field: els.activityAuthorPrompt, label: "Consegna" },
+  ];
+}
+
+function markActivityAuthorFieldInvalid(field, invalid) {
+  if (!field) return;
+  field.classList.toggle("fieldInvalid", invalid);
+  field.setAttribute("aria-invalid", invalid ? "true" : "false");
+}
+
+function validateActivityAuthorRequiredFields({ showMessage = false } = {}) {
+  const missing = [];
+  for (const item of activityAuthorRequiredFields()) {
+    const value = String(item.field?.value || "").trim();
+    const invalid = item.isValid ? !item.isValid(value) : !value;
+    markActivityAuthorFieldInvalid(item.field, invalid);
+    if (invalid) missing.push(item.label);
+  }
+  if (showMessage && missing.length) {
+    const message = `Completa i campi obbligatori: ${missing.join(", ")}.`;
     if (els.activityAuthorStatus) els.activityAuthorStatus.textContent = message;
     setStatus(message);
+  }
+  return missing;
+}
+
+async function saveActivityDraft() {
+  if (!els.saveActivityBtn) return;
+  const missingFields = validateActivityAuthorRequiredFields({ showMessage: true });
+  if (missingFields.length) {
     return;
   }
   els.saveActivityBtn.disabled = true;
@@ -2684,6 +2719,7 @@ function setAssignmentAiProgressError(message) {
 
 function markActivityReviewDirty() {
   state.activityReviewSaved = false;
+  validateActivityAuthorRequiredFields();
   if (currentAssignmentWizardStep() === "review") {
     setAssignmentWizardStep("review");
   }
@@ -2791,6 +2827,7 @@ function applyAssignmentAiDraftToActivityForm() {
     setStatus("Bozza AI pronta nello step Revisione activity: il docente puo ancora modificare tutto.");
     markActivityReviewDirty();
     openActivityReviewStep(`Bozza AI applicata alla revisione activity. Controlla e salva quando e pronta.${suffix}`);
+    validateActivityAuthorRequiredFields();
     return true;
   } catch (error) {
     if (els.activityAuthorStatus) els.activityAuthorStatus.textContent = `Bozza AI non applicata: ${error.message}`;
