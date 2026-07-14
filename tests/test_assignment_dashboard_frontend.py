@@ -1115,6 +1115,46 @@ def test_apply_assignment_ai_draft_to_activity_form_keeps_teacher_in_control() -
     )
 
 
+def test_apply_assignment_ai_draft_accepts_instruction_aliases_for_prompt() -> None:
+    run_dashboard_js(
+        """
+        tested.els.assignmentAiDraftText.value = JSON.stringify({
+          summary: "Bozza proposta",
+          activity_patch: {
+            titolo: "Array in C",
+            istruzioni: "Completa il programma C che somma gli elementi di un array.",
+          },
+          files: [],
+        });
+
+        const applied = tested.applyAssignmentAiDraftToActivityForm();
+
+        assert.equal(applied, true);
+        assert.equal(tested.els.activityAuthorTitle.value, "Array in C");
+        assert.equal(tested.els.activityAuthorPrompt.value, "Completa il programma C che somma gli elementi di un array.");
+      """
+    )
+
+
+def test_save_activity_draft_requires_prompt_before_posting() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.els.activityAuthorTitle.value = "Array in C";
+          tested.els.activityAuthorId.value = "array-c";
+          tested.els.activityAuthorPrompt.value = "";
+
+          await tested.saveActivityDraft();
+
+          const call = tested.fetchCalls.find((entry) => entry.path === "/api/activities/save");
+          assert.equal(call, undefined);
+          assert.match(tested.els.activityAuthorStatus.textContent, /Completa il campo Consegna/);
+          assert.match(tested.els.status.textContent, /Completa il campo Consegna/);
+        })();
+      """
+    )
+
+
 def test_apply_assignment_ai_draft_reports_invalid_json() -> None:
     run_dashboard_js(
         """

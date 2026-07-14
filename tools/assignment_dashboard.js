@@ -1803,6 +1803,12 @@ function openActivityReviewStep(statusMessage = "Controlla la bozza activity, mo
 
 async function saveActivityDraft() {
   if (!els.saveActivityBtn) return;
+  if (!String(els.activityAuthorPrompt?.value || "").trim()) {
+    const message = "Completa il campo Consegna prima di salvare l'activity.";
+    if (els.activityAuthorStatus) els.activityAuthorStatus.textContent = message;
+    setStatus(message);
+    return;
+  }
   els.saveActivityBtn.disabled = true;
   if (els.activityAuthorStatus) els.activityAuthorStatus.textContent = "Salvataggio activity...";
   try {
@@ -2740,7 +2746,7 @@ function applyAssignmentAiDraftToActivityForm() {
     const metriche = patch.metriche && typeof patch.metriche === "object" ? patch.metriche : {};
     const contesto = patch.contesto && typeof patch.contesto === "object" ? patch.contesto : {};
 
-    const title = firstDraftValue(patch, ["titolo", "title"]) || firstDraftValue(draft, ["titolo", "title", "summary"]);
+    const title = firstDraftValue(patch, ["titolo", "title", "nome", "name"]) || firstDraftValue(draft, ["titolo", "title"]);
     if (title && els.activityAuthorTitle) {
       els.activityAuthorTitle.value = title;
       syncActivityAuthorIdSuggestion();
@@ -2754,7 +2760,18 @@ function applyAssignmentAiDraftToActivityForm() {
     setSelectValueIfAvailable(els.activityAuthorKind, kind);
     const difficulty = firstDraftValue(patch, ["difficolta", "difficulty"]);
     setSelectValueIfAvailable(els.activityAuthorDifficulty, difficulty);
-    const prompt = firstDraftValue(patch, ["consegna", "prompt", "description"]);
+    const prompt = firstDraftValue(patch, [
+      "consegna",
+      "istruzioni",
+      "instructions",
+      "prompt",
+      "description",
+      "descrizione",
+      "traccia",
+      "testo",
+      "student_prompt",
+      "student_instructions",
+    ]);
     if (prompt && els.activityAuthorPrompt) els.activityAuthorPrompt.value = prompt;
     const minutes = firstDraftValue(metriche, ["tempo_stimato_minuti"]) || firstDraftValue(patch, ["estimated_minutes"]);
     if (minutes && els.activityAuthorMinutes) els.activityAuthorMinutes.value = minutes;
