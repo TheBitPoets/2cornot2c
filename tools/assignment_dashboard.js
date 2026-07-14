@@ -18,6 +18,32 @@ const OVERVIEW_TYPE_ORDER = [
   "verifica-scritta",
 ];
 const OVERVIEW_SUPPORT_ORDER = ["senza-aiuto", "feedback-tecnico", "studio-guidato", "ai-assisted"];
+const ASSIGNMENT_WIZARD_STEPS = [
+  {
+    id: "activity",
+    hint: "Step 1 di 6: scegli una activity salvata oppure apri l'editor per crearla o modificarla.",
+  },
+  {
+    id: "ai",
+    hint: "Step 2 di 6: genera o rifinisci una proposta AI, poi usala nell'editor activity.",
+  },
+  {
+    id: "targets",
+    hint: "Step 3 di 6: scegli classe, team o studenti destinatari della consegna.",
+  },
+  {
+    id: "dates",
+    hint: "Step 4 di 6: imposta data di assegnazione, scadenza e ora simulata se serve.",
+  },
+  {
+    id: "preview",
+    hint: "Step 5 di 6: controlla anteprima, target e asset prima di salvare o distribuire.",
+  },
+  {
+    id: "confirm",
+    hint: "Step 6 di 6: salva la consegna e, quando sei pronto, distribuisci gli asset ai target.",
+  },
+];
 const OVERVIEW_STATUS_ORDER = [
   "missing",
   "pending",
@@ -236,6 +262,9 @@ const els = {
   assignmentPlanPreview: document.querySelector("#assignmentPlanPreview"),
   assignmentStepTabs: document.querySelectorAll("[data-assignment-step-tab]"),
   assignmentSteps: document.querySelectorAll("[data-assignment-step]"),
+  assignmentWizardPrevBtn: document.querySelector("#assignmentWizardPrevBtn"),
+  assignmentWizardNextBtn: document.querySelector("#assignmentWizardNextBtn"),
+  assignmentWizardHint: document.querySelector("#assignmentWizardHint"),
   assignmentAiProvider: document.querySelector("#assignmentAiProvider"),
   assignmentAiPrompt: document.querySelector("#assignmentAiPrompt"),
   assignmentAiStudentBudget: document.querySelector("#assignmentAiStudentBudget"),
@@ -2561,7 +2590,7 @@ function applyAssignmentAiDraftToActivityForm() {
 }
 
 function setAssignmentWizardStep(step) {
-  const selectedStep = step || "activity";
+  const selectedStep = ASSIGNMENT_WIZARD_STEPS.some((candidate) => candidate.id === step) ? step : "activity";
   els.assignmentStepTabs.forEach((button) => {
     const isActive = button.dataset.assignmentStepTab === selectedStep;
     button.classList.toggle("isActive", isActive);
@@ -2571,6 +2600,22 @@ function setAssignmentWizardStep(step) {
     section.hidden = section.dataset.assignmentStep !== selectedStep;
     section.classList.toggle("isActive", section.dataset.assignmentStep === selectedStep);
   });
+  const index = ASSIGNMENT_WIZARD_STEPS.findIndex((candidate) => candidate.id === selectedStep);
+  const current = ASSIGNMENT_WIZARD_STEPS[index] || ASSIGNMENT_WIZARD_STEPS[0];
+  if (els.assignmentWizardHint) els.assignmentWizardHint.textContent = current.hint;
+  if (els.assignmentWizardPrevBtn) els.assignmentWizardPrevBtn.disabled = index <= 0;
+  if (els.assignmentWizardNextBtn) {
+    const isLast = index >= ASSIGNMENT_WIZARD_STEPS.length - 1;
+    els.assignmentWizardNextBtn.disabled = isLast;
+    els.assignmentWizardNextBtn.textContent = isLast ? "Fine percorso" : "Avanti";
+  }
+}
+
+function moveAssignmentWizardStep(offset) {
+  const current = Array.from(els.assignmentSteps).find((section) => !section.hidden)?.dataset.assignmentStep || "activity";
+  const index = ASSIGNMENT_WIZARD_STEPS.findIndex((candidate) => candidate.id === current);
+  const next = ASSIGNMENT_WIZARD_STEPS[Math.min(Math.max(index + offset, 0), ASSIGNMENT_WIZARD_STEPS.length - 1)];
+  setAssignmentWizardStep(next?.id || "activity");
 }
 
 function assignmentRecordPayload() {
@@ -3578,6 +3623,9 @@ els.resetPanelOrderBtn.addEventListener("click", resetPanelOrder);
 els.assignmentStepTabs.forEach((button) => {
   button.addEventListener("click", () => setAssignmentWizardStep(button.dataset.assignmentStepTab));
 });
+els.assignmentWizardPrevBtn?.addEventListener("click", () => moveAssignmentWizardStep(-1));
+els.assignmentWizardNextBtn?.addEventListener("click", () => moveAssignmentWizardStep(1));
+setAssignmentWizardStep("activity");
 els.previewAssignmentBtn?.addEventListener("click", previewAssignmentPlan);
 els.assignmentAiAskBtn?.addEventListener("click", previewAssignmentAiPackage);
 els.assignmentAiGenerateBtn?.addEventListener("click", generateAssignmentAiDraft);

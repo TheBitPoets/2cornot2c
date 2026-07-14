@@ -196,6 +196,23 @@ select {
   min-height: 8rem;
 }
 
+.assignmentWizardNav {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .8rem;
+  margin: 0 1.1rem 1.1rem;
+  padding: .85rem;
+  border: 1px solid rgba(17, 17, 17, .1);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.assignmentWizardNav .status {
+  margin: 0;
+  text-align: center;
+}
+
 .assignmentAiDraft {
   margin: 1.1rem;
   padding: 1rem;
@@ -265,6 +282,10 @@ select {
 
 .assignmentPackageJson {
   margin-top: .9rem;
+}
+
+.assignmentPackageJson.wideField {
+  margin-top: 0;
 }
 
 .assignmentPackageJson summary {
@@ -2081,6 +2102,14 @@ code {
 
   .assignmentPlanGrid {
     grid-template-columns: 1fr;
+  }
+
+  .assignmentWizardNav {
+    grid-template-columns: 1fr;
+  }
+
+  .assignmentWizardNav .status {
+    text-align: left;
   }
 
   .overviewFilters {

@@ -403,6 +403,7 @@ def run_dashboard_js(assertions: str) -> None:
         renderAssignmentCodexDraft,
         applyAssignmentAiDraftToActivityForm,
         setAssignmentWizardStep,
+        moveAssignmentWizardStep,
         assignmentPlanErrorMessage,
         previewAssignmentPlan,
         previewAssignmentAiPackage,
@@ -777,7 +778,13 @@ def test_assignment_wizard_contains_teacher_editable_ai_step() -> None:
     assert 'id="assignmentAiDraftText"' in assignment_section
     assert 'id="assignmentAiGenerateBtn"' in assignment_section
     assert 'id="assignmentAiApplyDraftBtn"' in assignment_section
-    assert "Genera bozza" in assignment_section
+    assert "Genera proposta AI" in assignment_section
+    assert "Usa questa proposta" in assignment_section
+    assert "Dettagli tecnici del pacchetto AI" in assignment_section
+    assert "Mostra pacchetto tecnico" in assignment_section
+    assert 'id="assignmentWizardPrevBtn"' in assignment_section
+    assert 'id="assignmentWizardNextBtn"' in assignment_section
+    assert 'id="assignmentWizardHint"' in assignment_section
     assert "Contesto da inviare" in assignment_section
     assert "Asset, starter file, test e soluzione" in assignment_section
     assert "Pacchetto file activity" in assignment_section
@@ -1014,6 +1021,33 @@ def test_assignment_wizard_switches_visible_step() -> None:
         assert.equal(activityTab["aria-selected"], "false");
         assert.equal(aiStep.hidden, false);
         assert.equal(activityStep.hidden, true);
+        assert.match(tested.els.assignmentWizardHint.textContent, /Step 2 di 6/);
+        assert.equal(tested.els.assignmentWizardPrevBtn.disabled, false);
+        assert.equal(tested.els.assignmentWizardNextBtn.disabled, false);
+        """
+    )
+
+
+def test_assignment_wizard_prev_next_guides_the_flow() -> None:
+    run_dashboard_js(
+        """
+        tested.setAssignmentWizardStep("activity");
+
+        assert.equal(tested.els.assignmentWizardPrevBtn.disabled, true);
+        assert.match(tested.els.assignmentWizardHint.textContent, /Step 1 di 6/);
+
+        tested.moveAssignmentWizardStep(1);
+        assert.match(tested.els.assignmentWizardHint.textContent, /Step 2 di 6/);
+
+        tested.moveAssignmentWizardStep(10);
+        assert.match(tested.els.assignmentWizardHint.textContent, /Step 6 di 6/);
+        assert.equal(tested.els.assignmentWizardNextBtn.disabled, true);
+        assert.equal(tested.els.assignmentWizardNextBtn.textContent, "Fine percorso");
+
+        tested.moveAssignmentWizardStep(-1);
+        assert.match(tested.els.assignmentWizardHint.textContent, /Step 5 di 6/);
+        assert.equal(tested.els.assignmentWizardNextBtn.disabled, false);
+        assert.equal(tested.els.assignmentWizardNextBtn.textContent, "Avanti");
         """
     )
 

@@ -126,17 +126,22 @@
                 </label>
               </div>
               <div class="generateActions wideField">
-                <button id="assignmentAiAskBtn" type="button" title="Prepara il pacchetto JSON con prompt, contesto e file che verra inviato al provider AI quando l'adapter sara collegato.">Prepara pacchetto AI</button>
-                <button id="assignmentAiGenerateBtn" type="button" title="Genera una bozza usando il provider selezionato. Per ora e attivo solo Codex locale.">Genera bozza</button>
-                <button id="assignmentAiApplyDraftBtn" type="button" title="Applica la bozza AI ai campi della activity. Il docente puo modificarli prima di salvare.">Applica al form activity</button>
+                <button id="assignmentAiGenerateBtn" type="button" class="primary" title="Genera una proposta modificabile usando il provider selezionato. Per ora e attivo Codex locale.">Genera proposta AI</button>
+                <button id="assignmentAiApplyDraftBtn" type="button" title="Usa la proposta AI nell'editor activity. Il docente puo modificarla prima di salvare.">Usa questa proposta</button>
               </div>
               <label class="wideField">
                 <span>Bozza AI modificabile dal docente</span>
                 <textarea id="assignmentAiDraftText" rows="6" placeholder="Qui comparira la proposta AI. Il docente potra modificarla prima di salvare l'activity o distribuirla."></textarea>
               </label>
-              <div id="assignmentAiPackagePreview" class="assignmentPlanPreview wideField" aria-live="polite">
-                <p class="status">Prepara il pacchetto AI per controllare prompt, contesto e file prima di chiamare provider o Codex.</p>
-              </div>
+              <details class="assignmentPackageJson wideField">
+                <summary>Dettagli tecnici del pacchetto AI</summary>
+                <div class="generateActions">
+                  <button id="assignmentAiAskBtn" type="button" class="smallButton" title="Prepara il pacchetto JSON con prompt, contesto e file senza chiamare il provider AI.">Mostra pacchetto tecnico</button>
+                </div>
+                <div id="assignmentAiPackagePreview" class="assignmentPlanPreview" aria-live="polite">
+                  <p class="status">Dettaglio avanzato: qui puoi controllare prompt, contesto e file inviati al provider o a Codex.</p>
+                </div>
+              </details>
             </div>
           </div>
         </section>
@@ -207,6 +212,11 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
             <button id="distributeAssignmentBtn" type="button" title="Copia traccia, README e asset studente nelle cartelle dei repository target.">Distribuisci ai target</button>
           </div>
         </section>
+        <nav class="assignmentWizardNav" aria-label="Navigazione wizard assegnazione">
+          <button id="assignmentWizardPrevBtn" type="button" title="Torna allo step precedente del wizard.">Indietro</button>
+          <p id="assignmentWizardHint" class="status">Step 1 di 6: scegli o crea la activity.</p>
+          <button id="assignmentWizardNextBtn" type="button" class="primary" title="Vai allo step successivo del wizard.">Avanti</button>
+        </nav>
       </div>
     </section>
 
