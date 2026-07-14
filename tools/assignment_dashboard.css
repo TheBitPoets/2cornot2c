@@ -213,6 +213,18 @@ select {
   text-align: center;
 }
 
+.activityWizardEditorMount {
+  margin: 0 1.1rem 1.1rem;
+  border: 1px solid rgba(17, 17, 17, .1);
+  border-radius: 8px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.activityWizardEditorMount .activityEditorBody {
+  overflow: visible;
+}
+
 .assignmentAiDraft {
   margin: 1.1rem;
   padding: 1rem;

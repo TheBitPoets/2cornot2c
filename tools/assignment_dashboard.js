@@ -21,27 +21,31 @@ const OVERVIEW_SUPPORT_ORDER = ["senza-aiuto", "feedback-tecnico", "studio-guida
 const ASSIGNMENT_WIZARD_STEPS = [
   {
     id: "activity",
-    hint: "Step 1 di 6: scegli una activity salvata oppure apri l'editor per crearla o modificarla.",
+    hint: "Step 1 di 7: scegli una activity salvata oppure apri la revisione per crearla o modificarla.",
   },
   {
     id: "ai",
-    hint: "Step 2 di 6: genera o rifinisci una proposta AI, poi usala nell'editor activity.",
+    hint: "Step 2 di 7: genera o rifinisci una proposta AI, poi prepara la revisione activity.",
+  },
+  {
+    id: "review",
+    hint: "Step 3 di 7: controlla, modifica e salva l'activity prima di assegnarla.",
   },
   {
     id: "targets",
-    hint: "Step 3 di 6: scegli classe, team o studenti destinatari della consegna.",
+    hint: "Step 4 di 7: scegli classe, team o studenti destinatari della consegna.",
   },
   {
     id: "dates",
-    hint: "Step 4 di 6: imposta data di assegnazione, scadenza e ora simulata se serve.",
+    hint: "Step 5 di 7: imposta data di assegnazione, scadenza e ora simulata se serve.",
   },
   {
     id: "preview",
-    hint: "Step 5 di 6: controlla anteprima, target e asset prima di salvare o distribuire.",
+    hint: "Step 6 di 7: controlla anteprima, target e asset prima di salvare o distribuire.",
   },
   {
     id: "confirm",
-    hint: "Step 6 di 6: salva la consegna e, quando sei pronto, distribuisci gli asset ai target.",
+    hint: "Step 7 di 7: salva la consegna e, quando sei pronto, distribuisci gli asset ai target.",
   },
 ];
 const OVERVIEW_STATUS_ORDER = [
@@ -214,6 +218,8 @@ const els = {
   filterButtons: document.querySelectorAll("[data-filter]"),
   activityEditorDialog: document.querySelector("#activityEditorDialog"),
   activityEditorCloseBtn: document.querySelector("#activityEditorCloseBtn"),
+  activityEditorBody: document.querySelector("#activityEditorBody"),
+  activityWizardEditorMount: document.querySelector("#activityWizardEditorMount"),
   openActivityEditorBtn: document.querySelector("#openActivityEditorBtn"),
   wizardOpenActivityEditorBtn: document.querySelector("#wizardOpenActivityEditorBtn"),
   activityPanelStatus: document.querySelector("#activityPanelStatus"),
@@ -1659,9 +1665,25 @@ function renderActivityPanelSummary() {
   `).join("");
 }
 
+function mountActivityEditorInDialog() {
+  if (!els.activityEditorDialog || !els.activityEditorBody) return;
+  if (els.activityEditorBody.parentElement !== els.activityEditorDialog) {
+    els.activityEditorDialog.append(els.activityEditorBody);
+  }
+}
+
+function mountActivityEditorInWizard() {
+  if (!els.activityWizardEditorMount || !els.activityEditorBody) return;
+  if (els.activityEditorDialog?.open) els.activityEditorDialog.close();
+  if (els.activityEditorBody.parentElement !== els.activityWizardEditorMount) {
+    els.activityWizardEditorMount.append(els.activityEditorBody);
+  }
+}
+
 function openActivityEditor(source = "panel") {
   renderActivityAuthorMetadataSelects(true);
   renderActivityPanelSummary();
+  mountActivityEditorInDialog();
   if (els.activityPanelStatus) {
     els.activityPanelStatus.textContent = source === "wizard"
       ? "Editor activity aperto dal wizard assegnazione."
@@ -1674,6 +1696,19 @@ function openActivityEditor(source = "panel") {
 
 function closeActivityEditor() {
   els.activityEditorDialog?.close?.();
+  const current = Array.from(els.assignmentSteps).find((section) => !section.hidden)?.dataset.assignmentStep || "";
+  if (current === "review") {
+    mountActivityEditorInWizard();
+  }
+  renderActivityPanelSummary();
+}
+
+function openActivityReviewStep(statusMessage = "Controlla la bozza activity, modifica se serve e salva prima di proseguire.") {
+  mountActivityEditorInWizard();
+  setAssignmentWizardStep("review");
+  if (els.activityAuthorStatus) {
+    els.activityAuthorStatus.textContent = statusMessage;
+  }
   renderActivityPanelSummary();
 }
 
@@ -2500,11 +2535,11 @@ function updateAssignmentAiApplyState() {
   try {
     parseAssignmentAiDraftText();
     els.assignmentAiApplyDraftBtn.disabled = false;
-    els.assignmentAiApplyDraftBtn.title = "Usa la proposta AI nell'editor activity. Il docente puo modificarla prima di salvare.";
+    els.assignmentAiApplyDraftBtn.title = "Porta la proposta AI nello step Revisione activity. Il docente puo modificarla prima di salvare.";
     return true;
   } catch (error) {
     els.assignmentAiApplyDraftBtn.disabled = true;
-    els.assignmentAiApplyDraftBtn.title = "Genera una proposta AI valida prima di usarla nell'editor activity.";
+    els.assignmentAiApplyDraftBtn.title = "Genera una proposta AI valida prima di preparare la revisione activity.";
     return false;
   }
 }
@@ -2590,12 +2625,8 @@ function applyAssignmentAiDraftToActivityForm() {
     const suffix = fileCount || assetCount
       ? ` File proposti: ${fileCount}; asset dichiarati: ${assetCount}. Gli asset non vengono ancora salvati automaticamente.`
       : "";
-    if (els.activityAuthorStatus) {
-      els.activityAuthorStatus.textContent = `Bozza AI applicata al form activity. Controlla e salva quando e pronta.${suffix}`;
-    }
-    setStatus("Bozza AI applicata al form activity: il docente puo ancora modificare tutto.");
-    setAssignmentWizardStep("activity");
-    openActivityEditor("wizard");
+    setStatus("Bozza AI pronta nello step Revisione activity: il docente puo ancora modificare tutto.");
+    openActivityReviewStep(`Bozza AI applicata alla revisione activity. Controlla e salva quando e pronta.${suffix}`);
     return true;
   } catch (error) {
     if (els.activityAuthorStatus) els.activityAuthorStatus.textContent = `Bozza AI non applicata: ${error.message}`;
@@ -2606,6 +2637,9 @@ function applyAssignmentAiDraftToActivityForm() {
 
 function setAssignmentWizardStep(step) {
   const selectedStep = ASSIGNMENT_WIZARD_STEPS.some((candidate) => candidate.id === step) ? step : "activity";
+  if (selectedStep === "review") {
+    mountActivityEditorInWizard();
+  }
   els.assignmentStepTabs.forEach((button) => {
     const isActive = button.dataset.assignmentStepTab === selectedStep;
     button.classList.toggle("isActive", isActive);
@@ -3649,7 +3683,7 @@ els.assignmentAiGenerateBtn?.addEventListener("click", generateAssignmentAiDraft
 els.assignmentAiApplyDraftBtn?.addEventListener("click", applyAssignmentAiDraftToActivityForm);
 els.assignmentAiDraftText?.addEventListener("input", updateAssignmentAiApplyState);
 els.openActivityEditorBtn?.addEventListener("click", () => openActivityEditor("panel"));
-els.wizardOpenActivityEditorBtn?.addEventListener("click", () => openActivityEditor("wizard"));
+els.wizardOpenActivityEditorBtn?.addEventListener("click", openActivityReviewStep);
 els.activityEditorCloseBtn?.addEventListener("click", closeActivityEditor);
 els.saveAssignmentBtn?.addEventListener("click", saveAssignmentRecord);
 els.distributeAssignmentBtn?.addEventListener("click", distributeAssignment);

@@ -55,10 +55,11 @@
         <div class="assignmentWizardSteps" role="tablist" aria-label="Step assegnazione activity">
           <button type="button" class="isActive" data-assignment-step-tab="activity" aria-selected="true">1 Activity</button>
           <button type="button" data-assignment-step-tab="ai" aria-selected="false">2 AI</button>
-          <button type="button" data-assignment-step-tab="targets" aria-selected="false">3 Destinatari</button>
-          <button type="button" data-assignment-step-tab="dates" aria-selected="false">4 Date</button>
-          <button type="button" data-assignment-step-tab="preview" aria-selected="false">5 Anteprima</button>
-          <button type="button" data-assignment-step-tab="confirm" aria-selected="false">6 Conferma</button>
+          <button type="button" data-assignment-step-tab="review" aria-selected="false">3 Revisione</button>
+          <button type="button" data-assignment-step-tab="targets" aria-selected="false">4 Destinatari</button>
+          <button type="button" data-assignment-step-tab="dates" aria-selected="false">5 Date</button>
+          <button type="button" data-assignment-step-tab="preview" aria-selected="false">6 Anteprima</button>
+          <button type="button" data-assignment-step-tab="confirm" aria-selected="false">7 Conferma</button>
         </div>
 
         <section class="assignmentWizardStep isActive" data-assignment-step="activity">
@@ -75,7 +76,7 @@
             </label>
           </div>
           <div class="generateActions">
-            <button id="wizardOpenActivityEditorBtn" type="button" title="Apri lo stesso editor activity usato dalla libreria, senza uscire dal wizard.">Apri editor activity</button>
+            <button id="wizardOpenActivityEditorBtn" type="button" title="Vai allo step Revisione activity per controllare e salvare la bozza.">Vai a revisione activity</button>
           </div>
         </section>
 
@@ -127,7 +128,7 @@
               </div>
               <div class="generateActions wideField">
                 <button id="assignmentAiGenerateBtn" type="button" class="primary" title="Genera una proposta modificabile usando il provider selezionato. Per ora e attivo Codex locale.">Genera proposta AI</button>
-                <button id="assignmentAiApplyDraftBtn" type="button" disabled title="Usa la proposta AI nell'editor activity. Il docente puo modificarla prima di salvare.">Usa questa proposta</button>
+                <button id="assignmentAiApplyDraftBtn" type="button" disabled title="Porta la proposta AI nello step Revisione activity. Il docente puo modificarla prima di salvare.">Prepara revisione</button>
               </div>
               <label class="wideField">
                 <span>Bozza AI modificabile dal docente</span>
@@ -144,6 +145,14 @@
               </details>
             </div>
           </div>
+        </section>
+
+        <section class="assignmentWizardStep" data-assignment-step="review" hidden>
+          <div class="assignmentAiDraft">
+            <strong>Revisione activity</strong>
+            <p>Controlla la bozza, modifica i campi e salva l'activity prima di scegliere destinatari, date e distribuzione.</p>
+          </div>
+          <div id="activityWizardEditorMount" class="activityWizardEditorMount"></div>
         </section>
 
         <section class="assignmentWizardStep" data-assignment-step="targets" hidden>
@@ -214,7 +223,7 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
         </section>
         <nav class="assignmentWizardNav" aria-label="Navigazione wizard assegnazione">
           <button id="assignmentWizardPrevBtn" type="button" title="Torna allo step precedente del wizard.">Indietro</button>
-          <p id="assignmentWizardHint" class="status">Step 1 di 6: scegli o crea la activity.</p>
+          <p id="assignmentWizardHint" class="status">Step 1 di 7: scegli o crea la activity.</p>
           <button id="assignmentWizardNextBtn" type="button" class="primary" title="Vai allo step successivo del wizard.">Avanti</button>
         </nav>
       </div>
@@ -347,7 +356,7 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
         <button id="activityEditorCloseBtn" type="button" class="smallButton" title="Chiudi l'editor activity e torna alla dashboard.">Chiudi</button>
       </div>
     </div>
-    <div class="activityEditorBody">
+    <div id="activityEditorBody" class="activityEditorBody">
       <div class="generateGrid">
         <label>
           <span>Titolo</span>
