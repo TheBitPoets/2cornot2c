@@ -413,6 +413,10 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         renderAssignmentPlan,
         renderAssignmentAiPackage,
         renderAssignmentCodexDraft,
+        assignmentAiDraftFiles,
+        renderAssignmentAiFilesReview,
+        openAssignmentAiFilesDialog,
+        closeAssignmentAiFilesDialog,
         applyAssignmentAiDraftToActivityForm,
         updateAssignmentAiApplyState,
         setAssignmentAiProgress,
@@ -912,12 +916,17 @@ def test_assignment_wizard_uses_calendar_date_time_inputs() -> None:
     assert 'id="nowAt" type="datetime-local"' in assignment_section
 
 
-def test_assignment_ai_context_checkboxes_use_fixed_alignment() -> None:
+def test_assignment_ai_context_uses_informative_status_rows() -> None:
+    html = open("tools/assignment_dashboard.html", encoding="utf-8").read()
     css = open("tools/assignment_dashboard.css", encoding="utf-8").read()
+    assignment_section = html.split('data-assignment-step="ai"', 1)[1].split('data-assignment-step="review"', 1)[0]
 
-    assert ".assignmentAiContext label" in css
-    assert "grid-template-columns: 1rem minmax(0, 1fr);" in css
-    assert '.assignmentAiContext input[type="checkbox"]' in css
+    assert 'type="checkbox"' not in assignment_section
+    assert "contextState isIncluded" in assignment_section
+    assert "contextState isPlanned" in assignment_section
+    assert ".assignmentAiContextItem" in css
+    assert ".contextState.isIncluded" in css
+    assert ".contextState.isPlanned" in css
 
 
 def test_assignment_ai_progress_has_visible_indeterminate_bar() -> None:
@@ -1057,6 +1066,36 @@ def test_generate_assignment_ai_draft_with_codex_posts_request_and_fills_teacher
           assert.equal(tested.els.assignmentWizardNextBtn.textContent, "Avanti: 3 Prepara revisione");
           assert.match(tested.els.status.textContent, /Bozza Codex pronta/);
         })();
+        """
+    )
+
+
+def test_generated_ai_files_open_in_review_style_modal() -> None:
+    run_dashboard_js(
+        """
+        tested.renderAssignmentCodexDraft({
+          draft: {
+            summary: "Bozza pronta",
+            activity_patch: { titolo: "Somma" },
+            files: [
+              { path: "starter/main.py", role: "starter", content: "print(1)\\n" },
+              { path: "tests/test_main.py", role: "test", content: "def test_ok():\\n    assert True\\n" },
+            ],
+          },
+        });
+
+        assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /Apri file/);
+
+        tested.openAssignmentAiFilesDialog(1);
+
+        assert.equal(tested.els.assignmentAiFilesDialog.open, true);
+        assert.match(tested.els.assignmentAiFilesStatus.textContent, /tests\\/test_main.py/);
+        assert.match(tested.els.assignmentAiFilesReview.innerHTML, /starter\\/main.py/);
+        assert.match(tested.els.assignmentAiFilesReview.innerHTML, /test_ok/);
+
+        tested.closeAssignmentAiFilesDialog();
+
+        assert.equal(tested.els.assignmentAiFilesDialog.open, false);
         """
     )
 

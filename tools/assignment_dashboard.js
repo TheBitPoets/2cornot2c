@@ -154,6 +154,7 @@ const state = {
   activityAuthorLastSuggestedId: "",
   activityReviewSaved: false,
   assignmentAiGenerating: false,
+  assignmentAiDraftFilePath: "",
   selectedRosterTargetIds: new Set(),
   selectedAssignmentId: "",
 };
@@ -303,6 +304,10 @@ const els = {
   assignmentAiDraftText: document.querySelector("#assignmentAiDraftText"),
   assignmentAiProgress: document.querySelector("#assignmentAiProgress"),
   assignmentAiPackagePreview: document.querySelector("#assignmentAiPackagePreview"),
+  assignmentAiFilesDialog: document.querySelector("#assignmentAiFilesDialog"),
+  assignmentAiFilesCloseBtn: document.querySelector("#assignmentAiFilesCloseBtn"),
+  assignmentAiFilesStatus: document.querySelector("#assignmentAiFilesStatus"),
+  assignmentAiFilesReview: document.querySelector("#assignmentAiFilesReview"),
   generateReportBtn: document.querySelector("#generateReportBtn"),
   panels: document.querySelectorAll("main.layout .panel"),
 };
@@ -2708,7 +2713,7 @@ function renderAssignmentCodexDraft(response) {
     <div class="assignmentPlanGrid">
       <section>
         <h3>File proposti</h3>
-        ${renderAssignmentAssetList(files, "Nessun file proposto da Codex.")}
+        ${renderAssignmentAssetList(files, "Nessun file proposto da Codex.", { openDraftFiles: true })}
       </section>
       <section>
         <h3>Note docente</h3>
@@ -2745,6 +2750,77 @@ function updateAssignmentAiApplyState() {
     }
   }
   return isValid;
+}
+
+function assignmentAiDraftFiles() {
+  try {
+    const draft = parseAssignmentAiDraftText();
+    return Array.isArray(draft.files) ? draft.files.filter((file) => file && typeof file === "object") : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function renderAssignmentAiFilesReview() {
+  if (!els.assignmentAiFilesReview) return;
+  const files = assignmentAiDraftFiles();
+  if (!files.length) {
+    els.assignmentAiFilesReview.className = "reviewEmpty";
+    els.assignmentAiFilesReview.textContent = "La bozza AI non contiene file proposti.";
+    if (els.assignmentAiFilesStatus) els.assignmentAiFilesStatus.textContent = "Nessun file proposto dalla bozza AI.";
+    return;
+  }
+  const selected = files.find((file) => String(file.path || "") === state.assignmentAiDraftFilePath) || files[0];
+  state.assignmentAiDraftFilePath = String(selected.path || files.indexOf(selected));
+  const selectedPath = String(selected.path || "file-proposto.txt");
+  const selectedContent = selected.content === undefined || selected.content === null
+    ? "Contenuto non presente nella risposta AI. Il file e dichiarato come asset, ma non e stato generato inline."
+    : String(selected.content);
+  if (els.assignmentAiFilesStatus) {
+    els.assignmentAiFilesStatus.textContent = `File AI: ${selectedPath}.`;
+  }
+  els.assignmentAiFilesReview.className = "reviewGrid";
+  els.assignmentAiFilesReview.innerHTML = `
+    <aside class="fileList">
+      <h3>File proposti</h3>
+      ${files.map((file, index) => {
+        const path = String(file.path || `file-${index + 1}.txt`);
+        const active = path === state.assignmentAiDraftFilePath;
+        return `
+          <button type="button" class="${active ? "isActive" : ""}" data-ai-draft-preview-file="${escapeHtml(path)}" title="Mostra il contenuto del file ${escapeHtml(path)}.">
+            <span>${escapeHtml(path.split(/[\\/]/).pop() || path)}</span>
+            <small>${escapeHtml(file.role || file.type || file.visibility || "file")}</small>
+          </button>
+        `;
+      }).join("")}
+    </aside>
+    <div class="reviewSplitter" role="separator" aria-label="Separatore lista file AI" aria-orientation="vertical"></div>
+    <section class="filePreview">
+      <div class="filePreviewHead">
+        <div>
+          <strong>${escapeHtml(selectedPath)}</strong>
+        </div>
+        <span>${escapeHtml(languageFromPath(selectedPath))}</span>
+      </div>
+      <pre><code>${highlightCode(selectedContent, selectedPath)}</code></pre>
+    </section>
+  `;
+}
+
+function openAssignmentAiFilesDialog(index = 0) {
+  const files = assignmentAiDraftFiles();
+  const selected = files[index] || files[0];
+  state.assignmentAiDraftFilePath = selected ? String(selected.path || `file-${index + 1}.txt`) : "";
+  renderAssignmentAiFilesReview();
+  if (els.assignmentAiFilesDialog && !els.assignmentAiFilesDialog.open) {
+    els.assignmentAiFilesDialog.showModal();
+  }
+}
+
+function closeAssignmentAiFilesDialog() {
+  if (els.assignmentAiFilesDialog?.open) {
+    els.assignmentAiFilesDialog.close();
+  }
 }
 
 function setAssignmentAiProgress(active, title = "Generazione proposta AI in corso", detail = "Codex sta lavorando sulla macchina docente.") {
@@ -2999,16 +3075,17 @@ function assignmentRecordPayload() {
   };
 }
 
-function renderAssignmentAssetList(assets, emptyLabel) {
+function renderAssignmentAssetList(assets, emptyLabel, options = {}) {
   const items = Array.isArray(assets) ? assets : [];
   if (!items.length) return `<p class="status">${escapeHtml(emptyLabel)}</p>`;
   return `
     <ul class="assignmentPlanList">
-      ${items.map((asset) => `
+      ${items.map((asset, index) => `
         <li>
           <strong>${escapeHtml(asset.target_path || asset.path || "-")}</strong>
           ${badge(asset.type || asset.role || "-", asset.visibility === "student" ? "ok" : "muted")}
           <small>${escapeHtml(asset.description || asset.path || "")}</small>
+          ${options.openDraftFiles ? `<button type="button" class="smallButton" data-ai-draft-file-index="${index}" title="Apri il contenuto del file proposto ${escapeHtml(asset.path || asset.target_path || "")}.">Apri file</button>` : ""}
         </li>
       `).join("")}
     </ul>
@@ -4019,6 +4096,18 @@ els.previewAssignmentBtn?.addEventListener("click", previewAssignmentPlan);
 els.assignmentAiAskBtn?.addEventListener("click", previewAssignmentAiPackage);
 els.assignmentAiGenerateBtn?.addEventListener("click", generateAssignmentAiDraft);
 els.assignmentAiDraftText?.addEventListener("input", updateAssignmentAiApplyState);
+els.assignmentAiPackagePreview?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-ai-draft-file-index]");
+  if (!button) return;
+  openAssignmentAiFilesDialog(Number(button.dataset.aiDraftFileIndex || 0));
+});
+els.assignmentAiFilesReview?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-ai-draft-preview-file]");
+  if (!button) return;
+  state.assignmentAiDraftFilePath = button.dataset.aiDraftPreviewFile || "";
+  renderAssignmentAiFilesReview();
+});
+els.assignmentAiFilesCloseBtn?.addEventListener("click", closeAssignmentAiFilesDialog);
 els.openActivityEditorBtn?.addEventListener("click", () => openActivityEditor("panel"));
 els.wizardOpenActivityEditorBtn?.addEventListener("click", openActivityReviewStep);
 els.activityEditorCloseBtn?.addEventListener("click", closeActivityEditor);

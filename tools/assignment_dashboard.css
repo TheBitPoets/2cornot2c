@@ -388,25 +388,41 @@ textarea[aria-invalid="true"]:focus {
   margin-bottom: .15rem;
 }
 
-.assignmentAiContext label {
+.assignmentAiContextItem {
   display: grid;
-  grid-template-columns: 1rem minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: start;
-  gap: .45rem;
+  gap: .55rem;
   color: var(--muted);
   font-size: .82rem;
   line-height: 1.35;
 }
 
-.assignmentAiContext input[type="checkbox"] {
-  width: 1rem;
-  height: 1rem;
-  margin: .08rem 0 0;
-  accent-color: #111111;
+.contextState {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 4.1rem;
+  border-radius: 999px;
+  padding: .1rem .42rem;
+  border: 1px solid rgba(17, 17, 17, .14);
+  background: #f3f4f6;
+  color: #374151;
+  font-size: .7rem;
+  font-weight: 800;
+  text-transform: uppercase;
 }
 
-.assignmentAiContext input[type="checkbox"]:disabled {
-  opacity: .7;
+.contextState.isIncluded {
+  border-color: rgba(22, 101, 52, .24);
+  background: #ecfdf3;
+  color: #166534;
+}
+
+.contextState.isPlanned {
+  border-color: rgba(146, 64, 14, .24);
+  background: #fff7ed;
+  color: #92400e;
 }
 
 .assignmentAiPolicy {

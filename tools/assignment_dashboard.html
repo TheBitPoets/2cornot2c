@@ -99,18 +99,18 @@
               </label>
               <div class="assignmentAiContext wideField" aria-label="Contesto che verra inviato all'AI">
                 <strong>Contesto da inviare</strong>
-                <label><input type="checkbox" checked disabled> Activity selezionata e metadati</label>
-                <label><input type="checkbox" checked disabled> Percorso, UDA e argomenti collegati</label>
-                <label><input type="checkbox" checked disabled> Destinatari, classe/team e scadenze</label>
-                <label><input type="checkbox" checked disabled> Asset, starter file, test e soluzione quando disponibili</label>
+                <div class="assignmentAiContextItem"><span class="contextState isIncluded">incluso</span><span>Activity selezionata e metadati</span></div>
+                <div class="assignmentAiContextItem"><span class="contextState isIncluded">incluso</span><span>Percorso, UDA e argomenti collegati</span></div>
+                <div class="assignmentAiContextItem"><span class="contextState isIncluded">incluso</span><span>Destinatari, classe/team e scadenze</span></div>
+                <div class="assignmentAiContextItem"><span class="contextState isIncluded">incluso</span><span>Asset, starter file, test e soluzione quando disponibili</span></div>
               </div>
               <div class="assignmentAiContext wideField" aria-label="Pacchetto file previsto per la generazione AI">
                 <strong>Pacchetto file activity</strong>
-                <label><input type="checkbox" checked disabled> Traccia e README studente</label>
-                <label><input type="checkbox" checked disabled> Starter code, esempi e fixture modificabili dal docente</label>
-                <label><input type="checkbox" checked disabled> Test pubblici per lo studente</label>
-                <label><input type="checkbox" checked disabled> Test riservati, runner e soluzione solo docente</label>
-                <label><input type="checkbox" disabled> File aggiuntivi liberi scelti da repository o caricati dal docente</label>
+                <div class="assignmentAiContextItem"><span class="contextState isIncluded">incluso</span><span>Traccia e README studente</span></div>
+                <div class="assignmentAiContextItem"><span class="contextState isIncluded">incluso</span><span>Starter code, esempi e fixture modificabili dal docente</span></div>
+                <div class="assignmentAiContextItem"><span class="contextState isIncluded">incluso</span><span>Test pubblici per lo studente</span></div>
+                <div class="assignmentAiContextItem"><span class="contextState isIncluded">incluso</span><span>Test riservati, runner e soluzione solo docente</span></div>
+                <div class="assignmentAiContextItem"><span class="contextState isPlanned">futuro</span><span>File aggiuntivi liberi scelti da repository o caricati dal docente</span></div>
               </div>
               <div class="assignmentAiPolicy wideField">
                 <label>
@@ -586,6 +586,22 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
     </div>
     <div id="submissionReview" class="reviewEmpty">
       Nessuna consegna selezionata.
+    </div>
+  </dialog>
+
+  <dialog id="assignmentAiFilesDialog" class="reviewDialog" aria-labelledby="assignmentAiFilesDialogTitle">
+    <div class="reviewDialogHead">
+      <div>
+        <p class="modalBreadcrumb" aria-label="Percorso modal">Dashboard &gt; Assegna activity &gt; File AI</p>
+        <h2 id="assignmentAiFilesDialogTitle">File proposti dall'AI</h2>
+        <p id="assignmentAiFilesStatus" class="status">Seleziona un file generato dalla bozza AI.</p>
+      </div>
+      <div class="reviewDialogActions">
+        <button id="assignmentAiFilesCloseBtn" type="button" class="smallButton" title="Chiudi la preview dei file proposti dall'AI.">Chiudi</button>
+      </div>
+    </div>
+    <div id="assignmentAiFilesReview" class="reviewEmpty">
+      Nessun file AI selezionato.
     </div>
   </dialog>
 
