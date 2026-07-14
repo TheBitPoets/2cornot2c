@@ -169,6 +169,71 @@ select {
   padding: 1.1rem;
 }
 
+.assignmentTargetPicker {
+  display: grid;
+  gap: .75rem;
+  padding: .85rem;
+  border: 1px solid rgba(17, 17, 17, .1);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.assignmentTargetPickerHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.assignmentTargetPickerHead strong {
+  display: block;
+  margin-bottom: .2rem;
+}
+
+.assignmentTargetPickerHead p {
+  max-width: 48rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: .82rem;
+  line-height: 1.45;
+}
+
+.assignmentTargetPickerList {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: .55rem;
+}
+
+.assignmentTargetOption {
+  display: grid;
+  grid-template-columns: 1rem minmax(0, 1fr);
+  align-items: start;
+  gap: .55rem;
+  padding: .65rem;
+  border: 1px solid rgba(17, 17, 17, .1);
+  border-radius: 8px;
+  background: #fbfbfb;
+}
+
+.assignmentTargetOption input {
+  width: 1rem;
+  height: 1rem;
+  margin: .12rem 0 0;
+  accent-color: #111111;
+}
+
+.assignmentTargetOption strong,
+.assignmentTargetOption small {
+  display: block;
+}
+
+.assignmentTargetOption small {
+  margin-top: .15rem;
+  color: var(--muted);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
 .assignmentWizard {
   border-top: 1px solid rgba(17, 17, 17, .08);
 }
@@ -2189,6 +2254,10 @@ code {
 
   .generateGrid {
     grid-template-columns: 1fr;
+  }
+
+  .assignmentTargetPickerHead {
+    flex-direction: column;
   }
 
   .assignmentPlanGrid {

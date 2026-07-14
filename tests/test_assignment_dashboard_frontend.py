@@ -401,6 +401,9 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         assignmentRecordPayload,
         renderAssignmentAssetList,
         renderAssignmentTargetList,
+        renderAssignmentTargetPicker,
+        syncTargetsFromRosterSelection,
+        syncRosterSelectionFromTargetsText,
         renderAssignmentPlan,
         renderAssignmentAiPackage,
         renderAssignmentCodexDraft,
@@ -1417,6 +1420,40 @@ def test_class_roster_targets_fill_generate_form_with_demo_fallbacks() -> None:
     )
 
 
+def test_assignment_targets_can_select_subset_of_roster_students() -> None:
+    run_dashboard_js(
+        """
+        tested.applyRosterToGenerateForm({
+          id: "demo-3a",
+          label: "Classe demo 3A",
+          github_team: "team-demo-3a",
+          students: [
+            { id: "rossi-mario", display_name: "Rossi Mario", local_path: "local/rossi-mario", active: true },
+            { id: "bianchi-luca", display_name: "Bianchi Luca", local_path: "local/bianchi-luca", active: true },
+            { id: "verdi-anna", display_name: "Verdi Anna", local_path: "local/verdi-anna", active: true },
+          ],
+        });
+
+        assert.match(tested.els.assignmentTargetPicker.innerHTML, /Rossi Mario/);
+        assert.match(tested.els.assignmentTargetPicker.innerHTML, /Bianchi Luca/);
+        assert.equal(tested.state.selectedRosterTargetIds.size, 3);
+
+        tested.state.selectedRosterTargetIds = new Set(["rossi-mario", "verdi-anna"]);
+        tested.syncTargetsFromRosterSelection();
+
+        assert.equal(tested.els.targetsText.value, ["local/rossi-mario", "local/verdi-anna"].join("\\n"));
+        assert.match(tested.els.rosterStatus.textContent, /2 target studenti/);
+        assert.match(tested.els.assignmentTargetPicker.innerHTML, /data-roster-target-student="rossi-mario" checked/);
+        assert.doesNotMatch(tested.els.assignmentTargetPicker.innerHTML, /data-roster-target-student="bianchi-luca" checked/);
+
+        tested.els.targetsText.value = "local/bianchi-luca";
+        tested.syncRosterSelectionFromTargetsText();
+
+        assert.deepEqual(Array.from(tested.state.selectedRosterTargetIds), ["bianchi-luca"]);
+      """
+    )
+
+
 def test_class_roster_option_label_includes_year_and_students() -> None:
     run_dashboard_js(
         """
@@ -1850,6 +1887,11 @@ def test_assignment_and_report_panels_are_separated() -> None:
     assert "Assegna activity" in assignment_section
     assert 'id="activitySelect"' in assignment_section
     assert 'id="classRosterSelect"' in assignment_section
+    assert 'id="assignmentTargetPicker"' in assignment_section
+    assert 'id="selectAllRosterTargetsBtn"' in assignment_section
+    assert 'id="clearRosterTargetsBtn"' in assignment_section
+    assert "Studenti dal roster" in assignment_section
+    assert "gruppo di studenti o un singolo studente" in assignment_section
     assert 'id="targetsText"' in assignment_section
     assert 'id="previewAssignmentBtn"' in assignment_section
     assert 'id="saveAssignmentBtn"' in assignment_section

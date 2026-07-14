@@ -154,6 +154,7 @@ const state = {
   activityAuthorLastSuggestedId: "",
   activityReviewSaved: false,
   assignmentAiGenerating: false,
+  selectedRosterTargetIds: new Set(),
   selectedAssignmentId: "",
 };
 
@@ -264,6 +265,9 @@ const els = {
   dueAt: document.querySelector("#dueAt"),
   nowAt: document.querySelector("#nowAt"),
   targetsText: document.querySelector("#targetsText"),
+  assignmentTargetPicker: document.querySelector("#assignmentTargetPicker"),
+  selectAllRosterTargetsBtn: document.querySelector("#selectAllRosterTargetsBtn"),
+  clearRosterTargetsBtn: document.querySelector("#clearRosterTargetsBtn"),
   previewAssignmentBtn: document.querySelector("#previewAssignmentBtn"),
   saveAssignmentBtn: document.querySelector("#saveAssignmentBtn"),
   distributeAssignmentBtn: document.querySelector("#distributeAssignmentBtn"),
@@ -886,6 +890,87 @@ function targetLineCount() {
   return els.targetsText.value.split(/\r?\n/).filter((line) => line.trim() && !line.trim().startsWith("#")).length;
 }
 
+function targetTextLines() {
+  return new Set(els.targetsText.value.split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith("#")));
+}
+
+function rosterStudentKey(student) {
+  return String(student?.id || student?.display_name || student?.local_path || student?.repo_path || student?.repo_ref || "").trim();
+}
+
+function activeRosterStudents(roster = state.selectedClassRoster) {
+  return (Array.isArray(roster?.students) ? roster.students : []).filter((student) => student?.active !== false);
+}
+
+function selectedRosterStudents() {
+  const roster = state.selectedClassRoster;
+  if (!roster) return [];
+  return activeRosterStudents(roster).filter((student) => state.selectedRosterTargetIds.has(rosterStudentKey(student)));
+}
+
+function syncTargetsFromRosterSelection() {
+  if (!state.selectedClassRoster || !els.assignmentTargetPicker) return;
+  const warnings = [];
+  const targets = [];
+  for (const student of selectedRosterStudents()) {
+    const result = localTargetFromStudent(student);
+    if (result.target) targets.push(result.target);
+    if (result.warning) warnings.push(result.warning);
+  }
+  els.targetsText.value = targets.join("\n");
+  clearSelectedAssignment();
+  renderAssignmentContext();
+  setRosterStatus(warnings.length
+    ? `Destinatari aggiornati con avvisi: ${warnings.join(" ")}`
+    : `Destinatari aggiornati: ${targets.length} target studenti.`);
+}
+
+function syncRosterSelectionFromTargetsText() {
+  if (!state.selectedClassRoster) return;
+  const lines = targetTextLines();
+  state.selectedRosterTargetIds = new Set(
+    activeRosterStudents().filter((student) => {
+      const target = localTargetFromStudent(student).target;
+      return target && lines.has(target);
+    }).map(rosterStudentKey),
+  );
+  renderAssignmentTargetPicker();
+}
+
+function renderAssignmentTargetPicker() {
+  if (!els.assignmentTargetPicker) return;
+  const roster = state.selectedClassRoster;
+  if (!roster) {
+    els.assignmentTargetPicker.innerHTML = '<p class="status">Seleziona un roster per scegliere classe intera, gruppo o singolo studente.</p>';
+    if (els.selectAllRosterTargetsBtn) els.selectAllRosterTargetsBtn.disabled = true;
+    if (els.clearRosterTargetsBtn) els.clearRosterTargetsBtn.disabled = true;
+    return;
+  }
+  const students = activeRosterStudents(roster);
+  if (els.selectAllRosterTargetsBtn) els.selectAllRosterTargetsBtn.disabled = students.length === 0;
+  if (els.clearRosterTargetsBtn) els.clearRosterTargetsBtn.disabled = students.length === 0;
+  if (!students.length) {
+    els.assignmentTargetPicker.innerHTML = '<p class="status">Il roster non contiene studenti attivi da assegnare.</p>';
+    return;
+  }
+  els.assignmentTargetPicker.innerHTML = students.map((student) => {
+    const key = rosterStudentKey(student);
+    const target = localTargetFromStudent(student);
+    const checked = state.selectedRosterTargetIds.has(key) ? " checked" : "";
+    const name = student.display_name || student.id || key || "-";
+    const hint = target.warning || target.target || "Target non disponibile";
+    return `
+      <label class="assignmentTargetOption">
+        <input type="checkbox" data-roster-target-student="${escapeHtml(key)}"${checked}>
+        <span>
+          <strong>${escapeHtml(name)}</strong>
+          <small>${escapeHtml(hint)}</small>
+        </span>
+      </label>
+    `;
+  }).join("");
+}
+
 function reportAssignmentSummaryItems() {
   const assignment = state.assignments.find((candidate) => candidate.id === state.selectedAssignmentId)
     || state.dueAssignments.find((candidate) => candidate.id === state.selectedAssignmentId);
@@ -915,6 +1000,7 @@ function renderReportAssignmentSummary() {
 }
 
 function renderAssignmentContext() {
+  renderAssignmentTargetPicker();
   renderRosterPanel();
   renderReportAssignmentSummary();
 }
@@ -1856,13 +1942,14 @@ function applyRosterToGenerateForm(roster) {
   els.classLabel.value = roster.label || roster.id || "";
   els.githubTeam.value = roster.github_team || "";
   const result = rosterTargets(roster);
+  state.selectedRosterTargetIds = new Set(activeRosterStudents(roster).map(rosterStudentKey));
   els.targetsText.value = result.targets.join("\n");
   const activity = currentActivity();
   if (activity?.id) els.outputName.value = defaultOutputName({ ...activity, class_id: roster.id, class_label: roster.label, github_team: roster.github_team });
   setRosterStatus(result.warnings.length
     ? `Roster applicato con avvisi: ${result.warnings.join(" ")}`
     : `Roster applicato: ${result.targets.length} target studenti.`);
-  renderRosterPanel();
+  renderAssignmentContext();
   return result;
 }
 
@@ -1870,7 +1957,9 @@ async function loadSelectedClassRoster() {
   const name = els.classRosterSelect?.value || "";
   if (!name) {
     state.selectedClassRoster = null;
+    state.selectedRosterTargetIds = new Set();
     renderRosterPanel();
+    renderAssignmentTargetPicker();
     setRosterStatus("Seleziona un roster per compilare classe e target.");
     return;
   }
@@ -3882,6 +3971,26 @@ els.activityAuthorClass?.addEventListener("change", () => {
   field?.addEventListener("change", markActivityReviewDirty);
 });
 els.classRosterSelect?.addEventListener("change", loadSelectedClassRoster);
+els.assignmentTargetPicker?.addEventListener("change", (event) => {
+  const input = event.target.closest("[data-roster-target-student]");
+  if (!input) return;
+  const key = input.dataset.rosterTargetStudent;
+  if (input.checked) {
+    state.selectedRosterTargetIds.add(key);
+  } else {
+    state.selectedRosterTargetIds.delete(key);
+  }
+  syncTargetsFromRosterSelection();
+});
+els.selectAllRosterTargetsBtn?.addEventListener("click", () => {
+  if (!state.selectedClassRoster) return;
+  state.selectedRosterTargetIds = new Set(activeRosterStudents().map(rosterStudentKey));
+  syncTargetsFromRosterSelection();
+});
+els.clearRosterTargetsBtn?.addEventListener("click", () => {
+  state.selectedRosterTargetIds = new Set();
+  syncTargetsFromRosterSelection();
+});
 els.activityPath.addEventListener("input", () => {
   clearSelectedAssignment();
   renderActivitySelect();
@@ -3911,6 +4020,7 @@ els.dueAt.addEventListener("input", () => {
 els.nowAt.addEventListener("change", () => loadAssignments().catch((error) => setStatus(`Assegnazioni non aggiornate: ${error.message}`)));
 els.targetsText.addEventListener("input", () => {
   clearSelectedAssignment();
+  syncRosterSelectionFromTargetsText();
   renderAssignmentContext();
 });
 els.classId.addEventListener("change", updateOutputNameForCurrentActivity);

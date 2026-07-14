@@ -182,6 +182,21 @@
               <span>Team GitHub</span>
               <input id="githubTeam" type="text" placeholder="3A-TPSI">
             </label>
+            <div class="assignmentTargetPicker wideField" aria-label="Studenti e gruppi da assegnare">
+              <div class="assignmentTargetPickerHead">
+                <div>
+                  <strong>Studenti dal roster</strong>
+                  <p>Seleziona tutta la classe, un gruppo di studenti o un singolo studente. I repository target sotto vengono aggiornati automaticamente.</p>
+                </div>
+                <div class="generateActions">
+                  <button id="selectAllRosterTargetsBtn" type="button" class="smallButton" title="Seleziona tutti gli studenti attivi del roster.">Tutti</button>
+                  <button id="clearRosterTargetsBtn" type="button" class="smallButton" title="Rimuovi tutti gli studenti dalla consegna.">Nessuno</button>
+                </div>
+              </div>
+              <div id="assignmentTargetPicker" class="assignmentTargetPickerList">
+                <p class="status">Seleziona un roster per scegliere classe intera, gruppo o singolo studente.</p>
+              </div>
+            </div>
             <label class="wideField">
               <span>Repository studenti locali, uno per riga</span>
               <textarea id="targetsText" rows="4">examples/assignment_tracking/student_repos/rossi-mario
