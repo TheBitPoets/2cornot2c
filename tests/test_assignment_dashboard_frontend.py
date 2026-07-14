@@ -414,6 +414,7 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         renderAssignmentAiPackage,
         renderAssignmentCodexDraft,
         setAssignmentAiPreviewView,
+        selectAssignmentAiPreviewView,
         assignmentAiDraftFiles,
         renderAssignmentAiFilesReview,
         openAssignmentAiFilesDialog,
@@ -898,7 +899,8 @@ def test_assignment_wizard_contains_teacher_editable_ai_step() -> None:
     assert "Invia prompt e genera proposta" in assignment_section
     assert "Generazione proposta AI in corso" in assignment_section
     assert "Controllo dati inviati all'AI" in assignment_section
-    assert "Aggiorna controllo dati" in assignment_section
+    assert "Aggiorna controllo dati" not in assignment_section
+    assert 'id="assignmentAiAskBtn"' not in assignment_section
     assert 'data-ai-preview-view="draft"' in assignment_section
     assert 'data-ai-preview-view="context"' in assignment_section
     assert 'id="assignmentWizardPrevBtn"' in assignment_section
@@ -1025,6 +1027,24 @@ def test_preview_assignment_ai_package_posts_bundle_request_and_renders_json() -
           assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /starter/);
           assert.equal(tested.els.assignmentAiDraftText.value, "");
           assert.match(tested.els.status.textContent, /Controllo dati AI pronto/);
+        })();
+        """
+    )
+
+
+def test_assignment_ai_context_tab_updates_context_preview() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.els.activityPath.value = "activities/python-base-somma-001.json";
+          tested.els.targetsText.value = "students/rossi-mario";
+          tested.els.assignmentAiPrompt.value = "Aggiungi test sui negativi";
+
+          await tested.selectAssignmentAiPreviewView("context");
+
+          const call = tested.fetchCalls.find((entry) => entry.path === "/api/activities/ai-package");
+          assert.ok(call);
+          assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /File di contesto inviati all'AI/);
         })();
         """
     )

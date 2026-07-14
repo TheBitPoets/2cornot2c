@@ -302,7 +302,6 @@ const els = {
   assignmentAiPrompt: document.querySelector("#assignmentAiPrompt"),
   assignmentAiStudentBudget: document.querySelector("#assignmentAiStudentBudget"),
   assignmentIntegrityMode: document.querySelector("#assignmentIntegrityMode"),
-  assignmentAiAskBtn: document.querySelector("#assignmentAiAskBtn"),
   assignmentAiGenerateBtn: document.querySelector("#assignmentAiGenerateBtn"),
   assignmentAiApplyDraftBtn: document.querySelector("#assignmentAiApplyDraftBtn"),
   assignmentAiDraftText: document.querySelector("#assignmentAiDraftText"),
@@ -2666,14 +2665,22 @@ function setAssignmentAiPreviewView(view) {
     : state.assignmentAiDraftHtml;
   els.assignmentAiPackagePreview.innerHTML = html || (
     state.assignmentAiPreviewView === "context"
-      ? '<p class="status">Clicca Aggiorna controllo dati per vedere prompt, metadati e file di contesto inviati all\'AI.</p>'
+      ? '<p class="status">Apri Dati inviati all\'AI per vedere prompt, metadati e file di contesto.</p>'
       : '<p class="status">Qui comparira la proposta generata dall\'AI. I dati inviati all\'AI restano disponibili nella vista dedicata.</p>'
   );
 }
 
+async function selectAssignmentAiPreviewView(view) {
+  if (view === "context") {
+    await previewAssignmentAiPackage();
+    return;
+  }
+  setAssignmentAiPreviewView(view);
+}
+
 function renderAssignmentAiPackage(aiPackage) {
   if (!aiPackage) {
-    state.assignmentAiContextHtml = '<p class="status">Clicca Aggiorna controllo dati per vedere prompt, metadati e file di contesto inviati all\'AI.</p>';
+    state.assignmentAiContextHtml = '<p class="status">Apri Dati inviati all\'AI per vedere prompt, metadati e file di contesto.</p>';
     setAssignmentAiPreviewView("context");
     return;
   }
@@ -3216,8 +3223,8 @@ async function previewAssignmentPlan() {
 }
 
 async function previewAssignmentAiPackage() {
-  if (!els.assignmentAiAskBtn) return;
-  els.assignmentAiAskBtn.disabled = true;
+  const contextButton = Array.from(els.assignmentAiPreviewButtons || []).find((button) => button.dataset.aiPreviewView === "context");
+  if (contextButton) contextButton.disabled = true;
   setStatus("Aggiornamento controllo dati inviati all'AI...");
   state.assignmentAiContextHtml = '<p class="status">Aggiornamento controllo dati inviati all\'AI...</p>';
   setAssignmentAiPreviewView("context");
@@ -3234,7 +3241,7 @@ async function previewAssignmentAiPackage() {
     setAssignmentAiPreviewView("context");
     setStatus(`Controllo dati AI non disponibile: ${message}`);
   } finally {
-    els.assignmentAiAskBtn.disabled = false;
+    if (contextButton) contextButton.disabled = false;
   }
 }
 
@@ -4128,10 +4135,12 @@ els.assignmentWizardPrevBtn?.addEventListener("click", () => moveAssignmentWizar
 els.assignmentWizardNextBtn?.addEventListener("click", () => moveAssignmentWizardStep(1));
 setAssignmentWizardStep("activity");
 els.previewAssignmentBtn?.addEventListener("click", previewAssignmentPlan);
-els.assignmentAiAskBtn?.addEventListener("click", previewAssignmentAiPackage);
 els.assignmentAiGenerateBtn?.addEventListener("click", generateAssignmentAiDraft);
 els.assignmentAiPreviewButtons?.forEach((button) => {
-  button.addEventListener("click", () => setAssignmentAiPreviewView(button.dataset.aiPreviewView));
+  button.addEventListener("click", () => {
+    selectAssignmentAiPreviewView(button.dataset.aiPreviewView)
+      .catch((error) => setStatus(`Controllo dati AI non disponibile: ${error.message}`));
+  });
 });
 els.assignmentAiPrompt?.addEventListener("focus", unlockAssignmentAiPrompt);
 els.assignmentAiPrompt?.addEventListener("click", unlockAssignmentAiPrompt);
