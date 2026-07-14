@@ -153,6 +153,7 @@ const state = {
   draggedPanelKey: "",
   activityAuthorLastSuggestedId: "",
   activityReviewSaved: false,
+  assignmentAiGenerating: false,
   selectedAssignmentId: "",
 };
 
@@ -280,6 +281,7 @@ const els = {
   assignmentAiGenerateBtn: document.querySelector("#assignmentAiGenerateBtn"),
   assignmentAiApplyDraftBtn: document.querySelector("#assignmentAiApplyDraftBtn"),
   assignmentAiDraftText: document.querySelector("#assignmentAiDraftText"),
+  assignmentAiProgress: document.querySelector("#assignmentAiProgress"),
   assignmentAiPackagePreview: document.querySelector("#assignmentAiPackagePreview"),
   generateReportBtn: document.querySelector("#generateReportBtn"),
   panels: document.querySelectorAll("main.layout .panel"),
@@ -2541,7 +2543,7 @@ function updateAssignmentAiApplyState() {
     isValid = false;
   }
   if (els.assignmentAiApplyDraftBtn) {
-    els.assignmentAiApplyDraftBtn.disabled = !isValid;
+    els.assignmentAiApplyDraftBtn.disabled = !isValid || state.assignmentAiGenerating;
     els.assignmentAiApplyDraftBtn.title = isValid
       ? "Porta la proposta AI nello step Revisione activity. Il docente puo modificarla prima di salvare."
       : "Genera una proposta AI valida prima di preparare la revisione activity.";
@@ -2550,11 +2552,25 @@ function updateAssignmentAiApplyState() {
     const current = currentAssignmentWizardStep();
     const index = assignmentWizardStepIndex(current);
     if (els.assignmentWizardNextBtn && index >= 0 && index < ASSIGNMENT_WIZARD_STEPS.length - 1) {
-      els.assignmentWizardNextBtn.disabled = !isValid;
+      els.assignmentWizardNextBtn.disabled = !isValid || state.assignmentAiGenerating;
       els.assignmentWizardNextBtn.textContent = assignmentWizardNextLabel(current);
     }
   }
   return isValid;
+}
+
+function setAssignmentAiProgress(active, title = "Generazione proposta AI in corso", detail = "Codex sta lavorando sulla macchina docente.") {
+  if (!els.assignmentAiProgress) return;
+  els.assignmentAiProgress.hidden = !active;
+  if (!active) return;
+  els.assignmentAiProgress.innerHTML = `
+    <div class="assignmentAiProgressHeader">
+      <strong>${escapeHtml(title)}</strong>
+      <span>${escapeHtml(detail)}</span>
+    </div>
+    <div class="assignmentAiProgressTrack" aria-hidden="true"><span></span></div>
+    <p>La durata dipende dal provider e dai file inviati. Se qualcosa si blocca, qui comparira un errore chiaro.</p>
+  `;
 }
 
 function markActivityReviewDirty() {
@@ -2678,6 +2694,7 @@ function nextAssignmentWizardStep(step) {
 
 function assignmentWizardStepComplete(step) {
   if (step === "activity") return Boolean(String(els.activityPath?.value || "").trim());
+  if (step === "ai" && state.assignmentAiGenerating) return false;
   if (step === "ai") return updateAssignmentAiApplyState();
   if (step === "review") return Boolean(state.activityReviewSaved && String(els.activityPath?.value || "").trim());
   return true;
@@ -2884,9 +2901,14 @@ async function previewAssignmentAiPackage() {
 async function generateAssignmentAiDraft() {
   if (!els.assignmentAiGenerateBtn) return;
   const provider = els.assignmentAiProvider?.value || "codex";
+  state.assignmentAiGenerating = true;
   els.assignmentAiGenerateBtn.disabled = true;
   if (els.assignmentAiApplyDraftBtn) els.assignmentAiApplyDraftBtn.disabled = true;
+  if (els.assignmentWizardNextBtn && currentAssignmentWizardStep() === "ai") {
+    els.assignmentWizardNextBtn.disabled = true;
+  }
   setStatus(`Generazione bozza con provider ${provider}...`);
+  setAssignmentAiProgress(true, "Generazione proposta AI in corso", `Provider: ${provider}. Attendi il completamento prima di avanzare.`);
   if (els.assignmentAiPackagePreview) {
     els.assignmentAiPackagePreview.innerHTML = '<p class="status">Generazione bozza in corso...</p>';
   }
@@ -2911,7 +2933,10 @@ async function generateAssignmentAiDraft() {
     updateAssignmentAiApplyState();
     setStatus(`Bozza AI non disponibile: ${message}`);
   } finally {
+    state.assignmentAiGenerating = false;
+    setAssignmentAiProgress(false);
     els.assignmentAiGenerateBtn.disabled = false;
+    updateAssignmentAiApplyState();
   }
 }
 

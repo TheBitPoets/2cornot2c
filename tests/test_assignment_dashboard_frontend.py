@@ -406,6 +406,7 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         renderAssignmentCodexDraft,
         applyAssignmentAiDraftToActivityForm,
         updateAssignmentAiApplyState,
+        setAssignmentAiProgress,
         assignmentWizardStepComplete,
         setAssignmentWizardStep,
         moveAssignmentWizardStep,
@@ -828,7 +829,9 @@ def test_assignment_wizard_contains_teacher_editable_ai_step() -> None:
     assert 'id="assignmentAiPrompt"' in assignment_section
     assert 'id="assignmentAiDraftText"' in assignment_section
     assert 'id="assignmentAiGenerateBtn"' in assignment_section
+    assert 'id="assignmentAiProgress"' in assignment_section
     assert "Genera proposta AI" in assignment_section
+    assert "Generazione proposta AI in corso" in assignment_section
     assert "Dettagli tecnici del pacchetto AI" in assignment_section
     assert "Mostra pacchetto tecnico" in assignment_section
     assert 'id="assignmentWizardPrevBtn"' in assignment_section
@@ -857,6 +860,14 @@ def test_assignment_ai_context_checkboxes_use_fixed_alignment() -> None:
     assert ".assignmentAiContext label" in css
     assert "grid-template-columns: 1rem minmax(0, 1fr);" in css
     assert '.assignmentAiContext input[type="checkbox"]' in css
+
+
+def test_assignment_ai_progress_has_visible_indeterminate_bar() -> None:
+    css = open("tools/assignment_dashboard.css", encoding="utf-8").read()
+
+    assert ".assignmentAiProgress" in css
+    assert ".assignmentAiProgressTrack" in css
+    assert "@keyframes assignmentAiProgressSweep" in css
 
 
 def test_assignment_date_time_inputs_are_serialized_as_iso() -> None:
@@ -980,12 +991,40 @@ def test_generate_assignment_ai_draft_with_codex_posts_request_and_fills_teacher
           assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /Bozza Codex pronta/);
           assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /File proposti/);
           assert.match(tested.els.assignmentAiDraftText.value, /Somma con negativi/);
+          assert.equal(tested.els.assignmentAiProgress.hidden, true);
           tested.setAssignmentWizardStep("ai");
           assert.equal(tested.assignmentWizardStepComplete("ai"), true);
           assert.equal(tested.els.assignmentWizardNextBtn.disabled, false);
           assert.equal(tested.els.assignmentWizardNextBtn.textContent, "Avanti: 3 Prepara revisione");
           assert.match(tested.els.status.textContent, /Bozza Codex pronta/);
         })();
+        """
+    )
+
+
+def test_assignment_ai_progress_blocks_next_until_generation_finishes() -> None:
+    run_dashboard_js(
+        """
+        tested.els.assignmentAiDraftText.value = JSON.stringify({ activity_patch: { titolo: "Somma" }, files: [] });
+        tested.setAssignmentWizardStep("ai");
+        assert.equal(tested.els.assignmentWizardNextBtn.disabled, false);
+
+        tested.state.assignmentAiGenerating = true;
+        tested.setAssignmentAiProgress(true, "Generazione proposta AI in corso", "Provider: codex.");
+        tested.updateAssignmentAiApplyState();
+
+        assert.equal(tested.els.assignmentAiProgress.hidden, false);
+        assert.match(tested.els.assignmentAiProgress.innerHTML, /Provider: codex/);
+        assert.equal(tested.assignmentWizardStepComplete("ai"), false);
+        assert.equal(tested.els.assignmentWizardNextBtn.disabled, true);
+
+        tested.state.assignmentAiGenerating = false;
+        tested.setAssignmentAiProgress(false);
+        tested.updateAssignmentAiApplyState();
+
+        assert.equal(tested.els.assignmentAiProgress.hidden, true);
+        assert.equal(tested.assignmentWizardStepComplete("ai"), true);
+        assert.equal(tested.els.assignmentWizardNextBtn.disabled, false);
         """
     )
 

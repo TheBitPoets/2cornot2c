@@ -129,6 +129,14 @@
               <div class="generateActions wideField">
                 <button id="assignmentAiGenerateBtn" type="button" class="primary" title="Genera una proposta modificabile usando il provider selezionato. Per ora e attivo Codex locale.">Genera proposta AI</button>
               </div>
+              <div id="assignmentAiProgress" class="assignmentAiProgress wideField" role="status" aria-live="polite" hidden>
+                <div class="assignmentAiProgressHeader">
+                  <strong>Generazione proposta AI in corso</strong>
+                  <span>Codex sta lavorando sulla macchina docente.</span>
+                </div>
+                <div class="assignmentAiProgressTrack" aria-hidden="true"><span></span></div>
+                <p>La durata dipende dal provider e dai file inviati. Se qualcosa si blocca, qui comparira un errore chiaro.</p>
+              </div>
               <label class="wideField">
                 <span>Bozza AI modificabile dal docente</span>
                 <textarea id="assignmentAiDraftText" rows="6" placeholder="Qui comparira la proposta AI. Il docente potra modificarla prima di salvare l'activity o distribuirla."></textarea>

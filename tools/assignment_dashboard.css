@@ -296,6 +296,68 @@ select {
   gap: .8rem;
 }
 
+.assignmentAiProgress {
+  display: grid;
+  gap: .65rem;
+  padding: .85rem;
+  border: 1px solid rgba(17, 17, 17, .14);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.assignmentAiProgress[hidden] {
+  display: none;
+}
+
+.assignmentAiProgressHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .8rem;
+}
+
+.assignmentAiProgressHeader strong {
+  margin: 0;
+}
+
+.assignmentAiProgressHeader span,
+.assignmentAiProgress p {
+  color: var(--muted);
+  font-size: .82rem;
+  line-height: 1.45;
+}
+
+.assignmentAiProgress p {
+  margin: 0;
+}
+
+.assignmentAiProgressTrack {
+  height: .55rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(17, 17, 17, .08);
+}
+
+.assignmentAiProgressTrack span {
+  display: block;
+  width: 45%;
+  height: 100%;
+  border-radius: inherit;
+  background:
+    linear-gradient(90deg, rgba(17, 17, 17, .15), rgba(17, 17, 17, .78), rgba(17, 17, 17, .15));
+  animation: assignmentAiProgressSweep 1.35s ease-in-out infinite;
+}
+
+@keyframes assignmentAiProgressSweep {
+  0% {
+    transform: translateX(-110%);
+  }
+
+  100% {
+    transform: translateX(230%);
+  }
+}
+
 .assignmentPackageJson {
   margin-top: .9rem;
 }
