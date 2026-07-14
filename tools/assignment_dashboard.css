@@ -348,6 +348,19 @@ select {
   animation: assignmentAiProgressSweep 1.35s ease-in-out infinite;
 }
 
+.assignmentAiProgress.isError {
+  border-color: rgba(185, 28, 28, .35);
+  background: #fff7f7;
+}
+
+.assignmentAiProgress.isError .assignmentAiProgressHeader strong {
+  color: #991b1b;
+}
+
+.assignmentAiProgress.isError p {
+  color: #7f1d1d;
+}
+
 @keyframes assignmentAiProgressSweep {
   0% {
     transform: translateX(-110%);

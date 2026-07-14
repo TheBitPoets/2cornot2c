@@ -407,6 +407,7 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         applyAssignmentAiDraftToActivityForm,
         updateAssignmentAiApplyState,
         setAssignmentAiProgress,
+        setAssignmentAiProgressError,
         assignmentWizardStepComplete,
         setAssignmentWizardStep,
         moveAssignmentWizardStep,
@@ -867,6 +868,7 @@ def test_assignment_ai_progress_has_visible_indeterminate_bar() -> None:
 
     assert ".assignmentAiProgress" in css
     assert ".assignmentAiProgressTrack" in css
+    assert ".assignmentAiProgress.isError" in css
     assert "@keyframes assignmentAiProgressSweep" in css
 
 
@@ -1025,6 +1027,25 @@ def test_assignment_ai_progress_blocks_next_until_generation_finishes() -> None:
         assert.equal(tested.els.assignmentAiProgress.hidden, true);
         assert.equal(tested.assignmentWizardStepComplete("ai"), true);
         assert.equal(tested.els.assignmentWizardNextBtn.disabled, false);
+        """
+    )
+
+
+def test_assignment_ai_generation_error_is_visible_outside_details() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.els.assignmentAiProvider.value = "openai";
+
+          await tested.generateAssignmentAiDraft();
+
+          assert.equal(tested.els.assignmentAiProgress.hidden, false);
+          assert.equal(tested.els.assignmentAiProgress.classList.contains("isError"), true);
+          assert.match(tested.els.assignmentAiProgress.innerHTML, /Generazione proposta AI interrotta/);
+          assert.match(tested.els.assignmentAiProgress.innerHTML, /Provider non ancora collegato/);
+          assert.equal(tested.els.assignmentAiGenerateBtn.disabled, false);
+          assert.match(tested.els.status.textContent, /Provider non ancora collegato/);
+        })();
         """
     )
 

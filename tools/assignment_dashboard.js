@@ -2563,6 +2563,7 @@ function setAssignmentAiProgress(active, title = "Generazione proposta AI in cor
   if (!els.assignmentAiProgress) return;
   els.assignmentAiProgress.hidden = !active;
   if (!active) return;
+  els.assignmentAiProgress.classList.remove("isError");
   els.assignmentAiProgress.innerHTML = `
     <div class="assignmentAiProgressHeader">
       <strong>${escapeHtml(title)}</strong>
@@ -2570,6 +2571,19 @@ function setAssignmentAiProgress(active, title = "Generazione proposta AI in cor
     </div>
     <div class="assignmentAiProgressTrack" aria-hidden="true"><span></span></div>
     <p>La durata dipende dal provider e dai file inviati. Se qualcosa si blocca, qui comparira un errore chiaro.</p>
+  `;
+}
+
+function setAssignmentAiProgressError(message) {
+  if (!els.assignmentAiProgress) return;
+  els.assignmentAiProgress.hidden = false;
+  els.assignmentAiProgress.classList.add("isError");
+  els.assignmentAiProgress.innerHTML = `
+    <div class="assignmentAiProgressHeader">
+      <strong>Generazione proposta AI interrotta</strong>
+      <span>Controlla il messaggio e riprova dopo la correzione.</span>
+    </div>
+    <p>${escapeHtml(message)}</p>
   `;
 }
 
@@ -2901,6 +2915,7 @@ async function previewAssignmentAiPackage() {
 async function generateAssignmentAiDraft() {
   if (!els.assignmentAiGenerateBtn) return;
   const provider = els.assignmentAiProvider?.value || "codex";
+  let failedMessage = "";
   state.assignmentAiGenerating = true;
   els.assignmentAiGenerateBtn.disabled = true;
   if (els.assignmentAiApplyDraftBtn) els.assignmentAiApplyDraftBtn.disabled = true;
@@ -2927,6 +2942,7 @@ async function generateAssignmentAiDraft() {
     setStatus("Bozza Codex pronta: controlla e modifica prima di salvare.");
   } catch (error) {
     const message = assignmentPlanErrorMessage(error);
+    failedMessage = message;
     if (els.assignmentAiPackagePreview) {
       els.assignmentAiPackagePreview.innerHTML = `<p class="status">Bozza AI non disponibile: ${escapeHtml(message)}</p>`;
     }
@@ -2934,7 +2950,11 @@ async function generateAssignmentAiDraft() {
     setStatus(`Bozza AI non disponibile: ${message}`);
   } finally {
     state.assignmentAiGenerating = false;
-    setAssignmentAiProgress(false);
+    if (failedMessage) {
+      setAssignmentAiProgressError(`Bozza AI non disponibile: ${failedMessage}`);
+    } else {
+      setAssignmentAiProgress(false);
+    }
     els.assignmentAiGenerateBtn.disabled = false;
     updateAssignmentAiApplyState();
   }
