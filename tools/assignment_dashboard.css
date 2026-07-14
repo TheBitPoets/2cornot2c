@@ -375,6 +375,22 @@ textarea[aria-invalid="true"]:focus {
   margin-top: 1rem;
 }
 
+.assignmentAiPromptField {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: .55rem;
+}
+
+.assignmentAiPromptField span,
+.assignmentAiPromptField textarea {
+  grid-column: 1 / -1;
+}
+
+.assignmentAiPromptField button {
+  justify-self: end;
+}
+
 .assignmentAiContext {
   display: grid;
   gap: .45rem;
@@ -384,8 +400,14 @@ textarea[aria-invalid="true"]:focus {
   background: #ffffff;
 }
 
-.assignmentAiContext strong {
+.assignmentAiContext summary {
+  cursor: pointer;
+  font-weight: 800;
   margin-bottom: .15rem;
+}
+
+.assignmentAiContext summary::marker {
+  color: var(--muted);
 }
 
 .assignmentAiContextItem {

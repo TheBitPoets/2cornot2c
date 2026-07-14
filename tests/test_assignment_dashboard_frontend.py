@@ -421,6 +421,8 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         updateAssignmentAiApplyState,
         setAssignmentAiProgress,
         setAssignmentAiProgressError,
+        setAssignmentAiPromptLocked,
+        unlockAssignmentAiPrompt,
         assignmentWizardStepComplete,
         setAssignmentWizardStep,
         moveAssignmentWizardStep,
@@ -892,7 +894,7 @@ def test_assignment_wizard_contains_teacher_editable_ai_step() -> None:
     assert 'id="assignmentAiDraftText"' in assignment_section
     assert 'id="assignmentAiGenerateBtn"' in assignment_section
     assert 'id="assignmentAiProgress"' in assignment_section
-    assert "Genera proposta AI" in assignment_section
+    assert "Invia prompt e genera proposta" in assignment_section
     assert "Generazione proposta AI in corso" in assignment_section
     assert "Dettagli tecnici del pacchetto AI" in assignment_section
     assert "Mostra pacchetto tecnico" in assignment_section
@@ -902,6 +904,7 @@ def test_assignment_wizard_contains_teacher_editable_ai_step() -> None:
     assert "Contesto da inviare" in assignment_section
     assert "Asset, starter file, test e soluzione" in assignment_section
     assert "Pacchetto file activity" in assignment_section
+    assert '<details class="assignmentAiContext wideField"' in assignment_section
     assert "File aggiuntivi liberi" in assignment_section
     assert 'id="assignmentAiStudentBudget"' in assignment_section
     assert 'id="assignmentIntegrityMode"' in assignment_section
@@ -1065,7 +1068,26 @@ def test_generate_assignment_ai_draft_with_codex_posts_request_and_fills_teacher
           assert.equal(tested.els.assignmentWizardNextBtn.disabled, false);
           assert.equal(tested.els.assignmentWizardNextBtn.textContent, "Avanti: 3 Prepara revisione");
           assert.match(tested.els.status.textContent, /Bozza Codex pronta/);
+          assert.equal(tested.els.assignmentAiGenerateBtn.disabled, true);
+          assert.match(tested.els.assignmentAiGenerateBtn.title, /Hai gia inviato questo prompt/);
         })();
+        """
+    )
+
+
+def test_assignment_ai_prompt_unlocks_generate_button_for_next_request() -> None:
+    run_dashboard_js(
+        """
+        tested.state.assignmentAiGenerating = false;
+
+        tested.setAssignmentAiPromptLocked(true);
+
+        assert.equal(tested.els.assignmentAiGenerateBtn.disabled, true);
+
+        tested.unlockAssignmentAiPrompt();
+
+        assert.equal(tested.els.assignmentAiGenerateBtn.disabled, false);
+        assert.match(tested.els.assignmentAiGenerateBtn.title, /Invia il prompt/);
         """
     )
 
@@ -1139,7 +1161,7 @@ def test_assignment_ai_generation_error_is_visible_outside_details() -> None:
           assert.equal(tested.els.assignmentAiProgress.classList.contains("isError"), true);
           assert.match(tested.els.assignmentAiProgress.innerHTML, /Generazione proposta AI interrotta/);
           assert.match(tested.els.assignmentAiProgress.innerHTML, /Provider non ancora collegato/);
-          assert.equal(tested.els.assignmentAiGenerateBtn.disabled, false);
+          assert.equal(tested.els.assignmentAiGenerateBtn.disabled, true);
           assert.match(tested.els.status.textContent, /Provider non ancora collegato/);
         })();
         """

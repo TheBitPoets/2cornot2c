@@ -154,6 +154,7 @@ const state = {
   activityAuthorLastSuggestedId: "",
   activityReviewSaved: false,
   assignmentAiGenerating: false,
+  assignmentAiPromptLocked: false,
   assignmentAiDraftFilePath: "",
   selectedRosterTargetIds: new Set(),
   selectedAssignmentId: "",
@@ -2823,6 +2824,20 @@ function closeAssignmentAiFilesDialog() {
   }
 }
 
+function setAssignmentAiPromptLocked(locked) {
+  state.assignmentAiPromptLocked = Boolean(locked);
+  if (!els.assignmentAiGenerateBtn) return;
+  els.assignmentAiGenerateBtn.disabled = state.assignmentAiGenerating || state.assignmentAiPromptLocked;
+  els.assignmentAiGenerateBtn.title = state.assignmentAiPromptLocked
+    ? "Hai gia inviato questo prompt. Clicca nel prompt e modificalo per inviare una nuova richiesta."
+    : "Invia il prompt al provider selezionato e genera una proposta modificabile. Per ora e attivo Codex locale.";
+}
+
+function unlockAssignmentAiPrompt() {
+  if (!state.assignmentAiPromptLocked) return;
+  setAssignmentAiPromptLocked(false);
+}
+
 function setAssignmentAiProgress(active, title = "Generazione proposta AI in corso", detail = "Codex sta lavorando sulla macchina docente.") {
   if (!els.assignmentAiProgress) return;
   els.assignmentAiProgress.hidden = !active;
@@ -3207,6 +3222,7 @@ async function generateAssignmentAiDraft() {
   const provider = els.assignmentAiProvider?.value || "codex";
   let failedMessage = "";
   state.assignmentAiGenerating = true;
+  setAssignmentAiPromptLocked(true);
   els.assignmentAiGenerateBtn.disabled = true;
   if (els.assignmentAiApplyDraftBtn) els.assignmentAiApplyDraftBtn.disabled = true;
   if (els.assignmentWizardNextBtn && currentAssignmentWizardStep() === "ai") {
@@ -3245,7 +3261,7 @@ async function generateAssignmentAiDraft() {
     } else {
       setAssignmentAiProgress(false);
     }
-    els.assignmentAiGenerateBtn.disabled = false;
+    setAssignmentAiPromptLocked(true);
     updateAssignmentAiApplyState();
   }
 }
@@ -4095,6 +4111,9 @@ setAssignmentWizardStep("activity");
 els.previewAssignmentBtn?.addEventListener("click", previewAssignmentPlan);
 els.assignmentAiAskBtn?.addEventListener("click", previewAssignmentAiPackage);
 els.assignmentAiGenerateBtn?.addEventListener("click", generateAssignmentAiDraft);
+els.assignmentAiPrompt?.addEventListener("focus", unlockAssignmentAiPrompt);
+els.assignmentAiPrompt?.addEventListener("click", unlockAssignmentAiPrompt);
+els.assignmentAiPrompt?.addEventListener("input", unlockAssignmentAiPrompt);
 els.assignmentAiDraftText?.addEventListener("input", updateAssignmentAiApplyState);
 els.assignmentAiPackagePreview?.addEventListener("click", (event) => {
   const button = event.target.closest("[data-ai-draft-file-index]");

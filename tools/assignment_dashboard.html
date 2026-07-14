@@ -93,25 +93,26 @@
                   <option value="manual">Solo bozza manuale</option>
                 </select>
               </label>
-              <label class="wideField">
+              <label class="wideField assignmentAiPromptField">
                 <span>Prompt docente</span>
                 <textarea id="assignmentAiPrompt" rows="4" placeholder="Chiedi una traccia, una variante piu semplice, test aggiuntivi, codice da debuggare o una rubric diversa."></textarea>
+                <button id="assignmentAiGenerateBtn" type="button" class="primary" title="Invia il prompt al provider selezionato e genera una proposta modificabile. Per ora e attivo Codex locale.">Invia prompt e genera proposta</button>
               </label>
-              <div class="assignmentAiContext wideField" aria-label="Contesto che verra inviato all'AI">
-                <strong>Contesto da inviare</strong>
+              <details class="assignmentAiContext wideField" aria-label="Contesto che verra inviato all'AI" open>
+                <summary>Contesto da inviare</summary>
                 <div class="assignmentAiContextItem"><span class="contextState isIncluded">incluso</span><span>Activity selezionata e metadati</span></div>
                 <div class="assignmentAiContextItem"><span class="contextState isIncluded">incluso</span><span>Percorso, UDA e argomenti collegati</span></div>
                 <div class="assignmentAiContextItem"><span class="contextState isIncluded">incluso</span><span>Destinatari, classe/team e scadenze</span></div>
                 <div class="assignmentAiContextItem"><span class="contextState isIncluded">incluso</span><span>Asset, starter file, test e soluzione quando disponibili</span></div>
-              </div>
-              <div class="assignmentAiContext wideField" aria-label="Pacchetto file previsto per la generazione AI">
-                <strong>Pacchetto file activity</strong>
+              </details>
+              <details class="assignmentAiContext wideField" aria-label="Pacchetto file previsto per la generazione AI">
+                <summary>Pacchetto file activity</summary>
                 <div class="assignmentAiContextItem"><span class="contextState isIncluded">incluso</span><span>Traccia e README studente</span></div>
                 <div class="assignmentAiContextItem"><span class="contextState isIncluded">incluso</span><span>Starter code, esempi e fixture modificabili dal docente</span></div>
                 <div class="assignmentAiContextItem"><span class="contextState isIncluded">incluso</span><span>Test pubblici per lo studente</span></div>
                 <div class="assignmentAiContextItem"><span class="contextState isIncluded">incluso</span><span>Test riservati, runner e soluzione solo docente</span></div>
                 <div class="assignmentAiContextItem"><span class="contextState isPlanned">futuro</span><span>File aggiuntivi liberi scelti da repository o caricati dal docente</span></div>
-              </div>
+              </details>
               <div class="assignmentAiPolicy wideField">
                 <label>
                   <span>Budget AI per studente</span>
@@ -125,9 +126,6 @@
                     <option value="kiosk">Kiosk/lab gestito futuro</option>
                   </select>
                 </label>
-              </div>
-              <div class="generateActions wideField">
-                <button id="assignmentAiGenerateBtn" type="button" class="primary" title="Genera una proposta modificabile usando il provider selezionato. Per ora e attivo Codex locale.">Genera proposta AI</button>
               </div>
               <div id="assignmentAiProgress" class="assignmentAiProgress wideField" role="status" aria-live="polite" hidden>
                 <div class="assignmentAiProgressHeader">
