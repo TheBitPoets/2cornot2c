@@ -22,18 +22,59 @@ http://localhost:8765/tools/assignment_dashboard.html
 
 ### Assegna activity
 
-Serve a preparare l'associazione tra una activity, i destinatari e le date.
+Serve a creare o scegliere una activity, preparare destinatari e date, controllare l'anteprima e poi salvare o distribuire l'assegnazione.
 
-Nota di nomenclatura: l'assegnazione e la pubblicazione della activity verso classe, team o studenti. In questa fase MVP la distribuzione reale degli asset agli studenti non e ancora attiva dalla GUI: il pannello mostra l'anteprima e prepara i dati usati dal registro.
+Nota di nomenclatura: l'activity e la definizione didattica del lavoro; l'assegnazione collega quella activity a classe, team, gruppo o singolo studente con date e destinatari. Il registro consegne, invece, serve a monitorare stato, consegne, grading e feedback dopo l'assegnazione.
 
 Usalo quando devi:
 
-- scegliere una activity;
+- scegliere o creare una activity;
+- generare una proposta AI/Codex e revisionarla;
 - scegliere la classe tramite roster;
-- impostare classe, team, assegnazione e scadenza;
+- scegliere destinatari, gruppo o singoli studenti;
+- impostare data di assegnazione e scadenza;
 - verificare destinatari e asset con **Anteprima assegnazione**.
 
 Screenshot previsto: `doc/images/dashboard-guides/docente-genera-registro.png`.
+
+#### Wizard Assegna activity
+
+Il pannello usa un percorso guidato. Puoi saltare tra le linguette, ma il flusso consigliato e andare avanti in ordine.
+
+1. **Activity**
+   - scegli una activity gia salvata con **Scegli activity**;
+   - oppure entra nella revisione activity per crearne una nuova;
+   - controlla che `Activity JSON`, linguaggio e file sorgente siano coerenti.
+2. **AI**
+   - scrivi il prompt nel campo **Prompt docente**;
+   - usa **Invia prompt e genera proposta** per chiedere a Codex/provider una bozza;
+   - dopo l'invio il bottone resta disabilitato finche non rientri nel prompt per modificarlo;
+   - la vista **Proposta AI** mostra la bozza generata, i file proposti e le note docente;
+   - la vista **Dati inviati all'AI** mostra prompt, metadati, destinatari, policy e file di contesto che verrebbero inviati al provider;
+   - i **file di contesto inviati all'AI** sono input gia disponibili per aiutare la generazione;
+   - i **file proposti dall'AI** sono output generati dalla bozza e si aprono con **Apri file** in un modal stile revisione consegna;
+   - il JSON tecnico resta disponibile solo per debug.
+3. **Revisione**
+   - controlla e modifica la bozza activity;
+   - salva l'activity prima di proseguire;
+   - il docente resta sempre responsabile della versione finale, anche quando la proposta nasce dall'AI.
+4. **Destinatari**
+   - scegli il roster classe;
+   - seleziona classe intera, gruppo o singoli studenti;
+   - verifica il testo dei repository/target generato sotto.
+5. **Date**
+   - **Assegnato il** viene valorizzato automaticamente con data e ora correnti;
+   - **Scadenza** e obbligatoria, parte vuota e viene evidenziata in rosso se non la compili;
+   - **Ora simulata opzionale** serve per anteprime e test: simula il momento corrente senza cambiare l'orologio reale. Se e vuota, la dashboard usa l'ora reale.
+6. **Anteprima**
+   - usa **Anteprima assegnazione** per vedere cosa succederebbe senza scrivere nei repository;
+   - controlla activity, linguaggio, file sorgente, destinatari, cartelle target, target gia esistenti, asset per studenti e asset riservati al docente/grading;
+   - se ci sono target bloccati o file mancanti, correggi prima di distribuire.
+7. **Conferma**
+   - **Salva assegnazione** registra l'assegnazione nel sistema docente senza necessariamente copiare asset nei repository;
+   - **Distribuisci ai target** copia traccia, README e asset studente nelle cartelle/repository target quando il piano e corretto.
+
+Regola pratica: prima genera o scegli l'activity, poi controlla destinatari e date, poi fai sempre anteprima prima di salvare o distribuire.
 
 ### Registro consegne
 
@@ -126,7 +167,47 @@ Usalo quando:
 
 Screenshot previsto: `doc/images/dashboard-guides/docente-revisione-consegna.png`.
 
-## Scenario 1 - Creare un registro per activity e classe
+## Scenario 1 - Creare o scegliere una activity e preparare l'assegnazione
+
+Obiettivo: arrivare a una activity revisionata, con destinatari e date pronti per anteprima, salvataggio o distribuzione.
+
+Prerequisiti:
+
+- il server locale e avviato;
+- esiste almeno un roster classe oppure inserisci manualmente i target;
+- se usi Codex, il provider locale deve essere disponibile sulla macchina docente.
+
+Passaggi:
+
+1. Apri il pannello **Assegna activity**.
+2. Nel passo **Activity**, scegli una activity esistente oppure prepara una nuova bozza.
+3. Nel passo **AI**, se vuoi assistenza:
+   - scrivi il prompt;
+   - premi **Invia prompt e genera proposta**;
+   - apri i file proposti con **Apri file**;
+   - confronta **Proposta AI** e **Dati inviati all'AI** se vuoi controllare contesto e metadati.
+4. Nel passo **Revisione**, modifica la bozza e salva l'activity.
+5. Nel passo **Destinatari**, scegli classe, gruppo o studenti.
+6. Nel passo **Date**, lascia **Assegnato il** se va bene la data corrente e compila **Scadenza**.
+7. Nel passo **Anteprima**, premi **Anteprima assegnazione** e controlla il piano.
+8. Nel passo **Conferma**, salva l'assegnazione o distribuisci ai target.
+
+Cosa controllare a schermo:
+
+- la proposta AI non sostituisce automaticamente il lavoro docente;
+- i file proposti dall'AI sono leggibili nel modal;
+- i dati inviati all'AI sono separati dalla proposta generata;
+- la scadenza e compilata;
+- i target corrispondono agli studenti desiderati;
+- l'anteprima non segnala target bloccati o asset mancanti inattesi.
+
+Screenshot previsti:
+
+- `doc/images/dashboard-guides/scenario-assegna-activity-ai.png`;
+- `doc/images/dashboard-guides/scenario-assegna-activity-date.png`;
+- `doc/images/dashboard-guides/scenario-assegna-activity-anteprima.png`.
+
+## Scenario 2 - Creare un registro per activity e classe
 
 Obiettivo: creare un registro consegne per una activity assegnata a una classe.
 
@@ -169,7 +250,7 @@ Screenshot previsti:
 - `doc/images/dashboard-guides/scenario-genera-registro-02.png`;
 - `doc/images/dashboard-guides/scenario-genera-registro-03.png`.
 
-## Scenario 2 - Caricare un registro esistente
+## Scenario 3 - Caricare un registro esistente
 
 Obiettivo: aprire un registro gia salvato in `teacher-reports`.
 
@@ -191,7 +272,7 @@ Cosa controllare a schermo:
 
 Screenshot previsto: `doc/images/dashboard-guides/scenario-carica-registro.png`.
 
-## Scenario 3 - Controllare il quadro classe
+## Scenario 4 - Controllare il quadro classe
 
 Obiettivo: avere una vista aggregata di tutte le consegne disponibili.
 
@@ -218,7 +299,7 @@ Cosa controllare a schermo:
 
 Screenshot previsto: `doc/images/dashboard-guides/scenario-quadro-classe.png`.
 
-## Scenario 4 - Revisionare una consegna studente
+## Scenario 5 - Revisionare una consegna studente
 
 Obiettivo: aprire i file consegnati da uno studente e leggerli.
 
@@ -242,7 +323,7 @@ Cosa controllare a schermo:
 
 Screenshot previsto: `doc/images/dashboard-guides/scenario-revisione-consegna.png`.
 
-## Scenario 5 - Leggere e approvare feedback AI
+## Scenario 6 - Leggere e approvare feedback AI
 
 Obiettivo: distinguere feedback non generato, bozza AI, feedback approvato e respinto.
 

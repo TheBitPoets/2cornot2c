@@ -530,9 +530,9 @@ Nel riquadro `Assegna activity` compila i dati che identificano activity, destin
 | Classe | Identificativo classe dell'assegnazione, per esempio `3A-TPSI` |
 | Etichetta classe | Nome leggibile mostrato in dashboard, per esempio `3A TPSI` |
 | Team GitHub | Team GitHub della classe, se disponibile |
-| Assegnato il | Data ISO di assegnazione |
-| Scadenza | Data ISO di scadenza |
-| Ora simulata opzionale | Data ISO usata per simulare il momento attuale |
+| Assegnato il | Data/ora di assegnazione; nel wizard viene proposta automaticamente la data corrente |
+| Scadenza | Data/ora di scadenza; nel wizard e obbligatoria e va scelta dal docente |
+| Ora simulata opzionale | Data/ora usata solo per anteprime e test, per simulare il momento attuale senza cambiare l'orologio reale |
 | Repository studenti locali | Un path per riga verso i repository/cartelle studente |
 
 Nel riquadro `Registro consegne` compila:
