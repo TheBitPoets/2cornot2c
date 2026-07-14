@@ -522,6 +522,32 @@ function isoToDateTimeInput(value) {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
+function currentDateTimeInput() {
+  return isoToDateTimeInput(new Date().toISOString());
+}
+
+function initializeAssignmentDateFields() {
+  if (els.assignedAt && !String(els.assignedAt.value || "").trim()) {
+    els.assignedAt.value = currentDateTimeInput();
+  }
+  validateAssignmentDateFields();
+}
+
+function validateAssignmentDateFields({ showMessage = false } = {}) {
+  const missingAssigned = !String(els.assignedAt?.value || "").trim();
+  const missingDue = !String(els.dueAt?.value || "").trim();
+  markActivityAuthorFieldInvalid(els.assignedAt, missingAssigned);
+  markActivityAuthorFieldInvalid(els.dueAt, missingDue);
+  if (showMessage && (missingAssigned || missingDue)) {
+    const missing = [
+      missingAssigned ? "Assegnato il" : "",
+      missingDue ? "Scadenza" : "",
+    ].filter(Boolean).join(", ");
+    setStatus(`Completa i campi data obbligatori: ${missing}.`);
+  }
+  return !(missingAssigned || missingDue);
+}
+
 function classValue(entity) {
   return entity?.class_label || entity?.class_id || entity?.github_team || "classe non indicata";
 }
@@ -3045,6 +3071,7 @@ function assignmentWizardStepComplete(step) {
   if (step === "ai" && state.assignmentAiGenerating) return false;
   if (step === "ai") return updateAssignmentAiApplyState();
   if (step === "review") return Boolean(state.activityReviewSaved && String(els.activityPath?.value || "").trim());
+  if (step === "dates") return validateAssignmentDateFields();
   return true;
 }
 
@@ -3068,6 +3095,9 @@ function setAssignmentWizardStep(step) {
   const selectedStep = ASSIGNMENT_WIZARD_STEPS.some((candidate) => candidate.id === step) ? step : "activity";
   if (selectedStep === "review") {
     mountActivityEditorInWizard();
+  }
+  if (selectedStep === "dates") {
+    initializeAssignmentDateFields();
   }
   els.assignmentStepTabs.forEach((button) => {
     const isActive = button.dataset.assignmentStepTab === selectedStep;
@@ -4284,10 +4314,14 @@ els.githubTeam.addEventListener("input", () => {
 });
 els.assignedAt.addEventListener("input", () => {
   clearSelectedAssignment();
+  validateAssignmentDateFields();
+  setAssignmentWizardStep(currentAssignmentWizardStep());
   renderReportAssignmentSummary();
 });
 els.dueAt.addEventListener("input", () => {
   clearSelectedAssignment();
+  validateAssignmentDateFields();
+  setAssignmentWizardStep(currentAssignmentWizardStep());
   renderReportAssignmentSummary();
 });
 els.nowAt.addEventListener("change", () => loadAssignments().catch((error) => setStatus(`Assegnazioni non aggiornate: ${error.message}`)));

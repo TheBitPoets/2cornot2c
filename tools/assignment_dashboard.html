@@ -211,15 +211,16 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
           <div class="generateGrid">
             <label>
               <span>Assegnato il</span>
-              <input id="assignedAt" type="datetime-local" value="2026-10-12T09:00">
+              <input id="assignedAt" type="datetime-local" required>
             </label>
             <label>
               <span>Scadenza</span>
-              <input id="dueAt" type="datetime-local" value="2026-10-19T23:59">
+              <input id="dueAt" type="datetime-local" required>
             </label>
             <label>
               <span>Ora simulata opzionale</span>
               <input id="nowAt" type="datetime-local">
+              <small>Serve solo per anteprime e test: simula il momento corrente senza cambiare l'orologio reale.</small>
             </label>
           </div>
         </section>

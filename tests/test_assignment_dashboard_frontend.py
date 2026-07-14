@@ -368,6 +368,9 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         reviewAiFeedback,
         dateTimeInputToIso,
         isoToDateTimeInput,
+        currentDateTimeInput,
+        initializeAssignmentDateFields,
+        validateAssignmentDateFields,
         compactStudentsSummaryItems,
         detailedStudentsSummaryItems,
         applyPanelOrder,
@@ -922,6 +925,35 @@ def test_assignment_wizard_uses_calendar_date_time_inputs() -> None:
     assert 'id="assignedAt" type="datetime-local"' in assignment_section
     assert 'id="dueAt" type="datetime-local"' in assignment_section
     assert 'id="nowAt" type="datetime-local"' in assignment_section
+    assert 'id="assignedAt" type="datetime-local" value=' not in assignment_section
+    assert 'id="dueAt" type="datetime-local" value=' not in assignment_section
+    assert 'id="assignedAt" type="datetime-local" required' in assignment_section
+    assert 'id="dueAt" type="datetime-local" required' in assignment_section
+    assert "simula il momento corrente" in assignment_section
+
+
+def test_assignment_dates_require_due_date_and_default_assigned_date() -> None:
+    run_dashboard_js(
+        """
+        tested.els.assignedAt.value = "";
+        tested.els.dueAt.value = "";
+
+        tested.setAssignmentWizardStep("dates");
+
+        assert.match(tested.els.assignedAt.value, /^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$/);
+        assert.equal(tested.els.dueAt["aria-invalid"], "true");
+        assert.equal(tested.assignmentWizardStepComplete("dates"), false);
+        assert.equal(tested.els.assignmentWizardNextBtn.disabled, true);
+
+        tested.els.dueAt.value = "2026-10-19T23:59";
+        assert.equal(tested.validateAssignmentDateFields(), true);
+        tested.setAssignmentWizardStep("dates");
+
+        assert.equal(tested.els.dueAt["aria-invalid"], "false");
+        assert.equal(tested.assignmentWizardStepComplete("dates"), true);
+        assert.equal(tested.els.assignmentWizardNextBtn.disabled, false);
+        """
+    )
 
 
 def test_assignment_ai_context_uses_informative_status_rows() -> None:
