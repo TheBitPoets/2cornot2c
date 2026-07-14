@@ -896,8 +896,8 @@ def test_assignment_wizard_contains_teacher_editable_ai_step() -> None:
     assert 'id="assignmentAiProgress"' in assignment_section
     assert "Invia prompt e genera proposta" in assignment_section
     assert "Generazione proposta AI in corso" in assignment_section
-    assert "Dettagli tecnici del pacchetto AI" in assignment_section
-    assert "Mostra pacchetto tecnico" in assignment_section
+    assert "Controllo dati inviati all'AI" in assignment_section
+    assert "Aggiorna controllo dati" in assignment_section
     assert 'id="assignmentWizardPrevBtn"' in assignment_section
     assert 'id="assignmentWizardNextBtn"' in assignment_section
     assert 'id="assignmentWizardHint"' in assignment_section
@@ -1016,11 +1016,32 @@ def test_preview_assignment_ai_package_posts_bundle_request_and_renders_json() -
           assert.equal(body.prompt, "Aggiungi test sui negativi");
           assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /Somma in Python/);
           assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /nessuna chiamata AI/);
-          assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /JSON pacchetto/);
+          assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /File di contesto inviati all'AI/);
+          assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /File di contesto non inviati/);
+          assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /JSON tecnico per debug/);
           assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /starter/);
           assert.equal(tested.els.assignmentAiDraftText.value, "");
-          assert.match(tested.els.status.textContent, /nessuna chiamata provider/);
+          assert.match(tested.els.status.textContent, /Controllo dati AI pronto/);
         })();
+        """
+    )
+
+
+def test_assignment_ai_package_empty_context_files_are_explained() -> None:
+    run_dashboard_js(
+        """
+        tested.renderAssignmentAiPackage({
+          schema_version: "activity_ai_package.v1",
+          provider: "codex",
+          prompt: "Crea una traccia",
+          activity: { id: "demo", title: "Demo" },
+          files: [],
+          policy: { student_budget: 5, integrity_mode: "normal" },
+          teacher_review: { required: true },
+        });
+
+        assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /Nessun file di contesto collegato all'activity/);
+        assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /Verranno inviati prompt e metadati/);
         """
     )
 

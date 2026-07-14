@@ -140,12 +140,13 @@
                 <textarea id="assignmentAiDraftText" rows="6" placeholder="Qui comparira la proposta AI. Il docente potra modificarla prima di salvare l'activity o distribuirla."></textarea>
               </label>
               <details class="assignmentPackageJson wideField">
-                <summary>Dettagli tecnici del pacchetto AI</summary>
+                <summary>Controllo dati inviati all'AI</summary>
+                <p class="status">Questa sezione mostra il contesto che verra inviato all'AI. Non genera una proposta: per quello usa il prompt sopra.</p>
                 <div class="generateActions">
-                  <button id="assignmentAiAskBtn" type="button" class="smallButton" title="Prepara il pacchetto JSON con prompt, contesto e file senza chiamare il provider AI.">Mostra pacchetto tecnico</button>
+                  <button id="assignmentAiAskBtn" type="button" class="smallButton" title="Aggiorna la preview di prompt, metadati e file di contesto senza chiamare il provider AI.">Aggiorna controllo dati</button>
                 </div>
                 <div id="assignmentAiPackagePreview" class="assignmentPlanPreview" aria-live="polite">
-                  <p class="status">Dettaglio avanzato: qui puoi controllare prompt, contesto e file inviati al provider o a Codex.</p>
+                  <p class="status">Qui vedrai prompt, metadati e file di contesto che saranno inviati al provider o a Codex.</p>
                 </div>
               </details>
             </div>

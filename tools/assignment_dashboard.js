@@ -2663,19 +2663,19 @@ function renderAssignmentAiPackage(aiPackage) {
   els.assignmentAiPackagePreview.innerHTML = `
     <div class="assignmentPlanHeader">
       <div>
-        <strong>${escapeHtml(aiPackage.activity?.title || aiPackage.activity?.id || "Pacchetto AI")}</strong>
-        <small>${escapeHtml(aiPackage.provider || "-")} - ${escapeHtml(aiPackage.schema_version || "-")} - ${escapeHtml(promptStatus)} - ${escapeHtml(draftStatus)}</small>
+        <strong>${escapeHtml(aiPackage.activity?.title || aiPackage.activity?.id || "Controllo dati AI")}</strong>
+        <small>${escapeHtml(aiPackage.provider || "-")} - ${escapeHtml(aiPackage.schema_version || "-")} - ${escapeHtml(promptStatus)} - ${escapeHtml(draftStatus)}. Questa anteprima non chiama l'AI.</small>
       </div>
       ${badge("nessuna chiamata AI", "muted")}
     </div>
     <div class="assignmentPlanGrid">
       <section>
-        <h3>File inclusi</h3>
-        ${renderAssignmentAssetList(includedFiles, "Nessun file incluso nel pacchetto.")}
+        <h3>File di contesto inviati all'AI</h3>
+        ${renderAssignmentAssetList(includedFiles, "Nessun file di contesto collegato all'activity. Verranno inviati prompt e metadati.")}
       </section>
       <section>
-        <h3>File esclusi o mancanti</h3>
-        ${renderAssignmentAssetList(skippedFiles.map((file) => ({ ...file, description: file.error || file.description })), "Nessun file escluso.")}
+        <h3>File di contesto non inviati</h3>
+        ${renderAssignmentAssetList(skippedFiles.map((file) => ({ ...file, description: file.error || file.description })), "Nessun file escluso o mancante.")}
       </section>
       <section>
         <h3>Policy</h3>
@@ -2687,7 +2687,7 @@ function renderAssignmentAiPackage(aiPackage) {
       </section>
     </div>
     <details class="assignmentPackageJson">
-      <summary>JSON pacchetto</summary>
+      <summary>JSON tecnico per debug</summary>
       <pre>${escapeHtml(JSON.stringify(aiPackage, null, 2))}</pre>
     </details>
   `;
@@ -3195,9 +3195,9 @@ async function previewAssignmentPlan() {
 async function previewAssignmentAiPackage() {
   if (!els.assignmentAiAskBtn) return;
   els.assignmentAiAskBtn.disabled = true;
-  setStatus("Preparazione pacchetto AI...");
+  setStatus("Aggiornamento controllo dati inviati all'AI...");
   if (els.assignmentAiPackagePreview) {
-    els.assignmentAiPackagePreview.innerHTML = '<p class="status">Preparazione pacchetto AI...</p>';
+    els.assignmentAiPackagePreview.innerHTML = '<p class="status">Aggiornamento controllo dati inviati all\'AI...</p>';
   }
   try {
     const payload = await api("/api/activities/ai-package", {
@@ -3205,13 +3205,13 @@ async function previewAssignmentAiPackage() {
       body: JSON.stringify(assignmentAiPackagePayload()),
     });
     renderAssignmentAiPackage(payload.package);
-    setStatus("Pacchetto AI pronto: nessuna chiamata provider eseguita.");
+    setStatus("Controllo dati AI pronto: nessuna chiamata provider eseguita.");
   } catch (error) {
     const message = assignmentPlanErrorMessage(error);
     if (els.assignmentAiPackagePreview) {
-      els.assignmentAiPackagePreview.innerHTML = `<p class="status">Pacchetto AI non disponibile: ${escapeHtml(message)}</p>`;
+      els.assignmentAiPackagePreview.innerHTML = `<p class="status">Controllo dati AI non disponibile: ${escapeHtml(message)}</p>`;
     }
-    setStatus(`Pacchetto AI non disponibile: ${message}`);
+    setStatus(`Controllo dati AI non disponibile: ${message}`);
   } finally {
     els.assignmentAiAskBtn.disabled = false;
   }
