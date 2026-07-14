@@ -300,6 +300,18 @@ Le operazioni distruttive vanno progettate con attenzione.
 
 Regola consigliata: introdurre prima `archivia`, poi `elimina definitivamente`.
 
+Prossimi step GUI da progettare:
+
+- aggiungere nel pannello activity una azione **Archivia activity** per nascondere una activity senza perdere lo storico;
+- aggiungere una azione **Elimina activity** solo per activity non assegnate o dopo conferma forte quando esistono assegnazioni, consegne o registri collegati;
+- aggiungere una azione **Annulla assegnazione/consegna** come comportamento principale quando il docente vuole ritirare una consegna gia pubblicata;
+- distinguere chiaramente **annulla** da **elimina definitivamente**:
+  - `annulla` mantiene traccia, date, destinatari e motivazione;
+  - `elimina definitivamente` rimuove il record e va limitato a bozze, demo o assegnazioni non distribuite;
+- decidere se l'annullamento deve lasciare intatti i file gia copiati nei repository studenti o creare una nuova operazione esplicita di pulizia;
+- mostrare nella dashboard quando una activity o una assegnazione e archiviata/annullata, evitando che entri nei flussi normali di registro e grading;
+- registrare audit minimo: chi ha archiviato, annullato o eliminato, quando e con quale motivazione.
+
 ## Priorita 3 - Vista studente e feedback assistito
 
 Questa e la fase che chiude il ciclo docente-studente.

@@ -678,4 +678,8 @@ Per il flusso consegne restano aperti soprattutto:
 6. archiviazione e cancellazione sicura di registri, activity e assegnazioni;
 7. valutazione dello stesso pattern di layout pannelli anche per calendario, course board e altre pagine GUI.
 
+Nota operativa per i prossimi step: la GUI dovra distinguere tra **archiviare**, **annullare** ed **eliminare definitivamente**.
+Per le activity conviene introdurre prima archiviazione e cancellazione solo se non esistono assegnazioni o registri collegati.
+Per le consegne/assegnazioni gia pubblicate l'azione principale dovrebbe essere **Annulla assegnazione/consegna**, mantenendo traccia e motivazione; l'eliminazione definitiva dovrebbe restare limitata a bozze, dati demo o assegnazioni non ancora distribuite.
+
 Il primo template repository studente e documentato in `STUDENT_REPOSITORY_TEMPLATE.md`.
