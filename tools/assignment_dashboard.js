@@ -272,6 +272,7 @@ const els = {
   activityPath: document.querySelector("#activityPath"),
   assignmentSelect: document.querySelector("#assignmentSelect"),
   assignmentStatus: document.querySelector("#assignmentStatus"),
+  assignmentConfirmStatus: document.querySelector("#assignmentConfirmStatus"),
   classRosterSelect: document.querySelector("#classRosterSelect"),
   rosterStatus: document.querySelector("#rosterStatus"),
   rosterPanelStatus: document.querySelector("#rosterPanelStatus"),
@@ -1859,6 +1860,15 @@ function setActivityAuthorStatus(type, title, message) {
   els.activityAuthorStatus.innerHTML = `<strong>${escapeHtml(title)}</strong><span>${escapeHtml(message)}</span>`;
 }
 
+function setAssignmentConfirmStatus(type, title, message) {
+  if (!els.assignmentConfirmStatus) return;
+  els.assignmentConfirmStatus.classList.remove("isSaving", "isSuccess", "isError");
+  if (type === "saving") els.assignmentConfirmStatus.classList.add("isSaving");
+  if (type === "success") els.assignmentConfirmStatus.classList.add("isSuccess");
+  if (type === "error") els.assignmentConfirmStatus.classList.add("isError");
+  els.assignmentConfirmStatus.innerHTML = `<strong>${escapeHtml(title)}</strong><span>${escapeHtml(message)}</span>`;
+}
+
 function activityAuthorRequiredFields() {
   return [
     { field: els.activityAuthorTitle, label: "Titolo" },
@@ -3326,6 +3336,7 @@ async function saveAssignmentRecord() {
   if (!els.saveAssignmentBtn) return;
   els.saveAssignmentBtn.disabled = true;
   setStatus("Salvataggio assegnazione...");
+  setAssignmentConfirmStatus("saving", "Salvataggio assegnazione", "Sto salvando dati, destinatari e date dell'assegnazione.");
   try {
     const payload = await api("/api/assignments/save", {
       method: "POST",
@@ -3335,9 +3346,17 @@ async function saveAssignmentRecord() {
     state.dueAssignments = (payload.due_without_register || []).map((item) => item.assignment || item);
     state.selectedAssignmentId = "";
     renderAssignmentSelect();
-    setStatus(`Assegnazione salvata: ${payload.assignment?.id || "-"}.`);
+    const assignmentId = payload.assignment?.id || "-";
+    setStatus(`Assegnazione salvata: ${assignmentId}.`);
+    setAssignmentConfirmStatus(
+      "success",
+      "Assegnazione salvata",
+      `ID: ${assignmentId}. Ora puoi distribuire ai target oppure tornare agli step precedenti per modificare i dati.`
+    );
   } catch (error) {
-    setStatus(`Assegnazione non salvata: ${assignmentPlanErrorMessage(error)}`);
+    const message = assignmentPlanErrorMessage(error);
+    setStatus(`Assegnazione non salvata: ${message}`);
+    setAssignmentConfirmStatus("error", "Assegnazione non salvata", message);
   } finally {
     els.saveAssignmentBtn.disabled = false;
   }
@@ -3347,6 +3366,7 @@ async function distributeAssignment() {
   if (!els.distributeAssignmentBtn) return;
   els.distributeAssignmentBtn.disabled = true;
   setStatus("Distribuzione assegnazione ai target...");
+  setAssignmentConfirmStatus("saving", "Distribuzione ai target", "Sto copiando traccia e asset nelle cartelle dei target selezionati.");
   if (els.assignmentPlanPreview) {
     els.assignmentPlanPreview.innerHTML = '<p class="status">Distribuzione assegnazione ai target...</p>';
   }
@@ -3356,13 +3376,20 @@ async function distributeAssignment() {
       body: JSON.stringify(assignmentPlanPayload()),
     });
     renderAssignmentPlan(payload.plan);
-    setStatus(`Assegnazione distribuita a ${payload.results?.length || 0} target.`);
+    const targetCount = payload.results?.length || 0;
+    setStatus(`Assegnazione distribuita a ${targetCount} target.`);
+    setAssignmentConfirmStatus(
+      "success",
+      "Distribuzione completata",
+      `${targetCount} target aggiornati. Controlla l'anteprima per eventuali target gia presenti o bloccati.`
+    );
   } catch (error) {
     const message = assignmentPlanErrorMessage(error);
     if (els.assignmentPlanPreview) {
       els.assignmentPlanPreview.innerHTML = `<p class="status">Distribuzione non completata: ${escapeHtml(message)}</p>`;
     }
     setStatus(`Distribuzione non completata: ${message}`);
+    setAssignmentConfirmStatus("error", "Distribuzione non completata", message);
   } finally {
     els.distributeAssignmentBtn.disabled = false;
   }

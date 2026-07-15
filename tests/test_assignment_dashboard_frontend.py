@@ -826,6 +826,8 @@ def test_save_assignment_record_posts_form_and_refreshes_due_assignments() -> No
           assert.equal(tested.state.dueAssignments.length, 1);
           assert.match(tested.els.assignmentStatus.textContent, /1 assegnazioni scadute senza registro/);
           assert.match(tested.els.status.textContent, /Assegnazione salvata/);
+          assert.match(tested.els.assignmentConfirmStatus.innerHTML, /Assegnazione salvata/);
+          assert.match(tested.els.assignmentConfirmStatus.innerHTML, /assignment-python-base-somma-001-3a-tpsi/);
         })();
         """
     )
@@ -875,6 +877,8 @@ def test_distribute_assignment_posts_plan_and_renders_written_targets() -> None:
           assert.match(tested.els.assignmentPlanPreview.innerHTML, /Somma in Python/);
           assert.match(tested.els.assignmentPlanPreview.innerHTML, /gia presente/);
           assert.match(tested.els.status.textContent, /distribuita a 1 target/);
+          assert.match(tested.els.assignmentConfirmStatus.innerHTML, /Distribuzione completata/);
+          assert.match(tested.els.assignmentConfirmStatus.innerHTML, /1 target aggiornati/);
         })();
         """
     )
