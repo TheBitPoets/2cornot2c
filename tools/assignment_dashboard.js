@@ -153,6 +153,8 @@ const state = {
   draggedPanelKey: "",
   activityAuthorLastSuggestedId: "",
   activityReviewSaved: false,
+  assignmentRecordSaved: false,
+  assignmentDistributed: false,
   assignmentAiGenerating: false,
   assignmentAiPromptLocked: false,
   assignmentAiDraftFilePath: "",
@@ -1871,8 +1873,23 @@ function setAssignmentConfirmStatus(type, title, message) {
   els.assignmentConfirmStatus.innerHTML = `<strong>${escapeHtml(title)}</strong><span>${escapeHtml(message)}</span>`;
 }
 
+function updateAssignmentConfirmActions() {
+  if (els.distributeAssignmentBtn) {
+    els.distributeAssignmentBtn.disabled = !state.assignmentRecordSaved || state.assignmentDistributed;
+    els.distributeAssignmentBtn.title = state.assignmentRecordSaved
+      ? "Copia traccia, README e asset studente nelle cartelle dei repository target."
+      : "Salva prima l'assegnazione, poi potrai distribuire ai target.";
+  }
+  if (els.saveAssignmentBtn) {
+    els.saveAssignmentBtn.disabled = state.assignmentDistributed;
+  }
+}
+
 function resetAssignmentConfirmStatus(message = "I dati dell'assegnazione sono cambiati: ricontrolla anteprima e conferma prima di salvare o distribuire.") {
+  state.assignmentRecordSaved = false;
+  state.assignmentDistributed = false;
   setAssignmentConfirmStatus("info", "Dati modificati", message);
+  updateAssignmentConfirmActions();
 }
 
 function activityAuthorRequiredFields() {
@@ -3090,6 +3107,7 @@ function assignmentWizardStepComplete(step) {
   if (step === "ai") return updateAssignmentAiApplyState();
   if (step === "review") return Boolean(state.activityReviewSaved && String(els.activityPath?.value || "").trim());
   if (step === "dates") return validateAssignmentDateFields();
+  if (step === "confirm") return state.assignmentDistributed;
   return true;
 }
 
@@ -3120,6 +3138,11 @@ function validateAssignmentBeforeConfirm(actionLabel) {
 }
 
 function assignmentWizardNextLabel(step) {
+  if (step === "confirm") {
+    if (!state.assignmentRecordSaved) return "Salva assegnazione";
+    if (!state.assignmentDistributed) return "Distribuisci ai target";
+    return "Percorso completato";
+  }
   const next = nextAssignmentWizardStep(step);
   if (!next || next.id === step) return "Fine percorso";
   if (step === "ai") return "Avanti: 3 Prepara revisione";
@@ -3158,16 +3181,27 @@ function setAssignmentWizardStep(step) {
   if (els.assignmentWizardPrevBtn) els.assignmentWizardPrevBtn.disabled = index <= 0;
   if (els.assignmentWizardNextBtn) {
     const isLast = index >= ASSIGNMENT_WIZARD_STEPS.length - 1;
-    els.assignmentWizardNextBtn.disabled = isLast || !assignmentWizardStepComplete(selectedStep);
-    els.assignmentWizardNextBtn.textContent = isLast ? "Fine percorso" : assignmentWizardNextLabel(selectedStep);
+    const isComplete = assignmentWizardStepComplete(selectedStep);
+    els.assignmentWizardNextBtn.disabled = isLast ? isComplete : !isComplete;
+    els.assignmentWizardNextBtn.textContent = assignmentWizardNextLabel(selectedStep);
   }
+  if (selectedStep === "confirm") updateAssignmentConfirmActions();
 }
 
-function moveAssignmentWizardStep(offset) {
+async function moveAssignmentWizardStep(offset) {
   const current = currentAssignmentWizardStep();
   if (offset > 0) {
     if (current === "ai") {
       applyAssignmentAiDraftToActivityForm();
+      return;
+    }
+    if (current === "confirm") {
+      if (!state.assignmentRecordSaved) {
+        await saveAssignmentRecord();
+      } else if (!state.assignmentDistributed) {
+        await distributeAssignment();
+      }
+      setAssignmentWizardStep("confirm");
       return;
     }
     if (!assignmentWizardStepComplete(current)) {
@@ -3369,6 +3403,9 @@ async function generateAssignmentAiDraft() {
 async function saveAssignmentRecord() {
   if (!els.saveAssignmentBtn) return;
   if (!validateAssignmentBeforeConfirm("salvare l'assegnazione")) return;
+  state.assignmentRecordSaved = false;
+  state.assignmentDistributed = false;
+  updateAssignmentConfirmActions();
   els.saveAssignmentBtn.disabled = true;
   setStatus("Salvataggio assegnazione...");
   setAssignmentConfirmStatus("saving", "Salvataggio assegnazione", "Sto salvando dati, destinatari e date dell'assegnazione.");
@@ -3382,6 +3419,8 @@ async function saveAssignmentRecord() {
     state.selectedAssignmentId = "";
     renderAssignmentSelect();
     const assignmentId = payload.assignment?.id || "-";
+    state.assignmentRecordSaved = true;
+    state.assignmentDistributed = false;
     setStatus(`Assegnazione salvata: ${assignmentId}.`);
     setAssignmentConfirmStatus(
       "success",
@@ -3394,12 +3433,18 @@ async function saveAssignmentRecord() {
     setAssignmentConfirmStatus("error", "Assegnazione non salvata", message);
   } finally {
     els.saveAssignmentBtn.disabled = false;
+    updateAssignmentConfirmActions();
   }
 }
 
 async function distributeAssignment() {
   if (!els.distributeAssignmentBtn) return;
   if (!validateAssignmentBeforeConfirm("distribuire ai target")) return;
+  if (!state.assignmentRecordSaved) {
+    setAssignmentConfirmStatus("error", "Salva prima l'assegnazione", "La distribuzione e disponibile solo dopo un salvataggio riuscito.");
+    setAssignmentWizardStep("confirm");
+    return;
+  }
   els.distributeAssignmentBtn.disabled = true;
   setStatus("Distribuzione assegnazione ai target...");
   setAssignmentConfirmStatus("saving", "Distribuzione ai target", "Sto copiando traccia e asset nelle cartelle dei target selezionati.");
@@ -3413,6 +3458,7 @@ async function distributeAssignment() {
     });
     renderAssignmentPlan(payload.plan);
     const targetCount = payload.results?.length || 0;
+    state.assignmentDistributed = true;
     setStatus(`Assegnazione distribuita a ${targetCount} target.`);
     setAssignmentConfirmStatus(
       "success",
@@ -3428,6 +3474,7 @@ async function distributeAssignment() {
     setAssignmentConfirmStatus("error", "Distribuzione non completata", message);
   } finally {
     els.distributeAssignmentBtn.disabled = false;
+    updateAssignmentConfirmActions();
   }
 }
 
