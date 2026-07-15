@@ -47,9 +47,20 @@ def run_dashboard_js(assertions: str) -> None:
         this.clientWidth = 960;
         this.testWidth = 240;
         this.tHead = {{ rows: [{{ cells: [] }}] }};
+        this.listeners = {{}};
       }}
-      addEventListener() {{}}
-      removeEventListener() {{}}
+      addEventListener(type, handler) {{
+        this.listeners[type] = this.listeners[type] || [];
+        this.listeners[type].push(handler);
+      }}
+      removeEventListener(type, handler) {{
+        this.listeners[type] = (this.listeners[type] || []).filter((candidate) => candidate !== handler);
+      }}
+      dispatchEvent(event) {{
+        const nextEvent = {{ type: event?.type || "", target: this }};
+        (this.listeners[nextEvent.type] || []).forEach((handler) => handler(nextEvent));
+        return true;
+      }}
       setAttribute(name, value) {{ this[name] = value; }}
       toggleAttribute(name, force) {{
         const enabled = force === undefined ? !Boolean(this[name]) : Boolean(force);
@@ -429,6 +440,7 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         setAssignmentAiPromptLocked,
         unlockAssignmentAiPrompt,
         assignmentWizardStepComplete,
+        validateAssignmentBeforeConfirm,
         setAssignmentWizardStep,
         moveAssignmentWizardStep,
         assignmentPlanErrorMessage,
@@ -778,6 +790,7 @@ def test_save_assignment_record_posts_form_and_refreshes_due_assignments() -> No
         """
         (async () => {
           tested.els.activityPath.value = "activities/python-base-somma-001.json";
+          tested.state.activityReviewSaved = true;
           tested.els.classId.value = "3A-TPSI";
           tested.els.classLabel.value = "3A TPSI";
           tested.els.githubTeam.value = "team-3a-tpsi";
@@ -838,7 +851,10 @@ def test_distribute_assignment_posts_plan_and_renders_written_targets() -> None:
         """
         (async () => {
           tested.els.activityPath.value = "activities/python-base-somma-001.json";
+          tested.state.activityReviewSaved = true;
           tested.els.targetsText.value = "students/rossi-mario";
+          tested.els.assignedAt.value = "2026-10-12T09:00";
+          tested.els.dueAt.value = "2026-10-19T23:59";
           tested.els.activityAuthorLanguage.value = "python";
           tested.els.activityAuthorSourceName.value = "main.py";
           tested.fetchResponses["/api/assignments/distribute"] = {
@@ -994,6 +1010,47 @@ def test_assignment_date_time_inputs_are_serialized_as_iso() -> None:
         assert.match(payload.due_at, /^2026-10-19T23:59:00[+-]\\d{2}:\\d{2}$/);
         assert.match(payload.now, /^2026-10-20T08:00:00[+-]\\d{2}:\\d{2}$/);
         assert.equal(tested.dateTimeInputToIso("2026-10-12T09:00:00+02:00"), "2026-10-12T09:00:00+02:00");
+        """
+    )
+
+
+def test_save_assignment_requires_complete_wizard_data_before_posting() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.els.activityPath.value = "activities/python-base-somma-001.json";
+          tested.state.activityReviewSaved = true;
+          tested.els.targetsText.value = "students/rossi-mario";
+          tested.els.assignedAt.value = "2026-10-12T09:00";
+          tested.els.dueAt.value = "";
+
+          await tested.saveAssignmentRecord();
+
+          assert.equal(tested.fetchCalls.some((entry) => entry.path === "/api/assignments/save"), false);
+          assert.match(tested.els.assignmentConfirmStatus.innerHTML, /Date incomplete/);
+          assert.equal(tested.els.dueAt["aria-invalid"], "true");
+          assert.equal(tested.els.assignmentWizardNextBtn.disabled, true);
+        })();
+        """
+    )
+
+
+def test_assignment_confirm_status_resets_when_assignment_data_changes() -> None:
+    run_dashboard_js(
+        """
+        tested.els.activityPath.value = "activities/python-base-somma-001.json";
+        tested.state.activityReviewSaved = true;
+        tested.els.targetsText.value = "students/rossi-mario";
+        tested.els.assignedAt.value = "2026-10-12T09:00";
+        tested.els.dueAt.value = "2026-10-19T23:59";
+
+        assert.equal(tested.validateAssignmentBeforeConfirm("salvare l'assegnazione"), true);
+        tested.els.assignmentConfirmStatus.innerHTML = "<strong>Assegnazione salvata</strong><span>ID: demo</span>";
+        tested.els.targetsText.value = "students/bianchi-luca";
+        tested.els.targetsText.dispatchEvent(new Event("input"));
+
+        assert.match(tested.els.assignmentConfirmStatus.innerHTML, /Dati modificati/);
+        assert.match(tested.els.assignmentConfirmStatus.innerHTML, /destinatari sono cambiati/);
         """
     )
 

@@ -972,6 +972,7 @@ function syncTargetsFromRosterSelection() {
   els.targetsText.value = targets.join("\n");
   clearSelectedAssignment();
   renderAssignmentContext();
+  resetAssignmentConfirmStatus("I destinatari sono cambiati: ricontrolla anteprima e conferma prima di salvare o distribuire.");
   setRosterStatus(warnings.length
     ? `Destinatari aggiornati con avvisi: ${warnings.join(" ")}`
     : `Destinatari aggiornati: ${targets.length} target studenti.`);
@@ -1867,6 +1868,10 @@ function setAssignmentConfirmStatus(type, title, message) {
   if (type === "success") els.assignmentConfirmStatus.classList.add("isSuccess");
   if (type === "error") els.assignmentConfirmStatus.classList.add("isError");
   els.assignmentConfirmStatus.innerHTML = `<strong>${escapeHtml(title)}</strong><span>${escapeHtml(message)}</span>`;
+}
+
+function resetAssignmentConfirmStatus(message = "I dati dell'assegnazione sono cambiati: ricontrolla anteprima e conferma prima di salvare o distribuire.") {
+  setAssignmentConfirmStatus("info", "Dati modificati", message);
 }
 
 function activityAuthorRequiredFields() {
@@ -3085,6 +3090,32 @@ function assignmentWizardStepComplete(step) {
   return true;
 }
 
+function validateAssignmentBeforeConfirm(actionLabel) {
+  if (!String(els.activityPath?.value || "").trim()) {
+    setAssignmentConfirmStatus("error", "Activity mancante", `Scegli o salva una activity prima di ${actionLabel}.`);
+    setAssignmentWizardStep("activity");
+    return false;
+  }
+  if (!state.activityReviewSaved) {
+    setAssignmentConfirmStatus("error", "Revisione activity da completare", `Salva l'activity nello step Revisione prima di ${actionLabel}.`);
+    setAssignmentWizardStep("review");
+    return false;
+  }
+  if (targetLineCount() <= 0) {
+    markActivityAuthorFieldInvalid(els.targetsText, true);
+    setAssignmentConfirmStatus("error", "Destinatari mancanti", `Scegli almeno un target nello step Destinatari prima di ${actionLabel}.`);
+    setAssignmentWizardStep("targets");
+    return false;
+  }
+  markActivityAuthorFieldInvalid(els.targetsText, false);
+  if (!validateAssignmentDateFields({ showMessage: true })) {
+    setAssignmentConfirmStatus("error", "Date incomplete", `Completa assegnazione e scadenza prima di ${actionLabel}.`);
+    setAssignmentWizardStep("dates");
+    return false;
+  }
+  return true;
+}
+
 function assignmentWizardNextLabel(step) {
   const next = nextAssignmentWizardStep(step);
   if (!next || next.id === step) return "Fine percorso";
@@ -3334,6 +3365,7 @@ async function generateAssignmentAiDraft() {
 
 async function saveAssignmentRecord() {
   if (!els.saveAssignmentBtn) return;
+  if (!validateAssignmentBeforeConfirm("salvare l'assegnazione")) return;
   els.saveAssignmentBtn.disabled = true;
   setStatus("Salvataggio assegnazione...");
   setAssignmentConfirmStatus("saving", "Salvataggio assegnazione", "Sto salvando dati, destinatari e date dell'assegnazione.");
@@ -3364,6 +3396,7 @@ async function saveAssignmentRecord() {
 
 async function distributeAssignment() {
   if (!els.distributeAssignmentBtn) return;
+  if (!validateAssignmentBeforeConfirm("distribuire ai target")) return;
   els.distributeAssignmentBtn.disabled = true;
   setStatus("Distribuzione assegnazione ai target...");
   setAssignmentConfirmStatus("saving", "Distribuzione ai target", "Sto copiando traccia e asset nelle cartelle dei target selezionati.");
@@ -4323,30 +4356,36 @@ els.clearRosterTargetsBtn?.addEventListener("click", () => {
 });
 els.activityPath.addEventListener("input", () => {
   clearSelectedAssignment();
+  resetAssignmentConfirmStatus("L'activity e cambiata: ricontrolla anteprima e conferma prima di salvare o distribuire.");
   renderActivitySelect();
   renderAssignmentContext();
 });
 els.outputName.addEventListener("input", renderAssignmentContext);
 els.classId.addEventListener("input", () => {
   clearSelectedAssignment();
+  resetAssignmentConfirmStatus("La classe e cambiata: ricontrolla anteprima e conferma prima di salvare o distribuire.");
   renderReportAssignmentSummary();
 });
 els.classLabel.addEventListener("input", () => {
   clearSelectedAssignment();
+  resetAssignmentConfirmStatus("L'etichetta classe e cambiata: ricontrolla anteprima e conferma prima di salvare o distribuire.");
   renderAssignmentContext();
 });
 els.githubTeam.addEventListener("input", () => {
   clearSelectedAssignment();
+  resetAssignmentConfirmStatus("Il team GitHub e cambiato: ricontrolla anteprima e conferma prima di salvare o distribuire.");
   renderAssignmentContext();
 });
 els.assignedAt.addEventListener("input", () => {
   clearSelectedAssignment();
+  resetAssignmentConfirmStatus("Le date sono cambiate: ricontrolla anteprima e conferma prima di salvare o distribuire.");
   validateAssignmentDateFields();
   setAssignmentWizardStep(currentAssignmentWizardStep());
   renderReportAssignmentSummary();
 });
 els.dueAt.addEventListener("input", () => {
   clearSelectedAssignment();
+  resetAssignmentConfirmStatus("Le date sono cambiate: ricontrolla anteprima e conferma prima di salvare o distribuire.");
   validateAssignmentDateFields();
   setAssignmentWizardStep(currentAssignmentWizardStep());
   renderReportAssignmentSummary();
@@ -4354,6 +4393,7 @@ els.dueAt.addEventListener("input", () => {
 els.nowAt.addEventListener("change", () => loadAssignments().catch((error) => setStatus(`Assegnazioni non aggiornate: ${error.message}`)));
 els.targetsText.addEventListener("input", () => {
   clearSelectedAssignment();
+  resetAssignmentConfirmStatus("I destinatari sono cambiati: ricontrolla anteprima e conferma prima di salvare o distribuire.");
   syncRosterSelectionFromTargetsText();
   renderAssignmentContext();
 });
