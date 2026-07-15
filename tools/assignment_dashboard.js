@@ -276,6 +276,7 @@ const els = {
   activityPath: document.querySelector("#activityPath"),
   assignmentSelect: document.querySelector("#assignmentSelect"),
   assignmentStatus: document.querySelector("#assignmentStatus"),
+  deleteAssignmentBtn: document.querySelector("#deleteAssignmentBtn"),
   assignmentConfirmStatus: document.querySelector("#assignmentConfirmStatus"),
   classRosterSelect: document.querySelector("#classRosterSelect"),
   rosterStatus: document.querySelector("#rosterStatus"),
@@ -1738,6 +1739,12 @@ function renderAssignmentSelect() {
   }
   els.assignmentSelect.value = state.dueAssignments.some((assignment) => assignment.id === selected) ? selected : "";
   state.selectedAssignmentId = els.assignmentSelect.value;
+  if (els.deleteAssignmentBtn) {
+    els.deleteAssignmentBtn.disabled = !state.selectedAssignmentId;
+    els.deleteAssignmentBtn.title = state.selectedAssignmentId
+      ? "Cancella solo il record docente dell'assegnazione selezionata. Non rimuove eventuali file gia distribuiti nei repository studenti."
+      : "Seleziona un'assegnazione da tracciare prima di cancellarla.";
+  }
   if (els.assignmentStatus) {
     els.assignmentStatus.textContent = state.dueAssignments.length
       ? `${state.dueAssignments.length} assegnazioni scadute senza registro.`
@@ -1749,6 +1756,7 @@ function clearSelectedAssignment() {
   if (!state.selectedAssignmentId && !els.assignmentSelect?.value) return;
   state.selectedAssignmentId = "";
   if (els.assignmentSelect) els.assignmentSelect.value = "";
+  if (els.deleteAssignmentBtn) els.deleteAssignmentBtn.disabled = true;
   renderReportAssignmentSummary();
 }
 
@@ -3511,6 +3519,48 @@ async function distributeAssignment() {
   }
 }
 
+async function deleteSelectedAssignment() {
+  if (!els.deleteAssignmentBtn) return;
+  const assignmentId = state.selectedAssignmentId || els.assignmentSelect?.value || "";
+  if (!assignmentId) {
+    setStatus("Seleziona un'assegnazione da cancellare.");
+    return;
+  }
+  const assignment = state.dueAssignments.find((candidate) => candidate.id === assignmentId)
+    || state.assignments.find((candidate) => candidate.id === assignmentId);
+  const label = assignment ? assignmentLabel(assignment) : assignmentId;
+  const confirmed = window.confirm?.(
+    `Cancellare l'assegnazione "${label}"?\n\n` +
+    "Verrà eliminato solo il record docente in teacher-assignments. " +
+    "Eventuali file già distribuiti nei repository studenti non verranno rimossi."
+  );
+  if (!confirmed) return;
+  els.deleteAssignmentBtn.disabled = true;
+  setStatus("Cancellazione assegnazione...");
+  try {
+    const payload = await api("/api/assignments/delete", {
+      method: "POST",
+      body: JSON.stringify({
+        assignment_id: assignmentId,
+        now: dateTimeInputToIso(els.nowAt?.value),
+      }),
+    });
+    state.assignments = payload.assignments || [];
+    state.dueAssignments = (payload.due_without_register || []).map((item) => item.assignment || item);
+    state.selectedAssignmentId = "";
+    if (els.assignmentSelect) els.assignmentSelect.value = "";
+    renderAssignmentSelect();
+    clearSelectedAssignment();
+    renderReportAssignmentSummary();
+    resetAssignmentConfirmStatus("Assegnazione cancellata: seleziona o crea un'altra consegna prima di salvare o distribuire.");
+    setStatus(`Assegnazione cancellata: ${payload.deleted?.id || assignmentId}.`);
+  } catch (error) {
+    const message = assignmentPlanErrorMessage(error);
+    setStatus(`Assegnazione non cancellata: ${message}`);
+    renderAssignmentSelect();
+  }
+}
+
 async function generateReport() {
   els.generateReportBtn.disabled = true;
   setStatus("Creazione registro consegne...");
@@ -4337,6 +4387,7 @@ els.wizardOpenActivityEditorBtn?.addEventListener("click", openActivityReviewSte
 els.activityEditorCloseBtn?.addEventListener("click", closeActivityEditor);
 els.saveAssignmentBtn?.addEventListener("click", saveAssignmentRecord);
 els.distributeAssignmentBtn?.addEventListener("click", distributeAssignment);
+els.deleteAssignmentBtn?.addEventListener("click", deleteSelectedAssignment);
 els.generateReportBtn.addEventListener("click", generateReport);
 els.reportSelect.addEventListener("change", loadSelectedReport);
 els.coverageOpenBtn.addEventListener("click", openCoverageDialog);

@@ -204,6 +204,7 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
       }},
       window: {{
         addEventListener() {{}},
+        confirm() {{ return true; }},
         location: {{
           reloaded: false,
           reload() {{ this.reloaded = true; }},
@@ -451,6 +452,7 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         generateAssignmentAiDraft,
         saveAssignmentRecord,
         distributeAssignment,
+        deleteSelectedAssignment,
         generateReport,
         loadAssignments,
         renderAssignmentSelect,
@@ -925,6 +927,71 @@ def test_distribute_assignment_requires_saved_record_before_posting() -> None:
           assert.equal(tested.fetchCalls.some((entry) => entry.path === "/api/assignments/distribute"), false);
           assert.match(tested.els.assignmentConfirmStatus.innerHTML, /Salva prima l'assegnazione/);
           assert.equal(tested.els.distributeAssignmentBtn.disabled, true);
+        })();
+        """
+    )
+
+
+def test_delete_selected_assignment_posts_confirmation_and_refreshes_list() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.state.dueAssignments = [{
+            id: "assignment-python-base-somma-001-3a",
+            activity_id: "python-base-somma-001",
+            activity_path: "activities/python-base-somma-001.json",
+            class_id: "3A",
+            class_label: "3A TPSI",
+            due_at: "2026-10-19T23:59:00+02:00",
+          }];
+          tested.renderAssignmentSelect();
+          tested.els.assignmentSelect.value = "assignment-python-base-somma-001-3a";
+          tested.state.selectedAssignmentId = "assignment-python-base-somma-001-3a";
+          tested.renderAssignmentSelect();
+          tested.els.nowAt.value = "2026-10-20T08:00";
+          tested.fetchResponses["/api/assignments/delete"] = {
+            ok: true,
+            deleted: { id: "assignment-python-base-somma-001-3a" },
+            assignments: [],
+            due_without_register: [],
+          };
+
+          await tested.deleteSelectedAssignment();
+
+          const call = tested.fetchCalls.find((entry) => entry.path === "/api/assignments/delete");
+          assert.ok(call);
+          assert.equal(call.options.method, "POST");
+          assert.deepEqual(JSON.parse(call.options.body), {
+            assignment_id: "assignment-python-base-somma-001-3a",
+            now: "2026-10-20T08:00:00+02:00",
+          });
+          assert.equal(tested.state.dueAssignments.length, 0);
+          assert.equal(tested.state.selectedAssignmentId, "");
+          assert.equal(tested.els.deleteAssignmentBtn.disabled, true);
+          assert.match(tested.els.status.textContent, /Assegnazione cancellata/);
+        })();
+        """
+    )
+
+
+def test_delete_selected_assignment_stops_when_confirmation_is_cancelled() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.window.confirm = () => false;
+          tested.state.dueAssignments = [{
+            id: "assignment-python-base-somma-001-3a",
+            activity_id: "python-base-somma-001",
+            class_label: "3A TPSI",
+            due_at: "2026-10-19T23:59:00+02:00",
+          }];
+          tested.state.selectedAssignmentId = "assignment-python-base-somma-001-3a";
+          tested.renderAssignmentSelect();
+
+          await tested.deleteSelectedAssignment();
+
+          assert.equal(tested.fetchCalls.some((entry) => entry.path === "/api/assignments/delete"), false);
+          assert.equal(tested.state.selectedAssignmentId, "assignment-python-base-somma-001-3a");
         })();
         """
     )
@@ -2619,6 +2686,8 @@ def test_assignment_and_report_panels_are_separated() -> None:
     assert 'id="outputName"' in report_section
     assert 'id="reportAssignmentSummary"' in report_section
     assert 'id="generateReportBtn"' in report_section
+    assert 'id="deleteAssignmentBtn"' in report_section
+    assert "Cancella assegnazione" in report_section
     assert 'id="saveAssignmentBtn"' not in report_section
     assert 'id="distributeAssignmentBtn"' not in report_section
     assert 'id="activitySelect"' not in report_section

@@ -318,6 +318,17 @@ class JsonAssignmentRecordStorage:
             raise FileNotFoundError(f"Assegnazione non trovata: {assignment_id}")
         return validate_assignment_record(self.read_json(path))
 
+    def delete_assignment(self, assignment_id: str) -> dict[str, Any]:
+        """Delete one assignment record by id."""
+
+        path = self.safe_assignment_path(assignment_id)
+        if not path.is_file():
+            raise FileNotFoundError(f"Assegnazione non trovata: {assignment_id}")
+        assignment = validate_assignment_record(self.read_json(path))
+        deleted = {**assignment, "name": path.name, "path": self.relative_path(path)}
+        path.unlink()
+        return deleted
+
     def list_assignments(self) -> list[dict[str, Any]]:
         """List assignment records stored in teacher-assignments."""
 
