@@ -844,6 +844,9 @@ def test_save_assignment_record_posts_form_and_refreshes_due_assignments() -> No
           assert.match(tested.els.status.textContent, /Assegnazione salvata/);
           assert.match(tested.els.assignmentConfirmStatus.innerHTML, /Assegnazione salvata/);
           assert.match(tested.els.assignmentConfirmStatus.innerHTML, /assignment-python-base-somma-001-3a-tpsi/);
+          assert.equal(tested.state.assignmentRecordSaved, true);
+          assert.equal(tested.state.assignmentDistributed, false);
+          assert.equal(tested.els.distributeAssignmentBtn.disabled, false);
         })();
         """
     )
@@ -858,6 +861,7 @@ def test_distribute_assignment_posts_plan_and_renders_written_targets() -> None:
           tested.els.targetsText.value = "students/rossi-mario";
           tested.els.assignedAt.value = "2026-10-12T09:00";
           tested.els.dueAt.value = "2026-10-19T23:59";
+          tested.state.assignmentRecordSaved = true;
           tested.els.activityAuthorLanguage.value = "python";
           tested.els.activityAuthorSourceName.value = "main.py";
           tested.fetchResponses["/api/assignments/distribute"] = {
@@ -898,6 +902,144 @@ def test_distribute_assignment_posts_plan_and_renders_written_targets() -> None:
           assert.match(tested.els.status.textContent, /distribuita a 1 target/);
           assert.match(tested.els.assignmentConfirmStatus.innerHTML, /Distribuzione completata/);
           assert.match(tested.els.assignmentConfirmStatus.innerHTML, /1 target aggiornati/);
+          assert.equal(tested.state.assignmentDistributed, true);
+          assert.equal(tested.els.distributeAssignmentBtn.disabled, true);
+        })();
+        """
+    )
+
+
+def test_distribute_assignment_requires_saved_record_before_posting() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.els.activityPath.value = "activities/python-base-somma-001.json";
+          tested.state.activityReviewSaved = true;
+          tested.els.targetsText.value = "students/rossi-mario";
+          tested.els.assignedAt.value = "2026-10-12T09:00";
+          tested.els.dueAt.value = "2026-10-19T23:59";
+          tested.state.assignmentRecordSaved = false;
+
+          await tested.distributeAssignment();
+
+          assert.equal(tested.fetchCalls.some((entry) => entry.path === "/api/assignments/distribute"), false);
+          assert.match(tested.els.assignmentConfirmStatus.innerHTML, /Salva prima l'assegnazione/);
+          assert.equal(tested.els.distributeAssignmentBtn.disabled, true);
+        })();
+        """
+    )
+
+
+def test_assignment_confirm_next_guides_save_then_distribute() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.setAssignmentWizardStep("confirm");
+          tested.state.activityReviewSaved = true;
+          tested.els.activityPath.value = "activities/python-base-somma-001.json";
+          tested.els.targetsText.value = "students/rossi-mario";
+          tested.els.assignedAt.value = "2026-10-12T09:00";
+          tested.els.dueAt.value = "2026-10-19T23:59";
+          tested.els.activityAuthorLanguage.value = "python";
+          tested.els.activityAuthorSourceName.value = "main.py";
+
+          assert.equal(tested.els.assignmentWizardNextBtn.disabled, false);
+          assert.equal(tested.els.assignmentWizardNextBtn.textContent, "Salva assegnazione");
+          assert.equal(tested.els.distributeAssignmentBtn.disabled, true);
+
+          await tested.moveAssignmentWizardStep(1);
+
+          assert.equal(tested.state.assignmentRecordSaved, true);
+          assert.equal(tested.state.assignmentDistributed, false);
+          assert.equal(tested.els.assignmentWizardNextBtn.textContent, "Distribuisci ai target");
+          assert.equal(tested.els.distributeAssignmentBtn.disabled, false);
+
+          await tested.moveAssignmentWizardStep(1);
+
+          assert.equal(tested.state.assignmentDistributed, true);
+          assert.equal(tested.els.assignmentWizardNextBtn.disabled, true);
+          assert.equal(tested.els.assignmentWizardNextBtn.textContent, "Percorso completato");
+          assert.equal(tested.els.distributeAssignmentBtn.disabled, true);
+          assert.ok(tested.fetchCalls.find((entry) => entry.path === "/api/assignments/save"));
+          assert.ok(tested.fetchCalls.find((entry) => entry.path === "/api/assignments/distribute"));
+        })();
+        """
+    )
+
+
+def test_assignment_confirm_next_ignores_concurrent_clicks_while_saving() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.setAssignmentWizardStep("confirm");
+          tested.state.activityReviewSaved = true;
+          tested.els.activityPath.value = "activities/python-base-somma-001.json";
+          tested.els.targetsText.value = "students/rossi-mario";
+          tested.els.assignedAt.value = "2026-10-12T09:00";
+          tested.els.dueAt.value = "2026-10-19T23:59";
+          tested.els.activityAuthorLanguage.value = "python";
+          tested.els.activityAuthorSourceName.value = "main.py";
+
+          const firstClick = tested.moveAssignmentWizardStep(1);
+          const secondClick = tested.moveAssignmentWizardStep(1);
+
+          assert.equal(tested.state.assignmentConfirmBusy, true);
+          assert.equal(tested.els.assignmentWizardNextBtn.disabled, true);
+
+          await Promise.all([firstClick, secondClick]);
+
+          const saveCalls = tested.fetchCalls.filter((entry) => entry.path === "/api/assignments/save");
+          assert.equal(saveCalls.length, 1);
+          assert.equal(tested.state.assignmentConfirmBusy, false);
+          assert.equal(tested.state.assignmentRecordSaved, true);
+          assert.equal(tested.els.assignmentWizardNextBtn.textContent, "Distribuisci ai target");
+        })();
+        """
+    )
+
+
+def test_assignment_confirm_busy_survives_field_reset_while_saving() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.setAssignmentWizardStep("confirm");
+          tested.state.activityReviewSaved = true;
+          tested.els.activityPath.value = "activities/python-base-somma-001.json";
+          tested.els.targetsText.value = "students/rossi-mario";
+          tested.els.assignedAt.value = "2026-10-12T09:00";
+          tested.els.dueAt.value = "2026-10-19T23:59";
+          tested.els.activityAuthorLanguage.value = "python";
+          tested.els.activityAuthorSourceName.value = "main.py";
+
+          let resolveSave;
+          tested.fetchResponses["/api/assignments/save"] = new Promise((resolve) => {
+            resolveSave = resolve;
+          });
+
+          const saveClick = tested.moveAssignmentWizardStep(1);
+
+          assert.equal(tested.state.assignmentConfirmBusy, true);
+          tested.els.targetsText.value = "students/bianchi-luca";
+          tested.els.targetsText.dispatchEvent(new Event("input"));
+
+          assert.equal(tested.state.assignmentConfirmBusy, true);
+          assert.equal(tested.els.assignmentWizardNextBtn.disabled, true);
+
+          await tested.moveAssignmentWizardStep(1);
+          assert.equal(tested.fetchCalls.filter((entry) => entry.path === "/api/assignments/save").length, 1);
+
+          resolveSave({
+            ok: true,
+            assignment: { id: "assignment-python-base-somma-001-3a-tpsi", activity_id: "python-base-somma-001" },
+            assignments: [],
+            due_without_register: [],
+          });
+          await saveClick;
+
+          assert.equal(tested.state.assignmentConfirmBusy, false);
+          assert.equal(tested.state.assignmentRecordSaved, false);
+          assert.match(tested.els.assignmentConfirmStatus.innerHTML, /Dati modificati dopo il salvataggio/);
+          assert.equal(tested.els.distributeAssignmentBtn.disabled, true);
         })();
         """
     )
@@ -939,6 +1081,10 @@ def test_assignment_wizard_contains_teacher_editable_ai_step() -> None:
     assert "File aggiuntivi liberi" in assignment_section
     assert 'id="assignmentAiStudentBudget"' in assignment_section
     assert 'id="assignmentIntegrityMode"' in assignment_section
+    assert 'id="saveAssignmentBtn" type="button"' in assignment_section
+    assert 'id="distributeAssignmentBtn" type="button" disabled' in assignment_section
+    assert "1 Salva assegnazione" in assignment_section
+    assert "2 Distribuisci ai target" in assignment_section
 
 
 def test_assignment_wizard_uses_calendar_date_time_inputs() -> None:
@@ -1049,11 +1195,15 @@ def test_assignment_confirm_status_resets_when_assignment_data_changes() -> None
 
         assert.equal(tested.validateAssignmentBeforeConfirm("salvare l'assegnazione"), true);
         tested.els.assignmentConfirmStatus.innerHTML = "<strong>Assegnazione salvata</strong><span>ID: demo</span>";
+        tested.state.assignmentRecordSaved = true;
+        tested.state.assignmentDistributed = false;
         tested.els.targetsText.value = "students/bianchi-luca";
         tested.els.targetsText.dispatchEvent(new Event("input"));
 
         assert.match(tested.els.assignmentConfirmStatus.innerHTML, /Dati modificati/);
         assert.match(tested.els.assignmentConfirmStatus.innerHTML, /destinatari sono cambiati/);
+        assert.equal(tested.state.assignmentRecordSaved, false);
+        assert.equal(tested.els.distributeAssignmentBtn.disabled, true);
         """
     )
 
@@ -1744,8 +1894,8 @@ def test_assignment_wizard_prev_next_guides_the_flow() -> None:
 
         tested.moveAssignmentWizardStep(10);
         assert.match(tested.els.assignmentWizardHint.textContent, /Step 7 di 7/);
-        assert.equal(tested.els.assignmentWizardNextBtn.disabled, true);
-        assert.equal(tested.els.assignmentWizardNextBtn.textContent, "Fine percorso");
+        assert.equal(tested.els.assignmentWizardNextBtn.disabled, false);
+        assert.equal(tested.els.assignmentWizardNextBtn.textContent, "Salva assegnazione");
 
         tested.moveAssignmentWizardStep(-1);
         assert.match(tested.els.assignmentWizardHint.textContent, /Step 6 di 7/);

@@ -71,8 +71,9 @@ Il pannello usa un percorso guidato. Puoi saltare tra le linguette, ma il flusso
    - controlla activity, linguaggio, file sorgente, destinatari, cartelle target, target gia esistenti, asset per studenti e asset riservati al docente/grading;
    - se ci sono target bloccati o file mancanti, correggi prima di distribuire.
 7. **Conferma**
+   - il bottone **Avanti** guida la sequenza: prima salva l'assegnazione, poi abilita la distribuzione;
    - **Salva assegnazione** registra l'assegnazione nel sistema docente senza necessariamente copiare asset nei repository;
-   - **Distribuisci ai target** copia traccia, README e asset studente nelle cartelle/repository target quando il piano e corretto.
+   - **Distribuisci ai target** si abilita solo dopo un salvataggio riuscito e copia traccia, README e asset studente nelle cartelle/repository target quando il piano e corretto.
 
 Regola pratica: prima genera o scegli l'activity, poi controlla destinatari e date, poi fai sempre anteprima prima di salvare o distribuire.
 
@@ -190,7 +191,7 @@ Passaggi:
 5. Nel passo **Destinatari**, scegli classe, gruppo o studenti.
 6. Nel passo **Date**, lascia **Assegnato il** se va bene la data corrente e compila **Scadenza**.
 7. Nel passo **Anteprima**, premi **Anteprima assegnazione** e controlla il piano.
-8. Nel passo **Conferma**, salva l'assegnazione o distribuisci ai target.
+8. Nel passo **Conferma**, usa **Avanti** per salvare l'assegnazione; dopo il salvataggio riuscito puoi usare ancora **Avanti** per distribuire ai target.
 
 Cosa controllare a schermo:
 
@@ -200,6 +201,7 @@ Cosa controllare a schermo:
 - la scadenza e compilata;
 - i target corrispondono agli studenti desiderati;
 - l'anteprima non segnala target bloccati o asset mancanti inattesi.
+- nel passo finale la distribuzione resta disabilitata finche l'assegnazione non e stata salvata.
 
 Screenshot previsti:
 
