@@ -741,6 +741,8 @@ def test_save_activity_builds_valid_draft_from_gui_payload(tmp_path, monkeypatch
         "topics": "variabili, operatori",
         "prompt": "Scrivi un programma che somma due numeri.",
         "estimated_minutes": "25",
+        "language": "python",
+        "source_name": "main.py",
         "class_id": "3A-TPSI",
         "github_team": "team-3a",
         "uda_id": "uda-1",
@@ -754,9 +756,16 @@ def test_save_activity_builds_valid_draft_from_gui_payload(tmp_path, monkeypatch
     assert saved_payload["id"] == "somma-in-python"
     assert saved_payload["titolo"] == "Somma in Python"
     assert saved_payload["tipo"] == "compito-casa"
+    assert saved_payload["linguaggio"] == "python"
+    assert saved_payload["language"] == "python"
     assert saved_payload["argomenti"] == ["variabili", "operatori"]
     assert saved_payload["metriche"]["tempo_stimato_minuti"] == 25
-    assert saved_payload["contesto"] == {"classe": "3A-TPSI", "team_github": "team-3a", "uda": "uda-1"}
+    assert saved_payload["contesto"] == {
+        "classe": "3A-TPSI",
+        "team_github": "team-3a",
+        "uda": "uda-1",
+        "source_name": "main.py",
+    }
 
 
 def test_ai_secret_status_reports_paths_and_configured_keys_without_values(tmp_path, monkeypatch) -> None:

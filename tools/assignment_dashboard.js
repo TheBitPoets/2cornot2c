@@ -21,27 +21,31 @@ const OVERVIEW_SUPPORT_ORDER = ["senza-aiuto", "feedback-tecnico", "studio-guida
 const ASSIGNMENT_WIZARD_STEPS = [
   {
     id: "activity",
-    hint: "Step 1 di 6: scegli una activity salvata oppure apri l'editor per crearla o modificarla.",
+    hint: "Step 1 di 7: scegli una activity salvata oppure apri la revisione per crearla o modificarla.",
   },
   {
     id: "ai",
-    hint: "Step 2 di 6: genera o rifinisci una proposta AI, poi usala nell'editor activity.",
+    hint: "Step 2 di 7: genera o rifinisci una proposta AI, poi prepara la revisione activity.",
+  },
+  {
+    id: "review",
+    hint: "Step 3 di 7: controlla, modifica e salva l'activity prima di assegnarla.",
   },
   {
     id: "targets",
-    hint: "Step 3 di 6: scegli classe, team o studenti destinatari della consegna.",
+    hint: "Step 4 di 7: scegli classe, team o studenti destinatari della consegna.",
   },
   {
     id: "dates",
-    hint: "Step 4 di 6: imposta data di assegnazione, scadenza e ora simulata se serve.",
+    hint: "Step 5 di 7: imposta data di assegnazione, scadenza e ora simulata se serve.",
   },
   {
     id: "preview",
-    hint: "Step 5 di 6: controlla anteprima, target e asset prima di salvare o distribuire.",
+    hint: "Step 6 di 7: controlla anteprima, target e asset prima di salvare o distribuire.",
   },
   {
     id: "confirm",
-    hint: "Step 6 di 6: salva la consegna e, quando sei pronto, distribuisci gli asset ai target.",
+    hint: "Step 7 di 7: salva la consegna e, quando sei pronto, distribuisci gli asset ai target.",
   },
 ];
 const OVERVIEW_STATUS_ORDER = [
@@ -148,7 +152,29 @@ const state = {
   reviewSplit: readReviewSplit(),
   draggedPanelKey: "",
   activityAuthorLastSuggestedId: "",
+  activityReviewSaved: false,
+  assignmentAiGenerating: false,
+  assignmentAiPromptLocked: false,
+  assignmentAiDraftFilePath: "",
+  assignmentAiPreviewView: "draft",
+  assignmentAiDraftHtml: "",
+  assignmentAiContextHtml: "",
+  selectedRosterTargetIds: new Set(),
   selectedAssignmentId: "",
+};
+
+const DEFAULT_SOURCE_NAMES = {
+  assembly: "main.asm",
+  c: "main.c",
+  cpp: "main.cpp",
+  go: "main.go",
+  html: "index.html",
+  java: "Main.java",
+  javascript: "main.js",
+  nodejs: "main.js",
+  php: "main.php",
+  python: "main.py",
+  sql: "main.sql",
 };
 
 const els = {
@@ -214,6 +240,8 @@ const els = {
   filterButtons: document.querySelectorAll("[data-filter]"),
   activityEditorDialog: document.querySelector("#activityEditorDialog"),
   activityEditorCloseBtn: document.querySelector("#activityEditorCloseBtn"),
+  activityEditorBody: document.querySelector("#activityEditorBody"),
+  activityWizardEditorMount: document.querySelector("#activityWizardEditorMount"),
   openActivityEditorBtn: document.querySelector("#openActivityEditorBtn"),
   wizardOpenActivityEditorBtn: document.querySelector("#wizardOpenActivityEditorBtn"),
   activityPanelStatus: document.querySelector("#activityPanelStatus"),
@@ -227,6 +255,8 @@ const els = {
   activityAuthorTopicsList: document.querySelector("#activityAuthorTopicsList"),
   activityAuthorTopicsCount: document.querySelector("#activityAuthorTopicsCount"),
   activityAuthorMinutes: document.querySelector("#activityAuthorMinutes"),
+  activityAuthorLanguage: document.querySelector("#activityAuthorLanguage"),
+  activityAuthorSourceName: document.querySelector("#activityAuthorSourceName"),
   activityAuthorClass: document.querySelector("#activityAuthorClass"),
   activityAuthorClassCount: document.querySelector("#activityAuthorClassCount"),
   activityAuthorTeam: document.querySelector("#activityAuthorTeam"),
@@ -242,6 +272,7 @@ const els = {
   activityPath: document.querySelector("#activityPath"),
   assignmentSelect: document.querySelector("#assignmentSelect"),
   assignmentStatus: document.querySelector("#assignmentStatus"),
+  assignmentConfirmStatus: document.querySelector("#assignmentConfirmStatus"),
   classRosterSelect: document.querySelector("#classRosterSelect"),
   rosterStatus: document.querySelector("#rosterStatus"),
   rosterPanelStatus: document.querySelector("#rosterPanelStatus"),
@@ -256,6 +287,9 @@ const els = {
   dueAt: document.querySelector("#dueAt"),
   nowAt: document.querySelector("#nowAt"),
   targetsText: document.querySelector("#targetsText"),
+  assignmentTargetPicker: document.querySelector("#assignmentTargetPicker"),
+  selectAllRosterTargetsBtn: document.querySelector("#selectAllRosterTargetsBtn"),
+  clearRosterTargetsBtn: document.querySelector("#clearRosterTargetsBtn"),
   previewAssignmentBtn: document.querySelector("#previewAssignmentBtn"),
   saveAssignmentBtn: document.querySelector("#saveAssignmentBtn"),
   distributeAssignmentBtn: document.querySelector("#distributeAssignmentBtn"),
@@ -269,11 +303,16 @@ const els = {
   assignmentAiPrompt: document.querySelector("#assignmentAiPrompt"),
   assignmentAiStudentBudget: document.querySelector("#assignmentAiStudentBudget"),
   assignmentIntegrityMode: document.querySelector("#assignmentIntegrityMode"),
-  assignmentAiAskBtn: document.querySelector("#assignmentAiAskBtn"),
   assignmentAiGenerateBtn: document.querySelector("#assignmentAiGenerateBtn"),
   assignmentAiApplyDraftBtn: document.querySelector("#assignmentAiApplyDraftBtn"),
   assignmentAiDraftText: document.querySelector("#assignmentAiDraftText"),
+  assignmentAiProgress: document.querySelector("#assignmentAiProgress"),
   assignmentAiPackagePreview: document.querySelector("#assignmentAiPackagePreview"),
+  assignmentAiPreviewButtons: document.querySelectorAll("[data-ai-preview-view]"),
+  assignmentAiFilesDialog: document.querySelector("#assignmentAiFilesDialog"),
+  assignmentAiFilesCloseBtn: document.querySelector("#assignmentAiFilesCloseBtn"),
+  assignmentAiFilesStatus: document.querySelector("#assignmentAiFilesStatus"),
+  assignmentAiFilesReview: document.querySelector("#assignmentAiFilesReview"),
   generateReportBtn: document.querySelector("#generateReportBtn"),
   panels: document.querySelectorAll("main.layout .panel"),
 };
@@ -482,6 +521,32 @@ function isoToDateTimeInput(value) {
   const hours = String(date.getHours()).padStart(2, "0");
   const minutes = String(date.getMinutes()).padStart(2, "0");
   return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function currentDateTimeInput() {
+  return isoToDateTimeInput(new Date().toISOString());
+}
+
+function initializeAssignmentDateFields() {
+  if (els.assignedAt && !String(els.assignedAt.value || "").trim()) {
+    els.assignedAt.value = currentDateTimeInput();
+  }
+  validateAssignmentDateFields();
+}
+
+function validateAssignmentDateFields({ showMessage = false } = {}) {
+  const missingAssigned = !String(els.assignedAt?.value || "").trim();
+  const missingDue = !String(els.dueAt?.value || "").trim();
+  markActivityAuthorFieldInvalid(els.assignedAt, missingAssigned);
+  markActivityAuthorFieldInvalid(els.dueAt, missingDue);
+  if (showMessage && (missingAssigned || missingDue)) {
+    const missing = [
+      missingAssigned ? "Assegnato il" : "",
+      missingDue ? "Scadenza" : "",
+    ].filter(Boolean).join(", ");
+    setStatus(`Completa i campi data obbligatori: ${missing}.`);
+  }
+  return !(missingAssigned || missingDue);
 }
 
 function classValue(entity) {
@@ -877,6 +942,88 @@ function targetLineCount() {
   return els.targetsText.value.split(/\r?\n/).filter((line) => line.trim() && !line.trim().startsWith("#")).length;
 }
 
+function targetTextLines() {
+  return new Set(els.targetsText.value.split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith("#")));
+}
+
+function rosterStudentKey(student) {
+  return String(student?.id || student?.display_name || student?.local_path || student?.repo_path || student?.repo_ref || "").trim();
+}
+
+function activeRosterStudents(roster = state.selectedClassRoster) {
+  return (Array.isArray(roster?.students) ? roster.students : []).filter((student) => student?.active !== false);
+}
+
+function selectedRosterStudents() {
+  const roster = state.selectedClassRoster;
+  if (!roster) return [];
+  return activeRosterStudents(roster).filter((student) => state.selectedRosterTargetIds.has(rosterStudentKey(student)));
+}
+
+function syncTargetsFromRosterSelection() {
+  if (!state.selectedClassRoster || !els.assignmentTargetPicker) return;
+  const warnings = [];
+  const targets = [];
+  for (const student of selectedRosterStudents()) {
+    const result = localTargetFromStudent(student);
+    if (result.target) targets.push(result.target);
+    if (result.warning) warnings.push(result.warning);
+  }
+  els.targetsText.value = targets.join("\n");
+  clearSelectedAssignment();
+  renderAssignmentContext();
+  resetAssignmentConfirmStatus("I destinatari sono cambiati: ricontrolla anteprima e conferma prima di salvare o distribuire.");
+  setRosterStatus(warnings.length
+    ? `Destinatari aggiornati con avvisi: ${warnings.join(" ")}`
+    : `Destinatari aggiornati: ${targets.length} target studenti.`);
+}
+
+function syncRosterSelectionFromTargetsText() {
+  if (!state.selectedClassRoster) return;
+  const lines = targetTextLines();
+  state.selectedRosterTargetIds = new Set(
+    activeRosterStudents().filter((student) => {
+      const target = localTargetFromStudent(student).target;
+      return target && lines.has(target);
+    }).map(rosterStudentKey),
+  );
+  renderAssignmentTargetPicker();
+}
+
+function renderAssignmentTargetPicker() {
+  if (!els.assignmentTargetPicker) return;
+  const roster = state.selectedClassRoster;
+  if (!roster) {
+    els.assignmentTargetPicker.innerHTML = '<p class="status">Seleziona un roster per scegliere classe intera, gruppo o singolo studente.</p>';
+    if (els.selectAllRosterTargetsBtn) els.selectAllRosterTargetsBtn.disabled = true;
+    if (els.clearRosterTargetsBtn) els.clearRosterTargetsBtn.disabled = true;
+    return;
+  }
+  const students = activeRosterStudents(roster);
+  if (els.selectAllRosterTargetsBtn) els.selectAllRosterTargetsBtn.disabled = students.length === 0;
+  if (els.clearRosterTargetsBtn) els.clearRosterTargetsBtn.disabled = students.length === 0;
+  if (!students.length) {
+    els.assignmentTargetPicker.innerHTML = '<p class="status">Il roster non contiene studenti attivi da assegnare.</p>';
+    return;
+  }
+  els.assignmentTargetPicker.innerHTML = students.map((student) => {
+    const key = rosterStudentKey(student);
+    const target = localTargetFromStudent(student);
+    const checked = state.selectedRosterTargetIds.has(key) ? " checked" : "";
+    const name = student.display_name || student.id || key || "-";
+    const hint = target.warning || target.target || "Target non disponibile";
+    return `
+      <label class="assignmentTargetOption">
+        <input type="checkbox" data-roster-target-student="${escapeHtml(key)}"${checked}>
+        <span>
+          <strong>${escapeHtml(name)}</strong>
+          <small>${escapeHtml(hint)}</small>
+        </span>
+      </label>
+    `;
+  }).join("");
+}
+
 function reportAssignmentSummaryItems() {
   const assignment = state.assignments.find((candidate) => candidate.id === state.selectedAssignmentId)
     || state.dueAssignments.find((candidate) => candidate.id === state.selectedAssignmentId);
@@ -906,6 +1053,7 @@ function renderReportAssignmentSummary() {
 }
 
 function renderAssignmentContext() {
+  renderAssignmentTargetPicker();
   renderRosterPanel();
   renderReportAssignmentSummary();
 }
@@ -1625,6 +1773,7 @@ function applyAssignmentToGenerateForm(assignmentId) {
   renderActivitySelect();
   renderAssignmentContext();
   renderAssignmentSelect();
+  resetAssignmentConfirmStatus("Assegnazione caricata: ricontrolla anteprima e conferma prima di salvare o distribuire.");
   return assignment;
 }
 
@@ -1659,9 +1808,25 @@ function renderActivityPanelSummary() {
   `).join("");
 }
 
+function mountActivityEditorInDialog() {
+  if (!els.activityEditorDialog || !els.activityEditorBody) return;
+  if (els.activityEditorBody.parentElement !== els.activityEditorDialog) {
+    els.activityEditorDialog.append(els.activityEditorBody);
+  }
+}
+
+function mountActivityEditorInWizard() {
+  if (!els.activityWizardEditorMount || !els.activityEditorBody) return;
+  if (els.activityEditorDialog?.open) els.activityEditorDialog.close();
+  if (els.activityEditorBody.parentElement !== els.activityWizardEditorMount) {
+    els.activityWizardEditorMount.append(els.activityEditorBody);
+  }
+}
+
 function openActivityEditor(source = "panel") {
   renderActivityAuthorMetadataSelects(true);
   renderActivityPanelSummary();
+  mountActivityEditorInDialog();
   if (els.activityPanelStatus) {
     els.activityPanelStatus.textContent = source === "wizard"
       ? "Editor activity aperto dal wizard assegnazione."
@@ -1674,13 +1839,118 @@ function openActivityEditor(source = "panel") {
 
 function closeActivityEditor() {
   els.activityEditorDialog?.close?.();
+  const current = Array.from(els.assignmentSteps).find((section) => !section.hidden)?.dataset.assignmentStep || "";
+  if (current === "review") {
+    mountActivityEditorInWizard();
+  }
   renderActivityPanelSummary();
+}
+
+function openActivityReviewStep(statusMessage = "Controlla la bozza activity, modifica se serve e salva prima di proseguire.") {
+  mountActivityEditorInWizard();
+  setAssignmentWizardStep("review");
+  setActivityAuthorStatus("info", "Revisione activity", statusMessage);
+  renderActivityPanelSummary();
+}
+
+function setActivityAuthorStatus(type, title, message) {
+  if (!els.activityAuthorStatus) return;
+  els.activityAuthorStatus.classList.remove("isSaving", "isSuccess", "isError");
+  if (type === "saving") els.activityAuthorStatus.classList.add("isSaving");
+  if (type === "success") els.activityAuthorStatus.classList.add("isSuccess");
+  if (type === "error") els.activityAuthorStatus.classList.add("isError");
+  els.activityAuthorStatus.innerHTML = `<strong>${escapeHtml(title)}</strong><span>${escapeHtml(message)}</span>`;
+}
+
+function setAssignmentConfirmStatus(type, title, message) {
+  if (!els.assignmentConfirmStatus) return;
+  els.assignmentConfirmStatus.classList.remove("isSaving", "isSuccess", "isError");
+  if (type === "saving") els.assignmentConfirmStatus.classList.add("isSaving");
+  if (type === "success") els.assignmentConfirmStatus.classList.add("isSuccess");
+  if (type === "error") els.assignmentConfirmStatus.classList.add("isError");
+  els.assignmentConfirmStatus.innerHTML = `<strong>${escapeHtml(title)}</strong><span>${escapeHtml(message)}</span>`;
+}
+
+function resetAssignmentConfirmStatus(message = "I dati dell'assegnazione sono cambiati: ricontrolla anteprima e conferma prima di salvare o distribuire.") {
+  setAssignmentConfirmStatus("info", "Dati modificati", message);
+}
+
+function activityAuthorRequiredFields() {
+  return [
+    { field: els.activityAuthorTitle, label: "Titolo" },
+    { field: els.activityAuthorKind, label: "Tipo" },
+    { field: els.activityAuthorDifficulty, label: "Difficolta" },
+    { field: els.activityAuthorTopics, label: "Argomenti" },
+    {
+      field: els.activityAuthorMinutes,
+      label: "Tempo stimato",
+      isValid: (value) => Number(value) > 0,
+    },
+    { field: els.activityAuthorLanguage, label: "Linguaggio" },
+    { field: els.activityAuthorSourceName, label: "File sorgente" },
+    { field: els.activityAuthorPrompt, label: "Consegna" },
+  ];
+}
+
+function defaultSourceNameForLanguage(language) {
+  return DEFAULT_SOURCE_NAMES[String(language || "").trim().toLowerCase()] || "main.c";
+}
+
+function languageFromSourceName(sourceName) {
+  const value = String(sourceName || "").trim().toLowerCase();
+  if (value.endsWith(".py")) return "python";
+  if (value.endsWith(".cpp") || value.endsWith(".cc") || value.endsWith(".cxx")) return "cpp";
+  if (value.endsWith(".c")) return "c";
+  if (value.endsWith(".go")) return "go";
+  if (value.endsWith(".html") || value.endsWith(".htm")) return "html";
+  if (value.endsWith(".java")) return "java";
+  if (value.endsWith(".js")) return "javascript";
+  if (value.endsWith(".php")) return "php";
+  if (value.endsWith(".sql")) return "sql";
+  if (value.endsWith(".asm") || value.endsWith(".s")) return "assembly";
+  return "";
+}
+
+function syncSourceNameForLanguage(force = false) {
+  if (!els.activityAuthorLanguage || !els.activityAuthorSourceName) return;
+  const nextSource = defaultSourceNameForLanguage(els.activityAuthorLanguage.value);
+  const currentSource = String(els.activityAuthorSourceName.value || "").trim();
+  const defaultSources = new Set(Object.values(DEFAULT_SOURCE_NAMES));
+  if (force || !currentSource || defaultSources.has(currentSource)) {
+    els.activityAuthorSourceName.value = nextSource;
+  }
+}
+
+function markActivityAuthorFieldInvalid(field, invalid) {
+  if (!field) return;
+  field.classList.toggle("fieldInvalid", invalid);
+  field.setAttribute("aria-invalid", invalid ? "true" : "false");
+}
+
+function validateActivityAuthorRequiredFields({ showMessage = false } = {}) {
+  const missing = [];
+  for (const item of activityAuthorRequiredFields()) {
+    const value = String(item.field?.value || "").trim();
+    const invalid = item.isValid ? !item.isValid(value) : !value;
+    markActivityAuthorFieldInvalid(item.field, invalid);
+    if (invalid) missing.push(item.label);
+  }
+  if (showMessage && missing.length) {
+    const message = `Completa i campi obbligatori: ${missing.join(", ")}.`;
+    setActivityAuthorStatus("error", "Activity non salvata", `${message} Correggi i campi evidenziati in rosso.`);
+    setStatus(message);
+  }
+  return missing;
 }
 
 async function saveActivityDraft() {
   if (!els.saveActivityBtn) return;
+  const missingFields = validateActivityAuthorRequiredFields({ showMessage: true });
+  if (missingFields.length) {
+    return;
+  }
   els.saveActivityBtn.disabled = true;
-  if (els.activityAuthorStatus) els.activityAuthorStatus.textContent = "Salvataggio activity...";
+  setActivityAuthorStatus("saving", "Salvataggio activity", "Validazione e scrittura della bozza in corso...");
   try {
     const payload = await api("/api/activities/save", {
       method: "POST",
@@ -1692,6 +1962,8 @@ async function saveActivityDraft() {
         topics: activityAuthorTopicValue(),
         prompt: els.activityAuthorPrompt?.value || "",
         estimated_minutes: els.activityAuthorMinutes?.value || "30",
+        language: els.activityAuthorLanguage?.value || "",
+        source_name: els.activityAuthorSourceName?.value || "",
         class_id: els.activityAuthorClass?.value || "",
         github_team: els.activityAuthorTeam?.value || "",
         path_id: els.activityAuthorPath?.value || "",
@@ -1703,16 +1975,19 @@ async function saveActivityDraft() {
     renderActivitySelect();
     renderCoverage();
     if (payload.activity?.path) selectActivity(payload.activity.path);
-    if (els.activityAuthorStatus) {
-      els.activityAuthorStatus.textContent = `Activity salvata: ${payload.activity?.path || "-"}.`;
-    }
+    markActivityReviewSaved();
+    setActivityAuthorStatus(
+      "success",
+      "Activity salvata",
+      `Puoi passare al punto 4 Destinatari. File: ${payload.activity?.path || "-"}.`,
+    );
     if (els.activityPanelStatus) {
       els.activityPanelStatus.textContent = `Activity salvata: ${payload.activity?.title || payload.activity?.id || "-"}.`;
     }
     renderActivityPanelSummary();
     setStatus(`Activity salvata: ${payload.activity?.title || payload.activity?.id || "-"}.`);
   } catch (error) {
-    if (els.activityAuthorStatus) els.activityAuthorStatus.textContent = `Errore: ${error.message}`;
+    setActivityAuthorStatus("error", "Activity non salvata", error.message);
     setStatus(`Errore salvataggio activity: ${error.message}`);
   } finally {
     els.saveActivityBtn.disabled = false;
@@ -1817,13 +2092,15 @@ function applyRosterToGenerateForm(roster) {
   els.classLabel.value = roster.label || roster.id || "";
   els.githubTeam.value = roster.github_team || "";
   const result = rosterTargets(roster);
+  state.selectedRosterTargetIds = new Set(activeRosterStudents(roster).map(rosterStudentKey));
   els.targetsText.value = result.targets.join("\n");
   const activity = currentActivity();
   if (activity?.id) els.outputName.value = defaultOutputName({ ...activity, class_id: roster.id, class_label: roster.label, github_team: roster.github_team });
   setRosterStatus(result.warnings.length
     ? `Roster applicato con avvisi: ${result.warnings.join(" ")}`
     : `Roster applicato: ${result.targets.length} target studenti.`);
-  renderRosterPanel();
+  renderAssignmentContext();
+  resetAssignmentConfirmStatus("Il roster e i destinatari sono cambiati: ricontrolla anteprima e conferma prima di salvare o distribuire.");
   return result;
 }
 
@@ -1831,7 +2108,9 @@ async function loadSelectedClassRoster() {
   const name = els.classRosterSelect?.value || "";
   if (!name) {
     state.selectedClassRoster = null;
+    state.selectedRosterTargetIds = new Set();
     renderRosterPanel();
+    renderAssignmentTargetPicker();
     setRosterStatus("Seleziona un roster per compilare classe e target.");
     return;
   }
@@ -1851,6 +2130,7 @@ function selectCoverageActivity(activityPath, outputName = "") {
   els.activityPath.value = activityPath;
   renderActivitySelect();
   if (outputName) els.outputName.value = outputName;
+  resetAssignmentConfirmStatus("Activity selezionata dalla copertura: ricontrolla anteprima e conferma prima di salvare o distribuire.");
   els.activityPath.scrollIntoView({ behavior: "smooth", block: "center" });
   els.activityPath.focus();
 }
@@ -2394,8 +2674,8 @@ function assignmentPlanPayload() {
   return {
     activity_path: els.activityPath.value,
     targets_text: els.targetsText.value,
-    language: "",
-    source_name: "",
+    language: els.activityAuthorLanguage?.value || "",
+    source_name: els.activityAuthorSourceName?.value || "",
     thebitlab_ref: "",
     overwrite: false,
   };
@@ -2416,10 +2696,36 @@ function assignmentAiPackagePayload() {
   return payload;
 }
 
-function renderAssignmentAiPackage(aiPackage) {
+function setAssignmentAiPreviewView(view) {
+  state.assignmentAiPreviewView = view === "context" ? "context" : "draft";
+  els.assignmentAiPreviewButtons?.forEach((button) => {
+    const isActive = button.dataset.aiPreviewView === state.assignmentAiPreviewView;
+    button.classList.toggle("isActive", isActive);
+    button.setAttribute("aria-selected", isActive ? "true" : "false");
+  });
   if (!els.assignmentAiPackagePreview) return;
+  const html = state.assignmentAiPreviewView === "context"
+    ? state.assignmentAiContextHtml
+    : state.assignmentAiDraftHtml;
+  els.assignmentAiPackagePreview.innerHTML = html || (
+    state.assignmentAiPreviewView === "context"
+      ? '<p class="status">Apri Dati inviati all\'AI per vedere prompt, metadati e file di contesto.</p>'
+      : '<p class="status">Qui comparira la proposta generata dall\'AI. I dati inviati all\'AI restano disponibili nella vista dedicata.</p>'
+  );
+}
+
+async function selectAssignmentAiPreviewView(view) {
+  if (view === "context") {
+    await previewAssignmentAiPackage();
+    return;
+  }
+  setAssignmentAiPreviewView(view);
+}
+
+function renderAssignmentAiPackage(aiPackage) {
   if (!aiPackage) {
-    els.assignmentAiPackagePreview.innerHTML = '<p class="status">Prepara il pacchetto AI per controllare prompt, contesto e file prima di chiamare provider o Codex.</p>';
+    state.assignmentAiContextHtml = '<p class="status">Apri Dati inviati all\'AI per vedere prompt, metadati e file di contesto.</p>';
+    setAssignmentAiPreviewView("context");
     return;
   }
   const files = Array.isArray(aiPackage.files) ? aiPackage.files : [];
@@ -2427,22 +2733,22 @@ function renderAssignmentAiPackage(aiPackage) {
   const skippedFiles = files.filter((file) => !file.included);
   const promptStatus = aiPackage.prompt?.trim() ? "prompt incluso" : "prompt vuoto";
   const draftStatus = aiPackage.current_draft ? "bozza corrente inclusa" : "nessuna bozza corrente";
-  els.assignmentAiPackagePreview.innerHTML = `
+  state.assignmentAiContextHtml = `
     <div class="assignmentPlanHeader">
       <div>
-        <strong>${escapeHtml(aiPackage.activity?.title || aiPackage.activity?.id || "Pacchetto AI")}</strong>
-        <small>${escapeHtml(aiPackage.provider || "-")} - ${escapeHtml(aiPackage.schema_version || "-")} - ${escapeHtml(promptStatus)} - ${escapeHtml(draftStatus)}</small>
+        <strong>${escapeHtml(aiPackage.activity?.title || aiPackage.activity?.id || "Controllo dati AI")}</strong>
+        <small>${escapeHtml(aiPackage.provider || "-")} - ${escapeHtml(aiPackage.schema_version || "-")} - ${escapeHtml(promptStatus)} - ${escapeHtml(draftStatus)}. Questa anteprima non chiama l'AI.</small>
       </div>
       ${badge("nessuna chiamata AI", "muted")}
     </div>
     <div class="assignmentPlanGrid">
       <section>
-        <h3>File inclusi</h3>
-        ${renderAssignmentAssetList(includedFiles, "Nessun file incluso nel pacchetto.")}
+        <h3>File di contesto inviati all'AI</h3>
+        ${renderAssignmentAssetList(includedFiles, "Nessun file di contesto collegato all'activity. Verranno inviati prompt e metadati.")}
       </section>
       <section>
-        <h3>File esclusi o mancanti</h3>
-        ${renderAssignmentAssetList(skippedFiles.map((file) => ({ ...file, description: file.error || file.description })), "Nessun file escluso.")}
+        <h3>File di contesto non inviati</h3>
+        ${renderAssignmentAssetList(skippedFiles.map((file) => ({ ...file, description: file.error || file.description })), "Nessun file escluso o mancante.")}
       </section>
       <section>
         <h3>Policy</h3>
@@ -2454,10 +2760,11 @@ function renderAssignmentAiPackage(aiPackage) {
       </section>
     </div>
     <details class="assignmentPackageJson">
-      <summary>JSON pacchetto</summary>
+      <summary>JSON tecnico per debug</summary>
       <pre>${escapeHtml(JSON.stringify(aiPackage, null, 2))}</pre>
     </details>
   `;
+  setAssignmentAiPreviewView("context");
 }
 
 function renderAssignmentCodexDraft(response) {
@@ -2466,11 +2773,10 @@ function renderAssignmentCodexDraft(response) {
     els.assignmentAiDraftText.value = JSON.stringify(response.draft, null, 2);
   }
   updateAssignmentAiApplyState();
-  if (!els.assignmentAiPackagePreview) return;
   const files = Array.isArray(response.draft.files) ? response.draft.files : [];
   const questions = Array.isArray(response.draft.questions) ? response.draft.questions : [];
   const warnings = Array.isArray(response.draft.warnings) ? response.draft.warnings : [];
-  els.assignmentAiPackagePreview.innerHTML = `
+  state.assignmentAiDraftHtml = `
     <div class="assignmentPlanHeader">
       <div>
         <strong>Bozza Codex pronta</strong>
@@ -2481,7 +2787,7 @@ function renderAssignmentCodexDraft(response) {
     <div class="assignmentPlanGrid">
       <section>
         <h3>File proposti</h3>
-        ${renderAssignmentAssetList(files, "Nessun file proposto da Codex.")}
+        ${renderAssignmentAssetList(files, "Nessun file proposto da Codex.", { openDraftFiles: true })}
       </section>
       <section>
         <h3>Note docente</h3>
@@ -2493,19 +2799,159 @@ function renderAssignmentCodexDraft(response) {
       </section>
     </div>
   `;
+  setAssignmentAiPreviewView("draft");
 }
 
 function updateAssignmentAiApplyState() {
-  if (!els.assignmentAiApplyDraftBtn) return false;
+  let isValid = false;
   try {
     parseAssignmentAiDraftText();
-    els.assignmentAiApplyDraftBtn.disabled = false;
-    els.assignmentAiApplyDraftBtn.title = "Usa la proposta AI nell'editor activity. Il docente puo modificarla prima di salvare.";
-    return true;
+    isValid = true;
   } catch (error) {
-    els.assignmentAiApplyDraftBtn.disabled = true;
-    els.assignmentAiApplyDraftBtn.title = "Genera una proposta AI valida prima di usarla nell'editor activity.";
-    return false;
+    isValid = false;
+  }
+  if (els.assignmentAiApplyDraftBtn) {
+    els.assignmentAiApplyDraftBtn.disabled = !isValid || state.assignmentAiGenerating;
+    els.assignmentAiApplyDraftBtn.title = isValid
+      ? "Porta la proposta AI nello step Revisione activity. Il docente puo modificarla prima di salvare."
+      : "Genera una proposta AI valida prima di preparare la revisione activity.";
+  }
+  if (currentAssignmentWizardStep() === "ai") {
+    const current = currentAssignmentWizardStep();
+    const index = assignmentWizardStepIndex(current);
+    if (els.assignmentWizardNextBtn && index >= 0 && index < ASSIGNMENT_WIZARD_STEPS.length - 1) {
+      els.assignmentWizardNextBtn.disabled = !isValid || state.assignmentAiGenerating;
+      els.assignmentWizardNextBtn.textContent = assignmentWizardNextLabel(current);
+    }
+  }
+  return isValid;
+}
+
+function assignmentAiDraftFiles() {
+  try {
+    const draft = parseAssignmentAiDraftText();
+    return Array.isArray(draft.files) ? draft.files.filter((file) => file && typeof file === "object") : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function renderAssignmentAiFilesReview() {
+  if (!els.assignmentAiFilesReview) return;
+  const files = assignmentAiDraftFiles();
+  if (!files.length) {
+    els.assignmentAiFilesReview.className = "reviewEmpty";
+    els.assignmentAiFilesReview.textContent = "La bozza AI non contiene file proposti.";
+    if (els.assignmentAiFilesStatus) els.assignmentAiFilesStatus.textContent = "Nessun file proposto dalla bozza AI.";
+    return;
+  }
+  const selected = files.find((file) => String(file.path || "") === state.assignmentAiDraftFilePath) || files[0];
+  state.assignmentAiDraftFilePath = String(selected.path || files.indexOf(selected));
+  const selectedPath = String(selected.path || "file-proposto.txt");
+  const selectedContent = selected.content === undefined || selected.content === null
+    ? "Contenuto non presente nella risposta AI. Il file e dichiarato come asset, ma non e stato generato inline."
+    : String(selected.content);
+  if (els.assignmentAiFilesStatus) {
+    els.assignmentAiFilesStatus.textContent = `File AI: ${selectedPath}.`;
+  }
+  els.assignmentAiFilesReview.className = "reviewGrid";
+  els.assignmentAiFilesReview.innerHTML = `
+    <aside class="fileList">
+      <h3>File proposti</h3>
+      ${files.map((file, index) => {
+        const path = String(file.path || `file-${index + 1}.txt`);
+        const active = path === state.assignmentAiDraftFilePath;
+        return `
+          <button type="button" class="${active ? "isActive" : ""}" data-ai-draft-preview-file="${escapeHtml(path)}" title="Mostra il contenuto del file ${escapeHtml(path)}.">
+            <span>${escapeHtml(path.split(/[\\/]/).pop() || path)}</span>
+            <small>${escapeHtml(file.role || file.type || file.visibility || "file")}</small>
+          </button>
+        `;
+      }).join("")}
+    </aside>
+    <div class="reviewSplitter" role="separator" aria-label="Separatore lista file AI" aria-orientation="vertical"></div>
+    <section class="filePreview">
+      <div class="filePreviewHead">
+        <div>
+          <strong>${escapeHtml(selectedPath)}</strong>
+        </div>
+        <span>${escapeHtml(languageFromPath(selectedPath))}</span>
+      </div>
+      <pre><code>${highlightCode(selectedContent, selectedPath)}</code></pre>
+    </section>
+  `;
+}
+
+function openAssignmentAiFilesDialog(index = 0) {
+  const files = assignmentAiDraftFiles();
+  const selected = files[index] || files[0];
+  state.assignmentAiDraftFilePath = selected ? String(selected.path || `file-${index + 1}.txt`) : "";
+  renderAssignmentAiFilesReview();
+  if (els.assignmentAiFilesDialog && !els.assignmentAiFilesDialog.open) {
+    els.assignmentAiFilesDialog.showModal();
+  }
+}
+
+function closeAssignmentAiFilesDialog() {
+  if (els.assignmentAiFilesDialog?.open) {
+    els.assignmentAiFilesDialog.close();
+  }
+}
+
+function setAssignmentAiPromptLocked(locked) {
+  state.assignmentAiPromptLocked = Boolean(locked);
+  if (!els.assignmentAiGenerateBtn) return;
+  els.assignmentAiGenerateBtn.disabled = state.assignmentAiGenerating || state.assignmentAiPromptLocked;
+  els.assignmentAiGenerateBtn.title = state.assignmentAiPromptLocked
+    ? "Hai gia inviato questo prompt. Clicca nel prompt e modificalo per inviare una nuova richiesta."
+    : "Invia il prompt al provider selezionato e genera una proposta modificabile. Per ora e attivo Codex locale.";
+}
+
+function unlockAssignmentAiPrompt() {
+  if (!state.assignmentAiPromptLocked) return;
+  setAssignmentAiPromptLocked(false);
+}
+
+function setAssignmentAiProgress(active, title = "Generazione proposta AI in corso", detail = "Codex sta lavorando sulla macchina docente.") {
+  if (!els.assignmentAiProgress) return;
+  els.assignmentAiProgress.hidden = !active;
+  if (!active) return;
+  els.assignmentAiProgress.classList.remove("isError");
+  els.assignmentAiProgress.innerHTML = `
+    <div class="assignmentAiProgressHeader">
+      <strong>${escapeHtml(title)}</strong>
+      <span>${escapeHtml(detail)}</span>
+    </div>
+    <div class="assignmentAiProgressTrack" aria-hidden="true"><span></span></div>
+    <p>La durata dipende dal provider e dai file inviati. Se qualcosa si blocca, qui comparira un errore chiaro.</p>
+  `;
+}
+
+function setAssignmentAiProgressError(message) {
+  if (!els.assignmentAiProgress) return;
+  els.assignmentAiProgress.hidden = false;
+  els.assignmentAiProgress.classList.add("isError");
+  els.assignmentAiProgress.innerHTML = `
+    <div class="assignmentAiProgressHeader">
+      <strong>Generazione proposta AI interrotta</strong>
+      <span>Controlla il messaggio e riprova dopo la correzione.</span>
+    </div>
+    <p>${escapeHtml(message)}</p>
+  `;
+}
+
+function markActivityReviewDirty() {
+  state.activityReviewSaved = false;
+  validateActivityAuthorRequiredFields();
+  if (currentAssignmentWizardStep() === "review") {
+    setAssignmentWizardStep("review");
+  }
+}
+
+function markActivityReviewSaved() {
+  state.activityReviewSaved = true;
+  if (currentAssignmentWizardStep() === "review") {
+    setAssignmentWizardStep("review");
   }
 }
 
@@ -2559,7 +3005,7 @@ function applyAssignmentAiDraftToActivityForm() {
     const metriche = patch.metriche && typeof patch.metriche === "object" ? patch.metriche : {};
     const contesto = patch.contesto && typeof patch.contesto === "object" ? patch.contesto : {};
 
-    const title = firstDraftValue(patch, ["titolo", "title"]) || firstDraftValue(draft, ["titolo", "title", "summary"]);
+    const title = firstDraftValue(patch, ["titolo", "title", "nome", "name"]) || firstDraftValue(draft, ["titolo", "title"]);
     if (title && els.activityAuthorTitle) {
       els.activityAuthorTitle.value = title;
       syncActivityAuthorIdSuggestion();
@@ -2573,10 +3019,33 @@ function applyAssignmentAiDraftToActivityForm() {
     setSelectValueIfAvailable(els.activityAuthorKind, kind);
     const difficulty = firstDraftValue(patch, ["difficolta", "difficulty"]);
     setSelectValueIfAvailable(els.activityAuthorDifficulty, difficulty);
-    const prompt = firstDraftValue(patch, ["consegna", "prompt", "description"]);
+    const prompt = firstDraftValue(patch, [
+      "consegna",
+      "istruzioni",
+      "instructions",
+      "prompt",
+      "description",
+      "descrizione",
+      "traccia",
+      "testo",
+      "student_prompt",
+      "student_instructions",
+    ]);
     if (prompt && els.activityAuthorPrompt) els.activityAuthorPrompt.value = prompt;
     const minutes = firstDraftValue(metriche, ["tempo_stimato_minuti"]) || firstDraftValue(patch, ["estimated_minutes"]);
     if (minutes && els.activityAuthorMinutes) els.activityAuthorMinutes.value = minutes;
+    const files = Array.isArray(draft.files) ? draft.files : [];
+    const firstSourceFile = files.find((file) => file && typeof file === "object" && String(file.path || "").trim());
+    const sourceName = firstDraftValue(patch, ["source_name", "sourceName", "file_sorgente", "nome_file"])
+      || (firstSourceFile ? String(firstSourceFile.path || "").split(/[\\/]/).pop() : "");
+    const language = firstDraftValue(patch, ["linguaggio", "language", "lingua"])
+      || languageFromSourceName(sourceName);
+    setSelectValueIfAvailable(els.activityAuthorLanguage, language);
+    if (sourceName && els.activityAuthorSourceName) {
+      els.activityAuthorSourceName.value = sourceName;
+    } else {
+      syncSourceNameForLanguage();
+    }
     setSelectValueIfAvailable(els.activityAuthorPath, firstDraftValue(contesto, ["percorso", "path_id"]));
     renderActivityAuthorMetadataSelects();
     setSelectValueIfAvailable(els.activityAuthorUda, firstDraftValue(contesto, ["uda", "uda_id"]));
@@ -2585,27 +3054,95 @@ function applyAssignmentAiDraftToActivityForm() {
     const topics = firstDraftValue(patch, ["argomenti", "topics"]);
     if (topics && els.activityAuthorTopics) els.activityAuthorTopics.value = topics;
 
-    const fileCount = Array.isArray(draft.files) ? draft.files.length : 0;
+    const fileCount = files.length;
     const assetCount = Array.isArray(patch.assets) ? patch.assets.length : 0;
     const suffix = fileCount || assetCount
       ? ` File proposti: ${fileCount}; asset dichiarati: ${assetCount}. Gli asset non vengono ancora salvati automaticamente.`
       : "";
-    if (els.activityAuthorStatus) {
-      els.activityAuthorStatus.textContent = `Bozza AI applicata al form activity. Controlla e salva quando e pronta.${suffix}`;
-    }
-    setStatus("Bozza AI applicata al form activity: il docente puo ancora modificare tutto.");
-    setAssignmentWizardStep("activity");
-    openActivityEditor("wizard");
+    setStatus("Bozza AI pronta nello step Revisione activity: il docente puo ancora modificare tutto.");
+    markActivityReviewDirty();
+    openActivityReviewStep(`Bozza AI applicata alla revisione activity. Controlla e salva quando e pronta.${suffix}`);
+    validateActivityAuthorRequiredFields();
     return true;
   } catch (error) {
-    if (els.activityAuthorStatus) els.activityAuthorStatus.textContent = `Bozza AI non applicata: ${error.message}`;
+    setActivityAuthorStatus("error", "Bozza AI non applicata", error.message);
     setStatus(`Bozza AI non applicata: ${error.message}`);
     return false;
   }
 }
 
+function currentAssignmentWizardStep() {
+  return Array.from(els.assignmentSteps).find((section) => !section.hidden)?.dataset.assignmentStep || "activity";
+}
+
+function assignmentWizardStepIndex(step) {
+  return ASSIGNMENT_WIZARD_STEPS.findIndex((candidate) => candidate.id === step);
+}
+
+function nextAssignmentWizardStep(step) {
+  const index = assignmentWizardStepIndex(step);
+  return ASSIGNMENT_WIZARD_STEPS[Math.min(index + 1, ASSIGNMENT_WIZARD_STEPS.length - 1)] || null;
+}
+
+function assignmentWizardStepComplete(step) {
+  if (step === "activity") return Boolean(String(els.activityPath?.value || "").trim());
+  if (step === "ai" && state.assignmentAiGenerating) return false;
+  if (step === "ai") return updateAssignmentAiApplyState();
+  if (step === "review") return Boolean(state.activityReviewSaved && String(els.activityPath?.value || "").trim());
+  if (step === "dates") return validateAssignmentDateFields();
+  return true;
+}
+
+function validateAssignmentBeforeConfirm(actionLabel) {
+  if (!String(els.activityPath?.value || "").trim()) {
+    setAssignmentConfirmStatus("error", "Activity mancante", `Scegli o salva una activity prima di ${actionLabel}.`);
+    setAssignmentWizardStep("activity");
+    return false;
+  }
+  if (!state.activityReviewSaved) {
+    setAssignmentConfirmStatus("error", "Revisione activity da completare", `Salva l'activity nello step Revisione prima di ${actionLabel}.`);
+    setAssignmentWizardStep("review");
+    return false;
+  }
+  if (targetLineCount() <= 0) {
+    markActivityAuthorFieldInvalid(els.targetsText, true);
+    setAssignmentConfirmStatus("error", "Destinatari mancanti", `Scegli almeno un target nello step Destinatari prima di ${actionLabel}.`);
+    setAssignmentWizardStep("targets");
+    return false;
+  }
+  markActivityAuthorFieldInvalid(els.targetsText, false);
+  if (!validateAssignmentDateFields({ showMessage: true })) {
+    setAssignmentConfirmStatus("error", "Date incomplete", `Completa assegnazione e scadenza prima di ${actionLabel}.`);
+    setAssignmentWizardStep("dates");
+    return false;
+  }
+  return true;
+}
+
+function assignmentWizardNextLabel(step) {
+  const next = nextAssignmentWizardStep(step);
+  if (!next || next.id === step) return "Fine percorso";
+  if (step === "ai") return "Avanti: 3 Prepara revisione";
+  const index = assignmentWizardStepIndex(next.id);
+  const label = {
+    ai: "AI",
+    review: "Revisione",
+    targets: "Destinatari",
+    dates: "Date",
+    preview: "Anteprima",
+    confirm: "Conferma",
+  }[next.id] || next.id;
+  return `Avanti: ${index + 1} ${label}`;
+}
+
 function setAssignmentWizardStep(step) {
   const selectedStep = ASSIGNMENT_WIZARD_STEPS.some((candidate) => candidate.id === step) ? step : "activity";
+  if (selectedStep === "review") {
+    mountActivityEditorInWizard();
+  }
+  if (selectedStep === "dates") {
+    initializeAssignmentDateFields();
+  }
   els.assignmentStepTabs.forEach((button) => {
     const isActive = button.dataset.assignmentStepTab === selectedStep;
     button.classList.toggle("isActive", isActive);
@@ -2621,14 +3158,24 @@ function setAssignmentWizardStep(step) {
   if (els.assignmentWizardPrevBtn) els.assignmentWizardPrevBtn.disabled = index <= 0;
   if (els.assignmentWizardNextBtn) {
     const isLast = index >= ASSIGNMENT_WIZARD_STEPS.length - 1;
-    els.assignmentWizardNextBtn.disabled = isLast;
-    els.assignmentWizardNextBtn.textContent = isLast ? "Fine percorso" : "Avanti";
+    els.assignmentWizardNextBtn.disabled = isLast || !assignmentWizardStepComplete(selectedStep);
+    els.assignmentWizardNextBtn.textContent = isLast ? "Fine percorso" : assignmentWizardNextLabel(selectedStep);
   }
 }
 
 function moveAssignmentWizardStep(offset) {
-  const current = Array.from(els.assignmentSteps).find((section) => !section.hidden)?.dataset.assignmentStep || "activity";
-  const index = ASSIGNMENT_WIZARD_STEPS.findIndex((candidate) => candidate.id === current);
+  const current = currentAssignmentWizardStep();
+  if (offset > 0) {
+    if (current === "ai") {
+      applyAssignmentAiDraftToActivityForm();
+      return;
+    }
+    if (!assignmentWizardStepComplete(current)) {
+      setAssignmentWizardStep(current);
+      return;
+    }
+  }
+  const index = assignmentWizardStepIndex(current);
   const next = ASSIGNMENT_WIZARD_STEPS[Math.min(Math.max(index + offset, 0), ASSIGNMENT_WIZARD_STEPS.length - 1)];
   setAssignmentWizardStep(next?.id || "activity");
 }
@@ -2647,16 +3194,17 @@ function assignmentRecordPayload() {
   };
 }
 
-function renderAssignmentAssetList(assets, emptyLabel) {
+function renderAssignmentAssetList(assets, emptyLabel, options = {}) {
   const items = Array.isArray(assets) ? assets : [];
   if (!items.length) return `<p class="status">${escapeHtml(emptyLabel)}</p>`;
   return `
     <ul class="assignmentPlanList">
-      ${items.map((asset) => `
+      ${items.map((asset, index) => `
         <li>
           <strong>${escapeHtml(asset.target_path || asset.path || "-")}</strong>
           ${badge(asset.type || asset.role || "-", asset.visibility === "student" ? "ok" : "muted")}
           <small>${escapeHtml(asset.description || asset.path || "")}</small>
+          ${options.openDraftFiles ? `<button type="button" class="smallButton" data-ai-draft-file-index="${index}" title="Apri il contenuto del file proposto ${escapeHtml(asset.path || asset.target_path || "")}.">Apri file</button>` : ""}
         </li>
       `).join("")}
     </ul>
@@ -2749,39 +3297,43 @@ async function previewAssignmentPlan() {
 }
 
 async function previewAssignmentAiPackage() {
-  if (!els.assignmentAiAskBtn) return;
-  els.assignmentAiAskBtn.disabled = true;
-  setStatus("Preparazione pacchetto AI...");
-  if (els.assignmentAiPackagePreview) {
-    els.assignmentAiPackagePreview.innerHTML = '<p class="status">Preparazione pacchetto AI...</p>';
-  }
+  const contextButton = Array.from(els.assignmentAiPreviewButtons || []).find((button) => button.dataset.aiPreviewView === "context");
+  if (contextButton) contextButton.disabled = true;
+  setStatus("Aggiornamento controllo dati inviati all'AI...");
+  state.assignmentAiContextHtml = '<p class="status">Aggiornamento controllo dati inviati all\'AI...</p>';
+  setAssignmentAiPreviewView("context");
   try {
     const payload = await api("/api/activities/ai-package", {
       method: "POST",
       body: JSON.stringify(assignmentAiPackagePayload()),
     });
     renderAssignmentAiPackage(payload.package);
-    setStatus("Pacchetto AI pronto: nessuna chiamata provider eseguita.");
+    setStatus("Controllo dati AI pronto: nessuna chiamata provider eseguita.");
   } catch (error) {
     const message = assignmentPlanErrorMessage(error);
-    if (els.assignmentAiPackagePreview) {
-      els.assignmentAiPackagePreview.innerHTML = `<p class="status">Pacchetto AI non disponibile: ${escapeHtml(message)}</p>`;
-    }
-    setStatus(`Pacchetto AI non disponibile: ${message}`);
+    state.assignmentAiContextHtml = `<p class="status">Controllo dati AI non disponibile: ${escapeHtml(message)}</p>`;
+    setAssignmentAiPreviewView("context");
+    setStatus(`Controllo dati AI non disponibile: ${message}`);
   } finally {
-    els.assignmentAiAskBtn.disabled = false;
+    if (contextButton) contextButton.disabled = false;
   }
 }
 
 async function generateAssignmentAiDraft() {
   if (!els.assignmentAiGenerateBtn) return;
   const provider = els.assignmentAiProvider?.value || "codex";
+  let failedMessage = "";
+  state.assignmentAiGenerating = true;
+  setAssignmentAiPromptLocked(true);
   els.assignmentAiGenerateBtn.disabled = true;
   if (els.assignmentAiApplyDraftBtn) els.assignmentAiApplyDraftBtn.disabled = true;
-  setStatus(`Generazione bozza con provider ${provider}...`);
-  if (els.assignmentAiPackagePreview) {
-    els.assignmentAiPackagePreview.innerHTML = '<p class="status">Generazione bozza in corso...</p>';
+  if (els.assignmentWizardNextBtn && currentAssignmentWizardStep() === "ai") {
+    els.assignmentWizardNextBtn.disabled = true;
   }
+  setStatus(`Generazione bozza con provider ${provider}...`);
+  setAssignmentAiProgress(true, "Generazione proposta AI in corso", `Provider: ${provider}. Attendi il completamento prima di avanzare.`);
+  state.assignmentAiDraftHtml = '<p class="status">Generazione bozza in corso...</p>';
+  setAssignmentAiPreviewView("draft");
   try {
     if (provider === "manual") {
       throw new Error("Modalita manuale: scrivi direttamente la bozza nel campo dedicato.");
@@ -2797,20 +3349,29 @@ async function generateAssignmentAiDraft() {
     setStatus("Bozza Codex pronta: controlla e modifica prima di salvare.");
   } catch (error) {
     const message = assignmentPlanErrorMessage(error);
-    if (els.assignmentAiPackagePreview) {
-      els.assignmentAiPackagePreview.innerHTML = `<p class="status">Bozza AI non disponibile: ${escapeHtml(message)}</p>`;
-    }
+    failedMessage = message;
+    state.assignmentAiDraftHtml = `<p class="status">Bozza AI non disponibile: ${escapeHtml(message)}</p>`;
+    setAssignmentAiPreviewView("draft");
     updateAssignmentAiApplyState();
     setStatus(`Bozza AI non disponibile: ${message}`);
   } finally {
-    els.assignmentAiGenerateBtn.disabled = false;
+    state.assignmentAiGenerating = false;
+    if (failedMessage) {
+      setAssignmentAiProgressError(`Bozza AI non disponibile: ${failedMessage}`);
+    } else {
+      setAssignmentAiProgress(false);
+    }
+    setAssignmentAiPromptLocked(true);
+    updateAssignmentAiApplyState();
   }
 }
 
 async function saveAssignmentRecord() {
   if (!els.saveAssignmentBtn) return;
+  if (!validateAssignmentBeforeConfirm("salvare l'assegnazione")) return;
   els.saveAssignmentBtn.disabled = true;
   setStatus("Salvataggio assegnazione...");
+  setAssignmentConfirmStatus("saving", "Salvataggio assegnazione", "Sto salvando dati, destinatari e date dell'assegnazione.");
   try {
     const payload = await api("/api/assignments/save", {
       method: "POST",
@@ -2820,9 +3381,17 @@ async function saveAssignmentRecord() {
     state.dueAssignments = (payload.due_without_register || []).map((item) => item.assignment || item);
     state.selectedAssignmentId = "";
     renderAssignmentSelect();
-    setStatus(`Assegnazione salvata: ${payload.assignment?.id || "-"}.`);
+    const assignmentId = payload.assignment?.id || "-";
+    setStatus(`Assegnazione salvata: ${assignmentId}.`);
+    setAssignmentConfirmStatus(
+      "success",
+      "Assegnazione salvata",
+      `ID: ${assignmentId}. Ora puoi distribuire ai target oppure tornare agli step precedenti per modificare i dati.`
+    );
   } catch (error) {
-    setStatus(`Assegnazione non salvata: ${assignmentPlanErrorMessage(error)}`);
+    const message = assignmentPlanErrorMessage(error);
+    setStatus(`Assegnazione non salvata: ${message}`);
+    setAssignmentConfirmStatus("error", "Assegnazione non salvata", message);
   } finally {
     els.saveAssignmentBtn.disabled = false;
   }
@@ -2830,8 +3399,10 @@ async function saveAssignmentRecord() {
 
 async function distributeAssignment() {
   if (!els.distributeAssignmentBtn) return;
+  if (!validateAssignmentBeforeConfirm("distribuire ai target")) return;
   els.distributeAssignmentBtn.disabled = true;
   setStatus("Distribuzione assegnazione ai target...");
+  setAssignmentConfirmStatus("saving", "Distribuzione ai target", "Sto copiando traccia e asset nelle cartelle dei target selezionati.");
   if (els.assignmentPlanPreview) {
     els.assignmentPlanPreview.innerHTML = '<p class="status">Distribuzione assegnazione ai target...</p>';
   }
@@ -2841,13 +3412,20 @@ async function distributeAssignment() {
       body: JSON.stringify(assignmentPlanPayload()),
     });
     renderAssignmentPlan(payload.plan);
-    setStatus(`Assegnazione distribuita a ${payload.results?.length || 0} target.`);
+    const targetCount = payload.results?.length || 0;
+    setStatus(`Assegnazione distribuita a ${targetCount} target.`);
+    setAssignmentConfirmStatus(
+      "success",
+      "Distribuzione completata",
+      `${targetCount} target aggiornati. Controlla l'anteprima per eventuali target gia presenti o bloccati.`
+    );
   } catch (error) {
     const message = assignmentPlanErrorMessage(error);
     if (els.assignmentPlanPreview) {
       els.assignmentPlanPreview.innerHTML = `<p class="status">Distribuzione non completata: ${escapeHtml(message)}</p>`;
     }
     setStatus(`Distribuzione non completata: ${message}`);
+    setAssignmentConfirmStatus("error", "Distribuzione non completata", message);
   } finally {
     els.distributeAssignmentBtn.disabled = false;
   }
@@ -3526,7 +4104,13 @@ function setFilter(filter) {
 function selectActivity(path) {
   els.activityPath.value = path;
   const activity = state.activities.find((candidate) => candidate.path === path);
+  if (activity) state.activityReviewSaved = true;
   if (activity?.id) {
+    const language = activity.language || activity.linguaggio || "";
+    if (language) setSelectValueIfAvailable(els.activityAuthorLanguage, language);
+    if (els.activityAuthorSourceName) {
+      els.activityAuthorSourceName.value = activity.source_name || activity.sourceName || defaultSourceNameForLanguage(language || els.activityAuthorLanguage?.value);
+    }
     els.classId.value = activity.class_id || activity.github_team || "";
     els.classLabel.value = activity.class_label || activity.class_id || "";
     els.githubTeam.value = activity.github_team || "";
@@ -3534,6 +4118,7 @@ function selectActivity(path) {
     renderRosterPanel();
   }
   renderActivityPanelSummary();
+  resetAssignmentConfirmStatus("L'activity e cambiata: ricontrolla anteprima e conferma prima di salvare o distribuire.");
 }
 
 function updateOutputNameForCurrentActivity() {
@@ -3644,12 +4229,31 @@ els.assignmentWizardPrevBtn?.addEventListener("click", () => moveAssignmentWizar
 els.assignmentWizardNextBtn?.addEventListener("click", () => moveAssignmentWizardStep(1));
 setAssignmentWizardStep("activity");
 els.previewAssignmentBtn?.addEventListener("click", previewAssignmentPlan);
-els.assignmentAiAskBtn?.addEventListener("click", previewAssignmentAiPackage);
 els.assignmentAiGenerateBtn?.addEventListener("click", generateAssignmentAiDraft);
-els.assignmentAiApplyDraftBtn?.addEventListener("click", applyAssignmentAiDraftToActivityForm);
+els.assignmentAiPreviewButtons?.forEach((button) => {
+  button.addEventListener("click", () => {
+    selectAssignmentAiPreviewView(button.dataset.aiPreviewView)
+      .catch((error) => setStatus(`Controllo dati AI non disponibile: ${error.message}`));
+  });
+});
+els.assignmentAiPrompt?.addEventListener("focus", unlockAssignmentAiPrompt);
+els.assignmentAiPrompt?.addEventListener("click", unlockAssignmentAiPrompt);
+els.assignmentAiPrompt?.addEventListener("input", unlockAssignmentAiPrompt);
 els.assignmentAiDraftText?.addEventListener("input", updateAssignmentAiApplyState);
+els.assignmentAiPackagePreview?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-ai-draft-file-index]");
+  if (!button) return;
+  openAssignmentAiFilesDialog(Number(button.dataset.aiDraftFileIndex || 0));
+});
+els.assignmentAiFilesReview?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-ai-draft-preview-file]");
+  if (!button) return;
+  state.assignmentAiDraftFilePath = button.dataset.aiDraftPreviewFile || "";
+  renderAssignmentAiFilesReview();
+});
+els.assignmentAiFilesCloseBtn?.addEventListener("click", closeAssignmentAiFilesDialog);
 els.openActivityEditorBtn?.addEventListener("click", () => openActivityEditor("panel"));
-els.wizardOpenActivityEditorBtn?.addEventListener("click", () => openActivityEditor("wizard"));
+els.wizardOpenActivityEditorBtn?.addEventListener("click", openActivityReviewStep);
 els.activityEditorCloseBtn?.addEventListener("click", closeActivityEditor);
 els.saveAssignmentBtn?.addEventListener("click", saveAssignmentRecord);
 els.distributeAssignmentBtn?.addEventListener("click", distributeAssignment);
@@ -3685,16 +4289,22 @@ els.assignmentSelect?.addEventListener("change", () => {
   setStatus(assignment ? `Assegnazione selezionata: ${assignment.id}.` : "Nessuna assegnazione selezionata.");
 });
 els.saveActivityBtn?.addEventListener("click", saveActivityDraft);
-els.activityAuthorTitle?.addEventListener("input", syncActivityAuthorIdSuggestion);
+els.activityAuthorTitle?.addEventListener("input", () => {
+  syncActivityAuthorIdSuggestion();
+  markActivityReviewDirty();
+});
 els.activityAuthorId?.addEventListener("input", () => {
   const current = els.activityAuthorId.value.trim();
   if (!current) state.activityAuthorLastSuggestedId = "";
+  markActivityReviewDirty();
 });
 els.activityAuthorPath?.addEventListener("change", () => {
   renderActivityAuthorMetadataSelects();
+  markActivityReviewDirty();
 });
 els.activityAuthorUda?.addEventListener("change", () => {
   renderTopicSearch(activityAuthorTopicOptions());
+  markActivityReviewDirty();
 });
 els.activityAuthorTopics?.addEventListener("input", () => {
   renderTopicSearch(
@@ -3702,43 +4312,93 @@ els.activityAuthorTopics?.addEventListener("input", () => {
     true,
   );
   renderCompactSelect(els.activityAuthorUda, activityAuthorUdaOptions(), "Nessuna UDA", els.activityAuthorUdaCount);
+  markActivityReviewDirty();
+});
+els.activityAuthorLanguage?.addEventListener("change", () => {
+  syncSourceNameForLanguage();
+  markActivityReviewDirty();
 });
 els.activityAuthorClass?.addEventListener("change", () => {
   const roster = state.classRosters.find((candidate) => (
     String(candidate.id || candidate.label || candidate.name || "").trim() === els.activityAuthorClass.value
   ));
   if (roster?.github_team && els.activityAuthorTeam) els.activityAuthorTeam.value = roster.github_team;
+  markActivityReviewDirty();
+});
+[
+  els.activityAuthorKind,
+  els.activityAuthorDifficulty,
+  els.activityAuthorTeam,
+  els.activityAuthorSourceName,
+  els.activityAuthorPrompt,
+  els.activityAuthorMinutes,
+  els.activityAuthorOverwrite,
+].forEach((field) => {
+  field?.addEventListener("input", markActivityReviewDirty);
+  field?.addEventListener("change", markActivityReviewDirty);
 });
 els.classRosterSelect?.addEventListener("change", loadSelectedClassRoster);
+els.assignmentTargetPicker?.addEventListener("change", (event) => {
+  const input = event.target.closest("[data-roster-target-student]");
+  if (!input) return;
+  const key = input.dataset.rosterTargetStudent;
+  if (input.checked) {
+    state.selectedRosterTargetIds.add(key);
+  } else {
+    state.selectedRosterTargetIds.delete(key);
+  }
+  syncTargetsFromRosterSelection();
+});
+els.selectAllRosterTargetsBtn?.addEventListener("click", () => {
+  if (!state.selectedClassRoster) return;
+  state.selectedRosterTargetIds = new Set(activeRosterStudents().map(rosterStudentKey));
+  syncTargetsFromRosterSelection();
+});
+els.clearRosterTargetsBtn?.addEventListener("click", () => {
+  state.selectedRosterTargetIds = new Set();
+  syncTargetsFromRosterSelection();
+});
 els.activityPath.addEventListener("input", () => {
   clearSelectedAssignment();
+  resetAssignmentConfirmStatus("L'activity e cambiata: ricontrolla anteprima e conferma prima di salvare o distribuire.");
   renderActivitySelect();
   renderAssignmentContext();
 });
 els.outputName.addEventListener("input", renderAssignmentContext);
 els.classId.addEventListener("input", () => {
   clearSelectedAssignment();
+  resetAssignmentConfirmStatus("La classe e cambiata: ricontrolla anteprima e conferma prima di salvare o distribuire.");
   renderReportAssignmentSummary();
 });
 els.classLabel.addEventListener("input", () => {
   clearSelectedAssignment();
+  resetAssignmentConfirmStatus("L'etichetta classe e cambiata: ricontrolla anteprima e conferma prima di salvare o distribuire.");
   renderAssignmentContext();
 });
 els.githubTeam.addEventListener("input", () => {
   clearSelectedAssignment();
+  resetAssignmentConfirmStatus("Il team GitHub e cambiato: ricontrolla anteprima e conferma prima di salvare o distribuire.");
   renderAssignmentContext();
 });
 els.assignedAt.addEventListener("input", () => {
   clearSelectedAssignment();
+  resetAssignmentConfirmStatus("Le date sono cambiate: ricontrolla anteprima e conferma prima di salvare o distribuire.");
+  validateAssignmentDateFields();
+  setAssignmentWizardStep(currentAssignmentWizardStep());
   renderReportAssignmentSummary();
 });
 els.dueAt.addEventListener("input", () => {
   clearSelectedAssignment();
+  resetAssignmentConfirmStatus("Le date sono cambiate: ricontrolla anteprima e conferma prima di salvare o distribuire.");
+  validateAssignmentDateFields();
+  setAssignmentWizardStep(currentAssignmentWizardStep());
   renderReportAssignmentSummary();
 });
 els.nowAt.addEventListener("change", () => loadAssignments().catch((error) => setStatus(`Assegnazioni non aggiornate: ${error.message}`)));
 els.targetsText.addEventListener("input", () => {
   clearSelectedAssignment();
+  resetAssignmentConfirmStatus("I destinatari sono cambiati: ricontrolla anteprima e conferma prima di salvare o distribuire.");
+  syncRosterSelectionFromTargetsText();
   renderAssignmentContext();
 });
 els.classId.addEventListener("change", updateOutputNameForCurrentActivity);

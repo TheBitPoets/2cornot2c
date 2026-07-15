@@ -55,10 +55,11 @@
         <div class="assignmentWizardSteps" role="tablist" aria-label="Step assegnazione activity">
           <button type="button" class="isActive" data-assignment-step-tab="activity" aria-selected="true">1 Activity</button>
           <button type="button" data-assignment-step-tab="ai" aria-selected="false">2 AI</button>
-          <button type="button" data-assignment-step-tab="targets" aria-selected="false">3 Destinatari</button>
-          <button type="button" data-assignment-step-tab="dates" aria-selected="false">4 Date</button>
-          <button type="button" data-assignment-step-tab="preview" aria-selected="false">5 Anteprima</button>
-          <button type="button" data-assignment-step-tab="confirm" aria-selected="false">6 Conferma</button>
+          <button type="button" data-assignment-step-tab="review" aria-selected="false">3 Revisione</button>
+          <button type="button" data-assignment-step-tab="targets" aria-selected="false">4 Destinatari</button>
+          <button type="button" data-assignment-step-tab="dates" aria-selected="false">5 Date</button>
+          <button type="button" data-assignment-step-tab="preview" aria-selected="false">6 Anteprima</button>
+          <button type="button" data-assignment-step-tab="confirm" aria-selected="false">7 Conferma</button>
         </div>
 
         <section class="assignmentWizardStep isActive" data-assignment-step="activity">
@@ -75,7 +76,7 @@
             </label>
           </div>
           <div class="generateActions">
-            <button id="wizardOpenActivityEditorBtn" type="button" title="Apri lo stesso editor activity usato dalla libreria, senza uscire dal wizard.">Apri editor activity</button>
+            <button id="wizardOpenActivityEditorBtn" type="button" title="Vai allo step Revisione activity per controllare e salvare la bozza.">Vai a revisione activity</button>
           </div>
         </section>
 
@@ -92,25 +93,26 @@
                   <option value="manual">Solo bozza manuale</option>
                 </select>
               </label>
-              <label class="wideField">
+              <label class="wideField assignmentAiPromptField">
                 <span>Prompt docente</span>
                 <textarea id="assignmentAiPrompt" rows="4" placeholder="Chiedi una traccia, una variante piu semplice, test aggiuntivi, codice da debuggare o una rubric diversa."></textarea>
+                <button id="assignmentAiGenerateBtn" type="button" class="primary" title="Invia il prompt al provider selezionato e genera una proposta modificabile. Per ora e attivo Codex locale.">Invia prompt e genera proposta</button>
               </label>
-              <div class="assignmentAiContext wideField" aria-label="Contesto che verra inviato all'AI">
-                <strong>Contesto da inviare</strong>
-                <label><input type="checkbox" checked disabled> Activity selezionata e metadati</label>
-                <label><input type="checkbox" checked disabled> Percorso, UDA e argomenti collegati</label>
-                <label><input type="checkbox" checked disabled> Destinatari, classe/team e scadenze</label>
-                <label><input type="checkbox" checked disabled> Asset, starter file, test e soluzione quando disponibili</label>
-              </div>
-              <div class="assignmentAiContext wideField" aria-label="Pacchetto file previsto per la generazione AI">
-                <strong>Pacchetto file activity</strong>
-                <label><input type="checkbox" checked disabled> Traccia e README studente</label>
-                <label><input type="checkbox" checked disabled> Starter code, esempi e fixture modificabili dal docente</label>
-                <label><input type="checkbox" checked disabled> Test pubblici per lo studente</label>
-                <label><input type="checkbox" checked disabled> Test riservati, runner e soluzione solo docente</label>
-                <label><input type="checkbox" disabled> File aggiuntivi liberi scelti da repository o caricati dal docente</label>
-              </div>
+              <details class="assignmentAiContext wideField" aria-label="Contesto che verra inviato all'AI" open>
+                <summary>Contesto da inviare</summary>
+                <div class="assignmentAiContextItem"><span class="contextState isIncluded">incluso</span><span>Activity selezionata e metadati</span></div>
+                <div class="assignmentAiContextItem"><span class="contextState isIncluded">incluso</span><span>Percorso, UDA e argomenti collegati</span></div>
+                <div class="assignmentAiContextItem"><span class="contextState isIncluded">incluso</span><span>Destinatari, classe/team e scadenze</span></div>
+                <div class="assignmentAiContextItem"><span class="contextState isIncluded">incluso</span><span>Asset, starter file, test e soluzione quando disponibili</span></div>
+              </details>
+              <details class="assignmentAiContext wideField" aria-label="Pacchetto file previsto per la generazione AI">
+                <summary>Pacchetto file activity</summary>
+                <div class="assignmentAiContextItem"><span class="contextState isIncluded">incluso</span><span>Traccia e README studente</span></div>
+                <div class="assignmentAiContextItem"><span class="contextState isIncluded">incluso</span><span>Starter code, esempi e fixture modificabili dal docente</span></div>
+                <div class="assignmentAiContextItem"><span class="contextState isIncluded">incluso</span><span>Test pubblici per lo studente</span></div>
+                <div class="assignmentAiContextItem"><span class="contextState isIncluded">incluso</span><span>Test riservati, runner e soluzione solo docente</span></div>
+                <div class="assignmentAiContextItem"><span class="contextState isPlanned">futuro</span><span>File aggiuntivi liberi scelti da repository o caricati dal docente</span></div>
+              </details>
               <div class="assignmentAiPolicy wideField">
                 <label>
                   <span>Budget AI per studente</span>
@@ -125,25 +127,39 @@
                   </select>
                 </label>
               </div>
-              <div class="generateActions wideField">
-                <button id="assignmentAiGenerateBtn" type="button" class="primary" title="Genera una proposta modificabile usando il provider selezionato. Per ora e attivo Codex locale.">Genera proposta AI</button>
-                <button id="assignmentAiApplyDraftBtn" type="button" disabled title="Usa la proposta AI nell'editor activity. Il docente puo modificarla prima di salvare.">Usa questa proposta</button>
+              <div id="assignmentAiProgress" class="assignmentAiProgress wideField" role="status" aria-live="polite" hidden>
+                <div class="assignmentAiProgressHeader">
+                  <strong>Generazione proposta AI in corso</strong>
+                  <span>Codex sta lavorando sulla macchina docente.</span>
+                </div>
+                <div class="assignmentAiProgressTrack" aria-hidden="true"><span></span></div>
+                <p>La durata dipende dal provider e dai file inviati. Se qualcosa si blocca, qui comparira un errore chiaro.</p>
               </div>
               <label class="wideField">
                 <span>Bozza AI modificabile dal docente</span>
                 <textarea id="assignmentAiDraftText" rows="6" placeholder="Qui comparira la proposta AI. Il docente potra modificarla prima di salvare l'activity o distribuirla."></textarea>
               </label>
               <details class="assignmentPackageJson wideField">
-                <summary>Dettagli tecnici del pacchetto AI</summary>
-                <div class="generateActions">
-                  <button id="assignmentAiAskBtn" type="button" class="smallButton" title="Prepara il pacchetto JSON con prompt, contesto e file senza chiamare il provider AI.">Mostra pacchetto tecnico</button>
+                <summary>Controllo dati inviati all'AI</summary>
+                <p class="status">Questa sezione mostra il contesto che verra inviato all'AI. Non genera una proposta: per quello usa il prompt sopra.</p>
+                <div class="segmentedTabs" role="tablist" aria-label="Vista risultati AI">
+                  <button type="button" data-ai-preview-view="draft" aria-selected="true">Proposta AI</button>
+                  <button type="button" data-ai-preview-view="context" aria-selected="false">Dati inviati all'AI</button>
                 </div>
                 <div id="assignmentAiPackagePreview" class="assignmentPlanPreview" aria-live="polite">
-                  <p class="status">Dettaglio avanzato: qui puoi controllare prompt, contesto e file inviati al provider o a Codex.</p>
+                  <p class="status">Qui vedrai prompt, metadati e file di contesto che saranno inviati al provider o a Codex.</p>
                 </div>
               </details>
             </div>
           </div>
+        </section>
+
+        <section class="assignmentWizardStep" data-assignment-step="review" hidden>
+          <div class="assignmentAiDraft">
+            <strong>Revisione activity</strong>
+            <p>Controlla la bozza, modifica i campi e salva l'activity prima di scegliere destinatari, date e distribuzione.</p>
+          </div>
+          <div id="activityWizardEditorMount" class="activityWizardEditorMount"></div>
         </section>
 
         <section class="assignmentWizardStep" data-assignment-step="targets" hidden>
@@ -166,6 +182,21 @@
               <span>Team GitHub</span>
               <input id="githubTeam" type="text" placeholder="3A-TPSI">
             </label>
+            <div class="assignmentTargetPicker wideField" aria-label="Studenti e gruppi da assegnare">
+              <div class="assignmentTargetPickerHead">
+                <div>
+                  <strong>Studenti dal roster</strong>
+                  <p>Seleziona tutta la classe, un gruppo di studenti o un singolo studente. I repository target sotto vengono aggiornati automaticamente.</p>
+                </div>
+                <div class="generateActions">
+                  <button id="selectAllRosterTargetsBtn" type="button" class="smallButton" title="Seleziona tutti gli studenti attivi del roster.">Tutti</button>
+                  <button id="clearRosterTargetsBtn" type="button" class="smallButton" title="Rimuovi tutti gli studenti dalla consegna.">Nessuno</button>
+                </div>
+              </div>
+              <div id="assignmentTargetPicker" class="assignmentTargetPickerList">
+                <p class="status">Seleziona un roster per scegliere classe intera, gruppo o singolo studente.</p>
+              </div>
+            </div>
             <label class="wideField">
               <span>Repository studenti locali, uno per riga</span>
               <textarea id="targetsText" rows="4">examples/assignment_tracking/student_repos/rossi-mario
@@ -180,15 +211,16 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
           <div class="generateGrid">
             <label>
               <span>Assegnato il</span>
-              <input id="assignedAt" type="datetime-local" value="2026-10-12T09:00">
+              <input id="assignedAt" type="datetime-local" required>
             </label>
             <label>
               <span>Scadenza</span>
-              <input id="dueAt" type="datetime-local" value="2026-10-19T23:59">
+              <input id="dueAt" type="datetime-local" required>
             </label>
             <label>
               <span>Ora simulata opzionale</span>
               <input id="nowAt" type="datetime-local">
+              <small>Serve solo per anteprime e test: simula il momento corrente senza cambiare l'orologio reale.</small>
             </label>
           </div>
         </section>
@@ -205,16 +237,20 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
         <section class="assignmentWizardStep" data-assignment-step="confirm" hidden>
           <div class="assignmentAiDraft">
             <strong>Conferma docente</strong>
-            <p>Salva la consegna nel registro docente e distribuisci gli asset solo dopo aver controllato activity, destinatari, date e anteprima.</p>
+            <p>Salva l'assegnazione e distribuisci gli asset solo dopo aver controllato activity, destinatari, date e anteprima.</p>
+          </div>
+          <div id="assignmentConfirmStatus" class="activityEditorStatus assignmentConfirmStatus" role="status" aria-live="polite">
+            <strong>Pronto per la conferma</strong>
+            <span>Prima salva l'assegnazione, poi distribuisci ai target se vuoi copiare traccia e asset nei repository.</span>
           </div>
           <div class="generateActions">
-            <button id="saveAssignmentBtn" type="button" class="primary" title="Salva la consegna per classe, team o studenti senza distribuire ancora asset nei repository.">Salva assegnazione</button>
+            <button id="saveAssignmentBtn" type="button" class="primary" title="Salva l'assegnazione per classe, team o studenti senza distribuire ancora asset nei repository.">Salva assegnazione</button>
             <button id="distributeAssignmentBtn" type="button" title="Copia traccia, README e asset studente nelle cartelle dei repository target.">Distribuisci ai target</button>
           </div>
         </section>
         <nav class="assignmentWizardNav" aria-label="Navigazione wizard assegnazione">
           <button id="assignmentWizardPrevBtn" type="button" title="Torna allo step precedente del wizard.">Indietro</button>
-          <p id="assignmentWizardHint" class="status">Step 1 di 6: scegli o crea la activity.</p>
+          <p id="assignmentWizardHint" class="status">Step 1 di 7: scegli o crea la activity.</p>
           <button id="assignmentWizardNextBtn" type="button" class="primary" title="Vai allo step successivo del wizard.">Avanti</button>
         </nav>
       </div>
@@ -341,17 +377,17 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
     <div class="activityEditorDialogHead">
       <div>
         <h2 id="activityEditorTitle">Editor activity</h2>
-        <p id="activityAuthorStatus" class="status">Crea una bozza activity locale da validare e poi assegnare.</p>
       </div>
       <div class="dialogActions">
         <button id="activityEditorCloseBtn" type="button" class="smallButton" title="Chiudi l'editor activity e torna alla dashboard.">Chiudi</button>
       </div>
     </div>
-    <div class="activityEditorBody">
+    <div id="activityEditorBody" class="activityEditorBody">
+      <p id="activityAuthorStatus" class="status activityEditorStatus">Crea una bozza activity locale da validare e poi assegnare.</p>
       <div class="generateGrid">
         <label>
           <span>Titolo</span>
-          <input id="activityAuthorTitle" type="text" placeholder="Somma in Python">
+          <input id="activityAuthorTitle" type="text" placeholder="Somma in Python" required>
         </label>
         <label>
           <span>ID opzionale</span>
@@ -359,7 +395,7 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
         </label>
         <label>
           <span>Tipo</span>
-          <select id="activityAuthorKind">
+          <select id="activityAuthorKind" required>
             <option value="compito-casa">compito-casa</option>
             <option value="laboratorio">laboratorio</option>
             <option value="esercizio-classe">esercizio-classe</option>
@@ -371,7 +407,7 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
         </label>
         <label>
           <span>Difficolta</span>
-          <select id="activityAuthorDifficulty">
+          <select id="activityAuthorDifficulty" required>
             <option value="A">A - base: copia e osserva</option>
             <option value="B" selected>B - facile: modifica piccola</option>
             <option value="C">C - medio: scrivi da zero</option>
@@ -383,14 +419,34 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
         <label>
           <span>Argomenti</span>
           <span class="selectWithCount">
-            <input id="activityAuthorTopics" type="search" list="activityAuthorTopicsList" placeholder="Cerca argomento" autocomplete="off" aria-label="Argomenti">
+            <input id="activityAuthorTopics" type="search" list="activityAuthorTopicsList" placeholder="Cerca argomento" autocomplete="off" aria-label="Argomenti" required>
             <datalist id="activityAuthorTopicsList"></datalist>
             <span id="activityAuthorTopicsCount" class="selectCountBadge" title="Numero di argomenti disponibili con i filtri correnti.">0</span>
           </span>
         </label>
         <label>
           <span>Tempo stimato</span>
-          <input id="activityAuthorMinutes" type="number" min="1" step="1" value="30">
+          <input id="activityAuthorMinutes" type="number" min="1" step="1" value="30" required>
+        </label>
+        <label>
+          <span>Linguaggio</span>
+          <select id="activityAuthorLanguage" required>
+            <option value="c" selected>C</option>
+            <option value="cpp">C++</option>
+            <option value="python">Python</option>
+            <option value="java">Java</option>
+            <option value="javascript">JavaScript</option>
+            <option value="nodejs">Node.js</option>
+            <option value="go">Go</option>
+            <option value="html">HTML</option>
+            <option value="php">PHP</option>
+            <option value="sql">SQL</option>
+            <option value="assembly">Assembly</option>
+          </select>
+        </label>
+        <label>
+          <span>File sorgente</span>
+          <input id="activityAuthorSourceName" type="text" value="main.c" placeholder="main.c" required>
         </label>
         <label>
           <span>Classe opzionale</span>
@@ -422,7 +478,7 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
         </label>
         <label class="wideField">
           <span>Consegna</span>
-          <textarea id="activityAuthorPrompt" rows="4" placeholder="Scrivi la traccia che vedra lo studente."></textarea>
+          <textarea id="activityAuthorPrompt" rows="4" placeholder="Scrivi la traccia che vedra lo studente." required></textarea>
         </label>
       </div>
       <div class="generateActions">
@@ -535,6 +591,22 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
     </div>
     <div id="submissionReview" class="reviewEmpty">
       Nessuna consegna selezionata.
+    </div>
+  </dialog>
+
+  <dialog id="assignmentAiFilesDialog" class="reviewDialog" aria-labelledby="assignmentAiFilesDialogTitle">
+    <div class="reviewDialogHead">
+      <div>
+        <p class="modalBreadcrumb" aria-label="Percorso modal">Dashboard &gt; Assegna activity &gt; File AI</p>
+        <h2 id="assignmentAiFilesDialogTitle">File proposti dall'AI</h2>
+        <p id="assignmentAiFilesStatus" class="status">Seleziona un file generato dalla bozza AI.</p>
+      </div>
+      <div class="reviewDialogActions">
+        <button id="assignmentAiFilesCloseBtn" type="button" class="smallButton" title="Chiudi la preview dei file proposti dall'AI.">Chiudi</button>
+      </div>
+    </div>
+    <div id="assignmentAiFilesReview" class="reviewEmpty">
+      Nessun file AI selezionato.
     </div>
   </dialog>
 

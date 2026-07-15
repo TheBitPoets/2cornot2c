@@ -47,9 +47,20 @@ def run_dashboard_js(assertions: str) -> None:
         this.clientWidth = 960;
         this.testWidth = 240;
         this.tHead = {{ rows: [{{ cells: [] }}] }};
+        this.listeners = {{}};
       }}
-      addEventListener() {{}}
-      removeEventListener() {{}}
+      addEventListener(type, handler) {{
+        this.listeners[type] = this.listeners[type] || [];
+        this.listeners[type].push(handler);
+      }}
+      removeEventListener(type, handler) {{
+        this.listeners[type] = (this.listeners[type] || []).filter((candidate) => candidate !== handler);
+      }}
+      dispatchEvent(event) {{
+        const nextEvent = {{ type: event?.type || "", target: this }};
+        (this.listeners[nextEvent.type] || []).forEach((handler) => handler(nextEvent));
+        return true;
+      }}
       setAttribute(name, value) {{ this[name] = value; }}
       toggleAttribute(name, force) {{
         const enabled = force === undefined ? !Boolean(this[name]) : Boolean(force);
@@ -133,6 +144,8 @@ def run_dashboard_js(assertions: str) -> None:
       }}
       closest() {{ return {{ clientWidth: 960 }}; }}
       getBoundingClientRect() {{ return {{ top: 0, bottom: 120, left: 0, right: this.testWidth, width: this.testWidth, height: 120 }}; }}
+      scrollIntoView() {{}}
+      focus() {{}}
       showModal() {{ this.open = true; }}
       close() {{ this.open = false; }}
       setPointerCapture() {{}}
@@ -164,7 +177,7 @@ def run_dashboard_js(assertions: str) -> None:
       button.dataset.legendTab = topic;
       return button;
     }});
-    const assignmentStepNames = ["activity", "ai", "targets", "dates", "preview", "confirm"];
+const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "preview", "confirm"];
     const assignmentStepTabs = assignmentStepNames.map((step) => {{
       const button = new FakeElement(`[data-assignment-step-tab="${{step}}"]`);
       button.dataset.assignmentStepTab = step;
@@ -368,6 +381,9 @@ def run_dashboard_js(assertions: str) -> None:
         reviewAiFeedback,
         dateTimeInputToIso,
         isoToDateTimeInput,
+        currentDateTimeInput,
+        initializeAssignmentDateFields,
+        validateAssignmentDateFields,
         compactStudentsSummaryItems,
         detailedStudentsSummaryItems,
         applyPanelOrder,
@@ -384,25 +400,49 @@ def run_dashboard_js(assertions: str) -> None:
         setupPanelDragAndDrop,
         renderLegend,
         saveActivityDraft,
+        validateActivityAuthorRequiredFields,
+        setActivityAuthorStatus,
         openActivityEditor,
         closeActivityEditor,
+        openActivityReviewStep,
+        mountActivityEditorInWizard,
+        mountActivityEditorInDialog,
         renderActivityPanelSummary,
+        selectActivity,
         activityAuthorTopicValue,
         activityAuthorTopicOptions,
         renderTopicSearch,
         suggestedActivityId,
         syncActivityAuthorIdSuggestion,
+        defaultSourceNameForLanguage,
+        languageFromSourceName,
+        syncSourceNameForLanguage,
         renderActivityAuthorMetadataSelects,
         assignmentPlanPayload,
         assignmentAiPackagePayload,
         assignmentRecordPayload,
         renderAssignmentAssetList,
         renderAssignmentTargetList,
+        renderAssignmentTargetPicker,
+        syncTargetsFromRosterSelection,
+        syncRosterSelectionFromTargetsText,
         renderAssignmentPlan,
         renderAssignmentAiPackage,
         renderAssignmentCodexDraft,
-        updateAssignmentAiApplyState,
+        setAssignmentAiPreviewView,
+        selectAssignmentAiPreviewView,
+        assignmentAiDraftFiles,
+        renderAssignmentAiFilesReview,
+        openAssignmentAiFilesDialog,
+        closeAssignmentAiFilesDialog,
         applyAssignmentAiDraftToActivityForm,
+        updateAssignmentAiApplyState,
+        setAssignmentAiProgress,
+        setAssignmentAiProgressError,
+        setAssignmentAiPromptLocked,
+        unlockAssignmentAiPrompt,
+        assignmentWizardStepComplete,
+        validateAssignmentBeforeConfirm,
         setAssignmentWizardStep,
         moveAssignmentWizardStep,
         assignmentPlanErrorMessage,
@@ -416,6 +456,7 @@ def run_dashboard_js(assertions: str) -> None:
         renderAssignmentSelect,
         clearSelectedAssignment,
         applyAssignmentToGenerateForm,
+        selectCoverageActivity,
         rosterOptionLabel,
         localTargetFromStudent,
         rosterTargets,
@@ -526,6 +567,8 @@ def test_save_activity_draft_posts_form_and_selects_saved_activity() -> None:
           topicOption.dataset.topicValue = "variabili";
           tested.els.activityAuthorTopicsList.append(topicOption);
           tested.els.activityAuthorMinutes.value = "25";
+          tested.els.activityAuthorLanguage.value = "python";
+          tested.els.activityAuthorSourceName.value = "main.py";
           tested.els.activityAuthorClass.value = "3A-TPSI";
           tested.els.activityAuthorTeam.value = "team-3a";
           tested.els.activityAuthorPath.value = "base";
@@ -539,13 +582,41 @@ def test_save_activity_draft_posts_form_and_selects_saved_activity() -> None:
           assert.equal(call.options.method, "POST");
           assert.equal(body.title, "Somma in Python");
           assert.equal(body.topics, "variabili");
+          assert.equal(body.language, "python");
+          assert.equal(body.source_name, "main.py");
           assert.equal(body.class_id, "3A-TPSI");
           assert.equal(tested.state.activities.length, 1);
           assert.equal(tested.els.activityPath.value, "activities/drafts/somma-in-python.json");
-          assert.match(tested.els.activityAuthorStatus.textContent, /Activity salvata/);
+          assert.equal(tested.els.activityAuthorStatus.classList.contains("isSuccess"), true);
+          assert.match(tested.els.activityAuthorStatus.innerHTML, /Activity salvata/);
           assert.match(tested.els.activityPanelStatus.textContent, /Activity salvata/);
         })();
         """
+    )
+
+
+def test_select_activity_restores_language_and_source_name() -> None:
+    run_dashboard_js(
+        """
+        tested.state.activities = [{
+          id: "python-base-somma-001",
+          title: "Somma in Python",
+          path: "activities/drafts/python-base-somma-001.json",
+          class_id: "3A-TPSI",
+          github_team: "team-3a",
+          language: "python",
+          source_name: "main.py",
+        }];
+        tested.els.activityAuthorLanguage.value = "c";
+        tested.els.activityAuthorSourceName.value = "main.c";
+
+        tested.selectActivity("activities/drafts/python-base-somma-001.json");
+
+        assert.equal(tested.els.activityPath.value, "activities/drafts/python-base-somma-001.json");
+        assert.equal(tested.els.activityAuthorLanguage.value, "python");
+        assert.equal(tested.els.activityAuthorSourceName.value, "main.py");
+        assert.equal(tested.els.classId.value, "3A-TPSI");
+      """
     )
 
 
@@ -561,15 +632,66 @@ def test_activity_editor_modal_is_shared_by_panel_and_wizard() -> None:
 def test_activity_editor_modal_opens_and_closes() -> None:
     run_dashboard_js(
         """
-        tested.openActivityEditor("wizard");
+        tested.openActivityEditor("panel");
 
         assert.equal(tested.els.activityEditorDialog.open, true);
-        assert.match(tested.els.activityPanelStatus.textContent, /wizard assegnazione/);
+        assert.equal(tested.els.activityEditorBody.parentElement, tested.els.activityEditorDialog);
+        assert.match(tested.els.activityPanelStatus.textContent, /libreria/);
 
         tested.closeActivityEditor();
 
         assert.equal(tested.els.activityEditorDialog.open, false);
       """
+    )
+
+
+def test_activity_review_step_mounts_shared_editor_inside_wizard() -> None:
+    run_dashboard_js(
+        """
+        tested.openActivityEditor("panel");
+        assert.equal(tested.els.activityEditorDialog.open, true);
+        assert.equal(tested.els.activityEditorBody.parentElement, tested.els.activityEditorDialog);
+
+        tested.openActivityReviewStep();
+
+        const reviewStep = tested.els.assignmentSteps.find((section) => section.dataset.assignmentStep === "review");
+        assert.equal(tested.els.activityEditorDialog.open, false);
+        assert.equal(tested.els.activityEditorBody.parentElement, tested.els.activityWizardEditorMount);
+        assert.equal(reviewStep.hidden, false);
+        assert.match(tested.els.assignmentWizardHint.textContent, /Step 3 di 7/);
+      """
+    )
+
+
+def test_save_activity_from_review_enables_wizard_next() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.openActivityReviewStep();
+          tested.els.activityAuthorTitle.value = "Somma in Python";
+          tested.els.activityAuthorId.value = "somma-in-python";
+          tested.els.activityAuthorKind.value = "compito-casa";
+          tested.els.activityAuthorDifficulty.value = "B";
+          tested.els.activityAuthorTopics.value = "variabili";
+          tested.els.activityAuthorMinutes.value = "30";
+          tested.els.activityAuthorLanguage.value = "python";
+          tested.els.activityAuthorSourceName.value = "main.py";
+          tested.els.activityAuthorPrompt.value = "Scrivi un programma che somma due numeri.";
+          tested.state.activityReviewSaved = false;
+          tested.setAssignmentWizardStep("review");
+
+          assert.equal(tested.els.assignmentWizardNextBtn.disabled, true);
+
+          await tested.saveActivityDraft();
+
+          assert.equal(tested.state.activityReviewSaved, true);
+          assert.equal(tested.els.activityPath.value, "activities/drafts/somma-in-python.json");
+          assert.equal(tested.els.activityAuthorStatus.classList.contains("isSuccess"), true);
+          assert.match(tested.els.activityAuthorStatus.innerHTML, /Activity salvata/);
+          assert.match(tested.els.activityAuthorStatus.innerHTML, /punto 4 Destinatari/);
+          assert.equal(tested.els.assignmentWizardNextBtn.disabled, false);
+        })();
+        """
     )
 
 
@@ -579,6 +701,8 @@ def test_assignment_preview_posts_plan_and_renders_assets() -> None:
         (async () => {
           tested.els.activityPath.value = "activities/examples/python_assets_scaffold/activity.json";
           tested.els.targetsText.value = "students/rossi-mario\\nstudents/bianchi-luca";
+          tested.els.activityAuthorLanguage.value = "python";
+          tested.els.activityAuthorSourceName.value = "main.py";
           tested.fetchResponses["/api/activities/assignment-plan"] = {
             ok: true,
             plan: {
@@ -627,6 +751,8 @@ def test_assignment_preview_posts_plan_and_renders_assets() -> None:
           assert.equal(call.options.method, "POST");
           assert.equal(body.activity_path, "activities/examples/python_assets_scaffold/activity.json");
           assert.equal(body.targets_text, "students/rossi-mario\\nstudents/bianchi-luca");
+          assert.equal(body.language, "python");
+          assert.equal(body.source_name, "main.py");
           assert.match(tested.els.assignmentPlanPreview.innerHTML, /Somma con scaffold Python/);
           assert.match(tested.els.assignmentPlanPreview.innerHTML, /main.py/);
           assert.match(tested.els.assignmentPlanPreview.innerHTML, /tests\\/test_hidden.py/);
@@ -643,6 +769,8 @@ def test_assignment_preview_explains_missing_server_endpoint() -> None:
         (async () => {
           tested.els.activityPath.value = "activities/examples/python_assets_scaffold/activity.json";
           tested.els.targetsText.value = "students/rossi-mario";
+          tested.els.activityAuthorLanguage.value = "python";
+          tested.els.activityAuthorSourceName.value = "main.py";
           tested.fetchResponses["/api/activities/assignment-plan"] = {
             ok: false,
             status: 404,
@@ -665,6 +793,7 @@ def test_save_assignment_record_posts_form_and_refreshes_due_assignments() -> No
         """
         (async () => {
           tested.els.activityPath.value = "activities/python-base-somma-001.json";
+          tested.state.activityReviewSaved = true;
           tested.els.classId.value = "3A-TPSI";
           tested.els.classLabel.value = "3A TPSI";
           tested.els.githubTeam.value = "team-3a-tpsi";
@@ -713,6 +842,8 @@ def test_save_assignment_record_posts_form_and_refreshes_due_assignments() -> No
           assert.equal(tested.state.dueAssignments.length, 1);
           assert.match(tested.els.assignmentStatus.textContent, /1 assegnazioni scadute senza registro/);
           assert.match(tested.els.status.textContent, /Assegnazione salvata/);
+          assert.match(tested.els.assignmentConfirmStatus.innerHTML, /Assegnazione salvata/);
+          assert.match(tested.els.assignmentConfirmStatus.innerHTML, /assignment-python-base-somma-001-3a-tpsi/);
         })();
         """
     )
@@ -723,7 +854,12 @@ def test_distribute_assignment_posts_plan_and_renders_written_targets() -> None:
         """
         (async () => {
           tested.els.activityPath.value = "activities/python-base-somma-001.json";
+          tested.state.activityReviewSaved = true;
           tested.els.targetsText.value = "students/rossi-mario";
+          tested.els.assignedAt.value = "2026-10-12T09:00";
+          tested.els.dueAt.value = "2026-10-19T23:59";
+          tested.els.activityAuthorLanguage.value = "python";
+          tested.els.activityAuthorSourceName.value = "main.py";
           tested.fetchResponses["/api/assignments/distribute"] = {
             ok: true,
             results: [
@@ -755,9 +891,13 @@ def test_distribute_assignment_posts_plan_and_renders_written_targets() -> None:
           const body = JSON.parse(call.options.body);
           assert.equal(body.activity_path, "activities/python-base-somma-001.json");
           assert.equal(body.targets_text, "students/rossi-mario");
+          assert.equal(body.language, "python");
+          assert.equal(body.source_name, "main.py");
           assert.match(tested.els.assignmentPlanPreview.innerHTML, /Somma in Python/);
           assert.match(tested.els.assignmentPlanPreview.innerHTML, /gia presente/);
           assert.match(tested.els.status.textContent, /distribuita a 1 target/);
+          assert.match(tested.els.assignmentConfirmStatus.innerHTML, /Distribuzione completata/);
+          assert.match(tested.els.assignmentConfirmStatus.innerHTML, /1 target aggiornati/);
         })();
         """
     )
@@ -769,27 +909,33 @@ def test_assignment_wizard_contains_teacher_editable_ai_step() -> None:
 
     assert 'data-assignment-step-tab="activity"' in assignment_section
     assert 'data-assignment-step-tab="ai"' in assignment_section
+    assert 'data-assignment-step-tab="review"' in assignment_section
     assert 'data-assignment-step-tab="confirm"' in assignment_section
     assert 'data-assignment-step="ai"' in assignment_section
+    assert 'data-assignment-step="review"' in assignment_section
     assert "Generazione AI assistita" in assignment_section
+    assert "Revisione activity" in assignment_section
     assert "provider AI o Codex" in assignment_section
     assert "modificarla" in assignment_section
     assert 'id="assignmentAiProvider"' in assignment_section
     assert 'id="assignmentAiPrompt"' in assignment_section
     assert 'id="assignmentAiDraftText"' in assignment_section
     assert 'id="assignmentAiGenerateBtn"' in assignment_section
-    assert 'id="assignmentAiApplyDraftBtn"' in assignment_section
-    assert 'id="assignmentAiApplyDraftBtn" type="button" disabled' in assignment_section
-    assert "Genera proposta AI" in assignment_section
-    assert "Usa questa proposta" in assignment_section
-    assert "Dettagli tecnici del pacchetto AI" in assignment_section
-    assert "Mostra pacchetto tecnico" in assignment_section
+    assert 'id="assignmentAiProgress"' in assignment_section
+    assert "Invia prompt e genera proposta" in assignment_section
+    assert "Generazione proposta AI in corso" in assignment_section
+    assert "Controllo dati inviati all'AI" in assignment_section
+    assert "Aggiorna controllo dati" not in assignment_section
+    assert 'id="assignmentAiAskBtn"' not in assignment_section
+    assert 'data-ai-preview-view="draft"' in assignment_section
+    assert 'data-ai-preview-view="context"' in assignment_section
     assert 'id="assignmentWizardPrevBtn"' in assignment_section
     assert 'id="assignmentWizardNextBtn"' in assignment_section
     assert 'id="assignmentWizardHint"' in assignment_section
     assert "Contesto da inviare" in assignment_section
     assert "Asset, starter file, test e soluzione" in assignment_section
     assert "Pacchetto file activity" in assignment_section
+    assert '<details class="assignmentAiContext wideField"' in assignment_section
     assert "File aggiuntivi liberi" in assignment_section
     assert 'id="assignmentAiStudentBudget"' in assignment_section
     assert 'id="assignmentIntegrityMode"' in assignment_section
@@ -802,14 +948,57 @@ def test_assignment_wizard_uses_calendar_date_time_inputs() -> None:
     assert 'id="assignedAt" type="datetime-local"' in assignment_section
     assert 'id="dueAt" type="datetime-local"' in assignment_section
     assert 'id="nowAt" type="datetime-local"' in assignment_section
+    assert 'id="assignedAt" type="datetime-local" value=' not in assignment_section
+    assert 'id="dueAt" type="datetime-local" value=' not in assignment_section
+    assert 'id="assignedAt" type="datetime-local" required' in assignment_section
+    assert 'id="dueAt" type="datetime-local" required' in assignment_section
+    assert "simula il momento corrente" in assignment_section
 
 
-def test_assignment_ai_context_checkboxes_use_fixed_alignment() -> None:
+def test_assignment_dates_require_due_date_and_default_assigned_date() -> None:
+    run_dashboard_js(
+        """
+        tested.els.assignedAt.value = "";
+        tested.els.dueAt.value = "";
+
+        tested.setAssignmentWizardStep("dates");
+
+        assert.match(tested.els.assignedAt.value, /^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$/);
+        assert.equal(tested.els.dueAt["aria-invalid"], "true");
+        assert.equal(tested.assignmentWizardStepComplete("dates"), false);
+        assert.equal(tested.els.assignmentWizardNextBtn.disabled, true);
+
+        tested.els.dueAt.value = "2026-10-19T23:59";
+        assert.equal(tested.validateAssignmentDateFields(), true);
+        tested.setAssignmentWizardStep("dates");
+
+        assert.equal(tested.els.dueAt["aria-invalid"], "false");
+        assert.equal(tested.assignmentWizardStepComplete("dates"), true);
+        assert.equal(tested.els.assignmentWizardNextBtn.disabled, false);
+        """
+    )
+
+
+def test_assignment_ai_context_uses_informative_status_rows() -> None:
+    html = open("tools/assignment_dashboard.html", encoding="utf-8").read()
+    css = open("tools/assignment_dashboard.css", encoding="utf-8").read()
+    assignment_section = html.split('data-assignment-step="ai"', 1)[1].split('data-assignment-step="review"', 1)[0]
+
+    assert 'type="checkbox"' not in assignment_section
+    assert "contextState isIncluded" in assignment_section
+    assert "contextState isPlanned" in assignment_section
+    assert ".assignmentAiContextItem" in css
+    assert ".contextState.isIncluded" in css
+    assert ".contextState.isPlanned" in css
+
+
+def test_assignment_ai_progress_has_visible_indeterminate_bar() -> None:
     css = open("tools/assignment_dashboard.css", encoding="utf-8").read()
 
-    assert ".assignmentAiContext label" in css
-    assert "grid-template-columns: 1rem minmax(0, 1fr);" in css
-    assert '.assignmentAiContext input[type="checkbox"]' in css
+    assert ".assignmentAiProgress" in css
+    assert ".assignmentAiProgressTrack" in css
+    assert ".assignmentAiProgress.isError" in css
+    assert "@keyframes assignmentAiProgressSweep" in css
 
 
 def test_assignment_date_time_inputs_are_serialized_as_iso() -> None:
@@ -824,6 +1013,124 @@ def test_assignment_date_time_inputs_are_serialized_as_iso() -> None:
         assert.match(payload.due_at, /^2026-10-19T23:59:00[+-]\\d{2}:\\d{2}$/);
         assert.match(payload.now, /^2026-10-20T08:00:00[+-]\\d{2}:\\d{2}$/);
         assert.equal(tested.dateTimeInputToIso("2026-10-12T09:00:00+02:00"), "2026-10-12T09:00:00+02:00");
+        """
+    )
+
+
+def test_save_assignment_requires_complete_wizard_data_before_posting() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.els.activityPath.value = "activities/python-base-somma-001.json";
+          tested.state.activityReviewSaved = true;
+          tested.els.targetsText.value = "students/rossi-mario";
+          tested.els.assignedAt.value = "2026-10-12T09:00";
+          tested.els.dueAt.value = "";
+
+          await tested.saveAssignmentRecord();
+
+          assert.equal(tested.fetchCalls.some((entry) => entry.path === "/api/assignments/save"), false);
+          assert.match(tested.els.assignmentConfirmStatus.innerHTML, /Date incomplete/);
+          assert.equal(tested.els.dueAt["aria-invalid"], "true");
+          assert.equal(tested.els.assignmentWizardNextBtn.disabled, true);
+        })();
+        """
+    )
+
+
+def test_assignment_confirm_status_resets_when_assignment_data_changes() -> None:
+    run_dashboard_js(
+        """
+        tested.els.activityPath.value = "activities/python-base-somma-001.json";
+        tested.state.activityReviewSaved = true;
+        tested.els.targetsText.value = "students/rossi-mario";
+        tested.els.assignedAt.value = "2026-10-12T09:00";
+        tested.els.dueAt.value = "2026-10-19T23:59";
+
+        assert.equal(tested.validateAssignmentBeforeConfirm("salvare l'assegnazione"), true);
+        tested.els.assignmentConfirmStatus.innerHTML = "<strong>Assegnazione salvata</strong><span>ID: demo</span>";
+        tested.els.targetsText.value = "students/bianchi-luca";
+        tested.els.targetsText.dispatchEvent(new Event("input"));
+
+        assert.match(tested.els.assignmentConfirmStatus.innerHTML, /Dati modificati/);
+        assert.match(tested.els.assignmentConfirmStatus.innerHTML, /destinatari sono cambiati/);
+        """
+    )
+
+
+def test_assignment_confirm_status_resets_when_activity_is_selected() -> None:
+    run_dashboard_js(
+        """
+        tested.state.activities = [{
+          id: "python-base-somma-001",
+          title: "Somma in Python",
+          path: "activities/python-base-somma-001.json",
+          language: "python",
+          source_name: "main.py",
+        }];
+        tested.els.assignmentConfirmStatus.innerHTML = "<strong>Assegnazione salvata</strong><span>ID: demo</span>";
+
+        tested.selectActivity("activities/python-base-somma-001.json");
+
+        assert.match(tested.els.assignmentConfirmStatus.innerHTML, /Dati modificati/);
+        assert.match(tested.els.assignmentConfirmStatus.innerHTML, /activity e cambiata/);
+        """
+    )
+
+
+def test_assignment_confirm_status_resets_when_roster_is_applied() -> None:
+    run_dashboard_js(
+        """
+        tested.els.assignmentConfirmStatus.innerHTML = "<strong>Distribuzione completata</strong><span>3 target aggiornati</span>";
+
+        tested.applyRosterToGenerateForm({
+          id: "3A",
+          label: "3A TPSI",
+          github_team: "team-3a",
+          students: [
+            { id: "rossi-mario", display_name: "Mario Rossi", local_path: "students/rossi-mario" },
+          ],
+        });
+
+        assert.match(tested.els.assignmentConfirmStatus.innerHTML, /Dati modificati/);
+        assert.match(tested.els.assignmentConfirmStatus.innerHTML, /roster e i destinatari sono cambiati/);
+        """
+    )
+
+
+def test_assignment_confirm_status_resets_when_existing_assignment_is_loaded() -> None:
+    run_dashboard_js(
+        """
+        tested.state.dueAssignments = [{
+          id: "assignment-python-base-somma-001-3a",
+          activity_id: "python-base-somma-001",
+          activity_path: "activities/python-base-somma-001.json",
+          class_id: "3A",
+          class_label: "3A TPSI",
+          github_team: "team-3a",
+          assigned_at: "2026-10-12T09:00:00+02:00",
+          due_at: "2026-10-19T23:59:00+02:00",
+          targets: [{ path: "students/rossi-mario" }],
+        }];
+        tested.els.assignmentConfirmStatus.innerHTML = "<strong>Assegnazione salvata</strong><span>ID: demo</span>";
+
+        tested.applyAssignmentToGenerateForm("assignment-python-base-somma-001-3a");
+
+        assert.match(tested.els.assignmentConfirmStatus.innerHTML, /Dati modificati/);
+        assert.match(tested.els.assignmentConfirmStatus.innerHTML, /Assegnazione caricata/);
+        """
+    )
+
+
+def test_assignment_confirm_status_resets_when_coverage_activity_is_selected() -> None:
+    run_dashboard_js(
+        """
+        tested.els.assignmentConfirmStatus.innerHTML = "<strong>Distribuzione completata</strong><span>3 target aggiornati</span>";
+
+        tested.selectCoverageActivity("activities/python-base-somma-001.json", "demo/python-base-somma-001.json");
+
+        assert.match(tested.els.assignmentConfirmStatus.innerHTML, /Dati modificati/);
+        assert.match(tested.els.assignmentConfirmStatus.innerHTML, /Activity selezionata dalla copertura/);
         """
     )
 
@@ -887,11 +1194,50 @@ def test_preview_assignment_ai_package_posts_bundle_request_and_renders_json() -
           assert.equal(body.prompt, "Aggiungi test sui negativi");
           assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /Somma in Python/);
           assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /nessuna chiamata AI/);
-          assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /JSON pacchetto/);
+          assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /File di contesto inviati all'AI/);
+          assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /File di contesto non inviati/);
+          assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /JSON tecnico per debug/);
           assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /starter/);
           assert.equal(tested.els.assignmentAiDraftText.value, "");
-          assert.match(tested.els.status.textContent, /nessuna chiamata provider/);
+          assert.match(tested.els.status.textContent, /Controllo dati AI pronto/);
         })();
+        """
+    )
+
+
+def test_assignment_ai_context_tab_updates_context_preview() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.els.activityPath.value = "activities/python-base-somma-001.json";
+          tested.els.targetsText.value = "students/rossi-mario";
+          tested.els.assignmentAiPrompt.value = "Aggiungi test sui negativi";
+
+          await tested.selectAssignmentAiPreviewView("context");
+
+          const call = tested.fetchCalls.find((entry) => entry.path === "/api/activities/ai-package");
+          assert.ok(call);
+          assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /File di contesto inviati all'AI/);
+        })();
+        """
+    )
+
+
+def test_assignment_ai_package_empty_context_files_are_explained() -> None:
+    run_dashboard_js(
+        """
+        tested.renderAssignmentAiPackage({
+          schema_version: "activity_ai_package.v1",
+          provider: "codex",
+          prompt: "Crea una traccia",
+          activity: { id: "demo", title: "Demo" },
+          files: [],
+          policy: { student_budget: 5, integrity_mode: "normal" },
+          teacher_review: { required: true },
+        });
+
+        assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /Nessun file di contesto collegato all'activity/);
+        assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /Verranno inviati prompt e metadati/);
         """
     )
 
@@ -933,29 +1279,165 @@ def test_generate_assignment_ai_draft_with_codex_posts_request_and_fills_teacher
           assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /Bozza Codex pronta/);
           assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /File proposti/);
           assert.match(tested.els.assignmentAiDraftText.value, /Somma con negativi/);
-          assert.equal(tested.els.assignmentAiApplyDraftBtn.disabled, false);
+          assert.equal(tested.els.assignmentAiProgress.hidden, true);
+          tested.setAssignmentWizardStep("ai");
+          assert.equal(tested.assignmentWizardStepComplete("ai"), true);
+          assert.equal(tested.els.assignmentWizardNextBtn.disabled, false);
+          assert.equal(tested.els.assignmentWizardNextBtn.textContent, "Avanti: 3 Prepara revisione");
           assert.match(tested.els.status.textContent, /Bozza Codex pronta/);
+          assert.equal(tested.els.assignmentAiGenerateBtn.disabled, true);
+          assert.match(tested.els.assignmentAiGenerateBtn.title, /Hai gia inviato questo prompt/);
         })();
         """
     )
 
 
-def test_assignment_ai_apply_button_tracks_valid_draft_text() -> None:
+def test_assignment_ai_preview_switches_between_draft_and_context_without_losing_content() -> None:
     run_dashboard_js(
         """
-        assert.equal(tested.els.assignmentAiApplyDraftBtn.disabled, false);
+        tested.renderAssignmentCodexDraft({
+          draft: {
+            summary: "Bozza pronta da mantenere",
+            activity_patch: { titolo: "Somma" },
+            files: [{ path: "starter/main.py", role: "starter", content: "print(1)\\n" }],
+          },
+        });
+        assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /Bozza Codex pronta/);
+        assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /starter\\/main.py/);
+
+        tested.renderAssignmentAiPackage({
+          schema_version: "activity_ai_package.v1",
+          provider: "codex",
+          prompt: "Crea una traccia",
+          activity: { id: "demo", title: "Demo" },
+          files: [],
+          policy: { student_budget: 5, integrity_mode: "normal" },
+          teacher_review: { required: true },
+        });
+        assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /File di contesto inviati all'AI/);
+        assert.doesNotMatch(tested.els.assignmentAiPackagePreview.innerHTML, /Bozza Codex pronta/);
+
+        tested.setAssignmentAiPreviewView("draft");
+        assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /Bozza Codex pronta/);
+        assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /starter\\/main.py/);
+
+        tested.setAssignmentAiPreviewView("context");
+        assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /File di contesto inviati all'AI/);
+      """
+    )
+
+
+def test_assignment_ai_prompt_unlocks_generate_button_for_next_request() -> None:
+    run_dashboard_js(
+        """
+        tested.state.assignmentAiGenerating = false;
+
+        tested.setAssignmentAiPromptLocked(true);
+
+        assert.equal(tested.els.assignmentAiGenerateBtn.disabled, true);
+
+        tested.unlockAssignmentAiPrompt();
+
+        assert.equal(tested.els.assignmentAiGenerateBtn.disabled, false);
+        assert.match(tested.els.assignmentAiGenerateBtn.title, /Invia il prompt/);
+        """
+    )
+
+
+def test_generated_ai_files_open_in_review_style_modal() -> None:
+    run_dashboard_js(
+        """
+        tested.renderAssignmentCodexDraft({
+          draft: {
+            summary: "Bozza pronta",
+            activity_patch: { titolo: "Somma" },
+            files: [
+              { path: "starter/main.py", role: "starter", content: "print(1)\\n" },
+              { path: "tests/test_main.py", role: "test", content: "def test_ok():\\n    assert True\\n" },
+            ],
+          },
+        });
+
+        assert.match(tested.els.assignmentAiPackagePreview.innerHTML, /Apri file/);
+
+        tested.openAssignmentAiFilesDialog(1);
+
+        assert.equal(tested.els.assignmentAiFilesDialog.open, true);
+        assert.match(tested.els.assignmentAiFilesStatus.textContent, /tests\\/test_main.py/);
+        assert.match(tested.els.assignmentAiFilesReview.innerHTML, /starter\\/main.py/);
+        assert.match(tested.els.assignmentAiFilesReview.innerHTML, /test_ok/);
+
+        tested.closeAssignmentAiFilesDialog();
+
+        assert.equal(tested.els.assignmentAiFilesDialog.open, false);
+        """
+    )
+
+
+def test_assignment_ai_progress_blocks_next_until_generation_finishes() -> None:
+    run_dashboard_js(
+        """
+        tested.els.assignmentAiDraftText.value = JSON.stringify({ activity_patch: { titolo: "Somma" }, files: [] });
+        tested.setAssignmentWizardStep("ai");
+        assert.equal(tested.els.assignmentWizardNextBtn.disabled, false);
+
+        tested.state.assignmentAiGenerating = true;
+        tested.setAssignmentAiProgress(true, "Generazione proposta AI in corso", "Provider: codex.");
+        tested.updateAssignmentAiApplyState();
+
+        assert.equal(tested.els.assignmentAiProgress.hidden, false);
+        assert.match(tested.els.assignmentAiProgress.innerHTML, /Provider: codex/);
+        assert.equal(tested.assignmentWizardStepComplete("ai"), false);
+        assert.equal(tested.els.assignmentWizardNextBtn.disabled, true);
+
+        tested.state.assignmentAiGenerating = false;
+        tested.setAssignmentAiProgress(false);
+        tested.updateAssignmentAiApplyState();
+
+        assert.equal(tested.els.assignmentAiProgress.hidden, true);
+        assert.equal(tested.assignmentWizardStepComplete("ai"), true);
+        assert.equal(tested.els.assignmentWizardNextBtn.disabled, false);
+        """
+    )
+
+
+def test_assignment_ai_generation_error_is_visible_outside_details() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.els.assignmentAiProvider.value = "openai";
+
+          await tested.generateAssignmentAiDraft();
+
+          assert.equal(tested.els.assignmentAiProgress.hidden, false);
+          assert.equal(tested.els.assignmentAiProgress.classList.contains("isError"), true);
+          assert.match(tested.els.assignmentAiProgress.innerHTML, /Generazione proposta AI interrotta/);
+          assert.match(tested.els.assignmentAiProgress.innerHTML, /Provider non ancora collegato/);
+          assert.equal(tested.els.assignmentAiGenerateBtn.disabled, true);
+          assert.match(tested.els.status.textContent, /Provider non ancora collegato/);
+        })();
+        """
+    )
+
+
+def test_assignment_ai_next_button_tracks_valid_draft_text() -> None:
+    run_dashboard_js(
+        """
+        tested.setAssignmentWizardStep("ai");
+        assert.equal(tested.els.assignmentWizardNextBtn.disabled, true);
 
         tested.els.assignmentAiDraftText.value = "";
         tested.updateAssignmentAiApplyState();
-        assert.equal(tested.els.assignmentAiApplyDraftBtn.disabled, true);
+        assert.equal(tested.els.assignmentWizardNextBtn.disabled, true);
 
         tested.els.assignmentAiDraftText.value = "{";
         tested.updateAssignmentAiApplyState();
-        assert.equal(tested.els.assignmentAiApplyDraftBtn.disabled, true);
+        assert.equal(tested.els.assignmentWizardNextBtn.disabled, true);
 
         tested.els.assignmentAiDraftText.value = JSON.stringify({ activity_patch: { titolo: "Somma" }, files: [] });
         tested.updateAssignmentAiApplyState();
-        assert.equal(tested.els.assignmentAiApplyDraftBtn.disabled, false);
+        assert.equal(tested.els.assignmentWizardNextBtn.disabled, false);
+        assert.equal(tested.els.assignmentWizardNextBtn.textContent, "Avanti: 3 Prepara revisione");
         """
     )
 
@@ -970,6 +1452,8 @@ def test_apply_assignment_ai_draft_to_activity_form_keeps_teacher_in_control() -
             titolo: "Somma con numeri negativi",
             tipo: "laboratorio",
             difficolta: "C",
+            linguaggio: "python",
+            source_name: "main.py",
             argomenti: ["variabili", "input"],
             consegna: "Scrivi un programma che somma due interi anche negativi.",
             metriche: { tempo_stimato_minuti: 35 },
@@ -989,10 +1473,187 @@ def test_apply_assignment_ai_draft_to_activity_form_keeps_teacher_in_control() -
         assert.equal(tested.els.activityAuthorTopics.value, "variabili, input");
         assert.equal(tested.els.activityAuthorPrompt.value, "Scrivi un programma che somma due interi anche negativi.");
         assert.equal(tested.els.activityAuthorMinutes.value, "35");
-        assert.match(tested.els.activityAuthorStatus.textContent, /Bozza AI applicata/);
-        assert.match(tested.els.activityAuthorStatus.textContent, /Gli asset non vengono ancora salvati automaticamente/);
-        assert.match(tested.els.status.textContent, /docente puo ancora modificare tutto/);
-        assert.equal(tested.els.activityEditorDialog.open, true);
+        assert.equal(tested.els.activityAuthorLanguage.value, "python");
+        assert.equal(tested.els.activityAuthorSourceName.value, "main.py");
+        assert.match(tested.els.activityAuthorStatus.innerHTML, /Bozza AI applicata/);
+        assert.match(tested.els.activityAuthorStatus.innerHTML, /Gli asset non vengono ancora salvati automaticamente/);
+        assert.match(tested.els.status.textContent, /Revisione activity/);
+        assert.equal(tested.els.activityEditorDialog.open, false);
+        assert.equal(tested.els.activityEditorBody.parentElement, tested.els.activityWizardEditorMount);
+        const reviewStep = tested.els.assignmentSteps.find((section) => section.dataset.assignmentStep === "review");
+        assert.equal(reviewStep.hidden, false);
+      """
+    )
+
+
+def test_apply_assignment_ai_draft_infers_language_from_proposed_file() -> None:
+    run_dashboard_js(
+        """
+        tested.els.assignmentAiDraftText.value = JSON.stringify({
+          summary: "Bozza Codex pronta",
+          activity_patch: {
+            titolo: "Somma in Python",
+            tipo: "laboratorio",
+            difficolta: "B",
+            argomenti: ["liste"],
+            consegna: "Completa il programma Python.",
+          },
+          files: [{ path: "starter/main.py", role: "starter", content: "print(0)\\n" }],
+        });
+
+        const applied = tested.applyAssignmentAiDraftToActivityForm();
+
+        assert.equal(applied, true);
+        assert.equal(tested.els.activityAuthorLanguage.value, "python");
+        assert.equal(tested.els.activityAuthorSourceName.value, "main.py");
+      """
+    )
+
+
+def test_activity_author_language_updates_default_source_name_only_when_safe() -> None:
+    run_dashboard_js(
+        """
+        tested.els.activityAuthorLanguage.value = "python";
+        tested.els.activityAuthorSourceName.value = "main.c";
+
+        tested.syncSourceNameForLanguage();
+
+        assert.equal(tested.els.activityAuthorSourceName.value, "main.py");
+
+        tested.els.activityAuthorSourceName.value = "soluzione_personale.py";
+        tested.els.activityAuthorLanguage.value = "c";
+
+        tested.syncSourceNameForLanguage();
+
+        assert.equal(tested.els.activityAuthorSourceName.value, "soluzione_personale.py");
+      """
+    )
+
+
+def test_apply_assignment_ai_draft_accepts_instruction_aliases_for_prompt() -> None:
+    run_dashboard_js(
+        """
+        tested.els.assignmentAiDraftText.value = JSON.stringify({
+          summary: "Bozza proposta",
+          activity_patch: {
+            titolo: "Array in C",
+            istruzioni: "Completa il programma C che somma gli elementi di un array.",
+          },
+          files: [],
+        });
+
+        const applied = tested.applyAssignmentAiDraftToActivityForm();
+
+        assert.equal(applied, true);
+        assert.equal(tested.els.activityAuthorTitle.value, "Array in C");
+        assert.equal(tested.els.activityAuthorPrompt.value, "Completa il programma C che somma gli elementi di un array.");
+      """
+    )
+
+
+def test_save_activity_draft_requires_prompt_before_posting() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.els.activityAuthorTitle.value = "Array in C";
+          tested.els.activityAuthorId.value = "array-c";
+          tested.els.activityAuthorKind.value = "laboratorio";
+          tested.els.activityAuthorDifficulty.value = "B";
+          tested.els.activityAuthorTopics.value = "array";
+          tested.els.activityAuthorMinutes.value = "30";
+          tested.els.activityAuthorLanguage.value = "c";
+          tested.els.activityAuthorSourceName.value = "main.c";
+          tested.els.activityAuthorPrompt.value = "";
+
+          await tested.saveActivityDraft();
+
+          const call = tested.fetchCalls.find((entry) => entry.path === "/api/activities/save");
+          assert.equal(call, undefined);
+          assert.equal(tested.els.activityAuthorStatus.classList.contains("isError"), true);
+          assert.match(tested.els.activityAuthorStatus.innerHTML, /Completa i campi obbligatori: Consegna/);
+          assert.match(tested.els.status.textContent, /Completa i campi obbligatori: Consegna/);
+          assert.equal(tested.els.activityAuthorPrompt["aria-invalid"], "true");
+        })();
+      """
+    )
+
+
+def test_save_activity_draft_shows_backend_errors_in_review_status() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.fetchResponses["/api/activities/save"] = {
+            ok: false,
+            status: 400,
+            statusText: "Bad Request",
+            text: JSON.stringify({ error: "File gia esistente: activities/drafts/array-c.json." }),
+          };
+          tested.els.activityAuthorTitle.value = "Array in C";
+          tested.els.activityAuthorId.value = "array-c";
+          tested.els.activityAuthorKind.value = "laboratorio";
+          tested.els.activityAuthorDifficulty.value = "B";
+          tested.els.activityAuthorTopics.value = "array";
+          tested.els.activityAuthorMinutes.value = "30";
+          tested.els.activityAuthorLanguage.value = "c";
+          tested.els.activityAuthorSourceName.value = "main.c";
+          tested.els.activityAuthorPrompt.value = "Completa il programma.";
+
+          await tested.saveActivityDraft();
+
+          assert.equal(tested.state.activityReviewSaved, false);
+          assert.equal(tested.els.activityAuthorStatus.classList.contains("isError"), true);
+          assert.match(tested.els.activityAuthorStatus.innerHTML, /Activity non salvata/);
+          assert.match(tested.els.activityAuthorStatus.innerHTML, /File gia esistente/);
+          assert.match(tested.els.status.textContent, /Errore salvataggio activity/);
+        })();
+      """
+    )
+
+
+def test_activity_author_required_fields_show_and_clear_invalid_state() -> None:
+    run_dashboard_js(
+        """
+        tested.els.activityAuthorTitle.value = "";
+        tested.els.activityAuthorKind.value = "";
+        tested.els.activityAuthorDifficulty.value = "B";
+        tested.els.activityAuthorTopics.value = "";
+        tested.els.activityAuthorMinutes.value = "0";
+        tested.els.activityAuthorLanguage.value = "";
+        tested.els.activityAuthorSourceName.value = "";
+        tested.els.activityAuthorPrompt.value = "";
+
+        let missing = tested.validateActivityAuthorRequiredFields({ showMessage: true });
+
+        assert.equal(JSON.stringify(missing), JSON.stringify(["Titolo", "Tipo", "Argomenti", "Tempo stimato", "Linguaggio", "File sorgente", "Consegna"]));
+        assert.equal(tested.els.activityAuthorTitle["aria-invalid"], "true");
+        assert.equal(tested.els.activityAuthorKind["aria-invalid"], "true");
+        assert.equal(tested.els.activityAuthorDifficulty["aria-invalid"], "false");
+        assert.equal(tested.els.activityAuthorTopics["aria-invalid"], "true");
+        assert.equal(tested.els.activityAuthorMinutes["aria-invalid"], "true");
+        assert.equal(tested.els.activityAuthorLanguage["aria-invalid"], "true");
+        assert.equal(tested.els.activityAuthorSourceName["aria-invalid"], "true");
+        assert.equal(tested.els.activityAuthorPrompt["aria-invalid"], "true");
+        assert.equal(tested.els.activityAuthorStatus.classList.contains("isError"), true);
+        assert.match(tested.els.activityAuthorStatus.innerHTML, /Titolo, Tipo, Argomenti, Tempo stimato, Linguaggio, File sorgente, Consegna/);
+
+        tested.els.activityAuthorTitle.value = "Array in C";
+        tested.els.activityAuthorKind.value = "laboratorio";
+        tested.els.activityAuthorTopics.value = "array";
+        tested.els.activityAuthorMinutes.value = "30";
+        tested.els.activityAuthorLanguage.value = "c";
+        tested.els.activityAuthorSourceName.value = "main.c";
+        tested.els.activityAuthorPrompt.value = "Completa il programma.";
+
+        missing = tested.validateActivityAuthorRequiredFields({ showMessage: true });
+
+        assert.equal(JSON.stringify(missing), JSON.stringify([]));
+        assert.equal(tested.els.activityAuthorTitle["aria-invalid"], "false");
+        assert.equal(tested.els.activityAuthorKind["aria-invalid"], "false");
+        assert.equal(tested.els.activityAuthorTopics["aria-invalid"], "false");
+        assert.equal(tested.els.activityAuthorMinutes["aria-invalid"], "false");
+        assert.equal(tested.els.activityAuthorLanguage["aria-invalid"], "false");
+        assert.equal(tested.els.activityAuthorSourceName["aria-invalid"], "false");
+        assert.equal(tested.els.activityAuthorPrompt["aria-invalid"], "false");
       """
     )
 
@@ -1005,7 +1666,8 @@ def test_apply_assignment_ai_draft_reports_invalid_json() -> None:
         const applied = tested.applyAssignmentAiDraftToActivityForm();
 
         assert.equal(applied, false);
-        assert.match(tested.els.activityAuthorStatus.textContent, /Bozza AI non applicata/);
+        assert.equal(tested.els.activityAuthorStatus.classList.contains("isError"), true);
+        assert.match(tested.els.activityAuthorStatus.innerHTML, /Bozza AI non applicata/);
         assert.match(tested.els.status.textContent, /Bozza AI non valida/);
       """
     )
@@ -1044,9 +1706,9 @@ def test_assignment_wizard_switches_visible_step() -> None:
         assert.equal(activityTab["aria-selected"], "false");
         assert.equal(aiStep.hidden, false);
         assert.equal(activityStep.hidden, true);
-        assert.match(tested.els.assignmentWizardHint.textContent, /Step 2 di 6/);
+        assert.match(tested.els.assignmentWizardHint.textContent, /Step 2 di 7/);
         assert.equal(tested.els.assignmentWizardPrevBtn.disabled, false);
-        assert.equal(tested.els.assignmentWizardNextBtn.disabled, false);
+        assert.equal(tested.els.assignmentWizardNextBtn.disabled, true);
         """
     )
 
@@ -1055,22 +1717,40 @@ def test_assignment_wizard_prev_next_guides_the_flow() -> None:
     run_dashboard_js(
         """
         tested.setAssignmentWizardStep("activity");
+        tested.els.activityPath.value = "activities/python-base-somma-001.json";
+        tested.setAssignmentWizardStep("activity");
 
         assert.equal(tested.els.assignmentWizardPrevBtn.disabled, true);
-        assert.match(tested.els.assignmentWizardHint.textContent, /Step 1 di 6/);
+        assert.match(tested.els.assignmentWizardHint.textContent, /Step 1 di 7/);
 
         tested.moveAssignmentWizardStep(1);
-        assert.match(tested.els.assignmentWizardHint.textContent, /Step 2 di 6/);
+        assert.match(tested.els.assignmentWizardHint.textContent, /Step 2 di 7/);
+        assert.equal(tested.els.assignmentWizardNextBtn.disabled, true);
+
+        tested.moveAssignmentWizardStep(1);
+        assert.match(tested.els.assignmentWizardHint.textContent, /Step 2 di 7/);
+
+        tested.els.assignmentAiDraftText.value = JSON.stringify({ activity_patch: { titolo: "Somma" }, files: [] });
+        tested.updateAssignmentAiApplyState();
+        tested.moveAssignmentWizardStep(1);
+        assert.match(tested.els.assignmentWizardHint.textContent, /Step 3 di 7/);
+        assert.equal(tested.els.activityEditorBody.parentElement, tested.els.activityWizardEditorMount);
+        assert.equal(tested.els.assignmentWizardNextBtn.disabled, true);
+
+        tested.state.activityReviewSaved = true;
+        tested.els.activityPath.value = "activities/drafts/somma.json";
+        tested.setAssignmentWizardStep("review");
+        assert.equal(tested.els.assignmentWizardNextBtn.disabled, false);
 
         tested.moveAssignmentWizardStep(10);
-        assert.match(tested.els.assignmentWizardHint.textContent, /Step 6 di 6/);
+        assert.match(tested.els.assignmentWizardHint.textContent, /Step 7 di 7/);
         assert.equal(tested.els.assignmentWizardNextBtn.disabled, true);
         assert.equal(tested.els.assignmentWizardNextBtn.textContent, "Fine percorso");
 
         tested.moveAssignmentWizardStep(-1);
-        assert.match(tested.els.assignmentWizardHint.textContent, /Step 5 di 6/);
+        assert.match(tested.els.assignmentWizardHint.textContent, /Step 6 di 7/);
         assert.equal(tested.els.assignmentWizardNextBtn.disabled, false);
-        assert.equal(tested.els.assignmentWizardNextBtn.textContent, "Avanti");
+        assert.equal(tested.els.assignmentWizardNextBtn.textContent, "Avanti: 7 Conferma");
         """
     )
 
@@ -1226,6 +1906,27 @@ def test_activity_authoring_difficulty_options_include_readable_labels() -> None
     assert '<option value="F">F - ninja: produzione</option>' in difficulty_section
 
 
+def test_activity_authoring_required_fields_are_marked_in_markup_and_css() -> None:
+    html = open("tools/assignment_dashboard.html", encoding="utf-8").read()
+    css = open("tools/assignment_dashboard.css", encoding="utf-8").read()
+
+    for field_id in [
+        "activityAuthorTitle",
+        "activityAuthorKind",
+        "activityAuthorDifficulty",
+        "activityAuthorTopics",
+        "activityAuthorMinutes",
+        "activityAuthorLanguage",
+        "activityAuthorSourceName",
+        "activityAuthorPrompt",
+    ]:
+        field_markup = html.split(f'id="{field_id}"', 1)[1].split(">", 1)[0]
+        assert "required" in field_markup
+
+    assert '[aria-invalid="true"]' in css
+    assert "#b91c1c" in css
+
+
 def test_legend_renders_static_marks_but_escapes_descriptions() -> None:
     run_dashboard_js(
         """
@@ -1281,6 +1982,40 @@ def test_class_roster_targets_fill_generate_form_with_demo_fallbacks() -> None:
           "studenti/demo",
         );
         """
+    )
+
+
+def test_assignment_targets_can_select_subset_of_roster_students() -> None:
+    run_dashboard_js(
+        """
+        tested.applyRosterToGenerateForm({
+          id: "demo-3a",
+          label: "Classe demo 3A",
+          github_team: "team-demo-3a",
+          students: [
+            { id: "rossi-mario", display_name: "Rossi Mario", local_path: "local/rossi-mario", active: true },
+            { id: "bianchi-luca", display_name: "Bianchi Luca", local_path: "local/bianchi-luca", active: true },
+            { id: "verdi-anna", display_name: "Verdi Anna", local_path: "local/verdi-anna", active: true },
+          ],
+        });
+
+        assert.match(tested.els.assignmentTargetPicker.innerHTML, /Rossi Mario/);
+        assert.match(tested.els.assignmentTargetPicker.innerHTML, /Bianchi Luca/);
+        assert.equal(tested.state.selectedRosterTargetIds.size, 3);
+
+        tested.state.selectedRosterTargetIds = new Set(["rossi-mario", "verdi-anna"]);
+        tested.syncTargetsFromRosterSelection();
+
+        assert.equal(tested.els.targetsText.value, ["local/rossi-mario", "local/verdi-anna"].join("\\n"));
+        assert.match(tested.els.rosterStatus.textContent, /2 target studenti/);
+        assert.match(tested.els.assignmentTargetPicker.innerHTML, /data-roster-target-student="rossi-mario" checked/);
+        assert.doesNotMatch(tested.els.assignmentTargetPicker.innerHTML, /data-roster-target-student="bianchi-luca" checked/);
+
+        tested.els.targetsText.value = "local/bianchi-luca";
+        tested.syncRosterSelectionFromTargetsText();
+
+        assert.deepEqual(Array.from(tested.state.selectedRosterTargetIds), ["bianchi-luca"]);
+      """
     )
 
 
@@ -1717,6 +2452,11 @@ def test_assignment_and_report_panels_are_separated() -> None:
     assert "Assegna activity" in assignment_section
     assert 'id="activitySelect"' in assignment_section
     assert 'id="classRosterSelect"' in assignment_section
+    assert 'id="assignmentTargetPicker"' in assignment_section
+    assert 'id="selectAllRosterTargetsBtn"' in assignment_section
+    assert 'id="clearRosterTargetsBtn"' in assignment_section
+    assert "Studenti dal roster" in assignment_section
+    assert "gruppo di studenti o un singolo studente" in assignment_section
     assert 'id="targetsText"' in assignment_section
     assert 'id="previewAssignmentBtn"' in assignment_section
     assert 'id="saveAssignmentBtn"' in assignment_section

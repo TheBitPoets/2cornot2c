@@ -334,6 +334,8 @@ def save_activity(payload: dict) -> dict:
         topics=topics,
         prompt=str(payload.get("prompt", "")).strip(),
         estimated_minutes=create_activity.positive_int(str(payload.get("estimated_minutes", "30"))),
+        language=create_submission_scaffold.validate_language(str(payload.get("language", "c") or "c")),
+        source_name=create_submission_scaffold.validate_source_name(str(payload.get("source_name", "main.c") or "main.c")),
         context={
             "classe": str(payload.get("class_id", "")).strip(),
             "team_github": str(payload.get("github_team", "")).strip(),

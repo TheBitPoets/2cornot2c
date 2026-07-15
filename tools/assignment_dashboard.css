@@ -162,11 +162,90 @@ select {
   padding: .72rem .9rem;
 }
 
+input[aria-invalid="true"],
+select[aria-invalid="true"],
+textarea[aria-invalid="true"] {
+  border-color: #b91c1c;
+  background: #fff7f7;
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, .12);
+}
+
+input[aria-invalid="true"]:focus,
+select[aria-invalid="true"]:focus,
+textarea[aria-invalid="true"]:focus {
+  outline-color: #b91c1c;
+}
+
 .generateGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: .8rem;
   padding: 1.1rem;
+}
+
+.assignmentTargetPicker {
+  display: grid;
+  gap: .75rem;
+  padding: .85rem;
+  border: 1px solid rgba(17, 17, 17, .1);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.assignmentTargetPickerHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.assignmentTargetPickerHead strong {
+  display: block;
+  margin-bottom: .2rem;
+}
+
+.assignmentTargetPickerHead p {
+  max-width: 48rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: .82rem;
+  line-height: 1.45;
+}
+
+.assignmentTargetPickerList {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: .55rem;
+}
+
+.assignmentTargetOption {
+  display: grid;
+  grid-template-columns: 1rem minmax(0, 1fr);
+  align-items: start;
+  gap: .55rem;
+  padding: .65rem;
+  border: 1px solid rgba(17, 17, 17, .1);
+  border-radius: 8px;
+  background: #fbfbfb;
+}
+
+.assignmentTargetOption input {
+  width: 1rem;
+  height: 1rem;
+  margin: .12rem 0 0;
+  accent-color: #111111;
+}
+
+.assignmentTargetOption strong,
+.assignmentTargetOption small {
+  display: block;
+}
+
+.assignmentTargetOption small {
+  margin-top: .15rem;
+  color: var(--muted);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .assignmentWizard {
@@ -192,6 +271,25 @@ select {
   color: #ffffff;
 }
 
+.segmentedTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+  margin: .65rem 0;
+}
+
+.segmentedTabs button {
+  box-shadow: none;
+  padding: .42rem .7rem;
+  color: var(--muted);
+}
+
+.segmentedTabs button.isActive {
+  background: #111111;
+  border-color: #111111;
+  color: #ffffff;
+}
+
 .assignmentWizardStep {
   min-height: 8rem;
 }
@@ -211,6 +309,62 @@ select {
 .assignmentWizardNav .status {
   margin: 0;
   text-align: center;
+}
+
+.activityWizardEditorMount {
+  margin: 0 1.1rem 1.1rem;
+  border: 1px solid rgba(17, 17, 17, .1);
+  border-radius: 8px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.activityWizardEditorMount .activityEditorBody {
+  overflow: visible;
+}
+
+.activityEditorStatus {
+  margin: 1rem 1.1rem 0;
+  padding: .85rem;
+  border: 1px solid rgba(17, 17, 17, .12);
+  border-radius: 8px;
+  background: #fbfbfb;
+  color: var(--muted);
+}
+
+.activityEditorStatus strong,
+.activityEditorStatus span {
+  display: block;
+}
+
+.activityEditorStatus strong {
+  margin-bottom: .2rem;
+  color: var(--text);
+}
+
+.activityEditorStatus.isSaving {
+  border-color: rgba(17, 17, 17, .22);
+  background: #ffffff;
+}
+
+.activityEditorStatus.isSuccess {
+  border-color: rgba(21, 128, 61, .35);
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.activityEditorStatus.isError {
+  border-color: rgba(185, 28, 28, .35);
+  background: #fff7f7;
+  color: #7f1d1d;
+}
+
+.activityEditorStatus.isSuccess strong {
+  color: #166534;
+}
+
+.activityEditorStatus.isError strong {
+  color: #991b1b;
 }
 
 .assignmentAiDraft {
@@ -240,6 +394,22 @@ select {
   margin-top: 1rem;
 }
 
+.assignmentAiPromptField {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: .55rem;
+}
+
+.assignmentAiPromptField span,
+.assignmentAiPromptField textarea {
+  grid-column: 1 / -1;
+}
+
+.assignmentAiPromptField button {
+  justify-self: end;
+}
+
 .assignmentAiContext {
   display: grid;
   gap: .45rem;
@@ -249,35 +419,132 @@ select {
   background: #ffffff;
 }
 
-.assignmentAiContext strong {
+.assignmentAiContext summary {
+  cursor: pointer;
+  font-weight: 800;
   margin-bottom: .15rem;
 }
 
-.assignmentAiContext label {
+.assignmentAiContext summary::marker {
+  color: var(--muted);
+}
+
+.assignmentAiContextItem {
   display: grid;
-  grid-template-columns: 1rem minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: start;
-  gap: .45rem;
+  gap: .55rem;
   color: var(--muted);
   font-size: .82rem;
   line-height: 1.35;
 }
 
-.assignmentAiContext input[type="checkbox"] {
-  width: 1rem;
-  height: 1rem;
-  margin: .08rem 0 0;
-  accent-color: #111111;
+.contextState {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 4.1rem;
+  border-radius: 999px;
+  padding: .1rem .42rem;
+  border: 1px solid rgba(17, 17, 17, .14);
+  background: #f3f4f6;
+  color: #374151;
+  font-size: .7rem;
+  font-weight: 800;
+  text-transform: uppercase;
 }
 
-.assignmentAiContext input[type="checkbox"]:disabled {
-  opacity: .7;
+.contextState.isIncluded {
+  border-color: rgba(22, 101, 52, .24);
+  background: #ecfdf3;
+  color: #166534;
+}
+
+.contextState.isPlanned {
+  border-color: rgba(146, 64, 14, .24);
+  background: #fff7ed;
+  color: #92400e;
 }
 
 .assignmentAiPolicy {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: .8rem;
+}
+
+.assignmentAiProgress {
+  display: grid;
+  gap: .65rem;
+  padding: .85rem;
+  border: 1px solid rgba(17, 17, 17, .14);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.assignmentAiProgress[hidden] {
+  display: none;
+}
+
+.assignmentAiProgressHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .8rem;
+}
+
+.assignmentAiProgressHeader strong {
+  margin: 0;
+}
+
+.assignmentAiProgressHeader span,
+.assignmentAiProgress p {
+  color: var(--muted);
+  font-size: .82rem;
+  line-height: 1.45;
+}
+
+.assignmentAiProgress p {
+  margin: 0;
+}
+
+.assignmentAiProgressTrack {
+  height: .55rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(17, 17, 17, .08);
+}
+
+.assignmentAiProgressTrack span {
+  display: block;
+  width: 45%;
+  height: 100%;
+  border-radius: inherit;
+  background:
+    linear-gradient(90deg, rgba(17, 17, 17, .15), rgba(17, 17, 17, .78), rgba(17, 17, 17, .15));
+  animation: assignmentAiProgressSweep 1.35s ease-in-out infinite;
+}
+
+.assignmentAiProgress.isError {
+  border-color: rgba(185, 28, 28, .35);
+  background: #fff7f7;
+}
+
+.assignmentAiProgress.isError .assignmentAiProgressHeader strong {
+  color: #991b1b;
+}
+
+.assignmentAiProgress.isError p {
+  color: #7f1d1d;
+}
+
+@keyframes assignmentAiProgressSweep {
+  0% {
+    transform: translateX(-110%);
+  }
+
+  100% {
+    transform: translateX(230%);
+  }
 }
 
 .assignmentPackageJson {
@@ -2098,6 +2365,10 @@ code {
 
   .generateGrid {
     grid-template-columns: 1fr;
+  }
+
+  .assignmentTargetPickerHead {
+    flex-direction: column;
   }
 
   .assignmentPlanGrid {

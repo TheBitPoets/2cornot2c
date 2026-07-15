@@ -132,6 +132,21 @@ def test_validate_codex_activity_draft_decodes_activity_patch_json() -> None:
     assert draft["activity_patch"]["argomenti"] == ["array"]
 
 
+def test_validate_codex_activity_draft_repairs_invalid_backslash_escape() -> None:
+    draft = codex_activity_adapter.validate_codex_activity_draft(
+        {
+            "summary": "Bozza",
+            "teacher_notes": "Note",
+            "activity_patch_json": '{"titolo": "Array C", "consegna": "Completa funzione somma\\_array"}',
+            "files": [],
+            "questions": [],
+            "warnings": [],
+        }
+    )
+
+    assert draft["activity_patch"]["consegna"] == "Completa funzione somma\\_array"
+
+
 def test_validate_codex_activity_draft_normalizes_activity_patch_asset_paths() -> None:
     draft = codex_activity_adapter.validate_codex_activity_draft(
         {

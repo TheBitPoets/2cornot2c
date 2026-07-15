@@ -84,6 +84,7 @@ def normalize_activity(payload: dict[str, Any]) -> dict[str, Any]:
     normalized["assets"] = first_list(payload, "assets")
     normalized["class_id"] = first_text(payload, "class_id") or first_text(context, "classe")
     normalized["github_team"] = first_text(payload, "github_team") or first_text(context, "team_github")
+    normalized["source_name"] = first_text(payload, "source_name") or first_text(context, "source_name")
     return normalized
 
 

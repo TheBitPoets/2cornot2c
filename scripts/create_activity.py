@@ -56,6 +56,8 @@ def build_activity(
     topics: list[str],
     prompt: str,
     estimated_minutes: int,
+    language: str = "c",
+    source_name: str = "",
     context: dict[str, str] | None = None,
 ) -> dict:
     """Build a minimal activity dictionary compatible with validate_activity."""
@@ -69,6 +71,8 @@ def build_activity(
         "titolo": title,
         "tipo": activity_type,
         "difficolta": difficulty,
+        "linguaggio": language,
+        "language": language,
         "argomenti": topics,
         "consegna": prompt,
         "correzione": dict(DEFAULT_CORRECTION),
@@ -79,6 +83,8 @@ def build_activity(
     }
 
     clean_context = {key: value for key, value in (context or {}).items() if value}
+    if source_name:
+        clean_context["source_name"] = source_name
     if clean_context:
         activity["contesto"] = clean_context
 

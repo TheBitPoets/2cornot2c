@@ -104,13 +104,46 @@ def activity_patch_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
     patch_json = payload.get("activity_patch_json")
     if not isinstance(patch_json, str) or not patch_json.strip():
         raise ValueError("La risposta Codex non contiene `activity_patch_json` valido.")
-    try:
-        patch = json.loads(patch_json)
-    except json.JSONDecodeError as error:
-        raise ValueError(f"`activity_patch_json` non e JSON valido: {error}") from error
+    patch = load_activity_patch_json(patch_json)
     if not isinstance(patch, dict):
         raise ValueError("`activity_patch_json` deve contenere un oggetto JSON.")
     return patch
+
+
+def load_activity_patch_json(patch_json: str) -> Any:
+    """Decode Codex activity patch JSON, repairing invalid backslash escapes when safe."""
+
+    try:
+        return json.loads(patch_json)
+    except json.JSONDecodeError as original_error:
+        repaired = escape_invalid_json_backslashes(patch_json)
+        if repaired == patch_json:
+            raise ValueError(f"`activity_patch_json` non e JSON valido: {original_error}") from original_error
+        try:
+            return json.loads(repaired)
+        except json.JSONDecodeError as repaired_error:
+            raise ValueError(f"`activity_patch_json` non e JSON valido: {repaired_error}") from repaired_error
+
+
+def escape_invalid_json_backslashes(text: str) -> str:
+    """Return text with JSON-invalid backslashes escaped as literal backslashes."""
+
+    result: list[str] = []
+    index = 0
+    valid_escapes = {'"', "\\", "/", "b", "f", "n", "r", "t", "u"}
+    while index < len(text):
+        char = text[index]
+        if char != "\\":
+            result.append(char)
+            index += 1
+            continue
+        next_char = text[index + 1] if index + 1 < len(text) else ""
+        if next_char in valid_escapes:
+            result.append(char)
+        else:
+            result.append("\\\\")
+        index += 1
+    return "".join(result)
 
 
 def validate_codex_activity_draft(payload: dict[str, Any]) -> dict[str, Any]:
