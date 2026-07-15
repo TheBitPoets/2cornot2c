@@ -1055,6 +1055,46 @@ def test_assignment_confirm_status_resets_when_assignment_data_changes() -> None
     )
 
 
+def test_assignment_confirm_status_resets_when_activity_is_selected() -> None:
+    run_dashboard_js(
+        """
+        tested.state.activities = [{
+          id: "python-base-somma-001",
+          title: "Somma in Python",
+          path: "activities/python-base-somma-001.json",
+          language: "python",
+          source_name: "main.py",
+        }];
+        tested.els.assignmentConfirmStatus.innerHTML = "<strong>Assegnazione salvata</strong><span>ID: demo</span>";
+
+        tested.selectActivity("activities/python-base-somma-001.json");
+
+        assert.match(tested.els.assignmentConfirmStatus.innerHTML, /Dati modificati/);
+        assert.match(tested.els.assignmentConfirmStatus.innerHTML, /activity e cambiata/);
+        """
+    )
+
+
+def test_assignment_confirm_status_resets_when_roster_is_applied() -> None:
+    run_dashboard_js(
+        """
+        tested.els.assignmentConfirmStatus.innerHTML = "<strong>Distribuzione completata</strong><span>3 target aggiornati</span>";
+
+        tested.applyRosterToGenerateForm({
+          id: "3A",
+          label: "3A TPSI",
+          github_team: "team-3a",
+          students: [
+            { id: "rossi-mario", display_name: "Mario Rossi", local_path: "students/rossi-mario" },
+          ],
+        });
+
+        assert.match(tested.els.assignmentConfirmStatus.innerHTML, /Dati modificati/);
+        assert.match(tested.els.assignmentConfirmStatus.innerHTML, /roster e i destinatari sono cambiati/);
+        """
+    )
+
+
 def test_assignment_ai_package_payload_includes_prompt_policy_and_targets() -> None:
     run_dashboard_js(
         """

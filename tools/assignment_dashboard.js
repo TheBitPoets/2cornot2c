@@ -2099,6 +2099,7 @@ function applyRosterToGenerateForm(roster) {
     ? `Roster applicato con avvisi: ${result.warnings.join(" ")}`
     : `Roster applicato: ${result.targets.length} target studenti.`);
   renderAssignmentContext();
+  resetAssignmentConfirmStatus("Il roster e i destinatari sono cambiati: ricontrolla anteprima e conferma prima di salvare o distribuire.");
   return result;
 }
 
@@ -4115,6 +4116,7 @@ function selectActivity(path) {
     renderRosterPanel();
   }
   renderActivityPanelSummary();
+  resetAssignmentConfirmStatus("L'activity e cambiata: ricontrolla anteprima e conferma prima di salvare o distribuire.");
 }
 
 function updateOutputNameForCurrentActivity() {
