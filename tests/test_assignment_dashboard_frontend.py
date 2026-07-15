@@ -144,6 +144,8 @@ def run_dashboard_js(assertions: str) -> None:
       }}
       closest() {{ return {{ clientWidth: 960 }}; }}
       getBoundingClientRect() {{ return {{ top: 0, bottom: 120, left: 0, right: this.testWidth, width: this.testWidth, height: 120 }}; }}
+      scrollIntoView() {{}}
+      focus() {{}}
       showModal() {{ this.open = true; }}
       close() {{ this.open = false; }}
       setPointerCapture() {{}}
@@ -454,6 +456,7 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         renderAssignmentSelect,
         clearSelectedAssignment,
         applyAssignmentToGenerateForm,
+        selectCoverageActivity,
         rosterOptionLabel,
         localTargetFromStudent,
         rosterTargets,
@@ -1091,6 +1094,43 @@ def test_assignment_confirm_status_resets_when_roster_is_applied() -> None:
 
         assert.match(tested.els.assignmentConfirmStatus.innerHTML, /Dati modificati/);
         assert.match(tested.els.assignmentConfirmStatus.innerHTML, /roster e i destinatari sono cambiati/);
+        """
+    )
+
+
+def test_assignment_confirm_status_resets_when_existing_assignment_is_loaded() -> None:
+    run_dashboard_js(
+        """
+        tested.state.dueAssignments = [{
+          id: "assignment-python-base-somma-001-3a",
+          activity_id: "python-base-somma-001",
+          activity_path: "activities/python-base-somma-001.json",
+          class_id: "3A",
+          class_label: "3A TPSI",
+          github_team: "team-3a",
+          assigned_at: "2026-10-12T09:00:00+02:00",
+          due_at: "2026-10-19T23:59:00+02:00",
+          targets: [{ path: "students/rossi-mario" }],
+        }];
+        tested.els.assignmentConfirmStatus.innerHTML = "<strong>Assegnazione salvata</strong><span>ID: demo</span>";
+
+        tested.applyAssignmentToGenerateForm("assignment-python-base-somma-001-3a");
+
+        assert.match(tested.els.assignmentConfirmStatus.innerHTML, /Dati modificati/);
+        assert.match(tested.els.assignmentConfirmStatus.innerHTML, /Assegnazione caricata/);
+        """
+    )
+
+
+def test_assignment_confirm_status_resets_when_coverage_activity_is_selected() -> None:
+    run_dashboard_js(
+        """
+        tested.els.assignmentConfirmStatus.innerHTML = "<strong>Distribuzione completata</strong><span>3 target aggiornati</span>";
+
+        tested.selectCoverageActivity("activities/python-base-somma-001.json", "demo/python-base-somma-001.json");
+
+        assert.match(tested.els.assignmentConfirmStatus.innerHTML, /Dati modificati/);
+        assert.match(tested.els.assignmentConfirmStatus.innerHTML, /Activity selezionata dalla copertura/);
         """
     )
 

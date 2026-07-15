@@ -1773,6 +1773,7 @@ function applyAssignmentToGenerateForm(assignmentId) {
   renderActivitySelect();
   renderAssignmentContext();
   renderAssignmentSelect();
+  resetAssignmentConfirmStatus("Assegnazione caricata: ricontrolla anteprima e conferma prima di salvare o distribuire.");
   return assignment;
 }
 
@@ -2129,6 +2130,7 @@ function selectCoverageActivity(activityPath, outputName = "") {
   els.activityPath.value = activityPath;
   renderActivitySelect();
   if (outputName) els.outputName.value = outputName;
+  resetAssignmentConfirmStatus("Activity selezionata dalla copertura: ricontrolla anteprima e conferma prima di salvare o distribuire.");
   els.activityPath.scrollIntoView({ behavior: "smooth", block: "center" });
   els.activityPath.focus();
 }
