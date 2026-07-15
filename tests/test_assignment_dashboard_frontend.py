@@ -967,6 +967,37 @@ def test_assignment_confirm_next_guides_save_then_distribute() -> None:
     )
 
 
+def test_assignment_confirm_next_ignores_concurrent_clicks_while_saving() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.setAssignmentWizardStep("confirm");
+          tested.state.activityReviewSaved = true;
+          tested.els.activityPath.value = "activities/python-base-somma-001.json";
+          tested.els.targetsText.value = "students/rossi-mario";
+          tested.els.assignedAt.value = "2026-10-12T09:00";
+          tested.els.dueAt.value = "2026-10-19T23:59";
+          tested.els.activityAuthorLanguage.value = "python";
+          tested.els.activityAuthorSourceName.value = "main.py";
+
+          const firstClick = tested.moveAssignmentWizardStep(1);
+          const secondClick = tested.moveAssignmentWizardStep(1);
+
+          assert.equal(tested.state.assignmentConfirmBusy, true);
+          assert.equal(tested.els.assignmentWizardNextBtn.disabled, true);
+
+          await Promise.all([firstClick, secondClick]);
+
+          const saveCalls = tested.fetchCalls.filter((entry) => entry.path === "/api/assignments/save");
+          assert.equal(saveCalls.length, 1);
+          assert.equal(tested.state.assignmentConfirmBusy, false);
+          assert.equal(tested.state.assignmentRecordSaved, true);
+          assert.equal(tested.els.assignmentWizardNextBtn.textContent, "Distribuisci ai target");
+        })();
+        """
+    )
+
+
 def test_assignment_wizard_contains_teacher_editable_ai_step() -> None:
     html = open("tools/assignment_dashboard.html", encoding="utf-8").read()
     assignment_section = html.split('data-panel-key="assignment"', 1)[1].split('data-panel-key="generate"', 1)[0]

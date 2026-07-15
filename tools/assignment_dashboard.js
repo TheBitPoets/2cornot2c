@@ -155,6 +155,7 @@ const state = {
   activityReviewSaved: false,
   assignmentRecordSaved: false,
   assignmentDistributed: false,
+  assignmentConfirmBusy: false,
   assignmentAiGenerating: false,
   assignmentAiPromptLocked: false,
   assignmentAiDraftFilePath: "",
@@ -1875,19 +1876,20 @@ function setAssignmentConfirmStatus(type, title, message) {
 
 function updateAssignmentConfirmActions() {
   if (els.distributeAssignmentBtn) {
-    els.distributeAssignmentBtn.disabled = !state.assignmentRecordSaved || state.assignmentDistributed;
+    els.distributeAssignmentBtn.disabled = state.assignmentConfirmBusy || !state.assignmentRecordSaved || state.assignmentDistributed;
     els.distributeAssignmentBtn.title = state.assignmentRecordSaved
       ? "Copia traccia, README e asset studente nelle cartelle dei repository target."
       : "Salva prima l'assegnazione, poi potrai distribuire ai target.";
   }
   if (els.saveAssignmentBtn) {
-    els.saveAssignmentBtn.disabled = state.assignmentDistributed;
+    els.saveAssignmentBtn.disabled = state.assignmentConfirmBusy || state.assignmentDistributed;
   }
 }
 
 function resetAssignmentConfirmStatus(message = "I dati dell'assegnazione sono cambiati: ricontrolla anteprima e conferma prima di salvare o distribuire.") {
   state.assignmentRecordSaved = false;
   state.assignmentDistributed = false;
+  state.assignmentConfirmBusy = false;
   setAssignmentConfirmStatus("info", "Dati modificati", message);
   updateAssignmentConfirmActions();
 }
@@ -3182,7 +3184,7 @@ function setAssignmentWizardStep(step) {
   if (els.assignmentWizardNextBtn) {
     const isLast = index >= ASSIGNMENT_WIZARD_STEPS.length - 1;
     const isComplete = assignmentWizardStepComplete(selectedStep);
-    els.assignmentWizardNextBtn.disabled = isLast ? isComplete : !isComplete;
+    els.assignmentWizardNextBtn.disabled = state.assignmentConfirmBusy || (isLast ? isComplete : !isComplete);
     els.assignmentWizardNextBtn.textContent = assignmentWizardNextLabel(selectedStep);
   }
   if (selectedStep === "confirm") updateAssignmentConfirmActions();
@@ -3190,6 +3192,7 @@ function setAssignmentWizardStep(step) {
 
 async function moveAssignmentWizardStep(offset) {
   const current = currentAssignmentWizardStep();
+  if (state.assignmentConfirmBusy) return;
   if (offset > 0) {
     if (current === "ai") {
       applyAssignmentAiDraftToActivityForm();
@@ -3402,10 +3405,13 @@ async function generateAssignmentAiDraft() {
 
 async function saveAssignmentRecord() {
   if (!els.saveAssignmentBtn) return;
+  if (state.assignmentConfirmBusy) return;
   if (!validateAssignmentBeforeConfirm("salvare l'assegnazione")) return;
+  state.assignmentConfirmBusy = true;
   state.assignmentRecordSaved = false;
   state.assignmentDistributed = false;
   updateAssignmentConfirmActions();
+  setAssignmentWizardStep(currentAssignmentWizardStep());
   els.saveAssignmentBtn.disabled = true;
   setStatus("Salvataggio assegnazione...");
   setAssignmentConfirmStatus("saving", "Salvataggio assegnazione", "Sto salvando dati, destinatari e date dell'assegnazione.");
@@ -3432,19 +3438,24 @@ async function saveAssignmentRecord() {
     setStatus(`Assegnazione non salvata: ${message}`);
     setAssignmentConfirmStatus("error", "Assegnazione non salvata", message);
   } finally {
-    els.saveAssignmentBtn.disabled = false;
+    state.assignmentConfirmBusy = false;
     updateAssignmentConfirmActions();
+    setAssignmentWizardStep(currentAssignmentWizardStep());
   }
 }
 
 async function distributeAssignment() {
   if (!els.distributeAssignmentBtn) return;
+  if (state.assignmentConfirmBusy) return;
   if (!validateAssignmentBeforeConfirm("distribuire ai target")) return;
   if (!state.assignmentRecordSaved) {
     setAssignmentConfirmStatus("error", "Salva prima l'assegnazione", "La distribuzione e disponibile solo dopo un salvataggio riuscito.");
     setAssignmentWizardStep("confirm");
     return;
   }
+  state.assignmentConfirmBusy = true;
+  updateAssignmentConfirmActions();
+  setAssignmentWizardStep(currentAssignmentWizardStep());
   els.distributeAssignmentBtn.disabled = true;
   setStatus("Distribuzione assegnazione ai target...");
   setAssignmentConfirmStatus("saving", "Distribuzione ai target", "Sto copiando traccia e asset nelle cartelle dei target selezionati.");
@@ -3473,8 +3484,9 @@ async function distributeAssignment() {
     setStatus(`Distribuzione non completata: ${message}`);
     setAssignmentConfirmStatus("error", "Distribuzione non completata", message);
   } finally {
-    els.distributeAssignmentBtn.disabled = false;
+    state.assignmentConfirmBusy = false;
     updateAssignmentConfirmActions();
+    setAssignmentWizardStep(currentAssignmentWizardStep());
   }
 }
 
