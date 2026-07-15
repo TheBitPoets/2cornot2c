@@ -1717,6 +1717,10 @@ function assignmentLabel(assignment) {
   return `${target} - ${activity} - ${formatDate(assignment.due_at)}`;
 }
 
+function dueAssignmentIds() {
+  return new Set(state.dueAssignments.map((assignment) => assignment.id).filter(Boolean));
+}
+
 function assignmentTargetLine(target) {
   return String(target?.path || target?.target || target?.repo_ref || target?.student_id || "").trim().replaceAll("\\", "/");
 }
@@ -1729,15 +1733,18 @@ function assignmentOutputName(assignment) {
 function renderAssignmentSelect() {
   if (!els.assignmentSelect) return;
   const selected = state.selectedAssignmentId || els.assignmentSelect.value;
+  const dueIds = dueAssignmentIds();
+  const displayedAssignments = state.assignments.length ? state.assignments : state.dueAssignments;
   els.assignmentSelect.innerHTML = '<option value="">Nessuna assegnazione selezionata</option>';
-  for (const assignment of state.dueAssignments) {
+  for (const assignment of displayedAssignments) {
     const option = document.createElement("option");
     option.value = assignment.id || "";
-    option.textContent = assignmentLabel(assignment);
+    const status = dueIds.has(assignment.id) ? "da tracciare" : "gia tracciata o non scaduta";
+    option.textContent = `${assignmentLabel(assignment)} - ${status}`;
     option.title = assignment.id || "";
     els.assignmentSelect.append(option);
   }
-  els.assignmentSelect.value = state.dueAssignments.some((assignment) => assignment.id === selected) ? selected : "";
+  els.assignmentSelect.value = displayedAssignments.some((assignment) => assignment.id === selected) ? selected : "";
   state.selectedAssignmentId = els.assignmentSelect.value;
   if (els.deleteAssignmentBtn) {
     els.deleteAssignmentBtn.disabled = !state.selectedAssignmentId;
@@ -1746,9 +1753,11 @@ function renderAssignmentSelect() {
       : "Seleziona un'assegnazione da tracciare prima di cancellarla.";
   }
   if (els.assignmentStatus) {
-    els.assignmentStatus.textContent = state.dueAssignments.length
-      ? `${state.dueAssignments.length} assegnazioni scadute senza registro.`
-      : "Nessuna assegnazione scaduta senza registro.";
+    if (displayedAssignments.length) {
+      els.assignmentStatus.textContent = `${state.dueAssignments.length} assegnazioni scadute senza registro su ${displayedAssignments.length} assegnazioni salvate.`;
+    } else {
+      els.assignmentStatus.textContent = "Nessuna assegnazione salvata.";
+    }
   }
 }
 

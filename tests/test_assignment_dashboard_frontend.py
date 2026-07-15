@@ -974,6 +974,41 @@ def test_delete_selected_assignment_posts_confirmation_and_refreshes_list() -> N
     )
 
 
+def test_assignment_select_lists_all_saved_assignments_with_tracking_status() -> None:
+    run_dashboard_js(
+        """
+        tested.state.assignments = [
+          {
+            id: "assignment-future-3a",
+            activity_id: "python-base-lista-001",
+            class_label: "3A TPSI",
+            due_at: "2026-11-02T23:59:00+01:00",
+          },
+          {
+            id: "assignment-due-3a",
+            activity_id: "python-base-somma-001",
+            class_label: "3A TPSI",
+            due_at: "2026-10-19T23:59:00+02:00",
+          },
+        ];
+        tested.state.dueAssignments = [tested.state.assignments[1]];
+        tested.state.selectedAssignmentId = "assignment-future-3a";
+
+        tested.renderAssignmentSelect();
+
+        const labels = tested.els.assignmentSelect.children.map((option) => option.textContent);
+        assert.equal(labels.length, 2);
+        assert.match(labels[0], /python-base-lista-001/);
+        assert.match(labels[0], /gia tracciata o non scaduta/);
+        assert.match(labels[1], /python-base-somma-001/);
+        assert.match(labels[1], /da tracciare/);
+        assert.equal(tested.els.assignmentSelect.value, "assignment-future-3a");
+        assert.equal(tested.els.deleteAssignmentBtn.disabled, false);
+        assert.match(tested.els.assignmentStatus.textContent, /1 assegnazioni scadute senza registro su 2 assegnazioni salvate/);
+        """
+    )
+
+
 def test_delete_selected_assignment_stops_when_confirmation_is_cancelled() -> None:
     run_dashboard_js(
         """
