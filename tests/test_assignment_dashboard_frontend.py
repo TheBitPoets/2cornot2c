@@ -998,6 +998,53 @@ def test_assignment_confirm_next_ignores_concurrent_clicks_while_saving() -> Non
     )
 
 
+def test_assignment_confirm_busy_survives_field_reset_while_saving() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.setAssignmentWizardStep("confirm");
+          tested.state.activityReviewSaved = true;
+          tested.els.activityPath.value = "activities/python-base-somma-001.json";
+          tested.els.targetsText.value = "students/rossi-mario";
+          tested.els.assignedAt.value = "2026-10-12T09:00";
+          tested.els.dueAt.value = "2026-10-19T23:59";
+          tested.els.activityAuthorLanguage.value = "python";
+          tested.els.activityAuthorSourceName.value = "main.py";
+
+          let resolveSave;
+          tested.fetchResponses["/api/assignments/save"] = new Promise((resolve) => {
+            resolveSave = resolve;
+          });
+
+          const saveClick = tested.moveAssignmentWizardStep(1);
+
+          assert.equal(tested.state.assignmentConfirmBusy, true);
+          tested.els.targetsText.value = "students/bianchi-luca";
+          tested.els.targetsText.dispatchEvent(new Event("input"));
+
+          assert.equal(tested.state.assignmentConfirmBusy, true);
+          assert.equal(tested.els.assignmentWizardNextBtn.disabled, true);
+
+          await tested.moveAssignmentWizardStep(1);
+          assert.equal(tested.fetchCalls.filter((entry) => entry.path === "/api/assignments/save").length, 1);
+
+          resolveSave({
+            ok: true,
+            assignment: { id: "assignment-python-base-somma-001-3a-tpsi", activity_id: "python-base-somma-001" },
+            assignments: [],
+            due_without_register: [],
+          });
+          await saveClick;
+
+          assert.equal(tested.state.assignmentConfirmBusy, false);
+          assert.equal(tested.state.assignmentRecordSaved, false);
+          assert.match(tested.els.assignmentConfirmStatus.innerHTML, /Dati modificati dopo il salvataggio/);
+          assert.equal(tested.els.distributeAssignmentBtn.disabled, true);
+        })();
+        """
+    )
+
+
 def test_assignment_wizard_contains_teacher_editable_ai_step() -> None:
     html = open("tools/assignment_dashboard.html", encoding="utf-8").read()
     assignment_section = html.split('data-panel-key="assignment"', 1)[1].split('data-panel-key="generate"', 1)[0]

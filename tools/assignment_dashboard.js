@@ -156,6 +156,7 @@ const state = {
   assignmentRecordSaved: false,
   assignmentDistributed: false,
   assignmentConfirmBusy: false,
+  assignmentConfirmRevision: 0,
   assignmentAiGenerating: false,
   assignmentAiPromptLocked: false,
   assignmentAiDraftFilePath: "",
@@ -1889,7 +1890,7 @@ function updateAssignmentConfirmActions() {
 function resetAssignmentConfirmStatus(message = "I dati dell'assegnazione sono cambiati: ricontrolla anteprima e conferma prima di salvare o distribuire.") {
   state.assignmentRecordSaved = false;
   state.assignmentDistributed = false;
-  state.assignmentConfirmBusy = false;
+  state.assignmentConfirmRevision += 1;
   setAssignmentConfirmStatus("info", "Dati modificati", message);
   updateAssignmentConfirmActions();
 }
@@ -3410,6 +3411,7 @@ async function saveAssignmentRecord() {
   state.assignmentConfirmBusy = true;
   state.assignmentRecordSaved = false;
   state.assignmentDistributed = false;
+  const confirmRevision = state.assignmentConfirmRevision;
   updateAssignmentConfirmActions();
   setAssignmentWizardStep(currentAssignmentWizardStep());
   els.saveAssignmentBtn.disabled = true;
@@ -3425,14 +3427,23 @@ async function saveAssignmentRecord() {
     state.selectedAssignmentId = "";
     renderAssignmentSelect();
     const assignmentId = payload.assignment?.id || "-";
-    state.assignmentRecordSaved = true;
-    state.assignmentDistributed = false;
-    setStatus(`Assegnazione salvata: ${assignmentId}.`);
-    setAssignmentConfirmStatus(
-      "success",
-      "Assegnazione salvata",
-      `ID: ${assignmentId}. Ora puoi distribuire ai target oppure tornare agli step precedenti per modificare i dati.`
-    );
+    if (confirmRevision === state.assignmentConfirmRevision) {
+      state.assignmentRecordSaved = true;
+      state.assignmentDistributed = false;
+      setStatus(`Assegnazione salvata: ${assignmentId}.`);
+      setAssignmentConfirmStatus(
+        "success",
+        "Assegnazione salvata",
+        `ID: ${assignmentId}. Ora puoi distribuire ai target oppure tornare agli step precedenti per modificare i dati.`
+      );
+    } else {
+      setStatus(`Assegnazione salvata: ${assignmentId}, ma i dati correnti sono cambiati.`);
+      setAssignmentConfirmStatus(
+        "info",
+        "Dati modificati dopo il salvataggio",
+        "Il salvataggio precedente e completato, ma i dati visibili ora sono cambiati: ricontrolla e salva di nuovo prima di distribuire."
+      );
+    }
   } catch (error) {
     const message = assignmentPlanErrorMessage(error);
     setStatus(`Assegnazione non salvata: ${message}`);
@@ -3454,6 +3465,7 @@ async function distributeAssignment() {
     return;
   }
   state.assignmentConfirmBusy = true;
+  const confirmRevision = state.assignmentConfirmRevision;
   updateAssignmentConfirmActions();
   setAssignmentWizardStep(currentAssignmentWizardStep());
   els.distributeAssignmentBtn.disabled = true;
@@ -3469,13 +3481,22 @@ async function distributeAssignment() {
     });
     renderAssignmentPlan(payload.plan);
     const targetCount = payload.results?.length || 0;
-    state.assignmentDistributed = true;
-    setStatus(`Assegnazione distribuita a ${targetCount} target.`);
-    setAssignmentConfirmStatus(
-      "success",
-      "Distribuzione completata",
-      `${targetCount} target aggiornati. Controlla l'anteprima per eventuali target gia presenti o bloccati.`
-    );
+    if (confirmRevision === state.assignmentConfirmRevision) {
+      state.assignmentDistributed = true;
+      setStatus(`Assegnazione distribuita a ${targetCount} target.`);
+      setAssignmentConfirmStatus(
+        "success",
+        "Distribuzione completata",
+        `${targetCount} target aggiornati. Controlla l'anteprima per eventuali target gia presenti o bloccati.`
+      );
+    } else {
+      setStatus(`Distribuzione completata per ${targetCount} target, ma i dati correnti sono cambiati.`);
+      setAssignmentConfirmStatus(
+        "info",
+        "Dati modificati dopo la distribuzione",
+        "La distribuzione precedente e completata, ma i dati visibili ora sono cambiati: ricontrolla prima di procedere."
+      );
+    }
   } catch (error) {
     const message = assignmentPlanErrorMessage(error);
     if (els.assignmentPlanPreview) {
