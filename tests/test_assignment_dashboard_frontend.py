@@ -204,6 +204,7 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
       }},
       window: {{
         addEventListener() {{}},
+        confirm() {{ return true; }},
         location: {{
           reloaded: false,
           reload() {{ this.reloaded = true; }},
@@ -451,6 +452,7 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         generateAssignmentAiDraft,
         saveAssignmentRecord,
         distributeAssignment,
+        deleteSelectedAssignment,
         generateReport,
         loadAssignments,
         renderAssignmentSelect,
@@ -478,7 +480,13 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
     const tested = context.__dashboardTest;
     {assertions}
     """
-    subprocess.run(["node", "-e", textwrap.dedent(script)], check=True)
+    result = subprocess.run(["node", "-e", textwrap.dedent(script)], capture_output=True, text=True)
+    if result.returncode:
+        raise AssertionError(
+            f"Node dashboard test failed with exit code {result.returncode}\n"
+            f"STDOUT:\n{result.stdout}\n"
+            f"STDERR:\n{result.stderr}"
+        )
 
 
 def test_reports_for_activity_isolates_explicit_classes() -> None:
@@ -840,7 +848,7 @@ def test_save_assignment_record_posts_form_and_refreshes_due_assignments() -> No
           });
           assert.equal(tested.state.assignments.length, 1);
           assert.equal(tested.state.dueAssignments.length, 1);
-          assert.match(tested.els.assignmentStatus.textContent, /1 assegnazioni scadute senza registro/);
+          assert.match(tested.els.assignmentStatus.textContent, /1 da tracciare/);
           assert.match(tested.els.status.textContent, /Assegnazione salvata/);
           assert.match(tested.els.assignmentConfirmStatus.innerHTML, /Assegnazione salvata/);
           assert.match(tested.els.assignmentConfirmStatus.innerHTML, /assignment-python-base-somma-001-3a-tpsi/);
@@ -925,6 +933,133 @@ def test_distribute_assignment_requires_saved_record_before_posting() -> None:
           assert.equal(tested.fetchCalls.some((entry) => entry.path === "/api/assignments/distribute"), false);
           assert.match(tested.els.assignmentConfirmStatus.innerHTML, /Salva prima l'assegnazione/);
           assert.equal(tested.els.distributeAssignmentBtn.disabled, true);
+        })();
+        """
+    )
+
+
+def test_delete_selected_assignment_posts_confirmation_and_refreshes_list() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.state.dueAssignments = [{
+            id: "assignment-python-base-somma-001-3a",
+            activity_id: "python-base-somma-001",
+            activity_path: "activities/python-base-somma-001.json",
+            class_id: "3A",
+            class_label: "3A TPSI",
+            due_at: "2026-10-19T23:59:00+02:00",
+          }];
+          tested.renderAssignmentSelect();
+          tested.els.assignmentSelect.value = "assignment-python-base-somma-001-3a";
+          tested.state.selectedAssignmentId = "assignment-python-base-somma-001-3a";
+          tested.renderAssignmentSelect();
+          tested.els.nowAt.value = "2026-10-20T08:00";
+          tested.fetchResponses["/api/assignments/delete"] = {
+            ok: true,
+            deleted: { id: "assignment-python-base-somma-001-3a" },
+            assignments: [],
+            due_without_register: [],
+          };
+
+          await tested.deleteSelectedAssignment();
+
+          const call = tested.fetchCalls.find((entry) => entry.path === "/api/assignments/delete");
+          assert.ok(call);
+          assert.equal(call.options.method, "POST");
+          const body = JSON.parse(call.options.body);
+          assert.equal(body.assignment_id, "assignment-python-base-somma-001-3a");
+          assert.match(body.now, /^2026-10-20T08:00:00[+-]\\d{2}:\\d{2}$/);
+          assert.equal(tested.state.dueAssignments.length, 0);
+          assert.equal(tested.state.selectedAssignmentId, "");
+          assert.equal(tested.els.deleteAssignmentBtn.disabled, true);
+          assert.match(tested.els.status.textContent, /Assegnazione cancellata/);
+        })();
+        """
+    )
+
+
+def test_assignment_select_lists_all_saved_assignments_with_tracking_status() -> None:
+    run_dashboard_js(
+        """
+        tested.state.assignments = [
+          {
+            id: "assignment-due-with-register",
+            activity_id: "demo-scaduta-con-registro",
+            class_label: "3A TPSI",
+            due_at: "2026-10-19T23:59:00+02:00",
+          },
+          {
+            id: "assignment-due-without-register",
+            activity_id: "demo-scaduta-senza-registro",
+            class_label: "3A TPSI",
+            due_at: "2026-10-19T23:59:00+02:00",
+          },
+          {
+            id: "assignment-future-with-register",
+            activity_id: "demo-non-scaduta-con-registro",
+            class_label: "3A TPSI",
+            due_at: "2026-11-02T23:59:00+01:00",
+          },
+          {
+            id: "assignment-future-without-register",
+            activity_id: "demo-non-scaduta-senza-registro",
+            class_label: "3A TPSI",
+            due_at: "2026-11-03T23:59:00+01:00",
+          },
+        ];
+        tested.state.assignmentStatuses = [
+          { assignment: tested.state.assignments[0], due: true, has_register: true, needs_register: false },
+          { assignment: tested.state.assignments[1], due: true, has_register: false, needs_register: true },
+          { assignment: tested.state.assignments[2], due: false, has_register: true, needs_register: false },
+          { assignment: tested.state.assignments[3], due: false, has_register: false, needs_register: false },
+        ];
+        tested.state.dueAssignments = [tested.state.assignments[1]];
+        tested.state.selectedAssignmentId = "assignment-future-with-register";
+
+        tested.renderAssignmentSelect();
+
+        const labels = tested.els.assignmentSelect.children
+          .filter((option) => option.value)
+          .map((option) => option.textContent);
+        assert.equal(labels.length, 4);
+        assert.match(labels[0], /demo-scaduta-con-registro/);
+        assert.match(labels[0], /scaduta - con registro/);
+        assert.match(labels[1], /demo-scaduta-senza-registro/);
+        assert.match(labels[1], /scaduta - senza registro - da tracciare/);
+        assert.match(labels[2], /demo-non-scaduta-con-registro/);
+        assert.match(labels[2], /non scaduta - con registro/);
+        assert.match(labels[3], /demo-non-scaduta-senza-registro/);
+        assert.match(labels[3], /non scaduta - senza registro/);
+        assert.equal(tested.els.assignmentSelect.value, "assignment-future-with-register");
+        assert.equal(tested.els.deleteAssignmentBtn.disabled, false);
+        assert.match(tested.els.assignmentStatus.textContent, /1 da tracciare/);
+        assert.match(tested.els.assignmentStatus.textContent, /1 scadute con registro/);
+        assert.match(tested.els.assignmentStatus.textContent, /1 non scadute senza registro/);
+        assert.match(tested.els.assignmentStatus.textContent, /1 non scadute con registro/);
+        assert.match(tested.els.assignmentStatus.textContent, /4 assegnazioni salvate/);
+        """
+    )
+
+
+def test_delete_selected_assignment_stops_when_confirmation_is_cancelled() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.window.confirm = () => false;
+          tested.state.dueAssignments = [{
+            id: "assignment-python-base-somma-001-3a",
+            activity_id: "python-base-somma-001",
+            class_label: "3A TPSI",
+            due_at: "2026-10-19T23:59:00+02:00",
+          }];
+          tested.state.selectedAssignmentId = "assignment-python-base-somma-001-3a";
+          tested.renderAssignmentSelect();
+
+          await tested.deleteSelectedAssignment();
+
+          assert.equal(tested.fetchCalls.some((entry) => entry.path === "/api/assignments/delete"), false);
+          assert.equal(tested.state.selectedAssignmentId, "assignment-python-base-somma-001-3a");
         })();
         """
     )
@@ -2619,6 +2754,8 @@ def test_assignment_and_report_panels_are_separated() -> None:
     assert 'id="outputName"' in report_section
     assert 'id="reportAssignmentSummary"' in report_section
     assert 'id="generateReportBtn"' in report_section
+    assert 'id="deleteAssignmentBtn"' in report_section
+    assert "Cancella assegnazione" in report_section
     assert 'id="saveAssignmentBtn"' not in report_section
     assert 'id="distributeAssignmentBtn"' not in report_section
     assert 'id="activitySelect"' not in report_section

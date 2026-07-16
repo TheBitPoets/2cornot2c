@@ -267,12 +267,28 @@ def list_assignment_records(now: str | None = None) -> dict:
             continue
     current_time = now or datetime_now_iso()
     assignments = record_storage.list_assignments()
-    due_without_register = record_storage.assignments_due_without_register(registers, current_time)
+    assignment_statuses = [
+        assignment_records.assignment_status(assignment, registers, current_time).to_dict()
+        for assignment in assignments
+    ]
+    due_without_register = [status for status in assignment_statuses if status["needs_register"]]
     return {
         "assignments": assignments,
+        "assignment_statuses": assignment_statuses,
         "due_without_register": due_without_register,
         "now": current_time,
     }
+
+
+def delete_assignment_record(payload: dict) -> dict:
+    """Delete one explicit assignment record and return the updated list."""
+
+    assignment_id = str(payload.get("assignment_id", "")).strip()
+    if not assignment_id:
+        raise ValueError("assignment_id obbligatorio.")
+    deleted = assignment_record_storage().delete_assignment(assignment_id)
+    updated = list_assignment_records(str(payload.get("now", "")).strip() or None)
+    return {"ok": True, "deleted": deleted, **updated}
 
 
 def list_class_rosters() -> list[dict]:
@@ -2110,6 +2126,20 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/assignments/save":
             try:
                 self.write_json(save_assignment_record(payload))
+            except FileNotFoundError as error:
+                self.send_response(404)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+            except Exception as error:  # noqa: BLE001
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+            return
+        if parsed.path == "/api/assignments/delete":
+            try:
+                self.write_json(delete_assignment_record(payload))
             except FileNotFoundError as error:
                 self.send_response(404)
                 self.send_header("Content-Type", "application/json; charset=utf-8")

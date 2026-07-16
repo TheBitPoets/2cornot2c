@@ -265,12 +265,15 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
       </div>
       <div class="generateGrid">
         <label class="wideField">
-          <span>Assegnazione da tracciare</span>
-          <select id="assignmentSelect" aria-label="Assegnazioni scadute senza registro">
+          <span>Assegnazione salvata</span>
+          <select id="assignmentSelect" aria-label="Assegnazioni salvate">
             <option value="">Caricamento assegnazioni...</option>
           </select>
         </label>
         <p id="assignmentStatus" class="status wideField" aria-live="polite"></p>
+        <div class="generateActions wideField">
+          <button id="deleteAssignmentBtn" type="button" class="danger" disabled title="Cancella solo il record docente dell'assegnazione selezionata. Non rimuove eventuali file gia distribuiti nei repository studenti.">Cancella assegnazione</button>
+        </div>
         <label class="wideField">
           <span>Output registro</span>
           <input id="outputName" type="text" value="demo/demo_assignment.json">

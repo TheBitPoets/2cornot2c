@@ -88,6 +88,7 @@ Usalo quando devi:
 - controllare o modificare il nome del registro JSON;
 - creare il registro in `teacher-reports`;
 - aggiornare il tracking dopo consegne, grading o feedback.
+- cancellare un'assegnazione salvata in `teacher-assignments` quando e stata creata per errore: questa azione non rimuove eventuali file gia distribuiti nei repository studenti.
 
 Screenshot previsto: `doc/images/dashboard-guides/docente-registro-consegne.png`.
 

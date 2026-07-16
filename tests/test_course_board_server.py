@@ -139,8 +139,43 @@ def test_list_assignment_records_marks_due_without_register(tmp_path, monkeypatc
     payload = course_board_server.list_assignment_records("2026-10-20T08:00:00+02:00")
 
     assert payload["assignments"][0]["id"] == assignment["id"]
+    assert payload["assignment_statuses"][0]["assignment"]["id"] == assignment["id"]
+    assert payload["assignment_statuses"][0]["due"] is True
+    assert payload["assignment_statuses"][0]["has_register"] is False
     assert payload["due_without_register"][0]["assignment"]["id"] == assignment["id"]
     assert payload["due_without_register"][0]["needs_register"] is True
+
+
+def test_delete_assignment_record_removes_saved_record(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
+    monkeypatch.setattr(course_board_server, "TEACHER_ASSIGNMENTS_DIR", tmp_path / "teacher-assignments")
+
+    storage = assignment_records.JsonAssignmentRecordStorage(tmp_path, tmp_path / "teacher-assignments")
+    assignment = storage.write_assignment(
+        assignment_records.build_assignment_record(
+            activity_id="python-base-somma-001",
+            activity_path="activities/python-base-somma-001.json",
+            target_type="class",
+            class_id="3A-TPSI",
+            class_label="3A TPSI",
+            github_team="team-3a-tpsi",
+            assigned_at="2026-10-12T09:00:00+02:00",
+            due_at="2026-10-19T23:59:00+02:00",
+            targets=[{"student_id": "rossi-mario", "path": "studenti/rossi-mario"}],
+        ),
+    )
+
+    payload = course_board_server.delete_assignment_record({
+        "assignment_id": assignment["id"],
+        "now": "2026-10-20T08:00:00+02:00",
+    })
+
+    assert payload["ok"] is True
+    assert payload["deleted"]["id"] == assignment["id"]
+    assert payload["assignments"] == []
+    assert payload["due_without_register"] == []
+    assert not (tmp_path / assignment["path"]).exists()
 
 
 def test_generate_assignment_report_preserves_assignment_id(tmp_path, monkeypatch) -> None:

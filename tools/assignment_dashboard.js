@@ -121,6 +121,7 @@ const LEGEND_SECTIONS = {
 const state = {
   activities: [],
   assignments: [],
+  assignmentStatuses: [],
   dueAssignments: [],
   reports: [],
   classRosters: [],
@@ -276,6 +277,7 @@ const els = {
   activityPath: document.querySelector("#activityPath"),
   assignmentSelect: document.querySelector("#assignmentSelect"),
   assignmentStatus: document.querySelector("#assignmentStatus"),
+  deleteAssignmentBtn: document.querySelector("#deleteAssignmentBtn"),
   assignmentConfirmStatus: document.querySelector("#assignmentConfirmStatus"),
   classRosterSelect: document.querySelector("#classRosterSelect"),
   rosterStatus: document.querySelector("#rosterStatus"),
@@ -1706,6 +1708,7 @@ async function loadAssignments() {
   const query = now ? `?now=${encodeURIComponent(now)}` : "";
   const payload = await api(`/api/assignments${query}`);
   state.assignments = payload.assignments || [];
+  state.assignmentStatuses = payload.assignment_statuses || [];
   state.dueAssignments = (payload.due_without_register || []).map((item) => item.assignment || item);
   renderAssignmentSelect();
 }
@@ -1714,6 +1717,27 @@ function assignmentLabel(assignment) {
   const target = assignment.class_label || assignment.class_id || assignment.github_team || assignment.target_type || "target";
   const activity = assignment.activity_id || assignment.activity_path || "activity";
   return `${target} - ${activity} - ${formatDate(assignment.due_at)}`;
+}
+
+function dueAssignmentIds() {
+  return new Set(state.dueAssignments.map((assignment) => assignment.id).filter(Boolean));
+}
+
+function assignmentStatusMap() {
+  return new Map(
+    state.assignmentStatuses
+      .filter((status) => status?.assignment?.id)
+      .map((status) => [status.assignment.id, status]),
+  );
+}
+
+function assignmentSelectStatusLabel(assignment, status, dueIds) {
+  const due = status?.due === true || dueIds.has(assignment.id);
+  const hasRegister = status?.has_register === true;
+  if (due && !hasRegister) return "scaduta - senza registro - da tracciare";
+  if (due && hasRegister) return "scaduta - con registro";
+  if (!due && hasRegister) return "non scaduta - con registro";
+  return "non scaduta - senza registro";
 }
 
 function assignmentTargetLine(target) {
@@ -1728,20 +1752,46 @@ function assignmentOutputName(assignment) {
 function renderAssignmentSelect() {
   if (!els.assignmentSelect) return;
   const selected = state.selectedAssignmentId || els.assignmentSelect.value;
-  els.assignmentSelect.innerHTML = '<option value="">Nessuna assegnazione selezionata</option>';
-  for (const assignment of state.dueAssignments) {
+  const dueIds = dueAssignmentIds();
+  const statusesById = assignmentStatusMap();
+  const displayedAssignments = state.assignments.length ? state.assignments : state.dueAssignments;
+  const emptyOption = document.createElement("option");
+  emptyOption.value = "";
+  emptyOption.textContent = "Nessuna assegnazione selezionata";
+  els.assignmentSelect.replaceChildren(emptyOption);
+  for (const assignment of displayedAssignments) {
     const option = document.createElement("option");
     option.value = assignment.id || "";
-    option.textContent = assignmentLabel(assignment);
+    const status = assignmentSelectStatusLabel(assignment, statusesById.get(assignment.id), dueIds);
+    option.textContent = `${assignmentLabel(assignment)} - ${status}`;
     option.title = assignment.id || "";
     els.assignmentSelect.append(option);
   }
-  els.assignmentSelect.value = state.dueAssignments.some((assignment) => assignment.id === selected) ? selected : "";
+  els.assignmentSelect.value = displayedAssignments.some((assignment) => assignment.id === selected) ? selected : "";
   state.selectedAssignmentId = els.assignmentSelect.value;
+  if (els.deleteAssignmentBtn) {
+    els.deleteAssignmentBtn.disabled = !state.selectedAssignmentId;
+    els.deleteAssignmentBtn.title = state.selectedAssignmentId
+      ? "Cancella solo il record docente dell'assegnazione selezionata. Non rimuove eventuali file gia distribuiti nei repository studenti."
+      : "Seleziona un'assegnazione da tracciare prima di cancellarla.";
+  }
   if (els.assignmentStatus) {
-    els.assignmentStatus.textContent = state.dueAssignments.length
-      ? `${state.dueAssignments.length} assegnazioni scadute senza registro.`
-      : "Nessuna assegnazione scaduta senza registro.";
+    if (displayedAssignments.length) {
+      const statusCounters = displayedAssignments.reduce((counters, assignment) => {
+        const label = assignmentSelectStatusLabel(assignment, statusesById.get(assignment.id), dueIds);
+        counters[label] = (counters[label] || 0) + 1;
+        return counters;
+      }, {});
+      els.assignmentStatus.textContent = [
+        `${state.dueAssignments.length} da tracciare`,
+        `${statusCounters["scaduta - con registro"] || 0} scadute con registro`,
+        `${statusCounters["non scaduta - senza registro"] || 0} non scadute senza registro`,
+        `${statusCounters["non scaduta - con registro"] || 0} non scadute con registro`,
+        `${displayedAssignments.length} assegnazioni salvate`,
+      ].join(", ") + ".";
+    } else {
+      els.assignmentStatus.textContent = "Nessuna assegnazione salvata.";
+    }
   }
 }
 
@@ -1749,6 +1799,7 @@ function clearSelectedAssignment() {
   if (!state.selectedAssignmentId && !els.assignmentSelect?.value) return;
   state.selectedAssignmentId = "";
   if (els.assignmentSelect) els.assignmentSelect.value = "";
+  if (els.deleteAssignmentBtn) els.deleteAssignmentBtn.disabled = true;
   renderReportAssignmentSummary();
 }
 
@@ -3423,6 +3474,7 @@ async function saveAssignmentRecord() {
       body: JSON.stringify(assignmentRecordPayload()),
     });
     state.assignments = payload.assignments || [];
+    state.assignmentStatuses = payload.assignment_statuses || [];
     state.dueAssignments = (payload.due_without_register || []).map((item) => item.assignment || item);
     state.selectedAssignmentId = "";
     renderAssignmentSelect();
@@ -3508,6 +3560,49 @@ async function distributeAssignment() {
     state.assignmentConfirmBusy = false;
     updateAssignmentConfirmActions();
     setAssignmentWizardStep(currentAssignmentWizardStep());
+  }
+}
+
+async function deleteSelectedAssignment() {
+  if (!els.deleteAssignmentBtn) return;
+  const assignmentId = state.selectedAssignmentId || els.assignmentSelect?.value || "";
+  if (!assignmentId) {
+    setStatus("Seleziona un'assegnazione da cancellare.");
+    return;
+  }
+  const assignment = state.dueAssignments.find((candidate) => candidate.id === assignmentId)
+    || state.assignments.find((candidate) => candidate.id === assignmentId);
+  const label = assignment ? assignmentLabel(assignment) : assignmentId;
+  const confirmed = window.confirm?.(
+    `Cancellare l'assegnazione "${label}"?\n\n` +
+    "Verrà eliminato solo il record docente in teacher-assignments. " +
+    "Eventuali file già distribuiti nei repository studenti non verranno rimossi."
+  );
+  if (!confirmed) return;
+  els.deleteAssignmentBtn.disabled = true;
+  setStatus("Cancellazione assegnazione...");
+  try {
+    const payload = await api("/api/assignments/delete", {
+      method: "POST",
+      body: JSON.stringify({
+        assignment_id: assignmentId,
+        now: dateTimeInputToIso(els.nowAt?.value),
+      }),
+    });
+    state.assignments = payload.assignments || [];
+    state.assignmentStatuses = payload.assignment_statuses || [];
+    state.dueAssignments = (payload.due_without_register || []).map((item) => item.assignment || item);
+    state.selectedAssignmentId = "";
+    if (els.assignmentSelect) els.assignmentSelect.value = "";
+    renderAssignmentSelect();
+    clearSelectedAssignment();
+    renderReportAssignmentSummary();
+    resetAssignmentConfirmStatus("Assegnazione cancellata: seleziona o crea un'altra consegna prima di salvare o distribuire.");
+    setStatus(`Assegnazione cancellata: ${payload.deleted?.id || assignmentId}.`);
+  } catch (error) {
+    const message = assignmentPlanErrorMessage(error);
+    setStatus(`Assegnazione non cancellata: ${message}`);
+    renderAssignmentSelect();
   }
 }
 
@@ -4337,6 +4432,7 @@ els.wizardOpenActivityEditorBtn?.addEventListener("click", openActivityReviewSte
 els.activityEditorCloseBtn?.addEventListener("click", closeActivityEditor);
 els.saveAssignmentBtn?.addEventListener("click", saveAssignmentRecord);
 els.distributeAssignmentBtn?.addEventListener("click", distributeAssignment);
+els.deleteAssignmentBtn?.addEventListener("click", deleteSelectedAssignment);
 els.generateReportBtn.addEventListener("click", generateReport);
 els.reportSelect.addEventListener("change", loadSelectedReport);
 els.coverageOpenBtn.addEventListener("click", openCoverageDialog);

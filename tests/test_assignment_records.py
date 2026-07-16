@@ -245,6 +245,19 @@ def test_assignment_record_storage_writes_lists_and_filters_due_without_register
     assert storage.assignments_due_without_register([{"assignment_id": saved["id"]}], "2026-10-20T08:00:00+02:00") == []
 
 
+def test_assignment_record_storage_deletes_assignment(tmp_path) -> None:
+    storage = assignment_records.JsonAssignmentRecordStorage(tmp_path)
+    saved = storage.write_assignment(assignment_records.build_assignment_record(**sample_assignment()))
+
+    deleted = storage.delete_assignment(saved["id"])
+
+    assert deleted["id"] == saved["id"]
+    assert deleted["path"] == saved["path"]
+    assert storage.list_assignments() == []
+    with pytest.raises(FileNotFoundError, match="Assegnazione non trovata"):
+        storage.read_assignment(saved["id"])
+
+
 def test_assignment_record_storage_rejects_duplicate_without_overwrite(tmp_path) -> None:
     storage = assignment_records.JsonAssignmentRecordStorage(tmp_path)
     storage.write_assignment(assignment_records.build_assignment_record(**sample_assignment()))
