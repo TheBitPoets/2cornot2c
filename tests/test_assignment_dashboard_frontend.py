@@ -332,6 +332,16 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
               path: "activities/drafts/somma-in-python.json",
             }}],
           }};
+          if (path === "/api/activities/delete") return {{
+            ok: true,
+            deleted: {{
+              id: "somma-in-python",
+              title: "Somma in Python",
+              path: "activities/drafts/somma-in-python.json",
+            }},
+            dependencies: {{ assignments: [], reports: [] }},
+            activities: [],
+          }};
           if (path === "/api/assignment-overview") return {{ rows: [] }};
           if (path === "/api/assignment-reports/ai-feedback/review") {{
             return {{
@@ -401,6 +411,9 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         setupPanelDragAndDrop,
         renderLegend,
         saveActivityDraft,
+        deleteSelectedActivity,
+        updateDeleteActivityButton,
+        renderActivitySelect,
         validateActivityAuthorRequiredFields,
         setActivityAuthorStatus,
         openActivityEditor,
@@ -598,6 +611,80 @@ def test_save_activity_draft_posts_form_and_selects_saved_activity() -> None:
           assert.equal(tested.els.activityAuthorStatus.classList.contains("isSuccess"), true);
           assert.match(tested.els.activityAuthorStatus.innerHTML, /Activity salvata/);
           assert.match(tested.els.activityPanelStatus.textContent, /Activity salvata/);
+        })();
+        """
+    )
+
+
+def test_delete_selected_activity_posts_confirmation_and_refreshes_list() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.state.activities = [{
+            id: "somma-in-python",
+            title: "Somma in Python",
+            kind: "compito-casa",
+            path: "activities/drafts/somma-in-python.json",
+          }];
+          tested.els.activityPath.value = "activities/drafts/somma-in-python.json";
+          tested.renderActivitySelect();
+          assert.equal(tested.els.deleteActivityBtn.disabled, false);
+
+          await tested.deleteSelectedActivity();
+
+          const call = tested.fetchCalls.find((entry) => entry.path === "/api/activities/delete");
+          assert.ok(call);
+          assert.equal(call.options.method, "POST");
+          assert.equal(JSON.parse(call.options.body).activity_path, "activities/drafts/somma-in-python.json");
+          assert.deepEqual(tested.state.activities, []);
+          assert.equal(tested.els.activityPath.value, "");
+          assert.equal(tested.els.deleteActivityBtn.disabled, true);
+          assert.match(tested.els.activityAuthorStatus.innerHTML, /Activity cancellata/);
+        })();
+        """
+    )
+
+
+def test_delete_selected_activity_stops_for_non_draft_activity() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.state.activities = [{
+            id: "demo",
+            title: "Demo",
+            kind: "laboratorio",
+            path: "examples/assignment_tracking/demo_activity.json",
+          }];
+          tested.els.activityPath.value = "examples/assignment_tracking/demo_activity.json";
+          tested.renderActivitySelect();
+          assert.equal(tested.els.deleteActivityBtn.disabled, true);
+
+          await tested.deleteSelectedActivity();
+
+          assert.equal(tested.fetchCalls.some((entry) => entry.path === "/api/activities/delete"), false);
+          assert.match(tested.els.activityAuthorStatus.innerHTML, /solo bozze activity/);
+        })();
+        """
+    )
+
+
+def test_delete_selected_activity_stops_when_confirmation_is_cancelled() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.window.confirm = () => false;
+          tested.state.activities = [{
+            id: "somma-in-python",
+            title: "Somma in Python",
+            kind: "compito-casa",
+            path: "activities/drafts/somma-in-python.json",
+          }];
+          tested.els.activityPath.value = "activities/drafts/somma-in-python.json";
+
+          await tested.deleteSelectedActivity();
+
+          assert.equal(tested.fetchCalls.some((entry) => entry.path === "/api/activities/delete"), false);
+          assert.equal(tested.els.activityPath.value, "activities/drafts/somma-in-python.json");
         })();
         """
     )

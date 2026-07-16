@@ -2,7 +2,48 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from scripts import assignment_records, course_board_server
+
+
+def patch_assignment_paths(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
+    monkeypatch.setattr(course_board_server, "TEACHER_ASSIGNMENTS_DIR", tmp_path / "teacher-assignments")
+    monkeypatch.setattr(course_board_server, "ACTIVITY_DIRS", [tmp_path / "activities"])
+
+
+def write_demo_activity(path, activity_id: str = "python-base-somma-001") -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "id": activity_id,
+                "titolo": "Somma in Python",
+                "tipo": "laboratorio",
+                "difficolta": "B",
+                "argomenti": ["variabili"],
+                "linguaggio": "python",
+                "consegna": "Somma due numeri.",
+                "correzione": {
+                    "compila": True,
+                    "test": True,
+                    "sandbox": True,
+                    "ai_feedback": False,
+                },
+                "metriche": {
+                    "tempo_stimato_minuti": 20,
+                    "traccia_tempo_dichiarato": True,
+                    "traccia_sessioni_thebitlab": True,
+                    "traccia_eventi_didattici": True,
+                    "traccia_errori_compilazione": True,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
 
 
 def test_assignment_overview_lists_students_across_saved_reports(tmp_path, monkeypatch) -> None:
@@ -176,6 +217,88 @@ def test_delete_assignment_record_removes_saved_record(tmp_path, monkeypatch) ->
     assert payload["assignments"] == []
     assert payload["due_without_register"] == []
     assert not (tmp_path / assignment["path"]).exists()
+
+
+def test_delete_activity_record_removes_unlinked_draft(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    activity_path = tmp_path / "activities" / "drafts" / "python-base-somma-001.json"
+    write_demo_activity(activity_path)
+
+    payload = course_board_server.delete_activity_record({
+        "activity_path": "activities/drafts/python-base-somma-001.json",
+    })
+
+    assert payload["ok"] is True
+    assert payload["deleted"]["id"] == "python-base-somma-001"
+    assert payload["dependencies"] == {"assignments": [], "reports": []}
+    assert payload["activities"] == []
+    assert not activity_path.exists()
+
+
+def test_delete_activity_record_blocks_when_assignment_exists(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    activity_path = tmp_path / "activities" / "drafts" / "python-base-somma-001.json"
+    write_demo_activity(activity_path)
+    storage = assignment_records.JsonAssignmentRecordStorage(tmp_path, tmp_path / "teacher-assignments")
+    storage.write_assignment(
+        assignment_records.build_assignment_record(
+            activity_id="python-base-somma-001",
+            activity_path="activities/drafts/python-base-somma-001.json",
+            target_type="class",
+            class_id="3A-TPSI",
+            class_label="3A TPSI",
+            github_team="team-3a-tpsi",
+            assigned_at="2026-10-12T09:00:00+02:00",
+            due_at="2026-10-19T23:59:00+02:00",
+            targets=[{"student_id": "rossi-mario", "path": "studenti/rossi-mario"}],
+        ),
+    )
+
+    with pytest.raises(ValueError, match="assegnazioni"):
+        course_board_server.delete_activity_record({
+            "activity_path": "activities/drafts/python-base-somma-001.json",
+        })
+
+    assert activity_path.exists()
+
+
+def test_delete_activity_record_blocks_when_register_exists(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    activity_path = tmp_path / "activities" / "drafts" / "python-base-somma-001.json"
+    write_demo_activity(activity_path)
+    report_path = tmp_path / "teacher-reports" / "demo" / "python-base-somma-001.json"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "activity_id": "python-base-somma-001",
+                "title": "Somma in Python",
+                "students": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="registri"):
+        course_board_server.delete_activity_record({
+            "activity_path": "activities/drafts/python-base-somma-001.json",
+        })
+
+    assert activity_path.exists()
+
+
+def test_delete_activity_record_rejects_non_draft_activity(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    activity_path = tmp_path / "activities" / "python-base-somma-001.json"
+    write_demo_activity(activity_path)
+
+    with pytest.raises(ValueError, match="activities/drafts"):
+        course_board_server.delete_activity_record({
+            "activity_path": "activities/python-base-somma-001.json",
+        })
+
+    assert activity_path.exists()
 
 
 def test_generate_assignment_report_preserves_assignment_id(tmp_path, monkeypatch) -> None:
