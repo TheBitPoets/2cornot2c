@@ -49,6 +49,20 @@ Per ogni consegna dello studente mostra:
 - link repository o file consegna quando disponibili;
 - feedback AI/didattico solo se approvato dal docente.
 
+## Relazione con il lab studente
+
+La dashboard studente web e la vista di consultazione: mostra consegne, calendario, percorso, stato, risultati e feedback approvato.
+
+La parte operativa del laboratorio verra costruita prima come backend riusabile con CLI/TUI:
+
+- prepara o trova il workspace della consegna;
+- apre la cartella di lavoro;
+- esegue test locali o Docker quando previsti dall'activity;
+- salva un risultato JSON strutturato;
+- espone lo stesso stato alla dashboard studente e al registro docente.
+
+Una futura GUI web completa del lab o un terminale nel browser dovranno riusare questo backend, invece di duplicare la logica di esecuzione nella pagina studente.
+
 ## Regola feedback
 
 La vista studente non mostra bozze AI, feedback respinti o feedback non generati.
