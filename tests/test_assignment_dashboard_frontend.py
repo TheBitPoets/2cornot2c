@@ -1307,7 +1307,7 @@ def test_assignment_wizard_contains_teacher_editable_ai_step() -> None:
     assert 'id="distributeAssignmentBtn" type="button" hidden disabled' in assignment_section
     assert "1 Salva assegnazione" in assignment_section
     assert "2 Distribuisci ai target" in assignment_section
-    assert "Usa il bottone Avanti" in assignment_section
+    assert "Usa il bottone principale in basso" in assignment_section
 
 
 def test_assignment_wizard_uses_calendar_date_time_inputs() -> None:
