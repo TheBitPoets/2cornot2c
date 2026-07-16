@@ -1755,7 +1755,10 @@ function renderAssignmentSelect() {
   const dueIds = dueAssignmentIds();
   const statusesById = assignmentStatusMap();
   const displayedAssignments = state.assignments.length ? state.assignments : state.dueAssignments;
-  els.assignmentSelect.innerHTML = '<option value="">Nessuna assegnazione selezionata</option>';
+  const emptyOption = document.createElement("option");
+  emptyOption.value = "";
+  emptyOption.textContent = "Nessuna assegnazione selezionata";
+  els.assignmentSelect.replaceChildren(emptyOption);
   for (const assignment of displayedAssignments) {
     const option = document.createElement("option");
     option.value = assignment.id || "";

@@ -1014,7 +1014,9 @@ def test_assignment_select_lists_all_saved_assignments_with_tracking_status() ->
 
         tested.renderAssignmentSelect();
 
-        const labels = tested.els.assignmentSelect.children.map((option) => option.textContent);
+        const labels = tested.els.assignmentSelect.children
+          .filter((option) => option.value)
+          .map((option) => option.textContent);
         assert.equal(labels.length, 4);
         assert.match(labels[0], /demo-scaduta-con-registro/);
         assert.match(labels[0], /scaduta - con registro/);
