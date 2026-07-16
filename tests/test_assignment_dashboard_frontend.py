@@ -480,7 +480,13 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
     const tested = context.__dashboardTest;
     {assertions}
     """
-    subprocess.run(["node", "-e", textwrap.dedent(script)], check=True)
+    result = subprocess.run(["node", "-e", textwrap.dedent(script)], capture_output=True, text=True)
+    if result.returncode:
+        raise AssertionError(
+            f"Node dashboard test failed with exit code {result.returncode}\n"
+            f"STDOUT:\n{result.stdout}\n"
+            f"STDERR:\n{result.stderr}"
+        )
 
 
 def test_reports_for_activity_isolates_explicit_classes() -> None:
