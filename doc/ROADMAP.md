@@ -115,6 +115,62 @@ Rimandabile dopo l'MVP:
 - metriche longitudinali avanzate;
 - database SQLite se il layer JSON normalizzato basta per la prova iniziale.
 
+### Decisione luglio-agosto 2026: lab studente MVP
+
+Per arrivare a una prova reale entro meta agosto, il lab studente va costruito come backend riusabile con una prima interfaccia operativa semplice, non come GUI web completa da subito.
+
+Decisione:
+
+1. Il nucleo deve essere un **backend lab studente** indipendente dalla UI:
+   - legge assegnazioni e activity dello studente;
+   - trova o prepara il workspace della consegna;
+   - mostra traccia, file attesi, scadenza e stato;
+   - esegue test locali o Docker quando l'activity lo dichiara;
+   - salva risultati strutturati JSON;
+   - espone gli stessi dati a dashboard docente, dashboard studente, CLI/TUI e future GUI.
+2. La prima interfaccia operativa sara una **CLI/TUI o interfaccia semigrafica**:
+   - elenco consegne;
+   - dettaglio consegna;
+   - apertura cartella workspace;
+   - esecuzione test;
+   - lettura stdout/stderr e risultati;
+   - preparazione o aggiornamento della consegna.
+3. La **dashboard studente web gia iniziata** resta la vista principale di consultazione:
+   - consegne e scadenze;
+   - percorso e calendario;
+   - stato e risultati;
+   - feedback approvato;
+   - priorita e prossime scadenze.
+4. Dopo il backend lab e la TUI, si potra aggiungere un terminale web prototipo:
+   - browser -> WebSocket -> backend lab -> PTY -> `student_lab.py` o shell controllata;
+   - preferibilmente su VM/container Linux, per semplificare PTY e isolamento;
+   - da trattare come demo/prototipo finche non esistono sessioni, timeout, permessi e isolamento robusti.
+5. La GUI web completa del lab arrivera dopo, riusando lo stesso backend:
+   - editor file;
+   - pulsante esegui test;
+   - output test;
+   - risultati e tentativi;
+   - consegna;
+   - feedback;
+   - eventuale tutor AI controllato.
+
+Per agosto l'obiettivo realistico e:
+
+- backend lab studente funzionante;
+- runner locale e Docker minimale collegato alle activity;
+- CLI/TUI usabile per svolgere e testare consegne;
+- dashboard studente web che legge stato, risultati e scadenze;
+- dati demo coerenti per provare il flusso docente -> assegnazione -> studente -> test -> registro.
+
+Non rientrano nel perimetro agosto:
+
+- sandbox multiutente completa;
+- terminale web sicuro per classe reale;
+- editor web completo;
+- blocco copia/incolla e monitoraggio schermo;
+- quote AI/token per studenti;
+- autenticazione e permessi reali.
+
 ## Stato recente
 
 Gia completato o sostanzialmente avviato:
@@ -357,6 +413,11 @@ Da avere per la prima prova:
    - collegare `student_id`, nominativo locale, username GitHub e repository studente;
    - mostrare avatar/profilo studente solo quando la fonte autorevole arriva da GitHub Team o roster locale;
    - evitare link esterni generici nella navigazione studente.
+6. Collegamento con il lab studente:
+   - la dashboard studente web resta la vista di consultazione per consegne, calendario, percorso, risultati e feedback;
+   - l'esecuzione operativa di test, Docker e workspace passa prima dal backend lab e da una CLI/TUI;
+   - la dashboard web legge i risultati prodotti dal lab, senza duplicare logica di esecuzione;
+   - una futura GUI web o terminale web dovra riusare lo stesso backend lab.
 
 ### Feedback assistito
 
@@ -586,30 +647,56 @@ Ordine consigliato:
 7. Pagina assegnazione activity a classe, gruppo o singolo studente e scaffold consegna.
    - separare esplicitamente i flussi GUI: `Assegna activity` distribuisce/aggancia asset e destinatari, `Crea/Aggiorna registro consegne` traccia lo stato delle consegne, `Valuta consegne` gestisce grading, voti e feedback;
    - evitare che il registro venga percepito come il comando che assegna l'activity o attribuisce voti definitivi.
-8. Interfaccia studente MVP per consegne, stato e feedback deterministico, web oppure TUI se piu rapida da rendere affidabile.
-9. Consolidamento grading Docker per flusso reale di consegna.
-10. Collegamento automatico report/artifact al registro consegne.
-11. Revisione dashboard docente contro il flusso MVP reale.
-12. Event log minimale e provenienza minima per activity/contenuti generati.
-13. Cornice didattica generale e guida operativa docente/studente.
-14. Inserimento activity nel percorso e visualizzazione calendario.
-15. Gestione consuntivi UDA reali:
+8. Backend lab studente MVP:
+   - servizio applicativo indipendente dalla UI;
+   - lista consegne dello studente;
+   - risoluzione workspace e activity package;
+   - runner locale;
+   - runner Docker minimale;
+   - salvataggio risultati JSON;
+   - contratto letto da dashboard studente e registro docente.
+9. CLI/TUI studente sopra il backend lab:
+   - elenco consegne;
+   - dettaglio consegna;
+   - apertura workspace;
+   - esecuzione test;
+   - lettura risultati;
+   - primo flusso operativo usabile prima della GUI web completa.
+10. Dashboard studente MVP per consegne, calendario, percorso, stato e feedback deterministico, collegata ai risultati prodotti dal backend lab.
+11. Consolidamento grading Docker per flusso reale di consegna.
+12. Collegamento automatico report/artifact al registro consegne.
+13. Revisione dashboard docente contro il flusso MVP reale.
+14. Event log minimale e provenienza minima per activity/contenuti generati.
+15. Cornice didattica generale e guida operativa docente/studente.
+16. Inserimento activity nel percorso e visualizzazione calendario.
+17. Terminale web prototipo, solo dopo backend lab e TUI:
+   - WebSocket;
+   - PTY;
+   - sessione locale o VM/container Linux;
+   - limiti chiari: demo/prototipo finche non esistono isolamento, permessi e timeout robusti.
+18. GUI web lab completa, riusando il backend:
+   - editor file;
+   - esecuzione test;
+   - output e tentativi;
+   - consegna;
+   - feedback.
+19. Gestione consuntivi UDA reali:
    - mostrare le UDA reali anche nella vista calendario docente;
    - aggiungere un filtro calendario per scegliere tra UDA programmate, UDA reali o entrambe;
    - rendere cliccabili le UDA reali nei calendari docente/studente e aprire un modal di dettaglio coerente;
    - cancellare una UDA reale gia salvata dal calendario docente;
    - ripristinare lo stato pianificato quando il consuntivo e stato inserito per errore;
    - confermare prima della cancellazione e registrare provenienza/eventuale audit log.
-16. Archiviazione/cancellazione sicura di registri e activity.
-17. Catalogo fonti e import paragrafi da piu repository.
-18. Estensione layout pannelli alle altre pagine.
-19. Feedback assistito avanzato lato studente.
-20. Governance AI e integrita prove:
+20. Archiviazione/cancellazione sicura di registri e activity.
+21. Catalogo fonti e import paragrafi da piu repository.
+22. Estensione layout pannelli alle altre pagine.
+23. Feedback assistito avanzato lato studente.
+24. Governance AI e integrita prove:
    - budget token/richieste per scuola, classe, studente e activity;
    - audit log separato dal voto per chiamate AI, costi stimati e policy applicata;
    - modalita verifica controllata nella GUI con blocco/log copia-incolla, focus/tab e fullscreen;
    - informativa chiara allo studente e minimizzazione dei dati raccolti.
-21. Source provider API, indicizzazione frammenti e playground knowledge lab.
+25. Source provider API, indicizzazione frammenti e playground knowledge lab.
 
 ## Criterio di priorita
 
