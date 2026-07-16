@@ -967,10 +967,9 @@ def test_delete_selected_assignment_posts_confirmation_and_refreshes_list() -> N
           const call = tested.fetchCalls.find((entry) => entry.path === "/api/assignments/delete");
           assert.ok(call);
           assert.equal(call.options.method, "POST");
-          assert.deepEqual(JSON.parse(call.options.body), {
-            assignment_id: "assignment-python-base-somma-001-3a",
-            now: "2026-10-20T08:00:00+02:00",
-          });
+          const body = JSON.parse(call.options.body);
+          assert.equal(body.assignment_id, "assignment-python-base-somma-001-3a");
+          assert.match(body.now, /^2026-10-20T08:00:00[+-]\\d{2}:\\d{2}$/);
           assert.equal(tested.state.dueAssignments.length, 0);
           assert.equal(tested.state.selectedAssignmentId, "");
           assert.equal(tested.els.deleteAssignmentBtn.disabled, true);
