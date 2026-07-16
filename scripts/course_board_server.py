@@ -291,6 +291,100 @@ def delete_assignment_record(payload: dict) -> dict:
     return {"ok": True, "deleted": deleted, **updated}
 
 
+def repository_relative_path(path: Path) -> str:
+    """Return a repository-relative path where possible."""
+
+    try:
+        return str(path.relative_to(ROOT)).replace("\\", "/")
+    except ValueError:
+        return str(path).replace("\\", "/")
+
+
+def ensure_activity_draft_path(path: Path) -> None:
+    """Reject deletion targets outside activities/drafts."""
+
+    drafts_dir = (ROOT / "activities" / "drafts").resolve()
+    try:
+        path.resolve().relative_to(drafts_dir)
+    except ValueError as error:
+        raise ValueError("Puoi cancellare solo bozze activity dentro activities/drafts.") from error
+
+
+def activity_delete_dependencies(activity_path: Path, activity: dict) -> dict:
+    """Return assignments and registers that still reference an activity."""
+
+    activity_id = str(activity.get("id", "")).strip()
+    relative_activity_path = repository_relative_path(activity_path.resolve())
+    assignments = []
+    for assignment in assignment_record_storage().list_assignments():
+        assignment_activity_id = str(assignment.get("activity_id", "")).strip()
+        assignment_activity_path = str(assignment.get("activity_path", "")).strip().replace("\\", "/")
+        if (activity_id and assignment_activity_id == activity_id) or assignment_activity_path == relative_activity_path:
+            assignments.append(
+                {
+                    "id": assignment.get("id", ""),
+                    "activity_id": assignment_activity_id,
+                    "activity_path": assignment_activity_path,
+                    "target_type": assignment.get("target_type", ""),
+                    "class_id": assignment.get("class_id", ""),
+                    "github_team": assignment.get("github_team", ""),
+                    "due_at": assignment.get("due_at", ""),
+                }
+            )
+
+    storage = assignment_storage()
+    reports = []
+    for report_summary in storage.list_assignment_reports():
+        name = str(report_summary.get("name", "")).strip()
+        if not name:
+            continue
+        try:
+            report = storage.read_assignment_report(name)
+        except Exception:  # noqa: BLE001
+            continue
+        report_activity_id = str(report.get("activity_id", "")).strip()
+        report_activity_path = str(report.get("activity_path", "")).strip().replace("\\", "/")
+        if (activity_id and report_activity_id == activity_id) or report_activity_path == relative_activity_path:
+            reports.append(
+                {
+                    "name": name,
+                    "activity_id": report_activity_id,
+                    "assignment_id": report.get("assignment_id", ""),
+                    "class_id": report.get("class_id", ""),
+                    "github_team": report.get("github_team", ""),
+                    "due_at": report.get("due_at", ""),
+                }
+            )
+    return {"assignments": assignments, "reports": reports}
+
+
+def delete_activity_record(payload: dict) -> dict:
+    """Delete one unlinked teacher-authored activity draft."""
+
+    activity_path = resolve_local_path(str(payload.get("activity_path", "")), "activity_path")
+    if not activity_path.is_file():
+        raise FileNotFoundError(f"Activity non trovata: {activity_path}")
+    ensure_activity_draft_path(activity_path)
+    storage = assignment_storage()
+    activity = normalize_activity(storage.read_json(activity_path))
+    dependencies = activity_delete_dependencies(activity_path, activity)
+    if dependencies["assignments"] or dependencies["reports"]:
+        assignment_count = len(dependencies["assignments"])
+        report_count = len(dependencies["reports"])
+        raise ValueError(
+            "Activity collegata a "
+            f"{assignment_count} assegnazioni e {report_count} registri: cancellazione bloccata. "
+            "Cancella prima le assegnazioni o i registri collegati."
+        )
+    deleted = {
+        "id": activity.get("id", ""),
+        "title": activity.get("title", ""),
+        "path": repository_relative_path(activity_path),
+    }
+    activity_path.unlink()
+    return {"ok": True, "deleted": deleted, "dependencies": dependencies, "activities": list_activities()}
+
+
 def list_class_rosters() -> list[dict]:
     """List local class rosters stored in doc/classes."""
 
@@ -2140,6 +2234,20 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/assignments/delete":
             try:
                 self.write_json(delete_assignment_record(payload))
+            except FileNotFoundError as error:
+                self.send_response(404)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+            except Exception as error:  # noqa: BLE001
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+            return
+        if parsed.path == "/api/activities/delete":
+            try:
+                self.write_json(delete_activity_record(payload))
             except FileNotFoundError as error:
                 self.send_response(404)
                 self.send_header("Content-Type", "application/json; charset=utf-8")

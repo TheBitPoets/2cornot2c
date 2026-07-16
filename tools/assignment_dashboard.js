@@ -273,6 +273,7 @@ const els = {
   activityAuthorPrompt: document.querySelector("#activityAuthorPrompt"),
   activityAuthorOverwrite: document.querySelector("#activityAuthorOverwrite"),
   saveActivityBtn: document.querySelector("#saveActivityBtn"),
+  deleteActivityBtn: document.querySelector("#deleteActivityBtn"),
   activitySelect: document.querySelector("#activitySelect"),
   activityPath: document.querySelector("#activityPath"),
   assignmentSelect: document.querySelector("#assignmentSelect"),
@@ -2065,6 +2066,31 @@ async function saveActivityDraft() {
   }
 }
 
+function normalizedActivityPathValue() {
+  return String(els.activityPath?.value || "").trim().replaceAll("\\", "/");
+}
+
+function isDraftActivityPath(path) {
+  return String(path || "").trim().replaceAll("\\", "/").startsWith("activities/drafts/");
+}
+
+function updateDeleteActivityButton() {
+  if (!els.deleteActivityBtn) return;
+  const path = normalizedActivityPathValue();
+  const activity = currentActivity();
+  const canDelete = Boolean(activity && isDraftActivityPath(path));
+  els.deleteActivityBtn.disabled = !canDelete;
+  if (!path) {
+    els.deleteActivityBtn.title = "Seleziona una bozza activity da cancellare.";
+  } else if (!activity) {
+    els.deleteActivityBtn.title = "Seleziona una activity salvata dall'elenco prima di cancellarla.";
+  } else if (!isDraftActivityPath(path)) {
+    els.deleteActivityBtn.title = "Puoi cancellare solo bozze activity dentro activities/drafts.";
+  } else {
+    els.deleteActivityBtn.title = "Cancella questa bozza activity se non ha consegne o registri collegati.";
+  }
+}
+
 function renderActivitySelect() {
   els.activitySelect.innerHTML = '<option value="">Scegli activity</option>';
   for (const activity of state.activities) {
@@ -2076,6 +2102,48 @@ function renderActivitySelect() {
   }
   const current = els.activityPath.value.trim().replaceAll("\\", "/");
   els.activitySelect.value = state.activities.some((activity) => activity.path === current) ? current : "";
+  updateDeleteActivityButton();
+}
+
+async function deleteSelectedActivity() {
+  const activity = currentActivity();
+  const activityPath = normalizedActivityPathValue();
+  if (!activity || !activityPath) {
+    setActivityAuthorStatus("error", "Activity non cancellata", "Seleziona prima una activity salvata dall'elenco.");
+    return;
+  }
+  if (!isDraftActivityPath(activityPath)) {
+    setActivityAuthorStatus("error", "Activity non cancellata", "Puoi cancellare solo bozze activity dentro activities/drafts.");
+    return;
+  }
+  const label = activity.title || activity.id || activityPath;
+  const confirmed = window.confirm(
+    `Cancellare l'activity "${label}"?\n\n` +
+      "Viene rimosso solo il file della bozza. Se esistono consegne o registri collegati, il server blocca la cancellazione.",
+  );
+  if (!confirmed) return;
+  els.deleteActivityBtn.disabled = true;
+  setActivityAuthorStatus("saving", "Cancellazione activity", "Controllo collegamenti e rimozione della bozza in corso...");
+  try {
+    const payload = await api("/api/activities/delete", {
+      method: "POST",
+      body: JSON.stringify({ activity_path: activityPath }),
+    });
+    state.activities = payload.activities || [];
+    els.activityPath.value = "";
+    els.activitySelect.value = "";
+    state.activityReviewSaved = false;
+    renderActivitySelect();
+    renderCoverage();
+    renderActivityPanelSummary();
+    resetAssignmentConfirmStatus("Activity cancellata: scegli o crea una nuova activity prima di continuare.");
+    setActivityAuthorStatus("success", "Activity cancellata", `Bozza rimossa: ${payload.deleted?.path || activityPath}.`);
+    setStatus(`Activity cancellata: ${label}.`);
+  } catch (error) {
+    setActivityAuthorStatus("error", "Activity non cancellata", error.message);
+    setStatus(`Errore cancellazione activity: ${error.message}`);
+    updateDeleteActivityButton();
+  }
 }
 
 function activityCoverageKey(activity) {
@@ -4280,6 +4348,7 @@ function selectActivity(path) {
   els.activityPath.value = path;
   const activity = state.activities.find((candidate) => candidate.path === path);
   if (activity) state.activityReviewSaved = true;
+  renderActivitySelect();
   if (activity?.id) {
     const language = activity.language || activity.linguaggio || "";
     if (language) setSelectValueIfAvailable(els.activityAuthorLanguage, language);
@@ -4465,6 +4534,7 @@ els.assignmentSelect?.addEventListener("change", () => {
   setStatus(assignment ? `Assegnazione selezionata: ${assignment.id}.` : "Nessuna assegnazione selezionata.");
 });
 els.saveActivityBtn?.addEventListener("click", saveActivityDraft);
+els.deleteActivityBtn?.addEventListener("click", deleteSelectedActivity);
 els.activityAuthorTitle?.addEventListener("input", () => {
   syncActivityAuthorIdSuggestion();
   markActivityReviewDirty();
