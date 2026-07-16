@@ -139,6 +139,9 @@ def test_list_assignment_records_marks_due_without_register(tmp_path, monkeypatc
     payload = course_board_server.list_assignment_records("2026-10-20T08:00:00+02:00")
 
     assert payload["assignments"][0]["id"] == assignment["id"]
+    assert payload["assignment_statuses"][0]["assignment"]["id"] == assignment["id"]
+    assert payload["assignment_statuses"][0]["due"] is True
+    assert payload["assignment_statuses"][0]["has_register"] is False
     assert payload["due_without_register"][0]["assignment"]["id"] == assignment["id"]
     assert payload["due_without_register"][0]["needs_register"] is True
 

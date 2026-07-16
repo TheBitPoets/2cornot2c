@@ -121,6 +121,7 @@ const LEGEND_SECTIONS = {
 const state = {
   activities: [],
   assignments: [],
+  assignmentStatuses: [],
   dueAssignments: [],
   reports: [],
   classRosters: [],
@@ -1707,6 +1708,7 @@ async function loadAssignments() {
   const query = now ? `?now=${encodeURIComponent(now)}` : "";
   const payload = await api(`/api/assignments${query}`);
   state.assignments = payload.assignments || [];
+  state.assignmentStatuses = payload.assignment_statuses || [];
   state.dueAssignments = (payload.due_without_register || []).map((item) => item.assignment || item);
   renderAssignmentSelect();
 }
@@ -1719,6 +1721,23 @@ function assignmentLabel(assignment) {
 
 function dueAssignmentIds() {
   return new Set(state.dueAssignments.map((assignment) => assignment.id).filter(Boolean));
+}
+
+function assignmentStatusMap() {
+  return new Map(
+    state.assignmentStatuses
+      .filter((status) => status?.assignment?.id)
+      .map((status) => [status.assignment.id, status]),
+  );
+}
+
+function assignmentSelectStatusLabel(assignment, status, dueIds) {
+  const due = status?.due === true || dueIds.has(assignment.id);
+  const hasRegister = status?.has_register === true;
+  if (due && !hasRegister) return "scaduta - senza registro - da tracciare";
+  if (due && hasRegister) return "scaduta - con registro";
+  if (!due && hasRegister) return "non scaduta - con registro";
+  return "non scaduta - senza registro";
 }
 
 function assignmentTargetLine(target) {
@@ -1734,12 +1753,13 @@ function renderAssignmentSelect() {
   if (!els.assignmentSelect) return;
   const selected = state.selectedAssignmentId || els.assignmentSelect.value;
   const dueIds = dueAssignmentIds();
+  const statusesById = assignmentStatusMap();
   const displayedAssignments = state.assignments.length ? state.assignments : state.dueAssignments;
   els.assignmentSelect.innerHTML = '<option value="">Nessuna assegnazione selezionata</option>';
   for (const assignment of displayedAssignments) {
     const option = document.createElement("option");
     option.value = assignment.id || "";
-    const status = dueIds.has(assignment.id) ? "da tracciare" : "gia tracciata o non scaduta";
+    const status = assignmentSelectStatusLabel(assignment, statusesById.get(assignment.id), dueIds);
     option.textContent = `${assignmentLabel(assignment)} - ${status}`;
     option.title = assignment.id || "";
     els.assignmentSelect.append(option);
@@ -1754,7 +1774,18 @@ function renderAssignmentSelect() {
   }
   if (els.assignmentStatus) {
     if (displayedAssignments.length) {
-      els.assignmentStatus.textContent = `${state.dueAssignments.length} assegnazioni scadute senza registro su ${displayedAssignments.length} assegnazioni salvate.`;
+      const statusCounters = displayedAssignments.reduce((counters, assignment) => {
+        const label = assignmentSelectStatusLabel(assignment, statusesById.get(assignment.id), dueIds);
+        counters[label] = (counters[label] || 0) + 1;
+        return counters;
+      }, {});
+      els.assignmentStatus.textContent = [
+        `${state.dueAssignments.length} da tracciare`,
+        `${statusCounters["scaduta - con registro"] || 0} scadute con registro`,
+        `${statusCounters["non scaduta - senza registro"] || 0} non scadute senza registro`,
+        `${statusCounters["non scaduta - con registro"] || 0} non scadute con registro`,
+        `${displayedAssignments.length} assegnazioni salvate`,
+      ].join(", ") + ".";
     } else {
       els.assignmentStatus.textContent = "Nessuna assegnazione salvata.";
     }
@@ -3440,6 +3471,7 @@ async function saveAssignmentRecord() {
       body: JSON.stringify(assignmentRecordPayload()),
     });
     state.assignments = payload.assignments || [];
+    state.assignmentStatuses = payload.assignment_statuses || [];
     state.dueAssignments = (payload.due_without_register || []).map((item) => item.assignment || item);
     state.selectedAssignmentId = "";
     renderAssignmentSelect();
@@ -3555,6 +3587,7 @@ async function deleteSelectedAssignment() {
       }),
     });
     state.assignments = payload.assignments || [];
+    state.assignmentStatuses = payload.assignment_statuses || [];
     state.dueAssignments = (payload.due_without_register || []).map((item) => item.assignment || item);
     state.selectedAssignmentId = "";
     if (els.assignmentSelect) els.assignmentSelect.value = "";

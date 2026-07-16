@@ -267,9 +267,14 @@ def list_assignment_records(now: str | None = None) -> dict:
             continue
     current_time = now or datetime_now_iso()
     assignments = record_storage.list_assignments()
-    due_without_register = record_storage.assignments_due_without_register(registers, current_time)
+    assignment_statuses = [
+        assignment_records.assignment_status(assignment, registers, current_time).to_dict()
+        for assignment in assignments
+    ]
+    due_without_register = [status for status in assignment_statuses if status["needs_register"]]
     return {
         "assignments": assignments,
+        "assignment_statuses": assignment_statuses,
         "due_without_register": due_without_register,
         "now": current_time,
     }

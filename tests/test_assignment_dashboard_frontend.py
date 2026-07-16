@@ -842,7 +842,7 @@ def test_save_assignment_record_posts_form_and_refreshes_due_assignments() -> No
           });
           assert.equal(tested.state.assignments.length, 1);
           assert.equal(tested.state.dueAssignments.length, 1);
-          assert.match(tested.els.assignmentStatus.textContent, /1 assegnazioni scadute senza registro/);
+          assert.match(tested.els.assignmentStatus.textContent, /1 da tracciare/);
           assert.match(tested.els.status.textContent, /Assegnazione salvata/);
           assert.match(tested.els.assignmentConfirmStatus.innerHTML, /Assegnazione salvata/);
           assert.match(tested.els.assignmentConfirmStatus.innerHTML, /assignment-python-base-somma-001-3a-tpsi/);
@@ -979,32 +979,58 @@ def test_assignment_select_lists_all_saved_assignments_with_tracking_status() ->
         """
         tested.state.assignments = [
           {
-            id: "assignment-future-3a",
-            activity_id: "python-base-lista-001",
+            id: "assignment-due-with-register",
+            activity_id: "demo-scaduta-con-registro",
+            class_label: "3A TPSI",
+            due_at: "2026-10-19T23:59:00+02:00",
+          },
+          {
+            id: "assignment-due-without-register",
+            activity_id: "demo-scaduta-senza-registro",
+            class_label: "3A TPSI",
+            due_at: "2026-10-19T23:59:00+02:00",
+          },
+          {
+            id: "assignment-future-with-register",
+            activity_id: "demo-non-scaduta-con-registro",
             class_label: "3A TPSI",
             due_at: "2026-11-02T23:59:00+01:00",
           },
           {
-            id: "assignment-due-3a",
-            activity_id: "python-base-somma-001",
+            id: "assignment-future-without-register",
+            activity_id: "demo-non-scaduta-senza-registro",
             class_label: "3A TPSI",
-            due_at: "2026-10-19T23:59:00+02:00",
+            due_at: "2026-11-03T23:59:00+01:00",
           },
         ];
+        tested.state.assignmentStatuses = [
+          { assignment: tested.state.assignments[0], due: true, has_register: true, needs_register: false },
+          { assignment: tested.state.assignments[1], due: true, has_register: false, needs_register: true },
+          { assignment: tested.state.assignments[2], due: false, has_register: true, needs_register: false },
+          { assignment: tested.state.assignments[3], due: false, has_register: false, needs_register: false },
+        ];
         tested.state.dueAssignments = [tested.state.assignments[1]];
-        tested.state.selectedAssignmentId = "assignment-future-3a";
+        tested.state.selectedAssignmentId = "assignment-future-with-register";
 
         tested.renderAssignmentSelect();
 
         const labels = tested.els.assignmentSelect.children.map((option) => option.textContent);
-        assert.equal(labels.length, 2);
-        assert.match(labels[0], /python-base-lista-001/);
-        assert.match(labels[0], /gia tracciata o non scaduta/);
-        assert.match(labels[1], /python-base-somma-001/);
-        assert.match(labels[1], /da tracciare/);
-        assert.equal(tested.els.assignmentSelect.value, "assignment-future-3a");
+        assert.equal(labels.length, 4);
+        assert.match(labels[0], /demo-scaduta-con-registro/);
+        assert.match(labels[0], /scaduta - con registro/);
+        assert.match(labels[1], /demo-scaduta-senza-registro/);
+        assert.match(labels[1], /scaduta - senza registro - da tracciare/);
+        assert.match(labels[2], /demo-non-scaduta-con-registro/);
+        assert.match(labels[2], /non scaduta - con registro/);
+        assert.match(labels[3], /demo-non-scaduta-senza-registro/);
+        assert.match(labels[3], /non scaduta - senza registro/);
+        assert.equal(tested.els.assignmentSelect.value, "assignment-future-with-register");
         assert.equal(tested.els.deleteAssignmentBtn.disabled, false);
-        assert.match(tested.els.assignmentStatus.textContent, /1 assegnazioni scadute senza registro su 2 assegnazioni salvate/);
+        assert.match(tested.els.assignmentStatus.textContent, /1 da tracciare/);
+        assert.match(tested.els.assignmentStatus.textContent, /1 scadute con registro/);
+        assert.match(tested.els.assignmentStatus.textContent, /1 non scadute senza registro/);
+        assert.match(tested.els.assignmentStatus.textContent, /1 non scadute con registro/);
+        assert.match(tested.els.assignmentStatus.textContent, /4 assegnazioni salvate/);
         """
     )
 
