@@ -49,6 +49,29 @@ Per ogni consegna dello studente mostra:
 - link repository o file consegna quando disponibili;
 - feedback AI/didattico solo se approvato dal docente.
 
+Il pannello `Lab` legge anche il payload operativo prodotto da `scripts/student_lab_service.py` e mostra:
+
+- workspace locale della consegna;
+- presenza dell'ultimo report `reports/<activity_id>/latest.json`;
+- stato ultimo tentativo;
+- test passati e totali;
+- backend usato dal runner, per esempio `local` o `docker`.
+
+Smoke test manuale:
+
+```bash
+python scripts/course_board_server.py
+```
+
+Apri `http://localhost:8765/tools/student_dashboard.html`, scegli uno studente con consegne assegnate e controlla il pannello `Lab`.
+Se prima esegui il runner con `--write-report`, per esempio:
+
+```bash
+python scripts/student_lab_runner.py --student-id rossi-mario --activity-id python-base-somma-001 --write-report
+```
+
+la dashboard deve mostrare il report salvato, il numero di test e il path del workspace.
+
 ## Relazione con il lab studente
 
 La dashboard studente web e la vista di consultazione: mostra consegne, calendario, percorso, stato, risultati e feedback approvato.

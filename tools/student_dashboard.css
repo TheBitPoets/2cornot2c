@@ -160,6 +160,7 @@ button {
 button:hover { transform: translateY(-1px); }
 
 .summary,
+.studentLab,
 .studentCalendar,
 .coursePath,
 .assignments {
@@ -240,6 +241,41 @@ button:hover { transform: translateY(-1px); }
   gap: .85rem;
   min-width: 0;
   padding: 1.1rem;
+}
+
+.studentLabBody {
+  display: grid;
+  gap: .85rem;
+  min-width: 0;
+  padding: 1.1rem;
+}
+
+.studentLabCard {
+  display: grid;
+  gap: .75rem;
+  min-width: 0;
+  border: 1px solid rgba(17, 17, 17, .14);
+  border-radius: 18px;
+  background: #ffffff;
+  padding: 1rem;
+}
+
+.studentLabHead {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.studentLabHead > div {
+  min-width: 0;
+}
+
+.studentLabHead h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  overflow-wrap: anywhere;
 }
 
 .studentCalendarControls {

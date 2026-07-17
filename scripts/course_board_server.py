@@ -42,6 +42,7 @@ from scripts import (
     create_activity,
     create_submission_scaffold,
     manual_ai_feedback,
+    student_lab_service,
     thebitlab_services,
     thebitlab_storage,
     track_assignments,
@@ -421,7 +422,17 @@ def assignment_overview() -> list[dict]:
 def student_dashboard(student_id: str) -> dict:
     """Return the minimal student-facing assignment dashboard."""
 
-    return assignment_service().student_dashboard(student_id)
+    dashboard = assignment_service().student_dashboard(student_id)
+    try:
+        dashboard["lab"] = student_lab_service.student_lab_payload(root=ROOT, student_id=student_id)
+    except Exception as error:  # noqa: BLE001
+        dashboard["lab"] = {
+            "schema_version": "student_lab.v1",
+            "student_id": str(student_id or "").strip(),
+            "assignments": [],
+            "error": str(error),
+        }
+    return dashboard
 
 
 def list_activities() -> list[dict]:

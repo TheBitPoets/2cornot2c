@@ -5,6 +5,8 @@ const els = {
   assignmentFilter: document.querySelector("#assignmentFilter"),
   assignmentSort: document.querySelector("#assignmentSort"),
   summary: document.querySelector("#summary"),
+  studentLab: document.querySelector("#studentLab"),
+  studentLabStatus: document.querySelector("#studentLabStatus"),
   status: document.querySelector("#status"),
   assignments: document.querySelector("#assignments"),
   studentCalendar: document.querySelector("#studentCalendar"),
@@ -258,6 +260,80 @@ function gradingBadge(grading) {
 function gradeValue(grading) {
   const grade = grading?.teacher_grade ?? grading?.score;
   return grade == null || String(grade).trim() === "" ? "-" : grade;
+}
+
+function labStatusBadge(assignment) {
+  if (assignment.status === "missing") return badge("Mancante", "badgeBad");
+  if (assignment.status === "submitted_late") return badge("Report in ritardo", "badgeWarn");
+  if (assignment.submitted || assignment.status === "submitted") return badge("Report presente", "badgeOk");
+  if (assignment.status === "pending") return badge("Da fare");
+  return badge(assignment.status || "Stato non disponibile");
+}
+
+function labWorkspaceBadge(workspace) {
+  if (workspace?.exists) return badge("Workspace pronto", "badgeOk");
+  return badge("Workspace non trovato", "badgeWarn");
+}
+
+function labReportBadge(report) {
+  if (report?.exists) return badge("Report salvato", "badgeOk");
+  return badge("Report assente");
+}
+
+function renderLabAssignment(assignment) {
+  const grading = assignment.grading || {};
+  const workspace = assignment.workspace || {};
+  const report = assignment.report || {};
+  const failedTests = Array.isArray(grading.failed_tests) ? grading.failed_tests : [];
+  return `
+    <article class="studentLabCard">
+      <div class="studentLabHead">
+        <div>
+          <h3>${escapeHtml(assignment.title || assignment.activity_id || "Activity")}</h3>
+          <p class="meta">
+            <span>${escapeHtml(assignment.activity?.language || "linguaggio non indicato")}</span>
+            <span>Scadenza: ${escapeHtml(formatDate(assignment.due_at))}</span>
+          </p>
+        </div>
+        <div class="assignmentBadges">
+          ${labStatusBadge(assignment)}
+          ${gradingBadge(grading)}
+        </div>
+      </div>
+      <p class="details">
+        <span>${labWorkspaceBadge(workspace)}</span>
+        <span>${labReportBadge(report)}</span>
+        <span>Test: ${escapeHtml(grading.tests_passed ?? "-")}/${escapeHtml(grading.tests_total ?? "-")}</span>
+        <span>Ultimo tentativo: ${escapeHtml(formatDate(report.submitted_at))}</span>
+      </p>
+      <p class="details">
+        <span>Workspace: ${escapeHtml(workspace.path || "-")}</span>
+        <span>Report: ${escapeHtml(report.path || "-")}</span>
+        <span>Backend: ${escapeHtml(assignment.runner?.backend || "-")}</span>
+      </p>
+      ${grading.detail ? `<p class="details">${escapeHtml(grading.detail)}</p>` : ""}
+      ${failedTests.length ? `<p class="details">Test falliti: ${failedTests.map(escapeHtml).join(", ")}</p>` : ""}
+    </article>
+  `;
+}
+
+function renderStudentLab(lab) {
+  if (!els.studentLab) return;
+  const assignments = Array.isArray(lab?.assignments) ? lab.assignments : [];
+  if (lab?.error) {
+    els.studentLab.innerHTML = `<p class="status">Lab non disponibile: ${escapeHtml(lab.error)}</p>`;
+    if (els.studentLabStatus) els.studentLabStatus.textContent = "Errore dati lab";
+    return;
+  }
+  if (els.studentLabStatus) {
+    const reports = assignments.filter((assignment) => assignment.report?.exists).length;
+    els.studentLabStatus.textContent = assignments.length
+      ? `${assignments.length} consegne lab · ${reports} report salvati`
+      : "Nessuna consegna lab";
+  }
+  els.studentLab.innerHTML = assignments.length
+    ? assignments.map(renderLabAssignment).join("")
+    : '<p class="status">Nessuna consegna lab operativa disponibile per questo studente.</p>';
 }
 
 function isOpenAssignment(assignment) {
@@ -1263,6 +1339,7 @@ function renderDashboard(payload) {
   const nextAssignment = nextOpenAssignment(assignments);
   const visibleAssignments = sortedAssignments(filteredAssignments(assignments, filterValue), sortValue);
   renderSummary(payload.student_id || "-", assignments);
+  renderStudentLab(payload.lab);
   renderStudentCalendar(assignments);
   renderCoursePath(currentCourseDesign, assignments, payload.student_id);
   renderStudentPathFilters(assignments, payload.student_id);
