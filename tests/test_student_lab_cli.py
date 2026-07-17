@@ -143,6 +143,16 @@ def test_render_assignment_detail_shows_workspace_report_and_runner() -> None:
     assert "bloccata" in rendered
     assert "not_graded" in rendered
     assert "not_run" in rendered
+    assert "Guida rapida" in rendered
+    assert "Consegna  lavoro assegnato dal docente." in rendered
+    assert "Workspace cartella locale dove modifichi i file." in rendered
+    assert "Test      controlli automatici sul tuo lavoro." in rendered
+    assert "Report    risultato salvato e letto da dashboard/registro." in rendered
+    assert "Flusso consigliato" in rendered
+    assert "1. Apri workspace" in rendered
+    assert "2. Modifica i file" in rendered
+    assert "3. Esegui test e salva report" in rendered
+    assert "4. Controlla esito e, se serve, chiedi aiuto sulla consegna" in rendered
     assert "Azioni principali" in rendered
     assert "  e  Esegui test e salva report" in rendered
     assert "  a  Chiedi aiuto" in rendered
@@ -166,6 +176,10 @@ def test_render_assignment_detail_can_color_status() -> None:
     rendered = student_lab_cli.render_assignment_detail(sample_assignment(status="missing"), use_color=True)
 
     assert "\033[31mMancante\033[0m" in rendered
+    assert "\033[35mConsegna \033[0m" in rendered
+    assert "\033[36mWorkspace\033[0m" in rendered
+    assert "\033[33mTest     \033[0m" in rendered
+    assert "\033[32mReport   \033[0m" in rendered
 
 
 def test_render_assignment_detail_summarizes_grading_tests() -> None:
