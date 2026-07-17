@@ -18,6 +18,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from scripts import (
     assignment_records,
     create_activity,
+    student_help_service,
     student_lab_runner,
     student_lab_service,
     track_assignments,
@@ -52,6 +53,7 @@ def write_demo_activity(root: Path) -> Path:
         source_name="main.py",
         context={"classe": "3A-TPSI", "team_github": "team-3a-tpsi", "percorso": "demo-lab"},
     )
+    activity["student_support_mode"] = "ai-assisted"
     output = root / "activities" / f"{ACTIVITY_ID}.json"
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(activity, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -135,6 +137,16 @@ def run_smoke(root: Path) -> dict[str, Any]:
     assignment_record = write_demo_assignment(root, activity_path)
     workspace = write_demo_workspace(root)
     assignment = student_lab_runner.load_student_assignment(root=root, student_id=STUDENT_ID, activity_id=ACTIVITY_ID, now=NOW)
+    help_event = student_help_service.record_help_request(
+        repo_path=root / "examples" / "assignment_tracking" / "student_repos" / STUDENT_ID,
+        activity_id=ACTIVITY_ID,
+        support_policy=assignment["support_policy"],
+        help_type="ai",
+        prompt="Puoi darmi un suggerimento senza scrivere la soluzione?",
+        now="2026-10-18T18:35:00+02:00",
+    )
+    if help_event.get("allowed") is not True:
+        raise RuntimeError(f"Richiesta aiuto demo non consentita: {help_event.get('reason')}")
     report = student_lab_runner.run_assignment(assignment, root=root, backend="local")
     if not report.get("passed"):
         raise RuntimeError(f"Runner demo fallito: {report.get('status')}")
@@ -143,11 +155,15 @@ def run_smoke(root: Path) -> dict[str, Any]:
     lab_assignment = lab_payload["assignments"][0]
     if not lab_assignment["report"]["exists"]:
         raise RuntimeError("La dashboard lab non vede il report appena salvato.")
+    if lab_assignment["help"]["total"] != 1 or lab_assignment["help"]["ai_budget"]["remaining"] != 4:
+        raise RuntimeError("La dashboard lab non vede la richiesta di aiuto della demo.")
     register_path = write_teacher_register(root)
     register = json.loads(register_path.read_text(encoding="utf-8"))
     student = register["students"][0]
     if student["grading"]["status"] != "graded_passed":
         raise RuntimeError(f"Registro docente non coerente: {student['grading']['status']}")
+    if student["help"]["total"] != 1 or student["help"]["ai_total"] != 1:
+        raise RuntimeError("Registro docente non coerente con le richieste di aiuto.")
     return {
         "ok": True,
         "root": str(root),
@@ -160,6 +176,11 @@ def run_smoke(root: Path) -> dict[str, Any]:
         "tests": {
             "passed": student["grading"]["tests_passed"],
             "total": student["grading"]["tests_total"],
+        },
+        "help": {
+            "total": lab_assignment["help"]["total"],
+            "ai_total": student["help"]["ai_total"],
+            "ai_budget_remaining": lab_assignment["help"]["ai_budget"]["remaining"],
         },
         "backend": student["submission"].get("report_backend"),
     }
