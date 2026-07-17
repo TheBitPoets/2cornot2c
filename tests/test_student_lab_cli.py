@@ -86,6 +86,9 @@ def test_render_assignment_list_summarizes_statuses() -> None:
     assert "Array in C" in rendered
     assert "workspace" in rendered
     assert "numero = dettaglio" in rendered
+    assert "Legenda:" in rendered
+    assert "Mancante: scadenza superata" in rendered
+    assert "no workspace: cartella locale" in rendered
 
 
 def test_render_assignment_list_handles_empty_payload() -> None:
@@ -107,6 +110,19 @@ def test_render_assignment_detail_shows_workspace_report_and_runner() -> None:
     assert "not_graded" in rendered
     assert "not_run" in rendered
     assert "o = apri workspace" in rendered
+
+
+def test_render_assignment_list_can_color_statuses() -> None:
+    rendered = student_lab_cli.render_assignment_list(sample_payload(), use_color=True)
+
+    assert "\033[33mDa fare\033[0m" in rendered
+    assert "\033[36mworkspace\033[0m" in rendered
+
+
+def test_render_assignment_detail_can_color_status() -> None:
+    rendered = student_lab_cli.render_assignment_detail(sample_assignment(status="missing"), use_color=True)
+
+    assert "\033[31mMancante\033[0m" in rendered
 
 
 def test_render_assignment_detail_summarizes_grading_tests() -> None:
@@ -168,3 +184,9 @@ def test_truncate_keeps_short_text_and_clips_long_text() -> None:
 def test_status_label_uses_human_labels() -> None:
     assert student_lab_cli.status_label("missing") == "Mancante"
     assert student_lab_cli.status_label("custom") == "custom"
+
+
+def test_supports_color_respects_no_color(monkeypatch) -> None:
+    assert student_lab_cli.supports_color(no_color=True) is False
+    monkeypatch.setenv("NO_COLOR", "1")
+    assert student_lab_cli.supports_color() is False

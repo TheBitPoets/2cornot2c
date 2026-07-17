@@ -24,6 +24,14 @@ STATUS_LABELS = {
     "submitted": "Consegnata",
     "submitted_late": "Consegnata in ritardo",
 }
+STATUS_COLORS = {
+    "pending": "\033[33m",
+    "missing": "\033[31m",
+    "submitted": "\033[32m",
+    "submitted_late": "\033[35m",
+}
+WORKSPACE_COLOR = "\033[36m"
+RESET_COLOR = "\033[0m"
 
 
 def clean_text(value: Any, fallback: str = "-") -> str:
@@ -37,6 +45,19 @@ def status_label(status: str) -> str:
     """Return the human label for a lab assignment status."""
 
     return STATUS_LABELS.get(status, clean_text(status))
+
+
+def colorize(text: str, color: str, use_color: bool) -> str:
+    """Wrap text in ANSI color codes when color output is enabled."""
+
+    return f"{color}{text}{RESET_COLOR}" if use_color and color else text
+
+
+def colored_status(status: str, use_color: bool) -> str:
+    """Return the status label, optionally colorized for terminal output."""
+
+    clean_status = clean_text(status, "")
+    return colorize(status_label(clean_status), STATUS_COLORS.get(clean_status, ""), use_color)
 
 
 def grading_label(grading: dict[str, Any]) -> str:
@@ -76,18 +97,35 @@ def render_header(student_id: str, assignments: list[dict[str, Any]]) -> str:
     )
 
 
-def render_assignment_row(index: int, assignment: dict[str, Any]) -> str:
+def render_legend(use_color: bool = False) -> str:
+    """Render a compact legend for status and workspace labels."""
+
+    return "\n".join(
+        [
+            "Legenda:",
+            f"- {colored_status('pending', use_color)}: consegna assegnata, scadenza futura, nessun report ancora salvato.",
+            f"- {colored_status('missing', use_color)}: scadenza superata senza report/consegna.",
+            f"- {colored_status('submitted', use_color)}: esiste un report coerente con la consegna.",
+            f"- {colored_status('submitted_late', use_color)}: report presente ma consegnato dopo la scadenza.",
+            f"- {colorize('workspace', WORKSPACE_COLOR, use_color)}: cartella locale della consegna presente.",
+            "- no workspace: cartella locale non ancora presente o non trovata.",
+        ]
+    )
+
+
+def render_assignment_row(index: int, assignment: dict[str, Any], use_color: bool = False) -> str:
     """Render one compact assignment row."""
 
     title = truncate(clean_text(assignment.get("title") or assignment.get("activity_id")), 34)
-    status = truncate(status_label(clean_text(assignment.get("status"))), 22)
+    status = truncate(colored_status(clean_text(assignment.get("status")), use_color), 31 if use_color else 22)
     due_at = truncate(clean_text(assignment.get("due_at")), 25)
     workspace = assignment.get("workspace") if isinstance(assignment.get("workspace"), dict) else {}
-    workspace_mark = "workspace" if workspace.get("exists") else "no workspace"
-    return f"{index:>2}. {title:<34} | {status:<22} | {due_at:<25} | {workspace_mark}"
+    workspace_mark = colorize("workspace", WORKSPACE_COLOR, use_color) if workspace.get("exists") else "no workspace"
+    status_width = 31 if use_color else 22
+    return f"{index:>2}. {title:<34} | {status:<{status_width}} | {due_at:<25} | {workspace_mark}"
 
 
-def render_assignment_list(payload: dict[str, Any]) -> str:
+def render_assignment_list(payload: dict[str, Any], use_color: bool = False) -> str:
     """Render the main assignment list."""
 
     assignments = payload.get("assignments") if isinstance(payload.get("assignments"), list) else []
@@ -96,6 +134,8 @@ def render_assignment_list(payload: dict[str, Any]) -> str:
         "",
         "Comandi: numero = dettaglio | r = ricarica | q = esci",
         "",
+        render_legend(use_color),
+        "",
     ]
     if not assignments:
         lines.append("Nessuna consegna disponibile per questo studente.")
@@ -103,7 +143,7 @@ def render_assignment_list(payload: dict[str, Any]) -> str:
     lines.append(" #  Titolo                             | Stato                  | Scadenza                  | Workspace")
     lines.append("-" * 104)
     for index, assignment in enumerate(assignments, start=1):
-        lines.append(render_assignment_row(index, assignment))
+        lines.append(render_assignment_row(index, assignment, use_color))
     return "\n".join(lines)
 
 
@@ -113,7 +153,7 @@ def detail_line(label: str, value: Any) -> str:
     return f"{label:<18} {clean_text(value)}"
 
 
-def render_assignment_detail(assignment: dict[str, Any]) -> str:
+def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False) -> str:
     """Render the detail page for one lab assignment."""
 
     workspace = assignment.get("workspace") if isinstance(assignment.get("workspace"), dict) else {}
@@ -131,7 +171,7 @@ def render_assignment_detail(assignment: dict[str, Any]) -> str:
         detail_line("Classe:", assignment.get("class_label") or assignment.get("class_id")),
         detail_line("Assegnata:", assignment.get("assigned_at")),
         detail_line("Scadenza:", assignment.get("due_at")),
-        detail_line("Stato:", status_label(clean_text(assignment.get("status")))),
+        detail_line("Stato:", colored_status(clean_text(assignment.get("status")), use_color)),
         "",
         "Workspace",
         detail_line("Path:", workspace.get("path")),
@@ -169,6 +209,16 @@ def clear_screen() -> None:
     os.system("cls" if os.name == "nt" else "clear")
 
 
+def supports_color(no_color: bool = False) -> bool:
+    """Return whether ANSI colors should be emitted."""
+
+    if no_color:
+        return False
+    if os.environ.get("NO_COLOR"):
+        return False
+    return sys.stdout.isatty()
+
+
 def open_workspace(path_value: str, root: Path = PROJECT_ROOT) -> bool:
     """Open a workspace folder with the platform file manager."""
 
@@ -198,6 +248,7 @@ def run_tui(
     input_fn: InputFn = input,
     print_fn: PrintFn = print,
     clear: bool = True,
+    use_color: bool = False,
 ) -> int:
     """Run the interactive student lab loop."""
 
@@ -205,7 +256,7 @@ def run_tui(
     while True:
         if clear:
             clear_screen()
-        print_fn(render_assignment_list(payload))
+        print_fn(render_assignment_list(payload, use_color=use_color))
         choice = input_fn("\nScelta: ").strip().lower()
         if choice in {"q", "quit", "esci"}:
             return 0
@@ -221,7 +272,7 @@ def run_tui(
         assignment = assignments[index]
         if clear:
             clear_screen()
-        print_fn(render_assignment_detail(assignment))
+        print_fn(render_assignment_detail(assignment, use_color=use_color))
         action = input_fn("\nDettaglio: ").strip().lower()
         if action == "o":
             workspace = assignment.get("workspace") if isinstance(assignment.get("workspace"), dict) else {}
@@ -238,6 +289,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--root", type=Path, default=PROJECT_ROOT, help="Root del repository TheBitLab.")
     parser.add_argument("--now", help="Data ISO da usare per calcolare scadenze e mancanti.")
     parser.add_argument("--no-clear", action="store_true", help="Non pulire lo schermo tra una vista e l'altra.")
+    parser.add_argument("--no-color", action="store_true", help="Disabilita colori ANSI.")
     return parser.parse_args()
 
 
@@ -251,6 +303,7 @@ def main() -> int:
             root=args.root.resolve(strict=False),
             now=args.now,
             clear=not args.no_clear,
+            use_color=supports_color(args.no_color),
         )
     except ValueError as error:
         print(f"Lab studente non disponibile:\n{error}", file=sys.stderr)

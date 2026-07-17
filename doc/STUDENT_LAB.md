@@ -14,6 +14,12 @@ La prima interfaccia semigrafica e:
 python scripts/student_lab_cli.py --student-id rossi-mario
 ```
 
+La TUI usa colori ANSI quando il terminale li supporta. Per disattivarli:
+
+```powershell
+python scripts/student_lab_cli.py --student-id rossi-mario --no-color
+```
+
 Comandi disponibili nella TUI minima:
 
 - numero della riga: apre il dettaglio della consegna;
