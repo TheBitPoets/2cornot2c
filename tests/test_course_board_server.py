@@ -855,6 +855,64 @@ def test_student_dashboard_endpoint_filters_to_requested_student(tmp_path, monke
     assert dashboard["assignments"][0]["approved_feedback"]["student_feedback"] == "Feedback visibile."
 
 
+def test_student_dashboard_endpoint_includes_student_lab_results(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    write_demo_activity(tmp_path / "activities" / "python-base-somma-001.json")
+    assignment_records.JsonAssignmentRecordStorage(tmp_path, tmp_path / "teacher-assignments").write_assignment(
+        assignment_records.build_assignment_record(
+            activity_id="python-base-somma-001",
+            activity_path="activities/python-base-somma-001.json",
+            target_type="class",
+            class_id="3A-TPSI",
+            class_label="3A TPSI",
+            github_team="team-3a-tpsi",
+            assigned_at="2026-10-12T09:00:00+02:00",
+            due_at="2026-10-19T23:59:00+02:00",
+            targets=[
+                {
+                    "student_id": "rossi-mario",
+                    "path": "examples/assignment_tracking/student_repos/rossi-mario",
+                }
+            ],
+        ),
+    )
+    repo = tmp_path / "examples" / "assignment_tracking" / "student_repos" / "rossi-mario"
+    workspace = repo / "assignments" / "python-base-somma-001"
+    report_path = repo / "reports" / "python-base-somma-001" / "latest.json"
+    workspace.mkdir(parents=True)
+    report_path.parent.mkdir(parents=True)
+    (workspace / "main.py").write_text("print(3)\n", encoding="utf-8")
+    report_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "student_lab_run.v1",
+                "activity_id": "python-base-somma-001",
+                "student_id": "rossi-mario",
+                "status": "passed",
+                "passed": True,
+                "source": "assignments/python-base-somma-001/main.py",
+                "submitted_at": "2026-10-18T18:00:00+02:00",
+                "summary": {"passed": 2, "total": 2},
+                "tests": [
+                    {"name": "somma positiva", "status": "passed", "passed": True},
+                    {"name": "somma negativa", "status": "passed", "passed": True},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    dashboard = course_board_server.student_dashboard("rossi-mario")
+
+    assert dashboard["lab"]["schema_version"] == "student_lab.v1"
+    assert len(dashboard["lab"]["assignments"]) == 1
+    lab_assignment = dashboard["lab"]["assignments"][0]
+    assert lab_assignment["workspace"]["exists"] is True
+    assert lab_assignment["report"]["exists"] is True
+    assert lab_assignment["grading"]["status"] == "graded_passed"
+    assert lab_assignment["grading"]["tests_passed"] == 2
+
+
 def test_class_roster_helpers_use_local_roster_storage(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     classes_dir = tmp_path / "doc" / "classes"

@@ -73,6 +73,7 @@ def run_student_dashboard_js(assertions: str) -> None:
         renderStudentCalendar,
         renderCoursePath,
         renderFeedback,
+        renderStudentLab,
         renderAssignment,
         renderAssignmentDetail,
         openAssignmentDetail,
@@ -152,6 +153,20 @@ def test_student_dashboard_renders_summary_and_assignment_card() -> None:
 
         tested.renderDashboard({
           student_id: "rossi-mario",
+          lab: {
+            assignments: [{
+              activity_id: "python-base-somma-001",
+              title: "Somma in Python",
+              due_at: "2026-10-19T23:59:00+02:00",
+              status: "submitted",
+              submitted: true,
+              activity: { language: "python" },
+              workspace: { path: "examples/assignment_tracking/student_repos/rossi-mario/assignments/python-base-somma-001", exists: true },
+              report: { path: "examples/assignment_tracking/student_repos/rossi-mario/reports/python-base-somma-001/latest.json", exists: true, submitted_at: "2026-10-18T18:22:10+02:00" },
+              grading: { status: "graded_passed", tests_passed: 2, tests_total: 2, failed_tests: [] },
+              runner: { backend: "local" },
+            }],
+          },
           assignments: [assignment, { activity_id: "python-loop-001", status: "missing", submitted: false, late: false }],
         });
 
@@ -170,6 +185,10 @@ def test_student_dashboard_renders_summary_and_assignment_card() -> None:
         assert.match(tested.els.assignments.innerHTML, /Dettaglio/);
         assert.match(tested.els.assignments.innerHTML, /data-detail-index="0"/);
         assert.match(tested.els.assignments.innerHTML, /href="https:\\/\\/github.com\\/TheBitPoets\\/rossi-mario\\/blob\\/main\\/assignments\\/python-base-somma-001\\/main.py"/);
+        assert.match(tested.els.studentLab.innerHTML, /Workspace pronto/);
+        assert.match(tested.els.studentLab.innerHTML, /Report salvato/);
+        assert.match(tested.els.studentLab.innerHTML, /Test: 2\\/2/);
+        assert.match(tested.els.studentLabStatus.textContent, /1 consegne lab · 1 report salvati/);
         """
     )
 
