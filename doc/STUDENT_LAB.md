@@ -14,10 +14,16 @@ La prima interfaccia semigrafica e:
 python scripts/student_lab_cli.py --student-id rossi-mario
 ```
 
-Il primo runner locale, senza Docker e senza salvataggio automatico del report, e:
+Il primo runner locale, senza Docker, e:
 
 ```powershell
 python scripts/student_lab_runner.py --student-id rossi-mario --activity-id python-base-somma-001
+```
+
+Per salvare il risultato nel path standard dello studente:
+
+```powershell
+python scripts/student_lab_runner.py --student-id rossi-mario --activity-id python-base-somma-001 --write-report
 ```
 
 La TUI usa colori ANSI quando il terminale li supporta. Per disattivarli:
@@ -44,7 +50,8 @@ Il payload ha schema `student_lab.v1` e contiene:
 - `runner`: stato del runner lab nel payload di consultazione.
 
 Nel payload di consultazione la TUI espone ancora `not_run`, perche l'esecuzione e un comando separato.
-Il runner locale produce un report JSON su stdout, ma non lo salva ancora in `reports/<activity_id>/latest.json`.
+Il runner locale produce un report JSON su stdout e, con `--write-report`, lo salva in `reports/<activity_id>/latest.json`.
+Quando il report e salvato, il servizio lab lo rilegge e aggiorna stato consegna e riepilogo grading.
 
 ## Stati minimi
 
@@ -57,10 +64,16 @@ Il runner locale produce un report JSON su stdout, ma non lo salva ancora in `re
 
 ## Direzione
 
+Il report salvato usa lo schema `student_lab_run.v1` e mantiene separati:
+
+- risultato deterministico: `passed`, `status`, `summary`, `tests`, `stdout`, `stderr`;
+- metadati di collegamento: `assignment_id`, `activity_id`, `student_id`, `language`, `source`, `submitted_at`;
+- feedback AI: non presente in questo report, per evitare di mescolare esecuzione deterministica e suggerimenti generativi.
+
 Le prossime PR dovranno usare questo contratto per:
 
-1. salvare risultati strutturati prodotti dal lab;
-2. collegare il comando di esecuzione alla TUI;
+1. collegare il comando di esecuzione alla TUI;
+2. mostrare nella TUI l'esito appena salvato;
 3. introdurre un runner Docker minimale;
 4. far leggere gli stessi risultati alla dashboard studente e al registro docente;
 5. valutare un adapter opzionale per layout terminale avanzato, per esempio tmux su ambienti compatibili.
