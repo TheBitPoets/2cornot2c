@@ -63,6 +63,23 @@ python scripts/student_lab_demo_setup.py --root tmp/mia-demo-lab
 La root scelta viene sempre ricreata da zero: usa una cartella dedicata alla demo.
 
 
+## Collaudo guidato
+
+Per preparare la demo, verificare automaticamente backend lab e API dashboard, e ottenere i passi manuali da seguire:
+
+```bash
+python scripts/student_lab_demo_check.py
+```
+
+Il comando stampa:
+
+- root demo usata;
+- esito dei controlli automatici su setup, payload lab e API dashboard;
+- comando per aprire la TUI studente;
+- comando per avviare il server dashboard sulla root demo;
+- URL della dashboard studente;
+- cosa controllare manualmente nella TUI e nel browser.
+
 ## Collaudo manuale su GUI/TUI
 
 Quando vuoi provare la demo con dati reali o demo del repository:
