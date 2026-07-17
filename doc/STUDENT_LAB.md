@@ -2,6 +2,8 @@
 
 Il lab studente nasce come backend riusabile prima della TUI e prima della GUI web completa.
 
+Per una prova end-to-end riproducibile senza sporcare i dati demo reali, usa `doc/STUDENT_LAB_DEMO.md`.
+
 Il primo contratto e prodotto da:
 
 ```powershell
