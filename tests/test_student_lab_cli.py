@@ -199,18 +199,41 @@ def test_render_assignment_detail_summarizes_grading_tests() -> None:
 
 def test_runner_result_message_shows_status_tests_and_report_path(tmp_path) -> None:
     message = student_lab_cli.runner_result_message(
-        {"status": "passed", "passed": True, "summary": {"passed": 2, "total": 3}},
+        {
+            "status": "failed",
+            "passed": False,
+            "summary": {"passed": 2, "total": 3},
+            "tests": [
+                {"name": "input_base", "passed": True, "status": "passed"},
+                {"name": "caso_zero", "passed": False, "status": "failed", "message": "Output atteso: 10, ottenuto: 8"},
+            ],
+        },
         tmp_path / "reports" / "latest.json",
     )
 
     assert "Esecuzione completata" in message
     assert "Stato runner:" in message
-    assert "passed" in message
-    assert "consegna superata" in message
+    assert "failed" in message
+    assert "consegna da ricontrollare" in message
     assert "2/3 test" in message
     assert "Report salvato:" in message
+    assert "Dettaglio test" in message
+    assert "[ok] input_base" in message
+    assert "[ko] caso_zero" in message
+    assert "Output atteso: 10, ottenuto: 8" in message
     assert "Questo report è quello letto da dashboard e registro docente." in message
     assert "Questo report e quello" not in message
+
+
+def test_runner_result_message_handles_missing_test_details(tmp_path) -> None:
+    message = student_lab_cli.runner_result_message(
+        {"status": "passed", "passed": True, "summary": {"passed": 2, "total": 2}},
+        tmp_path / "reports" / "latest.json",
+    )
+
+    assert "consegna superata" in message
+    assert "Dettaglio test" in message
+    assert "non disponibile nel report" in message
 
 
 def test_assignment_repo_path_uses_help_or_workspace_path(tmp_path) -> None:
