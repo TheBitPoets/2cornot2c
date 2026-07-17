@@ -274,14 +274,8 @@ def runner_result_message(report: dict[str, Any], report_path: Path) -> str:
 
 HELP_MENU = {
     "1": "feedback-tecnico",
-    "f": "feedback-tecnico",
-    "feedback": "feedback-tecnico",
     "2": "teoria",
-    "t": "teoria",
-    "teoria": "teoria",
     "3": "ai",
-    "a": "ai",
-    "ai": "ai",
 }
 
 
@@ -505,6 +499,8 @@ def run_tui(
                 help_choice = input_fn("Tipo: ").strip().lower()
                 if help_choice in {"", "b", "back", "indietro"}:
                     print_fn("Richiesta aiuto annullata.")
+                elif help_choice not in HELP_MENU:
+                    print_fn("Tipo aiuto non valido. Usa 1, 2, 3, invio o b.")
                 else:
                     help_type = HELP_MENU.get(help_choice, help_choice)
                     prompt = input_fn("Scrivi la richiesta: ").strip()
