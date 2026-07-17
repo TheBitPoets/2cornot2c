@@ -251,7 +251,7 @@ def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False
         detail_line("Stato:", runner.get("status")),
         detail_line("Backend:", runner.get("backend")),
         "",
-        "Comandi: a = chiedi aiuto | h = storico aiuti | e = esegui e salva report | o = apri workspace | invio = lista | q = esci",
+        "Comandi: a = chiedi aiuto | h = storico aiuti | e = esegui e salva report | o = apri workspace | invio/b = lista | q = esci",
     ]
     return "\n".join(lines)
 

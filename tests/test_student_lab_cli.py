@@ -144,7 +144,7 @@ def test_render_assignment_detail_shows_workspace_report_and_runner() -> None:
     assert "not_run" in rendered
     assert "e = esegui e salva report" in rendered
     assert "h = storico aiuti" in rendered
-    assert "invio = lista" in rendered
+    assert "invio/b = lista" in rendered
     assert "o = apri workspace" in rendered
 
 
