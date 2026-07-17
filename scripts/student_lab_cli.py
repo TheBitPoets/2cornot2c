@@ -263,17 +263,24 @@ def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False
 
 
 def runner_result_message(report: dict[str, Any], report_path: Path) -> str:
-    """Return a compact message after a runner execution."""
+    """Return a clear message after a runner execution."""
 
     status = clean_text(report.get("status"))
     summary = report.get("summary") if isinstance(report.get("summary"), dict) else {}
     passed = summary.get("passed")
     total = summary.get("total")
-    tests = f" ({passed}/{total} test)" if passed is not None and total is not None else ""
+    tests = f"{passed}/{total} test" if passed is not None and total is not None else "non disponibili"
+    outcome = "consegna superata" if report.get("passed") is True else "consegna da ricontrollare"
+    if report.get("passed") is None:
+        outcome = "esito non disponibile"
     return "\n".join(
         [
-            f"Runner completato: {status}{tests}",
-            f"Report salvato: {report_path}",
+            "Esecuzione completata",
+            detail_line("Stato runner:", status),
+            detail_line("Esito:", outcome),
+            detail_line("Test:", tests),
+            detail_line("Report salvato:", report_path),
+            "Questo report e quello letto da dashboard e registro docente.",
         ]
     )
 

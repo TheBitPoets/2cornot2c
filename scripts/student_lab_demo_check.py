@@ -51,7 +51,7 @@ def guided_steps(root: Path, commands: dict[str, str], *, host: str, port: int) 
         f"TUI studente: {commands['tui']}",
         f"Server dashboard: python scripts/course_board_server.py --root {root} --host {host} --port {port}",
         f"Dashboard studente: {dashboard_url}",
-        "In TUI: apri la consegna con il numero, verifica dettaglio, storico aiuti con h, runner con e.",
+        "In TUI: apri la consegna con il numero, verifica dettaglio, storico aiuti con h, runner con e e path report salvato.",
         "In dashboard: seleziona rossi-mario e verifica Demo somma in Python, report, test e richieste aiuto.",
     ]
 
