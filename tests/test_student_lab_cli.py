@@ -144,6 +144,7 @@ def test_render_assignment_detail_shows_workspace_report_and_runner() -> None:
     assert "not_run" in rendered
     assert "e = esegui e salva report" in rendered
     assert "h = storico aiuti" in rendered
+    assert "invio = lista" in rendered
     assert "o = apri workspace" in rendered
 
 
@@ -256,6 +257,16 @@ def test_render_help_history_handles_empty_or_invalid_log(tmp_path) -> None:
     assert "Log aiuti non leggibile" in invalid_rendered
 
 
+def test_find_assignment_prefers_assignment_id_and_falls_back_to_index() -> None:
+    first = sample_assignment(assignment_id="assignment-a", title="Prima")
+    second = sample_assignment(assignment_id="assignment-b", title="Seconda")
+    payload = sample_payload([first, second])
+
+    assert student_lab_cli.find_assignment(payload, "assignment-b", 0) == second
+    assert student_lab_cli.find_assignment(payload, "missing", 1) == second
+    assert student_lab_cli.find_assignment(sample_payload([]), "missing", 0) is None
+
+
 def test_help_result_message_shows_policy_decision() -> None:
     message = student_lab_cli.help_result_message(
         {
@@ -297,7 +308,7 @@ def test_run_tui_can_show_detail_and_exit(monkeypatch, tmp_path) -> None:
 def test_run_tui_can_record_help_request_and_reload(monkeypatch, tmp_path) -> None:
     payload = sample_payload()
     outputs = []
-    inputs = iter(["1", "a", "3", "Mi scrivi la soluzione?", "", "q"])
+    inputs = iter(["1", "a", "3", "Mi scrivi la soluzione?", "", "", "q"])
     load_calls = []
 
     def fake_load_payload(root, student_id, now=None):
@@ -321,6 +332,7 @@ def test_run_tui_can_record_help_request_and_reload(monkeypatch, tmp_path) -> No
     assert log_path.exists()
     assert "Mi scrivi la soluzione?" in log_path.read_text(encoding="utf-8")
     assert any("Richiesta aiuto bloccata: Aiuto AI" in output for output in outputs)
+    assert sum(1 for output in outputs if "Dettaglio consegna" in output) == 2
 
 
 def test_run_tui_can_show_help_history(monkeypatch, tmp_path) -> None:
@@ -344,7 +356,7 @@ def test_run_tui_can_show_help_history(monkeypatch, tmp_path) -> None:
     )
     payload = sample_payload()
     outputs = []
-    inputs = iter(["1", "h", "", "q"])
+    inputs = iter(["1", "h", "", "", "q"])
 
     monkeypatch.setattr(student_lab_cli, "load_payload", lambda root, student_id, now=None: payload)
 
@@ -359,12 +371,13 @@ def test_run_tui_can_show_help_history(monkeypatch, tmp_path) -> None:
     assert result == 0
     assert any("Storico richieste aiuto" in output for output in outputs)
     assert any("Mi ricordi la differenza" in output for output in outputs)
+    assert sum(1 for output in outputs if "Dettaglio consegna" in output) == 2
 
 
 def test_run_tui_can_execute_runner_save_report_and_reload(monkeypatch, tmp_path) -> None:
     payload = sample_payload()
     outputs = []
-    inputs = iter(["1", "e", "", "q"])
+    inputs = iter(["1", "e", "", "", "q"])
     load_calls = []
     saved_reports = []
 
@@ -398,6 +411,7 @@ def test_run_tui_can_execute_runner_save_report_and_reload(monkeypatch, tmp_path
     assert saved_reports
     assert any("Runner completato: passed (1/1 test)" in output for output in outputs)
     assert any("Report salvato:" in output for output in outputs)
+    assert sum(1 for output in outputs if "Dettaglio consegna" in output) == 2
 
 
 def test_open_workspace_rejects_missing_path(tmp_path) -> None:
