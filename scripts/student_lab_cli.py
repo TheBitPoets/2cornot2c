@@ -4,6 +4,7 @@ import argparse
 import os
 import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
 
@@ -82,6 +83,18 @@ def truncate(text: str, width: int) -> str:
     return clean[: width - 3] + "..."
 
 
+def compact_datetime(value: Any) -> str:
+    """Return a compact date/time label for the terminal."""
+
+    text = clean_text(value, "")
+    if not text:
+        return "-"
+    try:
+        return datetime.fromisoformat(text.replace("Z", "+00:00")).strftime("%Y-%m-%d %H:%M")
+    except ValueError:
+        return text
+
+
 def render_header(student_id: str, assignments: list[dict[str, Any]]) -> str:
     """Render the static header for the student lab TUI."""
 
@@ -118,11 +131,11 @@ def render_assignment_row(index: int, assignment: dict[str, Any], use_color: boo
 
     title = truncate(clean_text(assignment.get("title") or assignment.get("activity_id")), 34)
     status = truncate(colored_status(clean_text(assignment.get("status")), use_color), 31 if use_color else 22)
-    due_at = truncate(clean_text(assignment.get("due_at")), 25)
+    due_at = truncate(compact_datetime(assignment.get("due_at")), 16)
     workspace = assignment.get("workspace") if isinstance(assignment.get("workspace"), dict) else {}
     workspace_mark = colorize("workspace", WORKSPACE_COLOR, use_color) if workspace.get("exists") else "no workspace"
     status_width = 31 if use_color else 22
-    return f"{index:>2}. {title:<34} | {status:<{status_width}} | {due_at:<25} | {workspace_mark}"
+    return f"{index:>2}. {title:<34} | {status:<{status_width}} | {due_at:<16} | {workspace_mark}"
 
 
 def render_assignment_list(payload: dict[str, Any], use_color: bool = False) -> str:
@@ -140,8 +153,8 @@ def render_assignment_list(payload: dict[str, Any], use_color: bool = False) -> 
     if not assignments:
         lines.append("Nessuna consegna disponibile per questo studente.")
         return "\n".join(lines)
-    lines.append(" #  Titolo                             | Stato                  | Scadenza                  | Workspace")
-    lines.append("-" * 104)
+    lines.append(" #  Titolo                             | Stato                  | Scadenza         | Workspace")
+    lines.append("-" * 95)
     for index, assignment in enumerate(assignments, start=1):
         lines.append(render_assignment_row(index, assignment, use_color))
     return "\n".join(lines)
@@ -169,8 +182,8 @@ def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False
         detail_line("Activity:", assignment.get("activity_id")),
         detail_line("Assegnazione:", assignment.get("assignment_id")),
         detail_line("Classe:", assignment.get("class_label") or assignment.get("class_id")),
-        detail_line("Assegnata:", assignment.get("assigned_at")),
-        detail_line("Scadenza:", assignment.get("due_at")),
+        detail_line("Assegnata:", compact_datetime(assignment.get("assigned_at"))),
+        detail_line("Scadenza:", compact_datetime(assignment.get("due_at"))),
         detail_line("Stato:", colored_status(clean_text(assignment.get("status")), use_color)),
         "",
         "Workspace",
@@ -187,7 +200,7 @@ def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False
         "Report",
         detail_line("Path:", report.get("path")),
         detail_line("Esiste:", "si" if report.get("exists") else "no"),
-        detail_line("Consegnata:", report.get("submitted_at")),
+        detail_line("Consegnata:", compact_datetime(report.get("submitted_at"))),
         detail_line("Commit:", report.get("commit")),
         "",
         "Grading",

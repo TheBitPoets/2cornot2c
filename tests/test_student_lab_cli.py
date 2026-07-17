@@ -86,6 +86,8 @@ def test_render_assignment_list_summarizes_statuses() -> None:
     assert "Array in C" in rendered
     assert "workspace" in rendered
     assert "numero = dettaglio" in rendered
+    assert "2026-10-19 23:59" in rendered
+    assert "2026-10-19T23:59:00+02:00" not in rendered
     assert "Legenda:" in rendered
     assert "Mancante: scadenza superata" in rendered
     assert "no workspace: cartella locale" in rendered
@@ -103,6 +105,8 @@ def test_render_assignment_detail_shows_workspace_report_and_runner() -> None:
     assert "Dettaglio consegna" in rendered
     assert "Somma in Python" in rendered
     assert "Classe demo 3A" in rendered
+    assert "2026-10-12 09:00" in rendered
+    assert "2026-10-19 23:59" in rendered
     assert "Path:" in rendered
     assert "examples/assignment_tracking/student_repos/rossi-mario/assignments/python-base-somma-001" in rendered
     assert "Linguaggio:" in rendered
@@ -179,6 +183,12 @@ def test_open_workspace_resolves_relative_path_from_root(monkeypatch, tmp_path) 
 def test_truncate_keeps_short_text_and_clips_long_text() -> None:
     assert student_lab_cli.truncate("abc", 5) == "abc"
     assert student_lab_cli.truncate("abcdef", 5) == "ab..."
+
+
+def test_compact_datetime_hides_seconds_and_timezone() -> None:
+    assert student_lab_cli.compact_datetime("2026-10-19T23:59:00+02:00") == "2026-10-19 23:59"
+    assert student_lab_cli.compact_datetime("") == "-"
+    assert student_lab_cli.compact_datetime("non-data") == "non-data"
 
 
 def test_status_label_uses_human_labels() -> None:
