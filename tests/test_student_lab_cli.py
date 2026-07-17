@@ -39,6 +39,7 @@ def sample_assignment(**overrides):
             "last_requested_at": "2026-10-18T17:20:00+02:00",
             "last_decision": "bloccata",
             "counts": {"teoria": 1, "ai": 1},
+            "ai_budget": {"limit": 5, "used": 1, "remaining": 4, "exhausted": False},
         },
         "workspace": {
             "path": "examples/assignment_tracking/student_repos/rossi-mario/assignments/python-base-somma-001",
@@ -136,6 +137,7 @@ def test_render_assignment_detail_shows_workspace_report_and_runner() -> None:
     assert "soluzioni complete" in rendered
     assert "Richieste aiuto" in rendered
     assert "Bloccate:" in rendered
+    assert "1/5 usate, 4 rimanenti" in rendered
     assert "2026-10-18 17:20" in rendered
     assert "bloccata" in rendered
     assert "not_graded" in rendered
@@ -265,6 +267,11 @@ def test_help_result_message_shows_policy_decision() -> None:
 
     assert "Richiesta aiuto bloccata: Aiuto AI" in message
     assert "non consente aiuto AI" in message
+
+
+def test_ai_budget_label_handles_missing_and_exhausted_budget() -> None:
+    assert student_lab_cli.ai_budget_label({}) == "non disponibile"
+    assert student_lab_cli.ai_budget_label({"limit": 2, "used": 2, "remaining": 0, "exhausted": True}) == "2/2 usate, 0 rimanenti (esaurito)"
 
 
 def test_run_tui_can_show_detail_and_exit(monkeypatch, tmp_path) -> None:

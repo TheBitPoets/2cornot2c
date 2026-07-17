@@ -80,6 +80,20 @@ def policy_list(values: Any) -> str:
     return ", ".join(clean_text(value) for value in values)
 
 
+def ai_budget_label(value: Any) -> str:
+    """Return a compact AI budget summary."""
+
+    if not isinstance(value, dict):
+        return "-"
+    limit = value.get("limit")
+    used = value.get("used")
+    remaining = value.get("remaining")
+    if not limit:
+        return "non disponibile"
+    label = f"{used or 0}/{limit} usate, {remaining or 0} rimanenti"
+    return f"{label} (esaurito)" if value.get("exhausted") else label
+
+
 def truncate(text: str, width: int) -> str:
     """Return text clipped to width with a suffix."""
 
@@ -219,6 +233,7 @@ def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False
         detail_line("Eventi:", help_summary.get("total")),
         detail_line("Consentite:", help_summary.get("allowed")),
         detail_line("Bloccate:", help_summary.get("denied")),
+        detail_line("AI budget:", ai_budget_label(help_summary.get("ai_budget"))),
         detail_line("Ultima:", compact_datetime(help_summary.get("last_requested_at"))),
         detail_line("Esito ultima:", help_summary.get("last_decision")),
         "",

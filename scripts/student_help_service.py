@@ -80,6 +80,44 @@ def evaluate_help_request(support_policy: dict[str, Any], help_type: Any) -> dic
     }
 
 
+def positive_int(value: Any, default: int = 0) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+    return parsed if parsed > 0 else default
+
+
+def ai_events_used(events: list[dict[str, Any]]) -> int:
+    return sum(1 for event in events if normalize_help_type(event.get("help_type")) == "ai" and event.get("allowed") is True)
+
+
+def ai_budget_status(support_policy: dict[str, Any], events: list[dict[str, Any]]) -> dict[str, Any]:
+    limit = positive_int(support_policy.get("ai_request_limit"))
+    used = ai_events_used(events)
+    remaining = max(limit - used, 0) if limit else 0
+    return {
+        "limit": limit,
+        "used": used,
+        "remaining": remaining,
+        "exhausted": bool(limit and used >= limit),
+    }
+
+
+def apply_budget_limit(decision: dict[str, Any], support_policy: dict[str, Any], events: list[dict[str, Any]]) -> dict[str, Any]:
+    if decision.get("help_type") != "ai" or decision.get("allowed") is not True:
+        return decision
+    budget = ai_budget_status(support_policy, events)
+    if not budget["exhausted"]:
+        decision["budget"] = budget
+        return decision
+    blocked = dict(decision)
+    blocked["allowed"] = False
+    blocked["reason"] = "Budget richieste AI esaurito per questa consegna."
+    blocked["budget"] = budget
+    return blocked
+
+
 def help_log_path(repo_path: Path, activity_id: str) -> Path:
     return repo_path / "help" / clean_text(activity_id) / "events.json"
 
@@ -123,7 +161,9 @@ def record_help_request(
     prompt: str = "",
     now: str | None = None,
 ) -> dict[str, Any]:
-    decision = evaluate_help_request(support_policy, help_type)
+    path = help_log_path(repo_path, activity_id)
+    events = load_help_events(path)
+    decision = apply_budget_limit(evaluate_help_request(support_policy, help_type), support_policy, events)
     requested_at = parse_now(now)
     event = {
         "schema_version": HELP_EVENT_SCHEMA_VERSION,
@@ -135,8 +175,8 @@ def record_help_request(
         "reason": decision["reason"],
         "prompt": clean_text(prompt),
     }
-    path = help_log_path(repo_path, activity_id)
-    events = load_help_events(path)
+    if "budget" in decision:
+        event["budget"] = decision["budget"]
     events.append(event)
     write_help_events(path, events)
     return event
@@ -201,3 +241,8 @@ def teacher_help_summary(log_path: Path | None) -> dict[str, Any]:
     if error:
         summary["events"] = []
     return summary
+
+
+def help_budget_summary(log_path: Path | None, support_policy: dict[str, Any]) -> dict[str, Any]:
+    events = load_help_events(log_path) if log_path is not None else []
+    return ai_budget_status(support_policy, events)

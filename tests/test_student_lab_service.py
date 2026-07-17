@@ -119,6 +119,7 @@ def test_student_lab_exposes_explicit_support_policy(tmp_path) -> None:
     assert assignment["student_support_mode"] == "ai-assisted"
     assert assignment["support_policy"]["label"] == "AI assisted"
     assert assignment["support_policy"]["ai_allowed"] is True
+    assert assignment["support_policy"]["ai_request_limit"] == 5
     assert "suggerimenti AI controllati" in assignment["support_policy"]["allowed"]
 
 
@@ -215,6 +216,30 @@ def test_student_lab_exposes_help_summary(tmp_path) -> None:
     assert assignment["help"]["denied"] == 1
     assert assignment["help"]["last_decision"] == "bloccata"
     assert assignment["help"]["counts"] == {"teoria": 1, "ai": 1}
+    assert assignment["help"]["ai_budget"] == {"limit": 0, "used": 0, "remaining": 0, "exhausted": False}
+
+
+def test_student_lab_exposes_ai_budget_summary(tmp_path) -> None:
+    activity_path = write_activity(tmp_path, student_support_mode="ai-assisted")
+    write_assignment(tmp_path, sample_assignment(tmp_path, activity_path=activity_path))
+    repo = tmp_path / "examples" / "assignment_tracking" / "student_repos" / "rossi-mario"
+    policy = student_support_policy.support_policy("ai-assisted")
+    student_help_service.record_help_request(
+        repo_path=repo,
+        activity_id="python-base-somma-001",
+        support_policy=policy,
+        help_type="ai",
+        prompt="Dammi un suggerimento.",
+        now="2026-10-18T17:15:00+02:00",
+    )
+
+    assignment = student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id="rossi-mario",
+        now="2026-10-18T18:00:00+02:00",
+    )[0]
+
+    assert assignment["help"]["ai_budget"] == {"limit": 5, "used": 1, "remaining": 4, "exhausted": False}
 
 
 def test_student_lab_keeps_assignment_when_local_repo_path_is_only_inferred(tmp_path) -> None:

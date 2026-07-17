@@ -17,6 +17,7 @@ SUPPORT_POLICIES: dict[str, dict[str, Any]] = {
         "ai_allowed": False,
         "theory_allowed": False,
         "debug_allowed": False,
+        "ai_request_limit": 0,
     },
     "feedback-tecnico": {
         "mode": "feedback-tecnico",
@@ -27,6 +28,7 @@ SUPPORT_POLICIES: dict[str, dict[str, Any]] = {
         "ai_allowed": False,
         "theory_allowed": False,
         "debug_allowed": True,
+        "ai_request_limit": 0,
     },
     "studio-guidato": {
         "mode": "studio-guidato",
@@ -37,6 +39,7 @@ SUPPORT_POLICIES: dict[str, dict[str, Any]] = {
         "ai_allowed": False,
         "theory_allowed": True,
         "debug_allowed": True,
+        "ai_request_limit": 0,
     },
     "ai-assisted": {
         "mode": "ai-assisted",
@@ -47,6 +50,7 @@ SUPPORT_POLICIES: dict[str, dict[str, Any]] = {
         "ai_allowed": True,
         "theory_allowed": True,
         "debug_allowed": True,
+        "ai_request_limit": 5,
     },
 }
 
