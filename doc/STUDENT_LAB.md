@@ -79,6 +79,16 @@ Il report salvato usa lo schema `student_lab_run.v1` e mantiene separati:
 - metadati di collegamento: `assignment_id`, `activity_id`, `student_id`, `language`, `source`, `backend`, `submitted_at`;
 - feedback AI: non presente in questo report, per evitare di mescolare esecuzione deterministica e suggerimenti generativi.
 
+Il registro docente legge lo stesso `reports/<activity_id>/latest.json` usato dal lab studente.
+Quando il report esiste, il registro salva nella `submission` anche:
+
+- `report_path`: path relativo del report letto;
+- `report_backend`: backend che ha prodotto il report, per esempio `local` o `docker`;
+- `report_schema_version`: versione dello schema del report;
+- `report_status`: stato tecnico del report originale.
+
+In questo modo dashboard docente, dashboard studente e TUI leggono lo stesso risultato senza ricalcolare grading o stato in modi divergenti.
+
 Le prossime PR dovranno usare questo contratto per:
 
 1. collegare il comando di esecuzione alla TUI;

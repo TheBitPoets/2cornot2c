@@ -4093,6 +4093,8 @@ function renderStudents(students) {
         ${escapeHtml(formatDate(submission.submitted_at))}<br>
         <small>${submission.commit ? `commit ${escapeHtml(submission.commit)}` : "commit non disponibile"}</small><br>
         <small>${submission.source_path ? escapeHtml(submission.source_path) : "sorgente non indicato"}</small>
+        ${submission.report_path ? `<br><small>report ${escapeHtml(submission.report_path)}</small>` : ""}
+        ${submission.report_backend ? `<br><small>backend ${escapeHtml(submission.report_backend)}</small>` : ""}
         ${submission.source_github_url ? `<br>${externalLink(submission.source_github_url, "Apri su GitHub")}` : ""}
       </td>
       <td>

@@ -372,6 +372,7 @@ def track_assignments(
         report = load_report(report_path)
         if report is not None:
             validate_report_activity(report, activity_id, report_path)
+        relative_report_path = relative_to_root_or_repo(report_path, target.path) if report_path.exists() else None
         source_path = report.get("source") if report else None
         submitted = report is not None
         submitted_at = report.get("submitted_at") if report else None
@@ -398,10 +399,14 @@ def track_assignments(
                     "files": submission_files(target, activity_id, report, repo_url),
                     "submitted_at": submitted_at,
                     "commit": report.get("commit") if report else None,
+                    "report_path": relative_report_path,
+                    "report_backend": report.get("backend") if report else None,
+                    "report_schema_version": report.get("schema_version") if report else None,
+                    "report_status": report.get("status") if report else None,
                 },
                 "grading": grading_summary(report),
                 "ai_feedback": ai_feedback_placeholder(),
-                "report_path": str(report_path) if report_path.exists() else None,
+                "report_path": relative_report_path,
             }
         )
 

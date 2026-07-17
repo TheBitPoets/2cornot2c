@@ -523,6 +523,33 @@ def test_track_assignments_uses_technical_grading_adapter_for_infrastructure_err
     assert grading["report_status"] == "unsupported-language"
 
 
+def test_track_assignments_exposes_student_lab_report_metadata(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+    student = target(tmp_path, "rossi-mario")
+    write_report(student.path, "2026-10-20T08:00:00+02:00", passed=True)
+    report_path = student.path / "reports" / "python-base-somma-001" / "latest.json"
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    report["schema_version"] = "student_lab_run.v1"
+    report["backend"] = "docker"
+    report_path.write_text(json.dumps(report), encoding="utf-8")
+
+    index = track_assignments.track_assignments(
+        activity_path=activity_path,
+        targets=[student],
+        due_at="2026-10-21T08:00:00+02:00",
+        now="2026-10-20T09:00:00+02:00",
+    )
+
+    row = index["students"][0]
+
+    assert row["report_path"] == "reports/python-base-somma-001/latest.json"
+    assert row["submission"]["report_path"] == "reports/python-base-somma-001/latest.json"
+    assert row["submission"]["report_backend"] == "docker"
+    assert row["submission"]["report_schema_version"] == "student_lab_run.v1"
+    assert row["submission"]["report_status"] == "passed"
+    assert row["grading"]["status"] == "graded_passed"
+
+
 def test_track_assignments_rejects_report_for_different_activity(tmp_path) -> None:
     activity_path = write_activity(tmp_path)
     student = target(tmp_path, "verdi-anna")
