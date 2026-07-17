@@ -51,6 +51,7 @@ Lo script stampa un JSON con i path generati e i comandi utili per continuare il
 python scripts/student_lab_service.py --root tmp/student-lab-demo --student-id rossi-mario
 python scripts/student_lab_cli.py --root tmp/student-lab-demo --student-id rossi-mario
 python scripts/student_lab_runner.py --root tmp/student-lab-demo --student-id rossi-mario --activity-id python-demo-somma-001 --write-report
+python scripts/course_board_server.py --root tmp/student-lab-demo
 ```
 
 Se vuoi usare un'altra cartella:
@@ -69,7 +70,7 @@ Quando vuoi provare la demo con dati reali o demo del repository:
 1. Avvia il server:
 
    ```bash
-   python scripts/course_board_server.py
+   python scripts/course_board_server.py --root tmp/student-lab-demo
    ```
 
 2. Apri la dashboard studente:

@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from scripts import assignment_records, course_board_server
+from scripts import assignment_records, course_board_server, student_lab_demo_setup
 
 
 def patch_assignment_paths(tmp_path, monkeypatch) -> None:
@@ -911,6 +911,27 @@ def test_student_dashboard_endpoint_includes_student_lab_results(tmp_path, monke
     assert lab_assignment["report"]["exists"] is True
     assert lab_assignment["grading"]["status"] == "graded_passed"
     assert lab_assignment["grading"]["tests_passed"] == 2
+
+
+def test_student_dashboard_uses_configured_demo_data_root(tmp_path) -> None:
+    original_root = course_board_server.ROOT
+    student_lab_demo_setup.prepare_demo(tmp_path)
+
+    try:
+        configured = course_board_server.configure_data_root(tmp_path)
+        dashboard = course_board_server.student_dashboard("rossi-mario")
+    finally:
+        course_board_server.configure_data_root(original_root)
+
+    assert configured == tmp_path.resolve(strict=False)
+    assert dashboard["student_id"] == "rossi-mario"
+    assert dashboard["lab"]["schema_version"] == "student_lab.v1"
+    assert len(dashboard["lab"]["assignments"]) == 1
+    lab_assignment = dashboard["lab"]["assignments"][0]
+    assert lab_assignment["activity_id"] == "python-demo-somma-001"
+    assert lab_assignment["report"]["exists"] is True
+    assert lab_assignment["help"]["total"] == 1
+    assert lab_assignment["help"]["ai_budget"]["remaining"] == 4
 
 
 def test_class_roster_helpers_use_local_roster_storage(tmp_path, monkeypatch) -> None:
