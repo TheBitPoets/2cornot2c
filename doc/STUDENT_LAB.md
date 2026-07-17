@@ -8,6 +8,19 @@ Il primo contratto e prodotto da:
 python scripts/student_lab_service.py --student-id rossi-mario
 ```
 
+La prima interfaccia semigrafica e:
+
+```powershell
+python scripts/student_lab_cli.py --student-id rossi-mario
+```
+
+Comandi disponibili nella TUI minima:
+
+- numero della riga: apre il dettaglio della consegna;
+- `r`: ricarica le consegne;
+- `q`: esce;
+- `o` dal dettaglio: apre la cartella workspace, se esiste.
+
 Il payload ha schema `student_lab.v1` e contiene:
 
 - `student_id`: studente richiesto;
@@ -19,6 +32,7 @@ Il payload ha schema `student_lab.v1` e contiene:
 - `runner`: stato del runner lab.
 
 In questa prima PR il runner non esegue ancora codice: espone `not_run`.
+La TUI minima permette di consultare e aprire il workspace, ma non esegue ancora test.
 
 ## Stati minimi
 
