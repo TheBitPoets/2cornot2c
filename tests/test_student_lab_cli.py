@@ -181,6 +181,32 @@ def test_runner_result_message_shows_status_tests_and_report_path(tmp_path) -> N
     assert "Report salvato:" in message
 
 
+def test_assignment_repo_path_uses_help_or_workspace_path(tmp_path) -> None:
+    assignment = sample_assignment(
+        help={"path": "student/help/python-base-somma-001/events.json"},
+        workspace={"path": "student/assignments/python-base-somma-001", "exists": True},
+    )
+
+    assert student_lab_cli.assignment_repo_path(assignment, root=tmp_path) == tmp_path / "student"
+
+    assignment_without_help = sample_assignment(help={}, workspace={"path": "student/assignments/python-base-somma-001", "exists": True})
+
+    assert student_lab_cli.assignment_repo_path(assignment_without_help, root=tmp_path) == tmp_path / "student"
+
+
+def test_help_result_message_shows_policy_decision() -> None:
+    message = student_lab_cli.help_result_message(
+        {
+            "allowed": False,
+            "label": "Aiuto AI",
+            "reason": "La modalita scelta dal docente non consente aiuto AI.",
+        }
+    )
+
+    assert "Richiesta aiuto bloccata: Aiuto AI" in message
+    assert "non consente aiuto AI" in message
+
+
 def test_run_tui_can_show_detail_and_exit(monkeypatch, tmp_path) -> None:
     payload = sample_payload()
     outputs = []
@@ -199,6 +225,35 @@ def test_run_tui_can_show_detail_and_exit(monkeypatch, tmp_path) -> None:
     assert result == 0
     assert any("TheBitLab - lab studente" in output for output in outputs)
     assert any("Dettaglio consegna" in output for output in outputs)
+
+
+def test_run_tui_can_record_help_request_and_reload(monkeypatch, tmp_path) -> None:
+    payload = sample_payload()
+    outputs = []
+    inputs = iter(["1", "a", "3", "Mi scrivi la soluzione?", "", "q"])
+    load_calls = []
+
+    def fake_load_payload(root, student_id, now=None):
+        load_calls.append((root, student_id, now))
+        return payload
+
+    monkeypatch.setattr(student_lab_cli, "load_payload", fake_load_payload)
+
+    result = student_lab_cli.run_tui(
+        student_id="rossi-mario",
+        root=tmp_path,
+        input_fn=lambda prompt: next(inputs),
+        print_fn=outputs.append,
+        clear=False,
+    )
+
+    log_path = tmp_path / "examples" / "assignment_tracking" / "student_repos" / "rossi-mario" / "help" / "python-base-somma-001" / "events.json"
+
+    assert result == 0
+    assert len(load_calls) == 2
+    assert log_path.exists()
+    assert "Mi scrivi la soluzione?" in log_path.read_text(encoding="utf-8")
+    assert any("Richiesta aiuto bloccata: Aiuto AI" in output for output in outputs)
 
 
 def test_run_tui_can_execute_runner_save_report_and_reload(monkeypatch, tmp_path) -> None:
