@@ -123,6 +123,7 @@ def test_render_assignment_detail_shows_workspace_report_and_runner() -> None:
     rendered = student_lab_cli.render_assignment_detail(sample_assignment())
 
     assert "Dettaglio consegna" in rendered
+    assert rendered.count(student_lab_cli.section_separator()) >= 8
     assert "Somma in Python" in rendered
     assert "Classe demo 3A" in rendered
     assert "2026-10-12 09:00" in rendered

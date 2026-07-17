@@ -188,6 +188,12 @@ def detail_line(label: str, value: Any) -> str:
     return f"{label:<18} {clean_text(value)}"
 
 
+def section_separator(width: int = 72) -> str:
+    """Return a subtle separator for detail sections."""
+
+    return "-" * width
+
+
 def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False) -> str:
     """Render the detail page for one lab assignment."""
 
@@ -201,7 +207,7 @@ def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False
     topics = activity.get("topics") if isinstance(activity.get("topics"), list) else []
     lines = [
         "Dettaglio consegna",
-        "",
+        section_separator(),
         detail_line("Titolo:", assignment.get("title") or assignment.get("activity_id")),
         detail_line("Activity:", assignment.get("activity_id")),
         detail_line("Assegnazione:", assignment.get("assignment_id")),
@@ -209,24 +215,24 @@ def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False
         detail_line("Assegnata:", compact_datetime(assignment.get("assigned_at"))),
         detail_line("Scadenza:", compact_datetime(assignment.get("due_at"))),
         detail_line("Stato:", colored_status(clean_text(assignment.get("status")), use_color)),
-        "",
+        section_separator(),
         "Workspace",
         detail_line("Path:", workspace.get("path")),
         detail_line("Esiste:", "si" if workspace.get("exists") else "no"),
-        "",
+        section_separator(),
         "Activity",
         detail_line("Path:", activity.get("path")),
         detail_line("Tipo:", activity.get("kind")),
         detail_line("Linguaggio:", activity.get("language")),
         detail_line("Sorgente:", activity.get("source_name")),
         detail_line("Argomenti:", ", ".join(str(topic) for topic in topics) if topics else "-"),
-        "",
+        section_separator(),
         "Aiuto consentito",
         detail_line("Modalita:", support_policy.get("label") or assignment.get("student_support_mode")),
         detail_line("Sintesi:", support_policy.get("summary")),
         detail_line("Permesso:", policy_list(support_policy.get("allowed"))),
         detail_line("Non permesso:", policy_list(support_policy.get("not_allowed"))),
-        "",
+        section_separator(),
         "Richieste aiuto",
         detail_line("Stato log:", help_summary.get("status")),
         detail_line("Errore log:", help_summary.get("error")),
@@ -236,21 +242,21 @@ def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False
         detail_line("AI budget:", ai_budget_label(help_summary.get("ai_budget"))),
         detail_line("Ultima:", compact_datetime(help_summary.get("last_requested_at"))),
         detail_line("Esito ultima:", help_summary.get("last_decision")),
-        "",
+        section_separator(),
         "Report",
         detail_line("Path:", report.get("path")),
         detail_line("Esiste:", "si" if report.get("exists") else "no"),
         detail_line("Consegnata:", compact_datetime(report.get("submitted_at"))),
         detail_line("Commit:", report.get("commit")),
-        "",
+        section_separator(),
         "Grading",
         detail_line("Stato:", grading_label(grading)),
         detail_line("Voto:", grading.get("teacher_grade") if grading.get("teacher_grade") is not None else grading.get("score")),
-        "",
+        section_separator(),
         "Runner",
         detail_line("Stato:", runner.get("status")),
         detail_line("Backend:", runner.get("backend")),
-        "",
+        section_separator(),
         "Comandi: a = chiedi aiuto | h = storico aiuti | e = esegui e salva report | o = apri workspace | invio/b = lista | q = esci",
     ]
     return "\n".join(lines)
