@@ -5,6 +5,7 @@ import json
 import re
 import subprocess
 import sys
+import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -18,6 +19,8 @@ from scripts.thebitlab_contracts import normalize_activity
 
 
 DEFAULT_TIMEOUT_SECONDS = 5
+DEFAULT_DOCKER_IMAGE = grade_activity.DEFAULT_DOCKER_IMAGE
+RUNNER_BACKENDS = {"local", "docker"}
 DEFAULT_SOURCE_NAMES = {
     "c": "main.c",
     "python": "main.py",
@@ -221,6 +224,101 @@ def wrap_c_report(assignment: dict[str, Any], source: Path, report: dict[str, An
     }
 
 
+def run_c_docker(
+    assignment: dict[str, Any],
+    *,
+    activity_path: Path,
+    source: Path,
+    timeout_seconds: int,
+    docker_image: str = DEFAULT_DOCKER_IMAGE,
+) -> dict[str, Any]:
+    """Run a C assignment through the existing Docker grading sandbox."""
+
+    if not source.is_file():
+        return error_report(
+            assignment,
+            language="c",
+            source=source,
+            status="source-not-found",
+            error=f"Sorgente non trovato: {source}",
+            backend="docker",
+        )
+    with tempfile.TemporaryDirectory(prefix="thebitlab-student-docker-") as temp_dir:
+        temp_root = Path(temp_dir)
+        try:
+            workspace, copied_activity, copied_source = grade_activity.prepare_docker_workspace(activity_path, source, temp_root)
+            docker_timeout = grade_activity.docker_timeout_seconds(grade_activity.load_activity(copied_activity), timeout_seconds)
+            command = grade_activity.docker_command(
+                activity=copied_activity,
+                source=copied_source,
+                language="c",
+                timeout_seconds=timeout_seconds,
+                image=docker_image,
+                workspace=workspace,
+            )
+        except (OSError, ValueError) as error:
+            return error_report(
+                assignment,
+                language="c",
+                source=source,
+                status="docker-setup-error",
+                error=str(error),
+                backend="docker",
+            )
+        try:
+            result = subprocess.run(command, capture_output=True, text=True, timeout=docker_timeout, check=False)
+        except subprocess.TimeoutExpired:
+            return error_report(
+                assignment,
+                language="c",
+                source=source,
+                status="docker-timeout",
+                error=f"Timeout Docker dopo {docker_timeout} secondi.",
+                backend="docker",
+            )
+        except FileNotFoundError:
+            return error_report(
+                assignment,
+                language="c",
+                source=source,
+                status="docker-not-found",
+                error="Docker non trovato. Installa Docker oppure usa --backend local.",
+                backend="docker",
+            )
+    try:
+        report = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return error_report(
+            assignment,
+            language="c",
+            source=source,
+            status="docker-invalid-output",
+            error=result.stderr or result.stdout or "Il container non ha prodotto JSON valido.",
+            backend="docker",
+        )
+    if not grade_activity.has_minimal_report_shape(report):
+        return error_report(
+            assignment,
+            language="c",
+            source=source,
+            status="docker-invalid-report",
+            error=result.stderr or "Il container non ha prodotto un report di grading valido.",
+            backend="docker",
+        )
+    if result.returncode != 0 and report.get("passed") is True:
+        return error_report(
+            assignment,
+            language="c",
+            source=source,
+            status="docker-inconsistent-report",
+            error=result.stderr or "Il container ha fallito ma ha prodotto un report di successo.",
+            backend="docker",
+        )
+    wrapped = wrap_c_report(assignment, source, report)
+    wrapped["backend"] = "docker"
+    return wrapped
+
+
 def run_local_assignment(
     assignment: dict[str, Any],
     *,
@@ -270,6 +368,84 @@ def run_local_assignment(
     )
 
 
+def run_docker_assignment(
+    assignment: dict[str, Any],
+    *,
+    root: Path = PROJECT_ROOT,
+    timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
+    docker_image: str = DEFAULT_DOCKER_IMAGE,
+) -> dict[str, Any]:
+    """Run one student lab assignment with Docker when supported."""
+
+    activity_summary = assignment.get("activity") if isinstance(assignment.get("activity"), dict) else {}
+    activity_path_value = clean_text(activity_summary.get("path"))
+    activity_path = student_lab_service.resolve_local_path(root, activity_path_value) if activity_path_value else root
+    activity = load_activity(root, assignment)
+    normalized = normalize_activity(activity)
+    language = clean_text(normalized.get("language")).lower()
+    workspace = assignment.get("workspace") if isinstance(assignment.get("workspace"), dict) else {}
+    workspace_path_value = clean_text(workspace.get("path"))
+    workspace_path = student_lab_service.resolve_local_path(root, workspace_path_value) if workspace_path_value else root
+    source_name = source_name_for(activity, language)
+    source = workspace_path / source_name if source_name else workspace_path
+    if not is_safe_source_name(source_name):
+        return error_report(
+            assignment,
+            language=language,
+            source=source,
+            status="invalid-source-name",
+            error="source_name deve essere un nome file semplice dentro il workspace.",
+            backend="docker",
+        )
+    if not workspace_path.is_dir():
+        return error_report(
+            assignment,
+            language=language,
+            source=source,
+            status="workspace-not-found",
+            error=f"Workspace non trovato: {workspace_path_value}",
+            backend="docker",
+        )
+    if language == "c":
+        return run_c_docker(
+            assignment,
+            activity_path=activity_path,
+            source=source,
+            timeout_seconds=timeout_seconds,
+            docker_image=docker_image,
+        )
+    return error_report(
+        assignment,
+        language=language,
+        source=source,
+        status="unsupported-docker-language",
+        error=f"Runner Docker non supportato per il linguaggio: {language or '-'}",
+        backend="docker",
+    )
+
+
+def run_assignment(
+    assignment: dict[str, Any],
+    *,
+    root: Path = PROJECT_ROOT,
+    backend: str = "local",
+    timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
+    docker_image: str = DEFAULT_DOCKER_IMAGE,
+) -> dict[str, Any]:
+    """Run one assignment with the requested backend."""
+
+    if backend == "local":
+        return run_local_assignment(assignment, root=root, timeout_seconds=timeout_seconds)
+    if backend == "docker":
+        return run_docker_assignment(
+            assignment,
+            root=root,
+            timeout_seconds=timeout_seconds,
+            docker_image=docker_image,
+        )
+    raise ValueError(f"Backend runner non supportato: {backend}")
+
+
 def select_assignment(
     assignments: list[dict[str, Any]],
     *,
@@ -304,14 +480,22 @@ def run_student_assignment(
     assignment_id: str | None = None,
     activity_id: str | None = None,
     now: str | None = None,
+    backend: str = "local",
     timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
+    docker_image: str = DEFAULT_DOCKER_IMAGE,
 ) -> dict[str, Any]:
     """Load and run one assignment for a student."""
 
     payload = student_lab_service.student_lab_payload(root=root, student_id=student_id, now=now)
     assignments = payload.get("assignments") if isinstance(payload.get("assignments"), list) else []
     assignment = select_assignment(assignments, assignment_id=assignment_id, activity_id=activity_id)
-    return run_local_assignment(assignment, root=root, timeout_seconds=timeout_seconds)
+    return run_assignment(
+        assignment,
+        root=root,
+        backend=backend,
+        timeout_seconds=timeout_seconds,
+        docker_image=docker_image,
+    )
 
 
 def load_student_assignment(
@@ -403,6 +587,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--activity-id", help="ID activity da eseguire se l'assegnazione e univoca.")
     parser.add_argument("--root", type=Path, default=PROJECT_ROOT, help="Root del repository TheBitLab.")
     parser.add_argument("--now", help="Data ISO da usare per calcolare lo stato della consegna.")
+    parser.add_argument("--backend", choices=sorted(RUNNER_BACKENDS), default="local", help="Backend runner da usare.")
+    parser.add_argument("--docker-image", default=DEFAULT_DOCKER_IMAGE, help="Immagine Docker da usare con --backend docker.")
     parser.add_argument("--timeout", type=positive_int, default=DEFAULT_TIMEOUT_SECONDS, help="Timeout del runner locale.")
     parser.add_argument("--write-report", action="store_true", help="Scrive il report nel path standard dello studente.")
     parser.add_argument("--report", type=Path, help="Path alternativo del report JSON da scrivere.")
@@ -422,7 +608,13 @@ def main() -> int:
             activity_id=args.activity_id,
             now=args.now,
         )
-        report = run_local_assignment(assignment, root=root, timeout_seconds=args.timeout)
+        report = run_assignment(
+            assignment,
+            root=root,
+            backend=args.backend,
+            timeout_seconds=args.timeout,
+            docker_image=args.docker_image,
+        )
         if args.write_report or args.report:
             write_student_report(root, assignment, report, args.report.resolve(strict=False) if args.report else None)
     except ValueError as error:

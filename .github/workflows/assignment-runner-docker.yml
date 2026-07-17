@@ -9,6 +9,8 @@ on:
     paths:
       - "docker/assignment-runner/**"
       - "scripts/grade_activity.py"
+      - "scripts/student_lab_runner.py"
+      - "tests/test_student_lab_runner.py"
       - ".github/workflows/assignment-runner-docker.yml"
   push:
     branches:
@@ -16,6 +18,8 @@ on:
     paths:
       - "docker/assignment-runner/**"
       - "scripts/grade_activity.py"
+      - "scripts/student_lab_runner.py"
+      - "tests/test_student_lab_runner.py"
       - ".github/workflows/assignment-runner-docker.yml"
 
 jobs:
@@ -70,4 +74,110 @@ jobs:
           report = json.loads((Path(os.environ["RUNNER_TEMP"]) / "report.json").read_text(encoding="utf-8"))
           assert report["passed"] is True
           assert report["status"] == "passed"
+          PY
+
+      - name: Smoke test student lab Docker backend
+        run: |
+          mkdir -p "$RUNNER_TEMP/student-root"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          from scripts import assignment_records
+
+          root = Path(os.environ["RUNNER_TEMP"]) / "student-root"
+          activity_dir = root / "activities"
+          activity_dir.mkdir(parents=True, exist_ok=True)
+          activity_path = activity_dir / "c-base-somma-001.json"
+          activity_path.write_text(
+              json.dumps(
+                  {
+                      "schema_version": "1.0",
+                      "id": "c-base-somma-001",
+                      "title": "Somma C",
+                      "kind": "laboratorio",
+                      "difficulty": "B",
+                      "topics": ["variabili"],
+                      "language": "c",
+                      "source_name": "main.c",
+                      "instructions": "Somma due interi.",
+                      "grading_policy": {
+                          "compila": True,
+                          "test": True,
+                          "sandbox": True,
+                          "ai_feedback": False,
+                      },
+                      "test_cases": [
+                          {
+                              "name": "somma minima",
+                              "stdin": "2 3\n",
+                              "expected_stdout": "5\n",
+                          }
+                      ],
+                  }
+              ),
+              encoding="utf-8",
+          )
+          assignment = assignment_records.build_assignment_record(
+              activity_id="c-base-somma-001",
+              activity_path="activities/c-base-somma-001.json",
+              target_type="student",
+              assigned_at="2026-10-12T09:00:00+02:00",
+              due_at="2026-10-19T23:59:00+02:00",
+              targets=[
+                  {
+                      "student_id": "rossi-mario",
+                      "display_name": "Rossi Mario",
+                      "path": "examples/assignment_tracking/student_repos/rossi-mario",
+                  }
+              ],
+          )
+          assignment_records.JsonAssignmentRecordStorage(root).write_assignment(assignment)
+          workspace = root / "examples" / "assignment_tracking" / "student_repos" / "rossi-mario" / "assignments" / "c-base-somma-001"
+          workspace.mkdir(parents=True, exist_ok=True)
+          (workspace / "main.c").write_text(
+              """#include <stdio.h>
+
+          int main(void) {
+            int a;
+            int b;
+            if (scanf("%d %d", &a, &b) != 2) {
+              return 1;
+            }
+            printf("%d\\n", a + b);
+            return 0;
+          }
+          """,
+              encoding="utf-8",
+          )
+          PY
+          python scripts/student_lab_runner.py \
+            --root "$RUNNER_TEMP/student-root" \
+            --student-id rossi-mario \
+            --activity-id c-base-somma-001 \
+            --backend docker \
+            --write-report
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          report = json.loads(
+              (
+                  Path(os.environ["RUNNER_TEMP"])
+                  / "student-root"
+                  / "examples"
+                  / "assignment_tracking"
+                  / "student_repos"
+                  / "rossi-mario"
+                  / "reports"
+                  / "c-base-somma-001"
+                  / "latest.json"
+              ).read_text(encoding="utf-8")
+          )
+          assert report["backend"] == "docker"
+          assert report["passed"] is True
+          assert report["status"] == "passed"
+          assert report["summary"] == {"passed": 1, "total": 1}
           PY
