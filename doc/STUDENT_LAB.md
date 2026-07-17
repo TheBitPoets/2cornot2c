@@ -14,6 +14,12 @@ La prima interfaccia semigrafica e:
 python scripts/student_lab_cli.py --student-id rossi-mario
 ```
 
+Il primo runner locale, senza Docker e senza salvataggio automatico del report, e:
+
+```powershell
+python scripts/student_lab_runner.py --student-id rossi-mario --activity-id python-base-somma-001
+```
+
 La TUI usa colori ANSI quando il terminale li supporta. Per disattivarli:
 
 ```powershell
@@ -35,10 +41,10 @@ Il payload ha schema `student_lab.v1` e contiene:
 - `activity`: metadati minimi della activity collegata;
 - `report`: report locale `reports/<activity_id>/latest.json`, se esiste;
 - `grading`: riepilogo deterministico del report, se esiste;
-- `runner`: stato del runner lab.
+- `runner`: stato del runner lab nel payload di consultazione.
 
-In questa prima fase il runner non esegue ancora codice: espone `not_run`.
-La TUI minima permette di consultare e aprire il workspace, ma non esegue ancora test.
+Nel payload di consultazione la TUI espone ancora `not_run`, perche l'esecuzione e un comando separato.
+Il runner locale produce un report JSON su stdout, ma non lo salva ancora in `reports/<activity_id>/latest.json`.
 
 ## Stati minimi
 
@@ -53,8 +59,8 @@ La TUI minima permette di consultare e aprire il workspace, ma non esegue ancora
 
 Le prossime PR dovranno usare questo contratto per:
 
-1. introdurre un runner locale;
-2. salvare risultati strutturati prodotti dal lab;
+1. salvare risultati strutturati prodotti dal lab;
+2. collegare il comando di esecuzione alla TUI;
 3. introdurre un runner Docker minimale;
 4. far leggere gli stessi risultati alla dashboard studente e al registro docente;
 5. valutare un adapter opzionale per layout terminale avanzato, per esempio tmux su ambienti compatibili.
