@@ -189,7 +189,8 @@ def test_runner_result_message_shows_status_tests_and_report_path(tmp_path) -> N
     assert "consegna superata" in message
     assert "2/3 test" in message
     assert "Report salvato:" in message
-    assert "dashboard e registro docente" in message
+    assert "Questo report è quello letto da dashboard e registro docente." in message
+    assert "Questo report e quello" not in message
 
 
 def test_assignment_repo_path_uses_help_or_workspace_path(tmp_path) -> None:
@@ -229,7 +230,7 @@ def test_render_help_history_shows_events(tmp_path) -> None:
                         "requested_at": "2026-10-18T17:20:00+02:00",
                         "label": "Aiuto AI",
                         "allowed": False,
-                        "reason": "La modalita scelta dal docente non consente aiuto AI.",
+                        "reason": "La modalità scelta dal docente non consente aiuto AI.",
                         "prompt": "Mi scrivi la soluzione completa?",
                     }
                 ]
@@ -278,7 +279,7 @@ def test_help_result_message_shows_policy_decision() -> None:
         {
             "allowed": False,
             "label": "Aiuto AI",
-            "reason": "La modalita scelta dal docente non consente aiuto AI.",
+            "reason": "La modalità scelta dal docente non consente aiuto AI.",
         }
     )
 
@@ -436,7 +437,7 @@ def test_run_tui_can_show_help_history(monkeypatch, tmp_path) -> None:
                         "requested_at": "2026-10-18T17:20:00+02:00",
                         "label": "Richiamo teorico",
                         "allowed": True,
-                        "reason": "La modalita consente richiami teorici e materiali guida.",
+                        "reason": "La modalità consente richiami teorici e materiali guida.",
                         "prompt": "Mi ricordi la differenza tra input e output?",
                     }
                 ]
@@ -503,7 +504,8 @@ def test_run_tui_can_execute_runner_save_report_and_reload(monkeypatch, tmp_path
     assert any("consegna superata" in output for output in outputs)
     assert any("1/1 test" in output for output in outputs)
     assert any("Report salvato:" in output for output in outputs)
-    assert any("dashboard e registro docente" in output for output in outputs)
+    assert any("Questo report è quello letto da dashboard e registro docente." in output for output in outputs)
+    assert not any("Questo report e quello" in output for output in outputs)
     assert sum(1 for output in outputs if "Dettaglio consegna" in output) == 2
 
 

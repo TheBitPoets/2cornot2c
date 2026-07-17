@@ -34,7 +34,7 @@ Per usare la sandbox Docker minima, per ora sulle consegne C:
 python scripts/student_lab_runner.py --student-id rossi-mario --activity-id c-base-somma-001 --backend docker --write-report
 ```
 
-Il backend Docker usa l'immagine `thebitlab-assignment-runner`. Se Docker non e installato o non e avviato, il runner produce un report `docker-not-found` invece di interrompere la TUI con uno stack trace.
+Il backend Docker usa l'immagine `thebitlab-assignment-runner`. Se Docker non è installato o non è avviato, il runner produce un report `docker-not-found` invece di interrompere la TUI con uno stack trace.
 
 La TUI usa colori ANSI quando il terminale li supporta. Per disattivarli:
 
@@ -56,7 +56,7 @@ Comandi disponibili nella TUI minima:
 - invio o `b` dal dettaglio: torna alla lista delle consegne;
 
 Dopo un comando di dettaglio la TUI resta sulla stessa consegna e ricarica i dati quando il comando modifica lo stato, per esempio dopo una richiesta di aiuto o dopo l'esecuzione del runner.
-Quando usi `e`, la TUI mostra stato runner, esito, test passati/totali, path del report salvato e ricorda che quel report e quello letto da dashboard e registro docente.
+Quando usi `e`, la TUI mostra stato runner, esito, test passati/totali, path del report salvato e ricorda che quel report è quello letto da dashboard e registro docente.
 
 Il payload ha schema `student_lab.v1` e contiene:
 
@@ -68,9 +68,9 @@ Il payload ha schema `student_lab.v1` e contiene:
 - `grading`: riepilogo deterministico del report, se esiste;
 - `runner`: stato del runner lab nel payload di consultazione.
 
-Nel payload di consultazione la TUI espone ancora `not_run`, perche l'esecuzione e un comando separato.
+Nel payload di consultazione la TUI espone ancora `not_run`, perché l'esecuzione è un comando separato.
 Il runner locale produce un report JSON su stdout e, con `--write-report`, lo salva in `reports/<activity_id>/latest.json`.
-Quando il report e salvato, il servizio lab lo rilegge e aggiorna stato consegna e riepilogo grading.
+Quando il report è salvato, il servizio lab lo rilegge e aggiorna stato consegna e riepilogo grading.
 
 ## Stati minimi
 
@@ -81,29 +81,29 @@ Quando il report e salvato, il servizio lab lo rilegge e aggiorna stato consegna
 | `submitted` | Esiste un report coerente con la activity |
 | `submitted_late` | Esiste un report coerente, ma consegnato dopo la scadenza |
 
-## Modalita di aiuto
+## Modalità di aiuto
 
-Ogni consegna puo esporre `student_support_mode`.
-Il payload lab aggiunge `support_policy`, cioe una descrizione leggibile per lo studente:
+Ogni consegna può esporre `student_support_mode`.
+Il payload lab aggiunge `support_policy`, cioè una descrizione leggibile per lo studente:
 
-| Modalita | Significato MVP |
+| Modalità | Significato MVP |
 |---|---|
 | `senza-aiuto` | Lo studente lavora in autonomia e vede solo consegna, workspace e risultati deterministici. |
-| `feedback-tecnico` | Lo studente puo usare errori, output e test falliti per correggere il lavoro. |
-| `studio-guidato` | Lo studente puo consultare richiami teorici, domande guida ed esempi approvati dal docente. |
-| `ai-assisted` | Lo studente puo usare aiuto AI nei limiti di budget e policy decisi dal docente. |
+| `feedback-tecnico` | Lo studente può usare errori, output e test falliti per correggere il lavoro. |
+| `studio-guidato` | Lo studente può consultare richiami teorici, domande guida ed esempi approvati dal docente. |
+| `ai-assisted` | Lo studente può usare aiuto AI nei limiti di budget e policy decisi dal docente. |
 
 La TUI mostra la policy e usa la stessa logica backend per consentire o bloccare le richieste di aiuto. Per l'MVP `ai-assisted` abilita un budget minimo di richieste AI per consegna; i limiti token reali saranno introdotti nei passi successivi.
 
 ## Log richieste di aiuto
 
-Il backend puo registrare richieste di aiuto dello studente in:
+Il backend può registrare richieste di aiuto dello studente in:
 
 `<repo-studente>/help/<activity-id>/events.json`
 
 Ogni evento indica tipo di aiuto richiesto, esito consentito/bloccato, motivazione e prompt dello studente.
 Il payload lab espone un riepilogo `help` con totale eventi, richieste consentite, richieste bloccate, ultimo esito e budget AI usato/rimanente.
-La TUI puo registrare nuove richieste e mostrare lo storico salvato. In questa fase il log non chiama provider AI e non applica ancora limiti token reali: prepara il contratto per enforcement, budget e audit successivi.
+La TUI può registrare nuove richieste e mostrare lo storico salvato. In questa fase il log non chiama provider AI e non applica ancora limiti token reali: prepara il contratto per enforcement, budget e audit successivi.
 
 ## Direzione
 
@@ -122,7 +122,7 @@ Quando il report esiste, il registro salva nella `submission` anche:
 - `report_status`: stato tecnico del report originale.
 
 Il registro docente legge anche `help/<activity_id>/events.json`, quando presente, e aggiunge a ogni studente il riepilogo `help`.
-La dashboard docente puo cosi mostrare numero di richieste, richieste AI, richieste bloccate e prompt inviati dallo studente per quella consegna.
+La dashboard docente può così mostrare numero di richieste, richieste AI, richieste bloccate e prompt inviati dallo studente per quella consegna.
 
 In questo modo dashboard docente, dashboard studente e TUI leggono lo stesso risultato senza ricalcolare grading o stato in modi divergenti.
 
