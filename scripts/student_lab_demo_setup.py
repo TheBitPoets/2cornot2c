@@ -5,8 +5,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -20,14 +22,50 @@ from scripts import student_lab_demo_smoke
 DEFAULT_DEMO_ROOT = PROJECT_ROOT / "tmp" / "student-lab-demo"
 
 
+def remove_tree_with_retry(path: Path, *, attempts: int = 5) -> None:
+    """Remove a directory tree, retrying transient Windows cleanup failures."""
+
+    for attempt in range(attempts):
+        if not path.exists():
+            return
+        try:
+            shutil.rmtree(path)
+            return
+        except OSError:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(0.2 * (attempt + 1))
+
+
+def cleanup_stale_trash(root: Path) -> None:
+    """Best-effort cleanup for old demo roots already moved aside."""
+
+    for candidate in root.parent.glob(f"{root.name}.delete-*"):
+        try:
+            remove_tree_with_retry(candidate)
+        except OSError:
+            continue
+
+
 def reset_root(root: Path) -> None:
     """Remove an existing demo root after a minimal safety check."""
 
     resolved = root.resolve(strict=False)
     if resolved == resolved.parent or len(resolved.parts) < 3:
         raise ValueError(f"Root demo non sicura da resettare: {resolved}")
+    resolved.parent.mkdir(parents=True, exist_ok=True)
+    cleanup_stale_trash(resolved)
     if resolved.exists():
-        shutil.rmtree(resolved)
+        trash = resolved.with_name(f"{resolved.name}.delete-{os.getpid()}-{time.time_ns()}")
+        try:
+            resolved.rename(trash)
+        except OSError:
+            remove_tree_with_retry(resolved)
+        else:
+            try:
+                remove_tree_with_retry(trash)
+            except OSError:
+                pass
     resolved.mkdir(parents=True, exist_ok=True)
 
 
