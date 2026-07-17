@@ -376,6 +376,7 @@ def track_assignments(
         relative_report_path = relative_to_root_or_repo(report_path, target.path) if report_path.exists() else None
         help = student_help_service.teacher_help_summary(help_log_path)
         help["path"] = relative_to_root_or_repo(help_log_path, target.path)
+        help["activity_id"] = activity_id
         source_path = report.get("source") if report else None
         submitted = report is not None
         submitted_at = report.get("submitted_at") if report else None

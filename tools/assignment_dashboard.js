@@ -3901,6 +3901,7 @@ function studentHelpDetails(help) {
   return `
     <div class="studentHelpCell">
       ${badge(`Aiuti ${total}`, kind)}<br>
+      <small>Consegna: ${escapeHtml(data.activity_id || "-")}</small><br>
       <small>AI: ${escapeHtml(aiTotal)} · Bloccate: ${escapeHtml(denied)}</small>
       <details class="studentHelpDetails">
         <summary>Prompt aiuti</summary>

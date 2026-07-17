@@ -581,6 +581,7 @@ def test_track_assignments_exposes_student_help_requests(tmp_path) -> None:
     help_summary = index["students"][0]["help"]
 
     assert help_summary["path"] == "help/python-base-somma-001/events.json"
+    assert help_summary["activity_id"] == "python-base-somma-001"
     assert help_summary["total"] == 2
     assert help_summary["ai_total"] == 1
     assert help_summary["allowed"] == 1

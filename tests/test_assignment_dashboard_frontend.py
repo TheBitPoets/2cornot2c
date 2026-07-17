@@ -2807,6 +2807,7 @@ def test_student_help_details_render_counts_and_prompts() -> None:
     run_dashboard_js(
         """
         const html = tested.studentHelpDetails({
+          activity_id: "python-base-somma-001",
           total: 3,
           ai_total: 2,
           denied: 1,
@@ -2831,6 +2832,7 @@ def test_student_help_details_render_counts_and_prompts() -> None:
         });
 
         assert.match(html, /Aiuti 3/);
+        assert.match(html, /Consegna: python-base-somma-001/);
         assert.match(html, /AI: 2/);
         assert.match(html, /Bloccate: 1/);
         assert.match(html, /Prompt aiuti/);
