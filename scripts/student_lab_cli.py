@@ -251,7 +251,7 @@ def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False
         detail_line("Stato:", runner.get("status")),
         detail_line("Backend:", runner.get("backend")),
         "",
-        "Comandi: a = chiedi aiuto | h = storico aiuti | e = esegui e salva report | o = apri workspace | invio = torna all'elenco",
+        "Comandi: a = chiedi aiuto | h = storico aiuti | e = esegui e salva report | o = apri workspace | invio = lista | q = esci",
     ]
     return "\n".join(lines)
 
@@ -428,6 +428,28 @@ def load_payload(root: Path, student_id: str, now: str | None = None) -> dict[st
     return student_lab_service.student_lab_payload(root=root, student_id=student_id, now=now)
 
 
+def payload_assignments(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return assignment items from a student lab payload."""
+
+    assignments = payload.get("assignments")
+    return assignments if isinstance(assignments, list) else []
+
+
+def find_assignment(payload: dict[str, Any], assignment_id: str, fallback_index: int) -> dict[str, Any] | None:
+    """Return the selected assignment after a payload reload."""
+
+    assignments = payload_assignments(payload)
+    clean_assignment_id = clean_text(assignment_id, "")
+    if clean_assignment_id:
+        for assignment in assignments:
+            if isinstance(assignment, dict) and clean_text(assignment.get("assignment_id"), "") == clean_assignment_id:
+                return assignment
+    if 0 <= fallback_index < len(assignments):
+        assignment = assignments[fallback_index]
+        return assignment if isinstance(assignment, dict) else None
+    return None
+
+
 def run_tui(
     *,
     student_id: str,
@@ -454,52 +476,65 @@ def run_tui(
         if not choice.isdigit():
             continue
         index = int(choice) - 1
-        assignments = payload.get("assignments") if isinstance(payload.get("assignments"), list) else []
+        assignments = payload_assignments(payload)
         if index < 0 or index >= len(assignments):
             continue
-        assignment = assignments[index]
-        if clear:
-            clear_screen()
-        print_fn(render_assignment_detail(assignment, use_color=use_color))
-        action = input_fn("\nDettaglio: ").strip().lower()
-        if action == "o":
-            workspace = assignment.get("workspace") if isinstance(assignment.get("workspace"), dict) else {}
-            if not open_workspace(clean_text(workspace.get("path"), ""), root=root):
-                print_fn("Workspace non disponibile.")
+        selected_assignment_id = clean_text(assignments[index].get("assignment_id"), "")
+        while True:
+            assignment = find_assignment(payload, selected_assignment_id, index)
+            if assignment is None:
+                print_fn("Consegna non piu disponibile.")
+                input_fn("Premi invio per tornare alla lista...")
+                break
+            if clear:
+                clear_screen()
+            print_fn(render_assignment_detail(assignment, use_color=use_color))
+            action = input_fn("\nDettaglio: ").strip().lower()
+            if action in {"", "b", "back", "indietro"}:
+                break
+            if action in {"q", "quit", "esci"}:
+                return 0
+            if action == "o":
+                workspace = assignment.get("workspace") if isinstance(assignment.get("workspace"), dict) else {}
+                if not open_workspace(clean_text(workspace.get("path"), ""), root=root):
+                    print_fn("Workspace non disponibile.")
                 input_fn("Premi invio per continuare...")
-        if action == "a":
-            print_fn(f"Tipo aiuto: {help_choice_label()}")
-            help_choice = input_fn("Tipo: ").strip().lower()
-            help_type = HELP_MENU.get(help_choice, help_choice)
-            prompt = input_fn("Scrivi la richiesta: ").strip()
-            if not prompt:
-                print_fn("Richiesta non salvata: prompt vuoto.")
-            else:
+                continue
+            if action == "a":
+                print_fn(f"Tipo aiuto: {help_choice_label()}")
+                help_choice = input_fn("Tipo: ").strip().lower()
+                help_type = HELP_MENU.get(help_choice, help_choice)
+                prompt = input_fn("Scrivi la richiesta: ").strip()
+                if not prompt:
+                    print_fn("Richiesta non salvata: prompt vuoto.")
+                else:
+                    try:
+                        event = record_help_from_tui(
+                            assignment=assignment,
+                            root=root,
+                            help_type=help_type,
+                            prompt=prompt,
+                            now=now,
+                        )
+                        print_fn(help_result_message(event))
+                        payload = load_payload(root, student_id, now)
+                    except ValueError as error:
+                        print_fn(f"Richiesta aiuto non salvata:\n{error}")
+                input_fn("Premi invio per continuare...")
+                continue
+            if action == "h":
+                print_fn(render_help_history(assignment, root=root))
+                input_fn("Premi invio per continuare...")
+                continue
+            if action == "e":
                 try:
-                    event = record_help_from_tui(
-                        assignment=assignment,
-                        root=root,
-                        help_type=help_type,
-                        prompt=prompt,
-                        now=now,
-                    )
-                    print_fn(help_result_message(event))
+                    report = student_lab_runner.run_local_assignment(assignment, root=root)
+                    report_path = student_lab_runner.write_student_report(root, assignment, report)
+                    print_fn(runner_result_message(report, report_path))
                     payload = load_payload(root, student_id, now)
                 except ValueError as error:
-                    print_fn(f"Richiesta aiuto non salvata:\n{error}")
-            input_fn("Premi invio per continuare...")
-        if action == "h":
-            print_fn(render_help_history(assignment, root=root))
-            input_fn("Premi invio per continuare...")
-        if action == "e":
-            try:
-                report = student_lab_runner.run_local_assignment(assignment, root=root)
-                report_path = student_lab_runner.write_student_report(root, assignment, report)
-                print_fn(runner_result_message(report, report_path))
-                payload = load_payload(root, student_id, now)
-            except ValueError as error:
-                print_fn(f"Runner non disponibile:\n{error}")
-            input_fn("Premi invio per continuare...")
+                    print_fn(f"Runner non disponibile:\n{error}")
+                input_fn("Premi invio per continuare...")
 
 
 def parse_args() -> argparse.Namespace:
