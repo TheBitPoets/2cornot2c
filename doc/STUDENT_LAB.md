@@ -48,6 +48,7 @@ Comandi disponibili nella TUI minima:
 - `r`: ricarica le consegne;
 - `q`: esce;
 - `a` dal dettaglio: registra una richiesta di aiuto secondo la policy della consegna;
+- `h` dal dettaglio: mostra lo storico delle richieste di aiuto registrate per quella consegna;
 - `e` dal dettaglio: esegue il runner locale e salva il report;
 - `o` dal dettaglio: apre la cartella workspace, se esiste.
 
@@ -86,7 +87,7 @@ Il payload lab aggiunge `support_policy`, cioe una descrizione leggibile per lo 
 | `studio-guidato` | Lo studente puo consultare richiami teorici, domande guida ed esempi approvati dal docente. |
 | `ai-assisted` | Lo studente puo usare aiuto AI nei limiti di budget e policy decisi dal docente. |
 
-In questa fase la policy e informativa: TUI e dashboard la mostrano chiaramente, mentre enforcement tecnico, log degli aiuti e limiti AI saranno introdotti nei passi successivi.
+La TUI mostra la policy e usa la stessa logica backend per consentire o bloccare le richieste di aiuto. I limiti AI reali e i budget token saranno introdotti nei passi successivi.
 
 ## Log richieste di aiuto
 
@@ -96,7 +97,7 @@ Il backend puo registrare richieste di aiuto dello studente in:
 
 Ogni evento indica tipo di aiuto richiesto, esito consentito/bloccato, motivazione e prompt dello studente.
 Il payload lab espone un riepilogo `help` con totale eventi, richieste consentite, richieste bloccate e ultimo esito.
-In questa fase il log non chiama provider AI e non applica ancora limiti token reali: prepara il contratto per enforcement, budget e audit successivi.
+La TUI puo registrare nuove richieste e mostrare lo storico salvato. In questa fase il log non chiama provider AI e non applica ancora limiti token reali: prepara il contratto per enforcement, budget e audit successivi.
 
 ## Direzione
 
@@ -119,10 +120,10 @@ La dashboard docente puo cosi mostrare numero di richieste, richieste AI, richie
 
 In questo modo dashboard docente, dashboard studente e TUI leggono lo stesso risultato senza ricalcolare grading o stato in modi divergenti.
 
-Le prossime PR dovranno usare questo contratto per:
+Le prossime PR dovranno completare questo contratto con:
 
-1. collegare il comando di esecuzione alla TUI;
-2. mostrare nella TUI l'esito appena salvato;
-3. introdurre un runner Docker minimale;
-4. far leggere gli stessi risultati alla dashboard studente e al registro docente;
+1. budget AI e limiti di consumo per studente/consegna;
+2. chiamata reale a provider AI o adapter Codex quando la policy lo consente;
+3. demo end-to-end pulita con dati riproducibili;
+4. guida utente docente/studente aggiornata;
 5. valutare un adapter opzionale per layout terminale avanzato, per esempio tmux su ambienti compatibili.

@@ -236,7 +236,7 @@ def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False
         detail_line("Stato:", runner.get("status")),
         detail_line("Backend:", runner.get("backend")),
         "",
-        "Comandi: a = chiedi aiuto | e = esegui e salva report | o = apri workspace | invio = torna all'elenco",
+        "Comandi: a = chiedi aiuto | h = storico aiuti | e = esegui e salva report | o = apri workspace | invio = torna all'elenco",
     ]
     return "\n".join(lines)
 
@@ -294,6 +294,50 @@ def assignment_repo_path(assignment: dict[str, Any], root: Path = PROJECT_ROOT) 
         resolved = raw_path if raw_path.is_absolute() else (root / raw_path).resolve(strict=False)
         return resolved.parents[1] if len(resolved.parents) >= 2 else None
     return None
+
+
+def assignment_help_log_path(assignment: dict[str, Any], root: Path = PROJECT_ROOT) -> Path | None:
+    """Return the local help log path for one assignment, when available."""
+
+    help_data = assignment.get("help") if isinstance(assignment.get("help"), dict) else {}
+    help_path = clean_text(help_data.get("path"), "")
+    if help_path:
+        raw_path = Path(help_path)
+        return raw_path if raw_path.is_absolute() else (root / raw_path).resolve(strict=False)
+    repo_path = assignment_repo_path(assignment, root=root)
+    activity_id = clean_text(assignment.get("activity_id"), "")
+    if repo_path is None or not activity_id:
+        return None
+    return student_help_service.help_log_path(repo_path, activity_id)
+
+
+def render_help_history(assignment: dict[str, Any], root: Path = PROJECT_ROOT) -> str:
+    """Render the help request history for one assignment."""
+
+    log_path = assignment_help_log_path(assignment, root=root)
+    lines = ["Storico richieste aiuto", ""]
+    if log_path is None:
+        lines.append("Log aiuti non disponibile per questa consegna.")
+        return "\n".join(lines)
+    events, error = student_help_service.read_help_log(log_path)
+    if error:
+        lines.append(f"Log aiuti non leggibile: {error}")
+        lines.append(f"Path: {log_path}")
+        return "\n".join(lines)
+    if not events:
+        lines.append("Nessuna richiesta di aiuto registrata.")
+        lines.append(f"Path: {log_path}")
+        return "\n".join(lines)
+    for index, event in enumerate(events, start=1):
+        decision = "consentita" if event.get("allowed") is True else "bloccata"
+        lines.extend(
+            [
+                f"{index}. {compact_datetime(event.get('requested_at'))} | {clean_text(event.get('label'))} | {decision}",
+                f"   Motivo: {clean_text(event.get('reason'))}",
+                f"   Prompt: {truncate(clean_text(event.get('prompt')), 100)}",
+            ]
+        )
+    return "\n".join(lines)
 
 
 def record_help_from_tui(
@@ -428,6 +472,9 @@ def run_tui(
                     payload = load_payload(root, student_id, now)
                 except ValueError as error:
                     print_fn(f"Richiesta aiuto non salvata:\n{error}")
+            input_fn("Premi invio per continuare...")
+        if action == "h":
+            print_fn(render_help_history(assignment, root=root))
             input_fn("Premi invio per continuare...")
         if action == "e":
             try:

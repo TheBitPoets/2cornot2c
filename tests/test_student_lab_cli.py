@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from scripts import student_lab_cli
@@ -140,6 +141,7 @@ def test_render_assignment_detail_shows_workspace_report_and_runner() -> None:
     assert "not_graded" in rendered
     assert "not_run" in rendered
     assert "e = esegui e salva report" in rendered
+    assert "h = storico aiuti" in rendered
     assert "o = apri workspace" in rendered
 
 
@@ -192,6 +194,64 @@ def test_assignment_repo_path_uses_help_or_workspace_path(tmp_path) -> None:
     assignment_without_help = sample_assignment(help={}, workspace={"path": "student/assignments/python-base-somma-001", "exists": True})
 
     assert student_lab_cli.assignment_repo_path(assignment_without_help, root=tmp_path) == tmp_path / "student"
+
+
+def test_assignment_help_log_path_uses_payload_or_repo_path(tmp_path) -> None:
+    assignment = sample_assignment(help={"path": "student/help/python-base-somma-001/events.json"})
+
+    assert student_lab_cli.assignment_help_log_path(assignment, root=tmp_path) == tmp_path / "student" / "help" / "python-base-somma-001" / "events.json"
+
+    assignment_without_help_path = sample_assignment(help={}, workspace={"path": "student/assignments/python-base-somma-001", "exists": True})
+
+    assert (
+        student_lab_cli.assignment_help_log_path(assignment_without_help_path, root=tmp_path)
+        == tmp_path / "student" / "help" / "python-base-somma-001" / "events.json"
+    )
+
+
+def test_render_help_history_shows_events(tmp_path) -> None:
+    log_path = tmp_path / "student" / "help" / "python-base-somma-001" / "events.json"
+    log_path.parent.mkdir(parents=True)
+    log_path.write_text(
+        json.dumps(
+            {
+                "events": [
+                    {
+                        "requested_at": "2026-10-18T17:20:00+02:00",
+                        "label": "Aiuto AI",
+                        "allowed": False,
+                        "reason": "La modalita scelta dal docente non consente aiuto AI.",
+                        "prompt": "Mi scrivi la soluzione completa?",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    assignment = sample_assignment(help={"path": "student/help/python-base-somma-001/events.json"})
+
+    rendered = student_lab_cli.render_help_history(assignment, root=tmp_path)
+
+    assert "Storico richieste aiuto" in rendered
+    assert "2026-10-18 17:20 | Aiuto AI | bloccata" in rendered
+    assert "non consente aiuto AI" in rendered
+    assert "Mi scrivi la soluzione completa?" in rendered
+
+
+def test_render_help_history_handles_empty_or_invalid_log(tmp_path) -> None:
+    assignment = sample_assignment(help={"path": "student/help/python-base-somma-001/events.json"})
+
+    empty_rendered = student_lab_cli.render_help_history(assignment, root=tmp_path)
+
+    assert "Nessuna richiesta di aiuto registrata" in empty_rendered
+
+    log_path = tmp_path / "student" / "help" / "python-base-somma-001" / "events.json"
+    log_path.parent.mkdir(parents=True)
+    log_path.write_text("{non-json", encoding="utf-8")
+
+    invalid_rendered = student_lab_cli.render_help_history(assignment, root=tmp_path)
+
+    assert "Log aiuti non leggibile" in invalid_rendered
 
 
 def test_help_result_message_shows_policy_decision() -> None:
@@ -254,6 +314,44 @@ def test_run_tui_can_record_help_request_and_reload(monkeypatch, tmp_path) -> No
     assert log_path.exists()
     assert "Mi scrivi la soluzione?" in log_path.read_text(encoding="utf-8")
     assert any("Richiesta aiuto bloccata: Aiuto AI" in output for output in outputs)
+
+
+def test_run_tui_can_show_help_history(monkeypatch, tmp_path) -> None:
+    log_path = tmp_path / "examples" / "assignment_tracking" / "student_repos" / "rossi-mario" / "help" / "python-base-somma-001" / "events.json"
+    log_path.parent.mkdir(parents=True)
+    log_path.write_text(
+        json.dumps(
+            {
+                "events": [
+                    {
+                        "requested_at": "2026-10-18T17:20:00+02:00",
+                        "label": "Richiamo teorico",
+                        "allowed": True,
+                        "reason": "La modalita consente richiami teorici e materiali guida.",
+                        "prompt": "Mi ricordi la differenza tra input e output?",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    payload = sample_payload()
+    outputs = []
+    inputs = iter(["1", "h", "", "q"])
+
+    monkeypatch.setattr(student_lab_cli, "load_payload", lambda root, student_id, now=None: payload)
+
+    result = student_lab_cli.run_tui(
+        student_id="rossi-mario",
+        root=tmp_path,
+        input_fn=lambda prompt: next(inputs),
+        print_fn=outputs.append,
+        clear=False,
+    )
+
+    assert result == 0
+    assert any("Storico richieste aiuto" in output for output in outputs)
+    assert any("Mi ricordi la differenza" in output for output in outputs)
 
 
 def test_run_tui_can_execute_runner_save_report_and_reload(monkeypatch, tmp_path) -> None:
