@@ -87,7 +87,7 @@ Il payload lab aggiunge `support_policy`, cioe una descrizione leggibile per lo 
 | `studio-guidato` | Lo studente puo consultare richiami teorici, domande guida ed esempi approvati dal docente. |
 | `ai-assisted` | Lo studente puo usare aiuto AI nei limiti di budget e policy decisi dal docente. |
 
-La TUI mostra la policy e usa la stessa logica backend per consentire o bloccare le richieste di aiuto. I limiti AI reali e i budget token saranno introdotti nei passi successivi.
+La TUI mostra la policy e usa la stessa logica backend per consentire o bloccare le richieste di aiuto. Per l'MVP `ai-assisted` abilita un budget minimo di richieste AI per consegna; i limiti token reali saranno introdotti nei passi successivi.
 
 ## Log richieste di aiuto
 
@@ -96,7 +96,7 @@ Il backend puo registrare richieste di aiuto dello studente in:
 `<repo-studente>/help/<activity-id>/events.json`
 
 Ogni evento indica tipo di aiuto richiesto, esito consentito/bloccato, motivazione e prompt dello studente.
-Il payload lab espone un riepilogo `help` con totale eventi, richieste consentite, richieste bloccate e ultimo esito.
+Il payload lab espone un riepilogo `help` con totale eventi, richieste consentite, richieste bloccate, ultimo esito e budget AI usato/rimanente.
 La TUI puo registrare nuove richieste e mostrare lo storico salvato. In questa fase il log non chiama provider AI e non applica ancora limiti token reali: prepara il contratto per enforcement, budget e audit successivi.
 
 ## Direzione
@@ -122,7 +122,7 @@ In questo modo dashboard docente, dashboard studente e TUI leggono lo stesso ris
 
 Le prossime PR dovranno completare questo contratto con:
 
-1. budget AI e limiti di consumo per studente/consegna;
+1. budget AI a token/costo per scuola, classe, studente e consegna;
 2. chiamata reale a provider AI o adapter Codex quando la policy lo consente;
 3. demo end-to-end pulita con dati riproducibili;
 4. guida utente docente/studente aggiornata;

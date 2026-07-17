@@ -52,6 +52,41 @@ def test_record_help_request_appends_event_and_summary(tmp_path) -> None:
     assert summary["last_decision"] == "consentita"
 
 
+def test_record_help_request_blocks_ai_when_budget_is_exhausted(tmp_path) -> None:
+    repo = tmp_path / "student-repo"
+    policy = dict(student_support_policy.support_policy("ai-assisted"))
+    policy["ai_request_limit"] = 1
+
+    first = student_help_service.record_help_request(
+        repo_path=repo,
+        activity_id="python-base-somma-001",
+        support_policy=policy,
+        help_type="ai",
+        prompt="Dammi un suggerimento.",
+        now="2026-10-18T10:30:00+02:00",
+    )
+    second = student_help_service.record_help_request(
+        repo_path=repo,
+        activity_id="python-base-somma-001",
+        support_policy=policy,
+        help_type="ai",
+        prompt="Altro suggerimento.",
+        now="2026-10-18T10:35:00+02:00",
+    )
+
+    log_path = repo / "help" / "python-base-somma-001" / "events.json"
+    budget = student_help_service.help_budget_summary(log_path, policy)
+    summary = student_help_service.help_summary(log_path)
+
+    assert first["allowed"] is True
+    assert second["allowed"] is False
+    assert second["reason"] == "Budget richieste AI esaurito per questa consegna."
+    assert second["budget"]["exhausted"] is True
+    assert budget == {"limit": 1, "used": 1, "remaining": 0, "exhausted": True}
+    assert summary["allowed"] == 1
+    assert summary["denied"] == 1
+
+
 def test_help_summary_marks_invalid_json_without_raising(tmp_path) -> None:
     log_path = tmp_path / "student-repo" / "help" / "activity" / "events.json"
     log_path.parent.mkdir(parents=True)

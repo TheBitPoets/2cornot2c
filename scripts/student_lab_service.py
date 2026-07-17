@@ -186,6 +186,7 @@ def build_lab_assignment(
     help_log = student_help_service.help_summary(help_log_path)
     if help_log_path is not None:
         help_log["path"] = relative_to_root(root, help_log_path)
+    help_log["ai_budget"] = student_help_service.help_budget_summary(help_log_path, support_policy)
     grading = track_assignments.grading_summary(report)
     return {
         "assignment_id": normalized["id"],
