@@ -26,6 +26,14 @@ Per salvare il risultato nel path standard dello studente:
 python scripts/student_lab_runner.py --student-id rossi-mario --activity-id python-base-somma-001 --write-report
 ```
 
+Per usare la sandbox Docker minima, per ora sulle consegne C:
+
+```powershell
+python scripts/student_lab_runner.py --student-id rossi-mario --activity-id c-base-somma-001 --backend docker --write-report
+```
+
+Il backend Docker usa l'immagine `thebitlab-assignment-runner`. Se Docker non e installato o non e avviato, il runner produce un report `docker-not-found` invece di interrompere la TUI con uno stack trace.
+
 La TUI usa colori ANSI quando il terminale li supporta. Per disattivarli:
 
 ```powershell
@@ -68,7 +76,7 @@ Quando il report e salvato, il servizio lab lo rilegge e aggiorna stato consegna
 Il report salvato usa lo schema `student_lab_run.v1` e mantiene separati:
 
 - risultato deterministico: `passed`, `status`, `summary`, `tests`, `stdout`, `stderr`;
-- metadati di collegamento: `assignment_id`, `activity_id`, `student_id`, `language`, `source`, `submitted_at`;
+- metadati di collegamento: `assignment_id`, `activity_id`, `student_id`, `language`, `source`, `backend`, `submitted_at`;
 - feedback AI: non presente in questo report, per evitare di mescolare esecuzione deterministica e suggerimenti generativi.
 
 Le prossime PR dovranno usare questo contratto per:
