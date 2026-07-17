@@ -80,6 +80,14 @@ Il comando stampa:
 - URL della dashboard studente;
 - cosa controllare manualmente nella TUI e nel browser.
 
+Per ottenere lo stesso risultato in formato JSON, utile per automazione o debug:
+
+```bash
+python scripts/student_lab_demo_check.py --json
+```
+
+Esegui un solo collaudo alla volta sulla stessa root demo: il comando ricrea la cartella per garantire dati puliti.
+
 ## Collaudo manuale su GUI/TUI
 
 Quando vuoi provare la demo con dati reali o demo del repository:

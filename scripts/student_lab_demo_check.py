@@ -92,6 +92,31 @@ def run_guided_check(root: Path, *, host: str = "127.0.0.1", port: int = 8765) -
     }
 
 
+def render_text_check(result: dict[str, Any]) -> str:
+    """Render the guided check in a human-readable terminal format."""
+
+    checks = result.get("automatic_checks", {})
+    lines = [
+        "Collaudo lab studente",
+        "=====================",
+        "",
+        f"OK: {result.get('ok')}",
+        f"Root demo: {result.get('root')}",
+        f"Studente: {result.get('student_id')}",
+        f"Activity: {result.get('activity_id')}",
+        "",
+        "Controlli automatici",
+        "--------------------",
+    ]
+    for key in ("setup", "student_lab_payload", "student_dashboard_api"):
+        status = "OK" if checks.get(key) else "NO"
+        lines.append(f"- {status} {key}")
+    lines.extend(["", "Passi manuali", "-------------"])
+    for index, step in enumerate(result.get("manual_steps", []), start=1):
+        lines.append(f"{index}. {step}")
+    return "\n".join(lines)
+
+
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
 
@@ -99,11 +124,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--root", type=Path, default=student_lab_demo_setup.DEFAULT_DEMO_ROOT)
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--json", action="store_true", help="Stampa il risultato in JSON invece della checklist testuale.")
     return parser.parse_args()
 
 
 def main() -> int:
-    """Run the guided check and print the checklist as JSON."""
+    """Run the guided check and print the checklist."""
 
     args = parse_args()
     try:
@@ -111,7 +137,10 @@ def main() -> int:
     except Exception as error:  # noqa: BLE001
         print(f"Collaudo guidato non riuscito: {error}", file=sys.stderr)
         return 1
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    if args.json:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    else:
+        print(render_text_check(result))
     return 0
 
 
