@@ -14,7 +14,7 @@ def test_student_lab_demo_smoke_builds_complete_flow(tmp_path) -> None:
     assert summary["workspace"].endswith("assignments/python-demo-somma-001")
     assert summary["report"].endswith("reports/python-demo-somma-001/latest.json")
     assert summary["teacher_register"].endswith("teacher-reports/demo/python-demo-somma-001.json")
-    assert summary["tests"] == {"passed": 1, "total": 1}
+    assert summary["tests"] == {"passed": 2, "total": 2}
     assert summary["help"] == {"total": 1, "ai_total": 1, "ai_budget_remaining": 4}
     assert summary["backend"] == "local"
 
