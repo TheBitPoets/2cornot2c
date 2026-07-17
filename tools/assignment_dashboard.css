@@ -1665,12 +1665,30 @@ label > textarea {
   min-width: 0;
 }
 
+.studentHelpCell {
+  min-width: 0;
+  margin-top: .55rem;
+  padding-top: .55rem;
+  border-top: 1px solid rgba(17, 17, 17, .1);
+}
+
 .aiFeedbackDetails {
   margin-top: .45rem;
   font-size: .78rem;
 }
 
+.studentHelpDetails {
+  margin-top: .45rem;
+  font-size: .78rem;
+}
+
 .aiFeedbackDetails summary {
+  cursor: pointer;
+  color: #111111;
+  font-weight: 800;
+}
+
+.studentHelpDetails summary {
   cursor: pointer;
   color: #111111;
   font-weight: 800;
@@ -1689,7 +1707,24 @@ label > textarea {
   scrollbar-gutter: stable;
 }
 
+.studentHelpDetails dl {
+  display: grid;
+  gap: .45rem;
+  margin: .45rem 0 0;
+  max-height: 14rem;
+  overflow-y: auto;
+  padding: .55rem;
+  border: 1px solid rgba(17, 17, 17, .12);
+  border-radius: 8px;
+  background: #fafafa;
+  scrollbar-gutter: stable;
+}
+
 .aiFeedbackDetails div {
+  min-width: 0;
+}
+
+.studentHelpDetails div {
   min-width: 0;
 }
 
@@ -1700,10 +1735,27 @@ label > textarea {
   text-transform: uppercase;
 }
 
+.studentHelpDetails dt {
+  color: var(--muted);
+  font-size: .68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
 .aiFeedbackDetails dd {
   margin: .12rem 0 0;
   overflow-wrap: anywhere;
   text-align: justify;
+}
+
+.studentHelpDetails dd {
+  margin: .12rem 0 0;
+  overflow-wrap: anywhere;
+  text-align: justify;
+}
+
+.studentHelpDetails p {
+  margin: .35rem 0;
 }
 
 .aiFeedbackActions {

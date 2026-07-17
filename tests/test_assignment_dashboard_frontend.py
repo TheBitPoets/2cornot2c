@@ -389,6 +389,7 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         aiFeedbackDetails,
         aiFeedbackReviewDetails,
         aiFeedbackTeacherAction,
+        studentHelpDetails,
         reviewAiFeedback,
         dateTimeInputToIso,
         isoToDateTimeInput,
@@ -2690,6 +2691,9 @@ def test_students_summary_counts_include_grading_and_grades() -> None:
           late: 1,
           passed: 2,
           failed: 1,
+          helpRequests: 0,
+          helpAiRequests: 0,
+          helpDenied: 0,
           averageGrade: 6.5,
           missingGrades: 3,
         }));
@@ -2718,6 +2722,9 @@ def test_students_summary_counts_include_grading_and_grades() -> None:
           ["Grading KO", 1],
           ["Media voto", "6.5"],
           ["Voti mancanti", 3],
+          ["Aiuti", 0],
+          ["Aiuti AI", 0],
+          ["Aiuti bloccati", 0],
         ]));
         tested.state.filter = "all";
         assert.equal(tested.activeStudentFilterLabel(), "nessuno");
@@ -2796,6 +2803,63 @@ def test_ai_feedback_helpers_render_teacher_review_states() -> None:
     )
 
 
+def test_student_help_details_render_counts_and_prompts() -> None:
+    run_dashboard_js(
+        """
+        const html = tested.studentHelpDetails({
+          total: 3,
+          ai_total: 2,
+          denied: 1,
+          events: [
+            {
+              requested_at: "2026-10-20T08:10:00+02:00",
+              help_type: "teoria",
+              label: "Richiamo teorico",
+              allowed: true,
+              reason: "Consentito dalla policy.",
+              prompt: "Puoi ricordarmi come funziona input()?",
+            },
+            {
+              requested_at: "2026-10-20T08:15:00+02:00",
+              help_type: "ai",
+              label: "Aiuto AI",
+              allowed: false,
+              reason: "AI non consentita.",
+              prompt: "Scrivimi la soluzione completa.",
+            },
+          ],
+        });
+
+        assert.match(html, /Aiuti 3/);
+        assert.match(html, /AI: 2/);
+        assert.match(html, /Bloccate: 1/);
+        assert.match(html, /Prompt aiuti/);
+        assert.match(html, /Puoi ricordarmi come funziona input\\(\\)\\?/);
+        assert.match(html, /Scrivimi la soluzione completa\\./);
+        assert.match(html, /Bloccata/);
+
+        const empty = tested.studentHelpDetails({ total: 0, events: [] });
+        assert.match(empty, /Nessuna richiesta registrata/);
+        """
+    )
+
+
+def test_summary_counts_include_student_help_requests() -> None:
+    run_dashboard_js(
+        """
+        const counts = tested.summaryCounts([
+          { help: { total: 3, ai_total: 2, denied: 1 }, grading: {}, status: "pending" },
+          { help: { total: 1, counts: { ai: 1 }, denied: 0 }, grading: {}, status: "pending" },
+        ]);
+
+        assert.equal(counts.helpRequests, 4);
+        assert.equal(counts.helpAiRequests, 3);
+        assert.equal(counts.helpDenied, 1);
+        assert.equal(tested.summaryTooltip("Aiuti AI"), "Numero di richieste di aiuto AI registrate dagli studenti per questa consegna.");
+        """
+    )
+
+
 def test_ai_feedback_details_css_limits_expanded_content_height() -> None:
     css = open("tools/assignment_dashboard.css", encoding="utf-8").read()
 
@@ -2804,6 +2868,7 @@ def test_ai_feedback_details_css_limits_expanded_content_height() -> None:
     assert "overflow-y: auto;" in css
     assert "text-align: justify;" in css
     assert ".aiFeedbackActions" in css
+    assert ".studentHelpDetails dl" in css
 
 
 def test_report_loader_controls_live_in_selected_report_panel() -> None:
