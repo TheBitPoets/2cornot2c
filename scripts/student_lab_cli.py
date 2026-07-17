@@ -32,6 +32,12 @@ STATUS_COLORS = {
     "submitted_late": "\033[35m",
 }
 WORKSPACE_COLOR = "\033[36m"
+GUIDE_TERM_COLORS = {
+    "consegna": "\033[35m",
+    "workspace": WORKSPACE_COLOR,
+    "test": "\033[33m",
+    "report": "\033[32m",
+}
 RESET_COLOR = "\033[0m"
 
 
@@ -194,6 +200,18 @@ def section_separator(width: int = 72) -> str:
     return "-" * width
 
 
+def guide_term(text: str, use_color: bool = False) -> str:
+    """Return a highlighted guide term for the detail view."""
+
+    return colorize(text, GUIDE_TERM_COLORS.get(text.lower(), ""), use_color)
+
+
+def guide_label(text: str, use_color: bool = False) -> str:
+    """Return a padded guide term with optional coloring."""
+
+    return colorize(f"{text:<9}", GUIDE_TERM_COLORS.get(text.lower(), ""), use_color)
+
+
 def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False) -> str:
     """Render the detail page for one lab assignment."""
 
@@ -256,6 +274,18 @@ def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False
         "Runner",
         detail_line("Stato:", runner.get("status")),
         detail_line("Backend:", runner.get("backend")),
+        section_separator(),
+        "Guida rapida",
+        f"  {guide_label('Consegna', use_color)} lavoro assegnato dal docente.",
+        f"  {guide_label('Workspace', use_color)} cartella locale dove modifichi i file.",
+        f"  {guide_label('Test', use_color)} controlli automatici sul tuo lavoro.",
+        f"  {guide_label('Report', use_color)} risultato salvato e letto da dashboard/registro.",
+        "",
+        "Flusso consigliato",
+        f"  1. Apri {guide_term('workspace', use_color)}",
+        "  2. Modifica i file",
+        f"  3. Esegui {guide_term('test', use_color)} e salva {guide_term('report', use_color)}",
+        f"  4. Controlla esito e, se serve, chiedi aiuto sulla {guide_term('consegna', use_color)}",
         section_separator(),
         "Azioni principali",
         "  e  Esegui test e salva report",

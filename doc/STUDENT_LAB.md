@@ -55,6 +55,15 @@ Nel dettaglio della consegna i comandi sono divisi in:
 - azioni principali: `e` esegue il runner e salva il report, `a` registra una richiesta di aiuto, `o` apre la cartella workspace;
 - altri comandi: `h` mostra lo storico aiuti, `b` o invio torna alla lista, `q` esce.
 
+Il dettaglio mostra anche una guida rapida con i termini chiave:
+
+- consegna: lavoro assegnato dal docente;
+- workspace: cartella locale dove lo studente modifica i file;
+- test: controlli automatici sul lavoro;
+- report: risultato salvato e letto da dashboard e registro.
+
+Il flusso consigliato è: aprire il workspace, modificare i file, eseguire i test salvando il report, controllare l'esito e chiedere aiuto se serve.
+
 Dopo un comando di dettaglio la TUI resta sulla stessa consegna e ricarica i dati quando il comando modifica lo stato, per esempio dopo una richiesta di aiuto o dopo l'esecuzione del runner.
 Quando usi `e`, la TUI mostra stato runner, esito, test passati/totali, path del report salvato e ricorda che quel report è quello letto da dashboard e registro docente.
 
