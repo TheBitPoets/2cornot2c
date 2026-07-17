@@ -8,6 +8,25 @@ Il primo contratto e prodotto da:
 python scripts/student_lab_service.py --student-id rossi-mario
 ```
 
+La prima interfaccia semigrafica e:
+
+```powershell
+python scripts/student_lab_cli.py --student-id rossi-mario
+```
+
+La TUI usa colori ANSI quando il terminale li supporta. Per disattivarli:
+
+```powershell
+python scripts/student_lab_cli.py --student-id rossi-mario --no-color
+```
+
+Comandi disponibili nella TUI minima:
+
+- numero della riga: apre il dettaglio della consegna;
+- `r`: ricarica le consegne;
+- `q`: esce;
+- `o` dal dettaglio: apre la cartella workspace, se esiste.
+
 Il payload ha schema `student_lab.v1` e contiene:
 
 - `student_id`: studente richiesto;
@@ -18,7 +37,8 @@ Il payload ha schema `student_lab.v1` e contiene:
 - `grading`: riepilogo deterministico del report, se esiste;
 - `runner`: stato del runner lab.
 
-In questa prima PR il runner non esegue ancora codice: espone `not_run`.
+In questa prima fase il runner non esegue ancora codice: espone `not_run`.
+La TUI minima permette di consultare e aprire il workspace, ma non esegue ancora test.
 
 ## Stati minimi
 
@@ -33,8 +53,8 @@ In questa prima PR il runner non esegue ancora codice: espone `not_run`.
 
 Le prossime PR dovranno usare questo contratto per:
 
-1. aggiungere una CLI/TUI studente;
-2. introdurre un runner locale;
+1. introdurre un runner locale;
+2. salvare risultati strutturati prodotti dal lab;
 3. introdurre un runner Docker minimale;
-4. salvare risultati strutturati prodotti dal lab;
-5. far leggere gli stessi risultati alla dashboard studente e al registro docente.
+4. far leggere gli stessi risultati alla dashboard studente e al registro docente;
+5. valutare un adapter opzionale per layout terminale avanzato, per esempio tmux su ambienti compatibili.
