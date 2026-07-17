@@ -306,6 +306,7 @@ function renderSupportPolicy(assignment) {
         <span>Consentiti: ${escapeHtml(help.allowed ?? 0)}</span>
         <span>Bloccati: ${escapeHtml(help.denied ?? 0)}</span>
       </p>
+      ${help.error ? `<p class="details">Log aiuti: ${escapeHtml(help.error)}</p>` : ""}
     </section>
   `;
 }

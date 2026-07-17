@@ -50,3 +50,16 @@ def test_record_help_request_appends_event_and_summary(tmp_path) -> None:
     assert summary["allowed"] == 1
     assert summary["denied"] == 0
     assert summary["last_decision"] == "consentita"
+
+
+def test_help_summary_marks_invalid_json_without_raising(tmp_path) -> None:
+    log_path = tmp_path / "student-repo" / "help" / "activity" / "events.json"
+    log_path.parent.mkdir(parents=True)
+    log_path.write_text("{non-json", encoding="utf-8")
+
+    summary = student_help_service.help_summary(log_path)
+
+    assert summary["status"] == "invalid"
+    assert summary["error"].startswith("JSON non valido")
+    assert summary["total"] == 0
+    assert summary["allowed"] == 0

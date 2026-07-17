@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from json import JSONDecodeError
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -84,16 +85,24 @@ def help_log_path(repo_path: Path, activity_id: str) -> Path:
 
 
 def load_help_events(log_path: Path) -> list[dict[str, Any]]:
+    events, _ = read_help_log(log_path)
+    return events
+
+
+def read_help_log(log_path: Path) -> tuple[list[dict[str, Any]], str]:
     if not log_path.is_file():
-        return []
-    payload = json.loads(log_path.read_text(encoding="utf-8-sig"))
+        return [], ""
+    try:
+        payload = json.loads(log_path.read_text(encoding="utf-8-sig"))
+    except JSONDecodeError as error:
+        return [], f"JSON non valido: {error.msg}"
     if isinstance(payload, dict):
         events = payload.get("events")
         if isinstance(events, list):
-            return [event for event in events if isinstance(event, dict)]
+            return [event for event in events if isinstance(event, dict)], ""
     if isinstance(payload, list):
-        return [event for event in payload if isinstance(event, dict)]
-    return []
+        return [event for event in payload if isinstance(event, dict)], ""
+    return [], "Formato log aiuti non valido."
 
 
 def write_help_events(log_path: Path, events: list[dict[str, Any]]) -> None:
@@ -138,6 +147,8 @@ def help_summary(log_path: Path | None) -> dict[str, Any]:
         return {
             "path": "",
             "exists": False,
+            "status": "missing",
+            "error": "",
             "total": 0,
             "allowed": 0,
             "denied": 0,
@@ -145,7 +156,7 @@ def help_summary(log_path: Path | None) -> dict[str, Any]:
             "last_decision": "",
             "counts": {},
         }
-    events = load_help_events(log_path)
+    events, error = read_help_log(log_path)
     counts: dict[str, int] = {}
     for event in events:
         help_type = clean_text(event.get("help_type")) or "sconosciuto"
@@ -154,6 +165,8 @@ def help_summary(log_path: Path | None) -> dict[str, Any]:
     return {
         "path": str(log_path).replace("\\", "/"),
         "exists": bool(events),
+        "status": "invalid" if error else "ok",
+        "error": error,
         "total": len(events),
         "allowed": sum(1 for event in events if event.get("allowed") is True),
         "denied": sum(1 for event in events if event.get("allowed") is False),

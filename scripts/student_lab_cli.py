@@ -214,6 +214,8 @@ def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False
         detail_line("Non permesso:", policy_list(support_policy.get("not_allowed"))),
         "",
         "Richieste aiuto",
+        detail_line("Stato log:", help_summary.get("status")),
+        detail_line("Errore log:", help_summary.get("error")),
         detail_line("Eventi:", help_summary.get("total")),
         detail_line("Consentite:", help_summary.get("allowed")),
         detail_line("Bloccate:", help_summary.get("denied")),
