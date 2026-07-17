@@ -15,13 +15,15 @@ Lo script crea una root temporanea e simula il flusso:
 1. crea una activity Python;
 2. crea una assegnazione per `rossi-mario`;
 3. crea il workspace studente;
-4. esegue il runner locale;
-5. salva `reports/<activity_id>/latest.json`;
-6. legge lo stesso risultato dal payload lab studente;
-7. genera il registro docente in `teacher-reports`;
-8. verifica che il grading docente sia coerente.
+4. registra una richiesta di aiuto AI consentita;
+5. esegue il runner locale;
+6. salva `reports/<activity_id>/latest.json`;
+7. legge lo stesso risultato dal payload lab studente;
+8. verifica che il payload studente esponga richiesta di aiuto e budget AI;
+9. genera il registro docente in `teacher-reports`;
+10. verifica che grading e riepilogo aiuto docente siano coerenti.
 
-L'output atteso e un JSON con `ok: true`, il path del workspace, il path del report, il registro docente e `tests.passed` uguale a `tests.total`.
+L'output atteso e un JSON con `ok: true`, il path del workspace, il path del report, il registro docente, `tests.passed` uguale a `tests.total` e `help.total` uguale a `1`.
 
 Per conservare la cartella e ispezionare i file:
 
@@ -65,6 +67,7 @@ Quando vuoi provare la demo con dati reali o demo del repository:
    - report salvato;
    - test passati/totali;
    - ultimo tentativo valorizzato.
+   - richieste di aiuto e budget AI valorizzati, se la consegna consente AI.
 
 6. Rigenera o ricarica il registro docente relativo alla stessa activity e controlla nel pannello studenti:
 
@@ -72,6 +75,7 @@ Quando vuoi provare la demo con dati reali o demo del repository:
    - test;
    - path report;
    - backend del report.
+   - riepilogo richieste di aiuto e prompt inviati dallo studente.
 
 ## Cosa non copre ancora
 
