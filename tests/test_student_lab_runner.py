@@ -210,3 +210,19 @@ def test_select_assignment_requires_disambiguation() -> None:
         assert "--assignment-id" in str(error)
     else:
         raise AssertionError("select_assignment should require explicit selection")
+
+
+def test_select_assignment_requires_assignment_id_for_duplicate_activity() -> None:
+    try:
+        student_lab_runner.select_assignment(
+            [
+                {"assignment_id": "a", "activity_id": "x"},
+                {"assignment_id": "b", "activity_id": "x"},
+            ],
+            activity_id="x",
+        )
+    except ValueError as error:
+        assert "piu consegne" in str(error)
+        assert "--assignment-id" in str(error)
+    else:
+        raise AssertionError("select_assignment should reject ambiguous activity_id")

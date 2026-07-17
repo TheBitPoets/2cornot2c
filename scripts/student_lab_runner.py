@@ -245,11 +245,20 @@ def select_assignment(
 ) -> dict[str, Any]:
     """Return the requested assignment from a student lab payload."""
 
-    for assignment in assignments:
-        if assignment_id and assignment.get("assignment_id") == assignment_id:
-            return assignment
-        if activity_id and assignment.get("activity_id") == activity_id:
-            return assignment
+    if assignment_id:
+        for assignment in assignments:
+            if assignment.get("assignment_id") == assignment_id:
+                return assignment
+        raise ValueError(f"Consegna non trovata: {assignment_id}")
+    if activity_id:
+        matches = [assignment for assignment in assignments if assignment.get("activity_id") == activity_id]
+        if len(matches) == 1:
+            return matches[0]
+        if len(matches) > 1:
+            raise ValueError(
+                f"Activity {activity_id} presente in piu consegne. Usa --assignment-id per scegliere quella corretta."
+            )
+        raise ValueError(f"Activity non trovata: {activity_id}")
     if not assignment_id and not activity_id and len(assignments) == 1:
         return assignments[0]
     raise ValueError("Nessuna consegna selezionata. Usa --assignment-id o --activity-id.")
