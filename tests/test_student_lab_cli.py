@@ -391,6 +391,34 @@ def test_run_tui_can_cancel_help_request_with_empty_prompt(monkeypatch, tmp_path
     assert any("Richiesta aiuto annullata: prompt vuoto." in output for output in outputs)
 
 
+def test_run_tui_rejects_invalid_help_type_without_saving(monkeypatch, tmp_path) -> None:
+    payload = sample_payload()
+    outputs = []
+    inputs = iter(["1", "a", "x", "", "", "q"])
+    load_calls = []
+
+    def fake_load_payload(root, student_id, now=None):
+        load_calls.append((root, student_id, now))
+        return payload
+
+    monkeypatch.setattr(student_lab_cli, "load_payload", fake_load_payload)
+
+    result = student_lab_cli.run_tui(
+        student_id="rossi-mario",
+        root=tmp_path,
+        input_fn=lambda prompt: next(inputs),
+        print_fn=outputs.append,
+        clear=False,
+    )
+
+    log_path = tmp_path / "examples" / "assignment_tracking" / "student_repos" / "rossi-mario" / "help" / "python-base-somma-001" / "events.json"
+
+    assert result == 0
+    assert len(load_calls) == 1
+    assert not log_path.exists()
+    assert any("Tipo aiuto non valido" in output for output in outputs)
+
+
 def test_run_tui_can_show_help_history(monkeypatch, tmp_path) -> None:
     log_path = tmp_path / "examples" / "assignment_tracking" / "student_repos" / "rossi-mario" / "help" / "python-base-somma-001" / "events.json"
     log_path.parent.mkdir(parents=True)

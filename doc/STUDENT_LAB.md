@@ -48,6 +48,7 @@ Comandi disponibili nella TUI minima:
 - `r`: ricarica le consegne;
 - `q`: esce;
 - `a` dal dettaglio: registra una richiesta di aiuto secondo la policy della consegna;
+- tipo aiuto nella richiesta: `1`, `2`, `3`; altri valori sono rifiutati;
 - invio o `b` nella scelta del tipo aiuto, oppure prompt vuoto: annulla la richiesta senza salvare eventi;
 - `h` dal dettaglio: mostra lo storico delle richieste di aiuto registrate per quella consegna;
 - `e` dal dettaglio: esegue il runner locale e salva il report;
