@@ -501,25 +501,28 @@ def run_tui(
                 input_fn("Premi invio per continuare...")
                 continue
             if action == "a":
-                print_fn(f"Tipo aiuto: {help_choice_label()}")
+                print_fn(f"Tipo aiuto: {help_choice_label()} | invio/b annulla")
                 help_choice = input_fn("Tipo: ").strip().lower()
-                help_type = HELP_MENU.get(help_choice, help_choice)
-                prompt = input_fn("Scrivi la richiesta: ").strip()
-                if not prompt:
-                    print_fn("Richiesta non salvata: prompt vuoto.")
+                if help_choice in {"", "b", "back", "indietro"}:
+                    print_fn("Richiesta aiuto annullata.")
                 else:
-                    try:
-                        event = record_help_from_tui(
-                            assignment=assignment,
-                            root=root,
-                            help_type=help_type,
-                            prompt=prompt,
-                            now=now,
-                        )
-                        print_fn(help_result_message(event))
-                        payload = load_payload(root, student_id, now)
-                    except ValueError as error:
-                        print_fn(f"Richiesta aiuto non salvata:\n{error}")
+                    help_type = HELP_MENU.get(help_choice, help_choice)
+                    prompt = input_fn("Scrivi la richiesta: ").strip()
+                    if not prompt:
+                        print_fn("Richiesta non salvata: prompt vuoto.")
+                    else:
+                        try:
+                            event = record_help_from_tui(
+                                assignment=assignment,
+                                root=root,
+                                help_type=help_type,
+                                prompt=prompt,
+                                now=now,
+                            )
+                            print_fn(help_result_message(event))
+                            payload = load_payload(root, student_id, now)
+                        except ValueError as error:
+                            print_fn(f"Richiesta aiuto non salvata:\n{error}")
                 input_fn("Premi invio per continuare...")
                 continue
             if action == "h":
