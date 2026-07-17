@@ -228,7 +228,7 @@ def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False
         detail_line("Argomenti:", ", ".join(str(topic) for topic in topics) if topics else "-"),
         section_separator(),
         "Aiuto consentito",
-        detail_line("Modalita:", support_policy.get("label") or assignment.get("student_support_mode")),
+        detail_line("Modalità:", support_policy.get("label") or assignment.get("student_support_mode")),
         detail_line("Sintesi:", support_policy.get("summary")),
         detail_line("Permesso:", policy_list(support_policy.get("allowed"))),
         detail_line("Non permesso:", policy_list(support_policy.get("not_allowed"))),
@@ -280,7 +280,7 @@ def runner_result_message(report: dict[str, Any], report_path: Path) -> str:
             detail_line("Esito:", outcome),
             detail_line("Test:", tests),
             detail_line("Report salvato:", report_path),
-            "Questo report e quello letto da dashboard e registro docente.",
+            "Questo report è quello letto da dashboard e registro docente.",
         ]
     )
 
@@ -490,7 +490,7 @@ def run_tui(
         while True:
             assignment = find_assignment(payload, selected_assignment_id, index)
             if assignment is None:
-                print_fn("Consegna non piu disponibile.")
+                print_fn("Consegna non più disponibile.")
                 input_fn("Premi invio per tornare alla lista...")
                 break
             if clear:
