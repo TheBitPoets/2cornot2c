@@ -179,12 +179,17 @@ def test_render_assignment_detail_summarizes_grading_tests() -> None:
 
 def test_runner_result_message_shows_status_tests_and_report_path(tmp_path) -> None:
     message = student_lab_cli.runner_result_message(
-        {"status": "passed", "summary": {"passed": 2, "total": 3}},
+        {"status": "passed", "passed": True, "summary": {"passed": 2, "total": 3}},
         tmp_path / "reports" / "latest.json",
     )
 
-    assert "Runner completato: passed (2/3 test)" in message
+    assert "Esecuzione completata" in message
+    assert "Stato runner:" in message
+    assert "passed" in message
+    assert "consegna superata" in message
+    assert "2/3 test" in message
     assert "Report salvato:" in message
+    assert "dashboard e registro docente" in message
 
 
 def test_assignment_repo_path_uses_help_or_workspace_path(tmp_path) -> None:
@@ -474,7 +479,7 @@ def test_run_tui_can_execute_runner_save_report_and_reload(monkeypatch, tmp_path
     monkeypatch.setattr(
         student_lab_cli.student_lab_runner,
         "run_local_assignment",
-        lambda assignment, root: {"status": "passed", "summary": {"passed": 1, "total": 1}},
+        lambda assignment, root: {"status": "passed", "passed": True, "summary": {"passed": 1, "total": 1}},
     )
 
     def fake_write_report(root, assignment, report):
@@ -494,8 +499,11 @@ def test_run_tui_can_execute_runner_save_report_and_reload(monkeypatch, tmp_path
     assert result == 0
     assert len(load_calls) == 2
     assert saved_reports
-    assert any("Runner completato: passed (1/1 test)" in output for output in outputs)
+    assert any("Esecuzione completata" in output for output in outputs)
+    assert any("consegna superata" in output for output in outputs)
+    assert any("1/1 test" in output for output in outputs)
     assert any("Report salvato:" in output for output in outputs)
+    assert any("dashboard e registro docente" in output for output in outputs)
     assert sum(1 for output in outputs if "Dettaglio consegna" in output) == 2
 
 

@@ -56,6 +56,7 @@ Comandi disponibili nella TUI minima:
 - invio o `b` dal dettaglio: torna alla lista delle consegne;
 
 Dopo un comando di dettaglio la TUI resta sulla stessa consegna e ricarica i dati quando il comando modifica lo stato, per esempio dopo una richiesta di aiuto o dopo l'esecuzione del runner.
+Quando usi `e`, la TUI mostra stato runner, esito, test passati/totali, path del report salvato e ricorda che quel report e quello letto da dashboard e registro docente.
 
 Il payload ha schema `student_lab.v1` e contiene:
 
