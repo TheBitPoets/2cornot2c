@@ -125,6 +125,31 @@ def parse_pytest_summary(output: str) -> dict[str, int | None]:
     return {"passed": counts["passed"], "total": total}
 
 
+PYTEST_RESULT_RE = re.compile(
+    r"^(?P<node>\S+::\S+)\s+(?P<status>PASSED|FAILED|ERROR|SKIPPED|XFAIL|XPASS)\b",
+    re.MULTILINE,
+)
+
+
+def parse_pytest_test_results(output: str) -> list[dict[str, Any]]:
+    """Return per-test results from pytest verbose output."""
+
+    results: list[dict[str, Any]] = []
+    for match in PYTEST_RESULT_RE.finditer(output):
+        node = match.group("node").replace("\\", "/")
+        status = match.group("status").lower()
+        passed = status in {"passed", "xpass"}
+        item: dict[str, Any] = {
+            "name": node,
+            "passed": passed,
+            "status": status,
+        }
+        if not passed:
+            item["message"] = output.strip()
+        results.append(item)
+    return results
+
+
 def pytest_report_tests(*, passed: bool, status: str, stdout: str, stderr: str) -> list[dict[str, Any]]:
     """Return an aggregate pytest test entry for dashboard grading."""
 
@@ -164,7 +189,7 @@ def run_python_pytest(
             status="no-tests",
             error="Nessun test pytest rilevato nel workspace.",
         )
-    command = [sys.executable, "-m", "pytest", "-q", *targets]
+    command = [sys.executable, "-m", "pytest", "-vv", *targets]
     try:
         result = subprocess.run(
             command,
@@ -191,6 +216,12 @@ def run_python_pytest(
         }
     status = "passed" if result.returncode == 0 else "failed"
     output = f"{result.stdout}\n{result.stderr}"
+    test_results = parse_pytest_test_results(output) or pytest_report_tests(
+        passed=result.returncode == 0,
+        status=status,
+        stdout=result.stdout,
+        stderr=result.stderr,
+    )
     return {
         **report_base(assignment, language="python", source=source),
         "passed": result.returncode == 0,
@@ -198,12 +229,7 @@ def run_python_pytest(
         "command": command,
         "returncode": result.returncode,
         "summary": parse_pytest_summary(output),
-        "tests": pytest_report_tests(
-            passed=result.returncode == 0,
-            status=status,
-            stdout=result.stdout,
-            stderr=result.stderr,
-        ),
+        "tests": test_results,
         "stdout": result.stdout,
         "stderr": result.stderr,
     }

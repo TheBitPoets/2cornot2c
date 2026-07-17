@@ -85,6 +85,13 @@ def test_run_student_assignment_passes_python_pytest(tmp_path) -> None:
     assert report["status"] == "passed"
     assert report["passed"] is True
     assert report["summary"] == {"passed": 1, "total": 1}
+    assert report["tests"] == [
+        {
+            "name": "tests/test_main.py::test_somma",
+            "passed": True,
+            "status": "passed",
+        }
+    ]
 
 
 def test_write_student_report_persists_latest_json_and_service_reads_it(tmp_path) -> None:
@@ -143,6 +150,10 @@ def test_run_student_assignment_reports_python_pytest_failure(tmp_path) -> None:
     assert report["status"] == "failed"
     assert report["passed"] is False
     assert report["summary"]["total"] == 1
+    assert report["tests"][0]["name"] == "tests/test_main.py::test_somma"
+    assert report["tests"][0]["passed"] is False
+    assert report["tests"][0]["status"] == "failed"
+    assert "assert -1 == 5" in report["tests"][0]["message"]
     assert "FAILED" in report["stdout"]
 
 
