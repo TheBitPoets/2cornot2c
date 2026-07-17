@@ -509,7 +509,7 @@ def run_tui(
                     help_type = HELP_MENU.get(help_choice, help_choice)
                     prompt = input_fn("Scrivi la richiesta: ").strip()
                     if not prompt:
-                        print_fn("Richiesta non salvata: prompt vuoto.")
+                        print_fn("Richiesta aiuto annullata: prompt vuoto.")
                     else:
                         try:
                             event = record_help_from_tui(
