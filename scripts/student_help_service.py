@@ -174,3 +174,30 @@ def help_summary(log_path: Path | None) -> dict[str, Any]:
         "last_decision": "consentita" if last.get("allowed") is True else ("bloccata" if last.get("allowed") is False else ""),
         "counts": counts,
     }
+
+
+def teacher_help_summary(log_path: Path | None) -> dict[str, Any]:
+    """Return a teacher-facing help summary with sanitized event prompts."""
+
+    summary = help_summary(log_path)
+    if log_path is None:
+        summary["events"] = []
+        summary["ai_total"] = 0
+        return summary
+    events, error = read_help_log(log_path)
+    teacher_events = [
+        {
+            "requested_at": clean_text(event.get("requested_at")),
+            "help_type": clean_text(event.get("help_type")),
+            "label": clean_text(event.get("label")),
+            "allowed": event.get("allowed") is True,
+            "reason": clean_text(event.get("reason")),
+            "prompt": clean_text(event.get("prompt")),
+        }
+        for event in events
+    ]
+    summary["events"] = teacher_events
+    summary["ai_total"] = sum(1 for event in teacher_events if event["help_type"] == "ai")
+    if error:
+        summary["events"] = []
+    return summary

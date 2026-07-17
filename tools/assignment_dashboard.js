@@ -3879,6 +3879,38 @@ function aiFeedbackReviewDetails(ai) {
   `;
 }
 
+function studentHelpDetails(help) {
+  const data = help || {};
+  const total = Number(data.total || 0);
+  const aiTotal = Number(data.ai_total || data.counts?.ai || 0);
+  const denied = Number(data.denied || 0);
+  const kind = denied > 0 ? "bad" : aiTotal > 0 ? "warn" : total > 0 ? "ok" : "muted";
+  const events = Array.isArray(data.events) ? data.events : [];
+  const rows = events.length
+    ? events.map((event) => `
+        <div>
+          <dt>${escapeHtml(formatDate(event.requested_at))} · ${escapeHtml(event.label || event.help_type || "aiuto")}</dt>
+          <dd>
+            ${badge(event.allowed ? "Consentita" : "Bloccata", event.allowed ? "ok" : "bad")}
+            ${event.prompt ? `<p>${escapeHtml(event.prompt)}</p>` : "<p>Prompt non disponibile.</p>"}
+            ${event.reason ? `<small>${escapeHtml(event.reason)}</small>` : ""}
+          </dd>
+        </div>
+      `).join("")
+    : `<div><dt>Prompt</dt><dd>${escapeHtml(data.error || "Nessuna richiesta registrata.")}</dd></div>`;
+  return `
+    <div class="studentHelpCell">
+      ${badge(`Aiuti ${total}`, kind)}<br>
+      <small>Consegna: ${escapeHtml(data.activity_id || "-")}</small><br>
+      <small>AI: ${escapeHtml(aiTotal)} · Bloccate: ${escapeHtml(denied)}</small>
+      <details class="studentHelpDetails">
+        <summary>Prompt aiuti</summary>
+        <dl>${rows}</dl>
+      </details>
+    </div>
+  `;
+}
+
 function gradingDetails(grading) {
   const failedTests = Array.isArray(grading.failed_tests) ? grading.failed_tests : [];
   const tests = Array.isArray(grading.tests) ? grading.tests : [];
@@ -3934,6 +3966,9 @@ const SUMMARY_TOOLTIPS = {
   "Grading KO": "Numero di studenti con grading completato ma fallito.",
   "Media voto": "Media dei voti numerici disponibili nel registro selezionato.",
   "Voti mancanti": "Numero di studenti senza voto numerico disponibile.",
+  Aiuti: "Numero totale di richieste di aiuto registrate dagli studenti per questa consegna.",
+  "Aiuti AI": "Numero di richieste di aiuto AI registrate dagli studenti per questa consegna.",
+  "Aiuti bloccati": "Numero di richieste di aiuto non consentite dalla policy della consegna.",
 };
 
 function summaryTooltip(label) {
@@ -3958,6 +3993,9 @@ function summaryCounts(students) {
     late: students.filter((student) => student.submitted && student.late).length,
     passed: students.filter((student) => student.grading?.status === "graded_passed").length,
     failed: students.filter((student) => student.grading?.status === "graded_failed").length,
+    helpRequests: students.reduce((total, student) => total + Number(student.help?.total || 0), 0),
+    helpAiRequests: students.reduce((total, student) => total + Number(student.help?.ai_total || student.help?.counts?.ai || 0), 0),
+    helpDenied: students.reduce((total, student) => total + Number(student.help?.denied || 0), 0),
     averageGrade: grades.length ? grades.reduce((sum, grade) => sum + grade, 0) / grades.length : null,
     missingGrades: students.length - grades.length,
   };
@@ -4005,6 +4043,9 @@ function detailedStudentsSummaryItems(counts) {
     ["Grading KO", counts.failed],
     ["Media voto", counts.averageGrade == null ? "-" : counts.averageGrade.toFixed(1)],
     ["Voti mancanti", counts.missingGrades],
+    ["Aiuti", counts.helpRequests],
+    ["Aiuti AI", counts.helpAiRequests],
+    ["Aiuti bloccati", counts.helpDenied],
   ];
 }
 
@@ -4075,6 +4116,7 @@ function renderStudents(students) {
   for (const student of visible) {
     const grading = student.grading || {};
     const ai = student.ai_feedback || {};
+    const help = student.help || {};
     const submission = student.submission || {};
     const files = submissionFiles(student);
     const canReview = student.submitted && files.length > 0;
@@ -4106,6 +4148,7 @@ function renderStudents(students) {
       <td>
         <div data-ai-feedback-student="${escapeHtml(student.student_id || student.student)}">
           ${aiFeedbackDetails(ai)}
+          ${studentHelpDetails(help)}
         </div>
       </td>
       <td>

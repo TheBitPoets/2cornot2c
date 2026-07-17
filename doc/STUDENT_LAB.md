@@ -113,6 +113,9 @@ Quando il report esiste, il registro salva nella `submission` anche:
 - `report_schema_version`: versione dello schema del report;
 - `report_status`: stato tecnico del report originale.
 
+Il registro docente legge anche `help/<activity_id>/events.json`, quando presente, e aggiunge a ogni studente il riepilogo `help`.
+La dashboard docente puo cosi mostrare numero di richieste, richieste AI, richieste bloccate e prompt inviati dallo studente per quella consegna.
+
 In questo modo dashboard docente, dashboard studente e TUI leggono lo stesso risultato senza ricalcolare grading o stato in modi divergenti.
 
 Le prossime PR dovranno usare questo contratto per:

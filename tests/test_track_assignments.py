@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from scripts import track_assignments
+from scripts import student_help_service, student_support_policy, track_assignments
 from scripts.thebitlab_repository_providers import LocalRepositoryProvider, StudentRepository
 
 
@@ -548,6 +548,47 @@ def test_track_assignments_exposes_student_lab_report_metadata(tmp_path) -> None
     assert row["submission"]["report_schema_version"] == "student_lab_run.v1"
     assert row["submission"]["report_status"] == "passed"
     assert row["grading"]["status"] == "graded_passed"
+
+
+def test_track_assignments_exposes_student_help_requests(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+    student = target(tmp_path, "rossi-mario")
+    policy = student_support_policy.support_policy("studio-guidato")
+    student_help_service.record_help_request(
+        repo_path=student.path,
+        activity_id="python-base-somma-001",
+        support_policy=policy,
+        help_type="teoria",
+        prompt="Puoi ricordarmi come funziona input()?",
+        now="2026-10-20T08:10:00+02:00",
+    )
+    student_help_service.record_help_request(
+        repo_path=student.path,
+        activity_id="python-base-somma-001",
+        support_policy=policy,
+        help_type="ai",
+        prompt="Scrivimi la soluzione completa.",
+        now="2026-10-20T08:15:00+02:00",
+    )
+
+    index = track_assignments.track_assignments(
+        activity_path=activity_path,
+        targets=[student],
+        due_at="2026-10-21T08:00:00+02:00",
+        now="2026-10-20T09:00:00+02:00",
+    )
+
+    help_summary = index["students"][0]["help"]
+
+    assert help_summary["path"] == "help/python-base-somma-001/events.json"
+    assert help_summary["activity_id"] == "python-base-somma-001"
+    assert help_summary["total"] == 2
+    assert help_summary["ai_total"] == 1
+    assert help_summary["allowed"] == 1
+    assert help_summary["denied"] == 1
+    assert help_summary["events"][0]["prompt"] == "Puoi ricordarmi come funziona input()?"
+    assert help_summary["events"][1]["prompt"] == "Scrivimi la soluzione completa."
+    assert help_summary["events"][1]["allowed"] is False
 
 
 def test_track_assignments_rejects_report_for_different_activity(tmp_path) -> None:
