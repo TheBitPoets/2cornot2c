@@ -11,7 +11,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts import assignment_records, track_assignments
+from scripts import assignment_records, student_support_policy, track_assignments
 from scripts.thebitlab_contracts import normalize_activity
 
 
@@ -106,6 +106,7 @@ def load_activity_summary(root: Path, activity_path_value: str) -> dict[str, Any
             "language": "",
             "source_name": "",
             "topics": [],
+            "student_support_mode": "",
         }
     payload = json.loads(activity_path.read_text(encoding="utf-8-sig"))
     if not isinstance(payload, dict):
@@ -119,6 +120,7 @@ def load_activity_summary(root: Path, activity_path_value: str) -> dict[str, Any
         "language": clean_text(activity.get("language")),
         "source_name": clean_text(activity.get("source_name")),
         "topics": activity.get("topics") if isinstance(activity.get("topics"), list) else [],
+        "student_support_mode": clean_text(activity.get("student_support_mode")),
     }
 
 
@@ -184,6 +186,8 @@ def build_lab_assignment(
         "assignment_id": normalized["id"],
         "activity_id": activity_id,
         "title": activity["title"] or activity_id,
+        "student_support_mode": activity.get("student_support_mode", ""),
+        "support_policy": student_support_policy.support_policy(activity.get("student_support_mode", "")),
         "student_id": student_id,
         "target_type": normalized["target_type"],
         "class_id": normalized["class_id"],

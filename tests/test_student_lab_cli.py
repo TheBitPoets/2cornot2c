@@ -21,6 +21,14 @@ def sample_assignment(**overrides):
         "due_at": "2026-10-19T23:59:00+02:00",
         "status": "pending",
         "submitted": False,
+        "student_support_mode": "studio-guidato",
+        "support_policy": {
+            "mode": "studio-guidato",
+            "label": "Studio guidato",
+            "summary": "Puoi consultare materiali e domande guida.",
+            "allowed": ["riferimenti alla teoria", "feedback tecnico"],
+            "not_allowed": ["soluzioni complete"],
+        },
         "workspace": {
             "path": "examples/assignment_tracking/student_repos/rossi-mario/assignments/python-base-somma-001",
             "exists": True,
@@ -111,6 +119,10 @@ def test_render_assignment_detail_shows_workspace_report_and_runner() -> None:
     assert "examples/assignment_tracking/student_repos/rossi-mario/assignments/python-base-somma-001" in rendered
     assert "Linguaggio:" in rendered
     assert "python" in rendered
+    assert "Aiuto consentito" in rendered
+    assert "Studio guidato" in rendered
+    assert "riferimenti alla teoria, feedback tecnico" in rendered
+    assert "soluzioni complete" in rendered
     assert "not_graded" in rendered
     assert "not_run" in rendered
     assert "e = esegui e salva report" in rendered

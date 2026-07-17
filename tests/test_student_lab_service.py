@@ -5,11 +5,11 @@ import json
 from scripts import assignment_records, student_lab_service
 
 
-def write_activity(root, activity_id: str = "python-base-somma-001") -> str:
+def write_activity(root, activity_id: str = "python-base-somma-001", student_support_mode: str = "") -> str:
     """Write a minimal activity and return its repository-relative path."""
 
     path = root / "activities" / f"{activity_id}.json"
-    path.parent.mkdir(parents=True)
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(
             {
@@ -22,6 +22,7 @@ def write_activity(root, activity_id: str = "python-base-somma-001") -> str:
                 "language": "python",
                 "source_name": "main.py",
                 "instructions": "Scrivi un programma che stampa una somma.",
+                "student_support_mode": student_support_mode,
                 "grading_policy": {
                     "compila": True,
                     "test": True,
@@ -32,15 +33,16 @@ def write_activity(root, activity_id: str = "python-base-somma-001") -> str:
         ),
         encoding="utf-8",
     )
-    return "activities/python-base-somma-001.json"
+    return f"activities/{activity_id}.json"
 
 
 def sample_assignment(root, **overrides):
     """Return a valid assignment record for lab tests."""
 
+    activity_path = overrides.get("activity_path") or write_activity(root)
     payload = {
         "activity_id": "python-base-somma-001",
-        "activity_path": write_activity(root),
+        "activity_path": activity_path,
         "target_type": "group",
         "assigned_at": "2026-10-12T09:00:00+02:00",
         "due_at": "2026-10-19T23:59:00+02:00",
@@ -96,8 +98,28 @@ def test_student_lab_lists_only_requested_student_assignments(tmp_path) -> None:
     }
     assert assignment["activity"]["exists"] is True
     assert assignment["activity"]["language"] == "python"
+    assert assignment["support_policy"]["label"] == "Feedback tecnico"
+    assert assignment["support_policy"]["debug_allowed"] is True
     assert assignment["report"]["exists"] is False
     assert assignment["runner"]["status"] == "not_run"
+
+
+def test_student_lab_exposes_explicit_support_policy(tmp_path) -> None:
+    activity_id = "python-ai-assisted-001"
+    activity_path = write_activity(tmp_path, activity_id=activity_id, student_support_mode="ai-assisted")
+    write_assignment(tmp_path, sample_assignment(tmp_path, activity_id=activity_id, activity_path=activity_path))
+
+    assignment = student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id="rossi-mario",
+        now="2026-10-18T12:00:00+02:00",
+    )[0]
+
+    assert assignment["activity_id"] == activity_id
+    assert assignment["student_support_mode"] == "ai-assisted"
+    assert assignment["support_policy"]["label"] == "AI assisted"
+    assert assignment["support_policy"]["ai_allowed"] is True
+    assert "suggerimenti AI controllati" in assignment["support_policy"]["allowed"]
 
 
 def test_student_lab_marks_missing_after_due_date_without_report(tmp_path) -> None:

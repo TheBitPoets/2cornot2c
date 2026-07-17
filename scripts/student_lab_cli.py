@@ -72,6 +72,14 @@ def grading_label(grading: dict[str, Any]) -> str:
     return status
 
 
+def policy_list(values: Any) -> str:
+    """Return a compact comma-separated list for support policy details."""
+
+    if not isinstance(values, list) or not values:
+        return "-"
+    return ", ".join(clean_text(value) for value in values)
+
+
 def truncate(text: str, width: int) -> str:
     """Return text clipped to width with a suffix."""
 
@@ -174,6 +182,7 @@ def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False
     report = assignment.get("report") if isinstance(assignment.get("report"), dict) else {}
     grading = assignment.get("grading") if isinstance(assignment.get("grading"), dict) else {}
     runner = assignment.get("runner") if isinstance(assignment.get("runner"), dict) else {}
+    support_policy = assignment.get("support_policy") if isinstance(assignment.get("support_policy"), dict) else {}
     topics = activity.get("topics") if isinstance(activity.get("topics"), list) else []
     lines = [
         "Dettaglio consegna",
@@ -196,6 +205,12 @@ def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False
         detail_line("Linguaggio:", activity.get("language")),
         detail_line("Sorgente:", activity.get("source_name")),
         detail_line("Argomenti:", ", ".join(str(topic) for topic in topics) if topics else "-"),
+        "",
+        "Aiuto consentito",
+        detail_line("Modalita:", support_policy.get("label") or assignment.get("student_support_mode")),
+        detail_line("Sintesi:", support_policy.get("summary")),
+        detail_line("Permesso:", policy_list(support_policy.get("allowed"))),
+        detail_line("Non permesso:", policy_list(support_policy.get("not_allowed"))),
         "",
         "Report",
         detail_line("Path:", report.get("path")),
