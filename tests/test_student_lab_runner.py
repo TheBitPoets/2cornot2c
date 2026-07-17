@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import subprocess
 
-from scripts import assignment_records, student_lab_runner
+from scripts import assignment_records, student_lab_runner, student_lab_service
 
 
 def write_activity(root, activity_id: str = "python-base-somma-001", **overrides) -> str:
@@ -85,6 +85,44 @@ def test_run_student_assignment_passes_python_pytest(tmp_path) -> None:
     assert report["status"] == "passed"
     assert report["passed"] is True
     assert report["summary"] == {"passed": 1, "total": 1}
+
+
+def test_write_student_report_persists_latest_json_and_service_reads_it(tmp_path) -> None:
+    write_assignment(tmp_path, write_activity(tmp_path))
+    write_python_workspace(
+        tmp_path,
+        source="def somma(a, b):\n    return a + b\n",
+        test_source="from main import somma\n\ndef test_somma():\n    assert somma(2, 3) == 5\n",
+    )
+
+    assignment = student_lab_runner.load_student_assignment(
+        root=tmp_path,
+        student_id="rossi-mario",
+        activity_id="python-base-somma-001",
+        now="2026-10-18T12:00:00+02:00",
+    )
+    report = student_lab_runner.run_local_assignment(assignment, root=tmp_path)
+    report_path = student_lab_runner.write_student_report(tmp_path, assignment, report)
+
+    stored = json.loads(report_path.read_text(encoding="utf-8"))
+    assert stored["activity_id"] == "python-base-somma-001"
+    assert stored["submitted_at"] == report["generated_at"]
+    assert stored["source"] == "assignments/python-base-somma-001/main.py"
+
+    payload = student_lab_service.student_lab_payload(
+        root=tmp_path,
+        student_id="rossi-mario",
+        now="2026-10-20T12:00:00+02:00",
+    )
+
+    assignment_payload = payload["assignments"][0]
+    assert assignment_payload["status"] == "submitted"
+    assert assignment_payload["submitted"] is True
+    assert assignment_payload["report"]["exists"] is True
+    assert assignment_payload["report"]["submitted_at"] == report["generated_at"]
+    assert assignment_payload["grading"]["status"] == "graded_passed"
+    assert assignment_payload["grading"]["tests_passed"] == 1
+    assert assignment_payload["grading"]["tests_total"] == 1
 
 
 def test_run_student_assignment_reports_python_pytest_failure(tmp_path) -> None:

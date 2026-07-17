@@ -122,6 +122,19 @@ def parse_pytest_summary(output: str) -> dict[str, int | None]:
     return {"passed": counts["passed"], "total": total}
 
 
+def pytest_report_tests(*, passed: bool, status: str, stdout: str, stderr: str) -> list[dict[str, Any]]:
+    """Return an aggregate pytest test entry for dashboard grading."""
+
+    return [
+        {
+            "name": "pytest",
+            "passed": passed,
+            "status": status,
+            "message": stderr or stdout,
+        }
+    ]
+
+
 def run_python_pytest(
     assignment: dict[str, Any],
     *,
@@ -182,7 +195,12 @@ def run_python_pytest(
         "command": command,
         "returncode": result.returncode,
         "summary": parse_pytest_summary(output),
-        "tests": [],
+        "tests": pytest_report_tests(
+            passed=result.returncode == 0,
+            status=status,
+            stdout=result.stdout,
+            stderr=result.stderr,
+        ),
         "stdout": result.stdout,
         "stderr": result.stderr,
     }
@@ -296,6 +314,74 @@ def run_student_assignment(
     return run_local_assignment(assignment, root=root, timeout_seconds=timeout_seconds)
 
 
+def load_student_assignment(
+    *,
+    root: Path = PROJECT_ROOT,
+    student_id: str,
+    assignment_id: str | None = None,
+    activity_id: str | None = None,
+    now: str | None = None,
+) -> dict[str, Any]:
+    """Load one normalized assignment for a student."""
+
+    payload = student_lab_service.student_lab_payload(root=root, student_id=student_id, now=now)
+    assignments = payload.get("assignments") if isinstance(payload.get("assignments"), list) else []
+    return select_assignment(assignments, assignment_id=assignment_id, activity_id=activity_id)
+
+
+def assignment_report_path(root: Path, assignment: dict[str, Any]) -> Path:
+    """Return the default report path for an assignment."""
+
+    report = assignment.get("report") if isinstance(assignment.get("report"), dict) else {}
+    report_path_value = clean_text(report.get("path"))
+    if not report_path_value:
+        raise ValueError("report.path mancante nella consegna.")
+    return student_lab_service.resolve_local_path(root, report_path_value)
+
+
+def student_repo_path(root: Path, assignment: dict[str, Any]) -> Path | None:
+    """Infer the student repository path from the assignment workspace."""
+
+    workspace = assignment.get("workspace") if isinstance(assignment.get("workspace"), dict) else {}
+    workspace_path_value = clean_text(workspace.get("path"))
+    if not workspace_path_value:
+        return None
+    workspace_path = student_lab_service.resolve_local_path(root, workspace_path_value)
+    if workspace_path.parent.name != "assignments":
+        return None
+    return workspace_path.parent.parent
+
+
+def storage_report(root: Path, assignment: dict[str, Any], report: dict[str, Any]) -> dict[str, Any]:
+    """Return a report normalized for storage in the student repository."""
+
+    stored = dict(report)
+    stored.setdefault("submitted_at", clean_text(report.get("generated_at")) or datetime.now().astimezone().isoformat(timespec="seconds"))
+    repo_path = student_repo_path(root, assignment)
+    source_value = clean_text(stored.get("source"))
+    if repo_path is not None and source_value:
+        source_path = Path(source_value)
+        resolved_source = source_path.resolve(strict=False) if source_path.is_absolute() else (root / source_path).resolve(strict=False)
+        try:
+            stored["source"] = str(resolved_source.relative_to(repo_path.resolve())).replace("\\", "/")
+        except ValueError:
+            stored["source"] = source_value
+    return stored
+
+
+def write_student_report(root: Path, assignment: dict[str, Any], report: dict[str, Any], report_path: Path | None = None) -> Path:
+    """Persist a student lab report as JSON."""
+
+    output = report_path or assignment_report_path(root, assignment)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(
+        json.dumps(storage_report(root, assignment, report), ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    return output
+
+
 def positive_int(value: str) -> int:
     """Parse a positive integer CLI argument."""
 
@@ -318,6 +404,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--root", type=Path, default=PROJECT_ROOT, help="Root del repository TheBitLab.")
     parser.add_argument("--now", help="Data ISO da usare per calcolare lo stato della consegna.")
     parser.add_argument("--timeout", type=positive_int, default=DEFAULT_TIMEOUT_SECONDS, help="Timeout del runner locale.")
+    parser.add_argument("--write-report", action="store_true", help="Scrive il report nel path standard dello studente.")
+    parser.add_argument("--report", type=Path, help="Path alternativo del report JSON da scrivere.")
     return parser.parse_args()
 
 
@@ -326,14 +414,17 @@ def main() -> int:
 
     args = parse_args()
     try:
-        report = run_student_assignment(
-            root=args.root.resolve(strict=False),
+        root = args.root.resolve(strict=False)
+        assignment = load_student_assignment(
+            root=root,
             student_id=args.student_id,
             assignment_id=args.assignment_id,
             activity_id=args.activity_id,
             now=args.now,
-            timeout_seconds=args.timeout,
         )
+        report = run_local_assignment(assignment, root=root, timeout_seconds=args.timeout)
+        if args.write_report or args.report:
+            write_student_report(root, assignment, report, args.report.resolve(strict=False) if args.report else None)
     except ValueError as error:
         print(f"Runner lab non disponibile:\n{error}", file=sys.stderr)
         return 1
