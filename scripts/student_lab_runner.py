@@ -53,6 +53,13 @@ def source_name_for(activity: dict[str, Any], language: str) -> str:
     return clean_text(normalized.get("source_name")) or DEFAULT_SOURCE_NAMES.get(language, "")
 
 
+def is_safe_source_name(source_name: str) -> bool:
+    """Return whether source_name is a simple file name inside the workspace."""
+
+    path = Path(source_name)
+    return bool(source_name) and not path.is_absolute() and len(path.parts) == 1 and ".." not in path.parts
+
+
 def report_base(assignment: dict[str, Any], *, language: str, source: Path, backend: str = "local") -> dict[str, Any]:
     """Return common fields for local runner reports."""
 
@@ -212,6 +219,14 @@ def run_local_assignment(
     workspace_path = student_lab_service.resolve_local_path(root, workspace_path_value) if workspace_path_value else root
     source_name = source_name_for(activity, language)
     source = workspace_path / source_name if source_name else workspace_path
+    if not is_safe_source_name(source_name):
+        return error_report(
+            assignment,
+            language=language,
+            source=source,
+            status="invalid-source-name",
+            error="source_name deve essere un nome file semplice dentro il workspace.",
+        )
     if not workspace_path.is_dir():
         return error_report(
             assignment,

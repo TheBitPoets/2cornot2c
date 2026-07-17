@@ -165,6 +165,22 @@ def test_run_local_assignment_reports_unsupported_language(tmp_path) -> None:
     assert report["language"] == "sql"
 
 
+def test_run_local_assignment_rejects_source_name_outside_workspace(tmp_path) -> None:
+    activity_path = write_activity(tmp_path, source_name="../main.py")
+    write_assignment(tmp_path, activity_path)
+    workspace = tmp_path / "examples" / "assignment_tracking" / "student_repos" / "rossi-mario" / "assignments" / "python-base-somma-001"
+    workspace.mkdir(parents=True)
+
+    report = student_lab_runner.run_student_assignment(
+        root=tmp_path,
+        student_id="rossi-mario",
+        activity_id="python-base-somma-001",
+    )
+
+    assert report["status"] == "invalid-source-name"
+    assert report["passed"] is False
+
+
 def test_run_local_assignment_wraps_c_compile_error(monkeypatch, tmp_path) -> None:
     activity_id = "c-base-somma-001"
     activity_path = write_activity(tmp_path, activity_id=activity_id, language="c", source_name="main.c")
