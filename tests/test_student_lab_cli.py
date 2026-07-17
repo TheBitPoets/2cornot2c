@@ -143,10 +143,16 @@ def test_render_assignment_detail_shows_workspace_report_and_runner() -> None:
     assert "bloccata" in rendered
     assert "not_graded" in rendered
     assert "not_run" in rendered
-    assert "e = esegui e salva report" in rendered
-    assert "h = storico aiuti" in rendered
-    assert "invio/b = lista" in rendered
-    assert "o = apri workspace" in rendered
+    assert "Azioni principali" in rendered
+    assert "  e  Esegui test e salva report" in rendered
+    assert "  a  Chiedi aiuto" in rendered
+    assert "  o  Apri workspace" in rendered
+    assert "Altri comandi" in rendered
+    assert "  h  Storico aiuti" in rendered
+    assert "  b  Torna alla lista" in rendered
+    assert "  invio  Torna alla lista" in rendered
+    assert "  q  Esci" in rendered
+    assert "Comandi:" not in rendered
 
 
 def test_render_assignment_list_can_color_statuses() -> None:

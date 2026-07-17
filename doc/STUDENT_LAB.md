@@ -47,13 +47,13 @@ Comandi disponibili nella TUI minima:
 - numero della riga: apre il dettaglio della consegna;
 - `r`: ricarica le consegne;
 - `q`: esce;
-- `a` dal dettaglio: registra una richiesta di aiuto secondo la policy della consegna;
 - tipo aiuto nella richiesta: `1`, `2`, `3`; altri valori sono rifiutati;
 - invio o `b` nella scelta del tipo aiuto, oppure prompt vuoto: annulla la richiesta senza salvare eventi;
-- `h` dal dettaglio: mostra lo storico delle richieste di aiuto registrate per quella consegna;
-- `e` dal dettaglio: esegue il runner locale e salva il report;
-- `o` dal dettaglio: apre la cartella workspace, se esiste.
-- invio o `b` dal dettaglio: torna alla lista delle consegne;
+
+Nel dettaglio della consegna i comandi sono divisi in:
+
+- azioni principali: `e` esegue il runner e salva il report, `a` registra una richiesta di aiuto, `o` apre la cartella workspace;
+- altri comandi: `h` mostra lo storico aiuti, `b` o invio torna alla lista, `q` esce.
 
 Dopo un comando di dettaglio la TUI resta sulla stessa consegna e ricarica i dati quando il comando modifica lo stato, per esempio dopo una richiesta di aiuto o dopo l'esecuzione del runner.
 Quando usi `e`, la TUI mostra stato runner, esito, test passati/totali, path del report salvato e ricorda che quel report è quello letto da dashboard e registro docente.
