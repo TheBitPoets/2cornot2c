@@ -30,9 +30,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+APP_ROOT = Path(__file__).resolve().parents[1]
+ROOT = APP_ROOT
+if str(APP_ROOT) not in sys.path:
+    sys.path.insert(0, str(APP_ROOT))
 
 from scripts import (
     activity_ai_package,
@@ -85,6 +86,37 @@ AI_FRAME_TIMEOUT_SECONDS = 120
 AI_COURSE_PLAN_TIMEOUT_SECONDS = 240
 COMPACT_TEXT_CHARS = 1200
 MAX_SUBMISSION_FILE_BYTES = 512 * 1024
+
+
+def configure_data_root(root: Path) -> Path:
+    """Configure the repository data root used by API endpoints."""
+
+    global ROOT
+    global DESIGN_PATH
+    global COURSE_DESIGNS_DIR
+    global SCHOOL_CALENDARS_DIR
+    global TEACHER_REPORTS_DIR
+    global TEACHER_ASSIGNMENTS_DIR
+    global ACTIVITY_DIRS
+    global COURSE_PLAN_MD_PATH
+    global README_PATH
+    global AI_PROVIDERS_PATH
+    global AI_SECRET_PATH
+    global LEGACY_AI_SECRET_PATH
+
+    ROOT = root.resolve(strict=False)
+    DESIGN_PATH = ROOT / "doc" / "course_design.json"
+    COURSE_DESIGNS_DIR = ROOT / "doc" / "course_designs"
+    SCHOOL_CALENDARS_DIR = ROOT / "doc" / "calendars"
+    TEACHER_REPORTS_DIR = ROOT / "teacher-reports"
+    TEACHER_ASSIGNMENTS_DIR = ROOT / "teacher-assignments"
+    ACTIVITY_DIRS = [ROOT / "activities", ROOT / "examples" / "assignment_tracking"]
+    COURSE_PLAN_MD_PATH = ROOT / "doc" / "PERCORSO_DIDATTICO.md"
+    README_PATH = ROOT / "README.md"
+    AI_PROVIDERS_PATH = ROOT / "config" / "ai_providers.yaml"
+    AI_SECRET_PATH = ROOT / ".secrets" / "ai.secret"
+    LEGACY_AI_SECRET_PATH = ROOT / "scripts" / ".secrets" / "ai.secret"
+    return ROOT
 
 
 def course_storage() -> thebitlab_storage.JsonCourseStorage:
@@ -2395,9 +2427,9 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
 
     def serve_static(self, request_path: str) -> None:
         relative = unquote(request_path.lstrip("/")) or "tools/course_board.html"
-        target = (ROOT / relative).resolve()
+        target = (APP_ROOT / relative).resolve()
         try:
-            target.relative_to(ROOT)
+            target.relative_to(APP_ROOT)
         except ValueError:
             self.send_error(403)
             return
@@ -2421,9 +2453,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--root", type=Path, default=APP_ROOT, help="Root dati da usare per API e dashboard.")
     args = parser.parse_args()
+    data_root = configure_data_root(args.root)
     server = ThreadingHTTPServer((args.host, args.port), CourseBoardHandler)
     print(f"Course board: http://{args.host}:{args.port}/tools/course_board.html")
+    print(f"Root dati: {data_root}")
     print("Premi Ctrl+C per fermare il server.")
     try:
         server.serve_forever()
