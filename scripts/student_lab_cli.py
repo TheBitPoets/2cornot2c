@@ -12,7 +12,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts import student_lab_runner, student_lab_service
+from scripts import student_help_service, student_lab_runner, student_lab_service
 
 
 InputFn = Callable[[str], str]
@@ -236,7 +236,7 @@ def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False
         detail_line("Stato:", runner.get("status")),
         detail_line("Backend:", runner.get("backend")),
         "",
-        "Comandi: e = esegui e salva report | o = apri workspace | invio = torna all'elenco",
+        "Comandi: a = chiedi aiuto | e = esegui e salva report | o = apri workspace | invio = torna all'elenco",
     ]
     return "\n".join(lines)
 
@@ -253,6 +253,81 @@ def runner_result_message(report: dict[str, Any], report_path: Path) -> str:
         [
             f"Runner completato: {status}{tests}",
             f"Report salvato: {report_path}",
+        ]
+    )
+
+
+HELP_MENU = {
+    "1": "feedback-tecnico",
+    "f": "feedback-tecnico",
+    "feedback": "feedback-tecnico",
+    "2": "teoria",
+    "t": "teoria",
+    "teoria": "teoria",
+    "3": "ai",
+    "a": "ai",
+    "ai": "ai",
+}
+
+
+def help_choice_label() -> str:
+    """Return a compact help-type menu label."""
+
+    return "1 feedback tecnico | 2 teoria | 3 AI"
+
+
+def assignment_repo_path(assignment: dict[str, Any], root: Path = PROJECT_ROOT) -> Path | None:
+    """Infer the local student repo path from assignment paths."""
+
+    help_data = assignment.get("help") if isinstance(assignment.get("help"), dict) else {}
+    help_path = clean_text(help_data.get("path"), "")
+    normalized_help_path = help_path.replace("\\", "/")
+    if help_path and "/help/" in normalized_help_path:
+        raw_path = Path(help_path)
+        resolved = raw_path if raw_path.is_absolute() else (root / raw_path).resolve(strict=False)
+        return resolved.parents[2] if len(resolved.parents) >= 3 else None
+    workspace = assignment.get("workspace") if isinstance(assignment.get("workspace"), dict) else {}
+    workspace_path = clean_text(workspace.get("path"), "")
+    normalized_workspace_path = workspace_path.replace("\\", "/")
+    if workspace_path and "/assignments/" in normalized_workspace_path:
+        raw_path = Path(workspace_path)
+        resolved = raw_path if raw_path.is_absolute() else (root / raw_path).resolve(strict=False)
+        return resolved.parents[1] if len(resolved.parents) >= 2 else None
+    return None
+
+
+def record_help_from_tui(
+    *,
+    assignment: dict[str, Any],
+    root: Path,
+    help_type: str,
+    prompt: str,
+    now: str | None = None,
+) -> dict[str, Any]:
+    """Record one student help request from the TUI."""
+
+    repo_path = assignment_repo_path(assignment, root=root)
+    if repo_path is None:
+        raise ValueError("Repository studente non disponibile per salvare la richiesta di aiuto.")
+    support_policy = assignment.get("support_policy") if isinstance(assignment.get("support_policy"), dict) else {}
+    return student_help_service.record_help_request(
+        repo_path=repo_path,
+        activity_id=clean_text(assignment.get("activity_id"), ""),
+        support_policy=support_policy,
+        help_type=help_type,
+        prompt=prompt,
+        now=now,
+    )
+
+
+def help_result_message(event: dict[str, Any]) -> str:
+    """Return a compact message after recording a help request."""
+
+    status = "consentita" if event.get("allowed") else "bloccata"
+    return "\n".join(
+        [
+            f"Richiesta aiuto {status}: {clean_text(event.get('label'))}",
+            clean_text(event.get("reason")),
         ]
     )
 
@@ -333,6 +408,27 @@ def run_tui(
             if not open_workspace(clean_text(workspace.get("path"), ""), root=root):
                 print_fn("Workspace non disponibile.")
                 input_fn("Premi invio per continuare...")
+        if action == "a":
+            print_fn(f"Tipo aiuto: {help_choice_label()}")
+            help_choice = input_fn("Tipo: ").strip().lower()
+            help_type = HELP_MENU.get(help_choice, help_choice)
+            prompt = input_fn("Scrivi la richiesta: ").strip()
+            if not prompt:
+                print_fn("Richiesta non salvata: prompt vuoto.")
+            else:
+                try:
+                    event = record_help_from_tui(
+                        assignment=assignment,
+                        root=root,
+                        help_type=help_type,
+                        prompt=prompt,
+                        now=now,
+                    )
+                    print_fn(help_result_message(event))
+                    payload = load_payload(root, student_id, now)
+                except ValueError as error:
+                    print_fn(f"Richiesta aiuto non salvata:\n{error}")
+            input_fn("Premi invio per continuare...")
         if action == "e":
             try:
                 report = student_lab_runner.run_local_assignment(assignment, root=root)

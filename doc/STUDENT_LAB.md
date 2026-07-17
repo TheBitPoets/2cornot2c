@@ -47,6 +47,7 @@ Comandi disponibili nella TUI minima:
 - numero della riga: apre il dettaglio della consegna;
 - `r`: ricarica le consegne;
 - `q`: esce;
+- `a` dal dettaglio: registra una richiesta di aiuto secondo la policy della consegna;
 - `e` dal dettaglio: esegue il runner locale e salva il report;
 - `o` dal dettaglio: apre la cartella workspace, se esiste.
 
