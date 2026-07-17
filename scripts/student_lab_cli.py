@@ -12,7 +12,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts import student_lab_service
+from scripts import student_lab_runner, student_lab_service
 
 
 InputFn = Callable[[str], str]
@@ -211,9 +211,25 @@ def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False
         detail_line("Stato:", runner.get("status")),
         detail_line("Backend:", runner.get("backend")),
         "",
-        "Comandi: o = apri workspace | invio = torna all'elenco",
+        "Comandi: e = esegui e salva report | o = apri workspace | invio = torna all'elenco",
     ]
     return "\n".join(lines)
+
+
+def runner_result_message(report: dict[str, Any], report_path: Path) -> str:
+    """Return a compact message after a runner execution."""
+
+    status = clean_text(report.get("status"))
+    summary = report.get("summary") if isinstance(report.get("summary"), dict) else {}
+    passed = summary.get("passed")
+    total = summary.get("total")
+    tests = f" ({passed}/{total} test)" if passed is not None and total is not None else ""
+    return "\n".join(
+        [
+            f"Runner completato: {status}{tests}",
+            f"Report salvato: {report_path}",
+        ]
+    )
 
 
 def clear_screen() -> None:
@@ -292,6 +308,15 @@ def run_tui(
             if not open_workspace(clean_text(workspace.get("path"), ""), root=root):
                 print_fn("Workspace non disponibile.")
                 input_fn("Premi invio per continuare...")
+        if action == "e":
+            try:
+                report = student_lab_runner.run_local_assignment(assignment, root=root)
+                report_path = student_lab_runner.write_student_report(root, assignment, report)
+                print_fn(runner_result_message(report, report_path))
+                payload = load_payload(root, student_id, now)
+            except ValueError as error:
+                print_fn(f"Runner non disponibile:\n{error}")
+            input_fn("Premi invio per continuare...")
 
 
 def parse_args() -> argparse.Namespace:
