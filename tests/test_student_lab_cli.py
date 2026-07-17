@@ -148,9 +148,21 @@ def test_open_workspace_rejects_missing_path(tmp_path) -> None:
     assert student_lab_cli.open_workspace(str(tmp_path / "missing")) is False
 
 
+def test_open_workspace_resolves_relative_path_from_root(monkeypatch, tmp_path) -> None:
+    workspace = tmp_path / "student" / "assignments" / "python-base-somma-001"
+    workspace.mkdir(parents=True)
+    opened = []
+
+    monkeypatch.setattr(student_lab_cli.os, "startfile", opened.append, raising=False)
+    monkeypatch.setattr(student_lab_cli.os, "name", "nt")
+
+    assert student_lab_cli.open_workspace("student/assignments/python-base-somma-001", root=tmp_path) is True
+    assert opened == [workspace.resolve()]
+
+
 def test_truncate_keeps_short_text_and_clips_long_text() -> None:
     assert student_lab_cli.truncate("abc", 5) == "abc"
-    assert student_lab_cli.truncate("abcdef", 4) == "abc…"
+    assert student_lab_cli.truncate("abcdef", 5) == "ab..."
 
 
 def test_status_label_uses_human_labels() -> None:

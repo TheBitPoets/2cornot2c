@@ -51,14 +51,14 @@ def grading_label(grading: dict[str, Any]) -> str:
 
 
 def truncate(text: str, width: int) -> str:
-    """Return text clipped to width with an ellipsis-like suffix."""
+    """Return text clipped to width with a suffix."""
 
     clean = clean_text(text)
-    if width <= 1:
+    if width <= 3:
         return clean[:width]
     if len(clean) <= width:
         return clean
-    return clean[: width - 1] + "…"
+    return clean[: width - 3] + "..."
 
 
 def render_header(student_id: str, assignments: list[dict[str, Any]]) -> str:
@@ -169,10 +169,11 @@ def clear_screen() -> None:
     os.system("cls" if os.name == "nt" else "clear")
 
 
-def open_workspace(path_value: str) -> bool:
+def open_workspace(path_value: str, root: Path = PROJECT_ROOT) -> bool:
     """Open a workspace folder with the platform file manager."""
 
-    path = Path(path_value)
+    raw_path = Path(path_value)
+    path = raw_path if raw_path.is_absolute() else (root / raw_path).resolve(strict=False)
     if not path.is_dir():
         return False
     if os.name == "nt":
@@ -224,7 +225,7 @@ def run_tui(
         action = input_fn("\nDettaglio: ").strip().lower()
         if action == "o":
             workspace = assignment.get("workspace") if isinstance(assignment.get("workspace"), dict) else {}
-            if not open_workspace(clean_text(workspace.get("path"), "")):
+            if not open_workspace(clean_text(workspace.get("path"), ""), root=root):
                 print_fn("Workspace non disponibile.")
                 input_fn("Premi invio per continuare...")
 
