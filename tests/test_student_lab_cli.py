@@ -113,6 +113,7 @@ def test_render_assignment_detail_shows_workspace_report_and_runner() -> None:
     assert "python" in rendered
     assert "not_graded" in rendered
     assert "not_run" in rendered
+    assert "e = esegui e salva report" in rendered
     assert "o = apri workspace" in rendered
 
 
@@ -144,6 +145,16 @@ def test_render_assignment_detail_summarizes_grading_tests() -> None:
     assert "8" in rendered
 
 
+def test_runner_result_message_shows_status_tests_and_report_path(tmp_path) -> None:
+    message = student_lab_cli.runner_result_message(
+        {"status": "passed", "summary": {"passed": 2, "total": 3}},
+        tmp_path / "reports" / "latest.json",
+    )
+
+    assert "Runner completato: passed (2/3 test)" in message
+    assert "Report salvato:" in message
+
+
 def test_run_tui_can_show_detail_and_exit(monkeypatch, tmp_path) -> None:
     payload = sample_payload()
     outputs = []
@@ -162,6 +173,45 @@ def test_run_tui_can_show_detail_and_exit(monkeypatch, tmp_path) -> None:
     assert result == 0
     assert any("TheBitLab - lab studente" in output for output in outputs)
     assert any("Dettaglio consegna" in output for output in outputs)
+
+
+def test_run_tui_can_execute_runner_save_report_and_reload(monkeypatch, tmp_path) -> None:
+    payload = sample_payload()
+    outputs = []
+    inputs = iter(["1", "e", "", "q"])
+    load_calls = []
+    saved_reports = []
+
+    def fake_load_payload(root, student_id, now=None):
+        load_calls.append((root, student_id, now))
+        return payload
+
+    monkeypatch.setattr(student_lab_cli, "load_payload", fake_load_payload)
+    monkeypatch.setattr(
+        student_lab_cli.student_lab_runner,
+        "run_local_assignment",
+        lambda assignment, root: {"status": "passed", "summary": {"passed": 1, "total": 1}},
+    )
+
+    def fake_write_report(root, assignment, report):
+        saved_reports.append((root, assignment, report))
+        return tmp_path / "reports" / "latest.json"
+
+    monkeypatch.setattr(student_lab_cli.student_lab_runner, "write_student_report", fake_write_report)
+
+    result = student_lab_cli.run_tui(
+        student_id="rossi-mario",
+        root=tmp_path,
+        input_fn=lambda prompt: next(inputs),
+        print_fn=outputs.append,
+        clear=False,
+    )
+
+    assert result == 0
+    assert len(load_calls) == 2
+    assert saved_reports
+    assert any("Runner completato: passed (1/1 test)" in output for output in outputs)
+    assert any("Report salvato:" in output for output in outputs)
 
 
 def test_open_workspace_rejects_missing_path(tmp_path) -> None:
