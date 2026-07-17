@@ -51,7 +51,7 @@ Comandi disponibili nella TUI minima:
 - `h` dal dettaglio: mostra lo storico delle richieste di aiuto registrate per quella consegna;
 - `e` dal dettaglio: esegue il runner locale e salva il report;
 - `o` dal dettaglio: apre la cartella workspace, se esiste.
-- invio dal dettaglio: torna alla lista delle consegne;
+- invio o `b` dal dettaglio: torna alla lista delle consegne;
 
 Dopo un comando di dettaglio la TUI resta sulla stessa consegna e ricarica i dati quando il comando modifica lo stato, per esempio dopo una richiesta di aiuto o dopo l'esecuzione del runner.
 
