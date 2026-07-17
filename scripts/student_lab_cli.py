@@ -212,6 +212,47 @@ def guide_label(text: str, use_color: bool = False) -> str:
     return colorize(f"{text:<9}", GUIDE_TERM_COLORS.get(text.lower(), ""), use_color)
 
 
+def test_result_label(test: dict[str, Any]) -> str:
+    """Return a compact label for one test result."""
+
+    if test.get("passed") is True:
+        return "[ok]"
+    if test.get("passed") is False:
+        return "[ko]"
+    status = clean_text(test.get("status"), "")
+    return f"[{status}]" if status else "[?]"
+
+
+def test_result_detail(test: dict[str, Any]) -> str:
+    """Return the first useful detail for one test result."""
+
+    for key in ("detail", "message", "error", "stderr", "stdout"):
+        value = clean_text(test.get(key), "")
+        if value:
+            return " ".join(value.split())
+    return ""
+
+
+def render_test_details(report: dict[str, Any]) -> list[str]:
+    """Render test details from a runner report."""
+
+    tests = report.get("tests")
+    if not isinstance(tests, list) or not tests:
+        return ["Dettaglio test", "  non disponibile nel report"]
+    lines = ["Dettaglio test"]
+    for index, item in enumerate(tests, start=1):
+        if not isinstance(item, dict):
+            continue
+        name = clean_text(item.get("name"), f"test {index}")
+        lines.append(f"  {test_result_label(item)} {name}")
+        detail = test_result_detail(item)
+        if detail and item.get("passed") is not True:
+            lines.append(f"      {truncate(detail, 96)}")
+    if len(lines) == 1:
+        lines.append("  non disponibile nel report")
+    return lines
+
+
 def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False) -> str:
     """Render the detail page for one lab assignment."""
 
@@ -319,6 +360,9 @@ def runner_result_message(report: dict[str, Any], report_path: Path) -> str:
             detail_line("Esito:", outcome),
             detail_line("Test:", tests),
             detail_line("Report salvato:", report_path),
+            "",
+            *render_test_details(report),
+            "",
             "Questo report è quello letto da dashboard e registro docente.",
         ]
     )
