@@ -37,6 +37,31 @@ Per usare una cartella scelta:
 python scripts/student_lab_demo_smoke.py --root tmp/student-lab-demo
 ```
 
+## Setup locale ispezionabile
+
+Per preparare una demo stabile in `tmp/student-lab-demo`, cancellando eventuali residui precedenti:
+
+```bash
+python scripts/student_lab_demo_setup.py
+```
+
+Lo script stampa un JSON con i path generati e i comandi utili per continuare il collaudo. I comandi principali sono:
+
+```bash
+python scripts/student_lab_service.py --root tmp/student-lab-demo --student-id rossi-mario
+python scripts/student_lab_cli.py --root tmp/student-lab-demo --student-id rossi-mario
+python scripts/student_lab_runner.py --root tmp/student-lab-demo --student-id rossi-mario --activity-id python-demo-somma-001 --write-report
+```
+
+Se vuoi usare un'altra cartella:
+
+```bash
+python scripts/student_lab_demo_setup.py --root tmp/mia-demo-lab
+```
+
+La root scelta viene sempre ricreata da zero: usa una cartella dedicata alla demo.
+
+
 ## Collaudo manuale su GUI/TUI
 
 Quando vuoi provare la demo con dati reali o demo del repository:
