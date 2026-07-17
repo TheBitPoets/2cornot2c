@@ -183,6 +183,7 @@ def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False
     grading = assignment.get("grading") if isinstance(assignment.get("grading"), dict) else {}
     runner = assignment.get("runner") if isinstance(assignment.get("runner"), dict) else {}
     support_policy = assignment.get("support_policy") if isinstance(assignment.get("support_policy"), dict) else {}
+    help_summary = assignment.get("help") if isinstance(assignment.get("help"), dict) else {}
     topics = activity.get("topics") if isinstance(activity.get("topics"), list) else []
     lines = [
         "Dettaglio consegna",
@@ -211,6 +212,13 @@ def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False
         detail_line("Sintesi:", support_policy.get("summary")),
         detail_line("Permesso:", policy_list(support_policy.get("allowed"))),
         detail_line("Non permesso:", policy_list(support_policy.get("not_allowed"))),
+        "",
+        "Richieste aiuto",
+        detail_line("Eventi:", help_summary.get("total")),
+        detail_line("Consentite:", help_summary.get("allowed")),
+        detail_line("Bloccate:", help_summary.get("denied")),
+        detail_line("Ultima:", compact_datetime(help_summary.get("last_requested_at"))),
+        detail_line("Esito ultima:", help_summary.get("last_decision")),
         "",
         "Report",
         detail_line("Path:", report.get("path")),

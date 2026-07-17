@@ -11,7 +11,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts import assignment_records, student_support_policy, track_assignments
+from scripts import assignment_records, student_help_service, student_support_policy, track_assignments
 from scripts.thebitlab_contracts import normalize_activity
 
 
@@ -177,17 +177,22 @@ def build_lab_assignment(
     repo_path = target_repo_path(root, target, student_id)
     workspace_path = repo_path / "assignments" / activity_id if repo_path is not None else None
     report_path = repo_path / "reports" / activity_id / "latest.json" if repo_path is not None else None
+    help_log_path = student_help_service.help_log_path(repo_path, activity_id) if repo_path is not None else None
     report = load_report(report_path, activity_id) if report_path is not None else None
     submitted_at = clean_text(report.get("submitted_at")) if report else ""
     status = status_with_report(report, normalized["due_at"], now) if report else status_without_report(normalized["due_at"], now)
     activity = load_activity_summary(root, normalized["activity_path"])
+    support_policy = student_support_policy.support_policy(activity.get("student_support_mode", ""))
+    help_log = student_help_service.help_summary(help_log_path)
+    if help_log_path is not None:
+        help_log["path"] = relative_to_root(root, help_log_path)
     grading = track_assignments.grading_summary(report)
     return {
         "assignment_id": normalized["id"],
         "activity_id": activity_id,
         "title": activity["title"] or activity_id,
         "student_support_mode": activity.get("student_support_mode", ""),
-        "support_policy": student_support_policy.support_policy(activity.get("student_support_mode", "")),
+        "support_policy": support_policy,
         "student_id": student_id,
         "target_type": normalized["target_type"],
         "class_id": normalized["class_id"],
@@ -209,6 +214,7 @@ def build_lab_assignment(
             "commit": report.get("commit") if report else None,
         },
         "grading": grading,
+        "help": help_log,
         "runner": {
             "status": "not_run",
             "backend": "student_lab_service",
