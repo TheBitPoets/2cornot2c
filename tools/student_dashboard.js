@@ -280,6 +280,30 @@ function labReportBadge(report) {
   return badge("Report assente");
 }
 
+function supportPolicyLabel(assignment) {
+  return assignment.support_policy?.label || assignment.student_support_mode || "Modalita non indicata";
+}
+
+function renderSupportPolicy(assignment) {
+  const policy = assignment.support_policy || {};
+  const allowed = Array.isArray(policy.allowed) && policy.allowed.length
+    ? policy.allowed.join(", ")
+    : "-";
+  const notAllowed = Array.isArray(policy.not_allowed) && policy.not_allowed.length
+    ? policy.not_allowed.join(", ")
+    : "-";
+  return `
+    <section class="supportPolicy">
+      <h4>${escapeHtml(supportPolicyLabel(assignment))}</h4>
+      <p>${escapeHtml(policy.summary || "Modalita di supporto non indicata dal docente.")}</p>
+      <p class="details">
+        <span>Permesso: ${escapeHtml(allowed)}</span>
+        <span>Non permesso: ${escapeHtml(notAllowed)}</span>
+      </p>
+    </section>
+  `;
+}
+
 function renderLabAssignment(assignment) {
   const grading = assignment.grading || {};
   const workspace = assignment.workspace || {};
@@ -311,6 +335,7 @@ function renderLabAssignment(assignment) {
         <span>Report: ${escapeHtml(report.path || "-")}</span>
         <span>Backend: ${escapeHtml(assignment.runner?.backend || "-")}</span>
       </p>
+      ${renderSupportPolicy(assignment)}
       ${grading.detail ? `<p class="details">${escapeHtml(grading.detail)}</p>` : ""}
       ${failedTests.length ? `<p class="details">Test falliti: ${failedTests.map(escapeHtml).join(", ")}</p>` : ""}
     </article>
@@ -1225,10 +1250,11 @@ function renderAssignmentDetail(assignment) {
         ${detailItem("Titolo", assignment.title || assignment.activity_id)}
         ${detailItem("Classe", assignment.class_label || assignment.class_id || currentClassLabel)}
         ${detailItem("Tipo", assignment.kind || "tipo non indicato")}
-        ${detailItem("Modalita", assignment.student_support_mode || "modalita non indicata")}
+        ${detailItem("Modalita", supportPolicyLabel(assignment))}
         ${detailItem("Assegnata", formatDate(assignment.assigned_at))}
         ${detailItem("Scadenza", formatDate(assignment.due_at))}
       </div>
+      ${renderSupportPolicy(assignment)}
     </section>
     <section class="detailSection">
       <h3>Consegna</h3>

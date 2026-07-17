@@ -892,6 +892,24 @@ button:hover { transform: translateY(-1px); }
   text-align: justify;
 }
 
+.supportPolicy {
+  min-width: 0;
+  max-width: 70rem;
+  border-left: 4px solid #164a9f;
+  border-radius: 0 8px 8px 0;
+  padding: .75rem .85rem;
+  background: #f5f8ff;
+}
+
+.supportPolicy h4 {
+  margin: 0 0 .35rem;
+}
+
+.supportPolicy p {
+  margin-bottom: .45rem;
+  text-align: justify;
+}
+
 .emptyFeedback {
   color: var(--muted);
 }

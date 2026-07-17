@@ -73,6 +73,20 @@ Quando il report e salvato, il servizio lab lo rilegge e aggiorna stato consegna
 | `submitted` | Esiste un report coerente con la activity |
 | `submitted_late` | Esiste un report coerente, ma consegnato dopo la scadenza |
 
+## Modalita di aiuto
+
+Ogni consegna puo esporre `student_support_mode`.
+Il payload lab aggiunge `support_policy`, cioe una descrizione leggibile per lo studente:
+
+| Modalita | Significato MVP |
+|---|---|
+| `senza-aiuto` | Lo studente lavora in autonomia e vede solo consegna, workspace e risultati deterministici. |
+| `feedback-tecnico` | Lo studente puo usare errori, output e test falliti per correggere il lavoro. |
+| `studio-guidato` | Lo studente puo consultare richiami teorici, domande guida ed esempi approvati dal docente. |
+| `ai-assisted` | Lo studente puo usare aiuto AI nei limiti di budget e policy decisi dal docente. |
+
+In questa fase la policy e informativa: TUI e dashboard la mostrano chiaramente, mentre enforcement tecnico, log degli aiuti e limiti AI saranno introdotti nei passi successivi.
+
 ## Direzione
 
 Il report salvato usa lo schema `student_lab_run.v1` e mantiene separati:

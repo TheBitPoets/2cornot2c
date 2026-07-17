@@ -160,6 +160,13 @@ def test_student_dashboard_renders_summary_and_assignment_card() -> None:
               due_at: "2026-10-19T23:59:00+02:00",
               status: "submitted",
               submitted: true,
+              student_support_mode: "studio-guidato",
+              support_policy: {
+                label: "Studio guidato",
+                summary: "Puoi consultare materiali e domande guida.",
+                allowed: ["riferimenti alla teoria", "feedback tecnico"],
+                not_allowed: ["soluzioni complete"],
+              },
               activity: { language: "python" },
               workspace: { path: "examples/assignment_tracking/student_repos/rossi-mario/assignments/python-base-somma-001", exists: true },
               report: { path: "examples/assignment_tracking/student_repos/rossi-mario/reports/python-base-somma-001/latest.json", exists: true, submitted_at: "2026-10-18T18:22:10+02:00" },
@@ -188,6 +195,9 @@ def test_student_dashboard_renders_summary_and_assignment_card() -> None:
         assert.match(tested.els.studentLab.innerHTML, /Workspace pronto/);
         assert.match(tested.els.studentLab.innerHTML, /Report salvato/);
         assert.match(tested.els.studentLab.innerHTML, /Test: 2\\/2/);
+        assert.match(tested.els.studentLab.innerHTML, /Studio guidato/);
+        assert.match(tested.els.studentLab.innerHTML, /riferimenti alla teoria, feedback tecnico/);
+        assert.match(tested.els.studentLab.innerHTML, /soluzioni complete/);
         assert.match(tested.els.studentLabStatus.textContent, /1 consegne lab · 1 report salvati/);
         """
     )
