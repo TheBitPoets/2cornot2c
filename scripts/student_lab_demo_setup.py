@@ -48,18 +48,15 @@ def demo_commands(root: Path) -> dict[str, str]:
     }
 
 
-def prepare_demo(root: Path, *, reset: bool = True) -> dict[str, Any]:
+def prepare_demo(root: Path) -> dict[str, Any]:
     """Create a stable, inspectable demo root and return its summary."""
 
     root = root.resolve(strict=False)
-    if reset:
-        reset_root(root)
-    else:
-        root.mkdir(parents=True, exist_ok=True)
+    reset_root(root)
     summary = student_lab_demo_smoke.run_smoke(root)
     return {
         **summary,
-        "reset": reset,
+        "reset": True,
         "commands": demo_commands(root),
     }
 
@@ -74,7 +71,6 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_DEMO_ROOT,
         help="Root demo da preparare. Default: tmp/student-lab-demo.",
     )
-    parser.add_argument("--no-reset", action="store_true", help="Non cancellare la root demo prima di ricrearla.")
     return parser.parse_args()
 
 
@@ -83,7 +79,7 @@ def main() -> int:
 
     args = parse_args()
     try:
-        summary = prepare_demo(args.root, reset=not args.no_reset)
+        summary = prepare_demo(args.root)
     except Exception as error:  # noqa: BLE001
         print(f"Setup demo non riuscito: {error}", file=sys.stderr)
         return 1

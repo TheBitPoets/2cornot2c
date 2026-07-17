@@ -59,11 +59,8 @@ Se vuoi usare un'altra cartella:
 python scripts/student_lab_demo_setup.py --root tmp/mia-demo-lab
 ```
 
-Se vuoi conservare i file gia presenti nella root scelta:
+La root scelta viene sempre ricreata da zero: usa una cartella dedicata alla demo.
 
-```bash
-python scripts/student_lab_demo_setup.py --root tmp/mia-demo-lab --no-reset
-```
 
 ## Collaudo manuale su GUI/TUI
 
