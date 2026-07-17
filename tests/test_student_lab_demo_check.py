@@ -17,3 +17,10 @@ def test_student_lab_demo_check_returns_guided_manual_steps(tmp_path) -> None:
     assert any("student_lab_cli.py" in step for step in result["manual_steps"])
     assert any("course_board_server.py" in step for step in result["manual_steps"])
     assert any("http://127.0.0.1:8876/tools/student_dashboard.html" in step for step in result["manual_steps"])
+
+    rendered = student_lab_demo_check.render_text_check(result)
+
+    assert "Collaudo lab studente" in rendered
+    assert "- OK setup" in rendered
+    assert "Passi manuali" in rendered
+    assert "student_lab_cli.py" in rendered
