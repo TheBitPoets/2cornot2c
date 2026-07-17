@@ -286,6 +286,7 @@ function supportPolicyLabel(assignment) {
 
 function renderSupportPolicy(assignment) {
   const policy = assignment.support_policy || {};
+  const help = assignment.help || {};
   const allowed = Array.isArray(policy.allowed) && policy.allowed.length
     ? policy.allowed.join(", ")
     : "-";
@@ -300,6 +301,12 @@ function renderSupportPolicy(assignment) {
         <span>Permesso: ${escapeHtml(allowed)}</span>
         <span>Non permesso: ${escapeHtml(notAllowed)}</span>
       </p>
+      <p class="details">
+        <span>Aiuti tracciati: ${escapeHtml(help.total ?? 0)}</span>
+        <span>Consentiti: ${escapeHtml(help.allowed ?? 0)}</span>
+        <span>Bloccati: ${escapeHtml(help.denied ?? 0)}</span>
+      </p>
+      ${help.error ? `<p class="details">Log aiuti: ${escapeHtml(help.error)}</p>` : ""}
     </section>
   `;
 }

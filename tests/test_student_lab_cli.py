@@ -29,6 +29,16 @@ def sample_assignment(**overrides):
             "allowed": ["riferimenti alla teoria", "feedback tecnico"],
             "not_allowed": ["soluzioni complete"],
         },
+        "help": {
+            "path": "examples/assignment_tracking/student_repos/rossi-mario/help/python-base-somma-001/events.json",
+            "exists": True,
+            "total": 2,
+            "allowed": 1,
+            "denied": 1,
+            "last_requested_at": "2026-10-18T17:20:00+02:00",
+            "last_decision": "bloccata",
+            "counts": {"teoria": 1, "ai": 1},
+        },
         "workspace": {
             "path": "examples/assignment_tracking/student_repos/rossi-mario/assignments/python-base-somma-001",
             "exists": True,
@@ -123,6 +133,10 @@ def test_render_assignment_detail_shows_workspace_report_and_runner() -> None:
     assert "Studio guidato" in rendered
     assert "riferimenti alla teoria, feedback tecnico" in rendered
     assert "soluzioni complete" in rendered
+    assert "Richieste aiuto" in rendered
+    assert "Bloccate:" in rendered
+    assert "2026-10-18 17:20" in rendered
+    assert "bloccata" in rendered
     assert "not_graded" in rendered
     assert "not_run" in rendered
     assert "e = esegui e salva report" in rendered

@@ -87,6 +87,16 @@ Il payload lab aggiunge `support_policy`, cioe una descrizione leggibile per lo 
 
 In questa fase la policy e informativa: TUI e dashboard la mostrano chiaramente, mentre enforcement tecnico, log degli aiuti e limiti AI saranno introdotti nei passi successivi.
 
+## Log richieste di aiuto
+
+Il backend puo registrare richieste di aiuto dello studente in:
+
+`<repo-studente>/help/<activity-id>/events.json`
+
+Ogni evento indica tipo di aiuto richiesto, esito consentito/bloccato, motivazione e prompt dello studente.
+Il payload lab espone un riepilogo `help` con totale eventi, richieste consentite, richieste bloccate e ultimo esito.
+In questa fase il log non chiama provider AI e non applica ancora limiti token reali: prepara il contratto per enforcement, budget e audit successivi.
+
 ## Direzione
 
 Il report salvato usa lo schema `student_lab_run.v1` e mantiene separati:

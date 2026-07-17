@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from scripts import assignment_records, student_lab_service
+from scripts import assignment_records, student_help_service, student_lab_service, student_support_policy
 
 
 def write_activity(root, activity_id: str = "python-base-somma-001", student_support_mode: str = "") -> str:
@@ -179,6 +179,42 @@ def test_student_lab_uses_existing_report_and_grading_summary(tmp_path) -> None:
     assert assignment["grading"]["status"] == "graded_passed"
     assert assignment["grading"]["tests_passed"] == 2
     assert assignment["grading"]["tests_total"] == 2
+
+
+def test_student_lab_exposes_help_summary(tmp_path) -> None:
+    activity_path = write_activity(tmp_path, student_support_mode="studio-guidato")
+    write_assignment(tmp_path, sample_assignment(tmp_path, activity_path=activity_path))
+    repo = tmp_path / "examples" / "assignment_tracking" / "student_repos" / "rossi-mario"
+    policy = student_support_policy.support_policy("studio-guidato")
+    student_help_service.record_help_request(
+        repo_path=repo,
+        activity_id="python-base-somma-001",
+        support_policy=policy,
+        help_type="teoria",
+        prompt="Ripassami gli array.",
+        now="2026-10-18T17:15:00+02:00",
+    )
+    student_help_service.record_help_request(
+        repo_path=repo,
+        activity_id="python-base-somma-001",
+        support_policy=policy,
+        help_type="ai",
+        prompt="Scrivi la soluzione.",
+        now="2026-10-18T17:20:00+02:00",
+    )
+
+    assignment = student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id="rossi-mario",
+        now="2026-10-18T18:00:00+02:00",
+    )[0]
+
+    assert assignment["help"]["path"] == "examples/assignment_tracking/student_repos/rossi-mario/help/python-base-somma-001/events.json"
+    assert assignment["help"]["total"] == 2
+    assert assignment["help"]["allowed"] == 1
+    assert assignment["help"]["denied"] == 1
+    assert assignment["help"]["last_decision"] == "bloccata"
+    assert assignment["help"]["counts"] == {"teoria": 1, "ai": 1}
 
 
 def test_student_lab_keeps_assignment_when_local_repo_path_is_only_inferred(tmp_path) -> None:
