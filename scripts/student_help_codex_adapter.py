@@ -42,6 +42,7 @@ CODEX_ENVIRONMENT_KEYS = frozenset(
         "APPDATA",
         "COLORTERM",
         "COMSPEC",
+        "CODEX_HOME",
         "CURL_CA_BUNDLE",
         "DYLD_LIBRARY_PATH",
         "HOME",
@@ -56,6 +57,12 @@ CODEX_ENVIRONMENT_KEYS = frozenset(
         "LD_LIBRARY_PATH",
         "LOCALAPPDATA",
         "NO_PROXY",
+        "OPENAI_API_KEY",
+        "OPENAI_BASE_URL",
+        "OPENAI_ORGANIZATION",
+        "OPENAI_ORG_ID",
+        "OPENAI_PROJECT",
+        "OPENAI_PROJECT_ID",
         "PATH",
         "PATHEXT",
         "PROGRAMDATA",
@@ -117,8 +124,6 @@ def codex_subprocess_environment() -> dict[str, str]:
         key: value
         for key, value in os.environ.items()
         if key.upper() in CODEX_ENVIRONMENT_KEYS
-        or key.upper().startswith("CODEX_")
-        or key.upper().startswith("OPENAI_")
     }
 
 

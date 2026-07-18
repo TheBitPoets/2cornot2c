@@ -36,7 +36,9 @@ def test_codex_provider_runs_in_empty_read_only_ephemeral_workspace(monkeypatch)
     monkeypatch.setenv("THEBITLAB_TEACHER_TOKEN", "token-docente")
     monkeypatch.setenv("UNRELATED_DATABASE_PASSWORD", "password-estranea")
     monkeypatch.setenv("CODEX_HOME", "/home/docente/.codex")
+    monkeypatch.setenv("CODEX_PRIVATE_TOKEN", "segreto-codex-estraneo")
     monkeypatch.setenv("OPENAI_API_KEY", "chiave-codex")
+    monkeypatch.setenv("OPENAI_DATABASE_PASSWORD", "segreto-openai-estraneo")
     monkeypatch.setattr(student_help_codex_adapter.shutil, "which", lambda command: f"/bin/{command}")
 
     def fake_run(command, **kwargs):
@@ -90,6 +92,8 @@ def test_codex_provider_runs_in_empty_read_only_ephemeral_workspace(monkeypatch)
     assert "THEBITLAB_STUDENT_HELP_SECRET" not in captured["env"]
     assert "THEBITLAB_TEACHER_TOKEN" not in captured["env"]
     assert "UNRELATED_DATABASE_PASSWORD" not in captured["env"]
+    assert "CODEX_PRIVATE_TOKEN" not in captured["env"]
+    assert "OPENAI_DATABASE_PASSWORD" not in captured["env"]
     assert "già" in captured["raw_input"]
     assert captured["input"]["context"] == {
         "title": "Somma in Python",
