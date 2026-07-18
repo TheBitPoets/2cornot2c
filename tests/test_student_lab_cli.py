@@ -372,6 +372,33 @@ def test_render_help_history_keeps_legacy_events_visible(tmp_path) -> None:
     assert "Richiesta precedente." in rendered
 
 
+def test_render_help_history_does_not_duplicate_server_legacy_events(tmp_path) -> None:
+    legacy_path = tmp_path / "student" / "help" / "activity" / "events.json"
+    student_lab_cli.student_help_service.write_help_events(
+        legacy_path,
+        [{"prompt": "Evento legacy unico.", "allowed": True, "label": "Aiuto AI"}],
+    )
+    assignment = sample_assignment(
+        help={
+            "legacy_path": "student/help/activity/events.json",
+            "events": [
+                {
+                    "prompt": "Evento legacy unico.",
+                    "allowed": True,
+                    "label": "Aiuto AI",
+                    "source": "legacy-unverified",
+                }
+            ],
+        }
+    )
+
+    rendered = student_lab_cli.render_help_history(assignment, root=tmp_path)
+
+    assert rendered.count("Evento legacy unico.") == 1
+    assert "Legacy non verificati" in rendered
+    assert "non incidono sul budget" in rendered
+
+
 def test_render_help_history_uses_colors_and_wraps_long_text(tmp_path) -> None:
     log_path = tmp_path / "student" / "help" / "python-base-somma-001" / "events.json"
     log_path.parent.mkdir(parents=True)

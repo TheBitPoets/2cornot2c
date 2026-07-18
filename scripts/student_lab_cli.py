@@ -477,21 +477,28 @@ def render_help_history(
     help_data = assignment.get("help") if isinstance(assignment.get("help"), dict) else {}
     payload_events = help_data.get("events")
     log_path = assignment_help_log_path(assignment, root=root)
-    if isinstance(payload_events, list):
+    loaded_from_payload = isinstance(payload_events, list)
+    if loaded_from_payload:
         events = [event for event in payload_events if isinstance(event, dict)]
         error = ""
     elif log_path is not None:
         events, error = student_help_service.read_help_log(log_path)
+        if help_data.get("legacy_unverified") is True:
+            events = [{**event, "source": "legacy-unverified"} for event in events]
     else:
         lines.append("Log aiuti non disponibile per questa consegna.")
         return "\n".join(lines)
     legacy_path_value = clean_text(help_data.get("legacy_path"), "")
-    if legacy_path_value:
+    if legacy_path_value and not loaded_from_payload:
         raw_legacy_path = Path(legacy_path_value)
         legacy_path = raw_legacy_path if raw_legacy_path.is_absolute() else (root / raw_legacy_path).resolve(strict=False)
-        legacy_events, legacy_error = student_help_service.read_help_log(legacy_path)
-        if not legacy_error:
-            events = [*legacy_events, *events]
+        if log_path is None or legacy_path.resolve(strict=False) != log_path.resolve(strict=False):
+            legacy_events, legacy_error = student_help_service.read_help_log(legacy_path)
+            if not legacy_error:
+                events = [
+                    *({**event, "source": "legacy-unverified"} for event in legacy_events),
+                    *events,
+                ]
     if error:
         lines.append(f"Log aiuti non leggibile: {error}")
         lines.append(f"Path: {log_path}")
@@ -500,41 +507,59 @@ def render_help_history(
         lines.append("Nessuna richiesta di aiuto registrata.")
         lines.append(f"Path: {log_path}")
         return "\n".join(lines)
-    for index, event in enumerate(events, start=1):
-        decision = "consentita" if event.get("allowed") is True else "bloccata"
-        decision_color = HELP_RESPONSE_COLOR if event.get("allowed") is True else HELP_ERROR_COLOR
-        response = event.get("response") if isinstance(event.get("response"), dict) else {}
-        lines.extend(
-            [
-                section_separator(),
-                colorize(f"Richiesta {index}", HELP_REQUEST_COLOR, use_color),
-                detail_line("Data:", compact_datetime(event.get("requested_at"))),
-                detail_line("Tipo:", event.get("label")),
-                detail_line("Esito:", colorize(decision, decision_color, use_color)),
-                *help_history_block("Prompt studente", event.get("prompt"), HELP_PROMPT_COLOR, use_color),
-            ]
-        )
-        if response:
-            provider_label = clean_text(response.get("provider_label")) or "Provider aiuto"
-            if response.get("status") == "ready":
-                lines.extend(
-                    help_history_block(
-                        f"Risposta - {provider_label}",
-                        response.get("message"),
-                        HELP_RESPONSE_COLOR,
-                        use_color,
+    authoritative_events = [event for event in events if event.get("source") != "legacy-unverified"]
+    legacy_events = [event for event in events if event.get("source") == "legacy-unverified"]
+    groups = [("", authoritative_events)]
+    if legacy_events:
+        groups.append(("Legacy non verificati", legacy_events))
+    request_index = 0
+    for group_label, group_events in groups:
+        if not group_events:
+            continue
+        if group_label:
+            lines.extend(
+                [
+                    section_separator(),
+                    colorize(group_label, HELP_REASON_COLOR, use_color),
+                    "Questi eventi storici non incidono sul budget e sulle metriche del server.",
+                ]
+            )
+        for event in group_events:
+            request_index += 1
+            decision = "consentita" if event.get("allowed") is True else "bloccata"
+            decision_color = HELP_RESPONSE_COLOR if event.get("allowed") is True else HELP_ERROR_COLOR
+            response = event.get("response") if isinstance(event.get("response"), dict) else {}
+            lines.extend(
+                [
+                    section_separator(),
+                    colorize(f"Richiesta {request_index}", HELP_REQUEST_COLOR, use_color),
+                    detail_line("Data:", compact_datetime(event.get("requested_at"))),
+                    detail_line("Tipo:", event.get("label")),
+                    detail_line("Esito:", colorize(decision, decision_color, use_color)),
+                    *help_history_block("Prompt studente", event.get("prompt"), HELP_PROMPT_COLOR, use_color),
+                ]
+            )
+            if response:
+                provider_label = clean_text(response.get("provider_label")) or "Provider aiuto"
+                if response.get("status") == "ready":
+                    lines.extend(
+                        help_history_block(
+                            f"Risposta - {provider_label}",
+                            response.get("message"),
+                            HELP_RESPONSE_COLOR,
+                            use_color,
+                        )
                     )
-                )
-            else:
-                lines.extend(
-                    help_history_block(
-                        f"Risposta non disponibile - {provider_label}",
-                        response.get("detail"),
-                        HELP_ERROR_COLOR,
-                        use_color,
+                else:
+                    lines.extend(
+                        help_history_block(
+                            f"Risposta non disponibile - {provider_label}",
+                            response.get("detail"),
+                            HELP_ERROR_COLOR,
+                            use_color,
+                        )
                     )
-                )
-        lines.extend(help_history_block("Motivo della decisione", event.get("reason"), HELP_REASON_COLOR, use_color))
+            lines.extend(help_history_block("Motivo della decisione", event.get("reason"), HELP_REASON_COLOR, use_color))
     lines.append(section_separator())
     return "\n".join(lines)
 
