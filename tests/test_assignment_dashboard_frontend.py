@@ -2946,6 +2946,23 @@ def test_student_help_details_render_counts_and_prompts() -> None:
               reason: "AI non consentita.",
               prompt: "Scrivimi la soluzione completa.",
             },
+            {
+              requested_at: "2026-10-20T08:16:00+02:00",
+              help_type: "ai",
+              label: "Aiuto AI",
+              allowed: true,
+              provider_status: "pending",
+              prompt: "Sto ancora aspettando?",
+            },
+            {
+              requested_at: "2026-10-20T08:17:00+02:00",
+              help_type: "ai",
+              label: "Aiuto AI",
+              allowed: true,
+              provider_status: "completed",
+              response: { status: "error" },
+              prompt: "Il provider ha risposto?",
+            },
           ],
           legacy: {
             total: 1,
@@ -2961,6 +2978,9 @@ def test_student_help_details_render_counts_and_prompts() -> None:
         assert.match(html, /Puoi ricordarmi come funziona input\\(\\)\\?/);
         assert.match(html, /Scrivimi la soluzione completa\\./);
         assert.match(html, /Bloccata/);
+        assert.match(html, /In elaborazione/);
+        assert.match(html, /Risposta non disponibile/);
+        assert.match(html, /Consentita/);
         assert.match(html, /Legacy non verificati \\(1\\)/);
         assert.match(html, /non incidono su budget e metriche/);
         assert.match(html, /Dato modificabile\\./);

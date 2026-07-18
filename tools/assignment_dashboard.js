@@ -3925,16 +3925,27 @@ function studentHelpDetails(help) {
   const legacyTotal = Number(legacy.total || 0);
   const legacyEvents = Array.isArray(legacy.events) ? legacy.events : [];
   const rows = events.length
-    ? events.map((event) => `
+    ? events.map((event) => {
+      const response = event.response && typeof event.response === "object" ? event.response : {};
+      let responseBadge = badge("Consentita", "ok");
+      if (!event.allowed) responseBadge = badge("Bloccata", "bad");
+      else if (event.provider_status === "pending") responseBadge = badge("In elaborazione", "warn");
+      else if (
+        event.provider_status === "interrupted"
+        || response.status === "error"
+        || (event.provider_status === "completed" && !response.status)
+      ) responseBadge = badge("Risposta non disponibile", "bad");
+      return `
         <div>
           <dt>${escapeHtml(formatDate(event.requested_at))} - ${escapeHtml(event.label || event.help_type || "aiuto")}</dt>
           <dd>
-            ${badge(event.allowed ? "Consentita" : "Bloccata", event.allowed ? "ok" : "bad")}
+            ${responseBadge}
             ${event.prompt ? `<p>${escapeHtml(event.prompt)}</p>` : "<p>Prompt non disponibile.</p>"}
             ${event.reason ? `<small>${escapeHtml(event.reason)}</small>` : ""}
           </dd>
         </div>
-      `).join("")
+      `;
+    }).join("")
     : `<div><dt>Prompt</dt><dd>${escapeHtml(data.error || "Nessuna richiesta registrata.")}</dd></div>`;
   const legacyRows = legacyEvents.map((event) => `
     <div>
