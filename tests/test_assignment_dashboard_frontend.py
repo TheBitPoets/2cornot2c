@@ -2882,6 +2882,10 @@ def test_student_help_details_render_counts_and_prompts() -> None:
               prompt: "Scrivimi la soluzione completa.",
             },
           ],
+          legacy: {
+            total: 1,
+            events: [{ requested_at: "2026-09-01T08:00:00+02:00", prompt: "Dato modificabile." }],
+          },
         });
 
         assert.match(html, /Aiuti 3/);
@@ -2892,6 +2896,9 @@ def test_student_help_details_render_counts_and_prompts() -> None:
         assert.match(html, /Puoi ricordarmi come funziona input\\(\\)\\?/);
         assert.match(html, /Scrivimi la soluzione completa\\./);
         assert.match(html, /Bloccata/);
+        assert.match(html, /Legacy non verificati \\(1\\)/);
+        assert.match(html, /non incidono su budget e metriche/);
+        assert.match(html, /Dato modificabile\\./);
 
         const empty = tested.studentHelpDetails({ total: 0, events: [] });
         assert.match(empty, /Nessuna richiesta registrata/);

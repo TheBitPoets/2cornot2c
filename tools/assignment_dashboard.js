@@ -3910,6 +3910,9 @@ function studentHelpDetails(help) {
   const denied = Number(data.denied || 0);
   const kind = denied > 0 ? "bad" : aiTotal > 0 ? "warn" : total > 0 ? "ok" : "muted";
   const events = Array.isArray(data.events) ? data.events : [];
+  const legacy = data.legacy && typeof data.legacy === "object" ? data.legacy : {};
+  const legacyTotal = Number(legacy.total || 0);
+  const legacyEvents = Array.isArray(legacy.events) ? legacy.events : [];
   const rows = events.length
     ? events.map((event) => `
         <div>
@@ -3922,6 +3925,12 @@ function studentHelpDetails(help) {
         </div>
       `).join("")
     : `<div><dt>Prompt</dt><dd>${escapeHtml(data.error || "Nessuna richiesta registrata.")}</dd></div>`;
+  const legacyRows = legacyEvents.map((event) => `
+    <div>
+      <dt>${escapeHtml(formatDate(event.requested_at))} Â· ${escapeHtml(event.label || event.help_type || "aiuto")}</dt>
+      <dd>${event.prompt ? `<p>${escapeHtml(event.prompt)}</p>` : "<p>Prompt non disponibile.</p>"}</dd>
+    </div>
+  `).join("");
   return `
     <div class="studentHelpCell">
       ${badge(`Aiuti ${total}`, kind)}<br>
@@ -3931,6 +3940,13 @@ function studentHelpDetails(help) {
         <summary>Prompt aiuti</summary>
         <dl>${rows}</dl>
       </details>
+      ${legacyTotal ? `
+        <details class="studentHelpDetails studentHelpLegacy">
+          <summary>Legacy non verificati (${escapeHtml(legacyTotal)})</summary>
+          <p><strong>Attenzione:</strong> dati storici provenienti dal repository studente; non incidono su budget e metriche.</p>
+          ${legacyRows ? `<dl>${legacyRows}</dl>` : ""}
+        </details>
+      ` : ""}
     </div>
   `;
 }

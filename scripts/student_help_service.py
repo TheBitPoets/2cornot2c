@@ -454,32 +454,22 @@ def merge_legacy_help_summary(
     if not legacy.get("total"):
         return authoritative
     merged = dict(authoritative)
-    for key in ("total", "allowed", "denied", "ai_total"):
-        merged[key] = int(authoritative.get(key) or 0) + int(legacy.get(key) or 0)
-    counts = dict(authoritative.get("counts") or {})
-    for key, value in dict(legacy.get("counts") or {}).items():
-        counts[key] = counts.get(key, 0) + int(value or 0)
-    merged["counts"] = counts
-    if clean_text(legacy.get("last_requested_at")) > clean_text(authoritative.get("last_requested_at")):
-        for key in (
-            "last_requested_at",
-            "last_decision",
-            "last_response_status",
-            "last_response_provider",
-        ):
-            merged[key] = legacy.get(key, "")
-    authoritative_events = authoritative.get("events") if isinstance(authoritative.get("events"), list) else []
     legacy_events = legacy.get("events") if isinstance(legacy.get("events"), list) else []
-    if authoritative_events or legacy_events:
-        merged["events"] = sorted(
-            [
-                *({**event, "source": "legacy-unverified"} for event in legacy_events if isinstance(event, dict)),
-                *({**event, "source": "server"} for event in authoritative_events if isinstance(event, dict)),
-            ],
-            key=lambda event: clean_text(event.get("requested_at")),
-        )
     merged["legacy_unverified"] = True
     merged["legacy_path"] = legacy_path
+    merged["legacy"] = {
+        "total": int(legacy.get("total") or 0),
+        "allowed": int(legacy.get("allowed") or 0),
+        "denied": int(legacy.get("denied") or 0),
+        "ai_total": int(legacy.get("ai_total") or 0),
+        "counts": dict(legacy.get("counts") or {}),
+        "last_requested_at": clean_text(legacy.get("last_requested_at")),
+        "events": [
+            {**event, "source": "legacy-unverified"}
+            for event in legacy_events
+            if isinstance(event, dict)
+        ],
+    }
     return merged
 
 
