@@ -834,6 +834,73 @@ def test_generate_assignment_report_preserves_assignment_id(tmp_path, monkeypatc
     assert saved_payload["assignment_id"] == "assignment-python-base-somma-001-3a"
 
 
+def test_generate_assignment_report_blocks_concurrent_assignment_deletion(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    assignment_id = "assignment-report-in-corso"
+    activity_path = tmp_path / "activity.json"
+    write_demo_activity(activity_path)
+    student_repo = tmp_path / "studenti" / "rossi-mario"
+    student_repo.mkdir(parents=True)
+    storage = assignment_records.JsonAssignmentRecordStorage(tmp_path, tmp_path / "teacher-assignments")
+    storage.write_assignment(
+        assignment_records.build_assignment_record(
+            assignment_id=assignment_id,
+            activity_id="python-base-somma-001",
+            activity_path=str(activity_path),
+            target_type="student",
+            assigned_at="2026-10-12T09:00:00+02:00",
+            due_at="2026-10-19T23:59:00+02:00",
+            targets=[{"student_id": "rossi-mario", "path": str(student_repo)}],
+        )
+    )
+    tracking_started = threading.Event()
+    tracking_release = threading.Event()
+    report_errors = []
+    delete_errors = []
+
+    def blocking_tracking(**kwargs):
+        tracking_started.set()
+        assert tracking_release.wait(timeout=5)
+        return {"schema_version": "1.0", "assignment_id": assignment_id, "students": []}
+
+    monkeypatch.setattr(course_board_server.track_assignments, "track_assignments", blocking_tracking)
+    monkeypatch.setattr(course_board_server.track_assignments, "write_tracking_index", lambda index, path: None)
+    monkeypatch.setattr(course_board_server, "list_assignment_reports", lambda: [])
+
+    def generate_report():
+        try:
+            course_board_server.generate_assignment_report(
+                {
+                    "activity_path": str(activity_path),
+                    "output_name": "demo/report.json",
+                    "targets_text": str(student_repo),
+                    "assignment_id": assignment_id,
+                }
+            )
+        except Exception as error:  # noqa: BLE001
+            report_errors.append(error)
+
+    def delete_assignment():
+        try:
+            course_board_server.delete_assignment_record({"assignment_id": assignment_id})
+        except Exception as error:  # noqa: BLE001
+            delete_errors.append(error)
+
+    report_thread = threading.Thread(target=generate_report)
+    delete_thread = threading.Thread(target=delete_assignment)
+    report_thread.start()
+    assert tracking_started.wait(timeout=5)
+    delete_thread.start()
+    assert delete_thread.is_alive()
+    tracking_release.set()
+    report_thread.join(timeout=5)
+    delete_thread.join(timeout=5)
+
+    assert report_errors == []
+    assert delete_errors == []
+    assert not storage.safe_assignment_path(assignment_id).exists()
+
+
 def test_preview_activity_assignment_returns_plan_without_writing(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     activities_dir = tmp_path / "activities"

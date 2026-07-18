@@ -29,7 +29,7 @@ import threading
 import urllib.error
 import urllib.request
 import uuid
-from contextlib import ExitStack, contextmanager
+from contextlib import ExitStack, contextmanager, nullcontext
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -907,19 +907,21 @@ def generate_assignment_report(payload: dict) -> dict:
     targets = read_targets_from_text(str(payload.get("targets_text", "")))
     output_path = safe_teacher_report_path(payload.get("output_name", ""))
     assignment_id = str(payload.get("assignment_id", "")).strip()
-    index = track_assignments.track_assignments(
-        activity_path=activity_path,
-        targets=targets,
-        assigned_at=payload.get("assigned_at") or None,
-        due_at=payload.get("due_at") or None,
-        now=payload.get("now") or None,
-        class_id=payload.get("class_id") or None,
-        class_label=payload.get("class_label") or None,
-        github_team=payload.get("github_team") or None,
-        assignment_id=assignment_id or None,
-        server_root=ROOT if assignment_id else None,
-    )
-    track_assignments.write_tracking_index(index, output_path)
+    operation_lock = assignment_operation_lock(assignment_id) if assignment_id else nullcontext()
+    with operation_lock:
+        index = track_assignments.track_assignments(
+            activity_path=activity_path,
+            targets=targets,
+            assigned_at=payload.get("assigned_at") or None,
+            due_at=payload.get("due_at") or None,
+            now=payload.get("now") or None,
+            class_id=payload.get("class_id") or None,
+            class_label=payload.get("class_label") or None,
+            github_team=payload.get("github_team") or None,
+            assignment_id=assignment_id or None,
+            server_root=ROOT if assignment_id else None,
+        )
+        track_assignments.write_tracking_index(index, output_path)
     return {
         "ok": True,
         "report": index,
