@@ -47,6 +47,12 @@ Per collegare una macchina studente al server docente usa HTTPS, direttamente o 
 sostituisce l'autenticazione: la TUI usa sempre il bearer token studente, distinto dalle credenziali docente.
 L'opzione `--allow-insecure-http` e riservata a collaudi temporanei su una rete controllata.
 
+Anche la dashboard docente usa credenziali Basic, che HTTP non cifra. Per questo il server accetta per impostazione
+predefinita soltanto bind di loopback. La modalita raccomandata per l'accesso remoto e lasciare il server su
+`127.0.0.1` e raggiungerlo con un tunnel SSH, oppure pubblicarlo tramite un reverse proxy HTTPS. Il bind diretto su
+rete richiede l'opzione esplicita `--allow-insecure-network-http` e stampa un avviso; va usato soltanto per collaudi
+temporanei su una rete gia protetta.
+
 Il server usa `codex exec` con sessione effimera, directory temporanea vuota, shell e ricerca web disabilitate,
 sandbox `read-only`, output JSON validato e timeout. Non accetta dalla TUI identita, policy, contesto didattico o
 path: ricava lo studente dal token firmato e ricostruisce il resto usando `assignment_id`. Se Codex non e disponibile

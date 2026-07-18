@@ -20,6 +20,18 @@ from scripts import (
 from scripts.student_help_provider import StudentHelpResponse
 
 
+def test_server_bind_rejects_clear_text_network_exposure_by_default() -> None:
+    assert course_board_server.is_loopback_bind_host("127.0.0.1") is True
+    assert course_board_server.is_loopback_bind_host("::1") is True
+    assert course_board_server.is_loopback_bind_host("localhost") is True
+    assert course_board_server.is_loopback_bind_host("0.0.0.0") is False
+
+    with pytest.raises(ValueError, match="--allow-insecure-network-http"):
+        course_board_server.validate_server_bind("0.0.0.0")
+
+    course_board_server.validate_server_bind("0.0.0.0", allow_insecure_network_http=True)
+
+
 def patch_assignment_paths(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")

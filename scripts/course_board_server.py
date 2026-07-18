@@ -2761,10 +2761,22 @@ def main() -> int:
         default=os.environ.get("THEBITLAB_TEACHER_TOKEN", ""),
         help="Token HTTP Basic docente; se omesso viene generato a ogni avvio.",
     )
+    parser.add_argument(
+        "--allow-insecure-network-http",
+        action="store_true",
+        help="Consente esplicitamente HTTP su un indirizzo non loopback; usare solo dietro protezioni di rete.",
+    )
     args = parser.parse_args()
+    try:
+        validate_server_bind(args.host, args.allow_insecure_network_http)
+    except ValueError as error:
+        parser.error(str(error))
     data_root = configure_data_root(args.root)
     server = ThreadingHTTPServer((args.host, args.port), CourseBoardHandler)
     server.teacher_token = args.teacher_token.strip() or secrets.token_urlsafe(24)
+    if not is_loopback_bind_host(args.host):
+        print("ATTENZIONE: dashboard e credenziali Basic sono esposte su HTTP non cifrato.")
+        print("Preferisci loopback con tunnel SSH oppure un reverse proxy HTTPS.")
     print(f"Course board: http://{args.host}:{args.port}/tools/course_board.html")
     print(f"Root dati: {data_root}")
     print("Credenziali dashboard: utente teacher")
@@ -2777,6 +2789,29 @@ def main() -> int:
     finally:
         server.server_close()
     return 0
+
+
+def is_loopback_bind_host(host: str) -> bool:
+    """Return whether a server bind host is explicitly limited to loopback."""
+
+    normalized = host.strip().removeprefix("[").removesuffix("]")
+    if normalized.lower() == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(normalized).is_loopback
+    except ValueError:
+        return False
+
+
+def validate_server_bind(host: str, allow_insecure_network_http: bool = False) -> None:
+    """Reject accidental clear-text exposure of teacher Basic credentials."""
+
+    if is_loopback_bind_host(host) or allow_insecure_network_http:
+        return
+    raise ValueError(
+        "il bind HTTP su un indirizzo non loopback richiede "
+        "--allow-insecure-network-http. Preferisci un tunnel SSH o un reverse proxy HTTPS."
+    )
 
 
 if __name__ == "__main__":
