@@ -3,6 +3,48 @@ from __future__ import annotations
 import json
 
 from scripts import student_help_service, student_support_policy
+from scripts.student_help_provider import StudentHelpResponse
+
+
+class RecordingHelpProvider:
+    def __init__(self, *, fail: bool = False) -> None:
+        self.fail = fail
+        self.requests = []
+
+    def respond(self, request):
+        self.requests.append(request)
+        if self.fail:
+            raise RuntimeError("Provider non raggiungibile: token=segreto-di-prova")
+        return StudentHelpResponse(
+            status="ready",
+            provider="test-provider",
+            provider_label="Provider test",
+            message="Prova un caso minimo e confronta il risultato.",
+            usage={"input_tokens": 3, "output_tokens": 7, "total_tokens": 10},
+        )
+
+
+class NonSerializableHelpProvider:
+    def respond(self, request):
+        return StudentHelpResponse(
+            status="ready",
+            provider="malformed-provider",
+            provider_label="Provider malformato",
+            message="Risposta apparentemente valida.",
+            usage={"input_tokens": object(), "output_tokens": 0, "total_tokens": 0},
+        )
+
+
+class StructuredErrorHelpProvider:
+    def respond(self, request):
+        return StudentHelpResponse(
+            status="error",
+            provider="structured-error-provider",
+            provider_label="Provider con errore strutturato",
+            message="Stack trace remoto: api_key=segreto-nel-messaggio",
+            usage={"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
+            detail="Errore remoto: token=segreto-strutturato",
+        )
 
 
 def test_evaluate_help_request_denies_ai_when_policy_does_not_allow_it() -> None:
@@ -50,6 +92,118 @@ def test_record_help_request_appends_event_and_summary(tmp_path) -> None:
     assert summary["allowed"] == 1
     assert summary["denied"] == 0
     assert summary["last_decision"] == "consentita"
+
+
+def test_record_help_request_persists_provider_response_for_allowed_request(tmp_path) -> None:
+    repo = tmp_path / "student-repo"
+    policy = student_support_policy.support_policy("ai-assisted")
+    provider = RecordingHelpProvider()
+
+    event = student_help_service.record_help_request(
+        repo_path=repo,
+        activity_id="python-base-somma-001",
+        support_policy=policy,
+        help_type="ai",
+        prompt="Come posso trovare il caso che fallisce?",
+        provider=provider,
+        context={"failed_tests": ["test_negativi"]},
+    )
+
+    assert len(provider.requests) == 1
+    assert provider.requests[0].context == {"failed_tests": ["test_negativi"]}
+    assert event["response"]["status"] == "ready"
+    assert event["response"]["message"].startswith("Prova un caso minimo")
+    assert event["response"]["usage"]["total_tokens"] == 10
+    log_path = repo / "help" / "python-base-somma-001" / "events.json"
+    summary = student_help_service.help_summary(log_path)
+    teacher_summary = student_help_service.teacher_help_summary(log_path)
+    assert summary["last_response_status"] == "ready"
+    assert summary["last_response_provider"] == "Provider test"
+    assert teacher_summary["events"][0]["response"]["message"].startswith("Prova un caso minimo")
+    assert teacher_summary["events"][0]["response"]["usage"]["total_tokens"] == 10
+
+
+def test_record_help_request_does_not_call_provider_when_policy_blocks_request(tmp_path) -> None:
+    provider = RecordingHelpProvider()
+
+    event = student_help_service.record_help_request(
+        repo_path=tmp_path / "student-repo",
+        activity_id="python-base-somma-001",
+        support_policy=student_support_policy.support_policy("feedback-tecnico"),
+        help_type="ai",
+        prompt="Dammi un suggerimento.",
+        provider=provider,
+    )
+
+    assert provider.requests == []
+    assert "response" not in event
+
+
+def test_record_help_request_persists_provider_error_without_losing_request(tmp_path) -> None:
+    provider = RecordingHelpProvider(fail=True)
+
+    event = student_help_service.record_help_request(
+        repo_path=tmp_path / "student-repo",
+        activity_id="python-base-somma-001",
+        support_policy=student_support_policy.support_policy("ai-assisted"),
+        help_type="ai",
+        prompt="Dammi un suggerimento.",
+        provider=provider,
+    )
+
+    log_path = tmp_path / "student-repo" / "help" / "python-base-somma-001" / "events.json"
+    persisted_text = log_path.read_text(encoding="utf-8")
+
+    assert event["allowed"] is True
+    assert event["response"]["status"] == "error"
+    assert event["response"]["detail"] == student_help_service.PROVIDER_ERROR_DETAIL
+    assert "segreto-di-prova" not in persisted_text
+    assert "non raggiungibile" not in persisted_text
+
+
+def test_record_help_request_persists_request_when_provider_response_is_not_json_safe(tmp_path) -> None:
+    repo = tmp_path / "student-repo"
+
+    event = student_help_service.record_help_request(
+        repo_path=repo,
+        activity_id="python-base-somma-001",
+        support_policy=student_support_policy.support_policy("ai-assisted"),
+        help_type="ai",
+        prompt="Conserva questa richiesta.",
+        provider=NonSerializableHelpProvider(),
+    )
+
+    log_path = repo / "help" / "python-base-somma-001" / "events.json"
+    persisted = json.loads(log_path.read_text(encoding="utf-8"))["events"][0]
+
+    assert event["response"]["status"] == "error"
+    assert persisted["prompt"] == "Conserva questa richiesta."
+    assert persisted["response"]["status"] == "error"
+    assert persisted["response"]["usage"] == {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+
+
+def test_record_help_request_sanitizes_structured_provider_errors(tmp_path) -> None:
+    repo = tmp_path / "student-repo"
+
+    event = student_help_service.record_help_request(
+        repo_path=repo,
+        activity_id="python-base-somma-001",
+        support_policy=student_support_policy.support_policy("ai-assisted"),
+        help_type="ai",
+        prompt="Conserva la richiesta senza il segreto.",
+        provider=StructuredErrorHelpProvider(),
+    )
+
+    log_path = repo / "help" / "python-base-somma-001" / "events.json"
+    persisted_text = log_path.read_text(encoding="utf-8")
+
+    assert event["response"]["status"] == "error"
+    assert event["response"]["message"] == ""
+    assert event["response"]["detail"] == student_help_service.PROVIDER_ERROR_DETAIL
+    assert "segreto-nel-messaggio" not in persisted_text
+    assert "Stack trace remoto" not in persisted_text
+    assert "segreto-strutturato" not in persisted_text
+    assert "Errore remoto" not in persisted_text
 
 
 def test_record_help_request_blocks_ai_when_budget_is_exhausted(tmp_path) -> None:

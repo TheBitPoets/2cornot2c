@@ -4,6 +4,7 @@ import argparse
 import os
 import subprocess
 import sys
+import textwrap
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
@@ -13,6 +14,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from scripts import student_help_service, student_lab_runner, student_lab_service
+from scripts.student_help_provider import DeterministicStudentHelpProvider
 
 
 InputFn = Callable[[str], str]
@@ -32,6 +34,11 @@ STATUS_COLORS = {
     "submitted_late": "\033[35m",
 }
 WORKSPACE_COLOR = "\033[36m"
+HELP_REQUEST_COLOR = "\033[36m"
+HELP_PROMPT_COLOR = "\033[33m"
+HELP_REASON_COLOR = "\033[35m"
+HELP_RESPONSE_COLOR = "\033[32m"
+HELP_ERROR_COLOR = "\033[31m"
 GUIDE_TERM_COLORS = {
     "consegna": "\033[35m",
     "workspace": WORKSPACE_COLOR,
@@ -383,6 +390,8 @@ HELP_MENU = {
     "3": "ai",
 }
 
+DEFAULT_HELP_PROVIDER = DeterministicStudentHelpProvider()
+
 
 def help_choice_label() -> str:
     """Return a compact help-type menu label."""
@@ -425,11 +434,23 @@ def assignment_help_log_path(assignment: dict[str, Any], root: Path = PROJECT_RO
     return student_help_service.help_log_path(repo_path, activity_id)
 
 
-def render_help_history(assignment: dict[str, Any], root: Path = PROJECT_ROOT) -> str:
+def help_history_block(label: str, value: Any, color: str, use_color: bool = False) -> list[str]:
+    """Render one labelled, wrapped text block in the help history."""
+
+    text = clean_text(value)
+    wrapped = textwrap.wrap(text, width=68, break_long_words=True, break_on_hyphens=False) or ["-"]
+    return [colorize(label, color, use_color), *(f"  {line}" for line in wrapped)]
+
+
+def render_help_history(
+    assignment: dict[str, Any],
+    root: Path = PROJECT_ROOT,
+    use_color: bool = False,
+) -> str:
     """Render the help request history for one assignment."""
 
     log_path = assignment_help_log_path(assignment, root=root)
-    lines = ["Storico richieste aiuto", ""]
+    lines = ["Storico richieste aiuto"]
     if log_path is None:
         lines.append("Log aiuti non disponibile per questa consegna.")
         return "\n".join(lines)
@@ -444,14 +465,63 @@ def render_help_history(assignment: dict[str, Any], root: Path = PROJECT_ROOT) -
         return "\n".join(lines)
     for index, event in enumerate(events, start=1):
         decision = "consentita" if event.get("allowed") is True else "bloccata"
+        decision_color = HELP_RESPONSE_COLOR if event.get("allowed") is True else HELP_ERROR_COLOR
+        response = event.get("response") if isinstance(event.get("response"), dict) else {}
         lines.extend(
             [
-                f"{index}. {compact_datetime(event.get('requested_at'))} | {clean_text(event.get('label'))} | {decision}",
-                f"   Motivo: {clean_text(event.get('reason'))}",
-                f"   Prompt: {truncate(clean_text(event.get('prompt')), 100)}",
+                section_separator(),
+                colorize(f"Richiesta {index}", HELP_REQUEST_COLOR, use_color),
+                detail_line("Data:", compact_datetime(event.get("requested_at"))),
+                detail_line("Tipo:", event.get("label")),
+                detail_line("Esito:", colorize(decision, decision_color, use_color)),
+                *help_history_block("Prompt studente", event.get("prompt"), HELP_PROMPT_COLOR, use_color),
             ]
         )
+        if response:
+            provider_label = clean_text(response.get("provider_label")) or "Provider aiuto"
+            if response.get("status") == "ready":
+                lines.extend(
+                    help_history_block(
+                        f"Risposta - {provider_label}",
+                        response.get("message"),
+                        HELP_RESPONSE_COLOR,
+                        use_color,
+                    )
+                )
+            else:
+                lines.extend(
+                    help_history_block(
+                        f"Risposta non disponibile - {provider_label}",
+                        response.get("detail"),
+                        HELP_ERROR_COLOR,
+                        use_color,
+                    )
+                )
+        lines.extend(help_history_block("Motivo della decisione", event.get("reason"), HELP_REASON_COLOR, use_color))
+    lines.append(section_separator())
     return "\n".join(lines)
+
+
+def help_provider_context(assignment: dict[str, Any]) -> dict[str, Any]:
+    """Return the minimal assignment context allowed for the local help provider."""
+
+    activity = assignment.get("activity") if isinstance(assignment.get("activity"), dict) else {}
+    grading = assignment.get("grading") if isinstance(assignment.get("grading"), dict) else {}
+    report = assignment.get("report") if isinstance(assignment.get("report"), dict) else {}
+    tests = report.get("tests") if isinstance(report.get("tests"), list) else []
+    failed_tests = [
+        clean_text(test.get("name"))
+        for test in tests
+        if isinstance(test, dict) and test.get("passed") is False and clean_text(test.get("name"))
+    ]
+    raw_topics = activity.get("topics")
+    topics = raw_topics if isinstance(raw_topics, list) else []
+    return {
+        "title": clean_text(assignment.get("title")),
+        "topics": [clean_text(topic) for topic in topics if clean_text(topic)],
+        "grading_status": clean_text(grading.get("status")),
+        "failed_tests": failed_tests,
+    }
 
 
 def record_help_from_tui(
@@ -475,19 +545,53 @@ def record_help_from_tui(
         help_type=help_type,
         prompt=prompt,
         now=now,
+        provider=DEFAULT_HELP_PROVIDER,
+        context=help_provider_context(assignment),
     )
 
 
-def help_result_message(event: dict[str, Any]) -> str:
-    """Return a compact message after recording a help request."""
+def help_result_message(event: dict[str, Any], use_color: bool = False) -> str:
+    """Return a structured result after recording a help request."""
 
-    status = "consentita" if event.get("allowed") else "bloccata"
-    return "\n".join(
+    allowed = event.get("allowed") is True
+    status = "consentita" if allowed else "bloccata"
+    status_color = HELP_RESPONSE_COLOR if allowed else HELP_ERROR_COLOR
+    lines = [
+        colorize("Esito richiesta aiuto", HELP_REQUEST_COLOR, use_color),
+        section_separator(),
+        detail_line("Tipo:", event.get("label")),
+        detail_line("Esito:", colorize(status, status_color, use_color)),
+    ]
+    response = event.get("response") if isinstance(event.get("response"), dict) else {}
+    if response.get("status") == "ready":
+        provider_label = clean_text(response.get("provider_label"), "Provider aiuto")
+        lines.extend(
+            help_history_block(
+                f"Risposta - {provider_label}",
+                response.get("message"),
+                HELP_RESPONSE_COLOR,
+                use_color,
+            )
+        )
+    elif response:
+        provider_label = clean_text(response.get("provider_label"), "Provider aiuto")
+        lines.extend(
+            help_history_block(
+                f"Risposta non disponibile - {provider_label}",
+                response.get("detail"),
+                HELP_ERROR_COLOR,
+                use_color,
+            )
+        )
+    if not allowed or not response:
+        lines.extend(help_history_block("Motivo", event.get("reason"), HELP_REASON_COLOR, use_color))
+    lines.extend(
         [
-            f"Richiesta aiuto {status}: {clean_text(event.get('label'))}",
-            clean_text(event.get("reason")),
+            section_separator(),
+            f"Richiesta salvata. Usa {colorize('h', HELP_REQUEST_COLOR, use_color)} per rileggerla nello storico.",
         ]
     )
+    return "\n".join(lines)
 
 
 def clear_screen() -> None:
@@ -620,14 +724,14 @@ def run_tui(
                                 prompt=prompt,
                                 now=now,
                             )
-                            print_fn(help_result_message(event))
+                            print_fn(help_result_message(event, use_color=use_color))
                             payload = load_payload(root, student_id, now)
                         except ValueError as error:
                             print_fn(f"Richiesta aiuto non salvata:\n{error}")
                 input_fn("Premi invio per continuare...")
                 continue
             if action == "h":
-                print_fn(render_help_history(assignment, root=root))
+                print_fn(render_help_history(assignment, root=root, use_color=use_color))
                 input_fn("Premi invio per continuare...")
                 continue
             if action == "e":

@@ -68,7 +68,7 @@ Ogni pannello, modal, vista e comando deve avere almeno uno scenario manuale. Qu
 | TUI studente | Lista consegne | Avvia TUI e verifica legenda, colori opzionali, date compatte e selezione numerica | Test interattivo o snapshot terminale |
 | TUI studente | Dettaglio consegna | Apri una consegna e verifica sezioni, divisori, guida rapida e comandi | Test interattivo o snapshot terminale |
 | TUI studente | Comando `e` | Esegui test e salva report, poi verifica GUI studente/docente | Test interattivo piu assert su file |
-| TUI studente | Comando `a` | Chiedi aiuto, annulla con `b`/invio, valida input non valido | Test interattivo con input finto |
+| TUI studente | Comando `a` | Chiedi aiuto, verifica guida locale e storico, annulla con `b`/invio, valida input non valido | Test interattivo con input finto |
 | TUI studente | Comando `h` | Mostra storico aiuti e torna alla consegna | Test interattivo con input finto |
 | TUI studente | Comando `o` | Apre workspace se presente, mostra errore chiaro se assente | Test con mock apertura |
 | TUI studente | Comandi `b`, `r`, `q` | Torna indietro, ricarica, esce senza perdere stato | Test interattivo con input finto |
@@ -229,16 +229,24 @@ Obiettivo: verificare che la TUI sia comprensibile, robusta sugli input e coeren
 8. Premi `a`, poi invio senza testo: la richiesta deve essere annullata.
 9. Premi `a`, poi un tipo diverso da `1`, `2`, `3`, `b` o invio: deve comparire errore.
 10. Premi `a`, scegli `3`, scrivi un prompt e salva la richiesta.
-11. Premi `e` per eseguire test e salvare report.
-12. Premi `b` per tornare alla lista.
-13. Premi `r` per ricaricare.
-14. Premi `q` per uscire.
+11. Controlla che l'esito immediato sia diviso da linee tratteggiate e mostri tipo, stato e risposta a capo, etichettata `Guida locale (nessuna AI esterna)`.
+12. Premi `h` e verifica che prompt e risposta siano entrambi nello storico.
+13. Ripeti con un URL o un identificatore lungo senza spazi e verifica che venga mandato a capo senza scorrimento orizzontale.
+14. Premi `e` per eseguire test e salvare report.
+15. Premi `b` per tornare alla lista.
+16. Premi `r` per ricaricare.
+17. Premi `q` per uscire.
 
 Risultato atteso:
 
 - Gli input non validi non eseguono azioni.
 - `b` e invio annullano o tornano indietro dove previsto.
 - Dopo un comando nel dettaglio si resta nel dettaglio della consegna, non si torna alla lista generale.
+- La guida locale è distinta da una risposta AI reale e non mostra una soluzione completa.
+- L'esito immediato non ripete la motivazione della policy quando la richiesta riesce; per richieste bloccate o errori mostra subito il motivo.
+- Prompt e risposta restano visibili nello storico della consegna.
+- Ogni richiesta nello storico è separata da linee tratteggiate e prompt, risposta, motivo ed esito sono distinguibili per colore.
+- Con `--no-color` la stessa gerarchia resta leggibile grazie a intestazioni, rientri e separatori.
 - Il report salvato dalla TUI viene letto dalla dashboard studente.
 - Le richieste di aiuto salvate dalla TUI vengono viste dal docente.
 - Gli accenti e i testi italiani sono corretti.

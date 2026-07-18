@@ -23,6 +23,7 @@ from scripts import (
     student_lab_service,
     track_assignments,
 )
+from scripts.student_help_provider import DeterministicStudentHelpProvider
 
 
 STUDENT_ID = "rossi-mario"
@@ -144,9 +145,13 @@ def run_smoke(root: Path) -> dict[str, Any]:
         help_type="ai",
         prompt="Puoi darmi un suggerimento senza scrivere la soluzione?",
         now="2026-10-18T18:35:00+02:00",
+        provider=DeterministicStudentHelpProvider(),
+        context={"topics": ["funzioni", "somma"]},
     )
     if help_event.get("allowed") is not True:
         raise RuntimeError(f"Richiesta aiuto demo non consentita: {help_event.get('reason')}")
+    if help_event.get("response", {}).get("status") != "ready":
+        raise RuntimeError("Il provider locale non ha prodotto la risposta di aiuto demo.")
     report = student_lab_runner.run_assignment(assignment, root=root, backend="local")
     if not report.get("passed"):
         raise RuntimeError(f"Runner demo fallito: {report.get('status')}")
@@ -181,6 +186,7 @@ def run_smoke(root: Path) -> dict[str, Any]:
             "total": lab_assignment["help"]["total"],
             "ai_total": student["help"]["ai_total"],
             "ai_budget_remaining": lab_assignment["help"]["ai_budget"]["remaining"],
+            "response_provider": help_event["response"]["provider"],
         },
         "backend": student["submission"].get("report_backend"),
     }
