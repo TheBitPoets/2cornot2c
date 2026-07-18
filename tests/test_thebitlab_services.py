@@ -184,6 +184,7 @@ def test_assignment_overview_lists_student_rows(tmp_path) -> None:
             "tests_passed": 2,
             "tests_total": 2,
             "failed_tests": [],
+            "failed_test_details": [],
             "teacher_grade": 9,
             "score": None,
             "ai_status": "not_generated",

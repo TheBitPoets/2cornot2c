@@ -614,6 +614,22 @@ examples/assignment_tracking/student_repos/verdi-anna</textarea>
     </div>
   </dialog>
 
+  <dialog id="testDetailsDialog" class="reviewDialog testDetailsDialog" aria-labelledby="testDetailsDialogTitle">
+    <div class="reviewDialogHead">
+      <div>
+        <p class="modalBreadcrumb" aria-label="Percorso modal">Dashboard &gt; Dettaglio test</p>
+        <h2 id="testDetailsDialogTitle">Dettaglio errori test</h2>
+        <p id="testDetailsDialogStatus" class="status">Seleziona un dettaglio test dalla dashboard.</p>
+      </div>
+      <div class="reviewDialogActions">
+        <button id="testDetailsCloseBtn" type="button" class="smallButton" title="Chiudi il dettaglio errori e torna alla dashboard.">Chiudi</button>
+      </div>
+    </div>
+    <div id="testDetailsDialogBody" class="testDetailsDialogBody">
+      Nessun dettaglio test selezionato.
+    </div>
+  </dialog>
+
   <dialog id="coverageDialog" class="coverageDialog" aria-labelledby="coverageDialogTitle">
     <div class="coverageDialogHead">
       <div>

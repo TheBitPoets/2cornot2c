@@ -146,6 +146,14 @@ def test_grading_dict_from_grade_activity_report_keeps_failed_tests_visible() ->
     assert result["tests_passed"] == 1
     assert result["tests_total"] == 2
     assert result["failed_tests"] == ["somma_negativi"]
+    assert result["failed_test_details"] == [
+        {
+            "name": "somma_negativi",
+            "message": "Output errato",
+            "expected_stdout": "",
+            "actual_stdout": "",
+        }
+    ]
     assert result["score"] == 5
     assert result["teacher_grade"] == 5.5
     assert result["report_status"] == "failed"

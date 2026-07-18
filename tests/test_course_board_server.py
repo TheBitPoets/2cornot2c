@@ -92,6 +92,14 @@ def test_assignment_overview_lists_students_across_saved_reports(tmp_path, monke
                             "tests_passed": 1,
                             "tests_total": 2,
                             "failed_tests": ["somma numeri negativi"],
+                            "failed_test_details": [
+                                {
+                                    "name": "somma numeri negativi",
+                                    "message": "Output atteso diverso",
+                                    "expected_stdout": "0",
+                                    "actual_stdout": "1",
+                                }
+                            ],
                             "score": 5,
                         },
                     },
@@ -117,6 +125,7 @@ def test_assignment_overview_lists_students_across_saved_reports(tmp_path, monke
     assert rows[1]["student"] == "bianchi-luca"
     assert rows[1]["late"] is True
     assert rows[1]["failed_tests"] == ["somma numeri negativi"]
+    assert rows[1]["failed_test_details"][0]["message"] == "Output atteso diverso"
     assert rows[1]["score"] == 5
 
 

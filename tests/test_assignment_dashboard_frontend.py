@@ -390,6 +390,11 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         aiFeedbackReviewDetails,
         aiFeedbackTeacherAction,
         studentHelpDetails,
+        failedTestDetails,
+        gradingDetails,
+        renderTestDetailsDialogContent,
+        openTestDetailsDialog,
+        clearTestDetailsRows,
         reviewAiFeedback,
         dateTimeInputToIso,
         isoToDateTimeInput,
@@ -2799,6 +2804,54 @@ def test_ai_feedback_helpers_render_teacher_review_states() -> None:
           tested.aiFeedbackTeacherAction({ status: "approved" }),
           /riaprirlo come bozza/,
         );
+        """
+    )
+
+
+def test_grading_details_render_failed_test_messages() -> None:
+    run_dashboard_js(
+        """
+        const grading = {
+          status: "graded_failed",
+          failed_tests: ["somma_negativi"],
+          failed_test_details: [{
+            name: "somma_negativi",
+            message: "Output atteso diverso",
+            expected_stdout: "0",
+            actual_stdout: "1",
+          }],
+        };
+        const details = tested.failedTestDetails(grading);
+        assert.equal(details[0].message, "Output atteso diverso");
+        const html = tested.gradingDetails(grading);
+        assert.match(html, /Falliti:/);
+        assert.match(html, /somma_negativi/);
+        assert.match(html, /data-test-details-key=""/);
+        assert.match(html, /Dettaglio errori/);
+        assert.doesNotMatch(html, /Output atteso diverso/);
+        const modalHtml = tested.renderTestDetailsDialogContent({ grading });
+        assert.match(modalHtml, /Output atteso diverso/);
+        assert.match(modalHtml, /Output atteso/);
+        assert.match(modalHtml, />0</);
+        assert.match(modalHtml, /Output ottenuto/);
+        assert.match(modalHtml, />1</);
+        assert.equal(tested.failedTestDetails({ failed_test_details: [{ name: "test", message: "riga 1\\nriga 2" }] })[0].message, "riga 1\\nriga 2");
+        """
+    )
+
+
+def test_test_details_rows_are_cleared_by_view_prefix() -> None:
+    run_dashboard_js(
+        """
+        tested.state.testDetailsRows = new Map([
+          ["overview-0", { title: "Quadro" }],
+          ["students-rossi", { title: "Studenti" }],
+        ]);
+        tested.clearTestDetailsRows("overview-");
+        assert.equal(tested.state.testDetailsRows.has("overview-0"), false);
+        assert.equal(tested.state.testDetailsRows.has("students-rossi"), true);
+        tested.clearTestDetailsRows("students-");
+        assert.equal(tested.state.testDetailsRows.has("students-rossi"), false);
         """
     )
 
