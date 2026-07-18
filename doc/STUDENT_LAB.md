@@ -67,6 +67,7 @@ Il flusso consigliato è: aprire il workspace, modificare i file, eseguire i tes
 Dopo un comando di dettaglio la TUI resta sulla stessa consegna e ricarica i dati quando il comando modifica lo stato, per esempio dopo una richiesta di aiuto o dopo l'esecuzione del runner.
 Quando usi `e`, la TUI mostra stato runner, esito, test passati/totali, path del report salvato e ricorda che quel report è quello letto da dashboard e registro docente.
 Se il report contiene il dettaglio dei test, la TUI mostra anche l'elenco dei casi con `[ok]` o `[ko]` e il primo messaggio utile per i test falliti.
+Quando riapri una consegna con report già salvato, il dettaglio mostra anche l'ultimo dettaglio test letto dal report.
 
 Il payload ha schema `student_lab.v1` e contiene:
 

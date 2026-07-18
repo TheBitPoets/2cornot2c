@@ -187,7 +187,16 @@ def test_render_assignment_detail_summarizes_grading_tests() -> None:
         status="submitted",
         submitted=True,
         grading={"status": "graded_passed", "tests_passed": 2, "tests_total": 3, "teacher_grade": 8, "score": None},
-        report={"path": "reports/latest.json", "exists": True, "submitted_at": "2026-10-18T18:00:00+02:00", "commit": "abc1234"},
+        report={
+            "path": "reports/latest.json",
+            "exists": True,
+            "submitted_at": "2026-10-18T18:00:00+02:00",
+            "commit": "abc1234",
+            "tests": [
+                {"name": "input_base", "passed": True, "status": "passed"},
+                {"name": "caso_zero", "passed": False, "status": "failed", "message": "Output atteso: 10; output ottenuto: 8"},
+            ],
+        },
     )
 
     rendered = student_lab_cli.render_assignment_detail(assignment)
@@ -195,6 +204,10 @@ def test_render_assignment_detail_summarizes_grading_tests() -> None:
     assert "graded_passed (2/3 test)" in rendered
     assert "abc1234" in rendered
     assert "8" in rendered
+    assert "Ultimo dettaglio test" in rendered
+    assert "[ok] input_base" in rendered
+    assert "[ko] caso_zero" in rendered
+    assert "Output atteso: 10; output ottenuto: 8" in rendered
 
 
 def test_runner_result_message_shows_status_tests_and_report_path(tmp_path) -> None:

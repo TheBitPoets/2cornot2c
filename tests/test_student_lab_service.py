@@ -180,6 +180,57 @@ def test_student_lab_uses_existing_report_and_grading_summary(tmp_path) -> None:
     assert assignment["grading"]["status"] == "graded_passed"
     assert assignment["grading"]["tests_passed"] == 2
     assert assignment["grading"]["tests_total"] == 2
+    assert assignment["report"]["tests"] == [
+        {"name": "somma positiva", "passed": True, "status": "passed"},
+        {"name": "somma negativa", "passed": True, "status": "passed"},
+    ]
+
+
+def test_student_lab_exposes_saved_failed_test_messages(tmp_path) -> None:
+    write_assignment(tmp_path, sample_assignment(tmp_path))
+    repo = tmp_path / "examples" / "assignment_tracking" / "student_repos" / "rossi-mario"
+    workspace = repo / "assignments" / "python-base-somma-001"
+    report_path = repo / "reports" / "python-base-somma-001" / "latest.json"
+    workspace.mkdir(parents=True)
+    report_path.parent.mkdir(parents=True)
+    (workspace / "main.py").write_text("print(3)\n", encoding="utf-8")
+    report_path.write_text(
+        json.dumps(
+            {
+                "activity_id": "python-base-somma-001",
+                "status": "failed",
+                "passed": False,
+                "source": "assignments/python-base-somma-001/main.py",
+                "submitted_at": "2026-10-18T18:00:00+02:00",
+                "summary": {"passed": 0, "total": 1},
+                "tests": [
+                    {
+                        "name": "somma positiva",
+                        "status": "failed",
+                        "passed": False,
+                        "expected_stdout": "5\n",
+                        "stdout": "4\n",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assignments = student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id="rossi-mario",
+        now="2026-10-20T12:00:00+02:00",
+    )
+
+    assert assignments[0]["report"]["tests"] == [
+        {
+            "name": "somma positiva",
+            "passed": False,
+            "status": "failed",
+            "message": "Output atteso: 5; output ottenuto: 4",
+        }
+    ]
 
 
 def test_student_lab_exposes_help_summary(tmp_path) -> None:
