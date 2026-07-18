@@ -767,6 +767,42 @@ def test_run_tui_can_record_help_request_and_reload(monkeypatch, tmp_path) -> No
     assert sum(1 for output in outputs if "Dettaglio consegna" in output) == 2
 
 
+def test_run_tui_distinguishes_saved_help_from_failed_refresh(monkeypatch, tmp_path) -> None:
+    payload = sample_payload()
+    outputs = []
+    inputs = iter(["1", "a", "3", "Come procedo?", "", "", "q"])
+    fetch_count = 0
+
+    def fake_fetch_payload(**kwargs):
+        nonlocal fetch_count
+        fetch_count += 1
+        if fetch_count == 2:
+            raise ValueError("server temporaneamente non raggiungibile")
+        return payload
+
+    monkeypatch.setattr(student_lab_cli, "fetch_student_lab_payload", fake_fetch_payload)
+    monkeypatch.setattr(
+        student_lab_cli,
+        "record_help_from_tui",
+        lambda **kwargs: {"allowed": True, "label": "Aiuto AI"},
+    )
+
+    result = student_lab_cli.run_tui(
+        student_id="rossi-mario",
+        root=tmp_path,
+        input_fn=lambda prompt: next(inputs),
+        print_fn=outputs.append,
+        clear=False,
+        server_url="https://server.test",
+        server_token="signed-token",
+    )
+
+    assert result == 0
+    assert fetch_count == 2
+    assert any("Richiesta salvata, ma aggiornamento dati non disponibile" in output for output in outputs)
+    assert not any("Richiesta aiuto non salvata" in output for output in outputs)
+
+
 def test_run_tui_can_cancel_help_request_type_choice(monkeypatch, tmp_path) -> None:
     payload = sample_payload()
     outputs = []

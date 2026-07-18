@@ -912,17 +912,24 @@ def run_tui(
                                 prompt=prompt,
                                 allow_insecure_http=allow_insecure_http,
                             )
-                            print_fn(help_result_message(event, use_color=use_color))
-                            payload = load_current_payload(
-                                root=root,
-                                student_id=student_id,
-                                now=now,
-                                server_url=server_url,
-                                server_token=server_token,
-                                allow_insecure_http=allow_insecure_http,
-                            )
                         except ValueError as error:
                             print_fn(f"Richiesta aiuto non salvata:\n{error}")
+                        else:
+                            print_fn(help_result_message(event, use_color=use_color))
+                            try:
+                                payload = load_current_payload(
+                                    root=root,
+                                    student_id=student_id,
+                                    now=now,
+                                    server_url=server_url,
+                                    server_token=server_token,
+                                    allow_insecure_http=allow_insecure_http,
+                                )
+                            except ValueError as error:
+                                print_fn(
+                                    "Richiesta salvata, ma aggiornamento dati non disponibile:\n"
+                                    f"{error}"
+                                )
                 input_fn("Premi invio per continuare...")
                 continue
             if action == "h":
