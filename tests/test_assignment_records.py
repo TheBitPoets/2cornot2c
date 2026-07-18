@@ -260,6 +260,22 @@ def test_assignment_record_storage_deletes_assignment(tmp_path) -> None:
         storage.read_assignment(saved["id"])
 
 
+def test_assignment_storage_syncs_directory_after_replace_and_unlink(tmp_path, monkeypatch) -> None:
+    synced_directories = []
+    monkeypatch.setattr(
+        assignment_records,
+        "sync_directory",
+        lambda path: synced_directories.append(path),
+    )
+    storage = assignment_records.JsonAssignmentRecordStorage(tmp_path)
+
+    saved = storage.write_assignment(assignment_records.build_assignment_record(**sample_assignment()))
+    storage.delete_assignment(saved["id"])
+
+    assignments_dir = tmp_path / "teacher-assignments"
+    assert synced_directories == [assignments_dir, assignments_dir]
+
+
 def test_assignment_record_storage_rejects_duplicate_without_overwrite(tmp_path) -> None:
     storage = assignment_records.JsonAssignmentRecordStorage(tmp_path)
     storage.write_assignment(assignment_records.build_assignment_record(**sample_assignment()))

@@ -18,6 +18,19 @@ ASSIGNMENT_SCHEMA_VERSION = "1.0"
 DEFAULT_ASSIGNMENTS_DIR = Path("teacher-assignments")
 
 
+def sync_directory(path: Path) -> None:
+    """Persist directory-entry changes on platforms exposing directory fsync."""
+
+    if os.name == "nt":
+        return
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+    descriptor = os.open(path, flags)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
 @dataclass(frozen=True)
 class AssignmentStatus:
     """Computed status for one assignment record."""
@@ -307,6 +320,7 @@ class JsonAssignmentRecordStorage:
                 stream.flush()
                 os.fsync(stream.fileno())
             temporary_path.replace(path)
+            sync_directory(path.parent)
         finally:
             temporary_path.unlink(missing_ok=True)
 
@@ -337,6 +351,7 @@ class JsonAssignmentRecordStorage:
         assignment = validate_assignment_record(self.read_json(path))
         deleted = {**assignment, "name": path.name, "path": self.relative_path(path)}
         path.unlink()
+        sync_directory(path.parent)
         return deleted
 
     def list_assignments(self) -> list[dict[str, Any]]:

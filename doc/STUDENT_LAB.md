@@ -39,6 +39,10 @@ I token studente e docente si configurano soltanto con le variabili d'ambiente
 perche potrebbero comparire nella cronologia della shell o nell'elenco dei processi.
 Avvia una sola istanza di `course_board_server.py` per ciascun root dati: il server applica un lock di sistema e
 rifiuta un secondo avvio sulla stessa cartella per evitare scritture concorrenti.
+Le scritture JSON usano file temporanei, replace atomico e sincronizzazione della directory sui filesystem POSIX.
+Su Windows il replace resta atomico, ma Python non espone un equivalente portabile del `fsync` della directory:
+il journal consente il recupero dopo un arresto del processo, mentre non garantisce la persistenza assoluta in caso
+di interruzione dell'alimentazione nel brevissimo intervallo successivo al replace.
 
 In un secondo terminale:
 
