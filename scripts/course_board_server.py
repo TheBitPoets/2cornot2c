@@ -102,6 +102,7 @@ COMPACT_TEXT_CHARS = 1200
 MAX_SUBMISSION_FILE_BYTES = 512 * 1024
 MAX_STUDENT_HELP_REQUEST_BYTES = 16 * 1024
 MAX_HELP_LOG_ROLLBACK_BYTES = 256 * 1024 * 1024
+HELP_DELETION_SCHEMA_VERSION = "student_help_deletion.v2"
 STUDENT_HELP_SERVER_ERROR = "Servizio aiuto temporaneamente non disponibile."
 TEACHER_AUTH_REALM = "TheBitLab docente"
 PRIVATE_STATIC_ROOTS = {"teacher-assignments", "teacher-help-events", "teacher-reports"}
@@ -524,12 +525,149 @@ def restore_help_log_snapshots(snapshots: list[tuple[Path, dict[Path, bytes]]]) 
             destination = original / relative_path
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_bytes(content)
+        sync_file_tree(original)
+
+
+def sync_file_tree(root: Path) -> None:
+    """Persist a completed file tree before advancing its recovery journal."""
+
+    if os.name == "nt" or not root.is_dir():
+        return
+    directories = {root}
+    for candidate in root.rglob("*"):
+        if candidate.is_symlink():
+            raise ValueError(f"Collegamento simbolico non supportato: {candidate}")
+        if candidate.is_dir():
+            directories.add(candidate)
+            continue
+        if candidate.is_file():
+            with candidate.open("rb") as stream:
+                os.fsync(stream.fileno())
+            directories.add(candidate.parent)
+    for directory in sorted(directories, key=lambda item: len(item.parts), reverse=True):
+        assignment_records.sync_directory(directory)
+    assignment_records.sync_directory(root.parent)
+
+
+def update_help_deletion_manifest(trash_root: Path, **updates: Any) -> dict[str, Any]:
+    """Atomically update one deletion recovery journal."""
+
+    storage = assignment_records.JsonAssignmentRecordStorage(ROOT)
+    manifest_path = help_deletion_manifest_path(trash_root)
+    manifest = storage.read_json(manifest_path)
+    manifest.update(updates)
+    storage.write_json(manifest_path, manifest)
+    return manifest
+
+
+def persist_help_log_rollback(
+    trash_root: Path,
+    assignment: dict[str, Any],
+    snapshots: list[tuple[Path, dict[Path, bytes]]],
+) -> None:
+    """Persist a complete rollback copy before the assignment record is removed."""
+
+    manifest = assignment_records.JsonAssignmentRecordStorage(ROOT).read_json(
+        help_deletion_manifest_path(trash_root)
+    )
+    logs = manifest.get("logs")
+    if not isinstance(logs, list):
+        raise RuntimeError("Journal cancellazione incoerente con i log in quarantena.")
+    rollback_root = trash_root / "rollback"
+    for original, files in snapshots:
+        original_relative = str(original.resolve(strict=False).relative_to(ROOT.resolve(strict=False))).replace(
+            "\\", "/"
+        )
+        item = next(
+            (
+                candidate
+                for candidate in logs
+                if isinstance(candidate, dict) and candidate.get("original") == original_relative
+            ),
+            None,
+        )
+        if item is None:
+            raise RuntimeError("Journal cancellazione incoerente con i log in quarantena.")
+        staged_name = str(item.get("staged", "")).strip()
+        if not staged_name.isdigit():
+            raise RuntimeError("Path non valido nel journal cancellazione.")
+        backup_relative = Path("rollback") / staged_name
+        backup_dir = trash_root / backup_relative
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        for relative_path, content in files.items():
+            destination = backup_dir / relative_path
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            with destination.open("wb") as stream:
+                stream.write(content)
+                stream.flush()
+                os.fsync(stream.fileno())
+        item["rollback"] = str(backup_relative).replace("\\", "/")
+    sync_file_tree(rollback_root)
+    update_help_deletion_manifest(
+        trash_root,
+        state="rolling_back",
+        assignment=assignment,
+        logs=logs,
+    )
+
+
+def restore_persistent_help_deletion(trash_root: Path, manifest: dict[str, Any]) -> None:
+    """Idempotently restore assignment and logs from a rollback journal."""
+
+    assignment = manifest.get("assignment")
+    logs = manifest.get("logs")
+    if not isinstance(assignment, dict) or not isinstance(logs, list):
+        raise RuntimeError(f"Journal rollback non valido: {help_deletion_manifest_path(trash_root)}")
+    help_root = (ROOT / "teacher-help-events").resolve(strict=False)
+    for item in logs:
+        if not isinstance(item, dict):
+            raise RuntimeError(f"Journal rollback non valido: {help_deletion_manifest_path(trash_root)}")
+        rollback_path = str(item.get("rollback", "")).strip()
+        if not rollback_path:
+            continue
+        original = (ROOT / str(item.get("original", ""))).resolve(strict=False)
+        backup = (trash_root / rollback_path).resolve(strict=False)
+        try:
+            original_relative = original.relative_to(help_root)
+            backup_relative = backup.relative_to(trash_root.resolve(strict=False))
+        except ValueError as error:
+            raise RuntimeError(f"Path non valido nel journal: {help_deletion_manifest_path(trash_root)}") from error
+        if not original_relative.parts or len(backup_relative.parts) < 2 or backup_relative.parts[0] != "rollback":
+            raise RuntimeError(f"Path non valido nel journal: {help_deletion_manifest_path(trash_root)}")
+        if not backup.is_dir():
+            raise RuntimeError(f"Copia di rollback mancante: {backup}")
+        if original.exists():
+            shutil.rmtree(original)
+        shutil.copytree(backup, original)
+        sync_file_tree(original)
+    assignment_record_storage().write_assignment(assignment, overwrite=True)
+    update_help_deletion_manifest(trash_root, state="restored")
 
 
 def help_deletion_manifest_path(trash_root: Path) -> Path:
     """Return the persistent recovery journal for one deletion."""
 
     return trash_root / "deletion.json"
+
+
+def purge_help_deletion_trash(trash_root: Path, *, ignore_errors: bool = False) -> None:
+    """Remove transaction data while keeping the recovery journal until last."""
+
+    try:
+        manifest_path = help_deletion_manifest_path(trash_root)
+        if trash_root.is_dir():
+            for child in list(trash_root.iterdir()):
+                if child == manifest_path:
+                    continue
+                if child.is_dir() and not child.is_symlink():
+                    shutil.rmtree(child)
+                else:
+                    child.unlink(missing_ok=True)
+            manifest_path.unlink(missing_ok=True)
+            trash_root.rmdir()
+    except OSError:
+        if not ignore_errors:
+            raise
 
 
 def stage_help_logs_for_deletion(
@@ -550,7 +688,8 @@ def stage_help_logs_for_deletion(
     assignment_records.JsonAssignmentRecordStorage(ROOT).write_json(
         help_deletion_manifest_path(trash_root),
         {
-            "schema_version": "student_help_deletion.v1",
+            "schema_version": HELP_DELETION_SCHEMA_VERSION,
+            "state": "staging",
             "assignment_id": assignment_id,
             "logs": planned_logs,
         },
@@ -565,7 +704,7 @@ def stage_help_logs_for_deletion(
             staged_logs.append((log_dir, staged))
     except Exception:
         restore_staged_help_logs(staged_logs)
-        shutil.rmtree(trash_root, ignore_errors=True)
+        purge_help_deletion_trash(trash_root, ignore_errors=True)
         raise
     return trash_root, staged_logs
 
@@ -583,12 +722,23 @@ def recover_interrupted_assignment_deletions() -> None:
         if not manifest_path.is_file():
             raise RuntimeError(f"Quarantena senza journal: {trash_root}")
         manifest = storage.read_json(manifest_path)
-        if manifest.get("schema_version") != "student_help_deletion.v1":
+        schema_version = manifest.get("schema_version")
+        if schema_version not in {"student_help_deletion.v1", HELP_DELETION_SCHEMA_VERSION}:
             raise RuntimeError(f"Journal cancellazione non supportato: {manifest_path}")
         assignment_id = str(manifest.get("assignment_id", "")).strip()
         logs = manifest.get("logs")
         if not assignment_id or not isinstance(logs, list):
             raise RuntimeError(f"Journal cancellazione non valido: {manifest_path}")
+        state = "staging" if schema_version == "student_help_deletion.v1" else str(manifest.get("state", ""))
+        if state == "rolling_back":
+            restore_persistent_help_deletion(trash_root, manifest)
+            purge_help_deletion_trash(trash_root)
+            continue
+        if state in {"restored", "committed"}:
+            purge_help_deletion_trash(trash_root)
+            continue
+        if state != "staging":
+            raise RuntimeError(f"Stato journal cancellazione non supportato: {manifest_path}")
         assignment_exists = storage.safe_assignment_path(assignment_id).is_file()
         if assignment_exists:
             for item in logs:
@@ -597,20 +747,41 @@ def recover_interrupted_assignment_deletions() -> None:
                 original = (ROOT / str(item.get("original", ""))).resolve(strict=False)
                 staged = (trash_root / str(item.get("staged", ""))).resolve(strict=False)
                 try:
-                    original.relative_to(help_root)
-                    staged.relative_to(trash_root.resolve(strict=False))
+                    original_relative = original.relative_to(help_root)
+                    staged_relative = staged.relative_to(trash_root.resolve(strict=False))
                 except ValueError as error:
                     raise RuntimeError(f"Path non valido nel journal: {manifest_path}") from error
+                if (
+                    not original_relative.parts
+                    or len(staged_relative.parts) != 1
+                    or not staged_relative.parts[0].isdigit()
+                ):
+                    raise RuntimeError(f"Path non valido nel journal: {manifest_path}")
                 if staged.is_dir():
                     if original.exists():
-                        raise RuntimeError(f"Conflitto durante il recupero del log: {original}")
-                    original.parent.mkdir(parents=True, exist_ok=True)
-                    staged.replace(original)
-        shutil.rmtree(trash_root)
+                        shutil.copytree(staged, original, dirs_exist_ok=True)
+                        shutil.rmtree(staged)
+                    else:
+                        original.parent.mkdir(parents=True, exist_ok=True)
+                        staged.replace(original)
+        purge_help_deletion_trash(trash_root)
     try:
         trash_base.rmdir()
     except OSError:
         pass
+
+
+def rollback_help_deletion(
+    trash_root: Path,
+    assignment: dict[str, Any],
+    snapshots: list[tuple[Path, dict[Path, bytes]]],
+) -> None:
+    """Restore one failed deletion while leaving a recoverable journal on interruption."""
+
+    restore_help_log_snapshots(snapshots)
+    assignment_record_storage().write_assignment(assignment, overwrite=True)
+    update_help_deletion_manifest(trash_root, state="restored")
+    purge_help_deletion_trash(trash_root, ignore_errors=True)
 
 
 def delete_assignment_record(payload: dict) -> dict:
@@ -648,28 +819,31 @@ def delete_assignment_record(payload: dict) -> dict:
                 )
                 try:
                     rollback_snapshots = snapshot_staged_help_logs(staged_logs)
+                    persist_help_log_rollback(trash_root, assignment, rollback_snapshots)
                 except Exception:
                     restore_staged_help_logs(staged_logs)
-                    shutil.rmtree(trash_root, ignore_errors=True)
+                    purge_help_deletion_trash(trash_root, ignore_errors=True)
                     raise
                 try:
                     deleted = record_storage.delete_assignment(assignment_id)
                 except Exception:
-                    restore_staged_help_logs(staged_logs)
-                    shutil.rmtree(trash_root, ignore_errors=True)
+                    rollback_help_deletion(trash_root, assignment, rollback_snapshots)
                     raise
                 try:
-                    if trash_root.exists():
-                        shutil.rmtree(trash_root)
+                    for _, staged in staged_logs:
+                        if staged.exists():
+                            shutil.rmtree(staged)
+                    update_help_deletion_manifest(trash_root, state="committed")
                 except Exception:
-                    try:
-                        restore_help_log_snapshots(rollback_snapshots)
-                        record_storage.write_assignment(assignment, overwrite=True)
-                    finally:
-                        shutil.rmtree(trash_root, ignore_errors=True)
+                    rollback_help_deletion(trash_root, assignment, rollback_snapshots)
                     raise
+                cleanup_pending = False
+                try:
+                    purge_help_deletion_trash(trash_root)
+                except OSError:
+                    cleanup_pending = True
     updated = list_assignment_records(str(payload.get("now", "")).strip() or None)
-    return {"ok": True, "deleted": deleted, **updated}
+    return {"ok": True, "deleted": deleted, "cleanup_pending": cleanup_pending, **updated}
 
 
 def repository_relative_path(path: Path) -> str:

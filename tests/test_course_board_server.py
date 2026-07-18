@@ -682,16 +682,19 @@ def test_delete_assignment_restores_every_log_after_partial_quarantine_cleanup(t
         log_path.write_text(content, encoding="utf-8")
         expected_contents[log_path] = content
     original_rmtree = course_board_server.shutil.rmtree
-    cleanup_attempted = False
+    cleanup_attempts = 0
 
     def fail_after_removing_first_staged_log(path, ignore_errors=False):
-        nonlocal cleanup_attempted
+        nonlocal cleanup_attempts
         candidate = Path(path)
-        if ".trash" in candidate.parts and not ignore_errors and not cleanup_attempted:
-            cleanup_attempted = True
-            first_staged_dir = sorted(item for item in candidate.iterdir() if item.is_dir())[0]
-            original_rmtree(first_staged_dir)
-            raise PermissionError("pulizia parziale della quarantena")
+        if (
+            candidate.name.isdigit()
+            and candidate.parent.parent.name == ".trash"
+            and not ignore_errors
+        ):
+            cleanup_attempts += 1
+            if cleanup_attempts == 2:
+                raise PermissionError("pulizia parziale della quarantena")
         return original_rmtree(path, ignore_errors=ignore_errors)
 
     monkeypatch.setattr(course_board_server.shutil, "rmtree", fail_after_removing_first_staged_log)
@@ -700,8 +703,171 @@ def test_delete_assignment_restores_every_log_after_partial_quarantine_cleanup(t
         course_board_server.delete_assignment_record({"assignment_id": assignment["id"]})
 
     assert storage.read_assignment(assignment["id"])["id"] == assignment["id"]
-    assert cleanup_attempted is True
+    assert cleanup_attempts >= 2
     assert all(log_path.read_text(encoding="utf-8") == content for log_path, content in expected_contents.items())
+
+
+def test_recovery_is_idempotent_after_crash_during_partial_rollback(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "TEACHER_ASSIGNMENTS_DIR", tmp_path / "teacher-assignments")
+    storage = assignment_records.JsonAssignmentRecordStorage(tmp_path)
+    assignment = storage.write_assignment(
+        assignment_records.build_assignment_record(
+            assignment_id="assignment-crash-rollback-parziale",
+            activity_id="python-base-somma-001",
+            activity_path="activities/python-base-somma-001.json",
+            target_type="group",
+            assigned_at="2026-10-12T09:00:00+02:00",
+            due_at="2026-10-19T23:59:00+02:00",
+            targets=[{"student_id": "rossi-mario"}, {"student_id": "bianchi-luca"}],
+        )
+    )
+    log_paths = [
+        student_help_service.server_help_log_path(tmp_path, student_id, assignment["id"])
+        for student_id in ("rossi-mario", "bianchi-luca")
+    ]
+    expected_contents = {}
+    for index, log_path in enumerate(log_paths):
+        content = json.dumps({"events": [{"prompt": f"richiesta {index}"}]}) + "\n"
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        log_path.write_text(content, encoding="utf-8")
+        expected_contents[log_path] = content
+    trash_root, staged_logs = course_board_server.stage_help_logs_for_deletion(
+        assignment["id"],
+        [log_path.parent for log_path in log_paths],
+    )
+    snapshots = course_board_server.snapshot_staged_help_logs(staged_logs)
+    course_board_server.persist_help_log_rollback(trash_root, assignment, snapshots)
+    storage.delete_assignment(assignment["id"])
+    course_board_server.shutil.rmtree(staged_logs[0][1])
+    first_log = log_paths[0]
+    first_log.parent.mkdir(parents=True)
+    first_log.write_text("ripristino interrotto", encoding="utf-8")
+
+    course_board_server.recover_interrupted_assignment_deletions()
+
+    assert storage.read_assignment(assignment["id"])["id"] == assignment["id"]
+    assert not trash_root.exists()
+    assert all(log_path.read_text(encoding="utf-8") == content for log_path, content in expected_contents.items())
+
+
+def test_recovery_purges_committed_deletion_without_restoring_assignment(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "TEACHER_ASSIGNMENTS_DIR", tmp_path / "teacher-assignments")
+    storage = assignment_records.JsonAssignmentRecordStorage(tmp_path)
+    assignment = storage.write_assignment(
+        assignment_records.build_assignment_record(
+            assignment_id="assignment-cancellazione-committed",
+            activity_id="python-base-somma-001",
+            activity_path="activities/python-base-somma-001.json",
+            target_type="student",
+            assigned_at="2026-10-12T09:00:00+02:00",
+            due_at="2026-10-19T23:59:00+02:00",
+            targets=[{"student_id": "rossi-mario"}],
+        )
+    )
+    log_path = student_help_service.server_help_log_path(tmp_path, "rossi-mario", assignment["id"])
+    log_path.parent.mkdir(parents=True)
+    log_path.write_text('{"events": []}\n', encoding="utf-8")
+    trash_root, staged_logs = course_board_server.stage_help_logs_for_deletion(
+        assignment["id"], [log_path.parent]
+    )
+    snapshots = course_board_server.snapshot_staged_help_logs(staged_logs)
+    course_board_server.persist_help_log_rollback(trash_root, assignment, snapshots)
+    storage.delete_assignment(assignment["id"])
+    for _, staged in staged_logs:
+        course_board_server.shutil.rmtree(staged)
+    course_board_server.update_help_deletion_manifest(trash_root, state="committed")
+
+    course_board_server.recover_interrupted_assignment_deletions()
+
+    with pytest.raises(FileNotFoundError):
+        storage.read_assignment(assignment["id"])
+    assert not log_path.exists()
+    assert not trash_root.exists()
+
+
+def test_persistent_rollback_rejects_staged_path_outside_transaction(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "TEACHER_ASSIGNMENTS_DIR", tmp_path / "teacher-assignments")
+    storage = assignment_records.JsonAssignmentRecordStorage(tmp_path)
+    assignment = storage.write_assignment(
+        assignment_records.build_assignment_record(
+            assignment_id="assignment-journal-path-corrotto",
+            activity_id="python-base-somma-001",
+            activity_path="activities/python-base-somma-001.json",
+            target_type="student",
+            assigned_at="2026-10-12T09:00:00+02:00",
+            due_at="2026-10-19T23:59:00+02:00",
+            targets=[{"student_id": "rossi-mario"}],
+        )
+    )
+    log_path = student_help_service.server_help_log_path(tmp_path, "rossi-mario", assignment["id"])
+    log_path.parent.mkdir(parents=True)
+    log_path.write_text('{"events": []}\n', encoding="utf-8")
+    trash_root, staged_logs = course_board_server.stage_help_logs_for_deletion(
+        assignment["id"], [log_path.parent]
+    )
+    manifest_path = course_board_server.help_deletion_manifest_path(trash_root)
+    manifest = storage.read_json(manifest_path)
+    manifest["logs"][0]["staged"] = "../fuori-transazione"
+    storage.write_json(manifest_path, manifest)
+
+    with pytest.raises(RuntimeError, match="Path non valido"):
+        course_board_server.persist_help_log_rollback(
+            trash_root,
+            assignment,
+            course_board_server.snapshot_staged_help_logs(staged_logs),
+        )
+
+    assert not (trash_root.parent / "fuori-transazione").exists()
+
+
+def test_persistent_rollback_syncs_tree_before_advancing_journal(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "TEACHER_ASSIGNMENTS_DIR", tmp_path / "teacher-assignments")
+    storage = assignment_records.JsonAssignmentRecordStorage(tmp_path)
+    assignment = storage.write_assignment(
+        assignment_records.build_assignment_record(
+            assignment_id="assignment-journal-durevole",
+            activity_id="python-base-somma-001",
+            activity_path="activities/python-base-somma-001.json",
+            target_type="student",
+            assigned_at="2026-10-12T09:00:00+02:00",
+            due_at="2026-10-19T23:59:00+02:00",
+            targets=[{"student_id": "rossi-mario"}],
+        )
+    )
+    log_path = student_help_service.server_help_log_path(tmp_path, "rossi-mario", assignment["id"])
+    log_path.parent.mkdir(parents=True)
+    log_path.write_text('{"events": []}\n', encoding="utf-8")
+    trash_root, staged_logs = course_board_server.stage_help_logs_for_deletion(
+        assignment["id"], [log_path.parent]
+    )
+    events = []
+    original_update = course_board_server.update_help_deletion_manifest
+    monkeypatch.setattr(
+        course_board_server,
+        "sync_file_tree",
+        lambda root: events.append(("sync", root)),
+    )
+
+    def capture_update(current_trash_root, **updates):
+        events.append(("state", updates.get("state")))
+        return original_update(current_trash_root, **updates)
+
+    monkeypatch.setattr(course_board_server, "update_help_deletion_manifest", capture_update)
+
+    course_board_server.persist_help_log_rollback(
+        trash_root,
+        assignment,
+        course_board_server.snapshot_staged_help_logs(staged_logs),
+    )
+
+    assert events == [
+        ("sync", trash_root / "rollback"),
+        ("state", "rolling_back"),
+    ]
 
 
 def test_delete_assignment_does_not_restore_record_when_log_snapshot_restore_fails(tmp_path, monkeypatch) -> None:
