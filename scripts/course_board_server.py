@@ -100,11 +100,11 @@ MAX_STUDENT_HELP_REQUEST_BYTES = 16 * 1024
 STUDENT_HELP_SERVER_ERROR = "Servizio aiuto temporaneamente non disponibile."
 PRIVATE_STATIC_ROOTS = {"teacher-assignments", "teacher-help-events", "teacher-reports"}
 REMOTE_PUBLIC_STATIC_ROOTS = {"tools"}
-REMOTE_STUDENT_API_PATHS = frozenset(
+REMOTE_STUDENT_API_ROUTES = frozenset(
     {
-        "/api/student-lab/assignments",
-        "/api/student-lab/help",
-        "/api/student-lab/help-history",
+        ("GET", "/api/student-lab/assignments"),
+        ("GET", "/api/student-lab/help-history"),
+        ("POST", "/api/student-lab/help"),
     }
 )
 _ASSIGNMENT_OPERATION_LOCKS: dict[str, dict[str, Any]] = {}
@@ -2209,11 +2209,11 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         except ValueError:
             return False
 
-    def reject_remote_teacher_api(self, path: str) -> bool:
+    def reject_remote_teacher_api(self, method: str, path: str) -> bool:
         is_remote_teacher_api = (
             not self.is_loopback_client()
             and path.startswith("/api/")
-            and path not in REMOTE_STUDENT_API_PATHS
+            and (method, path) not in REMOTE_STUDENT_API_ROUTES
         )
         if is_remote_teacher_api:
             self.write_error_json(403, "API disponibile soltanto sulla macchina docente.")
@@ -2239,7 +2239,7 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
-        if self.reject_remote_teacher_api(parsed.path):
+        if self.reject_remote_teacher_api("GET", parsed.path):
             return
         if parsed.path in {"/api/student-lab/assignments", "/api/student-lab/help-history"}:
             student_id = self.authenticated_student_id()
@@ -2316,7 +2316,7 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
-        if self.reject_remote_teacher_api(parsed.path):
+        if self.reject_remote_teacher_api("POST", parsed.path):
             return
         if parsed.path == "/api/student-lab/help":
             student_id = self.authenticated_student_id()

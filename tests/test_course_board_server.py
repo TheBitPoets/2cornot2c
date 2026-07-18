@@ -1448,6 +1448,16 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
         with pytest.raises(urllib.error.HTTPError) as remote_unknown_student_api:
             urllib.request.urlopen(unknown_student_request, timeout=5)
         assert remote_unknown_student_api.value.code == 403
+        for read_only_path in ("assignments", "help-history"):
+            wrong_method_request = urllib.request.Request(
+                f"{base_url}/api/student-lab/{read_only_path}",
+                data=b"x",
+                headers={"Content-Length": str(10**9)},
+                method="POST",
+            )
+            with pytest.raises(urllib.error.HTTPError) as remote_wrong_method:
+                urllib.request.urlopen(wrong_method_request, timeout=5)
+            assert remote_wrong_method.value.code == 403
         public_asset = tmp_path / "tools" / "student-public.js"
         public_asset.parent.mkdir(parents=True, exist_ok=True)
         public_asset.write_text("console.log('pubblico');\n", encoding="utf-8")
