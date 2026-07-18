@@ -374,7 +374,9 @@ def assignment_student_id(
         if matches_target:
             student_id = student_identity.target_student_id(assignment_target)
             return student_id or target.student
-    return target.student
+    raise ValueError(
+        f"Il target {target.student} non appartiene all'assegnazione richiesta."
+    )
 
 
 def track_assignments(
@@ -406,11 +408,15 @@ def track_assignments(
     normalized_class_label = clean_metadata(class_label) or normalized_class_id
     normalized_github_team = clean_metadata(github_team) or clean_metadata(normalized_activity.get("github_team"))
     assignment = None
-    if assignment_id and server_root is not None:
+    if assignment_id and server_root is None:
+        raise ValueError("server_root obbligatorio quando assignment_id e specificato.")
+    if assignment_id:
         try:
             assignment = assignment_records.JsonAssignmentRecordStorage(server_root).read_assignment(assignment_id)
-        except FileNotFoundError:
-            assignment = None
+        except FileNotFoundError as error:
+            raise ValueError(f"Assegnazione non trovata: {assignment_id}") from error
+        if clean_metadata(assignment.get("activity_id")) != activity_id:
+            raise ValueError("L'assegnazione richiesta appartiene a un'altra activity.")
 
     students: list[dict[str, Any]] = []
     for target in targets:

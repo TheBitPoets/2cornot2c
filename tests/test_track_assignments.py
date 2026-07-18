@@ -781,6 +781,51 @@ def test_assignment_student_id_does_not_match_a_different_path_by_basename(tmp_p
     assert student_id == "rossi-classe-b"
 
 
+def test_track_assignments_rejects_missing_assignment_id(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+    student = target(tmp_path, "rossi-mario")
+
+    with pytest.raises(ValueError, match="Assegnazione non trovata"):
+        track_assignments.track_assignments(
+            activity_path=activity_path,
+            targets=[student],
+            assignment_id="assignment-inesistente",
+            server_root=tmp_path,
+        )
+
+
+def test_track_assignments_rejects_target_outside_assignment(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+    assigned_student = target(tmp_path, "rossi-mario")
+    other_student = target(tmp_path, "bianchi-luca")
+    assignment_id = "assignment-solo-rossi"
+    assignment_records.JsonAssignmentRecordStorage(tmp_path).write_assignment(
+        assignment_records.build_assignment_record(
+            assignment_id=assignment_id,
+            activity_id="python-base-somma-001",
+            activity_path=str(activity_path.relative_to(tmp_path)),
+            target_type="student",
+            assigned_at="2026-10-12T09:00:00+02:00",
+            due_at="2026-10-21T08:00:00+02:00",
+            targets=[
+                {
+                    "student_id": "rossi-mario",
+                    "repo_ref": assigned_student.repo,
+                    "path": str(assigned_student.path.relative_to(tmp_path)),
+                }
+            ],
+        )
+    )
+
+    with pytest.raises(ValueError, match="non appartiene"):
+        track_assignments.track_assignments(
+            activity_path=activity_path,
+            targets=[other_student],
+            assignment_id=assignment_id,
+            server_root=tmp_path,
+        )
+
+
 def test_track_assignments_rejects_report_for_different_activity(tmp_path) -> None:
     activity_path = write_activity(tmp_path)
     student = target(tmp_path, "verdi-anna")
