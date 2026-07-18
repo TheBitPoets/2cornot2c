@@ -92,6 +92,8 @@ Esegui un solo collaudo alla volta sulla stessa root demo: il comando ricrea la 
 
 ## Collaudo manuale su GUI/TUI
 
+Per una checklist piu completa degli scenari manuali GUI, con dati da selezionare e risultati attesi, vedi [`SCENARI_TEST_MANUALI_GUI.md`](SCENARI_TEST_MANUALI_GUI.md).
+
 Quando vuoi provare la demo con dati reali o demo del repository:
 
 1. Avvia il server:

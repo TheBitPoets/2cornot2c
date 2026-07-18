@@ -33,7 +33,8 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 5. [`MANUAL_AI_FEEDBACK_WORKFLOW.md`](MANUAL_AI_FEEDBACK_WORKFLOW.md)
 6. [`DASHBOARD_DOCENTE_GUIDA.md`](DASHBOARD_DOCENTE_GUIDA.md)
 7. [`DASHBOARD_STUDENTE_GUIDA.md`](DASHBOARD_STUDENTE_GUIDA.md)
-8. [`STUDENT_DASHBOARD.md`](STUDENT_DASHBOARD.md)
+8. [`SCENARI_TEST_MANUALI_GUI.md`](SCENARI_TEST_MANUALI_GUI.md)
+9. [`STUDENT_DASHBOARD.md`](STUDENT_DASHBOARD.md)
 
 `ASSIGNMENTS.md` descrive il modello leggero per attivita didattiche, uso dei team GitHub come classi, correzione automatica, sandbox, metriche e roadmap delle prossime PR.
 
@@ -48,6 +49,8 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 `DASHBOARD_DOCENTE_GUIDA.md` raccoglie la guida operativa docente per usare la dashboard consegne, con pannelli, scenari e placeholder per screenshot dettagliati.
 
 `DASHBOARD_STUDENTE_GUIDA.md` raccoglie la guida operativa studente per leggere consegne, stato, grading e feedback approvato.
+
+`SCENARI_TEST_MANUALI_GUI.md` raccoglie gli scenari manuali da ripetere su dashboard, modal, viste e TUI, con dati demo, passi e risultati attesi.
 
 `images/dashboard-guides/README.md` contiene la checklist degli screenshot da produrre per le guide docente e studente.
 
@@ -70,6 +73,7 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 | [`MANUAL_AI_FEEDBACK_WORKFLOW.md`](MANUAL_AI_FEEDBACK_WORKFLOW.md) | Quando devi provare il feedback AI manuale da registro senza API key o GUI dedicata |
 | [`DASHBOARD_DOCENTE_GUIDA.md`](DASHBOARD_DOCENTE_GUIDA.md) | Quando devi usare o documentare la dashboard consegne docente passo dopo passo |
 | [`DASHBOARD_STUDENTE_GUIDA.md`](DASHBOARD_STUDENTE_GUIDA.md) | Quando devi usare o documentare la vista studente passo dopo passo |
+| [`SCENARI_TEST_MANUALI_GUI.md`](SCENARI_TEST_MANUALI_GUI.md) | Quando devi collaudare manualmente dashboard, modal, viste e TUI prima di automatizzare |
 | [`images/dashboard-guides/README.md`](images/dashboard-guides/README.md) | Quando devi catturare o aggiornare gli screenshot delle guide dashboard |
 | [`STUDENT_DASHBOARD.md`](STUDENT_DASHBOARD.md) | Quando devi provare la vista studente minima su consegne, grading e feedback approvato |
 | [`STUDENT_REPOSITORY_TEMPLATE.md`](STUDENT_REPOSITORY_TEMPLATE.md) | Quando devi creare o mantenere il template repository studente |
