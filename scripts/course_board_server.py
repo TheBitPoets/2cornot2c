@@ -106,6 +106,7 @@ MAX_STUDENT_HELP_REQUEST_BYTES = 16 * 1024
 MIN_TEACHER_TOKEN_CHARS = 32
 MAX_HELP_LOG_ROLLBACK_BYTES = 256 * 1024 * 1024
 HELP_DELETION_SCHEMA_VERSION = "student_help_deletion.v2"
+ASSIGNMENT_TARGET_BINDINGS_OPERATION_ID = "assignment-target-bindings-global"
 STUDENT_HELP_SERVER_ERROR = "Servizio aiuto temporaneamente non disponibile."
 TEACHER_AUTH_REALM = "TheBitLab docente"
 PRIVATE_STATIC_ROOTS = {"teacher-assignments", "teacher-help-events", "teacher-reports"}
@@ -1301,19 +1302,20 @@ def save_assignment_record(payload: dict) -> dict:
     )
     overwrite = bool(payload.get("overwrite", False))
     storage = assignment_record_storage()
-    with assignment_operation_lock(assignment_record_operation_id(storage, assignment["id"])):
-        new_bindings = validate_global_assignment_target_bindings(storage, assignment)
-        if overwrite:
-            try:
-                existing = storage.read_assignment(assignment["id"])
-            except FileNotFoundError:
-                existing = None
-            if existing is not None and assignment_target_bindings(existing) != new_bindings:
-                raise ValueError(
-                    "I destinatari o i repository di un'assegnazione esistente non sono modificabili: "
-                    "cancella l'assegnazione e creane una nuova."
-                )
-        saved = storage.write_assignment(assignment, overwrite)
+    with assignment_operation_lock(ASSIGNMENT_TARGET_BINDINGS_OPERATION_ID):
+        with assignment_operation_lock(assignment_record_operation_id(storage, assignment["id"])):
+            new_bindings = validate_global_assignment_target_bindings(storage, assignment)
+            if overwrite:
+                try:
+                    existing = storage.read_assignment(assignment["id"])
+                except FileNotFoundError:
+                    existing = None
+                if existing is not None and assignment_target_bindings(existing) != new_bindings:
+                    raise ValueError(
+                        "I destinatari o i repository di un'assegnazione esistente non sono modificabili: "
+                        "cancella l'assegnazione e creane una nuova."
+                    )
+            saved = storage.write_assignment(assignment, overwrite)
     records = list_assignment_records(str(payload.get("now", "")).strip() or None)
     return {
         "ok": True,

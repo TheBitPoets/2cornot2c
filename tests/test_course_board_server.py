@@ -1481,6 +1481,66 @@ def test_save_assignment_rejects_student_id_bound_to_different_repository(tmp_pa
         )
 
 
+def test_concurrent_saves_cannot_bind_one_student_to_two_repositories(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    activity_path = tmp_path / "activities" / "python-base-somma-001.json"
+    write_demo_activity(activity_path)
+    (tmp_path / "classe-a" / "mario").mkdir(parents=True)
+    (tmp_path / "classe-b" / "mario").mkdir(parents=True)
+    first_validation_started = threading.Event()
+    release_first_validation = threading.Event()
+    original_validate = course_board_server.validate_global_assignment_target_bindings
+    validation_calls = 0
+
+    def blocking_validate(storage, assignment):
+        nonlocal validation_calls
+        validation_calls += 1
+        if validation_calls == 1:
+            first_validation_started.set()
+            assert release_first_validation.wait(timeout=5)
+        return original_validate(storage, assignment)
+
+    monkeypatch.setattr(course_board_server, "validate_global_assignment_target_bindings", blocking_validate)
+    base_payload = {
+        "activity_path": "activities/python-base-somma-001.json",
+        "target_type": "class",
+        "assigned_at": "2026-10-12T09:00:00+02:00",
+        "due_at": "2026-10-19T23:59:00+02:00",
+    }
+    saved = []
+    errors = []
+
+    def save_worker(class_id):
+        try:
+            saved.append(
+                course_board_server.save_assignment_record(
+                    {
+                        **base_payload,
+                        "class_id": class_id,
+                        "targets_text": f"{class_id}/mario",
+                    }
+                )["assignment"]
+            )
+        except Exception as error:  # noqa: BLE001
+            errors.append(error)
+
+    first_thread = threading.Thread(target=save_worker, args=("classe-a",))
+    second_thread = threading.Thread(target=save_worker, args=("classe-b",))
+    first_thread.start()
+    assert first_validation_started.wait(timeout=5)
+    second_thread.start()
+    second_thread.join(timeout=0.1)
+    assert second_thread.is_alive()
+    release_first_validation.set()
+    first_thread.join(timeout=5)
+    second_thread.join(timeout=5)
+
+    assert len(saved) == 1
+    assert len(errors) == 1
+    assert "gia associato a un altro repository: mario" in str(errors[0])
+    assert len(assignment_records.JsonAssignmentRecordStorage(tmp_path).list_assignments()) == 1
+
+
 def test_student_payload_does_not_wait_for_assignment_provider_lock(tmp_path, monkeypatch) -> None:
     patch_assignment_paths(tmp_path, monkeypatch)
     storage = assignment_records.JsonAssignmentRecordStorage(tmp_path, tmp_path / "teacher-assignments")
