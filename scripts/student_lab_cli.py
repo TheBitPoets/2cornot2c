@@ -599,7 +599,7 @@ def record_help_from_tui(
         method="POST",
     )
     try:
-        with urllib.request.urlopen(request, timeout=HELP_REQUEST_TIMEOUT_SECONDS) as response:
+        with student_api_urlopen(request, timeout=HELP_REQUEST_TIMEOUT_SECONDS) as response:
             payload = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as error:
         detail = _server_error_detail(error.read())
@@ -640,7 +640,7 @@ def fetch_help_history_from_server(
         method="GET",
     )
     try:
-        with urllib.request.urlopen(request, timeout=HELP_REQUEST_TIMEOUT_SECONDS) as response:
+        with student_api_urlopen(request, timeout=HELP_REQUEST_TIMEOUT_SECONDS) as response:
             payload = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as error:
         detail = _server_error_detail(error.read())
@@ -662,6 +662,22 @@ def _server_error_detail(body: bytes) -> str:
     except (json.JSONDecodeError, UnicodeDecodeError):
         return "richiesta rifiutata"
     return clean_text(payload.get("error"), "richiesta rifiutata") if isinstance(payload, dict) else "richiesta rifiutata"
+
+
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Keep bearer credentials confined to the original student API URL."""
+
+    def redirect_request(self, request, file_pointer, code, message, headers, new_url):
+        return None
+
+
+_STUDENT_API_OPENER = urllib.request.build_opener(_NoRedirectHandler())
+
+
+def student_api_urlopen(request: urllib.request.Request, *, timeout: float):
+    """Open an authenticated student API request without following redirects."""
+
+    return _STUDENT_API_OPENER.open(request, timeout=timeout)
 
 
 def help_result_message(event: dict[str, Any], use_color: bool = False) -> str:
@@ -769,7 +785,7 @@ def fetch_student_lab_payload(
         headers={"Authorization": f"Bearer {server_token.strip()}"},
     )
     try:
-        with urllib.request.urlopen(request, timeout=HELP_REQUEST_TIMEOUT_SECONDS) as response:
+        with student_api_urlopen(request, timeout=HELP_REQUEST_TIMEOUT_SECONDS) as response:
             payload = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as error:
         detail = _server_error_detail(error.read())

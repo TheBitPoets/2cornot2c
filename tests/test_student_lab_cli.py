@@ -597,7 +597,7 @@ def test_record_help_from_tui_posts_only_identifiers_and_prompt(monkeypatch) -> 
         captured["timeout"] = timeout
         return FakeResponse()
 
-    monkeypatch.setattr(student_lab_cli.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(student_lab_cli, "student_api_urlopen", fake_urlopen)
 
     event = student_lab_cli.record_help_from_tui(
         assignment=sample_assignment(),
@@ -637,7 +637,7 @@ def test_fetch_help_history_uses_authenticated_server_endpoint(monkeypatch) -> N
         captured["headers"] = dict(request.header_items())
         return FakeResponse()
 
-    monkeypatch.setattr(student_lab_cli.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(student_lab_cli, "student_api_urlopen", fake_urlopen)
 
     history = student_lab_cli.fetch_help_history_from_server(
         assignment=sample_assignment(),
@@ -670,7 +670,7 @@ def test_fetch_student_lab_payload_uses_authenticated_server_endpoint(monkeypatc
         captured["headers"] = dict(request.header_items())
         return FakeResponse()
 
-    monkeypatch.setattr(student_lab_cli.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(student_lab_cli, "student_api_urlopen", fake_urlopen)
 
     payload = student_lab_cli.fetch_student_lab_payload(
         server_url="https://teacher.test:8765",
@@ -685,8 +685,8 @@ def test_fetch_student_lab_payload_uses_authenticated_server_endpoint(monkeypatc
 
 def test_record_help_from_tui_reports_server_timeout(monkeypatch) -> None:
     monkeypatch.setattr(
-        student_lab_cli.urllib.request,
-        "urlopen",
+        student_lab_cli,
+        "student_api_urlopen",
         lambda *args, **kwargs: (_ for _ in ()).throw(TimeoutError()),
     )
 
@@ -706,7 +706,7 @@ def test_record_help_from_tui_reports_server_timeout(monkeypatch) -> None:
 
 def test_remote_help_server_requires_https_unless_explicitly_allowed(monkeypatch) -> None:
     calls = []
-    monkeypatch.setattr(student_lab_cli.urllib.request, "urlopen", lambda *args, **kwargs: calls.append(args))
+    monkeypatch.setattr(student_lab_cli, "student_api_urlopen", lambda *args, **kwargs: calls.append(args))
 
     with pytest.raises(ValueError, match="richiede HTTPS"):
         student_lab_cli.record_help_from_tui(
@@ -723,6 +723,29 @@ def test_remote_help_server_requires_https_unless_explicitly_allowed(monkeypatch
         "http://teacher.test:8765",
         allow_insecure_http=True,
     ) == "http://teacher.test:8765"
+
+
+def test_student_api_opener_rejects_redirects() -> None:
+    handler = next(
+        handler
+        for handler in student_lab_cli._STUDENT_API_OPENER.handlers
+        if isinstance(handler, student_lab_cli._NoRedirectHandler)
+    )
+    request = student_lab_cli.urllib.request.Request(
+        "https://teacher.test/api/student-lab/assignments",
+        headers={"Authorization": "Bearer signed-token"},
+    )
+
+    redirected = handler.redirect_request(
+        request,
+        None,
+        302,
+        "Found",
+        {},
+        "https://attacker.test/collect",
+    )
+
+    assert redirected is None
 
 
 def test_run_tui_can_show_detail_and_exit(monkeypatch, tmp_path) -> None:
