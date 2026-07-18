@@ -39,15 +39,15 @@ def url_path(path: Path) -> str:
     return str(path).replace("\\", "/")
 
 
-def relative_to_root(root: Path, path: Path) -> str:
-    """Return a repository-relative path without exposing external locations."""
+def relative_to_root(root: Path, path: Path, *, expose_external_paths: bool = False) -> str:
+    """Return a repository-relative path, optionally retaining trusted local paths."""
 
     resolved_root = root.resolve()
     resolved_path = path.resolve()
     try:
         return url_path(resolved_path.relative_to(resolved_root))
     except ValueError:
-        return ""
+        return url_path(resolved_path) if expose_external_paths else ""
 
 
 def resolve_local_path(root: Path, path_value: str) -> Path:
@@ -140,13 +140,22 @@ def target_repo_path(root: Path, target: dict[str, Any], student_id: str) -> Pat
     return None
 
 
-def load_activity_summary(root: Path, activity_path_value: str) -> dict[str, Any]:
+def load_activity_summary(
+    root: Path,
+    activity_path_value: str,
+    *,
+    expose_external_paths: bool = False,
+) -> dict[str, Any]:
     """Load a compact activity summary for a lab assignment."""
 
     activity_path = resolve_local_path(root, activity_path_value)
     if not activity_path.is_file():
         return {
-            "path": relative_to_root(root, activity_path),
+            "path": relative_to_root(
+                root,
+                activity_path,
+                expose_external_paths=expose_external_paths,
+            ),
             "exists": False,
             "title": "",
             "kind": "",
@@ -161,7 +170,11 @@ def load_activity_summary(root: Path, activity_path_value: str) -> dict[str, Any
         raise ValueError(f"Activity non valida: {activity_path}")
     activity = normalize_activity(payload)
     return {
-        "path": relative_to_root(root, activity_path),
+        "path": relative_to_root(
+            root,
+            activity_path,
+            expose_external_paths=expose_external_paths,
+        ),
         "exists": True,
         "title": clean_text(activity.get("title")),
         "kind": clean_text(activity.get("kind")),
@@ -256,6 +269,7 @@ def build_lab_assignment(
     target: dict[str, Any],
     student_id: str,
     now: str,
+    expose_external_paths: bool = False,
 ) -> dict[str, Any]:
     """Build the student-lab contract for one assignment target."""
 
@@ -268,7 +282,11 @@ def build_lab_assignment(
     report = load_report(report_path, activity_id) if report_path is not None else None
     submitted_at = clean_text(report.get("submitted_at")) if report else ""
     status = status_with_report(report, normalized["due_at"], now) if report else status_without_report(normalized["due_at"], now)
-    activity = load_activity_summary(root, normalized["activity_path"])
+    activity = load_activity_summary(
+        root,
+        normalized["activity_path"],
+        expose_external_paths=expose_external_paths,
+    )
     support_policy = student_support_policy.support_policy(activity.get("student_support_mode", ""))
     help_log = student_help_service.help_summary(help_log_path, now)
     if repo_path is not None:
@@ -277,7 +295,11 @@ def build_lab_assignment(
         help_log = student_help_service.merge_legacy_help_summary(
             help_log,
             legacy_help,
-            relative_to_root(root, legacy_path),
+            relative_to_root(
+                root,
+                legacy_path,
+                expose_external_paths=expose_external_paths,
+            ),
         )
     help_log["ai_budget"] = student_help_service.help_budget_summary(help_log_path, support_policy, now)
     help_log.pop("path", None)
@@ -298,12 +320,28 @@ def build_lab_assignment(
         "status": status,
         "submitted": report is not None,
         "workspace": {
-            "path": relative_to_root(root, workspace_path) if workspace_path is not None else "",
+            "path": (
+                relative_to_root(
+                    root,
+                    workspace_path,
+                    expose_external_paths=expose_external_paths,
+                )
+                if workspace_path is not None
+                else ""
+            ),
             "exists": bool(workspace_path and workspace_path.is_dir()),
         },
         "activity": activity,
         "report": {
-            "path": relative_to_root(root, report_path) if report_path is not None else "",
+            "path": (
+                relative_to_root(
+                    root,
+                    report_path,
+                    expose_external_paths=expose_external_paths,
+                )
+                if report_path is not None
+                else ""
+            ),
             "exists": report is not None,
             "submitted_at": submitted_at,
             "commit": report.get("commit") if report else None,
@@ -324,6 +362,7 @@ def list_student_lab_assignments(
     student_id: str,
     assignments_dir: Path | None = None,
     now: str | None = None,
+    expose_external_paths: bool = False,
 ) -> list[dict[str, Any]]:
     """Return normalized lab assignments visible to one student."""
 
@@ -345,6 +384,7 @@ def list_student_lab_assignments(
                         target=target,
                         student_id=canonical_student_id,
                         now=current_time,
+                        expose_external_paths=expose_external_paths,
                     )
                 )
     lab_assignments.sort(key=lambda item: (item.get("due_at") or "", item.get("activity_id") or ""))
@@ -357,6 +397,7 @@ def student_lab_payload(
     student_id: str,
     assignments_dir: Path | None = None,
     now: str | None = None,
+    expose_external_paths: bool = False,
 ) -> dict[str, Any]:
     """Return the complete student-lab payload for frontend or CLI consumers."""
 
@@ -369,6 +410,7 @@ def student_lab_payload(
             student_id=student_id,
             assignments_dir=assignments_dir,
             now=now,
+            expose_external_paths=expose_external_paths,
         ),
     }
 
@@ -443,6 +485,7 @@ def record_student_help_request(
         student_id=clean_student_id,
         assignments_dir=assignments_dir,
         now=now,
+        expose_external_paths=True,
     )
     assignment = next(
         (item for item in assignments if clean_text(item.get("assignment_id")) == clean_assignment_id),
@@ -486,6 +529,7 @@ def student_help_history(
         student_id=clean_student_id,
         assignments_dir=assignments_dir,
         now=now,
+        expose_external_paths=True,
     )
     assignment = next(
         (item for item in assignments if clean_text(item.get("assignment_id")) == clean_assignment_id),
@@ -544,6 +588,7 @@ def main() -> int:
             student_id=args.student_id,
             assignments_dir=args.assignments_dir,
             now=args.now,
+            expose_external_paths=True,
         )
     except ValueError as error:
         print(f"Lab studente non disponibile:\n{error}", file=sys.stderr)

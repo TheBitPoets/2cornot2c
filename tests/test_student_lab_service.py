@@ -171,6 +171,54 @@ def test_student_lab_hides_paths_outside_server_root(tmp_path) -> None:
     assert str(external_root) not in json.dumps(payload)
 
 
+def test_student_lab_retains_external_paths_for_trusted_local_consumers(tmp_path) -> None:
+    root = tmp_path / "server-root"
+    root.mkdir()
+    external_root = tmp_path / "external-student-data"
+    external_repo = external_root / "rossi-mario"
+    workspace = external_repo / "assignments" / "python-base-somma-001"
+    workspace.mkdir(parents=True)
+    external_activity = external_root / "activity.json"
+    external_activity.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "id": "python-base-somma-001",
+                "title": "Somma esterna",
+                "kind": "laboratorio",
+                "language": "python",
+                "source_name": "main.py",
+                "instructions": "Somma due numeri.",
+            }
+        ),
+        encoding="utf-8",
+    )
+    assignment = sample_assignment(
+        root,
+        activity_path=str(external_activity),
+        target_type="student",
+        targets=[{"student_id": "rossi-mario", "path": str(external_repo)}],
+    )
+    write_assignment(root, assignment)
+
+    payload = student_lab_service.student_lab_payload(
+        root=root,
+        student_id="rossi-mario",
+        now="2026-10-18T12:00:00+02:00",
+        expose_external_paths=True,
+    )
+
+    lab_assignment = payload["assignments"][0]
+    assert lab_assignment["workspace"] == {
+        "path": student_lab_service.url_path(workspace),
+        "exists": True,
+    }
+    assert lab_assignment["activity"]["path"] == student_lab_service.url_path(external_activity)
+    assert lab_assignment["report"]["path"] == student_lab_service.url_path(
+        external_repo / "reports" / "python-base-somma-001" / "latest.json"
+    )
+
+
 def test_stable_student_id_cannot_be_replaced_by_target_alias(tmp_path) -> None:
     assignment = sample_assignment(
         tmp_path,

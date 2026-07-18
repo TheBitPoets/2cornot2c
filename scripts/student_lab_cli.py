@@ -742,7 +742,12 @@ def open_workspace(path_value: str, root: Path = PROJECT_ROOT) -> bool:
 def load_payload(root: Path, student_id: str, now: str | None = None) -> dict[str, Any]:
     """Load the current student lab payload."""
 
-    return student_lab_service.student_lab_payload(root=root, student_id=student_id, now=now)
+    return student_lab_service.student_lab_payload(
+        root=root,
+        student_id=student_id,
+        now=now,
+        expose_external_paths=True,
+    )
 
 
 def fetch_student_lab_payload(
