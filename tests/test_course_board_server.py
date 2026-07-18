@@ -665,6 +665,63 @@ def test_delete_assignment_waits_for_inflight_help_request(tmp_path, monkeypatch
     assert not student_help_service.server_help_log_path(tmp_path, "rossi-mario", assignment["id"]).exists()
 
 
+def test_save_and_delete_assignment_are_serialized(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    activity_path = tmp_path / "activities" / "python-base-somma-001.json"
+    write_demo_activity(activity_path)
+    student_repo = tmp_path / "studenti" / "rossi-mario"
+    student_repo.mkdir(parents=True)
+    save_payload = {
+        "activity_path": "activities/python-base-somma-001.json",
+        "target_type": "student",
+        "targets_text": "studenti/rossi-mario",
+        "assigned_at": "2026-10-12T09:00:00+02:00",
+        "due_at": "2026-10-19T23:59:00+02:00",
+        "overwrite": True,
+    }
+    initial = course_board_server.save_assignment_record(save_payload)["assignment"]
+    original_write = assignment_records.JsonAssignmentRecordStorage.write_assignment
+    save_started = threading.Event()
+    release_save = threading.Event()
+    save_errors = []
+    delete_errors = []
+
+    def blocking_write(storage, assignment, overwrite=False):
+        save_started.set()
+        assert release_save.wait(timeout=5)
+        return original_write(storage, assignment, overwrite)
+
+    monkeypatch.setattr(assignment_records.JsonAssignmentRecordStorage, "write_assignment", blocking_write)
+
+    def save_worker():
+        try:
+            course_board_server.save_assignment_record(save_payload)
+        except Exception as error:  # noqa: BLE001
+            save_errors.append(error)
+
+    def delete_worker():
+        try:
+            course_board_server.delete_assignment_record({"assignment_id": initial["id"]})
+        except Exception as error:  # noqa: BLE001
+            delete_errors.append(error)
+
+    save_thread = threading.Thread(target=save_worker)
+    delete_thread = threading.Thread(target=delete_worker)
+    save_thread.start()
+    assert save_started.wait(timeout=5)
+    delete_thread.start()
+    delete_thread.join(timeout=0.1)
+    assert delete_thread.is_alive()
+    release_save.set()
+    save_thread.join(timeout=5)
+    delete_thread.join(timeout=5)
+
+    assert save_errors == []
+    assert delete_errors == []
+    with pytest.raises(FileNotFoundError):
+        assignment_records.JsonAssignmentRecordStorage(tmp_path).read_assignment(initial["id"])
+
+
 def test_student_payload_does_not_wait_for_assignment_provider_lock(tmp_path, monkeypatch) -> None:
     patch_assignment_paths(tmp_path, monkeypatch)
     storage = assignment_records.JsonAssignmentRecordStorage(tmp_path, tmp_path / "teacher-assignments")

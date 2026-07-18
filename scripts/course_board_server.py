@@ -122,7 +122,8 @@ class StudentHelpConfigurationError(RuntimeError):
 def assignment_operation_lock(assignment_id: str):
     """Serialize one assignment operation and release its cache entry afterward."""
 
-    key = f"{ROOT.resolve(strict=False)}::{str(assignment_id or '').strip()}"
+    normalized_assignment_id = create_activity.slugify(str(assignment_id or "").strip())
+    key = f"{ROOT.resolve(strict=False)}::{normalized_assignment_id}"
     with _ASSIGNMENT_OPERATION_LOCKS_GUARD:
         entry = _ASSIGNMENT_OPERATION_LOCKS.setdefault(
             key,
@@ -481,10 +482,9 @@ def delete_assignment_record(payload: dict) -> dict:
     if not requested_assignment_id:
         raise ValueError("assignment_id obbligatorio.")
     record_storage = assignment_record_storage()
-    assignment = record_storage.read_assignment(requested_assignment_id)
-    assignment_id = str(assignment["id"])
-    with assignment_operation_lock(assignment_id):
-        assignment = record_storage.read_assignment(assignment_id)
+    with assignment_operation_lock(requested_assignment_id):
+        assignment = record_storage.read_assignment(requested_assignment_id)
+        assignment_id = str(assignment["id"])
         student_ids = set()
         for target in assignment.get("targets", []):
             if isinstance(target, dict):
@@ -841,7 +841,8 @@ def save_assignment_record(payload: dict) -> dict:
         due_at=str(payload.get("due_at", "")).strip(),
         targets=targets,
     )
-    saved = assignment_record_storage().write_assignment(assignment, bool(payload.get("overwrite", False)))
+    with assignment_operation_lock(assignment["id"]):
+        saved = assignment_record_storage().write_assignment(assignment, bool(payload.get("overwrite", False)))
     records = list_assignment_records(str(payload.get("now", "")).strip() or None)
     return {
         "ok": True,
