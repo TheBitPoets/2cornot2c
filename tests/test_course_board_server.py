@@ -1400,6 +1400,30 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
 
         original_loopback_check = course_board_server.CourseBoardHandler.is_loopback_client
         monkeypatch.setattr(course_board_server.CourseBoardHandler, "is_loopback_client", lambda self: False)
+        original_student_lab_payload = course_board_server.student_lab_service.student_lab_payload
+        received_now = []
+
+        def capture_student_lab_now(**kwargs):
+            received_now.append(kwargs.get("now"))
+            return original_student_lab_payload(**kwargs)
+
+        monkeypatch.setattr(
+            course_board_server.student_lab_service,
+            "student_lab_payload",
+            capture_student_lab_now,
+        )
+        remote_assignments_with_future_time = urllib.request.Request(
+            f"{base_url}/api/student-lab/assignments?now=9999-01-01T00:00:00%2B00:00",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        with urllib.request.urlopen(remote_assignments_with_future_time, timeout=5) as response:
+            assert response.status == 200
+        assert received_now[-1] is None
+        monkeypatch.setattr(
+            course_board_server.student_lab_service,
+            "student_lab_payload",
+            original_student_lab_payload,
+        )
         for teacher_path in ("api/assignment-reports", "api/assignments", "api/student-dashboard"):
             with pytest.raises(urllib.error.HTTPError) as remote_teacher_api:
                 urllib.request.urlopen(f"{base_url}/{teacher_path}", timeout=5)

@@ -2248,12 +2248,13 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             try:
                 query = parse_qs(parsed.query)
                 if parsed.path == "/api/student-lab/assignments":
+                    requested_now = query.get("now", [""])[0] or None
                     self.write_json(
                         student_lab_service.student_lab_payload(
                             root=ROOT,
                             assignments_dir=TEACHER_ASSIGNMENTS_DIR,
                             student_id=student_id,
-                            now=query.get("now", [""])[0] or None,
+                            now=requested_now if self.is_loopback_client() else None,
                         )
                     )
                     return
