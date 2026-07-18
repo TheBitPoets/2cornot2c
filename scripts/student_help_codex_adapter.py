@@ -37,6 +37,12 @@ DISABLED_CODEX_FEATURES = (
 CODEX_PROVIDER = "codex-local"
 CODEX_PROVIDER_LABEL = "Codex locale (macchina docente)"
 MAX_RESPONSE_CHARS = 4000
+MAX_PACKAGE_BYTES = 48 * 1024
+MAX_PROMPT_CHARS = 2_000
+MAX_CONTEXT_INSTRUCTIONS_CHARS = 4_000
+MAX_CONTEXT_TEXT_CHARS = 300
+MAX_CONTEXT_LABELS = 12
+MAX_CONTEXT_LABEL_CHARS = 120
 _CODEX_CALL_SLOT = threading.BoundedSemaphore(1)
 
 CODEX_HELP_SCHEMA: dict[str, Any] = {
@@ -74,17 +80,17 @@ def codex_help_package(request: StudentHelpRequest) -> dict[str, Any]:
     """Return the minimal, provider-facing package for one help request."""
 
     context = request.context if isinstance(request.context, dict) else {}
-    return {
+    package = {
         "schema_version": "student_help_request.v1",
-        "activity_id": request.activity_id.strip(),
-        "help_type": request.help_type.strip(),
-        "prompt": request.prompt.strip(),
+        "activity_id": request.activity_id.strip()[:MAX_CONTEXT_TEXT_CHARS],
+        "help_type": request.help_type.strip()[:MAX_CONTEXT_TEXT_CHARS],
+        "prompt": request.prompt.strip()[:MAX_PROMPT_CHARS],
         "context": {
-            "title": str(context.get("title") or "").strip(),
-            "instructions": str(context.get("instructions") or "").strip()[:4000],
-            "language": str(context.get("language") or "").strip(),
+            "title": _clean_context_text(context.get("title")),
+            "instructions": str(context.get("instructions") or "").strip()[:MAX_CONTEXT_INSTRUCTIONS_CHARS],
+            "language": _clean_context_text(context.get("language")),
             "topics": _clean_labels(context.get("topics")),
-            "grading_status": str(context.get("grading_status") or "").strip(),
+            "grading_status": _clean_context_text(context.get("grading_status")),
             "failed_tests": _clean_labels(context.get("failed_tests")),
         },
         "constraints": {
@@ -94,6 +100,9 @@ def codex_help_package(request: StudentHelpRequest) -> dict[str, Any]:
             "teacher_machine_read_only": True,
         },
     }
+    if len(json.dumps(package, ensure_ascii=False).encode("utf-8")) > MAX_PACKAGE_BYTES:
+        raise ValueError("Contesto della richiesta Codex troppo grande.")
+    return package
 
 
 class CodexStudentHelpProvider:
@@ -219,7 +228,13 @@ def _clean_labels(value: Any) -> list[str]:
         return []
     labels: list[str] = []
     for item in value:
-        label = str(item or "").strip()
+        label = str(item or "").strip()[:MAX_CONTEXT_LABEL_CHARS]
         if label and label not in labels:
             labels.append(label)
+        if len(labels) >= MAX_CONTEXT_LABELS:
+            break
     return labels
+
+
+def _clean_context_text(value: Any) -> str:
+    return str(value or "").strip()[:MAX_CONTEXT_TEXT_CHARS]

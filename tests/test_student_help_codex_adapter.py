@@ -94,6 +94,31 @@ def test_codex_provider_rejects_missing_cli(monkeypatch) -> None:
         student_help_codex_adapter.CodexStudentHelpProvider().respond(sample_request())
 
 
+def test_codex_help_package_bounds_untrusted_report_labels() -> None:
+    request = sample_request()
+    request.context["topics"] = ["argomento-" + ("x" * 500)] * 2 + [
+        f"argomento-{index}-" + ("x" * 500)
+        for index in range(30)
+    ]
+    request.context["failed_tests"] = [
+        f"test-{index}-" + ("\U0001f4a1" * 500)
+        for index in range(30)
+    ]
+
+    package = student_help_codex_adapter.codex_help_package(request)
+
+    assert len(package["context"]["topics"]) == student_help_codex_adapter.MAX_CONTEXT_LABELS
+    assert len(package["context"]["failed_tests"]) == student_help_codex_adapter.MAX_CONTEXT_LABELS
+    assert all(
+        len(label) <= student_help_codex_adapter.MAX_CONTEXT_LABEL_CHARS
+        for key in ("topics", "failed_tests")
+        for label in package["context"][key]
+    )
+    assert len(json.dumps(package, ensure_ascii=False).encode("utf-8")) <= (
+        student_help_codex_adapter.MAX_PACKAGE_BYTES
+    )
+
+
 def test_codex_provider_rejects_parallel_process_when_slot_is_busy(monkeypatch) -> None:
     monkeypatch.setattr(student_help_codex_adapter.shutil, "which", lambda command: "/bin/codex")
     assert student_help_codex_adapter._CODEX_CALL_SLOT.acquire(blocking=False)
