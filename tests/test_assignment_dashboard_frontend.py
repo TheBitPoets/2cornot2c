@@ -2899,6 +2899,7 @@ def test_student_help_details_render_counts_and_prompts() -> None:
         assert.match(html, /Legacy non verificati \\(1\\)/);
         assert.match(html, /non incidono su budget e metriche/);
         assert.match(html, /Dato modificabile\\./);
+        assert.doesNotMatch(html, /Â|Ã/);
 
         const empty = tested.studentHelpDetails({ total: 0, events: [] });
         assert.match(empty, /Nessuna richiesta registrata/);

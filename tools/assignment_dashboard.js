@@ -3916,7 +3916,7 @@ function studentHelpDetails(help) {
   const rows = events.length
     ? events.map((event) => `
         <div>
-          <dt>${escapeHtml(formatDate(event.requested_at))} · ${escapeHtml(event.label || event.help_type || "aiuto")}</dt>
+          <dt>${escapeHtml(formatDate(event.requested_at))} - ${escapeHtml(event.label || event.help_type || "aiuto")}</dt>
           <dd>
             ${badge(event.allowed ? "Consentita" : "Bloccata", event.allowed ? "ok" : "bad")}
             ${event.prompt ? `<p>${escapeHtml(event.prompt)}</p>` : "<p>Prompt non disponibile.</p>"}
@@ -3927,7 +3927,7 @@ function studentHelpDetails(help) {
     : `<div><dt>Prompt</dt><dd>${escapeHtml(data.error || "Nessuna richiesta registrata.")}</dd></div>`;
   const legacyRows = legacyEvents.map((event) => `
     <div>
-      <dt>${escapeHtml(formatDate(event.requested_at))} Â· ${escapeHtml(event.label || event.help_type || "aiuto")}</dt>
+      <dt>${escapeHtml(formatDate(event.requested_at))} - ${escapeHtml(event.label || event.help_type || "aiuto")}</dt>
       <dd>${event.prompt ? `<p>${escapeHtml(event.prompt)}</p>` : "<p>Prompt non disponibile.</p>"}</dd>
     </div>
   `).join("");
@@ -3935,7 +3935,7 @@ function studentHelpDetails(help) {
     <div class="studentHelpCell">
       ${badge(`Aiuti ${total}`, kind)}<br>
       <small>Consegna: ${escapeHtml(data.activity_id || "-")}</small><br>
-      <small>AI: ${escapeHtml(aiTotal)} · Bloccate: ${escapeHtml(denied)}</small>
+      <small>AI: ${escapeHtml(aiTotal)} - Bloccate: ${escapeHtml(denied)}</small>
       <details class="studentHelpDetails">
         <summary>Prompt aiuti</summary>
         <dl>${rows}</dl>
