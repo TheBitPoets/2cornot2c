@@ -246,6 +246,39 @@ def test_stable_student_id_cannot_be_replaced_by_target_alias(tmp_path) -> None:
     assert stable_assignments[0]["student_id"] == "studente-stabile-001"
 
 
+def test_equivalent_targets_produce_only_one_assignment_row(tmp_path) -> None:
+    workspace = (
+        tmp_path
+        / "examples"
+        / "assignment_tracking"
+        / "student_repos"
+        / "rossi-mario"
+        / "assignments"
+        / "python-base-somma-001"
+    )
+    workspace.mkdir(parents=True)
+    assignment = sample_assignment(
+        tmp_path,
+        target_type="group",
+        targets=[
+            {"student_id": "rossi-mario"},
+            {
+                "student_id": "rossi-mario",
+                "path": "examples/assignment_tracking/student_repos/rossi-mario",
+            },
+        ],
+    )
+    write_assignment(tmp_path, assignment)
+
+    assignments = student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id="rossi-mario",
+    )
+
+    assert len(assignments) == 1
+    assert assignments[0]["workspace"]["exists"] is True
+
+
 def test_legacy_target_authorizes_only_one_canonical_identity(tmp_path) -> None:
     assignment = sample_assignment(
         tmp_path,

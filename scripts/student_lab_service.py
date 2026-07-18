@@ -316,21 +316,35 @@ def list_student_lab_assignments(
     current_time = parse_now(now)
     storage = assignment_records.JsonAssignmentRecordStorage(root, assignments_dir)
     lab_assignments = []
+
+    def target_selection_score(item: dict[str, Any]) -> tuple[bool, bool]:
+        repo_path = target_repo_path(root, item, clean_student_id)
+        return (
+            bool(repo_path and repo_path.is_dir()),
+            bool(clean_text(item.get("path")) or clean_text(item.get("target"))),
+        )
+
     for assignment in storage.list_assignments():
         targets = assignment.get("targets") if isinstance(assignment.get("targets"), list) else []
-        for target in targets:
-            if isinstance(target, dict) and target_matches_student(target, clean_student_id):
-                canonical_student_id = target_student_id(target)
-                lab_assignments.append(
-                    build_lab_assignment(
-                        root=root,
-                        assignment=assignment,
-                        target=target,
-                        student_id=canonical_student_id,
-                        now=current_time,
-                        expose_external_paths=expose_external_paths,
-                    )
-                )
+        matching_targets = [
+            target
+            for target in targets
+            if isinstance(target, dict) and target_matches_student(target, clean_student_id)
+        ]
+        if not matching_targets:
+            continue
+        target = max(matching_targets, key=target_selection_score)
+        canonical_student_id = target_student_id(target)
+        lab_assignments.append(
+            build_lab_assignment(
+                root=root,
+                assignment=assignment,
+                target=target,
+                student_id=canonical_student_id,
+                now=current_time,
+                expose_external_paths=expose_external_paths,
+            )
+        )
     lab_assignments.sort(key=lambda item: (item.get("due_at") or "", item.get("activity_id") or ""))
     return lab_assignments
 
