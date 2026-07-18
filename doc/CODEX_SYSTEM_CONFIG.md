@@ -65,6 +65,36 @@ powershell -ExecutionPolicy Bypass -File scripts/install_codex_system_config.ps1
 
 Usa `-Overwrite` solo su una macchina nuova o quando vuoi eliminare consapevolmente la configurazione precedente.
 
+## Installazione su Linux
+
+Da Bash, nella root del repository:
+
+```bash
+bash scripts/install_codex_system_config.sh
+```
+
+Lo script installa in `$HOME/.codex`, fa backup dei file esistenti e preserva le altre sezioni gia presenti nel `config.toml`.
+
+Per vedere cosa farebbe senza scrivere:
+
+```bash
+bash scripts/install_codex_system_config.sh --dry-run
+```
+
+Per usare una home Codex diversa, utile nei test o su macchine condivise:
+
+```bash
+bash scripts/install_codex_system_config.sh --codex-home /percorso/.codex
+```
+
+Per sovrascrivere completamente `config.toml` con il template minimo:
+
+```bash
+bash scripts/install_codex_system_config.sh --overwrite
+```
+
+Usa `--overwrite` solo su una macchina nuova o quando vuoi eliminare consapevolmente la configurazione precedente.
+
 ## Dopo l'installazione
 
 Chiudi e riapri:
