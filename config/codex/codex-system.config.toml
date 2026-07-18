@@ -1,0 +1,16 @@
+# Template globale Codex per usare GPT-5.6 Sol con reasoning ultra e sub-agenti.
+# Copialo o installalo in: %USERPROFILE%\.codex\config.toml
+#
+# Questo file non contiene segreti, token, path locali, plugin personali o MCP.
+# Lo script scripts/install_codex_system_config.ps1 puo applicare queste chiavi
+# preservando il resto della configurazione gia presente sulla macchina.
+
+model = "gpt-5.6-sol"
+model_reasoning_effort = "ultra"
+service_tier = "default"
+
+[agents]
+max_threads = 6
+max_depth = 1
+job_max_runtime_seconds = 1800
+interrupt_message = true

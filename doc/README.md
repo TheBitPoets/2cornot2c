@@ -76,6 +76,7 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 | [`SCENARI_TEST_MANUALI_GUI.md`](SCENARI_TEST_MANUALI_GUI.md) | Quando devi collaudare manualmente dashboard, modal, viste e TUI prima di automatizzare |
 | [`images/dashboard-guides/README.md`](images/dashboard-guides/README.md) | Quando devi catturare o aggiornare gli screenshot delle guide dashboard |
 | [`STUDENT_DASHBOARD.md`](STUDENT_DASHBOARD.md) | Quando devi provare la vista studente minima su consegne, grading e feedback approvato |
+| [`CODEX_SYSTEM_CONFIG.md`](CODEX_SYSTEM_CONFIG.md) | Quando devi installare su una macchina nuova la configurazione Codex globale per GPT-5.6 Sol, reasoning ultra e sub-agenti |
 | [`STUDENT_REPOSITORY_TEMPLATE.md`](STUDENT_REPOSITORY_TEMPLATE.md) | Quando devi creare o mantenere il template repository studente |
 | [`ASSIGNMENT_GRADING.md`](ASSIGNMENT_GRADING.md) | Quando devi correggere in modo deterministico una consegna TheBitLab |
 | [`ASSIGNMENT_SANDBOX.md`](ASSIGNMENT_SANDBOX.md) | Quando devi eseguire il grading in una sandbox Docker |
