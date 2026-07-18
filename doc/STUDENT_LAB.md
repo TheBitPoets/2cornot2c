@@ -37,6 +37,9 @@ condividere invece `THEBITLAB_STUDENT_HELP_SECRET`, che deve restare soltanto su
 I token studente e docente si configurano soltanto con le variabili d'ambiente
 `THEBITLAB_STUDENT_HELP_TOKEN` e `THEBITLAB_TEACHER_TOKEN`: non passarli come argomenti della riga di comando,
 perche potrebbero comparire nella cronologia della shell o nell'elenco dei processi.
+Il token studente scade dopo 24 ore. Il server puo modificare la durata impostando
+`THEBITLAB_STUDENT_HELP_TOKEN_TTL_SECONDS` tra 60 secondi e 7 giorni; alla scadenza il docente genera un nuovo
+token con `student_help_auth.py`.
 Avvia una sola istanza di `course_board_server.py` per ciascun root dati: il server applica un lock di sistema e
 rifiuta un secondo avvio sulla stessa cartella per evitare scritture concorrenti.
 Le scritture JSON usano file temporanei, replace atomico e sincronizzazione della directory sui filesystem POSIX.

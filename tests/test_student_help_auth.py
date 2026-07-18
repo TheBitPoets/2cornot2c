@@ -24,6 +24,35 @@ def test_student_token_rejects_tampering_and_wrong_secret() -> None:
         student_help_auth.verify_student_token(token, "different-secret-with-at-least-32-chars")
 
 
+def test_student_token_enforces_expiration_and_future_skew() -> None:
+    token = student_help_auth.create_student_token("rossi-mario", SECRET, issued_at=1_000)
+
+    assert student_help_auth.verify_student_token(
+        token,
+        SECRET,
+        now=1_060,
+        max_age_seconds=120,
+    ) == "rossi-mario"
+    with pytest.raises(ValueError, match="scaduto"):
+        student_help_auth.verify_student_token(token, SECRET, now=1_121, max_age_seconds=120)
+    with pytest.raises(ValueError, match="non ancora valido"):
+        student_help_auth.verify_student_token(
+            token,
+            SECRET,
+            now=1_000 - student_help_auth.TOKEN_CLOCK_SKEW_SECONDS - 1,
+            max_age_seconds=120,
+        )
+
+
+def test_student_token_ttl_is_configurable_with_safe_bounds(monkeypatch) -> None:
+    monkeypatch.setenv("THEBITLAB_STUDENT_HELP_TOKEN_TTL_SECONDS", "3600")
+    assert student_help_auth.student_token_ttl_seconds() == 3600
+
+    monkeypatch.setenv("THEBITLAB_STUDENT_HELP_TOKEN_TTL_SECONDS", "30")
+    with pytest.raises(ValueError, match="deve essere tra"):
+        student_help_auth.student_token_ttl_seconds()
+
+
 def test_authorization_requires_bearer_scheme() -> None:
     token = student_help_auth.create_student_token("rossi-mario", SECRET)
 
