@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import http.client
 import json
 import threading
 import urllib.error
@@ -993,6 +994,18 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
         with pytest.raises(urllib.error.HTTPError) as unauthorized:
             urllib.request.urlopen(unauthenticated_request, timeout=5)
         assert unauthorized.value.code == 401
+
+        connection = http.client.HTTPConnection("127.0.0.1", server.server_address[1], timeout=5)
+        connection.putrequest("POST", "/api/student-lab/help")
+        connection.putheader("Authorization", f"Bearer {token}")
+        connection.putheader("Content-Type", "application/json")
+        connection.putheader("Content-Length", "non-numerico")
+        connection.endheaders()
+        malformed_length = connection.getresponse()
+        malformed_payload = json.loads(malformed_length.read().decode("utf-8"))
+        connection.close()
+        assert malformed_length.status == 400
+        assert malformed_payload["error"] == "Content-Length non valido."
 
         oversized_request = urllib.request.Request(
             f"{base_url}/api/student-lab/help",

@@ -2158,7 +2158,11 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             except ValueError as error:
                 self.write_error_json(401, str(error))
                 return
-            length = int(self.headers.get("Content-Length", "0"))
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+            except (TypeError, ValueError):
+                self.write_error_json(400, "Content-Length non valido.")
+                return
             if length < 1 or length > MAX_STUDENT_HELP_REQUEST_BYTES:
                 self.write_error_json(413, "Richiesta aiuto troppo grande o vuota.")
                 return
