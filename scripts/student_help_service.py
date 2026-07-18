@@ -4,7 +4,7 @@ import json
 import threading
 import uuid
 from json import JSONDecodeError
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +17,7 @@ from scripts.student_help_provider import (
 
 HELP_LOG_SCHEMA_VERSION = "student_help_log.v1"
 HELP_EVENT_SCHEMA_VERSION = "student_help_event.v1"
+PENDING_PROVIDER_MAX_AGE = timedelta(minutes=5)
 PROVIDER_ERROR_DETAIL = "Il provider non ha potuto completare la richiesta. Riprova più tardi o avvisa il docente."
 _HELP_LOG_LOCKS: dict[str, threading.Lock] = {}
 _HELP_LOG_LOCKS_GUARD = threading.Lock()
@@ -141,7 +142,49 @@ def provider_response_payload(response: Any) -> dict[str, Any]:
 
 
 def ai_events_used(events: list[dict[str, Any]]) -> int:
-    return sum(1 for event in events if normalize_help_type(event.get("help_type")) == "ai" and event.get("allowed") is True)
+    return sum(
+        1
+        for event in events
+        if normalize_help_type(event.get("help_type")) == "ai"
+        and event.get("allowed") is True
+        and event.get("budget_charged") is not False
+    )
+
+
+def release_stale_provider_reservations(events: list[dict[str, Any]], now: str) -> bool:
+    """Release budget held by provider calls that cannot still be running."""
+
+    try:
+        current = datetime.fromisoformat(now)
+    except ValueError:
+        return False
+    changed = False
+    for event in events:
+        if event.get("provider_status") != "pending" or event.get("budget_charged") is False:
+            continue
+        try:
+            requested_at = datetime.fromisoformat(clean_text(event.get("requested_at")))
+        except ValueError:
+            continue
+        try:
+            age = current - requested_at
+        except TypeError:
+            continue
+        if age <= PENDING_PROVIDER_MAX_AGE:
+            continue
+        event["provider_status"] = "interrupted"
+        event["budget_charged"] = False
+        event["response"] = {
+            "schema_version": STUDENT_HELP_RESPONSE_SCHEMA_VERSION,
+            "status": "error",
+            "provider": "interrupted-provider-call",
+            "provider_label": "Richiesta interrotta",
+            "message": "",
+            "usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
+            "detail": PROVIDER_ERROR_DETAIL,
+        }
+        changed = True
+    return changed
 
 
 def ai_budget_status(support_policy: dict[str, Any], events: list[dict[str, Any]]) -> dict[str, Any]:
@@ -224,13 +267,15 @@ def record_help_request(
     context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     path = help_log_path(repo_path, activity_id)
+    requested_at = parse_now(now)
     with help_log_lock(path):
         events = load_help_events(path)
+        release_stale_provider_reservations(events, requested_at)
         decision = apply_budget_limit(evaluate_help_request(support_policy, help_type), support_policy, events)
         event = {
             "schema_version": HELP_EVENT_SCHEMA_VERSION,
             "request_id": uuid.uuid4().hex,
-            "requested_at": parse_now(now),
+            "requested_at": requested_at,
             "activity_id": clean_text(activity_id),
             "help_type": decision["help_type"],
             "label": decision["label"],
@@ -240,6 +285,10 @@ def record_help_request(
         }
         if "budget" in decision:
             event["budget"] = decision["budget"]
+        if decision["help_type"] == "ai" and decision["allowed"] is True:
+            event["budget_charged"] = True
+        if decision["allowed"] is True and provider is not None:
+            event["provider_status"] = "pending"
         events.append(event)
         write_help_events(path, events)
 
@@ -270,6 +319,7 @@ def record_help_request(
             for persisted in events:
                 if persisted.get("request_id") == event["request_id"]:
                     persisted["response"] = response
+                    persisted["provider_status"] = "completed"
                     event = persisted
                     break
             write_help_events(path, events)

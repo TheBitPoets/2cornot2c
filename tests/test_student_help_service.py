@@ -342,6 +342,48 @@ def test_concurrent_allowed_requests_do_not_hold_log_lock_during_provider_call(t
     assert all(event.get("response", {}).get("status") == "ready" for event in events)
 
 
+def test_stale_provider_reservation_is_released_after_server_restart(tmp_path) -> None:
+    repo = tmp_path / "student-repo"
+    activity_id = "python-base-somma-001"
+    log_path = student_help_service.help_log_path(repo, activity_id)
+    policy = dict(student_support_policy.support_policy("ai-assisted"))
+    policy["ai_request_limit"] = 1
+    student_help_service.write_help_events(
+        log_path,
+        [
+            {
+                "schema_version": student_help_service.HELP_EVENT_SCHEMA_VERSION,
+                "request_id": "orphaned-request",
+                "requested_at": "2026-10-18T10:00:00+02:00",
+                "activity_id": activity_id,
+                "help_type": "ai",
+                "label": "Aiuto AI",
+                "allowed": True,
+                "reason": "Richiesta avviata.",
+                "prompt": "Richiesta rimasta senza risposta.",
+                "budget_charged": True,
+                "provider_status": "pending",
+            }
+        ],
+    )
+
+    event = student_help_service.record_help_request(
+        repo_path=repo,
+        activity_id=activity_id,
+        support_policy=policy,
+        help_type="ai",
+        prompt="Nuova richiesta dopo il riavvio.",
+        now="2026-10-18T10:06:00+02:00",
+    )
+
+    events = student_help_service.load_help_events(log_path)
+    assert event["allowed"] is True
+    assert events[0]["provider_status"] == "interrupted"
+    assert events[0]["budget_charged"] is False
+    assert events[0]["response"]["status"] == "error"
+    assert student_help_service.ai_budget_status(policy, events)["used"] == 1
+
+
 def test_help_summary_marks_invalid_json_without_raising(tmp_path) -> None:
     log_path = tmp_path / "student-repo" / "help" / "activity" / "events.json"
     log_path.parent.mkdir(parents=True)
