@@ -218,6 +218,45 @@ def test_record_help_request_persists_provider_response_for_allowed_request(tmp_
     assert summary["last_response_provider"] == "Provider test"
     assert teacher_summary["events"][0]["response"]["message"].startswith("Prova un caso minimo")
     assert teacher_summary["events"][0]["response"]["usage"]["total_tokens"] == 10
+    assert teacher_summary["events"][0]["provider_status"] == "completed"
+
+
+def test_teacher_help_summary_exposes_only_known_provider_states(tmp_path) -> None:
+    log_path = tmp_path / "teacher-help-events" / "student" / "assignment" / "events.json"
+    student_help_service.write_help_events(
+        log_path,
+        [
+            {
+                "schema_version": student_help_service.HELP_EVENT_SCHEMA_VERSION,
+                "request_id": "request-provider-pending-0001",
+                "requested_at": "2026-10-20T08:00:00+02:00",
+                "activity_id": "activity-demo",
+                "help_type": "ai",
+                "label": "Aiuto AI",
+                "allowed": True,
+                "reason": "Consentita.",
+                "prompt": "Come procedo?",
+                "provider_status": "pending",
+            },
+            {
+                "schema_version": student_help_service.HELP_EVENT_SCHEMA_VERSION,
+                "request_id": "request-provider-unknown-0002",
+                "requested_at": "2026-10-20T08:01:00+02:00",
+                "activity_id": "activity-demo",
+                "help_type": "ai",
+                "label": "Aiuto AI",
+                "allowed": True,
+                "reason": "Consentita.",
+                "prompt": "E ora?",
+                "provider_status": "dettaglio-interno-non-previsto",
+            },
+        ],
+    )
+
+    summary = student_help_service.teacher_help_summary(log_path)
+
+    assert summary["events"][0]["provider_status"] == "pending"
+    assert "provider_status" not in summary["events"][1]
 
 
 def test_record_help_request_deduplicates_retried_request_id(tmp_path) -> None:

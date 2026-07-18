@@ -530,8 +530,10 @@ def teacher_help_summary(log_path: Path | None, now: str | None = None) -> dict[
         summary["ai_total"] = 0
         return summary
     events, error = read_help_log(log_path)
-    teacher_events = [
-        {
+    teacher_events = []
+    for event in events:
+        provider_status = clean_text(event.get("provider_status"))
+        teacher_event = {
             "requested_at": clean_text(event.get("requested_at")),
             "help_type": clean_text(event.get("help_type")),
             "label": clean_text(event.get("label")),
@@ -540,8 +542,9 @@ def teacher_help_summary(log_path: Path | None, now: str | None = None) -> dict[
             "prompt": clean_text(event.get("prompt")),
             "response": _teacher_response(event.get("response")),
         }
-        for event in events
-    ]
+        if provider_status in {"pending", "completed", "interrupted"}:
+            teacher_event["provider_status"] = provider_status
+        teacher_events.append(teacher_event)
     summary["events"] = teacher_events
     summary["ai_total"] = sum(1 for event in teacher_events if event["help_type"] == "ai")
     if error:

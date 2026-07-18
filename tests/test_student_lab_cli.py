@@ -371,6 +371,29 @@ def test_render_help_history_uses_events_from_server_payload(tmp_path) -> None:
     assert "Ripassa il ciclo for." in rendered
 
 
+def test_render_help_history_marks_a_saved_provider_request_as_pending(tmp_path) -> None:
+    assignment = sample_assignment(
+        help={
+            "events": [
+                {
+                    "requested_at": "2026-10-20T08:00:00+02:00",
+                    "help_type": "ai",
+                    "label": "Aiuto AI",
+                    "allowed": True,
+                    "prompt": "Come procedo?",
+                    "provider_status": "pending",
+                }
+            ]
+        }
+    )
+
+    rendered = student_lab_cli.render_help_history(assignment, root=tmp_path)
+
+    assert "Risposta in elaborazione" in rendered
+    assert "La richiesta e stata salvata" in rendered
+    assert "Risposta non disponibile" not in rendered
+
+
 def test_render_help_history_keeps_legacy_events_visible(tmp_path) -> None:
     legacy_path = tmp_path / "student" / "help" / "activity" / "events.json"
     student_lab_cli.student_help_service.write_help_events(

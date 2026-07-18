@@ -534,6 +534,7 @@ def render_help_history(
             decision = "consentita" if event.get("allowed") is True else "bloccata"
             decision_color = HELP_RESPONSE_COLOR if event.get("allowed") is True else HELP_ERROR_COLOR
             response = event.get("response") if isinstance(event.get("response"), dict) else {}
+            provider_status = clean_text(event.get("provider_status"), "")
             lines.extend(
                 [
                     section_separator(),
@@ -544,7 +545,16 @@ def render_help_history(
                     *help_history_block("Prompt studente", event.get("prompt"), HELP_PROMPT_COLOR, use_color),
                 ]
             )
-            if response:
+            if provider_status == "pending":
+                lines.extend(
+                    help_history_block(
+                        "Risposta in elaborazione",
+                        "La richiesta e stata salvata. Il provider sta preparando la risposta.",
+                        HELP_PROMPT_COLOR,
+                        use_color,
+                    )
+                )
+            elif response:
                 provider_label = clean_text(response.get("provider_label")) or "Provider aiuto"
                 if response.get("status") == "ready":
                     lines.extend(
