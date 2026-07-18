@@ -307,6 +307,15 @@ def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False
         detail_line("Esiste:", "si" if report.get("exists") else "no"),
         detail_line("Consegnata:", compact_datetime(report.get("submitted_at"))),
         detail_line("Commit:", report.get("commit")),
+        *(
+            [
+                section_separator(),
+                "Ultimo dettaglio test",
+                *render_test_details({"tests": report.get("tests")})[1:],
+            ]
+            if report.get("exists")
+            else []
+        ),
         section_separator(),
         "Grading",
         detail_line("Stato:", grading_label(grading)),

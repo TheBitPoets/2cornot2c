@@ -162,6 +162,44 @@ def load_report(report_path: Path, activity_id: str) -> dict[str, Any] | None:
     return report
 
 
+def report_test_message(test: dict[str, Any]) -> str:
+    """Return the first compact message available for a saved test."""
+
+    for key in ("message", "detail", "error", "stderr"):
+        value = clean_text(test.get(key))
+        if value:
+            return " ".join(value.split())
+    expected = clean_text(test.get("expected_stdout"))
+    actual = clean_text(test.get("stdout"))
+    if expected or actual:
+        return f"Output atteso: {expected or '-'}; output ottenuto: {actual or '-'}"
+    return ""
+
+
+def report_tests_summary(report: dict[str, Any] | None) -> list[dict[str, Any]]:
+    """Return a compact test list from a saved runner report."""
+
+    if report is None:
+        return []
+    tests = report.get("tests")
+    if not isinstance(tests, list):
+        return []
+    summarized: list[dict[str, Any]] = []
+    for index, item in enumerate(tests, start=1):
+        if not isinstance(item, dict):
+            continue
+        test = {
+            "name": clean_text(item.get("name")) or f"test {index}",
+            "passed": item.get("passed") if isinstance(item.get("passed"), bool) else None,
+            "status": clean_text(item.get("status")),
+        }
+        message = report_test_message(item)
+        if message:
+            test["message"] = message
+        summarized.append(test)
+    return summarized
+
+
 def build_lab_assignment(
     *,
     root: Path,
@@ -213,6 +251,7 @@ def build_lab_assignment(
             "exists": report is not None,
             "submitted_at": submitted_at,
             "commit": report.get("commit") if report else None,
+            "tests": report_tests_summary(report),
         },
         "grading": grading,
         "help": help_log,
