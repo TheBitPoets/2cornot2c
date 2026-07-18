@@ -28,6 +28,16 @@ python scripts/student_help_auth.py --student-id rossi-mario
 python scripts/course_board_server.py --root tmp/student-lab-demo
 ```
 
+Su Linux con Bash usa gli equivalenti:
+
+```bash
+python scripts/student_lab_demo_setup.py
+export THEBITLAB_STUDENT_HELP_PROVIDER="codex"
+export THEBITLAB_STUDENT_HELP_SECRET="demo-only-student-help-secret-change-me"
+python scripts/student_help_auth.py --student-id rossi-mario
+python scripts/course_board_server.py --root tmp/student-lab-demo
+```
+
 All'avvio il server stampa un token dashboard. Quando il browser chiede le credenziali usa `teacher` come nome
 utente e quel token come password. Per mantenere lo stesso token tra riavvii, imposta
 `THEBITLAB_TEACHER_TOKEN` prima di avviare il server. Non condividere il token docente con gli studenti.
@@ -51,6 +61,13 @@ In un secondo terminale:
 
 ```powershell
 $env:THEBITLAB_STUDENT_HELP_TOKEN="<token stampato dal comando precedente>"
+python scripts/student_lab_cli.py --root tmp/student-lab-demo --student-id rossi-mario --server-url http://127.0.0.1:8765
+```
+
+Su Linux con Bash:
+
+```bash
+export THEBITLAB_STUDENT_HELP_TOKEN="<token stampato dal comando precedente>"
 python scripts/student_lab_cli.py --root tmp/student-lab-demo --student-id rossi-mario --server-url http://127.0.0.1:8765
 ```
 
