@@ -32,6 +32,28 @@ def test_server_bind_rejects_clear_text_network_exposure_by_default() -> None:
     course_board_server.validate_server_bind("0.0.0.0", allow_insecure_network_http=True)
 
 
+def test_teacher_dashboard_token_rejects_weak_configured_value(monkeypatch) -> None:
+    monkeypatch.setenv("THEBITLAB_TEACHER_TOKEN", "troppo-corto")
+
+    with pytest.raises(ValueError, match="almeno 32 caratteri"):
+        course_board_server.teacher_dashboard_token()
+
+
+def test_teacher_dashboard_token_uses_valid_configured_value(monkeypatch) -> None:
+    configured = "teacher-dashboard-token-with-32-chars"
+    monkeypatch.setenv("THEBITLAB_TEACHER_TOKEN", configured)
+
+    assert course_board_server.teacher_dashboard_token() == configured
+
+
+def test_teacher_dashboard_token_generates_robust_value(monkeypatch) -> None:
+    monkeypatch.delenv("THEBITLAB_TEACHER_TOKEN", raising=False)
+
+    generated = course_board_server.teacher_dashboard_token()
+
+    assert len(generated) >= course_board_server.MIN_TEACHER_TOKEN_CHARS
+
+
 def test_data_root_process_lock_rejects_a_second_server(tmp_path) -> None:
     first_lock = course_board_server.DataRootProcessLock(tmp_path)
     second_lock = course_board_server.DataRootProcessLock(tmp_path)

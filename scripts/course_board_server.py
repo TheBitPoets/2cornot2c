@@ -101,6 +101,7 @@ AI_COURSE_PLAN_TIMEOUT_SECONDS = 240
 COMPACT_TEXT_CHARS = 1200
 MAX_SUBMISSION_FILE_BYTES = 512 * 1024
 MAX_STUDENT_HELP_REQUEST_BYTES = 16 * 1024
+MIN_TEACHER_TOKEN_CHARS = 32
 MAX_HELP_LOG_ROLLBACK_BYTES = 256 * 1024 * 1024
 HELP_DELETION_SCHEMA_VERSION = "student_help_deletion.v2"
 STUDENT_HELP_SERVER_ERROR = "Servizio aiuto temporaneamente non disponibile."
@@ -225,6 +226,19 @@ def student_help_provider() -> StudentHelpProvider:
     )
     ai_provider = student_help_codex_adapter.FallbackStudentHelpProvider(codex_provider, local_provider)
     return student_help_codex_adapter.StudentHelpProviderRouter(ai_provider, local_provider)
+
+
+def teacher_dashboard_token() -> str:
+    """Return a robust configured or generated teacher credential."""
+
+    configured = os.environ.get("THEBITLAB_TEACHER_TOKEN", "").strip()
+    if configured:
+        if len(configured) < MIN_TEACHER_TOKEN_CHARS:
+            raise ValueError(
+                f"THEBITLAB_TEACHER_TOKEN deve contenere almeno {MIN_TEACHER_TOKEN_CHARS} caratteri."
+            )
+        return configured
+    return secrets.token_urlsafe(24)
 
 
 def student_help_operation_id(assignment_id: str, student_id: str) -> str:
@@ -3225,6 +3239,7 @@ def main() -> int:
     args = parser.parse_args()
     try:
         validate_server_bind(args.host, args.allow_insecure_network_http)
+        configured_teacher_token = teacher_dashboard_token()
     except ValueError as error:
         parser.error(str(error))
     data_root_lock = DataRootProcessLock(args.root)
@@ -3236,7 +3251,7 @@ def main() -> int:
     try:
         data_root = configure_data_root(args.root)
         server = BoundedThreadingHTTPServer((args.host, args.port), CourseBoardHandler)
-        server.teacher_token = os.environ.get("THEBITLAB_TEACHER_TOKEN", "").strip() or secrets.token_urlsafe(24)
+        server.teacher_token = configured_teacher_token
         if not is_loopback_bind_host(args.host):
             print("ATTENZIONE: dashboard e credenziali Basic sono esposte su HTTP non cifrato.")
             print("Preferisci loopback con tunnel SSH oppure un reverse proxy HTTPS.")
