@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from scripts import assignment_records
@@ -270,3 +272,21 @@ def test_assignment_record_storage_rejects_duplicate_without_overwrite(tmp_path)
         overwrite=True,
     )
     assert overwritten["class_label"] == "3A TPSI aggiornata"
+def test_json_assignment_storage_keeps_previous_file_when_atomic_replace_fails(tmp_path, monkeypatch) -> None:
+    storage = assignment_records.JsonAssignmentRecordStorage(tmp_path)
+    path = tmp_path / "teacher-assignments" / "record.json"
+    storage.write_json(path, {"version": 1})
+    original_replace = Path.replace
+
+    def fail_temporary_replace(source, target):
+        if source.suffix == ".tmp":
+            raise PermissionError("replace bloccata")
+        return original_replace(source, target)
+
+    monkeypatch.setattr(Path, "replace", fail_temporary_replace)
+
+    with pytest.raises(PermissionError, match="replace bloccata"):
+        storage.write_json(path, {"version": 2})
+
+    assert storage.read_json(path) == {"version": 1}
+    assert list(path.parent.glob("*.tmp")) == []

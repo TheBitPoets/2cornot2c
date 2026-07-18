@@ -597,6 +597,46 @@ def test_delete_assignment_restores_every_log_after_partial_quarantine_cleanup(t
     assert all(log_path.read_text(encoding="utf-8") == content for log_path, content in expected_contents.items())
 
 
+def test_delete_assignment_does_not_restore_record_when_log_snapshot_restore_fails(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
+    monkeypatch.setattr(course_board_server, "TEACHER_ASSIGNMENTS_DIR", tmp_path / "teacher-assignments")
+    storage = assignment_records.JsonAssignmentRecordStorage(tmp_path, tmp_path / "teacher-assignments")
+    assignment = storage.write_assignment(
+        assignment_records.build_assignment_record(
+            assignment_id="assignment-rollback-log-bloccato",
+            activity_id="python-base-somma-001",
+            activity_path="activities/python-base-somma-001.json",
+            target_type="student",
+            assigned_at="2026-10-12T09:00:00+02:00",
+            due_at="2026-10-19T23:59:00+02:00",
+            targets=[{"student_id": "rossi-mario"}],
+        )
+    )
+    log_path = student_help_service.server_help_log_path(tmp_path, "rossi-mario", assignment["id"])
+    log_path.parent.mkdir(parents=True)
+    log_path.write_text('{"events": []}\n', encoding="utf-8")
+    original_rmtree = course_board_server.shutil.rmtree
+
+    def fail_strict_cleanup(path, ignore_errors=False):
+        if ".trash" in Path(path).parts and not ignore_errors:
+            raise PermissionError("quarantena bloccata")
+        return original_rmtree(path, ignore_errors=ignore_errors)
+
+    monkeypatch.setattr(course_board_server.shutil, "rmtree", fail_strict_cleanup)
+    monkeypatch.setattr(
+        course_board_server,
+        "restore_help_log_snapshots",
+        lambda snapshots: (_ for _ in ()).throw(OSError("ripristino log bloccato")),
+    )
+
+    with pytest.raises(OSError, match="ripristino log bloccato"):
+        course_board_server.delete_assignment_record({"assignment_id": assignment["id"]})
+
+    with pytest.raises(FileNotFoundError):
+        storage.read_assignment(assignment["id"])
+
+
 def test_delete_assignment_waits_for_inflight_help_request(tmp_path, monkeypatch) -> None:
     patch_assignment_paths(tmp_path, monkeypatch)
     activity_path = tmp_path / "activities" / "python-base-somma-001.json"

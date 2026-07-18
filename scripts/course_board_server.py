@@ -528,9 +528,11 @@ def delete_assignment_record(payload: dict) -> dict:
                 if trash_root.exists():
                     shutil.rmtree(trash_root)
             except Exception:
-                record_storage.write_assignment(assignment, overwrite=True)
-                restore_help_log_snapshots(rollback_snapshots)
-                shutil.rmtree(trash_root, ignore_errors=True)
+                try:
+                    restore_help_log_snapshots(rollback_snapshots)
+                    record_storage.write_assignment(assignment, overwrite=True)
+                finally:
+                    shutil.rmtree(trash_root, ignore_errors=True)
                 raise
     updated = list_assignment_records(str(payload.get("now", "")).strip() or None)
     return {"ok": True, "deleted": deleted, **updated}

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import uuid
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -298,7 +300,15 @@ class JsonAssignmentRecordStorage:
         """Write a JSON object with stable formatting."""
 
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        temporary_path = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
+        try:
+            with temporary_path.open("w", encoding="utf-8", newline="\n") as stream:
+                stream.write(json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+                stream.flush()
+                os.fsync(stream.fileno())
+            temporary_path.replace(path)
+        finally:
+            temporary_path.unlink(missing_ok=True)
 
     def write_assignment(self, payload: dict[str, Any], overwrite: bool = False) -> dict[str, Any]:
         """Persist one assignment record."""
