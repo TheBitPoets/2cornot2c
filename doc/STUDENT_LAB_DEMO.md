@@ -45,6 +45,8 @@ Per preparare una demo stabile in `tmp/student-lab-demo`, cancellando eventuali 
 python scripts/student_lab_demo_setup.py
 ```
 
+La cartella `tmp/student-lab-demo` e ignorata da git: usala per prove ripetute, errori intenzionali, report falliti e collaudi GUI/TUI senza sporcare il repository. Se hai bisogno di cambiare i dati demo, rigenera la root con questo comando invece di salvare manualmente file generati in `activities/drafts`, `teacher-assignments` o negli student repo demo.
+
 Lo script stampa un JSON con i path generati e i comandi utili per continuare il collaudo. I comandi principali sono:
 
 ```bash
@@ -90,6 +92,8 @@ Esegui un solo collaudo alla volta sulla stessa root demo: il comando ricrea la 
 
 ## Collaudo manuale su GUI/TUI
 
+Per una checklist piu completa degli scenari manuali GUI, con dati da selezionare e risultati attesi, vedi [`SCENARI_TEST_MANUALI_GUI.md`](SCENARI_TEST_MANUALI_GUI.md).
+
 Quando vuoi provare la demo con dati reali o demo del repository:
 
 1. Avvia il server:
@@ -107,7 +111,7 @@ Quando vuoi provare la demo con dati reali o demo del repository:
 3. Apri la TUI:
 
    ```bash
-   python scripts/student_lab_cli.py --student-id rossi-mario
+   python scripts/student_lab_cli.py --root tmp/student-lab-demo --student-id rossi-mario
    ```
 
 4. Entra nel dettaglio di una consegna e usa `e` per eseguire il runner e salvare il report.
