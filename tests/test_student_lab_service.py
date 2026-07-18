@@ -307,6 +307,38 @@ def test_display_only_legacy_target_uses_token_safe_identity(tmp_path) -> None:
     ) == []
 
 
+def test_display_only_legacy_target_reuses_existing_workspace_folder(tmp_path) -> None:
+    display_name = "Mario Rossi"
+    canonical_student_id = student_lab_service.legacy_display_student_id(display_name)
+    assignment = sample_assignment(
+        tmp_path,
+        target_type="student",
+        targets=[{"display_name": display_name}],
+    )
+    write_assignment(tmp_path, assignment)
+    workspace = (
+        tmp_path
+        / "examples"
+        / "assignment_tracking"
+        / "student_repos"
+        / display_name
+        / "assignments"
+        / "python-base-somma-001"
+    )
+    workspace.mkdir(parents=True)
+
+    assignments = student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id=canonical_student_id,
+    )
+
+    assert assignments[0]["student_id"] == canonical_student_id
+    assert assignments[0]["workspace"] == {
+        "path": student_lab_service.url_path(workspace.relative_to(tmp_path)),
+        "exists": True,
+    }
+
+
 def test_invalid_explicit_student_id_uses_token_safe_identity(tmp_path) -> None:
     original_student_id = "Mario Rossi"
     canonical_student_id = student_lab_service.legacy_display_student_id(original_student_id)

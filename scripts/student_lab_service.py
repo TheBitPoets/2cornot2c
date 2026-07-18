@@ -73,7 +73,14 @@ def target_repo_path(root: Path, target: dict[str, Any], student_id: str) -> Pat
         if value:
             return resolve_local_path(root, value)
     if clean_text(student_id):
-        return (root / DEFAULT_STUDENT_REPOS_DIR / student_id).resolve(strict=False)
+        repos_root = (root / DEFAULT_STUDENT_REPOS_DIR).resolve(strict=False)
+        for legacy_alias in sorted(target_legacy_student_aliases(target)):
+            if Path(legacy_alias).name != legacy_alias or legacy_alias in {".", ".."}:
+                continue
+            legacy_repo = (repos_root / legacy_alias).resolve(strict=False)
+            if legacy_repo.is_dir():
+                return legacy_repo
+        return (repos_root / student_id).resolve(strict=False)
     return None
 
 
