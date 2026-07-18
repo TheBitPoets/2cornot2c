@@ -77,6 +77,45 @@ def test_bounded_http_server_limits_workers_and_sets_client_timeout(monkeypatch)
         server.server_close()
 
 
+def test_bounded_http_server_rejects_overload_without_blocking(monkeypatch) -> None:
+    class FakeRequest:
+        def __init__(self) -> None:
+            self.timeout = None
+            self.response = b""
+
+        def settimeout(self, timeout) -> None:
+            self.timeout = timeout
+
+        def sendall(self, content) -> None:
+            self.response += content
+
+    server = course_board_server.BoundedThreadingHTTPServer(
+        ("127.0.0.1", 0),
+        course_board_server.CourseBoardHandler,
+        max_workers=1,
+    )
+    request = FakeRequest()
+    closed = []
+    try:
+        assert server._request_slots.acquire(blocking=False) is True
+        monkeypatch.setattr(server, "shutdown_request", lambda current_request: closed.append(current_request))
+        monkeypatch.setattr(
+            course_board_server.ThreadingHTTPServer,
+            "process_request",
+            lambda self, current_request, client_address: pytest.fail("La richiesta satura non va accodata."),
+        )
+
+        server.process_request(request, ("127.0.0.1", 12345))
+
+        assert request.timeout == 1
+        assert request.response.startswith(b"HTTP/1.1 503 Service Unavailable")
+        assert b"Content-Length: 34\r\n" in request.response
+        assert closed == [request]
+    finally:
+        server._request_slots.release()
+        server.server_close()
+
+
 def patch_assignment_paths(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")

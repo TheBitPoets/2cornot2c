@@ -2615,12 +2615,33 @@ class BoundedThreadingHTTPServer(ThreadingHTTPServer):
         super().__init__(*args, **kwargs)
 
     def process_request(self, request, client_address) -> None:
-        self._request_slots.acquire()
+        if not self._request_slots.acquire(blocking=False):
+            self.reject_overloaded_request(request)
+            return
         try:
             super().process_request(request, client_address)
         except BaseException:
             self._request_slots.release()
             raise
+
+    def reject_overloaded_request(self, request) -> None:
+        """Reject a connection without occupying the server accept loop."""
+
+        response = (
+            b"HTTP/1.1 503 Service Unavailable\r\n"
+            b"Connection: close\r\n"
+            b"Content-Type: text/plain; charset=utf-8\r\n"
+            b"Content-Length: 34\r\n"
+            b"Retry-After: 1\r\n\r\n"
+            b"Servizio temporaneamente occupato."
+        )
+        try:
+            request.settimeout(1)
+            request.sendall(response)
+        except OSError:
+            pass
+        finally:
+            self.shutdown_request(request)
 
     def process_request_thread(self, request, client_address) -> None:
         try:
