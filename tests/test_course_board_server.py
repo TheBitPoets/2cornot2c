@@ -359,13 +359,16 @@ def test_delete_assignment_record_removes_saved_record(tmp_path, monkeypatch) ->
     assert not (tmp_path / assignment["path"]).exists()
 
 
-def test_help_operation_ids_are_deduplicated_by_effective_lock_key() -> None:
+def test_help_operation_ids_keep_distinct_student_identities() -> None:
     operation_ids = course_board_server.unique_student_help_operation_ids(
         "assignment-001",
         {"mario.rossi", "mario-rossi"},
     )
 
-    assert len(operation_ids) == 1
+    assert len(operation_ids) == 2
+    with course_board_server.assignment_operation_lock(operation_ids[0], blocking=False):
+        with course_board_server.assignment_operation_lock(operation_ids[1], blocking=False):
+            pass
 
 
 def test_delete_assignment_record_resets_server_help_history_and_budget(tmp_path, monkeypatch) -> None:

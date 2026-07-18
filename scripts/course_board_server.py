@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import hashlib
 import ipaddress
 import json
 import mimetypes
@@ -129,7 +130,10 @@ class StudentHelpBusyError(RuntimeError):
 def normalized_assignment_operation_id(operation_id: str) -> str:
     """Return the canonical key shared by equivalent operation identifiers."""
 
-    return create_activity.slugify(str(operation_id or "").strip())
+    original = str(operation_id or "").strip()
+    readable = create_activity.slugify(original)[:48] or "operation"
+    digest = hashlib.sha256(original.encode("utf-8")).hexdigest()
+    return f"{readable}-{digest}"
 
 
 class DataRootProcessLock:
