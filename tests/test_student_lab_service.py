@@ -2,7 +2,51 @@ from __future__ import annotations
 
 import json
 
-from scripts import assignment_records, student_help_service, student_lab_service, student_support_policy
+import pytest
+
+from scripts import (
+    assignment_records,
+    student_help_auth,
+    student_help_service,
+    student_identity,
+    student_lab_service,
+    student_support_policy,
+)
+from scripts.student_help_provider import StudentHelpResponse
+
+
+class RecordingProvider:
+    def __init__(self) -> None:
+        self.requests = []
+
+    def respond(self, request):
+        self.requests.append(request)
+        return StudentHelpResponse(
+            status="ready",
+            provider="test-server",
+            provider_label="Provider server test",
+            message="Parti dal primo test fallito.",
+            usage={"input_tokens": 1, "output_tokens": 2, "total_tokens": 3},
+        )
+
+
+def test_confined_regular_file_rejects_external_and_symlinked_files(tmp_path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    local_file = repo / "local.json"
+    local_file.write_text("{}", encoding="utf-8")
+    external_file = tmp_path / "external.json"
+    external_file.write_text("{}", encoding="utf-8")
+
+    assert student_identity.confined_regular_file(repo, local_file) == local_file.resolve()
+    assert student_identity.confined_regular_file(repo, external_file) is None
+
+    linked_file = repo / "linked.json"
+    try:
+        linked_file.symlink_to(external_file)
+    except OSError:
+        pytest.skip("Creazione symlink non disponibile su questa piattaforma.")
+    assert student_identity.confined_regular_file(repo, linked_file) is None
 
 
 def write_activity(root, activity_id: str = "python-base-somma-001", student_support_mode: str = "") -> str:
@@ -104,6 +148,355 @@ def test_student_lab_lists_only_requested_student_assignments(tmp_path) -> None:
     assert assignment["runner"]["status"] == "not_run"
 
 
+def test_student_lab_hides_paths_outside_server_root(tmp_path) -> None:
+    root = tmp_path / "server-root"
+    root.mkdir()
+    external_root = tmp_path / "external-student-data"
+    external_repo = external_root / "rossi-mario"
+    external_repo.mkdir(parents=True)
+    external_activity = external_root / "activity.json"
+    external_activity.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "id": "python-base-somma-001",
+                "title": "Somma esterna",
+                "kind": "laboratorio",
+                "language": "python",
+                "source_name": "main.py",
+                "instructions": "Somma due numeri.",
+            }
+        ),
+        encoding="utf-8",
+    )
+    assignment = sample_assignment(
+        root,
+        activity_path=str(external_activity),
+        target_type="student",
+        targets=[{"student_id": "rossi-mario", "path": str(external_repo)}],
+    )
+    write_assignment(root, assignment)
+
+    payload = student_lab_service.student_lab_payload(
+        root=root,
+        student_id="rossi-mario",
+        now="2026-10-18T12:00:00+02:00",
+    )
+
+    lab_assignment = payload["assignments"][0]
+    assert lab_assignment["workspace"] == {"path": "", "exists": False}
+    assert lab_assignment["activity"]["path"] == ""
+    assert lab_assignment["activity"]["exists"] is True
+    assert lab_assignment["report"]["path"] == ""
+    assert str(external_root) not in json.dumps(payload)
+
+
+def test_student_lab_retains_external_paths_for_trusted_local_consumers(tmp_path) -> None:
+    root = tmp_path / "server-root"
+    root.mkdir()
+    external_root = tmp_path / "external-student-data"
+    external_repo = external_root / "rossi-mario"
+    workspace = external_repo / "assignments" / "python-base-somma-001"
+    workspace.mkdir(parents=True)
+    external_activity = external_root / "activity.json"
+    external_activity.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "id": "python-base-somma-001",
+                "title": "Somma esterna",
+                "kind": "laboratorio",
+                "language": "python",
+                "source_name": "main.py",
+                "instructions": "Somma due numeri.",
+            }
+        ),
+        encoding="utf-8",
+    )
+    assignment = sample_assignment(
+        root,
+        activity_path=str(external_activity),
+        target_type="student",
+        targets=[{"student_id": "rossi-mario", "path": str(external_repo)}],
+    )
+    write_assignment(root, assignment)
+
+    payload = student_lab_service.student_lab_payload(
+        root=root,
+        student_id="rossi-mario",
+        now="2026-10-18T12:00:00+02:00",
+        expose_external_paths=True,
+    )
+
+    lab_assignment = payload["assignments"][0]
+    assert lab_assignment["workspace"] == {
+        "path": student_lab_service.url_path(workspace),
+        "exists": True,
+    }
+    assert lab_assignment["activity"]["path"] == student_lab_service.url_path(external_activity)
+    assert lab_assignment["report"]["path"] == student_lab_service.url_path(
+        external_repo / "reports" / "python-base-somma-001" / "latest.json"
+    )
+
+
+def test_stable_student_id_cannot_be_replaced_by_target_alias(tmp_path) -> None:
+    assignment = sample_assignment(
+        tmp_path,
+        target_type="student",
+        targets=[
+            {
+                "student_id": "studente-stabile-001",
+                "display_name": "Alias Studente",
+                "repo_ref": "TheBitPoets/alias-cartella",
+                "path": "examples/assignment_tracking/student_repos/alias-cartella",
+            }
+        ],
+    )
+    write_assignment(tmp_path, assignment)
+
+    assert student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id="alias-cartella",
+    ) == []
+    stable_assignments = student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id="studente-stabile-001",
+    )
+    assert len(stable_assignments) == 1
+    assert stable_assignments[0]["student_id"] == "studente-stabile-001"
+
+
+def test_equivalent_targets_produce_only_one_assignment_row(tmp_path) -> None:
+    workspace = (
+        tmp_path
+        / "examples"
+        / "assignment_tracking"
+        / "student_repos"
+        / "rossi-mario"
+        / "assignments"
+        / "python-base-somma-001"
+    )
+    workspace.mkdir(parents=True)
+    assignment = sample_assignment(
+        tmp_path,
+        target_type="group",
+        targets=[
+            {"student_id": "rossi-mario"},
+            {
+                "student_id": "rossi-mario",
+                "path": "examples/assignment_tracking/student_repos/rossi-mario",
+            },
+        ],
+    )
+    write_assignment(tmp_path, assignment)
+
+    assignments = student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id="rossi-mario",
+    )
+
+    assert len(assignments) == 1
+    assert assignments[0]["workspace"]["exists"] is True
+
+
+def test_legacy_target_authorizes_only_one_canonical_identity(tmp_path) -> None:
+    assignment = sample_assignment(
+        tmp_path,
+        target_type="student",
+        targets=[
+            {
+                "target": "studenti/studente-canonico",
+                "path": "studenti/alias-da-path",
+                "repo_ref": "TheBitPoets/alias-da-repository",
+                "display_name": "Alias Visualizzato",
+            }
+        ],
+    )
+    write_assignment(tmp_path, assignment)
+
+    canonical_assignments = student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id="studente-canonico",
+    )
+
+    assert len(canonical_assignments) == 1
+    assert canonical_assignments[0]["student_id"] == "studente-canonico"
+    for alias in ("alias-da-path", "alias-da-repository", "Alias Visualizzato"):
+        assert student_lab_service.list_student_lab_assignments(
+            root=tmp_path,
+            student_id=alias,
+        ) == []
+
+
+def test_display_only_legacy_target_uses_token_safe_identity(tmp_path) -> None:
+    display_name = "Mario Rossi"
+    canonical_student_id = student_lab_service.legacy_display_student_id(display_name)
+    assignment = sample_assignment(
+        tmp_path,
+        target_type="student",
+        targets=[{"display_name": display_name}],
+    )
+    write_assignment(tmp_path, assignment)
+
+    assignments = student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id=canonical_student_id,
+    )
+    token = student_help_auth.create_student_token(
+        canonical_student_id,
+        "secret-studente-demo-lungo-almeno-trentadue-caratteri",
+    )
+
+    assert canonical_student_id.startswith("legacy-mario-rossi-")
+    assert len(assignments) == 1
+    assert assignments[0]["student_id"] == canonical_student_id
+    assert student_help_auth.verify_student_token(
+        token,
+        "secret-studente-demo-lungo-almeno-trentadue-caratteri",
+    ) == canonical_student_id
+    assert student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id=display_name,
+    ) == []
+
+
+def test_display_only_legacy_target_reuses_existing_workspace_folder(tmp_path) -> None:
+    display_name = "Mario Rossi"
+    canonical_student_id = student_lab_service.legacy_display_student_id(display_name)
+    assignment = sample_assignment(
+        tmp_path,
+        target_type="student",
+        targets=[{"display_name": display_name}],
+    )
+    write_assignment(tmp_path, assignment)
+    workspace = (
+        tmp_path
+        / "examples"
+        / "assignment_tracking"
+        / "student_repos"
+        / display_name
+        / "assignments"
+        / "python-base-somma-001"
+    )
+    workspace.mkdir(parents=True)
+
+    assignments = student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id=canonical_student_id,
+    )
+
+    assert assignments[0]["student_id"] == canonical_student_id
+    assert assignments[0]["workspace"] == {
+        "path": student_lab_service.url_path(workspace.relative_to(tmp_path)),
+        "exists": True,
+    }
+
+
+def test_invalid_explicit_student_id_uses_token_safe_identity(tmp_path) -> None:
+    original_student_id = "Mario Rossi"
+    canonical_student_id = student_lab_service.legacy_display_student_id(original_student_id)
+    target = {"student_id": original_student_id}
+    assignment = sample_assignment(
+        tmp_path,
+        target_type="student",
+        targets=[target],
+    )
+    write_assignment(tmp_path, assignment)
+
+    assignments = student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id=canonical_student_id,
+    )
+    token = student_help_auth.create_student_token(
+        canonical_student_id,
+        "secret-studente-demo-lungo-almeno-trentadue-caratteri",
+    )
+
+    assert len(assignments) == 1
+    assert assignments[0]["student_id"] == canonical_student_id
+    assert student_help_auth.verify_student_token(
+        token,
+        "secret-studente-demo-lungo-almeno-trentadue-caratteri",
+    ) == canonical_student_id
+    assert student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id=original_student_id,
+    ) == []
+    assert student_lab_service.target_cleanup_student_ids(target) == {
+        original_student_id,
+        canonical_student_id,
+    }
+
+
+def test_legacy_path_with_spaces_uses_token_safe_identity(tmp_path) -> None:
+    legacy_path = "examples/assignment_tracking/student_repos/Mario Rossi"
+    canonical_student_id = student_lab_service.legacy_display_student_id("Mario Rossi")
+    target = {"path": legacy_path}
+    assignment = sample_assignment(
+        tmp_path,
+        target_type="student",
+        targets=[target],
+    )
+    write_assignment(tmp_path, assignment)
+
+    assignments = student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id=canonical_student_id,
+    )
+    token = student_help_auth.create_student_token(
+        canonical_student_id,
+        "secret-studente-demo-lungo-almeno-trentadue-caratteri",
+    )
+
+    assert len(assignments) == 1
+    assert assignments[0]["student_id"] == canonical_student_id
+    assert student_help_auth.verify_student_token(
+        token,
+        "secret-studente-demo-lungo-almeno-trentadue-caratteri",
+    ) == canonical_student_id
+    assert student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id="Mario Rossi",
+    ) == []
+    assert student_lab_service.target_cleanup_student_ids(target) == {
+        "Mario Rossi",
+        canonical_student_id,
+    }
+
+
+def test_server_help_uses_canonical_student_id(tmp_path) -> None:
+    activity_path = write_activity(tmp_path, student_support_mode="ai-assisted")
+    assignment = write_assignment(
+        tmp_path,
+        sample_assignment(
+            tmp_path,
+            activity_path=activity_path,
+            target_type="student",
+            targets=[
+                {
+                    "student_id": "studente-stabile-001",
+                    "repo_ref": "TheBitPoets/cartella-diversa",
+                    "path": "examples/assignment_tracking/student_repos/cartella-diversa",
+                }
+            ],
+        ),
+    )
+
+    student_lab_service.record_student_help_request(
+        root=tmp_path,
+        student_id="studente-stabile-001",
+        assignment_id=assignment["id"],
+        help_type="ai",
+        prompt="Come procedo?",
+        provider=RecordingProvider(),
+    )
+
+    stable_log = student_help_service.server_help_log_path(tmp_path, "studente-stabile-001", assignment["id"])
+    alias_log = student_help_service.server_help_log_path(tmp_path, "cartella-diversa", assignment["id"])
+    assert stable_log.is_file()
+    assert not alias_log.exists()
+
+
 def test_student_lab_exposes_explicit_support_policy(tmp_path) -> None:
     activity_id = "python-ai-assisted-001"
     activity_path = write_activity(tmp_path, activity_id=activity_id, student_support_mode="ai-assisted")
@@ -121,6 +514,150 @@ def test_student_lab_exposes_explicit_support_policy(tmp_path) -> None:
     assert assignment["support_policy"]["ai_allowed"] is True
     assert assignment["support_policy"]["ai_request_limit"] == 5
     assert "suggerimenti AI controllati" in assignment["support_policy"]["allowed"]
+
+
+def test_student_lab_accepts_custom_unicode_assignment_id(tmp_path) -> None:
+    assignment_record = write_assignment(
+        tmp_path,
+        sample_assignment(tmp_path, assignment_id="Compito è 1"),
+    )
+
+    assignment = student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id="rossi-mario",
+    )[0]
+
+    assert assignment["assignment_id"] == assignment_record["id"]
+    assert "path" not in assignment["help"]
+
+
+def test_record_student_help_request_rebuilds_policy_and_context_on_server(tmp_path) -> None:
+    activity_id = "python-ai-assisted-001"
+    activity_path = write_activity(tmp_path, activity_id=activity_id, student_support_mode="ai-assisted")
+    assignment = write_assignment(
+        tmp_path,
+        sample_assignment(tmp_path, activity_id=activity_id, activity_path=activity_path),
+    )
+    provider = RecordingProvider()
+
+    event = student_lab_service.record_student_help_request(
+        root=tmp_path,
+        student_id="rossi-mario",
+        assignment_id=assignment["id"],
+        help_type="ai",
+        prompt="Come individuo il caso limite?",
+        provider=provider,
+        now="2026-10-18T12:00:00+02:00",
+    )
+
+    assert event["allowed"] is True
+    assert event["response"]["provider"] == "test-server"
+    assert len(provider.requests) == 1
+    assert provider.requests[0].activity_id == activity_id
+    assert provider.requests[0].context == {
+        "title": "Somma in Python",
+        "instructions": "Scrivi un programma che stampa una somma.",
+        "language": "python",
+        "topics": ["variabili", "input-output"],
+        "grading_status": "not_graded",
+        "failed_tests": [],
+    }
+    log_path = student_help_service.server_help_log_path(tmp_path, "rossi-mario", assignment["id"])
+    assert json.loads(log_path.read_text(encoding="utf-8"))["events"][0]["prompt"] == "Come individuo il caso limite?"
+
+
+def test_record_student_help_request_rejects_assignment_of_another_student(tmp_path) -> None:
+    assignment = write_assignment(tmp_path, sample_assignment(tmp_path))
+
+    with pytest.raises(ValueError, match="Consegna non trovata"):
+        student_lab_service.record_student_help_request(
+            root=tmp_path,
+            student_id="studente-inesistente",
+            assignment_id=assignment["id"],
+            help_type="ai",
+            prompt="Prova",
+            provider=RecordingProvider(),
+            now="2026-10-18T12:00:00+02:00",
+        )
+
+
+def test_student_repo_cannot_override_server_help_budget(tmp_path) -> None:
+    activity_path = write_activity(tmp_path, student_support_mode="ai-assisted")
+    assignment_record = write_assignment(tmp_path, sample_assignment(tmp_path, activity_path=activity_path))
+    student_repo = tmp_path / "examples" / "assignment_tracking" / "student_repos" / "rossi-mario"
+    legacy_log = student_help_service.help_log_path(student_repo, "python-base-somma-001")
+    student_help_service.write_help_events(
+        legacy_log,
+        [
+            {
+                "help_type": "ai",
+                "allowed": True,
+                "budget_charged": True,
+            }
+        ],
+    )
+
+    assignment = student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id="rossi-mario",
+    )[0]
+
+    assert assignment["assignment_id"] == assignment_record["id"]
+    assert assignment["help"]["total"] == 0
+    assert assignment["help"]["legacy_unverified"] is True
+    assert assignment["help"]["legacy"]["total"] == 1
+    assert assignment["help"]["ai_budget"]["used"] == 0
+    assert "path" not in assignment["help"]
+
+
+def test_same_activity_assignments_have_independent_help_budgets(tmp_path) -> None:
+    activity_path = write_activity(tmp_path, student_support_mode="ai-assisted")
+    first_record = write_assignment(
+        tmp_path,
+        sample_assignment(tmp_path, activity_path=activity_path),
+    )
+    second_record = write_assignment(
+        tmp_path,
+        sample_assignment(
+            tmp_path,
+            activity_path=activity_path,
+            assigned_at="2026-10-13T09:00:00+02:00",
+            due_at="2026-10-20T23:59:00+02:00",
+        ),
+    )
+    provider = RecordingProvider()
+
+    student_lab_service.record_student_help_request(
+        root=tmp_path,
+        student_id="rossi-mario",
+        assignment_id=first_record["id"],
+        help_type="ai",
+        prompt="Suggerimento per la prima consegna.",
+        provider=provider,
+    )
+
+    assignments = student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id="rossi-mario",
+    )
+    budgets = {item["assignment_id"]: item["help"]["ai_budget"] for item in assignments}
+    assert budgets[first_record["id"]]["used"] == 1
+    assert budgets[second_record["id"]]["used"] == 0
+
+
+def test_record_student_help_request_limits_untrusted_prompt_size(tmp_path) -> None:
+    assignment = write_assignment(tmp_path, sample_assignment(tmp_path))
+
+    with pytest.raises(ValueError, match="supera 2000 caratteri"):
+        student_lab_service.record_student_help_request(
+            root=tmp_path,
+            student_id="rossi-mario",
+            assignment_id=assignment["id"],
+            help_type="teoria",
+            prompt="x" * 2001,
+            provider=RecordingProvider(),
+            now="2026-10-18T12:00:00+02:00",
+        )
 
 
 def test_student_lab_marks_missing_after_due_date_without_report(tmp_path) -> None:
@@ -235,24 +772,24 @@ def test_student_lab_exposes_saved_failed_test_messages(tmp_path) -> None:
 
 def test_student_lab_exposes_help_summary(tmp_path) -> None:
     activity_path = write_activity(tmp_path, student_support_mode="studio-guidato")
-    write_assignment(tmp_path, sample_assignment(tmp_path, activity_path=activity_path))
-    repo = tmp_path / "examples" / "assignment_tracking" / "student_repos" / "rossi-mario"
+    assignment_record = write_assignment(tmp_path, sample_assignment(tmp_path, activity_path=activity_path))
     policy = student_support_policy.support_policy("studio-guidato")
+    log_path = student_help_service.server_help_log_path(tmp_path, "rossi-mario", assignment_record["id"])
     student_help_service.record_help_request(
-        repo_path=repo,
         activity_id="python-base-somma-001",
         support_policy=policy,
         help_type="teoria",
         prompt="Ripassami gli array.",
         now="2026-10-18T17:15:00+02:00",
+        log_path=log_path,
     )
     student_help_service.record_help_request(
-        repo_path=repo,
         activity_id="python-base-somma-001",
         support_policy=policy,
         help_type="ai",
         prompt="Scrivi la soluzione.",
         now="2026-10-18T17:20:00+02:00",
+        log_path=log_path,
     )
 
     assignment = student_lab_service.list_student_lab_assignments(
@@ -261,7 +798,7 @@ def test_student_lab_exposes_help_summary(tmp_path) -> None:
         now="2026-10-18T18:00:00+02:00",
     )[0]
 
-    assert assignment["help"]["path"] == "examples/assignment_tracking/student_repos/rossi-mario/help/python-base-somma-001/events.json"
+    assert "path" not in assignment["help"]
     assert assignment["help"]["total"] == 2
     assert assignment["help"]["allowed"] == 1
     assert assignment["help"]["denied"] == 1
@@ -270,18 +807,47 @@ def test_student_lab_exposes_help_summary(tmp_path) -> None:
     assert assignment["help"]["ai_budget"] == {"limit": 0, "used": 0, "remaining": 0, "exhausted": False}
 
 
+def test_student_help_history_requires_assignment_owned_by_student(tmp_path) -> None:
+    activity_path = write_activity(tmp_path, student_support_mode="ai-assisted")
+    assignment_record = write_assignment(tmp_path, sample_assignment(tmp_path, activity_path=activity_path))
+    provider = RecordingProvider()
+    student_lab_service.record_student_help_request(
+        root=tmp_path,
+        student_id="rossi-mario",
+        assignment_id=assignment_record["id"],
+        help_type="ai",
+        prompt="Come procedo?",
+        provider=provider,
+    )
+
+    history = student_lab_service.student_help_history(
+        root=tmp_path,
+        student_id="rossi-mario",
+        assignment_id=assignment_record["id"],
+    )
+
+    assert history["assignment_id"] == assignment_record["id"]
+    assert history["events"][0]["prompt"] == "Come procedo?"
+    assert history["events"][0]["source"] == "server"
+    with pytest.raises(ValueError, match="Consegna non trovata"):
+        student_lab_service.student_help_history(
+            root=tmp_path,
+            student_id="studente-inesistente",
+            assignment_id=assignment_record["id"],
+        )
+
+
 def test_student_lab_exposes_ai_budget_summary(tmp_path) -> None:
     activity_path = write_activity(tmp_path, student_support_mode="ai-assisted")
-    write_assignment(tmp_path, sample_assignment(tmp_path, activity_path=activity_path))
-    repo = tmp_path / "examples" / "assignment_tracking" / "student_repos" / "rossi-mario"
+    assignment_record = write_assignment(tmp_path, sample_assignment(tmp_path, activity_path=activity_path))
     policy = student_support_policy.support_policy("ai-assisted")
     student_help_service.record_help_request(
-        repo_path=repo,
         activity_id="python-base-somma-001",
         support_policy=policy,
         help_type="ai",
         prompt="Dammi un suggerimento.",
         now="2026-10-18T17:15:00+02:00",
+        log_path=student_help_service.server_help_log_path(tmp_path, "rossi-mario", assignment_record["id"]),
     )
 
     assignment = student_lab_service.list_student_lab_assignments(
@@ -312,6 +878,51 @@ def test_student_lab_keeps_assignment_when_local_repo_path_is_only_inferred(tmp_
     assert len(assignments) == 1
     assert assignments[0]["workspace"]["path"] == "examples/assignment_tracking/student_repos/neri-giulia/assignments/python-base-somma-001"
     assert assignments[0]["workspace"]["exists"] is False
+
+
+def test_student_lab_rejects_same_identity_bound_to_different_repositories(tmp_path) -> None:
+    write_assignment(
+        tmp_path,
+        sample_assignment(
+            tmp_path,
+            assignment_id="assignment-classe-a-mario",
+            target_type="student",
+            targets=[{"student_id": "mario", "path": "classe-a/mario"}],
+        ),
+    )
+    write_assignment(
+        tmp_path,
+        sample_assignment(
+            tmp_path,
+            assignment_id="assignment-classe-b-mario",
+            target_type="student",
+            targets=[{"student_id": "mario", "path": "classe-b/mario"}],
+        ),
+    )
+
+    with pytest.raises(student_lab_service.StudentLabDataError, match="Dati delle consegne non disponibili") as error:
+        student_lab_service.list_student_lab_assignments(
+            root=tmp_path,
+            student_id="mario",
+            now="2026-10-18T12:00:00+02:00",
+        )
+    assert "Identificativo studente ambiguo: mario" in str(error.value.__cause__)
+
+
+def test_student_lab_data_error_hides_persisted_report_paths(monkeypatch, tmp_path) -> None:
+    private_path = str(tmp_path / "teacher-reports" / "privato" / "report.json")
+
+    def fail_with_private_path(**kwargs):
+        raise ValueError(f"Report non valido: {private_path}")
+
+    monkeypatch.setattr(student_lab_service, "_list_student_lab_assignments", fail_with_private_path)
+
+    with pytest.raises(student_lab_service.StudentLabDataError) as error:
+        student_lab_service.list_student_lab_assignments(root=tmp_path, student_id="rossi-mario")
+
+    assert str(error.value) == "Dati delle consegne non disponibili. Avvisa il docente."
+    assert private_path not in str(error.value)
+    assert private_path in str(error.value.__cause__)
 
 
 def test_student_lab_rejects_missing_student_id(tmp_path) -> None:

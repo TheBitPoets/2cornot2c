@@ -1,11 +1,17 @@
 from __future__ import annotations
 
+import hashlib
 import json
+import os
+import re
+import threading
+import uuid
 from json import JSONDecodeError
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
+from scripts import assignment_records
 from scripts.student_help_provider import (
     STUDENT_HELP_RESPONSE_SCHEMA_VERSION,
     StudentHelpProvider,
@@ -14,8 +20,29 @@ from scripts.student_help_provider import (
 
 
 HELP_LOG_SCHEMA_VERSION = "student_help_log.v1"
+MAX_HELP_LOG_BYTES = 2 * 1024 * 1024
 HELP_EVENT_SCHEMA_VERSION = "student_help_event.v1"
+PENDING_PROVIDER_MAX_AGE = timedelta(minutes=5)
+MAX_HELP_EVENTS_PER_ASSIGNMENT = 40
+MAX_PROVIDER_MESSAGE_CHARS = 8_000
 PROVIDER_ERROR_DETAIL = "Il provider non ha potuto completare la richiesta. Riprova più tardi o avvisa il docente."
+_HELP_LOG_LOCKS: dict[str, threading.Lock] = {}
+_HELP_LOG_LOCKS_GUARD = threading.Lock()
+_ACTIVE_PROVIDER_CALLS: set[tuple[str, str]] = set()
+_ACTIVE_PROVIDER_CALLS_GUARD = threading.Lock()
+REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{16,128}$")
+
+
+class StudentHelpRateLimitError(ValueError):
+    """Raised when one assignment has reached its persisted help limit."""
+
+
+class StudentHelpPendingError(ValueError):
+    """Raised when an idempotent retry finds a provider call still running."""
+
+
+class StudentHelpRequestNotFoundError(ValueError):
+    """Raised when a read-only idempotency check finds no persisted request."""
 
 HELP_TYPES: dict[str, dict[str, str]] = {
     "feedback-tecnico": {
@@ -55,6 +82,12 @@ def clean_text(value: Any) -> str:
 
 def parse_now(now: str | None = None) -> str:
     return clean_text(now) or datetime.now().astimezone().isoformat(timespec="seconds")
+
+
+def reconciliation_now() -> str:
+    """Return the authoritative wall clock used for provider reservations."""
+
+    return datetime.now().astimezone().isoformat(timespec="seconds")
 
 
 def normalize_help_type(value: Any) -> str:
@@ -114,6 +147,8 @@ def provider_response_payload(response: Any) -> dict[str, Any]:
         raise ValueError("Etichetta provider non valida.")
     if not isinstance(message, str) or (status == "ready" and not message.strip()):
         raise ValueError("Messaggio risposta provider non valido.")
+    if len(message) > MAX_PROVIDER_MESSAGE_CHARS:
+        raise ValueError("Messaggio risposta provider troppo grande.")
     if not isinstance(detail, str):
         raise ValueError("Dettaglio risposta provider non valido.")
     usage = payload.get("usage")
@@ -137,7 +172,73 @@ def provider_response_payload(response: Any) -> dict[str, Any]:
 
 
 def ai_events_used(events: list[dict[str, Any]]) -> int:
-    return sum(1 for event in events if normalize_help_type(event.get("help_type")) == "ai" and event.get("allowed") is True)
+    return sum(
+        1
+        for event in events
+        if normalize_help_type(event.get("help_type")) == "ai"
+        and event.get("allowed") is True
+        and event.get("budget_charged") is not False
+    )
+
+
+def provider_call_key(log_path: Path, request_id: str) -> tuple[str, str]:
+    return str(log_path.resolve(strict=False)), request_id
+
+
+def set_provider_call_active(log_path: Path, request_id: str, active: bool) -> None:
+    key = provider_call_key(log_path, request_id)
+    with _ACTIVE_PROVIDER_CALLS_GUARD:
+        if active:
+            _ACTIVE_PROVIDER_CALLS.add(key)
+        else:
+            _ACTIVE_PROVIDER_CALLS.discard(key)
+
+
+def provider_call_is_active(log_path: Path, request_id: str) -> bool:
+    with _ACTIVE_PROVIDER_CALLS_GUARD:
+        return provider_call_key(log_path, request_id) in _ACTIVE_PROVIDER_CALLS
+
+
+def release_stale_provider_reservations(
+    events: list[dict[str, Any]],
+    now: str,
+    log_path: Path,
+) -> bool:
+    """Release budget held by provider calls that cannot still be running."""
+
+    try:
+        current = datetime.fromisoformat(now)
+    except ValueError:
+        return False
+    changed = False
+    for event in events:
+        if event.get("provider_status") != "pending" or event.get("budget_charged") is False:
+            continue
+        if provider_call_is_active(log_path, clean_text(event.get("request_id"))):
+            continue
+        try:
+            requested_at = datetime.fromisoformat(clean_text(event.get("requested_at")))
+        except ValueError:
+            continue
+        try:
+            age = current - requested_at
+        except TypeError:
+            continue
+        if age <= PENDING_PROVIDER_MAX_AGE:
+            continue
+        event["provider_status"] = "interrupted"
+        event["budget_charged"] = False
+        event["response"] = {
+            "schema_version": STUDENT_HELP_RESPONSE_SCHEMA_VERSION,
+            "status": "error",
+            "provider": "interrupted-provider-call",
+            "provider_label": "Richiesta interrotta",
+            "message": "",
+            "usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
+            "detail": PROVIDER_ERROR_DETAIL,
+        }
+        changed = True
+    return changed
 
 
 def ai_budget_status(support_policy: dict[str, Any], events: list[dict[str, Any]]) -> dict[str, Any]:
@@ -170,6 +271,19 @@ def help_log_path(repo_path: Path, activity_id: str) -> Path:
     return repo_path / "help" / clean_text(activity_id) / "events.json"
 
 
+def server_help_log_path(root: Path, student_id: str, assignment_id: str) -> Path:
+    """Return the authoritative server-side log for one assigned activity."""
+
+    keys = []
+    for label, value in (("student_id", student_id), ("assignment_id", assignment_id)):
+        key = clean_text(value)
+        if not key:
+            raise ValueError(f"{label} obbligatorio per il registro aiuti.")
+        digest = hashlib.sha256(key.encode("utf-8")).hexdigest()
+        keys.append(f"{label}-{digest}")
+    return root / "teacher-help-events" / keys[0] / keys[1] / "events.json"
+
+
 def load_help_events(log_path: Path) -> list[dict[str, Any]]:
     events, _ = read_help_log(log_path)
     return events
@@ -178,8 +292,12 @@ def load_help_events(log_path: Path) -> list[dict[str, Any]]:
 def read_help_log(log_path: Path) -> tuple[list[dict[str, Any]], str]:
     if not log_path.is_file():
         return [], ""
+    if log_path.stat().st_size > MAX_HELP_LOG_BYTES:
+        return [], f"Registro richieste di aiuto troppo grande: supera {MAX_HELP_LOG_BYTES} byte."
     try:
         payload = json.loads(log_path.read_text(encoding="utf-8-sig"))
+    except UnicodeDecodeError:
+        return [], "Encoding del log aiuti non valido: atteso UTF-8."
     except JSONDecodeError as error:
         return [], f"JSON non valido: {error.msg}"
     if isinstance(payload, dict):
@@ -192,84 +310,203 @@ def read_help_log(log_path: Path) -> tuple[list[dict[str, Any]], str]:
 
 
 def write_help_events(log_path: Path, events: list[dict[str, Any]]) -> None:
-    log_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "schema_version": HELP_LOG_SCHEMA_VERSION,
         "events": events,
     }
-    log_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    serialized = (json.dumps(payload, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+    if len(serialized) > MAX_HELP_LOG_BYTES:
+        raise StudentHelpRateLimitError(
+            "Limite spazio del registro aiuti raggiunto per questa consegna. Avvisa il docente."
+        )
+    assignment_records.create_durable_directory(log_path.parent)
+    temporary_path = log_path.with_name(f".{log_path.name}.{uuid.uuid4().hex}.tmp")
+    try:
+        with temporary_path.open("wb") as stream:
+            stream.write(serialized)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary_path, log_path)
+        assignment_records.sync_directory(log_path.parent)
+    finally:
+        temporary_path.unlink(missing_ok=True)
+
+
+def load_writable_help_events(log_path: Path) -> list[dict[str, Any]]:
+    """Load a log for mutation, refusing to overwrite invalid existing data."""
+
+    events, error = read_help_log(log_path)
+    if error:
+        raise RuntimeError("Registro richieste di aiuto non leggibile; intervento docente necessario.")
+    return events
+
+
+def load_reconciled_help_events(log_path: Path, now: str | None = None) -> tuple[list[dict[str, Any]], str]:
+    """Load a log and reconcile reservations using the service wall clock."""
+
+    with help_log_lock(log_path):
+        events, error = read_help_log(log_path)
+        if not error and release_stale_provider_reservations(events, reconciliation_now(), log_path):
+            write_help_events(log_path, events)
+        return events, error
+
+
+def help_log_lock(log_path: Path) -> threading.Lock:
+    """Return the process-local lock used to serialize one help log."""
+
+    key = str(log_path.resolve(strict=False))
+    with _HELP_LOG_LOCKS_GUARD:
+        return _HELP_LOG_LOCKS.setdefault(key, threading.Lock())
 
 
 def record_help_request(
     *,
-    repo_path: Path,
+    repo_path: Path | None = None,
     activity_id: str,
     support_policy: dict[str, Any],
     help_type: Any,
     prompt: str = "",
     now: str | None = None,
     provider: StudentHelpProvider | None = None,
+    provider_factory: Callable[[], StudentHelpProvider] | None = None,
     context: dict[str, Any] | None = None,
+    log_path: Path | None = None,
+    request_id: str = "",
+    existing_only: bool = False,
 ) -> dict[str, Any]:
-    path = help_log_path(repo_path, activity_id)
-    events = load_help_events(path)
-    decision = apply_budget_limit(evaluate_help_request(support_policy, help_type), support_policy, events)
+    if log_path is None:
+        if repo_path is None:
+            raise ValueError("Percorso registro aiuti non disponibile.")
+        log_path = help_log_path(repo_path, activity_id)
+    path = log_path
     requested_at = parse_now(now)
-    event = {
-        "schema_version": HELP_EVENT_SCHEMA_VERSION,
-        "requested_at": requested_at,
-        "activity_id": clean_text(activity_id),
-        "help_type": decision["help_type"],
-        "label": decision["label"],
-        "allowed": decision["allowed"],
-        "reason": decision["reason"],
-        "prompt": clean_text(prompt),
-    }
-    if "budget" in decision:
-        event["budget"] = decision["budget"]
-    if decision["allowed"] is True and provider is not None:
-        try:
-            response = provider.respond(
-                StudentHelpRequest(
-                    activity_id=clean_text(activity_id),
-                    help_type=decision["help_type"],
-                    prompt=clean_text(prompt),
-                    context=dict(context or {}),
-                )
+    clean_request_id = str(request_id or "").strip() or uuid.uuid4().hex
+    if not REQUEST_ID_PATTERN.fullmatch(clean_request_id):
+        raise ValueError("request_id non valido.")
+    with help_log_lock(path):
+        events = load_writable_help_events(path)
+        reconciled = release_stale_provider_reservations(events, requested_at, path)
+        existing = next(
+            (event for event in events if clean_text(event.get("request_id")) == clean_request_id),
+            None,
+        )
+        if existing is not None:
+            expected_help_type = evaluate_help_request(support_policy, help_type)["help_type"]
+            if (
+                clean_text(existing.get("activity_id")) != clean_text(activity_id)
+                or clean_text(existing.get("help_type")) != expected_help_type
+                or clean_text(existing.get("prompt")) != clean_text(prompt)
+            ):
+                raise ValueError("request_id gia usato per una richiesta diversa.")
+            if reconciled:
+                write_help_events(path, events)
+            if existing.get("provider_status") == "pending":
+                raise StudentHelpPendingError("Richiesta di aiuto ancora in elaborazione. Riprova tra poco.")
+            return existing
+        if existing_only:
+            if reconciled:
+                write_help_events(path, events)
+            raise StudentHelpRequestNotFoundError("Richiesta idempotente non ancora registrata.")
+        if len(events) >= MAX_HELP_EVENTS_PER_ASSIGNMENT:
+            raise StudentHelpRateLimitError(
+                "Limite richieste di aiuto raggiunto per questa consegna. Avvisa il docente."
             )
-            event["response"] = provider_response_payload(response)
-        except Exception:  # Provider failures must not discard the student's request.
-            event["response"] = {
-                "schema_version": "student_help_response.v1",
-                "status": "error",
-                "provider": type(provider).__name__,
-                "provider_label": "Provider aiuto non disponibile",
-                "message": "",
-                "usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
-                "detail": PROVIDER_ERROR_DETAIL,
-            }
-    events.append(event)
-    write_help_events(path, events)
+        decision = apply_budget_limit(evaluate_help_request(support_policy, help_type), support_policy, events)
+        event = {
+            "schema_version": HELP_EVENT_SCHEMA_VERSION,
+            "request_id": clean_request_id,
+            "requested_at": requested_at,
+            "activity_id": clean_text(activity_id),
+            "help_type": decision["help_type"],
+            "label": decision["label"],
+            "allowed": decision["allowed"],
+            "reason": decision["reason"],
+            "prompt": clean_text(prompt),
+        }
+        if "budget" in decision:
+            event["budget"] = decision["budget"]
+        if decision["help_type"] == "ai" and decision["allowed"] is True:
+            event["budget_charged"] = True
+        provider_expected = decision["allowed"] is True and (
+            provider is not None
+            or (decision["help_type"] == "ai" and provider_factory is not None)
+        )
+        if provider_expected:
+            event["provider_status"] = "pending"
+        events.append(event)
+        write_help_events(path, events)
+        if provider_expected:
+            set_provider_call_active(path, clean_request_id, True)
+
+    if provider_expected:
+        try:
+            active_provider = (
+                None
+                if decision["help_type"] == "ai" and provider_factory is not None
+                else provider
+            )
+            try:
+                if decision["help_type"] == "ai" and provider_factory is not None:
+                    active_provider = provider_factory()
+                if active_provider is None:
+                    raise RuntimeError("Provider aiuto non disponibile.")
+                response = provider_response_payload(
+                    active_provider.respond(
+                        StudentHelpRequest(
+                            activity_id=clean_text(activity_id),
+                            help_type=decision["help_type"],
+                            prompt=clean_text(prompt),
+                            context=dict(context or {}),
+                        )
+                    )
+                )
+            except Exception:  # Provider failures must not discard the student's request.
+                response = {
+                    "schema_version": "student_help_response.v1",
+                    "status": "error",
+                    "provider": type(active_provider).__name__ if active_provider is not None else "unavailable",
+                    "provider_label": "Provider aiuto non disponibile",
+                    "message": "",
+                    "usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
+                    "detail": PROVIDER_ERROR_DETAIL,
+                }
+            with help_log_lock(path):
+                events = load_writable_help_events(path)
+                for persisted in events:
+                    if persisted.get("request_id") == event["request_id"]:
+                        persisted["response"] = response
+                        persisted["provider_status"] = "completed"
+                        persisted["budget_charged"] = True
+                        event = persisted
+                        break
+                write_help_events(path, events)
+        finally:
+            set_provider_call_active(path, clean_request_id, False)
     return event
 
 
-def help_summary(log_path: Path | None) -> dict[str, Any]:
-    if log_path is None:
-        return {
-            "path": "",
-            "exists": False,
-            "status": "missing",
-            "error": "",
-            "total": 0,
-            "allowed": 0,
-            "denied": 0,
-            "last_requested_at": "",
-            "last_decision": "",
-            "last_response_status": "",
-            "last_response_provider": "",
-            "counts": {},
-        }
-    events, error = read_help_log(log_path)
+def _empty_help_summary() -> dict[str, Any]:
+    return {
+        "path": "",
+        "exists": False,
+        "status": "missing",
+        "error": "",
+        "total": 0,
+        "allowed": 0,
+        "denied": 0,
+        "last_requested_at": "",
+        "last_decision": "",
+        "last_response_status": "",
+        "last_response_provider": "",
+        "counts": {},
+    }
+
+
+def _help_summary_from_events(
+    log_path: Path,
+    events: list[dict[str, Any]],
+    error: str,
+) -> dict[str, Any]:
     counts: dict[str, int] = {}
     for event in events:
         help_type = clean_text(event.get("help_type")) or "sconosciuto"
@@ -292,36 +529,113 @@ def help_summary(log_path: Path | None) -> dict[str, Any]:
     }
 
 
-def teacher_help_summary(log_path: Path | None) -> dict[str, Any]:
-    """Return a teacher-facing help summary with sanitized event prompts."""
-
-    summary = help_summary(log_path)
+def help_summary(log_path: Path | None, now: str | None = None) -> dict[str, Any]:
     if log_path is None:
-        summary["events"] = []
-        summary["ai_total"] = 0
-        return summary
-    events, error = read_help_log(log_path)
-    teacher_events = [
-        {
-            "requested_at": clean_text(event.get("requested_at")),
-            "help_type": clean_text(event.get("help_type")),
-            "label": clean_text(event.get("label")),
-            "allowed": event.get("allowed") is True,
-            "reason": clean_text(event.get("reason")),
-            "prompt": clean_text(event.get("prompt")),
-            "response": _teacher_response(event.get("response")),
-        }
-        for event in events
-    ]
-    summary["events"] = teacher_events
-    summary["ai_total"] = sum(1 for event in teacher_events if event["help_type"] == "ai")
+        return _empty_help_summary()
+    events, error = load_reconciled_help_events(log_path, now)
+    return _help_summary_from_events(log_path, events, error)
+
+
+def help_summary_with_budget(
+    log_path: Path | None,
+    support_policy: dict[str, Any],
+    now: str | None = None,
+) -> dict[str, Any]:
+    """Return help history and budget derived from one log snapshot."""
+
+    events, error = load_reconciled_help_events(log_path, now) if log_path is not None else ([], "")
+    summary = _help_summary_from_events(log_path, events, error) if log_path is not None else _empty_help_summary()
     if error:
-        summary["events"] = []
+        limit = positive_int(support_policy.get("ai_request_limit"))
+        summary["ai_budget"] = {
+            "limit": limit,
+            "used": limit,
+            "remaining": 0,
+            "exhausted": bool(limit),
+        }
+    else:
+        summary["ai_budget"] = ai_budget_status(support_policy, events)
     return summary
 
 
-def help_budget_summary(log_path: Path | None, support_policy: dict[str, Any]) -> dict[str, Any]:
-    events = load_help_events(log_path) if log_path is not None else []
+def merge_legacy_help_summary(
+    authoritative: dict[str, Any],
+    legacy: dict[str, Any],
+    legacy_path: str,
+) -> dict[str, Any]:
+    """Merge legacy display data without making it authoritative for budget decisions."""
+
+    if not legacy.get("total"):
+        return authoritative
+    merged = dict(authoritative)
+    legacy_events = legacy.get("events") if isinstance(legacy.get("events"), list) else []
+    merged["legacy_unverified"] = True
+    merged["legacy_path"] = legacy_path
+    merged["legacy"] = {
+        "total": int(legacy.get("total") or 0),
+        "allowed": int(legacy.get("allowed") or 0),
+        "denied": int(legacy.get("denied") or 0),
+        "ai_total": int(legacy.get("ai_total") or 0),
+        "counts": dict(legacy.get("counts") or {}),
+        "last_requested_at": clean_text(legacy.get("last_requested_at")),
+        "events": [
+            {**event, "source": "legacy-unverified"}
+            for event in legacy_events
+            if isinstance(event, dict)
+        ],
+    }
+    return merged
+
+
+def teacher_help_summary(log_path: Path | None, now: str | None = None) -> dict[str, Any]:
+    """Return a teacher-facing help summary with sanitized event prompts."""
+
+    if log_path is None:
+        summary = _empty_help_summary()
+        summary["events"] = []
+        summary["ai_total"] = 0
+        return summary
+    with help_log_lock(log_path):
+        events, error = read_help_log(log_path)
+        if not error and release_stale_provider_reservations(events, reconciliation_now(), log_path):
+            write_help_events(log_path, events)
+        summary = _help_summary_from_events(log_path, events, error)
+        teacher_events = []
+        for event in events:
+            provider_status = clean_text(event.get("provider_status"))
+            teacher_event = {
+                "requested_at": clean_text(event.get("requested_at")),
+                "help_type": clean_text(event.get("help_type")),
+                "label": clean_text(event.get("label")),
+                "allowed": event.get("allowed") is True,
+                "reason": clean_text(event.get("reason")),
+                "prompt": clean_text(event.get("prompt")),
+                "response": _teacher_response(event.get("response")),
+            }
+            if provider_status in {"pending", "completed", "interrupted"}:
+                teacher_event["provider_status"] = provider_status
+            teacher_events.append(teacher_event)
+        summary["events"] = teacher_events
+        summary["ai_total"] = sum(1 for event in teacher_events if event["help_type"] == "ai")
+        if error:
+            summary["events"] = []
+        return summary
+
+
+def help_budget_summary(
+    log_path: Path | None,
+    support_policy: dict[str, Any],
+    now: str | None = None,
+) -> dict[str, Any]:
+    events, error = load_reconciled_help_events(log_path, now) if log_path is not None else ([], "")
+    if error:
+        limit = positive_int(support_policy.get("ai_request_limit"))
+        return {
+            "limit": limit,
+            "used": limit,
+            "remaining": 0,
+            "exhausted": bool(limit),
+        }
     return ai_budget_status(support_policy, events)
 
 

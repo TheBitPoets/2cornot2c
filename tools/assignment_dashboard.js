@@ -1778,7 +1778,7 @@ function renderAssignmentSelect() {
   if (els.deleteAssignmentBtn) {
     els.deleteAssignmentBtn.disabled = !state.selectedAssignmentId;
     els.deleteAssignmentBtn.title = state.selectedAssignmentId
-      ? "Cancella solo il record docente dell'assegnazione selezionata. Non rimuove eventuali file gia distribuiti nei repository studenti."
+      ? "Cancella il record docente, le richieste di aiuto autorevoli e il relativo conteggio del budget. Non rimuove workspace o file gia distribuiti nei repository studenti."
       : "Seleziona un'assegnazione da tracciare prima di cancellarla.";
   }
   if (els.assignmentStatus) {
@@ -3667,8 +3667,9 @@ async function deleteSelectedAssignment() {
   const label = assignment ? assignmentLabel(assignment) : assignmentId;
   const confirmed = window.confirm?.(
     `Cancellare l'assegnazione "${label}"?\n\n` +
-    "Verrà eliminato solo il record docente in teacher-assignments. " +
-    "Eventuali file già distribuiti nei repository studenti non verranno rimossi."
+    "Verranno eliminati il record docente in teacher-assignments, le richieste di aiuto autorevoli " +
+    "e il relativo conteggio del budget. Eventuali workspace e file già distribuiti nei repository " +
+    "studenti non verranno rimossi."
   );
   if (!confirmed) return;
   els.deleteAssignmentBtn.disabled = true;
@@ -3690,7 +3691,17 @@ async function deleteSelectedAssignment() {
     clearSelectedAssignment();
     renderReportAssignmentSummary();
     resetAssignmentConfirmStatus("Assegnazione cancellata: seleziona o crea un'altra consegna prima di salvare o distribuire.");
-    setStatus(`Assegnazione cancellata: ${payload.deleted?.id || assignmentId}.`);
+    const deletedLabel = payload.deleted?.id || assignmentId;
+    if (payload.cleanup_pending) {
+      setStatus(
+        `Assegnazione cancellata: ${deletedLabel}. ` +
+        "Pulizia della quarantena differita: il server la ritentera al prossimo avvio."
+      );
+    } else {
+      setStatus(payload.already_deleted
+        ? `Assegnazione gia cancellata: ${deletedLabel}.`
+        : `Assegnazione cancellata: ${deletedLabel}.`);
+    }
   } catch (error) {
     const message = assignmentPlanErrorMessage(error);
     setStatus(`Assegnazione non cancellata: ${message}`);
@@ -3910,27 +3921,54 @@ function studentHelpDetails(help) {
   const denied = Number(data.denied || 0);
   const kind = denied > 0 ? "bad" : aiTotal > 0 ? "warn" : total > 0 ? "ok" : "muted";
   const events = Array.isArray(data.events) ? data.events : [];
+  const legacy = data.legacy && typeof data.legacy === "object" ? data.legacy : {};
+  const legacyTotal = Number(legacy.total || 0);
+  const legacyEvents = Array.isArray(legacy.events) ? legacy.events : [];
   const rows = events.length
-    ? events.map((event) => `
+    ? events.map((event) => {
+      const response = event.response && typeof event.response === "object" ? event.response : {};
+      let responseBadge = badge("Consentita", "ok");
+      if (!event.allowed) responseBadge = badge("Bloccata", "bad");
+      else if (event.provider_status === "pending") responseBadge = badge("In elaborazione", "warn");
+      else if (
+        event.provider_status === "interrupted"
+        || response.status === "error"
+        || (event.provider_status === "completed" && !response.status)
+      ) responseBadge = badge("Risposta non disponibile", "bad");
+      return `
         <div>
-          <dt>${escapeHtml(formatDate(event.requested_at))} · ${escapeHtml(event.label || event.help_type || "aiuto")}</dt>
+          <dt>${escapeHtml(formatDate(event.requested_at))} - ${escapeHtml(event.label || event.help_type || "aiuto")}</dt>
           <dd>
-            ${badge(event.allowed ? "Consentita" : "Bloccata", event.allowed ? "ok" : "bad")}
+            ${responseBadge}
             ${event.prompt ? `<p>${escapeHtml(event.prompt)}</p>` : "<p>Prompt non disponibile.</p>"}
             ${event.reason ? `<small>${escapeHtml(event.reason)}</small>` : ""}
           </dd>
         </div>
-      `).join("")
+      `;
+    }).join("")
     : `<div><dt>Prompt</dt><dd>${escapeHtml(data.error || "Nessuna richiesta registrata.")}</dd></div>`;
+  const legacyRows = legacyEvents.map((event) => `
+    <div>
+      <dt>${escapeHtml(formatDate(event.requested_at))} - ${escapeHtml(event.label || event.help_type || "aiuto")}</dt>
+      <dd>${event.prompt ? `<p>${escapeHtml(event.prompt)}</p>` : "<p>Prompt non disponibile.</p>"}</dd>
+    </div>
+  `).join("");
   return `
     <div class="studentHelpCell">
       ${badge(`Aiuti ${total}`, kind)}<br>
       <small>Consegna: ${escapeHtml(data.activity_id || "-")}</small><br>
-      <small>AI: ${escapeHtml(aiTotal)} · Bloccate: ${escapeHtml(denied)}</small>
+      <small>AI: ${escapeHtml(aiTotal)} - Bloccate: ${escapeHtml(denied)}</small>
       <details class="studentHelpDetails">
         <summary>Prompt aiuti</summary>
         <dl>${rows}</dl>
       </details>
+      ${legacyTotal ? `
+        <details class="studentHelpDetails studentHelpLegacy">
+          <summary>Legacy non verificati (${escapeHtml(legacyTotal)})</summary>
+          <p><strong>Attenzione:</strong> dati storici provenienti dal repository studente; non incidono su budget e metriche.</p>
+          ${legacyRows ? `<dl>${legacyRows}</dl>` : ""}
+        </details>
+      ` : ""}
     </div>
   `;
 }

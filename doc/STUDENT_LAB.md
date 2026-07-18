@@ -16,6 +16,108 @@ La prima interfaccia semigrafica e:
 python scripts/student_lab_cli.py --student-id rossi-mario
 ```
 
+Le richieste di aiuto non invocano provider dentro la TUI. La TUI le invia al server locale della macchina docente,
+che ricarica consegna, policy e budget dai propri dati e usa Codex CLI installato localmente. Server e TUI devono
+puntare alla stessa root dati. Per la demo:
+
+```powershell
+python scripts/student_lab_demo_setup.py
+$env:THEBITLAB_STUDENT_HELP_PROVIDER="codex"
+$env:THEBITLAB_STUDENT_HELP_SECRET="demo-only-student-help-secret-change-me"
+python scripts/student_help_auth.py --student-id rossi-mario
+python scripts/course_board_server.py --root tmp/student-lab-demo
+```
+
+Su Linux con Bash usa gli equivalenti:
+
+```bash
+python scripts/student_lab_demo_setup.py
+export THEBITLAB_STUDENT_HELP_PROVIDER="codex"
+export THEBITLAB_STUDENT_HELP_SECRET="demo-only-student-help-secret-change-me"
+python scripts/student_help_auth.py --student-id rossi-mario
+python scripts/course_board_server.py --root tmp/student-lab-demo
+```
+
+All'avvio il server stampa un token dashboard. Quando il browser chiede le credenziali usa `teacher` come nome
+utente e quel token come password. Per mantenere lo stesso token tra riavvii, imposta
+`THEBITLAB_TEACHER_TOKEN` prima di avviare il server. Non condividere il token docente con gli studenti.
+
+Il comando `student_help_auth.py` stampa il token personale di `rossi-mario`. Copialo nel secondo terminale; non
+condividere invece `THEBITLAB_STUDENT_HELP_SECRET`, che deve restare soltanto sul server docente.
+I token studente e docente si configurano soltanto con le variabili d'ambiente
+`THEBITLAB_STUDENT_HELP_TOKEN` e `THEBITLAB_TEACHER_TOKEN`: non passarli come argomenti della riga di comando,
+perche potrebbero comparire nella cronologia della shell o nell'elenco dei processi.
+Il processo Codex riceve un ambiente limitato a runtime, profilo, proxy/certificati e configurazione Codex/OpenAI:
+i segreti TheBitLab e le altre variabili arbitrarie del server non vengono inoltrati.
+Il token studente scade dopo 24 ore. Il server puo modificare la durata impostando
+`THEBITLAB_STUDENT_HELP_TOKEN_TTL_SECONDS` tra 60 secondi e 7 giorni; alla scadenza il docente genera un nuovo
+token con `student_help_auth.py`.
+Avvia una sola istanza di `course_board_server.py` per ciascun root dati: il server applica un lock di sistema e
+rifiuta un secondo avvio sulla stessa cartella per evitare scritture concorrenti.
+Le scritture JSON usano file temporanei, replace atomico e sincronizzazione della directory sui filesystem POSIX.
+Su Windows il replace resta atomico, ma Python non espone un equivalente portabile del `fsync` della directory:
+il journal consente il recupero dopo un arresto del processo, mentre non garantisce la persistenza assoluta in caso
+di interruzione dell'alimentazione nel brevissimo intervallo successivo al replace.
+
+In un secondo terminale:
+
+```powershell
+$env:THEBITLAB_STUDENT_HELP_TOKEN="<token stampato dal comando precedente>"
+python scripts/student_lab_cli.py --root tmp/student-lab-demo --student-id rossi-mario --server-url http://127.0.0.1:8765
+```
+
+Su Linux con Bash:
+
+```bash
+export THEBITLAB_STUDENT_HELP_TOKEN="<token stampato dal comando precedente>"
+python scripts/student_lab_cli.py --root tmp/student-lab-demo --student-id rossi-mario --server-url http://127.0.0.1:8765
+```
+
+Il token puo viaggiare su HTTP solo quando il server e in loopback (`localhost` o `127.0.0.1`).
+Per collegare una macchina studente al server docente usa HTTPS, direttamente o tramite tunnel. Il tunnel non
+sostituisce l'autenticazione: la TUI usa sempre il bearer token studente, distinto dalle credenziali docente.
+L'opzione `--allow-insecure-http` e riservata a collaudi temporanei su una rete controllata.
+
+Anche la dashboard docente usa credenziali Basic, che HTTP non cifra. Per questo il server accetta per impostazione
+predefinita soltanto bind di loopback. La modalita raccomandata per l'accesso remoto e lasciare il server su
+`127.0.0.1` e raggiungerlo con un tunnel SSH, oppure pubblicarlo tramite un reverse proxy HTTPS. Il bind diretto su
+rete richiede l'opzione esplicita `--allow-insecure-network-http` e stampa un avviso; va usato soltanto per collaudi
+temporanei su una rete gia protetta.
+
+Il server usa `codex exec` con sessione effimera, directory temporanea vuota, shell e ricerca web disabilitate,
+sandbox `read-only`, output JSON validato e timeout. Non accetta dalla TUI identita, policy, contesto didattico o
+path: ricava lo studente dal token firmato e ricostruisce il resto usando `assignment_id`. Se Codex non e disponibile
+o non risponde correttamente, salva comunque la richiesta e restituisce
+la guida deterministica locale. La TUI rende visibile il provider effettivo con una delle etichette:
+
+- `Codex locale (macchina docente)`;
+- `Guida locale (nessuna AI esterna)`.
+
+Per forzare la guida locale senza consumare il proprio abbonamento Codex:
+
+```powershell
+$env:THEBITLAB_STUDENT_HELP_PROVIDER="local"
+python scripts/course_board_server.py --root tmp/student-lab-demo
+```
+
+Il modello Codex resta quello predefinito della CLI. Per selezionarne esplicitamente uno solo per gli aiuti studente,
+imposta `THEBITLAB_STUDENT_HELP_CODEX_MODEL` prima di avviare il server.
+
+Per l'MVP il server accetta un solo processo Codex alla volta: una richiesta concorrente riceve subito la guida
+locale, evitando code lunghe e consumo incontrollato. Solo il tipo `3 AI` usa Codex e consuma il budget AI; feedback
+tecnico e richiamo teorico usano la guida locale. I token studente scadono dopo la durata configurata e possono
+essere revocati prima della scadenza cambiando il segreto server e rigenerandoli. L'endpoint resta un servizio MVP e
+non sostituisce il futuro sistema di autenticazione.
+
+Asset e API docente richiedono sempre l'autenticazione HTTP Basic, anche da loopback. Le sole rotte
+`/api/student-lab/*` previste dal contratto usano invece il bearer token personale dello studente. Un tunnel SSH o
+un proxy locale non trasforma quindi una richiesta studente in una richiesta docente autorizzata.
+
+La cancellazione di un'assegnazione registra prima un journal privato nella quarantena dei log. Se il processo viene
+interrotto, al riavvio il server ripristina i log quando il record dell'assegnazione esiste ancora oppure completa la
+cancellazione quando il record non esiste piu. Una quarantena priva di journal blocca l'avvio invece di eliminare dati
+di cui non e possibile stabilire con sicurezza lo stato.
+
 Il primo runner locale, senza Docker, e:
 
 ```powershell
@@ -108,9 +210,14 @@ La TUI mostra la policy e usa la stessa logica backend per consentire o bloccare
 
 ## Log richieste di aiuto
 
-Il backend può registrare richieste di aiuto dello studente in:
+Il server registra le richieste di aiuto dello studente in uno storage che non appartiene al workspace dello studente:
 
-`<repo-studente>/help/<activity-id>/events.json`
+`teacher-help-events/student_id-<sha256>/assignment_id-<sha256>/events.json`
+
+La chiave include l'assegnazione, non soltanto l'activity: due consegne della stessa activity mantengono quindi budget
+e cronologie indipendenti. I segmenti sono opachi: diagnostica e accesso devono usare API e helper del servizio,
+senza ricostruire manualmente il path dagli ID. Il payload generale contiene soltanto il riepilogo; il comando `h` carica gli eventi da
+`GET /api/student-lab/help-history` usando il token dello studente. La TUI non riceve né apre il path autorevole.
 
 Ogni evento indica tipo di aiuto richiesto, esito consentito/bloccato, motivazione e prompt dello studente.
 Quando la richiesta è consentita e viene usato un provider, l'evento contiene anche una `response` conforme a
@@ -120,10 +227,10 @@ La TUI registra nuove richieste, mostra subito un esito compatto con tipo, stato
 i dettagli nello storico. La motivazione della policy compare subito solo quando la richiesta è bloccata o il provider
 non restituisce una risposta; per le richieste riuscite resta consultabile con `h`, evitando ripetizioni. Il comando
 `h` separa ogni evento con linee tratteggiate, distingue prompt, risposta e motivo con colori ANSI e mantiene la stessa
-struttura leggibile quando i colori sono disabilitati. In questa fase usa
-`DeterministicStudentHelpProvider`, indicato a schermo come `Guida locale (nessuna AI esterna)`: serve a collaudare
-il flusso senza credenziali e senza consumo di token. Il contratto `StudentHelpProvider` permette di sostituirlo con
-Codex o un provider API senza cambiare policy, persistenza e interfaccia.
+struttura leggibile quando i colori sono disabilitati. Il server usa `CodexStudentHelpProvider` quando e configurato
+su `codex`; il provider deterministico, indicato a schermo come `Guida locale (nessuna AI esterna)`, resta disponibile
+per il collaudo senza consumo e come fallback. Entrambi implementano `StudentHelpProvider`, quindi policy,
+persistenza e interfaccia non dipendono dal provider effettivo.
 
 Il provider locale restituisce solo metodo di lavoro, domande guida, argomenti e test su cui concentrarsi. Non genera
 soluzioni complete. Se il provider fallisce, la richiesta resta salvata e la risposta viene marcata `error`.
@@ -144,15 +251,15 @@ Quando il report esiste, il registro salva nella `submission` anche:
 - `report_schema_version`: versione dello schema del report;
 - `report_status`: stato tecnico del report originale.
 
-Il registro docente legge anche `help/<activity_id>/events.json`, quando presente, e aggiunge a ogni studente il riepilogo `help`.
+Quando il registro è collegato a un'assegnazione, il docente legge lo stesso log server-side
+`teacher-help-events/student_id-<sha256>/assignment_id-<sha256>/events.json` e aggiunge a ogni studente il riepilogo `help`.
 La dashboard docente può così mostrare numero di richieste, richieste AI, richieste bloccate e prompt inviati dallo studente per quella consegna.
 
 In questo modo dashboard docente, dashboard studente e TUI leggono lo stesso risultato senza ricalcolare grading o stato in modi divergenti.
 
 Le prossime PR dovranno completare questo contratto con:
 
-1. collegare un adapter Codex o provider API al contratto `StudentHelpProvider` quando la policy lo consente;
-2. contabilizzare token/costo reali per scuola, classe, studente e consegna usando i metadati `usage`;
-3. demo end-to-end pulita con dati riproducibili;
-4. guida utente docente/studente aggiornata;
-5. valutare un adapter opzionale per layout terminale avanzato, per esempio tmux su ambienti compatibili.
+1. contabilizzare token/costo reali per scuola, classe, studente e consegna usando i metadati `usage`;
+2. demo end-to-end pulita con dati riproducibili;
+3. guida utente docente/studente aggiornata;
+4. valutare un adapter opzionale per layout terminale avanzato, per esempio tmux su ambienti compatibili.

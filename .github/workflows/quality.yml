@@ -50,3 +50,28 @@ jobs:
 
       - name: Check generated course plan
         run: python scripts/generate_course_plan.py --check
+
+  windows-filesystem:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Test storage, lab and deletion workflows
+        run: >-
+          python -m pytest
+          tests/test_assignment_records.py
+          tests/test_student_help_service.py
+          tests/test_student_help_codex_adapter.py
+          tests/test_student_lab_service.py
+          tests/test_student_lab_cli.py
+          tests/test_track_assignments.py
+          tests/test_course_board_server.py

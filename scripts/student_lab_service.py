@@ -2,20 +2,43 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts import assignment_records, student_help_service, student_support_policy, track_assignments
+from scripts import (
+    assignment_records,
+    student_help_service,
+    student_support_policy,
+    track_assignments,
+)
+from scripts.student_identity import (
+    confined_regular_file,
+    cross_platform_basename,
+    legacy_display_student_id,
+    target_cleanup_student_ids,
+    target_legacy_student_aliases,
+    target_matches_student,
+    target_student_aliases,
+    target_student_id,
+    token_safe_student_id,
+)
+from scripts.student_help_provider import StudentHelpProvider
 from scripts.thebitlab_contracts import normalize_activity
 
 
 DEFAULT_STUDENT_REPOS_DIR = Path("examples/assignment_tracking/student_repos")
+MAX_HELP_PROMPT_CHARS = 2000
+
+
+class StudentLabDataError(RuntimeError):
+    """Report invalid persisted lab data without exposing storage details."""
 
 
 def clean_text(value: Any) -> str:
@@ -30,15 +53,15 @@ def url_path(path: Path) -> str:
     return str(path).replace("\\", "/")
 
 
-def relative_to_root(root: Path, path: Path) -> str:
-    """Return a repository-relative path when possible."""
+def relative_to_root(root: Path, path: Path, *, expose_external_paths: bool = False) -> str:
+    """Return a repository-relative path, optionally retaining trusted local paths."""
 
     resolved_root = root.resolve()
     resolved_path = path.resolve()
     try:
         return url_path(resolved_path.relative_to(resolved_root))
     except ValueError:
-        return url_path(resolved_path)
+        return url_path(resolved_path) if expose_external_paths else ""
 
 
 def resolve_local_path(root: Path, path_value: str) -> Path:
@@ -46,39 +69,6 @@ def resolve_local_path(root: Path, path_value: str) -> Path:
 
     path = Path(path_value)
     return path.resolve(strict=False) if path.is_absolute() else (root / path).resolve(strict=False)
-
-
-def target_student_id(target: dict[str, Any]) -> str:
-    """Return the best student identifier exposed by an assignment target."""
-
-    for key in ("student_id", "target", "display_name"):
-        value = clean_text(target.get(key))
-        if value:
-            return Path(value).name if key in {"target"} else value
-    path_value = clean_text(target.get("path"))
-    if path_value:
-        return Path(path_value).name
-    repo_ref = clean_text(target.get("repo_ref"))
-    if repo_ref:
-        return repo_ref.rstrip("/").split("/")[-1]
-    return ""
-
-
-def target_matches_student(target: dict[str, Any], student_id: str) -> bool:
-    """Return whether an assignment target belongs to the requested student."""
-
-    clean_student_id = clean_text(student_id)
-    candidates = {
-        clean_text(target.get("student_id")),
-        clean_text(target.get("display_name")),
-        target_student_id(target),
-    }
-    for key in ("path", "target", "repo_ref"):
-        value = clean_text(target.get(key))
-        if value:
-            candidates.add(Path(value).name)
-            candidates.add(value.rstrip("/").split("/")[-1])
-    return clean_student_id in {candidate for candidate in candidates if candidate}
 
 
 def target_repo_path(root: Path, target: dict[str, Any], student_id: str) -> Path | None:
@@ -89,23 +79,40 @@ def target_repo_path(root: Path, target: dict[str, Any], student_id: str) -> Pat
         if value:
             return resolve_local_path(root, value)
     if clean_text(student_id):
-        return (root / DEFAULT_STUDENT_REPOS_DIR / student_id).resolve(strict=False)
+        repos_root = (root / DEFAULT_STUDENT_REPOS_DIR).resolve(strict=False)
+        for legacy_alias in sorted(target_legacy_student_aliases(target)):
+            if Path(legacy_alias).name != legacy_alias or legacy_alias in {".", ".."}:
+                continue
+            legacy_repo = (repos_root / legacy_alias).resolve(strict=False)
+            if legacy_repo.is_dir():
+                return legacy_repo
+        return (repos_root / student_id).resolve(strict=False)
     return None
 
 
-def load_activity_summary(root: Path, activity_path_value: str) -> dict[str, Any]:
+def load_activity_summary(
+    root: Path,
+    activity_path_value: str,
+    *,
+    expose_external_paths: bool = False,
+) -> dict[str, Any]:
     """Load a compact activity summary for a lab assignment."""
 
     activity_path = resolve_local_path(root, activity_path_value)
     if not activity_path.is_file():
         return {
-            "path": url_path(activity_path_value),
+            "path": relative_to_root(
+                root,
+                activity_path,
+                expose_external_paths=expose_external_paths,
+            ),
             "exists": False,
             "title": "",
             "kind": "",
             "language": "",
             "source_name": "",
             "topics": [],
+            "instructions": "",
             "student_support_mode": "",
         }
     payload = json.loads(activity_path.read_text(encoding="utf-8-sig"))
@@ -113,13 +120,18 @@ def load_activity_summary(root: Path, activity_path_value: str) -> dict[str, Any
         raise ValueError(f"Activity non valida: {activity_path}")
     activity = normalize_activity(payload)
     return {
-        "path": relative_to_root(root, activity_path),
+        "path": relative_to_root(
+            root,
+            activity_path,
+            expose_external_paths=expose_external_paths,
+        ),
         "exists": True,
         "title": clean_text(activity.get("title")),
         "kind": clean_text(activity.get("kind")),
         "language": clean_text(activity.get("language")),
         "source_name": clean_text(activity.get("source_name")),
         "topics": activity.get("topics") if isinstance(activity.get("topics"), list) else [],
+        "instructions": clean_text(activity.get("instructions")),
         "student_support_mode": clean_text(activity.get("student_support_mode")),
     }
 
@@ -207,6 +219,7 @@ def build_lab_assignment(
     target: dict[str, Any],
     student_id: str,
     now: str,
+    expose_external_paths: bool = False,
 ) -> dict[str, Any]:
     """Build the student-lab contract for one assignment target."""
 
@@ -215,16 +228,33 @@ def build_lab_assignment(
     repo_path = target_repo_path(root, target, student_id)
     workspace_path = repo_path / "assignments" / activity_id if repo_path is not None else None
     report_path = repo_path / "reports" / activity_id / "latest.json" if repo_path is not None else None
-    help_log_path = student_help_service.help_log_path(repo_path, activity_id) if repo_path is not None else None
-    report = load_report(report_path, activity_id) if report_path is not None else None
+    help_log_path = student_help_service.server_help_log_path(root, student_id, normalized["id"])
+    safe_report_path = confined_regular_file(repo_path, report_path) if repo_path is not None and report_path else None
+    report = load_report(safe_report_path, activity_id) if safe_report_path is not None else None
     submitted_at = clean_text(report.get("submitted_at")) if report else ""
     status = status_with_report(report, normalized["due_at"], now) if report else status_without_report(normalized["due_at"], now)
-    activity = load_activity_summary(root, normalized["activity_path"])
+    activity = load_activity_summary(
+        root,
+        normalized["activity_path"],
+        expose_external_paths=expose_external_paths,
+    )
     support_policy = student_support_policy.support_policy(activity.get("student_support_mode", ""))
-    help_log = student_help_service.help_summary(help_log_path)
-    if help_log_path is not None:
-        help_log["path"] = relative_to_root(root, help_log_path)
-    help_log["ai_budget"] = student_help_service.help_budget_summary(help_log_path, support_policy)
+    help_log = student_help_service.help_summary_with_budget(help_log_path, support_policy, now)
+    if repo_path is not None:
+        legacy_path = student_help_service.help_log_path(repo_path, activity_id)
+        safe_legacy_path = confined_regular_file(repo_path, legacy_path)
+        if safe_legacy_path is not None:
+            legacy_help = student_help_service.help_summary(safe_legacy_path, now)
+            help_log = student_help_service.merge_legacy_help_summary(
+                help_log,
+                legacy_help,
+                relative_to_root(
+                    root,
+                    safe_legacy_path,
+                    expose_external_paths=expose_external_paths,
+                ),
+            )
+    help_log.pop("path", None)
     grading = track_assignments.grading_summary(report)
     return {
         "assignment_id": normalized["id"],
@@ -242,12 +272,28 @@ def build_lab_assignment(
         "status": status,
         "submitted": report is not None,
         "workspace": {
-            "path": relative_to_root(root, workspace_path) if workspace_path is not None else "",
+            "path": (
+                relative_to_root(
+                    root,
+                    workspace_path,
+                    expose_external_paths=expose_external_paths,
+                )
+                if workspace_path is not None
+                else ""
+            ),
             "exists": bool(workspace_path and workspace_path.is_dir()),
         },
         "activity": activity,
         "report": {
-            "path": relative_to_root(root, report_path) if report_path is not None else "",
+            "path": (
+                relative_to_root(
+                    root,
+                    report_path,
+                    expose_external_paths=expose_external_paths,
+                )
+                if report_path is not None
+                else ""
+            ),
             "exists": report is not None,
             "submitted_at": submitted_at,
             "commit": report.get("commit") if report else None,
@@ -262,12 +308,13 @@ def build_lab_assignment(
     }
 
 
-def list_student_lab_assignments(
+def _list_student_lab_assignments(
     *,
     root: Path = PROJECT_ROOT,
     student_id: str,
     assignments_dir: Path | None = None,
     now: str | None = None,
+    expose_external_paths: bool = False,
 ) -> list[dict[str, Any]]:
     """Return normalized lab assignments visible to one student."""
 
@@ -276,22 +323,73 @@ def list_student_lab_assignments(
         raise ValueError("student_id obbligatorio.")
     current_time = parse_now(now)
     storage = assignment_records.JsonAssignmentRecordStorage(root, assignments_dir)
-    lab_assignments = []
+    selected_assignments: list[tuple[dict[str, Any], dict[str, Any], str, str]] = []
+
+    def target_selection_score(item: dict[str, Any]) -> tuple[bool, bool]:
+        repo_path = target_repo_path(root, item, clean_student_id)
+        return (
+            bool(repo_path and repo_path.is_dir()),
+            bool(clean_text(item.get("path")) or clean_text(item.get("target"))),
+        )
+
     for assignment in storage.list_assignments():
         targets = assignment.get("targets") if isinstance(assignment.get("targets"), list) else []
-        for target in targets:
-            if isinstance(target, dict) and target_matches_student(target, clean_student_id):
-                lab_assignments.append(
-                    build_lab_assignment(
-                        root=root,
-                        assignment=assignment,
-                        target=target,
-                        student_id=clean_student_id,
-                        now=current_time,
-                    )
-                )
+        matching_targets = [
+            target
+            for target in targets
+            if isinstance(target, dict) and target_matches_student(target, clean_student_id)
+        ]
+        if not matching_targets:
+            continue
+        target = max(matching_targets, key=target_selection_score)
+        canonical_student_id = target_student_id(target)
+        repo_path = target_repo_path(root, target, canonical_student_id)
+        binding = os.path.normcase(str(repo_path.resolve(strict=False))) if repo_path is not None else ""
+        selected_assignments.append((assignment, target, canonical_student_id, binding))
+
+    bindings = {binding for _, _, _, binding in selected_assignments if binding}
+    if len(bindings) > 1:
+        raise ValueError(
+            f"Identificativo studente ambiguo: {clean_student_id} e associato a repository diversi."
+        )
+
+    lab_assignments = [
+        build_lab_assignment(
+            root=root,
+            assignment=assignment,
+            target=target,
+            student_id=canonical_student_id,
+            now=current_time,
+            expose_external_paths=expose_external_paths,
+        )
+        for assignment, target, canonical_student_id, _ in selected_assignments
+    ]
     lab_assignments.sort(key=lambda item: (item.get("due_at") or "", item.get("activity_id") or ""))
     return lab_assignments
+
+
+def list_student_lab_assignments(
+    *,
+    root: Path = PROJECT_ROOT,
+    student_id: str,
+    assignments_dir: Path | None = None,
+    now: str | None = None,
+    expose_external_paths: bool = False,
+) -> list[dict[str, Any]]:
+    """Return assignments while keeping persisted storage details private."""
+
+    if not clean_text(student_id):
+        raise ValueError("student_id obbligatorio.")
+    try:
+        return _list_student_lab_assignments(
+            root=root,
+            student_id=student_id,
+            assignments_dir=assignments_dir,
+            now=now,
+            expose_external_paths=expose_external_paths,
+        )
+    except (OSError, ValueError) as error:
+        raise StudentLabDataError("Dati delle consegne non disponibili. Avvisa il docente.") from error
 
 
 def student_lab_payload(
@@ -300,6 +398,7 @@ def student_lab_payload(
     student_id: str,
     assignments_dir: Path | None = None,
     now: str | None = None,
+    expose_external_paths: bool = False,
 ) -> dict[str, Any]:
     """Return the complete student-lab payload for frontend or CLI consumers."""
 
@@ -312,6 +411,167 @@ def student_lab_payload(
             student_id=student_id,
             assignments_dir=assignments_dir,
             now=now,
+            expose_external_paths=expose_external_paths,
+        ),
+    }
+
+
+def assignment_repo_path(root: Path, assignment: dict[str, Any]) -> Path | None:
+    """Return the student repository represented by one server-built assignment."""
+
+    help_data = assignment.get("help") if isinstance(assignment.get("help"), dict) else {}
+    help_path = clean_text(help_data.get("path"))
+    normalized_help_path = help_path.replace("\\", "/")
+    if help_path and "/help/" in normalized_help_path:
+        resolved = resolve_local_path(root, help_path)
+        return resolved.parents[2] if len(resolved.parents) >= 3 else None
+    workspace = assignment.get("workspace") if isinstance(assignment.get("workspace"), dict) else {}
+    workspace_path = clean_text(workspace.get("path"))
+    if workspace_path and "/assignments/" in workspace_path.replace("\\", "/"):
+        resolved = resolve_local_path(root, workspace_path)
+        return resolved.parents[1] if len(resolved.parents) >= 2 else None
+    return None
+
+
+def help_provider_context(assignment: dict[str, Any]) -> dict[str, Any]:
+    """Return the minimal assignment context allowed to leave the service."""
+
+    activity = assignment.get("activity") if isinstance(assignment.get("activity"), dict) else {}
+    grading = assignment.get("grading") if isinstance(assignment.get("grading"), dict) else {}
+    report = assignment.get("report") if isinstance(assignment.get("report"), dict) else {}
+    tests = report.get("tests") if isinstance(report.get("tests"), list) else []
+    failed_tests = [
+        clean_text(test.get("name"))
+        for test in tests
+        if isinstance(test, dict) and test.get("passed") is False and clean_text(test.get("name"))
+    ]
+    topics = activity.get("topics") if isinstance(activity.get("topics"), list) else []
+    return {
+        "title": clean_text(assignment.get("title")),
+        "instructions": clean_text(activity.get("instructions")),
+        "language": clean_text(activity.get("language")),
+        "topics": [clean_text(topic) for topic in topics if clean_text(topic)],
+        "grading_status": clean_text(grading.get("status")),
+        "failed_tests": failed_tests,
+    }
+
+
+def record_student_help_request(
+    *,
+    root: Path,
+    student_id: str,
+    assignment_id: str,
+    help_type: str,
+    prompt: str,
+    provider: StudentHelpProvider,
+    provider_factory: Callable[[], StudentHelpProvider] | None = None,
+    request_id: str = "",
+    assignments_dir: Path | None = None,
+    now: str | None = None,
+    existing_only: bool = False,
+) -> dict[str, Any]:
+    """Validate and record a server-authoritative student help request."""
+
+    clean_student_id = clean_text(student_id)
+    clean_assignment_id = clean_text(assignment_id)
+    clean_prompt = clean_text(prompt)
+    if not clean_student_id:
+        raise ValueError("student_id obbligatorio.")
+    if not clean_assignment_id:
+        raise ValueError("assignment_id obbligatorio.")
+    if not clean_prompt:
+        raise ValueError("La richiesta di aiuto non puo essere vuota.")
+    if len(clean_prompt) > MAX_HELP_PROMPT_CHARS:
+        raise ValueError(f"La richiesta di aiuto supera {MAX_HELP_PROMPT_CHARS} caratteri.")
+
+    assignments = list_student_lab_assignments(
+        root=root,
+        student_id=clean_student_id,
+        assignments_dir=assignments_dir,
+        now=now,
+        expose_external_paths=True,
+    )
+    assignment = next(
+        (item for item in assignments if clean_text(item.get("assignment_id")) == clean_assignment_id),
+        None,
+    )
+    if assignment is None:
+        raise ValueError("Consegna non trovata per lo studente indicato.")
+    if assignment_repo_path(root, assignment) is None:
+        raise ValueError("Repository studente non disponibile per salvare la richiesta di aiuto.")
+    support_policy = assignment.get("support_policy") if isinstance(assignment.get("support_policy"), dict) else {}
+    return student_help_service.record_help_request(
+        activity_id=clean_text(assignment.get("activity_id")),
+        support_policy=support_policy,
+        help_type=help_type,
+        prompt=clean_prompt,
+        now=now,
+        provider=provider,
+        provider_factory=provider_factory,
+        context=help_provider_context(assignment),
+        request_id=request_id,
+        log_path=student_help_service.server_help_log_path(
+            root,
+            clean_text(assignment.get("student_id")),
+            clean_assignment_id,
+        ),
+        existing_only=existing_only,
+    )
+
+
+def student_help_history(
+    *,
+    root: Path,
+    student_id: str,
+    assignment_id: str,
+    assignments_dir: Path | None = None,
+    now: str | None = None,
+) -> dict[str, Any]:
+    """Return authenticated help history for one assignment owned by the student."""
+
+    clean_student_id = clean_text(student_id)
+    clean_assignment_id = clean_text(assignment_id)
+    assignments = list_student_lab_assignments(
+        root=root,
+        student_id=clean_student_id,
+        assignments_dir=assignments_dir,
+        now=now,
+        expose_external_paths=True,
+    )
+    assignment = next(
+        (item for item in assignments if clean_text(item.get("assignment_id")) == clean_assignment_id),
+        None,
+    )
+    if assignment is None:
+        raise ValueError("Consegna non trovata per lo studente indicato.")
+    log_path = student_help_service.server_help_log_path(
+        root,
+        clean_text(assignment.get("student_id")),
+        clean_assignment_id,
+    )
+    server_summary = student_help_service.teacher_help_summary(log_path, now)
+    legacy_events: list[dict[str, Any]] = []
+    repo_path = assignment_repo_path(root, assignment)
+    if repo_path is not None:
+        legacy_path = student_help_service.help_log_path(repo_path, clean_text(assignment.get("activity_id")))
+        safe_legacy_path = confined_regular_file(repo_path, legacy_path)
+        if safe_legacy_path is not None:
+            legacy_summary = student_help_service.teacher_help_summary(safe_legacy_path, now)
+            legacy_events = [
+                {**event, "source": "legacy-unverified"}
+                for event in legacy_summary.get("events", [])
+                if isinstance(event, dict)
+            ]
+    server_events = [
+        {**event, "source": "server"}
+        for event in server_summary.get("events", [])
+        if isinstance(event, dict)
+    ]
+    return {
+        "assignment_id": clean_assignment_id,
+        "events": sorted(
+            [*legacy_events, *server_events],
+            key=lambda event: clean_text(event.get("requested_at")),
         ),
     }
 
@@ -337,6 +597,7 @@ def main() -> int:
             student_id=args.student_id,
             assignments_dir=args.assignments_dir,
             now=args.now,
+            expose_external_paths=True,
         )
     except ValueError as error:
         print(f"Lab studente non disponibile:\n{error}", file=sys.stderr)

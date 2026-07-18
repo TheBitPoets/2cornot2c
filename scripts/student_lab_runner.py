@@ -550,7 +550,12 @@ def run_student_assignment(
 ) -> dict[str, Any]:
     """Load and run one assignment for a student."""
 
-    payload = student_lab_service.student_lab_payload(root=root, student_id=student_id, now=now)
+    payload = student_lab_service.student_lab_payload(
+        root=root,
+        student_id=student_id,
+        now=now,
+        expose_external_paths=True,
+    )
     assignments = payload.get("assignments") if isinstance(payload.get("assignments"), list) else []
     assignment = select_assignment(assignments, assignment_id=assignment_id, activity_id=activity_id)
     return run_assignment(
@@ -572,7 +577,12 @@ def load_student_assignment(
 ) -> dict[str, Any]:
     """Load one normalized assignment for a student."""
 
-    payload = student_lab_service.student_lab_payload(root=root, student_id=student_id, now=now)
+    payload = student_lab_service.student_lab_payload(
+        root=root,
+        student_id=student_id,
+        now=now,
+        expose_external_paths=True,
+    )
     assignments = payload.get("assignments") if isinstance(payload.get("assignments"), list) else []
     return select_assignment(assignments, assignment_id=assignment_id, activity_id=activity_id)
 

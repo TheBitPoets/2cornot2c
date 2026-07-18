@@ -25,6 +25,9 @@ Avvia il server sulla root demo:
 python scripts/course_board_server.py --root tmp/student-lab-demo
 ```
 
+Il server stampa le credenziali temporanee della dashboard. Al primo accesso nel browser inserisci l'utente
+`teacher` e usa come password il token stampato; le stesse credenziali valgono per tutte le pagine web della demo.
+
 URL principali:
 
 - Dashboard docente consegne: `http://localhost:8765/tools/assignment_dashboard.html`
@@ -214,35 +217,51 @@ Risultato atteso:
 
 Obiettivo: verificare che la TUI sia comprensibile, robusta sugli input e coerente con dashboard e report.
 
-1. Avvia la TUI:
+1. Prepara la demo e avvia il server docente con provider Codex:
 
    ```powershell
-   python scripts/student_lab_cli.py --root tmp/student-lab-demo --student-id rossi-mario
+   python scripts/student_lab_demo_setup.py
+   $env:THEBITLAB_STUDENT_HELP_PROVIDER="codex"
+   $env:THEBITLAB_STUDENT_HELP_SECRET="demo-only-student-help-secret-change-me"
+   python scripts/student_help_auth.py --student-id rossi-mario
+   python scripts/course_board_server.py --root tmp/student-lab-demo
    ```
 
-2. Nella lista iniziale controlla legenda, date compatte e stati.
-3. Premi un valore non valido, per esempio `x`.
-4. Seleziona la consegna con il numero.
-5. Nel dettaglio controlla guida rapida, sezioni e divisori.
-6. Premi `h`, leggi lo storico aiuti e torna indietro.
-7. Premi `a`, poi `b`: la richiesta deve essere annullata.
-8. Premi `a`, poi invio senza testo: la richiesta deve essere annullata.
-9. Premi `a`, poi un tipo diverso da `1`, `2`, `3`, `b` o invio: deve comparire errore.
-10. Premi `a`, scegli `3`, scrivi un prompt e salva la richiesta.
-11. Controlla che l'esito immediato sia diviso da linee tratteggiate e mostri tipo, stato e risposta a capo, etichettata `Guida locale (nessuna AI esterna)`.
-12. Premi `h` e verifica che prompt e risposta siano entrambi nello storico.
-13. Ripeti con un URL o un identificatore lungo senza spazi e verifica che venga mandato a capo senza scorrimento orizzontale.
-14. Premi `e` per eseguire test e salvare report.
-15. Premi `b` per tornare alla lista.
-16. Premi `r` per ricaricare.
-17. Premi `q` per uscire.
+   Conserva il token studente stampato da `student_help_auth.py` per il passo successivo. Il server stampa
+   separatamente il token dashboard docente: non usarlo nella TUI e non condividerlo con gli studenti.
+
+2. In un secondo terminale avvia la TUI sulla stessa root:
+
+   ```powershell
+   $env:THEBITLAB_STUDENT_HELP_TOKEN="<token studente stampato da student_help_auth.py>"
+   python scripts/student_lab_cli.py --root tmp/student-lab-demo --student-id rossi-mario --server-url http://127.0.0.1:8765
+   ```
+
+3. Nella lista iniziale controlla legenda, date compatte e stati.
+4. Premi un valore non valido, per esempio `x`.
+5. Seleziona la consegna con il numero.
+6. Nel dettaglio controlla guida rapida, sezioni e divisori.
+7. Premi `h`, leggi lo storico aiuti e torna indietro.
+8. Premi `a`, poi `b`: la richiesta deve essere annullata.
+9. Premi `a`, poi invio senza testo: la richiesta deve essere annullata.
+10. Premi `a`, poi un tipo diverso da `1`, `2`, `3`, `b` o invio: deve comparire errore.
+11. Premi `a`, scegli `3`, scrivi un prompt e invia la richiesta.
+12. Controlla che l'esito immediato sia diviso da linee tratteggiate e mostri tipo, stato e risposta a capo. Con Codex operativo deve comparire `Codex locale (macchina docente)`.
+13. Ferma il server, imposta `THEBITLAB_STUDENT_HELP_PROVIDER=local`, riavvialo e ripeti: deve comparire `Guida locale (nessuna AI esterna)`.
+14. Premi `h` e verifica che prompt e risposta siano entrambi nello storico.
+15. Ripeti con un URL o un identificatore lungo senza spazi e verifica che venga mandato a capo senza scorrimento orizzontale.
+16. Premi `e` per eseguire test e salvare report.
+17. Premi `b` per tornare alla lista.
+18. Premi `r` per ricaricare.
+19. Premi `q` per uscire.
 
 Risultato atteso:
 
 - Gli input non validi non eseguono azioni.
 - `b` e invio annullano o tornano indietro dove previsto.
 - Dopo un comando nel dettaglio si resta nel dettaglio della consegna, non si torna alla lista generale.
-- La guida locale è distinta da una risposta AI reale e non mostra una soluzione completa.
+- Codex locale e la guida di fallback sono distinti dall'etichetta del provider e non mostrano una soluzione completa.
+- La TUI segnala chiaramente quando il server non è raggiungibile e non salva direttamente l'evento sul client.
 - L'esito immediato non ripete la motivazione della policy quando la richiesta riesce; per richieste bloccate o errori mostra subito il motivo.
 - Prompt e risposta restano visibili nello storico della consegna.
 - Ogni richiesta nello storico è separata da linee tratteggiate e prompt, risposta, motivo ed esito sono distinguibili per colore.

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from scripts import assignment_records
@@ -258,6 +260,22 @@ def test_assignment_record_storage_deletes_assignment(tmp_path) -> None:
         storage.read_assignment(saved["id"])
 
 
+def test_assignment_storage_syncs_directory_after_replace_and_unlink(tmp_path, monkeypatch) -> None:
+    synced_directories = []
+    monkeypatch.setattr(
+        assignment_records,
+        "sync_directory",
+        lambda path: synced_directories.append(path),
+    )
+    storage = assignment_records.JsonAssignmentRecordStorage(tmp_path)
+
+    saved = storage.write_assignment(assignment_records.build_assignment_record(**sample_assignment()))
+    storage.delete_assignment(saved["id"])
+
+    assignments_dir = tmp_path / "teacher-assignments"
+    assert synced_directories == [tmp_path, assignments_dir, assignments_dir]
+
+
 def test_assignment_record_storage_rejects_duplicate_without_overwrite(tmp_path) -> None:
     storage = assignment_records.JsonAssignmentRecordStorage(tmp_path)
     storage.write_assignment(assignment_records.build_assignment_record(**sample_assignment()))
@@ -270,3 +288,21 @@ def test_assignment_record_storage_rejects_duplicate_without_overwrite(tmp_path)
         overwrite=True,
     )
     assert overwritten["class_label"] == "3A TPSI aggiornata"
+def test_json_assignment_storage_keeps_previous_file_when_atomic_replace_fails(tmp_path, monkeypatch) -> None:
+    storage = assignment_records.JsonAssignmentRecordStorage(tmp_path)
+    path = tmp_path / "teacher-assignments" / "record.json"
+    storage.write_json(path, {"version": 1})
+    original_replace = Path.replace
+
+    def fail_temporary_replace(source, target):
+        if source.suffix == ".tmp":
+            raise PermissionError("replace bloccata")
+        return original_replace(source, target)
+
+    monkeypatch.setattr(Path, "replace", fail_temporary_replace)
+
+    with pytest.raises(PermissionError, match="replace bloccata"):
+        storage.write_json(path, {"version": 2})
+
+    assert storage.read_json(path) == {"version": 1}
+    assert list(path.parent.glob("*.tmp")) == []

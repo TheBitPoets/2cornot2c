@@ -1,10 +1,17 @@
 from __future__ import annotations
 
 import argparse
+import ipaddress
+import json
 import os
 import subprocess
 import sys
 import textwrap
+import urllib.error
+import urllib.parse
+import urllib.request
+import uuid
+import unicodedata
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
@@ -14,11 +21,16 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from scripts import student_help_service, student_lab_runner, student_lab_service
-from scripts.student_help_provider import DeterministicStudentHelpProvider
 
 
 InputFn = Callable[[str], str]
 PrintFn = Callable[[str], None]
+DEFAULT_SERVER_URL = "http://127.0.0.1:8765"
+HELP_REQUEST_TIMEOUT_SECONDS = 150
+
+
+class StudentHelpRequestPendingError(ValueError):
+    """Report that an idempotent help request is still being processed."""
 
 
 STATUS_LABELS = {
@@ -51,8 +63,34 @@ RESET_COLOR = "\033[0m"
 def clean_text(value: Any, fallback: str = "-") -> str:
     """Return a compact label for terminal output."""
 
-    text = str(value or "").strip()
+    text = "".join(
+        " " if character in "\r\n\t" else ""
+        if unicodedata.category(character).startswith("C")
+        else character
+        for character in str(value or "")
+    ).strip()
     return text or fallback
+
+
+def validated_server_url(server_url: str, allow_insecure_http: bool = False) -> str:
+    """Require HTTPS when a bearer token leaves the local machine."""
+
+    clean_url = str(server_url or "").strip().rstrip("/")
+    parsed = urllib.parse.urlparse(clean_url)
+    if parsed.scheme == "https" and parsed.hostname:
+        return clean_url
+    if parsed.scheme == "http" and parsed.hostname:
+        is_loopback = parsed.hostname.lower() == "localhost"
+        try:
+            is_loopback = is_loopback or ipaddress.ip_address(parsed.hostname).is_loopback
+        except ValueError:
+            pass
+        if is_loopback or allow_insecure_http:
+            return clean_url
+    raise ValueError(
+        "Il token studente richiede HTTPS per un server remoto. "
+        "Usa un tunnel HTTPS oppure --allow-insecure-http solo per un collaudo controllato."
+    )
 
 
 def status_label(status: str) -> str:
@@ -165,7 +203,9 @@ def render_assignment_row(index: int, assignment: dict[str, Any], use_color: boo
     """Render one compact assignment row."""
 
     title = truncate(clean_text(assignment.get("title") or assignment.get("activity_id")), 34)
-    status = truncate(colored_status(clean_text(assignment.get("status")), use_color), 31 if use_color else 22)
+    clean_status = clean_text(assignment.get("status"), "")
+    status = truncate(status_label(clean_status), 22)
+    status = colorize(status, STATUS_COLORS.get(clean_status, ""), use_color)
     due_at = truncate(compact_datetime(assignment.get("due_at")), 16)
     workspace = assignment.get("workspace") if isinstance(assignment.get("workspace"), dict) else {}
     workspace_mark = colorize("workspace", WORKSPACE_COLOR, use_color) if workspace.get("exists") else "no workspace"
@@ -195,10 +235,11 @@ def render_assignment_list(payload: dict[str, Any], use_color: bool = False) -> 
     return "\n".join(lines)
 
 
-def detail_line(label: str, value: Any) -> str:
+def detail_line(label: str, value: Any, *, formatted: bool = False) -> str:
     """Render one label/value line for the detail view."""
 
-    return f"{label:<18} {clean_text(value)}"
+    rendered = str(value) if formatted else clean_text(value)
+    return f"{label:<18} {rendered}"
 
 
 def section_separator(width: int = 72) -> str:
@@ -280,7 +321,7 @@ def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False
         detail_line("Classe:", assignment.get("class_label") or assignment.get("class_id")),
         detail_line("Assegnata:", compact_datetime(assignment.get("assigned_at"))),
         detail_line("Scadenza:", compact_datetime(assignment.get("due_at"))),
-        detail_line("Stato:", colored_status(clean_text(assignment.get("status")), use_color)),
+        detail_line("Stato:", colored_status(clean_text(assignment.get("status")), use_color), formatted=True),
         section_separator(),
         "Workspace",
         detail_line("Path:", workspace.get("path")),
@@ -390,9 +431,6 @@ HELP_MENU = {
     "3": "ai",
 }
 
-DEFAULT_HELP_PROVIDER = DeterministicStudentHelpProvider()
-
-
 def help_choice_label() -> str:
     """Return a compact help-type menu label."""
 
@@ -449,12 +487,32 @@ def render_help_history(
 ) -> str:
     """Render the help request history for one assignment."""
 
-    log_path = assignment_help_log_path(assignment, root=root)
     lines = ["Storico richieste aiuto"]
-    if log_path is None:
+    help_data = assignment.get("help") if isinstance(assignment.get("help"), dict) else {}
+    payload_events = help_data.get("events")
+    log_path = assignment_help_log_path(assignment, root=root)
+    loaded_from_payload = isinstance(payload_events, list)
+    if loaded_from_payload:
+        events = [event for event in payload_events if isinstance(event, dict)]
+        error = ""
+    elif log_path is not None:
+        events, error = student_help_service.read_help_log(log_path)
+        if help_data.get("legacy_unverified") is True:
+            events = [{**event, "source": "legacy-unverified"} for event in events]
+    else:
         lines.append("Log aiuti non disponibile per questa consegna.")
         return "\n".join(lines)
-    events, error = student_help_service.read_help_log(log_path)
+    legacy_path_value = clean_text(help_data.get("legacy_path"), "")
+    if legacy_path_value and not loaded_from_payload:
+        raw_legacy_path = Path(legacy_path_value)
+        legacy_path = raw_legacy_path if raw_legacy_path.is_absolute() else (root / raw_legacy_path).resolve(strict=False)
+        if log_path is None or legacy_path.resolve(strict=False) != log_path.resolve(strict=False):
+            legacy_events, legacy_error = student_help_service.read_help_log(legacy_path)
+            if not legacy_error:
+                events = [
+                    *({**event, "source": "legacy-unverified"} for event in legacy_events),
+                    *events,
+                ]
     if error:
         lines.append(f"Log aiuti non leggibile: {error}")
         lines.append(f"Path: {log_path}")
@@ -463,91 +521,194 @@ def render_help_history(
         lines.append("Nessuna richiesta di aiuto registrata.")
         lines.append(f"Path: {log_path}")
         return "\n".join(lines)
-    for index, event in enumerate(events, start=1):
-        decision = "consentita" if event.get("allowed") is True else "bloccata"
-        decision_color = HELP_RESPONSE_COLOR if event.get("allowed") is True else HELP_ERROR_COLOR
-        response = event.get("response") if isinstance(event.get("response"), dict) else {}
-        lines.extend(
-            [
-                section_separator(),
-                colorize(f"Richiesta {index}", HELP_REQUEST_COLOR, use_color),
-                detail_line("Data:", compact_datetime(event.get("requested_at"))),
-                detail_line("Tipo:", event.get("label")),
-                detail_line("Esito:", colorize(decision, decision_color, use_color)),
-                *help_history_block("Prompt studente", event.get("prompt"), HELP_PROMPT_COLOR, use_color),
-            ]
-        )
-        if response:
-            provider_label = clean_text(response.get("provider_label")) or "Provider aiuto"
-            if response.get("status") == "ready":
+    authoritative_events = [event for event in events if event.get("source") != "legacy-unverified"]
+    legacy_events = [event for event in events if event.get("source") == "legacy-unverified"]
+    groups = [("", authoritative_events)]
+    if legacy_events:
+        groups.append(("Legacy non verificati", legacy_events))
+    request_index = 0
+    for group_label, group_events in groups:
+        if not group_events:
+            continue
+        if group_label:
+            lines.extend(
+                [
+                    section_separator(),
+                    colorize(group_label, HELP_REASON_COLOR, use_color),
+                    "Questi eventi storici non incidono sul budget e sulle metriche del server.",
+                ]
+            )
+        for event in group_events:
+            request_index += 1
+            decision = "consentita" if event.get("allowed") is True else "bloccata"
+            decision_color = HELP_RESPONSE_COLOR if event.get("allowed") is True else HELP_ERROR_COLOR
+            response = event.get("response") if isinstance(event.get("response"), dict) else {}
+            provider_status = clean_text(event.get("provider_status"), "")
+            lines.extend(
+                [
+                    section_separator(),
+                    colorize(f"Richiesta {request_index}", HELP_REQUEST_COLOR, use_color),
+                    detail_line("Data:", compact_datetime(event.get("requested_at"))),
+                    detail_line("Tipo:", event.get("label")),
+                    detail_line("Esito:", colorize(decision, decision_color, use_color), formatted=True),
+                    *help_history_block("Prompt studente", event.get("prompt"), HELP_PROMPT_COLOR, use_color),
+                ]
+            )
+            if provider_status == "pending":
                 lines.extend(
                     help_history_block(
-                        f"Risposta - {provider_label}",
-                        response.get("message"),
-                        HELP_RESPONSE_COLOR,
+                        "Risposta in elaborazione",
+                        "La richiesta e stata salvata. Il provider sta preparando la risposta.",
+                        HELP_PROMPT_COLOR,
                         use_color,
                     )
                 )
-            else:
-                lines.extend(
-                    help_history_block(
-                        f"Risposta non disponibile - {provider_label}",
-                        response.get("detail"),
-                        HELP_ERROR_COLOR,
-                        use_color,
+            elif response:
+                provider_label = clean_text(response.get("provider_label")) or "Provider aiuto"
+                if response.get("status") == "ready":
+                    lines.extend(
+                        help_history_block(
+                            f"Risposta - {provider_label}",
+                            response.get("message"),
+                            HELP_RESPONSE_COLOR,
+                            use_color,
+                        )
                     )
-                )
-        lines.extend(help_history_block("Motivo della decisione", event.get("reason"), HELP_REASON_COLOR, use_color))
+                else:
+                    lines.extend(
+                        help_history_block(
+                            f"Risposta non disponibile - {provider_label}",
+                            response.get("detail"),
+                            HELP_ERROR_COLOR,
+                            use_color,
+                        )
+                    )
+            lines.extend(help_history_block("Motivo della decisione", event.get("reason"), HELP_REASON_COLOR, use_color))
     lines.append(section_separator())
     return "\n".join(lines)
-
-
-def help_provider_context(assignment: dict[str, Any]) -> dict[str, Any]:
-    """Return the minimal assignment context allowed for the local help provider."""
-
-    activity = assignment.get("activity") if isinstance(assignment.get("activity"), dict) else {}
-    grading = assignment.get("grading") if isinstance(assignment.get("grading"), dict) else {}
-    report = assignment.get("report") if isinstance(assignment.get("report"), dict) else {}
-    tests = report.get("tests") if isinstance(report.get("tests"), list) else []
-    failed_tests = [
-        clean_text(test.get("name"))
-        for test in tests
-        if isinstance(test, dict) and test.get("passed") is False and clean_text(test.get("name"))
-    ]
-    raw_topics = activity.get("topics")
-    topics = raw_topics if isinstance(raw_topics, list) else []
-    return {
-        "title": clean_text(assignment.get("title")),
-        "topics": [clean_text(topic) for topic in topics if clean_text(topic)],
-        "grading_status": clean_text(grading.get("status")),
-        "failed_tests": failed_tests,
-    }
 
 
 def record_help_from_tui(
     *,
     assignment: dict[str, Any],
-    root: Path,
+    server_url: str,
+    server_token: str,
     help_type: str,
     prompt: str,
-    now: str | None = None,
+    request_id: str = "",
+    allow_insecure_http: bool = False,
 ) -> dict[str, Any]:
-    """Record one student help request from the TUI."""
+    """Send one student help request to the teacher-side server."""
 
-    repo_path = assignment_repo_path(assignment, root=root)
-    if repo_path is None:
-        raise ValueError("Repository studente non disponibile per salvare la richiesta di aiuto.")
-    support_policy = assignment.get("support_policy") if isinstance(assignment.get("support_policy"), dict) else {}
-    return student_help_service.record_help_request(
-        repo_path=repo_path,
-        activity_id=clean_text(assignment.get("activity_id"), ""),
-        support_policy=support_policy,
-        help_type=help_type,
-        prompt=prompt,
-        now=now,
-        provider=DEFAULT_HELP_PROVIDER,
-        context=help_provider_context(assignment),
+    assignment_id = clean_text(assignment.get("assignment_id"), "")
+    if not assignment_id:
+        raise ValueError("Identificativo consegna non disponibile.")
+    if not server_token.strip():
+        raise ValueError("Token studente mancante. Imposta THEBITLAB_STUDENT_HELP_TOKEN.")
+    safe_server_url = validated_server_url(server_url, allow_insecure_http)
+    clean_request_id = str(request_id or "").strip() or uuid.uuid4().hex
+    body = json.dumps(
+        {
+            "assignment_id": assignment_id,
+            "help_type": help_type,
+            "prompt": prompt,
+            "request_id": clean_request_id,
+        },
+        ensure_ascii=False,
+    ).encode("utf-8")
+    request = urllib.request.Request(
+        f"{safe_server_url}/api/student-lab/help",
+        data=body,
+        headers={
+            "Content-Type": "application/json; charset=utf-8",
+            "Authorization": f"Bearer {server_token.strip()}",
+        },
+        method="POST",
     )
+    try:
+        with student_api_urlopen(request, timeout=HELP_REQUEST_TIMEOUT_SECONDS) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as error:
+        detail = _server_error_detail(error.read())
+        if error.code == 409:
+            raise StudentHelpRequestPendingError(
+                f"Server aiuti: {detail or 'richiesta gia salvata e ancora in elaborazione'}"
+            ) from error
+        raise ValueError(f"Server aiuti: {detail or error.reason}") from error
+    except urllib.error.URLError as error:
+        raise ValueError(
+            f"Server non raggiungibile su {server_url}. Avvialo con scripts/course_board_server.py."
+        ) from error
+    except TimeoutError as error:
+        raise ValueError("Il server aiuti non ha risposto entro il tempo previsto.") from error
+    except (json.JSONDecodeError, UnicodeDecodeError) as error:
+        raise ValueError("Il server aiuti ha restituito una risposta non valida.") from error
+    event = payload.get("event") if isinstance(payload, dict) else None
+    if not isinstance(event, dict):
+        raise ValueError("Il server aiuti non ha restituito l'evento salvato.")
+    return event
+
+
+def fetch_help_history_from_server(
+    *,
+    assignment: dict[str, Any],
+    server_url: str,
+    server_token: str,
+    allow_insecure_http: bool = False,
+) -> dict[str, Any]:
+    """Load one student's assignment history through the authenticated server API."""
+
+    assignment_id = clean_text(assignment.get("assignment_id"), "")
+    if not assignment_id:
+        raise ValueError("Identificativo consegna non disponibile.")
+    if not server_token.strip():
+        raise ValueError("Token studente mancante. Imposta THEBITLAB_STUDENT_HELP_TOKEN.")
+    safe_server_url = validated_server_url(server_url, allow_insecure_http)
+    query = urllib.parse.urlencode({"assignment_id": assignment_id})
+    request = urllib.request.Request(
+        f"{safe_server_url}/api/student-lab/help-history?{query}",
+        headers={"Authorization": f"Bearer {server_token.strip()}"},
+        method="GET",
+    )
+    try:
+        with student_api_urlopen(request, timeout=HELP_REQUEST_TIMEOUT_SECONDS) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as error:
+        detail = _server_error_detail(error.read())
+        raise ValueError(f"Server aiuti: {detail or error.reason}") from error
+    except urllib.error.URLError as error:
+        raise ValueError(f"Server non raggiungibile su {server_url}.") from error
+    except TimeoutError as error:
+        raise ValueError("Il server aiuti non ha risposto entro il tempo previsto.") from error
+    except (json.JSONDecodeError, UnicodeDecodeError) as error:
+        raise ValueError("Il server aiuti ha restituito uno storico non valido.") from error
+    if not isinstance(payload, dict) or not isinstance(payload.get("events"), list):
+        raise ValueError("Il server aiuti ha restituito uno storico non valido.")
+    return payload
+
+
+def _server_error_detail(body: bytes) -> str:
+    try:
+        payload = json.loads(body.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return "richiesta rifiutata"
+    return clean_text(payload.get("error"), "richiesta rifiutata") if isinstance(payload, dict) else "richiesta rifiutata"
+
+
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Keep bearer credentials confined to the original student API URL."""
+
+    def redirect_request(self, request, file_pointer, code, message, headers, new_url):
+        return None
+
+
+_STUDENT_API_OPENER = urllib.request.build_opener(_NoRedirectHandler())
+
+
+def student_api_urlopen(request: urllib.request.Request, *, timeout: float):
+    """Open an authenticated student API request without following redirects."""
+
+    return _STUDENT_API_OPENER.open(request, timeout=timeout)
 
 
 def help_result_message(event: dict[str, Any], use_color: bool = False) -> str:
@@ -560,7 +721,7 @@ def help_result_message(event: dict[str, Any], use_color: bool = False) -> str:
         colorize("Esito richiesta aiuto", HELP_REQUEST_COLOR, use_color),
         section_separator(),
         detail_line("Tipo:", event.get("label")),
-        detail_line("Esito:", colorize(status, status_color, use_color)),
+        detail_line("Esito:", colorize(status, status_color, use_color), formatted=True),
     ]
     response = event.get("response") if isinstance(event.get("response"), dict) else {}
     if response.get("status") == "ready":
@@ -628,7 +789,115 @@ def open_workspace(path_value: str, root: Path = PROJECT_ROOT) -> bool:
 def load_payload(root: Path, student_id: str, now: str | None = None) -> dict[str, Any]:
     """Load the current student lab payload."""
 
-    return student_lab_service.student_lab_payload(root=root, student_id=student_id, now=now)
+    return student_lab_service.student_lab_payload(
+        root=root,
+        student_id=student_id,
+        now=now,
+        expose_external_paths=True,
+    )
+
+
+def fetch_student_lab_payload(
+    *,
+    server_url: str,
+    server_token: str,
+    now: str | None = None,
+    allow_insecure_http: bool = False,
+) -> dict[str, Any]:
+    """Load the authenticated student-lab payload from the teacher server."""
+
+    if not server_token.strip():
+        raise ValueError("Token studente mancante. Imposta THEBITLAB_STUDENT_HELP_TOKEN.")
+    safe_server_url = validated_server_url(server_url, allow_insecure_http)
+    query = urllib.parse.urlencode({"now": now}) if now else ""
+    suffix = f"?{query}" if query else ""
+    request = urllib.request.Request(
+        f"{safe_server_url}/api/student-lab/assignments{suffix}",
+        headers={"Authorization": f"Bearer {server_token.strip()}"},
+    )
+    try:
+        with student_api_urlopen(request, timeout=HELP_REQUEST_TIMEOUT_SECONDS) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as error:
+        detail = _server_error_detail(error.read())
+        raise ValueError(f"Server consegne: {detail or error.reason}") from error
+    except urllib.error.URLError as error:
+        raise ValueError(f"Server non raggiungibile su {server_url}.") from error
+    except TimeoutError as error:
+        raise ValueError("Il server consegne non ha risposto entro il tempo previsto.") from error
+    except (json.JSONDecodeError, UnicodeDecodeError) as error:
+        raise ValueError("Il server consegne ha restituito una risposta non valida.") from error
+    if not isinstance(payload, dict) or not isinstance(payload.get("assignments"), list):
+        raise ValueError("Il server consegne ha restituito un payload non valido.")
+    return payload
+
+
+def load_current_payload(
+    *,
+    root: Path,
+    student_id: str,
+    now: str | None,
+    server_url: str,
+    server_token: str,
+    allow_insecure_http: bool,
+) -> dict[str, Any]:
+    """Load authoritative server data when authenticated, otherwise local data."""
+
+    if server_token.strip():
+        remote_payload = fetch_student_lab_payload(
+            server_url=server_url,
+            server_token=server_token,
+            now=now,
+            allow_insecure_http=allow_insecure_http,
+        )
+        try:
+            local_payload = load_payload(root, student_id, now)
+        except Exception:  # Local paths are an optional operational enhancement.
+            return remote_payload
+        return merge_local_operational_paths(remote_payload, local_payload)
+    return load_payload(root, student_id, now)
+
+
+def merge_local_operational_paths(
+    remote_payload: dict[str, Any],
+    local_payload: dict[str, Any],
+) -> dict[str, Any]:
+    """Enrich authoritative remote assignments with matching trusted local paths."""
+
+    remote_student_id = clean_text(remote_payload.get("student_id"), "")
+    local_student_id = clean_text(local_payload.get("student_id"), "")
+    if not remote_student_id or remote_student_id != local_student_id:
+        return remote_payload
+    local_by_id = {
+        clean_text(item.get("assignment_id"), ""): item
+        for item in payload_assignments(local_payload)
+        if isinstance(item, dict) and clean_text(item.get("assignment_id"), "")
+    }
+    merged_payload = dict(remote_payload)
+    merged_assignments: list[Any] = []
+    for remote_assignment in payload_assignments(remote_payload):
+        if not isinstance(remote_assignment, dict):
+            merged_assignments.append(remote_assignment)
+            continue
+        merged_assignment = dict(remote_assignment)
+        assignment_id = clean_text(remote_assignment.get("assignment_id"), "")
+        local_assignment = local_by_id.get(assignment_id)
+        if isinstance(local_assignment, dict):
+            for section_name in ("workspace", "activity", "report"):
+                remote_section = remote_assignment.get(section_name)
+                local_section = local_assignment.get(section_name)
+                if not isinstance(remote_section, dict) or not isinstance(local_section, dict):
+                    continue
+                local_path = clean_text(local_section.get("path"), "")
+                if not local_path:
+                    continue
+                merged_section = dict(remote_section)
+                merged_section["path"] = local_path
+                merged_section["exists"] = local_section.get("exists") is True
+                merged_assignment[section_name] = merged_section
+        merged_assignments.append(merged_assignment)
+    merged_payload["assignments"] = merged_assignments
+    return merged_payload
 
 
 def payload_assignments(payload: dict[str, Any]) -> list[dict[str, Any]]:
@@ -647,6 +916,7 @@ def find_assignment(payload: dict[str, Any], assignment_id: str, fallback_index:
         for assignment in assignments:
             if isinstance(assignment, dict) and clean_text(assignment.get("assignment_id"), "") == clean_assignment_id:
                 return assignment
+        return None
     if 0 <= fallback_index < len(assignments):
         assignment = assignments[fallback_index]
         return assignment if isinstance(assignment, dict) else None
@@ -662,10 +932,21 @@ def run_tui(
     print_fn: PrintFn = print,
     clear: bool = True,
     use_color: bool = False,
+    server_url: str = DEFAULT_SERVER_URL,
+    server_token: str = "",
+    allow_insecure_http: bool = False,
 ) -> int:
     """Run the interactive student lab loop."""
 
-    payload = load_payload(root, student_id, now)
+    payload = load_current_payload(
+        root=root,
+        student_id=student_id,
+        now=now,
+        server_url=server_url,
+        server_token=server_token,
+        allow_insecure_http=allow_insecure_http,
+    )
+    pending_help_request_ids: dict[tuple[str, str, str], str] = {}
     while True:
         if clear:
             clear_screen()
@@ -674,7 +955,18 @@ def run_tui(
         if choice in {"q", "quit", "esci"}:
             return 0
         if choice in {"r", "reload", "ricarica"}:
-            payload = load_payload(root, student_id, now)
+            try:
+                payload = load_current_payload(
+                    root=root,
+                    student_id=student_id,
+                    now=now,
+                    server_url=server_url,
+                    server_token=server_token,
+                    allow_insecure_http=allow_insecure_http,
+                )
+            except ValueError as error:
+                print_fn(f"Aggiornamento dati non disponibile:\n{error}")
+                input_fn("Premi invio per continuare...")
             continue
         if not choice.isdigit():
             continue
@@ -716,32 +1008,80 @@ def run_tui(
                     if not prompt:
                         print_fn("Richiesta aiuto annullata: prompt vuoto.")
                     else:
+                        request_key = (selected_assignment_id, help_type, prompt)
+                        request_id = pending_help_request_ids.setdefault(request_key, uuid.uuid4().hex)
                         try:
                             event = record_help_from_tui(
                                 assignment=assignment,
-                                root=root,
+                                server_url=server_url,
+                                server_token=server_token,
                                 help_type=help_type,
                                 prompt=prompt,
-                                now=now,
+                                request_id=request_id,
+                                allow_insecure_http=allow_insecure_http,
                             )
-                            print_fn(help_result_message(event, use_color=use_color))
-                            payload = load_payload(root, student_id, now)
+                        except StudentHelpRequestPendingError as error:
+                            print_fn(f"Richiesta aiuto gia salvata e ancora in elaborazione:\n{error}")
                         except ValueError as error:
                             print_fn(f"Richiesta aiuto non salvata:\n{error}")
+                        else:
+                            pending_help_request_ids.pop(request_key, None)
+                            print_fn(help_result_message(event, use_color=use_color))
+                            try:
+                                payload = load_current_payload(
+                                    root=root,
+                                    student_id=student_id,
+                                    now=now,
+                                    server_url=server_url,
+                                    server_token=server_token,
+                                    allow_insecure_http=allow_insecure_http,
+                                )
+                            except ValueError as error:
+                                print_fn(
+                                    "Richiesta salvata, ma aggiornamento dati non disponibile:\n"
+                                    f"{error}"
+                                )
                 input_fn("Premi invio per continuare...")
                 continue
             if action == "h":
-                print_fn(render_help_history(assignment, root=root, use_color=use_color))
+                try:
+                    if server_token.strip():
+                        history = fetch_help_history_from_server(
+                            assignment=assignment,
+                            server_url=server_url,
+                            server_token=server_token,
+                            allow_insecure_http=allow_insecure_http,
+                        )
+                        history_assignment = {**assignment, "help": {"events": history["events"]}}
+                        print_fn(render_help_history(history_assignment, root=root, use_color=use_color))
+                    else:
+                        print_fn(render_help_history(assignment, root=root, use_color=use_color))
+                except ValueError as error:
+                    print_fn(f"Storico aiuti non disponibile:\n{error}")
                 input_fn("Premi invio per continuare...")
                 continue
             if action == "e":
                 try:
                     report = student_lab_runner.run_local_assignment(assignment, root=root)
                     report_path = student_lab_runner.write_student_report(root, assignment, report)
-                    print_fn(runner_result_message(report, report_path))
-                    payload = load_payload(root, student_id, now)
                 except ValueError as error:
                     print_fn(f"Runner non disponibile:\n{error}")
+                else:
+                    print_fn(runner_result_message(report, report_path))
+                    try:
+                        payload = load_current_payload(
+                            root=root,
+                            student_id=student_id,
+                            now=now,
+                            server_url=server_url,
+                            server_token=server_token,
+                            allow_insecure_http=allow_insecure_http,
+                        )
+                    except ValueError as error:
+                        print_fn(
+                            "Report salvato, ma aggiornamento dati non disponibile:\n"
+                            f"{error}"
+                        )
                 input_fn("Premi invio per continuare...")
 
 
@@ -754,6 +1094,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--now", help="Data ISO da usare per calcolare scadenze e mancanti.")
     parser.add_argument("--no-clear", action="store_true", help="Non pulire lo schermo tra una vista e l'altra.")
     parser.add_argument("--no-color", action="store_true", help="Disabilita colori ANSI.")
+    parser.add_argument(
+        "--server-url",
+        default=os.environ.get("THEBITLAB_SERVER_URL", DEFAULT_SERVER_URL),
+        help="URL del server locale che gestisce richieste di aiuto e provider Codex.",
+    )
+    parser.add_argument(
+        "--allow-insecure-http",
+        action="store_true",
+        help="Consenti HTTP remoto solo per un collaudo su rete controllata; il default richiede HTTPS.",
+    )
     return parser.parse_args()
 
 
@@ -768,6 +1118,9 @@ def main() -> int:
             now=args.now,
             clear=not args.no_clear,
             use_color=supports_color(args.no_color),
+            server_url=args.server_url,
+            server_token=os.environ.get("THEBITLAB_STUDENT_HELP_TOKEN", ""),
+            allow_insecure_http=args.allow_insecure_http,
         )
     except ValueError as error:
         print(f"Lab studente non disponibile:\n{error}", file=sys.stderr)

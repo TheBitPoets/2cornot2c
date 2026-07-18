@@ -1035,6 +1035,11 @@ def test_delete_selected_assignment_posts_confirmation_and_refreshes_list() -> N
     run_dashboard_js(
         """
         (async () => {
+          let confirmation = "";
+          tested.window.confirm = (message) => {
+            confirmation = message;
+            return true;
+          };
           tested.state.dueAssignments = [{
             id: "assignment-python-base-somma-001-3a",
             activity_id: "python-base-somma-001",
@@ -1067,6 +1072,9 @@ def test_delete_selected_assignment_posts_confirmation_and_refreshes_list() -> N
           assert.equal(tested.state.selectedAssignmentId, "");
           assert.equal(tested.els.deleteAssignmentBtn.disabled, true);
           assert.match(tested.els.status.textContent, /Assegnazione cancellata/);
+          assert.match(confirmation, /richieste di aiuto autorevoli/);
+          assert.match(confirmation, /conteggio del budget/);
+          assert.match(confirmation, /workspace e file.*non verranno rimossi/s);
         })();
         """
     )
@@ -1153,6 +1161,63 @@ def test_delete_selected_assignment_stops_when_confirmation_is_cancelled() -> No
 
           assert.equal(tested.fetchCalls.some((entry) => entry.path === "/api/assignments/delete"), false);
           assert.equal(tested.state.selectedAssignmentId, "assignment-python-base-somma-001-3a");
+        })();
+        """
+    )
+
+
+def test_delete_selected_assignment_reports_an_idempotent_retry_as_completed() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.state.assignments = [{
+            id: "assignment-delete-retry",
+            activity_id: "activity-demo",
+            class_label: "3A TPSI",
+          }];
+          tested.state.selectedAssignmentId = "assignment-delete-retry";
+          tested.els.assignmentSelect.value = "assignment-delete-retry";
+          tested.fetchResponses["/api/assignments/delete"] = {
+            ok: true,
+            deleted: { id: "assignment-delete-retry" },
+            already_deleted: true,
+            cleanup_pending: false,
+            assignments: [],
+            assignment_statuses: [],
+            due_without_register: [],
+          };
+
+          await tested.deleteSelectedAssignment();
+
+          assert.match(tested.els.status.textContent, /Assegnazione gia cancellata/);
+          assert.doesNotMatch(tested.els.status.textContent, /non cancellata/);
+        })();
+        """
+    )
+
+
+def test_delete_selected_assignment_reports_deferred_quarantine_cleanup() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.state.assignments = [{ id: "assignment-cleanup", activity_id: "activity-demo" }];
+          tested.state.selectedAssignmentId = "assignment-cleanup";
+          tested.els.assignmentSelect.value = "assignment-cleanup";
+          tested.fetchResponses["/api/assignments/delete"] = {
+            ok: true,
+            deleted: { id: "assignment-cleanup" },
+            already_deleted: false,
+            cleanup_pending: true,
+            assignments: [],
+            assignment_statuses: [],
+            due_without_register: [],
+          };
+
+          await tested.deleteSelectedAssignment();
+
+          assert.match(tested.els.status.textContent, /Assegnazione cancellata/);
+          assert.match(tested.els.status.textContent, /Pulizia della quarantena differita/);
+          assert.match(tested.els.status.textContent, /prossimo avvio/);
         })();
         """
     )
@@ -2881,7 +2946,28 @@ def test_student_help_details_render_counts_and_prompts() -> None:
               reason: "AI non consentita.",
               prompt: "Scrivimi la soluzione completa.",
             },
+            {
+              requested_at: "2026-10-20T08:16:00+02:00",
+              help_type: "ai",
+              label: "Aiuto AI",
+              allowed: true,
+              provider_status: "pending",
+              prompt: "Sto ancora aspettando?",
+            },
+            {
+              requested_at: "2026-10-20T08:17:00+02:00",
+              help_type: "ai",
+              label: "Aiuto AI",
+              allowed: true,
+              provider_status: "completed",
+              response: { status: "error" },
+              prompt: "Il provider ha risposto?",
+            },
           ],
+          legacy: {
+            total: 1,
+            events: [{ requested_at: "2026-09-01T08:00:00+02:00", prompt: "Dato modificabile." }],
+          },
         });
 
         assert.match(html, /Aiuti 3/);
@@ -2892,6 +2978,13 @@ def test_student_help_details_render_counts_and_prompts() -> None:
         assert.match(html, /Puoi ricordarmi come funziona input\\(\\)\\?/);
         assert.match(html, /Scrivimi la soluzione completa\\./);
         assert.match(html, /Bloccata/);
+        assert.match(html, /In elaborazione/);
+        assert.match(html, /Risposta non disponibile/);
+        assert.match(html, /Consentita/);
+        assert.match(html, /Legacy non verificati \\(1\\)/);
+        assert.match(html, /non incidono su budget e metriche/);
+        assert.match(html, /Dato modificabile\\./);
+        assert.doesNotMatch(html, /Â|Ã/);
 
         const empty = tested.studentHelpDetails({ total: 0, events: [] });
         assert.match(empty, /Nessuna richiesta registrata/);
@@ -2964,6 +3057,8 @@ def test_assignment_and_report_panels_are_separated() -> None:
     assert 'id="generateReportBtn"' in report_section
     assert 'id="deleteAssignmentBtn"' in report_section
     assert "Cancella assegnazione" in report_section
+    assert "richieste di aiuto autorevoli" in report_section
+    assert "conteggio del budget" in report_section
     assert 'id="saveAssignmentBtn"' not in report_section
     assert 'id="distributeAssignmentBtn"' not in report_section
     assert 'id="activitySelect"' not in report_section

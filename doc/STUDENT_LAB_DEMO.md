@@ -56,6 +56,9 @@ python scripts/student_lab_runner.py --root tmp/student-lab-demo --student-id ro
 python scripts/course_board_server.py --root tmp/student-lab-demo
 ```
 
+Conserva il token dashboard stampato dal server. Quando il browser mostra la richiesta di autenticazione usa
+`teacher` come nome utente e il token come password.
+
 Se vuoi usare un'altra cartella:
 
 ```bash

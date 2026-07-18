@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import uuid
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -14,6 +16,35 @@ from scripts import create_activity
 
 ASSIGNMENT_SCHEMA_VERSION = "1.0"
 DEFAULT_ASSIGNMENTS_DIR = Path("teacher-assignments")
+
+
+def sync_directory(path: Path) -> None:
+    """Persist directory-entry changes on platforms exposing directory fsync."""
+
+    if os.name == "nt":
+        return
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+    descriptor = os.open(path, flags)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
+def create_durable_directory(path: Path) -> None:
+    """Create a directory tree and persist every newly added parent entry."""
+
+    missing: list[Path] = []
+    current = path
+    while not current.exists():
+        missing.append(current)
+        parent = current.parent
+        if parent == current:
+            break
+        current = parent
+    path.mkdir(parents=True, exist_ok=True)
+    for directory in reversed(missing):
+        sync_directory(directory.parent)
 
 
 @dataclass(frozen=True)
@@ -297,8 +328,17 @@ class JsonAssignmentRecordStorage:
     def write_json(self, path: Path, payload: dict[str, Any]) -> None:
         """Write a JSON object with stable formatting."""
 
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        create_durable_directory(path.parent)
+        temporary_path = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
+        try:
+            with temporary_path.open("w", encoding="utf-8", newline="\n") as stream:
+                stream.write(json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+                stream.flush()
+                os.fsync(stream.fileno())
+            temporary_path.replace(path)
+            sync_directory(path.parent)
+        finally:
+            temporary_path.unlink(missing_ok=True)
 
     def write_assignment(self, payload: dict[str, Any], overwrite: bool = False) -> dict[str, Any]:
         """Persist one assignment record."""
@@ -327,6 +367,7 @@ class JsonAssignmentRecordStorage:
         assignment = validate_assignment_record(self.read_json(path))
         deleted = {**assignment, "name": path.name, "path": self.relative_path(path)}
         path.unlink()
+        sync_directory(path.parent)
         return deleted
 
     def list_assignments(self) -> list[dict[str, Any]]:

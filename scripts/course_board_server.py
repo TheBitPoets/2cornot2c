@@ -17,17 +17,26 @@ serving static files from the repository.
 from __future__ import annotations
 
 import argparse
+import base64
+import hashlib
+import ipaddress
 import json
 import mimetypes
 import os
 import re
+import secrets
+import shutil
 import subprocess
 import sys
+import threading
 import urllib.error
 import urllib.request
+import uuid
+from contextlib import ExitStack, contextmanager, nullcontext
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from typing import Any
 from urllib.parse import parse_qs, unquote, urlparse
 
 APP_ROOT = Path(__file__).resolve().parents[1]
@@ -43,12 +52,16 @@ from scripts import (
     create_activity,
     create_submission_scaffold,
     manual_ai_feedback,
+    student_help_auth,
+    student_help_codex_adapter,
+    student_help_service,
     student_lab_service,
     thebitlab_services,
     thebitlab_storage,
     track_assignments,
 )
 from scripts.thebitlab_contracts import normalize_activity
+from scripts.student_help_provider import DeterministicStudentHelpProvider, StudentHelpProvider
 
 DESIGN_PATH = ROOT / "doc" / "course_design.json"
 COURSE_DESIGNS_DIR = ROOT / "doc" / "course_designs"
@@ -64,6 +77,9 @@ LEGACY_AI_SECRET_PATH = ROOT / "scripts" / ".secrets" / "ai.secret"
 DEFAULT_SOURCES = ["README.md", "LINUX_PROGRAMMING.md"]
 ACTIVE_AI_PROVIDER = os.environ.get("AI_PROVIDER", "openai").strip().lower()
 ACTIVE_AI_MODEL = os.environ.get("AI_MODEL", "").strip()
+MAX_HTTP_WORKERS = 64
+MAX_HTTP_WORKERS_PER_CLIENT = 8
+HTTP_CLIENT_TIMEOUT_SECONDS = 15
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 TAG_RE = re.compile(r"<[^>]+>")
 PUNCT_RE = re.compile(r"[^\w\s-]", re.UNICODE)
@@ -86,6 +102,208 @@ AI_FRAME_TIMEOUT_SECONDS = 120
 AI_COURSE_PLAN_TIMEOUT_SECONDS = 240
 COMPACT_TEXT_CHARS = 1200
 MAX_SUBMISSION_FILE_BYTES = 512 * 1024
+MAX_STUDENT_HELP_REQUEST_BYTES = 16 * 1024
+MIN_TEACHER_TOKEN_CHARS = 32
+MAX_HELP_LOG_ROLLBACK_BYTES = 256 * 1024 * 1024
+HELP_DELETION_SCHEMA_VERSION = "student_help_deletion.v2"
+ASSIGNMENT_TARGET_BINDINGS_OPERATION_ID = "assignment-target-bindings-global"
+STUDENT_HELP_SERVER_ERROR = "Servizio aiuto temporaneamente non disponibile."
+TEACHER_AUTH_REALM = "TheBitLab docente"
+PRIVATE_STATIC_ROOTS = {"teacher-assignments", "teacher-help-events", "teacher-reports"}
+REMOTE_STUDENT_API_ROUTES = frozenset(
+    {
+        ("GET", "/api/student-lab/assignments"),
+        ("GET", "/api/student-lab/help-history"),
+        ("POST", "/api/student-lab/help"),
+    }
+)
+_ASSIGNMENT_OPERATION_LOCKS: dict[str, dict[str, Any]] = {}
+_ASSIGNMENT_OPERATION_LOCKS_GUARD = threading.Lock()
+
+
+class StudentHelpConfigurationError(RuntimeError):
+    """Raised when the teacher server has an invalid help-provider setup."""
+
+
+class StudentHelpBusyError(RuntimeError):
+    """Raised when another help request already owns the assignment slot."""
+
+
+def normalized_assignment_operation_id(operation_id: str) -> str:
+    """Return the canonical key shared by equivalent operation identifiers."""
+
+    original = str(operation_id or "").strip()
+    readable = create_activity.slugify(original)[:48] or "operation"
+    digest = hashlib.sha256(original.encode("utf-8")).hexdigest()
+    return f"{readable}-{digest}"
+
+
+class DataRootProcessLock:
+    """Hold an operating-system lock for one server data root."""
+
+    def __init__(self, root: Path) -> None:
+        self.path = root.resolve(strict=False) / ".thebitlab-server.lock"
+        self._handle = None
+
+    def acquire(self) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        handle = self.path.open("a+b")
+        try:
+            handle.seek(0, os.SEEK_END)
+            if handle.tell() == 0:
+                handle.write(b"\0")
+                handle.flush()
+            handle.seek(0)
+            if os.name == "nt":
+                import msvcrt
+
+                msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except (OSError, BlockingIOError) as error:
+            handle.close()
+            raise RuntimeError(
+                f"Un altro server sta gia usando il root dati: {self.path.parent}"
+            ) from error
+        self._handle = handle
+
+    def release(self) -> None:
+        if self._handle is None:
+            return
+        try:
+            self._handle.seek(0)
+            if os.name == "nt":
+                import msvcrt
+
+                msvcrt.locking(self._handle.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(self._handle.fileno(), fcntl.LOCK_UN)
+        finally:
+            self._handle.close()
+            self._handle = None
+
+
+@contextmanager
+def assignment_operation_lock(assignment_id: str, *, blocking: bool = True):
+    """Serialize one assignment operation and release its cache entry afterward."""
+
+    normalized_assignment_id = normalized_assignment_operation_id(assignment_id)
+    key = f"{ROOT.resolve(strict=False)}::{normalized_assignment_id}"
+    with _ASSIGNMENT_OPERATION_LOCKS_GUARD:
+        entry = _ASSIGNMENT_OPERATION_LOCKS.setdefault(
+            key,
+            {"lock": threading.Lock(), "users": 0},
+        )
+        entry["users"] += 1
+    lock = entry["lock"]
+    acquired = lock.acquire(blocking=blocking)
+    if not acquired:
+        with _ASSIGNMENT_OPERATION_LOCKS_GUARD:
+            entry["users"] -= 1
+            if entry["users"] == 0 and _ASSIGNMENT_OPERATION_LOCKS.get(key) is entry:
+                _ASSIGNMENT_OPERATION_LOCKS.pop(key, None)
+        raise StudentHelpBusyError("Una richiesta di aiuto per questa consegna e gia in elaborazione.")
+    try:
+        yield
+    finally:
+        lock.release()
+        with _ASSIGNMENT_OPERATION_LOCKS_GUARD:
+            entry["users"] -= 1
+            if entry["users"] == 0 and _ASSIGNMENT_OPERATION_LOCKS.get(key) is entry:
+                _ASSIGNMENT_OPERATION_LOCKS.pop(key, None)
+
+
+def student_help_provider() -> StudentHelpProvider:
+    """Return the server-side provider selected for student help."""
+
+    local_provider = DeterministicStudentHelpProvider()
+    provider_name = os.environ.get("THEBITLAB_STUDENT_HELP_PROVIDER", "codex").strip().lower()
+    if provider_name in {"local", "deterministic-local"}:
+        return local_provider
+    if provider_name != "codex":
+        raise StudentHelpConfigurationError("Provider aiuto studente non supportato.")
+    codex_provider = student_help_codex_adapter.CodexStudentHelpProvider(
+        codex_command=os.environ.get("CODEX_COMMAND", "codex"),
+        model=os.environ.get("THEBITLAB_STUDENT_HELP_CODEX_MODEL", ""),
+    )
+    ai_provider = student_help_codex_adapter.FallbackStudentHelpProvider(codex_provider, local_provider)
+    return student_help_codex_adapter.StudentHelpProviderRouter(ai_provider, local_provider)
+
+
+def teacher_dashboard_token() -> str:
+    """Return a robust configured or generated teacher credential."""
+
+    configured = os.environ.get("THEBITLAB_TEACHER_TOKEN", "").strip()
+    if configured:
+        if len(configured) < MIN_TEACHER_TOKEN_CHARS:
+            raise ValueError(
+                f"THEBITLAB_TEACHER_TOKEN deve contenere almeno {MIN_TEACHER_TOKEN_CHARS} caratteri."
+            )
+        return configured
+    return secrets.token_urlsafe(24)
+
+
+def teacher_dashboard_token_console_line(token: str, configured: bool) -> str:
+    """Return a startup line without disclosing a persistent credential."""
+
+    if configured:
+        return "Token dashboard: configurato tramite THEBITLAB_TEACHER_TOKEN (valore non mostrato)"
+    return f"Token dashboard temporaneo: {token}"
+
+
+def student_help_operation_id(assignment_id: str, student_id: str) -> str:
+    """Return the per-student admission key for one assignment help request."""
+
+    return f"help::{assignment_id}::{student_id}"
+
+
+def unique_student_help_operation_ids(assignment_id: str, student_ids: set[str]) -> list[str]:
+    """Return one operation id for each effective lock key."""
+
+    operations: dict[str, str] = {}
+    for student_id in sorted(student_ids):
+        operation_id = student_help_operation_id(assignment_id, student_id)
+        operations.setdefault(normalized_assignment_operation_id(operation_id), operation_id)
+    return list(operations.values())
+
+
+def record_student_help(payload: dict[str, Any], *, student_id: str) -> dict[str, Any]:
+    """Record one TUI request using server-owned assignment context and policy."""
+
+    assignment_id = str(payload.get("assignment_id", "")).strip()
+    request_kwargs = {
+        "root": ROOT,
+        "assignments_dir": TEACHER_ASSIGNMENTS_DIR,
+        "student_id": student_id,
+        "assignment_id": assignment_id,
+        "help_type": payload.get("help_type", ""),
+        "prompt": payload.get("prompt", ""),
+        "request_id": payload.get("request_id", ""),
+    }
+    try:
+        with assignment_operation_lock(
+            student_help_operation_id(assignment_id, student_id),
+            blocking=False,
+        ):
+            event = student_lab_service.record_student_help_request(
+                **request_kwargs,
+                provider=DeterministicStudentHelpProvider(),
+                provider_factory=student_help_provider,
+            )
+    except StudentHelpBusyError:
+        try:
+            event = student_lab_service.record_student_help_request(
+                **request_kwargs,
+                provider=DeterministicStudentHelpProvider(),
+                existing_only=True,
+            )
+        except student_help_service.StudentHelpRequestNotFoundError:
+            raise StudentHelpBusyError("Richiesta di aiuto gia in elaborazione per questa consegna.") from None
+    return {"ok": True, "event": event}
 
 
 def configure_data_root(root: Path) -> Path:
@@ -116,6 +334,7 @@ def configure_data_root(root: Path) -> Path:
     AI_PROVIDERS_PATH = ROOT / "config" / "ai_providers.yaml"
     AI_SECRET_PATH = ROOT / ".secrets" / "ai.secret"
     LEGACY_AI_SECRET_PATH = ROOT / "scripts" / ".secrets" / "ai.secret"
+    recover_interrupted_assignment_deletions()
     return ROOT
 
 
@@ -147,6 +366,15 @@ def assignment_record_storage() -> assignment_records.JsonAssignmentRecordStorag
     """Return the JSON storage adapter for explicit assignment records."""
 
     return assignment_records.JsonAssignmentRecordStorage(ROOT, TEACHER_ASSIGNMENTS_DIR)
+
+
+def assignment_record_operation_id(
+    storage: assignment_records.JsonAssignmentRecordStorage,
+    assignment_id: str,
+) -> str:
+    """Return the lock identity shared by every alias of one record path."""
+
+    return f"assignment-record:{storage.safe_assignment_path(assignment_id)}"
 
 
 def class_roster_storage() -> thebitlab_storage.JsonClassRosterStorage:
@@ -313,15 +541,416 @@ def list_assignment_records(now: str | None = None) -> dict:
     }
 
 
-def delete_assignment_record(payload: dict) -> dict:
-    """Delete one explicit assignment record and return the updated list."""
+def locked_student_lab_payload(*, student_id: str, now: str | None = None) -> dict[str, Any]:
+    """Build the network-safe student payload without blocking provider calls."""
 
-    assignment_id = str(payload.get("assignment_id", "")).strip()
-    if not assignment_id:
+    return student_lab_service.student_lab_payload(
+        root=ROOT,
+        assignments_dir=TEACHER_ASSIGNMENTS_DIR,
+        student_id=student_id,
+        now=now,
+    )
+
+
+def restore_staged_help_logs(staged_logs: list[tuple[Path, Path]]) -> None:
+    """Restore quarantined help-log directories in reverse order."""
+
+    for original, staged in reversed(staged_logs):
+        if staged.exists():
+            original.parent.mkdir(parents=True, exist_ok=True)
+            staged.replace(original)
+            assignment_records.sync_directory(staged.parent)
+            assignment_records.sync_directory(original.parent)
+
+
+def snapshot_staged_help_logs(
+    staged_logs: list[tuple[Path, Path]],
+) -> list[tuple[Path, dict[Path, bytes]]]:
+    """Read a bounded rollback snapshot before deleting quarantined logs."""
+
+    snapshots: list[tuple[Path, dict[Path, bytes]]] = []
+    total_bytes = 0
+    for original, staged in staged_logs:
+        files: dict[Path, bytes] = {}
+        for candidate in staged.rglob("*"):
+            if candidate.is_symlink():
+                raise ValueError("La quarantena dei log contiene un collegamento simbolico non supportato.")
+            if not candidate.is_file():
+                continue
+            content = candidate.read_bytes()
+            total_bytes += len(content)
+            if total_bytes > MAX_HELP_LOG_ROLLBACK_BYTES:
+                raise ValueError("I log di aiuto superano il limite di rollback per una singola assegnazione.")
+            files[candidate.relative_to(staged)] = content
+        snapshots.append((original, files))
+    return snapshots
+
+
+def restore_help_log_snapshots(snapshots: list[tuple[Path, dict[Path, bytes]]]) -> None:
+    """Recreate complete help-log directories from an in-memory snapshot."""
+
+    for original, files in snapshots:
+        original.mkdir(parents=True, exist_ok=True)
+        for relative_path, content in files.items():
+            destination = original / relative_path
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(content)
+        sync_file_tree(original)
+
+
+def sync_file_tree(root: Path) -> None:
+    """Persist a completed file tree before advancing its recovery journal."""
+
+    if not root.is_dir():
+        return
+    directories = {root}
+    for candidate in root.rglob("*"):
+        if candidate.is_symlink():
+            raise ValueError(f"Collegamento simbolico non supportato: {candidate}")
+        if candidate.is_dir():
+            directories.add(candidate)
+            continue
+        if candidate.is_file():
+            with candidate.open("r+b") as stream:
+                os.fsync(stream.fileno())
+            directories.add(candidate.parent)
+    for directory in sorted(directories, key=lambda item: len(item.parts), reverse=True):
+        assignment_records.sync_directory(directory)
+    assignment_records.sync_directory(root.parent)
+
+
+def update_help_deletion_manifest(trash_root: Path, **updates: Any) -> dict[str, Any]:
+    """Atomically update one deletion recovery journal."""
+
+    storage = assignment_records.JsonAssignmentRecordStorage(ROOT)
+    manifest_path = help_deletion_manifest_path(trash_root)
+    manifest = storage.read_json(manifest_path)
+    manifest.update(updates)
+    storage.write_json(manifest_path, manifest)
+    return manifest
+
+
+def persist_help_log_rollback(
+    trash_root: Path,
+    assignment: dict[str, Any],
+    snapshots: list[tuple[Path, dict[Path, bytes]]],
+) -> None:
+    """Persist a complete rollback copy before the assignment record is removed."""
+
+    manifest = assignment_records.JsonAssignmentRecordStorage(ROOT).read_json(
+        help_deletion_manifest_path(trash_root)
+    )
+    logs = manifest.get("logs")
+    if not isinstance(logs, list):
+        raise RuntimeError("Journal cancellazione incoerente con i log in quarantena.")
+    rollback_root = trash_root / "rollback"
+    for original, files in snapshots:
+        original_relative = str(original.resolve(strict=False).relative_to(ROOT.resolve(strict=False))).replace(
+            "\\", "/"
+        )
+        item = next(
+            (
+                candidate
+                for candidate in logs
+                if isinstance(candidate, dict) and candidate.get("original") == original_relative
+            ),
+            None,
+        )
+        if item is None:
+            raise RuntimeError("Journal cancellazione incoerente con i log in quarantena.")
+        staged_name = str(item.get("staged", "")).strip()
+        if not staged_name.isdigit():
+            raise RuntimeError("Path non valido nel journal cancellazione.")
+        backup_relative = Path("rollback") / staged_name
+        backup_dir = trash_root / backup_relative
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        for relative_path, content in files.items():
+            destination = backup_dir / relative_path
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            with destination.open("wb") as stream:
+                stream.write(content)
+                stream.flush()
+                os.fsync(stream.fileno())
+        item["rollback"] = str(backup_relative).replace("\\", "/")
+    sync_file_tree(rollback_root)
+    update_help_deletion_manifest(
+        trash_root,
+        state="prepared",
+        assignment=assignment,
+        logs=logs,
+    )
+
+
+def restore_persistent_help_deletion(trash_root: Path, manifest: dict[str, Any]) -> None:
+    """Idempotently restore assignment and logs from a rollback journal."""
+
+    assignment = manifest.get("assignment")
+    logs = manifest.get("logs")
+    if not isinstance(assignment, dict) or not isinstance(logs, list):
+        raise RuntimeError(f"Journal rollback non valido: {help_deletion_manifest_path(trash_root)}")
+    help_root = (ROOT / "teacher-help-events").resolve(strict=False)
+    for item in logs:
+        if not isinstance(item, dict):
+            raise RuntimeError(f"Journal rollback non valido: {help_deletion_manifest_path(trash_root)}")
+        rollback_path = str(item.get("rollback", "")).strip()
+        if not rollback_path:
+            continue
+        original = (ROOT / str(item.get("original", ""))).resolve(strict=False)
+        backup = (trash_root / rollback_path).resolve(strict=False)
+        try:
+            original_relative = original.relative_to(help_root)
+            backup_relative = backup.relative_to(trash_root.resolve(strict=False))
+        except ValueError as error:
+            raise RuntimeError(f"Path non valido nel journal: {help_deletion_manifest_path(trash_root)}") from error
+        if not original_relative.parts or len(backup_relative.parts) < 2 or backup_relative.parts[0] != "rollback":
+            raise RuntimeError(f"Path non valido nel journal: {help_deletion_manifest_path(trash_root)}")
+        if not backup.is_dir():
+            raise RuntimeError(f"Copia di rollback mancante: {backup}")
+        if original.exists():
+            shutil.rmtree(original)
+        shutil.copytree(backup, original)
+        sync_file_tree(original)
+    assignment_record_storage().write_assignment(assignment, overwrite=True)
+    update_help_deletion_manifest(trash_root, state="restored")
+
+
+def help_deletion_manifest_path(trash_root: Path) -> Path:
+    """Return the persistent recovery journal for one deletion."""
+
+    return trash_root / "deletion.json"
+
+
+def purge_help_deletion_trash(trash_root: Path, *, ignore_errors: bool = False) -> None:
+    """Remove transaction data while keeping the recovery journal until last."""
+
+    try:
+        manifest_path = help_deletion_manifest_path(trash_root)
+        if trash_root.is_dir():
+            for child in list(trash_root.iterdir()):
+                if child == manifest_path:
+                    continue
+                if child.is_dir() and not child.is_symlink():
+                    shutil.rmtree(child)
+                else:
+                    child.unlink(missing_ok=True)
+            manifest_path.unlink(missing_ok=True)
+            assignment_records.sync_directory(trash_root)
+            trash_root.rmdir()
+            assignment_records.sync_directory(trash_root.parent)
+    except OSError:
+        if not ignore_errors:
+            raise
+
+
+def stage_help_logs_for_deletion(
+    assignment_id: str,
+    log_dirs: list[Path],
+) -> tuple[Path, list[tuple[Path, Path]]]:
+    """Move help logs to a private same-volume quarantine before record deletion."""
+
+    help_events_root = ROOT / "teacher-help-events"
+    help_events_root.mkdir(parents=True, exist_ok=True)
+    assignment_records.sync_directory(help_events_root.parent)
+    trash_base = help_events_root / ".trash"
+    trash_base.mkdir(parents=True, exist_ok=True)
+    assignment_records.sync_directory(trash_base.parent)
+    trash_root = trash_base / uuid.uuid4().hex
+    staged_logs: list[tuple[Path, Path]] = []
+    planned_logs = []
+    for index, log_dir in enumerate(log_dirs):
+        try:
+            original = log_dir.resolve(strict=False).relative_to(ROOT.resolve(strict=False))
+        except ValueError as error:
+            raise ValueError("Il log da cancellare deve trovarsi nella root dati.") from error
+        planned_logs.append({"original": str(original).replace("\\", "/"), "staged": str(index)})
+    assignment_records.JsonAssignmentRecordStorage(ROOT).write_json(
+        help_deletion_manifest_path(trash_root),
+        {
+            "schema_version": HELP_DELETION_SCHEMA_VERSION,
+            "state": "staging",
+            "assignment_id": assignment_id,
+            "logs": planned_logs,
+        },
+    )
+    assignment_records.sync_directory(trash_base)
+    try:
+        for index, log_dir in enumerate(log_dirs):
+            if not log_dir.is_dir():
+                continue
+            staged = trash_root / str(index)
+            staged.parent.mkdir(parents=True, exist_ok=True)
+            log_dir.replace(staged)
+            assignment_records.sync_directory(log_dir.parent)
+            assignment_records.sync_directory(staged.parent)
+            staged_logs.append((log_dir, staged))
+    except Exception:
+        restore_staged_help_logs(staged_logs)
+        purge_help_deletion_trash(trash_root, ignore_errors=True)
+        raise
+    return trash_root, staged_logs
+
+
+def recover_interrupted_assignment_deletions() -> None:
+    """Recover or complete journaled help-log deletions after a server restart."""
+
+    trash_base = ROOT / "teacher-help-events" / ".trash"
+    if not trash_base.is_dir():
+        return
+    storage = assignment_record_storage()
+    help_root = (ROOT / "teacher-help-events").resolve(strict=False)
+    for trash_root in sorted(path for path in trash_base.iterdir() if path.is_dir()):
+        manifest_path = help_deletion_manifest_path(trash_root)
+        if not manifest_path.is_file():
+            if not any(trash_root.iterdir()):
+                trash_root.rmdir()
+                assignment_records.sync_directory(trash_root.parent)
+                continue
+            raise RuntimeError(f"Quarantena senza journal: {trash_root}")
+        manifest = storage.read_json(manifest_path)
+        schema_version = manifest.get("schema_version")
+        if schema_version not in {"student_help_deletion.v1", HELP_DELETION_SCHEMA_VERSION}:
+            raise RuntimeError(f"Journal cancellazione non supportato: {manifest_path}")
+        assignment_id = str(manifest.get("assignment_id", "")).strip()
+        logs = manifest.get("logs")
+        if not assignment_id or not isinstance(logs, list):
+            raise RuntimeError(f"Journal cancellazione non valido: {manifest_path}")
+        state = "staging" if schema_version == "student_help_deletion.v1" else str(manifest.get("state", ""))
+        if state == "rolling_back":
+            restore_persistent_help_deletion(trash_root, manifest)
+            purge_help_deletion_trash(trash_root)
+            continue
+        if state in {"restored", "committed"}:
+            purge_help_deletion_trash(trash_root)
+            continue
+        if state not in {"staging", "prepared"}:
+            raise RuntimeError(f"Stato journal cancellazione non supportato: {manifest_path}")
+        assignment_exists = storage.safe_assignment_path(assignment_id).is_file()
+        if assignment_exists:
+            for item in logs:
+                if not isinstance(item, dict):
+                    raise RuntimeError(f"Journal cancellazione non valido: {manifest_path}")
+                original = (ROOT / str(item.get("original", ""))).resolve(strict=False)
+                staged = (trash_root / str(item.get("staged", ""))).resolve(strict=False)
+                try:
+                    original_relative = original.relative_to(help_root)
+                    staged_relative = staged.relative_to(trash_root.resolve(strict=False))
+                except ValueError as error:
+                    raise RuntimeError(f"Path non valido nel journal: {manifest_path}") from error
+                if (
+                    not original_relative.parts
+                    or len(staged_relative.parts) != 1
+                    or not staged_relative.parts[0].isdigit()
+                ):
+                    raise RuntimeError(f"Path non valido nel journal: {manifest_path}")
+                if staged.is_dir():
+                    if original.exists():
+                        shutil.copytree(staged, original, dirs_exist_ok=True)
+                        shutil.rmtree(staged)
+                    else:
+                        original.parent.mkdir(parents=True, exist_ok=True)
+                        staged.replace(original)
+                    sync_file_tree(original)
+        purge_help_deletion_trash(trash_root)
+    try:
+        trash_base.rmdir()
+    except OSError:
+        pass
+
+
+def rollback_help_deletion(
+    trash_root: Path,
+    assignment: dict[str, Any],
+    snapshots: list[tuple[Path, dict[Path, bytes]]],
+) -> None:
+    """Restore one failed deletion while leaving a recoverable journal on interruption."""
+
+    update_help_deletion_manifest(trash_root, state="rolling_back")
+    restore_help_log_snapshots(snapshots)
+    assignment_record_storage().write_assignment(assignment, overwrite=True)
+    update_help_deletion_manifest(trash_root, state="restored")
+    purge_help_deletion_trash(trash_root, ignore_errors=True)
+
+
+def delete_assignment_record(payload: dict) -> dict:
+    """Delete one assignment, including its authoritative student help logs."""
+
+    requested_assignment_id = str(payload.get("assignment_id", "")).strip()
+    if not requested_assignment_id:
         raise ValueError("assignment_id obbligatorio.")
-    deleted = assignment_record_storage().delete_assignment(assignment_id)
+    record_storage = assignment_record_storage()
+    with ExitStack() as assignment_locks:
+        assignment_locks.enter_context(assignment_operation_lock(ASSIGNMENT_TARGET_BINDINGS_OPERATION_ID))
+        assignment_locks.enter_context(
+            assignment_operation_lock(assignment_record_operation_id(record_storage, requested_assignment_id))
+        )
+        try:
+            assignment = record_storage.read_assignment(requested_assignment_id)
+        except FileNotFoundError:
+            updated = list_assignment_records(str(payload.get("now", "")).strip() or None)
+            return {
+                "ok": True,
+                "deleted": {"id": requested_assignment_id},
+                "already_deleted": True,
+                "cleanup_pending": False,
+                **updated,
+            }
+        assignment_id = str(assignment["id"])
+        student_ids = set()
+        for target in assignment.get("targets", []):
+            if isinstance(target, dict):
+                student_ids.update(student_lab_service.target_cleanup_student_ids(target))
+        log_paths = sorted(
+            {
+                student_help_service.server_help_log_path(ROOT, student_id, assignment_id)
+                for student_id in student_ids
+            },
+            key=str,
+        )
+        with ExitStack() as help_operations:
+            for operation_id in unique_student_help_operation_ids(assignment_id, student_ids):
+                help_operations.enter_context(
+                    assignment_operation_lock(operation_id)
+                )
+            with ExitStack() as log_locks:
+                for log_path in log_paths:
+                    log_locks.enter_context(student_help_service.help_log_lock(log_path))
+                trash_root, staged_logs = stage_help_logs_for_deletion(
+                    assignment_id,
+                    [log_path.parent for log_path in log_paths]
+                )
+                try:
+                    rollback_snapshots = snapshot_staged_help_logs(staged_logs)
+                    persist_help_log_rollback(trash_root, assignment, rollback_snapshots)
+                except Exception:
+                    restore_staged_help_logs(staged_logs)
+                    purge_help_deletion_trash(trash_root, ignore_errors=True)
+                    raise
+                try:
+                    deleted = record_storage.delete_assignment(assignment_id)
+                except Exception:
+                    rollback_help_deletion(trash_root, assignment, rollback_snapshots)
+                    raise
+                try:
+                    for _, staged in staged_logs:
+                        if staged.exists():
+                            shutil.rmtree(staged)
+                    update_help_deletion_manifest(trash_root, state="committed")
+                except Exception:
+                    rollback_help_deletion(trash_root, assignment, rollback_snapshots)
+                    raise
+                cleanup_pending = False
+                try:
+                    purge_help_deletion_trash(trash_root)
+                except OSError:
+                    cleanup_pending = True
     updated = list_assignment_records(str(payload.get("now", "")).strip() or None)
-    return {"ok": True, "deleted": deleted, **updated}
+    return {
+        "ok": True,
+        "deleted": deleted,
+        "already_deleted": False,
+        "cleanup_pending": cleanup_pending,
+        **updated,
+    }
 
 
 def repository_relative_path(path: Path) -> str:
@@ -433,7 +1062,27 @@ def read_class_roster(name: str) -> dict:
 def read_assignment_report(name: str) -> dict:
     """Read one assignment tracking report from teacher-reports."""
 
-    return assignment_service().read_assignment_report(name)
+    report = assignment_service().read_assignment_report(name)
+    assignment_id = str(report.get("assignment_id", "")).strip()
+    students = report.get("students") if isinstance(report.get("students"), list) else []
+    if not assignment_id:
+        return report
+    for student in students:
+        if not isinstance(student, dict):
+            continue
+        student_id = str(student.get("student_id", "") or student.get("student", "")).strip()
+        if not student_id:
+            continue
+        previous_help = student.get("help") if isinstance(student.get("help"), dict) else {}
+        log_path = student_help_service.server_help_log_path(ROOT, student_id, assignment_id)
+        current_help = student_help_service.teacher_help_summary(log_path)
+        current_help["path"] = str(log_path.relative_to(ROOT)).replace("\\", "/")
+        current_help["activity_id"] = str(report.get("activity_id", "")).strip()
+        for key in ("legacy_unverified", "legacy_path", "legacy"):
+            if key in previous_help:
+                current_help[key] = previous_help[key]
+        student["help"] = current_help
+    return report
 
 
 def review_assignment_ai_feedback(name: str, student_id: str, decision: str) -> dict:
@@ -456,7 +1105,7 @@ def student_dashboard(student_id: str) -> dict:
 
     dashboard = assignment_service().student_dashboard(student_id)
     try:
-        dashboard["lab"] = student_lab_service.student_lab_payload(root=ROOT, student_id=student_id)
+        dashboard["lab"] = locked_student_lab_payload(student_id=student_id)
     except Exception as error:  # noqa: BLE001
         dashboard["lab"] = {
             "schema_version": "student_lab.v1",
@@ -614,6 +1263,56 @@ def infer_assignment_target_type(class_id: str, github_team: str, targets: list[
     return "group"
 
 
+def assignment_target_student_ids(assignment: dict[str, Any]) -> set[str]:
+    """Return canonical student identities referenced by one assignment."""
+
+    return {
+        student_id
+        for target in assignment.get("targets", [])
+        if isinstance(target, dict)
+        for student_id in [student_lab_service.target_student_id(target)]
+        if student_id
+    }
+
+
+def assignment_target_bindings(assignment: dict[str, Any]) -> dict[str, str]:
+    """Return one unambiguous repository binding for every student identity."""
+
+    bindings: dict[str, str] = {}
+    for target in assignment.get("targets", []):
+        if not isinstance(target, dict):
+            continue
+        student_id = student_lab_service.target_student_id(target)
+        repo_path = student_lab_service.target_repo_path(ROOT, target, student_id)
+        if not student_id or repo_path is None:
+            raise ValueError("Destinatario senza identita o repository valido.")
+        binding = os.path.normcase(str(repo_path.resolve(strict=False)))
+        previous = bindings.setdefault(student_id, binding)
+        if previous != binding:
+            raise ValueError(
+                f"Identificativo studente ambiguo: {student_id} e associato a repository diversi."
+            )
+    return bindings
+
+
+def validate_global_assignment_target_bindings(
+    storage: assignment_records.JsonAssignmentRecordStorage,
+    assignment: dict[str, Any],
+) -> dict[str, str]:
+    """Reject reuse of one student identity for a different repository."""
+
+    new_bindings = assignment_target_bindings(assignment)
+    for existing in storage.list_assignments():
+        if existing.get("id") == assignment.get("id"):
+            continue
+        for student_id, binding in assignment_target_bindings(existing).items():
+            if student_id in new_bindings and new_bindings[student_id] != binding:
+                raise ValueError(
+                    f"Identificativo studente gia associato a un altro repository: {student_id}."
+                )
+    return new_bindings
+
+
 def save_assignment_record(payload: dict) -> dict:
     """Persist an explicit assignment record from the teacher dashboard."""
 
@@ -639,7 +1338,22 @@ def save_assignment_record(payload: dict) -> dict:
         due_at=str(payload.get("due_at", "")).strip(),
         targets=targets,
     )
-    saved = assignment_record_storage().write_assignment(assignment, bool(payload.get("overwrite", False)))
+    overwrite = bool(payload.get("overwrite", False))
+    storage = assignment_record_storage()
+    with assignment_operation_lock(ASSIGNMENT_TARGET_BINDINGS_OPERATION_ID):
+        with assignment_operation_lock(assignment_record_operation_id(storage, assignment["id"])):
+            new_bindings = validate_global_assignment_target_bindings(storage, assignment)
+            if overwrite:
+                try:
+                    existing = storage.read_assignment(assignment["id"])
+                except FileNotFoundError:
+                    existing = None
+                if existing is not None and assignment_target_bindings(existing) != new_bindings:
+                    raise ValueError(
+                        "I destinatari o i repository di un'assegnazione esistente non sono modificabili: "
+                        "cancella l'assegnazione e creane una nuova."
+                    )
+            saved = storage.write_assignment(assignment, overwrite)
     records = list_assignment_records(str(payload.get("now", "")).strip() or None)
     return {
         "ok": True,
@@ -747,20 +1461,30 @@ def generate_assignment_report(payload: dict) -> dict:
         raise FileNotFoundError(f"Activity non trovata: {activity_path}")
     targets = read_targets_from_text(str(payload.get("targets_text", "")))
     output_path = safe_teacher_report_path(payload.get("output_name", ""))
-    index = track_assignments.track_assignments(
-        activity_path=activity_path,
-        targets=targets,
-        assigned_at=payload.get("assigned_at") or None,
-        due_at=payload.get("due_at") or None,
-        now=payload.get("now") or None,
-        class_id=payload.get("class_id") or None,
-        class_label=payload.get("class_label") or None,
-        github_team=payload.get("github_team") or None,
-    )
     assignment_id = str(payload.get("assignment_id", "")).strip()
-    if assignment_id:
-        index["assignment_id"] = assignment_id
-    track_assignments.write_tracking_index(index, output_path)
+    record_storage = assignment_record_storage()
+    operation_lock = (
+        assignment_operation_lock(assignment_record_operation_id(record_storage, assignment_id))
+        if assignment_id
+        else nullcontext()
+    )
+    with operation_lock:
+        canonical_assignment_id = assignment_id
+        if assignment_id:
+            canonical_assignment_id = str(record_storage.read_assignment(assignment_id)["id"])
+        index = track_assignments.track_assignments(
+            activity_path=activity_path,
+            targets=targets,
+            assigned_at=payload.get("assigned_at") or None,
+            due_at=payload.get("due_at") or None,
+            now=payload.get("now") or None,
+            class_id=payload.get("class_id") or None,
+            class_label=payload.get("class_label") or None,
+            github_team=payload.get("github_team") or None,
+            assignment_id=canonical_assignment_id or None,
+            server_root=ROOT if canonical_assignment_id else None,
+        )
+        track_assignments.write_tracking_index(index, output_path)
     return {
         "ok": True,
         "report": index,
@@ -2062,11 +2786,220 @@ def set_ai_provider(provider: str, model: str = "") -> dict:
     return ai_config()
 
 
+class BoundedThreadingHTTPServer(ThreadingHTTPServer):
+    """Serve requests with a fixed upper bound on concurrent client threads."""
+
+    daemon_threads = True
+
+    def __init__(
+        self,
+        *args,
+        max_workers: int = MAX_HTTP_WORKERS,
+        max_workers_per_client: int | None = None,
+        **kwargs,
+    ) -> None:
+        if max_workers < 1:
+            raise ValueError("max_workers deve essere almeno 1")
+        if max_workers_per_client is None:
+            max_workers_per_client = min(MAX_HTTP_WORKERS_PER_CLIENT, max_workers)
+        if max_workers_per_client < 1 or max_workers_per_client > max_workers:
+            raise ValueError("max_workers_per_client deve essere tra 1 e max_workers")
+        self._request_slots = threading.BoundedSemaphore(max_workers)
+        self._max_workers_per_client = max_workers_per_client
+        self._client_workers: dict[str, int] = {}
+        self._client_workers_guard = threading.Lock()
+        super().__init__(*args, **kwargs)
+
+    def process_request(self, request, client_address) -> None:
+        if not self.acquire_client_slot(client_address):
+            self.reject_overloaded_request(request)
+            return
+        if not self._request_slots.acquire(blocking=False):
+            self.release_client_slot(client_address)
+            self.reject_overloaded_request(request)
+            return
+        try:
+            super().process_request(request, client_address)
+        except BaseException:
+            self._request_slots.release()
+            self.release_client_slot(client_address)
+            raise
+
+    def acquire_client_slot(self, client_address) -> bool:
+        client_key = str(client_address[0])
+        with self._client_workers_guard:
+            current = self._client_workers.get(client_key, 0)
+            if current >= self._max_workers_per_client:
+                return False
+            self._client_workers[client_key] = current + 1
+            return True
+
+    def release_client_slot(self, client_address) -> None:
+        client_key = str(client_address[0])
+        with self._client_workers_guard:
+            current = self._client_workers.get(client_key, 0)
+            if current <= 1:
+                self._client_workers.pop(client_key, None)
+            else:
+                self._client_workers[client_key] = current - 1
+
+    def reject_overloaded_request(self, request) -> None:
+        """Reject a connection without occupying the server accept loop."""
+
+        response = (
+            b"HTTP/1.1 503 Service Unavailable\r\n"
+            b"Connection: close\r\n"
+            b"Content-Type: text/plain; charset=utf-8\r\n"
+            b"Content-Length: 34\r\n"
+            b"Retry-After: 1\r\n\r\n"
+            b"Servizio temporaneamente occupato."
+        )
+        try:
+            request.settimeout(1)
+            request.sendall(response)
+        except OSError:
+            pass
+        finally:
+            self.shutdown_request(request)
+
+    def process_request_thread(self, request, client_address) -> None:
+        try:
+            request.settimeout(HTTP_CLIENT_TIMEOUT_SECONDS)
+            super().process_request_thread(request, client_address)
+        finally:
+            self._request_slots.release()
+            self.release_client_slot(client_address)
+
+
 class CourseBoardHandler(BaseHTTPRequestHandler):
     """HTTP handler for the local board and its JSON API."""
 
+    def end_headers(self) -> None:
+        """Add browser hardening headers to every server response."""
+
+        self.send_header("Content-Security-Policy", "frame-ancestors 'none'")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        super().end_headers()
+
+    def is_loopback_client(self) -> bool:
+        """Return whether this request originates from the teacher machine."""
+
+        try:
+            return ipaddress.ip_address(self.client_address[0]).is_loopback
+        except ValueError:
+            return False
+
+    def is_teacher_authenticated(self) -> bool:
+        """Authenticate the teacher independently from the network source."""
+
+        expected_token = str(getattr(self.server, "teacher_token", ""))
+        scheme, separator, credentials = self.headers.get("Authorization", "").partition(" ")
+        if not expected_token or not separator or scheme.lower() != "basic":
+            return False
+        try:
+            decoded = base64.b64decode(credentials, validate=True).decode("utf-8")
+        except (ValueError, UnicodeDecodeError):
+            return False
+        username, separator, password = decoded.partition(":")
+        return bool(
+            separator
+            and secrets.compare_digest(username, "teacher")
+            and secrets.compare_digest(password, expected_token)
+        )
+
+    def write_teacher_auth_required(self) -> None:
+        """Request browser-compatible teacher credentials."""
+
+        body = json.dumps(
+            {"error": "Autenticazione docente richiesta."},
+            ensure_ascii=False,
+        ).encode("utf-8")
+        self.send_response(401)
+        self.send_header("WWW-Authenticate", f'Basic realm="{TEACHER_AUTH_REALM}", charset="UTF-8"')
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def reject_unauthenticated_teacher_api(self, method: str, path: str) -> bool:
+        is_teacher_api = path.startswith("/api/") and (method, path) not in REMOTE_STUDENT_API_ROUTES
+        if is_teacher_api and not self.is_teacher_authenticated():
+            self.write_teacher_auth_required()
+            return True
+        return False
+
+    def reject_unsafe_teacher_post(self, path: str) -> bool:
+        """Reject browser cross-site writes and non-JSON teacher API requests."""
+
+        if not path.startswith("/api/") or ("POST", path) in REMOTE_STUDENT_API_ROUTES:
+            return False
+        content_type = self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
+        if content_type != "application/json":
+            self.write_error_json(415, "Le API docente accettano soltanto application/json.")
+            return True
+        if self.headers.get("Sec-Fetch-Site", "").strip().lower() == "cross-site":
+            self.write_error_json(403, "Richiesta cross-site rifiutata.")
+            return True
+        origin = self.headers.get("Origin", "").strip()
+        if origin:
+            parsed_origin = urlparse(origin)
+            request_host = self.headers.get("Host", "").strip().lower()
+            if parsed_origin.scheme not in {"http", "https"} or parsed_origin.netloc.lower() != request_host:
+                self.write_error_json(403, "Origine della richiesta non autorizzata.")
+                return True
+        return False
+
+    def authenticated_student_id(self) -> str | None:
+        """Authenticate one student request and write the HTTP error on failure."""
+
+        try:
+            secret = student_help_auth.student_help_secret()
+        except ValueError:
+            self.write_error_json(500, STUDENT_HELP_SERVER_ERROR)
+            return None
+        try:
+            return student_help_auth.student_id_from_authorization(
+                self.headers.get("Authorization", ""),
+                secret,
+            )
+        except ValueError as error:
+            self.write_error_json(401, str(error))
+            return None
+
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
+        if self.reject_unauthenticated_teacher_api("GET", parsed.path):
+            return
+        if parsed.path in {"/api/student-lab/assignments", "/api/student-lab/help-history"}:
+            student_id = self.authenticated_student_id()
+            if student_id is None:
+                return
+            try:
+                query = parse_qs(parsed.query)
+                if parsed.path == "/api/student-lab/assignments":
+                    requested_now = query.get("now", [""])[0] or None
+                    self.write_json(
+                        locked_student_lab_payload(
+                            student_id=student_id,
+                            now=requested_now if self.is_loopback_client() else None,
+                        )
+                    )
+                    return
+                assignment_id = query.get("assignment_id", [""])[0]
+                self.write_json(
+                    student_lab_service.student_help_history(
+                        root=ROOT,
+                        assignments_dir=TEACHER_ASSIGNMENTS_DIR,
+                        student_id=student_id,
+                        assignment_id=assignment_id,
+                    )
+                )
+            except ValueError as error:
+                self.write_error_json(400, str(error))
+            except Exception:  # noqa: BLE001
+                self.write_error_json(500, STUDENT_HELP_SERVER_ERROR)
+            return
         if parsed.path == "/api/headings":
             self.write_json({"headings": extract_headings()})
             return
@@ -2112,6 +3045,38 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
+        if self.reject_unauthenticated_teacher_api("POST", parsed.path):
+            return
+        if self.reject_unsafe_teacher_post(parsed.path):
+            return
+        if parsed.path == "/api/student-lab/help":
+            student_id = self.authenticated_student_id()
+            if student_id is None:
+                return
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+            except (TypeError, ValueError):
+                self.write_error_json(400, "Content-Length non valido.")
+                return
+            if length < 1 or length > MAX_STUDENT_HELP_REQUEST_BYTES:
+                self.write_error_json(413, "Richiesta aiuto troppo grande o vuota.")
+                return
+            try:
+                payload = json.loads(self.rfile.read(length).decode("utf-8"))
+                if not isinstance(payload, dict):
+                    raise ValueError("Il payload della richiesta deve essere un oggetto JSON.")
+                self.write_json(record_student_help(payload, student_id=student_id))
+            except student_help_service.StudentHelpRateLimitError as error:
+                self.write_error_json(429, str(error))
+            except student_help_service.StudentHelpPendingError as error:
+                self.write_error_json(409, str(error))
+            except StudentHelpBusyError as error:
+                self.write_error_json(429, str(error))
+            except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
+                self.write_error_json(400, str(error))
+            except Exception:  # noqa: BLE001
+                self.write_error_json(500, STUDENT_HELP_SERVER_ERROR)
+            return
         length = int(self.headers.get("Content-Length", "0"))
         payload = json.loads(self.rfile.read(length).decode("utf-8"))
         if parsed.path == "/api/course-design":
@@ -2425,12 +3390,30 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def write_error_json(self, status: int, message: str) -> None:
+        body = json.dumps({"error": message}, ensure_ascii=False).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     def serve_static(self, request_path: str) -> None:
+        if not self.is_teacher_authenticated():
+            self.write_teacher_auth_required()
+            return
         relative = unquote(request_path.lstrip("/")) or "tools/course_board.html"
         target = (APP_ROOT / relative).resolve()
         try:
-            target.relative_to(APP_ROOT)
+            relative_target = target.relative_to(APP_ROOT)
         except ValueError:
+            self.send_error(403)
+            return
+        lowered_parts = {part.lower() for part in relative_target.parts}
+        if lowered_parts & PRIVATE_STATIC_ROOTS or any(part.startswith(".") for part in relative_target.parts):
+            self.send_error(403)
+            return
+        if "student_repos" in lowered_parts and "help" in lowered_parts:
             self.send_error(403)
             return
         if target.is_dir():
@@ -2454,21 +3437,69 @@ def main() -> int:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--root", type=Path, default=APP_ROOT, help="Root dati da usare per API e dashboard.")
+    parser.add_argument(
+        "--allow-insecure-network-http",
+        action="store_true",
+        help="Consente esplicitamente HTTP su un indirizzo non loopback; usare solo dietro protezioni di rete.",
+    )
     args = parser.parse_args()
-    data_root = configure_data_root(args.root)
-    server = ThreadingHTTPServer((args.host, args.port), CourseBoardHandler)
-    print(f"Course board: http://{args.host}:{args.port}/tools/course_board.html")
-    print(f"Root dati: {data_root}")
-    print("Premi Ctrl+C per fermare il server.")
+    teacher_token_is_configured = bool(os.environ.get("THEBITLAB_TEACHER_TOKEN", "").strip())
     try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        print("\nServer fermato.")
+        validate_server_bind(args.host, args.allow_insecure_network_http)
+        configured_teacher_token = teacher_dashboard_token()
+    except ValueError as error:
+        parser.error(str(error))
+    data_root_lock = DataRootProcessLock(args.root)
+    try:
+        data_root_lock.acquire()
+    except RuntimeError as error:
+        parser.error(str(error))
+    server = None
+    try:
+        data_root = configure_data_root(args.root)
+        server = BoundedThreadingHTTPServer((args.host, args.port), CourseBoardHandler)
+        server.teacher_token = configured_teacher_token
+        if not is_loopback_bind_host(args.host):
+            print("ATTENZIONE: dashboard e credenziali Basic sono esposte su HTTP non cifrato.")
+            print("Preferisci loopback con tunnel SSH oppure un reverse proxy HTTPS.")
+        print(f"Course board: http://{args.host}:{args.port}/tools/course_board.html")
+        print(f"Root dati: {data_root}")
+        print("Credenziali dashboard: utente teacher")
+        print(teacher_dashboard_token_console_line(server.teacher_token, teacher_token_is_configured))
+        print("Premi Ctrl+C per fermare il server.")
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            print("\nServer fermato.")
     finally:
-        server.server_close()
+        if server is not None:
+            server.server_close()
+        data_root_lock.release()
     return 0
+
+
+def is_loopback_bind_host(host: str) -> bool:
+    """Return whether a server bind host is explicitly limited to loopback."""
+
+    normalized = host.strip().removeprefix("[").removesuffix("]")
+    if normalized.lower() == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(normalized).is_loopback
+    except ValueError:
+        return False
+
+
+def validate_server_bind(host: str, allow_insecure_network_http: bool = False) -> None:
+    """Reject accidental clear-text exposure of teacher Basic credentials."""
+
+    if is_loopback_bind_host(host) or allow_insecure_network_http:
+        return
+    raise ValueError(
+        "il bind HTTP su un indirizzo non loopback richiede "
+        "--allow-insecure-network-http. Preferisci un tunnel SSH o un reverse proxy HTTPS."
+    )
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

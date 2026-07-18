@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import io
 import json
+import sys
+import urllib.error
 from pathlib import Path
+
+import pytest
 
 from scripts import student_lab_cli
 
@@ -74,6 +79,28 @@ def sample_assignment(**overrides):
     }
     payload.update(overrides)
     return payload
+
+
+def test_main_reads_student_token_only_from_environment(monkeypatch, tmp_path) -> None:
+    captured = {}
+    monkeypatch.setenv("THEBITLAB_STUDENT_HELP_TOKEN", "token-da-ambiente")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["student_lab_cli.py", "--student-id", "rossi-mario", "--root", str(tmp_path)],
+    )
+    monkeypatch.setattr(student_lab_cli, "run_tui", lambda **kwargs: captured.update(kwargs) or 0)
+
+    assert student_lab_cli.main() == 0
+    assert captured["server_token"] == "token-da-ambiente"
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["student_lab_cli.py", "--student-id", "rossi-mario", "--server-token", "token-cli"],
+    )
+    with pytest.raises(SystemExit):
+        student_lab_cli.parse_args()
 
 
 def sample_payload(assignments=None):
@@ -317,6 +344,109 @@ def test_render_help_history_shows_events(tmp_path) -> None:
     assert "Prova prima un caso minimo" in rendered
 
 
+def test_render_help_history_uses_events_from_server_payload(tmp_path) -> None:
+    assignment = sample_assignment(
+        help={
+            "path": "teacher-help-events/rossi-mario/assignment-001/events.json",
+            "events": [
+                {
+                    "requested_at": "2026-10-18T17:20:00+02:00",
+                    "label": "Richiamo teorico",
+                    "allowed": True,
+                    "reason": "Consentito.",
+                    "prompt": "Quale concetto devo ripassare?",
+                    "response": {
+                        "status": "ready",
+                        "provider_label": "Guida locale",
+                        "message": "Ripassa il ciclo for.",
+                    },
+                }
+            ],
+        }
+    )
+
+    rendered = student_lab_cli.render_help_history(assignment, root=tmp_path)
+
+    assert "Quale concetto devo ripassare?" in rendered
+    assert "Ripassa il ciclo for." in rendered
+
+
+def test_render_help_history_marks_a_saved_provider_request_as_pending(tmp_path) -> None:
+    assignment = sample_assignment(
+        help={
+            "events": [
+                {
+                    "requested_at": "2026-10-20T08:00:00+02:00",
+                    "help_type": "ai",
+                    "label": "Aiuto AI",
+                    "allowed": True,
+                    "prompt": "Come procedo?",
+                    "provider_status": "pending",
+                }
+            ]
+        }
+    )
+
+    rendered = student_lab_cli.render_help_history(assignment, root=tmp_path)
+
+    assert "Risposta in elaborazione" in rendered
+    assert "La richiesta e stata salvata" in rendered
+    assert "Risposta non disponibile" not in rendered
+
+
+def test_render_help_history_keeps_legacy_events_visible(tmp_path) -> None:
+    legacy_path = tmp_path / "student" / "help" / "activity" / "events.json"
+    student_lab_cli.student_help_service.write_help_events(
+        legacy_path,
+        [
+            {
+                "requested_at": "2026-10-17T17:20:00+02:00",
+                "label": "Aiuto AI",
+                "allowed": True,
+                "reason": "Consentito.",
+                "prompt": "Richiesta precedente.",
+            }
+        ],
+    )
+    assignment = sample_assignment(
+        help={
+            "path": "teacher-help-events/rossi/assignment/events.json",
+            "legacy_path": "student/help/activity/events.json",
+        }
+    )
+
+    rendered = student_lab_cli.render_help_history(assignment, root=tmp_path)
+
+    assert "Richiesta precedente." in rendered
+
+
+def test_render_help_history_does_not_duplicate_server_legacy_events(tmp_path) -> None:
+    legacy_path = tmp_path / "student" / "help" / "activity" / "events.json"
+    student_lab_cli.student_help_service.write_help_events(
+        legacy_path,
+        [{"prompt": "Evento legacy unico.", "allowed": True, "label": "Aiuto AI"}],
+    )
+    assignment = sample_assignment(
+        help={
+            "legacy_path": "student/help/activity/events.json",
+            "events": [
+                {
+                    "prompt": "Evento legacy unico.",
+                    "allowed": True,
+                    "label": "Aiuto AI",
+                    "source": "legacy-unverified",
+                }
+            ],
+        }
+    )
+
+    rendered = student_lab_cli.render_help_history(assignment, root=tmp_path)
+
+    assert rendered.count("Evento legacy unico.") == 1
+    assert "Legacy non verificati" in rendered
+    assert "non incidono sul budget" in rendered
+
+
 def test_render_help_history_uses_colors_and_wraps_long_text(tmp_path) -> None:
     log_path = tmp_path / "student" / "help" / "python-base-somma-001" / "events.json"
     log_path.parent.mkdir(parents=True)
@@ -372,14 +502,46 @@ def test_render_help_history_handles_empty_or_invalid_log(tmp_path) -> None:
     assert "Log aiuti non leggibile" in invalid_rendered
 
 
-def test_find_assignment_prefers_assignment_id_and_falls_back_to_index() -> None:
+def test_find_assignment_uses_index_only_without_stable_assignment_id() -> None:
     first = sample_assignment(assignment_id="assignment-a", title="Prima")
     second = sample_assignment(assignment_id="assignment-b", title="Seconda")
     payload = sample_payload([first, second])
 
     assert student_lab_cli.find_assignment(payload, "assignment-b", 0) == second
-    assert student_lab_cli.find_assignment(payload, "missing", 1) == second
+    assert student_lab_cli.find_assignment(payload, "missing", 1) is None
+    assert student_lab_cli.find_assignment(payload, "", 1) == second
     assert student_lab_cli.find_assignment(sample_payload([]), "missing", 0) is None
+
+
+def test_run_tui_keeps_current_payload_when_manual_refresh_fails(monkeypatch, tmp_path) -> None:
+    payload = sample_payload()
+    outputs = []
+    inputs = iter(["r", "", "q"])
+    fetch_count = 0
+
+    def fake_fetch_payload(**kwargs):
+        nonlocal fetch_count
+        fetch_count += 1
+        if fetch_count == 2:
+            raise ValueError("server temporaneamente non disponibile")
+        return payload
+
+    monkeypatch.setattr(student_lab_cli, "fetch_student_lab_payload", fake_fetch_payload)
+
+    result = student_lab_cli.run_tui(
+        student_id="rossi-mario",
+        root=tmp_path,
+        input_fn=lambda prompt: next(inputs),
+        print_fn=outputs.append,
+        clear=False,
+        server_url="https://server.test",
+        server_token="signed-token",
+    )
+
+    assert result == 0
+    assert fetch_count == 2
+    assert any("Aggiornamento dati non disponibile" in output for output in outputs)
+    assert sum(1 for output in outputs if "TheBitLab - lab studente" in output) == 2
 
 
 def test_help_result_message_shows_policy_decision() -> None:
@@ -458,31 +620,336 @@ def test_help_history_block_wraps_long_urls_without_horizontal_overflow() -> Non
     assert "".join(line.removeprefix("  ") for line in lines[1:]) == long_url
 
 
-def test_help_provider_context_contains_only_minimal_assignment_data() -> None:
-    assignment = sample_assignment(
-        report={
-            "tests": [
-                {"name": "test_base", "passed": True},
-                {"name": "test_negativi", "passed": False},
-            ]
-        },
-        grading={"status": "graded_failed"},
-    )
-
-    context = student_lab_cli.help_provider_context(assignment)
-
-    assert context == {
-        "title": "Somma in Python",
-        "topics": ["variabili", "input-output"],
-        "grading_status": "graded_failed",
-        "failed_tests": ["test_negativi"],
-    }
-    assert "student_id" not in context
-
-
 def test_ai_budget_label_handles_missing_and_exhausted_budget() -> None:
     assert student_lab_cli.ai_budget_label({}) == "non disponibile"
     assert student_lab_cli.ai_budget_label({"limit": 2, "used": 2, "remaining": 0, "exhausted": True}) == "2/2 usate, 0 rimanenti (esaurito)"
+
+
+def test_report_detail_removes_terminal_control_sequences() -> None:
+    detail = student_lab_cli.test_result_detail(
+        {"stderr": "errore\u001b]52;c;dGVzdA==\u0007\nseconda riga"}
+    )
+
+    assert "\u001b" not in detail
+    assert "\u0007" not in detail
+    assert detail == "errore]52;c;dGVzdA== seconda riga"
+
+
+def test_formatted_detail_line_preserves_internal_color_codes() -> None:
+    colored = student_lab_cli.colorize("Consegnata", student_lab_cli.STATUS_COLORS["submitted"], True)
+
+    line = student_lab_cli.detail_line("Stato:", colored, formatted=True)
+
+    assert student_lab_cli.STATUS_COLORS["submitted"] in line
+    assert student_lab_cli.RESET_COLOR in line
+
+
+def test_record_help_from_tui_posts_only_identifiers_and_prompt(monkeypatch) -> None:
+    captured = {}
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return json.dumps({"ok": True, "event": {"allowed": True, "label": "Aiuto AI"}}).encode("utf-8")
+
+    def fake_urlopen(request, timeout):
+        captured["url"] = request.full_url
+        captured["headers"] = dict(request.header_items())
+        captured["payload"] = json.loads(request.data.decode("utf-8"))
+        captured["timeout"] = timeout
+        return FakeResponse()
+
+    monkeypatch.setattr(student_lab_cli, "student_api_urlopen", fake_urlopen)
+
+    event = student_lab_cli.record_help_from_tui(
+        assignment=sample_assignment(),
+        server_url="https://teacher.test:8765/",
+        server_token="signed-token",
+        help_type="ai",
+        prompt="Come procedo?",
+        request_id="request-tui-0001",
+    )
+
+    assert event == {"allowed": True, "label": "Aiuto AI"}
+    assert captured["url"] == "https://teacher.test:8765/api/student-lab/help"
+    assert captured["payload"] == {
+        "assignment_id": "assignment-python-base-somma-001-demo",
+        "help_type": "ai",
+        "prompt": "Come procedo?",
+        "request_id": "request-tui-0001",
+    }
+    assert captured["headers"]["Content-type"] == "application/json; charset=utf-8"
+    assert captured["headers"]["Authorization"] == "Bearer signed-token"
+    assert captured["timeout"] == student_lab_cli.HELP_REQUEST_TIMEOUT_SECONDS
+
+
+def test_record_help_from_tui_distinguishes_pending_idempotent_retry(monkeypatch) -> None:
+    response_body = io.BytesIO(
+        json.dumps({"error": "Richiesta di aiuto ancora in elaborazione. Riprova tra poco."}).encode("utf-8")
+    )
+
+    def fake_urlopen(*args, **kwargs):
+        raise urllib.error.HTTPError(
+            "https://teacher.test/api/student-lab/help",
+            409,
+            "Conflict",
+            {},
+            response_body,
+        )
+
+    monkeypatch.setattr(student_lab_cli, "student_api_urlopen", fake_urlopen)
+
+    with pytest.raises(student_lab_cli.StudentHelpRequestPendingError, match="ancora in elaborazione"):
+        student_lab_cli.record_help_from_tui(
+            assignment=sample_assignment(),
+            server_url="https://teacher.test",
+            server_token="signed-token",
+            help_type="ai",
+            prompt="Come procedo?",
+            request_id="request-pending-0001",
+        )
+
+
+def test_fetch_help_history_uses_authenticated_server_endpoint(monkeypatch) -> None:
+    captured = {}
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return json.dumps({"assignment_id": "assignment-python-base-somma-001-demo", "events": []}).encode()
+
+    def fake_urlopen(request, timeout):
+        captured["url"] = request.full_url
+        captured["headers"] = dict(request.header_items())
+        return FakeResponse()
+
+    monkeypatch.setattr(student_lab_cli, "student_api_urlopen", fake_urlopen)
+
+    history = student_lab_cli.fetch_help_history_from_server(
+        assignment=sample_assignment(),
+        server_url="https://teacher.test:8765/",
+        server_token="signed-token",
+    )
+
+    assert history["events"] == []
+    assert captured["url"].endswith(
+        "/api/student-lab/help-history?assignment_id=assignment-python-base-somma-001-demo"
+    )
+    assert captured["headers"]["Authorization"] == "Bearer signed-token"
+
+
+def test_fetch_student_lab_payload_uses_authenticated_server_endpoint(monkeypatch) -> None:
+    captured = {}
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return json.dumps({"schema_version": "student_lab.v1", "assignments": []}).encode()
+
+    def fake_urlopen(request, timeout):
+        captured["url"] = request.full_url
+        captured["headers"] = dict(request.header_items())
+        return FakeResponse()
+
+    monkeypatch.setattr(student_lab_cli, "student_api_urlopen", fake_urlopen)
+
+    payload = student_lab_cli.fetch_student_lab_payload(
+        server_url="https://teacher.test:8765",
+        server_token="signed-token",
+        now="2026-10-18T12:00:00+02:00",
+    )
+
+    assert payload["assignments"] == []
+    assert "/api/student-lab/assignments?now=" in captured["url"]
+    assert captured["headers"]["Authorization"] == "Bearer signed-token"
+
+
+def test_load_current_payload_enriches_remote_assignment_with_matching_local_paths(monkeypatch, tmp_path) -> None:
+    remote_assignment = sample_assignment(
+        status="missing",
+        workspace={"path": "", "exists": False},
+        activity={"path": "", "exists": True, "title": "Titolo autorevole"},
+        report={"path": "", "exists": False, "tests": []},
+    )
+    local_assignment = sample_assignment(
+        status="pending",
+        workspace={"path": "D:/studenti/rossi/assignments/somma", "exists": True},
+        activity={"path": "D:/attivita/somma.json", "exists": True, "title": "Titolo locale"},
+        report={"path": "D:/studenti/rossi/reports/somma/latest.json", "exists": True},
+    )
+    monkeypatch.setattr(
+        student_lab_cli,
+        "fetch_student_lab_payload",
+        lambda **kwargs: sample_payload([remote_assignment]),
+    )
+    monkeypatch.setattr(
+        student_lab_cli,
+        "load_payload",
+        lambda root, student_id, now=None: sample_payload([local_assignment]),
+    )
+
+    payload = student_lab_cli.load_current_payload(
+        root=tmp_path,
+        student_id="rossi-mario",
+        now=None,
+        server_url="https://teacher.test",
+        server_token="signed-token",
+        allow_insecure_http=False,
+    )
+
+    assignment = payload["assignments"][0]
+    assert assignment["status"] == "missing"
+    assert assignment["activity"]["title"] == "Titolo autorevole"
+    assert assignment["workspace"] == {"path": "D:/studenti/rossi/assignments/somma", "exists": True}
+    assert assignment["activity"]["path"] == "D:/attivita/somma.json"
+    assert assignment["report"]["path"] == "D:/studenti/rossi/reports/somma/latest.json"
+    assert assignment["report"]["exists"] is True
+
+
+def test_load_current_payload_keeps_remote_paths_hidden_without_local_match(monkeypatch, tmp_path) -> None:
+    remote_assignment = sample_assignment(
+        workspace={"path": "", "exists": True},
+        activity={"path": "", "exists": True},
+        report={"path": "", "exists": False},
+    )
+    monkeypatch.setattr(
+        student_lab_cli,
+        "fetch_student_lab_payload",
+        lambda **kwargs: sample_payload([remote_assignment]),
+    )
+    monkeypatch.setattr(
+        student_lab_cli,
+        "load_payload",
+        lambda root, student_id, now=None: sample_payload([sample_assignment(assignment_id="assignment-diversa")]),
+    )
+
+    payload = student_lab_cli.load_current_payload(
+        root=tmp_path,
+        student_id="rossi-mario",
+        now=None,
+        server_url="https://teacher.test",
+        server_token="signed-token",
+        allow_insecure_http=False,
+    )
+
+    assignment = payload["assignments"][0]
+    assert assignment["workspace"]["path"] == ""
+    assert assignment["activity"]["path"] == ""
+    assert assignment["report"]["path"] == ""
+
+
+def test_load_current_payload_rejects_local_paths_for_a_different_student(monkeypatch, tmp_path) -> None:
+    remote_payload = sample_payload(
+        [
+            sample_assignment(
+                workspace={"path": "", "exists": True},
+                activity={"path": "", "exists": True},
+                report={"path": "", "exists": False},
+            )
+        ]
+    )
+    local_payload = sample_payload(
+        [sample_assignment(workspace={"path": "D:/studenti/bianchi/assignments/somma", "exists": True})]
+    )
+    local_payload["student_id"] = "bianchi-luca"
+    monkeypatch.setattr(student_lab_cli, "fetch_student_lab_payload", lambda **kwargs: remote_payload)
+    monkeypatch.setattr(
+        student_lab_cli,
+        "load_payload",
+        lambda root, student_id, now=None: local_payload,
+    )
+
+    payload = student_lab_cli.load_current_payload(
+        root=tmp_path,
+        student_id="bianchi-luca",
+        now=None,
+        server_url="https://teacher.test",
+        server_token="token-di-rossi",
+        allow_insecure_http=False,
+    )
+
+    assert payload["student_id"] == "rossi-mario"
+    assert payload["assignments"][0]["workspace"]["path"] == ""
+
+
+def test_record_help_from_tui_reports_server_timeout(monkeypatch) -> None:
+    monkeypatch.setattr(
+        student_lab_cli,
+        "student_api_urlopen",
+        lambda *args, **kwargs: (_ for _ in ()).throw(TimeoutError()),
+    )
+
+    try:
+        student_lab_cli.record_help_from_tui(
+            assignment=sample_assignment(),
+            server_url="https://teacher.test:8765",
+            server_token="signed-token",
+            help_type="ai",
+            prompt="Come procedo?",
+        )
+    except ValueError as error:
+        assert "non ha risposto entro il tempo previsto" in str(error)
+    else:
+        raise AssertionError("Il timeout del server deve essere mostrato come errore TUI")
+
+
+def test_remote_help_server_requires_https_unless_explicitly_allowed(monkeypatch) -> None:
+    calls = []
+    monkeypatch.setattr(student_lab_cli, "student_api_urlopen", lambda *args, **kwargs: calls.append(args))
+
+    with pytest.raises(ValueError, match="richiede HTTPS"):
+        student_lab_cli.record_help_from_tui(
+            assignment=sample_assignment(),
+            server_url="http://teacher.test:8765",
+            server_token="signed-token",
+            help_type="ai",
+            prompt="Come procedo?",
+        )
+
+    assert calls == []
+    assert student_lab_cli.validated_server_url("http://127.0.0.1:8765") == "http://127.0.0.1:8765"
+    assert student_lab_cli.validated_server_url(
+        "http://teacher.test:8765",
+        allow_insecure_http=True,
+    ) == "http://teacher.test:8765"
+
+
+def test_student_api_opener_rejects_redirects() -> None:
+    handler = next(
+        handler
+        for handler in student_lab_cli._STUDENT_API_OPENER.handlers
+        if isinstance(handler, student_lab_cli._NoRedirectHandler)
+    )
+    request = student_lab_cli.urllib.request.Request(
+        "https://teacher.test/api/student-lab/assignments",
+        headers={"Authorization": "Bearer signed-token"},
+    )
+
+    redirected = handler.redirect_request(
+        request,
+        None,
+        302,
+        "Found",
+        {},
+        "https://attacker.test/collect",
+    )
+
+    assert redirected is None
 
 
 def test_run_tui_can_show_detail_and_exit(monkeypatch, tmp_path) -> None:
@@ -511,11 +978,26 @@ def test_run_tui_can_record_help_request_and_reload(monkeypatch, tmp_path) -> No
     inputs = iter(["1", "a", "3", "Mi scrivi la soluzione?", "", "", "q"])
     load_calls = []
 
-    def fake_load_payload(root, student_id, now=None):
-        load_calls.append((root, student_id, now))
+    def fake_fetch_payload(**kwargs):
+        load_calls.append(kwargs)
         return payload
 
-    monkeypatch.setattr(student_lab_cli, "load_payload", fake_load_payload)
+    monkeypatch.setattr(student_lab_cli, "fetch_student_lab_payload", fake_fetch_payload)
+    requests = []
+
+    def fake_record_help(**kwargs):
+        requests.append(kwargs)
+        return {
+            "allowed": True,
+            "label": "Aiuto AI",
+            "response": {
+                "status": "ready",
+                "provider_label": "Codex locale (macchina docente)",
+                "message": "Parti dal primo test fallito.",
+            },
+        }
+
+    monkeypatch.setattr(student_lab_cli, "record_help_from_tui", fake_record_help)
 
     result = student_lab_cli.run_tui(
         student_id="rossi-mario",
@@ -523,16 +1005,105 @@ def test_run_tui_can_record_help_request_and_reload(monkeypatch, tmp_path) -> No
         input_fn=lambda prompt: next(inputs),
         print_fn=outputs.append,
         clear=False,
+        server_url="http://server.test:8765",
+        server_token="signed-token",
     )
-
-    log_path = tmp_path / "examples" / "assignment_tracking" / "student_repos" / "rossi-mario" / "help" / "python-base-somma-001" / "events.json"
 
     assert result == 0
     assert len(load_calls) == 2
-    assert log_path.exists()
-    assert "Mi scrivi la soluzione?" in log_path.read_text(encoding="utf-8")
-    assert any("Esito richiesta aiuto" in output and "Esito:             bloccata" in output for output in outputs)
+    assert all(call["server_token"] == "signed-token" for call in load_calls)
+    assert len(requests) == 1
+    request = requests[0]
+    assert request["assignment"] == payload["assignments"][0]
+    assert request["server_url"] == "http://server.test:8765"
+    assert request["server_token"] == "signed-token"
+    assert request["help_type"] == "ai"
+    assert request["prompt"] == "Mi scrivi la soluzione?"
+    assert request["allow_insecure_http"] is False
+    assert len(request["request_id"]) == 32
+    assert request["request_id"].isalnum()
+    assert any("Esito richiesta aiuto" in output and "Codex locale" in output for output in outputs)
     assert sum(1 for output in outputs if "Dettaglio consegna" in output) == 2
+
+
+def test_run_tui_distinguishes_saved_help_from_failed_refresh(monkeypatch, tmp_path) -> None:
+    payload = sample_payload()
+    outputs = []
+    inputs = iter(["1", "a", "3", "Come procedo?", "", "", "q"])
+    fetch_count = 0
+
+    def fake_fetch_payload(**kwargs):
+        nonlocal fetch_count
+        fetch_count += 1
+        if fetch_count == 2:
+            raise ValueError("server temporaneamente non raggiungibile")
+        return payload
+
+    monkeypatch.setattr(student_lab_cli, "fetch_student_lab_payload", fake_fetch_payload)
+    monkeypatch.setattr(
+        student_lab_cli,
+        "record_help_from_tui",
+        lambda **kwargs: {"allowed": True, "label": "Aiuto AI"},
+    )
+
+    result = student_lab_cli.run_tui(
+        student_id="rossi-mario",
+        root=tmp_path,
+        input_fn=lambda prompt: next(inputs),
+        print_fn=outputs.append,
+        clear=False,
+        server_url="https://server.test",
+        server_token="signed-token",
+    )
+
+    assert result == 0
+    assert fetch_count == 2
+    assert any("Richiesta salvata, ma aggiornamento dati non disponibile" in output for output in outputs)
+    assert not any("Richiesta aiuto non salvata" in output for output in outputs)
+
+
+def test_run_tui_reuses_request_id_while_help_is_pending(monkeypatch, tmp_path) -> None:
+    payload = sample_payload()
+    outputs = []
+    inputs = iter(
+        [
+            "1",
+            "a",
+            "3",
+            "Come procedo?",
+            "",
+            "a",
+            "3",
+            "Come procedo?",
+            "",
+            "q",
+        ]
+    )
+    request_ids = []
+
+    monkeypatch.setattr(student_lab_cli, "fetch_student_lab_payload", lambda **kwargs: payload)
+
+    def fake_record_help(**kwargs):
+        request_ids.append(kwargs["request_id"])
+        raise student_lab_cli.StudentHelpRequestPendingError("ancora in elaborazione")
+
+    monkeypatch.setattr(student_lab_cli, "record_help_from_tui", fake_record_help)
+
+    result = student_lab_cli.run_tui(
+        student_id="rossi-mario",
+        root=tmp_path,
+        input_fn=lambda prompt: next(inputs),
+        print_fn=outputs.append,
+        clear=False,
+        server_url="https://server.test",
+        server_token="signed-token",
+    )
+
+    assert result == 0
+    assert len(request_ids) == 2
+    assert request_ids[0] == request_ids[1]
+    assert sum("gia salvata e ancora in elaborazione" in output for output in outputs) == 2
+    assert not any("Richiesta aiuto non salvata" in output for output in outputs)
 
 
 def test_run_tui_can_cancel_help_request_type_choice(monkeypatch, tmp_path) -> None:
@@ -700,6 +1271,93 @@ def test_run_tui_can_execute_runner_save_report_and_reload(monkeypatch, tmp_path
     assert any("Questo report è quello letto da dashboard e registro docente." in output for output in outputs)
     assert not any("Questo report e quello" in output for output in outputs)
     assert sum(1 for output in outputs if "Dettaglio consegna" in output) == 2
+
+
+def test_run_tui_refreshes_from_server_after_runner_in_remote_mode(monkeypatch, tmp_path) -> None:
+    payload = sample_payload()
+    outputs = []
+    inputs = iter(["1", "e", "", "", "q"])
+    fetch_calls = []
+
+    def fake_fetch_payload(**kwargs):
+        fetch_calls.append(kwargs)
+        return payload
+
+    monkeypatch.setattr(student_lab_cli, "fetch_student_lab_payload", fake_fetch_payload)
+    local_loads = []
+
+    def fake_load_payload(root, student_id, now=None):
+        local_loads.append((root, student_id, now))
+        return payload
+
+    monkeypatch.setattr(student_lab_cli, "load_payload", fake_load_payload)
+    monkeypatch.setattr(
+        student_lab_cli.student_lab_runner,
+        "run_local_assignment",
+        lambda assignment, root: {"status": "passed", "passed": True, "summary": {"passed": 1, "total": 1}},
+    )
+    monkeypatch.setattr(
+        student_lab_cli.student_lab_runner,
+        "write_student_report",
+        lambda root, assignment, report: tmp_path / "reports" / "latest.json",
+    )
+
+    result = student_lab_cli.run_tui(
+        student_id="rossi-mario",
+        root=tmp_path,
+        input_fn=lambda prompt: next(inputs),
+        print_fn=outputs.append,
+        clear=False,
+        server_url="https://server.test",
+        server_token="signed-token",
+    )
+
+    assert result == 0
+    assert len(fetch_calls) == 2
+    assert len(local_loads) == 2
+    assert all(call["server_token"] == "signed-token" for call in fetch_calls)
+    assert any("Esecuzione completata" in output for output in outputs)
+
+
+def test_run_tui_keeps_saved_runner_result_when_remote_refresh_fails(monkeypatch, tmp_path) -> None:
+    payload = sample_payload()
+    outputs = []
+    inputs = iter(["1", "e", "", "", "q"])
+    fetch_count = 0
+
+    def fake_fetch_payload(**kwargs):
+        nonlocal fetch_count
+        fetch_count += 1
+        if fetch_count == 2:
+            raise ValueError("server temporaneamente non disponibile")
+        return payload
+
+    monkeypatch.setattr(student_lab_cli, "fetch_student_lab_payload", fake_fetch_payload)
+    monkeypatch.setattr(
+        student_lab_cli.student_lab_runner,
+        "run_local_assignment",
+        lambda assignment, root: {"status": "passed", "passed": True, "summary": {"passed": 1, "total": 1}},
+    )
+    monkeypatch.setattr(
+        student_lab_cli.student_lab_runner,
+        "write_student_report",
+        lambda root, assignment, report: tmp_path / "reports" / "latest.json",
+    )
+
+    result = student_lab_cli.run_tui(
+        student_id="rossi-mario",
+        root=tmp_path,
+        input_fn=lambda prompt: next(inputs),
+        print_fn=outputs.append,
+        clear=False,
+        server_url="https://server.test",
+        server_token="signed-token",
+    )
+
+    assert result == 0
+    assert fetch_count == 2
+    assert any("Report salvato, ma aggiornamento dati non disponibile" in output for output in outputs)
+    assert not any("Runner non disponibile" in output for output in outputs)
 
 
 def test_open_workspace_rejects_missing_path(tmp_path) -> None:

@@ -9,7 +9,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from scripts import assign_activity, create_submission_scaffold, student_help_service
+from scripts import assignment_records, assign_activity, create_submission_scaffold, student_help_service
+from scripts import student_identity
 from scripts.thebitlab_contracts import (
     legacy_activity_validation_payload,
     normalize_activity,
@@ -26,6 +27,7 @@ GITHUB_RE = re.compile(r"github\.com[:/](?P<owner>[^/\s]+)/(?P<repo>[^/\s]+?)(?:
 OWNER_REPO_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 COMMIT_RE = re.compile(r"^[0-9a-fA-F]{7,40}$")
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+MAX_REPORT_BYTES = 2 * 1024 * 1024
 
 
 @dataclass(frozen=True)
@@ -265,6 +267,8 @@ def load_report(path: Path) -> dict[str, Any] | None:
     """Load a report if present, otherwise return None."""
     if not path.exists():
         return None
+    if path.stat().st_size > MAX_REPORT_BYTES:
+        raise ValueError(f"Report troppo grande: supera {MAX_REPORT_BYTES} byte ({path}).")
     report = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(report, dict):
         raise ValueError(f"Report non valido: {path}")
@@ -338,6 +342,43 @@ def clean_metadata(value: str | None) -> str:
     return str(value or "").strip()
 
 
+def assignment_student_id(
+    target: TrackingTarget,
+    assignment: dict[str, Any] | None,
+    server_root: Path,
+) -> str:
+    """Resolve the stable student id recorded for a tracking target."""
+
+    if assignment is None:
+        return target.student
+    target_path = target.path.resolve()
+    target_repo = clean_metadata(target.repo)
+    for assignment_target in assignment.get("targets", []):
+        if not isinstance(assignment_target, dict):
+            continue
+        matches_target = False
+        for path_key in ("path", "target"):
+            recorded_path = clean_metadata(assignment_target.get(path_key))
+            if not recorded_path:
+                continue
+            candidate_path = Path(recorded_path)
+            if not candidate_path.is_absolute():
+                candidate_path = server_root / candidate_path
+            if candidate_path.resolve() == target_path:
+                matches_target = True
+            is_bare_legacy_target = "/" not in recorded_path and "\\" not in recorded_path
+            if is_bare_legacy_target and student_identity.cross_platform_basename(recorded_path) == target.student:
+                matches_target = True
+        if target_repo and clean_metadata(assignment_target.get("repo_ref")) == target_repo:
+            matches_target = True
+        if matches_target:
+            student_id = student_identity.target_student_id(assignment_target)
+            return student_id or target.student
+    raise ValueError(
+        f"Il target {target.student} non appartiene all'assegnazione richiesta."
+    )
+
+
 def track_assignments(
     *,
     activity_path: Path,
@@ -348,6 +389,8 @@ def track_assignments(
     class_id: str | None = None,
     class_label: str | None = None,
     github_team: str | None = None,
+    assignment_id: str | None = None,
+    server_root: Path | None = None,
 ) -> dict[str, Any]:
     """Build a teacher-facing tracking index for one activity."""
     activity = create_submission_scaffold.load_activity(activity_path)
@@ -364,18 +407,51 @@ def track_assignments(
     normalized_class_id = clean_metadata(class_id) or clean_metadata(normalized_activity.get("class_id"))
     normalized_class_label = clean_metadata(class_label) or normalized_class_id
     normalized_github_team = clean_metadata(github_team) or clean_metadata(normalized_activity.get("github_team"))
+    assignment = None
+    if assignment_id and server_root is None:
+        raise ValueError("server_root obbligatorio quando assignment_id e specificato.")
+    if assignment_id:
+        try:
+            assignment = assignment_records.JsonAssignmentRecordStorage(server_root).read_assignment(assignment_id)
+        except FileNotFoundError as error:
+            raise ValueError(f"Assegnazione non trovata: {assignment_id}") from error
+        if clean_metadata(assignment.get("activity_id")) != activity_id:
+            raise ValueError("L'assegnazione richiesta appartiene a un'altra activity.")
 
     students: list[dict[str, Any]] = []
     for target in targets:
         repo_url = github_repo_url(target)
         report_path = default_report_path(target, activity_id)
-        help_log_path = student_help_service.help_log_path(target.path, activity_id)
-        report = load_report(report_path)
+        stable_student_id = student_identity.legacy_display_student_id(target.student)
+        if assignment_id and server_root is not None:
+            stable_student_id = assignment_student_id(target, assignment, server_root)
+            help_log_path = student_help_service.server_help_log_path(server_root, stable_student_id, assignment_id)
+        else:
+            legacy_help_path = student_help_service.help_log_path(target.path, activity_id)
+            help_log_path = student_identity.confined_regular_file(target.path, legacy_help_path)
+        safe_report_path = student_identity.confined_regular_file(target.path, report_path)
+        report = load_report(safe_report_path) if safe_report_path is not None else None
         if report is not None:
             validate_report_activity(report, activity_id, report_path)
-        relative_report_path = relative_to_root_or_repo(report_path, target.path) if report_path.exists() else None
-        help = student_help_service.teacher_help_summary(help_log_path)
-        help["path"] = relative_to_root_or_repo(help_log_path, target.path)
+        relative_report_path = (
+            relative_to_root_or_repo(safe_report_path, target.path)
+            if safe_report_path is not None
+            else None
+        )
+        help = student_help_service.teacher_help_summary(help_log_path, normalized_now)
+        if assignment_id and server_root is not None:
+            help["path"] = str(help_log_path.relative_to(server_root)).replace("\\", "/")
+            legacy_path = student_help_service.help_log_path(target.path, activity_id)
+            safe_legacy_path = student_identity.confined_regular_file(target.path, legacy_path)
+            if safe_legacy_path is not None:
+                legacy_help = student_help_service.teacher_help_summary(safe_legacy_path, normalized_now)
+                help = student_help_service.merge_legacy_help_summary(
+                    help,
+                    legacy_help,
+                    relative_to_root_or_repo(safe_legacy_path, target.path),
+                )
+        else:
+            help["path"] = relative_to_root_or_repo(help_log_path, target.path) if help_log_path else ""
         help["activity_id"] = activity_id
         source_path = report.get("source") if report else None
         submitted = report is not None
@@ -389,6 +465,7 @@ def track_assignments(
         students.append(
             {
                 "student": target.student,
+                "student_id": stable_student_id,
                 "repo": target.repo,
                 "repo_github_url": repo_url,
                 "assigned": True,
@@ -415,7 +492,7 @@ def track_assignments(
             }
         )
 
-    return {
+    result = {
         "activity_id": activity_id,
         "title": normalized_activity.get("title") or activity_id,
         "kind": normalized_activity.get("kind"),
@@ -427,6 +504,9 @@ def track_assignments(
         "due_at": normalized_due_at,
         "students": students,
     }
+    if assignment_id:
+        result["assignment_id"] = assignment_id
+    return result
 
 
 def write_tracking_index(index: dict[str, Any], output: Path) -> None:
@@ -447,6 +527,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--class-id", help="Identificativo classe dell'assegnazione, per esempio 3A-TPSI.")
     parser.add_argument("--class-label", help="Etichetta leggibile della classe, per esempio 3A TPSI.")
     parser.add_argument("--github-team", help="Team GitHub classe associato all'assegnazione.")
+    parser.add_argument(
+        "--assignment-id",
+        help="Identificativo assegnazione per collegare il registro agli aiuti server-side.",
+    )
+    parser.add_argument(
+        "--server-root",
+        type=Path,
+        default=PROJECT_ROOT,
+        help="Root dati del server docente. Usata insieme a --assignment-id.",
+    )
     parser.add_argument("--output", type=Path, required=True, help="Path JSON del registro generato.")
     return parser.parse_args()
 
@@ -465,6 +555,8 @@ def main() -> int:
             class_id=args.class_id,
             class_label=args.class_label,
             github_team=args.github_team,
+            assignment_id=args.assignment_id,
+            server_root=args.server_root if args.assignment_id else None,
         )
         write_tracking_index(index, args.output)
     except ValueError as error:

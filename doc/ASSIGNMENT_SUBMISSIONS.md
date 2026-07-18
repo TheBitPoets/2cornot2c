@@ -401,8 +401,14 @@ python scripts/track_assignments.py \
   --class-id 3A-TPSI \
   --class-label "3A TPSI" \
   --github-team 3A-TPSI \
+  --assignment-id assignment-c-sum-3a-2026-10-12 \
+  --server-root . \
   --output teacher-reports/3A/c_sum_with_tests.json
 ```
+
+`--assignment-id` collega il registro alla consegna salvata e permette di leggere gli aiuti dal relativo storage docente.
+`--server-root` indica la root dati del server; nella normale esecuzione dalla root del progetto il valore predefinito è già corretto.
+Senza `--assignment-id` la CLI mantiene la lettura legacy per i registri storici.
 
 Il registro prodotto e pensato per la futura GUI docente.
 
