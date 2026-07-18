@@ -429,11 +429,13 @@ def stage_help_logs_for_deletion(log_dirs: list[Path]) -> tuple[Path, list[tuple
 def delete_assignment_record(payload: dict) -> dict:
     """Delete one assignment, including its authoritative student help logs."""
 
-    assignment_id = str(payload.get("assignment_id", "")).strip()
-    if not assignment_id:
+    requested_assignment_id = str(payload.get("assignment_id", "")).strip()
+    if not requested_assignment_id:
         raise ValueError("assignment_id obbligatorio.")
+    record_storage = assignment_record_storage()
+    assignment = record_storage.read_assignment(requested_assignment_id)
+    assignment_id = str(assignment["id"])
     with assignment_operation_lock(assignment_id):
-        record_storage = assignment_record_storage()
         assignment = record_storage.read_assignment(assignment_id)
         student_ids = set()
         for target in assignment.get("targets", []):
