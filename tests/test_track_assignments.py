@@ -671,6 +671,8 @@ def test_track_assignments_uses_stable_assignment_student_id_for_server_help(tmp
     )
 
     help_summary = index["students"][0]["help"]
+    assert index["students"][0]["student"] == "cartella-repository"
+    assert index["students"][0]["student_id"] == "studente-stabile-001"
     assert help_summary["total"] == 1
     assert help_summary["events"][0]["prompt"] == "Come funziona input()?"
     assert "studente-stabile-001" not in help_summary["path"]

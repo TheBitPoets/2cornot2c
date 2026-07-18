@@ -1913,8 +1913,8 @@ def test_read_assignment_report_refreshes_authoritative_help_without_rewriting_f
         "title": "Activity demo",
         "students": [
             {
-                "student": "rossi-mario",
-                "student_id": "rossi-mario",
+                "student": "cartella-repository",
+                "student_id": "studente-stabile-001",
                 "help": {
                     "total": 0,
                     "events": [],
@@ -1927,7 +1927,7 @@ def test_read_assignment_report_refreshes_authoritative_help_without_rewriting_f
     storage.write_assignment_report("demo/help-refresh.json", saved_report)
     log_path = student_help_service.server_help_log_path(
         tmp_path,
-        "rossi-mario",
+        "studente-stabile-001",
         "assignment-help-refresh",
     )
     student_help_service.write_help_events(

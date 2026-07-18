@@ -422,6 +422,7 @@ def track_assignments(
     for target in targets:
         repo_url = github_repo_url(target)
         report_path = default_report_path(target, activity_id)
+        stable_student_id = student_identity.legacy_display_student_id(target.student)
         if assignment_id and server_root is not None:
             stable_student_id = assignment_student_id(target, assignment, server_root)
             help_log_path = student_help_service.server_help_log_path(server_root, stable_student_id, assignment_id)
@@ -464,6 +465,7 @@ def track_assignments(
         students.append(
             {
                 "student": target.student,
+                "student_id": stable_student_id,
                 "repo": target.repo,
                 "repo_github_url": repo_url,
                 "assigned": True,
