@@ -837,6 +837,7 @@ def recover_interrupted_assignment_deletions() -> None:
                     else:
                         original.parent.mkdir(parents=True, exist_ok=True)
                         staged.replace(original)
+                    sync_file_tree(original)
         purge_help_deletion_trash(trash_root)
     try:
         trash_base.rmdir()

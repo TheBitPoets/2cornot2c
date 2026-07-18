@@ -536,6 +536,48 @@ def test_recovery_restores_staged_logs_when_assignment_record_still_exists(tmp_p
     assert not trash_root.exists()
 
 
+def test_recovery_syncs_restored_logs_before_purging_journal(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "TEACHER_ASSIGNMENTS_DIR", tmp_path / "teacher-assignments")
+    storage = assignment_records.JsonAssignmentRecordStorage(tmp_path)
+    assignment = storage.write_assignment(
+        assignment_records.build_assignment_record(
+            assignment_id="assignment-recovery-sync",
+            activity_id="activity-demo",
+            activity_path="activities/activity-demo.json",
+            target_type="student",
+            assigned_at="2026-10-12T09:00:00+02:00",
+            due_at="2026-10-19T23:59:00+02:00",
+            targets=[{"student_id": "rossi-mario"}],
+        )
+    )
+    log_path = student_help_service.server_help_log_path(tmp_path, "rossi-mario", assignment["id"])
+    log_path.parent.mkdir(parents=True)
+    log_path.write_text('{"events": []}\n', encoding="utf-8")
+    trash_root, _ = course_board_server.stage_help_logs_for_deletion(
+        assignment["id"],
+        [log_path.parent],
+    )
+    events = []
+    original_purge = course_board_server.purge_help_deletion_trash
+    monkeypatch.setattr(
+        course_board_server,
+        "sync_file_tree",
+        lambda root: events.append(("sync", root)),
+    )
+
+    def capture_purge(current_trash_root, **kwargs):
+        events.append(("purge", current_trash_root))
+        return original_purge(current_trash_root, **kwargs)
+
+    monkeypatch.setattr(course_board_server, "purge_help_deletion_trash", capture_purge)
+
+    course_board_server.recover_interrupted_assignment_deletions()
+
+    assert events.index(("sync", log_path.parent)) < events.index(("purge", trash_root))
+    assert log_path.is_file()
+
+
 def test_recovery_purges_staged_logs_when_assignment_record_is_already_deleted(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "TEACHER_ASSIGNMENTS_DIR", tmp_path / "teacher-assignments")
