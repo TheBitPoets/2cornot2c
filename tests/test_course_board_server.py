@@ -1784,6 +1784,60 @@ def test_generate_assignment_report_preserves_assignment_id(tmp_path, monkeypatc
     assert saved_payload["assignment_id"] == "assignment-python-base-somma-001-3a"
 
 
+def test_read_assignment_report_refreshes_authoritative_help_without_rewriting_file(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
+    storage = course_board_server.assignment_storage()
+    saved_report = {
+        "schema_version": "1.0",
+        "assignment_id": "assignment-help-refresh",
+        "activity_id": "activity-demo",
+        "title": "Activity demo",
+        "students": [
+            {
+                "student": "rossi-mario",
+                "student_id": "rossi-mario",
+                "help": {
+                    "total": 0,
+                    "events": [],
+                    "legacy_unverified": True,
+                    "legacy": {"total": 1, "events": [{"prompt": "Evento legacy"}]},
+                },
+            }
+        ],
+    }
+    storage.write_assignment_report("demo/help-refresh.json", saved_report)
+    log_path = student_help_service.server_help_log_path(
+        tmp_path,
+        "rossi-mario",
+        "assignment-help-refresh",
+    )
+    student_help_service.write_help_events(
+        log_path,
+        [
+            {
+                "schema_version": student_help_service.HELP_EVENT_SCHEMA_VERSION,
+                "request_id": "request-help-refresh-0001",
+                "requested_at": "2026-10-20T08:00:00+02:00",
+                "activity_id": "activity-demo",
+                "help_type": "teoria",
+                "label": "Richiamo teorico",
+                "allowed": True,
+                "reason": "Consentita.",
+                "prompt": "Quale concetto ripasso?",
+            }
+        ],
+    )
+
+    refreshed = course_board_server.read_assignment_report("demo/help-refresh.json")
+    persisted = storage.read_assignment_report("demo/help-refresh.json")
+
+    assert refreshed["students"][0]["help"]["total"] == 1
+    assert refreshed["students"][0]["help"]["events"][0]["prompt"] == "Quale concetto ripasso?"
+    assert refreshed["students"][0]["help"]["legacy"]["events"][0]["prompt"] == "Evento legacy"
+    assert persisted["students"][0]["help"]["total"] == 0
+
+
 def test_generate_assignment_report_blocks_concurrent_assignment_deletion(tmp_path, monkeypatch) -> None:
     patch_assignment_paths(tmp_path, monkeypatch)
     assignment_id = "assignment-report-in-corso"

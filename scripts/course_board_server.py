@@ -1044,7 +1044,27 @@ def read_class_roster(name: str) -> dict:
 def read_assignment_report(name: str) -> dict:
     """Read one assignment tracking report from teacher-reports."""
 
-    return assignment_service().read_assignment_report(name)
+    report = assignment_service().read_assignment_report(name)
+    assignment_id = str(report.get("assignment_id", "")).strip()
+    students = report.get("students") if isinstance(report.get("students"), list) else []
+    if not assignment_id:
+        return report
+    for student in students:
+        if not isinstance(student, dict):
+            continue
+        student_id = str(student.get("student_id", "") or student.get("student", "")).strip()
+        if not student_id:
+            continue
+        previous_help = student.get("help") if isinstance(student.get("help"), dict) else {}
+        log_path = student_help_service.server_help_log_path(ROOT, student_id, assignment_id)
+        current_help = student_help_service.teacher_help_summary(log_path)
+        current_help["path"] = str(log_path.relative_to(ROOT)).replace("\\", "/")
+        current_help["activity_id"] = str(report.get("activity_id", "")).strip()
+        for key in ("legacy_unverified", "legacy_path", "legacy"):
+            if key in previous_help:
+                current_help[key] = previous_help[key]
+        student["help"] = current_help
+    return report
 
 
 def review_assignment_ai_feedback(name: str, student_id: str, decision: str) -> dict:
