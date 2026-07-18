@@ -391,8 +391,13 @@ def test_help_result_message_shows_policy_decision() -> None:
         }
     )
 
-    assert "Richiesta aiuto bloccata: Aiuto AI" in message
+    assert "Esito richiesta aiuto" in message
+    assert "Tipo:              Aiuto AI" in message
+    assert "Esito:             bloccata" in message
+    assert "Motivo" in message
     assert "non consente aiuto AI" in message
+    assert message.count(student_lab_cli.section_separator()) == 2
+    assert "Richiesta salvata. Usa h per rileggerla nello storico." in message
 
 
 def test_help_result_message_shows_local_provider_response() -> None:
@@ -409,9 +414,38 @@ def test_help_result_message_shows_local_provider_response() -> None:
         }
     )
 
-    assert "Richiesta aiuto consentita: Aiuto AI" in message
+    assert "Esito richiesta aiuto" in message
+    assert "Esito:             consentita" in message
     assert "Risposta - Guida locale (nessuna AI esterna)" in message
     assert "Parti dal primo test fallito" in message
+    assert "La modalità consente aiuto AI" not in message
+
+
+def test_help_result_message_uses_colors_and_wraps_long_response() -> None:
+    long_response = (
+        "Inizia dal primo test fallito e ricostruisci i valori delle variabili "
+        "passaggio per passaggio, poi confronta il risultato atteso con quello ottenuto."
+    )
+
+    message = student_lab_cli.help_result_message(
+        {
+            "allowed": True,
+            "label": "Aiuto AI",
+            "response": {
+                "status": "ready",
+                "provider_label": "Guida locale",
+                "message": long_response,
+            },
+        },
+        use_color=True,
+    )
+
+    assert "\033[36mEsito richiesta aiuto\033[0m" in message
+    assert "\033[32mconsentita\033[0m" in message
+    assert "\033[32mRisposta - Guida locale\033[0m" in message
+    assert "Usa \033[36mh\033[0m per rileggerla" in message
+    assert "\n  variabili passaggio per passaggio" in message
+    assert long_response not in message
 
 
 def test_help_provider_context_contains_only_minimal_assignment_data() -> None:
@@ -487,7 +521,7 @@ def test_run_tui_can_record_help_request_and_reload(monkeypatch, tmp_path) -> No
     assert len(load_calls) == 2
     assert log_path.exists()
     assert "Mi scrivi la soluzione?" in log_path.read_text(encoding="utf-8")
-    assert any("Richiesta aiuto bloccata: Aiuto AI" in output for output in outputs)
+    assert any("Esito richiesta aiuto" in output and "Esito:             bloccata" in output for output in outputs)
     assert sum(1 for output in outputs if "Dettaglio consegna" in output) == 2
 
 

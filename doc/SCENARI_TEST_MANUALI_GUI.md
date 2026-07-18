@@ -229,7 +229,7 @@ Obiettivo: verificare che la TUI sia comprensibile, robusta sugli input e coeren
 8. Premi `a`, poi invio senza testo: la richiesta deve essere annullata.
 9. Premi `a`, poi un tipo diverso da `1`, `2`, `3`, `b` o invio: deve comparire errore.
 10. Premi `a`, scegli `3`, scrivi un prompt e salva la richiesta.
-11. Controlla che compaia una risposta etichettata `Guida locale (nessuna AI esterna)`.
+11. Controlla che l'esito immediato sia diviso da linee tratteggiate e mostri tipo, stato e risposta a capo, etichettata `Guida locale (nessuna AI esterna)`.
 12. Premi `h` e verifica che prompt e risposta siano entrambi nello storico.
 13. Premi `e` per eseguire test e salvare report.
 14. Premi `b` per tornare alla lista.
@@ -242,6 +242,7 @@ Risultato atteso:
 - `b` e invio annullano o tornano indietro dove previsto.
 - Dopo un comando nel dettaglio si resta nel dettaglio della consegna, non si torna alla lista generale.
 - La guida locale è distinta da una risposta AI reale e non mostra una soluzione completa.
+- L'esito immediato non ripete la motivazione della policy quando la richiesta riesce; per richieste bloccate o errori mostra subito il motivo.
 - Prompt e risposta restano visibili nello storico della consegna.
 - Ogni richiesta nello storico è separata da linee tratteggiate e prompt, risposta, motivo ed esito sono distinguibili per colore.
 - Con `--no-color` la stessa gerarchia resta leggibile grazie a intestazioni, rientri e separatori.

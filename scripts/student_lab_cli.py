@@ -550,29 +550,47 @@ def record_help_from_tui(
     )
 
 
-def help_result_message(event: dict[str, Any]) -> str:
-    """Return a compact message after recording a help request."""
+def help_result_message(event: dict[str, Any], use_color: bool = False) -> str:
+    """Return a structured result after recording a help request."""
 
-    status = "consentita" if event.get("allowed") else "bloccata"
+    allowed = event.get("allowed") is True
+    status = "consentita" if allowed else "bloccata"
+    status_color = HELP_RESPONSE_COLOR if allowed else HELP_ERROR_COLOR
     lines = [
-        f"Richiesta aiuto {status}: {clean_text(event.get('label'))}",
-        clean_text(event.get("reason")),
+        colorize("Esito richiesta aiuto", HELP_REQUEST_COLOR, use_color),
+        section_separator(),
+        detail_line("Tipo:", event.get("label")),
+        detail_line("Esito:", colorize(status, status_color, use_color)),
     ]
     response = event.get("response") if isinstance(event.get("response"), dict) else {}
     if response.get("status") == "ready":
+        provider_label = clean_text(response.get("provider_label"), "Provider aiuto")
         lines.extend(
-            [
-                f"Risposta - {clean_text(response.get('provider_label'))}:",
-                clean_text(response.get("message")),
-            ]
+            help_history_block(
+                f"Risposta - {provider_label}",
+                response.get("message"),
+                HELP_RESPONSE_COLOR,
+                use_color,
+            )
         )
     elif response:
+        provider_label = clean_text(response.get("provider_label"), "Provider aiuto")
         lines.extend(
-            [
-                f"Risposta non disponibile - {clean_text(response.get('provider_label'))}:",
-                clean_text(response.get("detail")),
-            ]
+            help_history_block(
+                f"Risposta non disponibile - {provider_label}",
+                response.get("detail"),
+                HELP_ERROR_COLOR,
+                use_color,
+            )
         )
+    if not allowed or not response:
+        lines.extend(help_history_block("Motivo", event.get("reason"), HELP_REASON_COLOR, use_color))
+    lines.extend(
+        [
+            section_separator(),
+            f"Richiesta salvata. Usa {colorize('h', HELP_REQUEST_COLOR, use_color)} per rileggerla nello storico.",
+        ]
+    )
     return "\n".join(lines)
 
 
@@ -706,7 +724,7 @@ def run_tui(
                                 prompt=prompt,
                                 now=now,
                             )
-                            print_fn(help_result_message(event))
+                            print_fn(help_result_message(event, use_color=use_color))
                             payload = load_payload(root, student_id, now)
                         except ValueError as error:
                             print_fn(f"Richiesta aiuto non salvata:\n{error}")
