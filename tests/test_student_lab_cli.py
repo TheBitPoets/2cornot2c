@@ -1014,6 +1014,47 @@ def test_run_tui_refreshes_from_server_after_runner_in_remote_mode(monkeypatch, 
     assert any("Esecuzione completata" in output for output in outputs)
 
 
+def test_run_tui_keeps_saved_runner_result_when_remote_refresh_fails(monkeypatch, tmp_path) -> None:
+    payload = sample_payload()
+    outputs = []
+    inputs = iter(["1", "e", "", "", "q"])
+    fetch_count = 0
+
+    def fake_fetch_payload(**kwargs):
+        nonlocal fetch_count
+        fetch_count += 1
+        if fetch_count == 2:
+            raise ValueError("server temporaneamente non disponibile")
+        return payload
+
+    monkeypatch.setattr(student_lab_cli, "fetch_student_lab_payload", fake_fetch_payload)
+    monkeypatch.setattr(
+        student_lab_cli.student_lab_runner,
+        "run_local_assignment",
+        lambda assignment, root: {"status": "passed", "passed": True, "summary": {"passed": 1, "total": 1}},
+    )
+    monkeypatch.setattr(
+        student_lab_cli.student_lab_runner,
+        "write_student_report",
+        lambda root, assignment, report: tmp_path / "reports" / "latest.json",
+    )
+
+    result = student_lab_cli.run_tui(
+        student_id="rossi-mario",
+        root=tmp_path,
+        input_fn=lambda prompt: next(inputs),
+        print_fn=outputs.append,
+        clear=False,
+        server_url="https://server.test",
+        server_token="signed-token",
+    )
+
+    assert result == 0
+    assert fetch_count == 2
+    assert any("Report salvato, ma aggiornamento dati non disponibile" in output for output in outputs)
+    assert not any("Runner non disponibile" in output for output in outputs)
+
+
 def test_open_workspace_rejects_missing_path(tmp_path) -> None:
     assert student_lab_cli.open_workspace(str(tmp_path / "missing")) is False
 

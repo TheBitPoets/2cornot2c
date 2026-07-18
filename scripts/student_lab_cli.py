@@ -954,17 +954,24 @@ def run_tui(
                 try:
                     report = student_lab_runner.run_local_assignment(assignment, root=root)
                     report_path = student_lab_runner.write_student_report(root, assignment, report)
-                    print_fn(runner_result_message(report, report_path))
-                    payload = load_current_payload(
-                        root=root,
-                        student_id=student_id,
-                        now=now,
-                        server_url=server_url,
-                        server_token=server_token,
-                        allow_insecure_http=allow_insecure_http,
-                    )
                 except ValueError as error:
                     print_fn(f"Runner non disponibile:\n{error}")
+                else:
+                    print_fn(runner_result_message(report, report_path))
+                    try:
+                        payload = load_current_payload(
+                            root=root,
+                            student_id=student_id,
+                            now=now,
+                            server_url=server_url,
+                            server_token=server_token,
+                            allow_insecure_http=allow_insecure_http,
+                        )
+                    except ValueError as error:
+                        print_fn(
+                            "Report salvato, ma aggiornamento dati non disponibile:\n"
+                            f"{error}"
+                        )
                 input_fn("Premi invio per continuare...")
 
 
