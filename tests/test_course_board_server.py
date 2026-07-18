@@ -5,6 +5,7 @@ import json
 import threading
 import urllib.error
 import urllib.request
+from pathlib import Path
 
 import pytest
 
@@ -357,12 +358,88 @@ def test_delete_assignment_keeps_record_when_help_log_removal_fails(tmp_path, mo
     log_path = student_help_service.server_help_log_path(tmp_path, "rossi-mario", assignment["id"])
     log_path.parent.mkdir(parents=True)
     log_path.write_text('{"events": []}\n', encoding="utf-8")
-    monkeypatch.setattr(course_board_server.shutil, "rmtree", lambda path: (_ for _ in ()).throw(PermissionError()))
+    monkeypatch.setattr(Path, "replace", lambda self, target: (_ for _ in ()).throw(PermissionError()))
 
     with pytest.raises(PermissionError):
         course_board_server.delete_assignment_record({"assignment_id": assignment["id"]})
 
     assert storage.read_assignment(assignment["id"])["id"] == assignment["id"]
+    assert log_path.is_file()
+
+
+def test_delete_assignment_restores_all_logs_when_staging_fails_midway(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
+    monkeypatch.setattr(course_board_server, "TEACHER_ASSIGNMENTS_DIR", tmp_path / "teacher-assignments")
+    storage = assignment_records.JsonAssignmentRecordStorage(tmp_path, tmp_path / "teacher-assignments")
+    assignment = storage.write_assignment(
+        assignment_records.build_assignment_record(
+            assignment_id="assignment-due-log",
+            activity_id="python-base-somma-001",
+            activity_path="activities/python-base-somma-001.json",
+            target_type="group",
+            assigned_at="2026-10-12T09:00:00+02:00",
+            due_at="2026-10-19T23:59:00+02:00",
+            targets=[{"student_id": "rossi-mario"}, {"student_id": "bianchi-luca"}],
+        )
+    )
+    log_paths = [
+        student_help_service.server_help_log_path(tmp_path, student_id, assignment["id"])
+        for student_id in ("rossi-mario", "bianchi-luca")
+    ]
+    for log_path in log_paths:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        log_path.write_text('{"events": []}\n', encoding="utf-8")
+    original_replace = Path.replace
+    replace_calls = 0
+
+    def fail_second_stage(source, target):
+        nonlocal replace_calls
+        if ".trash" not in source.parts:
+            replace_calls += 1
+            if replace_calls == 2:
+                raise PermissionError("secondo log bloccato")
+        return original_replace(source, target)
+
+    monkeypatch.setattr(Path, "replace", fail_second_stage)
+
+    with pytest.raises(PermissionError, match="secondo log bloccato"):
+        course_board_server.delete_assignment_record({"assignment_id": assignment["id"]})
+
+    assert storage.read_assignment(assignment["id"])["id"] == assignment["id"]
+    assert all(log_path.is_file() for log_path in log_paths)
+
+
+def test_delete_assignment_restores_logs_when_record_delete_fails(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
+    monkeypatch.setattr(course_board_server, "TEACHER_ASSIGNMENTS_DIR", tmp_path / "teacher-assignments")
+    storage = assignment_records.JsonAssignmentRecordStorage(tmp_path, tmp_path / "teacher-assignments")
+    assignment = storage.write_assignment(
+        assignment_records.build_assignment_record(
+            assignment_id="assignment-record-bloccato",
+            activity_id="python-base-somma-001",
+            activity_path="activities/python-base-somma-001.json",
+            target_type="student",
+            assigned_at="2026-10-12T09:00:00+02:00",
+            due_at="2026-10-19T23:59:00+02:00",
+            targets=[{"student_id": "rossi-mario"}],
+        )
+    )
+    log_path = student_help_service.server_help_log_path(tmp_path, "rossi-mario", assignment["id"])
+    log_path.parent.mkdir(parents=True)
+    log_path.write_text('{"events": []}\n', encoding="utf-8")
+    monkeypatch.setattr(
+        assignment_records.JsonAssignmentRecordStorage,
+        "delete_assignment",
+        lambda self, assignment_id: (_ for _ in ()).throw(PermissionError("record bloccato")),
+    )
+
+    with pytest.raises(PermissionError, match="record bloccato"):
+        course_board_server.delete_assignment_record({"assignment_id": assignment["id"]})
+
+    assert storage.read_assignment(assignment["id"])["id"] == assignment["id"]
+    assert log_path.is_file()
 
 
 def test_delete_assignment_waits_for_inflight_help_request(tmp_path, monkeypatch) -> None:

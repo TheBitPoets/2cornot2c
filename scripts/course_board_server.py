@@ -28,6 +28,7 @@ import sys
 import threading
 import urllib.error
 import urllib.request
+import uuid
 from contextlib import contextmanager
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -390,6 +391,35 @@ def list_assignment_records(now: str | None = None) -> dict:
     }
 
 
+def restore_staged_help_logs(staged_logs: list[tuple[Path, Path]]) -> None:
+    """Restore quarantined help-log directories in reverse order."""
+
+    for original, staged in reversed(staged_logs):
+        if staged.exists():
+            original.parent.mkdir(parents=True, exist_ok=True)
+            staged.replace(original)
+
+
+def stage_help_logs_for_deletion(log_dirs: list[Path]) -> tuple[Path, list[tuple[Path, Path]]]:
+    """Move help logs to a private same-volume quarantine before record deletion."""
+
+    trash_root = ROOT / "teacher-help-events" / ".trash" / uuid.uuid4().hex
+    staged_logs: list[tuple[Path, Path]] = []
+    try:
+        for index, log_dir in enumerate(log_dirs):
+            if not log_dir.is_dir():
+                continue
+            staged = trash_root / str(index)
+            staged.parent.mkdir(parents=True, exist_ok=True)
+            log_dir.replace(staged)
+            staged_logs.append((log_dir, staged))
+    except Exception:
+        restore_staged_help_logs(staged_logs)
+        shutil.rmtree(trash_root, ignore_errors=True)
+        raise
+    return trash_root, staged_logs
+
+
 def delete_assignment_record(payload: dict) -> dict:
     """Delete one assignment, including its authoritative student help logs."""
 
@@ -403,11 +433,21 @@ def delete_assignment_record(payload: dict) -> dict:
         for target in assignment.get("targets", []):
             if isinstance(target, dict):
                 student_ids.update(student_lab_service.target_cleanup_student_ids(target))
-        for student_id in student_ids:
-            log_dir = student_help_service.server_help_log_path(ROOT, student_id, assignment_id).parent
-            if log_dir.is_dir():
-                shutil.rmtree(log_dir)
-        deleted = record_storage.delete_assignment(assignment_id)
+        log_dirs = sorted(
+            {
+                student_help_service.server_help_log_path(ROOT, student_id, assignment_id).parent
+                for student_id in student_ids
+            },
+            key=str,
+        )
+        trash_root, staged_logs = stage_help_logs_for_deletion(log_dirs)
+        try:
+            deleted = record_storage.delete_assignment(assignment_id)
+        except Exception:
+            restore_staged_help_logs(staged_logs)
+            shutil.rmtree(trash_root, ignore_errors=True)
+            raise
+        shutil.rmtree(trash_root, ignore_errors=True)
     updated = list_assignment_records(str(payload.get("now", "")).strip() or None)
     return {"ok": True, "deleted": deleted, **updated}
 
