@@ -833,6 +833,10 @@ def merge_local_operational_paths(
 ) -> dict[str, Any]:
     """Enrich authoritative remote assignments with matching trusted local paths."""
 
+    remote_student_id = clean_text(remote_payload.get("student_id"), "")
+    local_student_id = clean_text(local_payload.get("student_id"), "")
+    if not remote_student_id or remote_student_id != local_student_id:
+        return remote_payload
     local_by_id = {
         clean_text(item.get("assignment_id"), ""): item
         for item in payload_assignments(local_payload)

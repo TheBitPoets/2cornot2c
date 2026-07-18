@@ -757,6 +757,40 @@ def test_load_current_payload_keeps_remote_paths_hidden_without_local_match(monk
     assert assignment["report"]["path"] == ""
 
 
+def test_load_current_payload_rejects_local_paths_for_a_different_student(monkeypatch, tmp_path) -> None:
+    remote_payload = sample_payload(
+        [
+            sample_assignment(
+                workspace={"path": "", "exists": True},
+                activity={"path": "", "exists": True},
+                report={"path": "", "exists": False},
+            )
+        ]
+    )
+    local_payload = sample_payload(
+        [sample_assignment(workspace={"path": "D:/studenti/bianchi/assignments/somma", "exists": True})]
+    )
+    local_payload["student_id"] = "bianchi-luca"
+    monkeypatch.setattr(student_lab_cli, "fetch_student_lab_payload", lambda **kwargs: remote_payload)
+    monkeypatch.setattr(
+        student_lab_cli,
+        "load_payload",
+        lambda root, student_id, now=None: local_payload,
+    )
+
+    payload = student_lab_cli.load_current_payload(
+        root=tmp_path,
+        student_id="bianchi-luca",
+        now=None,
+        server_url="https://teacher.test",
+        server_token="token-di-rossi",
+        allow_insecure_http=False,
+    )
+
+    assert payload["student_id"] == "rossi-mario"
+    assert payload["assignments"][0]["workspace"]["path"] == ""
+
+
 def test_record_help_from_tui_reports_server_timeout(monkeypatch) -> None:
     monkeypatch.setattr(
         student_lab_cli,
