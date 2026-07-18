@@ -2906,6 +2906,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 self.write_json(record_student_help(payload, student_id=student_id))
             except student_help_service.StudentHelpRateLimitError as error:
                 self.write_error_json(429, str(error))
+            except student_help_service.StudentHelpPendingError as error:
+                self.write_error_json(409, str(error))
             except StudentHelpBusyError as error:
                 self.write_error_json(429, str(error))
             except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:

@@ -243,6 +243,38 @@ def test_record_help_request_deduplicates_retried_request_id(tmp_path) -> None:
     assert student_help_service.help_summary(log_path)["total"] == 1
 
 
+def test_record_help_request_rejects_retry_while_provider_is_pending(tmp_path) -> None:
+    repo = tmp_path / "student-repo"
+    activity_id = "python-base-somma-001"
+    log_path = student_help_service.help_log_path(repo, activity_id)
+    student_help_service.write_help_events(
+        log_path,
+        [
+            {
+                "schema_version": student_help_service.HELP_EVENT_SCHEMA_VERSION,
+                "request_id": "pending-request-0001",
+                "requested_at": "2026-10-18T10:00:00+02:00",
+                "activity_id": activity_id,
+                "help_type": "ai",
+                "prompt": "Come trovo il caso limite?",
+                "provider_status": "pending",
+                "budget_charged": True,
+            }
+        ],
+    )
+
+    with pytest.raises(student_help_service.StudentHelpPendingError, match="ancora in elaborazione"):
+        student_help_service.record_help_request(
+            repo_path=repo,
+            activity_id=activity_id,
+            support_policy=student_support_policy.support_policy("ai-assisted"),
+            help_type="ai",
+            prompt="Come trovo il caso limite?",
+            request_id="pending-request-0001",
+            now="2026-10-18T10:01:00+02:00",
+        )
+
+
 def test_record_help_request_rejects_reused_id_with_different_prompt(tmp_path) -> None:
     request = {
         "repo_path": tmp_path / "student-repo",

@@ -34,6 +34,10 @@ REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{16,128}$")
 class StudentHelpRateLimitError(ValueError):
     """Raised when one assignment has reached its persisted help limit."""
 
+
+class StudentHelpPendingError(ValueError):
+    """Raised when an idempotent retry finds a provider call still running."""
+
 HELP_TYPES: dict[str, dict[str, str]] = {
     "feedback-tecnico": {
         "label": "Feedback tecnico",
@@ -365,6 +369,8 @@ def record_help_request(
                 raise ValueError("request_id gia usato per una richiesta diversa.")
             if reconciled:
                 write_help_events(path, events)
+            if existing.get("provider_status") == "pending":
+                raise StudentHelpPendingError("Richiesta di aiuto ancora in elaborazione. Riprova tra poco.")
             return existing
         if len(events) >= MAX_HELP_EVENTS_PER_ASSIGNMENT:
             raise StudentHelpRateLimitError(

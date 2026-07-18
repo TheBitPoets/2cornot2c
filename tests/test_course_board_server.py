@@ -2504,6 +2504,14 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
             urllib.request.urlopen(private_log_request, timeout=5)
         assert private_log.value.code == 403
 
+        def fail_with_pending_request(payload, *, student_id):
+            raise student_help_service.StudentHelpPendingError("Richiesta ancora in elaborazione.")
+
+        monkeypatch.setattr(course_board_server, "record_student_help", fail_with_pending_request)
+        with pytest.raises(urllib.error.HTTPError) as pending_request:
+            urllib.request.urlopen(request, timeout=5)
+        assert pending_request.value.code == 409
+
         def fail_with_internal_path(payload, *, student_id):
             raise OSError(r"C:\dati-docente\segreto\events.json")
 
