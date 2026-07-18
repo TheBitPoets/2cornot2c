@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Callable
 
+from scripts import assignment_records
 from scripts.student_help_provider import (
     STUDENT_HELP_RESPONSE_SCHEMA_VERSION,
     StudentHelpProvider,
@@ -292,6 +293,7 @@ def write_help_events(log_path: Path, events: list[dict[str, Any]]) -> None:
             stream.flush()
             os.fsync(stream.fileno())
         os.replace(temporary_path, log_path)
+        assignment_records.sync_directory(log_path.parent)
     finally:
         temporary_path.unlink(missing_ok=True)
 
