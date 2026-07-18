@@ -720,6 +720,62 @@ def load_payload(root: Path, student_id: str, now: str | None = None) -> dict[st
     return student_lab_service.student_lab_payload(root=root, student_id=student_id, now=now)
 
 
+def fetch_student_lab_payload(
+    *,
+    server_url: str,
+    server_token: str,
+    now: str | None = None,
+    allow_insecure_http: bool = False,
+) -> dict[str, Any]:
+    """Load the authenticated student-lab payload from the teacher server."""
+
+    if not server_token.strip():
+        raise ValueError("Token studente mancante. Imposta THEBITLAB_STUDENT_HELP_TOKEN.")
+    safe_server_url = validated_server_url(server_url, allow_insecure_http)
+    query = urllib.parse.urlencode({"now": now}) if now else ""
+    suffix = f"?{query}" if query else ""
+    request = urllib.request.Request(
+        f"{safe_server_url}/api/student-lab/assignments{suffix}",
+        headers={"Authorization": f"Bearer {server_token.strip()}"},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=HELP_REQUEST_TIMEOUT_SECONDS) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as error:
+        detail = _server_error_detail(error.read())
+        raise ValueError(f"Server consegne: {detail or error.reason}") from error
+    except urllib.error.URLError as error:
+        raise ValueError(f"Server non raggiungibile su {server_url}.") from error
+    except TimeoutError as error:
+        raise ValueError("Il server consegne non ha risposto entro il tempo previsto.") from error
+    except (json.JSONDecodeError, UnicodeDecodeError) as error:
+        raise ValueError("Il server consegne ha restituito una risposta non valida.") from error
+    if not isinstance(payload, dict) or not isinstance(payload.get("assignments"), list):
+        raise ValueError("Il server consegne ha restituito un payload non valido.")
+    return payload
+
+
+def load_current_payload(
+    *,
+    root: Path,
+    student_id: str,
+    now: str | None,
+    server_url: str,
+    server_token: str,
+    allow_insecure_http: bool,
+) -> dict[str, Any]:
+    """Load authoritative server data when authenticated, otherwise local data."""
+
+    if server_token.strip():
+        return fetch_student_lab_payload(
+            server_url=server_url,
+            server_token=server_token,
+            now=now,
+            allow_insecure_http=allow_insecure_http,
+        )
+    return load_payload(root, student_id, now)
+
+
 def payload_assignments(payload: dict[str, Any]) -> list[dict[str, Any]]:
     """Return assignment items from a student lab payload."""
 
@@ -757,7 +813,14 @@ def run_tui(
 ) -> int:
     """Run the interactive student lab loop."""
 
-    payload = load_payload(root, student_id, now)
+    payload = load_current_payload(
+        root=root,
+        student_id=student_id,
+        now=now,
+        server_url=server_url,
+        server_token=server_token,
+        allow_insecure_http=allow_insecure_http,
+    )
     while True:
         if clear:
             clear_screen()
@@ -766,7 +829,14 @@ def run_tui(
         if choice in {"q", "quit", "esci"}:
             return 0
         if choice in {"r", "reload", "ricarica"}:
-            payload = load_payload(root, student_id, now)
+            payload = load_current_payload(
+                root=root,
+                student_id=student_id,
+                now=now,
+                server_url=server_url,
+                server_token=server_token,
+                allow_insecure_http=allow_insecure_http,
+            )
             continue
         if not choice.isdigit():
             continue
@@ -818,7 +888,14 @@ def run_tui(
                                 allow_insecure_http=allow_insecure_http,
                             )
                             print_fn(help_result_message(event, use_color=use_color))
-                            payload = load_payload(root, student_id, now)
+                            payload = load_current_payload(
+                                root=root,
+                                student_id=student_id,
+                                now=now,
+                                server_url=server_url,
+                                server_token=server_token,
+                                allow_insecure_http=allow_insecure_http,
+                            )
                         except ValueError as error:
                             print_fn(f"Richiesta aiuto non salvata:\n{error}")
                 input_fn("Premi invio per continuare...")

@@ -1152,6 +1152,7 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
         ) as response:
             dashboard = json.loads(response.read().decode("utf-8"))
         assignment = dashboard["lab"]["assignments"][0]
+        initial_help_total = assignment["help"]["total"]
         assert "events" not in assignment["help"]
         assert "path" not in assignment["help"]
         unauthenticated_request = urllib.request.Request(
@@ -1227,6 +1228,14 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
         with urllib.request.urlopen(history_request, timeout=5) as response:
             history = json.loads(response.read().decode("utf-8"))
         assert any(event["prompt"] == "Quale concetto devo ripassare?" for event in history["events"])
+        assignments_request = urllib.request.Request(
+            f"{base_url}/api/student-lab/assignments",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        with urllib.request.urlopen(assignments_request, timeout=5) as response:
+            remote_assignments = json.loads(response.read().decode("utf-8"))
+        assert remote_assignments["student_id"] == "rossi-mario"
+        assert remote_assignments["assignments"][0]["help"]["total"] == initial_help_total + 1
         unauthenticated_history = urllib.request.Request(
             f"{base_url}/api/student-lab/help-history?assignment_id={assignment['assignment_id']}"
         )

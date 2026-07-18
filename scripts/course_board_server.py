@@ -2156,25 +2156,43 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return True
         return False
 
+    def authenticated_student_id(self) -> str | None:
+        """Authenticate one student request and write the HTTP error on failure."""
+
+        try:
+            secret = student_help_auth.student_help_secret()
+        except ValueError:
+            self.write_error_json(500, STUDENT_HELP_SERVER_ERROR)
+            return None
+        try:
+            return student_help_auth.student_id_from_authorization(
+                self.headers.get("Authorization", ""),
+                secret,
+            )
+        except ValueError as error:
+            self.write_error_json(401, str(error))
+            return None
+
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
         if self.reject_remote_teacher_api(parsed.path):
             return
-        if parsed.path == "/api/student-lab/help-history":
-            try:
-                secret = student_help_auth.student_help_secret()
-            except ValueError:
-                self.write_error_json(500, STUDENT_HELP_SERVER_ERROR)
-                return
-            try:
-                student_id = student_help_auth.student_id_from_authorization(
-                    self.headers.get("Authorization", ""), secret
-                )
-            except ValueError as error:
-                self.write_error_json(401, str(error))
+        if parsed.path in {"/api/student-lab/assignments", "/api/student-lab/help-history"}:
+            student_id = self.authenticated_student_id()
+            if student_id is None:
                 return
             try:
                 query = parse_qs(parsed.query)
+                if parsed.path == "/api/student-lab/assignments":
+                    self.write_json(
+                        student_lab_service.student_lab_payload(
+                            root=ROOT,
+                            assignments_dir=TEACHER_ASSIGNMENTS_DIR,
+                            student_id=student_id,
+                            now=query.get("now", [""])[0] or None,
+                        )
+                    )
+                    return
                 self.write_json(
                     student_lab_service.student_help_history(
                         root=ROOT,
@@ -2236,17 +2254,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if self.reject_remote_teacher_api(parsed.path):
             return
         if parsed.path == "/api/student-lab/help":
-            try:
-                secret = student_help_auth.student_help_secret()
-            except ValueError:
-                self.write_error_json(500, STUDENT_HELP_SERVER_ERROR)
-                return
-            try:
-                student_id = student_help_auth.student_id_from_authorization(
-                    self.headers.get("Authorization", ""), secret
-                )
-            except ValueError as error:
-                self.write_error_json(401, str(error))
+            student_id = self.authenticated_student_id()
+            if student_id is None:
                 return
             try:
                 length = int(self.headers.get("Content-Length", "0"))

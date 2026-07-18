@@ -593,6 +593,37 @@ def test_fetch_help_history_uses_authenticated_server_endpoint(monkeypatch) -> N
     assert captured["headers"]["Authorization"] == "Bearer signed-token"
 
 
+def test_fetch_student_lab_payload_uses_authenticated_server_endpoint(monkeypatch) -> None:
+    captured = {}
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return json.dumps({"schema_version": "student_lab.v1", "assignments": []}).encode()
+
+    def fake_urlopen(request, timeout):
+        captured["url"] = request.full_url
+        captured["headers"] = dict(request.header_items())
+        return FakeResponse()
+
+    monkeypatch.setattr(student_lab_cli.urllib.request, "urlopen", fake_urlopen)
+
+    payload = student_lab_cli.fetch_student_lab_payload(
+        server_url="https://teacher.test:8765",
+        server_token="signed-token",
+        now="2026-10-18T12:00:00+02:00",
+    )
+
+    assert payload["assignments"] == []
+    assert "/api/student-lab/assignments?now=" in captured["url"]
+    assert captured["headers"]["Authorization"] == "Bearer signed-token"
+
+
 def test_record_help_from_tui_reports_server_timeout(monkeypatch) -> None:
     monkeypatch.setattr(
         student_lab_cli.urllib.request,
@@ -661,11 +692,11 @@ def test_run_tui_can_record_help_request_and_reload(monkeypatch, tmp_path) -> No
     inputs = iter(["1", "a", "3", "Mi scrivi la soluzione?", "", "", "q"])
     load_calls = []
 
-    def fake_load_payload(root, student_id, now=None):
-        load_calls.append((root, student_id, now))
+    def fake_fetch_payload(**kwargs):
+        load_calls.append(kwargs)
         return payload
 
-    monkeypatch.setattr(student_lab_cli, "load_payload", fake_load_payload)
+    monkeypatch.setattr(student_lab_cli, "fetch_student_lab_payload", fake_fetch_payload)
     requests = []
 
     def fake_record_help(**kwargs):
@@ -694,6 +725,7 @@ def test_run_tui_can_record_help_request_and_reload(monkeypatch, tmp_path) -> No
 
     assert result == 0
     assert len(load_calls) == 2
+    assert all(call["server_token"] == "signed-token" for call in load_calls)
     assert requests == [
         {
             "assignment": payload["assignments"][0],
