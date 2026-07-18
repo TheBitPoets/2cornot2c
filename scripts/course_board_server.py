@@ -25,6 +25,7 @@ import re
 import shutil
 import subprocess
 import sys
+import threading
 import urllib.error
 import urllib.request
 from datetime import datetime
@@ -98,10 +99,20 @@ STUDENT_HELP_SERVER_ERROR = "Servizio aiuto temporaneamente non disponibile."
 PRIVATE_STATIC_ROOTS = {"teacher-assignments", "teacher-help-events", "teacher-reports"}
 REMOTE_PUBLIC_STATIC_ROOTS = {"tools"}
 REMOTE_STUDENT_API_PREFIX = "/api/student-lab/"
+_ASSIGNMENT_OPERATION_LOCKS: dict[str, threading.Lock] = {}
+_ASSIGNMENT_OPERATION_LOCKS_GUARD = threading.Lock()
 
 
 class StudentHelpConfigurationError(RuntimeError):
     """Raised when the teacher server has an invalid help-provider setup."""
+
+
+def assignment_operation_lock(assignment_id: str) -> threading.Lock:
+    """Return the process-local lock coordinating help and deletion."""
+
+    key = f"{ROOT.resolve(strict=False)}::{str(assignment_id or '').strip()}"
+    with _ASSIGNMENT_OPERATION_LOCKS_GUARD:
+        return _ASSIGNMENT_OPERATION_LOCKS.setdefault(key, threading.Lock())
 
 
 def student_help_provider() -> StudentHelpProvider:
@@ -124,15 +135,17 @@ def student_help_provider() -> StudentHelpProvider:
 def record_student_help(payload: dict[str, Any], *, student_id: str) -> dict[str, Any]:
     """Record one TUI request using server-owned assignment context and policy."""
 
-    event = student_lab_service.record_student_help_request(
-        root=ROOT,
-        assignments_dir=TEACHER_ASSIGNMENTS_DIR,
-        student_id=student_id,
-        assignment_id=payload.get("assignment_id", ""),
-        help_type=payload.get("help_type", ""),
-        prompt=payload.get("prompt", ""),
-        provider=student_help_provider(),
-    )
+    assignment_id = str(payload.get("assignment_id", "")).strip()
+    with assignment_operation_lock(assignment_id):
+        event = student_lab_service.record_student_help_request(
+            root=ROOT,
+            assignments_dir=TEACHER_ASSIGNMENTS_DIR,
+            student_id=student_id,
+            assignment_id=assignment_id,
+            help_type=payload.get("help_type", ""),
+            prompt=payload.get("prompt", ""),
+            provider=student_help_provider(),
+        )
     return {"ok": True, "event": event}
 
 
@@ -367,16 +380,19 @@ def delete_assignment_record(payload: dict) -> dict:
     assignment_id = str(payload.get("assignment_id", "")).strip()
     if not assignment_id:
         raise ValueError("assignment_id obbligatorio.")
-    deleted = assignment_record_storage().delete_assignment(assignment_id)
-    student_ids = {
-        str(target.get("student_id", "")).strip()
-        for target in deleted.get("targets", [])
-        if isinstance(target, dict) and str(target.get("student_id", "")).strip()
-    }
-    for student_id in student_ids:
-        log_dir = student_help_service.server_help_log_path(ROOT, student_id, assignment_id).parent
-        if log_dir.is_dir():
-            shutil.rmtree(log_dir)
+    with assignment_operation_lock(assignment_id):
+        record_storage = assignment_record_storage()
+        assignment = record_storage.read_assignment(assignment_id)
+        student_ids = {
+            str(target.get("student_id", "")).strip()
+            for target in assignment.get("targets", [])
+            if isinstance(target, dict) and str(target.get("student_id", "")).strip()
+        }
+        for student_id in student_ids:
+            log_dir = student_help_service.server_help_log_path(ROOT, student_id, assignment_id).parent
+            if log_dir.is_dir():
+                shutil.rmtree(log_dir)
+        deleted = record_storage.delete_assignment(assignment_id)
     updated = list_assignment_records(str(payload.get("now", "")).strip() or None)
     return {"ok": True, "deleted": deleted, **updated}
 

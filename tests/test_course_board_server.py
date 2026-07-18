@@ -15,6 +15,7 @@ from scripts import (
     student_help_service,
     student_lab_demo_setup,
 )
+from scripts.student_help_provider import StudentHelpResponse
 
 
 def patch_assignment_paths(tmp_path, monkeypatch) -> None:
@@ -275,6 +276,101 @@ def test_delete_assignment_record_resets_server_help_history_and_budget(tmp_path
     assert not log_path.parent.exists()
     assert summary["total"] == 0
     assert summary["ai_total"] == 0
+
+
+def test_delete_assignment_keeps_record_when_help_log_removal_fails(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
+    monkeypatch.setattr(course_board_server, "TEACHER_ASSIGNMENTS_DIR", tmp_path / "teacher-assignments")
+    storage = assignment_records.JsonAssignmentRecordStorage(tmp_path, tmp_path / "teacher-assignments")
+    assignment = storage.write_assignment(
+        assignment_records.build_assignment_record(
+            assignment_id="assignment-log-bloccato",
+            activity_id="python-base-somma-001",
+            activity_path="activities/python-base-somma-001.json",
+            target_type="student",
+            assigned_at="2026-10-12T09:00:00+02:00",
+            due_at="2026-10-19T23:59:00+02:00",
+            targets=[{"student_id": "rossi-mario", "path": "studenti/rossi-mario"}],
+        )
+    )
+    log_path = student_help_service.server_help_log_path(tmp_path, "rossi-mario", assignment["id"])
+    log_path.parent.mkdir(parents=True)
+    log_path.write_text('{"events": []}\n', encoding="utf-8")
+    monkeypatch.setattr(course_board_server.shutil, "rmtree", lambda path: (_ for _ in ()).throw(PermissionError()))
+
+    with pytest.raises(PermissionError):
+        course_board_server.delete_assignment_record({"assignment_id": assignment["id"]})
+
+    assert storage.read_assignment(assignment["id"])["id"] == assignment["id"]
+
+
+def test_delete_assignment_waits_for_inflight_help_request(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    activity_path = tmp_path / "activities" / "python-base-somma-001.json"
+    write_demo_activity(activity_path)
+    student_repo = tmp_path / "studenti" / "rossi-mario"
+    student_repo.mkdir(parents=True)
+    storage = assignment_records.JsonAssignmentRecordStorage(tmp_path, tmp_path / "teacher-assignments")
+    assignment = storage.write_assignment(
+        assignment_records.build_assignment_record(
+            assignment_id="assignment-ai-in-corso",
+            activity_id="python-base-somma-001",
+            activity_path="activities/python-base-somma-001.json",
+            target_type="student",
+            assigned_at="2026-10-12T09:00:00+02:00",
+            due_at="2026-10-19T23:59:00+02:00",
+            targets=[{"student_id": "rossi-mario", "path": "studenti/rossi-mario"}],
+        )
+    )
+    provider_started = threading.Event()
+    provider_release = threading.Event()
+
+    class BlockingProvider:
+        def respond(self, request):
+            provider_started.set()
+            assert provider_release.wait(timeout=5)
+            return StudentHelpResponse(
+                status="ready",
+                provider="blocking-test",
+                provider_label="Provider bloccante test",
+                message="Controlla il primo passaggio.",
+                usage={"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
+            )
+
+    monkeypatch.setattr(course_board_server, "student_help_provider", lambda: BlockingProvider())
+    request_errors = []
+    delete_errors = []
+
+    def request_help():
+        try:
+            course_board_server.record_student_help(
+                {"assignment_id": assignment["id"], "help_type": "debug", "prompt": "Aiutami."},
+                student_id="rossi-mario",
+            )
+        except Exception as error:  # noqa: BLE001
+            request_errors.append(error)
+
+    def delete_assignment():
+        try:
+            course_board_server.delete_assignment_record({"assignment_id": assignment["id"]})
+        except Exception as error:  # noqa: BLE001
+            delete_errors.append(error)
+
+    request_thread = threading.Thread(target=request_help)
+    delete_thread = threading.Thread(target=delete_assignment)
+    request_thread.start()
+    assert provider_started.wait(timeout=5)
+    delete_thread.start()
+    assert delete_thread.is_alive()
+    provider_release.set()
+    request_thread.join(timeout=5)
+    delete_thread.join(timeout=5)
+
+    assert request_errors == []
+    assert delete_errors == []
+    assert not storage.safe_assignment_path(assignment["id"]).exists()
+    assert not student_help_service.server_help_log_path(tmp_path, "rossi-mario", assignment["id"]).exists()
 
 
 def test_delete_activity_record_removes_unlinked_draft(tmp_path, monkeypatch) -> None:
