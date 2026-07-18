@@ -2178,6 +2178,37 @@ button.matrixCell:disabled:focus-visible {
   color: #8f1d14;
 }
 
+.testDetailsExpander {
+  max-width: 18rem;
+  color: #6f241d;
+}
+
+.testDetailsExpander summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.testDetailsExpander dl {
+  display: grid;
+  gap: .45rem;
+  margin: .35rem 0 0;
+}
+
+.testDetailsExpander div {
+  display: grid;
+  gap: .16rem;
+}
+
+.testDetailsExpander dt {
+  font-weight: 900;
+}
+
+.testDetailsExpander dd {
+  margin: 0;
+  color: #5f2a24;
+  overflow-wrap: anywhere;
+}
+
 .testDetailsOk span {
   background: #eaf7ef;
   color: #0f6b3d;

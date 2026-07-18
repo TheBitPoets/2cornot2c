@@ -2793,7 +2793,14 @@ function renderOverview() {
       <td>${badge(row.status, statusKind(row.status, row.late, { status: row.grading_status }))}</td>
       <td>
         <code>${escapeHtml(testText)}</code>
-        ${row.failed_tests?.length ? gradingDetails({ status: row.grading_status, failed_tests: row.failed_tests, tests: [] }) : ""}
+        ${row.failed_tests?.length || row.failed_test_details?.length
+          ? gradingDetails({
+              status: row.grading_status,
+              failed_tests: row.failed_tests,
+              failed_test_details: row.failed_test_details,
+              tests: [],
+            })
+          : ""}
       </td>
       <td><code>${escapeHtml(grade)}</code></td>
       <td>
@@ -3914,11 +3921,31 @@ function studentHelpDetails(help) {
 function gradingDetails(grading) {
   const failedTests = Array.isArray(grading.failed_tests) ? grading.failed_tests : [];
   const tests = Array.isArray(grading.tests) ? grading.tests : [];
-  if (failedTests.length) {
+  const failedDetails = failedTestDetails(grading);
+  if (failedTests.length || failedDetails.length) {
+    const names = failedDetails.length ? failedDetails.map((test) => test.name) : failedTests;
+    const detailRows = failedDetails.filter((test) => test.message || test.expected_stdout || test.actual_stdout);
     return `
       <div class="testDetails testDetailsBad">
         <strong>Falliti:</strong>
-        ${failedTests.map((name) => `<span>${escapeHtml(name)}</span>`).join("")}
+        ${names.map((name) => `<span>${escapeHtml(name)}</span>`).join("")}
+        ${detailRows.length ? `
+          <details class="testDetailsExpander">
+            <summary>Dettaglio errori</summary>
+            <dl>
+              ${detailRows.map((test) => `
+                <div>
+                  <dt>${escapeHtml(test.name)}</dt>
+                  ${test.message ? `<dd>${escapeHtml(test.message)}</dd>` : ""}
+                  ${test.expected_stdout || test.actual_stdout ? `
+                    <dd>Atteso: ${escapeHtml(test.expected_stdout || "-")}</dd>
+                    <dd>Ottenuto: ${escapeHtml(test.actual_stdout || "-")}</dd>
+                  ` : ""}
+                </div>
+              `).join("")}
+            </dl>
+          </details>
+        ` : ""}
       </div>
     `;
   }
@@ -3931,6 +3958,36 @@ function gradingDetails(grading) {
     `;
   }
   return "";
+}
+
+function failedTestDetails(grading) {
+  const explicitDetails = Array.isArray(grading.failed_test_details) ? grading.failed_test_details : [];
+  if (explicitDetails.length) {
+    return explicitDetails
+      .filter((test) => test && typeof test === "object")
+      .map((test, index) => ({
+        name: String(test.name || `test ${index + 1}`),
+        message: String(test.message || ""),
+        expected_stdout: String(test.expected_stdout || ""),
+        actual_stdout: String(test.actual_stdout || ""),
+      }));
+  }
+  const tests = Array.isArray(grading.tests) ? grading.tests : [];
+  const failedFromTests = tests
+    .filter((test) => test && typeof test === "object" && test.passed === false)
+    .map((test, index) => ({
+      name: String(test.name || `test ${index + 1}`),
+      message: String(test.message || test.error || ""),
+      expected_stdout: String(test.expected_stdout || ""),
+      actual_stdout: String(test.actual_stdout || test.stdout || ""),
+    }));
+  if (failedFromTests.length) return failedFromTests;
+  return (Array.isArray(grading.failed_tests) ? grading.failed_tests : []).map((name) => ({
+    name: String(name),
+    message: "",
+    expected_stdout: "",
+    actual_stdout: "",
+  }));
 }
 
 function externalLink(url, label = "GitHub") {

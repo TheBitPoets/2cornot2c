@@ -390,6 +390,8 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         aiFeedbackReviewDetails,
         aiFeedbackTeacherAction,
         studentHelpDetails,
+        failedTestDetails,
+        gradingDetails,
         reviewAiFeedback,
         dateTimeInputToIso,
         isoToDateTimeInput,
@@ -2799,6 +2801,32 @@ def test_ai_feedback_helpers_render_teacher_review_states() -> None:
           tested.aiFeedbackTeacherAction({ status: "approved" }),
           /riaprirlo come bozza/,
         );
+        """
+    )
+
+
+def test_grading_details_render_failed_test_messages() -> None:
+    run_dashboard_js(
+        """
+        const grading = {
+          status: "graded_failed",
+          failed_tests: ["somma_negativi"],
+          failed_test_details: [{
+            name: "somma_negativi",
+            message: "Output atteso diverso",
+            expected_stdout: "0",
+            actual_stdout: "1",
+          }],
+        };
+        const details = tested.failedTestDetails(grading);
+        assert.equal(details[0].message, "Output atteso diverso");
+        const html = tested.gradingDetails(grading);
+        assert.match(html, /Falliti:/);
+        assert.match(html, /somma_negativi/);
+        assert.match(html, /Dettaglio errori/);
+        assert.match(html, /Output atteso diverso/);
+        assert.match(html, /Atteso: 0/);
+        assert.match(html, /Ottenuto: 1/);
         """
     )
 

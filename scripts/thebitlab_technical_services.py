@@ -484,6 +484,7 @@ def grading_dict_from_grade_activity_report(report: dict[str, Any]) -> dict[str,
     result["score"] = report.get("score", result["score"])
     result["teacher_grade"] = report.get("teacher_grade", result["teacher_grade"])
     result["tests"] = _grade_activity_report_tests(report)
+    result["failed_test_details"] = _grade_activity_report_failed_test_details(report)
     result["report_status"] = report.get("status")
     return result
 
@@ -498,12 +499,48 @@ def _grade_activity_report_tests(report: dict[str, Any]) -> list[dict[str, Any]]
                 "name": str(test.get("name") or test.get("id") or f"test {index + 1}"),
                 "passed": test.get("passed"),
                 "status": test.get("status"),
-                "message": test.get("message") or test.get("error") or "",
+                "message": test.get("message") or test.get("error") or test.get("stderr") or "",
                 "expected_stdout": test.get("expected_stdout"),
-                "actual_stdout": test.get("actual_stdout"),
+                "actual_stdout": test.get("actual_stdout") or test.get("stdout"),
             }
         )
     return tests
+
+
+def _grade_activity_report_failed_test_details(report: dict[str, Any]) -> list[dict[str, str]]:
+    details = []
+    for test in _grade_activity_report_tests(report):
+        if test.get("passed") is True:
+            continue
+        name = _compact_text(test.get("name")) or "test"
+        message = _compact_text(test.get("message"))
+        expected = _compact_text(test.get("expected_stdout"))
+        actual = _compact_text(test.get("actual_stdout"))
+        details.append(
+            {
+                "name": name,
+                "message": message,
+                "expected_stdout": expected,
+                "actual_stdout": actual,
+            }
+        )
+    if not details and report.get("status") in {"compile-error", "compile-timeout", "source-not-found"}:
+        name = "sorgente" if report.get("status") == "source-not-found" else "compilazione"
+        details.append(
+            {
+                "name": name,
+                "message": _compact_text(_grade_activity_report_detail(report)),
+                "expected_stdout": "",
+                "actual_stdout": "",
+            }
+        )
+    return details
+
+
+def _compact_text(value: Any) -> str:
+    if value is None:
+        return ""
+    return " ".join(str(value).split())
 
 
 def _grade_activity_report_detail(report: dict[str, Any]) -> str:

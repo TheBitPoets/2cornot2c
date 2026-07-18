@@ -130,6 +130,7 @@ def normalize_grading(payload: dict[str, Any]) -> dict[str, Any]:
     normalized.setdefault("tests_passed", None)
     normalized.setdefault("tests_total", None)
     normalized.setdefault("failed_tests", [])
+    normalized.setdefault("failed_test_details", [])
     normalized.setdefault("score", None)
     normalized.setdefault("teacher_grade", None)
     return normalized
