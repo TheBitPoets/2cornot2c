@@ -1,9 +1,33 @@
 from __future__ import annotations
 
 import json
+import sys
 
 from scripts import student_help_service, student_support_policy, track_assignments
 from scripts.thebitlab_repository_providers import LocalRepositoryProvider, StudentRepository
+
+
+def test_parse_args_exposes_server_help_storage_options(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "track_assignments.py",
+            "--activity",
+            "activity.json",
+            "--output",
+            "report.json",
+            "--assignment-id",
+            "assignment-001",
+            "--server-root",
+            str(tmp_path),
+        ],
+    )
+
+    args = track_assignments.parse_args()
+
+    assert args.assignment_id == "assignment-001"
+    assert args.server_root == tmp_path
 
 
 def activity() -> dict:

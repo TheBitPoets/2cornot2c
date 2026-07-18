@@ -465,6 +465,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--class-id", help="Identificativo classe dell'assegnazione, per esempio 3A-TPSI.")
     parser.add_argument("--class-label", help="Etichetta leggibile della classe, per esempio 3A TPSI.")
     parser.add_argument("--github-team", help="Team GitHub classe associato all'assegnazione.")
+    parser.add_argument(
+        "--assignment-id",
+        help="Identificativo assegnazione per collegare il registro agli aiuti server-side.",
+    )
+    parser.add_argument(
+        "--server-root",
+        type=Path,
+        default=PROJECT_ROOT,
+        help="Root dati del server docente. Usata insieme a --assignment-id.",
+    )
     parser.add_argument("--output", type=Path, required=True, help="Path JSON del registro generato.")
     return parser.parse_args()
 
@@ -483,6 +493,8 @@ def main() -> int:
             class_id=args.class_id,
             class_label=args.class_label,
             github_team=args.github_team,
+            assignment_id=args.assignment_id,
+            server_root=args.server_root if args.assignment_id else None,
         )
         write_tracking_index(index, args.output)
     except ValueError as error:
