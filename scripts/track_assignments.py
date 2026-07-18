@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from scripts import assign_activity, create_submission_scaffold, student_help_service
+from scripts import assignment_records, assign_activity, create_submission_scaffold, student_help_service
 from scripts.thebitlab_contracts import (
     legacy_activity_validation_payload,
     normalize_activity,
@@ -338,6 +338,35 @@ def clean_metadata(value: str | None) -> str:
     return str(value or "").strip()
 
 
+def assignment_student_id(
+    target: TrackingTarget,
+    assignment: dict[str, Any] | None,
+    server_root: Path,
+) -> str:
+    """Resolve the stable student id recorded for a tracking target."""
+
+    if assignment is None:
+        return target.student
+    target_path = target.path.resolve()
+    target_repo = clean_metadata(target.repo)
+    for assignment_target in assignment.get("targets", []):
+        if not isinstance(assignment_target, dict):
+            continue
+        student_id = clean_metadata(assignment_target.get("student_id"))
+        if not student_id:
+            continue
+        recorded_path = clean_metadata(assignment_target.get("path"))
+        if recorded_path:
+            candidate_path = Path(recorded_path)
+            if not candidate_path.is_absolute():
+                candidate_path = server_root / candidate_path
+            if candidate_path.resolve() == target_path:
+                return student_id
+        if target_repo and clean_metadata(assignment_target.get("repo_ref")) == target_repo:
+            return student_id
+    return target.student
+
+
 def track_assignments(
     *,
     activity_path: Path,
@@ -366,13 +395,20 @@ def track_assignments(
     normalized_class_id = clean_metadata(class_id) or clean_metadata(normalized_activity.get("class_id"))
     normalized_class_label = clean_metadata(class_label) or normalized_class_id
     normalized_github_team = clean_metadata(github_team) or clean_metadata(normalized_activity.get("github_team"))
+    assignment = None
+    if assignment_id and server_root is not None:
+        try:
+            assignment = assignment_records.JsonAssignmentRecordStorage(server_root).read_assignment(assignment_id)
+        except FileNotFoundError:
+            assignment = None
 
     students: list[dict[str, Any]] = []
     for target in targets:
         repo_url = github_repo_url(target)
         report_path = default_report_path(target, activity_id)
         if assignment_id and server_root is not None:
-            help_log_path = student_help_service.server_help_log_path(server_root, target.student, assignment_id)
+            stable_student_id = assignment_student_id(target, assignment, server_root)
+            help_log_path = student_help_service.server_help_log_path(server_root, stable_student_id, assignment_id)
         else:
             help_log_path = student_help_service.help_log_path(target.path, activity_id)
         report = load_report(report_path)
