@@ -813,13 +813,56 @@ def load_current_payload(
     """Load authoritative server data when authenticated, otherwise local data."""
 
     if server_token.strip():
-        return fetch_student_lab_payload(
+        remote_payload = fetch_student_lab_payload(
             server_url=server_url,
             server_token=server_token,
             now=now,
             allow_insecure_http=allow_insecure_http,
         )
+        try:
+            local_payload = load_payload(root, student_id, now)
+        except Exception:  # Local paths are an optional operational enhancement.
+            return remote_payload
+        return merge_local_operational_paths(remote_payload, local_payload)
     return load_payload(root, student_id, now)
+
+
+def merge_local_operational_paths(
+    remote_payload: dict[str, Any],
+    local_payload: dict[str, Any],
+) -> dict[str, Any]:
+    """Enrich authoritative remote assignments with matching trusted local paths."""
+
+    local_by_id = {
+        clean_text(item.get("assignment_id"), ""): item
+        for item in payload_assignments(local_payload)
+        if isinstance(item, dict) and clean_text(item.get("assignment_id"), "")
+    }
+    merged_payload = dict(remote_payload)
+    merged_assignments: list[Any] = []
+    for remote_assignment in payload_assignments(remote_payload):
+        if not isinstance(remote_assignment, dict):
+            merged_assignments.append(remote_assignment)
+            continue
+        merged_assignment = dict(remote_assignment)
+        assignment_id = clean_text(remote_assignment.get("assignment_id"), "")
+        local_assignment = local_by_id.get(assignment_id)
+        if isinstance(local_assignment, dict):
+            for section_name in ("workspace", "activity", "report"):
+                remote_section = remote_assignment.get(section_name)
+                local_section = local_assignment.get(section_name)
+                if not isinstance(remote_section, dict) or not isinstance(local_section, dict):
+                    continue
+                local_path = clean_text(local_section.get("path"), "")
+                if not local_path:
+                    continue
+                merged_section = dict(remote_section)
+                merged_section["path"] = local_path
+                merged_section["exists"] = local_section.get("exists") is True
+                merged_assignment[section_name] = merged_section
+        merged_assignments.append(merged_assignment)
+    merged_payload["assignments"] = merged_assignments
+    return merged_payload
 
 
 def payload_assignments(payload: dict[str, Any]) -> list[dict[str, Any]]:

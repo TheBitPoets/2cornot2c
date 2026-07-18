@@ -683,6 +683,80 @@ def test_fetch_student_lab_payload_uses_authenticated_server_endpoint(monkeypatc
     assert captured["headers"]["Authorization"] == "Bearer signed-token"
 
 
+def test_load_current_payload_enriches_remote_assignment_with_matching_local_paths(monkeypatch, tmp_path) -> None:
+    remote_assignment = sample_assignment(
+        status="missing",
+        workspace={"path": "", "exists": False},
+        activity={"path": "", "exists": True, "title": "Titolo autorevole"},
+        report={"path": "", "exists": False, "tests": []},
+    )
+    local_assignment = sample_assignment(
+        status="pending",
+        workspace={"path": "D:/studenti/rossi/assignments/somma", "exists": True},
+        activity={"path": "D:/attivita/somma.json", "exists": True, "title": "Titolo locale"},
+        report={"path": "D:/studenti/rossi/reports/somma/latest.json", "exists": True},
+    )
+    monkeypatch.setattr(
+        student_lab_cli,
+        "fetch_student_lab_payload",
+        lambda **kwargs: sample_payload([remote_assignment]),
+    )
+    monkeypatch.setattr(
+        student_lab_cli,
+        "load_payload",
+        lambda root, student_id, now=None: sample_payload([local_assignment]),
+    )
+
+    payload = student_lab_cli.load_current_payload(
+        root=tmp_path,
+        student_id="rossi-mario",
+        now=None,
+        server_url="https://teacher.test",
+        server_token="signed-token",
+        allow_insecure_http=False,
+    )
+
+    assignment = payload["assignments"][0]
+    assert assignment["status"] == "missing"
+    assert assignment["activity"]["title"] == "Titolo autorevole"
+    assert assignment["workspace"] == {"path": "D:/studenti/rossi/assignments/somma", "exists": True}
+    assert assignment["activity"]["path"] == "D:/attivita/somma.json"
+    assert assignment["report"]["path"] == "D:/studenti/rossi/reports/somma/latest.json"
+    assert assignment["report"]["exists"] is True
+
+
+def test_load_current_payload_keeps_remote_paths_hidden_without_local_match(monkeypatch, tmp_path) -> None:
+    remote_assignment = sample_assignment(
+        workspace={"path": "", "exists": True},
+        activity={"path": "", "exists": True},
+        report={"path": "", "exists": False},
+    )
+    monkeypatch.setattr(
+        student_lab_cli,
+        "fetch_student_lab_payload",
+        lambda **kwargs: sample_payload([remote_assignment]),
+    )
+    monkeypatch.setattr(
+        student_lab_cli,
+        "load_payload",
+        lambda root, student_id, now=None: sample_payload([sample_assignment(assignment_id="assignment-diversa")]),
+    )
+
+    payload = student_lab_cli.load_current_payload(
+        root=tmp_path,
+        student_id="rossi-mario",
+        now=None,
+        server_url="https://teacher.test",
+        server_token="signed-token",
+        allow_insecure_http=False,
+    )
+
+    assignment = payload["assignments"][0]
+    assert assignment["workspace"]["path"] == ""
+    assert assignment["activity"]["path"] == ""
+    assert assignment["report"]["path"] == ""
+
+
 def test_record_help_from_tui_reports_server_timeout(monkeypatch) -> None:
     monkeypatch.setattr(
         student_lab_cli,
@@ -1036,11 +1110,13 @@ def test_run_tui_refreshes_from_server_after_runner_in_remote_mode(monkeypatch, 
         return payload
 
     monkeypatch.setattr(student_lab_cli, "fetch_student_lab_payload", fake_fetch_payload)
-    monkeypatch.setattr(
-        student_lab_cli,
-        "load_payload",
-        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("refresh locale non previsto")),
-    )
+    local_loads = []
+
+    def fake_load_payload(root, student_id, now=None):
+        local_loads.append((root, student_id, now))
+        return payload
+
+    monkeypatch.setattr(student_lab_cli, "load_payload", fake_load_payload)
     monkeypatch.setattr(
         student_lab_cli.student_lab_runner,
         "run_local_assignment",
@@ -1064,6 +1140,7 @@ def test_run_tui_refreshes_from_server_after_runner_in_remote_mode(monkeypatch, 
 
     assert result == 0
     assert len(fetch_calls) == 2
+    assert len(local_loads) == 2
     assert all(call["server_token"] == "signed-token" for call in fetch_calls)
     assert any("Esecuzione completata" in output for output in outputs)
 
