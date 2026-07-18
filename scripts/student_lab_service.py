@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -319,7 +320,7 @@ def list_student_lab_assignments(
         raise ValueError("student_id obbligatorio.")
     current_time = parse_now(now)
     storage = assignment_records.JsonAssignmentRecordStorage(root, assignments_dir)
-    lab_assignments = []
+    selected_assignments: list[tuple[dict[str, Any], dict[str, Any], str, str]] = []
 
     def target_selection_score(item: dict[str, Any]) -> tuple[bool, bool]:
         repo_path = target_repo_path(root, item, clean_student_id)
@@ -339,16 +340,27 @@ def list_student_lab_assignments(
             continue
         target = max(matching_targets, key=target_selection_score)
         canonical_student_id = target_student_id(target)
-        lab_assignments.append(
-            build_lab_assignment(
-                root=root,
-                assignment=assignment,
-                target=target,
-                student_id=canonical_student_id,
-                now=current_time,
-                expose_external_paths=expose_external_paths,
-            )
+        repo_path = target_repo_path(root, target, canonical_student_id)
+        binding = os.path.normcase(str(repo_path.resolve(strict=False))) if repo_path is not None else ""
+        selected_assignments.append((assignment, target, canonical_student_id, binding))
+
+    bindings = {binding for _, _, _, binding in selected_assignments if binding}
+    if len(bindings) > 1:
+        raise ValueError(
+            f"Identificativo studente ambiguo: {clean_student_id} e associato a repository diversi."
         )
+
+    lab_assignments = [
+        build_lab_assignment(
+            root=root,
+            assignment=assignment,
+            target=target,
+            student_id=canonical_student_id,
+            now=current_time,
+            expose_external_paths=expose_external_paths,
+        )
+        for assignment, target, canonical_student_id, _ in selected_assignments
+    ]
     lab_assignments.sort(key=lambda item: (item.get("due_at") or "", item.get("activity_id") or ""))
     return lab_assignments
 

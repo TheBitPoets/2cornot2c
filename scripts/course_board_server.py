@@ -1185,6 +1185,44 @@ def assignment_target_student_ids(assignment: dict[str, Any]) -> set[str]:
     }
 
 
+def assignment_target_bindings(assignment: dict[str, Any]) -> dict[str, str]:
+    """Return one unambiguous repository binding for every student identity."""
+
+    bindings: dict[str, str] = {}
+    for target in assignment.get("targets", []):
+        if not isinstance(target, dict):
+            continue
+        student_id = student_lab_service.target_student_id(target)
+        repo_path = student_lab_service.target_repo_path(ROOT, target, student_id)
+        if not student_id or repo_path is None:
+            raise ValueError("Destinatario senza identita o repository valido.")
+        binding = os.path.normcase(str(repo_path.resolve(strict=False)))
+        previous = bindings.setdefault(student_id, binding)
+        if previous != binding:
+            raise ValueError(
+                f"Identificativo studente ambiguo: {student_id} e associato a repository diversi."
+            )
+    return bindings
+
+
+def validate_global_assignment_target_bindings(
+    storage: assignment_records.JsonAssignmentRecordStorage,
+    assignment: dict[str, Any],
+) -> dict[str, str]:
+    """Reject reuse of one student identity for a different repository."""
+
+    new_bindings = assignment_target_bindings(assignment)
+    for existing in storage.list_assignments():
+        if existing.get("id") == assignment.get("id"):
+            continue
+        for student_id, binding in assignment_target_bindings(existing).items():
+            if student_id in new_bindings and new_bindings[student_id] != binding:
+                raise ValueError(
+                    f"Identificativo studente gia associato a un altro repository: {student_id}."
+                )
+    return new_bindings
+
+
 def save_assignment_record(payload: dict) -> dict:
     """Persist an explicit assignment record from the teacher dashboard."""
 
@@ -1213,16 +1251,15 @@ def save_assignment_record(payload: dict) -> dict:
     overwrite = bool(payload.get("overwrite", False))
     with assignment_operation_lock(assignment["id"]):
         storage = assignment_record_storage()
+        new_bindings = validate_global_assignment_target_bindings(storage, assignment)
         if overwrite:
             try:
                 existing = storage.read_assignment(assignment["id"])
             except FileNotFoundError:
                 existing = None
-            if existing is not None and assignment_target_student_ids(existing) != assignment_target_student_ids(
-                assignment
-            ):
+            if existing is not None and assignment_target_bindings(existing) != new_bindings:
                 raise ValueError(
-                    "I destinatari di un'assegnazione esistente non sono modificabili: "
+                    "I destinatari o i repository di un'assegnazione esistente non sono modificabili: "
                     "cancella l'assegnazione e creane una nuova."
                 )
         saved = storage.write_assignment(assignment, overwrite)

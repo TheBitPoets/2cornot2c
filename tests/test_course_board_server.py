@@ -1325,6 +1325,32 @@ def test_save_assignment_rejects_overwrite_with_different_students(tmp_path, mon
     }
 
 
+def test_save_assignment_rejects_student_id_bound_to_different_repository(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    activity_path = tmp_path / "activities" / "python-base-somma-001.json"
+    write_demo_activity(activity_path)
+    (tmp_path / "classe-a" / "mario").mkdir(parents=True)
+    (tmp_path / "classe-b" / "mario").mkdir(parents=True)
+    base_payload = {
+        "activity_path": "activities/python-base-somma-001.json",
+        "target_type": "class",
+        "class_id": "classe-a",
+        "targets_text": "classe-a/mario",
+        "assigned_at": "2026-10-12T09:00:00+02:00",
+        "due_at": "2026-10-19T23:59:00+02:00",
+    }
+    course_board_server.save_assignment_record(base_payload)
+
+    with pytest.raises(ValueError, match="gia associato a un altro repository: mario"):
+        course_board_server.save_assignment_record(
+            {
+                **base_payload,
+                "class_id": "classe-b",
+                "targets_text": "classe-b/mario",
+            }
+        )
+
+
 def test_student_payload_does_not_wait_for_assignment_provider_lock(tmp_path, monkeypatch) -> None:
     patch_assignment_paths(tmp_path, monkeypatch)
     storage = assignment_records.JsonAssignmentRecordStorage(tmp_path, tmp_path / "teacher-assignments")

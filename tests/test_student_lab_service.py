@@ -880,6 +880,34 @@ def test_student_lab_keeps_assignment_when_local_repo_path_is_only_inferred(tmp_
     assert assignments[0]["workspace"]["exists"] is False
 
 
+def test_student_lab_rejects_same_identity_bound_to_different_repositories(tmp_path) -> None:
+    write_assignment(
+        tmp_path,
+        sample_assignment(
+            tmp_path,
+            assignment_id="assignment-classe-a-mario",
+            target_type="student",
+            targets=[{"student_id": "mario", "path": "classe-a/mario"}],
+        ),
+    )
+    write_assignment(
+        tmp_path,
+        sample_assignment(
+            tmp_path,
+            assignment_id="assignment-classe-b-mario",
+            target_type="student",
+            targets=[{"student_id": "mario", "path": "classe-b/mario"}],
+        ),
+    )
+
+    with pytest.raises(ValueError, match="Identificativo studente ambiguo: mario"):
+        student_lab_service.list_student_lab_assignments(
+            root=tmp_path,
+            student_id="mario",
+            now="2026-10-18T12:00:00+02:00",
+        )
+
+
 def test_student_lab_rejects_missing_student_id(tmp_path) -> None:
     try:
         student_lab_service.list_student_lab_assignments(root=tmp_path, student_id="")
