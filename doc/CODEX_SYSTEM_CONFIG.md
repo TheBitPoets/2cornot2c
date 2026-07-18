@@ -73,7 +73,9 @@ Da Bash, nella root del repository:
 bash scripts/install_codex_system_config.sh
 ```
 
-Lo script installa in `$HOME/.codex`, fa backup dei file esistenti e preserva le altre sezioni gia presenti nel `config.toml`.
+Prerequisiti: Bash e Python 3 disponibili sulla macchina.
+
+Lo script installa in `$HOME/.codex`, fa backup dei file esistenti e preserva le altre sezioni gia presenti nel `config.toml`. Per il merge della configurazione usa `python3` quando disponibile, con fallback a `python`.
 
 Per vedere cosa farebbe senza scrivere:
 

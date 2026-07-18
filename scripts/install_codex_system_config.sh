@@ -71,6 +71,17 @@ if [[ ! -f "$agents_template_path" ]]; then
   exit 1
 fi
 
+python_bin=""
+if command -v python3 >/dev/null 2>&1; then
+  python_bin="python3"
+elif command -v python >/dev/null 2>&1; then
+  python_bin="python"
+fi
+if [[ -z "$python_bin" ]]; then
+  echo "Python 3 non trovato: installa python3 oppure rendi disponibile un comando python compatibile." >&2
+  exit 1
+fi
+
 config_path="$codex_home/config.toml"
 agents_path="$codex_home/AGENTS.md"
 
@@ -87,7 +98,7 @@ backup_file() {
 render_merged_config() {
   local current="$1"
   local template="$2"
-  python - "$current" "$template" <<'PY'
+  "$python_bin" - "$current" "$template" <<'PY'
 from __future__ import annotations
 
 import re
