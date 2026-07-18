@@ -96,6 +96,10 @@ STUDENT_HELP_SERVER_ERROR = "Servizio aiuto temporaneamente non disponibile."
 PRIVATE_STATIC_ROOTS = {"teacher-assignments", "teacher-help-events", "teacher-reports"}
 
 
+class StudentHelpConfigurationError(RuntimeError):
+    """Raised when the teacher server has an invalid help-provider setup."""
+
+
 def student_help_provider() -> StudentHelpProvider:
     """Return the server-side provider selected for student help."""
 
@@ -104,7 +108,7 @@ def student_help_provider() -> StudentHelpProvider:
     if provider_name in {"local", "deterministic-local"}:
         return local_provider
     if provider_name != "codex":
-        raise ValueError(f"Provider aiuto studente non supportato: {provider_name}.")
+        raise StudentHelpConfigurationError("Provider aiuto studente non supportato.")
     codex_provider = student_help_codex_adapter.CodexStudentHelpProvider(
         codex_command=os.environ.get("CODEX_COMMAND", "codex"),
         model=os.environ.get("THEBITLAB_STUDENT_HELP_CODEX_MODEL", ""),
@@ -2175,6 +2179,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 return
             try:
                 payload = json.loads(self.rfile.read(length).decode("utf-8"))
+                if not isinstance(payload, dict):
+                    raise ValueError("Il payload della richiesta deve essere un oggetto JSON.")
                 self.write_json(record_student_help(payload, student_id=student_id))
             except student_help_service.StudentHelpRateLimitError as error:
                 self.write_error_json(429, str(error))

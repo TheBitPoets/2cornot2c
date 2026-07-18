@@ -1027,6 +1027,19 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
             urllib.request.urlopen(oversized_request, timeout=5)
         assert oversized.value.code == 413
 
+        non_object_request = urllib.request.Request(
+            f"{base_url}/api/student-lab/help",
+            data=b"[]",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {token}",
+            },
+            method="POST",
+        )
+        with pytest.raises(urllib.error.HTTPError) as non_object:
+            urllib.request.urlopen(non_object_request, timeout=5)
+        assert non_object.value.code == 400
+
         request = urllib.request.Request(
             f"{base_url}/api/student-lab/help",
             data=json.dumps(
@@ -1049,6 +1062,14 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
         with pytest.raises(urllib.error.HTTPError) as rate_limited:
             urllib.request.urlopen(request, timeout=5)
         assert rate_limited.value.code == 429
+
+        monkeypatch.setenv("THEBITLAB_STUDENT_HELP_PROVIDER", "provider-non-valido")
+        with pytest.raises(urllib.error.HTTPError) as invalid_provider:
+            urllib.request.urlopen(request, timeout=5)
+        invalid_provider_payload = json.loads(invalid_provider.value.read().decode("utf-8"))
+        assert invalid_provider.value.code == 500
+        assert invalid_provider_payload["error"] == course_board_server.STUDENT_HELP_SERVER_ERROR
+        monkeypatch.setenv("THEBITLAB_STUDENT_HELP_PROVIDER", "local")
 
         monkeypatch.setattr(course_board_server, "APP_ROOT", tmp_path)
         with pytest.raises(urllib.error.HTTPError) as private_log:
