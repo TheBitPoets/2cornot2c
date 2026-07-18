@@ -45,6 +45,8 @@ Per preparare una demo stabile in `tmp/student-lab-demo`, cancellando eventuali 
 python scripts/student_lab_demo_setup.py
 ```
 
+La cartella `tmp/student-lab-demo` e ignorata da git: usala per prove ripetute, errori intenzionali, report falliti e collaudi GUI/TUI senza sporcare il repository. Se hai bisogno di cambiare i dati demo, rigenera la root con questo comando invece di salvare manualmente file generati in `activities/drafts`, `teacher-assignments` o negli student repo demo.
+
 Lo script stampa un JSON con i path generati e i comandi utili per continuare il collaudo. I comandi principali sono:
 
 ```bash

@@ -12,3 +12,11 @@ doc/calendars/*.json
 !doc/calendars/.gitkeep
 teacher-reports/**/*.json
 !teacher-reports/demo/ai-feedback-states.json
+
+# Local lab/dashboard demo data generated while testing.
+tmp/
+activities/drafts/*.json
+teacher-assignments/*.json
+examples/assignment_tracking/student_repos/*/assignments/*/
+examples/assignment_tracking/student_repos/*/reports/*/
+examples/assignment_tracking/student_repos/*/help/
