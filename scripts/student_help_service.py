@@ -28,6 +28,8 @@ MAX_PROVIDER_MESSAGE_CHARS = 8_000
 PROVIDER_ERROR_DETAIL = "Il provider non ha potuto completare la richiesta. Riprova più tardi o avvisa il docente."
 _HELP_LOG_LOCKS: dict[str, threading.Lock] = {}
 _HELP_LOG_LOCKS_GUARD = threading.Lock()
+_ACTIVE_PROVIDER_CALLS: set[tuple[str, str]] = set()
+_ACTIVE_PROVIDER_CALLS_GUARD = threading.Lock()
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{16,128}$")
 
 
@@ -179,7 +181,29 @@ def ai_events_used(events: list[dict[str, Any]]) -> int:
     )
 
 
-def release_stale_provider_reservations(events: list[dict[str, Any]], now: str) -> bool:
+def provider_call_key(log_path: Path, request_id: str) -> tuple[str, str]:
+    return str(log_path.resolve(strict=False)), request_id
+
+
+def set_provider_call_active(log_path: Path, request_id: str, active: bool) -> None:
+    key = provider_call_key(log_path, request_id)
+    with _ACTIVE_PROVIDER_CALLS_GUARD:
+        if active:
+            _ACTIVE_PROVIDER_CALLS.add(key)
+        else:
+            _ACTIVE_PROVIDER_CALLS.discard(key)
+
+
+def provider_call_is_active(log_path: Path, request_id: str) -> bool:
+    with _ACTIVE_PROVIDER_CALLS_GUARD:
+        return provider_call_key(log_path, request_id) in _ACTIVE_PROVIDER_CALLS
+
+
+def release_stale_provider_reservations(
+    events: list[dict[str, Any]],
+    now: str,
+    log_path: Path,
+) -> bool:
     """Release budget held by provider calls that cannot still be running."""
 
     try:
@@ -189,6 +213,8 @@ def release_stale_provider_reservations(events: list[dict[str, Any]], now: str) 
     changed = False
     for event in events:
         if event.get("provider_status") != "pending" or event.get("budget_charged") is False:
+            continue
+        if provider_call_is_active(log_path, clean_text(event.get("request_id"))):
             continue
         try:
             requested_at = datetime.fromisoformat(clean_text(event.get("requested_at")))
@@ -320,7 +346,7 @@ def load_reconciled_help_events(log_path: Path, now: str | None = None) -> tuple
 
     with help_log_lock(log_path):
         events, error = read_help_log(log_path)
-        if not error and release_stale_provider_reservations(events, reconciliation_now()):
+        if not error and release_stale_provider_reservations(events, reconciliation_now(), log_path):
             write_help_events(log_path, events)
         return events, error
 
@@ -359,7 +385,7 @@ def record_help_request(
         raise ValueError("request_id non valido.")
     with help_log_lock(path):
         events = load_writable_help_events(path)
-        reconciled = release_stale_provider_reservations(events, requested_at)
+        reconciled = release_stale_provider_reservations(events, requested_at, path)
         existing = next(
             (event for event in events if clean_text(event.get("request_id")) == clean_request_id),
             None,
@@ -409,47 +435,53 @@ def record_help_request(
             event["provider_status"] = "pending"
         events.append(event)
         write_help_events(path, events)
+        if provider_expected:
+            set_provider_call_active(path, clean_request_id, True)
 
     if provider_expected:
-        active_provider = (
-            None
-            if decision["help_type"] == "ai" and provider_factory is not None
-            else provider
-        )
         try:
-            if decision["help_type"] == "ai" and provider_factory is not None:
-                active_provider = provider_factory()
-            if active_provider is None:
-                raise RuntimeError("Provider aiuto non disponibile.")
-            response = provider_response_payload(
-                active_provider.respond(
-                    StudentHelpRequest(
-                        activity_id=clean_text(activity_id),
-                        help_type=decision["help_type"],
-                        prompt=clean_text(prompt),
-                        context=dict(context or {}),
+            active_provider = (
+                None
+                if decision["help_type"] == "ai" and provider_factory is not None
+                else provider
+            )
+            try:
+                if decision["help_type"] == "ai" and provider_factory is not None:
+                    active_provider = provider_factory()
+                if active_provider is None:
+                    raise RuntimeError("Provider aiuto non disponibile.")
+                response = provider_response_payload(
+                    active_provider.respond(
+                        StudentHelpRequest(
+                            activity_id=clean_text(activity_id),
+                            help_type=decision["help_type"],
+                            prompt=clean_text(prompt),
+                            context=dict(context or {}),
+                        )
                     )
                 )
-            )
-        except Exception:  # Provider failures must not discard the student's request.
-            response = {
-                "schema_version": "student_help_response.v1",
-                "status": "error",
-                "provider": type(active_provider).__name__ if active_provider is not None else "unavailable",
-                "provider_label": "Provider aiuto non disponibile",
-                "message": "",
-                "usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
-                "detail": PROVIDER_ERROR_DETAIL,
-            }
-        with help_log_lock(path):
-            events = load_writable_help_events(path)
-            for persisted in events:
-                if persisted.get("request_id") == event["request_id"]:
-                    persisted["response"] = response
-                    persisted["provider_status"] = "completed"
-                    event = persisted
-                    break
-            write_help_events(path, events)
+            except Exception:  # Provider failures must not discard the student's request.
+                response = {
+                    "schema_version": "student_help_response.v1",
+                    "status": "error",
+                    "provider": type(active_provider).__name__ if active_provider is not None else "unavailable",
+                    "provider_label": "Provider aiuto non disponibile",
+                    "message": "",
+                    "usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
+                    "detail": PROVIDER_ERROR_DETAIL,
+                }
+            with help_log_lock(path):
+                events = load_writable_help_events(path)
+                for persisted in events:
+                    if persisted.get("request_id") == event["request_id"]:
+                        persisted["response"] = response
+                        persisted["provider_status"] = "completed"
+                        persisted["budget_charged"] = True
+                        event = persisted
+                        break
+                write_help_events(path, events)
+        finally:
+            set_provider_call_active(path, clean_request_id, False)
     return event
 
 
@@ -565,7 +597,7 @@ def teacher_help_summary(log_path: Path | None, now: str | None = None) -> dict[
         return summary
     with help_log_lock(log_path):
         events, error = read_help_log(log_path)
-        if not error and release_stale_provider_reservations(events, reconciliation_now()):
+        if not error and release_stale_provider_reservations(events, reconciliation_now(), log_path):
             write_help_events(log_path, events)
         summary = _help_summary_from_events(log_path, events, error)
         teacher_events = []

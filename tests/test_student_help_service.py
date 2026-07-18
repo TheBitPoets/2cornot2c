@@ -715,6 +715,52 @@ def test_stale_provider_reservation_is_released_after_server_restart(tmp_path) -
     assert student_help_service.ai_budget_status(policy, events)["used"] == 1
 
 
+def test_active_provider_call_is_not_released_by_stale_reconciliation(tmp_path, monkeypatch) -> None:
+    repo = tmp_path / "student-repo"
+    activity_id = "python-base-somma-001"
+    log_path = student_help_service.help_log_path(repo, activity_id)
+    policy = dict(student_support_policy.support_policy("ai-assisted"))
+    policy["ai_request_limit"] = 1
+    provider_started = threading.Event()
+    release_provider = threading.Event()
+
+    class SlowProvider(RecordingHelpProvider):
+        def respond(self, request):
+            provider_started.set()
+            assert release_provider.wait(timeout=2)
+            return super().respond(request)
+
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(
+            student_help_service.record_help_request,
+            repo_path=repo,
+            activity_id=activity_id,
+            support_policy=policy,
+            help_type="ai",
+            prompt="Richiesta lenta ma ancora attiva.",
+            now="2026-10-18T10:00:00+02:00",
+            provider=SlowProvider(),
+        )
+        assert provider_started.wait(timeout=2)
+        monkeypatch.setattr(
+            student_help_service,
+            "reconciliation_now",
+            lambda: "2026-10-18T10:06:00+02:00",
+        )
+        summary = student_help_service.help_summary(log_path)
+        persisted_while_active = student_help_service.load_help_events(log_path)[0]
+        release_provider.set()
+        completed = future.result(timeout=2)
+
+    persisted = student_help_service.load_help_events(log_path)[0]
+    assert summary["last_response_status"] == ""
+    assert persisted_while_active["provider_status"] == "pending"
+    assert persisted_while_active["budget_charged"] is True
+    assert completed["provider_status"] == "completed"
+    assert persisted["budget_charged"] is True
+    assert student_help_service.ai_budget_status(policy, [persisted])["used"] == 1
+
+
 def test_reading_summary_releases_stale_provider_reservation(tmp_path, monkeypatch) -> None:
     log_path = tmp_path / "events.json"
     policy = dict(student_support_policy.support_policy("ai-assisted"))
