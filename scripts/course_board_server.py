@@ -118,8 +118,12 @@ class StudentHelpConfigurationError(RuntimeError):
     """Raised when the teacher server has an invalid help-provider setup."""
 
 
+class StudentHelpBusyError(RuntimeError):
+    """Raised when another help request already owns the assignment slot."""
+
+
 @contextmanager
-def assignment_operation_lock(assignment_id: str):
+def assignment_operation_lock(assignment_id: str, *, blocking: bool = True):
     """Serialize one assignment operation and release its cache entry afterward."""
 
     normalized_assignment_id = create_activity.slugify(str(assignment_id or "").strip())
@@ -131,7 +135,13 @@ def assignment_operation_lock(assignment_id: str):
         )
         entry["users"] += 1
     lock = entry["lock"]
-    lock.acquire()
+    acquired = lock.acquire(blocking=blocking)
+    if not acquired:
+        with _ASSIGNMENT_OPERATION_LOCKS_GUARD:
+            entry["users"] -= 1
+            if entry["users"] == 0 and _ASSIGNMENT_OPERATION_LOCKS.get(key) is entry:
+                _ASSIGNMENT_OPERATION_LOCKS.pop(key, None)
+        raise StudentHelpBusyError("Una richiesta di aiuto per questa consegna e gia in elaborazione.")
     try:
         yield
     finally:
@@ -163,7 +173,7 @@ def record_student_help(payload: dict[str, Any], *, student_id: str) -> dict[str
     """Record one TUI request using server-owned assignment context and policy."""
 
     assignment_id = str(payload.get("assignment_id", "")).strip()
-    with assignment_operation_lock(assignment_id):
+    with assignment_operation_lock(assignment_id, blocking=False):
         event = student_lab_service.record_student_help_request(
             root=ROOT,
             assignments_dir=TEACHER_ASSIGNMENTS_DIR,
@@ -2455,6 +2465,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                     raise ValueError("Il payload della richiesta deve essere un oggetto JSON.")
                 self.write_json(record_student_help(payload, student_id=student_id))
             except student_help_service.StudentHelpRateLimitError as error:
+                self.write_error_json(429, str(error))
+            except StudentHelpBusyError as error:
                 self.write_error_json(429, str(error))
             except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
                 self.write_error_json(400, str(error))
