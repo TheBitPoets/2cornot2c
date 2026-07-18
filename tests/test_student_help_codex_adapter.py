@@ -17,7 +17,7 @@ def sample_request() -> StudentHelpRequest:
     return StudentHelpRequest(
         activity_id="python-base-somma-001",
         help_type="ai",
-        prompt="Come individuo il caso limite senza avere la soluzione?",
+        prompt="Come individuo il caso limite senza ricevere già la soluzione?",
         context={
             "title": "Somma in Python",
             "instructions": "Leggi due numeri e stampane la somma.",
@@ -37,6 +37,8 @@ def test_codex_provider_runs_in_empty_read_only_ephemeral_workspace(monkeypatch)
     def fake_run(command, **kwargs):
         captured["command"] = command
         captured["cwd"] = kwargs["cwd"]
+        captured["encoding"] = kwargs["encoding"]
+        captured["raw_input"] = kwargs["input"]
         captured["input"] = json.loads(kwargs["input"])
         schema_path = command[command.index("--output-schema") + 1]
         captured["schema"] = json.loads(open(schema_path, encoding="utf-8").read())
@@ -75,6 +77,8 @@ def test_codex_provider_runs_in_empty_read_only_ephemeral_workspace(monkeypatch)
     assert 'web_search="disabled"' in captured["command"]
     assert captured["command"][captured["command"].index("--model") + 1] == "gpt-test"
     assert captured["cwd"].name.startswith("thebitlab-student-help-")
+    assert captured["encoding"] == "utf-8"
+    assert "già" in captured["raw_input"]
     assert captured["input"]["context"] == {
         "title": "Somma in Python",
         "instructions": "Leggi due numeri e stampane la somma.",

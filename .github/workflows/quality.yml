@@ -70,6 +70,7 @@ jobs:
           python -m pytest
           tests/test_assignment_records.py
           tests/test_student_help_service.py
+          tests/test_student_help_codex_adapter.py
           tests/test_student_lab_service.py
           tests/test_student_lab_cli.py
           tests/test_track_assignments.py
