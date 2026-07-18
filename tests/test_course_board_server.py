@@ -1043,6 +1043,17 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
         )
         with urllib.request.urlopen(request, timeout=5) as response:
             result = json.loads(response.read().decode("utf-8"))
+
+        def fail_with_internal_path(payload, *, student_id):
+            raise OSError(r"C:\dati-docente\segreto\events.json")
+
+        monkeypatch.setattr(course_board_server, "record_student_help", fail_with_internal_path)
+        with pytest.raises(urllib.error.HTTPError) as internal_error:
+            urllib.request.urlopen(request, timeout=5)
+        internal_payload = json.loads(internal_error.value.read().decode("utf-8"))
+        assert internal_error.value.code == 500
+        assert internal_payload["error"] == course_board_server.STUDENT_HELP_SERVER_ERROR
+        assert "dati-docente" not in json.dumps(internal_payload)
     finally:
         if server is not None:
             server.shutdown()

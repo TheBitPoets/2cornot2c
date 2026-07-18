@@ -91,6 +91,7 @@ AI_COURSE_PLAN_TIMEOUT_SECONDS = 240
 COMPACT_TEXT_CHARS = 1200
 MAX_SUBMISSION_FILE_BYTES = 512 * 1024
 MAX_STUDENT_HELP_REQUEST_BYTES = 16 * 1024
+STUDENT_HELP_SERVER_ERROR = "Servizio aiuto temporaneamente non disponibile."
 
 
 def student_help_provider() -> StudentHelpProvider:
@@ -2151,9 +2152,13 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         if parsed.path == "/api/student-lab/help":
             try:
+                secret = student_help_auth.student_help_secret()
+            except ValueError:
+                self.write_error_json(500, STUDENT_HELP_SERVER_ERROR)
+                return
+            try:
                 student_id = student_help_auth.student_id_from_authorization(
-                    self.headers.get("Authorization", ""),
-                    student_help_auth.student_help_secret(),
+                    self.headers.get("Authorization", ""), secret
                 )
             except ValueError as error:
                 self.write_error_json(401, str(error))
@@ -2169,8 +2174,10 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             try:
                 payload = json.loads(self.rfile.read(length).decode("utf-8"))
                 self.write_json(record_student_help(payload, student_id=student_id))
-            except Exception as error:  # noqa: BLE001
+            except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
                 self.write_error_json(400, str(error))
+            except Exception:  # noqa: BLE001
+                self.write_error_json(500, STUDENT_HELP_SERVER_ERROR)
             return
         length = int(self.headers.get("Content-Length", "0"))
         payload = json.loads(self.rfile.read(length).decode("utf-8"))
