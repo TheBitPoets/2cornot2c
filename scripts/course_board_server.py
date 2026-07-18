@@ -593,7 +593,7 @@ def restore_help_log_snapshots(snapshots: list[tuple[Path, dict[Path, bytes]]]) 
 def sync_file_tree(root: Path) -> None:
     """Persist a completed file tree before advancing its recovery journal."""
 
-    if os.name == "nt" or not root.is_dir():
+    if not root.is_dir():
         return
     directories = {root}
     for candidate in root.rglob("*"):
@@ -603,7 +603,7 @@ def sync_file_tree(root: Path) -> None:
             directories.add(candidate)
             continue
         if candidate.is_file():
-            with candidate.open("rb") as stream:
+            with candidate.open("r+b") as stream:
                 os.fsync(stream.fileno())
             directories.add(candidate.parent)
     for directory in sorted(directories, key=lambda item: len(item.parts), reverse=True):

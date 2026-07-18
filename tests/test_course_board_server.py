@@ -649,6 +649,23 @@ def test_help_log_staging_syncs_transaction_and_rename_directories(tmp_path, mon
     assert log_path.is_file()
 
 
+def test_sync_file_tree_flushes_regular_files_on_windows(tmp_path, monkeypatch) -> None:
+    root = tmp_path / "rollback"
+    first = root / "student-a" / "events.json"
+    second = root / "student-b" / "events.json"
+    first.parent.mkdir(parents=True)
+    second.parent.mkdir(parents=True)
+    first.write_text("{}\n", encoding="utf-8")
+    second.write_text("{}\n", encoding="utf-8")
+    flushed = []
+    monkeypatch.setattr(course_board_server.os, "name", "nt")
+    monkeypatch.setattr(course_board_server.os, "fsync", lambda descriptor: flushed.append(descriptor))
+
+    course_board_server.sync_file_tree(root)
+
+    assert len(flushed) == 2
+
+
 def test_delete_assignment_uses_canonical_record_id_for_help_logs(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
