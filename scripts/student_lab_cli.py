@@ -11,6 +11,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+import unicodedata
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
@@ -62,7 +63,12 @@ RESET_COLOR = "\033[0m"
 def clean_text(value: Any, fallback: str = "-") -> str:
     """Return a compact label for terminal output."""
 
-    text = str(value or "").strip()
+    text = "".join(
+        " " if character in "\r\n\t" else ""
+        if unicodedata.category(character).startswith("C")
+        else character
+        for character in str(value or "")
+    ).strip()
     return text or fallback
 
 
@@ -197,7 +203,9 @@ def render_assignment_row(index: int, assignment: dict[str, Any], use_color: boo
     """Render one compact assignment row."""
 
     title = truncate(clean_text(assignment.get("title") or assignment.get("activity_id")), 34)
-    status = truncate(colored_status(clean_text(assignment.get("status")), use_color), 31 if use_color else 22)
+    clean_status = clean_text(assignment.get("status"), "")
+    status = truncate(status_label(clean_status), 22)
+    status = colorize(status, STATUS_COLORS.get(clean_status, ""), use_color)
     due_at = truncate(compact_datetime(assignment.get("due_at")), 16)
     workspace = assignment.get("workspace") if isinstance(assignment.get("workspace"), dict) else {}
     workspace_mark = colorize("workspace", WORKSPACE_COLOR, use_color) if workspace.get("exists") else "no workspace"
@@ -227,10 +235,11 @@ def render_assignment_list(payload: dict[str, Any], use_color: bool = False) -> 
     return "\n".join(lines)
 
 
-def detail_line(label: str, value: Any) -> str:
+def detail_line(label: str, value: Any, *, formatted: bool = False) -> str:
     """Render one label/value line for the detail view."""
 
-    return f"{label:<18} {clean_text(value)}"
+    rendered = str(value) if formatted else clean_text(value)
+    return f"{label:<18} {rendered}"
 
 
 def section_separator(width: int = 72) -> str:
@@ -312,7 +321,7 @@ def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False
         detail_line("Classe:", assignment.get("class_label") or assignment.get("class_id")),
         detail_line("Assegnata:", compact_datetime(assignment.get("assigned_at"))),
         detail_line("Scadenza:", compact_datetime(assignment.get("due_at"))),
-        detail_line("Stato:", colored_status(clean_text(assignment.get("status")), use_color)),
+        detail_line("Stato:", colored_status(clean_text(assignment.get("status")), use_color), formatted=True),
         section_separator(),
         "Workspace",
         detail_line("Path:", workspace.get("path")),
@@ -541,7 +550,7 @@ def render_help_history(
                     colorize(f"Richiesta {request_index}", HELP_REQUEST_COLOR, use_color),
                     detail_line("Data:", compact_datetime(event.get("requested_at"))),
                     detail_line("Tipo:", event.get("label")),
-                    detail_line("Esito:", colorize(decision, decision_color, use_color)),
+                    detail_line("Esito:", colorize(decision, decision_color, use_color), formatted=True),
                     *help_history_block("Prompt studente", event.get("prompt"), HELP_PROMPT_COLOR, use_color),
                 ]
             )
@@ -712,7 +721,7 @@ def help_result_message(event: dict[str, Any], use_color: bool = False) -> str:
         colorize("Esito richiesta aiuto", HELP_REQUEST_COLOR, use_color),
         section_separator(),
         detail_line("Tipo:", event.get("label")),
-        detail_line("Esito:", colorize(status, status_color, use_color)),
+        detail_line("Esito:", colorize(status, status_color, use_color), formatted=True),
     ]
     response = event.get("response") if isinstance(event.get("response"), dict) else {}
     if response.get("status") == "ready":
