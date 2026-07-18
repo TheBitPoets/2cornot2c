@@ -195,3 +195,20 @@ python -m scripts.manual_ai_feedback review-feedback updated-register.json rossi
 Il flusso operativo completo e descritto in [`../MANUAL_AI_FEEDBACK_WORKFLOW.md`](../MANUAL_AI_FEEDBACK_WORKFLOW.md).
 
 Se ChatGPT cambia stile di risposta, si modifica solo l'adapter del workflow manuale o il validatore dello schema, non il resto della dashboard. Lo stesso contratto JSON puo essere riusato anche dagli adapter automatici, che inviano e ricevono dati strutturati senza legarsi al testo libero del provider.
+
+## Aiuto durante lo svolgimento
+
+Il feedback AI sul grading e l'aiuto chiesto dallo studente durante il lavoro sono due casi d'uso distinti. Il primo
+produce una bozza sottoposta al docente; il secondo deve rispettare immediatamente la policy della consegna e non
+deve ricevere dati personali o codice non autorizzato.
+
+Il confine per il secondo caso e `StudentHelpProvider`, definito in `scripts/student_help_provider.py`:
+
+- `StudentHelpRequest` contiene activity, tipo di aiuto, prompt e contesto minimo consentito;
+- `StudentHelpResponse` usa lo schema `student_help_response.v1` e include provider, messaggio, errore e uso;
+- `DeterministicStudentHelpProvider` e il primo adapter locale, senza chiamate esterne e senza soluzioni complete;
+- `student_help_service.py` applica policy e budget prima di invocare il provider e persiste richiesta e risposta;
+- la TUI conosce solo il contratto e puo quindi usare in futuro Codex o un provider API senza cambiare il flusso.
+
+I contatori `usage` sono gia presenti, ma restano a zero per il provider locale. Un adapter reale dovra valorizzarli
+con dati restituiti dal provider prima di introdurre limiti a token o costo.

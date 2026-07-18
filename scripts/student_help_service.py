@@ -6,6 +6,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from scripts.student_help_provider import StudentHelpProvider, StudentHelpRequest
+
 
 HELP_LOG_SCHEMA_VERSION = "student_help_log.v1"
 HELP_EVENT_SCHEMA_VERSION = "student_help_event.v1"
@@ -160,6 +162,8 @@ def record_help_request(
     help_type: Any,
     prompt: str = "",
     now: str | None = None,
+    provider: StudentHelpProvider | None = None,
+    context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     path = help_log_path(repo_path, activity_id)
     events = load_help_events(path)
@@ -177,6 +181,27 @@ def record_help_request(
     }
     if "budget" in decision:
         event["budget"] = decision["budget"]
+    if decision["allowed"] is True and provider is not None:
+        try:
+            response = provider.respond(
+                StudentHelpRequest(
+                    activity_id=clean_text(activity_id),
+                    help_type=decision["help_type"],
+                    prompt=clean_text(prompt),
+                    context=dict(context or {}),
+                )
+            )
+            event["response"] = response.to_dict()
+        except Exception as error:  # Provider failures must not discard the student's request.
+            event["response"] = {
+                "schema_version": "student_help_response.v1",
+                "status": "error",
+                "provider": type(provider).__name__,
+                "provider_label": "Provider aiuto non disponibile",
+                "message": "",
+                "usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
+                "detail": clean_text(error) or "Errore provider senza dettagli.",
+            }
     events.append(event)
     write_help_events(path, events)
     return event
@@ -194,6 +219,8 @@ def help_summary(log_path: Path | None) -> dict[str, Any]:
             "denied": 0,
             "last_requested_at": "",
             "last_decision": "",
+            "last_response_status": "",
+            "last_response_provider": "",
             "counts": {},
         }
     events, error = read_help_log(log_path)
@@ -202,6 +229,7 @@ def help_summary(log_path: Path | None) -> dict[str, Any]:
         help_type = clean_text(event.get("help_type")) or "sconosciuto"
         counts[help_type] = counts.get(help_type, 0) + 1
     last = events[-1] if events else {}
+    last_response = last.get("response") if isinstance(last.get("response"), dict) else {}
     return {
         "path": str(log_path).replace("\\", "/"),
         "exists": bool(events),
@@ -212,6 +240,8 @@ def help_summary(log_path: Path | None) -> dict[str, Any]:
         "denied": sum(1 for event in events if event.get("allowed") is False),
         "last_requested_at": clean_text(last.get("requested_at")),
         "last_decision": "consentita" if last.get("allowed") is True else ("bloccata" if last.get("allowed") is False else ""),
+        "last_response_status": clean_text(last_response.get("status")),
+        "last_response_provider": clean_text(last_response.get("provider_label")),
         "counts": counts,
     }
 
@@ -233,6 +263,7 @@ def teacher_help_summary(log_path: Path | None) -> dict[str, Any]:
             "allowed": event.get("allowed") is True,
             "reason": clean_text(event.get("reason")),
             "prompt": clean_text(event.get("prompt")),
+            "response": _teacher_response(event.get("response")),
         }
         for event in events
     ]
@@ -246,3 +277,23 @@ def teacher_help_summary(log_path: Path | None) -> dict[str, Any]:
 def help_budget_summary(log_path: Path | None, support_policy: dict[str, Any]) -> dict[str, Any]:
     events = load_help_events(log_path) if log_path is not None else []
     return ai_budget_status(support_policy, events)
+
+
+def _teacher_response(value: Any) -> dict[str, Any]:
+    """Return safe response fields for teacher-facing help history."""
+
+    if not isinstance(value, dict):
+        return {}
+    usage = value.get("usage") if isinstance(value.get("usage"), dict) else {}
+    return {
+        "status": clean_text(value.get("status")),
+        "provider": clean_text(value.get("provider")),
+        "provider_label": clean_text(value.get("provider_label")),
+        "message": clean_text(value.get("message")),
+        "detail": clean_text(value.get("detail")),
+        "usage": {
+            "input_tokens": max(positive_int(usage.get("input_tokens")), 0),
+            "output_tokens": max(positive_int(usage.get("output_tokens")), 0),
+            "total_tokens": max(positive_int(usage.get("total_tokens")), 0),
+        },
+    }

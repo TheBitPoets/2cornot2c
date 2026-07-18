@@ -288,6 +288,11 @@ def test_render_help_history_shows_events(tmp_path) -> None:
                         "allowed": False,
                         "reason": "La modalità scelta dal docente non consente aiuto AI.",
                         "prompt": "Mi scrivi la soluzione completa?",
+                        "response": {
+                            "status": "ready",
+                            "provider_label": "Guida locale (nessuna AI esterna)",
+                            "message": "Prova prima un caso minimo.",
+                        },
                     }
                 ]
             }
@@ -302,6 +307,8 @@ def test_render_help_history_shows_events(tmp_path) -> None:
     assert "2026-10-18 17:20 | Aiuto AI | bloccata" in rendered
     assert "non consente aiuto AI" in rendered
     assert "Mi scrivi la soluzione completa?" in rendered
+    assert "Risposta - Guida locale (nessuna AI esterna)" in rendered
+    assert "Prova prima un caso minimo" in rendered
 
 
 def test_render_help_history_handles_empty_or_invalid_log(tmp_path) -> None:
@@ -341,6 +348,47 @@ def test_help_result_message_shows_policy_decision() -> None:
 
     assert "Richiesta aiuto bloccata: Aiuto AI" in message
     assert "non consente aiuto AI" in message
+
+
+def test_help_result_message_shows_local_provider_response() -> None:
+    message = student_lab_cli.help_result_message(
+        {
+            "allowed": True,
+            "label": "Aiuto AI",
+            "reason": "La modalità consente aiuto AI.",
+            "response": {
+                "status": "ready",
+                "provider_label": "Guida locale (nessuna AI esterna)",
+                "message": "Parti dal primo test fallito.",
+            },
+        }
+    )
+
+    assert "Richiesta aiuto consentita: Aiuto AI" in message
+    assert "Risposta - Guida locale (nessuna AI esterna)" in message
+    assert "Parti dal primo test fallito" in message
+
+
+def test_help_provider_context_contains_only_minimal_assignment_data() -> None:
+    assignment = sample_assignment(
+        report={
+            "tests": [
+                {"name": "test_base", "passed": True},
+                {"name": "test_negativi", "passed": False},
+            ]
+        },
+        grading={"status": "graded_failed"},
+    )
+
+    context = student_lab_cli.help_provider_context(assignment)
+
+    assert context == {
+        "title": "Somma in Python",
+        "topics": ["variabili", "input-output"],
+        "grading_status": "graded_failed",
+        "failed_tests": ["test_negativi"],
+    }
+    assert "student_id" not in context
 
 
 def test_ai_budget_label_handles_missing_and_exhausted_budget() -> None:

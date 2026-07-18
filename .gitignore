@@ -4,6 +4,8 @@
 *~
 .vagrant
 *.log
+__pycache__/
+*.py[cod]
 .secrets/
 *.secret
 

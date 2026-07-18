@@ -13,6 +13,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from scripts import student_help_service, student_lab_runner, student_lab_service
+from scripts.student_help_provider import DeterministicStudentHelpProvider
 
 
 InputFn = Callable[[str], str]
@@ -383,6 +384,8 @@ HELP_MENU = {
     "3": "ai",
 }
 
+DEFAULT_HELP_PROVIDER = DeterministicStudentHelpProvider()
+
 
 def help_choice_label() -> str:
     """Return a compact help-type menu label."""
@@ -444,6 +447,7 @@ def render_help_history(assignment: dict[str, Any], root: Path = PROJECT_ROOT) -
         return "\n".join(lines)
     for index, event in enumerate(events, start=1):
         decision = "consentita" if event.get("allowed") is True else "bloccata"
+        response = event.get("response") if isinstance(event.get("response"), dict) else {}
         lines.extend(
             [
                 f"{index}. {compact_datetime(event.get('requested_at'))} | {clean_text(event.get('label'))} | {decision}",
@@ -451,7 +455,35 @@ def render_help_history(assignment: dict[str, Any], root: Path = PROJECT_ROOT) -
                 f"   Prompt: {truncate(clean_text(event.get('prompt')), 100)}",
             ]
         )
+        if response:
+            provider_label = clean_text(response.get("provider_label")) or "Provider aiuto"
+            if response.get("status") == "ready":
+                lines.append(f"   Risposta - {provider_label}: {clean_text(response.get('message'))}")
+            else:
+                lines.append(f"   Risposta non disponibile - {provider_label}: {clean_text(response.get('detail'))}")
     return "\n".join(lines)
+
+
+def help_provider_context(assignment: dict[str, Any]) -> dict[str, Any]:
+    """Return the minimal assignment context allowed for the local help provider."""
+
+    activity = assignment.get("activity") if isinstance(assignment.get("activity"), dict) else {}
+    grading = assignment.get("grading") if isinstance(assignment.get("grading"), dict) else {}
+    report = assignment.get("report") if isinstance(assignment.get("report"), dict) else {}
+    tests = report.get("tests") if isinstance(report.get("tests"), list) else []
+    failed_tests = [
+        clean_text(test.get("name"))
+        for test in tests
+        if isinstance(test, dict) and test.get("passed") is False and clean_text(test.get("name"))
+    ]
+    raw_topics = activity.get("topics")
+    topics = raw_topics if isinstance(raw_topics, list) else []
+    return {
+        "title": clean_text(assignment.get("title")),
+        "topics": [clean_text(topic) for topic in topics if clean_text(topic)],
+        "grading_status": clean_text(grading.get("status")),
+        "failed_tests": failed_tests,
+    }
 
 
 def record_help_from_tui(
@@ -475,6 +507,8 @@ def record_help_from_tui(
         help_type=help_type,
         prompt=prompt,
         now=now,
+        provider=DEFAULT_HELP_PROVIDER,
+        context=help_provider_context(assignment),
     )
 
 
@@ -482,12 +516,26 @@ def help_result_message(event: dict[str, Any]) -> str:
     """Return a compact message after recording a help request."""
 
     status = "consentita" if event.get("allowed") else "bloccata"
-    return "\n".join(
-        [
-            f"Richiesta aiuto {status}: {clean_text(event.get('label'))}",
-            clean_text(event.get("reason")),
-        ]
-    )
+    lines = [
+        f"Richiesta aiuto {status}: {clean_text(event.get('label'))}",
+        clean_text(event.get("reason")),
+    ]
+    response = event.get("response") if isinstance(event.get("response"), dict) else {}
+    if response.get("status") == "ready":
+        lines.extend(
+            [
+                f"Risposta - {clean_text(response.get('provider_label'))}:",
+                clean_text(response.get("message")),
+            ]
+        )
+    elif response:
+        lines.extend(
+            [
+                f"Risposta non disponibile - {clean_text(response.get('provider_label'))}:",
+                clean_text(response.get("detail")),
+            ]
+        )
+    return "\n".join(lines)
 
 
 def clear_screen() -> None:
