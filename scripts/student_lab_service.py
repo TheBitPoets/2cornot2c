@@ -5,7 +5,7 @@ import json
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -425,6 +425,7 @@ def record_student_help_request(
     help_type: str,
     prompt: str,
     provider: StudentHelpProvider,
+    provider_factory: Callable[[], StudentHelpProvider] | None = None,
     request_id: str = "",
     assignments_dir: Path | None = None,
     now: str | None = None,
@@ -466,6 +467,7 @@ def record_student_help_request(
         prompt=clean_prompt,
         now=now,
         provider=provider,
+        provider_factory=provider_factory,
         context=help_provider_context(assignment),
         request_id=request_id,
         log_path=student_help_service.server_help_log_path(

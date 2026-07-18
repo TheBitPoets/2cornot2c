@@ -991,7 +991,7 @@ def test_delete_assignment_waits_for_inflight_help_request(tmp_path, monkeypatch
                 usage={"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
             )
 
-    monkeypatch.setattr(course_board_server, "student_help_provider", lambda: BlockingProvider())
+    monkeypatch.setattr(course_board_server, "DeterministicStudentHelpProvider", lambda: BlockingProvider())
     request_errors = []
     delete_errors = []
 
@@ -1061,7 +1061,7 @@ def test_concurrent_help_request_is_rejected_without_waiting(tmp_path, monkeypat
                 usage={"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
             )
 
-    monkeypatch.setattr(course_board_server, "student_help_provider", lambda: BlockingProvider())
+    monkeypatch.setattr(course_board_server, "DeterministicStudentHelpProvider", lambda: BlockingProvider())
     first_errors = []
 
     def first_request():
@@ -1128,7 +1128,7 @@ def test_classmates_can_request_help_on_the_same_assignment_concurrently(tmp_pat
                 usage={"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
             )
 
-    monkeypatch.setattr(course_board_server, "student_help_provider", lambda: PerStudentProvider())
+    monkeypatch.setattr(course_board_server, "DeterministicStudentHelpProvider", lambda: PerStudentProvider())
     first_errors = []
 
     def first_request():
@@ -1425,6 +1425,17 @@ def test_generate_assignment_report_preserves_assignment_id(tmp_path, monkeypatc
     student_repo = tmp_path / "studenti" / "rossi-mario"
     (student_repo / "assignments" / "python-base-somma-001").mkdir(parents=True)
     (student_repo / "assignments" / "python-base-somma-001" / "main.py").write_text("print(3)\n", encoding="utf-8")
+    assignment_records.JsonAssignmentRecordStorage(tmp_path).write_assignment(
+        assignment_records.build_assignment_record(
+            assignment_id="assignment-python-base-somma-001-3a",
+            activity_id="python-base-somma-001",
+            activity_path=str(activity_path),
+            target_type="student",
+            assigned_at="2026-10-12T09:00:00+02:00",
+            due_at="2026-10-19T23:59:00+02:00",
+            targets=[{"student_id": "rossi-mario", "path": str(student_repo)}],
+        )
+    )
 
     result = course_board_server.generate_assignment_report({
         "activity_path": str(activity_path),
@@ -2096,6 +2107,10 @@ def test_record_student_help_delegates_only_client_identifiers_to_service(monkey
     )
 
     assert response == {"ok": True, "event": {"allowed": True, "label": "Aiuto AI"}}
+    local_provider = captured.pop("provider")
+    provider_factory = captured.pop("provider_factory")
+    assert isinstance(local_provider, course_board_server.DeterministicStudentHelpProvider)
+    assert provider_factory() is provider
     assert captured == {
         "root": tmp_path,
         "assignments_dir": tmp_path / "teacher-assignments",
@@ -2104,7 +2119,6 @@ def test_record_student_help_delegates_only_client_identifiers_to_service(monkey
         "help_type": "ai",
         "prompt": "Dammi una domanda guida.",
         "request_id": "request-server-0001",
-        "provider": provider,
     }
 
 
@@ -2370,11 +2384,34 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
         assert rate_limited.value.code == 429
 
         monkeypatch.setenv("THEBITLAB_STUDENT_HELP_PROVIDER", "provider-non-valido")
-        with pytest.raises(urllib.error.HTTPError) as invalid_provider:
-            urllib.request.urlopen(request, timeout=5)
-        invalid_provider_payload = json.loads(invalid_provider.value.read().decode("utf-8"))
-        assert invalid_provider.value.code == 500
-        assert invalid_provider_payload["error"] == course_board_server.STUDENT_HELP_SERVER_ERROR
+        monkeypatch.setattr(student_help_service, "MAX_HELP_EVENTS_PER_ASSIGNMENT", 500)
+        with urllib.request.urlopen(request, timeout=5) as invalid_provider_response:
+            invalid_provider_payload = json.loads(invalid_provider_response.read().decode("utf-8"))
+        assert invalid_provider_response.status == 200
+        assert invalid_provider_payload["event"]["response"]["status"] == "ready"
+
+        ai_request = urllib.request.Request(
+            f"{base_url}/api/student-lab/help",
+            data=json.dumps(
+                {
+                    "assignment_id": assignment["assignment_id"],
+                    "help_type": "ai",
+                    "prompt": "Dammi una domanda guida.",
+                }
+            ).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json; charset=utf-8",
+                "Authorization": f"Bearer {token}",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(ai_request, timeout=5) as invalid_ai_provider_response:
+            invalid_ai_provider_payload = json.loads(
+                invalid_ai_provider_response.read().decode("utf-8")
+            )
+        assert invalid_ai_provider_response.status == 200
+        assert invalid_ai_provider_payload["event"]["response"]["status"] == "error"
+        assert invalid_ai_provider_payload["event"]["provider_status"] == "completed"
         monkeypatch.setenv("THEBITLAB_STUDENT_HELP_PROVIDER", "local")
 
         monkeypatch.setattr(course_board_server, "APP_ROOT", tmp_path.parent)
@@ -2414,7 +2451,8 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
         assignment["assignment_id"],
     )
     events = json.loads(log_path.read_text(encoding="utf-8"))["events"]
-    assert events[-1]["prompt"] == "Quale concetto devo ripassare?"
+    assert any(event["prompt"] == "Quale concetto devo ripassare?" for event in events)
+    assert any(event["prompt"] == "Dammi una domanda guida." for event in events)
 
 
 def test_student_dashboard_uses_configured_demo_data_root(tmp_path) -> None:

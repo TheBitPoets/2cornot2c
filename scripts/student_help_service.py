@@ -9,7 +9,7 @@ import uuid
 from json import JSONDecodeError
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from scripts.student_help_provider import (
     STUDENT_HELP_RESPONSE_SCHEMA_VERSION,
@@ -344,6 +344,7 @@ def record_help_request(
     prompt: str = "",
     now: str | None = None,
     provider: StudentHelpProvider | None = None,
+    provider_factory: Callable[[], StudentHelpProvider] | None = None,
     context: dict[str, Any] | None = None,
     log_path: Path | None = None,
     request_id: str = "",
@@ -395,15 +396,28 @@ def record_help_request(
             event["budget"] = decision["budget"]
         if decision["help_type"] == "ai" and decision["allowed"] is True:
             event["budget_charged"] = True
-        if decision["allowed"] is True and provider is not None:
+        provider_expected = decision["allowed"] is True and (
+            provider is not None
+            or (decision["help_type"] == "ai" and provider_factory is not None)
+        )
+        if provider_expected:
             event["provider_status"] = "pending"
         events.append(event)
         write_help_events(path, events)
 
-    if decision["allowed"] is True and provider is not None:
+    if provider_expected:
+        active_provider = (
+            None
+            if decision["help_type"] == "ai" and provider_factory is not None
+            else provider
+        )
         try:
+            if decision["help_type"] == "ai" and provider_factory is not None:
+                active_provider = provider_factory()
+            if active_provider is None:
+                raise RuntimeError("Provider aiuto non disponibile.")
             response = provider_response_payload(
-                provider.respond(
+                active_provider.respond(
                     StudentHelpRequest(
                         activity_id=clean_text(activity_id),
                         help_type=decision["help_type"],
@@ -416,7 +430,7 @@ def record_help_request(
             response = {
                 "schema_version": "student_help_response.v1",
                 "status": "error",
-                "provider": type(provider).__name__,
+                "provider": type(active_provider).__name__ if active_provider is not None else "unavailable",
                 "provider_label": "Provider aiuto non disponibile",
                 "message": "",
                 "usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},

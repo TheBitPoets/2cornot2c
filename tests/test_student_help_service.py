@@ -206,6 +206,43 @@ def test_record_help_request_does_not_call_provider_when_policy_blocks_request(t
     assert "response" not in event
 
 
+def test_record_help_request_audits_ai_when_provider_factory_fails(tmp_path) -> None:
+    def failing_provider_factory():
+        raise ValueError("Configurazione provider non valida.")
+
+    event = student_help_service.record_help_request(
+        repo_path=tmp_path / "student-repo",
+        activity_id="python-base-somma-001",
+        support_policy=student_support_policy.support_policy("ai-assisted"),
+        help_type="ai",
+        prompt="Dammi un suggerimento.",
+        provider_factory=failing_provider_factory,
+    )
+
+    log_path = tmp_path / "student-repo" / "help" / "python-base-somma-001" / "events.json"
+    assert event["provider_status"] == "completed"
+    assert event["response"]["status"] == "error"
+    assert event["response"]["provider"] == "unavailable"
+    assert student_help_service.help_summary(log_path)["total"] == 1
+
+
+def test_record_help_request_skips_ai_factory_for_local_help(tmp_path) -> None:
+    provider = RecordingHelpProvider()
+
+    event = student_help_service.record_help_request(
+        repo_path=tmp_path / "student-repo",
+        activity_id="python-base-somma-001",
+        support_policy=student_support_policy.support_policy("studio-guidato"),
+        help_type="teoria",
+        prompt="Ricordami il concetto.",
+        provider=provider,
+        provider_factory=lambda: pytest.fail("La factory AI non va risolta per un aiuto locale."),
+    )
+
+    assert event["response"]["status"] == "ready"
+    assert len(provider.requests) == 1
+
+
 def test_record_help_request_persists_provider_error_without_losing_request(tmp_path) -> None:
     provider = RecordingHelpProvider(fail=True)
 
