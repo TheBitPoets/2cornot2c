@@ -19,6 +19,7 @@ from scripts.student_help_provider import (
 
 
 HELP_LOG_SCHEMA_VERSION = "student_help_log.v1"
+MAX_HELP_LOG_BYTES = 2 * 1024 * 1024
 HELP_EVENT_SCHEMA_VERSION = "student_help_event.v1"
 PENDING_PROVIDER_MAX_AGE = timedelta(minutes=5)
 MAX_HELP_EVENTS_PER_ASSIGNMENT = 500
@@ -274,6 +275,8 @@ def load_help_events(log_path: Path) -> list[dict[str, Any]]:
 def read_help_log(log_path: Path) -> tuple[list[dict[str, Any]], str]:
     if not log_path.is_file():
         return [], ""
+    if log_path.stat().st_size > MAX_HELP_LOG_BYTES:
+        return [], f"Registro richieste di aiuto troppo grande: supera {MAX_HELP_LOG_BYTES} byte."
     try:
         payload = json.loads(log_path.read_text(encoding="utf-8-sig"))
     except JSONDecodeError as error:

@@ -27,6 +27,7 @@ GITHUB_RE = re.compile(r"github\.com[:/](?P<owner>[^/\s]+)/(?P<repo>[^/\s]+?)(?:
 OWNER_REPO_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 COMMIT_RE = re.compile(r"^[0-9a-fA-F]{7,40}$")
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+MAX_REPORT_BYTES = 2 * 1024 * 1024
 
 
 @dataclass(frozen=True)
@@ -266,6 +267,8 @@ def load_report(path: Path) -> dict[str, Any] | None:
     """Load a report if present, otherwise return None."""
     if not path.exists():
         return None
+    if path.stat().st_size > MAX_REPORT_BYTES:
+        raise ValueError(f"Report troppo grande: supera {MAX_REPORT_BYTES} byte ({path}).")
     report = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(report, dict):
         raise ValueError(f"Report non valido: {path}")

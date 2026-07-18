@@ -42,6 +42,17 @@ def test_server_help_log_path_encodes_non_portable_identifiers(tmp_path) -> None
     assert "Rossi Mario" not in str(path)
 
 
+def test_read_help_log_rejects_file_above_size_limit(tmp_path) -> None:
+    log_path = tmp_path / "events.json"
+    with log_path.open("wb") as stream:
+        stream.truncate(student_help_service.MAX_HELP_LOG_BYTES + 1)
+
+    events, error = student_help_service.read_help_log(log_path)
+
+    assert events == []
+    assert "troppo grande" in error
+
+
 class NonSerializableHelpProvider:
     def respond(self, request):
         return StudentHelpResponse(

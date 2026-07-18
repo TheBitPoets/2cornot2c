@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import sys
 
+import pytest
+
 from scripts import assignment_records, student_help_service, student_identity, student_support_policy, track_assignments
 from scripts.thebitlab_repository_providers import LocalRepositoryProvider, StudentRepository
 
@@ -28,6 +30,15 @@ def test_parse_args_exposes_server_help_storage_options(monkeypatch, tmp_path) -
 
     assert args.assignment_id == "assignment-001"
     assert args.server_root == tmp_path
+
+
+def test_load_report_rejects_file_above_size_limit(tmp_path) -> None:
+    report_path = tmp_path / "latest.json"
+    with report_path.open("wb") as stream:
+        stream.truncate(track_assignments.MAX_REPORT_BYTES + 1)
+
+    with pytest.raises(ValueError, match="Report troppo grande"):
+        track_assignments.load_report(report_path)
 
 
 def activity() -> dict:
