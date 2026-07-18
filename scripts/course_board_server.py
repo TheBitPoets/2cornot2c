@@ -100,7 +100,13 @@ MAX_STUDENT_HELP_REQUEST_BYTES = 16 * 1024
 STUDENT_HELP_SERVER_ERROR = "Servizio aiuto temporaneamente non disponibile."
 PRIVATE_STATIC_ROOTS = {"teacher-assignments", "teacher-help-events", "teacher-reports"}
 REMOTE_PUBLIC_STATIC_ROOTS = {"tools"}
-REMOTE_STUDENT_API_PREFIX = "/api/student-lab/"
+REMOTE_STUDENT_API_PATHS = frozenset(
+    {
+        "/api/student-lab/assignments",
+        "/api/student-lab/help",
+        "/api/student-lab/help-history",
+    }
+)
 _ASSIGNMENT_OPERATION_LOCKS: dict[str, dict[str, Any]] = {}
 _ASSIGNMENT_OPERATION_LOCKS_GUARD = threading.Lock()
 
@@ -2205,7 +2211,7 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         is_remote_teacher_api = (
             not self.is_loopback_client()
             and path.startswith("/api/")
-            and not path.startswith(REMOTE_STUDENT_API_PREFIX)
+            and path not in REMOTE_STUDENT_API_PATHS
         )
         if is_remote_teacher_api:
             self.write_error_json(403, "API disponibile soltanto sulla macchina docente.")
