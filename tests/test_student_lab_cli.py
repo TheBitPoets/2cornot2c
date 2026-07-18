@@ -970,6 +970,49 @@ def test_run_tui_can_execute_runner_save_report_and_reload(monkeypatch, tmp_path
     assert sum(1 for output in outputs if "Dettaglio consegna" in output) == 2
 
 
+def test_run_tui_refreshes_from_server_after_runner_in_remote_mode(monkeypatch, tmp_path) -> None:
+    payload = sample_payload()
+    outputs = []
+    inputs = iter(["1", "e", "", "", "q"])
+    fetch_calls = []
+
+    def fake_fetch_payload(**kwargs):
+        fetch_calls.append(kwargs)
+        return payload
+
+    monkeypatch.setattr(student_lab_cli, "fetch_student_lab_payload", fake_fetch_payload)
+    monkeypatch.setattr(
+        student_lab_cli,
+        "load_payload",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("refresh locale non previsto")),
+    )
+    monkeypatch.setattr(
+        student_lab_cli.student_lab_runner,
+        "run_local_assignment",
+        lambda assignment, root: {"status": "passed", "passed": True, "summary": {"passed": 1, "total": 1}},
+    )
+    monkeypatch.setattr(
+        student_lab_cli.student_lab_runner,
+        "write_student_report",
+        lambda root, assignment, report: tmp_path / "reports" / "latest.json",
+    )
+
+    result = student_lab_cli.run_tui(
+        student_id="rossi-mario",
+        root=tmp_path,
+        input_fn=lambda prompt: next(inputs),
+        print_fn=outputs.append,
+        clear=False,
+        server_url="https://server.test",
+        server_token="signed-token",
+    )
+
+    assert result == 0
+    assert len(fetch_calls) == 2
+    assert all(call["server_token"] == "signed-token" for call in fetch_calls)
+    assert any("Esecuzione completata" in output for output in outputs)
+
+
 def test_open_workspace_rejects_missing_path(tmp_path) -> None:
     assert student_lab_cli.open_workspace(str(tmp_path / "missing")) is False
 
