@@ -1117,6 +1117,22 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
         with pytest.raises(urllib.error.HTTPError) as remote_teacher_api:
             urllib.request.urlopen(f"{base_url}/api/assignment-reports", timeout=5)
         assert remote_teacher_api.value.code == 403
+        public_asset = tmp_path / "tools" / "student-public.js"
+        public_asset.parent.mkdir(parents=True, exist_ok=True)
+        public_asset.write_text("console.log('pubblico');\n", encoding="utf-8")
+        secret_file = tmp_path / ".secrets" / "ai.secret"
+        secret_file.parent.mkdir(parents=True, exist_ok=True)
+        secret_file.write_text("OPENAI_API_KEY=non-esporre\n", encoding="utf-8")
+        git_config = tmp_path / ".git" / "config"
+        git_config.parent.mkdir(parents=True, exist_ok=True)
+        git_config.write_text("[remote]\n", encoding="utf-8")
+        monkeypatch.setattr(course_board_server, "APP_ROOT", tmp_path)
+        with urllib.request.urlopen(f"{base_url}/tools/student-public.js", timeout=5) as public_response:
+            assert public_response.status == 200
+        for private_path in (".secrets/ai.secret", ".git/config"):
+            with pytest.raises(urllib.error.HTTPError) as private_file:
+                urllib.request.urlopen(f"{base_url}/{private_path}", timeout=5)
+            assert private_file.value.code == 403
         monkeypatch.setattr(
             course_board_server.CourseBoardHandler,
             "is_loopback_client",

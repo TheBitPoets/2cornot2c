@@ -96,6 +96,7 @@ MAX_SUBMISSION_FILE_BYTES = 512 * 1024
 MAX_STUDENT_HELP_REQUEST_BYTES = 16 * 1024
 STUDENT_HELP_SERVER_ERROR = "Servizio aiuto temporaneamente non disponibile."
 PRIVATE_STATIC_ROOTS = {"teacher-assignments", "teacher-help-events", "teacher-reports"}
+REMOTE_PUBLIC_STATIC_ROOTS = {"tools"}
 LOCAL_TEACHER_API_PREFIXES = ("/api/assignment-reports",)
 
 
@@ -2577,7 +2578,12 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             self.send_error(403)
             return
         lowered_parts = {part.lower() for part in relative_target.parts}
-        if lowered_parts & PRIVATE_STATIC_ROOTS:
+        if lowered_parts & PRIVATE_STATIC_ROOTS or any(part.startswith(".") for part in relative_target.parts):
+            self.send_error(403)
+            return
+        if not self.is_loopback_client() and (
+            not relative_target.parts or relative_target.parts[0].lower() not in REMOTE_PUBLIC_STATIC_ROOTS
+        ):
             self.send_error(403)
             return
         if "student_repos" in lowered_parts and "help" in lowered_parts:
