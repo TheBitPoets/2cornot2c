@@ -438,7 +438,7 @@ def help_history_block(label: str, value: Any, color: str, use_color: bool = Fal
     """Render one labelled, wrapped text block in the help history."""
 
     text = clean_text(value)
-    wrapped = textwrap.wrap(text, width=68, break_long_words=False, break_on_hyphens=False) or ["-"]
+    wrapped = textwrap.wrap(text, width=68, break_long_words=True, break_on_hyphens=False) or ["-"]
     return [colorize(label, color, use_color), *(f"  {line}" for line in wrapped)]
 
 

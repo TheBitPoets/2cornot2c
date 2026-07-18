@@ -231,10 +231,11 @@ Obiettivo: verificare che la TUI sia comprensibile, robusta sugli input e coeren
 10. Premi `a`, scegli `3`, scrivi un prompt e salva la richiesta.
 11. Controlla che l'esito immediato sia diviso da linee tratteggiate e mostri tipo, stato e risposta a capo, etichettata `Guida locale (nessuna AI esterna)`.
 12. Premi `h` e verifica che prompt e risposta siano entrambi nello storico.
-13. Premi `e` per eseguire test e salvare report.
-14. Premi `b` per tornare alla lista.
-15. Premi `r` per ricaricare.
-16. Premi `q` per uscire.
+13. Ripeti con un URL o un identificatore lungo senza spazi e verifica che venga mandato a capo senza scorrimento orizzontale.
+14. Premi `e` per eseguire test e salvare report.
+15. Premi `b` per tornare alla lista.
+16. Premi `r` per ricaricare.
+17. Premi `q` per uscire.
 
 Risultato atteso:
 

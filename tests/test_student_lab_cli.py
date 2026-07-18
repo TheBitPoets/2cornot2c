@@ -448,6 +448,16 @@ def test_help_result_message_uses_colors_and_wraps_long_response() -> None:
     assert long_response not in message
 
 
+def test_help_history_block_wraps_long_urls_without_horizontal_overflow() -> None:
+    long_url = "https://example.test/" + ("percorso" * 24)
+
+    lines = student_lab_cli.help_history_block("Prompt studente", long_url, "", use_color=False)
+
+    assert len(lines) > 2
+    assert all(len(line) <= 70 for line in lines[1:])
+    assert "".join(line.removeprefix("  ") for line in lines[1:]) == long_url
+
+
 def test_help_provider_context_contains_only_minimal_assignment_data() -> None:
     assignment = sample_assignment(
         report={
