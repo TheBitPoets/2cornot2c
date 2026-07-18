@@ -6,7 +6,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from scripts.student_help_provider import StudentHelpProvider, StudentHelpRequest
+from scripts.student_help_provider import (
+    STUDENT_HELP_RESPONSE_SCHEMA_VERSION,
+    StudentHelpProvider,
+    StudentHelpRequest,
+)
 
 
 HELP_LOG_SCHEMA_VERSION = "student_help_log.v1"
@@ -88,6 +92,47 @@ def positive_int(value: Any, default: int = 0) -> int:
     except (TypeError, ValueError):
         return default
     return parsed if parsed > 0 else default
+
+
+def provider_response_payload(response: Any) -> dict[str, Any]:
+    """Validate and normalize a provider response into JSON-safe values."""
+
+    payload = response.to_dict()
+    if not isinstance(payload, dict):
+        raise ValueError("La risposta del provider deve essere un oggetto.")
+    status = payload.get("status")
+    if status not in {"ready", "error"}:
+        raise ValueError("Stato risposta provider non valido.")
+    provider = payload.get("provider")
+    provider_label = payload.get("provider_label")
+    message = payload.get("message")
+    detail = payload.get("detail", "")
+    if not isinstance(provider, str) or not provider.strip():
+        raise ValueError("Provider risposta non valido.")
+    if not isinstance(provider_label, str) or not provider_label.strip():
+        raise ValueError("Etichetta provider non valida.")
+    if not isinstance(message, str) or (status == "ready" and not message.strip()):
+        raise ValueError("Messaggio risposta provider non valido.")
+    if not isinstance(detail, str):
+        raise ValueError("Dettaglio risposta provider non valido.")
+    usage = payload.get("usage")
+    if not isinstance(usage, dict):
+        raise ValueError("Contatori uso provider non validi.")
+    normalized_usage: dict[str, int] = {}
+    for key in ("input_tokens", "output_tokens", "total_tokens"):
+        value = usage.get(key)
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise ValueError(f"Contatore provider non valido: {key}.")
+        normalized_usage[key] = value
+    return {
+        "schema_version": STUDENT_HELP_RESPONSE_SCHEMA_VERSION,
+        "status": status,
+        "provider": provider.strip(),
+        "provider_label": provider_label.strip(),
+        "message": message.strip(),
+        "usage": normalized_usage,
+        "detail": detail.strip(),
+    }
 
 
 def ai_events_used(events: list[dict[str, Any]]) -> int:
@@ -191,7 +236,7 @@ def record_help_request(
                     context=dict(context or {}),
                 )
             )
-            event["response"] = response.to_dict()
+            event["response"] = provider_response_payload(response)
         except Exception as error:  # Provider failures must not discard the student's request.
             event["response"] = {
                 "schema_version": "student_help_response.v1",
