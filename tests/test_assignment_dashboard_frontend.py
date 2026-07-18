@@ -394,6 +394,7 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         gradingDetails,
         renderTestDetailsDialogContent,
         openTestDetailsDialog,
+        clearTestDetailsRows,
         reviewAiFeedback,
         dateTimeInputToIso,
         isoToDateTimeInput,
@@ -2835,6 +2836,22 @@ def test_grading_details_render_failed_test_messages() -> None:
         assert.match(modalHtml, /Output ottenuto/);
         assert.match(modalHtml, />1</);
         assert.equal(tested.failedTestDetails({ failed_test_details: [{ name: "test", message: "riga 1\\nriga 2" }] })[0].message, "riga 1\\nriga 2");
+        """
+    )
+
+
+def test_test_details_rows_are_cleared_by_view_prefix() -> None:
+    run_dashboard_js(
+        """
+        tested.state.testDetailsRows = new Map([
+          ["overview-0", { title: "Quadro" }],
+          ["students-rossi", { title: "Studenti" }],
+        ]);
+        tested.clearTestDetailsRows("overview-");
+        assert.equal(tested.state.testDetailsRows.has("overview-0"), false);
+        assert.equal(tested.state.testDetailsRows.has("students-rossi"), true);
+        tested.clearTestDetailsRows("students-");
+        assert.equal(tested.state.testDetailsRows.has("students-rossi"), false);
         """
     )
 

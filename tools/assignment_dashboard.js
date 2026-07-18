@@ -2764,7 +2764,7 @@ function renderOverview() {
     els.overviewStatus.textContent = `Mostrate ${rows.length}/${state.overviewRows.length} righe activity-studente.`;
   }
   els.overviewBody.innerHTML = "";
-  state.testDetailsRows = new Map();
+  clearTestDetailsRows("overview-");
   if (!state.overviewRows.length) {
     els.overviewBody.innerHTML = '<tr><td colspan="10">Genera o carica almeno un registro consegne.</td></tr>';
     renderOverviewMatrix(rows);
@@ -4046,6 +4046,14 @@ function closeTestDetailsDialog() {
   }
 }
 
+function clearTestDetailsRows(prefix) {
+  for (const key of Array.from(state.testDetailsRows.keys())) {
+    if (key.startsWith(prefix)) {
+      state.testDetailsRows.delete(key);
+    }
+  }
+}
+
 function externalLink(url, label = "GitHub") {
   if (!url) return "";
   return `<a class="externalLink" href="${escapeHtml(url)}" target="_blank" rel="noreferrer">${escapeHtml(label)}</a>`;
@@ -4216,6 +4224,7 @@ function renderStudents(students) {
     els.studentsDialogSummary.innerHTML = renderStudentsSummaryCards(detailedStudentsSummaryItems(counts));
   }
   els.studentsBody.innerHTML = "";
+  clearTestDetailsRows("students-");
   if (!state.report) {
     els.studentsBody.innerHTML = '<tr><td colspan="8">Carica un registro consegne.</td></tr>';
     setupResizableTable(els.studentsTable, "students");
