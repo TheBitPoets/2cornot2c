@@ -2111,6 +2111,34 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
+        if parsed.path == "/api/student-lab/help-history":
+            try:
+                secret = student_help_auth.student_help_secret()
+            except ValueError:
+                self.write_error_json(500, STUDENT_HELP_SERVER_ERROR)
+                return
+            try:
+                student_id = student_help_auth.student_id_from_authorization(
+                    self.headers.get("Authorization", ""), secret
+                )
+            except ValueError as error:
+                self.write_error_json(401, str(error))
+                return
+            try:
+                query = parse_qs(parsed.query)
+                self.write_json(
+                    student_lab_service.student_help_history(
+                        root=ROOT,
+                        assignments_dir=TEACHER_ASSIGNMENTS_DIR,
+                        student_id=student_id,
+                        assignment_id=query.get("assignment_id", [""])[0],
+                    )
+                )
+            except ValueError as error:
+                self.write_error_json(400, str(error))
+            except Exception:  # noqa: BLE001
+                self.write_error_json(500, STUDENT_HELP_SERVER_ERROR)
+            return
         if parsed.path == "/api/headings":
             self.write_json({"headings": extract_headings()})
             return

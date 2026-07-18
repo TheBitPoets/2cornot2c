@@ -558,6 +558,39 @@ def test_record_help_from_tui_posts_only_identifiers_and_prompt(monkeypatch) -> 
     assert captured["timeout"] == student_lab_cli.HELP_REQUEST_TIMEOUT_SECONDS
 
 
+def test_fetch_help_history_uses_authenticated_server_endpoint(monkeypatch) -> None:
+    captured = {}
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return json.dumps({"assignment_id": "assignment-python-base-somma-001-demo", "events": []}).encode()
+
+    def fake_urlopen(request, timeout):
+        captured["url"] = request.full_url
+        captured["headers"] = dict(request.header_items())
+        return FakeResponse()
+
+    monkeypatch.setattr(student_lab_cli.urllib.request, "urlopen", fake_urlopen)
+
+    history = student_lab_cli.fetch_help_history_from_server(
+        assignment=sample_assignment(),
+        server_url="http://teacher.test:8765/",
+        server_token="signed-token",
+    )
+
+    assert history["events"] == []
+    assert captured["url"].endswith(
+        "/api/student-lab/help-history?assignment_id=assignment-python-base-somma-001-demo"
+    )
+    assert captured["headers"]["Authorization"] == "Bearer signed-token"
+
+
 def test_record_help_from_tui_reports_server_timeout(monkeypatch) -> None:
     monkeypatch.setattr(
         student_lab_cli.urllib.request,

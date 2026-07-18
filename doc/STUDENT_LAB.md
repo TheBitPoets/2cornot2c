@@ -159,8 +159,8 @@ Il server registra le richieste di aiuto dello studente in uno storage che non a
 `teacher-help-events/<student-id>/<assignment-id>/events.json`
 
 La chiave include l'assegnazione, non soltanto l'activity: due consegne della stessa activity mantengono quindi budget
-e cronologie indipendenti. Il payload restituito dal server contiene lo storico visibile allo studente, perciò la TUI
-non deve accedere direttamente al file autorevole.
+e cronologie indipendenti. Il payload generale contiene soltanto il riepilogo; il comando `h` carica gli eventi da
+`GET /api/student-lab/help-history` usando il token dello studente. La TUI non riceve né apre il path autorevole.
 
 Ogni evento indica tipo di aiuto richiesto, esito consentito/bloccato, motivazione e prompt dello studente.
 Quando la richiesta è consentita e viene usato un provider, l'evento contiene anche una `response` conforme a

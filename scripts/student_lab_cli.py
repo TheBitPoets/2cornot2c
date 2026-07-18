@@ -7,6 +7,7 @@ import subprocess
 import sys
 import textwrap
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime
 from pathlib import Path
@@ -568,6 +569,42 @@ def record_help_from_tui(
     return event
 
 
+def fetch_help_history_from_server(
+    *,
+    assignment: dict[str, Any],
+    server_url: str,
+    server_token: str,
+) -> dict[str, Any]:
+    """Load one student's assignment history through the authenticated server API."""
+
+    assignment_id = clean_text(assignment.get("assignment_id"), "")
+    if not assignment_id:
+        raise ValueError("Identificativo consegna non disponibile.")
+    if not server_token.strip():
+        raise ValueError("Token studente mancante. Imposta THEBITLAB_STUDENT_HELP_TOKEN.")
+    query = urllib.parse.urlencode({"assignment_id": assignment_id})
+    request = urllib.request.Request(
+        f"{server_url.rstrip('/')}/api/student-lab/help-history?{query}",
+        headers={"Authorization": f"Bearer {server_token.strip()}"},
+        method="GET",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=HELP_REQUEST_TIMEOUT_SECONDS) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as error:
+        detail = _server_error_detail(error.read())
+        raise ValueError(f"Server aiuti: {detail or error.reason}") from error
+    except urllib.error.URLError as error:
+        raise ValueError(f"Server non raggiungibile su {server_url}.") from error
+    except TimeoutError as error:
+        raise ValueError("Il server aiuti non ha risposto entro il tempo previsto.") from error
+    except (json.JSONDecodeError, UnicodeDecodeError) as error:
+        raise ValueError("Il server aiuti ha restituito uno storico non valido.") from error
+    if not isinstance(payload, dict) or not isinstance(payload.get("events"), list):
+        raise ValueError("Il server aiuti ha restituito uno storico non valido.")
+    return payload
+
+
 def _server_error_detail(body: bytes) -> str:
     try:
         payload = json.loads(body.decode("utf-8"))
@@ -759,7 +796,19 @@ def run_tui(
                 input_fn("Premi invio per continuare...")
                 continue
             if action == "h":
-                print_fn(render_help_history(assignment, root=root, use_color=use_color))
+                try:
+                    if server_token.strip():
+                        history = fetch_help_history_from_server(
+                            assignment=assignment,
+                            server_url=server_url,
+                            server_token=server_token,
+                        )
+                        history_assignment = {**assignment, "help": {"events": history["events"]}}
+                        print_fn(render_help_history(history_assignment, root=root, use_color=use_color))
+                    else:
+                        print_fn(render_help_history(assignment, root=root, use_color=use_color))
+                except ValueError as error:
+                    print_fn(f"Storico aiuti non disponibile:\n{error}")
                 input_fn("Premi invio per continuare...")
                 continue
             if action == "e":

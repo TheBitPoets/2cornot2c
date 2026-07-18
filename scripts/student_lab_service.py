@@ -226,7 +226,6 @@ def build_lab_assignment(
     activity = load_activity_summary(root, normalized["activity_path"])
     support_policy = student_support_policy.support_policy(activity.get("student_support_mode", ""))
     help_log = student_help_service.help_summary(help_log_path, now)
-    help_log["path"] = relative_to_root(root, help_log_path)
     if repo_path is not None:
         legacy_path = student_help_service.help_log_path(repo_path, activity_id)
         legacy_help = student_help_service.help_summary(legacy_path, now)
@@ -236,6 +235,7 @@ def build_lab_assignment(
             relative_to_root(root, legacy_path),
         )
     help_log["ai_budget"] = student_help_service.help_budget_summary(help_log_path, support_policy, now)
+    help_log.pop("path", None)
     grading = track_assignments.grading_summary(report)
     return {
         "assignment_id": normalized["id"],
@@ -417,6 +417,56 @@ def record_student_help_request(
         context=help_provider_context(assignment),
         log_path=student_help_service.server_help_log_path(root, clean_student_id, clean_assignment_id),
     )
+
+
+def student_help_history(
+    *,
+    root: Path,
+    student_id: str,
+    assignment_id: str,
+    assignments_dir: Path | None = None,
+    now: str | None = None,
+) -> dict[str, Any]:
+    """Return authenticated help history for one assignment owned by the student."""
+
+    clean_student_id = clean_text(student_id)
+    clean_assignment_id = clean_text(assignment_id)
+    assignments = list_student_lab_assignments(
+        root=root,
+        student_id=clean_student_id,
+        assignments_dir=assignments_dir,
+        now=now,
+    )
+    assignment = next(
+        (item for item in assignments if clean_text(item.get("assignment_id")) == clean_assignment_id),
+        None,
+    )
+    if assignment is None:
+        raise ValueError("Consegna non trovata per lo studente indicato.")
+    log_path = student_help_service.server_help_log_path(root, clean_student_id, clean_assignment_id)
+    server_summary = student_help_service.teacher_help_summary(log_path, now)
+    legacy_events: list[dict[str, Any]] = []
+    repo_path = assignment_repo_path(root, assignment)
+    if repo_path is not None:
+        legacy_path = student_help_service.help_log_path(repo_path, clean_text(assignment.get("activity_id")))
+        legacy_summary = student_help_service.teacher_help_summary(legacy_path, now)
+        legacy_events = [
+            {**event, "source": "legacy-unverified"}
+            for event in legacy_summary.get("events", [])
+            if isinstance(event, dict)
+        ]
+    server_events = [
+        {**event, "source": "server"}
+        for event in server_summary.get("events", [])
+        if isinstance(event, dict)
+    ]
+    return {
+        "assignment_id": clean_assignment_id,
+        "events": sorted(
+            [*legacy_events, *server_events],
+            key=lambda event: clean_text(event.get("requested_at")),
+        ),
+    }
 
 
 def parse_args() -> argparse.Namespace:

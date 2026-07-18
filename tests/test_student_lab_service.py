@@ -153,7 +153,7 @@ def test_student_lab_accepts_custom_unicode_assignment_id(tmp_path) -> None:
     )[0]
 
     assert assignment["assignment_id"] == assignment_record["id"]
-    assert assignment["help"]["path"].startswith("teacher-help-events/rossi-mario/compito-1-")
+    assert "path" not in assignment["help"]
 
 
 def test_record_student_help_request_rebuilds_policy_and_context_on_server(tmp_path) -> None:
@@ -231,7 +231,7 @@ def test_student_repo_cannot_override_server_help_budget(tmp_path) -> None:
     assert assignment["help"]["total"] == 1
     assert assignment["help"]["legacy_unverified"] is True
     assert assignment["help"]["ai_budget"]["used"] == 0
-    assert assignment["help"]["path"].startswith("teacher-help-events/")
+    assert "path" not in assignment["help"]
 
 
 def test_same_activity_assignments_have_independent_help_budgets(tmp_path) -> None:
@@ -422,13 +422,43 @@ def test_student_lab_exposes_help_summary(tmp_path) -> None:
         now="2026-10-18T18:00:00+02:00",
     )[0]
 
-    assert assignment["help"]["path"] == f"teacher-help-events/rossi-mario/{assignment_record['id']}/events.json"
+    assert "path" not in assignment["help"]
     assert assignment["help"]["total"] == 2
     assert assignment["help"]["allowed"] == 1
     assert assignment["help"]["denied"] == 1
     assert assignment["help"]["last_decision"] == "bloccata"
     assert assignment["help"]["counts"] == {"teoria": 1, "ai": 1}
     assert assignment["help"]["ai_budget"] == {"limit": 0, "used": 0, "remaining": 0, "exhausted": False}
+
+
+def test_student_help_history_requires_assignment_owned_by_student(tmp_path) -> None:
+    activity_path = write_activity(tmp_path, student_support_mode="ai-assisted")
+    assignment_record = write_assignment(tmp_path, sample_assignment(tmp_path, activity_path=activity_path))
+    provider = RecordingProvider()
+    student_lab_service.record_student_help_request(
+        root=tmp_path,
+        student_id="rossi-mario",
+        assignment_id=assignment_record["id"],
+        help_type="ai",
+        prompt="Come procedo?",
+        provider=provider,
+    )
+
+    history = student_lab_service.student_help_history(
+        root=tmp_path,
+        student_id="rossi-mario",
+        assignment_id=assignment_record["id"],
+    )
+
+    assert history["assignment_id"] == assignment_record["id"]
+    assert history["events"][0]["prompt"] == "Come procedo?"
+    assert history["events"][0]["source"] == "server"
+    with pytest.raises(ValueError, match="Consegna non trovata"):
+        student_lab_service.student_help_history(
+            root=tmp_path,
+            student_id="studente-inesistente",
+            assignment_id=assignment_record["id"],
+        )
 
 
 def test_student_lab_exposes_ai_budget_summary(tmp_path) -> None:

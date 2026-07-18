@@ -992,6 +992,7 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
             dashboard = json.loads(response.read().decode("utf-8"))
         assignment = dashboard["lab"]["assignments"][0]
         assert "events" not in assignment["help"]
+        assert "path" not in assignment["help"]
         unauthenticated_request = urllib.request.Request(
             f"{base_url}/api/student-lab/help",
             data=b"{}",
@@ -1057,6 +1058,20 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
         )
         with urllib.request.urlopen(request, timeout=5) as response:
             result = json.loads(response.read().decode("utf-8"))
+
+        history_request = urllib.request.Request(
+            f"{base_url}/api/student-lab/help-history?assignment_id={assignment['assignment_id']}",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        with urllib.request.urlopen(history_request, timeout=5) as response:
+            history = json.loads(response.read().decode("utf-8"))
+        assert any(event["prompt"] == "Quale concetto devo ripassare?" for event in history["events"])
+        unauthenticated_history = urllib.request.Request(
+            f"{base_url}/api/student-lab/help-history?assignment_id={assignment['assignment_id']}"
+        )
+        with pytest.raises(urllib.error.HTTPError) as history_unauthorized:
+            urllib.request.urlopen(unauthenticated_history, timeout=5)
+        assert history_unauthorized.value.code == 401
 
         monkeypatch.setattr(student_help_service, "MAX_HELP_EVENTS_PER_ASSIGNMENT", 2)
         with pytest.raises(urllib.error.HTTPError) as rate_limited:
