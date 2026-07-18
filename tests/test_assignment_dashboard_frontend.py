@@ -392,7 +392,8 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         studentHelpDetails,
         failedTestDetails,
         gradingDetails,
-        compactTestDetailText,
+        renderTestDetailsDialogContent,
+        openTestDetailsDialog,
         reviewAiFeedback,
         dateTimeInputToIso,
         isoToDateTimeInput,
@@ -2824,12 +2825,16 @@ def test_grading_details_render_failed_test_messages() -> None:
         const html = tested.gradingDetails(grading);
         assert.match(html, /Falliti:/);
         assert.match(html, /somma_negativi/);
+        assert.match(html, /data-test-details-key=""/);
         assert.match(html, /Dettaglio errori/);
-        assert.match(html, /Output atteso diverso/);
-        assert.match(html, /Atteso: 0/);
-        assert.match(html, /Ottenuto: 1/);
-        assert.equal(tested.compactTestDetailText("a\\n  b\\t c"), "a b c");
-        assert.equal(tested.compactTestDetailText("x".repeat(520)).length, 500);
+        assert.doesNotMatch(html, /Output atteso diverso/);
+        const modalHtml = tested.renderTestDetailsDialogContent({ grading });
+        assert.match(modalHtml, /Output atteso diverso/);
+        assert.match(modalHtml, /Output atteso/);
+        assert.match(modalHtml, />0</);
+        assert.match(modalHtml, /Output ottenuto/);
+        assert.match(modalHtml, />1</);
+        assert.equal(tested.failedTestDetails({ failed_test_details: [{ name: "test", message: "riga 1\\nriga 2" }] })[0].message, "riga 1\\nriga 2");
         """
     )
 

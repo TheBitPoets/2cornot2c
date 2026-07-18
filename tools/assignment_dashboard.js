@@ -146,6 +146,7 @@ const state = {
   overviewView: "list",
   legendTopic: "overview",
   coverageCollapsedActivities: new Set(),
+  testDetailsRows: new Map(),
   reviewStudent: null,
   reviewSource: "",
   reviewFilePath: "",
@@ -236,6 +237,10 @@ const els = {
   reviewCloseBtn: document.querySelector("#reviewCloseBtn"),
   reviewStatus: document.querySelector("#reviewStatus"),
   submissionReview: document.querySelector("#submissionReview"),
+  testDetailsDialog: document.querySelector("#testDetailsDialog"),
+  testDetailsCloseBtn: document.querySelector("#testDetailsCloseBtn"),
+  testDetailsDialogStatus: document.querySelector("#testDetailsDialogStatus"),
+  testDetailsDialogBody: document.querySelector("#testDetailsDialogBody"),
   legendDialog: document.querySelector("#legendDialog"),
   legendCloseBtn: document.querySelector("#legendCloseBtn"),
   legendStatus: document.querySelector("#legendDialogStatus"),
@@ -2759,6 +2764,7 @@ function renderOverview() {
     els.overviewStatus.textContent = `Mostrate ${rows.length}/${state.overviewRows.length} righe activity-studente.`;
   }
   els.overviewBody.innerHTML = "";
+  state.testDetailsRows = new Map();
   if (!state.overviewRows.length) {
     els.overviewBody.innerHTML = '<tr><td colspan="10">Genera o carica almeno un registro consegne.</td></tr>';
     renderOverviewMatrix(rows);
@@ -2771,10 +2777,21 @@ function renderOverview() {
     setupResizableTables();
     return;
   }
-  for (const row of rows) {
+  rows.forEach((row, index) => {
     const testText = row.tests_total == null ? "-" : `${row.tests_passed ?? "-"}/${row.tests_total}`;
     const grade = row.teacher_grade ?? row.score ?? "-";
     const hasSubmission = row.submitted || row.status?.startsWith("submitted");
+    const testDetailsKey = `overview-${index}`;
+    state.testDetailsRows.set(testDetailsKey, {
+      title: row.title || row.activity_id || "Activity",
+      subtitle: `${row.student || "Studente"} - ${classValue(row) || "classe non indicata"}`,
+      grading: {
+        status: row.grading_status,
+        failed_tests: row.failed_tests,
+        failed_test_details: row.failed_test_details,
+        tests: [],
+      },
+    });
     const submissionTitle = hasSubmission
       ? `Apri la consegna di ${escapeHtml(row.student || "questo studente")} per questa activity.`
       : "Consegna non disponibile: lo studente non ha ancora consegnato.";
@@ -2799,7 +2816,7 @@ function renderOverview() {
               failed_tests: row.failed_tests,
               failed_test_details: row.failed_test_details,
               tests: [],
-            })
+            }, { detailsKey: testDetailsKey })
           : ""}
       </td>
       <td><code>${escapeHtml(grade)}</code></td>
@@ -2811,7 +2828,7 @@ function renderOverview() {
       </td>
     `;
     els.overviewBody.append(tr);
-  }
+  });
   renderOverviewMatrix(rows);
   setupResizableTables();
 }
@@ -3918,7 +3935,7 @@ function studentHelpDetails(help) {
   `;
 }
 
-function gradingDetails(grading) {
+function gradingDetails(grading, options = {}) {
   const failedTests = Array.isArray(grading.failed_tests) ? grading.failed_tests : [];
   const tests = Array.isArray(grading.tests) ? grading.tests : [];
   const failedDetails = failedTestDetails(grading);
@@ -3930,21 +3947,9 @@ function gradingDetails(grading) {
         <strong>Falliti:</strong>
         ${names.map((name) => `<span>${escapeHtml(name)}</span>`).join("")}
         ${detailRows.length ? `
-          <details class="testDetailsExpander">
-            <summary>Dettaglio errori</summary>
-            <dl>
-              ${detailRows.map((test) => `
-                <div>
-                  <dt>${escapeHtml(test.name)}</dt>
-                  ${test.message ? `<dd>${escapeHtml(test.message)}</dd>` : ""}
-                  ${test.expected_stdout || test.actual_stdout ? `
-                    <dd>Atteso: ${escapeHtml(test.expected_stdout || "-")}</dd>
-                    <dd>Ottenuto: ${escapeHtml(test.actual_stdout || "-")}</dd>
-                  ` : ""}
-                </div>
-              `).join("")}
-            </dl>
-          </details>
+          <button type="button" class="smallButton testDetailsButton" data-test-details-key="${escapeHtml(options.detailsKey || "")}" title="Apri il dettaglio completo degli errori dei test.">
+            Dettaglio errori
+          </button>
         ` : ""}
       </div>
     `;
@@ -3967,9 +3972,9 @@ function failedTestDetails(grading) {
       .filter((test) => test && typeof test === "object")
       .map((test, index) => ({
         name: String(test.name || `test ${index + 1}`),
-        message: compactTestDetailText(test.message || ""),
-        expected_stdout: compactTestDetailText(test.expected_stdout || ""),
-        actual_stdout: compactTestDetailText(test.actual_stdout || ""),
+        message: String(test.message || ""),
+        expected_stdout: String(test.expected_stdout || ""),
+        actual_stdout: String(test.actual_stdout || ""),
       }));
   }
   const tests = Array.isArray(grading.tests) ? grading.tests : [];
@@ -3977,9 +3982,9 @@ function failedTestDetails(grading) {
     .filter((test) => test && typeof test === "object" && test.passed === false)
     .map((test, index) => ({
       name: String(test.name || `test ${index + 1}`),
-      message: compactTestDetailText(test.message || test.error || ""),
-      expected_stdout: compactTestDetailText(test.expected_stdout || ""),
-      actual_stdout: compactTestDetailText(test.actual_stdout || test.stdout || ""),
+      message: String(test.message || test.error || ""),
+      expected_stdout: String(test.expected_stdout || ""),
+      actual_stdout: String(test.actual_stdout || test.stdout || ""),
     }));
   if (failedFromTests.length) return failedFromTests;
   return (Array.isArray(grading.failed_tests) ? grading.failed_tests : []).map((name) => ({
@@ -3990,10 +3995,55 @@ function failedTestDetails(grading) {
   }));
 }
 
-function compactTestDetailText(value, limit = 500) {
-  const compact = String(value || "").replace(/\s+/g, " ").trim();
-  if (compact.length <= limit) return compact;
-  return `${compact.slice(0, limit - 3).trimEnd()}...`;
+function renderTestDetailsDialogContent(entry) {
+  const grading = entry?.grading || {};
+  const details = failedTestDetails(grading).filter((test) => test.message || test.expected_stdout || test.actual_stdout);
+  if (!details.length) {
+    return '<p class="status">Nessun dettaglio errore disponibile per questi test.</p>';
+  }
+  return `
+    <div class="testDetailsDialogList">
+      ${details.map((test) => `
+        <section class="testDetailsDialogItem">
+          <h3>${escapeHtml(test.name)}</h3>
+          ${test.message ? `
+            <div>
+              <strong>Messaggio</strong>
+              <pre>${escapeHtml(test.message)}</pre>
+            </div>
+          ` : ""}
+          ${test.expected_stdout || test.actual_stdout ? `
+            <div class="testDetailsDialogColumns">
+              <div>
+                <strong>Output atteso</strong>
+                <pre>${escapeHtml(test.expected_stdout || "-")}</pre>
+              </div>
+              <div>
+                <strong>Output ottenuto</strong>
+                <pre>${escapeHtml(test.actual_stdout || "-")}</pre>
+              </div>
+            </div>
+          ` : ""}
+        </section>
+      `).join("")}
+    </div>
+  `;
+}
+
+function openTestDetailsDialog(detailsKey) {
+  const entry = state.testDetailsRows.get(detailsKey);
+  if (!entry || !els.testDetailsDialog) return;
+  els.testDetailsDialogStatus.textContent = `${entry.title || "Activity"} - ${entry.subtitle || "dettaglio test"}.`;
+  els.testDetailsDialogBody.innerHTML = renderTestDetailsDialogContent(entry);
+  if (!els.testDetailsDialog.open) {
+    els.testDetailsDialog.showModal();
+  }
+}
+
+function closeTestDetailsDialog() {
+  if (els.testDetailsDialog?.open) {
+    els.testDetailsDialog.close();
+  }
 }
 
 function externalLink(url, label = "GitHub") {
@@ -4181,6 +4231,12 @@ function renderStudents(students) {
     const ai = student.ai_feedback || {};
     const help = student.help || {};
     const submission = student.submission || {};
+    const testDetailsKey = `students-${student.student || student.student_id || ""}`;
+    state.testDetailsRows.set(testDetailsKey, {
+      title: state.report?.title || state.report?.activity_id || "Activity",
+      subtitle: `${student.student || student.student_id || "Studente"} - ${classValue(state.report) || "classe non indicata"}`,
+      grading,
+    });
     const files = submissionFiles(student);
     const canReview = student.submitted && files.length > 0;
     const reviewTitle = canReview
@@ -4205,7 +4261,7 @@ function renderStudents(students) {
       <td>
         ${badge(grading.status, grading.status === "graded_passed" ? "ok" : grading.status === "graded_failed" ? "bad" : "muted")}<br>
         <small>Test: ${escapeHtml(grading.tests_passed ?? "-")}/${escapeHtml(grading.tests_total ?? "-")}</small>
-        ${gradingDetails(grading)}
+        ${gradingDetails(grading, { detailsKey: testDetailsKey })}
       </td>
       <td><code>${escapeHtml(grading.teacher_grade ?? grading.score ?? "-")}</code></td>
       <td>
@@ -4631,6 +4687,7 @@ els.legendTabButtons.forEach((button) => {
 els.reviewPrevBtn.addEventListener("click", () => openAdjacentSubmission(-1));
 els.reviewNextBtn.addEventListener("click", () => openAdjacentSubmission(1));
 els.reviewCloseBtn.addEventListener("click", closeReviewDialog);
+els.testDetailsCloseBtn.addEventListener("click", closeTestDetailsDialog);
 els.activitySelect.addEventListener("change", () => {
   if (els.activitySelect.value) {
     clearSelectedAssignment();
@@ -4812,6 +4869,13 @@ els.overviewViewButtons.forEach((button) => {
   });
 });
 els.overviewBody.addEventListener("click", async (event) => {
+  const detailButton = event.target.closest("[data-test-details-key]");
+  if (detailButton) {
+    event.preventDefault();
+    event.stopPropagation();
+    openTestDetailsDialog(detailButton.dataset.testDetailsKey);
+    return;
+  }
   const button = event.target.closest("[data-overview-report]");
   if (!button) return;
   els.reportSelect.value = button.dataset.overviewReport;
@@ -4830,6 +4894,13 @@ els.overviewMatrixBody.addEventListener("click", async (event) => {
   }
 });
 els.studentsBody.addEventListener("click", (event) => {
+  const detailButton = event.target.closest("[data-test-details-key]");
+  if (detailButton) {
+    event.preventDefault();
+    event.stopPropagation();
+    openTestDetailsDialog(detailButton.dataset.testDetailsKey);
+    return;
+  }
   const aiButton = event.target.closest("[data-ai-feedback-decision]");
   if (aiButton && !aiButton.disabled) {
     event.preventDefault();

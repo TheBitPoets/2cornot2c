@@ -513,9 +513,9 @@ def _grade_activity_report_failed_test_details(report: dict[str, Any]) -> list[d
         if test.get("passed") is True:
             continue
         name = _compact_text(test.get("name")) or "test"
-        message = _compact_text(test.get("message"))
-        expected = _compact_text(test.get("expected_stdout"))
-        actual = _compact_text(test.get("actual_stdout"))
+        message = _multiline_text(test.get("message"))
+        expected = _multiline_text(test.get("expected_stdout"))
+        actual = _multiline_text(test.get("actual_stdout"))
         details.append(
             {
                 "name": name,
@@ -529,7 +529,7 @@ def _grade_activity_report_failed_test_details(report: dict[str, Any]) -> list[d
         details.append(
             {
                 "name": name,
-                "message": _compact_text(_grade_activity_report_detail(report)),
+                "message": _multiline_text(_grade_activity_report_detail(report)),
                 "expected_stdout": "",
                 "actual_stdout": "",
             }
@@ -544,6 +544,12 @@ def _compact_text(value: Any, *, limit: int = 500) -> str:
     if len(compact) <= limit:
         return compact
     return compact[: limit - 3].rstrip() + "..."
+
+
+def _multiline_text(value: Any) -> str:
+    if value is None:
+        return ""
+    return str(value).strip()
 
 
 def _grade_activity_report_detail(report: dict[str, Any]) -> str:

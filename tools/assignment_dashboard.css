@@ -2178,35 +2178,10 @@ button.matrixCell:disabled:focus-visible {
   color: #8f1d14;
 }
 
-.testDetailsExpander {
-  max-width: 18rem;
-  color: #6f241d;
-}
-
-.testDetailsExpander summary {
-  cursor: pointer;
-  font-weight: 800;
-}
-
-.testDetailsExpander dl {
-  display: grid;
-  gap: .45rem;
-  margin: .35rem 0 0;
-}
-
-.testDetailsExpander div {
-  display: grid;
-  gap: .16rem;
-}
-
-.testDetailsExpander dt {
-  font-weight: 900;
-}
-
-.testDetailsExpander dd {
-  margin: 0;
-  color: #5f2a24;
-  overflow-wrap: anywhere;
+.testDetailsButton {
+  width: fit-content;
+  margin-top: .1rem;
+  color: #8f1d14;
 }
 
 .testDetailsOk span {
@@ -2287,6 +2262,56 @@ code {
 .reviewEmpty {
   padding: 1.1rem;
   color: var(--muted);
+}
+
+.testDetailsDialogBody {
+  min-height: 0;
+  padding: 1.1rem;
+  overflow: auto;
+}
+
+.testDetailsDialogList {
+  display: grid;
+  gap: .85rem;
+}
+
+.testDetailsDialogItem {
+  display: grid;
+  gap: .65rem;
+  padding-bottom: .85rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.testDetailsDialogItem h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.testDetailsDialogItem strong {
+  display: block;
+  margin-bottom: .25rem;
+  color: var(--muted);
+  font-size: .76rem;
+  text-transform: uppercase;
+}
+
+.testDetailsDialogItem pre {
+  max-height: 18rem;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfbfb;
+  padding: .75rem;
+  color: var(--ink);
+  font: .82rem/1.45 Consolas, "Liberation Mono", monospace;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.testDetailsDialogColumns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .8rem;
 }
 
 .reviewGrid {
@@ -2480,5 +2505,9 @@ code {
 
   .fileList {
     border-bottom: 1px solid var(--line);
+  }
+
+  .testDetailsDialogColumns {
+    grid-template-columns: 1fr;
   }
 }
