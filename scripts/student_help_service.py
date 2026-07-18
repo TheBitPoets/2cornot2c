@@ -283,22 +283,6 @@ def read_help_log(log_path: Path) -> tuple[list[dict[str, Any]], str]:
     return [], "Formato log aiuti non valido."
 
 
-def create_durable_directory(path: Path) -> None:
-    """Create a directory tree and persist every newly added parent entry."""
-
-    missing: list[Path] = []
-    current = path
-    while not current.exists():
-        missing.append(current)
-        parent = current.parent
-        if parent == current:
-            break
-        current = parent
-    path.mkdir(parents=True, exist_ok=True)
-    for directory in reversed(missing):
-        assignment_records.sync_directory(directory.parent)
-
-
 def write_help_events(log_path: Path, events: list[dict[str, Any]]) -> None:
     payload = {
         "schema_version": HELP_LOG_SCHEMA_VERSION,
@@ -309,7 +293,7 @@ def write_help_events(log_path: Path, events: list[dict[str, Any]]) -> None:
         raise StudentHelpRateLimitError(
             "Limite spazio del registro aiuti raggiunto per questa consegna. Avvisa il docente."
         )
-    create_durable_directory(log_path.parent)
+    assignment_records.create_durable_directory(log_path.parent)
     temporary_path = log_path.with_name(f".{log_path.name}.{uuid.uuid4().hex}.tmp")
     try:
         with temporary_path.open("wb") as stream:

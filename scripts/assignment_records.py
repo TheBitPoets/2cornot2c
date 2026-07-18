@@ -31,6 +31,22 @@ def sync_directory(path: Path) -> None:
         os.close(descriptor)
 
 
+def create_durable_directory(path: Path) -> None:
+    """Create a directory tree and persist every newly added parent entry."""
+
+    missing: list[Path] = []
+    current = path
+    while not current.exists():
+        missing.append(current)
+        parent = current.parent
+        if parent == current:
+            break
+        current = parent
+    path.mkdir(parents=True, exist_ok=True)
+    for directory in reversed(missing):
+        sync_directory(directory.parent)
+
+
 @dataclass(frozen=True)
 class AssignmentStatus:
     """Computed status for one assignment record."""
@@ -312,7 +328,7 @@ class JsonAssignmentRecordStorage:
     def write_json(self, path: Path, payload: dict[str, Any]) -> None:
         """Write a JSON object with stable formatting."""
 
-        path.parent.mkdir(parents=True, exist_ok=True)
+        create_durable_directory(path.parent)
         temporary_path = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
         try:
             with temporary_path.open("w", encoding="utf-8", newline="\n") as stream:

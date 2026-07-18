@@ -273,7 +273,7 @@ def test_assignment_storage_syncs_directory_after_replace_and_unlink(tmp_path, m
     storage.delete_assignment(saved["id"])
 
     assignments_dir = tmp_path / "teacher-assignments"
-    assert synced_directories == [assignments_dir, assignments_dir]
+    assert synced_directories == [tmp_path, assignments_dir, assignments_dir]
 
 
 def test_assignment_record_storage_rejects_duplicate_without_overwrite(tmp_path) -> None:
