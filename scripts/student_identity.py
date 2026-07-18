@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import hashlib
+import re
 from pathlib import Path
 from typing import Any
 
 from scripts import create_activity, student_help_auth
+
+
+LEGACY_STUDENT_ID_RE = re.compile(r"^legacy-[a-z0-9-]+-[0-9a-f]{10}$")
 
 
 def clean_text(value: Any) -> str:
@@ -68,17 +72,32 @@ def token_safe_student_id(value: Any) -> str:
         return legacy_display_student_id(candidate)
 
 
+def target_candidate_student_id(value: Any) -> str:
+    """Return a target identity while reserving generated legacy aliases."""
+
+    candidate = clean_text(value)
+    if not candidate:
+        return ""
+    try:
+        stable_student_id = student_help_auth.validate_student_id(candidate)
+    except ValueError:
+        return legacy_display_student_id(candidate)
+    if LEGACY_STUDENT_ID_RE.fullmatch(stable_student_id):
+        return ""
+    return stable_student_id
+
+
 def target_student_id(target: dict[str, Any]) -> str:
     """Return the canonical student identifier for an assignment target."""
 
-    stable_student_id = token_safe_student_id(target.get("student_id"))
+    stable_student_id = target_candidate_student_id(target.get("student_id"))
     if stable_student_id:
         return stable_student_id
     for key in ("target", "path", "repo_ref"):
         value = clean_text(target.get(key))
         if value:
-            return token_safe_student_id(cross_platform_basename(value))
-    return token_safe_student_id(target.get("display_name"))
+            return target_candidate_student_id(cross_platform_basename(value))
+    return target_candidate_student_id(target.get("display_name"))
 
 
 def target_student_aliases(target: dict[str, Any]) -> set[str]:
