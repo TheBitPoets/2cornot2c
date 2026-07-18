@@ -99,6 +99,7 @@ AI_COURSE_PLAN_TIMEOUT_SECONDS = 240
 COMPACT_TEXT_CHARS = 1200
 MAX_SUBMISSION_FILE_BYTES = 512 * 1024
 MAX_STUDENT_HELP_REQUEST_BYTES = 16 * 1024
+MAX_HELP_LOG_ROLLBACK_BYTES = 256 * 1024 * 1024
 STUDENT_HELP_SERVER_ERROR = "Servizio aiuto temporaneamente non disponibile."
 TEACHER_AUTH_REALM = "TheBitLab docente"
 PRIVATE_STATIC_ROOTS = {"teacher-assignments", "teacher-help-events", "teacher-reports"}
@@ -419,6 +420,40 @@ def restore_staged_help_logs(staged_logs: list[tuple[Path, Path]]) -> None:
             staged.replace(original)
 
 
+def snapshot_staged_help_logs(
+    staged_logs: list[tuple[Path, Path]],
+) -> list[tuple[Path, dict[Path, bytes]]]:
+    """Read a bounded rollback snapshot before deleting quarantined logs."""
+
+    snapshots: list[tuple[Path, dict[Path, bytes]]] = []
+    total_bytes = 0
+    for original, staged in staged_logs:
+        files: dict[Path, bytes] = {}
+        for candidate in staged.rglob("*"):
+            if candidate.is_symlink():
+                raise ValueError("La quarantena dei log contiene un collegamento simbolico non supportato.")
+            if not candidate.is_file():
+                continue
+            content = candidate.read_bytes()
+            total_bytes += len(content)
+            if total_bytes > MAX_HELP_LOG_ROLLBACK_BYTES:
+                raise ValueError("I log di aiuto superano il limite di rollback per una singola assegnazione.")
+            files[candidate.relative_to(staged)] = content
+        snapshots.append((original, files))
+    return snapshots
+
+
+def restore_help_log_snapshots(snapshots: list[tuple[Path, dict[Path, bytes]]]) -> None:
+    """Recreate complete help-log directories from an in-memory snapshot."""
+
+    for original, files in snapshots:
+        original.mkdir(parents=True, exist_ok=True)
+        for relative_path, content in files.items():
+            destination = original / relative_path
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(content)
+
+
 def stage_help_logs_for_deletion(log_dirs: list[Path]) -> tuple[Path, list[tuple[Path, Path]]]:
     """Move help logs to a private same-volume quarantine before record deletion."""
 
@@ -468,6 +503,12 @@ def delete_assignment_record(payload: dict) -> dict:
                 [log_path.parent for log_path in log_paths]
             )
             try:
+                rollback_snapshots = snapshot_staged_help_logs(staged_logs)
+            except Exception:
+                restore_staged_help_logs(staged_logs)
+                shutil.rmtree(trash_root, ignore_errors=True)
+                raise
+            try:
                 deleted = record_storage.delete_assignment(assignment_id)
             except Exception:
                 restore_staged_help_logs(staged_logs)
@@ -478,7 +519,7 @@ def delete_assignment_record(payload: dict) -> dict:
                     shutil.rmtree(trash_root)
             except Exception:
                 record_storage.write_assignment(assignment, overwrite=True)
-                restore_staged_help_logs(staged_logs)
+                restore_help_log_snapshots(rollback_snapshots)
                 shutil.rmtree(trash_root, ignore_errors=True)
                 raise
     updated = list_assignment_records(str(payload.get("now", "")).strip() or None)

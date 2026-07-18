@@ -548,6 +548,55 @@ def test_delete_assignment_restores_record_and_logs_when_quarantine_cleanup_fail
     assert log_path.is_file()
 
 
+def test_delete_assignment_restores_every_log_after_partial_quarantine_cleanup(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
+    monkeypatch.setattr(course_board_server, "TEACHER_ASSIGNMENTS_DIR", tmp_path / "teacher-assignments")
+    storage = assignment_records.JsonAssignmentRecordStorage(tmp_path, tmp_path / "teacher-assignments")
+    assignment = storage.write_assignment(
+        assignment_records.build_assignment_record(
+            assignment_id="assignment-quarantena-parziale",
+            activity_id="python-base-somma-001",
+            activity_path="activities/python-base-somma-001.json",
+            target_type="group",
+            assigned_at="2026-10-12T09:00:00+02:00",
+            due_at="2026-10-19T23:59:00+02:00",
+            targets=[{"student_id": "rossi-mario"}, {"student_id": "bianchi-luca"}],
+        )
+    )
+    log_paths = [
+        student_help_service.server_help_log_path(tmp_path, student_id, assignment["id"])
+        for student_id in ("rossi-mario", "bianchi-luca")
+    ]
+    expected_contents = {}
+    for index, log_path in enumerate(log_paths):
+        content = json.dumps({"events": [{"prompt": f"richiesta {index}"}]}) + "\n"
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        log_path.write_text(content, encoding="utf-8")
+        expected_contents[log_path] = content
+    original_rmtree = course_board_server.shutil.rmtree
+    cleanup_attempted = False
+
+    def fail_after_removing_first_staged_log(path, ignore_errors=False):
+        nonlocal cleanup_attempted
+        candidate = Path(path)
+        if ".trash" in candidate.parts and not ignore_errors and not cleanup_attempted:
+            cleanup_attempted = True
+            first_staged_dir = sorted(item for item in candidate.iterdir() if item.is_dir())[0]
+            original_rmtree(first_staged_dir)
+            raise PermissionError("pulizia parziale della quarantena")
+        return original_rmtree(path, ignore_errors=ignore_errors)
+
+    monkeypatch.setattr(course_board_server.shutil, "rmtree", fail_after_removing_first_staged_log)
+
+    with pytest.raises(PermissionError, match="pulizia parziale"):
+        course_board_server.delete_assignment_record({"assignment_id": assignment["id"]})
+
+    assert storage.read_assignment(assignment["id"])["id"] == assignment["id"]
+    assert cleanup_attempted is True
+    assert all(log_path.read_text(encoding="utf-8") == content for log_path, content in expected_contents.items())
+
+
 def test_delete_assignment_waits_for_inflight_help_request(tmp_path, monkeypatch) -> None:
     patch_assignment_paths(tmp_path, monkeypatch)
     activity_path = tmp_path / "activities" / "python-base-somma-001.json"
