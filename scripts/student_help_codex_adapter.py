@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import tempfile
 import threading
+import unicodedata
 from pathlib import Path
 from typing import Any
 
@@ -119,6 +120,12 @@ def codex_subprocess_environment() -> dict[str, str]:
         or key.upper().startswith("CODEX_")
         or key.upper().startswith("OPENAI_")
     }
+
+
+def contains_terminal_control_characters(value: str) -> bool:
+    """Return whether provider text contains control or formatting code points."""
+
+    return any(unicodedata.category(character).startswith("C") for character in value)
 
 
 def codex_help_prompt() -> str:
@@ -245,12 +252,18 @@ class CodexStudentHelpProvider:
         if not isinstance(guidance, list) or not 1 <= len(guidance) <= 4:
             raise ValueError("Codex non ha restituito una guida valida.")
         steps = [str(item).strip() for item in guidance]
-        if any(not step or len(step) > MAX_GUIDANCE_STEP_CHARS for step in steps):
+        if any(
+            not step
+            or len(step) > MAX_GUIDANCE_STEP_CHARS
+            or contains_terminal_control_characters(step)
+            for step in steps
+        ):
             raise ValueError("Codex non ha restituito una guida valida.")
         if (
             not isinstance(check_question, str)
             or not check_question.strip()
             or len(check_question.strip()) > MAX_CHECK_QUESTION_CHARS
+            or contains_terminal_control_characters(check_question)
         ):
             raise ValueError("Codex non ha restituito una guida valida.")
         message = " ".join(f"{index}. {step}" for index, step in enumerate(steps, start=1))

@@ -157,6 +157,28 @@ def test_codex_provider_rejects_invalid_structured_output(monkeypatch) -> None:
         student_help_codex_adapter.CodexStudentHelpProvider().respond(sample_request())
 
 
+def test_codex_provider_rejects_terminal_escape_sequences(monkeypatch) -> None:
+    monkeypatch.setattr(student_help_codex_adapter.shutil, "which", lambda command: "/bin/codex")
+    monkeypatch.setattr(
+        student_help_codex_adapter.subprocess,
+        "run",
+        lambda *args, **kwargs: subprocess.CompletedProcess(
+            args[0],
+            0,
+            stdout=json.dumps(
+                {
+                    "guidance": ["Controlla l'input.\u001b]52;c;dGVzdA==\u0007"],
+                    "check_question": "Quale caso stai verificando?",
+                }
+            ),
+            stderr="",
+        ),
+    )
+
+    with pytest.raises(ValueError, match="guida valida"):
+        student_help_codex_adapter.CodexStudentHelpProvider().respond(sample_request())
+
+
 def test_codex_provider_rejects_output_that_would_truncate_check_question(monkeypatch) -> None:
     monkeypatch.setattr(student_help_codex_adapter.shutil, "which", lambda command: "/bin/codex")
     monkeypatch.setattr(
