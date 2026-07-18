@@ -1166,6 +1166,36 @@ def test_delete_selected_assignment_stops_when_confirmation_is_cancelled() -> No
     )
 
 
+def test_delete_selected_assignment_reports_an_idempotent_retry_as_completed() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.state.assignments = [{
+            id: "assignment-delete-retry",
+            activity_id: "activity-demo",
+            class_label: "3A TPSI",
+          }];
+          tested.state.selectedAssignmentId = "assignment-delete-retry";
+          tested.els.assignmentSelect.value = "assignment-delete-retry";
+          tested.fetchResponses["/api/assignments/delete"] = {
+            ok: true,
+            deleted: { id: "assignment-delete-retry" },
+            already_deleted: true,
+            cleanup_pending: false,
+            assignments: [],
+            assignment_statuses: [],
+            due_without_register: [],
+          };
+
+          await tested.deleteSelectedAssignment();
+
+          assert.match(tested.els.status.textContent, /Assegnazione gia cancellata/);
+          assert.doesNotMatch(tested.els.status.textContent, /non cancellata/);
+        })();
+        """
+    )
+
+
 def test_assignment_confirm_next_guides_save_then_distribute() -> None:
     run_dashboard_js(
         """

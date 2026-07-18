@@ -864,7 +864,17 @@ def delete_assignment_record(payload: dict) -> dict:
         raise ValueError("assignment_id obbligatorio.")
     record_storage = assignment_record_storage()
     with assignment_operation_lock(assignment_record_operation_id(record_storage, requested_assignment_id)):
-        assignment = record_storage.read_assignment(requested_assignment_id)
+        try:
+            assignment = record_storage.read_assignment(requested_assignment_id)
+        except FileNotFoundError:
+            updated = list_assignment_records(str(payload.get("now", "")).strip() or None)
+            return {
+                "ok": True,
+                "deleted": {"id": requested_assignment_id},
+                "already_deleted": True,
+                "cleanup_pending": False,
+                **updated,
+            }
         assignment_id = str(assignment["id"])
         student_ids = set()
         for target in assignment.get("targets", []):
@@ -915,7 +925,13 @@ def delete_assignment_record(payload: dict) -> dict:
                 except OSError:
                     cleanup_pending = True
     updated = list_assignment_records(str(payload.get("now", "")).strip() or None)
-    return {"ok": True, "deleted": deleted, "cleanup_pending": cleanup_pending, **updated}
+    return {
+        "ok": True,
+        "deleted": deleted,
+        "already_deleted": False,
+        "cleanup_pending": cleanup_pending,
+        **updated,
+    }
 
 
 def repository_relative_path(path: Path) -> str:

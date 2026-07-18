@@ -477,6 +477,32 @@ def test_delete_assignment_record_resets_server_help_history_and_budget(tmp_path
     assert summary["ai_total"] == 0
 
 
+def test_delete_assignment_record_is_idempotent_after_response_loss(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "TEACHER_ASSIGNMENTS_DIR", tmp_path / "teacher-assignments")
+    monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
+    storage = assignment_records.JsonAssignmentRecordStorage(tmp_path, tmp_path / "teacher-assignments")
+    assignment = storage.write_assignment(
+        assignment_records.build_assignment_record(
+            assignment_id="assignment-delete-retry",
+            activity_id="activity-demo",
+            activity_path="activities/activity-demo.json",
+            target_type="student",
+            assigned_at="2026-10-12T09:00:00+02:00",
+            due_at="2026-10-19T23:59:00+02:00",
+            targets=[{"student_id": "rossi-mario"}],
+        )
+    )
+
+    first = course_board_server.delete_assignment_record({"assignment_id": assignment["id"]})
+    retry = course_board_server.delete_assignment_record({"assignment_id": assignment["id"]})
+
+    assert first["already_deleted"] is False
+    assert retry["already_deleted"] is True
+    assert retry["deleted"]["id"] == assignment["id"]
+    assert retry["assignments"] == []
+
+
 def test_recovery_restores_staged_logs_when_assignment_record_still_exists(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "TEACHER_ASSIGNMENTS_DIR", tmp_path / "teacher-assignments")

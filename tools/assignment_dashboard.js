@@ -3691,7 +3691,9 @@ async function deleteSelectedAssignment() {
     clearSelectedAssignment();
     renderReportAssignmentSummary();
     resetAssignmentConfirmStatus("Assegnazione cancellata: seleziona o crea un'altra consegna prima di salvare o distribuire.");
-    setStatus(`Assegnazione cancellata: ${payload.deleted?.id || assignmentId}.`);
+    setStatus(payload.already_deleted
+      ? `Assegnazione gia cancellata: ${payload.deleted?.id || assignmentId}.`
+      : `Assegnazione cancellata: ${payload.deleted?.id || assignmentId}.`);
   } catch (error) {
     const message = assignmentPlanErrorMessage(error);
     setStatus(`Assegnazione non cancellata: ${message}`);
