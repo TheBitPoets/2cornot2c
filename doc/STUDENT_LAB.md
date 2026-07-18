@@ -38,6 +38,10 @@ $env:THEBITLAB_STUDENT_HELP_TOKEN="<token stampato dal comando precedente>"
 python scripts/student_lab_cli.py --root tmp/student-lab-demo --student-id rossi-mario --server-url http://127.0.0.1:8765
 ```
 
+Il token puo viaggiare su HTTP solo quando il server e in loopback (`localhost` o `127.0.0.1`).
+Per collegare una macchina studente al server docente usa HTTPS, direttamente o tramite tunnel.
+L'opzione `--allow-insecure-http` e riservata a collaudi temporanei su una rete controllata.
+
 Il server usa `codex exec` con sessione effimera, directory temporanea vuota, shell e ricerca web disabilitate,
 sandbox `read-only`, output JSON validato e timeout. Non accetta dalla TUI identita, policy, contesto didattico o
 path: ricava lo studente dal token firmato e ricostruisce il resto usando `assignment_id`. Se Codex non e disponibile

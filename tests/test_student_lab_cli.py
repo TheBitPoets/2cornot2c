@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from scripts import student_lab_cli
 
 
@@ -540,14 +542,14 @@ def test_record_help_from_tui_posts_only_identifiers_and_prompt(monkeypatch) -> 
 
     event = student_lab_cli.record_help_from_tui(
         assignment=sample_assignment(),
-        server_url="http://teacher.test:8765/",
+        server_url="https://teacher.test:8765/",
         server_token="signed-token",
         help_type="ai",
         prompt="Come procedo?",
     )
 
     assert event == {"allowed": True, "label": "Aiuto AI"}
-    assert captured["url"] == "http://teacher.test:8765/api/student-lab/help"
+    assert captured["url"] == "https://teacher.test:8765/api/student-lab/help"
     assert captured["payload"] == {
         "assignment_id": "assignment-python-base-somma-001-demo",
         "help_type": "ai",
@@ -580,7 +582,7 @@ def test_fetch_help_history_uses_authenticated_server_endpoint(monkeypatch) -> N
 
     history = student_lab_cli.fetch_help_history_from_server(
         assignment=sample_assignment(),
-        server_url="http://teacher.test:8765/",
+        server_url="https://teacher.test:8765/",
         server_token="signed-token",
     )
 
@@ -601,7 +603,7 @@ def test_record_help_from_tui_reports_server_timeout(monkeypatch) -> None:
     try:
         student_lab_cli.record_help_from_tui(
             assignment=sample_assignment(),
-            server_url="http://teacher.test:8765",
+            server_url="https://teacher.test:8765",
             server_token="signed-token",
             help_type="ai",
             prompt="Come procedo?",
@@ -610,6 +612,27 @@ def test_record_help_from_tui_reports_server_timeout(monkeypatch) -> None:
         assert "non ha risposto entro il tempo previsto" in str(error)
     else:
         raise AssertionError("Il timeout del server deve essere mostrato come errore TUI")
+
+
+def test_remote_help_server_requires_https_unless_explicitly_allowed(monkeypatch) -> None:
+    calls = []
+    monkeypatch.setattr(student_lab_cli.urllib.request, "urlopen", lambda *args, **kwargs: calls.append(args))
+
+    with pytest.raises(ValueError, match="richiede HTTPS"):
+        student_lab_cli.record_help_from_tui(
+            assignment=sample_assignment(),
+            server_url="http://teacher.test:8765",
+            server_token="signed-token",
+            help_type="ai",
+            prompt="Come procedo?",
+        )
+
+    assert calls == []
+    assert student_lab_cli.validated_server_url("http://127.0.0.1:8765") == "http://127.0.0.1:8765"
+    assert student_lab_cli.validated_server_url(
+        "http://teacher.test:8765",
+        allow_insecure_http=True,
+    ) == "http://teacher.test:8765"
 
 
 def test_run_tui_can_show_detail_and_exit(monkeypatch, tmp_path) -> None:
@@ -678,6 +701,7 @@ def test_run_tui_can_record_help_request_and_reload(monkeypatch, tmp_path) -> No
             "server_token": "signed-token",
             "help_type": "ai",
             "prompt": "Mi scrivi la soluzione?",
+            "allow_insecure_http": False,
         }
     ]
     assert any("Esito richiesta aiuto" in output and "Codex locale" in output for output in outputs)

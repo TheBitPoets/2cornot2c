@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import json
 import os
 import subprocess
@@ -58,6 +59,27 @@ def clean_text(value: Any, fallback: str = "-") -> str:
 
     text = str(value or "").strip()
     return text or fallback
+
+
+def validated_server_url(server_url: str, allow_insecure_http: bool = False) -> str:
+    """Require HTTPS when a bearer token leaves the local machine."""
+
+    clean_url = str(server_url or "").strip().rstrip("/")
+    parsed = urllib.parse.urlparse(clean_url)
+    if parsed.scheme == "https" and parsed.hostname:
+        return clean_url
+    if parsed.scheme == "http" and parsed.hostname:
+        is_loopback = parsed.hostname.lower() == "localhost"
+        try:
+            is_loopback = is_loopback or ipaddress.ip_address(parsed.hostname).is_loopback
+        except ValueError:
+            pass
+        if is_loopback or allow_insecure_http:
+            return clean_url
+    raise ValueError(
+        "Il token studente richiede HTTPS per un server remoto. "
+        "Usa un tunnel HTTPS oppure --allow-insecure-http solo per un collaudo controllato."
+    )
 
 
 def status_label(status: str) -> str:
@@ -524,6 +546,7 @@ def record_help_from_tui(
     server_token: str,
     help_type: str,
     prompt: str,
+    allow_insecure_http: bool = False,
 ) -> dict[str, Any]:
     """Send one student help request to the teacher-side server."""
 
@@ -532,6 +555,7 @@ def record_help_from_tui(
         raise ValueError("Identificativo consegna non disponibile.")
     if not server_token.strip():
         raise ValueError("Token studente mancante. Imposta THEBITLAB_STUDENT_HELP_TOKEN.")
+    safe_server_url = validated_server_url(server_url, allow_insecure_http)
     body = json.dumps(
         {
             "assignment_id": assignment_id,
@@ -541,7 +565,7 @@ def record_help_from_tui(
         ensure_ascii=False,
     ).encode("utf-8")
     request = urllib.request.Request(
-        f"{server_url.rstrip('/')}/api/student-lab/help",
+        f"{safe_server_url}/api/student-lab/help",
         data=body,
         headers={
             "Content-Type": "application/json; charset=utf-8",
@@ -574,6 +598,7 @@ def fetch_help_history_from_server(
     assignment: dict[str, Any],
     server_url: str,
     server_token: str,
+    allow_insecure_http: bool = False,
 ) -> dict[str, Any]:
     """Load one student's assignment history through the authenticated server API."""
 
@@ -582,9 +607,10 @@ def fetch_help_history_from_server(
         raise ValueError("Identificativo consegna non disponibile.")
     if not server_token.strip():
         raise ValueError("Token studente mancante. Imposta THEBITLAB_STUDENT_HELP_TOKEN.")
+    safe_server_url = validated_server_url(server_url, allow_insecure_http)
     query = urllib.parse.urlencode({"assignment_id": assignment_id})
     request = urllib.request.Request(
-        f"{server_url.rstrip('/')}/api/student-lab/help-history?{query}",
+        f"{safe_server_url}/api/student-lab/help-history?{query}",
         headers={"Authorization": f"Bearer {server_token.strip()}"},
         method="GET",
     )
@@ -727,6 +753,7 @@ def run_tui(
     use_color: bool = False,
     server_url: str = DEFAULT_SERVER_URL,
     server_token: str = "",
+    allow_insecure_http: bool = False,
 ) -> int:
     """Run the interactive student lab loop."""
 
@@ -788,6 +815,7 @@ def run_tui(
                                 server_token=server_token,
                                 help_type=help_type,
                                 prompt=prompt,
+                                allow_insecure_http=allow_insecure_http,
                             )
                             print_fn(help_result_message(event, use_color=use_color))
                             payload = load_payload(root, student_id, now)
@@ -802,6 +830,7 @@ def run_tui(
                             assignment=assignment,
                             server_url=server_url,
                             server_token=server_token,
+                            allow_insecure_http=allow_insecure_http,
                         )
                         history_assignment = {**assignment, "help": {"events": history["events"]}}
                         print_fn(render_help_history(history_assignment, root=root, use_color=use_color))
@@ -841,6 +870,11 @@ def parse_args() -> argparse.Namespace:
         default=os.environ.get("THEBITLAB_STUDENT_HELP_TOKEN", ""),
         help="Token personale firmato usato per autenticare le richieste di aiuto.",
     )
+    parser.add_argument(
+        "--allow-insecure-http",
+        action="store_true",
+        help="Consenti HTTP remoto solo per un collaudo su rete controllata; il default richiede HTTPS.",
+    )
     return parser.parse_args()
 
 
@@ -857,6 +891,7 @@ def main() -> int:
             use_color=supports_color(args.no_color),
             server_url=args.server_url,
             server_token=args.server_token,
+            allow_insecure_http=args.allow_insecure_http,
         )
     except ValueError as error:
         print(f"Lab studente non disponibile:\n{error}", file=sys.stderr)
