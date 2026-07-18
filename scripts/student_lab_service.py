@@ -33,14 +33,14 @@ def url_path(path: Path) -> str:
 
 
 def relative_to_root(root: Path, path: Path) -> str:
-    """Return a repository-relative path when possible."""
+    """Return a repository-relative path without exposing external locations."""
 
     resolved_root = root.resolve()
     resolved_path = path.resolve()
     try:
         return url_path(resolved_path.relative_to(resolved_root))
     except ValueError:
-        return url_path(resolved_path)
+        return ""
 
 
 def resolve_local_path(root: Path, path_value: str) -> Path:
@@ -128,7 +128,7 @@ def load_activity_summary(root: Path, activity_path_value: str) -> dict[str, Any
     activity_path = resolve_local_path(root, activity_path_value)
     if not activity_path.is_file():
         return {
-            "path": url_path(activity_path_value),
+            "path": relative_to_root(root, activity_path),
             "exists": False,
             "title": "",
             "kind": "",
