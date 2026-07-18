@@ -27,16 +27,7 @@ MAX_PROVIDER_MESSAGE_CHARS = 8_000
 PROVIDER_ERROR_DETAIL = "Il provider non ha potuto completare la richiesta. Riprova più tardi o avvisa il docente."
 _HELP_LOG_LOCKS: dict[str, threading.Lock] = {}
 _HELP_LOG_LOCKS_GUARD = threading.Lock()
-_STORAGE_KEY_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{16,128}$")
-_WINDOWS_RESERVED_NAMES = {
-    "CON",
-    "PRN",
-    "AUX",
-    "NUL",
-    *(f"COM{index}" for index in range(1, 10)),
-    *(f"LPT{index}" for index in range(1, 10)),
-}
 
 
 class StudentHelpRateLimitError(ValueError):
@@ -253,18 +244,8 @@ def server_help_log_path(root: Path, student_id: str, assignment_id: str) -> Pat
         key = clean_text(value)
         if not key:
             raise ValueError(f"{label} obbligatorio per il registro aiuti.")
-        is_portable = (
-            bool(_STORAGE_KEY_PATTERN.fullmatch(key))
-            and key == key.lower()
-            and not key.endswith(".")
-            and key.split(".", 1)[0].upper() not in _WINDOWS_RESERVED_NAMES
-        )
-        if is_portable:
-            keys.append(key)
-            continue
-        readable = re.sub(r"[^A-Za-z0-9._-]+", "-", key).strip("._-").lower()[:40] or label
-        digest = hashlib.sha256(key.encode("utf-8")).hexdigest()[:16]
-        keys.append(f"{readable}-{digest}")
+        digest = hashlib.sha256(key.encode("utf-8")).hexdigest()
+        keys.append(f"{label}-{digest}")
     return root / "teacher-help-events" / keys[0] / keys[1] / "events.json"
 
 

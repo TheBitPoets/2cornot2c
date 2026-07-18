@@ -42,6 +42,19 @@ def test_server_help_log_path_encodes_non_portable_identifiers(tmp_path) -> None
     assert "Rossi Mario" not in str(path)
 
 
+def test_server_help_log_path_separates_portable_id_from_encoded_lookalike(tmp_path) -> None:
+    first = student_help_service.server_help_log_path(tmp_path, "A", "assignment-001")
+    second = student_help_service.server_help_log_path(
+        tmp_path,
+        "a-559aead08264d579",
+        "assignment-001",
+    )
+
+    assert first != second
+    assert first.parent.name == second.parent.name
+    assert first.parent.parent != second.parent.parent
+
+
 def test_read_help_log_rejects_file_above_size_limit(tmp_path) -> None:
     log_path = tmp_path / "events.json"
     with log_path.open("wb") as stream:
