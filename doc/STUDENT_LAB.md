@@ -34,6 +34,9 @@ utente e quel token come password. Per mantenere lo stesso token tra riavvii, im
 
 Il comando `student_help_auth.py` stampa il token personale di `rossi-mario`. Copialo nel secondo terminale; non
 condividere invece `THEBITLAB_STUDENT_HELP_SECRET`, che deve restare soltanto sul server docente.
+I token studente e docente si configurano soltanto con le variabili d'ambiente
+`THEBITLAB_STUDENT_HELP_TOKEN` e `THEBITLAB_TEACHER_TOKEN`: non passarli come argomenti della riga di comando,
+perche potrebbero comparire nella cronologia della shell o nell'elenco dei processi.
 
 In un secondo terminale:
 

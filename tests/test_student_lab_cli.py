@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -76,6 +77,28 @@ def sample_assignment(**overrides):
     }
     payload.update(overrides)
     return payload
+
+
+def test_main_reads_student_token_only_from_environment(monkeypatch, tmp_path) -> None:
+    captured = {}
+    monkeypatch.setenv("THEBITLAB_STUDENT_HELP_TOKEN", "token-da-ambiente")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["student_lab_cli.py", "--student-id", "rossi-mario", "--root", str(tmp_path)],
+    )
+    monkeypatch.setattr(student_lab_cli, "run_tui", lambda **kwargs: captured.update(kwargs) or 0)
+
+    assert student_lab_cli.main() == 0
+    assert captured["server_token"] == "token-da-ambiente"
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["student_lab_cli.py", "--student-id", "rossi-mario", "--server-token", "token-cli"],
+    )
+    with pytest.raises(SystemExit):
+        student_lab_cli.parse_args()
 
 
 def sample_payload(assignments=None):

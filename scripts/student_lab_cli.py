@@ -1062,11 +1062,6 @@ def parse_args() -> argparse.Namespace:
         help="URL del server locale che gestisce richieste di aiuto e provider Codex.",
     )
     parser.add_argument(
-        "--server-token",
-        default=os.environ.get("THEBITLAB_STUDENT_HELP_TOKEN", ""),
-        help="Token personale firmato usato per autenticare le richieste di aiuto.",
-    )
-    parser.add_argument(
         "--allow-insecure-http",
         action="store_true",
         help="Consenti HTTP remoto solo per un collaudo su rete controllata; il default richiede HTTPS.",
@@ -1086,7 +1081,7 @@ def main() -> int:
             clear=not args.no_clear,
             use_color=supports_color(args.no_color),
             server_url=args.server_url,
-            server_token=args.server_token,
+            server_token=os.environ.get("THEBITLAB_STUDENT_HELP_TOKEN", ""),
             allow_insecure_http=args.allow_insecure_http,
         )
     except ValueError as error:

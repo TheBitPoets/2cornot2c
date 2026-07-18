@@ -2927,11 +2927,6 @@ def main() -> int:
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--root", type=Path, default=APP_ROOT, help="Root dati da usare per API e dashboard.")
     parser.add_argument(
-        "--teacher-token",
-        default=os.environ.get("THEBITLAB_TEACHER_TOKEN", ""),
-        help="Token HTTP Basic docente; se omesso viene generato a ogni avvio.",
-    )
-    parser.add_argument(
         "--allow-insecure-network-http",
         action="store_true",
         help="Consente esplicitamente HTTP su un indirizzo non loopback; usare solo dietro protezioni di rete.",
@@ -2943,7 +2938,7 @@ def main() -> int:
         parser.error(str(error))
     data_root = configure_data_root(args.root)
     server = ThreadingHTTPServer((args.host, args.port), CourseBoardHandler)
-    server.teacher_token = args.teacher_token.strip() or secrets.token_urlsafe(24)
+    server.teacher_token = os.environ.get("THEBITLAB_TEACHER_TOKEN", "").strip() or secrets.token_urlsafe(24)
     if not is_loopback_bind_host(args.host):
         print("ATTENZIONE: dashboard e credenziali Basic sono esposte su HTTP non cifrato.")
         print("Preferisci loopback con tunnel SSH oppure un reverse proxy HTTPS.")
