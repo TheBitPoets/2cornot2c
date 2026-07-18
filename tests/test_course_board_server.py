@@ -304,6 +304,40 @@ def test_delete_legacy_assignment_removes_logs_for_derived_aliases(tmp_path, mon
     assert all(not log_path.exists() for log_path in alias_paths)
 
 
+def test_delete_modern_assignment_also_removes_historical_alias_log(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
+    monkeypatch.setattr(course_board_server, "TEACHER_ASSIGNMENTS_DIR", tmp_path / "teacher-assignments")
+    storage = assignment_records.JsonAssignmentRecordStorage(tmp_path, tmp_path / "teacher-assignments")
+    assignment = storage.write_assignment(
+        assignment_records.build_assignment_record(
+            assignment_id="assignment-con-alias-storico",
+            activity_id="python-base-somma-001",
+            activity_path="activities/python-base-somma-001.json",
+            target_type="student",
+            assigned_at="2026-10-12T09:00:00+02:00",
+            due_at="2026-10-19T23:59:00+02:00",
+            targets=[
+                {
+                    "student_id": "studente-stabile-001",
+                    "repo_ref": "TheBitPoets/vecchia-cartella",
+                    "path": "studenti/vecchia-cartella",
+                }
+            ],
+        )
+    )
+    canonical_log = student_help_service.server_help_log_path(tmp_path, "studente-stabile-001", assignment["id"])
+    historical_log = student_help_service.server_help_log_path(tmp_path, "vecchia-cartella", assignment["id"])
+    for log_path in (canonical_log, historical_log):
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        log_path.write_text('{"events": []}\n', encoding="utf-8")
+
+    course_board_server.delete_assignment_record({"assignment_id": assignment["id"]})
+
+    assert not canonical_log.exists()
+    assert not historical_log.exists()
+
+
 def test_delete_assignment_keeps_record_when_help_log_removal_fails(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")

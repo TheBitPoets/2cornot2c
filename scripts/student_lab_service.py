@@ -79,9 +79,14 @@ def target_student_aliases(target: dict[str, Any]) -> set[str]:
     stable_student_id = clean_text(target.get("student_id"))
     if stable_student_id:
         return {stable_student_id}
+    return target_legacy_student_aliases(target)
+
+
+def target_legacy_student_aliases(target: dict[str, Any]) -> set[str]:
+    """Return historical aliases derivable from a target without granting access."""
+
     candidates = {
         clean_text(target.get("display_name")),
-        target_student_id(target),
     }
     for key in ("path", "target", "repo_ref"):
         value = clean_text(target.get(key))
@@ -89,6 +94,16 @@ def target_student_aliases(target: dict[str, Any]) -> set[str]:
             candidates.add(Path(value).name)
             candidates.add(value.rstrip("/").split("/")[-1])
     return {candidate for candidate in candidates if candidate}
+
+
+def target_cleanup_student_ids(target: dict[str, Any]) -> set[str]:
+    """Return canonical and historical storage keys to remove for one target."""
+
+    identities = target_legacy_student_aliases(target)
+    stable_student_id = clean_text(target.get("student_id"))
+    if stable_student_id:
+        identities.add(stable_student_id)
+    return identities
 
 
 def target_repo_path(root: Path, target: dict[str, Any], student_id: str) -> Path | None:

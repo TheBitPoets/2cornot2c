@@ -386,7 +386,7 @@ def delete_assignment_record(payload: dict) -> dict:
         student_ids = set()
         for target in assignment.get("targets", []):
             if isinstance(target, dict):
-                student_ids.update(student_lab_service.target_student_aliases(target))
+                student_ids.update(student_lab_service.target_cleanup_student_ids(target))
         for student_id in student_ids:
             log_dir = student_help_service.server_help_log_path(ROOT, student_id, assignment_id).parent
             if log_dir.is_dir():
