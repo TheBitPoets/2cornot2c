@@ -169,11 +169,20 @@ def student_help_provider() -> StudentHelpProvider:
     return student_help_codex_adapter.StudentHelpProviderRouter(ai_provider, local_provider)
 
 
+def student_help_operation_id(assignment_id: str, student_id: str) -> str:
+    """Return the per-student admission key for one assignment help request."""
+
+    return f"help::{assignment_id}::{student_id}"
+
+
 def record_student_help(payload: dict[str, Any], *, student_id: str) -> dict[str, Any]:
     """Record one TUI request using server-owned assignment context and policy."""
 
     assignment_id = str(payload.get("assignment_id", "")).strip()
-    with assignment_operation_lock(assignment_id, blocking=False):
+    with assignment_operation_lock(
+        student_help_operation_id(assignment_id, student_id),
+        blocking=False,
+    ):
         event = student_lab_service.record_student_help_request(
             root=ROOT,
             assignments_dir=TEACHER_ASSIGNMENTS_DIR,
@@ -574,35 +583,40 @@ def delete_assignment_record(payload: dict) -> dict:
             },
             key=str,
         )
-        with ExitStack() as log_locks:
-            for log_path in log_paths:
-                log_locks.enter_context(student_help_service.help_log_lock(log_path))
-            trash_root, staged_logs = stage_help_logs_for_deletion(
-                assignment_id,
-                [log_path.parent for log_path in log_paths]
-            )
-            try:
-                rollback_snapshots = snapshot_staged_help_logs(staged_logs)
-            except Exception:
-                restore_staged_help_logs(staged_logs)
-                shutil.rmtree(trash_root, ignore_errors=True)
-                raise
-            try:
-                deleted = record_storage.delete_assignment(assignment_id)
-            except Exception:
-                restore_staged_help_logs(staged_logs)
-                shutil.rmtree(trash_root, ignore_errors=True)
-                raise
-            try:
-                if trash_root.exists():
-                    shutil.rmtree(trash_root)
-            except Exception:
+        with ExitStack() as help_operations:
+            for student_id in sorted(student_ids):
+                help_operations.enter_context(
+                    assignment_operation_lock(student_help_operation_id(assignment_id, student_id))
+                )
+            with ExitStack() as log_locks:
+                for log_path in log_paths:
+                    log_locks.enter_context(student_help_service.help_log_lock(log_path))
+                trash_root, staged_logs = stage_help_logs_for_deletion(
+                    assignment_id,
+                    [log_path.parent for log_path in log_paths]
+                )
                 try:
-                    restore_help_log_snapshots(rollback_snapshots)
-                    record_storage.write_assignment(assignment, overwrite=True)
-                finally:
+                    rollback_snapshots = snapshot_staged_help_logs(staged_logs)
+                except Exception:
+                    restore_staged_help_logs(staged_logs)
                     shutil.rmtree(trash_root, ignore_errors=True)
-                raise
+                    raise
+                try:
+                    deleted = record_storage.delete_assignment(assignment_id)
+                except Exception:
+                    restore_staged_help_logs(staged_logs)
+                    shutil.rmtree(trash_root, ignore_errors=True)
+                    raise
+                try:
+                    if trash_root.exists():
+                        shutil.rmtree(trash_root)
+                except Exception:
+                    try:
+                        restore_help_log_snapshots(rollback_snapshots)
+                        record_storage.write_assignment(assignment, overwrite=True)
+                    finally:
+                        shutil.rmtree(trash_root, ignore_errors=True)
+                    raise
     updated = list_assignment_records(str(payload.get("now", "")).strip() or None)
     return {"ok": True, "deleted": deleted, **updated}
 

@@ -831,6 +831,72 @@ def test_concurrent_help_request_is_rejected_without_waiting(tmp_path, monkeypat
     assert first_errors == []
 
 
+def test_classmates_can_request_help_on_the_same_assignment_concurrently(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    activity_path = tmp_path / "activities" / "python-base-somma-001.json"
+    write_demo_activity(activity_path)
+    for student_id in ("rossi-mario", "bianchi-luca"):
+        (tmp_path / "studenti" / student_id).mkdir(parents=True)
+    assignment = assignment_records.JsonAssignmentRecordStorage(tmp_path).write_assignment(
+        assignment_records.build_assignment_record(
+            assignment_id="assignment-ai-classe",
+            activity_id="python-base-somma-001",
+            activity_path="activities/python-base-somma-001.json",
+            target_type="class",
+            class_id="3A",
+            assigned_at="2026-10-12T09:00:00+02:00",
+            due_at="2026-10-19T23:59:00+02:00",
+            targets=[
+                {"student_id": "rossi-mario", "path": "studenti/rossi-mario"},
+                {"student_id": "bianchi-luca", "path": "studenti/bianchi-luca"},
+            ],
+        )
+    )
+    first_started = threading.Event()
+    release_first = threading.Event()
+
+    class PerStudentProvider:
+        def respond(self, request):
+            if request.prompt == "Aiuto Rossi.":
+                first_started.set()
+                assert release_first.wait(timeout=5)
+            student_label = "rossi-mario" if request.prompt == "Aiuto Rossi." else "bianchi-luca"
+            return StudentHelpResponse(
+                status="ready",
+                provider="parallel-test",
+                provider_label="Provider parallelo test",
+                message=f"Risposta per {student_label}.",
+                usage={"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
+            )
+
+    monkeypatch.setattr(course_board_server, "student_help_provider", lambda: PerStudentProvider())
+    first_errors = []
+
+    def first_request():
+        try:
+            course_board_server.record_student_help(
+                {"assignment_id": assignment["id"], "help_type": "debug", "prompt": "Aiuto Rossi."},
+                student_id="rossi-mario",
+            )
+        except Exception as error:  # noqa: BLE001
+            first_errors.append(error)
+
+    first_thread = threading.Thread(target=first_request)
+    first_thread.start()
+    assert first_started.wait(timeout=5)
+
+    second = course_board_server.record_student_help(
+        {"assignment_id": assignment["id"], "help_type": "debug", "prompt": "Aiuto Bianchi."},
+        student_id="bianchi-luca",
+    )
+
+    assert second["event"]["response"]["message"] == "Risposta per bianchi-luca."
+    assert first_thread.is_alive()
+    release_first.set()
+    first_thread.join(timeout=5)
+    assert first_errors == []
+
+
 def test_save_and_delete_assignment_are_serialized(tmp_path, monkeypatch) -> None:
     patch_assignment_paths(tmp_path, monkeypatch)
     activity_path = tmp_path / "activities" / "python-base-somma-001.json"
