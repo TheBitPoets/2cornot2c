@@ -1173,6 +1173,18 @@ def infer_assignment_target_type(class_id: str, github_team: str, targets: list[
     return "group"
 
 
+def assignment_target_student_ids(assignment: dict[str, Any]) -> set[str]:
+    """Return canonical student identities referenced by one assignment."""
+
+    return {
+        student_id
+        for target in assignment.get("targets", [])
+        if isinstance(target, dict)
+        for student_id in [student_lab_service.target_student_id(target)]
+        if student_id
+    }
+
+
 def save_assignment_record(payload: dict) -> dict:
     """Persist an explicit assignment record from the teacher dashboard."""
 
@@ -1198,8 +1210,22 @@ def save_assignment_record(payload: dict) -> dict:
         due_at=str(payload.get("due_at", "")).strip(),
         targets=targets,
     )
+    overwrite = bool(payload.get("overwrite", False))
     with assignment_operation_lock(assignment["id"]):
-        saved = assignment_record_storage().write_assignment(assignment, bool(payload.get("overwrite", False)))
+        storage = assignment_record_storage()
+        if overwrite:
+            try:
+                existing = storage.read_assignment(assignment["id"])
+            except FileNotFoundError:
+                existing = None
+            if existing is not None and assignment_target_student_ids(existing) != assignment_target_student_ids(
+                assignment
+            ):
+                raise ValueError(
+                    "I destinatari di un'assegnazione esistente non sono modificabili: "
+                    "cancella l'assegnazione e creane una nuova."
+                )
+        saved = storage.write_assignment(assignment, overwrite)
     records = list_assignment_records(str(payload.get("now", "")).strip() or None)
     return {
         "ok": True,
