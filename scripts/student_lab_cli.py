@@ -855,14 +855,18 @@ def run_tui(
         if choice in {"q", "quit", "esci"}:
             return 0
         if choice in {"r", "reload", "ricarica"}:
-            payload = load_current_payload(
-                root=root,
-                student_id=student_id,
-                now=now,
-                server_url=server_url,
-                server_token=server_token,
-                allow_insecure_http=allow_insecure_http,
-            )
+            try:
+                payload = load_current_payload(
+                    root=root,
+                    student_id=student_id,
+                    now=now,
+                    server_url=server_url,
+                    server_token=server_token,
+                    allow_insecure_http=allow_insecure_http,
+                )
+            except ValueError as error:
+                print_fn(f"Aggiornamento dati non disponibile:\n{error}")
+                input_fn("Premi invio per continuare...")
             continue
         if not choice.isdigit():
             continue

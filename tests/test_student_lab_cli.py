@@ -465,6 +465,37 @@ def test_find_assignment_uses_index_only_without_stable_assignment_id() -> None:
     assert student_lab_cli.find_assignment(sample_payload([]), "missing", 0) is None
 
 
+def test_run_tui_keeps_current_payload_when_manual_refresh_fails(monkeypatch, tmp_path) -> None:
+    payload = sample_payload()
+    outputs = []
+    inputs = iter(["r", "", "q"])
+    fetch_count = 0
+
+    def fake_fetch_payload(**kwargs):
+        nonlocal fetch_count
+        fetch_count += 1
+        if fetch_count == 2:
+            raise ValueError("server temporaneamente non disponibile")
+        return payload
+
+    monkeypatch.setattr(student_lab_cli, "fetch_student_lab_payload", fake_fetch_payload)
+
+    result = student_lab_cli.run_tui(
+        student_id="rossi-mario",
+        root=tmp_path,
+        input_fn=lambda prompt: next(inputs),
+        print_fn=outputs.append,
+        clear=False,
+        server_url="https://server.test",
+        server_token="signed-token",
+    )
+
+    assert result == 0
+    assert fetch_count == 2
+    assert any("Aggiornamento dati non disponibile" in output for output in outputs)
+    assert sum(1 for output in outputs if "TheBitLab - lab studente" in output) == 2
+
+
 def test_help_result_message_shows_policy_decision() -> None:
     message = student_lab_cli.help_result_message(
         {
