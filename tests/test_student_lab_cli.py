@@ -344,6 +344,32 @@ def test_render_help_history_uses_events_from_server_payload(tmp_path) -> None:
     assert "Ripassa il ciclo for." in rendered
 
 
+def test_render_help_history_keeps_legacy_events_visible(tmp_path) -> None:
+    legacy_path = tmp_path / "student" / "help" / "activity" / "events.json"
+    student_lab_cli.student_help_service.write_help_events(
+        legacy_path,
+        [
+            {
+                "requested_at": "2026-10-17T17:20:00+02:00",
+                "label": "Aiuto AI",
+                "allowed": True,
+                "reason": "Consentito.",
+                "prompt": "Richiesta precedente.",
+            }
+        ],
+    )
+    assignment = sample_assignment(
+        help={
+            "path": "teacher-help-events/rossi/assignment/events.json",
+            "legacy_path": "student/help/activity/events.json",
+        }
+    )
+
+    rendered = student_lab_cli.render_help_history(assignment, root=tmp_path)
+
+    assert "Richiesta precedente." in rendered
+
+
 def test_render_help_history_uses_colors_and_wraps_long_text(tmp_path) -> None:
     log_path = tmp_path / "student" / "help" / "python-base-somma-001" / "events.json"
     log_path.parent.mkdir(parents=True)

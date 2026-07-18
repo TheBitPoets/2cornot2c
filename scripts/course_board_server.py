@@ -2521,6 +2521,10 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         if relative_target.parts and relative_target.parts[0].lower() in PRIVATE_STATIC_ROOTS:
             self.send_error(403)
             return
+        lowered_parts = {part.lower() for part in relative_target.parts}
+        if "student_repos" in lowered_parts and "help" in lowered_parts:
+            self.send_error(403)
+            return
         if target.is_dir():
             target = target / "index.html"
         if not target.is_file():

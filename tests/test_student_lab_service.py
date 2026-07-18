@@ -213,6 +213,8 @@ def test_student_repo_cannot_override_server_help_budget(tmp_path) -> None:
     )[0]
 
     assert assignment["assignment_id"] == assignment_record["id"]
+    assert assignment["help"]["total"] == 1
+    assert assignment["help"]["legacy_unverified"] is True
     assert assignment["help"]["ai_budget"]["used"] == 0
     assert assignment["help"]["path"].startswith("teacher-help-events/")
 

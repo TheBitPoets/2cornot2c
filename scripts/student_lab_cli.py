@@ -462,6 +462,13 @@ def render_help_history(
     else:
         lines.append("Log aiuti non disponibile per questa consegna.")
         return "\n".join(lines)
+    legacy_path_value = clean_text(help_data.get("legacy_path"), "")
+    if legacy_path_value:
+        raw_legacy_path = Path(legacy_path_value)
+        legacy_path = raw_legacy_path if raw_legacy_path.is_absolute() else (root / raw_legacy_path).resolve(strict=False)
+        legacy_events, legacy_error = student_help_service.read_help_log(legacy_path)
+        if not legacy_error:
+            events = [*legacy_events, *events]
     if error:
         lines.append(f"Log aiuti non leggibile: {error}")
         lines.append(f"Path: {log_path}")

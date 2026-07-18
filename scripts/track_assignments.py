@@ -382,6 +382,13 @@ def track_assignments(
         help = student_help_service.teacher_help_summary(help_log_path, normalized_now)
         if assignment_id and server_root is not None:
             help["path"] = str(help_log_path.relative_to(server_root)).replace("\\", "/")
+            legacy_path = student_help_service.help_log_path(target.path, activity_id)
+            legacy_help = student_help_service.teacher_help_summary(legacy_path, normalized_now)
+            help = student_help_service.merge_legacy_help_summary(
+                help,
+                legacy_help,
+                relative_to_root_or_repo(legacy_path, target.path),
+            )
         else:
             help["path"] = relative_to_root_or_repo(help_log_path, target.path)
         help["activity_id"] = activity_id
