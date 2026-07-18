@@ -227,12 +227,13 @@ Obiettivo: verificare che la TUI sia comprensibile, robusta sugli input e coeren
    python scripts/course_board_server.py --root tmp/student-lab-demo
    ```
 
-   Conserva il token stampato per il passo successivo.
+   Conserva il token studente stampato da `student_help_auth.py` per il passo successivo. Il server stampa
+   separatamente il token dashboard docente: non usarlo nella TUI e non condividerlo con gli studenti.
 
 2. In un secondo terminale avvia la TUI sulla stessa root:
 
    ```powershell
-   $env:THEBITLAB_STUDENT_HELP_TOKEN="<token stampato dal server docente>"
+   $env:THEBITLAB_STUDENT_HELP_TOKEN="<token studente stampato da student_help_auth.py>"
    python scripts/student_lab_cli.py --root tmp/student-lab-demo --student-id rossi-mario --server-url http://127.0.0.1:8765
    ```
 
