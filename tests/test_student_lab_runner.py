@@ -263,6 +263,46 @@ def test_run_local_assignment_wraps_c_compile_error(monkeypatch, tmp_path) -> No
     assert report["summary"] == {"passed": 0, "total": 0}
 
 
+def test_run_local_assignment_adds_c_failure_message(monkeypatch, tmp_path) -> None:
+    activity_id = "c-base-somma-001"
+    activity_path = write_activity(tmp_path, activity_id=activity_id, language="c", source_name="main.c")
+    write_assignment(tmp_path, activity_path, activity_id=activity_id)
+    workspace = tmp_path / "examples" / "assignment_tracking" / "student_repos" / "rossi-mario" / "assignments" / activity_id
+    workspace.mkdir(parents=True)
+    (workspace / "main.c").write_text("int main(void){ return 0; }\n", encoding="utf-8")
+
+    def failed_test(activity, source, **kwargs):
+        return {
+            "passed": False,
+            "status": "failed",
+            "activity_id": activity["id"],
+            "language": "c",
+            "source": str(source),
+            "tests": [
+                {
+                    "name": "somma_positivi",
+                    "passed": False,
+                    "status": "failed",
+                    "expected_stdout": "5\n",
+                    "stdout": "4\n",
+                    "stderr": "",
+                }
+            ],
+            "summary": {"passed": 0, "total": 1},
+        }
+
+    monkeypatch.setattr(student_lab_runner.grade_activity, "grade_activity", failed_test)
+
+    report = student_lab_runner.run_student_assignment(
+        root=tmp_path,
+        student_id="rossi-mario",
+        activity_id=activity_id,
+    )
+
+    assert report["status"] == "failed"
+    assert report["tests"][0]["message"] == "Output atteso: 5; output ottenuto: 4"
+
+
 def test_run_docker_assignment_wraps_container_report(monkeypatch, tmp_path) -> None:
     activity_id = "c-base-somma-001"
     activity_path = write_activity(tmp_path, activity_id=activity_id, language="c", source_name="main.c")
@@ -299,6 +339,51 @@ def test_run_docker_assignment_wraps_container_report(monkeypatch, tmp_path) -> 
     assert report["status"] == "passed"
     assert report["passed"] is True
     assert report["summary"] == {"passed": 1, "total": 1}
+
+
+def test_run_docker_assignment_adds_c_failure_message(monkeypatch, tmp_path) -> None:
+    activity_id = "c-base-somma-001"
+    activity_path = write_activity(tmp_path, activity_id=activity_id, language="c", source_name="main.c")
+    write_assignment(tmp_path, activity_path, activity_id=activity_id)
+    workspace = tmp_path / "examples" / "assignment_tracking" / "student_repos" / "rossi-mario" / "assignments" / activity_id
+    workspace.mkdir(parents=True)
+    (workspace / "main.c").write_text("int main(void){ return 0; }\n", encoding="utf-8")
+
+    class Result:
+        returncode = 0
+        stdout = json.dumps(
+            {
+                "passed": False,
+                "status": "failed",
+                "activity_id": activity_id,
+                "language": "c",
+                "source": "/workspace/source/main.c",
+                "tests": [
+                    {
+                        "name": "somma_negativi",
+                        "passed": False,
+                        "status": "failed",
+                        "expected_stdout": "-5\n",
+                        "stdout": "5\n",
+                    }
+                ],
+                "summary": {"passed": 0, "total": 1},
+            }
+        )
+        stderr = ""
+
+    monkeypatch.setattr(student_lab_runner.subprocess, "run", lambda *args, **kwargs: Result())
+
+    report = student_lab_runner.run_student_assignment(
+        root=tmp_path,
+        student_id="rossi-mario",
+        activity_id=activity_id,
+        backend="docker",
+    )
+
+    assert report["backend"] == "docker"
+    assert report["status"] == "failed"
+    assert report["tests"][0]["message"] == "Output atteso: -5; output ottenuto: 5"
 
 
 def test_run_docker_assignment_reports_missing_docker(monkeypatch, tmp_path) -> None:

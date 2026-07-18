@@ -163,6 +163,42 @@ def pytest_report_tests(*, passed: bool, status: str, stdout: str, stderr: str) 
     ]
 
 
+def c_test_message(test: dict[str, Any]) -> str:
+    """Return a compact student-facing message for a C test result."""
+
+    for key in ("message", "detail", "error", "stderr"):
+        value = clean_text(test.get(key))
+        if value:
+            return " ".join(value.split())
+    expected = clean_text(test.get("expected_stdout"))
+    actual = clean_text(test.get("stdout"))
+    if expected or actual:
+        return f"Output atteso: {expected or '-'}; output ottenuto: {actual or '-'}"
+    status = clean_text(test.get("status"))
+    return f"Test non superato: {status}" if status else ""
+
+
+def normalize_c_tests(tests: Any) -> list[dict[str, Any]]:
+    """Return C test results with fields useful for the TUI."""
+
+    if not isinstance(tests, list):
+        return []
+    normalized: list[dict[str, Any]] = []
+    for index, item in enumerate(tests, start=1):
+        if not isinstance(item, dict):
+            continue
+        test = dict(item)
+        test.setdefault("name", f"test {index}")
+        if "status" not in test:
+            test["status"] = "passed" if test.get("passed") is True else "failed" if test.get("passed") is False else "unknown"
+        if test.get("passed") is not True and not clean_text(test.get("message")):
+            message = c_test_message(test)
+            if message:
+                test["message"] = message
+        normalized.append(test)
+    return normalized
+
+
 def run_python_pytest(
     assignment: dict[str, Any],
     *,
@@ -239,6 +275,7 @@ def wrap_c_report(assignment: dict[str, Any], source: Path, report: dict[str, An
     """Wrap the existing C grader output in the student lab runner contract."""
 
     summary = report.get("summary") if isinstance(report.get("summary"), dict) else {"passed": 0, "total": 0}
+    tests = normalize_c_tests(report.get("tests"))
     return {
         **report_base(assignment, language="c", source=source),
         **report,
@@ -247,6 +284,7 @@ def wrap_c_report(assignment: dict[str, Any], source: Path, report: dict[str, An
         "assignment_id": clean_text(assignment.get("assignment_id")),
         "student_id": clean_text(assignment.get("student_id")),
         "summary": summary,
+        "tests": tests,
     }
 
 
