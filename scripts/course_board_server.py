@@ -17,6 +17,7 @@ serving static files from the repository.
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import json
 import mimetypes
 import os
@@ -94,6 +95,7 @@ MAX_SUBMISSION_FILE_BYTES = 512 * 1024
 MAX_STUDENT_HELP_REQUEST_BYTES = 16 * 1024
 STUDENT_HELP_SERVER_ERROR = "Servizio aiuto temporaneamente non disponibile."
 PRIVATE_STATIC_ROOTS = {"teacher-assignments", "teacher-help-events", "teacher-reports"}
+LOCAL_TEACHER_API_PREFIXES = ("/api/assignment-reports",)
 
 
 class StudentHelpConfigurationError(RuntimeError):
@@ -2109,8 +2111,24 @@ def set_ai_provider(provider: str, model: str = "") -> dict:
 class CourseBoardHandler(BaseHTTPRequestHandler):
     """HTTP handler for the local board and its JSON API."""
 
+    def is_loopback_client(self) -> bool:
+        """Return whether this request originates from the teacher machine."""
+
+        try:
+            return ipaddress.ip_address(self.client_address[0]).is_loopback
+        except ValueError:
+            return False
+
+    def reject_remote_teacher_api(self, path: str) -> bool:
+        if path.startswith(LOCAL_TEACHER_API_PREFIXES) and not self.is_loopback_client():
+            self.write_error_json(403, "API disponibile soltanto sulla macchina docente.")
+            return True
+        return False
+
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
+        if self.reject_remote_teacher_api(parsed.path):
+            return
         if parsed.path == "/api/student-lab/help-history":
             try:
                 secret = student_help_auth.student_help_secret()
@@ -2184,6 +2202,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
+        if self.reject_remote_teacher_api(parsed.path):
+            return
         if parsed.path == "/api/student-lab/help":
             try:
                 secret = student_help_auth.student_help_secret()

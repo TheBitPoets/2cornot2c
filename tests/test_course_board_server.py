@@ -1073,6 +1073,17 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
             urllib.request.urlopen(unauthenticated_history, timeout=5)
         assert history_unauthorized.value.code == 401
 
+        original_loopback_check = course_board_server.CourseBoardHandler.is_loopback_client
+        monkeypatch.setattr(course_board_server.CourseBoardHandler, "is_loopback_client", lambda self: False)
+        with pytest.raises(urllib.error.HTTPError) as remote_teacher_api:
+            urllib.request.urlopen(f"{base_url}/api/assignment-reports", timeout=5)
+        assert remote_teacher_api.value.code == 403
+        monkeypatch.setattr(
+            course_board_server.CourseBoardHandler,
+            "is_loopback_client",
+            original_loopback_check,
+        )
+
         monkeypatch.setattr(student_help_service, "MAX_HELP_EVENTS_PER_ASSIGNMENT", 2)
         with pytest.raises(urllib.error.HTTPError) as rate_limited:
             urllib.request.urlopen(request, timeout=5)

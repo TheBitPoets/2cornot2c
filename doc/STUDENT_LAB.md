@@ -62,6 +62,10 @@ locale, evitando code lunghe e consumo incontrollato. Solo il tipo `3 AI` usa Co
 tecnico e richiamo teorico usano la guida locale. I token firmati non hanno ancora scadenza: si revocano cambiando il
 segreto server e rigenerandoli. L'endpoint resta un servizio MVP e non sostituisce il futuro sistema di autenticazione.
 
+Quando il server viene reso raggiungibile dalle TUI, le API `/api/assignment-reports*` restano disponibili soltanto
+da indirizzi loopback della macchina docente. L'MVP separa così le rotte studente autenticate dalle viste sensibili
+del docente; un accesso docente remoto richiederà in seguito un'autenticazione dedicata.
+
 Il primo runner locale, senza Docker, e:
 
 ```powershell
