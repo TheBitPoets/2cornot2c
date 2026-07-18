@@ -130,7 +130,7 @@ def provider_response_payload(response: Any) -> dict[str, Any]:
         "status": status,
         "provider": provider.strip(),
         "provider_label": provider_label.strip(),
-        "message": message.strip(),
+        "message": "" if status == "error" else message.strip(),
         "usage": normalized_usage,
         "detail": PROVIDER_ERROR_DETAIL if status == "error" else detail.strip(),
     }

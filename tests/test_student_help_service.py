@@ -41,7 +41,7 @@ class StructuredErrorHelpProvider:
             status="error",
             provider="structured-error-provider",
             provider_label="Provider con errore strutturato",
-            message="",
+            message="Stack trace remoto: api_key=segreto-nel-messaggio",
             usage={"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
             detail="Errore remoto: token=segreto-strutturato",
         )
@@ -198,7 +198,10 @@ def test_record_help_request_sanitizes_structured_provider_errors(tmp_path) -> N
     persisted_text = log_path.read_text(encoding="utf-8")
 
     assert event["response"]["status"] == "error"
+    assert event["response"]["message"] == ""
     assert event["response"]["detail"] == student_help_service.PROVIDER_ERROR_DETAIL
+    assert "segreto-nel-messaggio" not in persisted_text
+    assert "Stack trace remoto" not in persisted_text
     assert "segreto-strutturato" not in persisted_text
     assert "Errore remoto" not in persisted_text
 
