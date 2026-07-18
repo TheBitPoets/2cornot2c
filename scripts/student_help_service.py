@@ -261,6 +261,8 @@ def read_help_log(log_path: Path) -> tuple[list[dict[str, Any]], str]:
         return [], f"Registro richieste di aiuto troppo grande: supera {MAX_HELP_LOG_BYTES} byte."
     try:
         payload = json.loads(log_path.read_text(encoding="utf-8-sig"))
+    except UnicodeDecodeError:
+        return [], "Encoding del log aiuti non valido: atteso UTF-8."
     except JSONDecodeError as error:
         return [], f"JSON non valido: {error.msg}"
     if isinstance(payload, dict):

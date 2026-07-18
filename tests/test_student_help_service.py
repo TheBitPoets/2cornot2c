@@ -66,6 +66,16 @@ def test_read_help_log_rejects_file_above_size_limit(tmp_path) -> None:
     assert "troppo grande" in error
 
 
+def test_read_help_log_reports_invalid_utf8_without_raising(tmp_path) -> None:
+    log_path = tmp_path / "events.json"
+    log_path.write_bytes(b"\xff\xfe{")
+
+    events, error = student_help_service.read_help_log(log_path)
+
+    assert events == []
+    assert error == "Encoding del log aiuti non valido: atteso UTF-8."
+
+
 def test_write_help_events_rejects_payload_above_read_limit(tmp_path) -> None:
     log_path = tmp_path / "events.json"
 
