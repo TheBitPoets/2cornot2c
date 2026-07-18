@@ -1045,6 +1045,11 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
         with urllib.request.urlopen(request, timeout=5) as response:
             result = json.loads(response.read().decode("utf-8"))
 
+        monkeypatch.setattr(student_help_service, "MAX_HELP_EVENTS_PER_ASSIGNMENT", 2)
+        with pytest.raises(urllib.error.HTTPError) as rate_limited:
+            urllib.request.urlopen(request, timeout=5)
+        assert rate_limited.value.code == 429
+
         monkeypatch.setattr(course_board_server, "APP_ROOT", tmp_path)
         with pytest.raises(urllib.error.HTTPError) as private_log:
             urllib.request.urlopen(

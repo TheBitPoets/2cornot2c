@@ -20,10 +20,16 @@ from scripts.student_help_provider import (
 HELP_LOG_SCHEMA_VERSION = "student_help_log.v1"
 HELP_EVENT_SCHEMA_VERSION = "student_help_event.v1"
 PENDING_PROVIDER_MAX_AGE = timedelta(minutes=5)
+MAX_HELP_EVENTS_PER_ASSIGNMENT = 500
+MAX_PROVIDER_MESSAGE_CHARS = 8_000
 PROVIDER_ERROR_DETAIL = "Il provider non ha potuto completare la richiesta. Riprova più tardi o avvisa il docente."
 _HELP_LOG_LOCKS: dict[str, threading.Lock] = {}
 _HELP_LOG_LOCKS_GUARD = threading.Lock()
 _STORAGE_KEY_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
+
+
+class StudentHelpRateLimitError(ValueError):
+    """Raised when one assignment has reached its persisted help limit."""
 
 HELP_TYPES: dict[str, dict[str, str]] = {
     "feedback-tecnico": {
@@ -122,6 +128,8 @@ def provider_response_payload(response: Any) -> dict[str, Any]:
         raise ValueError("Etichetta provider non valida.")
     if not isinstance(message, str) or (status == "ready" and not message.strip()):
         raise ValueError("Messaggio risposta provider non valido.")
+    if len(message) > MAX_PROVIDER_MESSAGE_CHARS:
+        raise ValueError("Messaggio risposta provider troppo grande.")
     if not isinstance(detail, str):
         raise ValueError("Dettaglio risposta provider non valido.")
     usage = payload.get("usage")
@@ -318,6 +326,10 @@ def record_help_request(
     with help_log_lock(path):
         events = load_writable_help_events(path)
         release_stale_provider_reservations(events, requested_at)
+        if len(events) >= MAX_HELP_EVENTS_PER_ASSIGNMENT:
+            raise StudentHelpRateLimitError(
+                "Limite richieste di aiuto raggiunto per questa consegna. Avvisa il docente."
+            )
         decision = apply_budget_limit(evaluate_help_request(support_policy, help_type), support_policy, events)
         event = {
             "schema_version": HELP_EVENT_SCHEMA_VERSION,

@@ -246,6 +246,30 @@ def test_record_help_request_blocks_ai_when_budget_is_exhausted(tmp_path) -> Non
     assert summary["denied"] == 1
 
 
+def test_record_help_request_stops_when_assignment_log_limit_is_reached(tmp_path, monkeypatch) -> None:
+    repo = tmp_path / "student-repo"
+    policy = student_support_policy.support_policy("studio-guidato")
+    monkeypatch.setattr(student_help_service, "MAX_HELP_EVENTS_PER_ASSIGNMENT", 1)
+    student_help_service.record_help_request(
+        repo_path=repo,
+        activity_id="activity",
+        support_policy=policy,
+        help_type="teoria",
+        prompt="Prima richiesta.",
+    )
+
+    with pytest.raises(student_help_service.StudentHelpRateLimitError, match="Limite richieste"):
+        student_help_service.record_help_request(
+            repo_path=repo,
+            activity_id="activity",
+            support_policy=policy,
+            help_type="teoria",
+            prompt="Richiesta oltre il limite.",
+        )
+
+    assert len(student_help_service.load_help_events(student_help_service.help_log_path(repo, "activity"))) == 1
+
+
 def test_concurrent_ai_requests_share_budget_and_preserve_both_events(tmp_path) -> None:
     repo = tmp_path / "student-repo"
     policy = dict(student_support_policy.support_policy("ai-assisted"))

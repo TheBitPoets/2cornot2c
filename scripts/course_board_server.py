@@ -46,6 +46,7 @@ from scripts import (
     manual_ai_feedback,
     student_help_auth,
     student_help_codex_adapter,
+    student_help_service,
     student_lab_service,
     thebitlab_services,
     thebitlab_storage,
@@ -2175,6 +2176,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             try:
                 payload = json.loads(self.rfile.read(length).decode("utf-8"))
                 self.write_json(record_student_help(payload, student_id=student_id))
+            except student_help_service.StudentHelpRateLimitError as error:
+                self.write_error_json(429, str(error))
             except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
                 self.write_error_json(400, str(error))
             except Exception:  # noqa: BLE001
