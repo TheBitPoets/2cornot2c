@@ -539,6 +539,39 @@ def test_recovery_purges_staged_logs_when_assignment_record_is_already_deleted(t
     assert not trash_root.exists()
 
 
+def test_help_log_staging_syncs_transaction_and_rename_directories(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    log_path = student_help_service.server_help_log_path(
+        tmp_path,
+        "rossi-mario",
+        "assignment-demo",
+    )
+    log_path.parent.mkdir(parents=True)
+    log_path.write_text('{"events": []}\n', encoding="utf-8")
+    synced_directories = []
+    monkeypatch.setattr(
+        assignment_records,
+        "sync_directory",
+        lambda path: synced_directories.append(path),
+    )
+
+    trash_root, staged_logs = course_board_server.stage_help_logs_for_deletion(
+        "assignment-demo",
+        [log_path.parent],
+    )
+
+    assert trash_root.parent in synced_directories
+    assert log_path.parent.parent in synced_directories
+    assert trash_root in synced_directories
+
+    synced_directories.clear()
+    course_board_server.restore_staged_help_logs(staged_logs)
+
+    assert trash_root in synced_directories
+    assert log_path.parent.parent in synced_directories
+    assert log_path.is_file()
+
+
 def test_delete_assignment_uses_canonical_record_id_for_help_logs(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")

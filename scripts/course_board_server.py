@@ -537,6 +537,8 @@ def restore_staged_help_logs(staged_logs: list[tuple[Path, Path]]) -> None:
         if staged.exists():
             original.parent.mkdir(parents=True, exist_ok=True)
             staged.replace(original)
+            assignment_records.sync_directory(staged.parent)
+            assignment_records.sync_directory(original.parent)
 
 
 def snapshot_staged_help_logs(
@@ -710,7 +712,9 @@ def purge_help_deletion_trash(trash_root: Path, *, ignore_errors: bool = False) 
                 else:
                     child.unlink(missing_ok=True)
             manifest_path.unlink(missing_ok=True)
+            assignment_records.sync_directory(trash_root)
             trash_root.rmdir()
+            assignment_records.sync_directory(trash_root.parent)
     except OSError:
         if not ignore_errors:
             raise
@@ -722,7 +726,13 @@ def stage_help_logs_for_deletion(
 ) -> tuple[Path, list[tuple[Path, Path]]]:
     """Move help logs to a private same-volume quarantine before record deletion."""
 
-    trash_root = ROOT / "teacher-help-events" / ".trash" / uuid.uuid4().hex
+    help_events_root = ROOT / "teacher-help-events"
+    help_events_root.mkdir(parents=True, exist_ok=True)
+    assignment_records.sync_directory(help_events_root.parent)
+    trash_base = help_events_root / ".trash"
+    trash_base.mkdir(parents=True, exist_ok=True)
+    assignment_records.sync_directory(trash_base.parent)
+    trash_root = trash_base / uuid.uuid4().hex
     staged_logs: list[tuple[Path, Path]] = []
     planned_logs = []
     for index, log_dir in enumerate(log_dirs):
@@ -740,6 +750,7 @@ def stage_help_logs_for_deletion(
             "logs": planned_logs,
         },
     )
+    assignment_records.sync_directory(trash_base)
     try:
         for index, log_dir in enumerate(log_dirs):
             if not log_dir.is_dir():
@@ -747,6 +758,8 @@ def stage_help_logs_for_deletion(
             staged = trash_root / str(index)
             staged.parent.mkdir(parents=True, exist_ok=True)
             log_dir.replace(staged)
+            assignment_records.sync_directory(log_dir.parent)
+            assignment_records.sync_directory(staged.parent)
             staged_logs.append((log_dir, staged))
     except Exception:
         restore_staged_help_logs(staged_logs)
