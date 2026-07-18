@@ -388,7 +388,6 @@ def help_summary(log_path: Path | None, now: str | None = None) -> dict[str, Any
             "last_response_status": "",
             "last_response_provider": "",
             "counts": {},
-            "events": [],
         }
     events, error = load_reconciled_help_events(log_path, now)
     counts: dict[str, int] = {}
@@ -410,18 +409,6 @@ def help_summary(log_path: Path | None, now: str | None = None) -> dict[str, Any
         "last_response_status": clean_text(last_response.get("status")),
         "last_response_provider": clean_text(last_response.get("provider_label")),
         "counts": counts,
-        "events": [
-            {
-                "requested_at": clean_text(event.get("requested_at")),
-                "help_type": clean_text(event.get("help_type")),
-                "label": clean_text(event.get("label")),
-                "allowed": event.get("allowed") is True,
-                "reason": clean_text(event.get("reason")),
-                "prompt": clean_text(event.get("prompt")),
-                "response": event.get("response") if isinstance(event.get("response"), dict) else {},
-            }
-            for event in events
-        ],
     }
 
 

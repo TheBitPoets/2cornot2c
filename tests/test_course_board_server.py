@@ -991,6 +991,7 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
         ) as response:
             dashboard = json.loads(response.read().decode("utf-8"))
         assignment = dashboard["lab"]["assignments"][0]
+        assert "events" not in assignment["help"]
         unauthenticated_request = urllib.request.Request(
             f"{base_url}/api/student-lab/help",
             data=b"{}",
@@ -1043,6 +1044,14 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
         )
         with urllib.request.urlopen(request, timeout=5) as response:
             result = json.loads(response.read().decode("utf-8"))
+
+        monkeypatch.setattr(course_board_server, "APP_ROOT", tmp_path)
+        with pytest.raises(urllib.error.HTTPError) as private_log:
+            urllib.request.urlopen(
+                f"{base_url}/teacher-help-events/rossi-mario/{assignment['assignment_id']}/events.json",
+                timeout=5,
+            )
+        assert private_log.value.code == 403
 
         def fail_with_internal_path(payload, *, student_id):
             raise OSError(r"C:\dati-docente\segreto\events.json")

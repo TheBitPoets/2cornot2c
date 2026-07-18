@@ -92,6 +92,7 @@ COMPACT_TEXT_CHARS = 1200
 MAX_SUBMISSION_FILE_BYTES = 512 * 1024
 MAX_STUDENT_HELP_REQUEST_BYTES = 16 * 1024
 STUDENT_HELP_SERVER_ERROR = "Servizio aiuto temporaneamente non disponibile."
+PRIVATE_STATIC_ROOTS = {"teacher-assignments", "teacher-help-events", "teacher-reports"}
 
 
 def student_help_provider() -> StudentHelpProvider:
@@ -2504,8 +2505,11 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         relative = unquote(request_path.lstrip("/")) or "tools/course_board.html"
         target = (APP_ROOT / relative).resolve()
         try:
-            target.relative_to(APP_ROOT)
+            relative_target = target.relative_to(APP_ROOT)
         except ValueError:
+            self.send_error(403)
+            return
+        if relative_target.parts and relative_target.parts[0].lower() in PRIVATE_STATIC_ROOTS:
             self.send_error(403)
             return
         if target.is_dir():
