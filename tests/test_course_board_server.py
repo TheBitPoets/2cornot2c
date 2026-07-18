@@ -1071,10 +1071,11 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
         assert invalid_provider_payload["error"] == course_board_server.STUDENT_HELP_SERVER_ERROR
         monkeypatch.setenv("THEBITLAB_STUDENT_HELP_PROVIDER", "local")
 
-        monkeypatch.setattr(course_board_server, "APP_ROOT", tmp_path)
+        monkeypatch.setattr(course_board_server, "APP_ROOT", tmp_path.parent)
         with pytest.raises(urllib.error.HTTPError) as private_log:
             urllib.request.urlopen(
-                f"{base_url}/teacher-help-events/rossi-mario/{assignment['assignment_id']}/events.json",
+                f"{base_url}/{tmp_path.name}/teacher-help-events/rossi-mario/"
+                f"{assignment['assignment_id']}/events.json",
                 timeout=5,
             )
         assert private_log.value.code == 403

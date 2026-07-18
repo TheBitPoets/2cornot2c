@@ -2518,10 +2518,10 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         except ValueError:
             self.send_error(403)
             return
-        if relative_target.parts and relative_target.parts[0].lower() in PRIVATE_STATIC_ROOTS:
+        lowered_parts = {part.lower() for part in relative_target.parts}
+        if lowered_parts & PRIVATE_STATIC_ROOTS:
             self.send_error(403)
             return
-        lowered_parts = {part.lower() for part in relative_target.parts}
         if "student_repos" in lowered_parts and "help" in lowered_parts:
             self.send_error(403)
             return
