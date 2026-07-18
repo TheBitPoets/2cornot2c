@@ -12,6 +12,28 @@ from scripts.student_help_provider import StudentHelpRequest, StudentHelpRespons
 
 
 CODEX_HELP_TIMEOUT_SECONDS = 120
+DISABLED_CODEX_FEATURES = (
+    "apps",
+    "artifact",
+    "auth_elicitation",
+    "browser_use",
+    "browser_use_external",
+    "browser_use_full_cdp_access",
+    "code_mode",
+    "code_mode_host",
+    "computer_use",
+    "enable_mcp_apps",
+    "hooks",
+    "image_generation",
+    "in_app_browser",
+    "multi_agent",
+    "multi_agent_v2",
+    "plugins",
+    "remote_plugin",
+    "shell_tool",
+    "standalone_web_search",
+    "tool_call_mcp_elicitation",
+)
 CODEX_PROVIDER = "codex-local"
 CODEX_PROVIDER_LABEL = "Codex locale (macchina docente)"
 MAX_RESPONSE_CHARS = 4000
@@ -113,8 +135,6 @@ class CodexStudentHelpProvider:
                     "--ignore-user-config",
                     "--ignore-rules",
                     "--skip-git-repo-check",
-                    "--disable",
-                    "shell_tool",
                     "--sandbox",
                     "read-only",
                     "--color",
@@ -126,6 +146,8 @@ class CodexStudentHelpProvider:
                     "-c",
                     'web_search="disabled"',
                 ]
+                for feature in DISABLED_CODEX_FEATURES:
+                    command.extend(["--disable", feature])
                 if self.model:
                     command.extend(["--model", self.model])
                 command.append(codex_help_prompt())

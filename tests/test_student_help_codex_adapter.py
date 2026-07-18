@@ -64,7 +64,13 @@ def test_codex_provider_runs_in_empty_read_only_ephemeral_workspace(monkeypatch)
     assert response.usage == {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
     assert "--ephemeral" in captured["command"]
     assert "--ignore-user-config" in captured["command"]
-    assert captured["command"][captured["command"].index("--disable") + 1] == "shell_tool"
+    disabled_features = {
+        captured["command"][index + 1]
+        for index, value in enumerate(captured["command"])
+        if value == "--disable"
+    }
+    assert disabled_features == set(student_help_codex_adapter.DISABLED_CODEX_FEATURES)
+    assert {"shell_tool", "apps", "browser_use", "computer_use", "multi_agent", "plugins"} <= disabled_features
     assert "read-only" in captured["command"]
     assert 'web_search="disabled"' in captured["command"]
     assert captured["command"][captured["command"].index("--model") + 1] == "gpt-test"
