@@ -317,6 +317,33 @@ def test_render_help_history_shows_events(tmp_path) -> None:
     assert "Prova prima un caso minimo" in rendered
 
 
+def test_render_help_history_uses_events_from_server_payload(tmp_path) -> None:
+    assignment = sample_assignment(
+        help={
+            "path": "teacher-help-events/rossi-mario/assignment-001/events.json",
+            "events": [
+                {
+                    "requested_at": "2026-10-18T17:20:00+02:00",
+                    "label": "Richiamo teorico",
+                    "allowed": True,
+                    "reason": "Consentito.",
+                    "prompt": "Quale concetto devo ripassare?",
+                    "response": {
+                        "status": "ready",
+                        "provider_label": "Guida locale",
+                        "message": "Ripassa il ciclo for.",
+                    },
+                }
+            ],
+        }
+    )
+
+    rendered = student_lab_cli.render_help_history(assignment, root=tmp_path)
+
+    assert "Quale concetto devo ripassare?" in rendered
+    assert "Ripassa il ciclo for." in rendered
+
+
 def test_render_help_history_uses_colors_and_wraps_long_text(tmp_path) -> None:
     log_path = tmp_path / "student" / "help" / "python-base-somma-001" / "events.json"
     log_path.parent.mkdir(parents=True)

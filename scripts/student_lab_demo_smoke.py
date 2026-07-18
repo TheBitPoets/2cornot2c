@@ -108,7 +108,7 @@ def write_demo_workspace(root: Path) -> Path:
     return workspace
 
 
-def write_teacher_register(root: Path) -> Path:
+def write_teacher_register(root: Path, assignment_id: str) -> Path:
     """Generate the teacher register from the report produced by the runner."""
 
     output = root / "teacher-reports" / "demo" / f"{ACTIVITY_ID}.json"
@@ -126,6 +126,8 @@ def write_teacher_register(root: Path) -> Path:
         class_id="3A-TPSI",
         class_label="3A TPSI",
         github_team="team-3a-tpsi",
+        assignment_id=assignment_id,
+        server_root=root,
     )
     track_assignments.write_tracking_index(index, output)
     return output
@@ -139,7 +141,6 @@ def run_smoke(root: Path) -> dict[str, Any]:
     workspace = write_demo_workspace(root)
     assignment = student_lab_runner.load_student_assignment(root=root, student_id=STUDENT_ID, activity_id=ACTIVITY_ID, now=NOW)
     help_event = student_help_service.record_help_request(
-        repo_path=root / "examples" / "assignment_tracking" / "student_repos" / STUDENT_ID,
         activity_id=ACTIVITY_ID,
         support_policy=assignment["support_policy"],
         help_type="ai",
@@ -147,6 +148,7 @@ def run_smoke(root: Path) -> dict[str, Any]:
         now="2026-10-18T18:35:00+02:00",
         provider=DeterministicStudentHelpProvider(),
         context={"topics": ["funzioni", "somma"]},
+        log_path=student_help_service.server_help_log_path(root, STUDENT_ID, assignment_record["id"]),
     )
     if help_event.get("allowed") is not True:
         raise RuntimeError(f"Richiesta aiuto demo non consentita: {help_event.get('reason')}")
@@ -162,7 +164,7 @@ def run_smoke(root: Path) -> dict[str, Any]:
         raise RuntimeError("La dashboard lab non vede il report appena salvato.")
     if lab_assignment["help"]["total"] != 1 or lab_assignment["help"]["ai_budget"]["remaining"] != 4:
         raise RuntimeError("La dashboard lab non vede la richiesta di aiuto della demo.")
-    register_path = write_teacher_register(root)
+    register_path = write_teacher_register(root, assignment_record["id"])
     register = json.loads(register_path.read_text(encoding="utf-8"))
     student = register["students"][0]
     if student["grading"]["status"] != "graded_passed":

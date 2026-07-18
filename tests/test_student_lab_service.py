@@ -172,16 +172,7 @@ def test_record_student_help_request_rebuilds_policy_and_context_on_server(tmp_p
         "grading_status": "not_graded",
         "failed_tests": [],
     }
-    log_path = (
-        tmp_path
-        / "examples"
-        / "assignment_tracking"
-        / "student_repos"
-        / "rossi-mario"
-        / "help"
-        / activity_id
-        / "events.json"
-    )
+    log_path = student_help_service.server_help_log_path(tmp_path, "rossi-mario", assignment["id"])
     assert json.loads(log_path.read_text(encoding="utf-8"))["events"][0]["prompt"] == "Come individuo il caso limite?"
 
 
@@ -198,6 +189,67 @@ def test_record_student_help_request_rejects_assignment_of_another_student(tmp_p
             provider=RecordingProvider(),
             now="2026-10-18T12:00:00+02:00",
         )
+
+
+def test_student_repo_cannot_override_server_help_budget(tmp_path) -> None:
+    activity_path = write_activity(tmp_path, student_support_mode="ai-assisted")
+    assignment_record = write_assignment(tmp_path, sample_assignment(tmp_path, activity_path=activity_path))
+    student_repo = tmp_path / "examples" / "assignment_tracking" / "student_repos" / "rossi-mario"
+    legacy_log = student_help_service.help_log_path(student_repo, "python-base-somma-001")
+    student_help_service.write_help_events(
+        legacy_log,
+        [
+            {
+                "help_type": "ai",
+                "allowed": True,
+                "budget_charged": True,
+            }
+        ],
+    )
+
+    assignment = student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id="rossi-mario",
+    )[0]
+
+    assert assignment["assignment_id"] == assignment_record["id"]
+    assert assignment["help"]["ai_budget"]["used"] == 0
+    assert assignment["help"]["path"].startswith("teacher-help-events/")
+
+
+def test_same_activity_assignments_have_independent_help_budgets(tmp_path) -> None:
+    activity_path = write_activity(tmp_path, student_support_mode="ai-assisted")
+    first_record = write_assignment(
+        tmp_path,
+        sample_assignment(tmp_path, activity_path=activity_path),
+    )
+    second_record = write_assignment(
+        tmp_path,
+        sample_assignment(
+            tmp_path,
+            activity_path=activity_path,
+            assigned_at="2026-10-13T09:00:00+02:00",
+            due_at="2026-10-20T23:59:00+02:00",
+        ),
+    )
+    provider = RecordingProvider()
+
+    student_lab_service.record_student_help_request(
+        root=tmp_path,
+        student_id="rossi-mario",
+        assignment_id=first_record["id"],
+        help_type="ai",
+        prompt="Suggerimento per la prima consegna.",
+        provider=provider,
+    )
+
+    assignments = student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id="rossi-mario",
+    )
+    budgets = {item["assignment_id"]: item["help"]["ai_budget"] for item in assignments}
+    assert budgets[first_record["id"]]["used"] == 1
+    assert budgets[second_record["id"]]["used"] == 0
 
 
 def test_record_student_help_request_limits_untrusted_prompt_size(tmp_path) -> None:
@@ -327,24 +379,24 @@ def test_student_lab_exposes_saved_failed_test_messages(tmp_path) -> None:
 
 def test_student_lab_exposes_help_summary(tmp_path) -> None:
     activity_path = write_activity(tmp_path, student_support_mode="studio-guidato")
-    write_assignment(tmp_path, sample_assignment(tmp_path, activity_path=activity_path))
-    repo = tmp_path / "examples" / "assignment_tracking" / "student_repos" / "rossi-mario"
+    assignment_record = write_assignment(tmp_path, sample_assignment(tmp_path, activity_path=activity_path))
     policy = student_support_policy.support_policy("studio-guidato")
+    log_path = student_help_service.server_help_log_path(tmp_path, "rossi-mario", assignment_record["id"])
     student_help_service.record_help_request(
-        repo_path=repo,
         activity_id="python-base-somma-001",
         support_policy=policy,
         help_type="teoria",
         prompt="Ripassami gli array.",
         now="2026-10-18T17:15:00+02:00",
+        log_path=log_path,
     )
     student_help_service.record_help_request(
-        repo_path=repo,
         activity_id="python-base-somma-001",
         support_policy=policy,
         help_type="ai",
         prompt="Scrivi la soluzione.",
         now="2026-10-18T17:20:00+02:00",
+        log_path=log_path,
     )
 
     assignment = student_lab_service.list_student_lab_assignments(
@@ -353,7 +405,7 @@ def test_student_lab_exposes_help_summary(tmp_path) -> None:
         now="2026-10-18T18:00:00+02:00",
     )[0]
 
-    assert assignment["help"]["path"] == "examples/assignment_tracking/student_repos/rossi-mario/help/python-base-somma-001/events.json"
+    assert assignment["help"]["path"] == f"teacher-help-events/rossi-mario/{assignment_record['id']}/events.json"
     assert assignment["help"]["total"] == 2
     assert assignment["help"]["allowed"] == 1
     assert assignment["help"]["denied"] == 1
@@ -364,16 +416,15 @@ def test_student_lab_exposes_help_summary(tmp_path) -> None:
 
 def test_student_lab_exposes_ai_budget_summary(tmp_path) -> None:
     activity_path = write_activity(tmp_path, student_support_mode="ai-assisted")
-    write_assignment(tmp_path, sample_assignment(tmp_path, activity_path=activity_path))
-    repo = tmp_path / "examples" / "assignment_tracking" / "student_repos" / "rossi-mario"
+    assignment_record = write_assignment(tmp_path, sample_assignment(tmp_path, activity_path=activity_path))
     policy = student_support_policy.support_policy("ai-assisted")
     student_help_service.record_help_request(
-        repo_path=repo,
         activity_id="python-base-somma-001",
         support_policy=policy,
         help_type="ai",
         prompt="Dammi un suggerimento.",
         now="2026-10-18T17:15:00+02:00",
+        log_path=student_help_service.server_help_log_path(tmp_path, "rossi-mario", assignment_record["id"]),
     )
 
     assignment = student_lab_service.list_student_lab_assignments(

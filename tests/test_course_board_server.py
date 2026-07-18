@@ -8,7 +8,13 @@ import urllib.request
 
 import pytest
 
-from scripts import assignment_records, course_board_server, student_help_auth, student_lab_demo_setup
+from scripts import (
+    assignment_records,
+    course_board_server,
+    student_help_auth,
+    student_help_service,
+    student_lab_demo_setup,
+)
 
 
 def patch_assignment_paths(tmp_path, monkeypatch) -> None:
@@ -1048,15 +1054,10 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
     assert result["ok"] is True
     assert result["event"]["allowed"] is True
     assert result["event"]["response"]["provider"] == "deterministic-local"
-    log_path = (
-        tmp_path
-        / "examples"
-        / "assignment_tracking"
-        / "student_repos"
-        / "rossi-mario"
-        / "help"
-        / assignment["activity_id"]
-        / "events.json"
+    log_path = student_help_service.server_help_log_path(
+        tmp_path,
+        "rossi-mario",
+        assignment["assignment_id"],
     )
     events = json.loads(log_path.read_text(encoding="utf-8"))["events"]
     assert events[-1]["prompt"] == "Quale concetto devo ripassare?"

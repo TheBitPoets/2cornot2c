@@ -219,15 +219,14 @@ def build_lab_assignment(
     repo_path = target_repo_path(root, target, student_id)
     workspace_path = repo_path / "assignments" / activity_id if repo_path is not None else None
     report_path = repo_path / "reports" / activity_id / "latest.json" if repo_path is not None else None
-    help_log_path = student_help_service.help_log_path(repo_path, activity_id) if repo_path is not None else None
+    help_log_path = student_help_service.server_help_log_path(root, student_id, normalized["id"])
     report = load_report(report_path, activity_id) if report_path is not None else None
     submitted_at = clean_text(report.get("submitted_at")) if report else ""
     status = status_with_report(report, normalized["due_at"], now) if report else status_without_report(normalized["due_at"], now)
     activity = load_activity_summary(root, normalized["activity_path"])
     support_policy = student_support_policy.support_policy(activity.get("student_support_mode", ""))
     help_log = student_help_service.help_summary(help_log_path)
-    if help_log_path is not None:
-        help_log["path"] = relative_to_root(root, help_log_path)
+    help_log["path"] = relative_to_root(root, help_log_path)
     help_log["ai_budget"] = student_help_service.help_budget_summary(help_log_path, support_policy)
     grading = track_assignments.grading_summary(report)
     return {
@@ -397,12 +396,10 @@ def record_student_help_request(
     )
     if assignment is None:
         raise ValueError("Consegna non trovata per lo studente indicato.")
-    repo_path = assignment_repo_path(root, assignment)
-    if repo_path is None:
+    if assignment_repo_path(root, assignment) is None:
         raise ValueError("Repository studente non disponibile per salvare la richiesta di aiuto.")
     support_policy = assignment.get("support_policy") if isinstance(assignment.get("support_policy"), dict) else {}
     return student_help_service.record_help_request(
-        repo_path=repo_path,
         activity_id=clean_text(assignment.get("activity_id")),
         support_policy=support_policy,
         help_type=help_type,
@@ -410,6 +407,7 @@ def record_student_help_request(
         now=now,
         provider=provider,
         context=help_provider_context(assignment),
+        log_path=student_help_service.server_help_log_path(root, clean_student_id, clean_assignment_id),
     )
 
 

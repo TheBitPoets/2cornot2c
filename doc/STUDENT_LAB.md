@@ -154,9 +154,13 @@ La TUI mostra la policy e usa la stessa logica backend per consentire o bloccare
 
 ## Log richieste di aiuto
 
-Il backend può registrare richieste di aiuto dello studente in:
+Il server registra le richieste di aiuto dello studente in uno storage che non appartiene al workspace dello studente:
 
-`<repo-studente>/help/<activity-id>/events.json`
+`teacher-help-events/<student-id>/<assignment-id>/events.json`
+
+La chiave include l'assegnazione, non soltanto l'activity: due consegne della stessa activity mantengono quindi budget
+e cronologie indipendenti. Il payload restituito dal server contiene lo storico visibile allo studente, perciò la TUI
+non deve accedere direttamente al file autorevole.
 
 Ogni evento indica tipo di aiuto richiesto, esito consentito/bloccato, motivazione e prompt dello studente.
 Quando la richiesta è consentita e viene usato un provider, l'evento contiene anche una `response` conforme a
@@ -190,7 +194,8 @@ Quando il report esiste, il registro salva nella `submission` anche:
 - `report_schema_version`: versione dello schema del report;
 - `report_status`: stato tecnico del report originale.
 
-Il registro docente legge anche `help/<activity_id>/events.json`, quando presente, e aggiunge a ogni studente il riepilogo `help`.
+Quando il registro è collegato a un'assegnazione, il docente legge lo stesso log server-side
+`teacher-help-events/<student-id>/<assignment-id>/events.json` e aggiunge a ogni studente il riepilogo `help`.
 La dashboard docente può così mostrare numero di richieste, richieste AI, richieste bloccate e prompt inviati dallo studente per quella consegna.
 
 In questo modo dashboard docente, dashboard studente e TUI leggono lo stesso risultato senza ricalcolare grading o stato in modi divergenti.

@@ -348,6 +348,8 @@ def track_assignments(
     class_id: str | None = None,
     class_label: str | None = None,
     github_team: str | None = None,
+    assignment_id: str | None = None,
+    server_root: Path | None = None,
 ) -> dict[str, Any]:
     """Build a teacher-facing tracking index for one activity."""
     activity = create_submission_scaffold.load_activity(activity_path)
@@ -369,13 +371,19 @@ def track_assignments(
     for target in targets:
         repo_url = github_repo_url(target)
         report_path = default_report_path(target, activity_id)
-        help_log_path = student_help_service.help_log_path(target.path, activity_id)
+        if assignment_id and server_root is not None:
+            help_log_path = student_help_service.server_help_log_path(server_root, target.student, assignment_id)
+        else:
+            help_log_path = student_help_service.help_log_path(target.path, activity_id)
         report = load_report(report_path)
         if report is not None:
             validate_report_activity(report, activity_id, report_path)
         relative_report_path = relative_to_root_or_repo(report_path, target.path) if report_path.exists() else None
         help = student_help_service.teacher_help_summary(help_log_path)
-        help["path"] = relative_to_root_or_repo(help_log_path, target.path)
+        if assignment_id and server_root is not None:
+            help["path"] = str(help_log_path.relative_to(server_root)).replace("\\", "/")
+        else:
+            help["path"] = relative_to_root_or_repo(help_log_path, target.path)
         help["activity_id"] = activity_id
         source_path = report.get("source") if report else None
         submitted = report is not None
@@ -415,7 +423,7 @@ def track_assignments(
             }
         )
 
-    return {
+    result = {
         "activity_id": activity_id,
         "title": normalized_activity.get("title") or activity_id,
         "kind": normalized_activity.get("kind"),
@@ -427,6 +435,9 @@ def track_assignments(
         "due_at": normalized_due_at,
         "students": students,
     }
+    if assignment_id:
+        result["assignment_id"] = assignment_id
+    return result
 
 
 def write_tracking_index(index: dict[str, Any], output: Path) -> None:

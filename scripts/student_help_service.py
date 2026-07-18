@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import threading
 import uuid
 from json import JSONDecodeError
@@ -21,6 +22,7 @@ PENDING_PROVIDER_MAX_AGE = timedelta(minutes=5)
 PROVIDER_ERROR_DETAIL = "Il provider non ha potuto completare la richiesta. Riprova più tardi o avvisa il docente."
 _HELP_LOG_LOCKS: dict[str, threading.Lock] = {}
 _HELP_LOG_LOCKS_GUARD = threading.Lock()
+_STORAGE_KEY_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
 
 HELP_TYPES: dict[str, dict[str, str]] = {
     "feedback-tecnico": {
@@ -217,6 +219,18 @@ def help_log_path(repo_path: Path, activity_id: str) -> Path:
     return repo_path / "help" / clean_text(activity_id) / "events.json"
 
 
+def server_help_log_path(root: Path, student_id: str, assignment_id: str) -> Path:
+    """Return the authoritative server-side log for one assigned activity."""
+
+    keys = []
+    for label, value in (("student_id", student_id), ("assignment_id", assignment_id)):
+        key = clean_text(value)
+        if not _STORAGE_KEY_PATTERN.fullmatch(key):
+            raise ValueError(f"{label} non valido per il registro aiuti.")
+        keys.append(key)
+    return root / "teacher-help-events" / keys[0] / keys[1] / "events.json"
+
+
 def load_help_events(log_path: Path) -> list[dict[str, Any]]:
     events, _ = read_help_log(log_path)
     return events
@@ -257,7 +271,7 @@ def help_log_lock(log_path: Path) -> threading.Lock:
 
 def record_help_request(
     *,
-    repo_path: Path,
+    repo_path: Path | None = None,
     activity_id: str,
     support_policy: dict[str, Any],
     help_type: Any,
@@ -265,8 +279,13 @@ def record_help_request(
     now: str | None = None,
     provider: StudentHelpProvider | None = None,
     context: dict[str, Any] | None = None,
+    log_path: Path | None = None,
 ) -> dict[str, Any]:
-    path = help_log_path(repo_path, activity_id)
+    if log_path is None:
+        if repo_path is None:
+            raise ValueError("Percorso registro aiuti non disponibile.")
+        log_path = help_log_path(repo_path, activity_id)
+    path = log_path
     requested_at = parse_now(now)
     with help_log_lock(path):
         events = load_help_events(path)
@@ -341,6 +360,7 @@ def help_summary(log_path: Path | None) -> dict[str, Any]:
             "last_response_status": "",
             "last_response_provider": "",
             "counts": {},
+            "events": [],
         }
     events, error = read_help_log(log_path)
     counts: dict[str, int] = {}
@@ -362,6 +382,18 @@ def help_summary(log_path: Path | None) -> dict[str, Any]:
         "last_response_status": clean_text(last_response.get("status")),
         "last_response_provider": clean_text(last_response.get("provider_label")),
         "counts": counts,
+        "events": [
+            {
+                "requested_at": clean_text(event.get("requested_at")),
+                "help_type": clean_text(event.get("help_type")),
+                "label": clean_text(event.get("label")),
+                "allowed": event.get("allowed") is True,
+                "reason": clean_text(event.get("reason")),
+                "prompt": clean_text(event.get("prompt")),
+                "response": event.get("response") if isinstance(event.get("response"), dict) else {},
+            }
+            for event in events
+        ],
     }
 
 

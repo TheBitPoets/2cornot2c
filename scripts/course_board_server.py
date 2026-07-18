@@ -784,6 +784,7 @@ def generate_assignment_report(payload: dict) -> dict:
         raise FileNotFoundError(f"Activity non trovata: {activity_path}")
     targets = read_targets_from_text(str(payload.get("targets_text", "")))
     output_path = safe_teacher_report_path(payload.get("output_name", ""))
+    assignment_id = str(payload.get("assignment_id", "")).strip()
     index = track_assignments.track_assignments(
         activity_path=activity_path,
         targets=targets,
@@ -793,10 +794,9 @@ def generate_assignment_report(payload: dict) -> dict:
         class_id=payload.get("class_id") or None,
         class_label=payload.get("class_label") or None,
         github_team=payload.get("github_team") or None,
+        assignment_id=assignment_id or None,
+        server_root=ROOT if assignment_id else None,
     )
-    assignment_id = str(payload.get("assignment_id", "")).strip()
-    if assignment_id:
-        index["assignment_id"] = assignment_id
     track_assignments.write_tracking_index(index, output_path)
     return {
         "ok": True,

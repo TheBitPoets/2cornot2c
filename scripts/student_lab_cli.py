@@ -450,12 +450,18 @@ def render_help_history(
 ) -> str:
     """Render the help request history for one assignment."""
 
-    log_path = assignment_help_log_path(assignment, root=root)
     lines = ["Storico richieste aiuto"]
-    if log_path is None:
+    help_data = assignment.get("help") if isinstance(assignment.get("help"), dict) else {}
+    payload_events = help_data.get("events")
+    log_path = assignment_help_log_path(assignment, root=root)
+    if isinstance(payload_events, list):
+        events = [event for event in payload_events if isinstance(event, dict)]
+        error = ""
+    elif log_path is not None:
+        events, error = student_help_service.read_help_log(log_path)
+    else:
         lines.append("Log aiuti non disponibile per questa consegna.")
         return "\n".join(lines)
-    events, error = student_help_service.read_help_log(log_path)
     if error:
         lines.append(f"Log aiuti non leggibile: {error}")
         lines.append(f"Path: {log_path}")
