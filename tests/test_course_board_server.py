@@ -603,7 +603,7 @@ def test_delete_assignment_waits_for_inflight_help_request(tmp_path, monkeypatch
     assert not student_help_service.server_help_log_path(tmp_path, "rossi-mario", assignment["id"]).exists()
 
 
-def test_delete_assignment_waits_for_student_payload_read(tmp_path, monkeypatch) -> None:
+def test_student_payload_does_not_wait_for_assignment_provider_lock(tmp_path, monkeypatch) -> None:
     patch_assignment_paths(tmp_path, monkeypatch)
     storage = assignment_records.JsonAssignmentRecordStorage(tmp_path, tmp_path / "teacher-assignments")
     assignment = storage.write_assignment(
@@ -617,24 +617,55 @@ def test_delete_assignment_waits_for_student_payload_read(tmp_path, monkeypatch)
             targets=[{"student_id": "rossi-mario"}],
         )
     )
+    provider_started = threading.Event()
+    provider_release = threading.Event()
+
+    def hold_assignment_lock():
+        with course_board_server.assignment_operation_lock(assignment["id"]):
+            provider_started.set()
+            assert provider_release.wait(timeout=5)
+
+    provider_thread = threading.Thread(target=hold_assignment_lock)
+    provider_thread.start()
+    assert provider_started.wait(timeout=5)
+
+    payload = course_board_server.locked_student_lab_payload(student_id="rossi-mario")
+
+    provider_release.set()
+    provider_thread.join(timeout=5)
+    assert payload["assignments"][0]["assignment_id"] == assignment["id"]
+
+
+def test_delete_assignment_waits_for_help_log_read(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    storage = assignment_records.JsonAssignmentRecordStorage(tmp_path, tmp_path / "teacher-assignments")
+    assignment = storage.write_assignment(
+        assignment_records.build_assignment_record(
+            assignment_id="assignment-log-in-lettura",
+            activity_id="python-base-somma-001",
+            activity_path="activities/python-base-somma-001.json",
+            target_type="student",
+            assigned_at="2026-10-12T09:00:00+02:00",
+            due_at="2026-10-19T23:59:00+02:00",
+            targets=[{"student_id": "rossi-mario"}],
+        )
+    )
+    log_path = student_help_service.server_help_log_path(tmp_path, "rossi-mario", assignment["id"])
+    log_path.parent.mkdir(parents=True)
+    log_path.write_text('{"events": []}\n', encoding="utf-8")
     read_started = threading.Event()
     read_release = threading.Event()
-    original_payload = course_board_server.student_lab_service.student_lab_payload
+    original_read_help_log = student_help_service.read_help_log
 
-    def blocking_payload(**kwargs):
-        read_started.set()
-        assert read_release.wait(timeout=5)
-        return original_payload(**kwargs)
+    def blocking_read_help_log(path):
+        if path == log_path:
+            read_started.set()
+            assert read_release.wait(timeout=5)
+        return original_read_help_log(path)
 
-    monkeypatch.setattr(course_board_server.student_lab_service, "student_lab_payload", blocking_payload)
-    read_errors = []
+    monkeypatch.setattr(student_help_service, "read_help_log", blocking_read_help_log)
     delete_errors = []
-
-    def read_payload():
-        try:
-            course_board_server.locked_student_lab_payload(student_id="rossi-mario")
-        except Exception as error:  # noqa: BLE001
-            read_errors.append(error)
+    read_thread = threading.Thread(target=lambda: student_help_service.help_summary(log_path))
 
     def delete_assignment():
         try:
@@ -642,7 +673,6 @@ def test_delete_assignment_waits_for_student_payload_read(tmp_path, monkeypatch)
         except Exception as error:  # noqa: BLE001
             delete_errors.append(error)
 
-    read_thread = threading.Thread(target=read_payload)
     delete_thread = threading.Thread(target=delete_assignment)
     read_thread.start()
     assert read_started.wait(timeout=5)
@@ -652,9 +682,9 @@ def test_delete_assignment_waits_for_student_payload_read(tmp_path, monkeypatch)
     read_thread.join(timeout=5)
     delete_thread.join(timeout=5)
 
-    assert read_errors == []
     assert delete_errors == []
     assert not storage.safe_assignment_path(assignment["id"]).exists()
+    assert not log_path.parent.exists()
 
 
 def test_assignment_operation_locks_are_released_after_use(tmp_path, monkeypatch) -> None:

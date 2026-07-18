@@ -398,22 +398,14 @@ def list_assignment_records(now: str | None = None) -> dict:
 
 
 def locked_student_lab_payload(*, student_id: str, now: str | None = None) -> dict[str, Any]:
-    """Build a student payload while coordinating with assignment deletion."""
+    """Build the network-safe student payload without blocking provider calls."""
 
-    assignment_ids = sorted(
-        str(assignment.get("id", "")).strip()
-        for assignment in assignment_record_storage().list_assignments()
-        if str(assignment.get("id", "")).strip()
+    return student_lab_service.student_lab_payload(
+        root=ROOT,
+        assignments_dir=TEACHER_ASSIGNMENTS_DIR,
+        student_id=student_id,
+        now=now,
     )
-    with ExitStack() as stack:
-        for assignment_id in assignment_ids:
-            stack.enter_context(assignment_operation_lock(assignment_id))
-        return student_lab_service.student_lab_payload(
-            root=ROOT,
-            assignments_dir=TEACHER_ASSIGNMENTS_DIR,
-            student_id=student_id,
-            now=now,
-        )
 
 
 def restore_staged_help_logs(staged_logs: list[tuple[Path, Path]]) -> None:
@@ -460,28 +452,33 @@ def delete_assignment_record(payload: dict) -> dict:
         for target in assignment.get("targets", []):
             if isinstance(target, dict):
                 student_ids.update(student_lab_service.target_cleanup_student_ids(target))
-        log_dirs = sorted(
+        log_paths = sorted(
             {
-                student_help_service.server_help_log_path(ROOT, student_id, assignment_id).parent
+                student_help_service.server_help_log_path(ROOT, student_id, assignment_id)
                 for student_id in student_ids
             },
             key=str,
         )
-        trash_root, staged_logs = stage_help_logs_for_deletion(log_dirs)
-        try:
-            deleted = record_storage.delete_assignment(assignment_id)
-        except Exception:
-            restore_staged_help_logs(staged_logs)
-            shutil.rmtree(trash_root, ignore_errors=True)
-            raise
-        try:
-            if trash_root.exists():
-                shutil.rmtree(trash_root)
-        except Exception:
-            record_storage.write_assignment(assignment, overwrite=True)
-            restore_staged_help_logs(staged_logs)
-            shutil.rmtree(trash_root, ignore_errors=True)
-            raise
+        with ExitStack() as log_locks:
+            for log_path in log_paths:
+                log_locks.enter_context(student_help_service.help_log_lock(log_path))
+            trash_root, staged_logs = stage_help_logs_for_deletion(
+                [log_path.parent for log_path in log_paths]
+            )
+            try:
+                deleted = record_storage.delete_assignment(assignment_id)
+            except Exception:
+                restore_staged_help_logs(staged_logs)
+                shutil.rmtree(trash_root, ignore_errors=True)
+                raise
+            try:
+                if trash_root.exists():
+                    shutil.rmtree(trash_root)
+            except Exception:
+                record_storage.write_assignment(assignment, overwrite=True)
+                restore_staged_help_logs(staged_logs)
+                shutil.rmtree(trash_root, ignore_errors=True)
+                raise
     updated = list_assignment_records(str(payload.get("now", "")).strip() or None)
     return {"ok": True, "deleted": deleted, **updated}
 
@@ -2283,15 +2280,14 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                     )
                     return
                 assignment_id = query.get("assignment_id", [""])[0]
-                with assignment_operation_lock(assignment_id):
-                    self.write_json(
-                        student_lab_service.student_help_history(
-                            root=ROOT,
-                            assignments_dir=TEACHER_ASSIGNMENTS_DIR,
-                            student_id=student_id,
-                            assignment_id=assignment_id,
-                        )
+                self.write_json(
+                    student_lab_service.student_help_history(
+                        root=ROOT,
+                        assignments_dir=TEACHER_ASSIGNMENTS_DIR,
+                        student_id=student_id,
+                        assignment_id=assignment_id,
                     )
+                )
             except ValueError as error:
                 self.write_error_json(400, str(error))
             except Exception:  # noqa: BLE001
