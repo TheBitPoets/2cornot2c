@@ -122,6 +122,66 @@ def test_student_lab_lists_only_requested_student_assignments(tmp_path) -> None:
     assert assignment["runner"]["status"] == "not_run"
 
 
+def test_stable_student_id_cannot_be_replaced_by_target_alias(tmp_path) -> None:
+    assignment = sample_assignment(
+        tmp_path,
+        target_type="student",
+        targets=[
+            {
+                "student_id": "studente-stabile-001",
+                "display_name": "Alias Studente",
+                "repo_ref": "TheBitPoets/alias-cartella",
+                "path": "examples/assignment_tracking/student_repos/alias-cartella",
+            }
+        ],
+    )
+    write_assignment(tmp_path, assignment)
+
+    assert student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id="alias-cartella",
+    ) == []
+    stable_assignments = student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id="studente-stabile-001",
+    )
+    assert len(stable_assignments) == 1
+    assert stable_assignments[0]["student_id"] == "studente-stabile-001"
+
+
+def test_server_help_uses_canonical_student_id(tmp_path) -> None:
+    activity_path = write_activity(tmp_path, student_support_mode="ai-assisted")
+    assignment = write_assignment(
+        tmp_path,
+        sample_assignment(
+            tmp_path,
+            activity_path=activity_path,
+            target_type="student",
+            targets=[
+                {
+                    "student_id": "studente-stabile-001",
+                    "repo_ref": "TheBitPoets/cartella-diversa",
+                    "path": "examples/assignment_tracking/student_repos/cartella-diversa",
+                }
+            ],
+        ),
+    )
+
+    student_lab_service.record_student_help_request(
+        root=tmp_path,
+        student_id="studente-stabile-001",
+        assignment_id=assignment["id"],
+        help_type="ai",
+        prompt="Come procedo?",
+        provider=RecordingProvider(),
+    )
+
+    stable_log = student_help_service.server_help_log_path(tmp_path, "studente-stabile-001", assignment["id"])
+    alias_log = student_help_service.server_help_log_path(tmp_path, "cartella-diversa", assignment["id"])
+    assert stable_log.is_file()
+    assert not alias_log.exists()
+
+
 def test_student_lab_exposes_explicit_support_policy(tmp_path) -> None:
     activity_id = "python-ai-assisted-001"
     activity_path = write_activity(tmp_path, activity_id=activity_id, student_support_mode="ai-assisted")

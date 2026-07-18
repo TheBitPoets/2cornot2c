@@ -70,8 +70,10 @@ def target_matches_student(target: dict[str, Any], student_id: str) -> bool:
     """Return whether an assignment target belongs to the requested student."""
 
     clean_student_id = clean_text(student_id)
+    stable_student_id = clean_text(target.get("student_id"))
+    if stable_student_id:
+        return clean_student_id == stable_student_id
     candidates = {
-        clean_text(target.get("student_id")),
         clean_text(target.get("display_name")),
         target_student_id(target),
     }
@@ -292,12 +294,13 @@ def list_student_lab_assignments(
         targets = assignment.get("targets") if isinstance(assignment.get("targets"), list) else []
         for target in targets:
             if isinstance(target, dict) and target_matches_student(target, clean_student_id):
+                canonical_student_id = target_student_id(target)
                 lab_assignments.append(
                     build_lab_assignment(
                         root=root,
                         assignment=assignment,
                         target=target,
-                        student_id=clean_student_id,
+                        student_id=canonical_student_id,
                         now=current_time,
                     )
                 )
@@ -415,7 +418,11 @@ def record_student_help_request(
         now=now,
         provider=provider,
         context=help_provider_context(assignment),
-        log_path=student_help_service.server_help_log_path(root, clean_student_id, clean_assignment_id),
+        log_path=student_help_service.server_help_log_path(
+            root,
+            clean_text(assignment.get("student_id")),
+            clean_assignment_id,
+        ),
     )
 
 
@@ -443,7 +450,11 @@ def student_help_history(
     )
     if assignment is None:
         raise ValueError("Consegna non trovata per lo studente indicato.")
-    log_path = student_help_service.server_help_log_path(root, clean_student_id, clean_assignment_id)
+    log_path = student_help_service.server_help_log_path(
+        root,
+        clean_text(assignment.get("student_id")),
+        clean_assignment_id,
+    )
     server_summary = student_help_service.teacher_help_summary(log_path, now)
     legacy_events: list[dict[str, Any]] = []
     repo_path = assignment_repo_path(root, assignment)
