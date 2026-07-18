@@ -278,6 +278,32 @@ def test_delete_assignment_record_resets_server_help_history_and_budget(tmp_path
     assert summary["ai_total"] == 0
 
 
+def test_delete_legacy_assignment_removes_logs_for_derived_aliases(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
+    monkeypatch.setattr(course_board_server, "TEACHER_ASSIGNMENTS_DIR", tmp_path / "teacher-assignments")
+    storage = assignment_records.JsonAssignmentRecordStorage(tmp_path, tmp_path / "teacher-assignments")
+    assignment_payload = assignment_records.build_assignment_record(
+        assignment_id="assignment-legacy-riutilizzabile",
+        activity_id="python-base-somma-001",
+        activity_path="activities/python-base-somma-001.json",
+        target_type="student",
+        assigned_at="2026-10-12T09:00:00+02:00",
+        due_at="2026-10-19T23:59:00+02:00",
+        targets=[{"target": "studenti/rossi-mario"}],
+    )
+    assignment = storage.write_assignment(assignment_payload)
+    alias_paths = [student_help_service.server_help_log_path(tmp_path, "rossi-mario", assignment["id"])]
+    for log_path in alias_paths:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        log_path.write_text('{"events": [{"help_type": "ai", "allowed": true}]}\n', encoding="utf-8")
+
+    course_board_server.delete_assignment_record({"assignment_id": assignment["id"]})
+    storage.write_assignment(assignment_payload)
+
+    assert all(not log_path.exists() for log_path in alias_paths)
+
+
 def test_delete_assignment_keeps_record_when_help_log_removal_fails(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")

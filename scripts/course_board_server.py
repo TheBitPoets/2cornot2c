@@ -383,11 +383,10 @@ def delete_assignment_record(payload: dict) -> dict:
     with assignment_operation_lock(assignment_id):
         record_storage = assignment_record_storage()
         assignment = record_storage.read_assignment(assignment_id)
-        student_ids = {
-            str(target.get("student_id", "")).strip()
-            for target in assignment.get("targets", [])
-            if isinstance(target, dict) and str(target.get("student_id", "")).strip()
-        }
+        student_ids = set()
+        for target in assignment.get("targets", []):
+            if isinstance(target, dict):
+                student_ids.update(student_lab_service.target_student_aliases(target))
         for student_id in student_ids:
             log_dir = student_help_service.server_help_log_path(ROOT, student_id, assignment_id).parent
             if log_dir.is_dir():

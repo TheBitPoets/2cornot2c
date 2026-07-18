@@ -70,9 +70,15 @@ def target_matches_student(target: dict[str, Any], student_id: str) -> bool:
     """Return whether an assignment target belongs to the requested student."""
 
     clean_student_id = clean_text(student_id)
+    return clean_student_id in target_student_aliases(target)
+
+
+def target_student_aliases(target: dict[str, Any]) -> set[str]:
+    """Return canonical or legacy identities accepted for one target."""
+
     stable_student_id = clean_text(target.get("student_id"))
     if stable_student_id:
-        return clean_student_id == stable_student_id
+        return {stable_student_id}
     candidates = {
         clean_text(target.get("display_name")),
         target_student_id(target),
@@ -82,7 +88,7 @@ def target_matches_student(target: dict[str, Any], student_id: str) -> bool:
         if value:
             candidates.add(Path(value).name)
             candidates.add(value.rstrip("/").split("/")[-1])
-    return clean_student_id in {candidate for candidate in candidates if candidate}
+    return {candidate for candidate in candidates if candidate}
 
 
 def target_repo_path(root: Path, target: dict[str, Any], student_id: str) -> Path | None:
