@@ -1778,7 +1778,7 @@ function renderAssignmentSelect() {
   if (els.deleteAssignmentBtn) {
     els.deleteAssignmentBtn.disabled = !state.selectedAssignmentId;
     els.deleteAssignmentBtn.title = state.selectedAssignmentId
-      ? "Cancella solo il record docente dell'assegnazione selezionata. Non rimuove eventuali file gia distribuiti nei repository studenti."
+      ? "Cancella il record docente, le richieste di aiuto autorevoli e il relativo conteggio del budget. Non rimuove workspace o file gia distribuiti nei repository studenti."
       : "Seleziona un'assegnazione da tracciare prima di cancellarla.";
   }
   if (els.assignmentStatus) {
@@ -3667,8 +3667,9 @@ async function deleteSelectedAssignment() {
   const label = assignment ? assignmentLabel(assignment) : assignmentId;
   const confirmed = window.confirm?.(
     `Cancellare l'assegnazione "${label}"?\n\n` +
-    "Verrà eliminato solo il record docente in teacher-assignments. " +
-    "Eventuali file già distribuiti nei repository studenti non verranno rimossi."
+    "Verranno eliminati il record docente in teacher-assignments, le richieste di aiuto autorevoli " +
+    "e il relativo conteggio del budget. Eventuali workspace e file già distribuiti nei repository " +
+    "studenti non verranno rimossi."
   );
   if (!confirmed) return;
   els.deleteAssignmentBtn.disabled = true;

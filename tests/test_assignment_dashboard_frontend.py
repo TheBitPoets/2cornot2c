@@ -1035,6 +1035,11 @@ def test_delete_selected_assignment_posts_confirmation_and_refreshes_list() -> N
     run_dashboard_js(
         """
         (async () => {
+          let confirmation = "";
+          tested.window.confirm = (message) => {
+            confirmation = message;
+            return true;
+          };
           tested.state.dueAssignments = [{
             id: "assignment-python-base-somma-001-3a",
             activity_id: "python-base-somma-001",
@@ -1067,6 +1072,9 @@ def test_delete_selected_assignment_posts_confirmation_and_refreshes_list() -> N
           assert.equal(tested.state.selectedAssignmentId, "");
           assert.equal(tested.els.deleteAssignmentBtn.disabled, true);
           assert.match(tested.els.status.textContent, /Assegnazione cancellata/);
+          assert.match(confirmation, /richieste di aiuto autorevoli/);
+          assert.match(confirmation, /conteggio del budget/);
+          assert.match(confirmation, /workspace e file.*non verranno rimossi/s);
         })();
         """
     )
@@ -2972,6 +2980,8 @@ def test_assignment_and_report_panels_are_separated() -> None:
     assert 'id="generateReportBtn"' in report_section
     assert 'id="deleteAssignmentBtn"' in report_section
     assert "Cancella assegnazione" in report_section
+    assert "richieste di aiuto autorevoli" in report_section
+    assert "conteggio del budget" in report_section
     assert 'id="saveAssignmentBtn"' not in report_section
     assert 'id="distributeAssignmentBtn"' not in report_section
     assert 'id="activitySelect"' not in report_section
