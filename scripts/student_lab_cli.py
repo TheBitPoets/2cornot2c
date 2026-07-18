@@ -28,6 +28,10 @@ DEFAULT_SERVER_URL = "http://127.0.0.1:8765"
 HELP_REQUEST_TIMEOUT_SECONDS = 150
 
 
+class StudentHelpRequestPendingError(ValueError):
+    """Report that an idempotent help request is still being processed."""
+
+
 STATUS_LABELS = {
     "pending": "Da fare",
     "missing": "Mancante",
@@ -607,6 +611,10 @@ def record_help_from_tui(
             payload = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as error:
         detail = _server_error_detail(error.read())
+        if error.code == 409:
+            raise StudentHelpRequestPendingError(
+                f"Server aiuti: {detail or 'richiesta gia salvata e ancora in elaborazione'}"
+            ) from error
         raise ValueError(f"Server aiuti: {detail or error.reason}") from error
     except urllib.error.URLError as error:
         raise ValueError(
@@ -993,6 +1001,8 @@ def run_tui(
                                 request_id=request_id,
                                 allow_insecure_http=allow_insecure_http,
                             )
+                        except StudentHelpRequestPendingError as error:
+                            print_fn(f"Richiesta aiuto gia salvata e ancora in elaborazione:\n{error}")
                         except ValueError as error:
                             print_fn(f"Richiesta aiuto non salvata:\n{error}")
                         else:

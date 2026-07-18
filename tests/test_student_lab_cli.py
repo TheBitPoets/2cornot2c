@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import io
 import json
 import sys
+import urllib.error
 from pathlib import Path
 
 import pytest
@@ -644,6 +646,33 @@ def test_record_help_from_tui_posts_only_identifiers_and_prompt(monkeypatch) -> 
     assert captured["timeout"] == student_lab_cli.HELP_REQUEST_TIMEOUT_SECONDS
 
 
+def test_record_help_from_tui_distinguishes_pending_idempotent_retry(monkeypatch) -> None:
+    response_body = io.BytesIO(
+        json.dumps({"error": "Richiesta di aiuto ancora in elaborazione. Riprova tra poco."}).encode("utf-8")
+    )
+
+    def fake_urlopen(*args, **kwargs):
+        raise urllib.error.HTTPError(
+            "https://teacher.test/api/student-lab/help",
+            409,
+            "Conflict",
+            {},
+            response_body,
+        )
+
+    monkeypatch.setattr(student_lab_cli, "student_api_urlopen", fake_urlopen)
+
+    with pytest.raises(student_lab_cli.StudentHelpRequestPendingError, match="ancora in elaborazione"):
+        student_lab_cli.record_help_from_tui(
+            assignment=sample_assignment(),
+            server_url="https://teacher.test",
+            server_token="signed-token",
+            help_type="ai",
+            prompt="Come procedo?",
+            request_id="request-pending-0001",
+        )
+
+
 def test_fetch_help_history_uses_authenticated_server_endpoint(monkeypatch) -> None:
     captured = {}
 
@@ -988,6 +1017,50 @@ def test_run_tui_distinguishes_saved_help_from_failed_refresh(monkeypatch, tmp_p
     assert result == 0
     assert fetch_count == 2
     assert any("Richiesta salvata, ma aggiornamento dati non disponibile" in output for output in outputs)
+    assert not any("Richiesta aiuto non salvata" in output for output in outputs)
+
+
+def test_run_tui_reuses_request_id_while_help_is_pending(monkeypatch, tmp_path) -> None:
+    payload = sample_payload()
+    outputs = []
+    inputs = iter(
+        [
+            "1",
+            "a",
+            "3",
+            "Come procedo?",
+            "",
+            "a",
+            "3",
+            "Come procedo?",
+            "",
+            "q",
+        ]
+    )
+    request_ids = []
+
+    monkeypatch.setattr(student_lab_cli, "fetch_student_lab_payload", lambda **kwargs: payload)
+
+    def fake_record_help(**kwargs):
+        request_ids.append(kwargs["request_id"])
+        raise student_lab_cli.StudentHelpRequestPendingError("ancora in elaborazione")
+
+    monkeypatch.setattr(student_lab_cli, "record_help_from_tui", fake_record_help)
+
+    result = student_lab_cli.run_tui(
+        student_id="rossi-mario",
+        root=tmp_path,
+        input_fn=lambda prompt: next(inputs),
+        print_fn=outputs.append,
+        clear=False,
+        server_url="https://server.test",
+        server_token="signed-token",
+    )
+
+    assert result == 0
+    assert len(request_ids) == 2
+    assert request_ids[0] == request_ids[1]
+    assert sum("gia salvata e ancora in elaborazione" in output for output in outputs) == 2
     assert not any("Richiesta aiuto non salvata" in output for output in outputs)
 
 
