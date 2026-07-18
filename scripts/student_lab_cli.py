@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import subprocess
 import sys
 import textwrap
+import urllib.error
+import urllib.request
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
@@ -14,11 +17,12 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from scripts import student_help_service, student_lab_runner, student_lab_service
-from scripts.student_help_provider import DeterministicStudentHelpProvider
 
 
 InputFn = Callable[[str], str]
 PrintFn = Callable[[str], None]
+DEFAULT_SERVER_URL = "http://127.0.0.1:8765"
+HELP_REQUEST_TIMEOUT_SECONDS = 150
 
 
 STATUS_LABELS = {
@@ -390,9 +394,6 @@ HELP_MENU = {
     "3": "ai",
 }
 
-DEFAULT_HELP_PROVIDER = DeterministicStudentHelpProvider()
-
-
 def help_choice_label() -> str:
     """Return a compact help-type menu label."""
 
@@ -502,52 +503,64 @@ def render_help_history(
     return "\n".join(lines)
 
 
-def help_provider_context(assignment: dict[str, Any]) -> dict[str, Any]:
-    """Return the minimal assignment context allowed for the local help provider."""
-
-    activity = assignment.get("activity") if isinstance(assignment.get("activity"), dict) else {}
-    grading = assignment.get("grading") if isinstance(assignment.get("grading"), dict) else {}
-    report = assignment.get("report") if isinstance(assignment.get("report"), dict) else {}
-    tests = report.get("tests") if isinstance(report.get("tests"), list) else []
-    failed_tests = [
-        clean_text(test.get("name"))
-        for test in tests
-        if isinstance(test, dict) and test.get("passed") is False and clean_text(test.get("name"))
-    ]
-    raw_topics = activity.get("topics")
-    topics = raw_topics if isinstance(raw_topics, list) else []
-    return {
-        "title": clean_text(assignment.get("title")),
-        "topics": [clean_text(topic) for topic in topics if clean_text(topic)],
-        "grading_status": clean_text(grading.get("status")),
-        "failed_tests": failed_tests,
-    }
-
-
 def record_help_from_tui(
     *,
     assignment: dict[str, Any],
-    root: Path,
+    server_url: str,
+    server_token: str,
     help_type: str,
     prompt: str,
-    now: str | None = None,
 ) -> dict[str, Any]:
-    """Record one student help request from the TUI."""
+    """Send one student help request to the teacher-side server."""
 
-    repo_path = assignment_repo_path(assignment, root=root)
-    if repo_path is None:
-        raise ValueError("Repository studente non disponibile per salvare la richiesta di aiuto.")
-    support_policy = assignment.get("support_policy") if isinstance(assignment.get("support_policy"), dict) else {}
-    return student_help_service.record_help_request(
-        repo_path=repo_path,
-        activity_id=clean_text(assignment.get("activity_id"), ""),
-        support_policy=support_policy,
-        help_type=help_type,
-        prompt=prompt,
-        now=now,
-        provider=DEFAULT_HELP_PROVIDER,
-        context=help_provider_context(assignment),
+    assignment_id = clean_text(assignment.get("assignment_id"), "")
+    if not assignment_id:
+        raise ValueError("Identificativo consegna non disponibile.")
+    if not server_token.strip():
+        raise ValueError("Token studente mancante. Imposta THEBITLAB_STUDENT_HELP_TOKEN.")
+    body = json.dumps(
+        {
+            "assignment_id": assignment_id,
+            "help_type": help_type,
+            "prompt": prompt,
+        },
+        ensure_ascii=False,
+    ).encode("utf-8")
+    request = urllib.request.Request(
+        f"{server_url.rstrip('/')}/api/student-lab/help",
+        data=body,
+        headers={
+            "Content-Type": "application/json; charset=utf-8",
+            "Authorization": f"Bearer {server_token.strip()}",
+        },
+        method="POST",
     )
+    try:
+        with urllib.request.urlopen(request, timeout=HELP_REQUEST_TIMEOUT_SECONDS) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as error:
+        detail = _server_error_detail(error.read())
+        raise ValueError(f"Server aiuti: {detail or error.reason}") from error
+    except urllib.error.URLError as error:
+        raise ValueError(
+            f"Server non raggiungibile su {server_url}. Avvialo con scripts/course_board_server.py."
+        ) from error
+    except TimeoutError as error:
+        raise ValueError("Il server aiuti non ha risposto entro il tempo previsto.") from error
+    except (json.JSONDecodeError, UnicodeDecodeError) as error:
+        raise ValueError("Il server aiuti ha restituito una risposta non valida.") from error
+    event = payload.get("event") if isinstance(payload, dict) else None
+    if not isinstance(event, dict):
+        raise ValueError("Il server aiuti non ha restituito l'evento salvato.")
+    return event
+
+
+def _server_error_detail(body: bytes) -> str:
+    try:
+        payload = json.loads(body.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return "richiesta rifiutata"
+    return clean_text(payload.get("error"), "richiesta rifiutata") if isinstance(payload, dict) else "richiesta rifiutata"
 
 
 def help_result_message(event: dict[str, Any], use_color: bool = False) -> str:
@@ -662,6 +675,8 @@ def run_tui(
     print_fn: PrintFn = print,
     clear: bool = True,
     use_color: bool = False,
+    server_url: str = DEFAULT_SERVER_URL,
+    server_token: str = "",
 ) -> int:
     """Run the interactive student lab loop."""
 
@@ -719,10 +734,10 @@ def run_tui(
                         try:
                             event = record_help_from_tui(
                                 assignment=assignment,
-                                root=root,
+                                server_url=server_url,
+                                server_token=server_token,
                                 help_type=help_type,
                                 prompt=prompt,
-                                now=now,
                             )
                             print_fn(help_result_message(event, use_color=use_color))
                             payload = load_payload(root, student_id, now)
@@ -754,6 +769,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--now", help="Data ISO da usare per calcolare scadenze e mancanti.")
     parser.add_argument("--no-clear", action="store_true", help="Non pulire lo schermo tra una vista e l'altra.")
     parser.add_argument("--no-color", action="store_true", help="Disabilita colori ANSI.")
+    parser.add_argument(
+        "--server-url",
+        default=os.environ.get("THEBITLAB_SERVER_URL", DEFAULT_SERVER_URL),
+        help="URL del server locale che gestisce richieste di aiuto e provider Codex.",
+    )
+    parser.add_argument(
+        "--server-token",
+        default=os.environ.get("THEBITLAB_STUDENT_HELP_TOKEN", ""),
+        help="Token personale firmato usato per autenticare le richieste di aiuto.",
+    )
     return parser.parse_args()
 
 
@@ -768,6 +793,8 @@ def main() -> int:
             now=args.now,
             clear=not args.no_clear,
             use_color=supports_color(args.no_color),
+            server_url=args.server_url,
+            server_token=args.server_token,
         )
     except ValueError as error:
         print(f"Lab studente non disponibile:\n{error}", file=sys.stderr)

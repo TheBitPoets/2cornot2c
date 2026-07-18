@@ -12,10 +12,12 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from scripts import assignment_records, student_help_service, student_support_policy, track_assignments
+from scripts.student_help_provider import StudentHelpProvider
 from scripts.thebitlab_contracts import normalize_activity
 
 
 DEFAULT_STUDENT_REPOS_DIR = Path("examples/assignment_tracking/student_repos")
+MAX_HELP_PROMPT_CHARS = 2000
 
 
 def clean_text(value: Any) -> str:
@@ -106,6 +108,7 @@ def load_activity_summary(root: Path, activity_path_value: str) -> dict[str, Any
             "language": "",
             "source_name": "",
             "topics": [],
+            "instructions": "",
             "student_support_mode": "",
         }
     payload = json.loads(activity_path.read_text(encoding="utf-8-sig"))
@@ -120,6 +123,7 @@ def load_activity_summary(root: Path, activity_path_value: str) -> dict[str, Any
         "language": clean_text(activity.get("language")),
         "source_name": clean_text(activity.get("source_name")),
         "topics": activity.get("topics") if isinstance(activity.get("topics"), list) else [],
+        "instructions": clean_text(activity.get("instructions")),
         "student_support_mode": clean_text(activity.get("student_support_mode")),
     }
 
@@ -314,6 +318,99 @@ def student_lab_payload(
             now=now,
         ),
     }
+
+
+def assignment_repo_path(root: Path, assignment: dict[str, Any]) -> Path | None:
+    """Return the student repository represented by one server-built assignment."""
+
+    help_data = assignment.get("help") if isinstance(assignment.get("help"), dict) else {}
+    help_path = clean_text(help_data.get("path"))
+    normalized_help_path = help_path.replace("\\", "/")
+    if help_path and "/help/" in normalized_help_path:
+        resolved = resolve_local_path(root, help_path)
+        return resolved.parents[2] if len(resolved.parents) >= 3 else None
+    workspace = assignment.get("workspace") if isinstance(assignment.get("workspace"), dict) else {}
+    workspace_path = clean_text(workspace.get("path"))
+    if workspace_path and "/assignments/" in workspace_path.replace("\\", "/"):
+        resolved = resolve_local_path(root, workspace_path)
+        return resolved.parents[1] if len(resolved.parents) >= 2 else None
+    return None
+
+
+def help_provider_context(assignment: dict[str, Any]) -> dict[str, Any]:
+    """Return the minimal assignment context allowed to leave the service."""
+
+    activity = assignment.get("activity") if isinstance(assignment.get("activity"), dict) else {}
+    grading = assignment.get("grading") if isinstance(assignment.get("grading"), dict) else {}
+    report = assignment.get("report") if isinstance(assignment.get("report"), dict) else {}
+    tests = report.get("tests") if isinstance(report.get("tests"), list) else []
+    failed_tests = [
+        clean_text(test.get("name"))
+        for test in tests
+        if isinstance(test, dict) and test.get("passed") is False and clean_text(test.get("name"))
+    ]
+    topics = activity.get("topics") if isinstance(activity.get("topics"), list) else []
+    return {
+        "title": clean_text(assignment.get("title")),
+        "instructions": clean_text(activity.get("instructions")),
+        "language": clean_text(activity.get("language")),
+        "topics": [clean_text(topic) for topic in topics if clean_text(topic)],
+        "grading_status": clean_text(grading.get("status")),
+        "failed_tests": failed_tests,
+    }
+
+
+def record_student_help_request(
+    *,
+    root: Path,
+    student_id: str,
+    assignment_id: str,
+    help_type: str,
+    prompt: str,
+    provider: StudentHelpProvider,
+    assignments_dir: Path | None = None,
+    now: str | None = None,
+) -> dict[str, Any]:
+    """Validate and record a server-authoritative student help request."""
+
+    clean_student_id = clean_text(student_id)
+    clean_assignment_id = clean_text(assignment_id)
+    clean_prompt = clean_text(prompt)
+    if not clean_student_id:
+        raise ValueError("student_id obbligatorio.")
+    if not clean_assignment_id:
+        raise ValueError("assignment_id obbligatorio.")
+    if not clean_prompt:
+        raise ValueError("La richiesta di aiuto non puo essere vuota.")
+    if len(clean_prompt) > MAX_HELP_PROMPT_CHARS:
+        raise ValueError(f"La richiesta di aiuto supera {MAX_HELP_PROMPT_CHARS} caratteri.")
+
+    assignments = list_student_lab_assignments(
+        root=root,
+        student_id=clean_student_id,
+        assignments_dir=assignments_dir,
+        now=now,
+    )
+    assignment = next(
+        (item for item in assignments if clean_text(item.get("assignment_id")) == clean_assignment_id),
+        None,
+    )
+    if assignment is None:
+        raise ValueError("Consegna non trovata per lo studente indicato.")
+    repo_path = assignment_repo_path(root, assignment)
+    if repo_path is None:
+        raise ValueError("Repository studente non disponibile per salvare la richiesta di aiuto.")
+    support_policy = assignment.get("support_policy") if isinstance(assignment.get("support_policy"), dict) else {}
+    return student_help_service.record_help_request(
+        repo_path=repo_path,
+        activity_id=clean_text(assignment.get("activity_id")),
+        support_policy=support_policy,
+        help_type=help_type,
+        prompt=clean_prompt,
+        now=now,
+        provider=provider,
+        context=help_provider_context(assignment),
+    )
 
 
 def parse_args() -> argparse.Namespace:

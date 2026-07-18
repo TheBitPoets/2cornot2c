@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import json
+import threading
+import urllib.error
+import urllib.request
 
 import pytest
 
-from scripts import assignment_records, course_board_server, student_lab_demo_setup
+from scripts import assignment_records, course_board_server, student_help_auth, student_lab_demo_setup
 
 
 def patch_assignment_paths(tmp_path, monkeypatch) -> None:
@@ -920,6 +923,130 @@ def test_student_dashboard_endpoint_includes_student_lab_results(tmp_path, monke
     assert lab_assignment["report"]["exists"] is True
     assert lab_assignment["grading"]["status"] == "graded_passed"
     assert lab_assignment["grading"]["tests_passed"] == 2
+
+
+def test_record_student_help_delegates_only_client_identifiers_to_service(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "TEACHER_ASSIGNMENTS_DIR", tmp_path / "teacher-assignments")
+    provider = object()
+    captured = {}
+    monkeypatch.setattr(course_board_server, "student_help_provider", lambda: provider)
+
+    def fake_record(**kwargs):
+        captured.update(kwargs)
+        return {"allowed": True, "label": "Aiuto AI"}
+
+    monkeypatch.setattr(course_board_server.student_lab_service, "record_student_help_request", fake_record)
+
+    response = course_board_server.record_student_help(
+        {
+            "student_id": "rossi-mario",
+            "assignment_id": "assignment-001",
+            "help_type": "ai",
+            "prompt": "Dammi una domanda guida.",
+            "support_policy": {"ai_allowed": True},
+            "context": {"secret": "client-controlled"},
+        },
+        student_id="rossi-mario",
+    )
+
+    assert response == {"ok": True, "event": {"allowed": True, "label": "Aiuto AI"}}
+    assert captured == {
+        "root": tmp_path,
+        "assignments_dir": tmp_path / "teacher-assignments",
+        "student_id": "rossi-mario",
+        "assignment_id": "assignment-001",
+        "help_type": "ai",
+        "prompt": "Dammi una domanda guida.",
+        "provider": provider,
+    }
+
+
+def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, monkeypatch) -> None:
+    original_root = course_board_server.ROOT
+    student_lab_demo_setup.prepare_demo(tmp_path)
+    monkeypatch.setenv("THEBITLAB_STUDENT_HELP_PROVIDER", "local")
+    secret = "demo-student-help-secret-for-tests-2026"
+    monkeypatch.setenv("THEBITLAB_STUDENT_HELP_SECRET", secret)
+    token = student_help_auth.create_student_token("rossi-mario", secret)
+    server = None
+    thread = None
+
+    try:
+        course_board_server.configure_data_root(tmp_path)
+        server = course_board_server.ThreadingHTTPServer(("127.0.0.1", 0), course_board_server.CourseBoardHandler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        base_url = f"http://127.0.0.1:{server.server_address[1]}"
+        with urllib.request.urlopen(
+            f"{base_url}/api/student-dashboard?student_id=rossi-mario",
+            timeout=5,
+        ) as response:
+            dashboard = json.loads(response.read().decode("utf-8"))
+        assignment = dashboard["lab"]["assignments"][0]
+        unauthenticated_request = urllib.request.Request(
+            f"{base_url}/api/student-lab/help",
+            data=b"{}",
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with pytest.raises(urllib.error.HTTPError) as unauthorized:
+            urllib.request.urlopen(unauthenticated_request, timeout=5)
+        assert unauthorized.value.code == 401
+
+        oversized_request = urllib.request.Request(
+            f"{base_url}/api/student-lab/help",
+            data=b"x" * (course_board_server.MAX_STUDENT_HELP_REQUEST_BYTES + 1),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {token}",
+            },
+            method="POST",
+        )
+        with pytest.raises(urllib.error.HTTPError) as oversized:
+            urllib.request.urlopen(oversized_request, timeout=5)
+        assert oversized.value.code == 413
+
+        request = urllib.request.Request(
+            f"{base_url}/api/student-lab/help",
+            data=json.dumps(
+                {
+                    "assignment_id": assignment["assignment_id"],
+                    "help_type": "teoria",
+                    "prompt": "Quale concetto devo ripassare?",
+                }
+            ).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json; charset=utf-8",
+                "Authorization": f"Bearer {token}",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(request, timeout=5) as response:
+            result = json.loads(response.read().decode("utf-8"))
+    finally:
+        if server is not None:
+            server.shutdown()
+            server.server_close()
+        if thread is not None:
+            thread.join(timeout=5)
+        course_board_server.configure_data_root(original_root)
+
+    assert result["ok"] is True
+    assert result["event"]["allowed"] is True
+    assert result["event"]["response"]["provider"] == "deterministic-local"
+    log_path = (
+        tmp_path
+        / "examples"
+        / "assignment_tracking"
+        / "student_repos"
+        / "rossi-mario"
+        / "help"
+        / assignment["activity_id"]
+        / "events.json"
+    )
+    events = json.loads(log_path.read_text(encoding="utf-8"))["events"]
+    assert events[-1]["prompt"] == "Quale concetto devo ripassare?"
 
 
 def test_student_dashboard_uses_configured_demo_data_root(tmp_path) -> None:

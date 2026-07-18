@@ -28,6 +28,7 @@ import urllib.request
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from typing import Any
 from urllib.parse import parse_qs, unquote, urlparse
 
 APP_ROOT = Path(__file__).resolve().parents[1]
@@ -43,12 +44,15 @@ from scripts import (
     create_activity,
     create_submission_scaffold,
     manual_ai_feedback,
+    student_help_auth,
+    student_help_codex_adapter,
     student_lab_service,
     thebitlab_services,
     thebitlab_storage,
     track_assignments,
 )
 from scripts.thebitlab_contracts import normalize_activity
+from scripts.student_help_provider import DeterministicStudentHelpProvider, StudentHelpProvider
 
 DESIGN_PATH = ROOT / "doc" / "course_design.json"
 COURSE_DESIGNS_DIR = ROOT / "doc" / "course_designs"
@@ -86,6 +90,39 @@ AI_FRAME_TIMEOUT_SECONDS = 120
 AI_COURSE_PLAN_TIMEOUT_SECONDS = 240
 COMPACT_TEXT_CHARS = 1200
 MAX_SUBMISSION_FILE_BYTES = 512 * 1024
+MAX_STUDENT_HELP_REQUEST_BYTES = 16 * 1024
+
+
+def student_help_provider() -> StudentHelpProvider:
+    """Return the server-side provider selected for student help."""
+
+    local_provider = DeterministicStudentHelpProvider()
+    provider_name = os.environ.get("THEBITLAB_STUDENT_HELP_PROVIDER", "codex").strip().lower()
+    if provider_name in {"local", "deterministic-local"}:
+        return local_provider
+    if provider_name != "codex":
+        raise ValueError(f"Provider aiuto studente non supportato: {provider_name}.")
+    codex_provider = student_help_codex_adapter.CodexStudentHelpProvider(
+        codex_command=os.environ.get("CODEX_COMMAND", "codex"),
+        model=os.environ.get("THEBITLAB_STUDENT_HELP_CODEX_MODEL", ""),
+    )
+    ai_provider = student_help_codex_adapter.FallbackStudentHelpProvider(codex_provider, local_provider)
+    return student_help_codex_adapter.StudentHelpProviderRouter(ai_provider, local_provider)
+
+
+def record_student_help(payload: dict[str, Any], *, student_id: str) -> dict[str, Any]:
+    """Record one TUI request using server-owned assignment context and policy."""
+
+    event = student_lab_service.record_student_help_request(
+        root=ROOT,
+        assignments_dir=TEACHER_ASSIGNMENTS_DIR,
+        student_id=student_id,
+        assignment_id=payload.get("assignment_id", ""),
+        help_type=payload.get("help_type", ""),
+        prompt=payload.get("prompt", ""),
+        provider=student_help_provider(),
+    )
+    return {"ok": True, "event": event}
 
 
 def configure_data_root(root: Path) -> Path:
@@ -2112,6 +2149,25 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
+        if parsed.path == "/api/student-lab/help":
+            try:
+                student_id = student_help_auth.student_id_from_authorization(
+                    self.headers.get("Authorization", ""),
+                    student_help_auth.student_help_secret(),
+                )
+            except ValueError as error:
+                self.write_error_json(401, str(error))
+                return
+            length = int(self.headers.get("Content-Length", "0"))
+            if length < 1 or length > MAX_STUDENT_HELP_REQUEST_BYTES:
+                self.write_error_json(413, "Richiesta aiuto troppo grande o vuota.")
+                return
+            try:
+                payload = json.loads(self.rfile.read(length).decode("utf-8"))
+                self.write_json(record_student_help(payload, student_id=student_id))
+            except Exception as error:  # noqa: BLE001
+                self.write_error_json(400, str(error))
+            return
         length = int(self.headers.get("Content-Length", "0"))
         payload = json.loads(self.rfile.read(length).decode("utf-8"))
         if parsed.path == "/api/course-design":
@@ -2420,6 +2476,14 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
     def write_json(self, payload: dict) -> None:
         body = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
         self.send_response(200)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def write_error_json(self, status: int, message: str) -> None:
+        body = json.dumps({"error": message}, ensure_ascii=False).encode("utf-8")
+        self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()

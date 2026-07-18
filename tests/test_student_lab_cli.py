@@ -458,31 +458,72 @@ def test_help_history_block_wraps_long_urls_without_horizontal_overflow() -> Non
     assert "".join(line.removeprefix("  ") for line in lines[1:]) == long_url
 
 
-def test_help_provider_context_contains_only_minimal_assignment_data() -> None:
-    assignment = sample_assignment(
-        report={
-            "tests": [
-                {"name": "test_base", "passed": True},
-                {"name": "test_negativi", "passed": False},
-            ]
-        },
-        grading={"status": "graded_failed"},
-    )
-
-    context = student_lab_cli.help_provider_context(assignment)
-
-    assert context == {
-        "title": "Somma in Python",
-        "topics": ["variabili", "input-output"],
-        "grading_status": "graded_failed",
-        "failed_tests": ["test_negativi"],
-    }
-    assert "student_id" not in context
-
-
 def test_ai_budget_label_handles_missing_and_exhausted_budget() -> None:
     assert student_lab_cli.ai_budget_label({}) == "non disponibile"
     assert student_lab_cli.ai_budget_label({"limit": 2, "used": 2, "remaining": 0, "exhausted": True}) == "2/2 usate, 0 rimanenti (esaurito)"
+
+
+def test_record_help_from_tui_posts_only_identifiers_and_prompt(monkeypatch) -> None:
+    captured = {}
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return json.dumps({"ok": True, "event": {"allowed": True, "label": "Aiuto AI"}}).encode("utf-8")
+
+    def fake_urlopen(request, timeout):
+        captured["url"] = request.full_url
+        captured["headers"] = dict(request.header_items())
+        captured["payload"] = json.loads(request.data.decode("utf-8"))
+        captured["timeout"] = timeout
+        return FakeResponse()
+
+    monkeypatch.setattr(student_lab_cli.urllib.request, "urlopen", fake_urlopen)
+
+    event = student_lab_cli.record_help_from_tui(
+        assignment=sample_assignment(),
+        server_url="http://teacher.test:8765/",
+        server_token="signed-token",
+        help_type="ai",
+        prompt="Come procedo?",
+    )
+
+    assert event == {"allowed": True, "label": "Aiuto AI"}
+    assert captured["url"] == "http://teacher.test:8765/api/student-lab/help"
+    assert captured["payload"] == {
+        "assignment_id": "assignment-python-base-somma-001-demo",
+        "help_type": "ai",
+        "prompt": "Come procedo?",
+    }
+    assert captured["headers"]["Content-type"] == "application/json; charset=utf-8"
+    assert captured["headers"]["Authorization"] == "Bearer signed-token"
+    assert captured["timeout"] == student_lab_cli.HELP_REQUEST_TIMEOUT_SECONDS
+
+
+def test_record_help_from_tui_reports_server_timeout(monkeypatch) -> None:
+    monkeypatch.setattr(
+        student_lab_cli.urllib.request,
+        "urlopen",
+        lambda *args, **kwargs: (_ for _ in ()).throw(TimeoutError()),
+    )
+
+    try:
+        student_lab_cli.record_help_from_tui(
+            assignment=sample_assignment(),
+            server_url="http://teacher.test:8765",
+            server_token="signed-token",
+            help_type="ai",
+            prompt="Come procedo?",
+        )
+    except ValueError as error:
+        assert "non ha risposto entro il tempo previsto" in str(error)
+    else:
+        raise AssertionError("Il timeout del server deve essere mostrato come errore TUI")
 
 
 def test_run_tui_can_show_detail_and_exit(monkeypatch, tmp_path) -> None:
@@ -516,6 +557,21 @@ def test_run_tui_can_record_help_request_and_reload(monkeypatch, tmp_path) -> No
         return payload
 
     monkeypatch.setattr(student_lab_cli, "load_payload", fake_load_payload)
+    requests = []
+
+    def fake_record_help(**kwargs):
+        requests.append(kwargs)
+        return {
+            "allowed": True,
+            "label": "Aiuto AI",
+            "response": {
+                "status": "ready",
+                "provider_label": "Codex locale (macchina docente)",
+                "message": "Parti dal primo test fallito.",
+            },
+        }
+
+    monkeypatch.setattr(student_lab_cli, "record_help_from_tui", fake_record_help)
 
     result = student_lab_cli.run_tui(
         student_id="rossi-mario",
@@ -523,15 +579,22 @@ def test_run_tui_can_record_help_request_and_reload(monkeypatch, tmp_path) -> No
         input_fn=lambda prompt: next(inputs),
         print_fn=outputs.append,
         clear=False,
+        server_url="http://server.test:8765",
+        server_token="signed-token",
     )
-
-    log_path = tmp_path / "examples" / "assignment_tracking" / "student_repos" / "rossi-mario" / "help" / "python-base-somma-001" / "events.json"
 
     assert result == 0
     assert len(load_calls) == 2
-    assert log_path.exists()
-    assert "Mi scrivi la soluzione?" in log_path.read_text(encoding="utf-8")
-    assert any("Esito richiesta aiuto" in output and "Esito:             bloccata" in output for output in outputs)
+    assert requests == [
+        {
+            "assignment": payload["assignments"][0],
+            "server_url": "http://server.test:8765",
+            "server_token": "signed-token",
+            "help_type": "ai",
+            "prompt": "Mi scrivi la soluzione?",
+        }
+    ]
+    assert any("Esito richiesta aiuto" in output and "Codex locale" in output for output in outputs)
     assert sum(1 for output in outputs if "Dettaglio consegna" in output) == 2
 
 

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import threading
+import uuid
 from json import JSONDecodeError
 from datetime import datetime
 from pathlib import Path
@@ -16,6 +18,8 @@ from scripts.student_help_provider import (
 HELP_LOG_SCHEMA_VERSION = "student_help_log.v1"
 HELP_EVENT_SCHEMA_VERSION = "student_help_event.v1"
 PROVIDER_ERROR_DETAIL = "Il provider non ha potuto completare la richiesta. Riprova più tardi o avvisa il docente."
+_HELP_LOG_LOCKS: dict[str, threading.Lock] = {}
+_HELP_LOG_LOCKS_GUARD = threading.Lock()
 
 HELP_TYPES: dict[str, dict[str, str]] = {
     "feedback-tecnico": {
@@ -200,6 +204,14 @@ def write_help_events(log_path: Path, events: list[dict[str, Any]]) -> None:
     log_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def help_log_lock(log_path: Path) -> threading.Lock:
+    """Return the process-local lock used to serialize one help log."""
+
+    key = str(log_path.resolve(strict=False))
+    with _HELP_LOG_LOCKS_GUARD:
+        return _HELP_LOG_LOCKS.setdefault(key, threading.Lock())
+
+
 def record_help_request(
     *,
     repo_path: Path,
@@ -212,34 +224,39 @@ def record_help_request(
     context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     path = help_log_path(repo_path, activity_id)
-    events = load_help_events(path)
-    decision = apply_budget_limit(evaluate_help_request(support_policy, help_type), support_policy, events)
-    requested_at = parse_now(now)
-    event = {
-        "schema_version": HELP_EVENT_SCHEMA_VERSION,
-        "requested_at": requested_at,
-        "activity_id": clean_text(activity_id),
-        "help_type": decision["help_type"],
-        "label": decision["label"],
-        "allowed": decision["allowed"],
-        "reason": decision["reason"],
-        "prompt": clean_text(prompt),
-    }
-    if "budget" in decision:
-        event["budget"] = decision["budget"]
+    with help_log_lock(path):
+        events = load_help_events(path)
+        decision = apply_budget_limit(evaluate_help_request(support_policy, help_type), support_policy, events)
+        event = {
+            "schema_version": HELP_EVENT_SCHEMA_VERSION,
+            "request_id": uuid.uuid4().hex,
+            "requested_at": parse_now(now),
+            "activity_id": clean_text(activity_id),
+            "help_type": decision["help_type"],
+            "label": decision["label"],
+            "allowed": decision["allowed"],
+            "reason": decision["reason"],
+            "prompt": clean_text(prompt),
+        }
+        if "budget" in decision:
+            event["budget"] = decision["budget"]
+        events.append(event)
+        write_help_events(path, events)
+
     if decision["allowed"] is True and provider is not None:
         try:
-            response = provider.respond(
-                StudentHelpRequest(
-                    activity_id=clean_text(activity_id),
-                    help_type=decision["help_type"],
-                    prompt=clean_text(prompt),
-                    context=dict(context or {}),
+            response = provider_response_payload(
+                provider.respond(
+                    StudentHelpRequest(
+                        activity_id=clean_text(activity_id),
+                        help_type=decision["help_type"],
+                        prompt=clean_text(prompt),
+                        context=dict(context or {}),
+                    )
                 )
             )
-            event["response"] = provider_response_payload(response)
         except Exception:  # Provider failures must not discard the student's request.
-            event["response"] = {
+            response = {
                 "schema_version": "student_help_response.v1",
                 "status": "error",
                 "provider": type(provider).__name__,
@@ -248,8 +265,14 @@ def record_help_request(
                 "usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
                 "detail": PROVIDER_ERROR_DETAIL,
             }
-    events.append(event)
-    write_help_events(path, events)
+        with help_log_lock(path):
+            events = load_help_events(path)
+            for persisted in events:
+                if persisted.get("request_id") == event["request_id"]:
+                    persisted["response"] = response
+                    event = persisted
+                    break
+            write_help_events(path, events)
     return event
 
 

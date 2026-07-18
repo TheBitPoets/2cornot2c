@@ -2,7 +2,25 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from scripts import assignment_records, student_help_service, student_lab_service, student_support_policy
+from scripts.student_help_provider import StudentHelpResponse
+
+
+class RecordingProvider:
+    def __init__(self) -> None:
+        self.requests = []
+
+    def respond(self, request):
+        self.requests.append(request)
+        return StudentHelpResponse(
+            status="ready",
+            provider="test-server",
+            provider_label="Provider server test",
+            message="Parti dal primo test fallito.",
+            usage={"input_tokens": 1, "output_tokens": 2, "total_tokens": 3},
+        )
 
 
 def write_activity(root, activity_id: str = "python-base-somma-001", student_support_mode: str = "") -> str:
@@ -121,6 +139,80 @@ def test_student_lab_exposes_explicit_support_policy(tmp_path) -> None:
     assert assignment["support_policy"]["ai_allowed"] is True
     assert assignment["support_policy"]["ai_request_limit"] == 5
     assert "suggerimenti AI controllati" in assignment["support_policy"]["allowed"]
+
+
+def test_record_student_help_request_rebuilds_policy_and_context_on_server(tmp_path) -> None:
+    activity_id = "python-ai-assisted-001"
+    activity_path = write_activity(tmp_path, activity_id=activity_id, student_support_mode="ai-assisted")
+    assignment = write_assignment(
+        tmp_path,
+        sample_assignment(tmp_path, activity_id=activity_id, activity_path=activity_path),
+    )
+    provider = RecordingProvider()
+
+    event = student_lab_service.record_student_help_request(
+        root=tmp_path,
+        student_id="rossi-mario",
+        assignment_id=assignment["id"],
+        help_type="ai",
+        prompt="Come individuo il caso limite?",
+        provider=provider,
+        now="2026-10-18T12:00:00+02:00",
+    )
+
+    assert event["allowed"] is True
+    assert event["response"]["provider"] == "test-server"
+    assert len(provider.requests) == 1
+    assert provider.requests[0].activity_id == activity_id
+    assert provider.requests[0].context == {
+        "title": "Somma in Python",
+        "instructions": "Scrivi un programma che stampa una somma.",
+        "language": "python",
+        "topics": ["variabili", "input-output"],
+        "grading_status": "not_graded",
+        "failed_tests": [],
+    }
+    log_path = (
+        tmp_path
+        / "examples"
+        / "assignment_tracking"
+        / "student_repos"
+        / "rossi-mario"
+        / "help"
+        / activity_id
+        / "events.json"
+    )
+    assert json.loads(log_path.read_text(encoding="utf-8"))["events"][0]["prompt"] == "Come individuo il caso limite?"
+
+
+def test_record_student_help_request_rejects_assignment_of_another_student(tmp_path) -> None:
+    assignment = write_assignment(tmp_path, sample_assignment(tmp_path))
+
+    with pytest.raises(ValueError, match="Consegna non trovata"):
+        student_lab_service.record_student_help_request(
+            root=tmp_path,
+            student_id="studente-inesistente",
+            assignment_id=assignment["id"],
+            help_type="ai",
+            prompt="Prova",
+            provider=RecordingProvider(),
+            now="2026-10-18T12:00:00+02:00",
+        )
+
+
+def test_record_student_help_request_limits_untrusted_prompt_size(tmp_path) -> None:
+    assignment = write_assignment(tmp_path, sample_assignment(tmp_path))
+
+    with pytest.raises(ValueError, match="supera 2000 caratteri"):
+        student_lab_service.record_student_help_request(
+            root=tmp_path,
+            student_id="rossi-mario",
+            assignment_id=assignment["id"],
+            help_type="teoria",
+            prompt="x" * 2001,
+            provider=RecordingProvider(),
+            now="2026-10-18T12:00:00+02:00",
+        )
 
 
 def test_student_lab_marks_missing_after_due_date_without_report(tmp_path) -> None:

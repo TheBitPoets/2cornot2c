@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import json
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 
 from scripts import student_help_service, student_support_policy
 from scripts.student_help_provider import StudentHelpResponse
@@ -239,6 +242,104 @@ def test_record_help_request_blocks_ai_when_budget_is_exhausted(tmp_path) -> Non
     assert budget == {"limit": 1, "used": 1, "remaining": 0, "exhausted": True}
     assert summary["allowed"] == 1
     assert summary["denied"] == 1
+
+
+def test_concurrent_ai_requests_share_budget_and_preserve_both_events(tmp_path) -> None:
+    repo = tmp_path / "student-repo"
+    policy = dict(student_support_policy.support_policy("ai-assisted"))
+    policy["ai_request_limit"] = 1
+    entered = threading.Event()
+    release = threading.Event()
+
+    class BlockingProvider(RecordingHelpProvider):
+        def respond(self, request):
+            entered.set()
+            assert release.wait(timeout=2)
+            return super().respond(request)
+
+    provider = BlockingProvider()
+
+    def record(prompt):
+        return student_help_service.record_help_request(
+            repo_path=repo,
+            activity_id="python-base-somma-001",
+            support_policy=policy,
+            help_type="ai",
+            prompt=prompt,
+            provider=provider,
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        first_future = executor.submit(record, "Prima richiesta")
+        assert entered.wait(timeout=2)
+        second_future = executor.submit(record, "Seconda richiesta")
+        time.sleep(0.05)
+        assert len(provider.requests) == 0
+        release.set()
+        first = first_future.result(timeout=2)
+        second = second_future.result(timeout=2)
+
+    events = student_help_service.load_help_events(
+        repo / "help" / "python-base-somma-001" / "events.json"
+    )
+    assert first["allowed"] is True
+    assert second["allowed"] is False
+    assert second["reason"] == "Budget richieste AI esaurito per questa consegna."
+    assert len(provider.requests) == 1
+    assert [event["prompt"] for event in events] == ["Prima richiesta", "Seconda richiesta"]
+
+
+def test_concurrent_allowed_requests_do_not_hold_log_lock_during_provider_call(tmp_path) -> None:
+    repo = tmp_path / "student-repo"
+    policy = dict(student_support_policy.support_policy("ai-assisted"))
+    policy["ai_request_limit"] = 2
+    first_entered = threading.Event()
+    second_entered = threading.Event()
+    release_first = threading.Event()
+    call_lock = threading.Lock()
+    call_count = 0
+
+    class ConcurrentProvider(RecordingHelpProvider):
+        def respond(self, request):
+            nonlocal call_count
+            with call_lock:
+                call_count += 1
+                current = call_count
+            if current == 1:
+                first_entered.set()
+                assert release_first.wait(timeout=2)
+            else:
+                second_entered.set()
+            return super().respond(request)
+
+    provider = ConcurrentProvider()
+
+    def record(prompt):
+        return student_help_service.record_help_request(
+            repo_path=repo,
+            activity_id="python-base-somma-001",
+            support_policy=policy,
+            help_type="ai",
+            prompt=prompt,
+            provider=provider,
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        first_future = executor.submit(record, "Prima richiesta")
+        assert first_entered.wait(timeout=2)
+        second_future = executor.submit(record, "Seconda richiesta")
+        assert second_entered.wait(timeout=2)
+        second = second_future.result(timeout=2)
+        release_first.set()
+        first = first_future.result(timeout=2)
+
+    events = student_help_service.load_help_events(
+        repo / "help" / "python-base-somma-001" / "events.json"
+    )
+    assert first["response"]["status"] == "ready"
+    assert second["response"]["status"] == "ready"
+    assert len(events) == 2
+    assert all(event.get("response", {}).get("status") == "ready" for event in events)
 
 
 def test_help_summary_marks_invalid_json_without_raising(tmp_path) -> None:
