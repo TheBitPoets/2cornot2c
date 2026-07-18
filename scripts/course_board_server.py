@@ -125,6 +125,12 @@ class StudentHelpBusyError(RuntimeError):
     """Raised when another help request already owns the assignment slot."""
 
 
+def normalized_assignment_operation_id(operation_id: str) -> str:
+    """Return the canonical key shared by equivalent operation identifiers."""
+
+    return create_activity.slugify(str(operation_id or "").strip())
+
+
 class DataRootProcessLock:
     """Hold an operating-system lock for one server data root."""
 
@@ -178,7 +184,7 @@ class DataRootProcessLock:
 def assignment_operation_lock(assignment_id: str, *, blocking: bool = True):
     """Serialize one assignment operation and release its cache entry afterward."""
 
-    normalized_assignment_id = create_activity.slugify(str(assignment_id or "").strip())
+    normalized_assignment_id = normalized_assignment_operation_id(assignment_id)
     key = f"{ROOT.resolve(strict=False)}::{normalized_assignment_id}"
     with _ASSIGNMENT_OPERATION_LOCKS_GUARD:
         entry = _ASSIGNMENT_OPERATION_LOCKS.setdefault(
@@ -225,6 +231,16 @@ def student_help_operation_id(assignment_id: str, student_id: str) -> str:
     """Return the per-student admission key for one assignment help request."""
 
     return f"help::{assignment_id}::{student_id}"
+
+
+def unique_student_help_operation_ids(assignment_id: str, student_ids: set[str]) -> list[str]:
+    """Return one operation id for each effective lock key."""
+
+    operations: dict[str, str] = {}
+    for student_id in sorted(student_ids):
+        operation_id = student_help_operation_id(assignment_id, student_id)
+        operations.setdefault(normalized_assignment_operation_id(operation_id), operation_id)
+    return list(operations.values())
 
 
 def record_student_help(payload: dict[str, Any], *, student_id: str) -> dict[str, Any]:
@@ -806,9 +822,9 @@ def delete_assignment_record(payload: dict) -> dict:
             key=str,
         )
         with ExitStack() as help_operations:
-            for student_id in sorted(student_ids):
+            for operation_id in unique_student_help_operation_ids(assignment_id, student_ids):
                 help_operations.enter_context(
-                    assignment_operation_lock(student_help_operation_id(assignment_id, student_id))
+                    assignment_operation_lock(operation_id)
                 )
             with ExitStack() as log_locks:
                 for log_path in log_paths:
