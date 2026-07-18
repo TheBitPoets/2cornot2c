@@ -97,7 +97,7 @@ MAX_STUDENT_HELP_REQUEST_BYTES = 16 * 1024
 STUDENT_HELP_SERVER_ERROR = "Servizio aiuto temporaneamente non disponibile."
 PRIVATE_STATIC_ROOTS = {"teacher-assignments", "teacher-help-events", "teacher-reports"}
 REMOTE_PUBLIC_STATIC_ROOTS = {"tools"}
-LOCAL_TEACHER_API_PREFIXES = ("/api/assignment-reports",)
+REMOTE_STUDENT_API_PREFIX = "/api/student-lab/"
 
 
 class StudentHelpConfigurationError(RuntimeError):
@@ -2131,7 +2131,12 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return False
 
     def reject_remote_teacher_api(self, path: str) -> bool:
-        if path.startswith(LOCAL_TEACHER_API_PREFIXES) and not self.is_loopback_client():
+        is_remote_teacher_api = (
+            not self.is_loopback_client()
+            and path.startswith("/api/")
+            and not path.startswith(REMOTE_STUDENT_API_PREFIX)
+        )
+        if is_remote_teacher_api:
             self.write_error_json(403, "API disponibile soltanto sulla macchina docente.")
             return True
         return False

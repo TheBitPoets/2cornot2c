@@ -1114,9 +1114,21 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
 
         original_loopback_check = course_board_server.CourseBoardHandler.is_loopback_client
         monkeypatch.setattr(course_board_server.CourseBoardHandler, "is_loopback_client", lambda self: False)
-        with pytest.raises(urllib.error.HTTPError) as remote_teacher_api:
-            urllib.request.urlopen(f"{base_url}/api/assignment-reports", timeout=5)
-        assert remote_teacher_api.value.code == 403
+        for teacher_path in ("api/assignment-reports", "api/assignments", "api/student-dashboard"):
+            with pytest.raises(urllib.error.HTTPError) as remote_teacher_api:
+                urllib.request.urlopen(f"{base_url}/{teacher_path}", timeout=5)
+            assert remote_teacher_api.value.code == 403
+        remote_delete = urllib.request.Request(
+            f"{base_url}/api/assignments/delete",
+            data=b"{}",
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with pytest.raises(urllib.error.HTTPError) as remote_teacher_write:
+            urllib.request.urlopen(remote_delete, timeout=5)
+        assert remote_teacher_write.value.code == 403
+        with urllib.request.urlopen(history_request, timeout=5) as remote_student_history:
+            assert remote_student_history.status == 200
         public_asset = tmp_path / "tools" / "student-public.js"
         public_asset.parent.mkdir(parents=True, exist_ok=True)
         public_asset.write_text("console.log('pubblico');\n", encoding="utf-8")
