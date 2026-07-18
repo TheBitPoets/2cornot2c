@@ -433,6 +433,17 @@ def test_delete_assignment_waits_for_inflight_help_request(tmp_path, monkeypatch
     assert not student_help_service.server_help_log_path(tmp_path, "rossi-mario", assignment["id"]).exists()
 
 
+def test_assignment_operation_locks_are_released_after_use(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    course_board_server._ASSIGNMENT_OPERATION_LOCKS.clear()
+
+    for index in range(50):
+        with course_board_server.assignment_operation_lock(f"assignment-inesistente-{index}"):
+            assert course_board_server._ASSIGNMENT_OPERATION_LOCKS
+
+    assert course_board_server._ASSIGNMENT_OPERATION_LOCKS == {}
+
+
 def test_delete_activity_record_removes_unlinked_draft(tmp_path, monkeypatch) -> None:
     patch_assignment_paths(tmp_path, monkeypatch)
     activity_path = tmp_path / "activities" / "drafts" / "python-base-somma-001.json"

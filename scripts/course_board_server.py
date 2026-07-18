@@ -28,6 +28,7 @@ import sys
 import threading
 import urllib.error
 import urllib.request
+from contextlib import contextmanager
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -99,7 +100,7 @@ STUDENT_HELP_SERVER_ERROR = "Servizio aiuto temporaneamente non disponibile."
 PRIVATE_STATIC_ROOTS = {"teacher-assignments", "teacher-help-events", "teacher-reports"}
 REMOTE_PUBLIC_STATIC_ROOTS = {"tools"}
 REMOTE_STUDENT_API_PREFIX = "/api/student-lab/"
-_ASSIGNMENT_OPERATION_LOCKS: dict[str, threading.Lock] = {}
+_ASSIGNMENT_OPERATION_LOCKS: dict[str, dict[str, Any]] = {}
 _ASSIGNMENT_OPERATION_LOCKS_GUARD = threading.Lock()
 
 
@@ -107,12 +108,27 @@ class StudentHelpConfigurationError(RuntimeError):
     """Raised when the teacher server has an invalid help-provider setup."""
 
 
-def assignment_operation_lock(assignment_id: str) -> threading.Lock:
-    """Return the process-local lock coordinating help and deletion."""
+@contextmanager
+def assignment_operation_lock(assignment_id: str):
+    """Serialize one assignment operation and release its cache entry afterward."""
 
     key = f"{ROOT.resolve(strict=False)}::{str(assignment_id or '').strip()}"
     with _ASSIGNMENT_OPERATION_LOCKS_GUARD:
-        return _ASSIGNMENT_OPERATION_LOCKS.setdefault(key, threading.Lock())
+        entry = _ASSIGNMENT_OPERATION_LOCKS.setdefault(
+            key,
+            {"lock": threading.Lock(), "users": 0},
+        )
+        entry["users"] += 1
+    lock = entry["lock"]
+    lock.acquire()
+    try:
+        yield
+    finally:
+        lock.release()
+        with _ASSIGNMENT_OPERATION_LOCKS_GUARD:
+            entry["users"] -= 1
+            if entry["users"] == 0 and _ASSIGNMENT_OPERATION_LOCKS.get(key) is entry:
+                _ASSIGNMENT_OPERATION_LOCKS.pop(key, None)
 
 
 def student_help_provider() -> StudentHelpProvider:
