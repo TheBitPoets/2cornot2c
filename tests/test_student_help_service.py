@@ -88,8 +88,8 @@ def test_write_help_events_rejects_payload_above_read_limit(tmp_path) -> None:
     assert not log_path.exists()
 
 
-def test_write_help_events_syncs_parent_directory_after_replace(tmp_path, monkeypatch) -> None:
-    log_path = tmp_path / "help" / "events.json"
+def test_write_help_events_syncs_created_tree_and_parent_after_replace(tmp_path, monkeypatch) -> None:
+    log_path = tmp_path / "help" / "student" / "events.json"
     synced = []
     monkeypatch.setattr(
         student_help_service.assignment_records,
@@ -99,7 +99,7 @@ def test_write_help_events_syncs_parent_directory_after_replace(tmp_path, monkey
 
     student_help_service.write_help_events(log_path, [{"request_id": "request-000000000001"}])
 
-    assert synced == [log_path.parent]
+    assert synced == [tmp_path, tmp_path / "help", log_path.parent]
 
 
 def test_maximum_help_history_remains_readable_with_utf8_content(tmp_path) -> None:
