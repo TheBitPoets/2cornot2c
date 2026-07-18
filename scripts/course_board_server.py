@@ -22,6 +22,7 @@ import json
 import mimetypes
 import os
 import re
+import shutil
 import subprocess
 import sys
 import urllib.error
@@ -360,12 +361,21 @@ def list_assignment_records(now: str | None = None) -> dict:
 
 
 def delete_assignment_record(payload: dict) -> dict:
-    """Delete one explicit assignment record and return the updated list."""
+    """Delete one assignment, including its authoritative student help logs."""
 
     assignment_id = str(payload.get("assignment_id", "")).strip()
     if not assignment_id:
         raise ValueError("assignment_id obbligatorio.")
     deleted = assignment_record_storage().delete_assignment(assignment_id)
+    student_ids = {
+        str(target.get("student_id", "")).strip()
+        for target in deleted.get("targets", [])
+        if isinstance(target, dict) and str(target.get("student_id", "")).strip()
+    }
+    for student_id in student_ids:
+        log_dir = student_help_service.server_help_log_path(ROOT, student_id, assignment_id).parent
+        if log_dir.is_dir():
+            shutil.rmtree(log_dir)
     updated = list_assignment_records(str(payload.get("now", "")).strip() or None)
     return {"ok": True, "deleted": deleted, **updated}
 

@@ -238,6 +238,45 @@ def test_delete_assignment_record_removes_saved_record(tmp_path, monkeypatch) ->
     assert not (tmp_path / assignment["path"]).exists()
 
 
+def test_delete_assignment_record_resets_server_help_history_and_budget(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
+    monkeypatch.setattr(course_board_server, "TEACHER_ASSIGNMENTS_DIR", tmp_path / "teacher-assignments")
+    storage = assignment_records.JsonAssignmentRecordStorage(tmp_path, tmp_path / "teacher-assignments")
+    assignment_payload = assignment_records.build_assignment_record(
+        assignment_id="assignment-riutilizzabile",
+        activity_id="python-base-somma-001",
+        activity_path="activities/python-base-somma-001.json",
+        target_type="student",
+        assigned_at="2026-10-12T09:00:00+02:00",
+        due_at="2026-10-19T23:59:00+02:00",
+        targets=[{"student_id": "studente-stabile-001", "path": "studenti/cartella-repository"}],
+    )
+    assignment = storage.write_assignment(assignment_payload)
+    log_path = student_help_service.server_help_log_path(
+        tmp_path,
+        "studente-stabile-001",
+        assignment["id"],
+    )
+    student_help_service.record_help_request(
+        activity_id="python-base-somma-001",
+        support_policy={"mode": "studio-guidato", "ai": {"enabled": True, "max_requests": 1}},
+        help_type="ai",
+        prompt="Aiutami con la somma.",
+        now="2026-10-20T08:10:00+02:00",
+        log_path=log_path,
+    )
+    assert student_help_service.teacher_help_summary(log_path)["total"] == 1
+
+    course_board_server.delete_assignment_record({"assignment_id": assignment["id"]})
+    storage.write_assignment(assignment_payload)
+
+    summary = student_help_service.teacher_help_summary(log_path)
+    assert not log_path.parent.exists()
+    assert summary["total"] == 0
+    assert summary["ai_total"] == 0
+
+
 def test_delete_activity_record_removes_unlinked_draft(tmp_path, monkeypatch) -> None:
     patch_assignment_paths(tmp_path, monkeypatch)
     activity_path = tmp_path / "activities" / "drafts" / "python-base-somma-001.json"
