@@ -29,7 +29,7 @@ import threading
 import urllib.error
 import urllib.request
 import uuid
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -397,6 +397,25 @@ def list_assignment_records(now: str | None = None) -> dict:
     }
 
 
+def locked_student_lab_payload(*, student_id: str, now: str | None = None) -> dict[str, Any]:
+    """Build a student payload while coordinating with assignment deletion."""
+
+    assignment_ids = sorted(
+        str(assignment.get("id", "")).strip()
+        for assignment in assignment_record_storage().list_assignments()
+        if str(assignment.get("id", "")).strip()
+    )
+    with ExitStack() as stack:
+        for assignment_id in assignment_ids:
+            stack.enter_context(assignment_operation_lock(assignment_id))
+        return student_lab_service.student_lab_payload(
+            root=ROOT,
+            assignments_dir=TEACHER_ASSIGNMENTS_DIR,
+            student_id=student_id,
+            now=now,
+        )
+
+
 def restore_staged_help_logs(staged_logs: list[tuple[Path, Path]]) -> None:
     """Restore quarantined help-log directories in reverse order."""
 
@@ -599,7 +618,7 @@ def student_dashboard(student_id: str) -> dict:
 
     dashboard = assignment_service().student_dashboard(student_id)
     try:
-        dashboard["lab"] = student_lab_service.student_lab_payload(root=ROOT, student_id=student_id)
+        dashboard["lab"] = locked_student_lab_payload(student_id=student_id)
     except Exception as error:  # noqa: BLE001
         dashboard["lab"] = {
             "schema_version": "student_lab.v1",
@@ -2257,22 +2276,22 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
                 if parsed.path == "/api/student-lab/assignments":
                     requested_now = query.get("now", [""])[0] or None
                     self.write_json(
-                        student_lab_service.student_lab_payload(
-                            root=ROOT,
-                            assignments_dir=TEACHER_ASSIGNMENTS_DIR,
+                        locked_student_lab_payload(
                             student_id=student_id,
                             now=requested_now if self.is_loopback_client() else None,
                         )
                     )
                     return
-                self.write_json(
-                    student_lab_service.student_help_history(
-                        root=ROOT,
-                        assignments_dir=TEACHER_ASSIGNMENTS_DIR,
-                        student_id=student_id,
-                        assignment_id=query.get("assignment_id", [""])[0],
+                assignment_id = query.get("assignment_id", [""])[0]
+                with assignment_operation_lock(assignment_id):
+                    self.write_json(
+                        student_lab_service.student_help_history(
+                            root=ROOT,
+                            assignments_dir=TEACHER_ASSIGNMENTS_DIR,
+                            student_id=student_id,
+                            assignment_id=assignment_id,
+                        )
                     )
-                )
             except ValueError as error:
                 self.write_error_json(400, str(error))
             except Exception:  # noqa: BLE001
