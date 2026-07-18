@@ -149,6 +149,35 @@ def test_stable_student_id_cannot_be_replaced_by_target_alias(tmp_path) -> None:
     assert stable_assignments[0]["student_id"] == "studente-stabile-001"
 
 
+def test_legacy_target_authorizes_only_one_canonical_identity(tmp_path) -> None:
+    assignment = sample_assignment(
+        tmp_path,
+        target_type="student",
+        targets=[
+            {
+                "target": "studenti/studente-canonico",
+                "path": "studenti/alias-da-path",
+                "repo_ref": "TheBitPoets/alias-da-repository",
+                "display_name": "Alias Visualizzato",
+            }
+        ],
+    )
+    write_assignment(tmp_path, assignment)
+
+    canonical_assignments = student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id="studente-canonico",
+    )
+
+    assert len(canonical_assignments) == 1
+    assert canonical_assignments[0]["student_id"] == "studente-canonico"
+    for alias in ("alias-da-path", "alias-da-repository", "Alias Visualizzato"):
+        assert student_lab_service.list_student_lab_assignments(
+            root=tmp_path,
+            student_id=alias,
+        ) == []
+
+
 def test_server_help_uses_canonical_student_id(tmp_path) -> None:
     activity_path = write_activity(tmp_path, student_support_mode="ai-assisted")
     assignment = write_assignment(

@@ -53,16 +53,16 @@ def resolve_local_path(root: Path, path_value: str) -> Path:
 def target_student_id(target: dict[str, Any]) -> str:
     """Return the best student identifier exposed by an assignment target."""
 
-    for key in ("student_id", "target", "display_name"):
+    stable_student_id = clean_text(target.get("student_id"))
+    if stable_student_id:
+        return stable_student_id
+    for key in ("target", "path", "repo_ref"):
         value = clean_text(target.get(key))
         if value:
-            return Path(value).name if key in {"target"} else value
-    path_value = clean_text(target.get("path"))
-    if path_value:
-        return Path(path_value).name
-    repo_ref = clean_text(target.get("repo_ref"))
-    if repo_ref:
-        return repo_ref.rstrip("/").split("/")[-1]
+            return value.rstrip("/\\").replace("\\", "/").split("/")[-1]
+    display_name = clean_text(target.get("display_name"))
+    if display_name:
+        return display_name
     return ""
 
 
@@ -76,10 +76,8 @@ def target_matches_student(target: dict[str, Any], student_id: str) -> bool:
 def target_student_aliases(target: dict[str, Any]) -> set[str]:
     """Return canonical or legacy identities accepted for one target."""
 
-    stable_student_id = clean_text(target.get("student_id"))
-    if stable_student_id:
-        return {stable_student_id}
-    return target_legacy_student_aliases(target)
+    canonical_student_id = target_student_id(target)
+    return {canonical_student_id} if canonical_student_id else set()
 
 
 def target_legacy_student_aliases(target: dict[str, Any]) -> set[str]:
