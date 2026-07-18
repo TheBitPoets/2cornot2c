@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -26,6 +27,14 @@ PROVIDER_ERROR_DETAIL = "Il provider non ha potuto completare la richiesta. Ripr
 _HELP_LOG_LOCKS: dict[str, threading.Lock] = {}
 _HELP_LOG_LOCKS_GUARD = threading.Lock()
 _STORAGE_KEY_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
+_WINDOWS_RESERVED_NAMES = {
+    "CON",
+    "PRN",
+    "AUX",
+    "NUL",
+    *(f"COM{index}" for index in range(1, 10)),
+    *(f"LPT{index}" for index in range(1, 10)),
+}
 
 
 class StudentHelpRateLimitError(ValueError):
@@ -234,9 +243,20 @@ def server_help_log_path(root: Path, student_id: str, assignment_id: str) -> Pat
     keys = []
     for label, value in (("student_id", student_id), ("assignment_id", assignment_id)):
         key = clean_text(value)
-        if not _STORAGE_KEY_PATTERN.fullmatch(key):
-            raise ValueError(f"{label} non valido per il registro aiuti.")
-        keys.append(key)
+        if not key:
+            raise ValueError(f"{label} obbligatorio per il registro aiuti.")
+        is_portable = (
+            bool(_STORAGE_KEY_PATTERN.fullmatch(key))
+            and key == key.lower()
+            and not key.endswith(".")
+            and key.split(".", 1)[0].upper() not in _WINDOWS_RESERVED_NAMES
+        )
+        if is_portable:
+            keys.append(key)
+            continue
+        readable = re.sub(r"[^A-Za-z0-9._-]+", "-", key).strip("._-").lower()[:40] or label
+        digest = hashlib.sha256(key.encode("utf-8")).hexdigest()[:16]
+        keys.append(f"{readable}-{digest}")
     return root / "teacher-help-events" / keys[0] / keys[1] / "events.json"
 
 

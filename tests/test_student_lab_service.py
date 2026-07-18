@@ -141,6 +141,21 @@ def test_student_lab_exposes_explicit_support_policy(tmp_path) -> None:
     assert "suggerimenti AI controllati" in assignment["support_policy"]["allowed"]
 
 
+def test_student_lab_accepts_custom_unicode_assignment_id(tmp_path) -> None:
+    assignment_record = write_assignment(
+        tmp_path,
+        sample_assignment(tmp_path, assignment_id="Compito è 1"),
+    )
+
+    assignment = student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id="rossi-mario",
+    )[0]
+
+    assert assignment["assignment_id"] == assignment_record["id"]
+    assert assignment["help"]["path"].startswith("teacher-help-events/rossi-mario/compito-1-")
+
+
 def test_record_student_help_request_rebuilds_policy_and_context_on_server(tmp_path) -> None:
     activity_id = "python-ai-assisted-001"
     activity_path = write_activity(tmp_path, activity_id=activity_id, student_support_mode="ai-assisted")

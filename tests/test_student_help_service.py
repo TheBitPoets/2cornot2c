@@ -29,6 +29,19 @@ class RecordingHelpProvider:
         )
 
 
+def test_server_help_log_path_encodes_non_portable_identifiers(tmp_path) -> None:
+    path = student_help_service.server_help_log_path(
+        tmp_path,
+        "Rossi Mario",
+        "Compito è 1/../segreto",
+    )
+
+    assert path.is_relative_to(tmp_path / "teacher-help-events")
+    assert path.name == "events.json"
+    assert ".." not in path.relative_to(tmp_path).parts
+    assert "Rossi Mario" not in str(path)
+
+
 class NonSerializableHelpProvider:
     def respond(self, request):
         return StudentHelpResponse(
