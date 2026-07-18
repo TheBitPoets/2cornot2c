@@ -817,6 +817,7 @@ def find_assignment(payload: dict[str, Any], assignment_id: str, fallback_index:
         for assignment in assignments:
             if isinstance(assignment, dict) and clean_text(assignment.get("assignment_id"), "") == clean_assignment_id:
                 return assignment
+        return None
     if 0 <= fallback_index < len(assignments):
         assignment = assignments[fallback_index]
         return assignment if isinstance(assignment, dict) else None

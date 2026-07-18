@@ -454,13 +454,14 @@ def test_render_help_history_handles_empty_or_invalid_log(tmp_path) -> None:
     assert "Log aiuti non leggibile" in invalid_rendered
 
 
-def test_find_assignment_prefers_assignment_id_and_falls_back_to_index() -> None:
+def test_find_assignment_uses_index_only_without_stable_assignment_id() -> None:
     first = sample_assignment(assignment_id="assignment-a", title="Prima")
     second = sample_assignment(assignment_id="assignment-b", title="Seconda")
     payload = sample_payload([first, second])
 
     assert student_lab_cli.find_assignment(payload, "assignment-b", 0) == second
-    assert student_lab_cli.find_assignment(payload, "missing", 1) == second
+    assert student_lab_cli.find_assignment(payload, "missing", 1) is None
+    assert student_lab_cli.find_assignment(payload, "", 1) == second
     assert student_lab_cli.find_assignment(sample_payload([]), "missing", 0) is None
 
 
