@@ -750,6 +750,26 @@ def test_track_assignments_matches_legacy_target_field_for_server_help(tmp_path)
     assert index["students"][0]["help"]["events"][0]["prompt"] == "Richiesta dal target legacy."
 
 
+def test_assignment_student_id_does_not_match_a_different_path_by_basename(tmp_path) -> None:
+    tracked_path = tmp_path / "classe-b" / "rossi"
+    tracked_path.mkdir(parents=True)
+    tracked = track_assignments.TrackingTarget(
+        student="rossi",
+        repo="TheBitPoets/classe-b-rossi",
+        path=tracked_path,
+    )
+    assignment = {
+        "targets": [
+            {"student_id": "rossi-classe-a", "target": "classe-a/rossi"},
+            {"student_id": "rossi-classe-b", "target": "classe-b/rossi"},
+        ]
+    }
+
+    student_id = track_assignments.assignment_student_id(tracked, assignment, tmp_path)
+
+    assert student_id == "rossi-classe-b"
+
+
 def test_track_assignments_rejects_report_for_different_activity(tmp_path) -> None:
     activity_path = write_activity(tmp_path)
     student = target(tmp_path, "verdi-anna")

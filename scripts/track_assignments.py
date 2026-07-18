@@ -363,7 +363,8 @@ def assignment_student_id(
                 candidate_path = server_root / candidate_path
             if candidate_path.resolve() == target_path:
                 matches_target = True
-            if student_identity.cross_platform_basename(recorded_path) == target.student:
+            is_bare_legacy_target = "/" not in recorded_path and "\\" not in recorded_path
+            if is_bare_legacy_target and student_identity.cross_platform_basename(recorded_path) == target.student:
                 matches_target = True
         if target_repo and clean_metadata(assignment_target.get("repo_ref")) == target_repo:
             matches_target = True
