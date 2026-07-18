@@ -3967,9 +3967,9 @@ function failedTestDetails(grading) {
       .filter((test) => test && typeof test === "object")
       .map((test, index) => ({
         name: String(test.name || `test ${index + 1}`),
-        message: String(test.message || ""),
-        expected_stdout: String(test.expected_stdout || ""),
-        actual_stdout: String(test.actual_stdout || ""),
+        message: compactTestDetailText(test.message || ""),
+        expected_stdout: compactTestDetailText(test.expected_stdout || ""),
+        actual_stdout: compactTestDetailText(test.actual_stdout || ""),
       }));
   }
   const tests = Array.isArray(grading.tests) ? grading.tests : [];
@@ -3977,9 +3977,9 @@ function failedTestDetails(grading) {
     .filter((test) => test && typeof test === "object" && test.passed === false)
     .map((test, index) => ({
       name: String(test.name || `test ${index + 1}`),
-      message: String(test.message || test.error || ""),
-      expected_stdout: String(test.expected_stdout || ""),
-      actual_stdout: String(test.actual_stdout || test.stdout || ""),
+      message: compactTestDetailText(test.message || test.error || ""),
+      expected_stdout: compactTestDetailText(test.expected_stdout || ""),
+      actual_stdout: compactTestDetailText(test.actual_stdout || test.stdout || ""),
     }));
   if (failedFromTests.length) return failedFromTests;
   return (Array.isArray(grading.failed_tests) ? grading.failed_tests : []).map((name) => ({
@@ -3988,6 +3988,12 @@ function failedTestDetails(grading) {
     expected_stdout: "",
     actual_stdout: "",
   }));
+}
+
+function compactTestDetailText(value, limit = 500) {
+  const compact = String(value || "").replace(/\s+/g, " ").trim();
+  if (compact.length <= limit) return compact;
+  return `${compact.slice(0, limit - 3).trimEnd()}...`;
 }
 
 function externalLink(url, label = "GitHub") {

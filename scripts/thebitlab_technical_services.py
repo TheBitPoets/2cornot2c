@@ -537,10 +537,13 @@ def _grade_activity_report_failed_test_details(report: dict[str, Any]) -> list[d
     return details
 
 
-def _compact_text(value: Any) -> str:
+def _compact_text(value: Any, *, limit: int = 500) -> str:
     if value is None:
         return ""
-    return " ".join(str(value).split())
+    compact = " ".join(str(value).split())
+    if len(compact) <= limit:
+        return compact
+    return compact[: limit - 3].rstrip() + "..."
 
 
 def _grade_activity_report_detail(report: dict[str, Any]) -> str:

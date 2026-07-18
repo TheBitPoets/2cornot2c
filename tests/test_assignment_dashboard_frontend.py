@@ -392,6 +392,7 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         studentHelpDetails,
         failedTestDetails,
         gradingDetails,
+        compactTestDetailText,
         reviewAiFeedback,
         dateTimeInputToIso,
         isoToDateTimeInput,
@@ -2827,6 +2828,8 @@ def test_grading_details_render_failed_test_messages() -> None:
         assert.match(html, /Output atteso diverso/);
         assert.match(html, /Atteso: 0/);
         assert.match(html, /Ottenuto: 1/);
+        assert.equal(tested.compactTestDetailText("a\\n  b\\t c"), "a b c");
+        assert.equal(tested.compactTestDetailText("x".repeat(520)).length, 500);
         """
     )
 
