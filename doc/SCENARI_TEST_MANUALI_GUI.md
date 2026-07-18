@@ -75,6 +75,8 @@ Ogni pannello, modal, vista e comando deve avere almeno uno scenario manuale. Qu
 
 Per l'automazione futura, la scelta piu naturale per le GUI web e Playwright, perche gestisce bene browser reali, screenshot e test responsive. Selenium resta possibile se vogliamo uno stack piu tradizionale. Per la TUI conviene partire da test con input finto e snapshot testuali, poi eventualmente passare a un harness terminale piu ricco.
 
+I test GUI automatici vanno introdotti quando i punti di aggancio della UI sono abbastanza stabili, usando attributi espliciti come `data-testid` invece di selettori fragili basati sulla posizione. I test piu pesanti, soprattutto quelli con browser, screenshot, responsive e dati demo end-to-end, sono candidati per una suite notturna o manuale da lanciare quando la macchina non serve per lavorare.
+
 ## Scenario 1 - Dashboard studente con report riuscito
 
 Obiettivo: verificare che lo studente veda consegna, workspace, report, test e aiuti.

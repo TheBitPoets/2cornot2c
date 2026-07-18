@@ -666,37 +666,42 @@ Ordine consigliato:
 11. Consolidamento grading Docker per flusso reale di consegna.
 12. Collegamento automatico report/artifact al registro consegne.
 13. Revisione dashboard docente contro il flusso MVP reale.
-14. Event log minimale e provenienza minima per activity/contenuti generati.
-15. Cornice didattica generale e guida operativa docente/studente.
-16. Inserimento activity nel percorso e visualizzazione calendario.
-17. Terminale web prototipo, solo dopo backend lab e TUI:
+14. Stabilizzazione test manuali e automazione GUI/TUI:
+   - mantenere aggiornata la checklist `doc/SCENARI_TEST_MANUALI_GUI.md` per ogni pannello, modal, vista e comando TUI;
+   - aggiungere `data-testid` o altri punti di aggancio stabili alle GUI prima di automatizzare;
+   - introdurre Playwright come prima scelta per dashboard, modal, calendario e responsive, lasciando Selenium come alternativa;
+   - creare una suite leggera da PR e una suite pesante/notturna con browser, screenshot e scenari end-to-end da lanciare quando la macchina non serve.
+15. Event log minimale e provenienza minima per activity/contenuti generati.
+16. Cornice didattica generale e guida operativa docente/studente.
+17. Inserimento activity nel percorso e visualizzazione calendario.
+18. Terminale web prototipo, solo dopo backend lab e TUI:
    - WebSocket;
    - PTY;
    - sessione locale o VM/container Linux;
    - limiti chiari: demo/prototipo finche non esistono isolamento, permessi e timeout robusti.
-18. GUI web lab completa, riusando il backend:
+19. GUI web lab completa, riusando il backend:
    - editor file;
    - esecuzione test;
    - output e tentativi;
    - consegna;
    - feedback.
-19. Gestione consuntivi UDA reali:
+20. Gestione consuntivi UDA reali:
    - mostrare le UDA reali anche nella vista calendario docente;
    - aggiungere un filtro calendario per scegliere tra UDA programmate, UDA reali o entrambe;
    - rendere cliccabili le UDA reali nei calendari docente/studente e aprire un modal di dettaglio coerente;
    - cancellare una UDA reale gia salvata dal calendario docente;
    - ripristinare lo stato pianificato quando il consuntivo e stato inserito per errore;
    - confermare prima della cancellazione e registrare provenienza/eventuale audit log.
-20. Archiviazione/cancellazione sicura di registri e activity.
-21. Catalogo fonti e import paragrafi da piu repository.
-22. Estensione layout pannelli alle altre pagine.
-23. Feedback assistito avanzato lato studente.
-24. Governance AI e integrita prove:
+21. Archiviazione/cancellazione sicura di registri e activity.
+22. Catalogo fonti e import paragrafi da piu repository.
+23. Estensione layout pannelli alle altre pagine.
+24. Feedback assistito avanzato lato studente.
+25. Governance AI e integrita prove:
    - budget token/richieste per scuola, classe, studente e activity;
    - audit log separato dal voto per chiamate AI, costi stimati e policy applicata;
    - modalita verifica controllata nella GUI con blocco/log copia-incolla, focus/tab e fullscreen;
    - informativa chiara allo studente e minimizzazione dei dati raccolti.
-25. Source provider API, indicizzazione frammenti e playground knowledge lab.
+26. Source provider API, indicizzazione frammenti e playground knowledge lab.
 
 ## Criterio di priorita
 

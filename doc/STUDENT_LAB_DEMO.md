@@ -111,7 +111,7 @@ Quando vuoi provare la demo con dati reali o demo del repository:
 3. Apri la TUI:
 
    ```bash
-   python scripts/student_lab_cli.py --student-id rossi-mario
+   python scripts/student_lab_cli.py --root tmp/student-lab-demo --student-id rossi-mario
    ```
 
 4. Entra nel dettaglio di una consegna e usa `e` per eseguire il runner e salvare il report.
