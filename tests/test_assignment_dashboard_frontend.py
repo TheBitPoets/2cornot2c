@@ -1196,6 +1196,33 @@ def test_delete_selected_assignment_reports_an_idempotent_retry_as_completed() -
     )
 
 
+def test_delete_selected_assignment_reports_deferred_quarantine_cleanup() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.state.assignments = [{ id: "assignment-cleanup", activity_id: "activity-demo" }];
+          tested.state.selectedAssignmentId = "assignment-cleanup";
+          tested.els.assignmentSelect.value = "assignment-cleanup";
+          tested.fetchResponses["/api/assignments/delete"] = {
+            ok: true,
+            deleted: { id: "assignment-cleanup" },
+            already_deleted: false,
+            cleanup_pending: true,
+            assignments: [],
+            assignment_statuses: [],
+            due_without_register: [],
+          };
+
+          await tested.deleteSelectedAssignment();
+
+          assert.match(tested.els.status.textContent, /Assegnazione cancellata/);
+          assert.match(tested.els.status.textContent, /Pulizia della quarantena differita/);
+          assert.match(tested.els.status.textContent, /prossimo avvio/);
+        })();
+        """
+    )
+
+
 def test_assignment_confirm_next_guides_save_then_distribute() -> None:
     run_dashboard_js(
         """

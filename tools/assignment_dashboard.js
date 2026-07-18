@@ -3691,9 +3691,17 @@ async function deleteSelectedAssignment() {
     clearSelectedAssignment();
     renderReportAssignmentSummary();
     resetAssignmentConfirmStatus("Assegnazione cancellata: seleziona o crea un'altra consegna prima di salvare o distribuire.");
-    setStatus(payload.already_deleted
-      ? `Assegnazione gia cancellata: ${payload.deleted?.id || assignmentId}.`
-      : `Assegnazione cancellata: ${payload.deleted?.id || assignmentId}.`);
+    const deletedLabel = payload.deleted?.id || assignmentId;
+    if (payload.cleanup_pending) {
+      setStatus(
+        `Assegnazione cancellata: ${deletedLabel}. ` +
+        "Pulizia della quarantena differita: il server la ritentera al prossimo avvio."
+      );
+    } else {
+      setStatus(payload.already_deleted
+        ? `Assegnazione gia cancellata: ${deletedLabel}.`
+        : `Assegnazione cancellata: ${deletedLabel}.`);
+    }
   } catch (error) {
     const message = assignmentPlanErrorMessage(error);
     setStatus(`Assegnazione non cancellata: ${message}`);
