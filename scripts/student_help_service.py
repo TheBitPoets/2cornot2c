@@ -38,6 +38,10 @@ class StudentHelpRateLimitError(ValueError):
 class StudentHelpPendingError(ValueError):
     """Raised when an idempotent retry finds a provider call still running."""
 
+
+class StudentHelpRequestNotFoundError(ValueError):
+    """Raised when a read-only idempotency check finds no persisted request."""
+
 HELP_TYPES: dict[str, dict[str, str]] = {
     "feedback-tecnico": {
         "label": "Feedback tecnico",
@@ -342,6 +346,7 @@ def record_help_request(
     context: dict[str, Any] | None = None,
     log_path: Path | None = None,
     request_id: str = "",
+    existing_only: bool = False,
 ) -> dict[str, Any]:
     if log_path is None:
         if repo_path is None:
@@ -372,6 +377,10 @@ def record_help_request(
             if existing.get("provider_status") == "pending":
                 raise StudentHelpPendingError("Richiesta di aiuto ancora in elaborazione. Riprova tra poco.")
             return existing
+        if existing_only:
+            if reconciled:
+                write_help_events(path, events)
+            raise StudentHelpRequestNotFoundError("Richiesta idempotente non ancora registrata.")
         if len(events) >= MAX_HELP_EVENTS_PER_ASSIGNMENT:
             raise StudentHelpRateLimitError(
                 "Limite richieste di aiuto raggiunto per questa consegna. Avvisa il docente."

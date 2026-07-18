@@ -266,21 +266,34 @@ def record_student_help(payload: dict[str, Any], *, student_id: str) -> dict[str
     """Record one TUI request using server-owned assignment context and policy."""
 
     assignment_id = str(payload.get("assignment_id", "")).strip()
-    with assignment_operation_lock(
-        student_help_operation_id(assignment_id, student_id),
-        blocking=False,
-    ):
-        event = student_lab_service.record_student_help_request(
-            root=ROOT,
-            assignments_dir=TEACHER_ASSIGNMENTS_DIR,
-            student_id=student_id,
-            assignment_id=assignment_id,
-            help_type=payload.get("help_type", ""),
-            prompt=payload.get("prompt", ""),
-            request_id=payload.get("request_id", ""),
-            provider=DeterministicStudentHelpProvider(),
-            provider_factory=student_help_provider,
-        )
+    request_kwargs = {
+        "root": ROOT,
+        "assignments_dir": TEACHER_ASSIGNMENTS_DIR,
+        "student_id": student_id,
+        "assignment_id": assignment_id,
+        "help_type": payload.get("help_type", ""),
+        "prompt": payload.get("prompt", ""),
+        "request_id": payload.get("request_id", ""),
+    }
+    try:
+        with assignment_operation_lock(
+            student_help_operation_id(assignment_id, student_id),
+            blocking=False,
+        ):
+            event = student_lab_service.record_student_help_request(
+                **request_kwargs,
+                provider=DeterministicStudentHelpProvider(),
+                provider_factory=student_help_provider,
+            )
+    except StudentHelpBusyError:
+        try:
+            event = student_lab_service.record_student_help_request(
+                **request_kwargs,
+                provider=DeterministicStudentHelpProvider(),
+                existing_only=True,
+            )
+        except student_help_service.StudentHelpRequestNotFoundError:
+            raise StudentHelpBusyError("Richiesta di aiuto gia in elaborazione per questa consegna.") from None
     return {"ok": True, "event": event}
 
 

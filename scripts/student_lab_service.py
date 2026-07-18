@@ -441,6 +441,7 @@ def record_student_help_request(
     request_id: str = "",
     assignments_dir: Path | None = None,
     now: str | None = None,
+    existing_only: bool = False,
 ) -> dict[str, Any]:
     """Validate and record a server-authoritative student help request."""
 
@@ -487,6 +488,7 @@ def record_student_help_request(
             clean_text(assignment.get("student_id")),
             clean_assignment_id,
         ),
+        existing_only=existing_only,
     )
 
 

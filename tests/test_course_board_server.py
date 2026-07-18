@@ -1215,6 +1215,65 @@ def test_concurrent_help_request_is_rejected_without_waiting(tmp_path, monkeypat
     assert first_errors == []
 
 
+def test_concurrent_idempotent_help_retry_reports_pending(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    activity_path = tmp_path / "activities" / "python-base-somma-001.json"
+    write_demo_activity(activity_path)
+    student_repo = tmp_path / "studenti" / "rossi-mario"
+    student_repo.mkdir(parents=True)
+    assignment = assignment_records.JsonAssignmentRecordStorage(tmp_path).write_assignment(
+        assignment_records.build_assignment_record(
+            assignment_id="assignment-ai-retry-pending",
+            activity_id="python-base-somma-001",
+            activity_path="activities/python-base-somma-001.json",
+            target_type="student",
+            assigned_at="2026-10-12T09:00:00+02:00",
+            due_at="2026-10-19T23:59:00+02:00",
+            targets=[{"student_id": "rossi-mario", "path": "studenti/rossi-mario"}],
+        )
+    )
+    provider_started = threading.Event()
+    provider_release = threading.Event()
+
+    class BlockingProvider:
+        def respond(self, request):
+            provider_started.set()
+            assert provider_release.wait(timeout=5)
+            return StudentHelpResponse(
+                status="ready",
+                provider="blocking-test",
+                provider_label="Provider bloccante test",
+                message="Controlla il primo passaggio.",
+                usage={"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
+            )
+
+    monkeypatch.setattr(course_board_server, "DeterministicStudentHelpProvider", lambda: BlockingProvider())
+    payload = {
+        "assignment_id": assignment["id"],
+        "help_type": "debug",
+        "prompt": "Prima richiesta.",
+        "request_id": "request-retry-pending-0001",
+    }
+    first_errors = []
+
+    def first_request():
+        try:
+            course_board_server.record_student_help(payload, student_id="rossi-mario")
+        except Exception as error:  # noqa: BLE001
+            first_errors.append(error)
+
+    first_thread = threading.Thread(target=first_request)
+    first_thread.start()
+    assert provider_started.wait(timeout=5)
+
+    with pytest.raises(student_help_service.StudentHelpPendingError, match="ancora in elaborazione"):
+        course_board_server.record_student_help(payload, student_id="rossi-mario")
+
+    provider_release.set()
+    first_thread.join(timeout=5)
+    assert first_errors == []
+
+
 def test_classmates_can_request_help_on_the_same_assignment_concurrently(tmp_path, monkeypatch) -> None:
     patch_assignment_paths(tmp_path, monkeypatch)
     activity_path = tmp_path / "activities" / "python-base-somma-001.json"
