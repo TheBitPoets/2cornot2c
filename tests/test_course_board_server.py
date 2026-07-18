@@ -1029,6 +1029,36 @@ def test_recovery_purges_committed_deletion_without_restoring_assignment(tmp_pat
     assert not trash_root.exists()
 
 
+def test_recovery_removes_empty_quarantine_left_after_manifest_purge(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    trash_base = tmp_path / "teacher-help-events" / ".trash"
+    trash_root = trash_base / "purge-interrotto"
+    trash_root.mkdir(parents=True)
+    synced = []
+    monkeypatch.setattr(
+        course_board_server.assignment_records,
+        "sync_directory",
+        lambda path: synced.append(path),
+    )
+
+    course_board_server.recover_interrupted_assignment_deletions()
+
+    assert not trash_root.exists()
+    assert synced == [trash_base]
+
+
+def test_recovery_rejects_nonempty_quarantine_without_manifest(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    trash_root = tmp_path / "teacher-help-events" / ".trash" / "journal-mancante"
+    trash_root.mkdir(parents=True)
+    (trash_root / "dati-residui.json").write_text("{}\n", encoding="utf-8")
+
+    with pytest.raises(RuntimeError, match="Quarantena senza journal"):
+        course_board_server.recover_interrupted_assignment_deletions()
+
+    assert trash_root.exists()
+
+
 def test_persistent_rollback_rejects_staged_path_outside_transaction(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "TEACHER_ASSIGNMENTS_DIR", tmp_path / "teacher-assignments")

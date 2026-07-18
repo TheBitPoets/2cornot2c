@@ -793,6 +793,10 @@ def recover_interrupted_assignment_deletions() -> None:
     for trash_root in sorted(path for path in trash_base.iterdir() if path.is_dir()):
         manifest_path = help_deletion_manifest_path(trash_root)
         if not manifest_path.is_file():
+            if not any(trash_root.iterdir()):
+                trash_root.rmdir()
+                assignment_records.sync_directory(trash_root.parent)
+                continue
             raise RuntimeError(f"Quarantena senza journal: {trash_root}")
         manifest = storage.read_json(manifest_path)
         schema_version = manifest.get("schema_version")
