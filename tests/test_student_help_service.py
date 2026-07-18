@@ -66,6 +66,37 @@ def test_read_help_log_rejects_file_above_size_limit(tmp_path) -> None:
     assert "troppo grande" in error
 
 
+def test_write_help_events_rejects_payload_above_read_limit(tmp_path) -> None:
+    log_path = tmp_path / "events.json"
+
+    with pytest.raises(student_help_service.StudentHelpRateLimitError, match="Limite spazio"):
+        student_help_service.write_help_events(
+            log_path,
+            [{"prompt": "x" * (student_help_service.MAX_HELP_LOG_BYTES + 1)}],
+        )
+
+    assert not log_path.exists()
+
+
+def test_maximum_help_history_remains_readable_with_utf8_content(tmp_path) -> None:
+    log_path = tmp_path / "events.json"
+    events = [
+        {
+            "request_id": f"request-{index:016d}",
+            "prompt": "\U0001f4a1" * 2_000,
+            "response": {"message": "\U0001f4a1" * student_help_service.MAX_PROVIDER_MESSAGE_CHARS},
+        }
+        for index in range(student_help_service.MAX_HELP_EVENTS_PER_ASSIGNMENT)
+    ]
+
+    student_help_service.write_help_events(log_path, events)
+    loaded, error = student_help_service.read_help_log(log_path)
+
+    assert error == ""
+    assert len(loaded) == student_help_service.MAX_HELP_EVENTS_PER_ASSIGNMENT
+    assert log_path.stat().st_size <= student_help_service.MAX_HELP_LOG_BYTES
+
+
 class NonSerializableHelpProvider:
     def respond(self, request):
         return StudentHelpResponse(

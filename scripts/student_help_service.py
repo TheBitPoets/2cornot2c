@@ -22,7 +22,7 @@ HELP_LOG_SCHEMA_VERSION = "student_help_log.v1"
 MAX_HELP_LOG_BYTES = 2 * 1024 * 1024
 HELP_EVENT_SCHEMA_VERSION = "student_help_event.v1"
 PENDING_PROVIDER_MAX_AGE = timedelta(minutes=5)
-MAX_HELP_EVENTS_PER_ASSIGNMENT = 500
+MAX_HELP_EVENTS_PER_ASSIGNMENT = 40
 MAX_PROVIDER_MESSAGE_CHARS = 8_000
 PROVIDER_ERROR_DETAIL = "Il provider non ha potuto completare la richiesta. Riprova più tardi o avvisa il docente."
 _HELP_LOG_LOCKS: dict[str, threading.Lock] = {}
@@ -273,15 +273,20 @@ def read_help_log(log_path: Path) -> tuple[list[dict[str, Any]], str]:
 
 
 def write_help_events(log_path: Path, events: list[dict[str, Any]]) -> None:
-    log_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "schema_version": HELP_LOG_SCHEMA_VERSION,
         "events": events,
     }
+    serialized = (json.dumps(payload, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+    if len(serialized) > MAX_HELP_LOG_BYTES:
+        raise StudentHelpRateLimitError(
+            "Limite spazio del registro aiuti raggiunto per questa consegna. Avvisa il docente."
+        )
+    log_path.parent.mkdir(parents=True, exist_ok=True)
     temporary_path = log_path.with_name(f".{log_path.name}.{uuid.uuid4().hex}.tmp")
     try:
-        with temporary_path.open("w", encoding="utf-8", newline="\n") as stream:
-            stream.write(json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+        with temporary_path.open("wb") as stream:
+            stream.write(serialized)
             stream.flush()
             os.fsync(stream.fileno())
         os.replace(temporary_path, log_path)
