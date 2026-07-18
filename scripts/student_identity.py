@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+from pathlib import Path
 from typing import Any
 
 from scripts import create_activity, student_help_auth
@@ -17,6 +18,31 @@ def cross_platform_basename(value: Any) -> str:
 
     clean = clean_text(value).rstrip("/\\").replace("\\", "/")
     return clean.split("/")[-1] if clean else ""
+
+
+def confined_regular_file(base_dir: Path, candidate: Path) -> Path | None:
+    """Return a regular non-symlink file confined below an authorized directory."""
+
+    lexical_base = base_dir.absolute()
+    lexical_candidate = candidate.absolute()
+    try:
+        lexical_relative = lexical_candidate.relative_to(lexical_base)
+    except ValueError:
+        return None
+    current = lexical_base
+    for part in lexical_relative.parts:
+        current /= part
+        if current.is_symlink():
+            return None
+    resolved_base = base_dir.resolve(strict=False)
+    resolved_candidate = candidate.resolve(strict=False)
+    try:
+        resolved_relative = resolved_candidate.relative_to(resolved_base)
+    except ValueError:
+        return None
+    if not resolved_relative.parts or not resolved_candidate.is_file():
+        return None
+    return resolved_candidate
 
 
 def legacy_display_student_id(value: Any) -> str:

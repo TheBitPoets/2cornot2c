@@ -417,23 +417,31 @@ def track_assignments(
             stable_student_id = assignment_student_id(target, assignment, server_root)
             help_log_path = student_help_service.server_help_log_path(server_root, stable_student_id, assignment_id)
         else:
-            help_log_path = student_help_service.help_log_path(target.path, activity_id)
-        report = load_report(report_path)
+            legacy_help_path = student_help_service.help_log_path(target.path, activity_id)
+            help_log_path = student_identity.confined_regular_file(target.path, legacy_help_path)
+        safe_report_path = student_identity.confined_regular_file(target.path, report_path)
+        report = load_report(safe_report_path) if safe_report_path is not None else None
         if report is not None:
             validate_report_activity(report, activity_id, report_path)
-        relative_report_path = relative_to_root_or_repo(report_path, target.path) if report_path.exists() else None
+        relative_report_path = (
+            relative_to_root_or_repo(safe_report_path, target.path)
+            if safe_report_path is not None
+            else None
+        )
         help = student_help_service.teacher_help_summary(help_log_path, normalized_now)
         if assignment_id and server_root is not None:
             help["path"] = str(help_log_path.relative_to(server_root)).replace("\\", "/")
             legacy_path = student_help_service.help_log_path(target.path, activity_id)
-            legacy_help = student_help_service.teacher_help_summary(legacy_path, normalized_now)
-            help = student_help_service.merge_legacy_help_summary(
-                help,
-                legacy_help,
-                relative_to_root_or_repo(legacy_path, target.path),
-            )
+            safe_legacy_path = student_identity.confined_regular_file(target.path, legacy_path)
+            if safe_legacy_path is not None:
+                legacy_help = student_help_service.teacher_help_summary(safe_legacy_path, normalized_now)
+                help = student_help_service.merge_legacy_help_summary(
+                    help,
+                    legacy_help,
+                    relative_to_root_or_repo(safe_legacy_path, target.path),
+                )
         else:
-            help["path"] = relative_to_root_or_repo(help_log_path, target.path)
+            help["path"] = relative_to_root_or_repo(help_log_path, target.path) if help_log_path else ""
         help["activity_id"] = activity_id
         source_path = report.get("source") if report else None
         submitted = report is not None

@@ -8,6 +8,7 @@ from scripts import (
     assignment_records,
     student_help_auth,
     student_help_service,
+    student_identity,
     student_lab_service,
     student_support_policy,
 )
@@ -27,6 +28,25 @@ class RecordingProvider:
             message="Parti dal primo test fallito.",
             usage={"input_tokens": 1, "output_tokens": 2, "total_tokens": 3},
         )
+
+
+def test_confined_regular_file_rejects_external_and_symlinked_files(tmp_path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    local_file = repo / "local.json"
+    local_file.write_text("{}", encoding="utf-8")
+    external_file = tmp_path / "external.json"
+    external_file.write_text("{}", encoding="utf-8")
+
+    assert student_identity.confined_regular_file(repo, local_file) == local_file.resolve()
+    assert student_identity.confined_regular_file(repo, external_file) is None
+
+    linked_file = repo / "linked.json"
+    try:
+        linked_file.symlink_to(external_file)
+    except OSError:
+        pytest.skip("Creazione symlink non disponibile su questa piattaforma.")
+    assert student_identity.confined_regular_file(repo, linked_file) is None
 
 
 def write_activity(root, activity_id: str = "python-base-somma-001", student_support_mode: str = "") -> str:

@@ -18,6 +18,7 @@ from scripts import (
     track_assignments,
 )
 from scripts.student_identity import (
+    confined_regular_file,
     cross_platform_basename,
     legacy_display_student_id,
     target_cleanup_student_ids,
@@ -223,7 +224,8 @@ def build_lab_assignment(
     workspace_path = repo_path / "assignments" / activity_id if repo_path is not None else None
     report_path = repo_path / "reports" / activity_id / "latest.json" if repo_path is not None else None
     help_log_path = student_help_service.server_help_log_path(root, student_id, normalized["id"])
-    report = load_report(report_path, activity_id) if report_path is not None else None
+    safe_report_path = confined_regular_file(repo_path, report_path) if repo_path is not None and report_path else None
+    report = load_report(safe_report_path, activity_id) if safe_report_path is not None else None
     submitted_at = clean_text(report.get("submitted_at")) if report else ""
     status = status_with_report(report, normalized["due_at"], now) if report else status_without_report(normalized["due_at"], now)
     activity = load_activity_summary(
@@ -235,16 +237,18 @@ def build_lab_assignment(
     help_log = student_help_service.help_summary(help_log_path, now)
     if repo_path is not None:
         legacy_path = student_help_service.help_log_path(repo_path, activity_id)
-        legacy_help = student_help_service.help_summary(legacy_path, now)
-        help_log = student_help_service.merge_legacy_help_summary(
-            help_log,
-            legacy_help,
-            relative_to_root(
-                root,
-                legacy_path,
-                expose_external_paths=expose_external_paths,
-            ),
-        )
+        safe_legacy_path = confined_regular_file(repo_path, legacy_path)
+        if safe_legacy_path is not None:
+            legacy_help = student_help_service.help_summary(safe_legacy_path, now)
+            help_log = student_help_service.merge_legacy_help_summary(
+                help_log,
+                legacy_help,
+                relative_to_root(
+                    root,
+                    safe_legacy_path,
+                    expose_external_paths=expose_external_paths,
+                ),
+            )
     help_log["ai_budget"] = student_help_service.help_budget_summary(help_log_path, support_policy, now)
     help_log.pop("path", None)
     grading = track_assignments.grading_summary(report)
@@ -505,12 +509,14 @@ def student_help_history(
     repo_path = assignment_repo_path(root, assignment)
     if repo_path is not None:
         legacy_path = student_help_service.help_log_path(repo_path, clean_text(assignment.get("activity_id")))
-        legacy_summary = student_help_service.teacher_help_summary(legacy_path, now)
-        legacy_events = [
-            {**event, "source": "legacy-unverified"}
-            for event in legacy_summary.get("events", [])
-            if isinstance(event, dict)
-        ]
+        safe_legacy_path = confined_regular_file(repo_path, legacy_path)
+        if safe_legacy_path is not None:
+            legacy_summary = student_help_service.teacher_help_summary(safe_legacy_path, now)
+            legacy_events = [
+                {**event, "source": "legacy-unverified"}
+                for event in legacy_summary.get("events", [])
+                if isinstance(event, dict)
+            ]
     server_events = [
         {**event, "source": "server"}
         for event in server_summary.get("events", [])
