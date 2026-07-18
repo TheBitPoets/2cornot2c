@@ -35,6 +35,18 @@ class NonSerializableHelpProvider:
         )
 
 
+class StructuredErrorHelpProvider:
+    def respond(self, request):
+        return StudentHelpResponse(
+            status="error",
+            provider="structured-error-provider",
+            provider_label="Provider con errore strutturato",
+            message="",
+            usage={"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
+            detail="Errore remoto: token=segreto-strutturato",
+        )
+
+
 def test_evaluate_help_request_denies_ai_when_policy_does_not_allow_it() -> None:
     policy = student_support_policy.support_policy("feedback-tecnico")
 
@@ -168,6 +180,27 @@ def test_record_help_request_persists_request_when_provider_response_is_not_json
     assert persisted["prompt"] == "Conserva questa richiesta."
     assert persisted["response"]["status"] == "error"
     assert persisted["response"]["usage"] == {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+
+
+def test_record_help_request_sanitizes_structured_provider_errors(tmp_path) -> None:
+    repo = tmp_path / "student-repo"
+
+    event = student_help_service.record_help_request(
+        repo_path=repo,
+        activity_id="python-base-somma-001",
+        support_policy=student_support_policy.support_policy("ai-assisted"),
+        help_type="ai",
+        prompt="Conserva la richiesta senza il segreto.",
+        provider=StructuredErrorHelpProvider(),
+    )
+
+    log_path = repo / "help" / "python-base-somma-001" / "events.json"
+    persisted_text = log_path.read_text(encoding="utf-8")
+
+    assert event["response"]["status"] == "error"
+    assert event["response"]["detail"] == student_help_service.PROVIDER_ERROR_DETAIL
+    assert "segreto-strutturato" not in persisted_text
+    assert "Errore remoto" not in persisted_text
 
 
 def test_record_help_request_blocks_ai_when_budget_is_exhausted(tmp_path) -> None:
