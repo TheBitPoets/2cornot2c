@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import sys
 from datetime import datetime
@@ -14,11 +13,19 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from scripts import (
     assignment_records,
-    create_activity,
-    student_help_auth,
     student_help_service,
     student_support_policy,
     track_assignments,
+)
+from scripts.student_identity import (
+    cross_platform_basename,
+    legacy_display_student_id,
+    target_cleanup_student_ids,
+    target_legacy_student_aliases,
+    target_matches_student,
+    target_student_aliases,
+    target_student_id,
+    token_safe_student_id,
 )
 from scripts.student_help_provider import StudentHelpProvider
 from scripts.thebitlab_contracts import normalize_activity
@@ -56,90 +63,6 @@ def resolve_local_path(root: Path, path_value: str) -> Path:
 
     path = Path(path_value)
     return path.resolve(strict=False) if path.is_absolute() else (root / path).resolve(strict=False)
-
-
-def cross_platform_basename(value: Any) -> str:
-    """Return a basename for paths produced on either Windows or POSIX."""
-
-    clean = clean_text(value).rstrip("/\\").replace("\\", "/")
-    return clean.split("/")[-1] if clean else ""
-
-
-def legacy_display_student_id(value: Any) -> str:
-    """Build a token-safe deterministic id from a legacy display label."""
-
-    display_name = clean_text(value)
-    if not display_name:
-        return ""
-    slug = create_activity.slugify(display_name)[:96]
-    digest = hashlib.sha256(display_name.encode("utf-8")).hexdigest()[:10]
-    return f"legacy-{slug}-{digest}"
-
-
-def token_safe_student_id(value: Any) -> str:
-    """Return a valid token identity, normalizing legacy labels when needed."""
-
-    candidate = clean_text(value)
-    if not candidate:
-        return ""
-    try:
-        return student_help_auth.validate_student_id(candidate)
-    except ValueError:
-        return legacy_display_student_id(candidate)
-
-
-def target_student_id(target: dict[str, Any]) -> str:
-    """Return the best student identifier exposed by an assignment target."""
-
-    stable_student_id = token_safe_student_id(target.get("student_id"))
-    if stable_student_id:
-        return stable_student_id
-    for key in ("target", "path", "repo_ref"):
-        value = clean_text(target.get(key))
-        if value:
-            return token_safe_student_id(cross_platform_basename(value))
-    display_name = clean_text(target.get("display_name"))
-    if display_name:
-        return token_safe_student_id(display_name)
-    return ""
-
-
-def target_matches_student(target: dict[str, Any], student_id: str) -> bool:
-    """Return whether an assignment target belongs to the requested student."""
-
-    clean_student_id = clean_text(student_id)
-    return clean_student_id in target_student_aliases(target)
-
-
-def target_student_aliases(target: dict[str, Any]) -> set[str]:
-    """Return canonical or legacy identities accepted for one target."""
-
-    canonical_student_id = target_student_id(target)
-    return {canonical_student_id} if canonical_student_id else set()
-
-
-def target_legacy_student_aliases(target: dict[str, Any]) -> set[str]:
-    """Return historical aliases derivable from a target without granting access."""
-
-    candidates = {
-        clean_text(target.get("student_id")),
-        clean_text(target.get("display_name")),
-    }
-    for key in ("path", "target", "repo_ref"):
-        value = clean_text(target.get(key))
-        if value:
-            candidates.add(cross_platform_basename(value))
-    return {candidate for candidate in candidates if candidate}
-
-
-def target_cleanup_student_ids(target: dict[str, Any]) -> set[str]:
-    """Return canonical and historical storage keys to remove for one target."""
-
-    identities = target_legacy_student_aliases(target)
-    canonical_student_id = target_student_id(target)
-    if canonical_student_id:
-        identities.add(canonical_student_id)
-    return identities
 
 
 def target_repo_path(root: Path, target: dict[str, Any], student_id: str) -> Path | None:

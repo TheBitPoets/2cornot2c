@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from scripts import assignment_records, assign_activity, create_submission_scaffold, student_help_service
+from scripts import student_identity
 from scripts.thebitlab_contracts import (
     legacy_activity_validation_payload,
     normalize_activity,
@@ -352,18 +353,19 @@ def assignment_student_id(
     for assignment_target in assignment.get("targets", []):
         if not isinstance(assignment_target, dict):
             continue
-        student_id = clean_metadata(assignment_target.get("student_id"))
-        if not student_id:
-            continue
+        matches_target = False
         recorded_path = clean_metadata(assignment_target.get("path"))
         if recorded_path:
             candidate_path = Path(recorded_path)
             if not candidate_path.is_absolute():
                 candidate_path = server_root / candidate_path
             if candidate_path.resolve() == target_path:
-                return student_id
+                matches_target = True
         if target_repo and clean_metadata(assignment_target.get("repo_ref")) == target_repo:
-            return student_id
+            matches_target = True
+        if matches_target:
+            student_id = student_identity.target_student_id(assignment_target)
+            return student_id or target.student
     return target.student
 
 

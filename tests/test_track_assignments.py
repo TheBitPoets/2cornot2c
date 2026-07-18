@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import sys
 
-from scripts import assignment_records, student_help_service, student_support_policy, track_assignments
+from scripts import assignment_records, student_help_service, student_identity, student_support_policy, track_assignments
 from scripts.thebitlab_repository_providers import LocalRepositoryProvider, StudentRepository
 
 
@@ -663,6 +663,52 @@ def test_track_assignments_uses_stable_assignment_student_id_for_server_help(tmp
     assert help_summary["total"] == 1
     assert help_summary["events"][0]["prompt"] == "Come funziona input()?"
     assert "studente-stabile-001" in help_summary["path"]
+
+
+def test_track_assignments_uses_canonical_legacy_identity_for_server_help(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+    student = target(tmp_path, "Mario Rossi")
+    assignment_id = "assignment-legacy-student"
+    relative_student_path = str(student.path.relative_to(tmp_path))
+    assignment_records.JsonAssignmentRecordStorage(tmp_path).write_assignment(
+        assignment_records.build_assignment_record(
+            assignment_id=assignment_id,
+            activity_id="python-base-somma-001",
+            activity_path=str(activity_path.relative_to(tmp_path)),
+            target_type="student",
+            assigned_at="2026-10-12T09:00:00+02:00",
+            due_at="2026-10-21T08:00:00+02:00",
+            targets=[{"path": relative_student_path}],
+        )
+    )
+    canonical_student_id = student_identity.legacy_display_student_id("Mario Rossi")
+    policy = student_support_policy.support_policy("studio-guidato")
+    student_help_service.record_help_request(
+        activity_id="python-base-somma-001",
+        support_policy=policy,
+        help_type="teoria",
+        prompt="Come funziona input()?",
+        now="2026-10-20T08:10:00+02:00",
+        log_path=student_help_service.server_help_log_path(
+            tmp_path,
+            canonical_student_id,
+            assignment_id,
+        ),
+    )
+
+    index = track_assignments.track_assignments(
+        activity_path=activity_path,
+        targets=[student],
+        assignment_id=assignment_id,
+        server_root=tmp_path,
+        due_at="2026-10-21T08:00:00+02:00",
+        now="2026-10-20T09:00:00+02:00",
+    )
+
+    help_summary = index["students"][0]["help"]
+    assert help_summary["total"] == 1
+    assert help_summary["events"][0]["prompt"] == "Come funziona input()?"
+    assert canonical_student_id in help_summary["path"]
 
 
 def test_track_assignments_rejects_report_for_different_activity(tmp_path) -> None:
