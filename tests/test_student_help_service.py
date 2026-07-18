@@ -5,6 +5,8 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
+import pytest
+
 from scripts import student_help_service, student_support_policy
 from scripts.student_help_provider import StudentHelpResponse
 
@@ -382,6 +384,41 @@ def test_stale_provider_reservation_is_released_after_server_restart(tmp_path) -
     assert events[0]["budget_charged"] is False
     assert events[0]["response"]["status"] == "error"
     assert student_help_service.ai_budget_status(policy, events)["used"] == 1
+
+
+def test_record_help_request_does_not_overwrite_corrupt_log(tmp_path) -> None:
+    repo = tmp_path / "student-repo"
+    log_path = student_help_service.help_log_path(repo, "activity")
+    log_path.parent.mkdir(parents=True)
+    log_path.write_text("{json-troncato", encoding="utf-8")
+
+    with pytest.raises(RuntimeError, match="intervento docente necessario"):
+        student_help_service.record_help_request(
+            repo_path=repo,
+            activity_id="activity",
+            support_policy=student_support_policy.support_policy("ai-assisted"),
+            help_type="ai",
+            prompt="Nuova richiesta.",
+        )
+
+    assert log_path.read_text(encoding="utf-8") == "{json-troncato"
+
+
+def test_atomic_log_write_preserves_previous_file_when_replace_fails(tmp_path, monkeypatch) -> None:
+    log_path = tmp_path / "events.json"
+    original_events = [{"request_id": "existing"}]
+    student_help_service.write_help_events(log_path, original_events)
+
+    def fail_replace(source, destination):
+        raise OSError("replace non riuscito")
+
+    monkeypatch.setattr(student_help_service.os, "replace", fail_replace)
+
+    with pytest.raises(OSError, match="replace non riuscito"):
+        student_help_service.write_help_events(log_path, [{"request_id": "new"}])
+
+    assert student_help_service.load_help_events(log_path) == original_events
+    assert list(tmp_path.glob(".*.tmp")) == []
 
 
 def test_help_summary_marks_invalid_json_without_raising(tmp_path) -> None:

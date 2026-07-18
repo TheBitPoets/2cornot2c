@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import threading
 import uuid
@@ -258,7 +259,24 @@ def write_help_events(log_path: Path, events: list[dict[str, Any]]) -> None:
         "schema_version": HELP_LOG_SCHEMA_VERSION,
         "events": events,
     }
-    log_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    temporary_path = log_path.with_name(f".{log_path.name}.{uuid.uuid4().hex}.tmp")
+    try:
+        with temporary_path.open("w", encoding="utf-8", newline="\n") as stream:
+            stream.write(json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary_path, log_path)
+    finally:
+        temporary_path.unlink(missing_ok=True)
+
+
+def load_writable_help_events(log_path: Path) -> list[dict[str, Any]]:
+    """Load a log for mutation, refusing to overwrite invalid existing data."""
+
+    events, error = read_help_log(log_path)
+    if error:
+        raise RuntimeError("Registro richieste di aiuto non leggibile; intervento docente necessario.")
+    return events
 
 
 def help_log_lock(log_path: Path) -> threading.Lock:
@@ -288,7 +306,7 @@ def record_help_request(
     path = log_path
     requested_at = parse_now(now)
     with help_log_lock(path):
-        events = load_help_events(path)
+        events = load_writable_help_events(path)
         release_stale_provider_reservations(events, requested_at)
         decision = apply_budget_limit(evaluate_help_request(support_policy, help_type), support_policy, events)
         event = {
@@ -334,7 +352,7 @@ def record_help_request(
                 "detail": PROVIDER_ERROR_DETAIL,
             }
         with help_log_lock(path):
-            events = load_help_events(path)
+            events = load_writable_help_events(path)
             for persisted in events:
                 if persisted.get("request_id") == event["request_id"]:
                     persisted["response"] = response
