@@ -247,6 +247,14 @@ def teacher_dashboard_token() -> str:
     return secrets.token_urlsafe(24)
 
 
+def teacher_dashboard_token_console_line(token: str, configured: bool) -> str:
+    """Return a startup line without disclosing a persistent credential."""
+
+    if configured:
+        return "Token dashboard: configurato tramite THEBITLAB_TEACHER_TOKEN (valore non mostrato)"
+    return f"Token dashboard temporaneo: {token}"
+
+
 def student_help_operation_id(assignment_id: str, student_id: str) -> str:
     """Return the per-student admission key for one assignment help request."""
 
@@ -3435,6 +3443,7 @@ def main() -> int:
         help="Consente esplicitamente HTTP su un indirizzo non loopback; usare solo dietro protezioni di rete.",
     )
     args = parser.parse_args()
+    teacher_token_is_configured = bool(os.environ.get("THEBITLAB_TEACHER_TOKEN", "").strip())
     try:
         validate_server_bind(args.host, args.allow_insecure_network_http)
         configured_teacher_token = teacher_dashboard_token()
@@ -3456,7 +3465,7 @@ def main() -> int:
         print(f"Course board: http://{args.host}:{args.port}/tools/course_board.html")
         print(f"Root dati: {data_root}")
         print("Credenziali dashboard: utente teacher")
-        print(f"Token dashboard: {server.teacher_token}")
+        print(teacher_dashboard_token_console_line(server.teacher_token, teacher_token_is_configured))
         print("Premi Ctrl+C per fermare il server.")
         try:
             server.serve_forever()

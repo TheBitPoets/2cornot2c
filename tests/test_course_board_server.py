@@ -55,6 +55,24 @@ def test_teacher_dashboard_token_generates_robust_value(monkeypatch) -> None:
     assert len(generated) >= course_board_server.MIN_TEACHER_TOKEN_CHARS
 
 
+def test_teacher_dashboard_token_console_line_hides_configured_value() -> None:
+    configured = "teacher-dashboard-token-with-32-chars"
+
+    line = course_board_server.teacher_dashboard_token_console_line(configured, configured=True)
+
+    assert configured not in line
+    assert "THEBITLAB_TEACHER_TOKEN" in line
+
+
+def test_teacher_dashboard_token_console_line_shows_generated_value() -> None:
+    generated = "generated-teacher-dashboard-token"
+
+    line = course_board_server.teacher_dashboard_token_console_line(generated, configured=False)
+
+    assert generated in line
+    assert "temporaneo" in line
+
+
 def test_data_root_process_lock_rejects_a_second_server(tmp_path) -> None:
     first_lock = course_board_server.DataRootProcessLock(tmp_path)
     second_lock = course_board_server.DataRootProcessLock(tmp_path)
