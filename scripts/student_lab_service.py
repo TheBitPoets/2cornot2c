@@ -37,6 +37,10 @@ DEFAULT_STUDENT_REPOS_DIR = Path("examples/assignment_tracking/student_repos")
 MAX_HELP_PROMPT_CHARS = 2000
 
 
+class StudentLabDataError(RuntimeError):
+    """Report invalid persisted lab data without exposing storage details."""
+
+
 def clean_text(value: Any) -> str:
     """Return a stripped text value for optional record fields."""
 
@@ -305,7 +309,7 @@ def build_lab_assignment(
     }
 
 
-def list_student_lab_assignments(
+def _list_student_lab_assignments(
     *,
     root: Path = PROJECT_ROOT,
     student_id: str,
@@ -363,6 +367,30 @@ def list_student_lab_assignments(
     ]
     lab_assignments.sort(key=lambda item: (item.get("due_at") or "", item.get("activity_id") or ""))
     return lab_assignments
+
+
+def list_student_lab_assignments(
+    *,
+    root: Path = PROJECT_ROOT,
+    student_id: str,
+    assignments_dir: Path | None = None,
+    now: str | None = None,
+    expose_external_paths: bool = False,
+) -> list[dict[str, Any]]:
+    """Return assignments while keeping persisted storage details private."""
+
+    if not clean_text(student_id):
+        raise ValueError("student_id obbligatorio.")
+    try:
+        return _list_student_lab_assignments(
+            root=root,
+            student_id=student_id,
+            assignments_dir=assignments_dir,
+            now=now,
+            expose_external_paths=expose_external_paths,
+        )
+    except (OSError, ValueError) as error:
+        raise StudentLabDataError("Dati delle consegne non disponibili. Avvisa il docente.") from error
 
 
 def student_lab_payload(

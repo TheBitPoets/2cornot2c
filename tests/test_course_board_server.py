@@ -2627,6 +2627,34 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
             remote_assignments = json.loads(response.read().decode("utf-8"))
         assert remote_assignments["student_id"] == "rossi-mario"
         assert remote_assignments["assignments"][0]["help"]["total"] == initial_help_total + 1
+
+        original_locked_payload = course_board_server.locked_student_lab_payload
+
+        def fail_student_payload_without_exposing_path(**kwargs):
+            try:
+                raise ValueError(r"Report non valido: C:\dati-docente\privato\report.json")
+            except ValueError as error:
+                raise student_lab_service.StudentLabDataError(
+                    "Dati delle consegne non disponibili. Avvisa il docente."
+                ) from error
+
+        monkeypatch.setattr(
+            course_board_server,
+            "locked_student_lab_payload",
+            fail_student_payload_without_exposing_path,
+        )
+        with pytest.raises(urllib.error.HTTPError) as invalid_student_data:
+            urllib.request.urlopen(assignments_request, timeout=5)
+        invalid_student_payload = json.loads(invalid_student_data.value.read().decode("utf-8"))
+        assert invalid_student_data.value.code == 500
+        assert invalid_student_payload["error"] == course_board_server.STUDENT_HELP_SERVER_ERROR
+        assert "dati-docente" not in json.dumps(invalid_student_payload)
+        monkeypatch.setattr(
+            course_board_server,
+            "locked_student_lab_payload",
+            original_locked_payload,
+        )
+
         unauthenticated_history = urllib.request.Request(
             f"{base_url}/api/student-lab/help-history?assignment_id={assignment['assignment_id']}"
         )

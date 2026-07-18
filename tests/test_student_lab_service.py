@@ -900,12 +900,29 @@ def test_student_lab_rejects_same_identity_bound_to_different_repositories(tmp_p
         ),
     )
 
-    with pytest.raises(ValueError, match="Identificativo studente ambiguo: mario"):
+    with pytest.raises(student_lab_service.StudentLabDataError, match="Dati delle consegne non disponibili") as error:
         student_lab_service.list_student_lab_assignments(
             root=tmp_path,
             student_id="mario",
             now="2026-10-18T12:00:00+02:00",
         )
+    assert "Identificativo studente ambiguo: mario" in str(error.value.__cause__)
+
+
+def test_student_lab_data_error_hides_persisted_report_paths(monkeypatch, tmp_path) -> None:
+    private_path = str(tmp_path / "teacher-reports" / "privato" / "report.json")
+
+    def fail_with_private_path(**kwargs):
+        raise ValueError(f"Report non valido: {private_path}")
+
+    monkeypatch.setattr(student_lab_service, "_list_student_lab_assignments", fail_with_private_path)
+
+    with pytest.raises(student_lab_service.StudentLabDataError) as error:
+        student_lab_service.list_student_lab_assignments(root=tmp_path, student_id="rossi-mario")
+
+    assert str(error.value) == "Dati delle consegne non disponibili. Avvisa il docente."
+    assert private_path not in str(error.value)
+    assert private_path in str(error.value.__cause__)
 
 
 def test_student_lab_rejects_missing_student_id(tmp_path) -> None:
