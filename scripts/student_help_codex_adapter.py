@@ -37,6 +37,8 @@ DISABLED_CODEX_FEATURES = (
 CODEX_PROVIDER = "codex-local"
 CODEX_PROVIDER_LABEL = "Codex locale (macchina docente)"
 MAX_RESPONSE_CHARS = 4000
+MAX_GUIDANCE_STEP_CHARS = 700
+MAX_CHECK_QUESTION_CHARS = 800
 MAX_PACKAGE_BYTES = 48 * 1024
 MAX_PROMPT_CHARS = 2_000
 MAX_CONTEXT_INSTRUCTIONS_CHARS = 4_000
@@ -50,11 +52,11 @@ CODEX_HELP_SCHEMA: dict[str, Any] = {
     "properties": {
         "guidance": {
             "type": "array",
-            "items": {"type": "string"},
+            "items": {"type": "string", "maxLength": MAX_GUIDANCE_STEP_CHARS},
             "minItems": 1,
             "maxItems": 4,
         },
-        "check_question": {"type": "string"},
+        "check_question": {"type": "string", "maxLength": MAX_CHECK_QUESTION_CHARS},
     },
     "required": ["guidance", "check_question"],
     "additionalProperties": False,
@@ -184,15 +186,23 @@ class CodexStudentHelpProvider:
         if not isinstance(guidance, list) or not 1 <= len(guidance) <= 4:
             raise ValueError("Codex non ha restituito una guida valida.")
         steps = [str(item).strip() for item in guidance]
-        if any(not step for step in steps) or not isinstance(check_question, str) or not check_question.strip():
+        if any(not step or len(step) > MAX_GUIDANCE_STEP_CHARS for step in steps):
+            raise ValueError("Codex non ha restituito una guida valida.")
+        if (
+            not isinstance(check_question, str)
+            or not check_question.strip()
+            or len(check_question.strip()) > MAX_CHECK_QUESTION_CHARS
+        ):
             raise ValueError("Codex non ha restituito una guida valida.")
         message = " ".join(f"{index}. {step}" for index, step in enumerate(steps, start=1))
         message = f"{message} Domanda guida: {check_question.strip()}"
+        if len(message) > MAX_RESPONSE_CHARS:
+            raise ValueError("Codex ha restituito una guida troppo grande.")
         return StudentHelpResponse(
             status="ready",
             provider=self.provider,
             provider_label=self.provider_label,
-            message=message[:MAX_RESPONSE_CHARS],
+            message=message,
             usage={"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
         )
 
