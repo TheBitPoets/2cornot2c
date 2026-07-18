@@ -106,6 +106,94 @@ Chiudi e riapri:
 
 Le app possono leggere `config.toml` all'avvio, quindi una sessione gia aperta potrebbe non vedere subito le modifiche.
 
+## Verifica della configurazione
+
+### Windows
+
+Dopo aver chiuso e riaperto VS Code, Codex o ChatGPT desktop, apri una nuova sessione Codex:
+
+```powershell
+codex
+```
+
+Poi dentro Codex esegui:
+
+```text
+/status
+```
+
+Dovresti vedere una configurazione coerente con:
+
+```text
+model: gpt-5.6-sol
+reasoning effort: ultra
+```
+
+Per controllare direttamente il file:
+
+```powershell
+Get-Content $env:USERPROFILE\.codex\config.toml | Select-String "model|model_reasoning_effort|\[agents\]|max_threads|max_depth"
+```
+
+Output atteso:
+
+```text
+model = "gpt-5.6-sol"
+model_reasoning_effort = "ultra"
+[agents]
+max_threads = 6
+max_depth = 1
+```
+
+### Linux
+
+Dopo aver riaperto terminale, editor o Codex:
+
+```bash
+codex
+```
+
+Poi dentro Codex esegui:
+
+```text
+/status
+```
+
+Dovresti vedere una configurazione coerente con:
+
+```text
+model: gpt-5.6-sol
+reasoning effort: ultra
+```
+
+Per controllare direttamente il file:
+
+```bash
+grep -E '^(model|model_reasoning_effort|max_threads|max_depth)|^\[agents\]' ~/.codex/config.toml
+```
+
+Output atteso:
+
+```text
+model = "gpt-5.6-sol"
+model_reasoning_effort = "ultra"
+[agents]
+max_threads = 6
+max_depth = 1
+```
+
+### Sub-agenti
+
+Per verificare che i sub-agenti siano disponibili, in una nuova sessione Codex prova un prompt di questo tipo:
+
+```text
+Usa sub-agenti per fare una review di questa branch: uno per bug, uno per test mancanti, uno per manutenibilita. Aspetta tutti e poi riassumi.
+```
+
+Se la superficie Codex che stai usando supporta i sub-agenti, dovresti vedere attivita o thread separati nell'interfaccia. Nella CLI puoi usare `/agent` per ispezionare e cambiare thread agente mentre sono in esecuzione.
+
+Se il file e corretto ma il modello non e disponibile per il tuo account o per quella superficie Codex, `/status` o l'avvio della sessione lo rendono visibile con un fallback o con un errore di modello non disponibile.
+
 ## Note operative
 
 `model_reasoning_effort = "ultra"` aumenta qualita e profondita sui task complessi, ma puo aumentare tempo e consumo.
