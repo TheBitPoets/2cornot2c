@@ -673,7 +673,8 @@ def test_track_assignments_uses_stable_assignment_student_id_for_server_help(tmp
     help_summary = index["students"][0]["help"]
     assert help_summary["total"] == 1
     assert help_summary["events"][0]["prompt"] == "Come funziona input()?"
-    assert "studente-stabile-001" in help_summary["path"]
+    assert "studente-stabile-001" not in help_summary["path"]
+    assert help_summary["path"].startswith("teacher-help-events/student_id-")
 
 
 def test_track_assignments_uses_canonical_legacy_identity_for_server_help(tmp_path) -> None:
@@ -719,7 +720,8 @@ def test_track_assignments_uses_canonical_legacy_identity_for_server_help(tmp_pa
     help_summary = index["students"][0]["help"]
     assert help_summary["total"] == 1
     assert help_summary["events"][0]["prompt"] == "Come funziona input()?"
-    assert canonical_student_id in help_summary["path"]
+    assert canonical_student_id not in help_summary["path"]
+    assert help_summary["path"].startswith("teacher-help-events/student_id-")
 
 
 def test_track_assignments_matches_legacy_target_field_for_server_help(tmp_path) -> None:
