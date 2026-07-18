@@ -15,6 +15,7 @@ from scripts.student_help_provider import (
 
 HELP_LOG_SCHEMA_VERSION = "student_help_log.v1"
 HELP_EVENT_SCHEMA_VERSION = "student_help_event.v1"
+PROVIDER_ERROR_DETAIL = "Il provider non ha potuto completare la richiesta. Riprova più tardi o avvisa il docente."
 
 HELP_TYPES: dict[str, dict[str, str]] = {
     "feedback-tecnico": {
@@ -237,7 +238,7 @@ def record_help_request(
                 )
             )
             event["response"] = provider_response_payload(response)
-        except Exception as error:  # Provider failures must not discard the student's request.
+        except Exception:  # Provider failures must not discard the student's request.
             event["response"] = {
                 "schema_version": "student_help_response.v1",
                 "status": "error",
@@ -245,7 +246,7 @@ def record_help_request(
                 "provider_label": "Provider aiuto non disponibile",
                 "message": "",
                 "usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
-                "detail": clean_text(error) or "Errore provider senza dettagli.",
+                "detail": PROVIDER_ERROR_DETAIL,
             }
     events.append(event)
     write_help_events(path, events)

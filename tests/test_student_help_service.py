@@ -14,7 +14,7 @@ class RecordingHelpProvider:
     def respond(self, request):
         self.requests.append(request)
         if self.fail:
-            raise RuntimeError("Provider di prova non raggiungibile")
+            raise RuntimeError("Provider non raggiungibile: token=segreto-di-prova")
         return StudentHelpResponse(
             status="ready",
             provider="test-provider",
@@ -139,9 +139,14 @@ def test_record_help_request_persists_provider_error_without_losing_request(tmp_
         provider=provider,
     )
 
+    log_path = tmp_path / "student-repo" / "help" / "python-base-somma-001" / "events.json"
+    persisted_text = log_path.read_text(encoding="utf-8")
+
     assert event["allowed"] is True
     assert event["response"]["status"] == "error"
-    assert "non raggiungibile" in event["response"]["detail"]
+    assert event["response"]["detail"] == student_help_service.PROVIDER_ERROR_DETAIL
+    assert "segreto-di-prova" not in persisted_text
+    assert "non raggiungibile" not in persisted_text
 
 
 def test_record_help_request_persists_request_when_provider_response_is_not_json_safe(tmp_path) -> None:
