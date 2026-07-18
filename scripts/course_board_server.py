@@ -2317,6 +2317,27 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return True
         return False
 
+    def reject_unsafe_teacher_post(self, path: str) -> bool:
+        """Reject browser cross-site writes and non-JSON teacher API requests."""
+
+        if not path.startswith("/api/") or ("POST", path) in REMOTE_STUDENT_API_ROUTES:
+            return False
+        content_type = self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
+        if content_type != "application/json":
+            self.write_error_json(415, "Le API docente accettano soltanto application/json.")
+            return True
+        if self.headers.get("Sec-Fetch-Site", "").strip().lower() == "cross-site":
+            self.write_error_json(403, "Richiesta cross-site rifiutata.")
+            return True
+        origin = self.headers.get("Origin", "").strip()
+        if origin:
+            parsed_origin = urlparse(origin)
+            request_host = self.headers.get("Host", "").strip().lower()
+            if parsed_origin.scheme not in {"http", "https"} or parsed_origin.netloc.lower() != request_host:
+                self.write_error_json(403, "Origine della richiesta non autorizzata.")
+                return True
+        return False
+
     def authenticated_student_id(self) -> str | None:
         """Authenticate one student request and write the HTTP error on failure."""
 
@@ -2413,6 +2434,8 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
         if self.reject_unauthenticated_teacher_api("POST", parsed.path):
+            return
+        if self.reject_unsafe_teacher_post(parsed.path):
             return
         if parsed.path == "/api/student-lab/help":
             student_id = self.authenticated_student_id()

@@ -1786,6 +1786,32 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
         with pytest.raises(urllib.error.HTTPError) as remote_teacher_write:
             urllib.request.urlopen(remote_delete, timeout=5)
         assert remote_teacher_write.value.code == 401
+        cross_site_teacher_write = urllib.request.Request(
+            f"{base_url}/api/assignments/delete",
+            data=b"{}",
+            headers={
+                "Authorization": teacher_authorization,
+                "Content-Type": "application/json",
+                "Origin": "https://pagina-malevola.test",
+                "Sec-Fetch-Site": "cross-site",
+            },
+            method="POST",
+        )
+        with pytest.raises(urllib.error.HTTPError) as cross_site_rejected:
+            urllib.request.urlopen(cross_site_teacher_write, timeout=5)
+        assert cross_site_rejected.value.code == 403
+        plain_text_teacher_write = urllib.request.Request(
+            f"{base_url}/api/assignments/delete",
+            data=b"{}",
+            headers={
+                "Authorization": teacher_authorization,
+                "Content-Type": "text/plain",
+            },
+            method="POST",
+        )
+        with pytest.raises(urllib.error.HTTPError) as plain_text_rejected:
+            urllib.request.urlopen(plain_text_teacher_write, timeout=5)
+        assert plain_text_rejected.value.code == 415
         with urllib.request.urlopen(history_request, timeout=5) as remote_student_history:
             assert remote_student_history.status == 200
         unknown_student_request = urllib.request.Request(
