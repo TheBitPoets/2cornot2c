@@ -32,6 +32,20 @@ def test_server_bind_rejects_clear_text_network_exposure_by_default() -> None:
     course_board_server.validate_server_bind("0.0.0.0", allow_insecure_network_http=True)
 
 
+def test_data_root_process_lock_rejects_a_second_server(tmp_path) -> None:
+    first_lock = course_board_server.DataRootProcessLock(tmp_path)
+    second_lock = course_board_server.DataRootProcessLock(tmp_path)
+    first_lock.acquire()
+    try:
+        with pytest.raises(RuntimeError, match="Un altro server"):
+            second_lock.acquire()
+    finally:
+        first_lock.release()
+
+    second_lock.acquire()
+    second_lock.release()
+
+
 def test_bounded_http_server_limits_workers_and_sets_client_timeout(monkeypatch) -> None:
     class FakeRequest:
         timeout = None

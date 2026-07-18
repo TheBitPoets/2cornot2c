@@ -124,6 +124,55 @@ class StudentHelpBusyError(RuntimeError):
     """Raised when another help request already owns the assignment slot."""
 
 
+class DataRootProcessLock:
+    """Hold an operating-system lock for one server data root."""
+
+    def __init__(self, root: Path) -> None:
+        self.path = root.resolve(strict=False) / ".thebitlab-server.lock"
+        self._handle = None
+
+    def acquire(self) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        handle = self.path.open("a+b")
+        try:
+            handle.seek(0, os.SEEK_END)
+            if handle.tell() == 0:
+                handle.write(b"\0")
+                handle.flush()
+            handle.seek(0)
+            if os.name == "nt":
+                import msvcrt
+
+                msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except (OSError, BlockingIOError) as error:
+            handle.close()
+            raise RuntimeError(
+                f"Un altro server sta gia usando il root dati: {self.path.parent}"
+            ) from error
+        self._handle = handle
+
+    def release(self) -> None:
+        if self._handle is None:
+            return
+        try:
+            self._handle.seek(0)
+            if os.name == "nt":
+                import msvcrt
+
+                msvcrt.locking(self._handle.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(self._handle.fileno(), fcntl.LOCK_UN)
+        finally:
+            self._handle.close()
+            self._handle = None
+
+
 @contextmanager
 def assignment_operation_lock(assignment_id: str, *, blocking: bool = True):
     """Serialize one assignment operation and release its cache entry afterward."""
@@ -2965,23 +3014,32 @@ def main() -> int:
         validate_server_bind(args.host, args.allow_insecure_network_http)
     except ValueError as error:
         parser.error(str(error))
-    data_root = configure_data_root(args.root)
-    server = BoundedThreadingHTTPServer((args.host, args.port), CourseBoardHandler)
-    server.teacher_token = os.environ.get("THEBITLAB_TEACHER_TOKEN", "").strip() or secrets.token_urlsafe(24)
-    if not is_loopback_bind_host(args.host):
-        print("ATTENZIONE: dashboard e credenziali Basic sono esposte su HTTP non cifrato.")
-        print("Preferisci loopback con tunnel SSH oppure un reverse proxy HTTPS.")
-    print(f"Course board: http://{args.host}:{args.port}/tools/course_board.html")
-    print(f"Root dati: {data_root}")
-    print("Credenziali dashboard: utente teacher")
-    print(f"Token dashboard: {server.teacher_token}")
-    print("Premi Ctrl+C per fermare il server.")
+    data_root_lock = DataRootProcessLock(args.root)
     try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        print("\nServer fermato.")
+        data_root_lock.acquire()
+    except RuntimeError as error:
+        parser.error(str(error))
+    server = None
+    try:
+        data_root = configure_data_root(args.root)
+        server = BoundedThreadingHTTPServer((args.host, args.port), CourseBoardHandler)
+        server.teacher_token = os.environ.get("THEBITLAB_TEACHER_TOKEN", "").strip() or secrets.token_urlsafe(24)
+        if not is_loopback_bind_host(args.host):
+            print("ATTENZIONE: dashboard e credenziali Basic sono esposte su HTTP non cifrato.")
+            print("Preferisci loopback con tunnel SSH oppure un reverse proxy HTTPS.")
+        print(f"Course board: http://{args.host}:{args.port}/tools/course_board.html")
+        print(f"Root dati: {data_root}")
+        print("Credenziali dashboard: utente teacher")
+        print(f"Token dashboard: {server.teacher_token}")
+        print("Premi Ctrl+C per fermare il server.")
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            print("\nServer fermato.")
     finally:
-        server.server_close()
+        if server is not None:
+            server.server_close()
+        data_root_lock.release()
     return 0
 
 
