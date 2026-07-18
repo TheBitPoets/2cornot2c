@@ -628,6 +628,7 @@ def test_record_help_from_tui_posts_only_identifiers_and_prompt(monkeypatch) -> 
         server_token="signed-token",
         help_type="ai",
         prompt="Come procedo?",
+        request_id="request-tui-0001",
     )
 
     assert event == {"allowed": True, "label": "Aiuto AI"}
@@ -636,6 +637,7 @@ def test_record_help_from_tui_posts_only_identifiers_and_prompt(monkeypatch) -> 
         "assignment_id": "assignment-python-base-somma-001-demo",
         "help_type": "ai",
         "prompt": "Come procedo?",
+        "request_id": "request-tui-0001",
     }
     assert captured["headers"]["Content-type"] == "application/json; charset=utf-8"
     assert captured["headers"]["Authorization"] == "Bearer signed-token"
@@ -939,16 +941,16 @@ def test_run_tui_can_record_help_request_and_reload(monkeypatch, tmp_path) -> No
     assert result == 0
     assert len(load_calls) == 2
     assert all(call["server_token"] == "signed-token" for call in load_calls)
-    assert requests == [
-        {
-            "assignment": payload["assignments"][0],
-            "server_url": "http://server.test:8765",
-            "server_token": "signed-token",
-            "help_type": "ai",
-            "prompt": "Mi scrivi la soluzione?",
-            "allow_insecure_http": False,
-        }
-    ]
+    assert len(requests) == 1
+    request = requests[0]
+    assert request["assignment"] == payload["assignments"][0]
+    assert request["server_url"] == "http://server.test:8765"
+    assert request["server_token"] == "signed-token"
+    assert request["help_type"] == "ai"
+    assert request["prompt"] == "Mi scrivi la soluzione?"
+    assert request["allow_insecure_http"] is False
+    assert len(request["request_id"]) == 32
+    assert request["request_id"].isalnum()
     assert any("Esito richiesta aiuto" in output and "Codex locale" in output for output in outputs)
     assert sum(1 for output in outputs if "Dettaglio consegna" in output) == 2
 

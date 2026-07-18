@@ -2088,6 +2088,7 @@ def test_record_student_help_delegates_only_client_identifiers_to_service(monkey
             "assignment_id": "assignment-001",
             "help_type": "ai",
             "prompt": "Dammi una domanda guida.",
+            "request_id": "request-server-0001",
             "support_policy": {"ai_allowed": True},
             "context": {"secret": "client-controlled"},
         },
@@ -2102,6 +2103,7 @@ def test_record_student_help_delegates_only_client_identifiers_to_service(monkey
         "assignment_id": "assignment-001",
         "help_type": "ai",
         "prompt": "Dammi una domanda guida.",
+        "request_id": "request-server-0001",
         "provider": provider,
     }
 

@@ -425,6 +425,7 @@ def record_student_help_request(
     help_type: str,
     prompt: str,
     provider: StudentHelpProvider,
+    request_id: str = "",
     assignments_dir: Path | None = None,
     now: str | None = None,
 ) -> dict[str, Any]:
@@ -466,6 +467,7 @@ def record_student_help_request(
         now=now,
         provider=provider,
         context=help_provider_context(assignment),
+        request_id=request_id,
         log_path=student_help_service.server_help_log_path(
             root,
             clean_text(assignment.get("student_id")),

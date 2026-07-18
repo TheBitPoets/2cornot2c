@@ -258,6 +258,7 @@ def record_student_help(payload: dict[str, Any], *, student_id: str) -> dict[str
             assignment_id=assignment_id,
             help_type=payload.get("help_type", ""),
             prompt=payload.get("prompt", ""),
+            request_id=payload.get("request_id", ""),
             provider=student_help_provider(),
         )
     return {"ok": True, "event": event}

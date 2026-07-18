@@ -28,6 +28,7 @@ PROVIDER_ERROR_DETAIL = "Il provider non ha potuto completare la richiesta. Ripr
 _HELP_LOG_LOCKS: dict[str, threading.Lock] = {}
 _HELP_LOG_LOCKS_GUARD = threading.Lock()
 _STORAGE_KEY_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
+REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{16,128}$")
 _WINDOWS_RESERVED_NAMES = {
     "CON",
     "PRN",
@@ -345,6 +346,7 @@ def record_help_request(
     provider: StudentHelpProvider | None = None,
     context: dict[str, Any] | None = None,
     log_path: Path | None = None,
+    request_id: str = "",
 ) -> dict[str, Any]:
     if log_path is None:
         if repo_path is None:
@@ -352,9 +354,27 @@ def record_help_request(
         log_path = help_log_path(repo_path, activity_id)
     path = log_path
     requested_at = parse_now(now)
+    clean_request_id = str(request_id or "").strip() or uuid.uuid4().hex
+    if not REQUEST_ID_PATTERN.fullmatch(clean_request_id):
+        raise ValueError("request_id non valido.")
     with help_log_lock(path):
         events = load_writable_help_events(path)
-        release_stale_provider_reservations(events, requested_at)
+        reconciled = release_stale_provider_reservations(events, requested_at)
+        existing = next(
+            (event for event in events if clean_text(event.get("request_id")) == clean_request_id),
+            None,
+        )
+        if existing is not None:
+            expected_help_type = evaluate_help_request(support_policy, help_type)["help_type"]
+            if (
+                clean_text(existing.get("activity_id")) != clean_text(activity_id)
+                or clean_text(existing.get("help_type")) != expected_help_type
+                or clean_text(existing.get("prompt")) != clean_text(prompt)
+            ):
+                raise ValueError("request_id gia usato per una richiesta diversa.")
+            if reconciled:
+                write_help_events(path, events)
+            return existing
         if len(events) >= MAX_HELP_EVENTS_PER_ASSIGNMENT:
             raise StudentHelpRateLimitError(
                 "Limite richieste di aiuto raggiunto per questa consegna. Avvisa il docente."
@@ -362,7 +382,7 @@ def record_help_request(
         decision = apply_budget_limit(evaluate_help_request(support_policy, help_type), support_policy, events)
         event = {
             "schema_version": HELP_EVENT_SCHEMA_VERSION,
-            "request_id": uuid.uuid4().hex,
+            "request_id": clean_request_id,
             "requested_at": requested_at,
             "activity_id": clean_text(activity_id),
             "help_type": decision["help_type"],

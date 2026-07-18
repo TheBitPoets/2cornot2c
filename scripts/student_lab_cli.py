@@ -10,6 +10,7 @@ import textwrap
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
@@ -571,6 +572,7 @@ def record_help_from_tui(
     server_token: str,
     help_type: str,
     prompt: str,
+    request_id: str = "",
     allow_insecure_http: bool = False,
 ) -> dict[str, Any]:
     """Send one student help request to the teacher-side server."""
@@ -581,11 +583,13 @@ def record_help_from_tui(
     if not server_token.strip():
         raise ValueError("Token studente mancante. Imposta THEBITLAB_STUDENT_HELP_TOKEN.")
     safe_server_url = validated_server_url(server_url, allow_insecure_http)
+    clean_request_id = str(request_id or "").strip() or uuid.uuid4().hex
     body = json.dumps(
         {
             "assignment_id": assignment_id,
             "help_type": help_type,
             "prompt": prompt,
+            "request_id": clean_request_id,
         },
         ensure_ascii=False,
     ).encode("utf-8")
@@ -915,6 +919,7 @@ def run_tui(
         server_token=server_token,
         allow_insecure_http=allow_insecure_http,
     )
+    pending_help_request_ids: dict[tuple[str, str, str], str] = {}
     while True:
         if clear:
             clear_screen()
@@ -976,6 +981,8 @@ def run_tui(
                     if not prompt:
                         print_fn("Richiesta aiuto annullata: prompt vuoto.")
                     else:
+                        request_key = (selected_assignment_id, help_type, prompt)
+                        request_id = pending_help_request_ids.setdefault(request_key, uuid.uuid4().hex)
                         try:
                             event = record_help_from_tui(
                                 assignment=assignment,
@@ -983,11 +990,13 @@ def run_tui(
                                 server_token=server_token,
                                 help_type=help_type,
                                 prompt=prompt,
+                                request_id=request_id,
                                 allow_insecure_http=allow_insecure_http,
                             )
                         except ValueError as error:
                             print_fn(f"Richiesta aiuto non salvata:\n{error}")
                         else:
+                            pending_help_request_ids.pop(request_key, None)
                             print_fn(help_result_message(event, use_color=use_color))
                             try:
                                 payload = load_current_payload(

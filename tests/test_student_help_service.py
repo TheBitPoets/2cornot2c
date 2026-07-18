@@ -152,6 +152,44 @@ def test_record_help_request_persists_provider_response_for_allowed_request(tmp_
     assert teacher_summary["events"][0]["response"]["usage"]["total_tokens"] == 10
 
 
+def test_record_help_request_deduplicates_retried_request_id(tmp_path) -> None:
+    repo = tmp_path / "student-repo"
+    policy = student_support_policy.support_policy("ai-assisted")
+    provider = RecordingHelpProvider()
+    request = {
+        "repo_path": repo,
+        "activity_id": "python-base-somma-001",
+        "support_policy": policy,
+        "help_type": "ai",
+        "prompt": "Come posso trovare il caso che fallisce?",
+        "provider": provider,
+        "request_id": "retry-request-0001",
+    }
+
+    first = student_help_service.record_help_request(**request)
+    second = student_help_service.record_help_request(**request)
+
+    log_path = repo / "help" / "python-base-somma-001" / "events.json"
+    assert second == first
+    assert len(provider.requests) == 1
+    assert student_help_service.help_summary(log_path)["total"] == 1
+
+
+def test_record_help_request_rejects_reused_id_with_different_prompt(tmp_path) -> None:
+    request = {
+        "repo_path": tmp_path / "student-repo",
+        "activity_id": "python-base-somma-001",
+        "support_policy": student_support_policy.support_policy("ai-assisted"),
+        "help_type": "teoria",
+        "prompt": "Prima richiesta",
+        "request_id": "conflict-request-01",
+    }
+    student_help_service.record_help_request(**request)
+
+    with pytest.raises(ValueError, match="gia usato"):
+        student_help_service.record_help_request(**{**request, "prompt": "Seconda richiesta"})
+
+
 def test_record_help_request_does_not_call_provider_when_policy_blocks_request(tmp_path) -> None:
     provider = RecordingHelpProvider()
 
