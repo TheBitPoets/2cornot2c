@@ -243,6 +243,8 @@ Risultato atteso:
 - Dopo un comando nel dettaglio si resta nel dettaglio della consegna, non si torna alla lista generale.
 - La guida locale è distinta da una risposta AI reale e non mostra una soluzione completa.
 - Prompt e risposta restano visibili nello storico della consegna.
+- Ogni richiesta nello storico è separata da linee tratteggiate e prompt, risposta, motivo ed esito sono distinguibili per colore.
+- Con `--no-color` la stessa gerarchia resta leggibile grazie a intestazioni, rientri e separatori.
 - Il report salvato dalla TUI viene letto dalla dashboard studente.
 - Le richieste di aiuto salvate dalla TUI vengono viste dal docente.
 - Gli accenti e i testi italiani sono corretti.

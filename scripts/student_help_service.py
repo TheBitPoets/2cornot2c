@@ -16,20 +16,20 @@ HELP_TYPES: dict[str, dict[str, str]] = {
     "feedback-tecnico": {
         "label": "Feedback tecnico",
         "policy_key": "debug_allowed",
-        "allowed_reason": "La modalita consente feedback tecnico, errori e risultati dei test.",
-        "denied_reason": "La modalita scelta dal docente non consente feedback tecnico aggiuntivo.",
+        "allowed_reason": "La modalità consente feedback tecnico, errori e risultati dei test.",
+        "denied_reason": "La modalità scelta dal docente non consente feedback tecnico aggiuntivo.",
     },
     "teoria": {
         "label": "Richiamo teorico",
         "policy_key": "theory_allowed",
-        "allowed_reason": "La modalita consente richiami teorici e materiali guida.",
-        "denied_reason": "La modalita scelta dal docente non consente richiami teorici aggiuntivi.",
+        "allowed_reason": "La modalità consente richiami teorici e materiali guida.",
+        "denied_reason": "La modalità scelta dal docente non consente richiami teorici aggiuntivi.",
     },
     "ai": {
         "label": "Aiuto AI",
         "policy_key": "ai_allowed",
-        "allowed_reason": "La modalita consente aiuto AI nei limiti decisi dal docente.",
-        "denied_reason": "La modalita scelta dal docente non consente aiuto AI.",
+        "allowed_reason": "La modalità consente aiuto AI nei limiti decisi dal docente.",
+        "denied_reason": "La modalità scelta dal docente non consente aiuto AI.",
     },
 }
 

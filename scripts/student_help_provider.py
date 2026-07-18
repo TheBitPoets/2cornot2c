@@ -120,7 +120,7 @@ class DeterministicStudentHelpProvider:
         test_focus = _optional_focus(" Considera in particolare i test", failed_tests)
         return (
             f"{topic_focus}.{test_focus} Chiediti: quale ipotesi sta verificando il test, quale caso limite manca "
-            "e quale osservazione confermerebbe la prossima modifica? Questa e una guida locale a domande, "
+            "e quale osservazione confermerebbe la prossima modifica? Questa è una guida locale a domande, "
             "senza AI esterna e senza soluzione completa."
         )
 

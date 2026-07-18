@@ -33,7 +33,7 @@ SUPPORT_POLICIES: dict[str, dict[str, Any]] = {
     "studio-guidato": {
         "mode": "studio-guidato",
         "label": "Studio guidato",
-        "summary": "Puoi consultare materiali, richiami teorici e domande guida collegate all'attivita.",
+        "summary": "Puoi consultare materiali, richiami teorici e domande guida collegate all'attività.",
         "allowed": ["riferimenti alla teoria", "domande guida", "esempi approvati dal docente", "feedback tecnico"],
         "not_allowed": ["soluzioni complete non approvate", "AI generativa libera"],
         "ai_allowed": False,

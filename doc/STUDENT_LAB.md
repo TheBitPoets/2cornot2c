@@ -116,7 +116,9 @@ Ogni evento indica tipo di aiuto richiesto, esito consentito/bloccato, motivazio
 Quando la richiesta è consentita e viene usato un provider, l'evento contiene anche una `response` conforme a
 `student_help_response.v1`: stato, provider, messaggio, dettaglio tecnico e contatori d'uso.
 Il payload lab espone un riepilogo `help` con totale eventi, richieste consentite, richieste bloccate, ultimo esito e budget AI usato/rimanente.
-La TUI registra nuove richieste, mostra subito la risposta e la conserva nello storico. In questa fase usa
+La TUI registra nuove richieste, mostra subito la risposta e la conserva nello storico. Il comando `h` separa ogni
+evento con linee tratteggiate, distingue prompt, risposta e motivo con colori ANSI e mantiene la stessa struttura
+leggibile quando i colori sono disabilitati. In questa fase usa
 `DeterministicStudentHelpProvider`, indicato a schermo come `Guida locale (nessuna AI esterna)`: serve a collaudare
 il flusso senza credenziali e senza consumo di token. Il contratto `StudentHelpProvider` permette di sostituirlo con
 Codex o un provider API senza cambiare policy, persistenza e interfaccia.

@@ -304,11 +304,56 @@ def test_render_help_history_shows_events(tmp_path) -> None:
     rendered = student_lab_cli.render_help_history(assignment, root=tmp_path)
 
     assert "Storico richieste aiuto" in rendered
-    assert "2026-10-18 17:20 | Aiuto AI | bloccata" in rendered
+    assert "Richiesta 1" in rendered
+    assert "Data:              2026-10-18 17:20" in rendered
+    assert "Tipo:              Aiuto AI" in rendered
+    assert "Esito:             bloccata" in rendered
+    assert rendered.count(student_lab_cli.section_separator()) == 2
+    assert "Prompt studente" in rendered
+    assert "Motivo della decisione" in rendered
     assert "non consente aiuto AI" in rendered
     assert "Mi scrivi la soluzione completa?" in rendered
     assert "Risposta - Guida locale (nessuna AI esterna)" in rendered
     assert "Prova prima un caso minimo" in rendered
+
+
+def test_render_help_history_uses_colors_and_wraps_long_text(tmp_path) -> None:
+    log_path = tmp_path / "student" / "help" / "python-base-somma-001" / "events.json"
+    log_path.parent.mkdir(parents=True)
+    long_prompt = "Vorrei capire come analizzare il primo test fallito senza ricevere la soluzione completa e senza saltare i passaggi di debug."
+    log_path.write_text(
+        json.dumps(
+            {
+                "events": [
+                    {
+                        "requested_at": "2026-10-18T17:20:00+02:00",
+                        "label": "Aiuto AI",
+                        "allowed": True,
+                        "reason": "La modalità consente aiuto AI.",
+                        "prompt": long_prompt,
+                        "response": {
+                            "status": "ready",
+                            "provider_label": "Guida locale (nessuna AI esterna)",
+                            "message": "Parti dal primo test fallito e verifica una sola ipotesi alla volta.",
+                        },
+                    }
+                ]
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    assignment = sample_assignment(help={"path": "student/help/python-base-somma-001/events.json"})
+
+    rendered = student_lab_cli.render_help_history(assignment, root=tmp_path, use_color=True)
+
+    assert "\033[36mRichiesta 1\033[0m" in rendered
+    assert "\033[33mPrompt studente\033[0m" in rendered
+    assert "\033[32mRisposta - Guida locale (nessuna AI esterna)\033[0m" in rendered
+    assert "\033[35mMotivo della decisione\033[0m" in rendered
+    assert "\033[32mconsentita\033[0m" in rendered
+    assert "\n  la soluzione completa e senza saltare i passaggi di debug." in rendered
+    assert long_prompt not in rendered
 
 
 def test_render_help_history_handles_empty_or_invalid_log(tmp_path) -> None:
