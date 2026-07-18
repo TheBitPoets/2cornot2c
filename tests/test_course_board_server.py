@@ -79,6 +79,7 @@ def test_bounded_http_server_limits_workers_and_sets_client_timeout(monkeypatch)
         ("127.0.0.1", 0),
         course_board_server.CourseBoardHandler,
         max_workers=1,
+        max_workers_per_client=1,
     )
     request = FakeRequest()
     try:
@@ -115,6 +116,7 @@ def test_bounded_http_server_rejects_overload_without_blocking(monkeypatch) -> N
         ("127.0.0.1", 0),
         course_board_server.CourseBoardHandler,
         max_workers=1,
+        max_workers_per_client=1,
     )
     request = FakeRequest()
     closed = []
@@ -135,6 +137,59 @@ def test_bounded_http_server_rejects_overload_without_blocking(monkeypatch) -> N
         assert closed == [request]
     finally:
         server._request_slots.release()
+        server.server_close()
+
+
+def test_bounded_http_server_limits_and_releases_slots_per_client(monkeypatch) -> None:
+    class FakeRequest:
+        def __init__(self) -> None:
+            self.response = b""
+
+        def settimeout(self, timeout) -> None:
+            pass
+
+        def sendall(self, content) -> None:
+            self.response += content
+
+    server = course_board_server.BoundedThreadingHTTPServer(
+        ("127.0.0.1", 0),
+        course_board_server.CourseBoardHandler,
+        max_workers=4,
+        max_workers_per_client=1,
+    )
+    first = FakeRequest()
+    same_client = FakeRequest()
+    other_client = FakeRequest()
+    retry = FakeRequest()
+    accepted = []
+    try:
+        monkeypatch.setattr(server, "shutdown_request", lambda request: None)
+        monkeypatch.setattr(
+            course_board_server.ThreadingHTTPServer,
+            "process_request",
+            lambda self, request, address: accepted.append((request, address)),
+        )
+        monkeypatch.setattr(
+            course_board_server.ThreadingHTTPServer,
+            "process_request_thread",
+            lambda self, request, address: None,
+        )
+
+        server.process_request(first, ("192.0.2.10", 1001))
+        server.process_request(same_client, ("192.0.2.10", 1002))
+        server.process_request(other_client, ("192.0.2.11", 1003))
+
+        assert [item[0] for item in accepted] == [first, other_client]
+        assert same_client.response.startswith(b"HTTP/1.1 503 Service Unavailable")
+
+        server.process_request_thread(first, ("192.0.2.10", 1001))
+        server.process_request(retry, ("192.0.2.10", 1004))
+        assert accepted[-1][0] is retry
+
+        server.process_request_thread(retry, ("192.0.2.10", 1004))
+        server.process_request_thread(other_client, ("192.0.2.11", 1003))
+        assert server._client_workers == {}
+    finally:
         server.server_close()
 
 

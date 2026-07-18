@@ -78,6 +78,7 @@ DEFAULT_SOURCES = ["README.md", "LINUX_PROGRAMMING.md"]
 ACTIVE_AI_PROVIDER = os.environ.get("AI_PROVIDER", "openai").strip().lower()
 ACTIVE_AI_MODEL = os.environ.get("AI_MODEL", "").strip()
 MAX_HTTP_WORKERS = 64
+MAX_HTTP_WORKERS_PER_CLIENT = 8
 HTTP_CLIENT_TIMEOUT_SECONDS = 15
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 TAG_RE = re.compile(r"<[^>]+>")
@@ -2628,21 +2629,57 @@ class BoundedThreadingHTTPServer(ThreadingHTTPServer):
 
     daemon_threads = True
 
-    def __init__(self, *args, max_workers: int = MAX_HTTP_WORKERS, **kwargs) -> None:
+    def __init__(
+        self,
+        *args,
+        max_workers: int = MAX_HTTP_WORKERS,
+        max_workers_per_client: int | None = None,
+        **kwargs,
+    ) -> None:
         if max_workers < 1:
             raise ValueError("max_workers deve essere almeno 1")
+        if max_workers_per_client is None:
+            max_workers_per_client = min(MAX_HTTP_WORKERS_PER_CLIENT, max_workers)
+        if max_workers_per_client < 1 or max_workers_per_client > max_workers:
+            raise ValueError("max_workers_per_client deve essere tra 1 e max_workers")
         self._request_slots = threading.BoundedSemaphore(max_workers)
+        self._max_workers_per_client = max_workers_per_client
+        self._client_workers: dict[str, int] = {}
+        self._client_workers_guard = threading.Lock()
         super().__init__(*args, **kwargs)
 
     def process_request(self, request, client_address) -> None:
+        if not self.acquire_client_slot(client_address):
+            self.reject_overloaded_request(request)
+            return
         if not self._request_slots.acquire(blocking=False):
+            self.release_client_slot(client_address)
             self.reject_overloaded_request(request)
             return
         try:
             super().process_request(request, client_address)
         except BaseException:
             self._request_slots.release()
+            self.release_client_slot(client_address)
             raise
+
+    def acquire_client_slot(self, client_address) -> bool:
+        client_key = str(client_address[0])
+        with self._client_workers_guard:
+            current = self._client_workers.get(client_key, 0)
+            if current >= self._max_workers_per_client:
+                return False
+            self._client_workers[client_key] = current + 1
+            return True
+
+    def release_client_slot(self, client_address) -> None:
+        client_key = str(client_address[0])
+        with self._client_workers_guard:
+            current = self._client_workers.get(client_key, 0)
+            if current <= 1:
+                self._client_workers.pop(client_key, None)
+            else:
+                self._client_workers[client_key] = current - 1
 
     def reject_overloaded_request(self, request) -> None:
         """Reject a connection without occupying the server accept loop."""
@@ -2669,6 +2706,7 @@ class BoundedThreadingHTTPServer(ThreadingHTTPServer):
             super().process_request_thread(request, client_address)
         finally:
             self._request_slots.release()
+            self.release_client_slot(client_address)
 
 
 class CourseBoardHandler(BaseHTTPRequestHandler):
