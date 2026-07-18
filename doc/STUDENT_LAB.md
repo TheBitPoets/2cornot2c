@@ -86,8 +86,9 @@ imposta `THEBITLAB_STUDENT_HELP_CODEX_MODEL` prima di avviare il server.
 
 Per l'MVP il server accetta un solo processo Codex alla volta: una richiesta concorrente riceve subito la guida
 locale, evitando code lunghe e consumo incontrollato. Solo il tipo `3 AI` usa Codex e consuma il budget AI; feedback
-tecnico e richiamo teorico usano la guida locale. I token firmati non hanno ancora scadenza: si revocano cambiando il
-segreto server e rigenerandoli. L'endpoint resta un servizio MVP e non sostituisce il futuro sistema di autenticazione.
+tecnico e richiamo teorico usano la guida locale. I token studente scadono dopo la durata configurata e possono
+essere revocati prima della scadenza cambiando il segreto server e rigenerandoli. L'endpoint resta un servizio MVP e
+non sostituisce il futuro sistema di autenticazione.
 
 Asset e API docente richiedono sempre l'autenticazione HTTP Basic, anche da loopback. Le sole rotte
 `/api/student-lab/*` previste dal contratto usano invece il bearer token personale dello studente. Un tunnel SSH o
