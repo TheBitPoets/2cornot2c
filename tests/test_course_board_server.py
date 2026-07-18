@@ -338,6 +338,31 @@ def test_delete_legacy_assignment_removes_logs_for_derived_aliases(tmp_path, mon
     assert all(not log_path.exists() for log_path in alias_paths)
 
 
+def test_delete_legacy_assignment_normalizes_windows_path_aliases(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
+    monkeypatch.setattr(course_board_server, "TEACHER_ASSIGNMENTS_DIR", tmp_path / "teacher-assignments")
+    storage = assignment_records.JsonAssignmentRecordStorage(tmp_path, tmp_path / "teacher-assignments")
+    assignment = storage.write_assignment(
+        assignment_records.build_assignment_record(
+            assignment_id="assignment-legacy-windows",
+            activity_id="python-base-somma-001",
+            activity_path="activities/python-base-somma-001.json",
+            target_type="student",
+            assigned_at="2026-10-12T09:00:00+02:00",
+            due_at="2026-10-19T23:59:00+02:00",
+            targets=[{"target": r"studenti\rossi-mario"}],
+        )
+    )
+    log_path = student_help_service.server_help_log_path(tmp_path, "rossi-mario", assignment["id"])
+    log_path.parent.mkdir(parents=True)
+    log_path.write_text('{"events": []}\n', encoding="utf-8")
+
+    course_board_server.delete_assignment_record({"assignment_id": assignment["id"]})
+
+    assert not log_path.parent.exists()
+
+
 def test_delete_modern_assignment_also_removes_historical_alias_log(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")

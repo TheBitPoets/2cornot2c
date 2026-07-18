@@ -50,6 +50,13 @@ def resolve_local_path(root: Path, path_value: str) -> Path:
     return path.resolve(strict=False) if path.is_absolute() else (root / path).resolve(strict=False)
 
 
+def cross_platform_basename(value: Any) -> str:
+    """Return a basename for paths produced on either Windows or POSIX."""
+
+    clean = clean_text(value).rstrip("/\\").replace("\\", "/")
+    return clean.split("/")[-1] if clean else ""
+
+
 def target_student_id(target: dict[str, Any]) -> str:
     """Return the best student identifier exposed by an assignment target."""
 
@@ -59,7 +66,7 @@ def target_student_id(target: dict[str, Any]) -> str:
     for key in ("target", "path", "repo_ref"):
         value = clean_text(target.get(key))
         if value:
-            return value.rstrip("/\\").replace("\\", "/").split("/")[-1]
+            return cross_platform_basename(value)
     display_name = clean_text(target.get("display_name"))
     if display_name:
         return display_name
@@ -89,8 +96,7 @@ def target_legacy_student_aliases(target: dict[str, Any]) -> set[str]:
     for key in ("path", "target", "repo_ref"):
         value = clean_text(target.get(key))
         if value:
-            candidates.add(Path(value).name)
-            candidates.add(value.rstrip("/").split("/")[-1])
+            candidates.add(cross_platform_basename(value))
     return {candidate for candidate in candidates if candidate}
 
 
@@ -98,9 +104,9 @@ def target_cleanup_student_ids(target: dict[str, Any]) -> set[str]:
     """Return canonical and historical storage keys to remove for one target."""
 
     identities = target_legacy_student_aliases(target)
-    stable_student_id = clean_text(target.get("student_id"))
-    if stable_student_id:
-        identities.add(stable_student_id)
+    canonical_student_id = target_student_id(target)
+    if canonical_student_id:
+        identities.add(canonical_student_id)
     return identities
 
 
