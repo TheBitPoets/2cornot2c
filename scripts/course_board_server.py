@@ -346,6 +346,15 @@ def assignment_record_storage() -> assignment_records.JsonAssignmentRecordStorag
     return assignment_records.JsonAssignmentRecordStorage(ROOT, TEACHER_ASSIGNMENTS_DIR)
 
 
+def assignment_record_operation_id(
+    storage: assignment_records.JsonAssignmentRecordStorage,
+    assignment_id: str,
+) -> str:
+    """Return the lock identity shared by every alias of one record path."""
+
+    return f"assignment-record:{storage.safe_assignment_path(assignment_id)}"
+
+
 def class_roster_storage() -> thebitlab_storage.JsonClassRosterStorage:
     """Return the JSON storage adapter for local class rosters."""
 
@@ -828,7 +837,7 @@ def delete_assignment_record(payload: dict) -> dict:
     if not requested_assignment_id:
         raise ValueError("assignment_id obbligatorio.")
     record_storage = assignment_record_storage()
-    with assignment_operation_lock(requested_assignment_id):
+    with assignment_operation_lock(assignment_record_operation_id(record_storage, requested_assignment_id)):
         assignment = record_storage.read_assignment(requested_assignment_id)
         assignment_id = str(assignment["id"])
         student_ids = set()
@@ -1249,8 +1258,8 @@ def save_assignment_record(payload: dict) -> dict:
         targets=targets,
     )
     overwrite = bool(payload.get("overwrite", False))
-    with assignment_operation_lock(assignment["id"]):
-        storage = assignment_record_storage()
+    storage = assignment_record_storage()
+    with assignment_operation_lock(assignment_record_operation_id(storage, assignment["id"])):
         new_bindings = validate_global_assignment_target_bindings(storage, assignment)
         if overwrite:
             try:

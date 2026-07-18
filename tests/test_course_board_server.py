@@ -426,6 +426,18 @@ def test_help_operation_ids_keep_distinct_student_identities() -> None:
             pass
 
 
+def test_assignment_record_aliases_share_the_same_operation_lock(tmp_path) -> None:
+    storage = assignment_records.JsonAssignmentRecordStorage(tmp_path)
+    canonical = course_board_server.assignment_record_operation_id(storage, "assignment-demo")
+    alias = course_board_server.assignment_record_operation_id(storage, "Assignment Demo")
+
+    assert canonical == alias
+    with course_board_server.assignment_operation_lock(canonical):
+        with pytest.raises(course_board_server.StudentHelpBusyError):
+            with course_board_server.assignment_operation_lock(alias, blocking=False):
+                pass
+
+
 def test_delete_assignment_record_resets_server_help_history_and_budget(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
