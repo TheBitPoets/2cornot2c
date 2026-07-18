@@ -864,7 +864,11 @@ def delete_assignment_record(payload: dict) -> dict:
     if not requested_assignment_id:
         raise ValueError("assignment_id obbligatorio.")
     record_storage = assignment_record_storage()
-    with assignment_operation_lock(assignment_record_operation_id(record_storage, requested_assignment_id)):
+    with ExitStack() as assignment_locks:
+        assignment_locks.enter_context(assignment_operation_lock(ASSIGNMENT_TARGET_BINDINGS_OPERATION_ID))
+        assignment_locks.enter_context(
+            assignment_operation_lock(assignment_record_operation_id(record_storage, requested_assignment_id))
+        )
         try:
             assignment = record_storage.read_assignment(requested_assignment_id)
         except FileNotFoundError:

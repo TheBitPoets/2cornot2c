@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import http.client
 import json
+import os
 import threading
 import urllib.error
 import urllib.request
@@ -1539,6 +1540,81 @@ def test_concurrent_saves_cannot_bind_one_student_to_two_repositories(tmp_path, 
     assert len(errors) == 1
     assert "gia associato a un altro repository: mario" in str(errors[0])
     assert len(assignment_records.JsonAssignmentRecordStorage(tmp_path).list_assignments()) == 1
+
+
+def test_delete_rollback_blocks_an_incompatible_concurrent_binding(tmp_path, monkeypatch) -> None:
+    patch_assignment_paths(tmp_path, monkeypatch)
+    activity_path = tmp_path / "activities" / "python-base-somma-001.json"
+    write_demo_activity(activity_path)
+    (tmp_path / "classe-a" / "mario").mkdir(parents=True)
+    (tmp_path / "classe-b" / "mario").mkdir(parents=True)
+    storage = assignment_records.JsonAssignmentRecordStorage(tmp_path, tmp_path / "teacher-assignments")
+    assignment = storage.write_assignment(
+        assignment_records.build_assignment_record(
+            assignment_id="assignment-binding-rollback",
+            activity_id="python-base-somma-001",
+            activity_path="activities/python-base-somma-001.json",
+            target_type="student",
+            assigned_at="2026-10-12T09:00:00+02:00",
+            due_at="2026-10-19T23:59:00+02:00",
+            targets=[{"student_id": "mario", "path": "classe-a/mario"}],
+        )
+    )
+    commit_started = threading.Event()
+    release_commit = threading.Event()
+    original_update = course_board_server.update_help_deletion_manifest
+
+    def fail_committed_update(trash_root, **updates):
+        if updates.get("state") == "committed":
+            commit_started.set()
+            assert release_commit.wait(timeout=5)
+            raise OSError("journal non aggiornabile")
+        return original_update(trash_root, **updates)
+
+    monkeypatch.setattr(course_board_server, "update_help_deletion_manifest", fail_committed_update)
+    delete_errors = []
+    save_errors = []
+
+    def delete_worker():
+        try:
+            course_board_server.delete_assignment_record({"assignment_id": assignment["id"]})
+        except Exception as error:  # noqa: BLE001
+            delete_errors.append(error)
+
+    def save_worker():
+        try:
+            course_board_server.save_assignment_record(
+                {
+                    "activity_path": "activities/python-base-somma-001.json",
+                    "target_type": "student",
+                    "class_id": "classe-b",
+                    "targets_text": "classe-b/mario",
+                    "assigned_at": "2026-10-13T09:00:00+02:00",
+                    "due_at": "2026-10-20T23:59:00+02:00",
+                }
+            )
+        except Exception as error:  # noqa: BLE001
+            save_errors.append(error)
+
+    delete_thread = threading.Thread(target=delete_worker)
+    save_thread = threading.Thread(target=save_worker)
+    delete_thread.start()
+    assert commit_started.wait(timeout=5)
+    save_thread.start()
+    save_thread.join(timeout=0.1)
+    assert save_thread.is_alive()
+    release_commit.set()
+    delete_thread.join(timeout=5)
+    save_thread.join(timeout=5)
+
+    assert len(delete_errors) == 1
+    assert len(save_errors) == 1
+    assert "gia associato a un altro repository: mario" in str(save_errors[0])
+    persisted = storage.list_assignments()
+    assert [item["id"] for item in persisted] == [assignment["id"]]
+    assert course_board_server.assignment_target_bindings(persisted[0])["mario"] == os.path.normcase(
+        str((tmp_path / "classe-a" / "mario").resolve(strict=False))
+    )
 
 
 def test_student_payload_does_not_wait_for_assignment_provider_lock(tmp_path, monkeypatch) -> None:
