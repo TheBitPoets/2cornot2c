@@ -279,6 +279,16 @@ def load_writable_help_events(log_path: Path) -> list[dict[str, Any]]:
     return events
 
 
+def load_reconciled_help_events(log_path: Path, now: str | None = None) -> tuple[list[dict[str, Any]], str]:
+    """Load a log and persist the release of stale provider reservations."""
+
+    with help_log_lock(log_path):
+        events, error = read_help_log(log_path)
+        if not error and release_stale_provider_reservations(events, parse_now(now)):
+            write_help_events(log_path, events)
+        return events, error
+
+
 def help_log_lock(log_path: Path) -> threading.Lock:
     """Return the process-local lock used to serialize one help log."""
 
@@ -363,7 +373,7 @@ def record_help_request(
     return event
 
 
-def help_summary(log_path: Path | None) -> dict[str, Any]:
+def help_summary(log_path: Path | None, now: str | None = None) -> dict[str, Any]:
     if log_path is None:
         return {
             "path": "",
@@ -380,7 +390,7 @@ def help_summary(log_path: Path | None) -> dict[str, Any]:
             "counts": {},
             "events": [],
         }
-    events, error = read_help_log(log_path)
+    events, error = load_reconciled_help_events(log_path, now)
     counts: dict[str, int] = {}
     for event in events:
         help_type = clean_text(event.get("help_type")) or "sconosciuto"
@@ -415,10 +425,10 @@ def help_summary(log_path: Path | None) -> dict[str, Any]:
     }
 
 
-def teacher_help_summary(log_path: Path | None) -> dict[str, Any]:
+def teacher_help_summary(log_path: Path | None, now: str | None = None) -> dict[str, Any]:
     """Return a teacher-facing help summary with sanitized event prompts."""
 
-    summary = help_summary(log_path)
+    summary = help_summary(log_path, now)
     if log_path is None:
         summary["events"] = []
         summary["ai_total"] = 0
@@ -443,8 +453,20 @@ def teacher_help_summary(log_path: Path | None) -> dict[str, Any]:
     return summary
 
 
-def help_budget_summary(log_path: Path | None, support_policy: dict[str, Any]) -> dict[str, Any]:
-    events = load_help_events(log_path) if log_path is not None else []
+def help_budget_summary(
+    log_path: Path | None,
+    support_policy: dict[str, Any],
+    now: str | None = None,
+) -> dict[str, Any]:
+    events, error = load_reconciled_help_events(log_path, now) if log_path is not None else ([], "")
+    if error:
+        limit = positive_int(support_policy.get("ai_request_limit"))
+        return {
+            "limit": limit,
+            "used": limit,
+            "remaining": 0,
+            "exhausted": bool(limit),
+        }
     return ai_budget_status(support_policy, events)
 
 

@@ -225,9 +225,9 @@ def build_lab_assignment(
     status = status_with_report(report, normalized["due_at"], now) if report else status_without_report(normalized["due_at"], now)
     activity = load_activity_summary(root, normalized["activity_path"])
     support_policy = student_support_policy.support_policy(activity.get("student_support_mode", ""))
-    help_log = student_help_service.help_summary(help_log_path)
+    help_log = student_help_service.help_summary(help_log_path, now)
     help_log["path"] = relative_to_root(root, help_log_path)
-    help_log["ai_budget"] = student_help_service.help_budget_summary(help_log_path, support_policy)
+    help_log["ai_budget"] = student_help_service.help_budget_summary(help_log_path, support_policy, now)
     grading = track_assignments.grading_summary(report)
     return {
         "assignment_id": normalized["id"],

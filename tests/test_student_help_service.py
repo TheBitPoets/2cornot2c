@@ -386,6 +386,32 @@ def test_stale_provider_reservation_is_released_after_server_restart(tmp_path) -
     assert student_help_service.ai_budget_status(policy, events)["used"] == 1
 
 
+def test_reading_summary_releases_stale_provider_reservation(tmp_path) -> None:
+    log_path = tmp_path / "events.json"
+    policy = dict(student_support_policy.support_policy("ai-assisted"))
+    student_help_service.write_help_events(
+        log_path,
+        [
+            {
+                "requested_at": "2026-10-18T10:00:00+02:00",
+                "help_type": "ai",
+                "allowed": True,
+                "budget_charged": True,
+                "provider_status": "pending",
+            }
+        ],
+    )
+
+    summary = student_help_service.help_summary(log_path, "2026-10-18T10:06:00+02:00")
+    budget = student_help_service.help_budget_summary(log_path, policy, "2026-10-18T10:06:00+02:00")
+
+    persisted = student_help_service.load_help_events(log_path)[0]
+    assert summary["last_response_status"] == "error"
+    assert budget["used"] == 0
+    assert persisted["provider_status"] == "interrupted"
+    assert persisted["budget_charged"] is False
+
+
 def test_record_help_request_does_not_overwrite_corrupt_log(tmp_path) -> None:
     repo = tmp_path / "student-repo"
     log_path = student_help_service.help_log_path(repo, "activity")
@@ -402,6 +428,10 @@ def test_record_help_request_does_not_overwrite_corrupt_log(tmp_path) -> None:
         )
 
     assert log_path.read_text(encoding="utf-8") == "{json-troncato"
+    assert student_help_service.help_budget_summary(
+        log_path,
+        student_support_policy.support_policy("ai-assisted"),
+    ) == {"limit": 5, "used": 5, "remaining": 0, "exhausted": True}
 
 
 def test_atomic_log_write_preserves_previous_file_when_replace_fails(tmp_path, monkeypatch) -> None:

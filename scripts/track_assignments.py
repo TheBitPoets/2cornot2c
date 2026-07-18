@@ -379,7 +379,7 @@ def track_assignments(
         if report is not None:
             validate_report_activity(report, activity_id, report_path)
         relative_report_path = relative_to_root_or_repo(report_path, target.path) if report_path.exists() else None
-        help = student_help_service.teacher_help_summary(help_log_path)
+        help = student_help_service.teacher_help_summary(help_log_path, normalized_now)
         if assignment_id and server_root is not None:
             help["path"] = str(help_log_path.relative_to(server_root)).replace("\\", "/")
         else:
