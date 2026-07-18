@@ -47,6 +47,8 @@ condividere invece `THEBITLAB_STUDENT_HELP_SECRET`, che deve restare soltanto su
 I token studente e docente si configurano soltanto con le variabili d'ambiente
 `THEBITLAB_STUDENT_HELP_TOKEN` e `THEBITLAB_TEACHER_TOKEN`: non passarli come argomenti della riga di comando,
 perche potrebbero comparire nella cronologia della shell o nell'elenco dei processi.
+Il processo Codex riceve un ambiente limitato a runtime, profilo, proxy/certificati e configurazione Codex/OpenAI:
+i segreti TheBitLab e le altre variabili arbitrarie del server non vengono inoltrati.
 Il token studente scade dopo 24 ore. Il server puo modificare la durata impostando
 `THEBITLAB_STUDENT_HELP_TOKEN_TTL_SECONDS` tra 60 secondi e 7 giorni; alla scadenza il docente genera un nuovo
 token con `student_help_auth.py`.

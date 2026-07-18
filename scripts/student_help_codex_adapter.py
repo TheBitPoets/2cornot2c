@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import tempfile
@@ -34,6 +35,51 @@ DISABLED_CODEX_FEATURES = (
     "standalone_web_search",
     "tool_call_mcp_elicitation",
 )
+CODEX_ENVIRONMENT_KEYS = frozenset(
+    {
+        "ALL_PROXY",
+        "APPDATA",
+        "COLORTERM",
+        "COMSPEC",
+        "CURL_CA_BUNDLE",
+        "DYLD_LIBRARY_PATH",
+        "HOME",
+        "HOMEDRIVE",
+        "HOMEPATH",
+        "HTTP_PROXY",
+        "HTTPS_PROXY",
+        "LANG",
+        "LANGUAGE",
+        "LC_ALL",
+        "LC_CTYPE",
+        "LD_LIBRARY_PATH",
+        "LOCALAPPDATA",
+        "NO_PROXY",
+        "PATH",
+        "PATHEXT",
+        "PROGRAMDATA",
+        "PROGRAMFILES",
+        "PROGRAMFILES(X86)",
+        "PROGRAMW6432",
+        "REQUESTS_CA_BUNDLE",
+        "SHELL",
+        "SSL_CERT_DIR",
+        "SSL_CERT_FILE",
+        "SYSTEMROOT",
+        "TEMP",
+        "TERM",
+        "TMP",
+        "TMPDIR",
+        "USER",
+        "USERNAME",
+        "USERPROFILE",
+        "WINDIR",
+        "WSLENV",
+        "XDG_CACHE_HOME",
+        "XDG_CONFIG_HOME",
+        "XDG_DATA_HOME",
+    }
+)
 CODEX_PROVIDER = "codex-local"
 CODEX_PROVIDER_LABEL = "Codex locale (macchina docente)"
 MAX_RESPONSE_CHARS = 4000
@@ -61,6 +107,18 @@ CODEX_HELP_SCHEMA: dict[str, Any] = {
     "required": ["guidance", "check_question"],
     "additionalProperties": False,
 }
+
+
+def codex_subprocess_environment() -> dict[str, str]:
+    """Return the minimum server environment needed by the local Codex CLI."""
+
+    return {
+        key: value
+        for key, value in os.environ.items()
+        if key.upper() in CODEX_ENVIRONMENT_KEYS
+        or key.upper().startswith("CODEX_")
+        or key.upper().startswith("OPENAI_")
+    }
 
 
 def codex_help_prompt() -> str:
@@ -165,6 +223,7 @@ class CodexStudentHelpProvider:
                 completed = subprocess.run(
                     command,
                     cwd=workdir,
+                    env=codex_subprocess_environment(),
                     input=json.dumps(package, ensure_ascii=False, indent=2),
                     capture_output=True,
                     text=True,

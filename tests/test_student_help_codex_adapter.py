@@ -32,12 +32,18 @@ def sample_request() -> StudentHelpRequest:
 
 def test_codex_provider_runs_in_empty_read_only_ephemeral_workspace(monkeypatch) -> None:
     captured = {}
+    monkeypatch.setenv("THEBITLAB_STUDENT_HELP_SECRET", "segreto-server")
+    monkeypatch.setenv("THEBITLAB_TEACHER_TOKEN", "token-docente")
+    monkeypatch.setenv("UNRELATED_DATABASE_PASSWORD", "password-estranea")
+    monkeypatch.setenv("CODEX_HOME", "/home/docente/.codex")
+    monkeypatch.setenv("OPENAI_API_KEY", "chiave-codex")
     monkeypatch.setattr(student_help_codex_adapter.shutil, "which", lambda command: f"/bin/{command}")
 
     def fake_run(command, **kwargs):
         captured["command"] = command
         captured["cwd"] = kwargs["cwd"]
         captured["encoding"] = kwargs["encoding"]
+        captured["env"] = kwargs["env"]
         captured["raw_input"] = kwargs["input"]
         captured["input"] = json.loads(kwargs["input"])
         schema_path = command[command.index("--output-schema") + 1]
@@ -78,6 +84,12 @@ def test_codex_provider_runs_in_empty_read_only_ephemeral_workspace(monkeypatch)
     assert captured["command"][captured["command"].index("--model") + 1] == "gpt-test"
     assert captured["cwd"].name.startswith("thebitlab-student-help-")
     assert captured["encoding"] == "utf-8"
+    assert captured["env"]["CODEX_HOME"] == "/home/docente/.codex"
+    assert captured["env"]["OPENAI_API_KEY"] == "chiave-codex"
+    assert "PATH" in captured["env"]
+    assert "THEBITLAB_STUDENT_HELP_SECRET" not in captured["env"]
+    assert "THEBITLAB_TEACHER_TOKEN" not in captured["env"]
+    assert "UNRELATED_DATABASE_PASSWORD" not in captured["env"]
     assert "già" in captured["raw_input"]
     assert captured["input"]["context"] == {
         "title": "Somma in Python",
