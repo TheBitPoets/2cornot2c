@@ -292,6 +292,68 @@ def test_delete_assignment_record_resets_server_help_history_and_budget(tmp_path
     assert summary["ai_total"] == 0
 
 
+def test_recovery_restores_staged_logs_when_assignment_record_still_exists(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "TEACHER_ASSIGNMENTS_DIR", tmp_path / "teacher-assignments")
+    storage = assignment_records.JsonAssignmentRecordStorage(tmp_path)
+    assignment = storage.write_assignment(
+        assignment_records.build_assignment_record(
+            assignment_id="assignment-crash-prima-record",
+            activity_id="python-base-somma-001",
+            activity_path="activities/python-base-somma-001.json",
+            target_type="student",
+            assigned_at="2026-10-12T09:00:00+02:00",
+            due_at="2026-10-19T23:59:00+02:00",
+            targets=[{"student_id": "rossi-mario"}],
+        )
+    )
+    log_path = student_help_service.server_help_log_path(tmp_path, "rossi-mario", assignment["id"])
+    log_path.parent.mkdir(parents=True)
+    log_path.write_text('{"events": [{"prompt": "prima del crash"}]}\n', encoding="utf-8")
+
+    trash_root, _ = course_board_server.stage_help_logs_for_deletion(
+        assignment["id"],
+        [log_path.parent],
+    )
+    assert not log_path.exists()
+
+    course_board_server.recover_interrupted_assignment_deletions()
+
+    assert log_path.is_file()
+    assert "prima del crash" in log_path.read_text(encoding="utf-8")
+    assert not trash_root.exists()
+
+
+def test_recovery_purges_staged_logs_when_assignment_record_is_already_deleted(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "TEACHER_ASSIGNMENTS_DIR", tmp_path / "teacher-assignments")
+    storage = assignment_records.JsonAssignmentRecordStorage(tmp_path)
+    assignment = storage.write_assignment(
+        assignment_records.build_assignment_record(
+            assignment_id="assignment-crash-dopo-record",
+            activity_id="python-base-somma-001",
+            activity_path="activities/python-base-somma-001.json",
+            target_type="student",
+            assigned_at="2026-10-12T09:00:00+02:00",
+            due_at="2026-10-19T23:59:00+02:00",
+            targets=[{"student_id": "rossi-mario"}],
+        )
+    )
+    log_path = student_help_service.server_help_log_path(tmp_path, "rossi-mario", assignment["id"])
+    log_path.parent.mkdir(parents=True)
+    log_path.write_text('{"events": [{"prompt": "da eliminare"}]}\n', encoding="utf-8")
+    trash_root, _ = course_board_server.stage_help_logs_for_deletion(
+        assignment["id"],
+        [log_path.parent],
+    )
+    storage.delete_assignment(assignment["id"])
+
+    course_board_server.recover_interrupted_assignment_deletions()
+
+    assert not log_path.exists()
+    assert not trash_root.exists()
+
+
 def test_delete_assignment_uses_canonical_record_id_for_help_logs(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")

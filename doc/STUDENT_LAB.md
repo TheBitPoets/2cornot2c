@@ -81,6 +81,11 @@ Asset e API docente richiedono sempre l'autenticazione HTTP Basic, anche da loop
 `/api/student-lab/*` previste dal contratto usano invece il bearer token personale dello studente. Un tunnel SSH o
 un proxy locale non trasforma quindi una richiesta studente in una richiesta docente autorizzata.
 
+La cancellazione di un'assegnazione registra prima un journal privato nella quarantena dei log. Se il processo viene
+interrotto, al riavvio il server ripristina i log quando il record dell'assegnazione esiste ancora oppure completa la
+cancellazione quando il record non esiste piu. Una quarantena priva di journal blocca l'avvio invece di eliminare dati
+di cui non e possibile stabilire con sicurezza lo stato.
+
 Il primo runner locale, senza Docker, e:
 
 ```powershell

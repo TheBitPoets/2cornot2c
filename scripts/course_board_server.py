@@ -214,6 +214,7 @@ def configure_data_root(root: Path) -> Path:
     AI_PROVIDERS_PATH = ROOT / "config" / "ai_providers.yaml"
     AI_SECRET_PATH = ROOT / ".secrets" / "ai.secret"
     LEGACY_AI_SECRET_PATH = ROOT / "scripts" / ".secrets" / "ai.secret"
+    recover_interrupted_assignment_deletions()
     return ROOT
 
 
@@ -465,11 +466,35 @@ def restore_help_log_snapshots(snapshots: list[tuple[Path, dict[Path, bytes]]]) 
             destination.write_bytes(content)
 
 
-def stage_help_logs_for_deletion(log_dirs: list[Path]) -> tuple[Path, list[tuple[Path, Path]]]:
+def help_deletion_manifest_path(trash_root: Path) -> Path:
+    """Return the persistent recovery journal for one deletion."""
+
+    return trash_root / "deletion.json"
+
+
+def stage_help_logs_for_deletion(
+    assignment_id: str,
+    log_dirs: list[Path],
+) -> tuple[Path, list[tuple[Path, Path]]]:
     """Move help logs to a private same-volume quarantine before record deletion."""
 
     trash_root = ROOT / "teacher-help-events" / ".trash" / uuid.uuid4().hex
     staged_logs: list[tuple[Path, Path]] = []
+    planned_logs = []
+    for index, log_dir in enumerate(log_dirs):
+        try:
+            original = log_dir.resolve(strict=False).relative_to(ROOT.resolve(strict=False))
+        except ValueError as error:
+            raise ValueError("Il log da cancellare deve trovarsi nella root dati.") from error
+        planned_logs.append({"original": str(original).replace("\\", "/"), "staged": str(index)})
+    assignment_records.JsonAssignmentRecordStorage(ROOT).write_json(
+        help_deletion_manifest_path(trash_root),
+        {
+            "schema_version": "student_help_deletion.v1",
+            "assignment_id": assignment_id,
+            "logs": planned_logs,
+        },
+    )
     try:
         for index, log_dir in enumerate(log_dirs):
             if not log_dir.is_dir():
@@ -483,6 +508,49 @@ def stage_help_logs_for_deletion(log_dirs: list[Path]) -> tuple[Path, list[tuple
         shutil.rmtree(trash_root, ignore_errors=True)
         raise
     return trash_root, staged_logs
+
+
+def recover_interrupted_assignment_deletions() -> None:
+    """Recover or complete journaled help-log deletions after a server restart."""
+
+    trash_base = ROOT / "teacher-help-events" / ".trash"
+    if not trash_base.is_dir():
+        return
+    storage = assignment_record_storage()
+    help_root = (ROOT / "teacher-help-events").resolve(strict=False)
+    for trash_root in sorted(path for path in trash_base.iterdir() if path.is_dir()):
+        manifest_path = help_deletion_manifest_path(trash_root)
+        if not manifest_path.is_file():
+            raise RuntimeError(f"Quarantena senza journal: {trash_root}")
+        manifest = storage.read_json(manifest_path)
+        if manifest.get("schema_version") != "student_help_deletion.v1":
+            raise RuntimeError(f"Journal cancellazione non supportato: {manifest_path}")
+        assignment_id = str(manifest.get("assignment_id", "")).strip()
+        logs = manifest.get("logs")
+        if not assignment_id or not isinstance(logs, list):
+            raise RuntimeError(f"Journal cancellazione non valido: {manifest_path}")
+        assignment_exists = storage.safe_assignment_path(assignment_id).is_file()
+        if assignment_exists:
+            for item in logs:
+                if not isinstance(item, dict):
+                    raise RuntimeError(f"Journal cancellazione non valido: {manifest_path}")
+                original = (ROOT / str(item.get("original", ""))).resolve(strict=False)
+                staged = (trash_root / str(item.get("staged", ""))).resolve(strict=False)
+                try:
+                    original.relative_to(help_root)
+                    staged.relative_to(trash_root.resolve(strict=False))
+                except ValueError as error:
+                    raise RuntimeError(f"Path non valido nel journal: {manifest_path}") from error
+                if staged.is_dir():
+                    if original.exists():
+                        raise RuntimeError(f"Conflitto durante il recupero del log: {original}")
+                    original.parent.mkdir(parents=True, exist_ok=True)
+                    staged.replace(original)
+        shutil.rmtree(trash_root)
+    try:
+        trash_base.rmdir()
+    except OSError:
+        pass
 
 
 def delete_assignment_record(payload: dict) -> dict:
@@ -510,6 +578,7 @@ def delete_assignment_record(payload: dict) -> dict:
             for log_path in log_paths:
                 log_locks.enter_context(student_help_service.help_log_lock(log_path))
             trash_root, staged_logs = stage_help_logs_for_deletion(
+                assignment_id,
                 [log_path.parent for log_path in log_paths]
             )
             try:
