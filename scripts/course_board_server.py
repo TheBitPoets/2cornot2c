@@ -76,6 +76,8 @@ LEGACY_AI_SECRET_PATH = ROOT / "scripts" / ".secrets" / "ai.secret"
 DEFAULT_SOURCES = ["README.md", "LINUX_PROGRAMMING.md"]
 ACTIVE_AI_PROVIDER = os.environ.get("AI_PROVIDER", "openai").strip().lower()
 ACTIVE_AI_MODEL = os.environ.get("AI_MODEL", "").strip()
+MAX_HTTP_WORKERS = 64
+HTTP_CLIENT_TIMEOUT_SECONDS = 15
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 TAG_RE = re.compile(r"<[^>]+>")
 PUNCT_RE = re.compile(r"[^\w\s-]", re.UNICODE)
@@ -2362,6 +2364,33 @@ def set_ai_provider(provider: str, model: str = "") -> dict:
     return ai_config()
 
 
+class BoundedThreadingHTTPServer(ThreadingHTTPServer):
+    """Serve requests with a fixed upper bound on concurrent client threads."""
+
+    daemon_threads = True
+
+    def __init__(self, *args, max_workers: int = MAX_HTTP_WORKERS, **kwargs) -> None:
+        if max_workers < 1:
+            raise ValueError("max_workers deve essere almeno 1")
+        self._request_slots = threading.BoundedSemaphore(max_workers)
+        super().__init__(*args, **kwargs)
+
+    def process_request(self, request, client_address) -> None:
+        self._request_slots.acquire()
+        try:
+            super().process_request(request, client_address)
+        except BaseException:
+            self._request_slots.release()
+            raise
+
+    def process_request_thread(self, request, client_address) -> None:
+        try:
+            request.settimeout(HTTP_CLIENT_TIMEOUT_SECONDS)
+            super().process_request_thread(request, client_address)
+        finally:
+            self._request_slots.release()
+
+
 class CourseBoardHandler(BaseHTTPRequestHandler):
     """HTTP handler for the local board and its JSON API."""
 
@@ -2937,7 +2966,7 @@ def main() -> int:
     except ValueError as error:
         parser.error(str(error))
     data_root = configure_data_root(args.root)
-    server = ThreadingHTTPServer((args.host, args.port), CourseBoardHandler)
+    server = BoundedThreadingHTTPServer((args.host, args.port), CourseBoardHandler)
     server.teacher_token = os.environ.get("THEBITLAB_TEACHER_TOKEN", "").strip() or secrets.token_urlsafe(24)
     if not is_loopback_bind_host(args.host):
         print("ATTENZIONE: dashboard e credenziali Basic sono esposte su HTTP non cifrato.")

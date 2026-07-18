@@ -32,6 +32,37 @@ def test_server_bind_rejects_clear_text_network_exposure_by_default() -> None:
     course_board_server.validate_server_bind("0.0.0.0", allow_insecure_network_http=True)
 
 
+def test_bounded_http_server_limits_workers_and_sets_client_timeout(monkeypatch) -> None:
+    class FakeRequest:
+        timeout = None
+
+        def settimeout(self, timeout) -> None:
+            self.timeout = timeout
+
+    server = course_board_server.BoundedThreadingHTTPServer(
+        ("127.0.0.1", 0),
+        course_board_server.CourseBoardHandler,
+        max_workers=1,
+    )
+    request = FakeRequest()
+    try:
+        assert server._request_slots.acquire(blocking=False) is True
+        assert server._request_slots.acquire(blocking=False) is False
+        monkeypatch.setattr(
+            course_board_server.ThreadingHTTPServer,
+            "process_request_thread",
+            lambda self, current_request, client_address: None,
+        )
+
+        server.process_request_thread(request, ("127.0.0.1", 12345))
+
+        assert request.timeout == course_board_server.HTTP_CLIENT_TIMEOUT_SECONDS
+        assert server._request_slots.acquire(blocking=False) is True
+        server._request_slots.release()
+    finally:
+        server.server_close()
+
+
 def patch_assignment_paths(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
@@ -1863,7 +1894,9 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
 
     try:
         course_board_server.configure_data_root(tmp_path)
-        server = course_board_server.ThreadingHTTPServer(("127.0.0.1", 0), course_board_server.CourseBoardHandler)
+        server = course_board_server.BoundedThreadingHTTPServer(
+            ("127.0.0.1", 0), course_board_server.CourseBoardHandler
+        )
         server.teacher_token = teacher_token
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
