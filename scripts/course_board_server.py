@@ -667,7 +667,7 @@ def persist_help_log_rollback(
     sync_file_tree(rollback_root)
     update_help_deletion_manifest(
         trash_root,
-        state="rolling_back",
+        state="prepared",
         assignment=assignment,
         logs=logs,
     )
@@ -814,7 +814,7 @@ def recover_interrupted_assignment_deletions() -> None:
         if state in {"restored", "committed"}:
             purge_help_deletion_trash(trash_root)
             continue
-        if state != "staging":
+        if state not in {"staging", "prepared"}:
             raise RuntimeError(f"Stato journal cancellazione non supportato: {manifest_path}")
         assignment_exists = storage.safe_assignment_path(assignment_id).is_file()
         if assignment_exists:
@@ -856,6 +856,7 @@ def rollback_help_deletion(
 ) -> None:
     """Restore one failed deletion while leaving a recoverable journal on interruption."""
 
+    update_help_deletion_manifest(trash_root, state="rolling_back")
     restore_help_log_snapshots(snapshots)
     assignment_record_storage().write_assignment(assignment, overwrite=True)
     update_help_deletion_manifest(trash_root, state="restored")

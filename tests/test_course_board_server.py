@@ -596,10 +596,18 @@ def test_recovery_purges_staged_logs_when_assignment_record_is_already_deleted(t
     log_path = student_help_service.server_help_log_path(tmp_path, "rossi-mario", assignment["id"])
     log_path.parent.mkdir(parents=True)
     log_path.write_text('{"events": [{"prompt": "da eliminare"}]}\n', encoding="utf-8")
-    trash_root, _ = course_board_server.stage_help_logs_for_deletion(
+    trash_root, staged_logs = course_board_server.stage_help_logs_for_deletion(
         assignment["id"],
         [log_path.parent],
     )
+    course_board_server.persist_help_log_rollback(
+        trash_root,
+        assignment,
+        course_board_server.snapshot_staged_help_logs(staged_logs),
+    )
+    assert assignment_records.JsonAssignmentRecordStorage(tmp_path).read_json(
+        course_board_server.help_deletion_manifest_path(trash_root)
+    )["state"] == "prepared"
     storage.delete_assignment(assignment["id"])
 
     course_board_server.recover_interrupted_assignment_deletions()
@@ -981,6 +989,7 @@ def test_recovery_is_idempotent_after_crash_during_partial_rollback(tmp_path, mo
     snapshots = course_board_server.snapshot_staged_help_logs(staged_logs)
     course_board_server.persist_help_log_rollback(trash_root, assignment, snapshots)
     storage.delete_assignment(assignment["id"])
+    course_board_server.update_help_deletion_manifest(trash_root, state="rolling_back")
     course_board_server.shutil.rmtree(staged_logs[0][1])
     first_log = log_paths[0]
     first_log.parent.mkdir(parents=True)
@@ -1138,7 +1147,7 @@ def test_persistent_rollback_syncs_tree_before_advancing_journal(tmp_path, monke
 
     assert events == [
         ("sync", trash_root / "rollback"),
-        ("state", "rolling_back"),
+        ("state", "prepared"),
     ]
 
 
