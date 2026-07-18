@@ -574,32 +574,36 @@ def merge_legacy_help_summary(
 def teacher_help_summary(log_path: Path | None, now: str | None = None) -> dict[str, Any]:
     """Return a teacher-facing help summary with sanitized event prompts."""
 
-    summary = help_summary(log_path, now)
     if log_path is None:
+        summary = _empty_help_summary()
         summary["events"] = []
         summary["ai_total"] = 0
         return summary
-    events, error = read_help_log(log_path)
-    teacher_events = []
-    for event in events:
-        provider_status = clean_text(event.get("provider_status"))
-        teacher_event = {
-            "requested_at": clean_text(event.get("requested_at")),
-            "help_type": clean_text(event.get("help_type")),
-            "label": clean_text(event.get("label")),
-            "allowed": event.get("allowed") is True,
-            "reason": clean_text(event.get("reason")),
-            "prompt": clean_text(event.get("prompt")),
-            "response": _teacher_response(event.get("response")),
-        }
-        if provider_status in {"pending", "completed", "interrupted"}:
-            teacher_event["provider_status"] = provider_status
-        teacher_events.append(teacher_event)
-    summary["events"] = teacher_events
-    summary["ai_total"] = sum(1 for event in teacher_events if event["help_type"] == "ai")
-    if error:
-        summary["events"] = []
-    return summary
+    with help_log_lock(log_path):
+        events, error = read_help_log(log_path)
+        if not error and release_stale_provider_reservations(events, reconciliation_now()):
+            write_help_events(log_path, events)
+        summary = _help_summary_from_events(log_path, events, error)
+        teacher_events = []
+        for event in events:
+            provider_status = clean_text(event.get("provider_status"))
+            teacher_event = {
+                "requested_at": clean_text(event.get("requested_at")),
+                "help_type": clean_text(event.get("help_type")),
+                "label": clean_text(event.get("label")),
+                "allowed": event.get("allowed") is True,
+                "reason": clean_text(event.get("reason")),
+                "prompt": clean_text(event.get("prompt")),
+                "response": _teacher_response(event.get("response")),
+            }
+            if provider_status in {"pending", "completed", "interrupted"}:
+                teacher_event["provider_status"] = provider_status
+            teacher_events.append(teacher_event)
+        summary["events"] = teacher_events
+        summary["ai_total"] = sum(1 for event in teacher_events if event["help_type"] == "ai")
+        if error:
+            summary["events"] = []
+        return summary
 
 
 def help_budget_summary(

@@ -513,6 +513,44 @@ def test_help_summary_with_budget_uses_one_snapshot_during_deletion(tmp_path, mo
     assert summary["ai_budget"]["remaining"] == 4
 
 
+def test_teacher_help_summary_blocks_mutation_until_snapshot_is_complete(tmp_path, monkeypatch) -> None:
+    log_path = tmp_path / "help" / "events.json"
+    policy = student_support_policy.support_policy("studio-guidato")
+    student_help_service.write_help_events(
+        log_path,
+        [{"help_type": "teoria", "allowed": True, "response": {"status": "ready"}}],
+    )
+    sanitizing = threading.Event()
+    continue_summary = threading.Event()
+    original_response = student_help_service._teacher_response
+
+    def blocking_response(value):
+        sanitizing.set()
+        assert continue_summary.wait(timeout=2)
+        return original_response(value)
+
+    monkeypatch.setattr(student_help_service, "_teacher_response", blocking_response)
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        summary_future = executor.submit(student_help_service.teacher_help_summary, log_path)
+        assert sanitizing.wait(timeout=2)
+        mutation_future = executor.submit(
+            student_help_service.record_help_request,
+            log_path=log_path,
+            activity_id="activity",
+            support_policy=policy,
+            help_type="esempio",
+        )
+        time.sleep(0.05)
+        assert not mutation_future.done()
+        continue_summary.set()
+        summary = summary_future.result(timeout=2)
+        mutation_future.result(timeout=2)
+
+    assert summary["total"] == 1
+    assert len(summary["events"]) == 1
+    assert student_help_service.teacher_help_summary(log_path)["total"] == 2
+
+
 def test_record_help_request_stops_when_assignment_log_limit_is_reached(tmp_path, monkeypatch) -> None:
     repo = tmp_path / "student-repo"
     policy = student_support_policy.support_policy("studio-guidato")
