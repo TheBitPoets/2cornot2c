@@ -76,22 +76,31 @@ def legacy_display_student_id(value: Any) -> str:
     return f"legacy-{slug}-{digest}"
 
 
+def token_safe_student_id(value: Any) -> str:
+    """Return a valid token identity, normalizing legacy labels when needed."""
+
+    candidate = clean_text(value)
+    if not candidate:
+        return ""
+    try:
+        return student_help_auth.validate_student_id(candidate)
+    except ValueError:
+        return legacy_display_student_id(candidate)
+
+
 def target_student_id(target: dict[str, Any]) -> str:
     """Return the best student identifier exposed by an assignment target."""
 
-    stable_student_id = clean_text(target.get("student_id"))
+    stable_student_id = token_safe_student_id(target.get("student_id"))
     if stable_student_id:
-        try:
-            return student_help_auth.validate_student_id(stable_student_id)
-        except ValueError:
-            return legacy_display_student_id(stable_student_id)
+        return stable_student_id
     for key in ("target", "path", "repo_ref"):
         value = clean_text(target.get(key))
         if value:
-            return cross_platform_basename(value)
+            return token_safe_student_id(cross_platform_basename(value))
     display_name = clean_text(target.get("display_name"))
     if display_name:
-        return legacy_display_student_id(display_name)
+        return token_safe_student_id(display_name)
     return ""
 
 
