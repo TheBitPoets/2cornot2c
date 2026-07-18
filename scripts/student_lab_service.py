@@ -15,6 +15,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from scripts import (
     assignment_records,
     create_activity,
+    student_help_auth,
     student_help_service,
     student_support_policy,
     track_assignments,
@@ -80,7 +81,10 @@ def target_student_id(target: dict[str, Any]) -> str:
 
     stable_student_id = clean_text(target.get("student_id"))
     if stable_student_id:
-        return stable_student_id
+        try:
+            return student_help_auth.validate_student_id(stable_student_id)
+        except ValueError:
+            return legacy_display_student_id(stable_student_id)
     for key in ("target", "path", "repo_ref"):
         value = clean_text(target.get(key))
         if value:
@@ -109,6 +113,7 @@ def target_legacy_student_aliases(target: dict[str, Any]) -> set[str]:
     """Return historical aliases derivable from a target without granting access."""
 
     candidates = {
+        clean_text(target.get("student_id")),
         clean_text(target.get("display_name")),
     }
     for key in ("path", "target", "repo_ref"):

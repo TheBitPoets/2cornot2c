@@ -307,6 +307,42 @@ def test_display_only_legacy_target_uses_token_safe_identity(tmp_path) -> None:
     ) == []
 
 
+def test_invalid_explicit_student_id_uses_token_safe_identity(tmp_path) -> None:
+    original_student_id = "Mario Rossi"
+    canonical_student_id = student_lab_service.legacy_display_student_id(original_student_id)
+    target = {"student_id": original_student_id}
+    assignment = sample_assignment(
+        tmp_path,
+        target_type="student",
+        targets=[target],
+    )
+    write_assignment(tmp_path, assignment)
+
+    assignments = student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id=canonical_student_id,
+    )
+    token = student_help_auth.create_student_token(
+        canonical_student_id,
+        "secret-studente-demo-lungo-almeno-trentadue-caratteri",
+    )
+
+    assert len(assignments) == 1
+    assert assignments[0]["student_id"] == canonical_student_id
+    assert student_help_auth.verify_student_token(
+        token,
+        "secret-studente-demo-lungo-almeno-trentadue-caratteri",
+    ) == canonical_student_id
+    assert student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id=original_student_id,
+    ) == []
+    assert student_lab_service.target_cleanup_student_ids(target) == {
+        original_student_id,
+        canonical_student_id,
+    }
+
+
 def test_server_help_uses_canonical_student_id(tmp_path) -> None:
     activity_path = write_activity(tmp_path, student_support_mode="ai-assisted")
     assignment = write_assignment(
