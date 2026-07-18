@@ -17,11 +17,13 @@ serving static files from the repository.
 from __future__ import annotations
 
 import argparse
+import base64
 import ipaddress
 import json
 import mimetypes
 import os
 import re
+import secrets
 import shutil
 import subprocess
 import sys
@@ -98,8 +100,8 @@ COMPACT_TEXT_CHARS = 1200
 MAX_SUBMISSION_FILE_BYTES = 512 * 1024
 MAX_STUDENT_HELP_REQUEST_BYTES = 16 * 1024
 STUDENT_HELP_SERVER_ERROR = "Servizio aiuto temporaneamente non disponibile."
+TEACHER_AUTH_REALM = "TheBitLab docente"
 PRIVATE_STATIC_ROOTS = {"teacher-assignments", "teacher-help-events", "teacher-reports"}
-REMOTE_PUBLIC_STATIC_ROOTS = {"tools"}
 REMOTE_STUDENT_API_ROUTES = frozenset(
     {
         ("GET", "/api/student-lab/assignments"),
@@ -2234,14 +2236,42 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         except ValueError:
             return False
 
-    def reject_remote_teacher_api(self, method: str, path: str) -> bool:
-        is_remote_teacher_api = (
-            not self.is_loopback_client()
-            and path.startswith("/api/")
-            and (method, path) not in REMOTE_STUDENT_API_ROUTES
+    def is_teacher_authenticated(self) -> bool:
+        """Authenticate the teacher independently from the network source."""
+
+        expected_token = str(getattr(self.server, "teacher_token", ""))
+        scheme, separator, credentials = self.headers.get("Authorization", "").partition(" ")
+        if not expected_token or not separator or scheme.lower() != "basic":
+            return False
+        try:
+            decoded = base64.b64decode(credentials, validate=True).decode("utf-8")
+        except (ValueError, UnicodeDecodeError):
+            return False
+        username, separator, password = decoded.partition(":")
+        return bool(
+            separator
+            and secrets.compare_digest(username, "teacher")
+            and secrets.compare_digest(password, expected_token)
         )
-        if is_remote_teacher_api:
-            self.write_error_json(403, "API disponibile soltanto sulla macchina docente.")
+
+    def write_teacher_auth_required(self) -> None:
+        """Request browser-compatible teacher credentials."""
+
+        body = json.dumps(
+            {"error": "Autenticazione docente richiesta."},
+            ensure_ascii=False,
+        ).encode("utf-8")
+        self.send_response(401)
+        self.send_header("WWW-Authenticate", f'Basic realm="{TEACHER_AUTH_REALM}", charset="UTF-8"')
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def reject_unauthenticated_teacher_api(self, method: str, path: str) -> bool:
+        is_teacher_api = path.startswith("/api/") and (method, path) not in REMOTE_STUDENT_API_ROUTES
+        if is_teacher_api and not self.is_teacher_authenticated():
+            self.write_teacher_auth_required()
             return True
         return False
 
@@ -2264,7 +2294,7 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
-        if self.reject_remote_teacher_api("GET", parsed.path):
+        if self.reject_unauthenticated_teacher_api("GET", parsed.path):
             return
         if parsed.path in {"/api/student-lab/assignments", "/api/student-lab/help-history"}:
             student_id = self.authenticated_student_id()
@@ -2340,7 +2370,7 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
-        if self.reject_remote_teacher_api("POST", parsed.path):
+        if self.reject_unauthenticated_teacher_api("POST", parsed.path):
             return
         if parsed.path == "/api/student-lab/help":
             student_id = self.authenticated_student_id()
@@ -2688,6 +2718,9 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def serve_static(self, request_path: str) -> None:
+        if not self.is_teacher_authenticated():
+            self.write_teacher_auth_required()
+            return
         relative = unquote(request_path.lstrip("/")) or "tools/course_board.html"
         target = (APP_ROOT / relative).resolve()
         try:
@@ -2697,11 +2730,6 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return
         lowered_parts = {part.lower() for part in relative_target.parts}
         if lowered_parts & PRIVATE_STATIC_ROOTS or any(part.startswith(".") for part in relative_target.parts):
-            self.send_error(403)
-            return
-        if not self.is_loopback_client() and (
-            not relative_target.parts or relative_target.parts[0].lower() not in REMOTE_PUBLIC_STATIC_ROOTS
-        ):
             self.send_error(403)
             return
         if "student_repos" in lowered_parts and "help" in lowered_parts:
@@ -2728,11 +2756,19 @@ def main() -> int:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--root", type=Path, default=APP_ROOT, help="Root dati da usare per API e dashboard.")
+    parser.add_argument(
+        "--teacher-token",
+        default=os.environ.get("THEBITLAB_TEACHER_TOKEN", ""),
+        help="Token HTTP Basic docente; se omesso viene generato a ogni avvio.",
+    )
     args = parser.parse_args()
     data_root = configure_data_root(args.root)
     server = ThreadingHTTPServer((args.host, args.port), CourseBoardHandler)
+    server.teacher_token = args.teacher_token.strip() or secrets.token_urlsafe(24)
     print(f"Course board: http://{args.host}:{args.port}/tools/course_board.html")
     print(f"Root dati: {data_root}")
+    print("Credenziali dashboard: utente teacher")
+    print(f"Token dashboard: {server.teacher_token}")
     print("Premi Ctrl+C per fermare il server.")
     try:
         server.serve_forever()

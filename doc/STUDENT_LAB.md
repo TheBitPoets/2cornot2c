@@ -28,6 +28,10 @@ python scripts/student_help_auth.py --student-id rossi-mario
 python scripts/course_board_server.py --root tmp/student-lab-demo
 ```
 
+All'avvio il server stampa un token dashboard. Quando il browser chiede le credenziali usa `teacher` come nome
+utente e quel token come password. Per mantenere lo stesso token tra riavvii, imposta
+`THEBITLAB_TEACHER_TOKEN` prima di avviare il server. Non condividere il token docente con gli studenti.
+
 Il comando `student_help_auth.py` stampa il token personale di `rossi-mario`. Copialo nel secondo terminale; non
 condividere invece `THEBITLAB_STUDENT_HELP_SECRET`, che deve restare soltanto sul server docente.
 
@@ -39,7 +43,8 @@ python scripts/student_lab_cli.py --root tmp/student-lab-demo --student-id rossi
 ```
 
 Il token puo viaggiare su HTTP solo quando il server e in loopback (`localhost` o `127.0.0.1`).
-Per collegare una macchina studente al server docente usa HTTPS, direttamente o tramite tunnel.
+Per collegare una macchina studente al server docente usa HTTPS, direttamente o tramite tunnel. Il tunnel non
+sostituisce l'autenticazione: la TUI usa sempre il bearer token studente, distinto dalle credenziali docente.
 L'opzione `--allow-insecure-http` e riservata a collaudi temporanei su una rete controllata.
 
 Il server usa `codex exec` con sessione effimera, directory temporanea vuota, shell e ricerca web disabilitate,
@@ -66,9 +71,9 @@ locale, evitando code lunghe e consumo incontrollato. Solo il tipo `3 AI` usa Co
 tecnico e richiamo teorico usano la guida locale. I token firmati non hanno ancora scadenza: si revocano cambiando il
 segreto server e rigenerandoli. L'endpoint resta un servizio MVP e non sostituisce il futuro sistema di autenticazione.
 
-Quando il server viene reso raggiungibile dalle TUI, le API `/api/assignment-reports*` restano disponibili soltanto
-da indirizzi loopback della macchina docente. L'MVP separa così le rotte studente autenticate dalle viste sensibili
-del docente; un accesso docente remoto richiederà in seguito un'autenticazione dedicata.
+Asset e API docente richiedono sempre l'autenticazione HTTP Basic, anche da loopback. Le sole rotte
+`/api/student-lab/*` previste dal contratto usano invece il bearer token personale dello studente. Un tunnel SSH o
+un proxy locale non trasforma quindi una richiesta studente in una richiesta docente autorizzata.
 
 Il primo runner locale, senza Docker, e:
 

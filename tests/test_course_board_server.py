@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import http.client
 import json
 import threading
@@ -1501,6 +1502,10 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
     student_lab_demo_setup.prepare_demo(tmp_path)
     monkeypatch.setenv("THEBITLAB_STUDENT_HELP_PROVIDER", "local")
     secret = "demo-student-help-secret-for-tests-2026"
+    teacher_token = "teacher-dashboard-token-for-tests"
+    teacher_authorization = "Basic " + base64.b64encode(
+        f"teacher:{teacher_token}".encode("utf-8")
+    ).decode("ascii")
     monkeypatch.setenv("THEBITLAB_STUDENT_HELP_SECRET", secret)
     token = student_help_auth.create_student_token("rossi-mario", secret)
     server = None
@@ -1509,13 +1514,22 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
     try:
         course_board_server.configure_data_root(tmp_path)
         server = course_board_server.ThreadingHTTPServer(("127.0.0.1", 0), course_board_server.CourseBoardHandler)
+        server.teacher_token = teacher_token
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
         base_url = f"http://127.0.0.1:{server.server_address[1]}"
-        with urllib.request.urlopen(
+        with pytest.raises(urllib.error.HTTPError) as local_teacher_unauthorized:
+            urllib.request.urlopen(
+                f"{base_url}/api/student-dashboard?student_id=rossi-mario",
+                timeout=5,
+            )
+        assert local_teacher_unauthorized.value.code == 401
+        assert local_teacher_unauthorized.value.headers["WWW-Authenticate"].startswith("Basic ")
+        teacher_dashboard_request = urllib.request.Request(
             f"{base_url}/api/student-dashboard?student_id=rossi-mario",
-            timeout=5,
-        ) as response:
+            headers={"Authorization": teacher_authorization},
+        )
+        with urllib.request.urlopen(teacher_dashboard_request, timeout=5) as response:
             dashboard = json.loads(response.read().decode("utf-8"))
         assignment = dashboard["lab"]["assignments"][0]
         initial_help_total = assignment["help"]["total"]
@@ -1638,7 +1652,13 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
         for teacher_path in ("api/assignment-reports", "api/assignments", "api/student-dashboard"):
             with pytest.raises(urllib.error.HTTPError) as remote_teacher_api:
                 urllib.request.urlopen(f"{base_url}/{teacher_path}", timeout=5)
-            assert remote_teacher_api.value.code == 403
+            assert remote_teacher_api.value.code == 401
+        authenticated_teacher_request = urllib.request.Request(
+            f"{base_url}/api/assignments",
+            headers={"Authorization": teacher_authorization},
+        )
+        with urllib.request.urlopen(authenticated_teacher_request, timeout=5) as teacher_response:
+            assert teacher_response.status == 200
         remote_delete = urllib.request.Request(
             f"{base_url}/api/assignments/delete",
             data=b"{}",
@@ -1647,7 +1667,7 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
         )
         with pytest.raises(urllib.error.HTTPError) as remote_teacher_write:
             urllib.request.urlopen(remote_delete, timeout=5)
-        assert remote_teacher_write.value.code == 403
+        assert remote_teacher_write.value.code == 401
         with urllib.request.urlopen(history_request, timeout=5) as remote_student_history:
             assert remote_student_history.status == 200
         unknown_student_request = urllib.request.Request(
@@ -1658,7 +1678,7 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
         )
         with pytest.raises(urllib.error.HTTPError) as remote_unknown_student_api:
             urllib.request.urlopen(unknown_student_request, timeout=5)
-        assert remote_unknown_student_api.value.code == 403
+        assert remote_unknown_student_api.value.code == 401
         for read_only_path in ("assignments", "help-history"):
             wrong_method_request = urllib.request.Request(
                 f"{base_url}/api/student-lab/{read_only_path}",
@@ -1668,7 +1688,7 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
             )
             with pytest.raises(urllib.error.HTTPError) as remote_wrong_method:
                 urllib.request.urlopen(wrong_method_request, timeout=5)
-            assert remote_wrong_method.value.code == 403
+            assert remote_wrong_method.value.code == 401
         public_asset = tmp_path / "tools" / "student-public.js"
         public_asset.parent.mkdir(parents=True, exist_ok=True)
         public_asset.write_text("console.log('pubblico');\n", encoding="utf-8")
@@ -1679,11 +1699,22 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
         git_config.parent.mkdir(parents=True, exist_ok=True)
         git_config.write_text("[remote]\n", encoding="utf-8")
         monkeypatch.setattr(course_board_server, "APP_ROOT", tmp_path)
-        with urllib.request.urlopen(f"{base_url}/tools/student-public.js", timeout=5) as public_response:
+        with pytest.raises(urllib.error.HTTPError) as public_unauthorized:
+            urllib.request.urlopen(f"{base_url}/tools/student-public.js", timeout=5)
+        assert public_unauthorized.value.code == 401
+        public_request = urllib.request.Request(
+            f"{base_url}/tools/student-public.js",
+            headers={"Authorization": teacher_authorization},
+        )
+        with urllib.request.urlopen(public_request, timeout=5) as public_response:
             assert public_response.status == 200
         for private_path in (".secrets/ai.secret", ".git/config"):
+            private_request = urllib.request.Request(
+                f"{base_url}/{private_path}",
+                headers={"Authorization": teacher_authorization},
+            )
             with pytest.raises(urllib.error.HTTPError) as private_file:
-                urllib.request.urlopen(f"{base_url}/{private_path}", timeout=5)
+                urllib.request.urlopen(private_request, timeout=5)
             assert private_file.value.code == 403
         monkeypatch.setattr(
             course_board_server.CourseBoardHandler,
@@ -1705,12 +1736,13 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
         monkeypatch.setenv("THEBITLAB_STUDENT_HELP_PROVIDER", "local")
 
         monkeypatch.setattr(course_board_server, "APP_ROOT", tmp_path.parent)
+        private_log_request = urllib.request.Request(
+            f"{base_url}/{tmp_path.name}/teacher-help-events/rossi-mario/"
+            f"{assignment['assignment_id']}/events.json",
+            headers={"Authorization": teacher_authorization},
+        )
         with pytest.raises(urllib.error.HTTPError) as private_log:
-            urllib.request.urlopen(
-                f"{base_url}/{tmp_path.name}/teacher-help-events/rossi-mario/"
-                f"{assignment['assignment_id']}/events.json",
-                timeout=5,
-            )
+            urllib.request.urlopen(private_log_request, timeout=5)
         assert private_log.value.code == 403
 
         def fail_with_internal_path(payload, *, student_id):

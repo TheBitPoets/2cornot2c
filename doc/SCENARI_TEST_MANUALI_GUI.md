@@ -25,6 +25,9 @@ Avvia il server sulla root demo:
 python scripts/course_board_server.py --root tmp/student-lab-demo
 ```
 
+Il server stampa le credenziali temporanee della dashboard. Al primo accesso nel browser inserisci l'utente
+`teacher` e usa come password il token stampato; le stesse credenziali valgono per tutte le pagine web della demo.
+
 URL principali:
 
 - Dashboard docente consegne: `http://localhost:8765/tools/assignment_dashboard.html`
