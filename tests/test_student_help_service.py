@@ -484,6 +484,35 @@ def test_record_help_request_blocks_ai_when_budget_is_exhausted(tmp_path) -> Non
     assert summary["denied"] == 1
 
 
+def test_help_summary_with_budget_uses_one_snapshot_during_deletion(tmp_path, monkeypatch) -> None:
+    log_path = tmp_path / "help" / "events.json"
+    policy = dict(student_support_policy.support_policy("ai-assisted"))
+    student_help_service.write_help_events(
+        log_path,
+        [{"help_type": "ai", "allowed": True, "budget_charged": True}],
+    )
+    snapshot_ready = threading.Event()
+    continue_summary = threading.Event()
+    original_summary = student_help_service._help_summary_from_events
+
+    def blocking_summary(path, events, error):
+        snapshot_ready.set()
+        assert continue_summary.wait(timeout=2)
+        return original_summary(path, events, error)
+
+    monkeypatch.setattr(student_help_service, "_help_summary_from_events", blocking_summary)
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(student_help_service.help_summary_with_budget, log_path, policy)
+        assert snapshot_ready.wait(timeout=2)
+        log_path.unlink()
+        continue_summary.set()
+        summary = future.result(timeout=2)
+
+    assert summary["total"] == 1
+    assert summary["ai_budget"]["used"] == 1
+    assert summary["ai_budget"]["remaining"] == 4
+
+
 def test_record_help_request_stops_when_assignment_log_limit_is_reached(tmp_path, monkeypatch) -> None:
     repo = tmp_path / "student-repo"
     policy = student_support_policy.support_policy("studio-guidato")

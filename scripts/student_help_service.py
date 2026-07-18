@@ -469,23 +469,28 @@ def record_help_request(
     return event
 
 
-def help_summary(log_path: Path | None, now: str | None = None) -> dict[str, Any]:
-    if log_path is None:
-        return {
-            "path": "",
-            "exists": False,
-            "status": "missing",
-            "error": "",
-            "total": 0,
-            "allowed": 0,
-            "denied": 0,
-            "last_requested_at": "",
-            "last_decision": "",
-            "last_response_status": "",
-            "last_response_provider": "",
-            "counts": {},
-        }
-    events, error = load_reconciled_help_events(log_path, now)
+def _empty_help_summary() -> dict[str, Any]:
+    return {
+        "path": "",
+        "exists": False,
+        "status": "missing",
+        "error": "",
+        "total": 0,
+        "allowed": 0,
+        "denied": 0,
+        "last_requested_at": "",
+        "last_decision": "",
+        "last_response_status": "",
+        "last_response_provider": "",
+        "counts": {},
+    }
+
+
+def _help_summary_from_events(
+    log_path: Path,
+    events: list[dict[str, Any]],
+    error: str,
+) -> dict[str, Any]:
     counts: dict[str, int] = {}
     for event in events:
         help_type = clean_text(event.get("help_type")) or "sconosciuto"
@@ -506,6 +511,35 @@ def help_summary(log_path: Path | None, now: str | None = None) -> dict[str, Any
         "last_response_provider": clean_text(last_response.get("provider_label")),
         "counts": counts,
     }
+
+
+def help_summary(log_path: Path | None, now: str | None = None) -> dict[str, Any]:
+    if log_path is None:
+        return _empty_help_summary()
+    events, error = load_reconciled_help_events(log_path, now)
+    return _help_summary_from_events(log_path, events, error)
+
+
+def help_summary_with_budget(
+    log_path: Path | None,
+    support_policy: dict[str, Any],
+    now: str | None = None,
+) -> dict[str, Any]:
+    """Return help history and budget derived from one log snapshot."""
+
+    events, error = load_reconciled_help_events(log_path, now) if log_path is not None else ([], "")
+    summary = _help_summary_from_events(log_path, events, error) if log_path is not None else _empty_help_summary()
+    if error:
+        limit = positive_int(support_policy.get("ai_request_limit"))
+        summary["ai_budget"] = {
+            "limit": limit,
+            "used": limit,
+            "remaining": 0,
+            "exhausted": bool(limit),
+        }
+    else:
+        summary["ai_budget"] = ai_budget_status(support_policy, events)
+    return summary
 
 
 def merge_legacy_help_summary(

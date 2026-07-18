@@ -239,7 +239,7 @@ def build_lab_assignment(
         expose_external_paths=expose_external_paths,
     )
     support_policy = student_support_policy.support_policy(activity.get("student_support_mode", ""))
-    help_log = student_help_service.help_summary(help_log_path, now)
+    help_log = student_help_service.help_summary_with_budget(help_log_path, support_policy, now)
     if repo_path is not None:
         legacy_path = student_help_service.help_log_path(repo_path, activity_id)
         safe_legacy_path = confined_regular_file(repo_path, legacy_path)
@@ -254,7 +254,6 @@ def build_lab_assignment(
                     expose_external_paths=expose_external_paths,
                 ),
             )
-    help_log["ai_budget"] = student_help_service.help_budget_summary(help_log_path, support_policy, now)
     help_log.pop("path", None)
     grading = track_assignments.grading_summary(report)
     return {
