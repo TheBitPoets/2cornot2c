@@ -354,12 +354,16 @@ def assignment_student_id(
         if not isinstance(assignment_target, dict):
             continue
         matches_target = False
-        recorded_path = clean_metadata(assignment_target.get("path"))
-        if recorded_path:
+        for path_key in ("path", "target"):
+            recorded_path = clean_metadata(assignment_target.get(path_key))
+            if not recorded_path:
+                continue
             candidate_path = Path(recorded_path)
             if not candidate_path.is_absolute():
                 candidate_path = server_root / candidate_path
             if candidate_path.resolve() == target_path:
+                matches_target = True
+            if student_identity.cross_platform_basename(recorded_path) == target.student:
                 matches_target = True
         if target_repo and clean_metadata(assignment_target.get("repo_ref")) == target_repo:
             matches_target = True
