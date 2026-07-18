@@ -80,6 +80,12 @@ def parse_now(now: str | None = None) -> str:
     return clean_text(now) or datetime.now().astimezone().isoformat(timespec="seconds")
 
 
+def reconciliation_now() -> str:
+    """Return the authoritative wall clock used for provider reservations."""
+
+    return datetime.now().astimezone().isoformat(timespec="seconds")
+
+
 def normalize_help_type(value: Any) -> str:
     help_type = clean_text(value).lower()
     return HELP_TYPE_ALIASES.get(help_type, help_type)
@@ -308,11 +314,11 @@ def load_writable_help_events(log_path: Path) -> list[dict[str, Any]]:
 
 
 def load_reconciled_help_events(log_path: Path, now: str | None = None) -> tuple[list[dict[str, Any]], str]:
-    """Load a log and persist the release of stale provider reservations."""
+    """Load a log and reconcile reservations using the service wall clock."""
 
     with help_log_lock(log_path):
         events, error = read_help_log(log_path)
-        if not error and release_stale_provider_reservations(events, parse_now(now)):
+        if not error and release_stale_provider_reservations(events, reconciliation_now()):
             write_help_events(log_path, events)
         return events, error
 

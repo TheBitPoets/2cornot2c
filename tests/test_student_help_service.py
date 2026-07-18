@@ -423,7 +423,7 @@ def test_stale_provider_reservation_is_released_after_server_restart(tmp_path) -
     assert student_help_service.ai_budget_status(policy, events)["used"] == 1
 
 
-def test_reading_summary_releases_stale_provider_reservation(tmp_path) -> None:
+def test_reading_summary_releases_stale_provider_reservation(tmp_path, monkeypatch) -> None:
     log_path = tmp_path / "events.json"
     policy = dict(student_support_policy.support_policy("ai-assisted"))
     student_help_service.write_help_events(
@@ -439,14 +439,46 @@ def test_reading_summary_releases_stale_provider_reservation(tmp_path) -> None:
         ],
     )
 
-    summary = student_help_service.help_summary(log_path, "2026-10-18T10:06:00+02:00")
-    budget = student_help_service.help_budget_summary(log_path, policy, "2026-10-18T10:06:00+02:00")
+    monkeypatch.setattr(
+        student_help_service,
+        "reconciliation_now",
+        lambda: "2026-10-18T10:06:00+02:00",
+    )
+    summary = student_help_service.help_summary(log_path, "9999-01-01T00:00:00+00:00")
+    budget = student_help_service.help_budget_summary(log_path, policy, "9999-01-01T00:00:00+00:00")
 
     persisted = student_help_service.load_help_events(log_path)[0]
     assert summary["last_response_status"] == "error"
     assert budget["used"] == 0
     assert persisted["provider_status"] == "interrupted"
     assert persisted["budget_charged"] is False
+
+
+def test_simulated_view_time_cannot_release_active_provider_reservation(tmp_path, monkeypatch) -> None:
+    log_path = tmp_path / "events.json"
+    student_help_service.write_help_events(
+        log_path,
+        [
+            {
+                "requested_at": "2026-10-18T10:00:00+02:00",
+                "help_type": "ai",
+                "allowed": True,
+                "budget_charged": True,
+                "provider_status": "pending",
+            }
+        ],
+    )
+    monkeypatch.setattr(
+        student_help_service,
+        "reconciliation_now",
+        lambda: "2026-10-18T10:01:00+02:00",
+    )
+
+    student_help_service.help_summary(log_path, "9999-01-01T00:00:00+00:00")
+
+    persisted = student_help_service.load_help_events(log_path)[0]
+    assert persisted["provider_status"] == "pending"
+    assert persisted["budget_charged"] is True
 
 
 def test_record_help_request_does_not_overwrite_corrupt_log(tmp_path) -> None:
