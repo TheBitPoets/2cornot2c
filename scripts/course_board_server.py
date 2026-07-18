@@ -2365,6 +2365,14 @@ def set_ai_provider(provider: str, model: str = "") -> dict:
 class CourseBoardHandler(BaseHTTPRequestHandler):
     """HTTP handler for the local board and its JSON API."""
 
+    def end_headers(self) -> None:
+        """Add browser hardening headers to every server response."""
+
+        self.send_header("Content-Security-Policy", "frame-ancestors 'none'")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        super().end_headers()
+
     def is_loopback_client(self) -> bool:
         """Return whether this request originates from the teacher machine."""
 
@@ -2978,4 +2986,3 @@ def validate_server_bind(host: str, allow_insecure_network_http: bool = False) -
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

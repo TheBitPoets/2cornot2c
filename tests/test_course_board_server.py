@@ -2084,6 +2084,9 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
         )
         with urllib.request.urlopen(public_request, timeout=5) as public_response:
             assert public_response.status == 200
+            assert public_response.headers["Content-Security-Policy"] == "frame-ancestors 'none'"
+            assert public_response.headers["X-Frame-Options"] == "DENY"
+            assert public_response.headers["X-Content-Type-Options"] == "nosniff"
         for private_path in (".secrets/ai.secret", ".git/config"):
             private_request = urllib.request.Request(
                 f"{base_url}/{private_path}",
