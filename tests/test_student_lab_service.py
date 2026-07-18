@@ -4,7 +4,13 @@ import json
 
 import pytest
 
-from scripts import assignment_records, student_help_service, student_lab_service, student_support_policy
+from scripts import (
+    assignment_records,
+    student_help_auth,
+    student_help_service,
+    student_lab_service,
+    student_support_policy,
+)
 from scripts.student_help_provider import StudentHelpResponse
 
 
@@ -219,6 +225,38 @@ def test_legacy_target_authorizes_only_one_canonical_identity(tmp_path) -> None:
             root=tmp_path,
             student_id=alias,
         ) == []
+
+
+def test_display_only_legacy_target_uses_token_safe_identity(tmp_path) -> None:
+    display_name = "Mario Rossi"
+    canonical_student_id = student_lab_service.legacy_display_student_id(display_name)
+    assignment = sample_assignment(
+        tmp_path,
+        target_type="student",
+        targets=[{"display_name": display_name}],
+    )
+    write_assignment(tmp_path, assignment)
+
+    assignments = student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id=canonical_student_id,
+    )
+    token = student_help_auth.create_student_token(
+        canonical_student_id,
+        "secret-studente-demo-lungo-almeno-trentadue-caratteri",
+    )
+
+    assert canonical_student_id.startswith("legacy-mario-rossi-")
+    assert len(assignments) == 1
+    assert assignments[0]["student_id"] == canonical_student_id
+    assert student_help_auth.verify_student_token(
+        token,
+        "secret-studente-demo-lungo-almeno-trentadue-caratteri",
+    ) == canonical_student_id
+    assert student_lab_service.list_student_lab_assignments(
+        root=tmp_path,
+        student_id=display_name,
+    ) == []
 
 
 def test_server_help_uses_canonical_student_id(tmp_path) -> None:

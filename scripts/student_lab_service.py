@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from datetime import datetime
@@ -11,7 +12,13 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts import assignment_records, student_help_service, student_support_policy, track_assignments
+from scripts import (
+    assignment_records,
+    create_activity,
+    student_help_service,
+    student_support_policy,
+    track_assignments,
+)
 from scripts.student_help_provider import StudentHelpProvider
 from scripts.thebitlab_contracts import normalize_activity
 
@@ -57,6 +64,17 @@ def cross_platform_basename(value: Any) -> str:
     return clean.split("/")[-1] if clean else ""
 
 
+def legacy_display_student_id(value: Any) -> str:
+    """Build a token-safe deterministic id from a legacy display label."""
+
+    display_name = clean_text(value)
+    if not display_name:
+        return ""
+    slug = create_activity.slugify(display_name)[:96]
+    digest = hashlib.sha256(display_name.encode("utf-8")).hexdigest()[:10]
+    return f"legacy-{slug}-{digest}"
+
+
 def target_student_id(target: dict[str, Any]) -> str:
     """Return the best student identifier exposed by an assignment target."""
 
@@ -69,7 +87,7 @@ def target_student_id(target: dict[str, Any]) -> str:
             return cross_platform_basename(value)
     display_name = clean_text(target.get("display_name"))
     if display_name:
-        return display_name
+        return legacy_display_student_id(display_name)
     return ""
 
 
