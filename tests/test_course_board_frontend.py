@@ -105,11 +105,39 @@ def test_quick_add_does_not_duplicate_a_heading_tree() -> None:
           years: [{ id: "path", title: "Percorso", udas: [{ id: "uda-1", items: [] }] }],
         };
 
-        addToFirstUda(heading);
-        addToFirstUda(heading);
+        addHeadingWithDestination(heading);
+        addHeadingWithDestination(heading);
 
         assert.equal(state.design.years[0].udas[0].items.length, 1);
         assert.match(els.status.textContent, /già presente/);
+        """
+    )
+
+
+def test_accessible_add_can_target_the_second_uda() -> None:
+    run_course_board_js(
+        """
+        renderCourse = () => {};
+        renderHeadings = () => {};
+        prompt = () => "2";
+        const heading = { id: "topic", title: "Argomento", source: "README.md", level: 2 };
+        state.headings = [heading];
+        state.design = {
+          years: [{
+            id: "path",
+            title: "Percorso",
+            udas: [
+              { id: "uda-1", title: "Prima", items: [] },
+              { id: "uda-2", title: "Seconda", items: [] },
+            ],
+          }],
+        };
+
+        addHeadingWithDestination(heading);
+
+        assert.equal(state.design.years[0].udas[0].items.length, 0);
+        assert.equal(state.design.years[0].udas[1].items[0].id, "topic");
+        assert.match(els.status.textContent, /UDA-2/);
         """
     )
 

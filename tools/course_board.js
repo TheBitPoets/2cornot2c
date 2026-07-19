@@ -756,10 +756,10 @@ function renderHeadings() {
     node.addEventListener("dragstart", () => {
       state.draggedHeading = heading;
     });
-    node.addEventListener("dblclick", () => addToFirstUda(heading));
+    node.addEventListener("dblclick", () => addHeadingWithDestination(heading));
     const addButton = node.querySelector(".headingAdd");
-    addButton.setAttribute("aria-label", `Aggiungi ${heading.title} alla prima UDA del percorso`);
-    addButton.addEventListener("click", () => addToFirstUda(heading));
+    addButton.setAttribute("aria-label", `Aggiungi ${heading.title} a una UDA del percorso`);
+    addButton.addEventListener("click", () => addHeadingWithDestination(heading));
     els.headingList.append(node);
   }
 
@@ -802,22 +802,42 @@ function toggleHeading(headingId) {
   renderHeadings();
 }
 
-function addToFirstUda(heading) {
-  const firstYear = state.design.years?.[0];
-  const firstUda = firstYear?.udas?.[0];
-  if (!firstYear || !firstUda) {
+function addHeadingWithDestination(heading) {
+  const destinations = (state.design.years || []).flatMap((year) =>
+    (year.udas || []).map((uda) => ({ year, uda }))
+  );
+  if (!destinations.length) {
     setStatus("Aggiungi prima un percorso con almeno una UDA.");
     return;
   }
-  if (isHeadingTreeAssignedToYear(heading, firstYear.id)) {
-    setStatus(`"${heading.title}" o un suo sottoparagrafo è già presente in ${firstYear.title}.`);
+  let destination = destinations[0];
+  if (destinations.length > 1) {
+    const choices = destinations
+      .map(({ year, uda }, index) => `${index + 1}. ${year.title} - ${uda.id.toUpperCase()}: ${uda.title}`)
+      .join("\n");
+    const answer = prompt(`Scegli la UDA di destinazione:\n\n${choices}`, "1");
+    if (answer === null || answer.trim() === "") {
+      setStatus("Inserimento annullato: nessuna UDA selezionata.");
+      return;
+    }
+    const normalizedAnswer = answer.trim();
+    const selectedIndex = /^\d+$/.test(normalizedAnswer) ? Number.parseInt(normalizedAnswer, 10) - 1 : -1;
+    if (!Number.isInteger(selectedIndex) || selectedIndex < 0 || selectedIndex >= destinations.length) {
+      setStatus(`Scelta non valida. Inserisci un numero da 1 a ${destinations.length}.`);
+      return;
+    }
+    destination = destinations[selectedIndex];
+  }
+  const { year, uda } = destination;
+  if (isHeadingTreeAssignedToYear(heading, year.id)) {
+    setStatus(`"${heading.title}" o un suo sottoparagrafo è già presente in ${year.title}.`);
     return;
   }
-  firstUda.items ||= [];
-  firstUda.items.push(itemFromHeading(heading));
+  uda.items ||= [];
+  uda.items.push(itemFromHeading(heading));
   renderCourse();
   renderHeadings();
-  setStatus(`"${heading.title}" aggiunto alla prima UDA di ${firstYear.title}.`);
+  setStatus(`"${heading.title}" aggiunto a ${uda.id.toUpperCase()}: ${uda.title}.`);
 }
 
 function itemFromHeading(heading) {
