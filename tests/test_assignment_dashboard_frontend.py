@@ -3718,6 +3718,7 @@ def test_review_ai_feedback_posts_decision_and_updates_modal_status() -> None:
     run_dashboard_js(
         """
         tested.state.reportName = "demo/ai-feedback-states.json";
+        tested.els.reportSelect.value = "demo/ai-feedback-states.json";
         tested.state.report = { students: [] };
 
         tested.reviewAiFeedback("rossi-mario", "approve").then(() => {
