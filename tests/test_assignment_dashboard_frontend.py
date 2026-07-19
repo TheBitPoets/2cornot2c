@@ -3061,8 +3061,7 @@ def test_loading_report_enables_students_panel_and_reports_failures() -> None:
           assert.equal(tested.state.report.students.length, 1);
           assert.match(tested.els.status.textContent, /Registro caricato/);
 
-          tested.state.report = null;
-          tested.els.studentsOpenBtn.disabled = true;
+          tested.els.reportSelect.value = "demo/registro-rimosso.json";
           tested.fetchResponses["/api/assignment-reports/load"] = {
             ok: false,
             status: 404,
@@ -3073,7 +3072,11 @@ def test_loading_report_enables_students_panel_and_reports_failures() -> None:
           const failed = await tested.loadSelectedReport();
 
           assert.equal(failed, false);
+          assert.equal(tested.state.report, null);
+          assert.equal(tested.state.reportName, "");
+          assert.equal(tested.els.reportSelect.value, "");
           assert.equal(tested.els.studentsOpenBtn.disabled, true);
+          assert.match(tested.els.reportSummary.innerHTML, /Carica un registro/);
           assert.match(tested.els.status.textContent, /Registro non caricato: 404 Not Found: Registro non trovato/);
         })();
         """

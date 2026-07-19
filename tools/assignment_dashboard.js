@@ -1138,6 +1138,13 @@ async function loadSelectedReport() {
       throw new Error("il server ha restituito un registro non valido");
     }
   } catch (error) {
+    state.report = null;
+    state.reportName = "";
+    els.reportSelect.value = "";
+    els.studentsOpenBtn.disabled = true;
+    clearReview();
+    closeStudentHelpDialog();
+    renderDashboard();
     setStatus(`Registro non caricato: ${error.message}`);
     return false;
   }
