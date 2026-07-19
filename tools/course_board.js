@@ -151,18 +151,18 @@ function designSnapshot() {
   return state.design ? JSON.stringify(state.design) : "";
 }
 
-function markDesignClean() {
+function markDesignClean(savedSnapshot = "") {
   normalizeCourseDesignFrames();
-  cleanDesignSnapshot = designSnapshot();
+  cleanDesignSnapshot = savedSnapshot || designSnapshot();
 }
 
-function normalizeCourseDesignFrames() {
+function normalizeCourseDesignFrames(design = state.design) {
   const visit = (item) => {
     item.frame = { ...defaultFrame(), ...(item.frame || {}) };
     item.frame_quality = { ...defaultFrameQuality(), ...(item.frame_quality || {}) };
     for (const child of item.children || []) visit(child);
   };
-  for (const year of state.design?.years || []) {
+  for (const year of design?.years || []) {
     for (const uda of year.udas || []) {
       for (const item of uda.items || []) visit(item);
     }
@@ -446,13 +446,17 @@ async function saveArchiveDesignWithName(name, options = {}) {
     overwrite = false,
     confirmOverwrite = false,
     design = state.design,
+    opensSavedDesign = state.design !== design,
   } = options;
+  normalizeCourseDesignFrames(design);
+  const designToSave = JSON.parse(JSON.stringify(design));
+  const savedSnapshot = JSON.stringify(designToSave);
   setStatus(`Salvataggio archivio "${name}"...`);
   let payload;
   try {
     payload = await api("/api/saved-designs/save", {
       method: "POST",
-      body: JSON.stringify({ name, design, overwrite }),
+      body: JSON.stringify({ name, design: designToSave, overwrite }),
     });
   } catch (error) {
     if (error.status === 409 && confirmOverwrite) {
@@ -460,16 +464,20 @@ async function saveArchiveDesignWithName(name, options = {}) {
         setStatus("Salvataggio annullato: il progetto esistente non è stato modificato.");
         return false;
       }
-      return saveArchiveDesignWithName(name, { design, overwrite: true });
+      return saveArchiveDesignWithName(name, {
+        design: designToSave,
+        overwrite: true,
+        opensSavedDesign,
+      });
     }
     setStatus(`Salvataggio non riuscito. Dettaglio: ${error.message}`);
     return false;
   }
-  state.design = design;
+  if (opensSavedDesign) state.design = designToSave;
   state.savedDesigns = payload.designs || [];
   state.activeSavedDesign = payload.saved?.name || name;
   state.isNewDesign = false;
-  markDesignClean();
+  markDesignClean(savedSnapshot);
   localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, state.activeSavedDesign);
   sessionStorage.setItem(ACTIVE_COURSE_SESSION_KEY, "true");
   renderSavedDesigns();
@@ -480,16 +488,18 @@ async function saveArchiveDesignWithName(name, options = {}) {
 }
 
 async function saveCurrentProject() {
+  normalizeCourseDesignFrames();
+  const savedSnapshot = designSnapshot();
   setStatus("Salvataggio progetto corrente in doc/course_design.json...");
   await api("/api/course-design", {
     method: "POST",
-    body: JSON.stringify(state.design),
+    body: savedSnapshot,
   });
   localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
   sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
   state.activeSavedDesign = "";
   state.isNewDesign = false;
-  markDesignClean();
+  markDesignClean(savedSnapshot);
   renderSavedDesigns();
   renderProjectTitle();
   renderCourseActions();
@@ -1767,16 +1777,18 @@ async function saveDesign() {
     "Questa operazione sovrascrive doc/course_design.json."
   );
   if (!confirmed) return;
+  normalizeCourseDesignFrames();
+  const savedSnapshot = designSnapshot();
   setStatus("Salvataggio...");
   await api("/api/course-design", {
     method: "POST",
-    body: JSON.stringify(state.design),
+    body: savedSnapshot,
   });
   localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
   sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
   state.activeSavedDesign = "";
   state.isNewDesign = false;
-  markDesignClean();
+  markDesignClean(savedSnapshot);
   renderSavedDesigns();
   renderProjectTitle();
   renderCourseActions();

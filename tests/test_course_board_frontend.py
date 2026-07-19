@@ -217,6 +217,30 @@ def test_dirty_tracking_detects_changes_and_resets_after_save() -> None:
     )
 
 
+def test_change_during_current_project_save_remains_dirty() -> None:
+    run_course_board_js(
+        """
+        let completeRequest;
+        api = async () => new Promise((resolve) => { completeRequest = resolve; });
+        renderSavedDesigns = () => {};
+        renderProjectTitle = () => {};
+        renderCourseActions = () => {};
+        state.design = { years: [{ id: "first" }] };
+        markDesignClean();
+
+        const saving = saveCurrentProject();
+        state.design.years.push({ id: "changed-while-saving" });
+        completeRequest({});
+
+        saving.then(() => {
+          assert.equal(hasUnsavedChanges(), true);
+          assert.match(cleanDesignSnapshot, /first/);
+          assert.doesNotMatch(cleanDesignSnapshot, /changed-while-saving/);
+        });
+        """
+    )
+
+
 def test_clean_snapshot_normalizes_legacy_frames_before_comparison() -> None:
     run_course_board_js(
         """
