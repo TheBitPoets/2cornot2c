@@ -73,5 +73,6 @@ jobs:
           tests/test_student_help_codex_adapter.py
           tests/test_student_lab_service.py
           tests/test_student_lab_cli.py
+          tests/test_student_lab_demo_setup.py
           tests/test_track_assignments.py
           tests/test_course_board_server.py
