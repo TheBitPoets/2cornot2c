@@ -128,10 +128,24 @@ class JsonCourseStorage:
         return payload
 
     def write_json(self, path: Path, payload: dict[str, Any]) -> None:
-        """Write a JSON object with stable formatting."""
+        """Atomically replace a JSON object with stable formatting."""
 
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        descriptor, temporary_name = tempfile.mkstemp(
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            dir=path.parent,
+        )
+        temporary_path = Path(temporary_name)
+        try:
+            with os.fdopen(descriptor, "w", encoding="utf-8") as destination:
+                json.dump(payload, destination, ensure_ascii=False, indent=2)
+                destination.write("\n")
+                destination.flush()
+                os.fsync(destination.fileno())
+            os.replace(temporary_path, path)
+        finally:
+            temporary_path.unlink(missing_ok=True)
 
     def write_json_exclusive(self, path: Path, payload: dict[str, Any]) -> None:
         """Publish a complete JSON file only when the final name is still free."""

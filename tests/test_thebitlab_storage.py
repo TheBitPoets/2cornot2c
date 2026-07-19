@@ -27,6 +27,23 @@ def test_write_and_read_current_design(tmp_path) -> None:
     assert (tmp_path / "doc" / "course_design.json").read_text(encoding="utf-8").endswith("\n")
 
 
+def test_json_overwrite_keeps_previous_content_when_publication_fails(tmp_path, monkeypatch) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    storage.write_design({"title": "Versione precedente"})
+    target = storage.design_path
+
+    monkeypatch.setattr(
+        "scripts.thebitlab_storage.os.replace",
+        lambda _source, _destination: (_ for _ in ()).throw(OSError("pubblicazione interrotta")),
+    )
+
+    with pytest.raises(OSError, match="pubblicazione interrotta"):
+        storage.write_design({"title": "Versione nuova"})
+
+    assert storage.read_design() == {"title": "Versione precedente"}
+    assert list(target.parent.glob(f".{target.name}.*.tmp")) == []
+
+
 def test_saved_designs_are_validated_and_listed(tmp_path) -> None:
     storage = JsonCourseStorage(tmp_path)
 
