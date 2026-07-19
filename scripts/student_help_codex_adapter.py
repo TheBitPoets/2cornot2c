@@ -225,22 +225,24 @@ def _create_windows_kill_job(process: subprocess.Popen[bytes]) -> Any:
     job = kernel32.CreateJobObjectW(None, None)
     if not job:
         return None
-    information = JobObjectExtendedLimitInformation()
-    information.BasicLimitInformation.LimitFlags = 0x00002000
-    configured = kernel32.SetInformationJobObject(
-        job,
-        9,
-        ctypes.byref(information),
-        ctypes.sizeof(information),
-    )
-    assigned = configured and kernel32.AssignProcessToJobObject(
-        job,
-        wintypes.HANDLE(int(process._handle)),
-    )
-    if assigned:
-        return job
-    kernel32.CloseHandle(job)
-    return None
+    assigned = False
+    try:
+        information = JobObjectExtendedLimitInformation()
+        information.BasicLimitInformation.LimitFlags = 0x00002000
+        configured = kernel32.SetInformationJobObject(
+            job,
+            9,
+            ctypes.byref(information),
+            ctypes.sizeof(information),
+        )
+        assigned = bool(configured and kernel32.AssignProcessToJobObject(
+            job,
+            wintypes.HANDLE(int(process._handle)),
+        ))
+        return job if assigned else None
+    finally:
+        if not assigned:
+            kernel32.CloseHandle(job)
 
 
 def _close_windows_job(job: Any, *, terminate: bool = False) -> None:
@@ -314,24 +316,16 @@ def _run_codex_process(
     else:
         process_options["start_new_session"] = True
     process = subprocess.Popen(command, **process_options)
-    windows_job = _create_windows_kill_job(process)
-    if os.name == "nt" and not windows_job:
-        process.kill()
-        process.wait(timeout=10)
-        raise RuntimeError("Impossibile isolare il processo Codex in un Job Object Windows.")
+    windows_job = None
+    finished = False
     try:
+        windows_job = _create_windows_kill_job(process)
+        if os.name == "nt" and not windows_job:
+            raise RuntimeError("Impossibile isolare il processo Codex in un Job Object Windows.")
         _resume_windows_process(process)
-    except OSError:
-        if windows_job:
-            _close_windows_job(windows_job, terminate=True)
-            windows_job = None
-        elif process.poll() is None:
-            process.kill()
-        process.wait(timeout=10)
-        raise
-    try:
         try:
             stdout, stderr = process.communicate(input=input, timeout=timeout)
+            finished = True
         except subprocess.TimeoutExpired as error:
             _terminate_process_tree(process, windows_job)
             windows_job = None
@@ -349,6 +343,14 @@ def _run_codex_process(
                 stderr=stderr or error.stderr,
             ) from error
     finally:
+        if not finished:
+            _terminate_process_tree(process, windows_job)
+            windows_job = None
+            try:
+                process.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                if process.poll() is None:
+                    process.kill()
         _close_windows_job(windows_job)
     completed = subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
     if check:
