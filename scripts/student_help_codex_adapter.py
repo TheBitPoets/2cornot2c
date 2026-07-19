@@ -276,20 +276,6 @@ def _terminate_process_tree(process: subprocess.Popen[bytes], windows_job: Any =
         if windows_job:
             _close_windows_job(windows_job, terminate=True)
             return
-        taskkill = shutil.which("taskkill")
-        if taskkill:
-            try:
-                completed = subprocess.run(
-                    [taskkill, "/PID", str(process.pid), "/T", "/F"],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    check=False,
-                    timeout=10,
-                )
-                if completed.returncode == 0:
-                    return
-            except (OSError, subprocess.TimeoutExpired):
-                pass
     else:
         try:
             os.killpg(process.pid, signal.SIGKILL)
@@ -329,6 +315,10 @@ def _run_codex_process(
         process_options["start_new_session"] = True
     process = subprocess.Popen(command, **process_options)
     windows_job = _create_windows_kill_job(process)
+    if os.name == "nt" and not windows_job:
+        process.kill()
+        process.wait(timeout=10)
+        raise RuntimeError("Impossibile isolare il processo Codex in un Job Object Windows.")
     try:
         _resume_windows_process(process)
     except OSError:

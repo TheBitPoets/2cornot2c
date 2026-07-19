@@ -542,6 +542,29 @@ time.sleep(5)
     ) == {"input_tokens": 6, "output_tokens": 2, "total_tokens": 8}
 
 
+@pytest.mark.skipif(os.name != "nt", reason="Job Object disponibile solo su Windows")
+def test_codex_runner_fails_closed_before_resume_when_job_setup_fails(monkeypatch, tmp_path) -> None:
+    marker_path = tmp_path / "started.txt"
+    monkeypatch.setattr(student_help_codex_adapter, "_create_windows_kill_job", lambda process: None)
+
+    with pytest.raises(RuntimeError, match="Job Object Windows"):
+        student_help_codex_adapter._run_codex_process(
+            [
+                sys.executable,
+                "-c",
+                f"from pathlib import Path; Path({str(marker_path)!r}).write_text('started')",
+            ],
+            cwd=tmp_path,
+            env=dict(os.environ),
+            input=b"",
+            capture_output=True,
+            timeout=1,
+            check=False,
+        )
+
+    assert not marker_path.exists()
+
+
 def test_partial_usage_rejects_complete_corruption_before_incomplete_tail() -> None:
     completed_event = json.dumps({
         "type": "turn.completed",
