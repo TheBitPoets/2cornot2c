@@ -117,6 +117,18 @@ def test_saved_design_create_does_not_publish_partial_file_when_sync_fails(tmp_p
     assert storage.read_saved_design("retry.json") == {"title": "Completo"}
 
 
+def test_saved_design_create_does_not_require_hard_link_support(tmp_path, monkeypatch) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    monkeypatch.setattr(
+        "scripts.thebitlab_storage.os.link",
+        lambda _source, _destination: (_ for _ in ()).throw(OSError("hard link non supportato")),
+    )
+
+    storage.write_saved_design("portable.json", {"title": "Portabile"}, overwrite=False)
+
+    assert storage.read_saved_design("portable.json") == {"title": "Portabile"}
+
+
 def test_school_calendar_metadata_tolerates_invalid_json(tmp_path) -> None:
     storage = JsonCourseStorage(tmp_path)
     storage.write_saved_design("as_2026_2027.json", {"title": "AS 2026/2027"})

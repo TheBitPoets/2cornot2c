@@ -244,30 +244,12 @@ class JsonCourseStorage:
             temporary_path.unlink(missing_ok=True)
 
     def write_json_exclusive(self, path: Path, payload: dict[str, Any]) -> None:
-        """Publish a complete JSON file only when the final name is still free."""
+        """Publish JSON only when the process-locked final name is still free."""
 
-        path.parent.mkdir(parents=True, exist_ok=True)
-        descriptor, temporary_name = tempfile.mkstemp(
-            prefix=f".{path.name}.",
-            suffix=".tmp",
-            dir=path.parent,
-        )
-        temporary_path = Path(temporary_name)
-        try:
-            os.chmod(temporary_path, 0o644)
-            destination = os.fdopen(descriptor, "w", encoding="utf-8")
-            descriptor = -1
-            with destination:
-                json.dump(payload, destination, ensure_ascii=False, indent=2)
-                destination.write("\n")
-                destination.flush()
-                os.fsync(destination.fileno())
-            os.link(temporary_path, path)
-            sync_directory(path.parent)
-        finally:
-            if descriptor >= 0:
-                os.close(descriptor)
-            temporary_path.unlink(missing_ok=True)
+        with self.operation_lock:
+            if path.exists() or path.is_symlink():
+                raise FileExistsError(errno.EEXIST, "File gia esistente", str(path))
+            self.write_json(path, payload)
 
     def relative_path(self, path: Path) -> str:
         """Return a repository-relative path with URL-style separators."""
