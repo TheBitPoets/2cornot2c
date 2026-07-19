@@ -4,6 +4,7 @@ import json
 import os
 import re
 import shutil
+import tempfile
 import threading
 import uuid
 from datetime import datetime
@@ -132,6 +133,26 @@ class JsonCourseStorage:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
+    def write_json_exclusive(self, path: Path, payload: dict[str, Any]) -> None:
+        """Publish a complete JSON file only when the final name is still free."""
+
+        path.parent.mkdir(parents=True, exist_ok=True)
+        descriptor, temporary_name = tempfile.mkstemp(
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            dir=path.parent,
+        )
+        temporary_path = Path(temporary_name)
+        try:
+            with os.fdopen(descriptor, "w", encoding="utf-8") as destination:
+                json.dump(payload, destination, ensure_ascii=False, indent=2)
+                destination.write("\n")
+                destination.flush()
+                os.fsync(destination.fileno())
+            os.link(temporary_path, path)
+        finally:
+            temporary_path.unlink(missing_ok=True)
+
     def relative_path(self, path: Path) -> str:
         """Return a repository-relative path with URL-style separators."""
 
@@ -179,10 +200,7 @@ class JsonCourseStorage:
             if overwrite:
                 self.write_json(path, payload)
             else:
-                path.parent.mkdir(parents=True, exist_ok=True)
-                serialized = json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
-                with path.open("x", encoding="utf-8") as destination:
-                    destination.write(serialized)
+                self.write_json_exclusive(path, payload)
         return {"name": path.name, "path": self.relative_path(path)}
 
     def list_school_calendars(self) -> list[dict[str, str]]:

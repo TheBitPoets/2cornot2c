@@ -57,6 +57,22 @@ def test_saved_design_create_does_not_overwrite_existing_file(tmp_path) -> None:
     assert storage.read_saved_design("existing.json") == {"title": "Originale"}
 
 
+def test_saved_design_create_does_not_publish_partial_file_when_sync_fails(tmp_path, monkeypatch) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    target = storage.saved_design_path("retry.json")
+    monkeypatch.setattr("scripts.thebitlab_storage.os.fsync", lambda _descriptor: (_ for _ in ()).throw(OSError("sync")))
+
+    with pytest.raises(OSError, match="sync"):
+        storage.write_saved_design("retry.json", {"title": "Incompleto"}, overwrite=False)
+
+    assert not target.exists()
+    assert list(target.parent.glob(f".{target.name}.*.tmp")) == []
+
+    monkeypatch.undo()
+    storage.write_saved_design("retry.json", {"title": "Completo"}, overwrite=False)
+    assert storage.read_saved_design("retry.json") == {"title": "Completo"}
+
+
 def test_school_calendar_metadata_tolerates_invalid_json(tmp_path) -> None:
     storage = JsonCourseStorage(tmp_path)
     calendars_dir = tmp_path / "doc" / "calendars"
