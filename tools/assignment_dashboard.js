@@ -1122,6 +1122,10 @@ function renderRosterPanel() {
   }).join("");
 }
 
+function invalidateReportLoads() {
+  state.reportLoadRevision += 1;
+}
+
 async function loadSelectedReport() {
   const revision = ++state.reportLoadRevision;
   const name = els.reportSelect.value;
@@ -3759,6 +3763,7 @@ async function generateReport() {
         assignment_id: state.selectedAssignmentId,
       }),
     });
+    invalidateReportLoads();
     state.report = payload.report;
     state.reportName = payload.saved?.name || "";
     state.reports = payload.reports || [];
@@ -4483,6 +4488,7 @@ async function reviewAiFeedback(studentId, decision) {
       decision,
     }),
   });
+  invalidateReportLoads();
   state.report = payload.report;
   renderDashboard();
   const outcome = {

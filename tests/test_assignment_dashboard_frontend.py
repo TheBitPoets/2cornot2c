@@ -3147,6 +3147,68 @@ def test_loading_report_ignores_stale_successes_and_failures() -> None:
     )
 
 
+def test_report_mutation_invalidates_a_pending_load() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          const response = (payload) => ({
+            ok: true,
+            status: 200,
+            statusText: "OK",
+            json: async () => payload,
+            text: async () => "",
+          });
+          let resolveLoad;
+          context.fetch = (path) => {
+            if (path === "/api/assignment-reports/load") {
+              return new Promise((resolve) => { resolveLoad = resolve; });
+            }
+            if (path === "/api/assignment-reports/ai-feedback/review") {
+              return Promise.resolve(response({
+                report: {
+                  activity_id: "somma",
+                  students: [{
+                    student: "rossi",
+                    student_id: "rossi",
+                    ai_feedback: { status: "approved", approved_by_teacher: true },
+                  }],
+                },
+              }));
+            }
+            throw new Error(`Endpoint inatteso: ${path}`);
+          };
+          tested.state.report = {
+            activity_id: "somma",
+            students: [{
+              student: "rossi",
+              student_id: "rossi",
+              ai_feedback: { status: "draft" },
+            }],
+          };
+          tested.state.reportName = "demo/somma.json";
+          tested.els.reportSelect.value = "demo/somma.json";
+
+          const loading = tested.loadSelectedReport();
+          await tested.reviewAiFeedback("rossi", "approve");
+          assert.equal(tested.state.report.students[0].ai_feedback.status, "approved");
+
+          resolveLoad(response({
+            report: {
+              activity_id: "somma",
+              students: [{
+                student: "rossi",
+                student_id: "rossi",
+                ai_feedback: { status: "draft" },
+              }],
+            },
+          }));
+          assert.equal(await loading, false);
+          assert.equal(tested.state.report.students[0].ai_feedback.status, "approved");
+        })();
+        """
+    )
+
+
 def test_student_help_dialog_opens_from_table_click_and_closes_from_button() -> None:
     run_dashboard_js(
         """
