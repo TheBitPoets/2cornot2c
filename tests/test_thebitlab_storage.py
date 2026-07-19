@@ -156,6 +156,22 @@ def test_delete_saved_design_deletes_only_linked_calendars(tmp_path) -> None:
     assert (tmp_path / "doc" / "calendars" / "other.json").exists()
 
 
+def test_delete_saved_design_rescans_linked_calendars_under_lock(tmp_path) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    storage.write_saved_design("victim.json", {"title": "Da eliminare"})
+    storage.write_school_calendar("known.json", {"course_design_name": "victim.json"})
+    storage.write_school_calendar("created-later.json", {"course_design_name": "victim.json"})
+
+    result = storage.delete_saved_design(
+        "victim.json",
+        delete_calendars=True,
+        calendars=["known.json"],
+    )
+
+    assert result["deleted_calendars"] == ["created-later.json", "known.json"]
+    assert storage.list_school_calendars() == []
+
+
 def test_delete_saved_design_validates_all_calendar_names_before_deleting(tmp_path) -> None:
     storage = JsonCourseStorage(tmp_path)
     storage.write_saved_design("victim.json", {"title": "Da conservare"})

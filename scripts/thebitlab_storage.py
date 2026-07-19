@@ -357,15 +357,17 @@ class JsonCourseStorage:
             targets = [path]
             if delete_calendars:
                 for calendar_name in calendars or []:
-                    safe_calendar_name = self.safe_design_name(calendar_name)
-                    calendar_path = self.school_calendar_path(safe_calendar_name)
-                    if not calendar_path.is_file():
+                    self.safe_design_name(calendar_name)
+                self.school_calendars_dir.mkdir(parents=True, exist_ok=True)
+                for calendar_path in sorted(self.school_calendars_dir.glob("*.json")):
+                    try:
+                        payload = self.read_json(calendar_path)
+                    except (OSError, ValueError, json.JSONDecodeError):
                         continue
-                    payload = self.read_json(calendar_path)
                     if payload.get("course_design_name", "") != safe_name:
                         continue
                     targets.append(calendar_path)
-                    deleted_calendars.append(safe_calendar_name)
+                    deleted_calendars.append(calendar_path.name)
 
             transaction_id = uuid.uuid4().hex
             self.delete_staging_dir.mkdir(parents=True, exist_ok=True)
