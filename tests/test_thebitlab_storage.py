@@ -44,6 +44,16 @@ def test_json_overwrite_keeps_previous_content_when_publication_fails(tmp_path, 
     assert list(target.parent.glob(f".{target.name}.*.tmp")) == []
 
 
+def test_json_publication_syncs_destination_directory(tmp_path, monkeypatch) -> None:
+    synced: list[Path] = []
+    monkeypatch.setattr("scripts.thebitlab_storage.sync_directory", lambda path: synced.append(path))
+    storage = JsonCourseStorage(tmp_path)
+
+    storage.write_design({"title": "Versione durevole"})
+
+    assert storage.design_path.parent in synced
+
+
 def test_saved_designs_are_validated_and_listed(tmp_path) -> None:
     storage = JsonCourseStorage(tmp_path)
 

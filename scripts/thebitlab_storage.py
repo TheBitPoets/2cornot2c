@@ -28,6 +28,18 @@ def course_storage_lock(root: Path) -> threading.RLock:
         return _COURSE_LOCKS.setdefault(key, threading.RLock())
 
 
+def sync_directory(path: Path) -> None:
+    """Persist directory metadata where the platform exposes directory fsync."""
+
+    if os.name == "nt":
+        return
+    descriptor = os.open(path, os.O_RDONLY)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
 class JsonCourseStorage:
     """JSON storage adapter for course designs and school calendars."""
 
@@ -56,6 +68,7 @@ class JsonCourseStorage:
             destination.write(content)
             destination.flush()
             os.fsync(destination.fileno())
+        sync_directory(path.parent)
 
     def _original_delete_path(self, value: str) -> Path:
         path = (self.root / value).resolve(strict=False)
@@ -75,6 +88,8 @@ class JsonCourseStorage:
                 raise RuntimeError(f"Rollback in conflitto con un file esistente: {entry['original']}")
             original_path.parent.mkdir(parents=True, exist_ok=True)
             os.replace(staged_path, original_path)
+            sync_directory(original_path.parent)
+            sync_directory(transaction_dir)
 
     def _recover_delete_transactions(self) -> None:
         if not self.delete_staging_dir.is_dir():
@@ -83,6 +98,7 @@ class JsonCourseStorage:
             if transaction_dir.name.endswith(".committed") or (transaction_dir / "COMMITTED").is_file():
                 try:
                     shutil.rmtree(transaction_dir)
+                    sync_directory(self.delete_staging_dir)
                 except OSError:
                     continue
                 continue
@@ -100,6 +116,7 @@ class JsonCourseStorage:
                 continue
             self._rollback_delete_entries(transaction_dir, entries)
             shutil.rmtree(transaction_dir)
+            sync_directory(self.delete_staging_dir)
 
     def safe_design_name(self, name: str) -> str:
         """Validate a JSON filename used by saved designs and calendars."""
@@ -144,6 +161,7 @@ class JsonCourseStorage:
                 destination.flush()
                 os.fsync(destination.fileno())
             os.replace(temporary_path, path)
+            sync_directory(path.parent)
         finally:
             temporary_path.unlink(missing_ok=True)
 
@@ -164,6 +182,7 @@ class JsonCourseStorage:
                 destination.flush()
                 os.fsync(destination.fileno())
             os.link(temporary_path, path)
+            sync_directory(path.parent)
         finally:
             temporary_path.unlink(missing_ok=True)
 
@@ -277,9 +296,12 @@ class JsonCourseStorage:
                     deleted_calendars.append(safe_calendar_name)
 
             transaction_id = uuid.uuid4().hex
+            self.delete_staging_dir.mkdir(parents=True, exist_ok=True)
+            sync_directory(self.delete_staging_dir.parent)
             transaction_dir = self.delete_staging_dir / f"{transaction_id}.pending"
             committed_transaction_dir = self.delete_staging_dir / f"{transaction_id}.committed"
             transaction_dir.mkdir(parents=True, exist_ok=False)
+            sync_directory(self.delete_staging_dir)
             entries = self._delete_manifest_entries(targets)
             self._write_delete_transaction_file(
                 transaction_dir / "manifest.json",
@@ -289,14 +311,19 @@ class JsonCourseStorage:
                 for target, entry in zip(targets, entries, strict=True):
                     staged_path = transaction_dir / entry["staged"]
                     os.replace(target, staged_path)
+                    sync_directory(target.parent)
+                    sync_directory(transaction_dir)
                 os.replace(transaction_dir, committed_transaction_dir)
             except Exception:
                 self._rollback_delete_entries(transaction_dir, entries)
                 shutil.rmtree(transaction_dir)
+                sync_directory(self.delete_staging_dir)
                 raise
+            sync_directory(self.delete_staging_dir)
             cleanup_pending = False
             try:
                 shutil.rmtree(committed_transaction_dir)
+                sync_directory(self.delete_staging_dir)
             except OSError:
                 cleanup_pending = True
             return {
