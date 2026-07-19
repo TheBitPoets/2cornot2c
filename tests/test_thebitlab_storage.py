@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import stat
 import subprocess
 import sys
 import threading
@@ -55,6 +56,19 @@ def test_json_publication_syncs_destination_directory(tmp_path, monkeypatch) -> 
     storage.write_design({"title": "Versione durevole"})
 
     assert storage.design_path.parent in synced
+
+
+@pytest.mark.skipif(os.name == "nt", reason="I modi POSIX non sono rappresentati integralmente su Windows.")
+def test_json_publication_preserves_existing_mode_and_uses_shared_read_mode(tmp_path) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    storage.write_design({"title": "Originale"})
+    storage.design_path.chmod(0o640)
+
+    storage.write_design({"title": "Aggiornato"})
+    storage.write_saved_design("new.json", {"title": "Nuovo"}, overwrite=False)
+
+    assert stat.S_IMODE(storage.design_path.stat().st_mode) == 0o640
+    assert stat.S_IMODE(storage.saved_design_path("new.json").stat().st_mode) == 0o644
 
 
 def test_saved_designs_are_validated_and_listed(tmp_path) -> None:

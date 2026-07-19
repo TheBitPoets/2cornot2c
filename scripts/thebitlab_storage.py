@@ -5,6 +5,7 @@ import json
 import os
 import re
 import shutil
+import stat
 import tempfile
 import threading
 import time
@@ -219,6 +220,7 @@ class JsonCourseStorage:
         """Atomically replace a JSON object with stable formatting."""
 
         path.parent.mkdir(parents=True, exist_ok=True)
+        destination_mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else 0o644
         descriptor, temporary_name = tempfile.mkstemp(
             prefix=f".{path.name}.",
             suffix=".tmp",
@@ -226,7 +228,10 @@ class JsonCourseStorage:
         )
         temporary_path = Path(temporary_name)
         try:
-            with os.fdopen(descriptor, "w", encoding="utf-8") as destination:
+            os.chmod(temporary_path, destination_mode)
+            destination = os.fdopen(descriptor, "w", encoding="utf-8")
+            descriptor = -1
+            with destination:
                 json.dump(payload, destination, ensure_ascii=False, indent=2)
                 destination.write("\n")
                 destination.flush()
@@ -234,6 +239,8 @@ class JsonCourseStorage:
             os.replace(temporary_path, path)
             sync_directory(path.parent)
         finally:
+            if descriptor >= 0:
+                os.close(descriptor)
             temporary_path.unlink(missing_ok=True)
 
     def write_json_exclusive(self, path: Path, payload: dict[str, Any]) -> None:
@@ -247,7 +254,10 @@ class JsonCourseStorage:
         )
         temporary_path = Path(temporary_name)
         try:
-            with os.fdopen(descriptor, "w", encoding="utf-8") as destination:
+            os.chmod(temporary_path, 0o644)
+            destination = os.fdopen(descriptor, "w", encoding="utf-8")
+            descriptor = -1
+            with destination:
                 json.dump(payload, destination, ensure_ascii=False, indent=2)
                 destination.write("\n")
                 destination.flush()
@@ -255,6 +265,8 @@ class JsonCourseStorage:
             os.link(temporary_path, path)
             sync_directory(path.parent)
         finally:
+            if descriptor >= 0:
+                os.close(descriptor)
             temporary_path.unlink(missing_ok=True)
 
     def relative_path(self, path: Path) -> str:
