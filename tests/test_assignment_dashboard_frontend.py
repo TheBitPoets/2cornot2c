@@ -3456,6 +3456,59 @@ def test_review_does_not_cancel_a_pending_switch_to_another_report() -> None:
     )
 
 
+def test_second_ai_review_is_rejected_while_the_first_is_pending() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          const response = (payload) => ({
+            ok: true,
+            status: 200,
+            statusText: "OK",
+            json: async () => payload,
+            text: async () => "",
+          });
+          let resolveReview;
+          let reviewCalls = 0;
+          context.fetch = (path) => {
+            if (path !== "/api/assignment-reports/ai-feedback/review") {
+              throw new Error(`Endpoint inatteso: ${path}`);
+            }
+            reviewCalls += 1;
+            return new Promise((resolve) => { resolveReview = resolve; });
+          };
+          tested.state.report = {
+            activity_id: "somma",
+            students: [{
+              student: "rossi",
+              student_id: "rossi",
+              ai_feedback: { status: "draft" },
+            }],
+          };
+          tested.state.reportName = "demo/somma.json";
+          tested.els.reportSelect.value = "demo/somma.json";
+
+          const firstReview = tested.reviewAiFeedback("rossi", "approve");
+          assert.equal(await tested.reviewAiFeedback("rossi", "reject"), false);
+          assert.equal(reviewCalls, 1);
+          assert.match(tested.els.studentsDialogStatus.textContent, /revisione AI gia in corso/);
+
+          resolveReview(response({
+            report: {
+              activity_id: "somma",
+              students: [{
+                student: "rossi",
+                student_id: "rossi",
+                ai_feedback: { status: "approved", approved_by_teacher: true },
+              }],
+            },
+          }));
+          assert.equal(await firstReview, true);
+          assert.equal(tested.state.aiFeedbackReviewPending, false);
+        })();
+        """
+    )
+
+
 def test_student_help_dialog_opens_from_table_click_and_closes_from_button() -> None:
     run_dashboard_js(
         """

@@ -5,6 +5,7 @@ import http.client
 import json
 import os
 import threading
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -2803,6 +2804,84 @@ def test_review_assignment_ai_feedback_persists_teacher_decision(tmp_path, monke
     assert report["students"][0]["ai_feedback"]["approved_by_teacher"] is True
     assert saved["students"][0]["ai_feedback"]["status"] == "approved"
     assert saved["students"][0]["ai_feedback"]["approved_by_teacher"] is True
+
+
+def test_review_assignment_ai_feedback_serializes_updates_to_one_register(monkeypatch) -> None:
+    class ConcurrentStorage:
+        def __init__(self) -> None:
+            self.data = {
+                "activity_id": "activity",
+                "students": [
+                    {
+                        "student": "rossi-mario",
+                        "student_id": "rossi-mario",
+                        "ai_feedback": {
+                            "status": "draft",
+                            "summary": "Bozza Rossi",
+                            "approved_by_teacher": False,
+                        },
+                    },
+                    {
+                        "student": "bianchi-luca",
+                        "student_id": "bianchi-luca",
+                        "ai_feedback": {
+                            "status": "draft",
+                            "summary": "Bozza Bianchi",
+                            "approved_by_teacher": False,
+                        },
+                    },
+                ],
+            }
+            self.guard = threading.Lock()
+            self.active = 0
+            self.max_active = 0
+
+        def read_assignment_report(self, _name: str) -> dict:
+            with self.guard:
+                self.active += 1
+                self.max_active = max(self.max_active, self.active)
+            time.sleep(0.05)
+            return json.loads(json.dumps(self.data))
+
+        def write_assignment_report(self, _name: str, payload: dict) -> dict:
+            self.data = json.loads(json.dumps(payload))
+            with self.guard:
+                self.active -= 1
+            return json.loads(json.dumps(payload))
+
+    storage = ConcurrentStorage()
+    monkeypatch.setattr(course_board_server, "assignment_storage", lambda: storage)
+    start = threading.Barrier(3)
+    errors = []
+
+    def review(student_id: str) -> None:
+        try:
+            start.wait(timeout=2)
+            course_board_server.review_assignment_ai_feedback(
+                "demo/activity.json",
+                student_id,
+                "approve",
+            )
+        except Exception as error:  # noqa: BLE001
+            errors.append(error)
+
+    threads = [
+        threading.Thread(target=review, args=("rossi-mario",)),
+        threading.Thread(target=review, args=("bianchi-luca",)),
+    ]
+    for thread in threads:
+        thread.start()
+    start.wait(timeout=2)
+    for thread in threads:
+        thread.join(timeout=2)
+
+    assert errors == []
+    assert storage.max_active == 1
+    assert storage.active == 0
+    assert [student["ai_feedback"]["status"] for student in storage.data["students"]] == [
+        "approved",
+        "approved",
+    ]
 
 
 def test_review_assignment_ai_feedback_reopens_reviewed_feedback(tmp_path, monkeypatch) -> None:

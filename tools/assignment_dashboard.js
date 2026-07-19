@@ -131,6 +131,7 @@ const state = {
   report: null,
   reportName: "",
   reportLoadRevision: 0,
+  aiFeedbackReviewPending: false,
   filter: "all",
   overviewFilters: {
     class: "",
@@ -4515,6 +4516,12 @@ async function reviewAiFeedback(studentId, decision) {
     setStudentsDialogStatus(message);
     return false;
   }
+  if (state.aiFeedbackReviewPending) {
+    const message = "Attendi il completamento della revisione AI gia in corso.";
+    setStatus(message);
+    setStudentsDialogStatus(message);
+    return false;
+  }
   const reportName = state.reportName;
   invalidateReportLoads();
   const reportRevision = state.reportLoadRevision;
@@ -4526,32 +4533,37 @@ async function reviewAiFeedback(studentId, decision) {
   const progressMessage = `Salvataggio ${label} feedback AI per ${studentId}...`;
   setStatus(progressMessage);
   setStudentsDialogStatus(progressMessage);
-  const payload = await api("/api/assignment-reports/ai-feedback/review", {
-    method: "POST",
-    body: JSON.stringify({
-      name: reportName,
-      student_id: studentId,
-      decision,
-    }),
-  });
-  if (
-    reportRevision !== state.reportLoadRevision
-    || state.reportName !== reportName
-    || els.reportSelect.value !== reportName
-  ) {
-    return false;
+  state.aiFeedbackReviewPending = true;
+  try {
+    const payload = await api("/api/assignment-reports/ai-feedback/review", {
+      method: "POST",
+      body: JSON.stringify({
+        name: reportName,
+        student_id: studentId,
+        decision,
+      }),
+    });
+    if (
+      reportRevision !== state.reportLoadRevision
+      || state.reportName !== reportName
+      || els.reportSelect.value !== reportName
+    ) {
+      return false;
+    }
+    state.report = payload.report;
+    renderDashboard();
+    const outcome = {
+      approve: "approvato",
+      reject: "respinto",
+      reopen: "riaperto come bozza",
+    }[decision] || "revisionato";
+    const doneMessage = `Feedback AI ${outcome} per ${studentId}.`;
+    setStatus(doneMessage);
+    setStudentsDialogStatus(doneMessage);
+    return true;
+  } finally {
+    state.aiFeedbackReviewPending = false;
   }
-  state.report = payload.report;
-  renderDashboard();
-  const outcome = {
-    approve: "approvato",
-    reject: "respinto",
-    reopen: "riaperto come bozza",
-  }[decision] || "revisionato";
-  const doneMessage = `Feedback AI ${outcome} per ${studentId}.`;
-  setStatus(doneMessage);
-  setStudentsDialogStatus(doneMessage);
-  return true;
 }
 
 function submissionFiles(student) {
@@ -5153,12 +5165,16 @@ els.studentsBody.addEventListener("click", (event) => {
     const container = aiButton.closest("[data-ai-feedback-student]");
     if (!container?.dataset.aiFeedbackStudent) return;
     aiButton.disabled = true;
-    reviewAiFeedback(container.dataset.aiFeedbackStudent, aiButton.dataset.aiFeedbackDecision).catch((error) => {
-      aiButton.disabled = false;
-      const message = `Errore feedback AI: ${error.message}`;
-      setStatus(message);
-      setStudentsDialogStatus(message);
-    });
+    reviewAiFeedback(container.dataset.aiFeedbackStudent, aiButton.dataset.aiFeedbackDecision)
+      .then((completed) => {
+        if (!completed) aiButton.disabled = false;
+      })
+      .catch((error) => {
+        aiButton.disabled = false;
+        const message = `Errore feedback AI: ${error.message}`;
+        setStatus(message);
+        setStudentsDialogStatus(message);
+      });
     return;
   }
   const button = event.target.closest("[data-review-student]");
