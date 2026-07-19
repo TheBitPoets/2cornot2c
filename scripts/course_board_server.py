@@ -28,6 +28,7 @@ import secrets
 import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 import urllib.error
 import urllib.request
@@ -138,17 +139,38 @@ def normalized_assignment_operation_id(operation_id: str) -> str:
     return f"{readable}-{digest}"
 
 
+def data_root_process_lock_dir() -> Path:
+    """Return a private, stable directory for cross-process data-root locks."""
+
+    configured = os.environ.get("THEBITLAB_LOCK_DIR", "").strip()
+    if configured:
+        return Path(configured).expanduser().resolve(strict=False)
+    if os.name == "nt":
+        base = Path(os.environ.get("LOCALAPPDATA") or tempfile.gettempdir())
+        return base / "TheBitLab" / "locks"
+    runtime_dir = os.environ.get("XDG_RUNTIME_DIR", "").strip()
+    if runtime_dir:
+        return Path(runtime_dir).expanduser().resolve(strict=False) / "thebitlab" / "locks"
+    cache_dir = os.environ.get("XDG_CACHE_HOME", "").strip()
+    base = Path(cache_dir).expanduser() if cache_dir else Path.home() / ".cache"
+    return base.resolve(strict=False) / "thebitlab" / "locks"
+
+
 class DataRootProcessLock:
     """Hold an operating-system lock for one server data root."""
 
     def __init__(self, root: Path) -> None:
         self.root = root.resolve(strict=False)
-        root_name = self.root.name or "root"
-        self.path = self.root.parent / f".{root_name}.thebitlab-server.lock"
+        readable = create_activity.slugify(self.root.name)[:32] or "root"
+        root_key = os.path.normcase(str(self.root))
+        digest = hashlib.sha256(root_key.encode("utf-8")).hexdigest()
+        self.path = data_root_process_lock_dir() / f"{readable}-{digest}.lock"
         self._handle = None
 
     def acquire(self) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        if os.name != "nt":
+            self.path.parent.chmod(0o700)
         handle = self.path.open("a+b")
         try:
             handle.seek(0, os.SEEK_END)

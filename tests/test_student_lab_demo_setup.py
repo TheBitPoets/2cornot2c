@@ -8,6 +8,12 @@ import pytest
 from scripts import student_lab_demo_setup
 
 
+@pytest.fixture(autouse=True)
+def isolated_process_lock_dir(tmp_path, monkeypatch) -> None:
+    lock_dir = tmp_path.parent / f"{tmp_path.name}-process-locks"
+    monkeypatch.setenv("THEBITLAB_LOCK_DIR", str(lock_dir))
+
+
 def test_student_lab_demo_setup_prepares_stable_root(tmp_path) -> None:
     root = tmp_path / "student-lab-demo"
     stale = root / "stale.txt"

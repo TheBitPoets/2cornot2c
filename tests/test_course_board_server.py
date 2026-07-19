@@ -21,6 +21,12 @@ from scripts import (
 from scripts.student_help_provider import StudentHelpResponse
 
 
+@pytest.fixture(autouse=True)
+def isolated_process_lock_dir(tmp_path, monkeypatch) -> None:
+    lock_dir = tmp_path.parent / f"{tmp_path.name}-process-locks"
+    monkeypatch.setenv("THEBITLAB_LOCK_DIR", str(lock_dir))
+
+
 def test_server_bind_rejects_clear_text_network_exposure_by_default() -> None:
     assert course_board_server.is_loopback_bind_host("127.0.0.1") is True
     assert course_board_server.is_loopback_bind_host("::1") is True
@@ -161,10 +167,14 @@ def test_submission_file_rejects_path_outside_local_student_repo(tmp_path, monke
 
 
 def test_data_root_process_lock_rejects_a_second_server(tmp_path) -> None:
-    first_lock = course_board_server.DataRootProcessLock(tmp_path)
-    second_lock = course_board_server.DataRootProcessLock(tmp_path)
-    assert first_lock.path.parent == tmp_path.parent
-    assert first_lock.path.name == f".{tmp_path.name}.thebitlab-server.lock"
+    root = tmp_path / "data"
+    first_lock = course_board_server.DataRootProcessLock(root)
+    second_lock = course_board_server.DataRootProcessLock(root)
+    assert first_lock.path.parent == (
+        tmp_path.parent / f"{tmp_path.name}-process-locks"
+    ).resolve()
+    assert first_lock.path.name.startswith("data-")
+    assert first_lock.path.suffix == ".lock"
     first_lock.acquire()
     try:
         with pytest.raises(RuntimeError, match="Un altro server"):
@@ -174,6 +184,23 @@ def test_data_root_process_lock_rejects_a_second_server(tmp_path) -> None:
 
     second_lock.acquire()
     second_lock.release()
+
+
+@pytest.mark.skipif(
+    os.name == "nt" or (hasattr(os, "geteuid") and os.geteuid() == 0),
+    reason="I permessi POSIX sul parent non sono verificabili in questo ambiente.",
+)
+def test_data_root_process_lock_does_not_require_writable_root_parent(tmp_path) -> None:
+    root_parent = tmp_path / "read-only-parent"
+    root = root_parent / "data"
+    root.mkdir(parents=True)
+    root_parent.chmod(0o500)
+    try:
+        lock = course_board_server.DataRootProcessLock(root)
+        lock.acquire()
+        lock.release()
+    finally:
+        root_parent.chmod(0o700)
 
 
 def test_bounded_http_server_limits_workers_and_sets_client_timeout(monkeypatch) -> None:
