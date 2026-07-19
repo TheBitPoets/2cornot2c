@@ -1125,20 +1125,31 @@ async function loadSelectedReport() {
   const name = els.reportSelect.value;
   if (!name) {
     setStatus("Seleziona un registro consegne.");
-    return;
+    return false;
   }
   setStatus(`Caricamento registro ${name}...`);
-  const payload = await api("/api/assignment-reports/load", {
-    method: "POST",
-    body: JSON.stringify({ name }),
-  });
+  let payload;
+  try {
+    payload = await api("/api/assignment-reports/load", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    });
+    if (!payload.report || !Array.isArray(payload.report.students)) {
+      throw new Error("il server ha restituito un registro non valido");
+    }
+  } catch (error) {
+    setStatus(`Registro non caricato: ${error.message}`);
+    return false;
+  }
   state.report = payload.report;
   state.reportName = name;
+  els.studentsOpenBtn.disabled = false;
   clearReview();
   focusOverviewClassFromReport(state.report);
   renderOverview();
   renderDashboard();
   setStatus(`Registro caricato: ${name}.`);
+  return true;
 }
 
 function readReviewSplit() {
@@ -4830,7 +4841,7 @@ els.reviewPrevBtn.addEventListener("click", () => openAdjacentSubmission(-1));
 els.reviewNextBtn.addEventListener("click", () => openAdjacentSubmission(1));
 els.reviewCloseBtn.addEventListener("click", closeReviewDialog);
 els.testDetailsCloseBtn.addEventListener("click", closeTestDetailsDialog);
-els.studentHelpCloseBtn.addEventListener("click", closeStudentHelpDialog);
+els.studentHelpCloseBtn?.addEventListener("click", closeStudentHelpDialog);
 els.activitySelect.addEventListener("change", () => {
   if (els.activitySelect.value) {
     clearSelectedAssignment();
@@ -4982,8 +4993,8 @@ els.coverageBody.addEventListener("click", async (event) => {
   }
   if (reportButton && reportButton.dataset.coverageReport) {
     els.reportSelect.value = reportButton.dataset.coverageReport;
-    await loadSelectedReport();
-    if (reportButton.dataset.coverageOpenStudents === "true") {
+    const loaded = await loadSelectedReport();
+    if (loaded && reportButton.dataset.coverageOpenStudents === "true") {
       openStudentsDialog();
     }
   }
@@ -5022,8 +5033,8 @@ els.overviewBody.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-overview-report]");
   if (!button) return;
   els.reportSelect.value = button.dataset.overviewReport;
-  await loadSelectedReport();
-  if (button.dataset.overviewStudent) {
+  const loaded = await loadSelectedReport();
+  if (loaded && button.dataset.overviewStudent) {
     openSubmission(button.dataset.overviewStudent, "", "overview");
   }
 });
@@ -5031,8 +5042,8 @@ els.overviewMatrixBody.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-overview-report]");
   if (!button || button.disabled) return;
   els.reportSelect.value = button.dataset.overviewReport;
-  await loadSelectedReport();
-  if (button.dataset.overviewStudent) {
+  const loaded = await loadSelectedReport();
+  if (loaded && button.dataset.overviewStudent) {
     openSubmission(button.dataset.overviewStudent, "", "overview");
   }
 });

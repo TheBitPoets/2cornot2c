@@ -476,6 +476,7 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         distributeAssignment,
         deleteSelectedAssignment,
         generateReport,
+        loadSelectedReport,
         loadAssignments,
         renderAssignmentSelect,
         clearSelectedAssignment,
@@ -3035,6 +3036,46 @@ def test_student_help_dialog_opens_selected_student_and_clears_stale_rows() -> N
 
         tested.clearStudentHelpRows();
         assert.equal(tested.state.studentHelpRows.size, 0);
+        """
+    )
+
+
+def test_loading_report_enables_students_panel_and_reports_failures() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.els.reportSelect.value = "demo/python-demo-somma-001.json";
+          tested.els.studentsOpenBtn.disabled = true;
+          tested.fetchResponses["/api/assignment-reports/load"] = {
+            report: {
+              activity_id: "python-demo-somma-001",
+              title: "Demo somma in Python",
+              students: [{ student: "rossi-mario", submitted: false }],
+            },
+          };
+
+          const loaded = await tested.loadSelectedReport();
+
+          assert.equal(loaded, true);
+          assert.equal(tested.els.studentsOpenBtn.disabled, false);
+          assert.equal(tested.state.report.students.length, 1);
+          assert.match(tested.els.status.textContent, /Registro caricato/);
+
+          tested.state.report = null;
+          tested.els.studentsOpenBtn.disabled = true;
+          tested.fetchResponses["/api/assignment-reports/load"] = {
+            ok: false,
+            status: 404,
+            statusText: "Not Found",
+            text: '{"error":"Registro non trovato"}',
+          };
+
+          const failed = await tested.loadSelectedReport();
+
+          assert.equal(failed, false);
+          assert.equal(tested.els.studentsOpenBtn.disabled, true);
+          assert.match(tested.els.status.textContent, /Registro non caricato: 404 Not Found: Registro non trovato/);
+        })();
         """
     )
 
