@@ -115,6 +115,7 @@ let aiProgressTimer = null;
 let frameBatch = null;
 let cleanDesignSnapshot = "";
 let allowNextUnloadWithoutWarning = false;
+let saveOperationInProgress = false;
 
 function emptyCourseDesign() {
   return {
@@ -206,6 +207,27 @@ async function runAsyncAction(action, label) {
     setStatus(`${label} non riuscito. Dettaglio: ${error.message}`);
     return undefined;
   }
+}
+
+function startSaveOperation() {
+  if (saveOperationInProgress) {
+    setStatus("Salvataggio gia in corso. Attendi il completamento prima di avviarne un altro.");
+    return false;
+  }
+  saveOperationInProgress = true;
+  els.newDesignBtn.disabled = true;
+  els.saveArchiveBtn.disabled = true;
+  els.saveArchiveAsBtn.disabled = true;
+  els.saveBtn.disabled = true;
+  return true;
+}
+
+function finishSaveOperation() {
+  saveOperationInProgress = false;
+  els.newDesignBtn.disabled = false;
+  els.saveArchiveBtn.disabled = false;
+  els.saveArchiveAsBtn.disabled = false;
+  renderCourseActions();
 }
 
 function startAiProgress(title) {
@@ -467,6 +489,15 @@ async function saveArchiveDesignAs() {
 }
 
 async function saveArchiveDesignWithName(name, options = {}) {
+  if (!startSaveOperation()) return false;
+  try {
+    return await persistArchiveDesignWithName(name, options);
+  } finally {
+    finishSaveOperation();
+  }
+}
+
+async function persistArchiveDesignWithName(name, options = {}) {
   const {
     overwrite = false,
     confirmOverwrite = false,
@@ -490,7 +521,7 @@ async function saveArchiveDesignWithName(name, options = {}) {
         setStatus("Salvataggio annullato: il progetto esistente non è stato modificato.");
         return false;
       }
-      return saveArchiveDesignWithName(name, {
+      return persistArchiveDesignWithName(name, {
         design: designToSave,
         overwrite: true,
         opensSavedDesign,
@@ -522,6 +553,15 @@ async function saveArchiveDesignWithName(name, options = {}) {
 }
 
 async function saveCurrentProject() {
+  if (!startSaveOperation()) return false;
+  try {
+    return await persistCurrentProject();
+  } finally {
+    finishSaveOperation();
+  }
+}
+
+async function persistCurrentProject() {
   normalizeCourseDesignFrames();
   const savedSnapshot = designSnapshot();
   const boardContext = captureBoardContext();
@@ -543,6 +583,7 @@ async function saveCurrentProject() {
   renderProjectTitle();
   renderCourseActions();
   setStatus("Progetto corrente salvato in doc/course_design.json.");
+  return true;
 }
 
 function reconcileDeletedArchive(name, payload) {
@@ -1859,6 +1900,15 @@ function toggleCourseItem(collapseKey) {
 }
 
 async function saveDesign() {
+  if (!startSaveOperation()) return false;
+  try {
+    return await persistDesignAsCurrent();
+  } finally {
+    finishSaveOperation();
+  }
+}
+
+async function persistDesignAsCurrent() {
   if (!state.activeSavedDesign && !state.isNewDesign) {
     setStatus("Il progetto corrente e gia caricato: non serve impostarlo di nuovo.");
     renderCourseActions();
@@ -1890,6 +1940,7 @@ async function saveDesign() {
   renderProjectTitle();
   renderCourseActions();
   setStatus("Progetto impostato come corrente in doc/course_design.json.");
+  return true;
 }
 
 async function generateCoursePlanMd() {

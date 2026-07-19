@@ -278,6 +278,37 @@ def test_change_during_current_project_save_remains_dirty() -> None:
     )
 
 
+def test_overlapping_save_is_rejected_until_the_first_completes() -> None:
+    run_course_board_js(
+        """
+        let completeRequest;
+        let requests = 0;
+        api = async () => {
+          requests += 1;
+          return new Promise((resolve) => { completeRequest = resolve; });
+        };
+        renderSavedDesigns = () => {};
+        renderProjectTitle = () => {};
+        renderCourseActions = () => {};
+        state.design = { years: [{ id: "first" }] };
+
+        const firstSave = saveCurrentProject();
+        const secondSave = saveCurrentProject();
+
+        secondSave.then((saved) => {
+          assert.equal(saved, false);
+          assert.equal(requests, 1);
+          assert.equal(saveOperationInProgress, true);
+          completeRequest({});
+          return firstSave.then(() => {
+            assert.equal(saveOperationInProgress, false);
+            assert.equal(els.newDesignBtn.disabled, false);
+          });
+        });
+        """
+    )
+
+
 def test_archive_save_response_does_not_relabel_a_newly_opened_project() -> None:
     run_course_board_js(
         """
