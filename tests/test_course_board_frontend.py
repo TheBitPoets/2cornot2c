@@ -144,6 +144,13 @@ def test_accessible_add_can_target_the_second_uda() -> None:
     )
 
 
+def test_accessible_add_tooltip_describes_destination_choice() -> None:
+    html = Path("tools/course_board.html").read_text(encoding="utf-8")
+
+    assert "permette di scegliere la destinazione" in html
+    assert "alla prima UDA del percorso" not in html
+
+
 def test_course_item_collapse_key_is_scoped_to_the_course() -> None:
     run_course_board_js(
         """
