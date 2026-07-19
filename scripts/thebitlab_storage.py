@@ -37,6 +37,68 @@ class JsonCourseStorage:
         self.design_path = root / "doc" / "course_design.json"
         self.course_designs_dir = root / "doc" / "course_designs"
         self.school_calendars_dir = root / "doc" / "calendars"
+        self.delete_staging_dir = root / "doc" / ".delete-staging"
+        with self.operation_lock:
+            self._recover_delete_transactions()
+
+    def _delete_manifest_entries(self, targets: list[Path]) -> list[dict[str, str]]:
+        return [
+            {
+                "original": self.relative_path(target),
+                "staged": f"{index}-{target.name}",
+            }
+            for index, target in enumerate(targets)
+        ]
+
+    def _write_delete_transaction_file(self, path: Path, content: str) -> None:
+        with path.open("x", encoding="utf-8") as destination:
+            destination.write(content)
+            destination.flush()
+            os.fsync(destination.fileno())
+
+    def _original_delete_path(self, value: str) -> Path:
+        path = (self.root / value).resolve(strict=False)
+        try:
+            path.relative_to(self.root.resolve(strict=False))
+        except ValueError as error:
+            raise RuntimeError("Journal di cancellazione non valido.") from error
+        return path
+
+    def _rollback_delete_entries(self, transaction_dir: Path, entries: list[dict[str, str]]) -> None:
+        for entry in reversed(entries):
+            staged_path = transaction_dir / entry["staged"]
+            if not staged_path.exists():
+                continue
+            original_path = self._original_delete_path(entry["original"])
+            if original_path.exists():
+                raise RuntimeError(f"Rollback in conflitto con un file esistente: {entry['original']}")
+            original_path.parent.mkdir(parents=True, exist_ok=True)
+            os.replace(staged_path, original_path)
+
+    def _recover_delete_transactions(self) -> None:
+        if not self.delete_staging_dir.is_dir():
+            return
+        for transaction_dir in sorted(path for path in self.delete_staging_dir.iterdir() if path.is_dir()):
+            if (transaction_dir / "COMMITTED").is_file():
+                try:
+                    shutil.rmtree(transaction_dir)
+                except OSError:
+                    continue
+                continue
+            manifest_path = transaction_dir / "manifest.json"
+            try:
+                manifest = self.read_json(manifest_path)
+                entries = manifest.get("entries", [])
+                if not isinstance(entries, list) or not all(isinstance(entry, dict) for entry in entries):
+                    raise ValueError("entries non valide")
+            except (OSError, ValueError, json.JSONDecodeError) as error:
+                staged_files = [path for path in transaction_dir.iterdir() if path.name != "manifest.json"]
+                if staged_files:
+                    raise RuntimeError(f"Journal di cancellazione illeggibile: {transaction_dir}") from error
+                shutil.rmtree(transaction_dir)
+                continue
+            self._rollback_delete_entries(transaction_dir, entries)
+            shutil.rmtree(transaction_dir)
 
     def safe_design_name(self, name: str) -> str:
         """Validate a JSON filename used by saved designs and calendars."""
@@ -181,24 +243,31 @@ class JsonCourseStorage:
                     targets.append(calendar_path)
                     deleted_calendars.append(safe_calendar_name)
 
-            transaction_dir = self.root / "doc" / ".delete-staging" / uuid.uuid4().hex
+            transaction_dir = self.delete_staging_dir / uuid.uuid4().hex
             transaction_dir.mkdir(parents=True, exist_ok=False)
-            staged: list[tuple[Path, Path]] = []
+            entries = self._delete_manifest_entries(targets)
+            self._write_delete_transaction_file(
+                transaction_dir / "manifest.json",
+                json.dumps({"version": 1, "entries": entries}, ensure_ascii=False, indent=2) + "\n",
+            )
             try:
-                for index, target in enumerate(targets):
-                    staged_path = transaction_dir / f"{index}-{target.name}"
+                for target, entry in zip(targets, entries, strict=True):
+                    staged_path = transaction_dir / entry["staged"]
                     os.replace(target, staged_path)
-                    staged.append((target, staged_path))
+                self._write_delete_transaction_file(transaction_dir / "COMMITTED", "committed\n")
             except Exception:
-                for original_path, staged_path in reversed(staged):
-                    if staged_path.exists():
-                        os.replace(staged_path, original_path)
-                shutil.rmtree(transaction_dir, ignore_errors=True)
+                self._rollback_delete_entries(transaction_dir, entries)
+                shutil.rmtree(transaction_dir)
                 raise
-            shutil.rmtree(transaction_dir, ignore_errors=True)
+            cleanup_pending = False
+            try:
+                shutil.rmtree(transaction_dir)
+            except OSError:
+                cleanup_pending = True
             return {
                 "name": safe_name,
                 "deleted_calendars": deleted_calendars,
+                "cleanup_pending": cleanup_pending,
                 "designs": self.list_saved_designs(),
                 "calendars": self.list_school_calendars(),
             }

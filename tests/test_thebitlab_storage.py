@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import threading
 from pathlib import Path
 
@@ -199,6 +200,80 @@ def test_save_waits_for_delete_rollback_before_updating_design(tmp_path, monkeyp
 
     assert save_done.is_set()
     assert saving_storage.read_saved_design("victim.json") == {"title": "Aggiornato"}
+
+
+def test_uncommitted_delete_transaction_is_restored_on_next_adapter(tmp_path) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    storage.write_saved_design("victim.json", {"title": "Da ripristinare"})
+    original = storage.saved_design_path("victim.json")
+    transaction_dir = storage.delete_staging_dir / "interrupted"
+    transaction_dir.mkdir(parents=True)
+    staged = transaction_dir / "0-victim.json"
+    os.replace(original, staged)
+    (transaction_dir / "manifest.json").write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "entries": [{"original": storage.relative_path(original), "staged": staged.name}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    recovered = JsonCourseStorage(tmp_path)
+
+    assert recovered.read_saved_design("victim.json") == {"title": "Da ripristinare"}
+    assert not transaction_dir.exists()
+
+
+def test_committed_delete_transaction_is_completed_on_next_adapter(tmp_path) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    storage.write_saved_design("victim.json", {"title": "Da eliminare"})
+    original = storage.saved_design_path("victim.json")
+    transaction_dir = storage.delete_staging_dir / "committed"
+    transaction_dir.mkdir(parents=True)
+    staged = transaction_dir / "0-victim.json"
+    os.replace(original, staged)
+    (transaction_dir / "manifest.json").write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "entries": [{"original": storage.relative_path(original), "staged": staged.name}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (transaction_dir / "COMMITTED").write_text("committed\n", encoding="utf-8")
+
+    recovered = JsonCourseStorage(tmp_path)
+
+    assert recovered.list_saved_designs() == []
+    assert not transaction_dir.exists()
+
+
+def test_delete_reports_pending_cleanup_and_next_adapter_retries(tmp_path, monkeypatch) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    storage.write_saved_design("victim.json", {"title": "Da eliminare"})
+    real_rmtree = shutil.rmtree
+    failed_once = False
+
+    def fail_first_cleanup(path, *args, **kwargs):
+        nonlocal failed_once
+        if not failed_once and Path(path).parent == storage.delete_staging_dir:
+            failed_once = True
+            raise PermissionError("cleanup bloccato")
+        return real_rmtree(path, *args, **kwargs)
+
+    monkeypatch.setattr("scripts.thebitlab_storage.shutil.rmtree", fail_first_cleanup)
+    result = storage.delete_saved_design("victim.json")
+
+    assert result["cleanup_pending"] is True
+    assert any(storage.delete_staging_dir.iterdir())
+
+    monkeypatch.setattr("scripts.thebitlab_storage.shutil.rmtree", real_rmtree)
+    recovered = JsonCourseStorage(tmp_path)
+    assert recovered.list_saved_designs() == []
+    assert list(recovered.delete_staging_dir.iterdir()) == []
 
 
 def test_read_json_rejects_non_object_payload(tmp_path) -> None:
