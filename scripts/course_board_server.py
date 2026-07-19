@@ -1110,10 +1110,9 @@ def read_class_roster(name: str) -> dict:
     return class_roster_service().read_class_roster(name)
 
 
-def read_assignment_report(name: str) -> dict:
-    """Read one assignment tracking report from teacher-reports."""
+def enrich_assignment_report_help(report: dict) -> dict:
+    """Attach current authoritative help summaries to one assignment report."""
 
-    report = assignment_service().read_assignment_report(name)
     assignment_id = str(report.get("assignment_id", "")).strip()
     students = report.get("students") if isinstance(report.get("students"), list) else []
     if not assignment_id:
@@ -1136,6 +1135,12 @@ def read_assignment_report(name: str) -> dict:
     return report
 
 
+def read_assignment_report(name: str) -> dict:
+    """Read one assignment tracking report from teacher-reports."""
+
+    return enrich_assignment_report_help(assignment_service().read_assignment_report(name))
+
+
 def review_assignment_ai_feedback(name: str, student_id: str, decision: str) -> dict:
     """Apply a teacher review decision to draft AI feedback in a report."""
 
@@ -1143,7 +1148,8 @@ def review_assignment_ai_feedback(name: str, student_id: str, decision: str) -> 
         storage = assignment_storage()
         register = storage.read_assignment_report(name)
         updated = manual_ai_feedback.review_feedback_in_register(register, student_id, decision)
-        return storage.write_assignment_report(name, updated)
+        saved = storage.write_assignment_report(name, updated)
+        return enrich_assignment_report_help(saved)
 
 
 def assignment_overview() -> list[dict]:

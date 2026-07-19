@@ -2806,6 +2806,55 @@ def test_review_assignment_ai_feedback_persists_teacher_decision(tmp_path, monke
     assert saved["students"][0]["ai_feedback"]["approved_by_teacher"] is True
 
 
+def test_review_assignment_ai_feedback_returns_current_help_without_persisting_it(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
+    report_path = tmp_path / "teacher-reports" / "activity.json"
+    report_path.parent.mkdir(parents=True)
+    report_path.write_text(
+        json.dumps(
+            {
+                "activity_id": "activity",
+                "assignment_id": "assignment-001",
+                "students": [
+                    {
+                        "student": "rossi-mario",
+                        "student_id": "rossi-mario",
+                        "help": {"total": 0, "events": []},
+                        "ai_feedback": {
+                            "status": "draft",
+                            "summary": "Bozza",
+                            "approved_by_teacher": False,
+                        },
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    current_help = {
+        "total": 2,
+        "events": [{"help_type": "ai", "prompt": "Spiegami il ciclo."}],
+        "ai_total": 1,
+    }
+    monkeypatch.setattr(
+        course_board_server.student_help_service,
+        "teacher_help_summary",
+        lambda _path: json.loads(json.dumps(current_help)),
+    )
+
+    reviewed = course_board_server.review_assignment_ai_feedback(
+        "activity.json",
+        "rossi-mario",
+        "approve",
+    )
+    persisted = json.loads(report_path.read_text(encoding="utf-8"))
+
+    assert reviewed["students"][0]["help"]["total"] == 2
+    assert reviewed["students"][0]["help"]["events"][0]["prompt"] == "Spiegami il ciclo."
+    assert persisted["students"][0]["help"] == {"total": 0, "events": []}
+
+
 def test_review_assignment_ai_feedback_serializes_updates_to_one_register(monkeypatch) -> None:
     class ConcurrentStorage:
         def __init__(self) -> None:
