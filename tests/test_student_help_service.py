@@ -141,7 +141,21 @@ class StructuredErrorHelpProvider:
             message="Stack trace remoto: api_key=segreto-nel-messaggio",
             usage={"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
             detail="Errore remoto: token=segreto-strutturato",
-        )
+    )
+
+
+def test_provider_response_normalizes_total_tokens() -> None:
+    response = StudentHelpResponse(
+        status="ready",
+        provider="test-provider",
+        provider_label="Provider test",
+        message="Guida",
+        usage={"input_tokens": 3, "output_tokens": 7, "total_tokens": 999},
+    )
+
+    payload = student_help_service.provider_response_payload(response)
+
+    assert payload["usage"] == {"input_tokens": 3, "output_tokens": 7, "total_tokens": 10}
 
 
 def test_evaluate_help_request_denies_ai_when_policy_does_not_allow_it() -> None:
@@ -216,9 +230,67 @@ def test_record_help_request_persists_provider_response_for_allowed_request(tmp_
     teacher_summary = student_help_service.teacher_help_summary(log_path)
     assert summary["last_response_status"] == "ready"
     assert summary["last_response_provider"] == "Provider test"
+    assert summary["ai_usage"] == {
+        "input_tokens": 3,
+        "output_tokens": 7,
+        "total_tokens": 10,
+        "requests_reported": 1,
+        "requests_without_usage": 0,
+    }
     assert teacher_summary["events"][0]["response"]["message"].startswith("Prova un caso minimo")
     assert teacher_summary["events"][0]["response"]["usage"]["total_tokens"] == 10
     assert teacher_summary["events"][0]["provider_status"] == "completed"
+
+
+def test_ai_usage_distinguishes_reported_missing_local_and_blocked_requests(tmp_path) -> None:
+    log_path = tmp_path / "teacher-help-events" / "student" / "assignment" / "events.json"
+    events = [
+        {
+            "help_type": "ai",
+            "allowed": True,
+            "response": {
+                "provider": "codex-local",
+                "usage": {"input_tokens": 12, "output_tokens": 3, "total_tokens": 999},
+            },
+        },
+        {
+            "help_type": "ai",
+            "allowed": True,
+            "response": {
+                "provider": "codex-local",
+                "usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
+            },
+        },
+        {
+            "help_type": "ai",
+            "allowed": True,
+            "response": {
+                "provider": "deterministic-local",
+                "usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
+            },
+        },
+        {"help_type": "ai", "allowed": False},
+        {
+            "help_type": "teoria",
+            "allowed": True,
+            "response": {
+                "provider": "remote-provider",
+                "usage": {"input_tokens": 99, "output_tokens": 1, "total_tokens": 100},
+            },
+        },
+    ]
+    student_help_service.write_help_events(log_path, events)
+
+    summary = student_help_service.teacher_help_summary(log_path)
+
+    assert summary["ai_usage"] == {
+        "input_tokens": 12,
+        "output_tokens": 3,
+        "total_tokens": 15,
+        "requests_reported": 1,
+        "requests_without_usage": 1,
+    }
+    assert summary["events"][0]["response"]["usage"]["total_tokens"] == 15
 
 
 def test_teacher_help_summary_exposes_only_known_provider_states(tmp_path) -> None:

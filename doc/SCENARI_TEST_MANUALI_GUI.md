@@ -169,7 +169,8 @@ Obiettivo: verificare che il docente veda quante volte lo studente ha chiesto ai
 5. Controlla il riepilogo dedicato agli aiuti.
 6. Clicca `Dettagli aiuti`.
 7. Leggi prompt, risposta, provider, stato e utilizzo dichiarato.
-8. Chiudi il modal e verifica di tornare alla stessa vista Studenti.
+8. Controlla `Token AI dichiarati` nella cella, nel modal e nel riepilogo Studenti.
+9. Chiudi il modal e verifica di tornare alla stessa vista Studenti.
 
 Risultato atteso:
 
@@ -177,8 +178,11 @@ Risultato atteso:
 - Il docente vede `Aiuti AI 1`.
 - La cella resta compatta e non mostra direttamente i prompt lunghi.
 - `Dettagli aiuti` apre un modal dedicato.
-- Il prompt demo e visibile nel modal: `Puoi darmi un suggerimento senza scrivere la soluzione?`.
+- Il prompt demo è visibile nel modal: `Puoi darmi un suggerimento senza scrivere la soluzione?`.
 - La risposta e il provider sono leggibili senza scorrimento orizzontale.
+- Il totale `Token AI dichiarati` coincide con la somma dei contatori mostrati nelle richieste AI.
+- Il riepilogo `AI senza contatori` coincide con gli avvisi presenti nelle righe studente.
+- Eventuali risposte remote senza usage sono indicate come `Senza contatori` e non aumentano il totale.
 - Gli aiuti bloccati sono `0`.
 
 ## Scenario 5 - Dettaglio errori test in modal

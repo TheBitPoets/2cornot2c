@@ -13,6 +13,7 @@ from typing import Any, Callable
 
 from scripts import assignment_records
 from scripts.student_help_provider import (
+    DETERMINISTIC_PROVIDER,
     STUDENT_HELP_RESPONSE_SCHEMA_VERSION,
     StudentHelpProvider,
     StudentHelpRequest,
@@ -128,6 +129,56 @@ def positive_int(value: Any, default: int = 0) -> int:
     return parsed if parsed > 0 else default
 
 
+def token_counter(value: Any) -> int:
+    """Return one persisted token counter without accepting booleans."""
+
+    return value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else 0
+
+
+def normalized_token_usage(value: Any) -> dict[str, int]:
+    """Return consistent counters for persisted or historical provider usage."""
+
+    usage = value if isinstance(value, dict) else {}
+    input_tokens = token_counter(usage.get("input_tokens"))
+    output_tokens = token_counter(usage.get("output_tokens"))
+    return {
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "total_tokens": input_tokens + output_tokens,
+    }
+
+
+def summarize_ai_usage(events: list[dict[str, Any]]) -> dict[str, int]:
+    """Aggregate authoritative AI token usage without including blocked or local requests."""
+
+    summary = {
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "total_tokens": 0,
+        "requests_reported": 0,
+        "requests_without_usage": 0,
+    }
+    for event in events:
+        if normalize_help_type(event.get("help_type")) != "ai" or event.get("allowed") is not True:
+            continue
+        response = event.get("response") if isinstance(event.get("response"), dict) else {}
+        provider = clean_text(response.get("provider"))
+        if not provider or provider == DETERMINISTIC_PROVIDER:
+            continue
+        usage = normalized_token_usage(response.get("usage"))
+        input_tokens = usage["input_tokens"]
+        output_tokens = usage["output_tokens"]
+        total_tokens = usage["total_tokens"]
+        summary["input_tokens"] += input_tokens
+        summary["output_tokens"] += output_tokens
+        summary["total_tokens"] += total_tokens
+        if total_tokens:
+            summary["requests_reported"] += 1
+            continue
+        summary["requests_without_usage"] += 1
+    return summary
+
+
 def provider_response_payload(response: Any) -> dict[str, Any]:
     """Validate and normalize a provider response into JSON-safe values."""
 
@@ -160,6 +211,9 @@ def provider_response_payload(response: Any) -> dict[str, Any]:
         if isinstance(value, bool) or not isinstance(value, int) or value < 0:
             raise ValueError(f"Contatore provider non valido: {key}.")
         normalized_usage[key] = value
+    normalized_usage["total_tokens"] = (
+        normalized_usage["input_tokens"] + normalized_usage["output_tokens"]
+    )
     return {
         "schema_version": STUDENT_HELP_RESPONSE_SCHEMA_VERSION,
         "status": status,
@@ -499,6 +553,7 @@ def _empty_help_summary() -> dict[str, Any]:
         "last_response_status": "",
         "last_response_provider": "",
         "counts": {},
+        "ai_usage": summarize_ai_usage([]),
     }
 
 
@@ -526,6 +581,7 @@ def _help_summary_from_events(
         "last_response_status": clean_text(last_response.get("status")),
         "last_response_provider": clean_text(last_response.get("provider_label")),
         "counts": counts,
+        "ai_usage": summarize_ai_usage(events),
     }
 
 
@@ -644,16 +700,12 @@ def _teacher_response(value: Any) -> dict[str, Any]:
 
     if not isinstance(value, dict):
         return {}
-    usage = value.get("usage") if isinstance(value.get("usage"), dict) else {}
+    usage = normalized_token_usage(value.get("usage"))
     return {
         "status": clean_text(value.get("status")),
         "provider": clean_text(value.get("provider")),
         "provider_label": clean_text(value.get("provider_label")),
         "message": clean_text(value.get("message")),
         "detail": clean_text(value.get("detail")),
-        "usage": {
-            "input_tokens": max(positive_int(usage.get("input_tokens")), 0),
-            "output_tokens": max(positive_int(usage.get("output_tokens")), 0),
-            "total_tokens": max(positive_int(usage.get("total_tokens")), 0),
-        },
+        "usage": usage,
     }

@@ -206,7 +206,9 @@ Il payload lab aggiunge `support_policy`, cioè una descrizione leggibile per lo
 | `studio-guidato` | Lo studente può consultare richiami teorici, domande guida ed esempi approvati dal docente. |
 | `ai-assisted` | Lo studente può usare aiuto AI nei limiti di budget e policy decisi dal docente. |
 
-La TUI mostra la policy e usa la stessa logica backend per consentire o bloccare le richieste di aiuto. Per l'MVP `ai-assisted` abilita un budget minimo di richieste AI per consegna; i limiti token reali saranno introdotti nei passi successivi.
+La TUI mostra la policy e usa la stessa logica backend per consentire o bloccare le richieste di aiuto. Per l'MVP
+`ai-assisted` abilita un budget minimo basato sul numero di richieste AI per consegna. I token dichiarati dal provider
+vengono contabilizzati separatamente: servono al monitoraggio docente, ma non modificano ancora il limite.
 
 ## Log richieste di aiuto
 
@@ -222,12 +224,20 @@ senza ricostruire manualmente il path dagli ID. Il payload generale contiene sol
 Ogni evento indica tipo di aiuto richiesto, esito consentito/bloccato, motivazione e prompt dello studente.
 Quando la richiesta è consentita e viene usato un provider, l'evento contiene anche una `response` conforme a
 `student_help_response.v1`: stato, provider, messaggio, dettaglio tecnico e contatori d'uso.
-Il payload lab espone un riepilogo `help` con totale eventi, richieste consentite, richieste bloccate, ultimo esito e budget AI usato/rimanente.
+Con Codex locale, il server esegue `codex exec --json`, legge i contatori dall'ultimo evento `turn.completed` e usa
+`--output-last-message` per mantenere separata la risposta didattica strutturata. Il riepilogo autorevole `help.ai_usage`
+somma `input_tokens`, `output_tokens` e `total_tokens` per studente e assegnazione. Espone inoltre il numero di risposte
+con utilizzo dichiarato e di risposte remote storiche prive di contatori. Richieste bloccate, guida locale e dati legacy
+non aumentano il totale.
+
+Il payload lab espone un riepilogo `help` con totale eventi, richieste consentite, richieste bloccate, ultimo esito,
+budget AI usato/rimanente e utilizzo token. Il costo monetario non viene stimato: Codex con abbonamento non dichiara
+un prezzo per singola richiesta e zero non deve essere confuso con un costo reale pari a zero.
 La TUI registra nuove richieste, mostra subito un esito compatto con tipo, stato e risposta a capo, poi conserva tutti
 i dettagli nello storico. La motivazione della policy compare subito solo quando la richiesta è bloccata o il provider
 non restituisce una risposta; per le richieste riuscite resta consultabile con `h`, evitando ripetizioni. Il comando
 `h` separa ogni evento con linee tratteggiate, distingue prompt, risposta e motivo con colori ANSI e mantiene la stessa
-struttura leggibile quando i colori sono disabilitati. Il server usa `CodexStudentHelpProvider` quando e configurato
+struttura leggibile quando i colori sono disabilitati. Il server usa `CodexStudentHelpProvider` quando è configurato
 su `codex`; il provider deterministico, indicato a schermo come `Guida locale (nessuna AI esterna)`, resta disponibile
 per il collaudo senza consumo e come fallback. Entrambi implementano `StudentHelpProvider`, quindi policy,
 persistenza e interfaccia non dipendono dal provider effettivo.
@@ -253,13 +263,15 @@ Quando il report esiste, il registro salva nella `submission` anche:
 
 Quando il registro è collegato a un'assegnazione, il docente legge lo stesso log server-side
 `teacher-help-events/student_id-<sha256>/assignment_id-<sha256>/events.json` e aggiunge a ogni studente il riepilogo `help`.
-La dashboard docente può così mostrare numero di richieste, richieste AI, richieste bloccate e prompt inviati dallo studente per quella consegna.
+La dashboard docente può così mostrare numero di richieste, richieste AI, richieste bloccate, token dichiarati e prompt
+inviati dallo studente per quella consegna. Il riepilogo del registro somma gli stessi token per la classe corrente.
 
 In questo modo dashboard docente, dashboard studente e TUI leggono lo stesso risultato senza ricalcolare grading o stato in modi divergenti.
 
 Le prossime PR dovranno completare questo contratto con:
 
-1. contabilizzare token/costo reali per scuola, classe, studente e consegna usando i metadati `usage`;
-2. demo end-to-end pulita con dati riproducibili;
-3. guida utente docente/studente aggiornata;
-4. valutare un adapter opzionale per layout terminale avanzato, per esempio tmux su ambienti compatibili.
+1. introdurre eventuali budget token per scuola e classe senza sostituire il limite per numero di richieste;
+2. attribuire costi monetari solo ai provider che comunicano modello, tariffazione e metadati di billing verificabili;
+3. demo end-to-end pulita con dati riproducibili;
+4. guida utente docente/studente aggiornata;
+5. valutare un adapter opzionale per layout terminale avanzato, per esempio tmux su ambienti compatibili.
