@@ -223,7 +223,7 @@ def test_codex_provider_rejects_output_that_would_truncate_check_question(monkey
         student_help_codex_adapter.CodexStudentHelpProvider().respond(sample_request())
 
 
-def test_codex_provider_rejects_missing_token_usage(monkeypatch) -> None:
+def test_codex_provider_marks_missing_token_usage_without_losing_response(monkeypatch) -> None:
     monkeypatch.setattr(student_help_codex_adapter.shutil, "which", lambda command: "/bin/codex")
     monkeypatch.setattr(
         student_help_codex_adapter.subprocess,
@@ -238,8 +238,10 @@ def test_codex_provider_rejects_missing_token_usage(monkeypatch) -> None:
         ),
     )
 
-    with pytest.raises(ValueError, match="utilizzo token"):
-        student_help_codex_adapter.CodexStudentHelpProvider().respond(sample_request())
+    response = student_help_codex_adapter.CodexStudentHelpProvider().respond(sample_request())
+
+    assert response.provider == "codex-local"
+    assert response.usage == {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
 
 
 @pytest.mark.parametrize(
@@ -250,7 +252,7 @@ def test_codex_provider_rejects_missing_token_usage(monkeypatch) -> None:
         [{"type": "turn.completed", "usage": {"input_tokens": True, "output_tokens": 2}}],
     ],
 )
-def test_codex_provider_rejects_invalid_token_usage(monkeypatch, events) -> None:
+def test_codex_provider_marks_invalid_token_usage_without_losing_response(monkeypatch, events) -> None:
     monkeypatch.setattr(student_help_codex_adapter.shutil, "which", lambda command: "/bin/codex")
     monkeypatch.setattr(
         student_help_codex_adapter.subprocess,
@@ -265,8 +267,10 @@ def test_codex_provider_rejects_invalid_token_usage(monkeypatch, events) -> None
         ),
     )
 
-    with pytest.raises(ValueError, match="eventi JSONL|contatori token|utilizzo token"):
-        student_help_codex_adapter.CodexStudentHelpProvider().respond(sample_request())
+    response = student_help_codex_adapter.CodexStudentHelpProvider().respond(sample_request())
+
+    assert response.provider == "codex-local"
+    assert response.usage == {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
 
 
 def test_codex_usage_rejects_malformed_jsonl() -> None:
@@ -288,6 +292,25 @@ def test_fallback_provider_uses_local_guide_when_codex_fails() -> None:
 
     assert response.provider == "deterministic-local"
     assert response.status == "ready"
+
+
+def test_codex_fallback_preserves_usage_from_invalid_structured_response(monkeypatch) -> None:
+    monkeypatch.setattr(student_help_codex_adapter.shutil, "which", lambda command: "/bin/codex")
+    monkeypatch.setattr(
+        student_help_codex_adapter.subprocess,
+        "run",
+        lambda *args, **kwargs: completed_codex_run(args[0], {}),
+    )
+    provider = student_help_codex_adapter.FallbackStudentHelpProvider(
+        student_help_codex_adapter.CodexStudentHelpProvider(),
+        DeterministicStudentHelpProvider(),
+    )
+
+    response = provider.respond(sample_request())
+
+    assert response.provider == "codex-local-fallback"
+    assert response.provider_label == "Guida locale (nessuna AI esterna) dopo errore Codex"
+    assert response.usage == {"input_tokens": 120, "output_tokens": 30, "total_tokens": 150}
 
 
 def test_fallback_provider_does_not_hide_unexpected_programming_errors() -> None:

@@ -117,6 +117,18 @@ CODEX_HELP_SCHEMA: dict[str, Any] = {
 }
 
 
+class CodexStudentHelpResponseError(ValueError):
+    """Structured-response failure that retains usage from the completed Codex turn."""
+
+    def __init__(self, message: str, usage: dict[str, int]) -> None:
+        super().__init__(message)
+        self.usage = dict(usage)
+
+
+def _zero_usage() -> dict[str, int]:
+    return {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+
+
 def codex_subprocess_environment() -> dict[str, str]:
     """Return the minimum server environment needed by the local Codex CLI."""
 
@@ -288,14 +300,20 @@ class CodexStudentHelpProvider:
             detail = (completed.stderr or completed.stdout or "Codex non ha restituito dettagli.").strip()
             raise RuntimeError(f"Codex exec non riuscito: {detail}")
         try:
+            usage = codex_usage_from_jsonl(completed.stdout)
+        except ValueError:
+            usage = _zero_usage()
+        try:
             payload = json.loads(response_text)
         except json.JSONDecodeError as error:
-            raise ValueError("Codex non ha restituito una risposta JSON valida.") from error
-        usage = codex_usage_from_jsonl(completed.stdout)
+            raise CodexStudentHelpResponseError(
+                "Codex non ha restituito una risposta JSON valida.",
+                usage,
+            ) from error
         guidance = payload.get("guidance") if isinstance(payload, dict) else None
         check_question = payload.get("check_question") if isinstance(payload, dict) else None
         if not isinstance(guidance, list) or not 1 <= len(guidance) <= 4:
-            raise ValueError("Codex non ha restituito una guida valida.")
+            raise CodexStudentHelpResponseError("Codex non ha restituito una guida valida.", usage)
         steps = [str(item).strip() for item in guidance]
         if any(
             not step
@@ -303,18 +321,18 @@ class CodexStudentHelpProvider:
             or contains_terminal_control_characters(step)
             for step in steps
         ):
-            raise ValueError("Codex non ha restituito una guida valida.")
+            raise CodexStudentHelpResponseError("Codex non ha restituito una guida valida.", usage)
         if (
             not isinstance(check_question, str)
             or not check_question.strip()
             or len(check_question.strip()) > MAX_CHECK_QUESTION_CHARS
             or contains_terminal_control_characters(check_question)
         ):
-            raise ValueError("Codex non ha restituito una guida valida.")
+            raise CodexStudentHelpResponseError("Codex non ha restituito una guida valida.", usage)
         message = " ".join(f"{index}. {step}" for index, step in enumerate(steps, start=1))
         message = f"{message} Domanda guida: {check_question.strip()}"
         if len(message) > MAX_RESPONSE_CHARS:
-            raise ValueError("Codex ha restituito una guida troppo grande.")
+            raise CodexStudentHelpResponseError("Codex ha restituito una guida troppo grande.", usage)
         return StudentHelpResponse(
             status="ready",
             provider=self.provider,
@@ -334,8 +352,19 @@ class FallbackStudentHelpProvider:
     def respond(self, request: StudentHelpRequest) -> StudentHelpResponse:
         try:
             return self.primary.respond(request)
-        except (OSError, RuntimeError, ValueError, subprocess.TimeoutExpired):
-            return self.fallback.respond(request)
+        except (OSError, RuntimeError, ValueError, subprocess.TimeoutExpired) as error:
+            response = self.fallback.respond(request)
+            if getattr(self.primary, "provider", "") != CODEX_PROVIDER:
+                return response
+            usage = getattr(error, "usage", _zero_usage())
+            return StudentHelpResponse(
+                status=response.status,
+                provider=f"{CODEX_PROVIDER}-fallback",
+                provider_label=f"{response.provider_label} dopo errore Codex",
+                message=response.message,
+                usage=dict(usage),
+                detail=response.detail,
+            )
 
 
 class StudentHelpProviderRouter:
