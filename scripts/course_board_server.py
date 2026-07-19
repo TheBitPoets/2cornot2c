@@ -2909,7 +2909,8 @@ def set_ai_provider(provider: str, model: str = "") -> dict:
 class BoundedThreadingHTTPServer(ThreadingHTTPServer):
     """Serve requests with a fixed upper bound on concurrent client threads."""
 
-    daemon_threads = True
+    daemon_threads = False
+    block_on_close = True
 
     def __init__(
         self,

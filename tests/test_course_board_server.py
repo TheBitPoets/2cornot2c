@@ -334,6 +334,40 @@ def test_bounded_http_server_limits_workers_and_sets_client_timeout(monkeypatch)
         server.server_close()
 
 
+def test_bounded_http_server_waits_for_active_handlers_before_closing() -> None:
+    handler_started = threading.Event()
+    release_handler = threading.Event()
+    close_finished = threading.Event()
+    server = course_board_server.BoundedThreadingHTTPServer(
+        ("127.0.0.1", 0),
+        course_board_server.CourseBoardHandler,
+        max_workers=1,
+        max_workers_per_client=1,
+    )
+
+    def slow_handler(_request, _client_address) -> None:
+        handler_started.set()
+        release_handler.wait(timeout=5)
+
+    server.process_request_thread = slow_handler
+    server.process_request(object(), ("127.0.0.1", 12345))
+    assert handler_started.wait(timeout=2)
+
+    def close_server() -> None:
+        server.server_close()
+        close_finished.set()
+
+    close_thread = threading.Thread(target=close_server)
+    close_thread.start()
+    try:
+        assert close_finished.wait(timeout=0.05) is False
+        release_handler.set()
+        assert close_finished.wait(timeout=2) is True
+    finally:
+        release_handler.set()
+        close_thread.join(timeout=2)
+
+
 def test_bounded_http_server_rejects_overload_without_blocking(monkeypatch) -> None:
     class FakeRequest:
         def __init__(self) -> None:
