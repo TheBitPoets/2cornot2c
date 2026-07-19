@@ -257,6 +257,20 @@ def _close_windows_job(job: Any, *, terminate: bool = False) -> None:
     kernel32.CloseHandle(job)
 
 
+def _resume_windows_process(process: subprocess.Popen[bytes]) -> None:
+    if os.name != "nt":
+        return
+    import ctypes
+    from ctypes import wintypes
+
+    ntdll = ctypes.WinDLL("ntdll", use_last_error=True)
+    ntdll.NtResumeProcess.argtypes = [wintypes.HANDLE]
+    ntdll.NtResumeProcess.restype = ctypes.c_long
+    status = ntdll.NtResumeProcess(wintypes.HANDLE(int(process._handle)))
+    if status != 0:
+        raise OSError(f"Impossibile riprendere il processo Codex sospeso: NTSTATUS {status}.")
+
+
 def _terminate_process_tree(process: subprocess.Popen[bytes], windows_job: Any = None) -> None:
     if os.name == "nt":
         if windows_job:
@@ -308,11 +322,23 @@ def _run_codex_process(
         "stderr": subprocess.PIPE,
     }
     if os.name == "nt":
-        process_options["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+        process_options["creationflags"] = (
+            subprocess.CREATE_NEW_PROCESS_GROUP | 0x00000004
+        )
     else:
         process_options["start_new_session"] = True
     process = subprocess.Popen(command, **process_options)
     windows_job = _create_windows_kill_job(process)
+    try:
+        _resume_windows_process(process)
+    except OSError:
+        if windows_job:
+            _close_windows_job(windows_job, terminate=True)
+            windows_job = None
+        elif process.poll() is None:
+            process.kill()
+        process.wait(timeout=10)
+        raise
     try:
         try:
             stdout, stderr = process.communicate(input=input, timeout=timeout)
