@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -105,6 +106,47 @@ def test_delete_saved_design_deletes_only_linked_calendars(tmp_path) -> None:
     ]
     assert not (tmp_path / "doc" / "calendars" / "linked.json").exists()
     assert (tmp_path / "doc" / "calendars" / "other.json").exists()
+
+
+def test_delete_saved_design_validates_all_calendar_names_before_deleting(tmp_path) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    storage.write_saved_design("victim.json", {"title": "Da conservare"})
+
+    with pytest.raises(ValueError):
+        storage.delete_saved_design(
+            "victim.json",
+            delete_calendars=True,
+            calendars=["../unsafe.json"],
+        )
+
+    assert storage.read_saved_design("victim.json") == {"title": "Da conservare"}
+
+
+def test_delete_saved_design_rolls_back_when_staging_fails(tmp_path, monkeypatch) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    storage.write_saved_design("victim.json", {"title": "Da conservare"})
+    storage.write_school_calendar("linked.json", {"course_design_name": "victim.json"})
+    real_replace = os.replace
+    calls = 0
+
+    def fail_second_replace(source, destination):
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise OSError("staging non disponibile")
+        real_replace(source, destination)
+
+    monkeypatch.setattr("scripts.thebitlab_storage.os.replace", fail_second_replace)
+
+    with pytest.raises(OSError, match="staging non disponibile"):
+        storage.delete_saved_design(
+            "victim.json",
+            delete_calendars=True,
+            calendars=["linked.json"],
+        )
+
+    assert storage.read_saved_design("victim.json") == {"title": "Da conservare"}
+    assert storage.read_school_calendar("linked.json") == {"course_design_name": "victim.json"}
 
 
 def test_read_json_rejects_non_object_payload(tmp_path) -> None:

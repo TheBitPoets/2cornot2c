@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import json
+import os
 import re
+import shutil
+import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -150,8 +153,8 @@ class JsonCourseStorage:
         path = self.saved_design_path(safe_name)
         if not path.is_file():
             raise FileNotFoundError(f"Percorso salvato non trovato: {safe_name}")
-        path.unlink()
-        deleted_calendars = []
+        deleted_calendars: list[str] = []
+        targets = [path]
         if delete_calendars:
             for calendar_name in calendars or []:
                 safe_calendar_name = self.safe_design_name(calendar_name)
@@ -161,8 +164,24 @@ class JsonCourseStorage:
                 payload = self.read_json(calendar_path)
                 if payload.get("course_design_name", "") != safe_name:
                     continue
-                calendar_path.unlink()
+                targets.append(calendar_path)
                 deleted_calendars.append(safe_calendar_name)
+
+        transaction_dir = self.root / "doc" / ".delete-staging" / uuid.uuid4().hex
+        transaction_dir.mkdir(parents=True, exist_ok=False)
+        staged: list[tuple[Path, Path]] = []
+        try:
+            for index, target in enumerate(targets):
+                staged_path = transaction_dir / f"{index}-{target.name}"
+                os.replace(target, staged_path)
+                staged.append((target, staged_path))
+        except Exception:
+            for original_path, staged_path in reversed(staged):
+                if staged_path.exists():
+                    os.replace(staged_path, original_path)
+            shutil.rmtree(transaction_dir, ignore_errors=True)
+            raise
+        shutil.rmtree(transaction_dir, ignore_errors=True)
         return {
             "name": safe_name,
             "deleted_calendars": deleted_calendars,
