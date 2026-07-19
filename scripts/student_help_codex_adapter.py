@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import codecs
 import json
 import os
 import shutil
@@ -137,20 +138,32 @@ def _zero_usage() -> dict[str, int]:
     return {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
 
 
-def _subprocess_output_text(value: Any) -> str:
+def _subprocess_output_text(value: Any, *, allow_incomplete_tail: bool = False) -> str:
     if isinstance(value, str):
         return value
     if isinstance(value, bytes):
         try:
+            if allow_incomplete_tail:
+                decoder = codecs.getincrementaldecoder("utf-8")()
+                return decoder.decode(value, final=False)
             return value.decode("utf-8")
         except UnicodeDecodeError:
             return ""
     return ""
 
 
-def _codex_usage_or_zero(value: Any) -> dict[str, int]:
+def _codex_usage_or_zero(value: Any, *, allow_incomplete_tail: bool = False) -> dict[str, int]:
+    text = _subprocess_output_text(value, allow_incomplete_tail=allow_incomplete_tail)
     try:
-        return codex_usage_from_jsonl(_subprocess_output_text(value))
+        return codex_usage_from_jsonl(text)
+    except ValueError:
+        if not allow_incomplete_tail:
+            return _zero_usage()
+    last_line_break = max(text.rfind("\n"), text.rfind("\r"))
+    if last_line_break < 0:
+        return _zero_usage()
+    try:
+        return codex_usage_from_jsonl(text[: last_line_break + 1])
     except ValueError:
         return _zero_usage()
 
@@ -320,7 +333,7 @@ class CodexStudentHelpProvider:
                 except subprocess.TimeoutExpired as error:
                     raise CodexStudentHelpProcessError(
                         "Codex exec ha superato il tempo massimo consentito.",
-                        _codex_usage_or_zero(error.stdout),
+                        _codex_usage_or_zero(error.stdout, allow_incomplete_tail=True),
                     ) from error
                 try:
                     response_text = response_path.read_text(encoding="utf-8")

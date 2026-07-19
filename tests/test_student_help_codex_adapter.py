@@ -404,6 +404,20 @@ def test_codex_fallback_preserves_usage_when_process_exits_with_error(monkeypatc
             "type": "turn.completed",
             "usage": {"input_tokens": 21, "output_tokens": 8},
         }).encode("utf-8"),
+        (
+            json.dumps({
+                "type": "turn.completed",
+                "usage": {"input_tokens": 21, "output_tokens": 8},
+            })
+            + '\n{"type":'
+        ),
+        (
+            json.dumps({
+                "type": "turn.completed",
+                "usage": {"input_tokens": 21, "output_tokens": 8},
+            }).encode("utf-8")
+            + b'\n{"message":"troncato-\xc3'
+        ),
     ],
 )
 def test_codex_fallback_preserves_usage_from_timed_out_process(monkeypatch, partial_output) -> None:
