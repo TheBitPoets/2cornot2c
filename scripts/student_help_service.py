@@ -13,6 +13,7 @@ from typing import Any, Callable
 
 from scripts import assignment_records
 from scripts.student_help_provider import (
+    DETERMINISTIC_PROVIDER,
     STUDENT_HELP_RESPONSE_SCHEMA_VERSION,
     StudentHelpProvider,
     StudentHelpRequest,
@@ -126,6 +127,44 @@ def positive_int(value: Any, default: int = 0) -> int:
     except (TypeError, ValueError):
         return default
     return parsed if parsed > 0 else default
+
+
+def token_counter(value: Any) -> int:
+    """Return one persisted token counter without accepting booleans."""
+
+    return value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else 0
+
+
+def summarize_ai_usage(events: list[dict[str, Any]]) -> dict[str, int]:
+    """Aggregate authoritative AI token usage without including blocked or local requests."""
+
+    summary = {
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "total_tokens": 0,
+        "requests_reported": 0,
+        "requests_without_usage": 0,
+    }
+    for event in events:
+        if normalize_help_type(event.get("help_type")) != "ai" or event.get("allowed") is not True:
+            continue
+        response = event.get("response") if isinstance(event.get("response"), dict) else {}
+        usage = response.get("usage") if isinstance(response.get("usage"), dict) else {}
+        input_tokens = token_counter(usage.get("input_tokens"))
+        output_tokens = token_counter(usage.get("output_tokens"))
+        total_tokens = token_counter(usage.get("total_tokens"))
+        if total_tokens != input_tokens + output_tokens:
+            total_tokens = input_tokens + output_tokens
+        summary["input_tokens"] += input_tokens
+        summary["output_tokens"] += output_tokens
+        summary["total_tokens"] += total_tokens
+        if total_tokens:
+            summary["requests_reported"] += 1
+            continue
+        provider = clean_text(response.get("provider"))
+        if provider and provider != DETERMINISTIC_PROVIDER:
+            summary["requests_without_usage"] += 1
+    return summary
 
 
 def provider_response_payload(response: Any) -> dict[str, Any]:
@@ -499,6 +538,7 @@ def _empty_help_summary() -> dict[str, Any]:
         "last_response_status": "",
         "last_response_provider": "",
         "counts": {},
+        "ai_usage": summarize_ai_usage([]),
     }
 
 
@@ -526,6 +566,7 @@ def _help_summary_from_events(
         "last_response_status": clean_text(last_response.get("status")),
         "last_response_provider": clean_text(last_response.get("provider_label")),
         "counts": counts,
+        "ai_usage": summarize_ai_usage(events),
     }
 
 

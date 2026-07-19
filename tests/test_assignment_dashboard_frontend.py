@@ -2768,6 +2768,7 @@ def test_students_summary_counts_include_grading_and_grades() -> None:
           failed: 1,
           helpRequests: 0,
           helpAiRequests: 0,
+          helpAiTokens: 0,
           helpDenied: 0,
           averageGrade: 6.5,
           missingGrades: 3,
@@ -2799,6 +2800,7 @@ def test_students_summary_counts_include_grading_and_grades() -> None:
           ["Voti mancanti", 3],
           ["Aiuti", 0],
           ["Aiuti AI", 0],
+          ["Token AI", 0],
           ["Aiuti bloccati", 0],
         ]));
         tested.state.filter = "all";
@@ -2934,6 +2936,7 @@ def test_student_help_details_render_compact_summary_and_modal_content() -> None
           total: 3,
           ai_total: 2,
           denied: 1,
+          ai_usage: { total_tokens: 3, requests_without_usage: 1 },
           events: [
             {
               requested_at: "2026-10-20T08:10:00+02:00",
@@ -2992,6 +2995,7 @@ def test_student_help_details_render_compact_summary_and_modal_content() -> None
         assert.match(html, /Consegna: python-base-somma-001/);
         assert.match(html, /AI: 2/);
         assert.match(html, /Bloccate: 1/);
+        assert.match(html, /Token AI: 3 - Senza contatori: 1/);
         assert.match(html, /Dettagli aiuti/);
         assert.match(html, /data-student-help-key="student-help-rossi"/);
         assert.match(html, /aria-label="Dettagli aiuti di Rossi &quot;Mario&quot; per Somma &amp; media"/);
@@ -3012,6 +3016,8 @@ def test_student_help_details_render_compact_summary_and_modal_content() -> None
         assert.match(modalHtml, /Parti dal primo test fallito\\./);
         assert.match(modalHtml, /Guida locale \\(nessuna AI esterna\\)/);
         assert.match(modalHtml, /3 token \\(1 input, 2 output\\)/);
+        assert.match(modalHtml, /Token AI 3/);
+        assert.match(modalHtml, /Senza contatori 1/);
         assert.match(modalHtml, /Legacy non verificati \\(1\\)/);
         assert.match(modalHtml, /non incidono su budget e metriche/);
         assert.match(modalHtml, /Dato modificabile\\./);
@@ -3735,14 +3741,16 @@ def test_summary_counts_include_student_help_requests() -> None:
     run_dashboard_js(
         """
         const counts = tested.summaryCounts([
-          { help: { total: 3, ai_total: 2, denied: 1 }, grading: {}, status: "pending" },
-          { help: { total: 1, counts: { ai: 1 }, denied: 0 }, grading: {}, status: "pending" },
+          { help: { total: 3, ai_total: 2, denied: 1, ai_usage: { total_tokens: 15 } }, grading: {}, status: "pending" },
+          { help: { total: 1, counts: { ai: 1 }, denied: 0, ai_usage: { total_tokens: 7 } }, grading: {}, status: "pending" },
         ]);
 
         assert.equal(counts.helpRequests, 4);
         assert.equal(counts.helpAiRequests, 3);
+        assert.equal(counts.helpAiTokens, 22);
         assert.equal(counts.helpDenied, 1);
         assert.equal(tested.summaryTooltip("Aiuti AI"), "Numero di richieste di aiuto AI registrate dagli studenti per questa consegna.");
+        assert.equal(tested.summaryTooltip("Token AI"), "Token input e output dichiarati dai provider AI per il registro selezionato.");
         """
     )
 
