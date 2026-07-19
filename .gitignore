@@ -8,6 +8,7 @@ __pycache__/
 *.py[cod]
 .secrets/
 *.secret
+.course-storage.lock
 
 # Local dashboard data generated while testing.
 doc/calendars/*.json
