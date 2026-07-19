@@ -217,6 +217,24 @@ def test_dirty_tracking_detects_changes_and_resets_after_save() -> None:
     )
 
 
+def test_clean_snapshot_normalizes_legacy_frames_before_comparison() -> None:
+    run_course_board_js(
+        """
+        const item = { id: "legacy", frame: { context: "Contesto" } };
+        state.design = {
+          years: [{ id: "path", udas: [{ id: "uda-1", items: [item] }] }],
+        };
+
+        markDesignClean();
+
+        assert.equal(item.frame.context, "Contesto");
+        assert.equal(item.frame.status, "todo");
+        assert.equal(item.frame_quality.context, "none");
+        assert.equal(hasUnsavedChanges(), false);
+        """
+    )
+
+
 def test_async_action_exposes_errors_in_the_visible_status() -> None:
     run_course_board_js(
         """

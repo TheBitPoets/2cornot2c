@@ -151,7 +151,21 @@ function designSnapshot() {
 }
 
 function markDesignClean() {
+  normalizeCourseDesignFrames();
   cleanDesignSnapshot = designSnapshot();
+}
+
+function normalizeCourseDesignFrames() {
+  const visit = (item) => {
+    item.frame = { ...defaultFrame(), ...(item.frame || {}) };
+    item.frame_quality = { ...defaultFrameQuality(), ...(item.frame_quality || {}) };
+    for (const child of item.children || []) visit(child);
+  };
+  for (const year of state.design?.years || []) {
+    for (const uda of year.udas || []) {
+      for (const item of uda.items || []) visit(item);
+    }
+  }
 }
 
 function hasUnsavedChanges() {
