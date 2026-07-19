@@ -6,6 +6,11 @@ Questa checklist raccoglie gli scenari manuali da ripetere quando si toccano das
 
 Esegui i comandi dalla root del repository.
 
+Gli scenari possono essere eseguiti singolarmente oppure in sequenza. Nell'esecuzione sequenziale lascia
+attivo il server tra due scenari consecutivi, salvo quando un passaggio chiede esplicitamente di fermarlo
+per cambiare root dati o configurazione. Nell'esecuzione singola applica prima il setup indicato dallo
+scenario o, se non presente, questo setup comune.
+
 Se la porta `8765` e gia occupata su Windows:
 
 ```powershell
@@ -248,7 +253,8 @@ Risultato atteso:
 
 Obiettivo: verificare che la TUI sia comprensibile, robusta sugli input e coerente con dashboard e report.
 
-1. Prepara la demo e avvia il server docente con provider Codex:
+1. Se stai continuando dagli scenari precedenti, ferma con `Ctrl+C` il server avviato durante il setup
+   comune. Prepara quindi di nuovo la demo e avvia il server docente con provider Codex:
 
    ```powershell
    python scripts/student_lab_demo_setup.py
@@ -324,7 +330,8 @@ Risultato atteso:
 
 Obiettivo: verificare che percorso e calendario docente restino coerenti con la dashboard studente.
 
-1. Avvia il server senza root demo, usando i dati del repository:
+1. Ferma con `Ctrl+C` il server dello Scenario 7, se ancora attivo. Avvia quindi il server senza root demo,
+   usando i dati del repository:
 
    ```powershell
    python scripts/course_board_server.py
