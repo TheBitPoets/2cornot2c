@@ -169,10 +169,99 @@ def _codex_usage_or_zero(value: Any, *, allow_incomplete_tail: bool = False) -> 
         return _zero_usage()
 
 
-def _terminate_process_tree(process: subprocess.Popen[bytes]) -> None:
-    if process.poll() is not None:
+def _create_windows_kill_job(process: subprocess.Popen[bytes]) -> Any:
+    """Assign one Windows process tree to a kill-on-close Job Object."""
+
+    if os.name != "nt":
+        return None
+    import ctypes
+    from ctypes import wintypes
+
+    class JobObjectBasicLimitInformation(ctypes.Structure):
+        _fields_ = [
+            ("PerProcessUserTimeLimit", ctypes.c_longlong),
+            ("PerJobUserTimeLimit", ctypes.c_longlong),
+            ("LimitFlags", wintypes.DWORD),
+            ("MinimumWorkingSetSize", ctypes.c_size_t),
+            ("MaximumWorkingSetSize", ctypes.c_size_t),
+            ("ActiveProcessLimit", wintypes.DWORD),
+            ("Affinity", ctypes.c_size_t),
+            ("PriorityClass", wintypes.DWORD),
+            ("SchedulingClass", wintypes.DWORD),
+        ]
+
+    class IoCounters(ctypes.Structure):
+        _fields_ = [
+            ("ReadOperationCount", ctypes.c_ulonglong),
+            ("WriteOperationCount", ctypes.c_ulonglong),
+            ("OtherOperationCount", ctypes.c_ulonglong),
+            ("ReadTransferCount", ctypes.c_ulonglong),
+            ("WriteTransferCount", ctypes.c_ulonglong),
+            ("OtherTransferCount", ctypes.c_ulonglong),
+        ]
+
+    class JobObjectExtendedLimitInformation(ctypes.Structure):
+        _fields_ = [
+            ("BasicLimitInformation", JobObjectBasicLimitInformation),
+            ("IoInfo", IoCounters),
+            ("ProcessMemoryLimit", ctypes.c_size_t),
+            ("JobMemoryLimit", ctypes.c_size_t),
+            ("PeakProcessMemoryUsed", ctypes.c_size_t),
+            ("PeakJobMemoryUsed", ctypes.c_size_t),
+        ]
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.CreateJobObjectW.restype = wintypes.HANDLE
+    kernel32.SetInformationJobObject.argtypes = [
+        wintypes.HANDLE,
+        ctypes.c_int,
+        ctypes.c_void_p,
+        wintypes.DWORD,
+    ]
+    kernel32.SetInformationJobObject.restype = wintypes.BOOL
+    kernel32.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
+    kernel32.AssignProcessToJobObject.restype = wintypes.BOOL
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    job = kernel32.CreateJobObjectW(None, None)
+    if not job:
+        return None
+    information = JobObjectExtendedLimitInformation()
+    information.BasicLimitInformation.LimitFlags = 0x00002000
+    configured = kernel32.SetInformationJobObject(
+        job,
+        9,
+        ctypes.byref(information),
+        ctypes.sizeof(information),
+    )
+    assigned = configured and kernel32.AssignProcessToJobObject(
+        job,
+        wintypes.HANDLE(int(process._handle)),
+    )
+    if assigned:
+        return job
+    kernel32.CloseHandle(job)
+    return None
+
+
+def _close_windows_job(job: Any, *, terminate: bool = False) -> None:
+    if os.name != "nt" or not job:
         return
+    import ctypes
+    from ctypes import wintypes
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.TerminateJobObject.argtypes = [wintypes.HANDLE, wintypes.UINT]
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    if terminate:
+        kernel32.TerminateJobObject(job, 1)
+    kernel32.CloseHandle(job)
+
+
+def _terminate_process_tree(process: subprocess.Popen[bytes], windows_job: Any = None) -> None:
     if os.name == "nt":
+        if windows_job:
+            _close_windows_job(windows_job, terminate=True)
+            return
         taskkill = shutil.which("taskkill")
         if taskkill:
             try:
@@ -193,7 +282,8 @@ def _terminate_process_tree(process: subprocess.Popen[bytes]) -> None:
             return
         except (OSError, ProcessLookupError):
             pass
-    process.kill()
+    if process.poll() is None:
+        process.kill()
 
 
 def _run_codex_process(
@@ -222,22 +312,28 @@ def _run_codex_process(
     else:
         process_options["start_new_session"] = True
     process = subprocess.Popen(command, **process_options)
+    windows_job = _create_windows_kill_job(process)
     try:
-        stdout, stderr = process.communicate(input=input, timeout=timeout)
-    except subprocess.TimeoutExpired as error:
-        _terminate_process_tree(process)
         try:
-            stdout, stderr = process.communicate(timeout=10)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            stdout = error.stdout or b""
-            stderr = error.stderr or b""
-        raise subprocess.TimeoutExpired(
-            command,
-            timeout,
-            output=stdout or error.stdout,
-            stderr=stderr or error.stderr,
-        ) from error
+            stdout, stderr = process.communicate(input=input, timeout=timeout)
+        except subprocess.TimeoutExpired as error:
+            _terminate_process_tree(process, windows_job)
+            windows_job = None
+            try:
+                stdout, stderr = process.communicate(timeout=10)
+            except subprocess.TimeoutExpired:
+                if process.poll() is None:
+                    process.kill()
+                stdout = error.stdout or b""
+                stderr = error.stderr or b""
+            raise subprocess.TimeoutExpired(
+                command,
+                timeout,
+                output=stdout or error.stdout,
+                stderr=stderr or error.stderr,
+            ) from error
+    finally:
+        _close_windows_job(windows_job)
     completed = subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
     if check:
         completed.check_returncode()

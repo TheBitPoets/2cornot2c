@@ -511,13 +511,13 @@ time.sleep(5)
     if os.name == "nt":
         launcher_path = tmp_path / "slow_codex.cmd"
         launcher_path.write_text(
-            f'@echo off\r\n"{sys.executable}" "{child_path}"\r\n',
+            f'@echo off\r\nstart "" /B "{sys.executable}" "{child_path}"\r\n',
             encoding="utf-8",
         )
     else:
         launcher_path = tmp_path / "slow_codex"
         launcher_path.write_text(
-            f'#!/bin/sh\n"{sys.executable}" "{child_path}"\n',
+            f'#!/bin/sh\n"{sys.executable}" "{child_path}" &\n',
             encoding="utf-8",
         )
         launcher_path.chmod(0o755)
