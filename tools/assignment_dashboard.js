@@ -4951,6 +4951,10 @@ els.reviewNextBtn.addEventListener("click", () => openAdjacentSubmission(1));
 els.reviewCloseBtn.addEventListener("click", closeReviewDialog);
 els.testDetailsCloseBtn.addEventListener("click", closeTestDetailsDialog);
 els.studentHelpCloseBtn?.addEventListener("click", closeStudentHelpDialog);
+els.studentHelpDialog?.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closeStudentHelpDialog();
+});
 els.activitySelect.addEventListener("change", () => {
   if (els.activitySelect.value) {
     clearSelectedAssignment();
