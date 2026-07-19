@@ -133,12 +133,16 @@ def test_submission_file_infers_legacy_local_repo_from_remote_reference(tmp_path
     source = repo / "assignments" / "somma-001" / "main.py"
     source.parent.mkdir(parents=True)
     source.write_text("print(2 + 3)\n", encoding="utf-8")
+    report_path = repo / "reports" / "somma-001" / "latest.json"
+    report_path.parent.mkdir(parents=True)
+    report_path.write_text("{}\n", encoding="utf-8")
     monkeypatch.setattr(course_board_server, "APP_ROOT", app_root)
     monkeypatch.setattr(course_board_server, "ROOT", root)
 
     resolved = course_board_server.resolve_submission_file_path(
         {
             "repo": "TheBitPoets/rossi-mario",
+            "report_path": "tmp/student-help-modal-test/examples/assignment_tracking/student_repos/rossi-mario/reports/somma-001/latest.json",
             "submission": {
                 "files": [
                     {
@@ -151,6 +155,32 @@ def test_submission_file_infers_legacy_local_repo_from_remote_reference(tmp_path
     )
 
     assert resolved == source
+
+
+def test_submission_file_rejects_registered_path_outside_inferred_legacy_repo(tmp_path, monkeypatch) -> None:
+    root = tmp_path / "data"
+    repo = root / "students" / "rossi-mario"
+    report_path = repo / "reports" / "somma-001" / "latest.json"
+    secret = root / "teacher-private" / "rossi-mario" / "assignments" / "x" / "secret.txt"
+    report_path.parent.mkdir(parents=True)
+    secret.parent.mkdir(parents=True)
+    report_path.write_text("{}\n", encoding="utf-8")
+    secret.write_text("riservato\n", encoding="utf-8")
+    monkeypatch.setattr(course_board_server, "ROOT", root)
+
+    with pytest.raises(FileNotFoundError, match="non trovato o non consentito"):
+        course_board_server.resolve_submission_file_path(
+            {
+                "repo": "TheBitPoets/rossi-mario",
+                "report_path": "students/rossi-mario/reports/somma-001/latest.json",
+                "submission": {
+                    "files": [
+                        {"path": "teacher-private/rossi-mario/assignments/x/secret.txt"}
+                    ]
+                },
+            },
+            "teacher-private/rossi-mario/assignments/x/secret.txt",
+        )
 
 
 def test_submission_file_does_not_infer_legacy_repo_outside_trusted_roots(tmp_path, monkeypatch) -> None:

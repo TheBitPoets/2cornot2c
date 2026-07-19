@@ -203,14 +203,24 @@ def should_include_submission_file(path: Path) -> bool:
     return path.is_file()
 
 
-def report_source_path(target: TrackingTarget, source_value: str | None) -> Path | None:
-    """Return the submitted source path resolved from the student repository."""
-    if not source_value:
+def confined_report_file_path(target: TrackingTarget, file_value: Any) -> Path | None:
+    """Resolve a report-declared file only when it belongs to the student repository."""
+
+    if not file_value:
         return None
-    source_path = Path(source_value)
-    if source_path.is_absolute():
-        return source_path.resolve()
-    return (target.path / source_path).resolve()
+    raw_path = Path(str(file_value))
+    candidates = [raw_path] if raw_path.is_absolute() else [target.path / raw_path, PROJECT_ROOT / raw_path]
+    for candidate in candidates:
+        confined = student_identity.confined_regular_file(target.path, candidate)
+        if confined is not None:
+            return confined
+    return None
+
+
+def report_source_path(target: TrackingTarget, source_value: str | None) -> Path | None:
+    """Return a report source only when it is confined to the student repository."""
+
+    return confined_report_file_path(target, source_value)
 
 
 def submission_files(
@@ -235,13 +245,14 @@ def submission_files(
                 role = file_entry.get("role") or "support"
             else:
                 continue
-            if file_path:
-                normalized_path = str(file_path).replace("\\", "/")
+            confined_path = confined_report_file_path(target, file_path)
+            if confined_path is not None:
+                normalized_path = relative_to_root_or_repo(confined_path, target.path)
                 normalized_files.append(
                     {
                         "path": normalized_path,
                         "role": role,
-                        "github_url": github_file_url(target, repo_url, normalized_path, commit),
+                        "github_url": github_file_url(target, repo_url, str(confined_path), commit),
                     }
                 )
         if normalized_files:
@@ -262,14 +273,14 @@ def submission_files(
                     "github_url": github_file_url(target, repo_url, str(path), commit),
                 }
             )
-    if source_value and source_path not in resolved_files:
-        normalized_source = str(source_value).replace("\\", "/")
+    if source_path is not None and source_path not in resolved_files:
+        normalized_source = relative_to_root_or_repo(source_path, target.path)
         files.insert(
             0,
             {
                 "path": normalized_source,
                 "role": "solution",
-                "github_url": github_file_url(target, repo_url, normalized_source, commit),
+                "github_url": github_file_url(target, repo_url, str(source_path), commit),
             },
         )
     return files

@@ -397,6 +397,8 @@ def test_track_assignments_uses_report_file_manifest_when_available(tmp_path) ->
     student = target(tmp_path, "rossi-mario")
     write_report(student.path, "2026-10-18T18:22:10+02:00")
     report_path = student.path / "reports" / "python-base-somma-001" / "latest.json"
+    utils_path = student.path / "assignments" / "python-base-somma-001" / "utils.py"
+    utils_path.write_text("def add(a, b):\n    return a + b\n", encoding="utf-8")
     report = json.loads(report_path.read_text(encoding="utf-8"))
     report["files"] = [
         {"path": "assignments/python-base-somma-001/main.py", "role": "solution"},
@@ -415,6 +417,32 @@ def test_track_assignments_uses_report_file_manifest_when_available(tmp_path) ->
         ("assignments/python-base-somma-001/main.py", "solution"),
         ("assignments/python-base-somma-001/utils.py", "support"),
     ]
+
+
+def test_track_assignments_ignores_report_files_outside_student_repo(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+    student = target(tmp_path, "rossi-mario")
+    write_report(student.path, "2026-10-18T18:22:10+02:00")
+    report_path = student.path / "reports" / "python-base-somma-001" / "latest.json"
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    secret = tmp_path / "teacher-private" / "secret.txt"
+    secret.parent.mkdir()
+    secret.write_text("riservato\n", encoding="utf-8")
+    report["files"] = [
+        {"path": str(secret), "role": "support"},
+        {"path": "assignments/python-base-somma-001/main.py", "role": "solution"},
+    ]
+    report_path.write_text(json.dumps(report), encoding="utf-8")
+
+    index = track_assignments.track_assignments(
+        activity_path=activity_path,
+        targets=[student],
+        due_at="2026-10-19T23:59:00+02:00",
+    )
+
+    files = index["students"][0]["submission"]["files"]
+    assert [entry["role"] for entry in files] == ["solution"]
+    assert files[0]["path"].endswith("assignments/python-base-somma-001/main.py")
 
 
 def test_track_assignments_marks_pending_before_due_date(tmp_path) -> None:
