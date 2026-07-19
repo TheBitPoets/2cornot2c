@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import codecs
 import json
 import os
+import signal
 import shutil
 import subprocess
 import tempfile
@@ -125,8 +127,235 @@ class CodexStudentHelpResponseError(ValueError):
         self.usage = dict(usage)
 
 
+class CodexStudentHelpProcessError(RuntimeError):
+    """Codex process failure that retains usage emitted before termination."""
+
+    def __init__(self, message: str, usage: dict[str, int]) -> None:
+        super().__init__(message)
+        self.usage = dict(usage)
+
+
 def _zero_usage() -> dict[str, int]:
     return {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+
+
+def _subprocess_output_text(value: Any, *, allow_incomplete_tail: bool = False) -> str:
+    if isinstance(value, str):
+        return value
+    if isinstance(value, bytes):
+        try:
+            if allow_incomplete_tail:
+                decoder = codecs.getincrementaldecoder("utf-8")()
+                return decoder.decode(value, final=False)
+            return value.decode("utf-8")
+        except UnicodeDecodeError:
+            return ""
+    return ""
+
+
+def _codex_usage_or_zero(value: Any, *, allow_incomplete_tail: bool = False) -> dict[str, int]:
+    text = _subprocess_output_text(value, allow_incomplete_tail=allow_incomplete_tail)
+    try:
+        return codex_usage_from_jsonl(text)
+    except ValueError:
+        if not allow_incomplete_tail:
+            return _zero_usage()
+    last_line_break = max(text.rfind("\n"), text.rfind("\r"))
+    if last_line_break < 0:
+        return _zero_usage()
+    try:
+        return codex_usage_from_jsonl(text[: last_line_break + 1])
+    except ValueError:
+        return _zero_usage()
+
+
+def _create_windows_kill_job(process: subprocess.Popen[bytes]) -> Any:
+    """Assign one Windows process tree to a kill-on-close Job Object."""
+
+    if os.name != "nt":
+        return None
+    import ctypes
+    from ctypes import wintypes
+
+    class JobObjectBasicLimitInformation(ctypes.Structure):
+        _fields_ = [
+            ("PerProcessUserTimeLimit", ctypes.c_longlong),
+            ("PerJobUserTimeLimit", ctypes.c_longlong),
+            ("LimitFlags", wintypes.DWORD),
+            ("MinimumWorkingSetSize", ctypes.c_size_t),
+            ("MaximumWorkingSetSize", ctypes.c_size_t),
+            ("ActiveProcessLimit", wintypes.DWORD),
+            ("Affinity", ctypes.c_size_t),
+            ("PriorityClass", wintypes.DWORD),
+            ("SchedulingClass", wintypes.DWORD),
+        ]
+
+    class IoCounters(ctypes.Structure):
+        _fields_ = [
+            ("ReadOperationCount", ctypes.c_ulonglong),
+            ("WriteOperationCount", ctypes.c_ulonglong),
+            ("OtherOperationCount", ctypes.c_ulonglong),
+            ("ReadTransferCount", ctypes.c_ulonglong),
+            ("WriteTransferCount", ctypes.c_ulonglong),
+            ("OtherTransferCount", ctypes.c_ulonglong),
+        ]
+
+    class JobObjectExtendedLimitInformation(ctypes.Structure):
+        _fields_ = [
+            ("BasicLimitInformation", JobObjectBasicLimitInformation),
+            ("IoInfo", IoCounters),
+            ("ProcessMemoryLimit", ctypes.c_size_t),
+            ("JobMemoryLimit", ctypes.c_size_t),
+            ("PeakProcessMemoryUsed", ctypes.c_size_t),
+            ("PeakJobMemoryUsed", ctypes.c_size_t),
+        ]
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.CreateJobObjectW.restype = wintypes.HANDLE
+    kernel32.SetInformationJobObject.argtypes = [
+        wintypes.HANDLE,
+        ctypes.c_int,
+        ctypes.c_void_p,
+        wintypes.DWORD,
+    ]
+    kernel32.SetInformationJobObject.restype = wintypes.BOOL
+    kernel32.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
+    kernel32.AssignProcessToJobObject.restype = wintypes.BOOL
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    job = kernel32.CreateJobObjectW(None, None)
+    if not job:
+        return None
+    assigned = False
+    try:
+        information = JobObjectExtendedLimitInformation()
+        information.BasicLimitInformation.LimitFlags = 0x00002000
+        configured = kernel32.SetInformationJobObject(
+            job,
+            9,
+            ctypes.byref(information),
+            ctypes.sizeof(information),
+        )
+        assigned = bool(configured and kernel32.AssignProcessToJobObject(
+            job,
+            wintypes.HANDLE(int(process._handle)),
+        ))
+        return job if assigned else None
+    finally:
+        if not assigned:
+            kernel32.CloseHandle(job)
+
+
+def _close_windows_job(job: Any, *, terminate: bool = False) -> None:
+    if os.name != "nt" or not job:
+        return
+    import ctypes
+    from ctypes import wintypes
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.TerminateJobObject.argtypes = [wintypes.HANDLE, wintypes.UINT]
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    if terminate:
+        kernel32.TerminateJobObject(job, 1)
+    kernel32.CloseHandle(job)
+
+
+def _resume_windows_process(process: subprocess.Popen[bytes]) -> None:
+    if os.name != "nt":
+        return
+    import ctypes
+    from ctypes import wintypes
+
+    ntdll = ctypes.WinDLL("ntdll", use_last_error=True)
+    ntdll.NtResumeProcess.argtypes = [wintypes.HANDLE]
+    ntdll.NtResumeProcess.restype = ctypes.c_long
+    status = ntdll.NtResumeProcess(wintypes.HANDLE(int(process._handle)))
+    if status != 0:
+        raise OSError(f"Impossibile riprendere il processo Codex sospeso: NTSTATUS {status}.")
+
+
+def _terminate_process_tree(process: subprocess.Popen[bytes], windows_job: Any = None) -> None:
+    if os.name == "nt":
+        if windows_job:
+            _close_windows_job(windows_job, terminate=True)
+            return
+    else:
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+            return
+        except (OSError, ProcessLookupError):
+            pass
+    if process.poll() is None:
+        process.kill()
+
+
+def _run_codex_process(
+    command: list[str],
+    *,
+    cwd: Path,
+    env: dict[str, str],
+    input: bytes,
+    capture_output: bool,
+    timeout: int | float,
+    check: bool,
+) -> subprocess.CompletedProcess[bytes]:
+    """Run Codex and terminate its whole process tree when the timeout expires."""
+
+    if not capture_output:
+        raise ValueError("Il runner Codex richiede la cattura dell'output.")
+    process_options: dict[str, Any] = {
+        "cwd": cwd,
+        "env": env,
+        "stdin": subprocess.PIPE,
+        "stdout": subprocess.PIPE,
+        "stderr": subprocess.PIPE,
+    }
+    if os.name == "nt":
+        process_options["creationflags"] = (
+            subprocess.CREATE_NEW_PROCESS_GROUP | 0x00000004
+        )
+    else:
+        process_options["start_new_session"] = True
+    process = subprocess.Popen(command, **process_options)
+    windows_job = None
+    finished = False
+    try:
+        windows_job = _create_windows_kill_job(process)
+        if os.name == "nt" and not windows_job:
+            raise RuntimeError("Impossibile isolare il processo Codex in un Job Object Windows.")
+        _resume_windows_process(process)
+        try:
+            stdout, stderr = process.communicate(input=input, timeout=timeout)
+            finished = True
+        except subprocess.TimeoutExpired as error:
+            _terminate_process_tree(process, windows_job)
+            windows_job = None
+            try:
+                stdout, stderr = process.communicate(timeout=10)
+            except subprocess.TimeoutExpired:
+                if process.poll() is None:
+                    process.kill()
+                stdout = error.stdout or b""
+                stderr = error.stderr or b""
+            raise subprocess.TimeoutExpired(
+                command,
+                timeout,
+                output=stdout or error.stdout,
+                stderr=stderr or error.stderr,
+            ) from error
+    finally:
+        if not finished:
+            _terminate_process_tree(process, windows_job)
+            windows_job = None
+            try:
+                process.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                if process.poll() is None:
+                    process.kill()
+        _close_windows_job(windows_job)
+    completed = subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
+    if check:
+        completed.check_returncode()
+    return completed
 
 
 def codex_subprocess_environment() -> dict[str, str]:
@@ -279,30 +508,40 @@ class CodexStudentHelpProvider:
                 if self.model:
                     command.extend(["--model", self.model])
                 command.append(codex_help_prompt())
-                completed = subprocess.run(
-                    command,
-                    cwd=workdir,
-                    env=codex_subprocess_environment(),
-                    input=json.dumps(package, ensure_ascii=False, indent=2),
-                    capture_output=True,
-                    text=True,
-                    encoding="utf-8",
-                    timeout=self.timeout_seconds,
-                    check=False,
-                )
+                try:
+                    completed = _run_codex_process(
+                        command,
+                        cwd=workdir,
+                        env=codex_subprocess_environment(),
+                        input=json.dumps(package, ensure_ascii=False, indent=2).encode("utf-8"),
+                        capture_output=True,
+                        timeout=self.timeout_seconds,
+                        check=False,
+                    )
+                except subprocess.TimeoutExpired as error:
+                    raise CodexStudentHelpProcessError(
+                        "Codex exec ha superato il tempo massimo consentito.",
+                        _codex_usage_or_zero(error.stdout, allow_incomplete_tail=True),
+                    ) from error
+                usage = _codex_usage_or_zero(completed.stdout)
+                if completed.returncode:
+                    detail = (
+                        _subprocess_output_text(completed.stderr)
+                        or _subprocess_output_text(completed.stdout)
+                        or "Codex non ha restituito dettagli."
+                    ).strip()
+                    raise CodexStudentHelpProcessError(f"Codex exec non riuscito: {detail}", usage)
                 try:
                     response_text = response_path.read_text(encoding="utf-8")
+                except UnicodeDecodeError as error:
+                    raise CodexStudentHelpResponseError(
+                        "Codex non ha restituito una risposta UTF-8 valida.",
+                        usage,
+                    ) from error
                 except OSError:
                     response_text = ""
         finally:
             _CODEX_CALL_SLOT.release()
-        if completed.returncode:
-            detail = (completed.stderr or completed.stdout or "Codex non ha restituito dettagli.").strip()
-            raise RuntimeError(f"Codex exec non riuscito: {detail}")
-        try:
-            usage = codex_usage_from_jsonl(completed.stdout)
-        except ValueError:
-            usage = _zero_usage()
         try:
             payload = json.loads(response_text)
         except json.JSONDecodeError as error:
