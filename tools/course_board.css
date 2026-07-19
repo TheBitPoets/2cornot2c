@@ -336,6 +336,11 @@ input, select { width: 100%; padding: .72rem .9rem; }
   line-height: 1;
 }
 
+input[aria-invalid="true"] {
+  border-color: #b42318;
+  box-shadow: 0 0 0 2px rgba(180, 35, 24, .16);
+}
+
 .headingCard::before {
   content: "";
   position: absolute;

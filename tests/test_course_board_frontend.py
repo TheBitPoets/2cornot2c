@@ -21,7 +21,9 @@ def run_course_board_js(assertions: str) -> None:
         this.listeners = {{}};
       }}
       addEventListener(type, handler) {{ this.listeners[type] = handler; }}
-      setAttribute() {{}}
+      setAttribute(name, value) {{ this[name] = value; }}
+      removeAttribute(name) {{ delete this[name]; }}
+      focus() {{ this.focused = true; }}
       contains() {{ return false; }}
     }}
 
@@ -171,5 +173,27 @@ def test_save_as_requires_confirmation_before_overwriting() -> None:
             assert.equal(saved, true);
             assert.equal(requests, 2);
           });
+        """
+    )
+
+
+def test_create_course_rejects_invalid_weeks_and_hours() -> None:
+    run_course_board_js(
+        """
+        state.design = { years: [] };
+        els.yearTitleInput.value = "Percorso";
+        els.yearIdInput.value = "percorso";
+        els.yearWeeksInput.value = "0";
+        els.yearWeeklyHoursInput.value = "3";
+
+        createYearFromDialog();
+        assert.equal(state.design.years.length, 0);
+        assert.equal(els.yearWeeksInput["aria-invalid"], "true");
+
+        els.yearWeeksInput.value = "10";
+        els.yearWeeklyHoursInput.value = "-1";
+        createYearFromDialog();
+        assert.equal(state.design.years.length, 0);
+        assert.equal(els.yearWeeklyHoursInput["aria-invalid"], "true");
         """
     )

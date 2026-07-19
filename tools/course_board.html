@@ -61,7 +61,7 @@
     <section class="panel planner">
       <div class="panelHead">
         <h2 id="projectTitle">Progetto didattico: doc/course_design.json</h2>
-        <p id="status" class="status">Pronto.</p>
+        <p id="status" class="status" role="status" aria-live="polite" aria-atomic="true">Pronto.</p>
         <p id="aiConfig" class="aiConfig">AI: configurazione non caricata.</p>
         <button id="addYearBtn" type="button" title="Aggiunge esplicitamente un percorso didattico di materia/anno con settimane e ore personalizzate.">Aggiungi percorso</button>
       </div>
@@ -69,7 +69,7 @@
     </section>
   </main>
 
-  <div id="aiBusy" class="aiBusy" hidden>
+  <div id="aiBusy" class="aiBusy" role="status" aria-live="polite" aria-atomic="true" hidden>
     <div class="aiBusyCard">
       <div>
         <strong id="aiBusyTitle">AI assisted in corso</strong>
@@ -96,7 +96,7 @@
     </article>
   </template>
 
-  <dialog id="courseAiDialog" class="courseAiDialog">
+  <dialog id="courseAiDialog" class="courseAiDialog" aria-labelledby="courseAiTitle">
     <form method="dialog" class="courseAiPanel">
       <header class="courseAiHead">
         <div>
@@ -157,12 +157,12 @@
     </form>
   </dialog>
 
-  <dialog id="yearDialog" class="courseAiDialog yearDialog">
+  <dialog id="yearDialog" class="courseAiDialog yearDialog" aria-labelledby="yearDialogTitle">
     <form method="dialog" class="courseAiPanel">
       <header class="courseAiHead">
         <div>
           <p class="eyebrow">Percorso didattico</p>
-          <h2>Aggiungi percorso</h2>
+          <h2 id="yearDialogTitle">Aggiungi percorso</h2>
         </div>
         <button id="yearCloseBtn" type="button" title="Chiude la finestra senza creare il percorso.">Chiudi</button>
       </header>
@@ -170,7 +170,7 @@
       <div class="briefGrid">
         <label>
           <span>Nome percorso</span>
-          <input id="yearTitleInput" type="text" placeholder="TPSI - Terzo anno, Sistemi e reti - Quarto anno...">
+          <input id="yearTitleInput" type="text" required placeholder="TPSI - Terzo anno, Sistemi e reti - Quarto anno...">
         </label>
         <label>
           <span>Materia</span>
@@ -178,15 +178,15 @@
         </label>
         <label>
           <span>ID</span>
-          <input id="yearIdInput" type="text" placeholder="terzo-anno">
+          <input id="yearIdInput" type="text" required placeholder="terzo-anno">
         </label>
         <label>
           <span>Settimane</span>
-          <input id="yearWeeksInput" type="number" min="1" value="33">
+          <input id="yearWeeksInput" type="number" min="1" step="1" required value="33">
         </label>
         <label>
           <span>Ore/settimana</span>
-          <input id="yearWeeklyHoursInput" type="number" min="1" step="0.5" value="3">
+          <input id="yearWeeklyHoursInput" type="number" min="0.5" step="0.5" required value="3">
         </label>
       </div>
 

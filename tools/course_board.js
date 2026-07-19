@@ -813,6 +813,7 @@ function openYearDialog() {
   els.yearWeeksInput.value = "33";
   els.yearWeeklyHoursInput.value = "3";
   els.yearDescriptionInput.value = "";
+  clearYearValidation();
   els.yearDialog.showModal();
   els.yearTitleInput.focus();
 }
@@ -821,15 +822,24 @@ function createYearFromDialog() {
   const title = els.yearTitleInput.value.trim();
   const subject = els.yearSubjectInput.value.trim();
   const id = els.yearIdInput.value.trim();
-  const weeks = Number(els.yearWeeksInput.value || 33);
-  const weeklyHours = Number(els.yearWeeklyHoursInput.value || 3);
+  const weeks = Number(els.yearWeeksInput.value);
+  const weeklyHours = Number(els.yearWeeklyHoursInput.value);
   const description = els.yearDescriptionInput.value.trim();
+  clearYearValidation();
   if (!title) {
-    setStatus("Inserisci il nome del percorso.");
+    showInvalidYearField(els.yearTitleInput, "Inserisci il nome del percorso.");
     return;
   }
   if (!id) {
-    setStatus("Inserisci un ID per il percorso.");
+    showInvalidYearField(els.yearIdInput, "Inserisci un ID per il percorso.");
+    return;
+  }
+  if (!Number.isInteger(weeks) || weeks <= 0) {
+    showInvalidYearField(els.yearWeeksInput, "Le settimane devono essere un numero intero maggiore di zero.");
+    return;
+  }
+  if (!Number.isFinite(weeklyHours) || weeklyHours <= 0) {
+    showInvalidYearField(els.yearWeeklyHoursInput, "Le ore settimanali devono essere maggiori di zero.");
     return;
   }
   if ((state.design.years || []).some((year) => year.id === id)) {
@@ -844,6 +854,23 @@ function createYearFromDialog() {
   renderCourse();
   renderHeadings();
   setStatus(`Percorso "${title}" aggiunto.`);
+}
+
+function clearYearValidation() {
+  for (const element of [
+    els.yearTitleInput,
+    els.yearIdInput,
+    els.yearWeeksInput,
+    els.yearWeeklyHoursInput,
+  ]) {
+    element.removeAttribute("aria-invalid");
+  }
+}
+
+function showInvalidYearField(element, message) {
+  element.setAttribute("aria-invalid", "true");
+  element.focus();
+  setStatus(message);
 }
 
 function renderCourse() {
