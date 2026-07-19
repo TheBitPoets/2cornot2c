@@ -179,7 +179,12 @@ function captureBoardContext() {
     design: state.design,
     activeSavedDesign: state.activeSavedDesign,
     isNewDesign: state.isNewDesign,
+    snapshot: designSnapshot(),
   };
+}
+
+function isBoardContextUnchanged(context) {
+  return isBoardContextCurrent(context) && designSnapshot() === context.snapshot;
 }
 
 function isBoardContextCurrent(context) {
@@ -543,8 +548,13 @@ async function deleteArchiveDesign() {
     renderCourseActions();
     return;
   }
+  const boardContext = captureBoardContext();
   const name = state.activeSavedDesign;
   const calendarsPayload = await api("/api/school-calendars");
+  if (!isBoardContextUnchanged(boardContext)) {
+    setStatus("Cancellazione annullata: la vista aperta e cambiata.");
+    return;
+  }
   const linkedCalendars = (calendarsPayload.calendars || []).filter((calendar) => (calendar.course_design_name || "") === name);
   let deleteCalendars = false;
   if (linkedCalendars.length) {
@@ -576,10 +586,19 @@ async function deleteArchiveDesign() {
       calendars: linkedCalendars.map((calendar) => calendar.name),
     }),
   });
+  if (!isBoardContextUnchanged(boardContext)) {
+    setStatus(`Progetto archiviato eliminato: ${name}. La vista aperta non e stata cambiata.`);
+    return;
+  }
+  const currentDesign = await api("/api/course-design");
+  if (!isBoardContextUnchanged(boardContext)) {
+    setStatus(`Progetto archiviato eliminato: ${name}. La vista aperta non e stata cambiata.`);
+    return;
+  }
   state.savedDesigns = payload.designs || [];
   localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
   sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
-  state.design = await api("/api/course-design");
+  state.design = currentDesign;
   state.activeSavedDesign = "";
   state.isNewDesign = false;
   markDesignClean();

@@ -299,6 +299,44 @@ def test_archive_save_response_does_not_relabel_a_newly_opened_project() -> None
     )
 
 
+def test_delete_response_does_not_replace_a_newly_opened_project() -> None:
+    run_course_board_js(
+        """
+        let completeDelete;
+        let currentDesignRequests = 0;
+        api = async (path) => {
+          if (path === "/api/school-calendars") return { calendars: [] };
+          if (path === "/api/saved-designs/delete") {
+            return new Promise((resolve) => { completeDelete = resolve; });
+          }
+          if (path === "/api/course-design") currentDesignRequests += 1;
+          return { years: [{ id: "current" }] };
+        };
+        renderSavedDesigns = () => {};
+        renderProjectTitle = () => {};
+        renderHeadings = () => {};
+        renderCourse = () => {};
+        renderCourseActions = () => {};
+        state.design = { years: [{ id: "first" }] };
+        state.activeSavedDesign = "first.json";
+
+        const deleting = deleteArchiveDesign();
+        Promise.resolve().then(() => {
+          const secondDesign = { years: [{ id: "second" }] };
+          state.design = secondDesign;
+          state.activeSavedDesign = "second.json";
+          completeDelete({ designs: [], deleted_calendars: [] });
+          return deleting.then(() => {
+            assert.equal(state.design, secondDesign);
+            assert.equal(state.activeSavedDesign, "second.json");
+            assert.equal(currentDesignRequests, 0);
+            assert.match(els.status.textContent, /vista aperta non e stata cambiata/);
+          });
+        });
+        """
+    )
+
+
 def test_clean_snapshot_normalizes_legacy_frames_before_comparison() -> None:
     run_course_board_js(
         """
