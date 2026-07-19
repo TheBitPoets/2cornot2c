@@ -1960,11 +1960,17 @@ for (const link of document.querySelectorAll(".topNav a:not([target='_blank'])")
       return;
     }
     allowNextUnloadWithoutWarning = true;
+    setTimeout(() => {
+      allowNextUnloadWithoutWarning = false;
+    }, 0);
   });
 }
 
 window.addEventListener("beforeunload", (event) => {
-  if (allowNextUnloadWithoutWarning) return;
+  if (allowNextUnloadWithoutWarning) {
+    allowNextUnloadWithoutWarning = false;
+    return;
+  }
   if (!hasUnsavedChanges()) return;
   event.preventDefault();
   event.returnValue = "";

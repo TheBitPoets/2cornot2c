@@ -410,5 +410,14 @@ def test_accepted_internal_navigation_suppresses_the_second_unload_warning() -> 
         window.listeners.beforeunload(event);
 
         assert.equal(event.prevented, false);
+        assert.equal(allowNextUnloadWithoutWarning, false);
+
+        const secondEvent = {
+          prevented: false,
+          preventDefault() { this.prevented = true; },
+          returnValue: null,
+        };
+        window.listeners.beforeunload(secondEvent);
+        assert.equal(secondEvent.prevented, true);
         """
     )
