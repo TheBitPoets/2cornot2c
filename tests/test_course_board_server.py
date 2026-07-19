@@ -110,6 +110,40 @@ def test_submission_file_accepts_legacy_project_relative_path_inside_absolute_re
     assert resolved == source
 
 
+def test_submission_file_infers_legacy_local_repo_from_remote_reference(tmp_path, monkeypatch) -> None:
+    app_root = tmp_path / "app"
+    root = app_root / "tmp" / "student-help-modal-test"
+    repo = root / "examples" / "assignment_tracking" / "student_repos" / "rossi-mario"
+    source = repo / "assignments" / "somma-001" / "main.py"
+    source.parent.mkdir(parents=True)
+    source.write_text("print(2 + 3)\n", encoding="utf-8")
+    monkeypatch.setattr(course_board_server, "APP_ROOT", app_root)
+    monkeypatch.setattr(course_board_server, "ROOT", root)
+
+    resolved = course_board_server.resolve_submission_file_path(
+        {"repo": "TheBitPoets/rossi-mario"},
+        "tmp/student-help-modal-test/examples/assignment_tracking/student_repos/rossi-mario/assignments/somma-001/main.py",
+    )
+
+    assert resolved == source
+
+
+def test_submission_file_does_not_infer_legacy_repo_outside_trusted_roots(tmp_path, monkeypatch) -> None:
+    app_root = tmp_path / "app"
+    root = app_root / "data"
+    outside = tmp_path / "outside" / "rossi-mario" / "assignments" / "somma-001" / "main.py"
+    outside.parent.mkdir(parents=True)
+    outside.write_text("riservato\n", encoding="utf-8")
+    monkeypatch.setattr(course_board_server, "APP_ROOT", app_root)
+    monkeypatch.setattr(course_board_server, "ROOT", root)
+
+    with pytest.raises(FileNotFoundError, match="non trovato o non consentito"):
+        course_board_server.resolve_submission_file_path(
+            {"repo": "TheBitPoets/rossi-mario"},
+            str(outside),
+        )
+
+
 def test_submission_file_rejects_path_outside_local_student_repo(tmp_path, monkeypatch) -> None:
     root = tmp_path / "data"
     repo = root / "examples" / "student_repos" / "rossi-mario"

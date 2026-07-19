@@ -1151,10 +1151,32 @@ def save_activity(payload: dict) -> dict:
     return {"ok": True, "activity": saved, "activities": list_activities()}
 
 
+def legacy_submission_repo_path(student: dict, candidate: Path) -> Path | None:
+    """Infer an old local repo root from a confined assignment file path."""
+
+    trusted_roots = (ROOT.resolve(strict=False), APP_ROOT.resolve(strict=False))
+    if not any(candidate == root or candidate.is_relative_to(root) for root in trusted_roots):
+        return None
+    repo_ref = str(student.get("repo", "")).strip().replace("\\", "/").rstrip("/")
+    repo_name = repo_ref.rsplit("/", 1)[-1]
+    if repo_name.endswith(".git"):
+        repo_name = repo_name[:-4]
+    if not repo_name:
+        return None
+    for parent in candidate.parents:
+        if parent.name.casefold() != "assignments":
+            continue
+        inferred_repo = parent.parent
+        if inferred_repo.name.casefold() == repo_name.casefold():
+            return inferred_repo
+    return None
+
+
 def resolve_submission_file_path(student: dict, file_path: str) -> Path:
     """Resolve a submitted file path while keeping reads inside the student repo."""
 
-    repo_value = str(student.get("repo_path", "") or student.get("repo", "")).strip()
+    explicit_repo_path = str(student.get("repo_path", "")).strip()
+    repo_value = explicit_repo_path or str(student.get("repo", "")).strip()
     repo = Path(repo_value)
     if not str(repo):
         raise ValueError("Repository studente mancante nel registro.")
@@ -1170,9 +1192,12 @@ def resolve_submission_file_path(student: dict, file_path: str) -> Path:
         candidates.append((APP_ROOT / raw_path).resolve())
         candidates.append((repo_path / raw_path).resolve())
     for candidate in candidates:
-        try:
-            candidate.relative_to(repo_path)
-        except ValueError:
+        allowed_repo_paths = [repo_path]
+        if not explicit_repo_path:
+            inferred_repo_path = legacy_submission_repo_path(student, candidate)
+            if inferred_repo_path is not None:
+                allowed_repo_paths.append(inferred_repo_path)
+        if not any(candidate == allowed or candidate.is_relative_to(allowed) for allowed in allowed_repo_paths):
             continue
         if candidate.is_file():
             return candidate
