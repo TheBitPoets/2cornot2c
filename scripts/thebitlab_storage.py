@@ -277,9 +277,10 @@ class JsonCourseStorage:
     def read_design(self) -> dict[str, Any]:
         """Load the current course design, returning a minimal shape if missing."""
 
-        if self.design_path.exists():
-            return self.read_json(self.design_path)
-        return {"version": 1, "source_files": self.default_sources, "years": []}
+        with self.operation_lock:
+            if self.design_path.exists():
+                return self.read_json(self.design_path)
+            return {"version": 1, "source_files": self.default_sources, "years": []}
 
     def write_design(self, payload: dict[str, Any]) -> None:
         """Persist the current course design."""
@@ -290,19 +291,21 @@ class JsonCourseStorage:
     def list_saved_designs(self) -> list[dict[str, str]]:
         """List saved course designs stored in doc/course_designs."""
 
-        self.course_designs_dir.mkdir(parents=True, exist_ok=True)
-        return [
-            {"name": path.name, "path": self.relative_path(path)}
-            for path in sorted(self.course_designs_dir.glob("*.json"))
-        ]
+        with self.operation_lock:
+            self.course_designs_dir.mkdir(parents=True, exist_ok=True)
+            return [
+                {"name": path.name, "path": self.relative_path(path)}
+                for path in sorted(self.course_designs_dir.glob("*.json"))
+            ]
 
     def read_saved_design(self, name: str) -> dict[str, Any]:
         """Read a saved course design by filename."""
 
         path = self.saved_design_path(name)
-        if not path.is_file():
-            raise FileNotFoundError(f"Percorso salvato non trovato: {name}")
-        return self.read_json(path)
+        with self.operation_lock:
+            if not path.is_file():
+                raise FileNotFoundError(f"Percorso salvato non trovato: {name}")
+            return self.read_json(path)
 
     def write_saved_design(
         self,
@@ -323,26 +326,28 @@ class JsonCourseStorage:
     def list_school_calendars(self) -> list[dict[str, str]]:
         """List saved school calendars stored in doc/calendars."""
 
-        self.school_calendars_dir.mkdir(parents=True, exist_ok=True)
-        calendars = []
-        for path in sorted(self.school_calendars_dir.glob("*.json")):
-            metadata = {"name": path.name, "path": self.relative_path(path), "course_design_name": ""}
-            try:
-                payload = self.read_json(path)
-                course_design_name = payload.get("course_design_name", "")
-                metadata["course_design_name"] = course_design_name if isinstance(course_design_name, str) else ""
-            except Exception:  # noqa: BLE001
-                metadata["course_design_name"] = ""
-            calendars.append(metadata)
-        return calendars
+        with self.operation_lock:
+            self.school_calendars_dir.mkdir(parents=True, exist_ok=True)
+            calendars = []
+            for path in sorted(self.school_calendars_dir.glob("*.json")):
+                metadata = {"name": path.name, "path": self.relative_path(path), "course_design_name": ""}
+                try:
+                    payload = self.read_json(path)
+                    course_design_name = payload.get("course_design_name", "")
+                    metadata["course_design_name"] = course_design_name if isinstance(course_design_name, str) else ""
+                except Exception:  # noqa: BLE001
+                    metadata["course_design_name"] = ""
+                calendars.append(metadata)
+            return calendars
 
     def read_school_calendar(self, name: str) -> dict[str, Any]:
         """Read a saved school calendar by filename."""
 
         path = self.school_calendar_path(name)
-        if not path.is_file():
-            raise FileNotFoundError(f"Calendario scolastico non trovato: {name}")
-        return self.read_json(path)
+        with self.operation_lock:
+            if not path.is_file():
+                raise FileNotFoundError(f"Calendario scolastico non trovato: {name}")
+            return self.read_json(path)
 
     def write_school_calendar(self, name: str, payload: dict[str, Any]) -> dict[str, str]:
         """Persist a named school calendar in the calendars folder."""

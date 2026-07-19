@@ -279,6 +279,58 @@ def test_save_waits_for_delete_rollback_before_updating_design(tmp_path, monkeyp
     assert saving_storage.read_saved_design("victim.json") == {"title": "Aggiornato"}
 
 
+def test_read_waits_for_delete_rollback_before_observing_design(tmp_path, monkeypatch) -> None:
+    deleting_storage = JsonCourseStorage(tmp_path)
+    reading_storage = JsonCourseStorage(tmp_path)
+    deleting_storage.write_saved_design("victim.json", {"title": "Originale"})
+    deleting_storage.write_school_calendar("linked.json", {"course_design_name": "victim.json"})
+    first_move_done = threading.Event()
+    continue_delete = threading.Event()
+    read_done = threading.Event()
+    read_result: list[dict[str, str]] = []
+    real_replace = os.replace
+    calls = 0
+
+    def controlled_replace(source, destination):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            real_replace(source, destination)
+            first_move_done.set()
+            assert continue_delete.wait(timeout=5)
+            return
+        if calls == 2:
+            raise OSError("staging non disponibile")
+        real_replace(source, destination)
+
+    monkeypatch.setattr("scripts.thebitlab_storage.os.replace", controlled_replace)
+
+    def delete_design() -> None:
+        with pytest.raises(OSError, match="staging non disponibile"):
+            deleting_storage.delete_saved_design(
+                "victim.json",
+                delete_calendars=True,
+                calendars=["linked.json"],
+            )
+
+    def read_design() -> None:
+        read_result.append(reading_storage.read_saved_design("victim.json"))
+        read_done.set()
+
+    delete_thread = threading.Thread(target=delete_design)
+    read_thread = threading.Thread(target=read_design)
+    delete_thread.start()
+    assert first_move_done.wait(timeout=5)
+    read_thread.start()
+    assert read_done.wait(timeout=0.1) is False
+    continue_delete.set()
+    delete_thread.join(timeout=5)
+    read_thread.join(timeout=5)
+
+    assert read_done.is_set()
+    assert read_result == [{"title": "Originale"}]
+
+
 def test_calendar_save_waits_for_course_storage_operation(tmp_path) -> None:
     locking_storage = JsonCourseStorage(tmp_path)
     saving_storage = JsonCourseStorage(tmp_path)
