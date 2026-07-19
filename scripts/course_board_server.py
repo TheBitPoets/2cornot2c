@@ -1144,8 +1144,10 @@ def read_assignment_report(name: str) -> dict:
 def review_assignment_ai_feedback(name: str, student_id: str, decision: str) -> dict:
     """Apply a teacher review decision to draft AI feedback in a report."""
 
-    with assignment_operation_lock(f"ai-feedback-review::{name}"):
-        storage = assignment_storage()
+    storage = assignment_storage()
+    report_path = storage.safe_teacher_report_path(name)
+    operation_id = f"ai-feedback-review::{os.path.normcase(str(report_path))}"
+    with assignment_operation_lock(operation_id):
         register = storage.read_assignment_report(name)
         updated = manual_ai_feedback.review_feedback_in_register(register, student_id, decision)
         saved = storage.write_assignment_report(name, updated)

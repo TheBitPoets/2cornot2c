@@ -2885,6 +2885,10 @@ def test_review_assignment_ai_feedback_serializes_updates_to_one_register(monkey
             self.active = 0
             self.max_active = 0
 
+        def safe_teacher_report_path(self, name: str) -> Path:
+            normalized = name.strip().replace("\\", "/")
+            return (Path("teacher-reports") / normalized).resolve()
+
         def read_assignment_report(self, _name: str) -> dict:
             with self.guard:
                 self.active += 1
@@ -2903,11 +2907,11 @@ def test_review_assignment_ai_feedback_serializes_updates_to_one_register(monkey
     start = threading.Barrier(3)
     errors = []
 
-    def review(student_id: str) -> None:
+    def review(report_name: str, student_id: str) -> None:
         try:
             start.wait(timeout=2)
             course_board_server.review_assignment_ai_feedback(
-                "demo/activity.json",
+                report_name,
                 student_id,
                 "approve",
             )
@@ -2915,8 +2919,8 @@ def test_review_assignment_ai_feedback_serializes_updates_to_one_register(monkey
             errors.append(error)
 
     threads = [
-        threading.Thread(target=review, args=("rossi-mario",)),
-        threading.Thread(target=review, args=("bianchi-luca",)),
+        threading.Thread(target=review, args=("demo/activity.json", "rossi-mario")),
+        threading.Thread(target=review, args=(r"demo\activity.json", "bianchi-luca")),
     ]
     for thread in threads:
         thread.start()
