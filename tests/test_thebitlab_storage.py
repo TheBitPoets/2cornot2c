@@ -413,6 +413,20 @@ def test_partial_committed_cleanup_never_restores_deleted_design(tmp_path, monke
     assert list(recovered.delete_staging_dir.iterdir()) == []
 
 
+def test_delete_syncs_staged_entry_before_source_removal(tmp_path, monkeypatch) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    storage.write_saved_design("victim.json", {"title": "Da eliminare"})
+    synced: list[Path] = []
+    monkeypatch.setattr("scripts.thebitlab_storage.sync_directory", lambda path: synced.append(path))
+
+    storage.delete_saved_design("victim.json")
+
+    source_sync_index = synced.index(storage.course_designs_dir)
+    staged_directory = synced[source_sync_index - 1]
+    assert staged_directory.parent == storage.delete_staging_dir
+    assert staged_directory.name.endswith(".pending")
+
+
 def test_read_json_rejects_non_object_payload(tmp_path) -> None:
     storage = JsonCourseStorage(tmp_path)
     path = tmp_path / "list.json"

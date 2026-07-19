@@ -385,8 +385,8 @@ class JsonCourseStorage:
                 for target, entry in zip(targets, entries, strict=True):
                     staged_path = transaction_dir / entry["staged"]
                     os.replace(target, staged_path)
-                    sync_directory(target.parent)
                     sync_directory(transaction_dir)
+                    sync_directory(target.parent)
                 os.replace(transaction_dir, committed_transaction_dir)
             except Exception:
                 self._rollback_delete_entries(transaction_dir, entries)
