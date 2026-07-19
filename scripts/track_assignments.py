@@ -92,9 +92,14 @@ def default_report_path(target: TrackingTarget, activity_id: str) -> Path:
     return target.path / "reports" / activity_id / "latest.json"
 
 
-def relative_to_root_or_repo(path: Path, repo: Path) -> str:
+def relative_to_root_or_repo(path: Path, repo: Path, server_root: Path | None = None) -> str:
     """Return a stable relative path for JSON output."""
     resolved = path.resolve()
+    if server_root is not None:
+        try:
+            return str(resolved.relative_to(server_root.resolve())).replace("\\", "/")
+        except ValueError:
+            pass
     try:
         return str(resolved.relative_to(PROJECT_ROOT)).replace("\\", "/")
     except ValueError:
@@ -102,6 +107,16 @@ def relative_to_root_or_repo(path: Path, repo: Path) -> str:
             return str(resolved.relative_to(repo.resolve())).replace("\\", "/")
         except ValueError:
             return str(resolved)
+
+
+def relative_to_repo(path: Path, repo: Path) -> str:
+    """Return a file reference that remains valid when the data root moves."""
+
+    resolved = path.resolve()
+    try:
+        return str(resolved.relative_to(repo.resolve())).replace("\\", "/")
+    except ValueError:
+        return str(resolved)
 
 
 def local_repo_path(path: Path, server_root: Path | None) -> str:
@@ -247,7 +262,7 @@ def submission_files(
                 continue
             confined_path = confined_report_file_path(target, file_path)
             if confined_path is not None:
-                normalized_path = relative_to_root_or_repo(confined_path, target.path)
+                normalized_path = relative_to_repo(confined_path, target.path)
                 normalized_files.append(
                     {
                         "path": normalized_path,
@@ -268,13 +283,13 @@ def submission_files(
             resolved_files.add(path.resolve())
             files.append(
                 {
-                    "path": relative_to_root_or_repo(path, target.path),
+                    "path": relative_to_repo(path, target.path),
                     "role": submission_file_role(path, source_path),
                     "github_url": github_file_url(target, repo_url, str(path), commit),
                 }
             )
     if source_path is not None and source_path not in resolved_files:
-        normalized_source = relative_to_root_or_repo(source_path, target.path)
+        normalized_source = relative_to_repo(source_path, target.path)
         files.insert(
             0,
             {
@@ -457,7 +472,7 @@ def track_assignments(
         if report is not None:
             validate_report_activity(report, activity_id, report_path)
         relative_report_path = (
-            relative_to_root_or_repo(safe_report_path, target.path)
+            relative_to_root_or_repo(safe_report_path, target.path, server_root)
             if safe_report_path is not None
             else None
         )
@@ -476,7 +491,8 @@ def track_assignments(
         else:
             help["path"] = relative_to_root_or_repo(help_log_path, target.path) if help_log_path else ""
         help["activity_id"] = activity_id
-        source_path = report.get("source") if report else None
+        source_file_path = report_source_path(target, report.get("source")) if report else None
+        source_path = relative_to_repo(source_file_path, target.path) if source_file_path is not None else None
         submitted = report is not None
         submitted_at = report.get("submitted_at") if report else None
         status, late = submission_status(
@@ -500,7 +516,7 @@ def track_assignments(
                 "late": late,
                 "submission": {
                     "source_path": source_path,
-                    "source_github_url": github_file_url(target, repo_url, source_path, report.get("commit") if report else None),
+                    "source_github_url": github_file_url(target, repo_url, str(source_file_path) if source_file_path else None, report.get("commit") if report else None),
                     "files": submission_files(target, activity_id, report, repo_url),
                     "submitted_at": submitted_at,
                     "commit": report.get("commit") if report else None,

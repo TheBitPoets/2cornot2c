@@ -1,12 +1,20 @@
 from __future__ import annotations
 
 import json
+import shutil
 import sys
 from pathlib import Path
 
 import pytest
 
-from scripts import assignment_records, student_help_service, student_identity, student_support_policy, track_assignments
+from scripts import (
+    assignment_records,
+    course_board_server,
+    student_help_service,
+    student_identity,
+    student_support_policy,
+    track_assignments,
+)
 from scripts.thebitlab_repository_providers import LocalRepositoryProvider, StudentRepository
 
 
@@ -366,6 +374,42 @@ def test_track_assignments_lists_multiple_submission_files(tmp_path) -> None:
     assert any(path.endswith("assignments/python-base-somma-001/utils.py") for path in paths)
     assert any(path.endswith("assignments/python-base-somma-001/README.md") for path in paths)
     assert not any("__pycache__" in path for path in paths)
+
+
+def test_tracking_file_references_survive_moving_the_server_root(tmp_path, monkeypatch) -> None:
+    project_root = tmp_path / "project"
+    original_root = project_root / "demo-a"
+    moved_root = project_root / "moved-demo"
+    original_root.mkdir(parents=True)
+    activity_path = write_activity(original_root)
+    student = target(original_root, "rossi-mario")
+    write_report(student.path, "2026-10-18T18:22:10+02:00")
+    monkeypatch.setattr(track_assignments, "PROJECT_ROOT", project_root)
+
+    index = track_assignments.track_assignments(
+        activity_path=activity_path,
+        targets=[student],
+        due_at="2026-10-19T23:59:00+02:00",
+        server_root=original_root,
+    )
+    tracked_student = index["students"][0]
+    source_reference = tracked_student["submission"]["files"][0]["path"]
+    assert source_reference == "assignments/python-base-somma-001/main.py"
+    assert tracked_student["submission"]["source_path"] == source_reference
+
+    shutil.move(original_root, moved_root)
+    monkeypatch.setattr(course_board_server, "ROOT", moved_root)
+    monkeypatch.setattr(course_board_server, "APP_ROOT", project_root)
+
+    resolved = course_board_server.resolve_submission_file_path(tracked_student, source_reference)
+
+    assert resolved == (
+        moved_root
+        / "rossi-mario"
+        / "assignments"
+        / "python-base-somma-001"
+        / "main.py"
+    )
 
 
 def test_track_assignments_resolves_relative_report_source_from_student_repo(tmp_path) -> None:
