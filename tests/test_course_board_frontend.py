@@ -45,8 +45,10 @@ def run_course_board_js(assertions: str) -> None:
       console,
       document: {{
         querySelector: elementFor,
+        querySelectorAll() {{ return []; }},
         addEventListener() {{}},
       }},
+      window: {{ addEventListener() {{}} }},
       localStorage: storage(),
       sessionStorage: storage(),
       setInterval() {{ return 1; }},
@@ -195,5 +197,35 @@ def test_create_course_rejects_invalid_weeks_and_hours() -> None:
         createYearFromDialog();
         assert.equal(state.design.years.length, 0);
         assert.equal(els.yearWeeklyHoursInput["aria-invalid"], "true");
+        """
+    )
+
+
+def test_dirty_tracking_detects_changes_and_resets_after_save() -> None:
+    run_course_board_js(
+        """
+        state.design = { years: [{ id: "first" }] };
+        markDesignClean();
+        assert.equal(hasUnsavedChanges(), false);
+
+        state.design.years.push({ id: "second" });
+        assert.equal(hasUnsavedChanges(), true);
+
+        markDesignClean();
+        assert.equal(hasUnsavedChanges(), false);
+        """
+    )
+
+
+def test_async_action_exposes_errors_in_the_visible_status() -> None:
+    run_course_board_js(
+        """
+        runAsyncAction(
+          async () => { throw new Error("server non disponibile"); },
+          "Ricarica",
+        ).then(() => {
+          assert.match(els.status.textContent, /Ricarica non riuscito/);
+          assert.match(els.status.textContent, /server non disponibile/);
+        });
         """
     )

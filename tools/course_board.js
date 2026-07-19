@@ -112,6 +112,7 @@ const AI_PROGRESS_STAGES = [
 
 let aiProgressTimer = null;
 let frameBatch = null;
+let cleanDesignSnapshot = "";
 
 function emptyCourseDesign() {
   return {
@@ -143,6 +144,33 @@ function emptyCourseYear(id, title, weeklyHours, weeks = 33, subject = "") {
 
 function setStatus(message) {
   els.status.textContent = message;
+}
+
+function designSnapshot() {
+  return state.design ? JSON.stringify(state.design) : "";
+}
+
+function markDesignClean() {
+  cleanDesignSnapshot = designSnapshot();
+}
+
+function hasUnsavedChanges() {
+  return Boolean(cleanDesignSnapshot && designSnapshot() !== cleanDesignSnapshot);
+}
+
+function confirmDiscardChanges() {
+  if (!hasUnsavedChanges()) return true;
+  return confirm("Ci sono modifiche non salvate. Vuoi scartarle e continuare?");
+}
+
+async function runAsyncAction(action, label) {
+  try {
+    return await action();
+  } catch (error) {
+    console.error(error);
+    setStatus(`${label} non riuscito. Dettaglio: ${error.message}`);
+    return undefined;
+  }
 }
 
 function startAiProgress(title) {
@@ -251,6 +279,7 @@ async function loadAll() {
   renderProjectTitle();
   renderHeadings();
   renderCourse();
+  markDesignClean();
   if (state.activeSavedDesign || state.isNewDesign) {
     setStatus("Pronto.");
   } else {
@@ -264,14 +293,20 @@ function renderSavedDesigns() {
   currentButton.type = "button";
   currentButton.className = "courseLoadItem";
   currentButton.textContent = "Progetto corrente (doc/course_design.json)";
-  currentButton.addEventListener("click", () => loadDesignFromMenu("__current__"));
+  currentButton.addEventListener("click", () => runAsyncAction(
+    () => loadDesignFromMenu("__current__"),
+    "Caricamento progetto",
+  ));
   els.savedDesignMenu.append(currentButton);
   for (const design of state.savedDesigns) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "courseLoadItem";
     button.textContent = design.name;
-    button.addEventListener("click", () => loadDesignFromMenu(design.name));
+    button.addEventListener("click", () => runAsyncAction(
+      () => loadDesignFromMenu(design.name),
+      "Caricamento progetto",
+    ));
     els.savedDesignMenu.append(button);
   }
   renderCourseActions();
@@ -334,6 +369,7 @@ async function loadCurrentDesign() {
   state.design = await api("/api/course-design");
   state.activeSavedDesign = "";
   state.isNewDesign = false;
+  markDesignClean();
   localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
   sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
   renderSavedDesigns();
@@ -355,6 +391,7 @@ async function loadSavedDesignByName(name, options = {}) {
   state.design = payload.design;
   state.activeSavedDesign = name;
   state.isNewDesign = false;
+  markDesignClean();
   localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, name);
   sessionStorage.setItem(ACTIVE_COURSE_SESSION_KEY, "true");
   if (render) {
@@ -417,6 +454,7 @@ async function saveArchiveDesignWithName(name, options = {}) {
   state.savedDesigns = payload.designs || [];
   state.activeSavedDesign = payload.saved?.name || name;
   state.isNewDesign = false;
+  markDesignClean();
   localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, state.activeSavedDesign);
   sessionStorage.setItem(ACTIVE_COURSE_SESSION_KEY, "true");
   renderSavedDesigns();
@@ -436,6 +474,7 @@ async function saveCurrentProject() {
   sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
   state.activeSavedDesign = "";
   state.isNewDesign = false;
+  markDesignClean();
   renderSavedDesigns();
   renderProjectTitle();
   renderCourseActions();
@@ -487,6 +526,7 @@ async function deleteArchiveDesign() {
   state.design = await api("/api/course-design");
   state.activeSavedDesign = "";
   state.isNewDesign = false;
+  markDesignClean();
   renderSavedDesigns();
   renderProjectTitle();
   renderHeadings();
@@ -1721,6 +1761,7 @@ async function saveDesign() {
   sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
   state.activeSavedDesign = "";
   state.isNewDesign = false;
+  markDesignClean();
   renderSavedDesigns();
   renderProjectTitle();
   renderCourseActions();
@@ -1767,13 +1808,16 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;");
 }
 
-els.reloadBtn.addEventListener("click", loadAll);
-els.saveBtn.addEventListener("click", saveDesign);
+els.reloadBtn.addEventListener("click", () => {
+  if (!confirmDiscardChanges()) return;
+  runAsyncAction(loadAll, "Ricarica");
+});
+els.saveBtn.addEventListener("click", () => runAsyncAction(saveDesign, "Impostazione progetto corrente"));
 els.loadSavedDesignBtn.addEventListener("click", openSavedDesignPicker);
-els.newDesignBtn.addEventListener("click", newCourseDesign);
-els.saveArchiveBtn.addEventListener("click", saveArchiveDesign);
-els.saveArchiveAsBtn.addEventListener("click", saveArchiveDesignAs);
-els.deleteArchiveBtn.addEventListener("click", deleteArchiveDesign);
+els.newDesignBtn.addEventListener("click", () => runAsyncAction(newCourseDesign, "Creazione progetto"));
+els.saveArchiveBtn.addEventListener("click", () => runAsyncAction(saveArchiveDesign, "Salvataggio progetto"));
+els.saveArchiveAsBtn.addEventListener("click", () => runAsyncAction(saveArchiveDesignAs, "Salvataggio copia"));
+els.deleteArchiveBtn.addEventListener("click", () => runAsyncAction(deleteArchiveDesign, "Cancellazione progetto"));
 els.addYearBtn.addEventListener("click", openYearDialog);
 els.yearCloseBtn.addEventListener("click", () => els.yearDialog.close());
 els.yearCancelBtn.addEventListener("click", () => els.yearDialog.close());
@@ -1804,6 +1848,19 @@ document.addEventListener("click", (event) => {
   if (event.target === els.loadSavedDesignBtn || els.savedDesignMenu.contains(event.target)) return;
   els.savedDesignMenu.hidden = true;
   els.loadSavedDesignBtn.setAttribute("aria-expanded", "false");
+});
+
+for (const link of document.querySelectorAll(".topNav a:not([target='_blank'])")) {
+  link.addEventListener("click", (event) => {
+    if (confirmDiscardChanges()) return;
+    event.preventDefault();
+  });
+}
+
+window.addEventListener("beforeunload", (event) => {
+  if (!hasUnsavedChanges()) return;
+  event.preventDefault();
+  event.returnValue = "";
 });
 
 loadAll().catch((error) => {
