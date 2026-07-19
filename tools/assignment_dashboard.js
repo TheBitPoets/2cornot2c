@@ -4065,10 +4065,16 @@ function renderStudentHelpDialogContent(entry) {
   const data = entry?.help || {};
   const events = Array.isArray(data.events) ? data.events : [];
   const legacy = data.legacy && typeof data.legacy === "object" ? data.legacy : {};
+  const errorNotice = data.error ? `
+    <p class="studentHelpDialogError" role="alert">
+      <strong>Log autorevole non disponibile:</strong> ${escapeHtml(data.error)}
+    </p>
+  ` : "";
   if (!events.length && !Number(legacy.total || 0)) {
-    return `<p class="status">${escapeHtml(data.error || "Nessuna richiesta di aiuto disponibile.")}</p>`;
+    return errorNotice || '<p class="status">Nessuna richiesta di aiuto disponibile.</p>';
   }
   return `
+    ${errorNotice}
     <div class="studentHelpDialogSummary">
       ${badge(`Aiuti ${Number(data.total || 0)}`, Number(data.denied || 0) ? "bad" : "ok")}
       ${badge(`AI ${Number(data.ai_total || data.counts?.ai || 0)}`, "warn")}

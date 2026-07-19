@@ -3016,6 +3016,22 @@ def test_student_help_details_render_compact_summary_and_modal_content() -> None
         assert.match(modalHtml, /Dato modificabile\\./);
         assert.doesNotMatch(html, /Â|Ã/);
 
+        const legacyWithError = tested.renderStudentHelpDialogContent({
+          help: {
+            error: "Log richieste non valido",
+            total: 0,
+            events: [],
+            legacy: {
+              total: 1,
+              events: [{ requested_at: "2026-09-01T08:00:00+02:00", prompt: "Dato storico." }],
+            },
+          },
+        });
+        assert.match(legacyWithError, /role="alert"/);
+        assert.match(legacyWithError, /Log richieste non valido/);
+        assert.ok(legacyWithError.includes("Legacy non verificati (1)"));
+        assert.ok(legacyWithError.includes("Dato storico."));
+
         const empty = tested.studentHelpDetails({ total: 0, events: [] });
         assert.match(empty, /Dettagli aiuti/);
         assert.match(empty, /disabled/);

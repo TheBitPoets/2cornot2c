@@ -2288,6 +2288,16 @@ code {
   margin-bottom: 1rem;
 }
 
+.studentHelpDialogError {
+  margin: 0 0 1rem;
+  border: 1px solid #d97757;
+  border-radius: 8px;
+  background: #fff8f5;
+  padding: .75rem;
+  color: #8f1d14;
+  overflow-wrap: anywhere;
+}
+
 .studentHelpDialogList {
   display: grid;
   gap: 1rem;
