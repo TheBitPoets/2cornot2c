@@ -69,3 +69,23 @@ def test_student_lab_demo_setup_does_not_reset_root_when_server_lock_is_busy(tmp
         student_lab_demo_setup.prepare_demo(root)
 
     assert existing_report.read_text(encoding="utf-8") == '{"activity_id": "existing"}'
+
+
+def test_student_lab_demo_setup_holds_lock_through_smoke(tmp_path, monkeypatch) -> None:
+    root = tmp_path / "student-lab-demo"
+    original_run_smoke = student_lab_demo_setup.student_lab_demo_smoke.run_smoke
+
+    def assert_locked(current_root: Path):
+        competing_lock = student_lab_demo_setup.course_board_server.DataRootProcessLock(current_root)
+        with pytest.raises(RuntimeError, match="Un altro server"):
+            competing_lock.acquire()
+        return original_run_smoke(current_root)
+
+    monkeypatch.setattr(student_lab_demo_setup.student_lab_demo_smoke, "run_smoke", assert_locked)
+
+    summary = student_lab_demo_setup.prepare_demo(root)
+
+    assert summary["ok"] is True
+    released_lock = student_lab_demo_setup.course_board_server.DataRootProcessLock(root)
+    released_lock.acquire()
+    released_lock.release()

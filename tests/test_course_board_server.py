@@ -129,6 +129,8 @@ def test_submission_file_rejects_path_outside_local_student_repo(tmp_path, monke
 def test_data_root_process_lock_rejects_a_second_server(tmp_path) -> None:
     first_lock = course_board_server.DataRootProcessLock(tmp_path)
     second_lock = course_board_server.DataRootProcessLock(tmp_path)
+    assert first_lock.path.parent == tmp_path.parent
+    assert first_lock.path.name == f".{tmp_path.name}.thebitlab-server.lock"
     first_lock.acquire()
     try:
         with pytest.raises(RuntimeError, match="Un altro server"):

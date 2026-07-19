@@ -142,7 +142,9 @@ class DataRootProcessLock:
     """Hold an operating-system lock for one server data root."""
 
     def __init__(self, root: Path) -> None:
-        self.path = root.resolve(strict=False) / ".thebitlab-server.lock"
+        self.root = root.resolve(strict=False)
+        root_name = self.root.name or "root"
+        self.path = self.root.parent / f".{root_name}.thebitlab-server.lock"
         self._handle = None
 
     def acquire(self) -> None:
@@ -165,7 +167,7 @@ class DataRootProcessLock:
         except (OSError, BlockingIOError) as error:
             handle.close()
             raise RuntimeError(
-                f"Un altro server sta gia usando il root dati: {self.path.parent}"
+                f"Un altro server sta gia usando il root dati: {self.root}"
             ) from error
         self._handle = handle
 
