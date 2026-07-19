@@ -333,20 +333,25 @@ class CodexStudentHelpProvider:
                         "Codex exec ha superato il tempo massimo consentito.",
                         _codex_usage_or_zero(error.stdout, allow_incomplete_tail=True),
                     ) from error
+                usage = _codex_usage_or_zero(completed.stdout)
+                if completed.returncode:
+                    detail = (
+                        _subprocess_output_text(completed.stderr)
+                        or _subprocess_output_text(completed.stdout)
+                        or "Codex non ha restituito dettagli."
+                    ).strip()
+                    raise CodexStudentHelpProcessError(f"Codex exec non riuscito: {detail}", usage)
                 try:
                     response_text = response_path.read_text(encoding="utf-8")
+                except UnicodeDecodeError as error:
+                    raise CodexStudentHelpResponseError(
+                        "Codex non ha restituito una risposta UTF-8 valida.",
+                        usage,
+                    ) from error
                 except OSError:
                     response_text = ""
         finally:
             _CODEX_CALL_SLOT.release()
-        usage = _codex_usage_or_zero(completed.stdout)
-        if completed.returncode:
-            detail = (
-                _subprocess_output_text(completed.stderr)
-                or _subprocess_output_text(completed.stdout)
-                or "Codex non ha restituito dettagli."
-            ).strip()
-            raise CodexStudentHelpProcessError(f"Codex exec non riuscito: {detail}", usage)
         try:
             payload = json.loads(response_text)
         except json.JSONDecodeError as error:

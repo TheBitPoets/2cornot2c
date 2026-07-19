@@ -369,6 +369,34 @@ def test_codex_fallback_preserves_usage_from_invalid_structured_response(monkeyp
     assert response.usage == {"input_tokens": 120, "output_tokens": 30, "total_tokens": 150}
 
 
+def test_codex_fallback_preserves_usage_from_non_utf8_sidecar(monkeypatch) -> None:
+    monkeypatch.setattr(student_help_codex_adapter.shutil, "which", lambda command: "/bin/codex")
+
+    def corrupt_sidecar(command, **kwargs):
+        completed = completed_codex_run(
+            command,
+            {
+                "guidance": ["Controlla l'input."],
+                "check_question": "Quale caso stai verificando?",
+            },
+            usage={"input_tokens": 9, "output_tokens": 4},
+        )
+        response_path = Path(command[command.index("--output-last-message") + 1])
+        response_path.write_bytes(b"\xff")
+        return completed
+
+    monkeypatch.setattr(student_help_codex_adapter.subprocess, "run", corrupt_sidecar)
+    provider = student_help_codex_adapter.FallbackStudentHelpProvider(
+        student_help_codex_adapter.CodexStudentHelpProvider(),
+        DeterministicStudentHelpProvider(),
+    )
+
+    response = provider.respond(sample_request())
+
+    assert response.provider == "codex-local-fallback"
+    assert response.usage == {"input_tokens": 9, "output_tokens": 4, "total_tokens": 13}
+
+
 def test_codex_fallback_preserves_usage_when_process_exits_with_error(monkeypatch) -> None:
     monkeypatch.setattr(student_help_codex_adapter.shutil, "which", lambda command: "/bin/codex")
     monkeypatch.setattr(
