@@ -194,6 +194,7 @@ const els = {
   coverageStatus: document.querySelector("#coverageStatus"),
   coverageSummary: document.querySelector("#coverageSummary"),
   coverageDialogSummary: document.querySelector("#coverageDialogSummary"),
+  coverageDialogStatus: document.querySelector("#coverageDialogStatus"),
   coverageDialog: document.querySelector("#coverageDialog"),
   coverageBreadcrumb: document.querySelector("#coverageBreadcrumb"),
   coverageOpenBtn: document.querySelector("#coverageOpenBtn"),
@@ -205,6 +206,7 @@ const els = {
   overviewBody: document.querySelector("#overviewBody"),
   overviewSummary: document.querySelector("#overviewSummary"),
   overviewDialogSummary: document.querySelector("#overviewDialogSummary"),
+  overviewDialogStatus: document.querySelector("#overviewDialogStatus"),
   overviewClassFilter: document.querySelector("#overviewClassFilter"),
   overviewStudentFilter: document.querySelector("#overviewStudentFilter"),
   overviewActivityFilter: document.querySelector("#overviewActivityFilter"),
@@ -1136,15 +1138,20 @@ function clearActiveReport() {
   renderDashboard();
 }
 
-async function loadSelectedReport() {
+function setReportLoadStatus(message, statusElement = null) {
+  setStatus(message);
+  if (statusElement) statusElement.textContent = message;
+}
+
+async function loadSelectedReport({ statusElement = null } = {}) {
   const revision = ++state.reportLoadRevision;
   const name = els.reportSelect.value;
   if (!name) {
     clearActiveReport();
-    setStatus("Seleziona un registro consegne.");
+    setReportLoadStatus("Seleziona un registro consegne.", statusElement);
     return false;
   }
-  setStatus(`Caricamento registro ${name}...`);
+  setReportLoadStatus(`Caricamento registro ${name}...`, statusElement);
   let payload;
   try {
     payload = await api("/api/assignment-reports/load", {
@@ -1159,7 +1166,7 @@ async function loadSelectedReport() {
       return false;
     }
     clearActiveReport();
-    setStatus(`Registro non caricato: ${error.message}`);
+    setReportLoadStatus(`Registro non caricato: ${error.message}`, statusElement);
     return false;
   }
   if (revision !== state.reportLoadRevision || els.reportSelect.value !== name) {
@@ -1172,7 +1179,7 @@ async function loadSelectedReport() {
   focusOverviewClassFromReport(state.report);
   renderOverview();
   renderDashboard();
-  setStatus(`Registro caricato: ${name}.`);
+  setReportLoadStatus(`Registro caricato: ${name}.`, statusElement);
   return true;
 }
 
@@ -4829,7 +4836,7 @@ function closeStudentsDialog() {
   }
 }
 
-els.loadReportBtn.addEventListener("click", loadSelectedReport);
+els.loadReportBtn.addEventListener("click", () => loadSelectedReport());
 els.reloadBtn.addEventListener("click", async () => {
   await loadReports();
   await loadAssignments();
@@ -4873,7 +4880,7 @@ els.saveAssignmentBtn?.addEventListener("click", saveAssignmentRecord);
 els.distributeAssignmentBtn?.addEventListener("click", distributeAssignment);
 els.deleteAssignmentBtn?.addEventListener("click", deleteSelectedAssignment);
 els.generateReportBtn.addEventListener("click", generateReport);
-els.reportSelect.addEventListener("change", loadSelectedReport);
+els.reportSelect.addEventListener("change", () => loadSelectedReport());
 els.coverageOpenBtn.addEventListener("click", openCoverageDialog);
 els.coverageCloseBtn.addEventListener("click", closeCoverageDialog);
 els.overviewOpenBtn.addEventListener("click", openOverviewDialog);
@@ -5046,7 +5053,7 @@ els.coverageBody.addEventListener("click", async (event) => {
   }
   if (reportButton && reportButton.dataset.coverageReport) {
     els.reportSelect.value = reportButton.dataset.coverageReport;
-    const loaded = await loadSelectedReport();
+    const loaded = await loadSelectedReport({ statusElement: els.coverageDialogStatus });
     if (loaded && reportButton.dataset.coverageOpenStudents === "true") {
       openStudentsDialog();
     }
@@ -5086,7 +5093,7 @@ els.overviewBody.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-overview-report]");
   if (!button) return;
   els.reportSelect.value = button.dataset.overviewReport;
-  const loaded = await loadSelectedReport();
+  const loaded = await loadSelectedReport({ statusElement: els.overviewDialogStatus });
   if (loaded && button.dataset.overviewStudent) {
     openSubmission(button.dataset.overviewStudent, "", "overview");
   }
@@ -5095,7 +5102,7 @@ els.overviewMatrixBody.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-overview-report]");
   if (!button || button.disabled) return;
   els.reportSelect.value = button.dataset.overviewReport;
-  const loaded = await loadSelectedReport();
+  const loaded = await loadSelectedReport({ statusElement: els.overviewDialogStatus });
   if (loaded && button.dataset.overviewStudent) {
     openSubmission(button.dataset.overviewStudent, "", "overview");
   }

@@ -3127,6 +3127,34 @@ def test_loading_report_enables_students_panel_and_reports_failures() -> None:
     )
 
 
+def test_report_load_errors_are_visible_inside_calling_modals() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.fetchResponses["/api/assignment-reports/load"] = {
+            ok: false,
+            status: 404,
+            statusText: "Not Found",
+            text: '{"error":"Registro non trovato"}',
+          };
+
+          tested.els.reportSelect.value = "demo/registro-rimosso.json";
+          assert.equal(await tested.loadSelectedReport({
+            statusElement: tested.els.coverageDialogStatus,
+          }), false);
+          assert.match(tested.els.coverageDialogStatus.textContent, /Registro non caricato: 404 Not Found/);
+
+          tested.els.reportSelect.value = "demo/registro-rimosso.json";
+          assert.equal(await tested.loadSelectedReport({
+            statusElement: tested.els.overviewDialogStatus,
+          }), false);
+          assert.match(tested.els.overviewDialogStatus.textContent, /Registro non caricato: 404 Not Found/);
+          assert.match(tested.els.status.textContent, /Registro non caricato: 404 Not Found/);
+        })();
+        """
+    )
+
+
 def test_selecting_empty_report_clears_the_active_report() -> None:
     run_dashboard_js(
         """
@@ -3442,6 +3470,13 @@ def test_student_help_dialog_markup_has_accessible_title_and_close_action() -> N
     assert 'id="studentHelpDialogStatus"' in html
     assert 'id="studentHelpDialogBody"' in html
     assert 'id="studentHelpCloseBtn"' in html
+
+
+def test_report_modals_have_local_live_status_messages() -> None:
+    html = open("tools/assignment_dashboard.html", encoding="utf-8").read()
+
+    assert 'id="coverageDialogStatus" class="status" aria-live="polite"' in html
+    assert 'id="overviewDialogStatus" class="status" aria-live="polite"' in html
 
 
 def test_report_loader_controls_live_in_selected_report_panel() -> None:
