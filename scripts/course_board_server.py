@@ -468,34 +468,70 @@ def write_design(payload: dict) -> None:
 
 
 def generate_course_plan_md(payload: dict) -> dict:
-    """Persist the current design and regenerate doc/PERCORSO_DIDATTICO.md."""
+    """Generate doc/PERCORSO_DIDATTICO.md without promoting the edited design."""
 
-    write_design(payload)
-    command = [sys.executable, str(ROOT / "scripts" / "generate_course_plan.py")]
-    completed = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, check=False)
-    if completed.returncode:
-        detail = (completed.stderr or completed.stdout or "Errore sconosciuto durante la generazione del percorso MD.").strip()
-        raise RuntimeError(detail)
+    temporary_root = ROOT / "tmp"
+    temporary_root.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="course-plan-", dir=temporary_root) as directory:
+        workdir = Path(directory)
+        input_path = workdir / "course_design.json"
+        output_path = workdir / COURSE_PLAN_MD_PATH.name
+        input_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        command = [
+            sys.executable,
+            str(ROOT / "scripts" / "generate_course_plan.py"),
+            "--input",
+            str(input_path),
+            "--output",
+            str(output_path),
+        ]
+        completed = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, check=False)
+        if completed.returncode:
+            detail = (
+                completed.stderr
+                or completed.stdout
+                or "Errore sconosciuto durante la generazione del percorso MD."
+            ).strip()
+            raise RuntimeError(detail)
+        COURSE_PLAN_MD_PATH.parent.mkdir(parents=True, exist_ok=True)
+        os.replace(output_path, COURSE_PLAN_MD_PATH)
     return {
         "ok": True,
-        "design_path": str(DESIGN_PATH.relative_to(ROOT)),
         "markdown_path": str(COURSE_PLAN_MD_PATH.relative_to(ROOT)),
         "message": (completed.stdout or "").strip(),
     }
 
 
 def update_readme_frames(payload: dict) -> dict:
-    """Persist the current design and update README.md didactic-frame blocks."""
+    """Update README didactic frames without promoting the edited design."""
 
-    write_design(payload)
-    command = [sys.executable, str(ROOT / "scripts" / "update_course_frames.py"), "--target", str(README_PATH)]
-    completed = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, check=False)
-    if completed.returncode:
-        detail = (completed.stderr or completed.stdout or "Errore sconosciuto durante l'aggiornamento del README.").strip()
-        raise RuntimeError(detail)
+    temporary_root = ROOT / "tmp"
+    temporary_root.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="readme-frames-", dir=temporary_root) as directory:
+        workdir = Path(directory)
+        input_path = workdir / "course_design.json"
+        target_path = workdir / README_PATH.name
+        input_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        shutil.copy2(README_PATH, target_path)
+        command = [
+            sys.executable,
+            str(ROOT / "scripts" / "update_course_frames.py"),
+            "--input",
+            str(input_path),
+            "--target",
+            str(target_path),
+        ]
+        completed = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, check=False)
+        if completed.returncode:
+            detail = (
+                completed.stderr
+                or completed.stdout
+                or "Errore sconosciuto durante l'aggiornamento del README."
+            ).strip()
+            raise RuntimeError(detail)
+        os.replace(target_path, README_PATH)
     return {
         "ok": True,
-        "design_path": str(DESIGN_PATH.relative_to(ROOT)),
         "readme_path": str(README_PATH.relative_to(ROOT)),
         "message": (completed.stdout or "").strip(),
     }

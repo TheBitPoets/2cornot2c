@@ -1702,7 +1702,7 @@ async function saveDesign() {
 
 async function generateCoursePlanMd() {
   els.generateCoursePlanMdBtn.disabled = true;
-  setStatus("Aggiornamento percorso Markdown: salvo il JSON corrente e rigenero doc/PERCORSO_DIDATTICO.md...");
+  setStatus("Aggiornamento percorso Markdown dalla bozza aperta...");
   try {
     const payload = await api("/api/course-plan-md", {
       method: "POST",
@@ -1718,7 +1718,7 @@ async function generateCoursePlanMd() {
 
 async function updateReadmeFrames() {
   els.updateReadmeFramesBtn.disabled = true;
-  setStatus("Aggiornamento README: salvo il JSON corrente e inserisco le cornici didattiche nei paragrafi...");
+  setStatus("Aggiornamento README dalle cornici della bozza aperta...");
   try {
     const payload = await api("/api/readme-frames", {
       method: "POST",

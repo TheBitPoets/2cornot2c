@@ -4,6 +4,7 @@ import base64
 import http.client
 import json
 import os
+import subprocess
 import threading
 import time
 import urllib.error
@@ -78,6 +79,75 @@ def test_teacher_dashboard_token_console_line_shows_generated_value() -> None:
 
     assert generated in line
     assert "temporaneo" in line
+
+
+def test_generate_course_plan_uses_temporary_design_without_promoting_it(tmp_path, monkeypatch) -> None:
+    design_path = tmp_path / "doc" / "course_design.json"
+    output_path = tmp_path / "doc" / "PERCORSO_DIDATTICO.md"
+    design_path.parent.mkdir(parents=True)
+    design_path.write_text('{"title": "Corrente"}\n', encoding="utf-8")
+    output_path.write_text("vecchio\n", encoding="utf-8")
+
+    def fake_run(command, **_kwargs):
+        input_path = Path(command[command.index("--input") + 1])
+        generated_path = Path(command[command.index("--output") + 1])
+        assert json.loads(input_path.read_text(encoding="utf-8")) == {"title": "Bozza"}
+        generated_path.write_text("nuovo\n", encoding="utf-8")
+        return subprocess.CompletedProcess(command, 0, stdout="generato", stderr="")
+
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "DESIGN_PATH", design_path)
+    monkeypatch.setattr(course_board_server, "COURSE_PLAN_MD_PATH", output_path)
+    monkeypatch.setattr(course_board_server.subprocess, "run", fake_run)
+
+    course_board_server.generate_course_plan_md({"title": "Bozza"})
+
+    assert json.loads(design_path.read_text(encoding="utf-8")) == {"title": "Corrente"}
+    assert output_path.read_text(encoding="utf-8") == "nuovo\n"
+
+
+def test_generate_course_plan_preserves_output_when_generation_fails(tmp_path, monkeypatch) -> None:
+    output_path = tmp_path / "doc" / "PERCORSO_DIDATTICO.md"
+    output_path.parent.mkdir(parents=True)
+    output_path.write_text("stabile\n", encoding="utf-8")
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "COURSE_PLAN_MD_PATH", output_path)
+    monkeypatch.setattr(
+        course_board_server.subprocess,
+        "run",
+        lambda command, **kwargs: subprocess.CompletedProcess(command, 1, stdout="", stderr="errore"),
+    )
+
+    with pytest.raises(RuntimeError, match="errore"):
+        course_board_server.generate_course_plan_md({"title": "Bozza"})
+
+    assert output_path.read_text(encoding="utf-8") == "stabile\n"
+
+
+def test_update_readme_frames_uses_temporary_design_without_promoting_it(tmp_path, monkeypatch) -> None:
+    design_path = tmp_path / "doc" / "course_design.json"
+    readme_path = tmp_path / "README.md"
+    design_path.parent.mkdir(parents=True)
+    design_path.write_text('{"title": "Corrente"}\n', encoding="utf-8")
+    readme_path.write_text("README originale\n", encoding="utf-8")
+
+    def fake_run(command, **_kwargs):
+        input_path = Path(command[command.index("--input") + 1])
+        target_path = Path(command[command.index("--target") + 1])
+        assert json.loads(input_path.read_text(encoding="utf-8")) == {"title": "Bozza"}
+        assert target_path.name == "README.md"
+        target_path.write_text("README aggiornato\n", encoding="utf-8")
+        return subprocess.CompletedProcess(command, 0, stdout="aggiornato", stderr="")
+
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "DESIGN_PATH", design_path)
+    monkeypatch.setattr(course_board_server, "README_PATH", readme_path)
+    monkeypatch.setattr(course_board_server.subprocess, "run", fake_run)
+
+    course_board_server.update_readme_frames({"title": "Bozza"})
+
+    assert json.loads(design_path.read_text(encoding="utf-8")) == {"title": "Corrente"}
+    assert readme_path.read_text(encoding="utf-8") == "README aggiornato\n"
 
 
 def test_submission_file_uses_local_repo_path_separately_from_remote_repo(tmp_path, monkeypatch) -> None:

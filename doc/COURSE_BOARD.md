@@ -681,7 +681,7 @@ doc/PERCORSO_DIDATTICO.md
 
 ### Metodo da UI
 
-Il metodo consigliato e usare direttamente la board.
+Il metodo consigliato è usare direttamente la board.
 
 Flusso:
 
@@ -692,10 +692,10 @@ Flusso:
 
 Il bottone `Aggiorna percorso MD` esegue due passaggi:
 
-1. salva lo stato corrente della board in `doc/course_design.json`;
-2. rigenera `doc/PERCORSO_DIDATTICO.md` usando `scripts/generate_course_plan.py`.
+1. prepara una copia temporanea della bozza aperta;
+2. rigenera `doc/PERCORSO_DIDATTICO.md` usando `scripts/generate_course_plan.py` e sostituisce il file solo a operazione riuscita.
 
-In questo modo non devi ricordare il comando da terminale e riduci il rischio di avere un JSON aggiornato ma un Markdown vecchio.
+Il progetto corrente `doc/course_design.json` non viene modificato. Per rendere corrente un progetto archiviato usa sempre `Imposta corrente`, che richiede una conferma esplicita.
 
 Se l'operazione riesce, la board mostra il percorso del file aggiornato. Se fallisce, mostra il dettaglio dell'errore restituito dal server.
 
@@ -823,7 +823,7 @@ Le cornici didattiche possono essere inserite anche direttamente nei paragrafi d
 
 #### Metodo da UI
 
-Il metodo consigliato e usare il bottone:
+Il metodo consigliato è usare il bottone:
 
 ```text
 Aggiorna README
@@ -831,12 +831,12 @@ Aggiorna README
 
 Il bottone esegue due passaggi:
 
-1. salva lo stato corrente della board in `doc/course_design.json`;
-2. esegue `scripts/update_course_frames.py --target README.md`.
+1. prepara una copia temporanea della bozza e del `README.md`;
+2. esegue `scripts/update_course_frames.py` sulle copie e sostituisce il `README.md` solo a operazione riuscita.
 
 La board mostra un messaggio di successo con il percorso aggiornato oppure il dettaglio dell'errore restituito dallo script.
 
-Usa questo bottone quando hai gia controllato il percorso e vuoi riportare nel `README.md` le cornici `Orientamento della sezione` associate agli argomenti presenti nel JSON.
+Usa questo bottone quando hai già controllato il percorso e vuoi riportare nel `README.md` le cornici `Orientamento della sezione` associate agli argomenti presenti nella bozza aperta. Il progetto corrente non viene modificato.
 
 #### Metodo manuale da terminale
 
