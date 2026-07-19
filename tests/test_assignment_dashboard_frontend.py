@@ -3366,6 +3366,56 @@ def test_pending_report_mutation_does_not_replace_a_newer_loaded_report() -> Non
     )
 
 
+def test_review_does_not_cancel_a_pending_switch_to_another_report() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          const response = (payload) => ({
+            ok: true,
+            status: 200,
+            statusText: "OK",
+            json: async () => payload,
+            text: async () => "",
+          });
+          let resolveLoad;
+          let reviewCalled = false;
+          context.fetch = (path, options = {}) => {
+            if (path === "/api/assignment-reports/load") {
+              assert.equal(JSON.parse(options.body).name, "demo/moltiplicazione.json");
+              return new Promise((resolve) => { resolveLoad = resolve; });
+            }
+            if (path === "/api/assignment-reports/ai-feedback/review") {
+              reviewCalled = true;
+            }
+            throw new Error(`Endpoint inatteso: ${path}`);
+          };
+          tested.state.report = {
+            activity_id: "somma",
+            students: [{ student: "rossi", student_id: "rossi" }],
+          };
+          tested.state.reportName = "demo/somma.json";
+          tested.els.reportSelect.value = "demo/moltiplicazione.json";
+
+          const loading = tested.loadSelectedReport();
+          assert.equal(await tested.reviewAiFeedback("rossi", "approve"), false);
+          assert.equal(reviewCalled, false);
+          assert.match(tested.els.studentsDialogStatus.textContent, /Attendi il caricamento/);
+
+          resolveLoad(response({
+            report: {
+              activity_id: "moltiplicazione",
+              students: [{ student: "bianchi", student_id: "bianchi" }],
+            },
+          }));
+          assert.equal(await loading, true);
+          assert.equal(tested.state.report.activity_id, "moltiplicazione");
+          assert.equal(tested.state.reportName, "demo/moltiplicazione.json");
+          assert.equal(tested.els.reportSelect.value, "demo/moltiplicazione.json");
+        })();
+        """
+    )
+
+
 def test_student_help_dialog_opens_from_table_click_and_closes_from_button() -> None:
     run_dashboard_js(
         """

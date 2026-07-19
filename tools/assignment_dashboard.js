@@ -4489,7 +4489,13 @@ async function reviewAiFeedback(studentId, decision) {
     const message = "Carica un registro prima di revisionare il feedback AI.";
     setStatus(message);
     setStudentsDialogStatus(message);
-    return;
+    return false;
+  }
+  if (els.reportSelect.value !== state.reportName) {
+    const message = "Attendi il caricamento del registro selezionato prima di revisionare il feedback AI.";
+    setStatus(message);
+    setStudentsDialogStatus(message);
+    return false;
   }
   const reportName = state.reportName;
   invalidateReportLoads();
