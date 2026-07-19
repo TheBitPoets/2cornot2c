@@ -1197,14 +1197,24 @@ function openFrameBatchQueue(rootTitle, entries, message) {
     running: false,
     cancelled: false,
     cancelAction: "",
-    snapshots: entries.map((entry) => ({
-      item: entry.item,
-      frame: JSON.parse(JSON.stringify({ ...defaultFrame(), ...(entry.item.frame || {}) })),
-    })),
+    snapshots: entries.map(frameEntrySnapshot),
   };
   els.generateAllFramesBtn.disabled = true;
   setStatus(message);
   showFrameBatchProgress();
+}
+
+function frameEntrySnapshot(entry) {
+  return {
+    item: entry.item,
+    frame: JSON.parse(JSON.stringify({ ...defaultFrame(), ...(entry.item.frame || {}) })),
+    frameQuality: JSON.parse(JSON.stringify({ ...defaultFrameQuality(), ...(entry.item.frame_quality || {}) })),
+  };
+}
+
+function restoreFrameSnapshot(snapshot) {
+  snapshot.item.frame = JSON.parse(JSON.stringify(snapshot.frame));
+  snapshot.item.frame_quality = JSON.parse(JSON.stringify(snapshot.frameQuality));
 }
 
 async function generateFrameForEntry(entry) {
@@ -1314,7 +1324,7 @@ function cancelFrameBatch() {
     return;
   }
   for (const snapshot of frameBatch.snapshots) {
-    snapshot.item.frame = JSON.parse(JSON.stringify(snapshot.frame));
+    restoreFrameSnapshot(snapshot);
   }
   const total = frameBatch.entries.length;
   frameBatch = null;
@@ -1329,7 +1339,7 @@ function finishCancelledFrameBatch() {
   if (!frameBatch) return;
   if (frameBatch.cancelAction === "restore") {
     for (const snapshot of frameBatch.snapshots) {
-      snapshot.item.frame = JSON.parse(JSON.stringify(snapshot.frame));
+      restoreFrameSnapshot(snapshot);
     }
     const total = frameBatch.entries.length;
     frameBatch = null;

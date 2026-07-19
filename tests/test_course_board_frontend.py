@@ -122,3 +122,24 @@ def test_course_item_collapse_key_is_scoped_to_the_course() -> None:
         assert.deepEqual(JSON.parse(first), ["first", "uda-1", "README.md#topic"]);
         """
     )
+
+
+def test_frame_snapshot_restores_content_and_quality() -> None:
+    run_course_board_js(
+        """
+        const item = {
+          frame: { ...defaultFrame(), context: "Originale", status: "ok" },
+          frame_quality: { ...defaultFrameQuality(), context: "ai" },
+        };
+        const snapshot = frameEntrySnapshot({ item });
+
+        item.frame.context = "Generato";
+        item.frame_quality.context = "none";
+        restoreFrameSnapshot(snapshot);
+
+        assert.equal(item.frame.context, "Originale");
+        assert.equal(item.frame_quality.context, "ai");
+        assert.notEqual(item.frame, snapshot.frame);
+        assert.notEqual(item.frame_quality, snapshot.frameQuality);
+        """
+    )
