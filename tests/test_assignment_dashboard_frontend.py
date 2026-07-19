@@ -3088,6 +3088,65 @@ def test_loading_report_enables_students_panel_and_reports_failures() -> None:
     )
 
 
+def test_loading_report_ignores_stale_successes_and_failures() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          const pending = new Map();
+          context.fetch = (path, options = {}) => new Promise((resolve) => {
+            const name = JSON.parse(options.body).name;
+            pending.set(name, resolve);
+          });
+          const success = (activityId) => ({
+            ok: true,
+            status: 200,
+            statusText: "OK",
+            json: async () => ({
+              report: { activity_id: activityId, students: [] },
+            }),
+            text: async () => "",
+          });
+          const failure = (message) => ({
+            ok: false,
+            status: 404,
+            statusText: "Not Found",
+            json: async () => ({}),
+            text: async () => JSON.stringify({ error: message }),
+          });
+
+          tested.els.reportSelect.value = "demo/registro-lento.json";
+          const staleFailure = tested.loadSelectedReport();
+          tested.els.reportSelect.value = "demo/registro-corrente.json";
+          const currentSuccess = tested.loadSelectedReport();
+
+          pending.get("demo/registro-corrente.json")(success("corrente"));
+          assert.equal(await currentSuccess, true);
+          pending.get("demo/registro-lento.json")(failure("Registro non trovato"));
+          assert.equal(await staleFailure, false);
+          assert.equal(tested.state.report.activity_id, "corrente");
+          assert.equal(tested.state.reportName, "demo/registro-corrente.json");
+          assert.equal(tested.els.reportSelect.value, "demo/registro-corrente.json");
+          assert.equal(tested.els.studentsOpenBtn.disabled, false);
+
+          tested.els.reportSelect.value = "demo/registro-obsoleto.json";
+          const staleSuccess = tested.loadSelectedReport();
+          tested.els.reportSelect.value = "demo/registro-nuovo.json";
+          const latestSuccess = tested.loadSelectedReport();
+
+          pending.get("demo/registro-nuovo.json")(success("nuovo"));
+          assert.equal(await latestSuccess, true);
+          pending.get("demo/registro-obsoleto.json")(success("obsoleto"));
+          assert.equal(await staleSuccess, false);
+          assert.equal(tested.state.report.activity_id, "nuovo");
+          assert.equal(tested.state.reportName, "demo/registro-nuovo.json");
+          assert.ok(tested.els.status.textContent.includes(
+            "Registro caricato: demo/registro-nuovo.json",
+          ));
+        })();
+        """
+    )
+
+
 def test_student_help_dialog_opens_from_table_click_and_closes_from_button() -> None:
     run_dashboard_js(
         """

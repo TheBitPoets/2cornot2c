@@ -130,6 +130,7 @@ const state = {
   overviewRows: [],
   report: null,
   reportName: "",
+  reportLoadRevision: 0,
   filter: "all",
   overviewFilters: {
     class: "",
@@ -1122,6 +1123,7 @@ function renderRosterPanel() {
 }
 
 async function loadSelectedReport() {
+  const revision = ++state.reportLoadRevision;
   const name = els.reportSelect.value;
   if (!name) {
     setStatus("Seleziona un registro consegne.");
@@ -1138,6 +1140,9 @@ async function loadSelectedReport() {
       throw new Error("il server ha restituito un registro non valido");
     }
   } catch (error) {
+    if (revision !== state.reportLoadRevision || els.reportSelect.value !== name) {
+      return false;
+    }
     state.report = null;
     state.reportName = "";
     els.reportSelect.value = "";
@@ -1146,6 +1151,9 @@ async function loadSelectedReport() {
     closeStudentHelpDialog();
     renderDashboard();
     setStatus(`Registro non caricato: ${error.message}`);
+    return false;
+  }
+  if (revision !== state.reportLoadRevision || els.reportSelect.value !== name) {
     return false;
   }
   state.report = payload.report;
