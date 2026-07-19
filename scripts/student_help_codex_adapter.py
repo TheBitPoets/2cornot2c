@@ -3,6 +3,7 @@ from __future__ import annotations
 import codecs
 import json
 import os
+import signal
 import shutil
 import subprocess
 import tempfile
@@ -168,6 +169,81 @@ def _codex_usage_or_zero(value: Any, *, allow_incomplete_tail: bool = False) -> 
         return _zero_usage()
 
 
+def _terminate_process_tree(process: subprocess.Popen[bytes]) -> None:
+    if process.poll() is not None:
+        return
+    if os.name == "nt":
+        taskkill = shutil.which("taskkill")
+        if taskkill:
+            try:
+                completed = subprocess.run(
+                    [taskkill, "/PID", str(process.pid), "/T", "/F"],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    check=False,
+                    timeout=10,
+                )
+                if completed.returncode == 0:
+                    return
+            except (OSError, subprocess.TimeoutExpired):
+                pass
+    else:
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+            return
+        except (OSError, ProcessLookupError):
+            pass
+    process.kill()
+
+
+def _run_codex_process(
+    command: list[str],
+    *,
+    cwd: Path,
+    env: dict[str, str],
+    input: bytes,
+    capture_output: bool,
+    timeout: int | float,
+    check: bool,
+) -> subprocess.CompletedProcess[bytes]:
+    """Run Codex and terminate its whole process tree when the timeout expires."""
+
+    if not capture_output:
+        raise ValueError("Il runner Codex richiede la cattura dell'output.")
+    process_options: dict[str, Any] = {
+        "cwd": cwd,
+        "env": env,
+        "stdin": subprocess.PIPE,
+        "stdout": subprocess.PIPE,
+        "stderr": subprocess.PIPE,
+    }
+    if os.name == "nt":
+        process_options["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+    else:
+        process_options["start_new_session"] = True
+    process = subprocess.Popen(command, **process_options)
+    try:
+        stdout, stderr = process.communicate(input=input, timeout=timeout)
+    except subprocess.TimeoutExpired as error:
+        _terminate_process_tree(process)
+        try:
+            stdout, stderr = process.communicate(timeout=10)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            stdout = error.stdout or b""
+            stderr = error.stderr or b""
+        raise subprocess.TimeoutExpired(
+            command,
+            timeout,
+            output=stdout or error.stdout,
+            stderr=stderr or error.stderr,
+        ) from error
+    completed = subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
+    if check:
+        completed.check_returncode()
+    return completed
+
+
 def codex_subprocess_environment() -> dict[str, str]:
     """Return the minimum server environment needed by the local Codex CLI."""
 
@@ -319,7 +395,7 @@ class CodexStudentHelpProvider:
                     command.extend(["--model", self.model])
                 command.append(codex_help_prompt())
                 try:
-                    completed = subprocess.run(
+                    completed = _run_codex_process(
                         command,
                         cwd=workdir,
                         env=codex_subprocess_environment(),

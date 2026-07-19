@@ -4,6 +4,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -129,7 +130,7 @@ def test_codex_provider_runs_in_empty_read_only_ephemeral_workspace(monkeypatch)
             },
         )
 
-    monkeypatch.setattr(student_help_codex_adapter.subprocess, "run", fake_run)
+    monkeypatch.setattr(student_help_codex_adapter, "_run_codex_process", fake_run)
 
     response = student_help_codex_adapter.CodexStudentHelpProvider(model="gpt-test").respond(sample_request())
 
@@ -234,8 +235,8 @@ def test_codex_provider_rejects_parallel_process_when_slot_is_busy(monkeypatch) 
 def test_codex_provider_rejects_invalid_structured_output(monkeypatch) -> None:
     monkeypatch.setattr(student_help_codex_adapter.shutil, "which", lambda command: "/bin/codex")
     monkeypatch.setattr(
-        student_help_codex_adapter.subprocess,
-        "run",
+        student_help_codex_adapter,
+        "_run_codex_process",
         lambda *args, **kwargs: completed_codex_run(args[0], {}),
     )
 
@@ -246,8 +247,8 @@ def test_codex_provider_rejects_invalid_structured_output(monkeypatch) -> None:
 def test_codex_provider_rejects_terminal_escape_sequences(monkeypatch) -> None:
     monkeypatch.setattr(student_help_codex_adapter.shutil, "which", lambda command: "/bin/codex")
     monkeypatch.setattr(
-        student_help_codex_adapter.subprocess,
-        "run",
+        student_help_codex_adapter,
+        "_run_codex_process",
         lambda *args, **kwargs: completed_codex_run(
             args[0],
             {
@@ -264,8 +265,8 @@ def test_codex_provider_rejects_terminal_escape_sequences(monkeypatch) -> None:
 def test_codex_provider_rejects_output_that_would_truncate_check_question(monkeypatch) -> None:
     monkeypatch.setattr(student_help_codex_adapter.shutil, "which", lambda command: "/bin/codex")
     monkeypatch.setattr(
-        student_help_codex_adapter.subprocess,
-        "run",
+        student_help_codex_adapter,
+        "_run_codex_process",
         lambda *args, **kwargs: completed_codex_run(
             args[0],
             {
@@ -282,8 +283,8 @@ def test_codex_provider_rejects_output_that_would_truncate_check_question(monkey
 def test_codex_provider_marks_missing_token_usage_without_losing_response(monkeypatch) -> None:
     monkeypatch.setattr(student_help_codex_adapter.shutil, "which", lambda command: "/bin/codex")
     monkeypatch.setattr(
-        student_help_codex_adapter.subprocess,
-        "run",
+        student_help_codex_adapter,
+        "_run_codex_process",
         lambda *args, **kwargs: completed_codex_run(
             args[0],
             {
@@ -311,8 +312,8 @@ def test_codex_provider_marks_missing_token_usage_without_losing_response(monkey
 def test_codex_provider_marks_invalid_token_usage_without_losing_response(monkeypatch, events) -> None:
     monkeypatch.setattr(student_help_codex_adapter.shutil, "which", lambda command: "/bin/codex")
     monkeypatch.setattr(
-        student_help_codex_adapter.subprocess,
-        "run",
+        student_help_codex_adapter,
+        "_run_codex_process",
         lambda *args, **kwargs: completed_codex_run(
             args[0],
             {
@@ -353,8 +354,8 @@ def test_fallback_provider_uses_local_guide_when_codex_fails() -> None:
 def test_codex_fallback_preserves_usage_from_invalid_structured_response(monkeypatch) -> None:
     monkeypatch.setattr(student_help_codex_adapter.shutil, "which", lambda command: "/bin/codex")
     monkeypatch.setattr(
-        student_help_codex_adapter.subprocess,
-        "run",
+        student_help_codex_adapter,
+        "_run_codex_process",
         lambda *args, **kwargs: completed_codex_run(args[0], {}),
     )
     provider = student_help_codex_adapter.FallbackStudentHelpProvider(
@@ -385,7 +386,7 @@ def test_codex_fallback_preserves_usage_from_non_utf8_sidecar(monkeypatch) -> No
         response_path.write_bytes(b"\xff")
         return completed
 
-    monkeypatch.setattr(student_help_codex_adapter.subprocess, "run", corrupt_sidecar)
+    monkeypatch.setattr(student_help_codex_adapter, "_run_codex_process", corrupt_sidecar)
     provider = student_help_codex_adapter.FallbackStudentHelpProvider(
         student_help_codex_adapter.CodexStudentHelpProvider(),
         DeterministicStudentHelpProvider(),
@@ -400,8 +401,8 @@ def test_codex_fallback_preserves_usage_from_non_utf8_sidecar(monkeypatch) -> No
 def test_codex_fallback_preserves_usage_when_process_exits_with_error(monkeypatch) -> None:
     monkeypatch.setattr(student_help_codex_adapter.shutil, "which", lambda command: "/bin/codex")
     monkeypatch.setattr(
-        student_help_codex_adapter.subprocess,
-        "run",
+        student_help_codex_adapter,
+        "_run_codex_process",
         lambda *args, **kwargs: completed_codex_run(
             args[0],
             {},
@@ -453,7 +454,7 @@ def test_codex_fallback_preserves_usage_from_timed_out_process(monkeypatch, part
     def timeout(*args, **kwargs):
         raise subprocess.TimeoutExpired(args[0], 1, output=partial_output)
 
-    monkeypatch.setattr(student_help_codex_adapter.subprocess, "run", timeout)
+    monkeypatch.setattr(student_help_codex_adapter, "_run_codex_process", timeout)
     provider = student_help_codex_adapter.FallbackStudentHelpProvider(
         student_help_codex_adapter.CodexStudentHelpProvider(),
         DeterministicStudentHelpProvider(),
@@ -490,6 +491,55 @@ def test_real_timeout_keeps_complete_jsonl_before_truncated_utf8_tail() -> None:
         captured.value.stdout,
         allow_incomplete_tail=True,
     ) == {"input_tokens": 34, "output_tokens": 13, "total_tokens": 47}
+
+
+def test_codex_runner_kills_launcher_process_tree_on_timeout(tmp_path) -> None:
+    child_path = tmp_path / "slow_codex.py"
+    child_path.write_text(
+        """import json
+import sys
+import time
+
+print(json.dumps({
+    "type": "turn.completed",
+    "usage": {"input_tokens": 6, "output_tokens": 2},
+}), flush=True)
+time.sleep(5)
+""",
+        encoding="utf-8",
+    )
+    if os.name == "nt":
+        launcher_path = tmp_path / "slow_codex.cmd"
+        launcher_path.write_text(
+            f'@echo off\r\n"{sys.executable}" "{child_path}"\r\n',
+            encoding="utf-8",
+        )
+    else:
+        launcher_path = tmp_path / "slow_codex"
+        launcher_path.write_text(
+            f'#!/bin/sh\n"{sys.executable}" "{child_path}"\n',
+            encoding="utf-8",
+        )
+        launcher_path.chmod(0o755)
+
+    started_at = time.monotonic()
+    with pytest.raises(subprocess.TimeoutExpired) as captured:
+        student_help_codex_adapter._run_codex_process(
+            [str(launcher_path)],
+            cwd=tmp_path,
+            env=dict(os.environ),
+            input=b"",
+            capture_output=True,
+            timeout=0.5,
+            check=False,
+        )
+    elapsed = time.monotonic() - started_at
+
+    assert elapsed < 3
+    assert student_help_codex_adapter._codex_usage_or_zero(
+        captured.value.stdout,
+        allow_incomplete_tail=True,
+    ) == {"input_tokens": 6, "output_tokens": 2, "total_tokens": 8}
 
 
 def test_partial_usage_rejects_complete_corruption_before_incomplete_tail() -> None:
