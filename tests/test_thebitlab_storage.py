@@ -105,6 +105,7 @@ def test_saved_design_create_does_not_publish_partial_file_when_sync_fails(tmp_p
 
 def test_school_calendar_metadata_tolerates_invalid_json(tmp_path) -> None:
     storage = JsonCourseStorage(tmp_path)
+    storage.write_saved_design("as_2026_2027.json", {"title": "AS 2026/2027"})
     calendars_dir = tmp_path / "doc" / "calendars"
     calendars_dir.mkdir(parents=True)
     (calendars_dir / "broken.json").write_text("{", encoding="utf-8")
@@ -134,7 +135,7 @@ def test_delete_saved_design_deletes_only_linked_calendars(tmp_path) -> None:
     storage = JsonCourseStorage(tmp_path)
     storage.write_saved_design("as_2026_2027.json", {"title": "AS 2026/2027"})
     storage.write_school_calendar("linked.json", {"course_design_name": "as_2026_2027.json"})
-    storage.write_school_calendar("other.json", {"course_design_name": "other.json"})
+    storage.write_school_calendar("other.json", {"course_design_name": ""})
 
     result = storage.delete_saved_design(
         "as_2026_2027.json",
@@ -149,7 +150,7 @@ def test_delete_saved_design_deletes_only_linked_calendars(tmp_path) -> None:
         {
             "name": "other.json",
             "path": "doc/calendars/other.json",
-            "course_design_name": "other.json",
+            "course_design_name": "",
         }
     ]
     assert not (tmp_path / "doc" / "calendars" / "linked.json").exists()
@@ -267,6 +268,7 @@ def test_save_waits_for_delete_rollback_before_updating_design(tmp_path, monkeyp
 def test_calendar_save_waits_for_course_storage_operation(tmp_path) -> None:
     locking_storage = JsonCourseStorage(tmp_path)
     saving_storage = JsonCourseStorage(tmp_path)
+    locking_storage.write_saved_design("victim.json", {"title": "Esistente"})
     save_started = threading.Event()
     save_done = threading.Event()
 
@@ -284,6 +286,26 @@ def test_calendar_save_waits_for_course_storage_operation(tmp_path) -> None:
     save_thread.join(timeout=5)
     assert save_done.is_set()
     assert saving_storage.read_school_calendar("linked.json") == {"course_design_name": "victim.json"}
+
+
+def test_calendar_save_rejects_a_deleted_linked_design(tmp_path) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    storage.write_saved_design("victim.json", {"title": "Da eliminare"})
+    storage.delete_saved_design("victim.json")
+
+    with pytest.raises(FileNotFoundError, match="Percorso associato non trovato"):
+        storage.write_school_calendar("orphan.json", {"course_design_name": "victim.json"})
+
+    assert storage.list_school_calendars() == []
+
+
+def test_calendar_save_normalizes_linked_design_name(tmp_path) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    storage.write_saved_design("linked.json", {"title": "Esistente"})
+
+    storage.write_school_calendar("calendar.json", {"course_design_name": " linked.json "})
+
+    assert storage.read_school_calendar("calendar.json")["course_design_name"] == "linked.json"
 
 
 def test_course_storage_lock_serializes_different_processes(tmp_path) -> None:

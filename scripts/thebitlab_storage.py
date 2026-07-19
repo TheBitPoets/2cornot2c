@@ -337,7 +337,16 @@ class JsonCourseStorage:
 
         path = self.school_calendar_path(name)
         with self.operation_lock:
-            self.write_json(path, payload)
+            course_design_name = payload.get("course_design_name", "")
+            if not isinstance(course_design_name, str):
+                raise ValueError("course_design_name deve essere una stringa.")
+            course_design_name = course_design_name.strip()
+            if course_design_name:
+                linked_design_path = self.saved_design_path(course_design_name)
+                if not linked_design_path.is_file():
+                    raise FileNotFoundError(f"Percorso associato non trovato: {course_design_name}")
+            normalized_payload = {**payload, "course_design_name": course_design_name}
+            self.write_json(path, normalized_payload)
         return {"name": path.name, "path": self.relative_path(path)}
 
     def delete_saved_design(
