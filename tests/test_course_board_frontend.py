@@ -48,7 +48,7 @@ def run_course_board_js(assertions: str) -> None:
         querySelectorAll() {{ return []; }},
         addEventListener() {{}},
       }},
-      window: {{ addEventListener() {{}} }},
+      window: elementFor("window"),
       localStorage: storage(),
       sessionStorage: storage(),
       setInterval() {{ return 1; }},
@@ -245,5 +245,26 @@ def test_async_action_exposes_errors_in_the_visible_status() -> None:
           assert.match(els.status.textContent, /Ricarica non riuscito/);
           assert.match(els.status.textContent, /server non disponibile/);
         });
+        """
+    )
+
+
+def test_accepted_internal_navigation_suppresses_the_second_unload_warning() -> None:
+    run_course_board_js(
+        """
+        state.design = { years: [] };
+        markDesignClean();
+        state.design.years.push({ id: "changed" });
+        assert.equal(hasUnsavedChanges(), true);
+
+        allowNextUnloadWithoutWarning = true;
+        const event = {
+          prevented: false,
+          preventDefault() { this.prevented = true; },
+          returnValue: null,
+        };
+        window.listeners.beforeunload(event);
+
+        assert.equal(event.prevented, false);
         """
     )

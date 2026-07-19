@@ -113,6 +113,7 @@ const AI_PROGRESS_STAGES = [
 let aiProgressTimer = null;
 let frameBatch = null;
 let cleanDesignSnapshot = "";
+let allowNextUnloadWithoutWarning = false;
 
 function emptyCourseDesign() {
   return {
@@ -1866,12 +1867,17 @@ document.addEventListener("click", (event) => {
 
 for (const link of document.querySelectorAll(".topNav a:not([target='_blank'])")) {
   link.addEventListener("click", (event) => {
-    if (confirmDiscardChanges()) return;
-    event.preventDefault();
+    if (!hasUnsavedChanges()) return;
+    if (!confirmDiscardChanges()) {
+      event.preventDefault();
+      return;
+    }
+    allowNextUnloadWithoutWarning = true;
   });
 }
 
 window.addEventListener("beforeunload", (event) => {
+  if (allowNextUnloadWithoutWarning) return;
   if (!hasUnsavedChanges()) return;
   event.preventDefault();
   event.returnValue = "";
