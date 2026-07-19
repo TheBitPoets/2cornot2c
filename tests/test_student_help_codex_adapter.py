@@ -464,6 +464,19 @@ def test_real_timeout_keeps_complete_jsonl_before_truncated_utf8_tail() -> None:
     ) == {"input_tokens": 34, "output_tokens": 13, "total_tokens": 47}
 
 
+def test_partial_usage_rejects_complete_corruption_before_incomplete_tail() -> None:
+    completed_event = json.dumps({
+        "type": "turn.completed",
+        "usage": {"input_tokens": 34, "output_tokens": 13},
+    })
+    partial_output = f'{completed_event}\nnot-json\n{{"type":'
+
+    assert student_help_codex_adapter._codex_usage_or_zero(
+        partial_output,
+        allow_incomplete_tail=True,
+    ) == {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+
+
 def test_fallback_provider_does_not_hide_unexpected_programming_errors() -> None:
     class BrokenProvider:
         def respond(self, request):
