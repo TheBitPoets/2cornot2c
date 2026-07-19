@@ -39,6 +39,8 @@ def completed_codex_run(
     *,
     usage: dict[str, int] | None = None,
     events: list[object] | None = None,
+    returncode: int = 0,
+    stderr: str = "",
 ) -> subprocess.CompletedProcess[str]:
     response_path = Path(command[command.index("--output-last-message") + 1])
     response_path.write_text(json.dumps(payload), encoding="utf-8")
@@ -54,9 +56,9 @@ def completed_codex_run(
         }]
     return subprocess.CompletedProcess(
         command,
-        0,
+        returncode,
         stdout="\n".join(json.dumps(event) for event in events),
-        stderr="",
+        stderr=stderr,
     )
 
 
@@ -366,6 +368,60 @@ def test_codex_fallback_preserves_usage_from_invalid_structured_response(monkeyp
     assert response.provider == "codex-local-fallback"
     assert response.provider_label == "Guida locale (nessuna AI esterna) dopo errore Codex"
     assert response.usage == {"input_tokens": 120, "output_tokens": 30, "total_tokens": 150}
+
+
+def test_codex_fallback_preserves_usage_when_process_exits_with_error(monkeypatch) -> None:
+    monkeypatch.setattr(student_help_codex_adapter.shutil, "which", lambda command: "/bin/codex")
+    monkeypatch.setattr(
+        student_help_codex_adapter.subprocess,
+        "run",
+        lambda *args, **kwargs: completed_codex_run(
+            args[0],
+            {},
+            returncode=1,
+            stderr="errore dopo il turno",
+        ),
+    )
+    provider = student_help_codex_adapter.FallbackStudentHelpProvider(
+        student_help_codex_adapter.CodexStudentHelpProvider(),
+        DeterministicStudentHelpProvider(),
+    )
+
+    response = provider.respond(sample_request())
+
+    assert response.provider == "codex-local-fallback"
+    assert response.usage == {"input_tokens": 120, "output_tokens": 30, "total_tokens": 150}
+
+
+@pytest.mark.parametrize(
+    "partial_output",
+    [
+        json.dumps({
+            "type": "turn.completed",
+            "usage": {"input_tokens": 21, "output_tokens": 8},
+        }),
+        json.dumps({
+            "type": "turn.completed",
+            "usage": {"input_tokens": 21, "output_tokens": 8},
+        }).encode("utf-8"),
+    ],
+)
+def test_codex_fallback_preserves_usage_from_timed_out_process(monkeypatch, partial_output) -> None:
+    monkeypatch.setattr(student_help_codex_adapter.shutil, "which", lambda command: "/bin/codex")
+
+    def timeout(*args, **kwargs):
+        raise subprocess.TimeoutExpired(args[0], 1, output=partial_output)
+
+    monkeypatch.setattr(student_help_codex_adapter.subprocess, "run", timeout)
+    provider = student_help_codex_adapter.FallbackStudentHelpProvider(
+        student_help_codex_adapter.CodexStudentHelpProvider(),
+        DeterministicStudentHelpProvider(),
+    )
+
+    response = provider.respond(sample_request())
+
+    assert response.provider == "codex-local-fallback"
+    assert response.usage == {"input_tokens": 21, "output_tokens": 8, "total_tokens": 29}
 
 
 def test_fallback_provider_does_not_hide_unexpected_programming_errors() -> None:

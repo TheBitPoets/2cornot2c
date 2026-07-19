@@ -125,8 +125,34 @@ class CodexStudentHelpResponseError(ValueError):
         self.usage = dict(usage)
 
 
+class CodexStudentHelpProcessError(RuntimeError):
+    """Codex process failure that retains usage emitted before termination."""
+
+    def __init__(self, message: str, usage: dict[str, int]) -> None:
+        super().__init__(message)
+        self.usage = dict(usage)
+
+
 def _zero_usage() -> dict[str, int]:
     return {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+
+
+def _subprocess_output_text(value: Any) -> str:
+    if isinstance(value, str):
+        return value
+    if isinstance(value, bytes):
+        try:
+            return value.decode("utf-8")
+        except UnicodeDecodeError:
+            return ""
+    return ""
+
+
+def _codex_usage_or_zero(value: Any) -> dict[str, int]:
+    try:
+        return codex_usage_from_jsonl(_subprocess_output_text(value))
+    except ValueError:
+        return _zero_usage()
 
 
 def codex_subprocess_environment() -> dict[str, str]:
@@ -279,30 +305,33 @@ class CodexStudentHelpProvider:
                 if self.model:
                     command.extend(["--model", self.model])
                 command.append(codex_help_prompt())
-                completed = subprocess.run(
-                    command,
-                    cwd=workdir,
-                    env=codex_subprocess_environment(),
-                    input=json.dumps(package, ensure_ascii=False, indent=2),
-                    capture_output=True,
-                    text=True,
-                    encoding="utf-8",
-                    timeout=self.timeout_seconds,
-                    check=False,
-                )
+                try:
+                    completed = subprocess.run(
+                        command,
+                        cwd=workdir,
+                        env=codex_subprocess_environment(),
+                        input=json.dumps(package, ensure_ascii=False, indent=2),
+                        capture_output=True,
+                        text=True,
+                        encoding="utf-8",
+                        timeout=self.timeout_seconds,
+                        check=False,
+                    )
+                except subprocess.TimeoutExpired as error:
+                    raise CodexStudentHelpProcessError(
+                        "Codex exec ha superato il tempo massimo consentito.",
+                        _codex_usage_or_zero(error.stdout),
+                    ) from error
                 try:
                     response_text = response_path.read_text(encoding="utf-8")
                 except OSError:
                     response_text = ""
         finally:
             _CODEX_CALL_SLOT.release()
+        usage = _codex_usage_or_zero(completed.stdout)
         if completed.returncode:
             detail = (completed.stderr or completed.stdout or "Codex non ha restituito dettagli.").strip()
-            raise RuntimeError(f"Codex exec non riuscito: {detail}")
-        try:
-            usage = codex_usage_from_jsonl(completed.stdout)
-        except ValueError:
-            usage = _zero_usage()
+            raise CodexStudentHelpProcessError(f"Codex exec non riuscito: {detail}", usage)
         try:
             payload = json.loads(response_text)
         except json.JSONDecodeError as error:
