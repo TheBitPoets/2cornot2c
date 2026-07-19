@@ -4382,6 +4382,7 @@ function filteredStudents(students) {
 }
 
 function renderStudents(students) {
+  closeStudentHelpDialog();
   const visible = filteredStudents(students);
   els.tableStatus.textContent = state.report
     ? `Mostrati ${visible.length}/${students.length} studenti.`

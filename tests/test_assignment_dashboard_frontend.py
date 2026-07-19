@@ -393,6 +393,7 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         renderStudentHelpDialogContent,
         openStudentHelpDialog,
         clearStudentHelpRows,
+        renderStudents,
         failedTestDetails,
         gradingDetails,
         renderTestDetailsDialogContent,
@@ -3056,6 +3057,28 @@ def test_student_help_dialog_opens_selected_student_and_clears_stale_rows() -> N
         assert.match(tested.els.studentHelpDialogBody.innerHTML, /Un suggerimento\\?/);
 
         tested.clearStudentHelpRows();
+        assert.equal(tested.state.studentHelpRows.size, 0);
+        """
+    )
+
+
+def test_render_students_closes_open_help_dialog_before_clearing_rows() -> None:
+    run_dashboard_js(
+        """
+        tested.state.studentHelpRows = new Map([
+          ["student-help-rossi", {
+            student: "Rossi Mario",
+            activity: "Somma in Python",
+            help: { total: 1, events: [{ allowed: true, prompt: "Un suggerimento?" }] },
+          }],
+        ]);
+        tested.openStudentHelpDialog("student-help-rossi");
+        assert.equal(tested.els.studentHelpDialog.open, true);
+
+        tested.state.report = null;
+        tested.renderStudents([]);
+
+        assert.equal(tested.els.studentHelpDialog.open, false);
         assert.equal(tested.state.studentHelpRows.size, 0);
         """
     )
