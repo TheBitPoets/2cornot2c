@@ -32,8 +32,8 @@
         <button id="saveArchiveAsBtn" type="button" title="Salva il progetto didattico attuale con un nuovo nome nell'archivio doc/course_designs.">Salva progetto con nome</button>
         <button id="deleteArchiveBtn" type="button" class="danger" title="Cancella il progetto archiviato caricato. Il progetto corrente doc/course_design.json non puo essere eliminato.">Cancella progetto</button>
         <button id="generateAllFramesBtn" type="button" title="Usa il provider AI configurato e apre una coda controllata per generare le cornici didattiche del percorso.">AI genera cornici</button>
-        <button id="generateCoursePlanMdBtn" type="button" title="Salva il JSON corrente e rigenera doc/PERCORSO_DIDATTICO.md.">Aggiorna percorso MD</button>
-        <button id="updateReadmeFramesBtn" type="button" title="Salva il JSON corrente e inserisce le cornici didattiche nei paragrafi del README.md.">Aggiorna README</button>
+        <button id="generateCoursePlanMdBtn" type="button" title="Rigenera doc/PERCORSO_DIDATTICO.md dalla bozza aperta senza cambiare il progetto corrente.">Aggiorna percorso MD</button>
+        <button id="updateReadmeFramesBtn" type="button" title="Inserisce nel README le cornici della bozza aperta senza cambiare il progetto corrente.">Aggiorna README</button>
         <button id="reloadBtn" type="button" title="Ricarica headings, percorso, archivi e configurazione AI dalla sorgente locale.">Ricarica</button>
         <button id="saveBtn" type="button" class="primary" title="Imposta il progetto caricato come progetto corrente, sovrascrivendo doc/course_design.json dopo conferma esplicita.">Imposta corrente</button>
       </div>
@@ -61,7 +61,7 @@
     <section class="panel planner">
       <div class="panelHead">
         <h2 id="projectTitle">Progetto didattico: doc/course_design.json</h2>
-        <p id="status" class="status">Pronto.</p>
+        <p id="status" class="status" role="status" aria-live="polite" aria-atomic="true">Pronto.</p>
         <p id="aiConfig" class="aiConfig">AI: configurazione non caricata.</p>
         <button id="addYearBtn" type="button" title="Aggiunge esplicitamente un percorso didattico di materia/anno con settimane e ore personalizzate.">Aggiungi percorso</button>
       </div>
@@ -73,10 +73,10 @@
     <div class="aiBusyCard">
       <div>
         <strong id="aiBusyTitle">AI assisted in corso</strong>
-        <p id="aiBusyMessage">Preparo la richiesta...</p>
+        <p id="aiBusyMessage" role="status" aria-live="polite" aria-atomic="true">Preparo la richiesta...</p>
       </div>
       <div class="aiBusyPercent" id="aiBusyPercent">0%</div>
-      <div class="aiBusyBar" aria-hidden="true">
+      <div id="aiBusyBar" class="aiBusyBar" role="progressbar" aria-label="Avanzamento elaborazione AI" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
         <span id="aiBusyBarFill"></span>
       </div>
       <div id="aiBusyControls" class="aiBusyControls" hidden>
@@ -92,10 +92,11 @@
     <article class="headingCard" draggable="true">
       <div class="headingTitle"></div>
       <div class="headingMeta"></div>
+      <button class="headingAdd" type="button" title="Aggiunge il paragrafo a una UDA del percorso; se ce ne sono più di una, permette di scegliere la destinazione.">+</button>
     </article>
   </template>
 
-  <dialog id="courseAiDialog" class="courseAiDialog">
+  <dialog id="courseAiDialog" class="courseAiDialog" aria-labelledby="courseAiTitle">
     <form method="dialog" class="courseAiPanel">
       <header class="courseAiHead">
         <div>
@@ -156,12 +157,12 @@
     </form>
   </dialog>
 
-  <dialog id="yearDialog" class="courseAiDialog yearDialog">
+  <dialog id="yearDialog" class="courseAiDialog yearDialog" aria-labelledby="yearDialogTitle">
     <form method="dialog" class="courseAiPanel">
       <header class="courseAiHead">
         <div>
           <p class="eyebrow">Percorso didattico</p>
-          <h2>Aggiungi percorso</h2>
+          <h2 id="yearDialogTitle">Aggiungi percorso</h2>
         </div>
         <button id="yearCloseBtn" type="button" title="Chiude la finestra senza creare il percorso.">Chiudi</button>
       </header>
@@ -169,7 +170,7 @@
       <div class="briefGrid">
         <label>
           <span>Nome percorso</span>
-          <input id="yearTitleInput" type="text" placeholder="TPSI - Terzo anno, Sistemi e reti - Quarto anno...">
+          <input id="yearTitleInput" type="text" required placeholder="TPSI - Terzo anno, Sistemi e reti - Quarto anno...">
         </label>
         <label>
           <span>Materia</span>
@@ -177,15 +178,15 @@
         </label>
         <label>
           <span>ID</span>
-          <input id="yearIdInput" type="text" placeholder="terzo-anno">
+          <input id="yearIdInput" type="text" required placeholder="terzo-anno">
         </label>
         <label>
           <span>Settimane</span>
-          <input id="yearWeeksInput" type="number" min="1" value="33">
+          <input id="yearWeeksInput" type="number" min="1" step="1" required value="33">
         </label>
         <label>
           <span>Ore/settimana</span>
-          <input id="yearWeeklyHoursInput" type="number" min="1" step="0.5" value="3">
+          <input id="yearWeeklyHoursInput" type="number" min="0.5" step="0.5" required value="3">
         </label>
       </div>
 

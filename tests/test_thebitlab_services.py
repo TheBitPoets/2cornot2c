@@ -77,7 +77,12 @@ def test_course_service_accepts_protocol_compatible_storage(tmp_path) -> None:
         def read_saved_design(self, name: str) -> dict[str, object]:
             return {"name": name}
 
-        def write_saved_design(self, name: str, payload: dict[str, object]) -> dict[str, str]:
+        def write_saved_design(
+            self,
+            name: str,
+            payload: dict[str, object],
+            overwrite: bool = True,
+        ) -> dict[str, str]:
             return {"name": name, "path": f"doc/course_designs/{name}"}
 
         def delete_saved_design(
@@ -110,7 +115,7 @@ def test_course_service_deletes_linked_calendars(tmp_path) -> None:
     service = course_service(tmp_path)
     service.write_saved_design("as_2026_2027.json", {"title": "AS 2026/2027"})
     service.write_school_calendar("linked.json", {"course_design_name": "as_2026_2027.json"})
-    service.write_school_calendar("other.json", {"course_design_name": "other.json"})
+    service.write_school_calendar("other.json", {"course_design_name": ""})
 
     result = service.delete_saved_design(
         "as_2026_2027.json",
@@ -124,7 +129,7 @@ def test_course_service_deletes_linked_calendars(tmp_path) -> None:
         {
             "name": "other.json",
             "path": "doc/calendars/other.json",
-            "course_design_name": "other.json",
+            "course_design_name": "",
         }
     ]
 

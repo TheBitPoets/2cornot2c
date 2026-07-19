@@ -21,7 +21,12 @@ class CourseStorage(Protocol):
 
     def read_saved_design(self, name: str) -> dict[str, Any]: ...
 
-    def write_saved_design(self, name: str, payload: dict[str, Any]) -> dict[str, str]: ...
+    def write_saved_design(
+        self,
+        name: str,
+        payload: dict[str, Any],
+        overwrite: bool = True,
+    ) -> dict[str, str]: ...
 
     def delete_saved_design(
         self,

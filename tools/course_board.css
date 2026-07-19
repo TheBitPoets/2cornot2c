@@ -321,6 +321,24 @@ input, select { width: 100%; padding: .72rem .9rem; }
   position: relative;
   cursor: grab;
   margin-left: calc(var(--depth, 0) * 2.3rem);
+  padding-right: 3.2rem;
+}
+
+.headingAdd {
+  position: absolute;
+  top: .5rem;
+  right: .5rem;
+  width: 2rem;
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0;
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+input[aria-invalid="true"] {
+  border-color: #b42318;
+  box-shadow: 0 0 0 2px rgba(180, 35, 24, .16);
 }
 
 .headingCard::before {

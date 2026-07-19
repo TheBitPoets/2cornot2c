@@ -59,6 +59,7 @@ const els = {
   aiBusyTitle: document.querySelector("#aiBusyTitle"),
   aiBusyMessage: document.querySelector("#aiBusyMessage"),
   aiBusyPercent: document.querySelector("#aiBusyPercent"),
+  aiBusyBar: document.querySelector("#aiBusyBar"),
   aiBusyBarFill: document.querySelector("#aiBusyBarFill"),
   aiBusyControls: document.querySelector("#aiBusyControls"),
   aiBusyNextBtn: document.querySelector("#aiBusyNextBtn"),
@@ -112,6 +113,9 @@ const AI_PROGRESS_STAGES = [
 
 let aiProgressTimer = null;
 let frameBatch = null;
+let cleanDesignSnapshot = "";
+let allowNextUnloadWithoutWarning = false;
+let saveOperationInProgress = false;
 
 function emptyCourseDesign() {
   return {
@@ -145,12 +149,94 @@ function setStatus(message) {
   els.status.textContent = message;
 }
 
+function designSnapshot() {
+  return state.design ? JSON.stringify(state.design) : "";
+}
+
+function markDesignClean(savedSnapshot = "") {
+  normalizeCourseDesignFrames();
+  cleanDesignSnapshot = savedSnapshot || designSnapshot();
+}
+
+function normalizeCourseDesignFrames(design = state.design) {
+  const visit = (item) => {
+    item.frame = { ...defaultFrame(), ...(item.frame || {}) };
+    item.frame_quality = { ...defaultFrameQuality(), ...(item.frame_quality || {}) };
+    for (const child of item.children || []) visit(child);
+  };
+  for (const year of design?.years || []) {
+    for (const uda of year.udas || []) {
+      for (const item of uda.items || []) visit(item);
+    }
+  }
+}
+
+function hasUnsavedChanges() {
+  return Boolean(cleanDesignSnapshot && designSnapshot() !== cleanDesignSnapshot);
+}
+
+function captureBoardContext() {
+  return {
+    design: state.design,
+    activeSavedDesign: state.activeSavedDesign,
+    isNewDesign: state.isNewDesign,
+    snapshot: designSnapshot(),
+  };
+}
+
+function isBoardContextUnchanged(context) {
+  return isBoardContextCurrent(context) && designSnapshot() === context.snapshot;
+}
+
+function isBoardContextCurrent(context) {
+  return state.design === context.design
+    && state.activeSavedDesign === context.activeSavedDesign
+    && state.isNewDesign === context.isNewDesign;
+}
+
+function confirmDiscardChanges() {
+  if (!hasUnsavedChanges()) return true;
+  return confirm("Ci sono modifiche non salvate. Vuoi scartarle e continuare?");
+}
+
+async function runAsyncAction(action, label) {
+  try {
+    return await action();
+  } catch (error) {
+    console.error(error);
+    setStatus(`${label} non riuscito. Dettaglio: ${error.message}`);
+    return undefined;
+  }
+}
+
+function startSaveOperation() {
+  if (saveOperationInProgress) {
+    setStatus("Salvataggio gia in corso. Attendi il completamento prima di avviarne un altro.");
+    return false;
+  }
+  saveOperationInProgress = true;
+  els.newDesignBtn.disabled = true;
+  els.saveArchiveBtn.disabled = true;
+  els.saveArchiveAsBtn.disabled = true;
+  els.saveBtn.disabled = true;
+  return true;
+}
+
+function finishSaveOperation() {
+  saveOperationInProgress = false;
+  els.newDesignBtn.disabled = false;
+  els.saveArchiveBtn.disabled = false;
+  els.saveArchiveAsBtn.disabled = false;
+  renderCourseActions();
+}
+
 function startAiProgress(title) {
   let percent = 4;
   let stageIndex = 0;
   els.aiBusy.hidden = false;
   els.aiBusyControls.hidden = true;
   els.aiBusyTitle.textContent = title;
+  els.aiBusyMessage.textContent = "";
   updateAiProgress(percent, AI_PROGRESS_STAGES[stageIndex]);
   clearInterval(aiProgressTimer);
   aiProgressTimer = setInterval(() => {
@@ -161,8 +247,12 @@ function startAiProgress(title) {
 }
 
 function updateAiProgress(percent, message) {
-  els.aiBusyMessage.textContent = message;
+  if (els.aiBusyMessage.textContent !== message) {
+    els.aiBusyMessage.textContent = message;
+  }
   els.aiBusyPercent.textContent = `${percent}%`;
+  els.aiBusyBar.setAttribute("aria-valuenow", String(percent));
+  els.aiBusyBar.setAttribute("aria-valuetext", message);
   els.aiBusyBarFill.style.width = `${percent}%`;
 }
 
@@ -208,7 +298,9 @@ async function api(path, options = {}) {
     ...options,
   });
   if (!response.ok) {
-    throw new Error(await responseErrorMessage(response));
+    const error = new Error(await responseErrorMessage(response));
+    error.status = response.status;
+    throw error;
   }
   return response.json();
 }
@@ -249,6 +341,7 @@ async function loadAll() {
   renderProjectTitle();
   renderHeadings();
   renderCourse();
+  markDesignClean();
   if (state.activeSavedDesign || state.isNewDesign) {
     setStatus("Pronto.");
   } else {
@@ -262,14 +355,20 @@ function renderSavedDesigns() {
   currentButton.type = "button";
   currentButton.className = "courseLoadItem";
   currentButton.textContent = "Progetto corrente (doc/course_design.json)";
-  currentButton.addEventListener("click", () => loadDesignFromMenu("__current__"));
+  currentButton.addEventListener("click", () => runAsyncAction(
+    () => loadDesignFromMenu("__current__"),
+    "Caricamento progetto",
+  ));
   els.savedDesignMenu.append(currentButton);
   for (const design of state.savedDesigns) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "courseLoadItem";
     button.textContent = design.name;
-    button.addEventListener("click", () => loadDesignFromMenu(design.name));
+    button.addEventListener("click", () => runAsyncAction(
+      () => loadDesignFromMenu(design.name),
+      "Caricamento progetto",
+    ));
     els.savedDesignMenu.append(button);
   }
   renderCourseActions();
@@ -332,6 +431,7 @@ async function loadCurrentDesign() {
   state.design = await api("/api/course-design");
   state.activeSavedDesign = "";
   state.isNewDesign = false;
+  markDesignClean();
   localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
   sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
   renderSavedDesigns();
@@ -353,6 +453,7 @@ async function loadSavedDesignByName(name, options = {}) {
   state.design = payload.design;
   state.activeSavedDesign = name;
   state.isNewDesign = false;
+  markDesignClean();
   localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, name);
   sessionStorage.setItem(ACTIVE_COURSE_SESSION_KEY, "true");
   if (render) {
@@ -372,7 +473,7 @@ async function saveArchiveDesign() {
   }
   const defaultName = state.activeSavedDesign || "course_design_as_25_26.json";
   if (state.activeSavedDesign) {
-    await saveArchiveDesignWithName(state.activeSavedDesign);
+    await saveArchiveDesignWithName(state.activeSavedDesign, { overwrite: true });
     return;
   }
   const name = prompt("Nome file archivio JSON:", defaultName);
@@ -384,40 +485,120 @@ async function saveArchiveDesignAs() {
   const defaultName = state.activeSavedDesign || "course_design_as_25_26.json";
   const name = prompt("Nome file archivio JSON:", defaultName);
   if (!name) return;
-  await saveArchiveDesignWithName(name);
+  await saveArchiveDesignWithName(name, { confirmOverwrite: true });
 }
 
-async function saveArchiveDesignWithName(name) {
+async function saveArchiveDesignWithName(name, options = {}) {
+  if (!startSaveOperation()) return false;
+  try {
+    return await persistArchiveDesignWithName(name, options);
+  } finally {
+    finishSaveOperation();
+  }
+}
+
+async function persistArchiveDesignWithName(name, options = {}) {
+  const {
+    overwrite = false,
+    confirmOverwrite = false,
+    design = state.design,
+    opensSavedDesign = state.design !== design,
+    boardContext = captureBoardContext(),
+  } = options;
+  normalizeCourseDesignFrames(design);
+  const designToSave = JSON.parse(JSON.stringify(design));
+  const savedSnapshot = JSON.stringify(designToSave);
   setStatus(`Salvataggio archivio "${name}"...`);
-  const payload = await api("/api/saved-designs/save", {
-    method: "POST",
-    body: JSON.stringify({ name, design: state.design }),
-  });
+  let payload;
+  try {
+    payload = await api("/api/saved-designs/save", {
+      method: "POST",
+      body: JSON.stringify({ name, design: designToSave, overwrite }),
+    });
+  } catch (error) {
+    if (error.status === 409 && confirmOverwrite) {
+      if (!confirm(`Esiste già un progetto chiamato "${name}". Vuoi sostituirlo?`)) {
+        setStatus("Salvataggio annullato: il progetto esistente non è stato modificato.");
+        return false;
+      }
+      return persistArchiveDesignWithName(name, {
+        design: designToSave,
+        overwrite: true,
+        opensSavedDesign,
+        boardContext,
+      });
+    }
+    setStatus(`Salvataggio non riuscito. Dettaglio: ${error.message}`);
+    return false;
+  }
+  const contextStillValid = opensSavedDesign
+    ? isBoardContextUnchanged(boardContext)
+    : isBoardContextCurrent(boardContext);
+  if (!contextStillValid) {
+    setStatus(`Progetto salvato in archivio: ${payload.saved?.name || name}. La vista aperta non e stata cambiata.`);
+    return !opensSavedDesign;
+  }
+  if (opensSavedDesign) state.design = designToSave;
   state.savedDesigns = payload.designs || [];
   state.activeSavedDesign = payload.saved?.name || name;
   state.isNewDesign = false;
+  markDesignClean(savedSnapshot);
   localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, state.activeSavedDesign);
   sessionStorage.setItem(ACTIVE_COURSE_SESSION_KEY, "true");
   renderSavedDesigns();
   renderProjectTitle();
   renderCourseActions();
   setStatus(`Progetto salvato in archivio: ${state.activeSavedDesign}.`);
+  return true;
 }
 
 async function saveCurrentProject() {
+  if (!startSaveOperation()) return false;
+  try {
+    return await persistCurrentProject();
+  } finally {
+    finishSaveOperation();
+  }
+}
+
+async function persistCurrentProject() {
+  normalizeCourseDesignFrames();
+  const savedSnapshot = designSnapshot();
+  const boardContext = captureBoardContext();
   setStatus("Salvataggio progetto corrente in doc/course_design.json...");
   await api("/api/course-design", {
     method: "POST",
-    body: JSON.stringify(state.design),
+    body: savedSnapshot,
   });
+  if (!isBoardContextCurrent(boardContext)) {
+    setStatus("Progetto corrente salvato. La vista aperta non e stata cambiata.");
+    return;
+  }
   localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
   sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
   state.activeSavedDesign = "";
   state.isNewDesign = false;
+  markDesignClean(savedSnapshot);
   renderSavedDesigns();
   renderProjectTitle();
   renderCourseActions();
   setStatus("Progetto corrente salvato in doc/course_design.json.");
+  return true;
+}
+
+function reconcileDeletedArchive(name, payload) {
+  state.savedDesigns = payload.designs || [];
+  const detachedDraft = state.activeSavedDesign === name;
+  if (detachedDraft) {
+    state.activeSavedDesign = "";
+    state.isNewDesign = true;
+    localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
+    sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
+    renderProjectTitle();
+  }
+  renderSavedDesigns();
+  renderCourseActions();
+  return detachedDraft;
 }
 
 async function deleteArchiveDesign() {
@@ -426,8 +607,13 @@ async function deleteArchiveDesign() {
     renderCourseActions();
     return;
   }
+  const boardContext = captureBoardContext();
   const name = state.activeSavedDesign;
   const calendarsPayload = await api("/api/school-calendars");
+  if (!isBoardContextUnchanged(boardContext)) {
+    setStatus("Cancellazione annullata: la vista aperta e cambiata.");
+    return;
+  }
   const linkedCalendars = (calendarsPayload.calendars || []).filter((calendar) => (calendar.course_design_name || "") === name);
   let deleteCalendars = false;
   if (linkedCalendars.length) {
@@ -459,12 +645,26 @@ async function deleteArchiveDesign() {
       calendars: linkedCalendars.map((calendar) => calendar.name),
     }),
   });
+  if (!isBoardContextUnchanged(boardContext)) {
+    const detachedDraft = reconcileDeletedArchive(name, payload);
+    const preserved = detachedDraft ? " La bozza modificata resta aperta senza nome archivio." : " La vista aperta non e stata cambiata.";
+    setStatus(`Progetto archiviato eliminato: ${name}.${preserved}`);
+    return;
+  }
+  const currentDesign = await api("/api/course-design");
+  if (!isBoardContextUnchanged(boardContext)) {
+    const detachedDraft = reconcileDeletedArchive(name, payload);
+    const preserved = detachedDraft ? " La bozza modificata resta aperta senza nome archivio." : " La vista aperta non e stata cambiata.";
+    setStatus(`Progetto archiviato eliminato: ${name}.${preserved}`);
+    return;
+  }
   state.savedDesigns = payload.designs || [];
   localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
   sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
-  state.design = await api("/api/course-design");
+  state.design = currentDesign;
   state.activeSavedDesign = "";
   state.isNewDesign = false;
+  markDesignClean();
   renderSavedDesigns();
   renderProjectTitle();
   renderHeadings();
@@ -480,10 +680,9 @@ async function newCourseDesign() {
   if (!confirm("Creare un nuovo percorso vuoto? Le modifiche non salvate nella vista corrente saranno perse.")) return;
   const name = prompt("Nome file del nuovo percorso JSON:", "course_design_as_25_26.json");
   if (!name) return;
-  state.design = emptyCourseDesign();
-  state.activeSavedDesign = name;
-  state.isNewDesign = false;
-  await saveArchiveDesignWithName(name);
+  const design = emptyCourseDesign();
+  const saved = await saveArchiveDesignWithName(name, { design, confirmOverwrite: true });
+  if (!saved) return;
   renderSavedDesigns();
   renderProjectTitle();
   renderHeadings();
@@ -645,7 +844,10 @@ function renderHeadings() {
     node.addEventListener("dragstart", () => {
       state.draggedHeading = heading;
     });
-    node.addEventListener("dblclick", () => addToFirstUda(heading));
+    node.addEventListener("dblclick", () => addHeadingWithDestination(heading));
+    const addButton = node.querySelector(".headingAdd");
+    addButton.setAttribute("aria-label", `Aggiungi ${heading.title} a una UDA del percorso`);
+    addButton.addEventListener("click", () => addHeadingWithDestination(heading));
     els.headingList.append(node);
   }
 
@@ -668,11 +870,13 @@ function headingHasChildren(heading) {
 function isHiddenByCollapsedParent(heading) {
   const index = state.headings.findIndex((candidate) => candidate.id === heading.id);
   if (index < 0) return false;
+  let ancestorLevel = heading.level;
   for (let i = index - 1; i >= 0; i -= 1) {
     const candidate = state.headings[i];
     if (candidate.source !== heading.source) break;
-    if (candidate.level < heading.level && state.collapsedHeadingIds.has(candidate.id)) return true;
-    if (candidate.level < heading.level) continue;
+    if (candidate.level >= ancestorLevel) continue;
+    if (state.collapsedHeadingIds.has(candidate.id)) return true;
+    ancestorLevel = candidate.level;
   }
   return false;
 }
@@ -686,14 +890,42 @@ function toggleHeading(headingId) {
   renderHeadings();
 }
 
-function addToFirstUda(heading) {
-  const firstYear = state.design.years?.[0];
-  const firstUda = firstYear?.udas?.[0];
-  if (!firstUda) return;
-  firstUda.items ||= [];
-  firstUda.items.push(itemFromHeading(heading));
+function addHeadingWithDestination(heading) {
+  const destinations = (state.design.years || []).flatMap((year) =>
+    (year.udas || []).map((uda) => ({ year, uda }))
+  );
+  if (!destinations.length) {
+    setStatus("Aggiungi prima un percorso con almeno una UDA.");
+    return;
+  }
+  let destination = destinations[0];
+  if (destinations.length > 1) {
+    const choices = destinations
+      .map(({ year, uda }, index) => `${index + 1}. ${year.title} - ${uda.id.toUpperCase()}: ${uda.title}`)
+      .join("\n");
+    const answer = prompt(`Scegli la UDA di destinazione:\n\n${choices}`, "1");
+    if (answer === null || answer.trim() === "") {
+      setStatus("Inserimento annullato: nessuna UDA selezionata.");
+      return;
+    }
+    const normalizedAnswer = answer.trim();
+    const selectedIndex = /^\d+$/.test(normalizedAnswer) ? Number.parseInt(normalizedAnswer, 10) - 1 : -1;
+    if (!Number.isInteger(selectedIndex) || selectedIndex < 0 || selectedIndex >= destinations.length) {
+      setStatus(`Scelta non valida. Inserisci un numero da 1 a ${destinations.length}.`);
+      return;
+    }
+    destination = destinations[selectedIndex];
+  }
+  const { year, uda } = destination;
+  if (isHeadingTreeAssignedToYear(heading, year.id)) {
+    setStatus(`"${heading.title}" o un suo sottoparagrafo è già presente in ${year.title}.`);
+    return;
+  }
+  uda.items ||= [];
+  uda.items.push(itemFromHeading(heading));
   renderCourse();
   renderHeadings();
+  setStatus(`"${heading.title}" aggiunto a ${uda.id.toUpperCase()}: ${uda.title}.`);
 }
 
 function itemFromHeading(heading) {
@@ -779,6 +1011,7 @@ function openYearDialog() {
   els.yearWeeksInput.value = "33";
   els.yearWeeklyHoursInput.value = "3";
   els.yearDescriptionInput.value = "";
+  clearYearValidation();
   els.yearDialog.showModal();
   els.yearTitleInput.focus();
 }
@@ -787,15 +1020,24 @@ function createYearFromDialog() {
   const title = els.yearTitleInput.value.trim();
   const subject = els.yearSubjectInput.value.trim();
   const id = els.yearIdInput.value.trim();
-  const weeks = Number(els.yearWeeksInput.value || 33);
-  const weeklyHours = Number(els.yearWeeklyHoursInput.value || 3);
+  const weeks = Number(els.yearWeeksInput.value);
+  const weeklyHours = Number(els.yearWeeklyHoursInput.value);
   const description = els.yearDescriptionInput.value.trim();
+  clearYearValidation();
   if (!title) {
-    setStatus("Inserisci il nome del percorso.");
+    showInvalidYearField(els.yearTitleInput, "Inserisci il nome del percorso.");
     return;
   }
   if (!id) {
-    setStatus("Inserisci un ID per il percorso.");
+    showInvalidYearField(els.yearIdInput, "Inserisci un ID per il percorso.");
+    return;
+  }
+  if (!Number.isInteger(weeks) || weeks <= 0) {
+    showInvalidYearField(els.yearWeeksInput, "Le settimane devono essere un numero intero maggiore di zero.");
+    return;
+  }
+  if (!Number.isFinite(weeklyHours) || weeklyHours <= 0) {
+    showInvalidYearField(els.yearWeeklyHoursInput, "Le ore settimanali devono essere maggiori di zero.");
     return;
   }
   if ((state.design.years || []).some((year) => year.id === id)) {
@@ -810,6 +1052,23 @@ function createYearFromDialog() {
   renderCourse();
   renderHeadings();
   setStatus(`Percorso "${title}" aggiunto.`);
+}
+
+function clearYearValidation() {
+  for (const element of [
+    els.yearTitleInput,
+    els.yearIdInput,
+    els.yearWeeksInput,
+    els.yearWeeklyHoursInput,
+  ]) {
+    element.removeAttribute("aria-invalid");
+  }
+}
+
+function showInvalidYearField(element, message) {
+  element.setAttribute("aria-invalid", "true");
+  element.focus();
+  setStatus(message);
 }
 
 function renderCourse() {
@@ -921,7 +1180,7 @@ function renderItem(year, uda, siblings, item, index, depth) {
   const children = item.children || [];
   item.frame = { ...defaultFrame(), ...(item.frame || {}) };
   item.frame_quality = { ...defaultFrameQuality(), ...(item.frame_quality || {}) };
-  const collapseKey = `${uda.id}:${item.id}`;
+  const collapseKey = courseItemCollapseKey(year, uda, item);
   const isCollapsed = state.collapsedCourseItemIds.has(collapseKey);
   node.innerHTML = `
     <div class="itemRow">
@@ -972,6 +1231,10 @@ function renderItem(year, uda, siblings, item, index, depth) {
     node.append(childList);
   }
   return node;
+}
+
+function courseItemCollapseKey(year, uda, item) {
+  return JSON.stringify([year.id, uda.id, item.id]);
 }
 
 function defaultCourseBrief(year) {
@@ -1180,14 +1443,24 @@ function openFrameBatchQueue(rootTitle, entries, message) {
     running: false,
     cancelled: false,
     cancelAction: "",
-    snapshots: entries.map((entry) => ({
-      item: entry.item,
-      frame: JSON.parse(JSON.stringify({ ...defaultFrame(), ...(entry.item.frame || {}) })),
-    })),
+    snapshots: entries.map(frameEntrySnapshot),
   };
   els.generateAllFramesBtn.disabled = true;
   setStatus(message);
   showFrameBatchProgress();
+}
+
+function frameEntrySnapshot(entry) {
+  return {
+    item: entry.item,
+    frame: JSON.parse(JSON.stringify({ ...defaultFrame(), ...(entry.item.frame || {}) })),
+    frameQuality: JSON.parse(JSON.stringify({ ...defaultFrameQuality(), ...(entry.item.frame_quality || {}) })),
+  };
+}
+
+function restoreFrameSnapshot(snapshot) {
+  snapshot.item.frame = JSON.parse(JSON.stringify(snapshot.frame));
+  snapshot.item.frame_quality = JSON.parse(JSON.stringify(snapshot.frameQuality));
 }
 
 async function generateFrameForEntry(entry) {
@@ -1297,7 +1570,7 @@ function cancelFrameBatch() {
     return;
   }
   for (const snapshot of frameBatch.snapshots) {
-    snapshot.item.frame = JSON.parse(JSON.stringify(snapshot.frame));
+    restoreFrameSnapshot(snapshot);
   }
   const total = frameBatch.entries.length;
   frameBatch = null;
@@ -1312,7 +1585,7 @@ function finishCancelledFrameBatch() {
   if (!frameBatch) return;
   if (frameBatch.cancelAction === "restore") {
     for (const snapshot of frameBatch.snapshots) {
-      snapshot.item.frame = JSON.parse(JSON.stringify(snapshot.frame));
+      restoreFrameSnapshot(snapshot);
     }
     const total = frameBatch.entries.length;
     frameBatch = null;
@@ -1627,6 +1900,15 @@ function toggleCourseItem(collapseKey) {
 }
 
 async function saveDesign() {
+  if (!startSaveOperation()) return false;
+  try {
+    return await persistDesignAsCurrent();
+  } finally {
+    finishSaveOperation();
+  }
+}
+
+async function persistDesignAsCurrent() {
   if (!state.activeSavedDesign && !state.isNewDesign) {
     setStatus("Il progetto corrente e gia caricato: non serve impostarlo di nuovo.");
     renderCourseActions();
@@ -1637,24 +1919,33 @@ async function saveDesign() {
     "Questa operazione sovrascrive doc/course_design.json."
   );
   if (!confirmed) return;
+  normalizeCourseDesignFrames();
+  const savedSnapshot = designSnapshot();
+  const boardContext = captureBoardContext();
   setStatus("Salvataggio...");
   await api("/api/course-design", {
     method: "POST",
-    body: JSON.stringify(state.design),
+    body: savedSnapshot,
   });
+  if (!isBoardContextCurrent(boardContext)) {
+    setStatus("Progetto impostato come corrente. La vista aperta non e stata cambiata.");
+    return;
+  }
   localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
   sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
   state.activeSavedDesign = "";
   state.isNewDesign = false;
+  markDesignClean(savedSnapshot);
   renderSavedDesigns();
   renderProjectTitle();
   renderCourseActions();
   setStatus("Progetto impostato come corrente in doc/course_design.json.");
+  return true;
 }
 
 async function generateCoursePlanMd() {
   els.generateCoursePlanMdBtn.disabled = true;
-  setStatus("Aggiornamento percorso Markdown: salvo il JSON corrente e rigenero doc/PERCORSO_DIDATTICO.md...");
+  setStatus("Aggiornamento percorso Markdown dalla bozza aperta...");
   try {
     const payload = await api("/api/course-plan-md", {
       method: "POST",
@@ -1670,7 +1961,7 @@ async function generateCoursePlanMd() {
 
 async function updateReadmeFrames() {
   els.updateReadmeFramesBtn.disabled = true;
-  setStatus("Aggiornamento README: salvo il JSON corrente e inserisco le cornici didattiche nei paragrafi...");
+  setStatus("Aggiornamento README dalle cornici della bozza aperta...");
   try {
     const payload = await api("/api/readme-frames", {
       method: "POST",
@@ -1692,13 +1983,16 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;");
 }
 
-els.reloadBtn.addEventListener("click", loadAll);
-els.saveBtn.addEventListener("click", saveDesign);
+els.reloadBtn.addEventListener("click", () => {
+  if (!confirmDiscardChanges()) return;
+  runAsyncAction(loadAll, "Ricarica");
+});
+els.saveBtn.addEventListener("click", () => runAsyncAction(saveDesign, "Impostazione progetto corrente"));
 els.loadSavedDesignBtn.addEventListener("click", openSavedDesignPicker);
-els.newDesignBtn.addEventListener("click", newCourseDesign);
-els.saveArchiveBtn.addEventListener("click", saveArchiveDesign);
-els.saveArchiveAsBtn.addEventListener("click", saveArchiveDesignAs);
-els.deleteArchiveBtn.addEventListener("click", deleteArchiveDesign);
+els.newDesignBtn.addEventListener("click", () => runAsyncAction(newCourseDesign, "Creazione progetto"));
+els.saveArchiveBtn.addEventListener("click", () => runAsyncAction(saveArchiveDesign, "Salvataggio progetto"));
+els.saveArchiveAsBtn.addEventListener("click", () => runAsyncAction(saveArchiveDesignAs, "Salvataggio copia"));
+els.deleteArchiveBtn.addEventListener("click", () => runAsyncAction(deleteArchiveDesign, "Cancellazione progetto"));
 els.addYearBtn.addEventListener("click", openYearDialog);
 els.yearCloseBtn.addEventListener("click", () => els.yearDialog.close());
 els.yearCancelBtn.addEventListener("click", () => els.yearDialog.close());
@@ -1729,6 +2023,30 @@ document.addEventListener("click", (event) => {
   if (event.target === els.loadSavedDesignBtn || els.savedDesignMenu.contains(event.target)) return;
   els.savedDesignMenu.hidden = true;
   els.loadSavedDesignBtn.setAttribute("aria-expanded", "false");
+});
+
+for (const link of document.querySelectorAll(".topNav a:not([target='_blank'])")) {
+  link.addEventListener("click", (event) => {
+    if (!hasUnsavedChanges()) return;
+    if (!confirmDiscardChanges()) {
+      event.preventDefault();
+      return;
+    }
+    allowNextUnloadWithoutWarning = true;
+    setTimeout(() => {
+      allowNextUnloadWithoutWarning = false;
+    }, 0);
+  });
+}
+
+window.addEventListener("beforeunload", (event) => {
+  if (allowNextUnloadWithoutWarning) {
+    allowNextUnloadWithoutWarning = false;
+    return;
+  }
+  if (!hasUnsavedChanges()) return;
+  event.preventDefault();
+  event.returnValue = "";
 });
 
 loadAll().catch((error) => {

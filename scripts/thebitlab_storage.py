@@ -1,7 +1,15 @@
 from __future__ import annotations
 
+import errno
 import json
+import os
 import re
+import shutil
+import stat
+import tempfile
+import threading
+import time
+import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -11,6 +19,111 @@ from scripts.thebitlab_contracts import normalize_activity, normalize_assignment
 
 
 DESIGN_NAME_RE = re.compile(r"^[a-zA-Z0-9_.-]+\.json$")
+_COURSE_LOCKS_GUARD = threading.Lock()
+_COURSE_LOCKS: dict[Path, "CourseStorageLock"] = {}
+
+
+class CourseStorageLock:
+    """Reentrant thread and process lock for one course data root."""
+
+    def __init__(self, root: Path) -> None:
+        self.path = root.resolve(strict=False) / "doc" / ".course-storage.lock"
+        self.thread_lock = threading.RLock()
+        self.depth = 0
+        self.handle = None
+
+    def _acquire_process_lock(self):
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        handle = self.path.open("a+b")
+        handle.seek(0, os.SEEK_END)
+        if handle.tell() == 0:
+            handle.write(b"\0")
+            handle.flush()
+            os.fsync(handle.fileno())
+        while True:
+            try:
+                handle.seek(0)
+                if os.name == "nt":
+                    import msvcrt
+
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+                else:
+                    import fcntl
+
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                return handle
+            except OSError as error:
+                if error.errno not in {errno.EACCES, errno.EAGAIN, errno.EDEADLK}:
+                    handle.close()
+                    raise
+                time.sleep(0.05)
+
+    @staticmethod
+    def _release_process_lock(handle) -> None:
+        handle.seek(0)
+        if os.name == "nt":
+            import msvcrt
+
+            msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+        handle.close()
+
+    def __enter__(self) -> "CourseStorageLock":
+        self.thread_lock.acquire()
+        try:
+            if self.depth == 0:
+                self.handle = self._acquire_process_lock()
+            self.depth += 1
+            return self
+        except Exception:
+            self.thread_lock.release()
+            raise
+
+    def __exit__(self, _exc_type, _exc_value, _traceback) -> None:
+        self.depth -= 1
+        try:
+            if self.depth == 0 and self.handle is not None:
+                self._release_process_lock(self.handle)
+                self.handle = None
+        finally:
+            self.thread_lock.release()
+
+
+def course_storage_lock(root: Path) -> CourseStorageLock:
+    """Return the process-local lock shared by every adapter for one root."""
+
+    key = root.resolve(strict=False)
+    with _COURSE_LOCKS_GUARD:
+        return _COURSE_LOCKS.setdefault(key, CourseStorageLock(key))
+
+
+def sync_directory(path: Path) -> None:
+    """Persist directory metadata where the platform exposes directory fsync."""
+
+    if os.name == "nt":
+        return
+    unsupported_errnos = {
+        errno.EINVAL,
+        getattr(errno, "ENOTSUP", errno.EINVAL),
+        getattr(errno, "EOPNOTSUPP", errno.EINVAL),
+    }
+    try:
+        descriptor = os.open(path, os.O_RDONLY)
+    except OSError as error:
+        if error.errno in unsupported_errnos:
+            return
+        raise
+    try:
+        try:
+            os.fsync(descriptor)
+        except OSError as error:
+            if error.errno not in unsupported_errnos:
+                raise
+    finally:
+        os.close(descriptor)
 
 
 class JsonCourseStorage:
@@ -18,10 +131,78 @@ class JsonCourseStorage:
 
     def __init__(self, root: Path, default_sources: list[str] | None = None) -> None:
         self.root = root
+        self.operation_lock = course_storage_lock(root)
         self.default_sources = default_sources or []
         self.design_path = root / "doc" / "course_design.json"
         self.course_designs_dir = root / "doc" / "course_designs"
         self.school_calendars_dir = root / "doc" / "calendars"
+        self.delete_staging_dir = root / "doc" / ".delete-staging"
+        with self.operation_lock:
+            self._recover_delete_transactions()
+
+    def _delete_manifest_entries(self, targets: list[Path]) -> list[dict[str, str]]:
+        return [
+            {
+                "original": self.relative_path(target),
+                "staged": f"{index}-{target.name}",
+            }
+            for index, target in enumerate(targets)
+        ]
+
+    def _write_delete_transaction_file(self, path: Path, content: str) -> None:
+        with path.open("x", encoding="utf-8") as destination:
+            destination.write(content)
+            destination.flush()
+            os.fsync(destination.fileno())
+        sync_directory(path.parent)
+
+    def _original_delete_path(self, value: str) -> Path:
+        path = (self.root / value).resolve(strict=False)
+        try:
+            path.relative_to(self.root.resolve(strict=False))
+        except ValueError as error:
+            raise RuntimeError("Journal di cancellazione non valido.") from error
+        return path
+
+    def _rollback_delete_entries(self, transaction_dir: Path, entries: list[dict[str, str]]) -> None:
+        for entry in reversed(entries):
+            staged_path = transaction_dir / entry["staged"]
+            if not staged_path.exists():
+                continue
+            original_path = self._original_delete_path(entry["original"])
+            if original_path.exists():
+                raise RuntimeError(f"Rollback in conflitto con un file esistente: {entry['original']}")
+            original_path.parent.mkdir(parents=True, exist_ok=True)
+            os.replace(staged_path, original_path)
+            sync_directory(original_path.parent)
+            sync_directory(transaction_dir)
+
+    def _recover_delete_transactions(self) -> None:
+        if not self.delete_staging_dir.is_dir():
+            return
+        for transaction_dir in sorted(path for path in self.delete_staging_dir.iterdir() if path.is_dir()):
+            if transaction_dir.name.endswith(".committed") or (transaction_dir / "COMMITTED").is_file():
+                try:
+                    shutil.rmtree(transaction_dir)
+                    sync_directory(self.delete_staging_dir)
+                except OSError:
+                    continue
+                continue
+            manifest_path = transaction_dir / "manifest.json"
+            try:
+                manifest = self.read_json(manifest_path)
+                entries = manifest.get("entries", [])
+                if not isinstance(entries, list) or not all(isinstance(entry, dict) for entry in entries):
+                    raise ValueError("entries non valide")
+            except (OSError, ValueError, json.JSONDecodeError) as error:
+                staged_files = [path for path in transaction_dir.iterdir() if path.name != "manifest.json"]
+                if staged_files:
+                    raise RuntimeError(f"Journal di cancellazione illeggibile: {transaction_dir}") from error
+                shutil.rmtree(transaction_dir)
+                continue
+            self._rollback_delete_entries(transaction_dir, entries)
+            shutil.rmtree(transaction_dir)
+            sync_directory(self.delete_staging_dir)
 
     def safe_design_name(self, name: str) -> str:
         """Validate a JSON filename used by saved designs and calendars."""
@@ -50,10 +231,39 @@ class JsonCourseStorage:
         return payload
 
     def write_json(self, path: Path, payload: dict[str, Any]) -> None:
-        """Write a JSON object with stable formatting."""
+        """Atomically replace a JSON object with stable formatting."""
 
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        destination_mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else 0o644
+        descriptor, temporary_name = tempfile.mkstemp(
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            dir=path.parent,
+        )
+        temporary_path = Path(temporary_name)
+        try:
+            os.chmod(temporary_path, destination_mode)
+            destination = os.fdopen(descriptor, "w", encoding="utf-8")
+            descriptor = -1
+            with destination:
+                json.dump(payload, destination, ensure_ascii=False, indent=2)
+                destination.write("\n")
+                destination.flush()
+                os.fsync(destination.fileno())
+            os.replace(temporary_path, path)
+            sync_directory(path.parent)
+        finally:
+            if descriptor >= 0:
+                os.close(descriptor)
+            temporary_path.unlink(missing_ok=True)
+
+    def write_json_exclusive(self, path: Path, payload: dict[str, Any]) -> None:
+        """Publish JSON only when the process-locked final name is still free."""
+
+        with self.operation_lock:
+            if path.exists() or path.is_symlink():
+                raise FileExistsError(errno.EEXIST, "File gia esistente", str(path))
+            self.write_json(path, payload)
 
     def relative_path(self, path: Path) -> str:
         """Return a repository-relative path with URL-style separators."""
@@ -63,68 +273,93 @@ class JsonCourseStorage:
     def read_design(self) -> dict[str, Any]:
         """Load the current course design, returning a minimal shape if missing."""
 
-        if self.design_path.exists():
-            return self.read_json(self.design_path)
-        return {"version": 1, "source_files": self.default_sources, "years": []}
+        with self.operation_lock:
+            if self.design_path.exists():
+                return self.read_json(self.design_path)
+            return {"version": 1, "source_files": self.default_sources, "years": []}
 
     def write_design(self, payload: dict[str, Any]) -> None:
         """Persist the current course design."""
 
-        self.write_json(self.design_path, payload)
+        with self.operation_lock:
+            self.write_json(self.design_path, payload)
 
     def list_saved_designs(self) -> list[dict[str, str]]:
         """List saved course designs stored in doc/course_designs."""
 
-        self.course_designs_dir.mkdir(parents=True, exist_ok=True)
-        return [
-            {"name": path.name, "path": self.relative_path(path)}
-            for path in sorted(self.course_designs_dir.glob("*.json"))
-        ]
+        with self.operation_lock:
+            self.course_designs_dir.mkdir(parents=True, exist_ok=True)
+            return [
+                {"name": path.name, "path": self.relative_path(path)}
+                for path in sorted(self.course_designs_dir.glob("*.json"))
+            ]
 
     def read_saved_design(self, name: str) -> dict[str, Any]:
         """Read a saved course design by filename."""
 
         path = self.saved_design_path(name)
-        if not path.is_file():
-            raise FileNotFoundError(f"Percorso salvato non trovato: {name}")
-        return self.read_json(path)
+        with self.operation_lock:
+            if not path.is_file():
+                raise FileNotFoundError(f"Percorso salvato non trovato: {name}")
+            return self.read_json(path)
 
-    def write_saved_design(self, name: str, payload: dict[str, Any]) -> dict[str, str]:
+    def write_saved_design(
+        self,
+        name: str,
+        payload: dict[str, Any],
+        overwrite: bool = True,
+    ) -> dict[str, str]:
         """Persist a named course design in the archive folder."""
 
         path = self.saved_design_path(name)
-        self.write_json(path, payload)
+        with self.operation_lock:
+            if overwrite:
+                self.write_json(path, payload)
+            else:
+                self.write_json_exclusive(path, payload)
         return {"name": path.name, "path": self.relative_path(path)}
 
     def list_school_calendars(self) -> list[dict[str, str]]:
         """List saved school calendars stored in doc/calendars."""
 
-        self.school_calendars_dir.mkdir(parents=True, exist_ok=True)
-        calendars = []
-        for path in sorted(self.school_calendars_dir.glob("*.json")):
-            metadata = {"name": path.name, "path": self.relative_path(path), "course_design_name": ""}
-            try:
-                payload = self.read_json(path)
-                course_design_name = payload.get("course_design_name", "")
-                metadata["course_design_name"] = course_design_name if isinstance(course_design_name, str) else ""
-            except Exception:  # noqa: BLE001
-                metadata["course_design_name"] = ""
-            calendars.append(metadata)
-        return calendars
+        with self.operation_lock:
+            self.school_calendars_dir.mkdir(parents=True, exist_ok=True)
+            calendars = []
+            for path in sorted(self.school_calendars_dir.glob("*.json")):
+                metadata = {"name": path.name, "path": self.relative_path(path), "course_design_name": ""}
+                try:
+                    payload = self.read_json(path)
+                    course_design_name = payload.get("course_design_name", "")
+                    metadata["course_design_name"] = course_design_name if isinstance(course_design_name, str) else ""
+                except Exception:  # noqa: BLE001
+                    metadata["course_design_name"] = ""
+                calendars.append(metadata)
+            return calendars
 
     def read_school_calendar(self, name: str) -> dict[str, Any]:
         """Read a saved school calendar by filename."""
 
         path = self.school_calendar_path(name)
-        if not path.is_file():
-            raise FileNotFoundError(f"Calendario scolastico non trovato: {name}")
-        return self.read_json(path)
+        with self.operation_lock:
+            if not path.is_file():
+                raise FileNotFoundError(f"Calendario scolastico non trovato: {name}")
+            return self.read_json(path)
 
     def write_school_calendar(self, name: str, payload: dict[str, Any]) -> dict[str, str]:
         """Persist a named school calendar in the calendars folder."""
 
         path = self.school_calendar_path(name)
-        self.write_json(path, payload)
+        with self.operation_lock:
+            course_design_name = payload.get("course_design_name", "")
+            if not isinstance(course_design_name, str):
+                raise ValueError("course_design_name deve essere una stringa.")
+            course_design_name = course_design_name.strip()
+            if course_design_name:
+                linked_design_path = self.saved_design_path(course_design_name)
+                if not linked_design_path.is_file():
+                    raise FileNotFoundError(f"Percorso associato non trovato: {course_design_name}")
+            normalized_payload = {**payload, "course_design_name": course_design_name}
+            self.write_json(path, normalized_payload)
         return {"name": path.name, "path": self.relative_path(path)}
 
     def delete_saved_design(
@@ -135,29 +370,65 @@ class JsonCourseStorage:
     ) -> dict[str, Any]:
         """Delete an archived course design and, optionally, its linked calendars."""
 
-        safe_name = self.safe_design_name(name)
-        path = self.saved_design_path(safe_name)
-        if not path.is_file():
-            raise FileNotFoundError(f"Percorso salvato non trovato: {safe_name}")
-        path.unlink()
-        deleted_calendars = []
-        if delete_calendars:
-            for calendar_name in calendars or []:
-                safe_calendar_name = self.safe_design_name(calendar_name)
-                calendar_path = self.school_calendar_path(safe_calendar_name)
-                if not calendar_path.is_file():
-                    continue
-                payload = self.read_json(calendar_path)
-                if payload.get("course_design_name", "") != safe_name:
-                    continue
-                calendar_path.unlink()
-                deleted_calendars.append(safe_calendar_name)
-        return {
-            "name": safe_name,
-            "deleted_calendars": deleted_calendars,
-            "designs": self.list_saved_designs(),
-            "calendars": self.list_school_calendars(),
-        }
+        with self.operation_lock:
+            safe_name = self.safe_design_name(name)
+            path = self.saved_design_path(safe_name)
+            if not path.is_file():
+                raise FileNotFoundError(f"Percorso salvato non trovato: {safe_name}")
+            deleted_calendars: list[str] = []
+            targets = [path]
+            if delete_calendars:
+                for calendar_name in calendars or []:
+                    self.safe_design_name(calendar_name)
+                self.school_calendars_dir.mkdir(parents=True, exist_ok=True)
+                for calendar_path in sorted(self.school_calendars_dir.glob("*.json")):
+                    try:
+                        payload = self.read_json(calendar_path)
+                    except (OSError, ValueError, json.JSONDecodeError):
+                        continue
+                    if payload.get("course_design_name", "") != safe_name:
+                        continue
+                    targets.append(calendar_path)
+                    deleted_calendars.append(calendar_path.name)
+
+            transaction_id = uuid.uuid4().hex
+            self.delete_staging_dir.mkdir(parents=True, exist_ok=True)
+            sync_directory(self.delete_staging_dir.parent)
+            transaction_dir = self.delete_staging_dir / f"{transaction_id}.pending"
+            committed_transaction_dir = self.delete_staging_dir / f"{transaction_id}.committed"
+            transaction_dir.mkdir(parents=True, exist_ok=False)
+            sync_directory(self.delete_staging_dir)
+            entries = self._delete_manifest_entries(targets)
+            self._write_delete_transaction_file(
+                transaction_dir / "manifest.json",
+                json.dumps({"version": 1, "entries": entries}, ensure_ascii=False, indent=2) + "\n",
+            )
+            try:
+                for target, entry in zip(targets, entries, strict=True):
+                    staged_path = transaction_dir / entry["staged"]
+                    os.replace(target, staged_path)
+                    sync_directory(transaction_dir)
+                    sync_directory(target.parent)
+                os.replace(transaction_dir, committed_transaction_dir)
+            except Exception:
+                self._rollback_delete_entries(transaction_dir, entries)
+                shutil.rmtree(transaction_dir)
+                sync_directory(self.delete_staging_dir)
+                raise
+            sync_directory(self.delete_staging_dir)
+            cleanup_pending = False
+            try:
+                shutil.rmtree(committed_transaction_dir)
+                sync_directory(self.delete_staging_dir)
+            except OSError:
+                cleanup_pending = True
+            return {
+                "name": safe_name,
+                "deleted_calendars": deleted_calendars,
+                "cleanup_pending": cleanup_pending,
+                "designs": self.list_saved_designs(),
+                "calendars": self.list_school_calendars(),
+            }
 
 
 class JsonAssignmentStorage:

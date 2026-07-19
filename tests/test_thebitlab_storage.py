@@ -1,11 +1,24 @@
 from __future__ import annotations
 
+import errno
 import json
+import os
+import shutil
+import stat
+import subprocess
+import sys
+import threading
+import time
 from pathlib import Path
 
 import pytest
 
-from scripts.thebitlab_storage import JsonAssignmentStorage, JsonClassRosterStorage, JsonCourseStorage
+from scripts.thebitlab_storage import (
+    JsonAssignmentStorage,
+    JsonClassRosterStorage,
+    JsonCourseStorage,
+    sync_directory,
+)
 
 
 def test_read_design_returns_minimal_default_when_missing(tmp_path) -> None:
@@ -22,6 +35,64 @@ def test_write_and_read_current_design(tmp_path) -> None:
 
     assert storage.read_design() == payload
     assert (tmp_path / "doc" / "course_design.json").read_text(encoding="utf-8").endswith("\n")
+
+
+def test_json_overwrite_keeps_previous_content_when_publication_fails(tmp_path, monkeypatch) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    storage.write_design({"title": "Versione precedente"})
+    target = storage.design_path
+
+    monkeypatch.setattr(
+        "scripts.thebitlab_storage.os.replace",
+        lambda _source, _destination: (_ for _ in ()).throw(OSError("pubblicazione interrotta")),
+    )
+
+    with pytest.raises(OSError, match="pubblicazione interrotta"):
+        storage.write_design({"title": "Versione nuova"})
+
+    assert storage.read_design() == {"title": "Versione precedente"}
+    assert list(target.parent.glob(f".{target.name}.*.tmp")) == []
+
+
+def test_json_publication_syncs_destination_directory(tmp_path, monkeypatch) -> None:
+    synced: list[Path] = []
+    monkeypatch.setattr("scripts.thebitlab_storage.sync_directory", lambda path: synced.append(path))
+    storage = JsonCourseStorage(tmp_path)
+
+    storage.write_design({"title": "Versione durevole"})
+
+    assert storage.design_path.parent in synced
+
+
+@pytest.mark.skipif(os.name == "nt", reason="Windows non espone directory fsync tramite questa API.")
+def test_directory_sync_ignores_only_unsupported_operation_errors(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(
+        "scripts.thebitlab_storage.os.fsync",
+        lambda _descriptor: (_ for _ in ()).throw(OSError(errno.EINVAL, "non supportato")),
+    )
+
+    sync_directory(tmp_path)
+
+    monkeypatch.setattr(
+        "scripts.thebitlab_storage.os.fsync",
+        lambda _descriptor: (_ for _ in ()).throw(OSError(errno.EIO, "errore I/O")),
+    )
+    with pytest.raises(OSError) as error:
+        sync_directory(tmp_path)
+    assert error.value.errno == errno.EIO
+
+
+@pytest.mark.skipif(os.name == "nt", reason="I modi POSIX non sono rappresentati integralmente su Windows.")
+def test_json_publication_preserves_existing_mode_and_uses_shared_read_mode(tmp_path) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    storage.write_design({"title": "Originale"})
+    storage.design_path.chmod(0o640)
+
+    storage.write_design({"title": "Aggiornato"})
+    storage.write_saved_design("new.json", {"title": "Nuovo"}, overwrite=False)
+
+    assert stat.S_IMODE(storage.design_path.stat().st_mode) == 0o640
+    assert stat.S_IMODE(storage.saved_design_path("new.json").stat().st_mode) == 0o644
 
 
 def test_saved_designs_are_validated_and_listed(tmp_path) -> None:
@@ -44,8 +115,47 @@ def test_saved_design_rejects_unsafe_name(tmp_path) -> None:
         storage.write_saved_design("../unsafe.json", {})
 
 
+def test_saved_design_create_does_not_overwrite_existing_file(tmp_path) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    storage.write_saved_design("existing.json", {"title": "Originale"}, overwrite=False)
+
+    with pytest.raises(FileExistsError):
+        storage.write_saved_design("existing.json", {"title": "Nuovo"}, overwrite=False)
+
+    assert storage.read_saved_design("existing.json") == {"title": "Originale"}
+
+
+def test_saved_design_create_does_not_publish_partial_file_when_sync_fails(tmp_path, monkeypatch) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    target = storage.saved_design_path("retry.json")
+    monkeypatch.setattr("scripts.thebitlab_storage.os.fsync", lambda _descriptor: (_ for _ in ()).throw(OSError("sync")))
+
+    with pytest.raises(OSError, match="sync"):
+        storage.write_saved_design("retry.json", {"title": "Incompleto"}, overwrite=False)
+
+    assert not target.exists()
+    assert list(target.parent.glob(f".{target.name}.*.tmp")) == []
+
+    monkeypatch.undo()
+    storage.write_saved_design("retry.json", {"title": "Completo"}, overwrite=False)
+    assert storage.read_saved_design("retry.json") == {"title": "Completo"}
+
+
+def test_saved_design_create_does_not_require_hard_link_support(tmp_path, monkeypatch) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    monkeypatch.setattr(
+        "scripts.thebitlab_storage.os.link",
+        lambda _source, _destination: (_ for _ in ()).throw(OSError("hard link non supportato")),
+    )
+
+    storage.write_saved_design("portable.json", {"title": "Portabile"}, overwrite=False)
+
+    assert storage.read_saved_design("portable.json") == {"title": "Portabile"}
+
+
 def test_school_calendar_metadata_tolerates_invalid_json(tmp_path) -> None:
     storage = JsonCourseStorage(tmp_path)
+    storage.write_saved_design("as_2026_2027.json", {"title": "AS 2026/2027"})
     calendars_dir = tmp_path / "doc" / "calendars"
     calendars_dir.mkdir(parents=True)
     (calendars_dir / "broken.json").write_text("{", encoding="utf-8")
@@ -75,7 +185,7 @@ def test_delete_saved_design_deletes_only_linked_calendars(tmp_path) -> None:
     storage = JsonCourseStorage(tmp_path)
     storage.write_saved_design("as_2026_2027.json", {"title": "AS 2026/2027"})
     storage.write_school_calendar("linked.json", {"course_design_name": "as_2026_2027.json"})
-    storage.write_school_calendar("other.json", {"course_design_name": "other.json"})
+    storage.write_school_calendar("other.json", {"course_design_name": ""})
 
     result = storage.delete_saved_design(
         "as_2026_2027.json",
@@ -90,11 +200,355 @@ def test_delete_saved_design_deletes_only_linked_calendars(tmp_path) -> None:
         {
             "name": "other.json",
             "path": "doc/calendars/other.json",
-            "course_design_name": "other.json",
+            "course_design_name": "",
         }
     ]
     assert not (tmp_path / "doc" / "calendars" / "linked.json").exists()
     assert (tmp_path / "doc" / "calendars" / "other.json").exists()
+
+
+def test_delete_saved_design_rescans_linked_calendars_under_lock(tmp_path) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    storage.write_saved_design("victim.json", {"title": "Da eliminare"})
+    storage.write_school_calendar("known.json", {"course_design_name": "victim.json"})
+    storage.write_school_calendar("created-later.json", {"course_design_name": "victim.json"})
+
+    result = storage.delete_saved_design(
+        "victim.json",
+        delete_calendars=True,
+        calendars=["known.json"],
+    )
+
+    assert result["deleted_calendars"] == ["created-later.json", "known.json"]
+    assert storage.list_school_calendars() == []
+
+
+def test_delete_saved_design_validates_all_calendar_names_before_deleting(tmp_path) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    storage.write_saved_design("victim.json", {"title": "Da conservare"})
+
+    with pytest.raises(ValueError):
+        storage.delete_saved_design(
+            "victim.json",
+            delete_calendars=True,
+            calendars=["../unsafe.json"],
+        )
+
+    assert storage.read_saved_design("victim.json") == {"title": "Da conservare"}
+
+
+def test_delete_saved_design_rolls_back_when_staging_fails(tmp_path, monkeypatch) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    storage.write_saved_design("victim.json", {"title": "Da conservare"})
+    storage.write_school_calendar("linked.json", {"course_design_name": "victim.json"})
+    real_replace = os.replace
+    calls = 0
+
+    def fail_second_replace(source, destination):
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise OSError("staging non disponibile")
+        real_replace(source, destination)
+
+    monkeypatch.setattr("scripts.thebitlab_storage.os.replace", fail_second_replace)
+
+    with pytest.raises(OSError, match="staging non disponibile"):
+        storage.delete_saved_design(
+            "victim.json",
+            delete_calendars=True,
+            calendars=["linked.json"],
+        )
+
+    assert storage.read_saved_design("victim.json") == {"title": "Da conservare"}
+    assert storage.read_school_calendar("linked.json") == {"course_design_name": "victim.json"}
+
+
+def test_save_waits_for_delete_rollback_before_updating_design(tmp_path, monkeypatch) -> None:
+    deleting_storage = JsonCourseStorage(tmp_path)
+    saving_storage = JsonCourseStorage(tmp_path)
+    deleting_storage.write_saved_design("victim.json", {"title": "Originale"})
+    deleting_storage.write_school_calendar("linked.json", {"course_design_name": "victim.json"})
+    first_move_done = threading.Event()
+    continue_delete = threading.Event()
+    save_done = threading.Event()
+    real_replace = os.replace
+    calls = 0
+
+    def controlled_replace(source, destination):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            real_replace(source, destination)
+            first_move_done.set()
+            assert continue_delete.wait(timeout=5)
+            return
+        if calls == 2:
+            raise OSError("staging non disponibile")
+        real_replace(source, destination)
+
+    monkeypatch.setattr("scripts.thebitlab_storage.os.replace", controlled_replace)
+
+    def delete_design() -> None:
+        with pytest.raises(OSError, match="staging non disponibile"):
+            deleting_storage.delete_saved_design(
+                "victim.json",
+                delete_calendars=True,
+                calendars=["linked.json"],
+            )
+
+    def save_design() -> None:
+        saving_storage.write_saved_design("victim.json", {"title": "Aggiornato"})
+        save_done.set()
+
+    delete_thread = threading.Thread(target=delete_design)
+    save_thread = threading.Thread(target=save_design)
+    delete_thread.start()
+    assert first_move_done.wait(timeout=5)
+    save_thread.start()
+    assert save_done.wait(timeout=0.1) is False
+    continue_delete.set()
+    delete_thread.join(timeout=5)
+    save_thread.join(timeout=5)
+
+    assert save_done.is_set()
+    assert saving_storage.read_saved_design("victim.json") == {"title": "Aggiornato"}
+
+
+def test_read_waits_for_delete_rollback_before_observing_design(tmp_path, monkeypatch) -> None:
+    deleting_storage = JsonCourseStorage(tmp_path)
+    reading_storage = JsonCourseStorage(tmp_path)
+    deleting_storage.write_saved_design("victim.json", {"title": "Originale"})
+    deleting_storage.write_school_calendar("linked.json", {"course_design_name": "victim.json"})
+    first_move_done = threading.Event()
+    continue_delete = threading.Event()
+    read_done = threading.Event()
+    read_result: list[dict[str, str]] = []
+    real_replace = os.replace
+    calls = 0
+
+    def controlled_replace(source, destination):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            real_replace(source, destination)
+            first_move_done.set()
+            assert continue_delete.wait(timeout=5)
+            return
+        if calls == 2:
+            raise OSError("staging non disponibile")
+        real_replace(source, destination)
+
+    monkeypatch.setattr("scripts.thebitlab_storage.os.replace", controlled_replace)
+
+    def delete_design() -> None:
+        with pytest.raises(OSError, match="staging non disponibile"):
+            deleting_storage.delete_saved_design(
+                "victim.json",
+                delete_calendars=True,
+                calendars=["linked.json"],
+            )
+
+    def read_design() -> None:
+        read_result.append(reading_storage.read_saved_design("victim.json"))
+        read_done.set()
+
+    delete_thread = threading.Thread(target=delete_design)
+    read_thread = threading.Thread(target=read_design)
+    delete_thread.start()
+    assert first_move_done.wait(timeout=5)
+    read_thread.start()
+    assert read_done.wait(timeout=0.1) is False
+    continue_delete.set()
+    delete_thread.join(timeout=5)
+    read_thread.join(timeout=5)
+
+    assert read_done.is_set()
+    assert read_result == [{"title": "Originale"}]
+
+
+def test_calendar_save_waits_for_course_storage_operation(tmp_path) -> None:
+    locking_storage = JsonCourseStorage(tmp_path)
+    saving_storage = JsonCourseStorage(tmp_path)
+    locking_storage.write_saved_design("victim.json", {"title": "Esistente"})
+    save_started = threading.Event()
+    save_done = threading.Event()
+
+    def save_calendar() -> None:
+        save_started.set()
+        saving_storage.write_school_calendar("linked.json", {"course_design_name": "victim.json"})
+        save_done.set()
+
+    save_thread = threading.Thread(target=save_calendar)
+    with locking_storage.operation_lock:
+        save_thread.start()
+        assert save_started.wait(timeout=5)
+        assert save_done.wait(timeout=0.1) is False
+
+    save_thread.join(timeout=5)
+    assert save_done.is_set()
+    assert saving_storage.read_school_calendar("linked.json") == {"course_design_name": "victim.json"}
+
+
+def test_calendar_save_rejects_a_deleted_linked_design(tmp_path) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    storage.write_saved_design("victim.json", {"title": "Da eliminare"})
+    storage.delete_saved_design("victim.json")
+
+    with pytest.raises(FileNotFoundError, match="Percorso associato non trovato"):
+        storage.write_school_calendar("orphan.json", {"course_design_name": "victim.json"})
+
+    assert storage.list_school_calendars() == []
+
+
+def test_calendar_save_normalizes_linked_design_name(tmp_path) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    storage.write_saved_design("linked.json", {"title": "Esistente"})
+
+    storage.write_school_calendar("calendar.json", {"course_design_name": " linked.json "})
+
+    assert storage.read_school_calendar("calendar.json")["course_design_name"] == "linked.json"
+
+
+def test_course_storage_lock_serializes_different_processes(tmp_path) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    command = [
+        sys.executable,
+        "-c",
+        (
+            "from pathlib import Path; "
+            "from scripts.thebitlab_storage import JsonCourseStorage; "
+            f"storage = JsonCourseStorage(Path({str(tmp_path)!r})); "
+            "storage.write_design({'title': 'child'}); "
+            "print('completed', flush=True)"
+        ),
+    ]
+
+    with storage.operation_lock:
+        process = subprocess.Popen(command, cwd=Path.cwd(), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        time.sleep(0.3)
+        assert process.poll() is None
+
+    stdout, stderr = process.communicate(timeout=10)
+    assert process.returncode == 0, stderr
+    assert stdout.strip() == "completed"
+    assert storage.read_design() == {"title": "child"}
+
+
+def test_uncommitted_delete_transaction_is_restored_on_next_adapter(tmp_path) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    storage.write_saved_design("victim.json", {"title": "Da ripristinare"})
+    original = storage.saved_design_path("victim.json")
+    transaction_dir = storage.delete_staging_dir / "interrupted"
+    transaction_dir.mkdir(parents=True)
+    staged = transaction_dir / "0-victim.json"
+    os.replace(original, staged)
+    (transaction_dir / "manifest.json").write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "entries": [{"original": storage.relative_path(original), "staged": staged.name}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    recovered = JsonCourseStorage(tmp_path)
+
+    assert recovered.read_saved_design("victim.json") == {"title": "Da ripristinare"}
+    assert not transaction_dir.exists()
+
+
+def test_committed_delete_transaction_is_completed_on_next_adapter(tmp_path) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    storage.write_saved_design("victim.json", {"title": "Da eliminare"})
+    original = storage.saved_design_path("victim.json")
+    transaction_dir = storage.delete_staging_dir / "committed"
+    transaction_dir.mkdir(parents=True)
+    staged = transaction_dir / "0-victim.json"
+    os.replace(original, staged)
+    (transaction_dir / "manifest.json").write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "entries": [{"original": storage.relative_path(original), "staged": staged.name}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (transaction_dir / "COMMITTED").write_text("committed\n", encoding="utf-8")
+
+    recovered = JsonCourseStorage(tmp_path)
+
+    assert recovered.list_saved_designs() == []
+    assert not transaction_dir.exists()
+
+
+def test_delete_reports_pending_cleanup_and_next_adapter_retries(tmp_path, monkeypatch) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    storage.write_saved_design("victim.json", {"title": "Da eliminare"})
+    real_rmtree = shutil.rmtree
+    failed_once = False
+
+    def fail_first_cleanup(path, *args, **kwargs):
+        nonlocal failed_once
+        if not failed_once and Path(path).parent == storage.delete_staging_dir:
+            failed_once = True
+            raise PermissionError("cleanup bloccato")
+        return real_rmtree(path, *args, **kwargs)
+
+    monkeypatch.setattr("scripts.thebitlab_storage.shutil.rmtree", fail_first_cleanup)
+    result = storage.delete_saved_design("victim.json")
+
+    assert result["cleanup_pending"] is True
+    assert any(storage.delete_staging_dir.iterdir())
+
+    monkeypatch.setattr("scripts.thebitlab_storage.shutil.rmtree", real_rmtree)
+    recovered = JsonCourseStorage(tmp_path)
+    assert recovered.list_saved_designs() == []
+    assert list(recovered.delete_staging_dir.iterdir()) == []
+
+
+def test_partial_committed_cleanup_never_restores_deleted_design(tmp_path, monkeypatch) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    storage.write_saved_design("victim.json", {"title": "Da eliminare"})
+    real_rmtree = shutil.rmtree
+    failed_once = False
+
+    def partially_clean_then_fail(path, *args, **kwargs):
+        nonlocal failed_once
+        transaction_dir = Path(path)
+        if not failed_once and transaction_dir.name.endswith(".committed"):
+            failed_once = True
+            (transaction_dir / "manifest.json").unlink()
+            raise PermissionError("cleanup interrotto")
+        return real_rmtree(path, *args, **kwargs)
+
+    monkeypatch.setattr("scripts.thebitlab_storage.shutil.rmtree", partially_clean_then_fail)
+    result = storage.delete_saved_design("victim.json")
+
+    assert result["cleanup_pending"] is True
+    assert storage.list_saved_designs() == []
+    assert any(path.name.endswith(".committed") for path in storage.delete_staging_dir.iterdir())
+
+    monkeypatch.setattr("scripts.thebitlab_storage.shutil.rmtree", real_rmtree)
+    recovered = JsonCourseStorage(tmp_path)
+    assert recovered.list_saved_designs() == []
+    assert list(recovered.delete_staging_dir.iterdir()) == []
+
+
+def test_delete_syncs_staged_entry_before_source_removal(tmp_path, monkeypatch) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    storage.write_saved_design("victim.json", {"title": "Da eliminare"})
+    synced: list[Path] = []
+    monkeypatch.setattr("scripts.thebitlab_storage.sync_directory", lambda path: synced.append(path))
+
+    storage.delete_saved_design("victim.json")
+
+    source_sync_index = synced.index(storage.course_designs_dir)
+    staged_directory = synced[source_sync_index - 1]
+    assert staged_directory.parent == storage.delete_staging_dir
+    assert staged_directory.name.endswith(".pending")
 
 
 def test_read_json_rejects_non_object_payload(tmp_path) -> None:

@@ -1226,7 +1226,7 @@ async function saveAssociatedCourseDesign() {
   if (name) {
     await api("/api/saved-designs/save", {
       method: "POST",
-      body: JSON.stringify({ name, design: state.courseDesign }),
+      body: JSON.stringify({ name, design: state.courseDesign, overwrite: true }),
     });
     return `doc/course_designs/${name}`;
   }
