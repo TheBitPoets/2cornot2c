@@ -207,9 +207,20 @@ Risultato atteso:
 
 Per tornare alla demo pulita:
 
+1. Nel terminale in cui e in esecuzione il server premi `Ctrl+C` e attendi che il processo termini.
+2. Rigenera i dati della demo:
+
 ```powershell
 python scripts/student_lab_demo_setup.py
 ```
+
+3. Riavvia il server sulla root rigenerata:
+
+```powershell
+python scripts/course_board_server.py --root tmp/student-lab-demo
+```
+
+4. Ricarica la dashboard nel browser prima di continuare con gli scenari successivi.
 
 ## Scenario 6 - Dashboard studente dopo esecuzione TUI
 
