@@ -140,7 +140,12 @@ Usalo quando:
 
 - vuoi filtrare consegne mancanti, in ritardo, consegnate o con test falliti;
 - vuoi aprire la consegna di uno studente;
-- vuoi controllare grading, voti, feedback AI e stato revisione.
+- vuoi controllare grading, voti, feedback AI e stato revisione;
+- vuoi verificare quante richieste di aiuto sono state inviate per la consegna corrente e quante sono state bloccate dalla policy.
+
+Il pulsante `Dettagli aiuti` apre un modal dedicato allo studente e all'activity del registro selezionato. Per ogni richiesta mostra data, tipo di aiuto, prompt dello studente, risposta ricevuta, provider e consumo token dichiarato. Le richieste bloccate riportano l'esito della policy senza una risposta generata.
+
+La sezione `Legacy non verificati`, quando presente, contiene dati storici provenienti dal repository studente: serve per consultazione, ma non contribuisce al budget o alle metriche autorevoli. Se il log autorevole non è disponibile, il modal mostra un avviso esplicito anche in presenza di dati legacy.
 
 Screenshot previsto: `doc/images/dashboard-guides/docente-studenti.png`.
 
