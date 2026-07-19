@@ -1221,9 +1221,36 @@ def legacy_submission_repo_path(student: dict, candidate: Path) -> Path | None:
     return None
 
 
+def normalized_submission_file_reference(value: Any) -> str:
+    """Return a comparable register reference for one submitted file."""
+
+    normalized = str(value or "").strip().replace("\\", "/")
+    while normalized.startswith("./"):
+        normalized = normalized[2:]
+    return normalized
+
+
+def registered_submission_file_references(student: dict) -> set[str]:
+    """Return the file references explicitly recorded for one submission."""
+
+    submission = student.get("submission") if isinstance(student.get("submission"), dict) else {}
+    references = {
+        normalized_submission_file_reference(submission.get("source_path")),
+    }
+    files = submission.get("files") if isinstance(submission.get("files"), list) else []
+    for entry in files:
+        value = entry.get("path") or entry.get("source_path") if isinstance(entry, dict) else entry
+        references.add(normalized_submission_file_reference(value))
+    references.discard("")
+    return references
+
+
 def resolve_submission_file_path(student: dict, file_path: str) -> Path:
     """Resolve a submitted file path while keeping reads inside the student repo."""
 
+    requested_reference = normalized_submission_file_reference(file_path)
+    if requested_reference not in registered_submission_file_references(student):
+        raise FileNotFoundError(f"File consegna non trovato o non consentito: {file_path}")
     explicit_repo_path = str(student.get("repo_path", "")).strip()
     repo_value = explicit_repo_path or str(student.get("repo", "")).strip()
     repo = Path(repo_value)

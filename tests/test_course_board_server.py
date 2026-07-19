@@ -91,6 +91,7 @@ def test_submission_file_uses_local_repo_path_separately_from_remote_repo(tmp_pa
         {
             "repo": "TheBitPoets/rossi-mario",
             "repo_path": "examples/student_repos/rossi-mario",
+            "submission": {"files": [{"path": "assignments/somma-001/main.py"}]},
         },
         "assignments/somma-001/main.py",
     )
@@ -109,7 +110,16 @@ def test_submission_file_accepts_legacy_project_relative_path_inside_absolute_re
     monkeypatch.setattr(course_board_server, "ROOT", root)
 
     resolved = course_board_server.resolve_submission_file_path(
-        {"repo": str(repo)},
+        {
+            "repo": str(repo),
+            "submission": {
+                "files": [
+                    {
+                        "path": "tmp/student-lab-demo/examples/student_repos/rossi-mario/assignments/somma-001/main.py"
+                    }
+                ]
+            },
+        },
         "tmp/student-lab-demo/examples/student_repos/rossi-mario/assignments/somma-001/main.py",
     )
 
@@ -127,7 +137,16 @@ def test_submission_file_infers_legacy_local_repo_from_remote_reference(tmp_path
     monkeypatch.setattr(course_board_server, "ROOT", root)
 
     resolved = course_board_server.resolve_submission_file_path(
-        {"repo": "TheBitPoets/rossi-mario"},
+        {
+            "repo": "TheBitPoets/rossi-mario",
+            "submission": {
+                "files": [
+                    {
+                        "path": "tmp/student-help-modal-test/examples/assignment_tracking/student_repos/rossi-mario/assignments/somma-001/main.py"
+                    }
+                ]
+            },
+        },
         "tmp/student-help-modal-test/examples/assignment_tracking/student_repos/rossi-mario/assignments/somma-001/main.py",
     )
 
@@ -145,7 +164,14 @@ def test_submission_file_does_not_infer_legacy_repo_outside_trusted_roots(tmp_pa
 
     with pytest.raises(FileNotFoundError, match="non trovato o non consentito"):
         course_board_server.resolve_submission_file_path(
-            {"repo": "TheBitPoets/rossi-mario"},
+            {
+                "repo": "TheBitPoets/rossi-mario",
+                "submission": {
+                    "files": [
+                        {"path": "archive/rossi-mario/assignments/somma-001/main.py"}
+                    ]
+                },
+            },
             "archive/rossi-mario/assignments/somma-001/main.py",
         )
 
@@ -161,8 +187,35 @@ def test_submission_file_rejects_path_outside_local_student_repo(tmp_path, monke
 
     with pytest.raises(FileNotFoundError, match="non trovato o non consentito"):
         course_board_server.resolve_submission_file_path(
-            {"repo_path": "examples/student_repos/rossi-mario"},
+            {
+                "repo_path": "examples/student_repos/rossi-mario",
+                "submission": {"files": [{"path": "teacher-reports/secret.txt"}]},
+            },
             "teacher-reports/secret.txt",
+        )
+
+
+def test_submission_file_rejects_unregistered_legacy_path_in_same_named_repo(tmp_path, monkeypatch) -> None:
+    root = tmp_path / "data"
+    legitimate = root / "students" / "rossi-mario" / "assignments" / "somma-001" / "main.py"
+    secret = root / "teacher-private" / "rossi-mario" / "assignments" / "x" / "secret.txt"
+    legitimate.parent.mkdir(parents=True)
+    secret.parent.mkdir(parents=True)
+    legitimate.write_text("print(5)\n", encoding="utf-8")
+    secret.write_text("riservato\n", encoding="utf-8")
+    monkeypatch.setattr(course_board_server, "ROOT", root)
+
+    with pytest.raises(FileNotFoundError, match="non trovato o non consentito"):
+        course_board_server.resolve_submission_file_path(
+            {
+                "repo": "TheBitPoets/rossi-mario",
+                "submission": {
+                    "files": [
+                        {"path": "students/rossi-mario/assignments/somma-001/main.py"}
+                    ]
+                },
+            },
+            "teacher-private/rossi-mario/assignments/x/secret.txt",
         )
 
 
