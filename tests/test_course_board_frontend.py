@@ -143,3 +143,33 @@ def test_frame_snapshot_restores_content_and_quality() -> None:
         assert.notEqual(item.frame_quality, snapshot.frameQuality);
         """
     )
+
+
+def test_save_as_requires_confirmation_before_overwriting() -> None:
+    run_course_board_js(
+        """
+        let requests = 0;
+        api = async (_path, options) => {
+          requests += 1;
+          const body = JSON.parse(options.body);
+          if (requests === 1) {
+            const error = new Error("409 Conflict");
+            error.status = 409;
+            throw error;
+          }
+          assert.equal(body.overwrite, true);
+          return { saved: { name: body.name }, designs: [{ name: body.name }] };
+        };
+        confirm = () => true;
+        renderSavedDesigns = () => {};
+        renderProjectTitle = () => {};
+        renderCourseActions = () => {};
+        state.design = { years: [] };
+
+        saveArchiveDesignWithName("existing.json", { confirmOverwrite: true })
+          .then((saved) => {
+            assert.equal(saved, true);
+            assert.equal(requests, 2);
+          });
+        """
+    )

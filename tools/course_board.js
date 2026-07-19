@@ -208,7 +208,9 @@ async function api(path, options = {}) {
     ...options,
   });
   if (!response.ok) {
-    throw new Error(await responseErrorMessage(response));
+    const error = new Error(await responseErrorMessage(response));
+    error.status = response.status;
+    throw error;
   }
   return response.json();
 }
@@ -372,7 +374,7 @@ async function saveArchiveDesign() {
   }
   const defaultName = state.activeSavedDesign || "course_design_as_25_26.json";
   if (state.activeSavedDesign) {
-    await saveArchiveDesignWithName(state.activeSavedDesign);
+    await saveArchiveDesignWithName(state.activeSavedDesign, { overwrite: true });
     return;
   }
   const name = prompt("Nome file archivio JSON:", defaultName);
@@ -384,15 +386,34 @@ async function saveArchiveDesignAs() {
   const defaultName = state.activeSavedDesign || "course_design_as_25_26.json";
   const name = prompt("Nome file archivio JSON:", defaultName);
   if (!name) return;
-  await saveArchiveDesignWithName(name);
+  await saveArchiveDesignWithName(name, { confirmOverwrite: true });
 }
 
-async function saveArchiveDesignWithName(name) {
+async function saveArchiveDesignWithName(name, options = {}) {
+  const {
+    overwrite = false,
+    confirmOverwrite = false,
+    design = state.design,
+  } = options;
   setStatus(`Salvataggio archivio "${name}"...`);
-  const payload = await api("/api/saved-designs/save", {
-    method: "POST",
-    body: JSON.stringify({ name, design: state.design }),
-  });
+  let payload;
+  try {
+    payload = await api("/api/saved-designs/save", {
+      method: "POST",
+      body: JSON.stringify({ name, design, overwrite }),
+    });
+  } catch (error) {
+    if (error.status === 409 && confirmOverwrite) {
+      if (!confirm(`Esiste già un progetto chiamato "${name}". Vuoi sostituirlo?`)) {
+        setStatus("Salvataggio annullato: il progetto esistente non è stato modificato.");
+        return false;
+      }
+      return saveArchiveDesignWithName(name, { design, overwrite: true });
+    }
+    setStatus(`Salvataggio non riuscito. Dettaglio: ${error.message}`);
+    return false;
+  }
+  state.design = design;
   state.savedDesigns = payload.designs || [];
   state.activeSavedDesign = payload.saved?.name || name;
   state.isNewDesign = false;
@@ -402,6 +423,7 @@ async function saveArchiveDesignWithName(name) {
   renderProjectTitle();
   renderCourseActions();
   setStatus(`Progetto salvato in archivio: ${state.activeSavedDesign}.`);
+  return true;
 }
 
 async function saveCurrentProject() {
@@ -480,10 +502,9 @@ async function newCourseDesign() {
   if (!confirm("Creare un nuovo percorso vuoto? Le modifiche non salvate nella vista corrente saranno perse.")) return;
   const name = prompt("Nome file del nuovo percorso JSON:", "course_design_as_25_26.json");
   if (!name) return;
-  state.design = emptyCourseDesign();
-  state.activeSavedDesign = name;
-  state.isNewDesign = false;
-  await saveArchiveDesignWithName(name);
+  const design = emptyCourseDesign();
+  const saved = await saveArchiveDesignWithName(name, { design, confirmOverwrite: true });
+  if (!saved) return;
   renderSavedDesigns();
   renderProjectTitle();
   renderHeadings();

@@ -44,6 +44,16 @@ def test_saved_design_rejects_unsafe_name(tmp_path) -> None:
         storage.write_saved_design("../unsafe.json", {})
 
 
+def test_saved_design_create_does_not_overwrite_existing_file(tmp_path) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    storage.write_saved_design("existing.json", {"title": "Originale"}, overwrite=False)
+
+    with pytest.raises(FileExistsError):
+        storage.write_saved_design("existing.json", {"title": "Nuovo"}, overwrite=False)
+
+    assert storage.read_saved_design("existing.json") == {"title": "Originale"}
+
+
 def test_school_calendar_metadata_tolerates_invalid_json(tmp_path) -> None:
     storage = JsonCourseStorage(tmp_path)
     calendars_dir = tmp_path / "doc" / "calendars"

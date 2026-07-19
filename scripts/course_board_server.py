@@ -543,10 +543,10 @@ def read_saved_design(name: str) -> dict:
     return course_service().read_saved_design(name)
 
 
-def write_saved_design(name: str, payload: dict) -> dict:
+def write_saved_design(name: str, payload: dict, overwrite: bool = True) -> dict:
     """Persist a named course design in the archive folder."""
 
-    return course_service().write_saved_design(name, payload)
+    return course_service().write_saved_design(name, payload, overwrite=overwrite)
 
 
 def delete_saved_design(name: str, delete_calendars: bool = False, calendars: list[str] | None = None) -> dict:
@@ -3303,13 +3303,16 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/saved-designs/save":
             try:
-                saved = write_saved_design(payload.get("name", ""), payload.get("design", {}))
+                saved = write_saved_design(
+                    payload.get("name", ""),
+                    payload.get("design", {}),
+                    overwrite=payload.get("overwrite") is True,
+                )
                 self.write_json({"ok": True, "saved": saved, "designs": list_saved_designs()})
+            except FileExistsError:
+                self.write_error_json(409, "Esiste già un progetto con questo nome.")
             except Exception as error:  # noqa: BLE001
-                self.send_response(400)
-                self.send_header("Content-Type", "application/json; charset=utf-8")
-                self.end_headers()
-                self.wfile.write(json.dumps({"error": str(error)}, ensure_ascii=False).encode("utf-8"))
+                self.write_error_json(400, str(error))
             return
         if parsed.path == "/api/saved-designs/delete":
             try:

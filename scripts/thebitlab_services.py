@@ -47,10 +47,15 @@ class CourseService:
 
         return self.storage.read_saved_design(name)
 
-    def write_saved_design(self, name: str, payload: dict[str, Any]) -> dict[str, str]:
+    def write_saved_design(
+        self,
+        name: str,
+        payload: dict[str, Any],
+        overwrite: bool = True,
+    ) -> dict[str, str]:
         """Persist a named course design."""
 
-        return self.storage.write_saved_design(name, payload)
+        return self.storage.write_saved_design(name, payload, overwrite=overwrite)
 
     def delete_saved_design(
         self,

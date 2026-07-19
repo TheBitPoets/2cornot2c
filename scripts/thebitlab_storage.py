@@ -89,11 +89,22 @@ class JsonCourseStorage:
             raise FileNotFoundError(f"Percorso salvato non trovato: {name}")
         return self.read_json(path)
 
-    def write_saved_design(self, name: str, payload: dict[str, Any]) -> dict[str, str]:
+    def write_saved_design(
+        self,
+        name: str,
+        payload: dict[str, Any],
+        overwrite: bool = True,
+    ) -> dict[str, str]:
         """Persist a named course design in the archive folder."""
 
         path = self.saved_design_path(name)
-        self.write_json(path, payload)
+        if overwrite:
+            self.write_json(path, payload)
+        else:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            serialized = json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
+            with path.open("x", encoding="utf-8") as destination:
+                destination.write(serialized)
         return {"name": path.name, "path": self.relative_path(path)}
 
     def list_school_calendars(self) -> list[dict[str, str]]:

@@ -77,7 +77,12 @@ def test_course_service_accepts_protocol_compatible_storage(tmp_path) -> None:
         def read_saved_design(self, name: str) -> dict[str, object]:
             return {"name": name}
 
-        def write_saved_design(self, name: str, payload: dict[str, object]) -> dict[str, str]:
+        def write_saved_design(
+            self,
+            name: str,
+            payload: dict[str, object],
+            overwrite: bool = True,
+        ) -> dict[str, str]:
             return {"name": name, "path": f"doc/course_designs/{name}"}
 
         def delete_saved_design(
