@@ -270,8 +270,7 @@ def submission_files(
                         "github_url": github_file_url(target, repo_url, str(confined_path), commit),
                     }
                 )
-        if normalized_files:
-            return normalized_files
+        return normalized_files
 
     source_value = report.get("source")
     source_path = report_source_path(target, source_value)

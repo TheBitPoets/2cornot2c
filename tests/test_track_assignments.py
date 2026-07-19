@@ -489,6 +489,29 @@ def test_track_assignments_ignores_report_files_outside_student_repo(tmp_path) -
     assert files[0]["path"].endswith("assignments/python-base-somma-001/main.py")
 
 
+def test_track_assignments_does_not_scan_assignment_when_explicit_manifest_is_empty(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+    student = target(tmp_path, "rossi-mario")
+    write_report(student.path, "2026-10-18T18:22:10+02:00")
+    assignment_path = student.path / "assignments" / "python-base-somma-001"
+    unlisted_path = assignment_path / "non-inviato.txt"
+    unlisted_path.write_text("Non dichiarato nel manifest.\n", encoding="utf-8")
+    report_path = student.path / "reports" / "python-base-somma-001" / "latest.json"
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    report["files"] = [
+        {"path": "assignments/python-base-somma-001/mancante.py", "role": "solution"},
+    ]
+    report_path.write_text(json.dumps(report), encoding="utf-8")
+
+    index = track_assignments.track_assignments(
+        activity_path=activity_path,
+        targets=[student],
+        due_at="2026-10-19T23:59:00+02:00",
+    )
+
+    assert index["students"][0]["submission"]["files"] == []
+
+
 def test_track_assignments_marks_pending_before_due_date(tmp_path) -> None:
     activity_path = write_activity(tmp_path)
     student = target(tmp_path, "bianchi-luca")
