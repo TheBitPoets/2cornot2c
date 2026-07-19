@@ -80,7 +80,7 @@ class JsonCourseStorage:
         if not self.delete_staging_dir.is_dir():
             return
         for transaction_dir in sorted(path for path in self.delete_staging_dir.iterdir() if path.is_dir()):
-            if (transaction_dir / "COMMITTED").is_file():
+            if transaction_dir.name.endswith(".committed") or (transaction_dir / "COMMITTED").is_file():
                 try:
                     shutil.rmtree(transaction_dir)
                 except OSError:
@@ -261,7 +261,9 @@ class JsonCourseStorage:
                     targets.append(calendar_path)
                     deleted_calendars.append(safe_calendar_name)
 
-            transaction_dir = self.delete_staging_dir / uuid.uuid4().hex
+            transaction_id = uuid.uuid4().hex
+            transaction_dir = self.delete_staging_dir / f"{transaction_id}.pending"
+            committed_transaction_dir = self.delete_staging_dir / f"{transaction_id}.committed"
             transaction_dir.mkdir(parents=True, exist_ok=False)
             entries = self._delete_manifest_entries(targets)
             self._write_delete_transaction_file(
@@ -272,14 +274,14 @@ class JsonCourseStorage:
                 for target, entry in zip(targets, entries, strict=True):
                     staged_path = transaction_dir / entry["staged"]
                     os.replace(target, staged_path)
-                self._write_delete_transaction_file(transaction_dir / "COMMITTED", "committed\n")
+                os.replace(transaction_dir, committed_transaction_dir)
             except Exception:
                 self._rollback_delete_entries(transaction_dir, entries)
                 shutil.rmtree(transaction_dir)
                 raise
             cleanup_pending = False
             try:
-                shutil.rmtree(transaction_dir)
+                shutil.rmtree(committed_transaction_dir)
             except OSError:
                 cleanup_pending = True
             return {

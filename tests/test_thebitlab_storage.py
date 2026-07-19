@@ -292,6 +292,34 @@ def test_delete_reports_pending_cleanup_and_next_adapter_retries(tmp_path, monke
     assert list(recovered.delete_staging_dir.iterdir()) == []
 
 
+def test_partial_committed_cleanup_never_restores_deleted_design(tmp_path, monkeypatch) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    storage.write_saved_design("victim.json", {"title": "Da eliminare"})
+    real_rmtree = shutil.rmtree
+    failed_once = False
+
+    def partially_clean_then_fail(path, *args, **kwargs):
+        nonlocal failed_once
+        transaction_dir = Path(path)
+        if not failed_once and transaction_dir.name.endswith(".committed"):
+            failed_once = True
+            (transaction_dir / "manifest.json").unlink()
+            raise PermissionError("cleanup interrotto")
+        return real_rmtree(path, *args, **kwargs)
+
+    monkeypatch.setattr("scripts.thebitlab_storage.shutil.rmtree", partially_clean_then_fail)
+    result = storage.delete_saved_design("victim.json")
+
+    assert result["cleanup_pending"] is True
+    assert storage.list_saved_designs() == []
+    assert any(path.name.endswith(".committed") for path in storage.delete_staging_dir.iterdir())
+
+    monkeypatch.setattr("scripts.thebitlab_storage.shutil.rmtree", real_rmtree)
+    recovered = JsonCourseStorage(tmp_path)
+    assert recovered.list_saved_designs() == []
+    assert list(recovered.delete_staging_dir.iterdir()) == []
+
+
 def test_read_json_rejects_non_object_payload(tmp_path) -> None:
     storage = JsonCourseStorage(tmp_path)
     path = tmp_path / "list.json"
