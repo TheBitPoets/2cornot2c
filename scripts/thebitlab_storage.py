@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import errno
 import json
 import os
 import re
 import shutil
 import tempfile
 import threading
+import time
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -17,15 +19,84 @@ from scripts.thebitlab_contracts import normalize_activity, normalize_assignment
 
 DESIGN_NAME_RE = re.compile(r"^[a-zA-Z0-9_.-]+\.json$")
 _COURSE_LOCKS_GUARD = threading.Lock()
-_COURSE_LOCKS: dict[Path, threading.RLock] = {}
+_COURSE_LOCKS: dict[Path, "CourseStorageLock"] = {}
 
 
-def course_storage_lock(root: Path) -> threading.RLock:
+class CourseStorageLock:
+    """Reentrant thread and process lock for one course data root."""
+
+    def __init__(self, root: Path) -> None:
+        self.path = root.resolve(strict=False) / "doc" / ".course-storage.lock"
+        self.thread_lock = threading.RLock()
+        self.depth = 0
+        self.handle = None
+
+    def _acquire_process_lock(self):
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        handle = self.path.open("a+b")
+        handle.seek(0, os.SEEK_END)
+        if handle.tell() == 0:
+            handle.write(b"\0")
+            handle.flush()
+            os.fsync(handle.fileno())
+        while True:
+            try:
+                handle.seek(0)
+                if os.name == "nt":
+                    import msvcrt
+
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+                else:
+                    import fcntl
+
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                return handle
+            except OSError as error:
+                if error.errno not in {errno.EACCES, errno.EAGAIN, errno.EDEADLK}:
+                    handle.close()
+                    raise
+                time.sleep(0.05)
+
+    @staticmethod
+    def _release_process_lock(handle) -> None:
+        handle.seek(0)
+        if os.name == "nt":
+            import msvcrt
+
+            msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+        handle.close()
+
+    def __enter__(self) -> "CourseStorageLock":
+        self.thread_lock.acquire()
+        try:
+            if self.depth == 0:
+                self.handle = self._acquire_process_lock()
+            self.depth += 1
+            return self
+        except Exception:
+            self.thread_lock.release()
+            raise
+
+    def __exit__(self, _exc_type, _exc_value, _traceback) -> None:
+        self.depth -= 1
+        try:
+            if self.depth == 0 and self.handle is not None:
+                self._release_process_lock(self.handle)
+                self.handle = None
+        finally:
+            self.thread_lock.release()
+
+
+def course_storage_lock(root: Path) -> CourseStorageLock:
     """Return the process-local lock shared by every adapter for one root."""
 
     key = root.resolve(strict=False)
     with _COURSE_LOCKS_GUARD:
-        return _COURSE_LOCKS.setdefault(key, threading.RLock())
+        return _COURSE_LOCKS.setdefault(key, CourseStorageLock(key))
 
 
 def sync_directory(path: Path) -> None:
@@ -201,7 +272,8 @@ class JsonCourseStorage:
     def write_design(self, payload: dict[str, Any]) -> None:
         """Persist the current course design."""
 
-        self.write_json(self.design_path, payload)
+        with self.operation_lock:
+            self.write_json(self.design_path, payload)
 
     def list_saved_designs(self) -> list[dict[str, str]]:
         """List saved course designs stored in doc/course_designs."""

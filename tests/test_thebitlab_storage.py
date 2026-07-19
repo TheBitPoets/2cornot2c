@@ -3,7 +3,10 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import subprocess
+import sys
 import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -265,6 +268,31 @@ def test_calendar_save_waits_for_course_storage_operation(tmp_path) -> None:
     save_thread.join(timeout=5)
     assert save_done.is_set()
     assert saving_storage.read_school_calendar("linked.json") == {"course_design_name": "victim.json"}
+
+
+def test_course_storage_lock_serializes_different_processes(tmp_path) -> None:
+    storage = JsonCourseStorage(tmp_path)
+    command = [
+        sys.executable,
+        "-c",
+        (
+            "from pathlib import Path; "
+            "from scripts.thebitlab_storage import JsonCourseStorage; "
+            f"storage = JsonCourseStorage(Path({str(tmp_path)!r})); "
+            "storage.write_design({'title': 'child'}); "
+            "print('completed', flush=True)"
+        ),
+    ]
+
+    with storage.operation_lock:
+        process = subprocess.Popen(command, cwd=Path.cwd(), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        time.sleep(0.3)
+        assert process.poll() is None
+
+    stdout, stderr = process.communicate(timeout=10)
+    assert process.returncode == 0, stderr
+    assert stdout.strip() == "completed"
+    assert storage.read_design() == {"title": "child"}
 
 
 def test_uncommitted_delete_transaction_is_restored_on_next_adapter(tmp_path) -> None:
