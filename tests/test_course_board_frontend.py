@@ -241,6 +241,34 @@ def test_change_during_current_project_save_remains_dirty() -> None:
     )
 
 
+def test_archive_save_response_does_not_relabel_a_newly_opened_project() -> None:
+    run_course_board_js(
+        """
+        let completeRequest;
+        api = async () => new Promise((resolve) => { completeRequest = resolve; });
+        renderSavedDesigns = () => {};
+        renderProjectTitle = () => {};
+        renderCourseActions = () => {};
+        const firstDesign = { years: [{ id: "first" }] };
+        const secondDesign = { years: [{ id: "second" }] };
+        state.design = firstDesign;
+        state.activeSavedDesign = "first.json";
+
+        const saving = saveArchiveDesignWithName("first.json", { overwrite: true });
+        state.design = secondDesign;
+        state.activeSavedDesign = "second.json";
+        completeRequest({ saved: { name: "first.json" }, designs: [] });
+
+        saving.then((saved) => {
+          assert.equal(saved, true);
+          assert.equal(state.design, secondDesign);
+          assert.equal(state.activeSavedDesign, "second.json");
+          assert.match(els.status.textContent, /vista aperta non e stata cambiata/);
+        });
+        """
+    )
+
+
 def test_clean_snapshot_normalizes_legacy_frames_before_comparison() -> None:
     run_course_board_js(
         """

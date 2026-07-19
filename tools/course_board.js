@@ -173,6 +173,20 @@ function hasUnsavedChanges() {
   return Boolean(cleanDesignSnapshot && designSnapshot() !== cleanDesignSnapshot);
 }
 
+function captureBoardContext() {
+  return {
+    design: state.design,
+    activeSavedDesign: state.activeSavedDesign,
+    isNewDesign: state.isNewDesign,
+  };
+}
+
+function isBoardContextCurrent(context) {
+  return state.design === context.design
+    && state.activeSavedDesign === context.activeSavedDesign
+    && state.isNewDesign === context.isNewDesign;
+}
+
 function confirmDiscardChanges() {
   if (!hasUnsavedChanges()) return true;
   return confirm("Ci sono modifiche non salvate. Vuoi scartarle e continuare?");
@@ -447,6 +461,7 @@ async function saveArchiveDesignWithName(name, options = {}) {
     confirmOverwrite = false,
     design = state.design,
     opensSavedDesign = state.design !== design,
+    boardContext = captureBoardContext(),
   } = options;
   normalizeCourseDesignFrames(design);
   const designToSave = JSON.parse(JSON.stringify(design));
@@ -468,10 +483,15 @@ async function saveArchiveDesignWithName(name, options = {}) {
         design: designToSave,
         overwrite: true,
         opensSavedDesign,
+        boardContext,
       });
     }
     setStatus(`Salvataggio non riuscito. Dettaglio: ${error.message}`);
     return false;
+  }
+  if (!isBoardContextCurrent(boardContext)) {
+    setStatus(`Progetto salvato in archivio: ${payload.saved?.name || name}. La vista aperta non e stata cambiata.`);
+    return true;
   }
   if (opensSavedDesign) state.design = designToSave;
   state.savedDesigns = payload.designs || [];
@@ -490,11 +510,16 @@ async function saveArchiveDesignWithName(name, options = {}) {
 async function saveCurrentProject() {
   normalizeCourseDesignFrames();
   const savedSnapshot = designSnapshot();
+  const boardContext = captureBoardContext();
   setStatus("Salvataggio progetto corrente in doc/course_design.json...");
   await api("/api/course-design", {
     method: "POST",
     body: savedSnapshot,
   });
+  if (!isBoardContextCurrent(boardContext)) {
+    setStatus("Progetto corrente salvato. La vista aperta non e stata cambiata.");
+    return;
+  }
   localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
   sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
   state.activeSavedDesign = "";
@@ -1779,11 +1804,16 @@ async function saveDesign() {
   if (!confirmed) return;
   normalizeCourseDesignFrames();
   const savedSnapshot = designSnapshot();
+  const boardContext = captureBoardContext();
   setStatus("Salvataggio...");
   await api("/api/course-design", {
     method: "POST",
     body: savedSnapshot,
   });
+  if (!isBoardContextCurrent(boardContext)) {
+    setStatus("Progetto impostato come corrente. La vista aperta non e stata cambiata.");
+    return;
+  }
   localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
   sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
   state.activeSavedDesign = "";
