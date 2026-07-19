@@ -141,7 +141,21 @@ class StructuredErrorHelpProvider:
             message="Stack trace remoto: api_key=segreto-nel-messaggio",
             usage={"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
             detail="Errore remoto: token=segreto-strutturato",
-        )
+    )
+
+
+def test_provider_response_normalizes_total_tokens() -> None:
+    response = StudentHelpResponse(
+        status="ready",
+        provider="test-provider",
+        provider_label="Provider test",
+        message="Guida",
+        usage={"input_tokens": 3, "output_tokens": 7, "total_tokens": 999},
+    )
+
+    payload = student_help_service.provider_response_payload(response)
+
+    assert payload["usage"] == {"input_tokens": 3, "output_tokens": 7, "total_tokens": 10}
 
 
 def test_evaluate_help_request_denies_ai_when_policy_does_not_allow_it() -> None:
@@ -236,7 +250,7 @@ def test_ai_usage_distinguishes_reported_missing_local_and_blocked_requests(tmp_
             "allowed": True,
             "response": {
                 "provider": "codex-local",
-                "usage": {"input_tokens": 12, "output_tokens": 3, "total_tokens": 15},
+                "usage": {"input_tokens": 12, "output_tokens": 3, "total_tokens": 999},
             },
         },
         {
@@ -276,6 +290,7 @@ def test_ai_usage_distinguishes_reported_missing_local_and_blocked_requests(tmp_
         "requests_reported": 1,
         "requests_without_usage": 1,
     }
+    assert summary["events"][0]["response"]["usage"]["total_tokens"] == 15
 
 
 def test_teacher_help_summary_exposes_only_known_provider_states(tmp_path) -> None:
