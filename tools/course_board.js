@@ -646,6 +646,9 @@ function renderHeadings() {
       state.draggedHeading = heading;
     });
     node.addEventListener("dblclick", () => addToFirstUda(heading));
+    const addButton = node.querySelector(".headingAdd");
+    addButton.setAttribute("aria-label", `Aggiungi ${heading.title} alla prima UDA del percorso`);
+    addButton.addEventListener("click", () => addToFirstUda(heading));
     els.headingList.append(node);
   }
 
@@ -691,11 +694,19 @@ function toggleHeading(headingId) {
 function addToFirstUda(heading) {
   const firstYear = state.design.years?.[0];
   const firstUda = firstYear?.udas?.[0];
-  if (!firstUda) return;
+  if (!firstYear || !firstUda) {
+    setStatus("Aggiungi prima un percorso con almeno una UDA.");
+    return;
+  }
+  if (isHeadingTreeAssignedToYear(heading, firstYear.id)) {
+    setStatus(`"${heading.title}" o un suo sottoparagrafo è già presente in ${firstYear.title}.`);
+    return;
+  }
   firstUda.items ||= [];
   firstUda.items.push(itemFromHeading(heading));
   renderCourse();
   renderHeadings();
+  setStatus(`"${heading.title}" aggiunto alla prima UDA di ${firstYear.title}.`);
 }
 
 function itemFromHeading(heading) {

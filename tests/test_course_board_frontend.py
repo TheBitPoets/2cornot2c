@@ -85,3 +85,26 @@ def test_collapsed_heading_only_hides_its_real_descendants() -> None:
         assert.equal(isHiddenByCollapsedParent(state.headings[4]), true);
         """
     )
+
+
+def test_quick_add_does_not_duplicate_a_heading_tree() -> None:
+    run_course_board_js(
+        """
+        renderCourse = () => {};
+        renderHeadings = () => {};
+        const heading = { id: "topic", title: "Argomento", source: "README.md", level: 2 };
+        state.headings = [
+          heading,
+          { id: "child", title: "Sottoargomento", source: "README.md", level: 3 },
+        ];
+        state.design = {
+          years: [{ id: "path", title: "Percorso", udas: [{ id: "uda-1", items: [] }] }],
+        };
+
+        addToFirstUda(heading);
+        addToFirstUda(heading);
+
+        assert.equal(state.design.years[0].udas[0].items.length, 1);
+        assert.match(els.status.textContent, /già presente/);
+        """
+    )
