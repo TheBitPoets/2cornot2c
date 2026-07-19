@@ -5,6 +5,7 @@ import http.client
 import json
 import os
 import threading
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -19,6 +20,12 @@ from scripts import (
     student_lab_demo_setup,
 )
 from scripts.student_help_provider import StudentHelpResponse
+
+
+@pytest.fixture(autouse=True)
+def isolated_process_lock_dir(tmp_path, monkeypatch) -> None:
+    lock_dir = tmp_path.parent / f"{tmp_path.name}-process-locks"
+    monkeypatch.setenv("THEBITLAB_LOCK_DIR", str(lock_dir))
 
 
 def test_server_bind_rejects_clear_text_network_exposure_by_default() -> None:
@@ -73,9 +80,185 @@ def test_teacher_dashboard_token_console_line_shows_generated_value() -> None:
     assert "temporaneo" in line
 
 
+def test_submission_file_uses_local_repo_path_separately_from_remote_repo(tmp_path, monkeypatch) -> None:
+    root = tmp_path / "data"
+    repo = root / "examples" / "student_repos" / "rossi-mario"
+    source = repo / "assignments" / "somma-001" / "main.py"
+    source.parent.mkdir(parents=True)
+    source.write_text("print(2 + 3)\n", encoding="utf-8")
+    monkeypatch.setattr(course_board_server, "ROOT", root)
+
+    resolved = course_board_server.resolve_submission_file_path(
+        {
+            "repo": "TheBitPoets/rossi-mario",
+            "repo_path": "examples/student_repos/rossi-mario",
+            "submission": {"files": [{"path": "assignments/somma-001/main.py"}]},
+        },
+        "assignments/somma-001/main.py",
+    )
+
+    assert resolved == source
+
+
+def test_submission_file_accepts_legacy_project_relative_path_inside_absolute_repo(tmp_path, monkeypatch) -> None:
+    app_root = tmp_path / "app"
+    root = app_root / "tmp" / "student-lab-demo"
+    repo = root / "examples" / "student_repos" / "rossi-mario"
+    source = repo / "assignments" / "somma-001" / "main.py"
+    source.parent.mkdir(parents=True)
+    source.write_text("print(2 + 3)\n", encoding="utf-8")
+    monkeypatch.setattr(course_board_server, "APP_ROOT", app_root)
+    monkeypatch.setattr(course_board_server, "ROOT", root)
+
+    resolved = course_board_server.resolve_submission_file_path(
+        {
+            "repo": str(repo),
+            "submission": {
+                "files": [
+                    {
+                        "path": "tmp/student-lab-demo/examples/student_repos/rossi-mario/assignments/somma-001/main.py"
+                    }
+                ]
+            },
+        },
+        "tmp/student-lab-demo/examples/student_repos/rossi-mario/assignments/somma-001/main.py",
+    )
+
+    assert resolved == source
+
+
+def test_submission_file_infers_legacy_local_repo_from_remote_reference(tmp_path, monkeypatch) -> None:
+    app_root = tmp_path / "app"
+    root = app_root / "tmp" / "student-help-modal-test"
+    repo = root / "examples" / "assignment_tracking" / "student_repos" / "rossi-mario"
+    source = repo / "assignments" / "somma-001" / "main.py"
+    source.parent.mkdir(parents=True)
+    source.write_text("print(2 + 3)\n", encoding="utf-8")
+    report_path = repo / "reports" / "somma-001" / "latest.json"
+    report_path.parent.mkdir(parents=True)
+    report_path.write_text("{}\n", encoding="utf-8")
+    monkeypatch.setattr(course_board_server, "APP_ROOT", app_root)
+    monkeypatch.setattr(course_board_server, "ROOT", root)
+
+    resolved = course_board_server.resolve_submission_file_path(
+        {
+            "repo": "TheBitPoets/rossi-mario",
+            "report_path": "tmp/student-help-modal-test/examples/assignment_tracking/student_repos/rossi-mario/reports/somma-001/latest.json",
+            "submission": {
+                "files": [
+                    {
+                        "path": "tmp/student-help-modal-test/examples/assignment_tracking/student_repos/rossi-mario/assignments/somma-001/main.py"
+                    }
+                ]
+            },
+        },
+        "tmp/student-help-modal-test/examples/assignment_tracking/student_repos/rossi-mario/assignments/somma-001/main.py",
+    )
+
+    assert resolved == source
+
+
+def test_submission_file_rejects_registered_path_outside_inferred_legacy_repo(tmp_path, monkeypatch) -> None:
+    root = tmp_path / "data"
+    repo = root / "students" / "rossi-mario"
+    report_path = repo / "reports" / "somma-001" / "latest.json"
+    secret = root / "teacher-private" / "rossi-mario" / "assignments" / "x" / "secret.txt"
+    report_path.parent.mkdir(parents=True)
+    secret.parent.mkdir(parents=True)
+    report_path.write_text("{}\n", encoding="utf-8")
+    secret.write_text("riservato\n", encoding="utf-8")
+    monkeypatch.setattr(course_board_server, "ROOT", root)
+
+    with pytest.raises(FileNotFoundError, match="non trovato o non consentito"):
+        course_board_server.resolve_submission_file_path(
+            {
+                "repo": "TheBitPoets/rossi-mario",
+                "report_path": "students/rossi-mario/reports/somma-001/latest.json",
+                "submission": {
+                    "files": [
+                        {"path": "teacher-private/rossi-mario/assignments/x/secret.txt"}
+                    ]
+                },
+            },
+            "teacher-private/rossi-mario/assignments/x/secret.txt",
+        )
+
+
+def test_submission_file_does_not_infer_legacy_repo_outside_trusted_roots(tmp_path, monkeypatch) -> None:
+    app_root = tmp_path / "app"
+    root = app_root / "data"
+    outside = app_root / "archive" / "rossi-mario" / "assignments" / "somma-001" / "main.py"
+    outside.parent.mkdir(parents=True)
+    outside.write_text("riservato\n", encoding="utf-8")
+    monkeypatch.setattr(course_board_server, "APP_ROOT", app_root)
+    monkeypatch.setattr(course_board_server, "ROOT", root)
+
+    with pytest.raises(FileNotFoundError, match="non trovato o non consentito"):
+        course_board_server.resolve_submission_file_path(
+            {
+                "repo": "TheBitPoets/rossi-mario",
+                "submission": {
+                    "files": [
+                        {"path": "archive/rossi-mario/assignments/somma-001/main.py"}
+                    ]
+                },
+            },
+            "archive/rossi-mario/assignments/somma-001/main.py",
+        )
+
+
+def test_submission_file_rejects_path_outside_local_student_repo(tmp_path, monkeypatch) -> None:
+    root = tmp_path / "data"
+    repo = root / "examples" / "student_repos" / "rossi-mario"
+    repo.mkdir(parents=True)
+    outside = root / "teacher-reports" / "secret.txt"
+    outside.parent.mkdir(parents=True)
+    outside.write_text("riservato", encoding="utf-8")
+    monkeypatch.setattr(course_board_server, "ROOT", root)
+
+    with pytest.raises(FileNotFoundError, match="non trovato o non consentito"):
+        course_board_server.resolve_submission_file_path(
+            {
+                "repo_path": "examples/student_repos/rossi-mario",
+                "submission": {"files": [{"path": "teacher-reports/secret.txt"}]},
+            },
+            "teacher-reports/secret.txt",
+        )
+
+
+def test_submission_file_rejects_unregistered_legacy_path_in_same_named_repo(tmp_path, monkeypatch) -> None:
+    root = tmp_path / "data"
+    legitimate = root / "students" / "rossi-mario" / "assignments" / "somma-001" / "main.py"
+    secret = root / "teacher-private" / "rossi-mario" / "assignments" / "x" / "secret.txt"
+    legitimate.parent.mkdir(parents=True)
+    secret.parent.mkdir(parents=True)
+    legitimate.write_text("print(5)\n", encoding="utf-8")
+    secret.write_text("riservato\n", encoding="utf-8")
+    monkeypatch.setattr(course_board_server, "ROOT", root)
+
+    with pytest.raises(FileNotFoundError, match="non trovato o non consentito"):
+        course_board_server.resolve_submission_file_path(
+            {
+                "repo": "TheBitPoets/rossi-mario",
+                "submission": {
+                    "files": [
+                        {"path": "students/rossi-mario/assignments/somma-001/main.py"}
+                    ]
+                },
+            },
+            "teacher-private/rossi-mario/assignments/x/secret.txt",
+        )
+
+
 def test_data_root_process_lock_rejects_a_second_server(tmp_path) -> None:
-    first_lock = course_board_server.DataRootProcessLock(tmp_path)
-    second_lock = course_board_server.DataRootProcessLock(tmp_path)
+    root = tmp_path / "data"
+    first_lock = course_board_server.DataRootProcessLock(root)
+    second_lock = course_board_server.DataRootProcessLock(root)
+    assert first_lock.path.parent == (
+        tmp_path.parent / f"{tmp_path.name}-process-locks"
+    ).resolve()
+    assert first_lock.path.name.startswith("data-")
+    assert first_lock.path.suffix == ".lock"
     first_lock.acquire()
     try:
         with pytest.raises(RuntimeError, match="Un altro server"):
@@ -85,6 +268,39 @@ def test_data_root_process_lock_rejects_a_second_server(tmp_path) -> None:
 
     second_lock.acquire()
     second_lock.release()
+
+
+def test_data_root_process_lock_rejects_a_legacy_server(tmp_path) -> None:
+    root = tmp_path / "data"
+    root.mkdir()
+    legacy_path = root / ".thebitlab-server.lock"
+    legacy_handle = course_board_server.DataRootProcessLock._acquire_handle(legacy_path)
+    try:
+        current_lock = course_board_server.DataRootProcessLock(root)
+        with pytest.raises(RuntimeError, match="Un altro server"):
+            current_lock.acquire()
+    finally:
+        course_board_server.DataRootProcessLock._release_handle(legacy_handle)
+
+    current_lock.acquire()
+    current_lock.release()
+
+
+@pytest.mark.skipif(
+    os.name == "nt" or (hasattr(os, "geteuid") and os.geteuid() == 0),
+    reason="I permessi POSIX sul parent non sono verificabili in questo ambiente.",
+)
+def test_data_root_process_lock_does_not_require_writable_root_parent(tmp_path) -> None:
+    root_parent = tmp_path / "read-only-parent"
+    root = root_parent / "data"
+    root.mkdir(parents=True)
+    root_parent.chmod(0o500)
+    try:
+        lock = course_board_server.DataRootProcessLock(root)
+        lock.acquire()
+        lock.release()
+    finally:
+        root_parent.chmod(0o700)
 
 
 def test_bounded_http_server_limits_workers_and_sets_client_timeout(monkeypatch) -> None:
@@ -117,6 +333,40 @@ def test_bounded_http_server_limits_workers_and_sets_client_timeout(monkeypatch)
         server._request_slots.release()
     finally:
         server.server_close()
+
+
+def test_bounded_http_server_waits_for_active_handlers_before_closing() -> None:
+    handler_started = threading.Event()
+    release_handler = threading.Event()
+    close_finished = threading.Event()
+    server = course_board_server.BoundedThreadingHTTPServer(
+        ("127.0.0.1", 0),
+        course_board_server.CourseBoardHandler,
+        max_workers=1,
+        max_workers_per_client=1,
+    )
+
+    def slow_handler(_request, _client_address) -> None:
+        handler_started.set()
+        release_handler.wait(timeout=5)
+
+    server.process_request_thread = slow_handler
+    server.process_request(object(), ("127.0.0.1", 12345))
+    assert handler_started.wait(timeout=2)
+
+    def close_server() -> None:
+        server.server_close()
+        close_finished.set()
+
+    close_thread = threading.Thread(target=close_server)
+    close_thread.start()
+    try:
+        assert close_finished.wait(timeout=0.05) is False
+        release_handler.set()
+        assert close_finished.wait(timeout=2) is True
+    finally:
+        release_handler.set()
+        close_thread.join(timeout=2)
 
 
 def test_bounded_http_server_rejects_overload_without_blocking(monkeypatch) -> None:
@@ -1976,6 +2226,204 @@ def test_generate_assignment_report_preserves_assignment_id(tmp_path, monkeypatc
     assert saved_payload["assignment_id"] == "assignment-python-base-somma-001-3a"
 
 
+def test_regenerated_report_preserves_reviewed_ai_feedback() -> None:
+    approved = {
+        "status": "approved",
+        "approved_by_teacher": True,
+        "suggested_grade": 8,
+        "summary": "Feedback approvato",
+        "teacher_notes": "Controllato dal docente",
+    }
+    rejected = {
+        "status": "rejected",
+        "approved_by_teacher": False,
+        "suggested_grade": 5,
+        "summary": "Feedback respinto",
+    }
+    previous = {
+        "activity_id": "activity",
+        "assignment_id": "assignment-001",
+        "students": [
+            {"student": "rossi", "student_id": "student-rossi", "ai_feedback": approved},
+            {"student": "bianchi", "student_id": "student-bianchi", "ai_feedback": rejected},
+        ],
+    }
+    generated = {
+        "activity_id": "activity",
+        "assignment_id": "assignment-001",
+        "students": [
+            {"student": "rossi", "student_id": "student-rossi", "ai_feedback": {"status": "not_generated"}},
+            {"student": "bianchi", "student_id": "student-bianchi", "ai_feedback": {"status": "not_generated"}},
+        ],
+    }
+
+    course_board_server.preserve_assignment_ai_feedback(previous, generated)
+
+    assert generated["students"][0]["ai_feedback"] == approved
+    assert generated["students"][1]["ai_feedback"] == rejected
+    assert generated["students"][0]["ai_feedback"] is not approved
+    assert generated["students"][1]["ai_feedback"] is not rejected
+
+
+def test_regenerated_report_does_not_copy_feedback_from_another_activity() -> None:
+    previous = {
+        "activity_id": "activity-a",
+        "students": [{
+            "student": "rossi",
+            "student_id": "student-rossi",
+            "ai_feedback": {"status": "approved", "approved_by_teacher": True},
+        }],
+    }
+    generated = {
+        "activity_id": "activity-b",
+        "students": [{
+            "student": "rossi",
+            "student_id": "student-rossi",
+            "ai_feedback": {"status": "not_generated", "approved_by_teacher": False},
+        }],
+    }
+
+    course_board_server.preserve_assignment_ai_feedback(previous, generated)
+
+    assert generated["students"][0]["ai_feedback"]["status"] == "not_generated"
+
+
+def test_regenerated_report_does_not_copy_feedback_from_another_assignment() -> None:
+    previous = {
+        "activity_id": "activity",
+        "assignment_id": "assignment-a",
+        "students": [{
+            "student": "rossi",
+            "student_id": "student-rossi",
+            "ai_feedback": {"status": "approved", "approved_by_teacher": True},
+        }],
+    }
+    generated = {
+        "activity_id": "activity",
+        "assignment_id": "assignment-b",
+        "students": [{
+            "student": "rossi",
+            "student_id": "student-rossi",
+            "ai_feedback": {"status": "not_generated", "approved_by_teacher": False},
+        }],
+    }
+
+    course_board_server.preserve_assignment_ai_feedback(previous, generated)
+
+    assert generated["students"][0]["ai_feedback"]["status"] == "not_generated"
+
+
+@pytest.mark.parametrize(
+    ("previous_assignment", "generated_assignment"),
+    [
+        ("assignment-a", None),
+        (None, "assignment-a"),
+    ],
+)
+def test_regenerated_report_does_not_copy_feedback_when_only_one_assignment_id_is_missing(
+    previous_assignment: str | None,
+    generated_assignment: str | None,
+) -> None:
+    previous = {
+        "activity_id": "activity",
+        "students": [{
+            "student": "rossi",
+            "student_id": "student-rossi",
+            "ai_feedback": {"status": "approved", "approved_by_teacher": True},
+        }],
+    }
+    generated = {
+        "activity_id": "activity",
+        "students": [{
+            "student": "rossi",
+            "student_id": "student-rossi",
+            "ai_feedback": {"status": "not_generated", "approved_by_teacher": False},
+        }],
+    }
+    if previous_assignment is not None:
+        previous["assignment_id"] = previous_assignment
+    if generated_assignment is not None:
+        generated["assignment_id"] = generated_assignment
+
+    course_board_server.preserve_assignment_ai_feedback(previous, generated)
+
+    assert generated["students"][0]["ai_feedback"]["status"] == "not_generated"
+
+
+def test_generate_report_preserves_review_completed_while_tracking(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
+    activity_path = tmp_path / "activity.json"
+    activity_path.write_text("{}", encoding="utf-8")
+    storage = course_board_server.assignment_storage()
+    report_name = "demo/activity.json"
+    storage.write_assignment_report(
+        report_name,
+        {
+            "activity_id": "activity",
+            "students": [{
+                "student": "rossi",
+                "student_id": "rossi",
+                "ai_feedback": {
+                    "status": "draft",
+                    "summary": "Bozza da revisionare",
+                    "approved_by_teacher": False,
+                },
+            }],
+        },
+    )
+    generated = {
+        "activity_id": "activity",
+        "students": [{
+            "student": "rossi",
+            "student_id": "rossi",
+            "ai_feedback": {"status": "not_generated", "approved_by_teacher": False},
+        }],
+    }
+    tracking_started = threading.Event()
+    continue_tracking = threading.Event()
+    generation_errors = []
+
+    def track_report(**_kwargs) -> dict:
+        tracking_started.set()
+        assert continue_tracking.wait(timeout=2)
+        return json.loads(json.dumps(generated))
+
+    monkeypatch.setattr(course_board_server, "read_targets_from_text", lambda _value: [])
+    monkeypatch.setattr(course_board_server.track_assignments, "track_assignments", track_report)
+
+    def generate() -> None:
+        try:
+            course_board_server.generate_assignment_report({
+                "activity_path": str(activity_path),
+                "output_name": report_name,
+                "targets_text": "",
+            })
+        except Exception as error:  # noqa: BLE001
+            generation_errors.append(error)
+
+    thread = threading.Thread(target=generate)
+    thread.start()
+    assert tracking_started.wait(timeout=2)
+
+    try:
+        reviewed = course_board_server.review_assignment_ai_feedback(
+            report_name,
+            "rossi",
+            "approve",
+        )
+    finally:
+        continue_tracking.set()
+    thread.join(timeout=2)
+
+    saved = storage.read_assignment_report(report_name)
+    assert generation_errors == []
+    assert not thread.is_alive()
+    assert reviewed["students"][0]["ai_feedback"]["status"] == "approved"
+    assert saved["students"][0]["ai_feedback"]["status"] == "approved"
+    assert saved["students"][0]["ai_feedback"]["approved_by_teacher"] is True
+
+
 def test_read_assignment_report_refreshes_authoritative_help_without_rewriting_file(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
@@ -2554,6 +3002,137 @@ def test_review_assignment_ai_feedback_persists_teacher_decision(tmp_path, monke
     assert report["students"][0]["ai_feedback"]["approved_by_teacher"] is True
     assert saved["students"][0]["ai_feedback"]["status"] == "approved"
     assert saved["students"][0]["ai_feedback"]["approved_by_teacher"] is True
+
+
+def test_review_assignment_ai_feedback_returns_current_help_without_persisting_it(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
+    report_path = tmp_path / "teacher-reports" / "activity.json"
+    report_path.parent.mkdir(parents=True)
+    report_path.write_text(
+        json.dumps(
+            {
+                "activity_id": "activity",
+                "assignment_id": "assignment-001",
+                "students": [
+                    {
+                        "student": "rossi-mario",
+                        "student_id": "rossi-mario",
+                        "help": {"total": 0, "events": []},
+                        "ai_feedback": {
+                            "status": "draft",
+                            "summary": "Bozza",
+                            "approved_by_teacher": False,
+                        },
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    current_help = {
+        "total": 2,
+        "events": [{"help_type": "ai", "prompt": "Spiegami il ciclo."}],
+        "ai_total": 1,
+    }
+    monkeypatch.setattr(
+        course_board_server.student_help_service,
+        "teacher_help_summary",
+        lambda _path: json.loads(json.dumps(current_help)),
+    )
+
+    reviewed = course_board_server.review_assignment_ai_feedback(
+        "activity.json",
+        "rossi-mario",
+        "approve",
+    )
+    persisted = json.loads(report_path.read_text(encoding="utf-8"))
+
+    assert reviewed["students"][0]["help"]["total"] == 2
+    assert reviewed["students"][0]["help"]["events"][0]["prompt"] == "Spiegami il ciclo."
+    assert persisted["students"][0]["help"] == {"total": 0, "events": []}
+
+
+def test_review_assignment_ai_feedback_serializes_updates_to_one_register(monkeypatch) -> None:
+    class ConcurrentStorage:
+        def __init__(self) -> None:
+            self.data = {
+                "activity_id": "activity",
+                "students": [
+                    {
+                        "student": "rossi-mario",
+                        "student_id": "rossi-mario",
+                        "ai_feedback": {
+                            "status": "draft",
+                            "summary": "Bozza Rossi",
+                            "approved_by_teacher": False,
+                        },
+                    },
+                    {
+                        "student": "bianchi-luca",
+                        "student_id": "bianchi-luca",
+                        "ai_feedback": {
+                            "status": "draft",
+                            "summary": "Bozza Bianchi",
+                            "approved_by_teacher": False,
+                        },
+                    },
+                ],
+            }
+            self.guard = threading.Lock()
+            self.active = 0
+            self.max_active = 0
+
+        def safe_teacher_report_path(self, name: str) -> Path:
+            normalized = name.strip().replace("\\", "/")
+            return (Path("teacher-reports") / normalized).resolve()
+
+        def read_assignment_report(self, _name: str) -> dict:
+            with self.guard:
+                self.active += 1
+                self.max_active = max(self.max_active, self.active)
+            time.sleep(0.05)
+            return json.loads(json.dumps(self.data))
+
+        def write_assignment_report(self, _name: str, payload: dict) -> dict:
+            self.data = json.loads(json.dumps(payload))
+            with self.guard:
+                self.active -= 1
+            return json.loads(json.dumps(payload))
+
+    storage = ConcurrentStorage()
+    monkeypatch.setattr(course_board_server, "assignment_storage", lambda: storage)
+    start = threading.Barrier(3)
+    errors = []
+
+    def review(report_name: str, student_id: str) -> None:
+        try:
+            start.wait(timeout=2)
+            course_board_server.review_assignment_ai_feedback(
+                report_name,
+                student_id,
+                "approve",
+            )
+        except Exception as error:  # noqa: BLE001
+            errors.append(error)
+
+    threads = [
+        threading.Thread(target=review, args=("demo/activity.json", "rossi-mario")),
+        threading.Thread(target=review, args=(r"demo\activity.json", "bianchi-luca")),
+    ]
+    for thread in threads:
+        thread.start()
+    start.wait(timeout=2)
+    for thread in threads:
+        thread.join(timeout=2)
+
+    assert errors == []
+    assert storage.max_active == 1
+    assert storage.active == 0
+    assert [student["ai_feedback"]["status"] for student in storage.data["students"]] == [
+        "approved",
+        "approved",
+    ]
 
 
 def test_review_assignment_ai_feedback_reopens_reviewed_feedback(tmp_path, monkeypatch) -> None:

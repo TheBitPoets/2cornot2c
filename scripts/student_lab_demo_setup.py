@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import shutil
 import sys
 import time
@@ -16,10 +15,24 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts import student_lab_demo_smoke
+from scripts import course_board_server, student_lab_demo_smoke
 
 
 DEFAULT_DEMO_ROOT = PROJECT_ROOT / "tmp" / "student-lab-demo"
+
+
+def ensure_demo_root_available(root: Path) -> course_board_server.DataRootProcessLock:
+    """Acquire and return the lock that protects the complete demo reset."""
+
+    lock = course_board_server.DataRootProcessLock(root)
+    try:
+        lock.acquire()
+    except RuntimeError as error:
+        raise RuntimeError(
+            f"Root demo in uso da un server attivo: {root.resolve(strict=False)}. "
+            "Ferma il server prima di rigenerare la demo."
+        ) from error
+    return lock
 
 
 def remove_tree_with_retry(path: Path, *, attempts: int = 5) -> None:
@@ -30,6 +43,24 @@ def remove_tree_with_retry(path: Path, *, attempts: int = 5) -> None:
             return
         try:
             shutil.rmtree(path)
+            return
+        except OSError:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(0.2 * (attempt + 1))
+
+
+def remove_path_with_retry(path: Path, *, attempts: int = 5) -> None:
+    """Remove one file, symlink or directory after transient Windows failures."""
+
+    for attempt in range(attempts):
+        if not path.exists() and not path.is_symlink():
+            return
+        try:
+            if path.is_dir() and not path.is_symlink():
+                shutil.rmtree(path)
+            else:
+                path.unlink()
             return
         except OSError:
             if attempt == attempts - 1:
@@ -48,25 +79,18 @@ def cleanup_stale_trash(root: Path) -> None:
 
 
 def reset_root(root: Path) -> None:
-    """Remove an existing demo root after a minimal safety check."""
+    """Clear a demo root while preserving its actively held legacy lock file."""
 
     resolved = root.resolve(strict=False)
     if resolved == resolved.parent or len(resolved.parts) < 3:
         raise ValueError(f"Root demo non sicura da resettare: {resolved}")
     resolved.parent.mkdir(parents=True, exist_ok=True)
     cleanup_stale_trash(resolved)
-    if resolved.exists():
-        trash = resolved.with_name(f"{resolved.name}.delete-{os.getpid()}-{time.time_ns()}")
-        try:
-            resolved.rename(trash)
-        except OSError:
-            remove_tree_with_retry(resolved)
-        else:
-            try:
-                remove_tree_with_retry(trash)
-            except OSError:
-                pass
     resolved.mkdir(parents=True, exist_ok=True)
+    for candidate in resolved.iterdir():
+        if candidate.name == ".thebitlab-server.lock":
+            continue
+        remove_path_with_retry(candidate)
 
 
 def demo_commands(root: Path) -> dict[str, str]:
@@ -90,13 +114,17 @@ def prepare_demo(root: Path) -> dict[str, Any]:
     """Create a stable, inspectable demo root and return its summary."""
 
     root = root.resolve(strict=False)
-    reset_root(root)
-    summary = student_lab_demo_smoke.run_smoke(root)
-    return {
-        **summary,
-        "reset": True,
-        "commands": demo_commands(root),
-    }
+    lock = ensure_demo_root_available(root)
+    try:
+        reset_root(root)
+        summary = student_lab_demo_smoke.run_smoke(root)
+        return {
+            **summary,
+            "reset": True,
+            "commands": demo_commands(root),
+        }
+    finally:
+        lock.release()
 
 
 def parse_args() -> argparse.Namespace:

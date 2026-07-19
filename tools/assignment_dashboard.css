@@ -1677,18 +1677,7 @@ label > textarea {
   font-size: .78rem;
 }
 
-.studentHelpDetails {
-  margin-top: .45rem;
-  font-size: .78rem;
-}
-
 .aiFeedbackDetails summary {
-  cursor: pointer;
-  color: #111111;
-  font-weight: 800;
-}
-
-.studentHelpDetails summary {
   cursor: pointer;
   color: #111111;
   font-weight: 800;
@@ -1707,35 +1696,11 @@ label > textarea {
   scrollbar-gutter: stable;
 }
 
-.studentHelpDetails dl {
-  display: grid;
-  gap: .45rem;
-  margin: .45rem 0 0;
-  max-height: 14rem;
-  overflow-y: auto;
-  padding: .55rem;
-  border: 1px solid rgba(17, 17, 17, .12);
-  border-radius: 8px;
-  background: #fafafa;
-  scrollbar-gutter: stable;
-}
-
 .aiFeedbackDetails div {
   min-width: 0;
 }
 
-.studentHelpDetails div {
-  min-width: 0;
-}
-
 .aiFeedbackDetails dt {
-  color: var(--muted);
-  font-size: .68rem;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.studentHelpDetails dt {
   color: var(--muted);
   font-size: .68rem;
   font-weight: 800;
@@ -1748,14 +1713,9 @@ label > textarea {
   text-align: justify;
 }
 
-.studentHelpDetails dd {
-  margin: .12rem 0 0;
-  overflow-wrap: anywhere;
-  text-align: justify;
-}
-
-.studentHelpDetails p {
-  margin: .35rem 0;
+.studentHelpButton {
+  width: fit-content;
+  margin-top: .45rem;
 }
 
 .aiFeedbackActions {
@@ -2314,6 +2274,105 @@ code {
   gap: .8rem;
 }
 
+.studentHelpDialogBody {
+  min-height: 0;
+  padding: 1.1rem;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.studentHelpDialogSummary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+  margin-bottom: 1rem;
+}
+
+.studentHelpDialogError {
+  margin: 0 0 1rem;
+  border: 1px solid #d97757;
+  border-radius: 8px;
+  background: #fff8f5;
+  padding: .75rem;
+  color: #8f1d14;
+  overflow-wrap: anywhere;
+}
+
+.studentHelpDialogList {
+  display: grid;
+  gap: 1rem;
+}
+
+.studentHelpDialogItem {
+  display: grid;
+  gap: .7rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 1rem;
+}
+
+.studentHelpDialogItemHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: .75rem;
+}
+
+.studentHelpDialogItem h3,
+.studentHelpLegacyBlock h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.studentHelpDialogItem strong {
+  display: block;
+  margin-bottom: .25rem;
+  color: var(--muted);
+  font-size: .76rem;
+  text-transform: uppercase;
+}
+
+.studentHelpDialogMeta {
+  margin: 0;
+  color: var(--muted);
+  font-size: .78rem;
+}
+
+.studentHelpDialogText {
+  margin: 0;
+  overflow-wrap: anywhere;
+  text-align: start;
+  white-space: pre-wrap;
+}
+
+.studentHelpDialogProvider {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .8rem;
+}
+
+.studentHelpDialogProvider span,
+.studentHelpDialogProvider small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.studentHelpLegacyBlock {
+  display: grid;
+  gap: .75rem;
+  border-top: 2px solid #d97757;
+  padding-top: 1rem;
+}
+
+.studentHelpLegacyBlock > p {
+  margin: 0;
+}
+
+.studentHelpLegacyItem {
+  background: #fff8f5;
+}
+
 .reviewGrid {
   display: grid;
   grid-template-columns: minmax(11rem, var(--review-list-width, 20rem)) 8px minmax(0, 1fr);
@@ -2509,5 +2568,19 @@ code {
 
   .testDetailsDialogColumns {
     grid-template-columns: 1fr;
+  }
+
+  .studentHelpDialogProvider {
+    grid-template-columns: 1fr;
+  }
+
+  .studentHelpDialog {
+    height: min(94dvh, 52rem);
+    min-height: 0;
+    max-height: 94dvh;
+  }
+
+  .studentHelpDialogItemHead {
+    display: grid;
   }
 }

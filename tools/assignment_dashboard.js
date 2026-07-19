@@ -130,6 +130,8 @@ const state = {
   overviewRows: [],
   report: null,
   reportName: "",
+  reportLoadRevision: 0,
+  aiFeedbackReviewPending: false,
   filter: "all",
   overviewFilters: {
     class: "",
@@ -147,6 +149,9 @@ const state = {
   legendTopic: "overview",
   coverageCollapsedActivities: new Set(),
   testDetailsRows: new Map(),
+  studentHelpRows: new Map(),
+  studentHelpDialogKey: "",
+  studentHelpDialogReportName: "",
   reviewStudent: null,
   reviewSource: "",
   reviewFilePath: "",
@@ -192,6 +197,7 @@ const els = {
   coverageStatus: document.querySelector("#coverageStatus"),
   coverageSummary: document.querySelector("#coverageSummary"),
   coverageDialogSummary: document.querySelector("#coverageDialogSummary"),
+  coverageDialogStatus: document.querySelector("#coverageDialogStatus"),
   coverageDialog: document.querySelector("#coverageDialog"),
   coverageBreadcrumb: document.querySelector("#coverageBreadcrumb"),
   coverageOpenBtn: document.querySelector("#coverageOpenBtn"),
@@ -203,6 +209,7 @@ const els = {
   overviewBody: document.querySelector("#overviewBody"),
   overviewSummary: document.querySelector("#overviewSummary"),
   overviewDialogSummary: document.querySelector("#overviewDialogSummary"),
+  overviewDialogStatus: document.querySelector("#overviewDialogStatus"),
   overviewClassFilter: document.querySelector("#overviewClassFilter"),
   overviewStudentFilter: document.querySelector("#overviewStudentFilter"),
   overviewActivityFilter: document.querySelector("#overviewActivityFilter"),
@@ -241,6 +248,10 @@ const els = {
   testDetailsCloseBtn: document.querySelector("#testDetailsCloseBtn"),
   testDetailsDialogStatus: document.querySelector("#testDetailsDialogStatus"),
   testDetailsDialogBody: document.querySelector("#testDetailsDialogBody"),
+  studentHelpDialog: document.querySelector("#studentHelpDialog"),
+  studentHelpCloseBtn: document.querySelector("#studentHelpCloseBtn"),
+  studentHelpDialogStatus: document.querySelector("#studentHelpDialogStatus"),
+  studentHelpDialogBody: document.querySelector("#studentHelpDialogBody"),
   legendDialog: document.querySelector("#legendDialog"),
   legendCloseBtn: document.querySelector("#legendCloseBtn"),
   legendStatus: document.querySelector("#legendDialogStatus"),
@@ -1116,24 +1127,63 @@ function renderRosterPanel() {
   }).join("");
 }
 
-async function loadSelectedReport() {
+function invalidateReportLoads() {
+  state.reportLoadRevision += 1;
+}
+
+function clearActiveReport() {
+  state.report = null;
+  state.reportName = "";
+  els.reportSelect.value = "";
+  els.studentsOpenBtn.disabled = true;
+  clearReview();
+  closeStudentHelpDialog({ restoreFocus: false });
+  renderDashboard();
+}
+
+function setReportLoadStatus(message, statusElement = null) {
+  setStatus(message);
+  if (statusElement) statusElement.textContent = message;
+}
+
+async function loadSelectedReport({ statusElement = null } = {}) {
+  const revision = ++state.reportLoadRevision;
   const name = els.reportSelect.value;
   if (!name) {
-    setStatus("Seleziona un registro consegne.");
-    return;
+    clearActiveReport();
+    setReportLoadStatus("Seleziona un registro consegne.", statusElement);
+    return false;
   }
-  setStatus(`Caricamento registro ${name}...`);
-  const payload = await api("/api/assignment-reports/load", {
-    method: "POST",
-    body: JSON.stringify({ name }),
-  });
+  setReportLoadStatus(`Caricamento registro ${name}...`, statusElement);
+  let payload;
+  try {
+    payload = await api("/api/assignment-reports/load", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    });
+    if (!payload.report || !Array.isArray(payload.report.students)) {
+      throw new Error("il server ha restituito un registro non valido");
+    }
+  } catch (error) {
+    if (revision !== state.reportLoadRevision || els.reportSelect.value !== name) {
+      return false;
+    }
+    clearActiveReport();
+    setReportLoadStatus(`Registro non caricato: ${error.message}`, statusElement);
+    return false;
+  }
+  if (revision !== state.reportLoadRevision || els.reportSelect.value !== name) {
+    return false;
+  }
   state.report = payload.report;
   state.reportName = name;
+  els.studentsOpenBtn.disabled = false;
   clearReview();
   focusOverviewClassFromReport(state.report);
   renderOverview();
   renderDashboard();
-  setStatus(`Registro caricato: ${name}.`);
+  setReportLoadStatus(`Registro caricato: ${name}.`, statusElement);
+  return true;
 }
 
 function readReviewSplit() {
@@ -3728,6 +3778,7 @@ async function generateReport() {
         assignment_id: state.selectedAssignmentId,
       }),
     });
+    invalidateReportLoads();
     state.report = payload.report;
     state.reportName = payload.saved?.name || "";
     state.reports = payload.reports || [];
@@ -3914,7 +3965,19 @@ function aiFeedbackReviewDetails(ai) {
   `;
 }
 
-function studentHelpDetails(help) {
+function studentHelpStatusBadge(event) {
+  const response = event?.response && typeof event.response === "object" ? event.response : {};
+  if (!event?.allowed) return badge("Bloccata", "bad");
+  if (event.provider_status === "pending") return badge("In elaborazione", "warn");
+  if (
+    event.provider_status === "interrupted"
+    || response.status === "error"
+    || (event.provider_status === "completed" && !response.status)
+  ) return badge("Risposta non disponibile", "bad");
+  return badge("Consentita", "ok");
+}
+
+function studentHelpDetails(help, options = {}) {
   const data = help || {};
   const total = Number(data.total || 0);
   const aiTotal = Number(data.ai_total || data.counts?.ai || 0);
@@ -3923,52 +3986,113 @@ function studentHelpDetails(help) {
   const events = Array.isArray(data.events) ? data.events : [];
   const legacy = data.legacy && typeof data.legacy === "object" ? data.legacy : {};
   const legacyTotal = Number(legacy.total || 0);
-  const legacyEvents = Array.isArray(legacy.events) ? legacy.events : [];
-  const rows = events.length
-    ? events.map((event) => {
-      const response = event.response && typeof event.response === "object" ? event.response : {};
-      let responseBadge = badge("Consentita", "ok");
-      if (!event.allowed) responseBadge = badge("Bloccata", "bad");
-      else if (event.provider_status === "pending") responseBadge = badge("In elaborazione", "warn");
-      else if (
-        event.provider_status === "interrupted"
-        || response.status === "error"
-        || (event.provider_status === "completed" && !response.status)
-      ) responseBadge = badge("Risposta non disponibile", "bad");
-      return `
-        <div>
-          <dt>${escapeHtml(formatDate(event.requested_at))} - ${escapeHtml(event.label || event.help_type || "aiuto")}</dt>
-          <dd>
-            ${responseBadge}
-            ${event.prompt ? `<p>${escapeHtml(event.prompt)}</p>` : "<p>Prompt non disponibile.</p>"}
-            ${event.reason ? `<small>${escapeHtml(event.reason)}</small>` : ""}
-          </dd>
-        </div>
-      `;
-    }).join("")
-    : `<div><dt>Prompt</dt><dd>${escapeHtml(data.error || "Nessuna richiesta registrata.")}</dd></div>`;
-  const legacyRows = legacyEvents.map((event) => `
-    <div>
-      <dt>${escapeHtml(formatDate(event.requested_at))} - ${escapeHtml(event.label || event.help_type || "aiuto")}</dt>
-      <dd>${event.prompt ? `<p>${escapeHtml(event.prompt)}</p>` : "<p>Prompt non disponibile.</p>"}</dd>
-    </div>
-  `).join("");
+  const hasDetails = total > 0 || legacyTotal > 0 || Boolean(data.error);
+  const detailsLabel = options.student && options.activity
+    ? `Dettagli aiuti di ${options.student} per ${options.activity}`
+    : "Dettagli aiuti";
   return `
     <div class="studentHelpCell">
       ${badge(`Aiuti ${total}`, kind)}<br>
       <small>Consegna: ${escapeHtml(data.activity_id || "-")}</small><br>
       <small>AI: ${escapeHtml(aiTotal)} - Bloccate: ${escapeHtml(denied)}</small>
-      <details class="studentHelpDetails">
-        <summary>Prompt aiuti</summary>
-        <dl>${rows}</dl>
-      </details>
-      ${legacyTotal ? `
-        <details class="studentHelpDetails studentHelpLegacy">
-          <summary>Legacy non verificati (${escapeHtml(legacyTotal)})</summary>
-          <p><strong>Attenzione:</strong> dati storici provenienti dal repository studente; non incidono su budget e metriche.</p>
-          ${legacyRows ? `<dl>${legacyRows}</dl>` : ""}
-        </details>
-      ` : ""}
+      <button
+        type="button"
+        class="smallButton studentHelpButton"
+        data-student-help-key="${escapeHtml(options.detailsKey || "")}"
+        aria-label="${escapeHtml(detailsLabel)}"
+        title="${hasDetails ? "Apri prompt, risposte e dati delle richieste di aiuto." : "Nessuna richiesta di aiuto disponibile."}"
+        ${hasDetails ? "" : "disabled"}
+      >Dettagli aiuti</button>
+    </div>
+  `;
+}
+
+function renderStudentHelpUsage(response) {
+  const usage = response?.usage && typeof response.usage === "object" ? response.usage : null;
+  if (!usage) return "";
+  const input = Number(usage.input_tokens || 0);
+  const output = Number(usage.output_tokens || 0);
+  const total = Number(usage.total_tokens || 0);
+  return `<small>Utilizzo dichiarato: ${escapeHtml(total)} token (${escapeHtml(input)} input, ${escapeHtml(output)} output).</small>`;
+}
+
+function renderStudentHelpEvent(event, index) {
+  const response = event?.response && typeof event.response === "object" ? event.response : {};
+  const provider = !event?.allowed
+    ? "Non invocato"
+    : response.provider_label || response.provider || "Provider non indicato";
+  let responseText = response.message || response.detail || "Nessuna risposta disponibile.";
+  if (!event?.allowed) responseText = "Nessuna risposta generata: la richiesta e stata bloccata dalla policy.";
+  else if (event.provider_status === "pending") responseText = "Risposta in elaborazione.";
+  else if (event.provider_status === "interrupted") responseText = response.message || response.detail || "Elaborazione interrotta.";
+  return `
+    <article class="studentHelpDialogItem">
+      <div class="studentHelpDialogItemHead">
+        <h3>Richiesta ${escapeHtml(index + 1)} - ${escapeHtml(event.label || event.help_type || "Aiuto")}</h3>
+        ${studentHelpStatusBadge(event)}
+      </div>
+      <p class="studentHelpDialogMeta">${escapeHtml(formatDate(event.requested_at))}</p>
+      <div>
+        <strong>Prompt dello studente</strong>
+        <p class="studentHelpDialogText">${escapeHtml(event.prompt || "Prompt non disponibile.")}</p>
+      </div>
+      <div>
+        <strong>Risposta</strong>
+        <p class="studentHelpDialogText">${escapeHtml(responseText)}</p>
+      </div>
+      <div class="studentHelpDialogProvider">
+        <span><strong>Provider</strong>${escapeHtml(provider)}</span>
+        ${renderStudentHelpUsage(response)}
+      </div>
+      ${event.reason ? `<div><strong>Esito della policy</strong><p class="studentHelpDialogText">${escapeHtml(event.reason)}</p></div>` : ""}
+    </article>
+  `;
+}
+
+function renderStudentHelpLegacy(legacy) {
+  const events = Array.isArray(legacy?.events) ? legacy.events : [];
+  const total = Number(legacy?.total || 0);
+  if (!total) return "";
+  return `
+    <section class="studentHelpLegacyBlock">
+      <h3>Legacy non verificati (${escapeHtml(total)})</h3>
+      <p><strong>Attenzione:</strong> dati storici provenienti dal repository studente; non incidono su budget e metriche.</p>
+      ${events.map((event, index) => `
+        <article class="studentHelpDialogItem studentHelpLegacyItem">
+          <h3>Richiesta legacy ${escapeHtml(index + 1)} - ${escapeHtml(event.label || event.help_type || "Aiuto")}</h3>
+          <p class="studentHelpDialogMeta">${escapeHtml(formatDate(event.requested_at))}</p>
+          <div>
+            <strong>Prompt dello studente</strong>
+            <p class="studentHelpDialogText">${escapeHtml(event.prompt || "Prompt non disponibile.")}</p>
+          </div>
+        </article>
+      `).join("")}
+    </section>
+  `;
+}
+
+function renderStudentHelpDialogContent(entry) {
+  const data = entry?.help || {};
+  const events = Array.isArray(data.events) ? data.events : [];
+  const legacy = data.legacy && typeof data.legacy === "object" ? data.legacy : {};
+  const errorNotice = data.error ? `
+    <p class="studentHelpDialogError" role="alert">
+      <strong>Log autorevole non disponibile:</strong> ${escapeHtml(data.error)}
+    </p>
+  ` : "";
+  if (!events.length && !Number(legacy.total || 0)) {
+    return errorNotice || '<p class="status">Nessuna richiesta di aiuto disponibile.</p>';
+  }
+  return `
+    ${errorNotice}
+    <div class="studentHelpDialogSummary">
+      ${badge(`Aiuti ${Number(data.total || 0)}`, Number(data.denied || 0) ? "bad" : "ok")}
+      ${badge(`AI ${Number(data.ai_total || data.counts?.ai || 0)}`, "warn")}
+      ${badge(`Bloccate ${Number(data.denied || 0)}`, Number(data.denied || 0) ? "bad" : "muted")}
+    </div>
+    <div class="studentHelpDialogList">
+      ${events.map(renderStudentHelpEvent).join("")}
+      ${renderStudentHelpLegacy(legacy)}
     </div>
   `;
 }
@@ -4090,6 +4214,39 @@ function clearTestDetailsRows(prefix) {
       state.testDetailsRows.delete(key);
     }
   }
+}
+
+function openStudentHelpDialog(detailsKey) {
+  const entry = state.studentHelpRows.get(detailsKey);
+  if (!entry || !els.studentHelpDialog) return;
+  state.studentHelpDialogKey = detailsKey;
+  state.studentHelpDialogReportName = state.reportName;
+  els.studentHelpDialogStatus.textContent = `${entry.student || "Studente"} - ${entry.activity || "activity non indicata"}.`;
+  els.studentHelpDialogBody.innerHTML = renderStudentHelpDialogContent(entry);
+  if (!els.studentHelpDialog.open) {
+    els.studentHelpDialog.showModal();
+  }
+}
+
+function studentHelpButtonForKey(detailsKey) {
+  return Array.from(document.querySelectorAll("[data-student-help-key]"))
+    .find((button) => button.dataset.studentHelpKey === detailsKey) || null;
+}
+
+function closeStudentHelpDialog({ restoreFocus = true } = {}) {
+  const detailsKey = state.studentHelpDialogKey;
+  if (els.studentHelpDialog?.open) {
+    els.studentHelpDialog.close();
+  }
+  state.studentHelpDialogKey = "";
+  state.studentHelpDialogReportName = "";
+  if (restoreFocus && detailsKey) {
+    requestAnimationFrame(() => studentHelpButtonForKey(detailsKey)?.focus());
+  }
+}
+
+function clearStudentHelpRows() {
+  state.studentHelpRows.clear();
 }
 
 function externalLink(url, label = "GitHub") {
@@ -4247,8 +4404,22 @@ function filteredStudents(students) {
   return students;
 }
 
+function studentHelpRowKey(student) {
+  return `student-help-${student.student_id || student.student || ""}`;
+}
+
 function renderStudents(students) {
   const visible = filteredStudents(students);
+  const activeStudentHelpKey = state.studentHelpDialogKey;
+  const keepStudentHelpDialogOpen = Boolean(
+    els.studentHelpDialog?.open
+    && activeStudentHelpKey
+    && state.studentHelpDialogReportName === state.reportName
+    && visible.some((student) => studentHelpRowKey(student) === activeStudentHelpKey),
+  );
+  if (els.studentHelpDialog?.open && !keepStudentHelpDialogOpen) {
+    closeStudentHelpDialog({ restoreFocus: false });
+  }
   els.tableStatus.textContent = state.report
     ? `Mostrati ${visible.length}/${students.length} studenti.`
     : "Nessun registro caricato.";
@@ -4263,6 +4434,7 @@ function renderStudents(students) {
   }
   els.studentsBody.innerHTML = "";
   clearTestDetailsRows("students-");
+  clearStudentHelpRows();
   if (!state.report) {
     els.studentsBody.innerHTML = '<tr><td colspan="8">Carica un registro consegne.</td></tr>';
     setupResizableTable(els.studentsTable, "students");
@@ -4279,10 +4451,18 @@ function renderStudents(students) {
     const help = student.help || {};
     const submission = student.submission || {};
     const testDetailsKey = `students-${student.student || student.student_id || ""}`;
+    const studentHelpKey = studentHelpRowKey(student);
+    const studentName = student.student || student.student_id || "Studente";
+    const helpActivity = help.activity_id || state.report?.title || state.report?.activity_id || "Activity";
     state.testDetailsRows.set(testDetailsKey, {
       title: state.report?.title || state.report?.activity_id || "Activity",
       subtitle: `${student.student || student.student_id || "Studente"} - ${classValue(state.report) || "classe non indicata"}`,
       grading,
+    });
+    state.studentHelpRows.set(studentHelpKey, {
+      student: studentName,
+      activity: helpActivity,
+      help,
     });
     const files = submissionFiles(student);
     const canReview = student.submitted && files.length > 0;
@@ -4314,7 +4494,11 @@ function renderStudents(students) {
       <td>
         <div data-ai-feedback-student="${escapeHtml(student.student_id || student.student)}">
           ${aiFeedbackDetails(ai)}
-          ${studentHelpDetails(help)}
+          ${studentHelpDetails(help, {
+            detailsKey: studentHelpKey,
+            student: studentName,
+            activity: helpActivity,
+          })}
         </div>
       </td>
       <td>
@@ -4326,6 +4510,9 @@ function renderStudents(students) {
     `;
     els.studentsBody.append(row);
   }
+  if (keepStudentHelpDialogOpen) {
+    openStudentHelpDialog(activeStudentHelpKey);
+  }
   setupResizableTable(els.studentsTable, "students");
 }
 
@@ -4334,8 +4521,23 @@ async function reviewAiFeedback(studentId, decision) {
     const message = "Carica un registro prima di revisionare il feedback AI.";
     setStatus(message);
     setStudentsDialogStatus(message);
-    return;
+    return false;
   }
+  if (els.reportSelect.value !== state.reportName) {
+    const message = "Attendi il caricamento del registro selezionato prima di revisionare il feedback AI.";
+    setStatus(message);
+    setStudentsDialogStatus(message);
+    return false;
+  }
+  if (state.aiFeedbackReviewPending) {
+    const message = "Attendi il completamento della revisione AI gia in corso.";
+    setStatus(message);
+    setStudentsDialogStatus(message);
+    return false;
+  }
+  const reportName = state.reportName;
+  invalidateReportLoads();
+  const reportRevision = state.reportLoadRevision;
   const label = {
     approve: "approvazione",
     reject: "respinta",
@@ -4344,24 +4546,37 @@ async function reviewAiFeedback(studentId, decision) {
   const progressMessage = `Salvataggio ${label} feedback AI per ${studentId}...`;
   setStatus(progressMessage);
   setStudentsDialogStatus(progressMessage);
-  const payload = await api("/api/assignment-reports/ai-feedback/review", {
-    method: "POST",
-    body: JSON.stringify({
-      name: state.reportName,
-      student_id: studentId,
-      decision,
-    }),
-  });
-  state.report = payload.report;
-  renderDashboard();
-  const outcome = {
-    approve: "approvato",
-    reject: "respinto",
-    reopen: "riaperto come bozza",
-  }[decision] || "revisionato";
-  const doneMessage = `Feedback AI ${outcome} per ${studentId}.`;
-  setStatus(doneMessage);
-  setStudentsDialogStatus(doneMessage);
+  state.aiFeedbackReviewPending = true;
+  try {
+    const payload = await api("/api/assignment-reports/ai-feedback/review", {
+      method: "POST",
+      body: JSON.stringify({
+        name: reportName,
+        student_id: studentId,
+        decision,
+      }),
+    });
+    if (
+      reportRevision !== state.reportLoadRevision
+      || state.reportName !== reportName
+      || els.reportSelect.value !== reportName
+    ) {
+      return false;
+    }
+    state.report = payload.report;
+    renderDashboard();
+    const outcome = {
+      approve: "approvato",
+      reject: "respinto",
+      reopen: "riaperto come bozza",
+    }[decision] || "revisionato";
+    const doneMessage = `Feedback AI ${outcome} per ${studentId}.`;
+    setStatus(doneMessage);
+    setStudentsDialogStatus(doneMessage);
+    return true;
+  } finally {
+    state.aiFeedbackReviewPending = false;
+  }
 }
 
 function submissionFiles(student) {
@@ -4670,7 +4885,7 @@ function closeStudentsDialog() {
   }
 }
 
-els.loadReportBtn.addEventListener("click", loadSelectedReport);
+els.loadReportBtn.addEventListener("click", () => loadSelectedReport());
 els.reloadBtn.addEventListener("click", async () => {
   await loadReports();
   await loadAssignments();
@@ -4714,7 +4929,7 @@ els.saveAssignmentBtn?.addEventListener("click", saveAssignmentRecord);
 els.distributeAssignmentBtn?.addEventListener("click", distributeAssignment);
 els.deleteAssignmentBtn?.addEventListener("click", deleteSelectedAssignment);
 els.generateReportBtn.addEventListener("click", generateReport);
-els.reportSelect.addEventListener("change", loadSelectedReport);
+els.reportSelect.addEventListener("change", () => loadSelectedReport());
 els.coverageOpenBtn.addEventListener("click", openCoverageDialog);
 els.coverageCloseBtn.addEventListener("click", closeCoverageDialog);
 els.overviewOpenBtn.addEventListener("click", openOverviewDialog);
@@ -4735,6 +4950,11 @@ els.reviewPrevBtn.addEventListener("click", () => openAdjacentSubmission(-1));
 els.reviewNextBtn.addEventListener("click", () => openAdjacentSubmission(1));
 els.reviewCloseBtn.addEventListener("click", closeReviewDialog);
 els.testDetailsCloseBtn.addEventListener("click", closeTestDetailsDialog);
+els.studentHelpCloseBtn?.addEventListener("click", closeStudentHelpDialog);
+els.studentHelpDialog?.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closeStudentHelpDialog();
+});
 els.activitySelect.addEventListener("change", () => {
   if (els.activitySelect.value) {
     clearSelectedAssignment();
@@ -4886,8 +5106,8 @@ els.coverageBody.addEventListener("click", async (event) => {
   }
   if (reportButton && reportButton.dataset.coverageReport) {
     els.reportSelect.value = reportButton.dataset.coverageReport;
-    await loadSelectedReport();
-    if (reportButton.dataset.coverageOpenStudents === "true") {
+    const loaded = await loadSelectedReport({ statusElement: els.coverageDialogStatus });
+    if (loaded && reportButton.dataset.coverageOpenStudents === "true") {
       openStudentsDialog();
     }
   }
@@ -4926,8 +5146,8 @@ els.overviewBody.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-overview-report]");
   if (!button) return;
   els.reportSelect.value = button.dataset.overviewReport;
-  await loadSelectedReport();
-  if (button.dataset.overviewStudent) {
+  const loaded = await loadSelectedReport({ statusElement: els.overviewDialogStatus });
+  if (loaded && button.dataset.overviewStudent) {
     openSubmission(button.dataset.overviewStudent, "", "overview");
   }
 });
@@ -4935,8 +5155,8 @@ els.overviewMatrixBody.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-overview-report]");
   if (!button || button.disabled) return;
   els.reportSelect.value = button.dataset.overviewReport;
-  await loadSelectedReport();
-  if (button.dataset.overviewStudent) {
+  const loaded = await loadSelectedReport({ statusElement: els.overviewDialogStatus });
+  if (loaded && button.dataset.overviewStudent) {
     openSubmission(button.dataset.overviewStudent, "", "overview");
   }
 });
@@ -4948,6 +5168,13 @@ els.studentsBody.addEventListener("click", (event) => {
     openTestDetailsDialog(detailButton.dataset.testDetailsKey);
     return;
   }
+  const helpButton = event.target.closest("[data-student-help-key]");
+  if (helpButton && !helpButton.disabled) {
+    event.preventDefault();
+    event.stopPropagation();
+    openStudentHelpDialog(helpButton.dataset.studentHelpKey);
+    return;
+  }
   const aiButton = event.target.closest("[data-ai-feedback-decision]");
   if (aiButton && !aiButton.disabled) {
     event.preventDefault();
@@ -4955,12 +5182,16 @@ els.studentsBody.addEventListener("click", (event) => {
     const container = aiButton.closest("[data-ai-feedback-student]");
     if (!container?.dataset.aiFeedbackStudent) return;
     aiButton.disabled = true;
-    reviewAiFeedback(container.dataset.aiFeedbackStudent, aiButton.dataset.aiFeedbackDecision).catch((error) => {
-      aiButton.disabled = false;
-      const message = `Errore feedback AI: ${error.message}`;
-      setStatus(message);
-      setStudentsDialogStatus(message);
-    });
+    reviewAiFeedback(container.dataset.aiFeedbackStudent, aiButton.dataset.aiFeedbackDecision)
+      .then((completed) => {
+        if (!completed) aiButton.disabled = false;
+      })
+      .catch((error) => {
+        aiButton.disabled = false;
+        const message = `Errore feedback AI: ${error.message}`;
+        setStatus(message);
+        setStudentsDialogStatus(message);
+      });
     return;
   }
   const button = event.target.closest("[data-review-student]");

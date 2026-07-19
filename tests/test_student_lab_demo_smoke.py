@@ -26,6 +26,8 @@ def test_student_lab_demo_smoke_builds_complete_flow(tmp_path) -> None:
     register = json.loads((tmp_path / summary["teacher_register"]).read_text(encoding="utf-8"))
     student = register["students"][0]
     assert student["submitted"] is True
+    assert student["repo"] == "TheBitPoets/rossi-mario"
+    assert student["repo_path"] == "examples/assignment_tracking/student_repos/rossi-mario"
     assert student["grading"]["status"] == "graded_passed"
     assert student["submission"]["report_backend"] == "local"
     assert student["help"]["total"] == 1

@@ -6,6 +6,11 @@ Questa checklist raccoglie gli scenari manuali da ripetere quando si toccano das
 
 Esegui i comandi dalla root del repository.
 
+Gli scenari possono essere eseguiti singolarmente oppure in sequenza. Nell'esecuzione sequenziale lascia
+attivo il server tra due scenari consecutivi, salvo quando un passaggio chiede esplicitamente di fermarlo
+per cambiare root dati o configurazione. Nell'esecuzione singola applica prima il setup indicato dallo
+scenario o, se non presente, questo setup comune.
+
 Se la porta `8765` e gia occupata su Windows:
 
 ```powershell
@@ -80,6 +85,16 @@ Per l'automazione futura, la scelta piu naturale per le GUI web e Playwright, pe
 
 I test GUI automatici vanno introdotti quando i punti di aggancio della UI sono abbastanza stabili, usando attributi espliciti come `data-testid` invece di selettori fragili basati sulla posizione. I test piu pesanti, soprattutto quelli con browser, screenshot, responsive e dati demo end-to-end, sono candidati per una suite notturna o manuale da lanciare quando la macchina non serve per lavorare.
 
+## Collaudo completo con dati durevoli
+
+Quando il flusso activity, assegnazione, consegna, lab e registro sara completo, eseguire tutti gli scenari di questo documento partendo da una root ricreata da zero. Non riutilizzare registri copiati da root temporanee di test: i riferimenti ai workspace devono appartenere alla root demo corrente.
+
+1. Arresta il server che usa `tmp/student-lab-demo`.
+2. Esegui `python scripts/student_lab_demo_setup.py` per ricreare dati coerenti e ripetibili.
+3. Avvia nuovamente il server con `--root tmp/student-lab-demo`.
+4. Esegui nell'ordine gli scenari TUI, dashboard studente e dashboard docente.
+5. Verifica non soltanto la visibilita in GUI, ma anche che file, assegnazioni, report, aiuti e cancellazioni siano realmente persistiti o rimossi nella root dati.
+
 ## Scenario 1 - Dashboard studente con report riuscito
 
 Obiettivo: verificare che lo studente veda consegna, workspace, report, test e aiuti.
@@ -110,6 +125,8 @@ Obiettivo: verificare che il docente possa caricare il registro generato dalla d
 4. Controlla i riepiloghi del registro selezionato.
 5. Apri il pannello `Studenti`.
 6. Apri il modal degli studenti, se disponibile.
+7. Nella riga di `rossi-mario`, clicca `Apri consegna`.
+8. Seleziona `main.py` e poi `test_main.py` dalla lista dei file.
 
 Risultato atteso:
 
@@ -120,6 +137,8 @@ Risultato atteso:
 - I test risultano `2/2`.
 - Il backend report risulta locale.
 - Le richieste di aiuto risultano visibili nel riepilogo docente.
+- Il modal della consegna mostra il contenuto di `main.py` e `test_main.py` senza errori 404.
+- I file aperti appartengono alla root demo corrente, non a una precedente cartella temporanea.
 
 ## Scenario 3 - Quadro classe ed elenco consegne
 
@@ -147,13 +166,19 @@ Obiettivo: verificare che il docente veda quante volte lo studente ha chiesto ai
 2. Carica il registro `demo/python-demo-somma-001.json`.
 3. Apri il pannello o modal `Studenti`.
 4. Cerca `rossi-mario`.
-5. Controlla la sezione dedicata agli aiuti.
+5. Controlla il riepilogo dedicato agli aiuti.
+6. Clicca `Dettagli aiuti`.
+7. Leggi prompt, risposta, provider, stato e utilizzo dichiarato.
+8. Chiudi il modal e verifica di tornare alla stessa vista Studenti.
 
 Risultato atteso:
 
 - Il docente vede `Aiuti 1`.
 - Il docente vede `Aiuti AI 1`.
-- Il prompt demo e visibile: `Puoi darmi un suggerimento senza scrivere la soluzione?`.
+- La cella resta compatta e non mostra direttamente i prompt lunghi.
+- `Dettagli aiuti` apre un modal dedicato.
+- Il prompt demo e visibile nel modal: `Puoi darmi un suggerimento senza scrivere la soluzione?`.
+- La risposta e il provider sono leggibili senza scorrimento orizzontale.
 - Gli aiuti bloccati sono `0`.
 
 ## Scenario 5 - Dettaglio errori test in modal
@@ -187,9 +212,20 @@ Risultato atteso:
 
 Per tornare alla demo pulita:
 
+1. Nel terminale in cui e in esecuzione il server premi `Ctrl+C` e attendi che il processo termini.
+2. Rigenera i dati della demo:
+
 ```powershell
 python scripts/student_lab_demo_setup.py
 ```
+
+3. Riavvia il server sulla root rigenerata:
+
+```powershell
+python scripts/course_board_server.py --root tmp/student-lab-demo
+```
+
+4. Ricarica la dashboard nel browser prima di continuare con gli scenari successivi.
 
 ## Scenario 6 - Dashboard studente dopo esecuzione TUI
 
@@ -217,7 +253,8 @@ Risultato atteso:
 
 Obiettivo: verificare che la TUI sia comprensibile, robusta sugli input e coerente con dashboard e report.
 
-1. Prepara la demo e avvia il server docente con provider Codex:
+1. Se stai continuando dagli scenari precedenti, ferma con `Ctrl+C` il server avviato durante il setup
+   comune. Prepara quindi di nuovo la demo e avvia il server docente con provider Codex:
 
    ```powershell
    python scripts/student_lab_demo_setup.py
@@ -293,7 +330,8 @@ Risultato atteso:
 
 Obiettivo: verificare che percorso e calendario docente restino coerenti con la dashboard studente.
 
-1. Avvia il server senza root demo, usando i dati del repository:
+1. Ferma con `Ctrl+C` il server dello Scenario 7, se ancora attivo. Avvia quindi il server senza root demo,
+   usando i dati del repository:
 
    ```powershell
    python scripts/course_board_server.py

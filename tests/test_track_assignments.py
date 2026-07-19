@@ -1,11 +1,20 @@
 from __future__ import annotations
 
 import json
+import shutil
 import sys
+from pathlib import Path
 
 import pytest
 
-from scripts import assignment_records, student_help_service, student_identity, student_support_policy, track_assignments
+from scripts import (
+    assignment_records,
+    course_board_server,
+    student_help_service,
+    student_identity,
+    student_support_policy,
+    track_assignments,
+)
 from scripts.thebitlab_repository_providers import LocalRepositoryProvider, StudentRepository
 
 
@@ -246,6 +255,7 @@ def test_track_assignments_marks_submitted_on_time(tmp_path) -> None:
     assert row["grading"]["status"] == "graded_passed"
     assert row["grading"]["tests_passed"] == 2
     assert row["ai_feedback"]["status"] == "not_generated"
+    assert Path(row["repo_path"]) == student.path.resolve()
     assert row["submission"]["files"][0]["path"].endswith("assignments/python-base-somma-001/main.py")
     assert row["submission"]["files"][0]["role"] == "solution"
 
@@ -366,6 +376,42 @@ def test_track_assignments_lists_multiple_submission_files(tmp_path) -> None:
     assert not any("__pycache__" in path for path in paths)
 
 
+def test_tracking_file_references_survive_moving_the_server_root(tmp_path, monkeypatch) -> None:
+    project_root = tmp_path / "project"
+    original_root = project_root / "demo-a"
+    moved_root = project_root / "moved-demo"
+    original_root.mkdir(parents=True)
+    activity_path = write_activity(original_root)
+    student = target(original_root, "rossi-mario")
+    write_report(student.path, "2026-10-18T18:22:10+02:00")
+    monkeypatch.setattr(track_assignments, "PROJECT_ROOT", project_root)
+
+    index = track_assignments.track_assignments(
+        activity_path=activity_path,
+        targets=[student],
+        due_at="2026-10-19T23:59:00+02:00",
+        server_root=original_root,
+    )
+    tracked_student = index["students"][0]
+    source_reference = tracked_student["submission"]["files"][0]["path"]
+    assert source_reference == "assignments/python-base-somma-001/main.py"
+    assert tracked_student["submission"]["source_path"] == source_reference
+
+    shutil.move(original_root, moved_root)
+    monkeypatch.setattr(course_board_server, "ROOT", moved_root)
+    monkeypatch.setattr(course_board_server, "APP_ROOT", project_root)
+
+    resolved = course_board_server.resolve_submission_file_path(tracked_student, source_reference)
+
+    assert resolved == (
+        moved_root
+        / "rossi-mario"
+        / "assignments"
+        / "python-base-somma-001"
+        / "main.py"
+    )
+
+
 def test_track_assignments_resolves_relative_report_source_from_student_repo(tmp_path) -> None:
     activity_path = write_activity(tmp_path)
     student = target(tmp_path, "rossi-mario")
@@ -395,6 +441,8 @@ def test_track_assignments_uses_report_file_manifest_when_available(tmp_path) ->
     student = target(tmp_path, "rossi-mario")
     write_report(student.path, "2026-10-18T18:22:10+02:00")
     report_path = student.path / "reports" / "python-base-somma-001" / "latest.json"
+    utils_path = student.path / "assignments" / "python-base-somma-001" / "utils.py"
+    utils_path.write_text("def add(a, b):\n    return a + b\n", encoding="utf-8")
     report = json.loads(report_path.read_text(encoding="utf-8"))
     report["files"] = [
         {"path": "assignments/python-base-somma-001/main.py", "role": "solution"},
@@ -413,6 +461,55 @@ def test_track_assignments_uses_report_file_manifest_when_available(tmp_path) ->
         ("assignments/python-base-somma-001/main.py", "solution"),
         ("assignments/python-base-somma-001/utils.py", "support"),
     ]
+
+
+def test_track_assignments_ignores_report_files_outside_student_repo(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+    student = target(tmp_path, "rossi-mario")
+    write_report(student.path, "2026-10-18T18:22:10+02:00")
+    report_path = student.path / "reports" / "python-base-somma-001" / "latest.json"
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    secret = tmp_path / "teacher-private" / "secret.txt"
+    secret.parent.mkdir()
+    secret.write_text("riservato\n", encoding="utf-8")
+    report["files"] = [
+        {"path": str(secret), "role": "support"},
+        {"path": "assignments/python-base-somma-001/main.py", "role": "solution"},
+    ]
+    report_path.write_text(json.dumps(report), encoding="utf-8")
+
+    index = track_assignments.track_assignments(
+        activity_path=activity_path,
+        targets=[student],
+        due_at="2026-10-19T23:59:00+02:00",
+    )
+
+    files = index["students"][0]["submission"]["files"]
+    assert [entry["role"] for entry in files] == ["solution"]
+    assert files[0]["path"].endswith("assignments/python-base-somma-001/main.py")
+
+
+def test_track_assignments_does_not_scan_assignment_when_explicit_manifest_is_empty(tmp_path) -> None:
+    activity_path = write_activity(tmp_path)
+    student = target(tmp_path, "rossi-mario")
+    write_report(student.path, "2026-10-18T18:22:10+02:00")
+    assignment_path = student.path / "assignments" / "python-base-somma-001"
+    unlisted_path = assignment_path / "non-inviato.txt"
+    unlisted_path.write_text("Non dichiarato nel manifest.\n", encoding="utf-8")
+    report_path = student.path / "reports" / "python-base-somma-001" / "latest.json"
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    report["files"] = [
+        {"path": "assignments/python-base-somma-001/mancante.py", "role": "solution"},
+    ]
+    report_path.write_text(json.dumps(report), encoding="utf-8")
+
+    index = track_assignments.track_assignments(
+        activity_path=activity_path,
+        targets=[student],
+        due_at="2026-10-19T23:59:00+02:00",
+    )
+
+    assert index["students"][0]["submission"]["files"] == []
 
 
 def test_track_assignments_marks_pending_before_due_date(tmp_path) -> None:

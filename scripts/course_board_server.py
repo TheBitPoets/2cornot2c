@@ -28,10 +28,12 @@ import secrets
 import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 import urllib.error
 import urllib.request
 import uuid
+from copy import deepcopy
 from contextlib import ExitStack, contextmanager, nullcontext
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -138,16 +140,40 @@ def normalized_assignment_operation_id(operation_id: str) -> str:
     return f"{readable}-{digest}"
 
 
+def data_root_process_lock_dir() -> Path:
+    """Return a private, stable directory for cross-process data-root locks."""
+
+    configured = os.environ.get("THEBITLAB_LOCK_DIR", "").strip()
+    if configured:
+        return Path(configured).expanduser().resolve(strict=False)
+    if os.name == "nt":
+        base = Path(os.environ.get("LOCALAPPDATA") or tempfile.gettempdir())
+        return base / "TheBitLab" / "locks"
+    runtime_dir = os.environ.get("XDG_RUNTIME_DIR", "").strip()
+    if runtime_dir:
+        return Path(runtime_dir).expanduser().resolve(strict=False) / "thebitlab" / "locks"
+    cache_dir = os.environ.get("XDG_CACHE_HOME", "").strip()
+    base = Path(cache_dir).expanduser() if cache_dir else Path.home() / ".cache"
+    return base.resolve(strict=False) / "thebitlab" / "locks"
+
+
 class DataRootProcessLock:
     """Hold an operating-system lock for one server data root."""
 
-    def __init__(self, root: Path) -> None:
-        self.path = root.resolve(strict=False) / ".thebitlab-server.lock"
+    def __init__(self, root: Path, *, hold_legacy_lock: bool = True) -> None:
+        self.root = root.resolve(strict=False)
+        readable = create_activity.slugify(self.root.name)[:32] or "root"
+        root_key = os.path.normcase(str(self.root))
+        digest = hashlib.sha256(root_key.encode("utf-8")).hexdigest()
+        self.path = data_root_process_lock_dir() / f"{readable}-{digest}.lock"
+        self.legacy_path = self.root / ".thebitlab-server.lock"
+        self.hold_legacy_lock = hold_legacy_lock
         self._handle = None
+        self._legacy_handle = None
 
-    def acquire(self) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        handle = self.path.open("a+b")
+    @staticmethod
+    def _acquire_handle(path: Path):
+        handle = path.open("a+b")
         try:
             handle.seek(0, os.SEEK_END)
             if handle.tell() == 0:
@@ -162,28 +188,54 @@ class DataRootProcessLock:
                 import fcntl
 
                 fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except (OSError, BlockingIOError) as error:
+        except (OSError, BlockingIOError):
             handle.close()
+            raise
+        return handle
+
+    @staticmethod
+    def _release_handle(handle) -> None:
+        handle.seek(0)
+        if os.name == "nt":
+            import msvcrt
+
+            msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+        handle.close()
+
+    def acquire(self) -> None:
+        self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        if os.name != "nt":
+            self.path.parent.chmod(0o700)
+        self.legacy_path.parent.mkdir(parents=True, exist_ok=True)
+        private_handle = None
+        legacy_handle = None
+        try:
+            private_handle = self._acquire_handle(self.path)
+            legacy_handle = self._acquire_handle(self.legacy_path)
+        except (OSError, BlockingIOError) as error:
+            if legacy_handle is not None:
+                self._release_handle(legacy_handle)
+            if private_handle is not None:
+                self._release_handle(private_handle)
             raise RuntimeError(
-                f"Un altro server sta gia usando il root dati: {self.path.parent}"
+                f"Un altro server sta gia usando il root dati: {self.root}"
             ) from error
-        self._handle = handle
+        self._handle = private_handle
+        if self.hold_legacy_lock:
+            self._legacy_handle = legacy_handle
+        else:
+            self._release_handle(legacy_handle)
 
     def release(self) -> None:
-        if self._handle is None:
-            return
-        try:
-            self._handle.seek(0)
-            if os.name == "nt":
-                import msvcrt
-
-                msvcrt.locking(self._handle.fileno(), msvcrt.LK_UNLCK, 1)
-            else:
-                import fcntl
-
-                fcntl.flock(self._handle.fileno(), fcntl.LOCK_UN)
-        finally:
-            self._handle.close()
+        if self._legacy_handle is not None:
+            self._release_handle(self._legacy_handle)
+            self._legacy_handle = None
+        if self._handle is not None:
+            self._release_handle(self._handle)
             self._handle = None
 
 
@@ -1059,10 +1111,9 @@ def read_class_roster(name: str) -> dict:
     return class_roster_service().read_class_roster(name)
 
 
-def read_assignment_report(name: str) -> dict:
-    """Read one assignment tracking report from teacher-reports."""
+def enrich_assignment_report_help(report: dict) -> dict:
+    """Attach current authoritative help summaries to one assignment report."""
 
-    report = assignment_service().read_assignment_report(name)
     assignment_id = str(report.get("assignment_id", "")).strip()
     students = report.get("students") if isinstance(report.get("students"), list) else []
     if not assignment_id:
@@ -1085,13 +1136,77 @@ def read_assignment_report(name: str) -> dict:
     return report
 
 
+def read_assignment_report(name: str) -> dict:
+    """Read one assignment tracking report from teacher-reports."""
+
+    return enrich_assignment_report_help(assignment_service().read_assignment_report(name))
+
+
+def assignment_report_operation_id(
+    storage: thebitlab_storage.JsonAssignmentStorage,
+    name: str,
+) -> str:
+    """Return the canonical lock identity shared by mutations of one report."""
+
+    report_path = storage.safe_teacher_report_path(name)
+    return f"assignment-report::{os.path.normcase(str(report_path))}"
+
+
+def preserve_assignment_ai_feedback(previous: dict, generated: dict) -> dict:
+    """Keep meaningful AI feedback when regenerating the same assignment report."""
+
+    previous_activity = str(previous.get("activity_id", "")).strip()
+    generated_activity = str(generated.get("activity_id", "")).strip()
+    if not previous_activity or previous_activity != generated_activity:
+        return generated
+    previous_assignment = str(previous.get("assignment_id", "")).strip()
+    generated_assignment = str(generated.get("assignment_id", "")).strip()
+    if previous_assignment != generated_assignment:
+        return generated
+
+    previous_students = previous.get("students") if isinstance(previous.get("students"), list) else []
+    by_student_id = {}
+    by_student_name = {}
+    for student in previous_students:
+        if not isinstance(student, dict):
+            continue
+        student_id = str(student.get("student_id", "")).strip()
+        student_name = str(student.get("student", "")).strip()
+        if student_id:
+            by_student_id.setdefault(student_id, student)
+        if student_name:
+            by_student_name.setdefault(student_name, student)
+
+    generated_students = generated.get("students") if isinstance(generated.get("students"), list) else []
+    for student in generated_students:
+        if not isinstance(student, dict):
+            continue
+        student_id = str(student.get("student_id", "")).strip()
+        student_name = str(student.get("student", "")).strip()
+        previous_student = by_student_id.get(student_id) if student_id else None
+        if previous_student is None and student_name:
+            previous_student = by_student_name.get(student_name)
+        if previous_student is None:
+            continue
+        feedback = previous_student.get("ai_feedback")
+        if not isinstance(feedback, dict):
+            continue
+        status = str(feedback.get("status", "")).strip()
+        if not status or status == "not_generated":
+            continue
+        student["ai_feedback"] = deepcopy(feedback)
+    return generated
+
+
 def review_assignment_ai_feedback(name: str, student_id: str, decision: str) -> dict:
     """Apply a teacher review decision to draft AI feedback in a report."""
 
     storage = assignment_storage()
-    register = storage.read_assignment_report(name)
-    updated = manual_ai_feedback.review_feedback_in_register(register, student_id, decision)
-    return storage.write_assignment_report(name, updated)
+    with assignment_operation_lock(assignment_report_operation_id(storage, name)):
+        register = storage.read_assignment_report(name)
+        updated = manual_ai_feedback.review_feedback_in_register(register, student_id, decision)
+        saved = storage.write_assignment_report(name, updated)
+        return enrich_assignment_report_help(saved)
 
 
 def assignment_overview() -> list[dict]:
@@ -1149,13 +1264,80 @@ def save_activity(payload: dict) -> dict:
     return {"ok": True, "activity": saved, "activities": list_activities()}
 
 
+def legacy_submission_repo_path(student: dict) -> Path | None:
+    """Infer an old local repo root from its recorded grading report path."""
+
+    trusted_root = ROOT.resolve(strict=False)
+    repo_ref = str(student.get("repo", "")).strip().replace("\\", "/").rstrip("/")
+    repo_name = repo_ref.rsplit("/", 1)[-1]
+    if repo_name.endswith(".git"):
+        repo_name = repo_name[:-4]
+    if not repo_name:
+        return None
+    submission = student.get("submission") if isinstance(student.get("submission"), dict) else {}
+    report_references = {
+        normalized_submission_file_reference(student.get("report_path")),
+        normalized_submission_file_reference(submission.get("report_path")),
+    }
+    report_references.discard("")
+    for reference in report_references:
+        raw_path = Path(reference)
+        candidates = [raw_path.resolve()] if raw_path.is_absolute() else [
+            (ROOT / raw_path).resolve(),
+            (APP_ROOT / raw_path).resolve(),
+            (ROOT / repo_name / raw_path).resolve(),
+        ]
+        for candidate in candidates:
+            if candidate != trusted_root and not candidate.is_relative_to(trusted_root):
+                continue
+            if not candidate.is_file():
+                continue
+            for parent in candidate.parents:
+                if parent.name.casefold() != "reports":
+                    continue
+                inferred_repo = parent.parent
+                if inferred_repo.name.casefold() == repo_name.casefold():
+                    return inferred_repo
+    return None
+
+
+def normalized_submission_file_reference(value: Any) -> str:
+    """Return a comparable register reference for one submitted file."""
+
+    normalized = str(value or "").strip().replace("\\", "/")
+    while normalized.startswith("./"):
+        normalized = normalized[2:]
+    return normalized
+
+
+def registered_submission_file_references(student: dict) -> set[str]:
+    """Return the file references explicitly recorded for one submission."""
+
+    submission = student.get("submission") if isinstance(student.get("submission"), dict) else {}
+    references = {
+        normalized_submission_file_reference(submission.get("source_path")),
+    }
+    files = submission.get("files") if isinstance(submission.get("files"), list) else []
+    for entry in files:
+        value = entry.get("path") or entry.get("source_path") if isinstance(entry, dict) else entry
+        references.add(normalized_submission_file_reference(value))
+    references.discard("")
+    return references
+
+
 def resolve_submission_file_path(student: dict, file_path: str) -> Path:
     """Resolve a submitted file path while keeping reads inside the student repo."""
 
-    repo = Path(str(student.get("repo", "")).strip())
+    requested_reference = normalized_submission_file_reference(file_path)
+    if requested_reference not in registered_submission_file_references(student):
+        raise FileNotFoundError(f"File consegna non trovato o non consentito: {file_path}")
+    explicit_repo_path = str(student.get("repo_path", "")).strip()
+    repo_value = explicit_repo_path or str(student.get("repo", "")).strip()
+    repo = Path(repo_value)
     if not str(repo):
         raise ValueError("Repository studente mancante nel registro.")
     repo_path = repo if repo.is_absolute() else (ROOT / repo).resolve()
+    legacy_repo_path = None if explicit_repo_path or repo_path.is_dir() else legacy_submission_repo_path(student)
     raw_path = Path(str(file_path).strip())
     if not str(raw_path):
         raise ValueError("File consegna non indicato.")
@@ -1164,11 +1346,13 @@ def resolve_submission_file_path(student: dict, file_path: str) -> Path:
         candidates.append(raw_path.resolve())
     else:
         candidates.append((ROOT / raw_path).resolve())
+        candidates.append((APP_ROOT / raw_path).resolve())
         candidates.append((repo_path / raw_path).resolve())
     for candidate in candidates:
-        try:
-            candidate.relative_to(repo_path)
-        except ValueError:
+        allowed_repo_paths = [repo_path]
+        if legacy_repo_path is not None:
+            allowed_repo_paths.append(legacy_repo_path)
+        if not any(candidate == allowed or candidate.is_relative_to(allowed) for allowed in allowed_repo_paths):
             continue
         if candidate.is_file():
             return candidate
@@ -1460,7 +1644,9 @@ def generate_assignment_report(payload: dict) -> dict:
     if not activity_path.is_file():
         raise FileNotFoundError(f"Activity non trovata: {activity_path}")
     targets = read_targets_from_text(str(payload.get("targets_text", "")))
-    output_path = safe_teacher_report_path(payload.get("output_name", ""))
+    output_name = str(payload.get("output_name", ""))
+    storage = assignment_storage()
+    output_path = storage.safe_teacher_report_path(output_name)
     assignment_id = str(payload.get("assignment_id", "")).strip()
     record_storage = assignment_record_storage()
     operation_lock = (
@@ -1484,7 +1670,11 @@ def generate_assignment_report(payload: dict) -> dict:
             assignment_id=canonical_assignment_id or None,
             server_root=ROOT if canonical_assignment_id else None,
         )
-        track_assignments.write_tracking_index(index, output_path)
+        with assignment_operation_lock(assignment_report_operation_id(storage, output_name)):
+            if output_path.is_file():
+                previous = storage.read_assignment_report(output_name)
+                preserve_assignment_ai_feedback(previous, index)
+            track_assignments.write_tracking_index(index, output_path)
     return {
         "ok": True,
         "report": index,
@@ -2789,7 +2979,8 @@ def set_ai_provider(provider: str, model: str = "") -> dict:
 class BoundedThreadingHTTPServer(ThreadingHTTPServer):
     """Serve requests with a fixed upper bound on concurrent client threads."""
 
-    daemon_threads = True
+    daemon_threads = False
+    block_on_close = True
 
     def __init__(
         self,

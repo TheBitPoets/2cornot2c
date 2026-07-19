@@ -41,6 +41,8 @@ python scripts/student_lab_demo_smoke.py --root tmp/student-lab-demo
 
 Per preparare una demo stabile in `tmp/student-lab-demo`, cancellando eventuali residui precedenti:
 
+Se un server sta già usando questa root, arrestalo prima con `Ctrl+C` nella shell in cui è in esecuzione. Il setup controlla il lock prima di cancellare i dati e rifiuta il reset finché il server resta attivo.
+
 ```bash
 python scripts/student_lab_demo_setup.py
 ```
@@ -55,6 +57,8 @@ python scripts/student_lab_cli.py --root tmp/student-lab-demo --student-id rossi
 python scripts/student_lab_runner.py --root tmp/student-lab-demo --student-id rossi-mario --activity-id python-demo-somma-001 --write-report
 python scripts/course_board_server.py --root tmp/student-lab-demo
 ```
+
+Dopo ogni rigenerazione riavvia il server con l'ultimo comando e ricarica la dashboard nel browser. Non avviare due server contemporaneamente sulla stessa root.
 
 Conserva il token dashboard stampato dal server. Quando il browser mostra la richiesta di autenticazione usa
 `teacher` come nome utente e il token come password.
