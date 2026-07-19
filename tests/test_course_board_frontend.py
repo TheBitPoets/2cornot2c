@@ -108,3 +108,17 @@ def test_quick_add_does_not_duplicate_a_heading_tree() -> None:
         assert.match(els.status.textContent, /già presente/);
         """
     )
+
+
+def test_course_item_collapse_key_is_scoped_to_the_course() -> None:
+    run_course_board_js(
+        """
+        const uda = { id: "uda-1" };
+        const item = { id: "README.md#topic" };
+        const first = courseItemCollapseKey({ id: "first" }, uda, item);
+        const second = courseItemCollapseKey({ id: "second" }, uda, item);
+
+        assert.notEqual(first, second);
+        assert.deepEqual(JSON.parse(first), ["first", "uda-1", "README.md#topic"]);
+        """
+    )

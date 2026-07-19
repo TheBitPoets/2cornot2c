@@ -934,7 +934,7 @@ function renderItem(year, uda, siblings, item, index, depth) {
   const children = item.children || [];
   item.frame = { ...defaultFrame(), ...(item.frame || {}) };
   item.frame_quality = { ...defaultFrameQuality(), ...(item.frame_quality || {}) };
-  const collapseKey = `${uda.id}:${item.id}`;
+  const collapseKey = courseItemCollapseKey(year, uda, item);
   const isCollapsed = state.collapsedCourseItemIds.has(collapseKey);
   node.innerHTML = `
     <div class="itemRow">
@@ -985,6 +985,10 @@ function renderItem(year, uda, siblings, item, index, depth) {
     node.append(childList);
   }
   return node;
+}
+
+function courseItemCollapseKey(year, uda, item) {
+  return JSON.stringify([year.id, uda.id, item.id]);
 }
 
 function defaultCourseBrief(year) {
