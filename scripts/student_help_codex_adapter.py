@@ -323,10 +323,8 @@ class CodexStudentHelpProvider:
                         command,
                         cwd=workdir,
                         env=codex_subprocess_environment(),
-                        input=json.dumps(package, ensure_ascii=False, indent=2),
+                        input=json.dumps(package, ensure_ascii=False, indent=2).encode("utf-8"),
                         capture_output=True,
-                        text=True,
-                        encoding="utf-8",
                         timeout=self.timeout_seconds,
                         check=False,
                     )
@@ -343,7 +341,11 @@ class CodexStudentHelpProvider:
             _CODEX_CALL_SLOT.release()
         usage = _codex_usage_or_zero(completed.stdout)
         if completed.returncode:
-            detail = (completed.stderr or completed.stdout or "Codex non ha restituito dettagli.").strip()
+            detail = (
+                _subprocess_output_text(completed.stderr)
+                or _subprocess_output_text(completed.stdout)
+                or "Codex non ha restituito dettagli."
+            ).strip()
             raise CodexStudentHelpProcessError(f"Codex exec non riuscito: {detail}", usage)
         try:
             payload = json.loads(response_text)

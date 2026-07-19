@@ -41,7 +41,7 @@ def completed_codex_run(
     events: list[object] | None = None,
     returncode: int = 0,
     stderr: str = "",
-) -> subprocess.CompletedProcess[str]:
+) -> subprocess.CompletedProcess[bytes]:
     response_path = Path(command[command.index("--output-last-message") + 1])
     response_path.write_text(json.dumps(payload), encoding="utf-8")
     if events is None:
@@ -57,8 +57,8 @@ def completed_codex_run(
     return subprocess.CompletedProcess(
         command,
         returncode,
-        stdout="\n".join(json.dumps(event) for event in events),
-        stderr=stderr,
+        stdout="\n".join(json.dumps(event) for event in events).encode("utf-8"),
+        stderr=stderr.encode("utf-8"),
     )
 
 
@@ -116,10 +116,9 @@ def test_codex_provider_runs_in_empty_read_only_ephemeral_workspace(monkeypatch)
     def fake_run(command, **kwargs):
         captured["command"] = command
         captured["cwd"] = kwargs["cwd"]
-        captured["encoding"] = kwargs["encoding"]
         captured["env"] = kwargs["env"]
-        captured["raw_input"] = kwargs["input"]
-        captured["input"] = json.loads(kwargs["input"])
+        captured["raw_input"] = kwargs["input"].decode("utf-8")
+        captured["input"] = json.loads(captured["raw_input"])
         schema_path = command[command.index("--output-schema") + 1]
         captured["schema"] = json.loads(open(schema_path, encoding="utf-8").read())
         return completed_codex_run(
@@ -155,7 +154,7 @@ def test_codex_provider_runs_in_empty_read_only_ephemeral_workspace(monkeypatch)
     assert 'web_search="disabled"' in captured["command"]
     assert captured["command"][captured["command"].index("--model") + 1] == "gpt-test"
     assert captured["cwd"].name.startswith("thebitlab-student-help-")
-    assert captured["encoding"] == "utf-8"
+    assert isinstance(captured["raw_input"], str)
     assert captured["env"]["CODEX_HOME"] == "/home/docente/.codex"
     assert captured["env"]["OPENAI_API_KEY"] == "chiave-codex"
     assert "PATH" in captured["env"]
@@ -436,6 +435,33 @@ def test_codex_fallback_preserves_usage_from_timed_out_process(monkeypatch, part
 
     assert response.provider == "codex-local-fallback"
     assert response.usage == {"input_tokens": 21, "output_tokens": 8, "total_tokens": 29}
+
+
+def test_real_timeout_keeps_complete_jsonl_before_truncated_utf8_tail() -> None:
+    completed_event = json.dumps({
+        "type": "turn.completed",
+        "usage": {"input_tokens": 34, "output_tokens": 13},
+    }).encode("utf-8")
+    partial_output = completed_event + b'\n{"message":"troncato-\xc3'
+    script = (
+        "import sys, time; "
+        f"sys.stdout.buffer.write({partial_output!r}); "
+        "sys.stdout.buffer.flush(); time.sleep(5)"
+    )
+
+    with pytest.raises(subprocess.TimeoutExpired) as captured:
+        subprocess.run(
+            [sys.executable, "-c", script],
+            input=b"",
+            capture_output=True,
+            timeout=0.5,
+            check=False,
+        )
+
+    assert student_help_codex_adapter._codex_usage_or_zero(
+        captured.value.stdout,
+        allow_incomplete_tail=True,
+    ) == {"input_tokens": 34, "output_tokens": 13, "total_tokens": 47}
 
 
 def test_fallback_provider_does_not_hide_unexpected_programming_errors() -> None:
