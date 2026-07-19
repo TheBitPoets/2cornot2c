@@ -3998,7 +3998,7 @@ function studentHelpDetails(help, options = {}) {
       ${badge(`Aiuti ${total}`, kind)}<br>
       <small>Consegna: ${escapeHtml(data.activity_id || "-")}</small><br>
       <small>AI: ${escapeHtml(aiTotal)} - Bloccate: ${escapeHtml(denied)}</small><br>
-      <small>Token AI: ${escapeHtml(aiTokens)}${missingUsage ? ` - Senza contatori: ${escapeHtml(missingUsage)}` : ""}</small>
+      <small>Token AI dichiarati: ${escapeHtml(aiTokens)}${missingUsage ? ` - Senza contatori: ${escapeHtml(missingUsage)}` : ""}</small>
       <button
         type="button"
         class="smallButton studentHelpButton"
@@ -4017,6 +4017,10 @@ function renderStudentHelpUsage(response) {
   const input = Number(usage.input_tokens || 0);
   const output = Number(usage.output_tokens || 0);
   const total = Number(usage.total_tokens || 0);
+  const provider = String(response?.provider || "");
+  if (!total && provider && provider !== "deterministic-local") {
+    return "<small>Contatori token non disponibili.</small>";
+  }
   return `<small>Utilizzo dichiarato: ${escapeHtml(total)} token (${escapeHtml(input)} input, ${escapeHtml(output)} output).</small>`;
 }
 
@@ -4093,7 +4097,7 @@ function renderStudentHelpDialogContent(entry) {
     <div class="studentHelpDialogSummary">
       ${badge(`Aiuti ${Number(data.total || 0)}`, Number(data.denied || 0) ? "bad" : "ok")}
       ${badge(`AI ${Number(data.ai_total || data.counts?.ai || 0)}`, "warn")}
-      ${badge(`Token AI ${Number(aiUsage.total_tokens || 0)}`, "muted")}
+      ${badge(`Token AI dichiarati ${Number(aiUsage.total_tokens || 0)}`, "muted")}
       ${badge(`Bloccate ${Number(data.denied || 0)}`, Number(data.denied || 0) ? "bad" : "muted")}
       ${Number(aiUsage.requests_without_usage || 0) ? badge(`Senza contatori ${Number(aiUsage.requests_without_usage)}`, "warn") : ""}
     </div>
@@ -4291,7 +4295,8 @@ const SUMMARY_TOOLTIPS = {
   "Voti mancanti": "Numero di studenti senza voto numerico disponibile.",
   Aiuti: "Numero totale di richieste di aiuto registrate dagli studenti per questa consegna.",
   "Aiuti AI": "Numero di richieste di aiuto AI registrate dagli studenti per questa consegna.",
-  "Token AI": "Token input e output dichiarati dai provider AI per il registro selezionato.",
+  "Token AI dichiarati": "Token input e output dichiarati dai provider AI per il registro selezionato.",
+  "AI senza contatori": "Risposte AI remote per cui il provider non ha dichiarato i contatori token.",
   "Aiuti bloccati": "Numero di richieste di aiuto non consentite dalla policy della consegna.",
 };
 
@@ -4320,6 +4325,10 @@ function summaryCounts(students) {
     helpRequests: students.reduce((total, student) => total + Number(student.help?.total || 0), 0),
     helpAiRequests: students.reduce((total, student) => total + Number(student.help?.ai_total || student.help?.counts?.ai || 0), 0),
     helpAiTokens: students.reduce((total, student) => total + Number(student.help?.ai_usage?.total_tokens || 0), 0),
+    helpAiMissingUsage: students.reduce(
+      (total, student) => total + Number(student.help?.ai_usage?.requests_without_usage || 0),
+      0,
+    ),
     helpDenied: students.reduce((total, student) => total + Number(student.help?.denied || 0), 0),
     averageGrade: grades.length ? grades.reduce((sum, grade) => sum + grade, 0) / grades.length : null,
     missingGrades: students.length - grades.length,
@@ -4370,7 +4379,8 @@ function detailedStudentsSummaryItems(counts) {
     ["Voti mancanti", counts.missingGrades],
     ["Aiuti", counts.helpRequests],
     ["Aiuti AI", counts.helpAiRequests],
-    ["Token AI", counts.helpAiTokens],
+    ["Token AI dichiarati", counts.helpAiTokens],
+    ["AI senza contatori", counts.helpAiMissingUsage],
     ["Aiuti bloccati", counts.helpDenied],
   ];
 }

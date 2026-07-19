@@ -145,8 +145,9 @@ Usalo quando:
 
 Il pulsante `Dettagli aiuti` apre un modal dedicato allo studente e all'activity del registro selezionato. Per ogni
 richiesta mostra data, tipo di aiuto, prompt dello studente, risposta ricevuta, provider e consumo token dichiarato.
-La cella dello studente e il modal mostrano il totale `Token AI`; il riepilogo Studenti somma lo stesso dato per il
-registro e la classe correnti. `Senza contatori` segnala risposte remote storiche che non dichiaravano usage e non
+La cella dello studente e il modal mostrano il totale `Token AI dichiarati`; il riepilogo Studenti somma lo stesso dato
+per il registro e la classe correnti e mostra anche `AI senza contatori`. `Senza contatori` segnala risposte remote
+storiche che non dichiaravano usage e non
 devono essere interpretate come richieste gratuite. Le richieste bloccate riportano l'esito della policy senza una
 risposta generata.
 

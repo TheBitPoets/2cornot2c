@@ -390,6 +390,7 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         aiFeedbackReviewDetails,
         aiFeedbackTeacherAction,
         studentHelpDetails,
+        renderStudentHelpUsage,
         renderStudentHelpDialogContent,
         openStudentHelpDialog,
         clearStudentHelpRows,
@@ -2769,6 +2770,7 @@ def test_students_summary_counts_include_grading_and_grades() -> None:
           helpRequests: 0,
           helpAiRequests: 0,
           helpAiTokens: 0,
+          helpAiMissingUsage: 0,
           helpDenied: 0,
           averageGrade: 6.5,
           missingGrades: 3,
@@ -2800,7 +2802,8 @@ def test_students_summary_counts_include_grading_and_grades() -> None:
           ["Voti mancanti", 3],
           ["Aiuti", 0],
           ["Aiuti AI", 0],
-          ["Token AI", 0],
+          ["Token AI dichiarati", 0],
+          ["AI senza contatori", 0],
           ["Aiuti bloccati", 0],
         ]));
         tested.state.filter = "all";
@@ -2933,23 +2936,23 @@ def test_student_help_details_render_compact_summary_and_modal_content() -> None
         """
         const help = {
           activity_id: "python-base-somma-001",
-          total: 3,
-          ai_total: 2,
+          total: 4,
+          ai_total: 4,
           denied: 1,
           ai_usage: { total_tokens: 3, requests_without_usage: 1 },
           events: [
             {
               requested_at: "2026-10-20T08:10:00+02:00",
-              help_type: "teoria",
-              label: "Richiamo teorico",
+              help_type: "ai",
+              label: "Aiuto AI",
               allowed: true,
               reason: "Consentito dalla policy.",
               prompt: "Puoi ricordarmi come funziona input()?",
               provider_status: "completed",
               response: {
                 status: "ready",
-                provider: "deterministic-local",
-                provider_label: "Guida locale (nessuna AI esterna)",
+                provider: "codex-local",
+                provider_label: "Codex locale (macchina docente)",
                 message: "Parti dal primo test fallito.",
                 usage: { input_tokens: 1, output_tokens: 2, total_tokens: 3 },
               },
@@ -2991,11 +2994,11 @@ def test_student_help_details_render_compact_summary_and_modal_content() -> None
           activity: "Somma & media",
         });
 
-        assert.match(html, /Aiuti 3/);
+        assert.match(html, /Aiuti 4/);
         assert.match(html, /Consegna: python-base-somma-001/);
-        assert.match(html, /AI: 2/);
+        assert.match(html, /AI: 4/);
         assert.match(html, /Bloccate: 1/);
-        assert.match(html, /Token AI: 3 - Senza contatori: 1/);
+        assert.match(html, /Token AI dichiarati: 3 - Senza contatori: 1/);
         assert.match(html, /Dettagli aiuti/);
         assert.match(html, /data-student-help-key="student-help-rossi"/);
         assert.match(html, /aria-label="Dettagli aiuti di Rossi &quot;Mario&quot; per Somma &amp; media"/);
@@ -3014,10 +3017,17 @@ def test_student_help_details_render_compact_summary_and_modal_content() -> None
         assert.match(modalHtml, /Risposta in elaborazione\\./);
         assert.match(modalHtml, /Non invocato/);
         assert.match(modalHtml, /Parti dal primo test fallito\\./);
-        assert.match(modalHtml, /Guida locale \\(nessuna AI esterna\\)/);
+        assert.match(modalHtml, /Codex locale \\(macchina docente\\)/);
         assert.match(modalHtml, /3 token \\(1 input, 2 output\\)/);
-        assert.match(modalHtml, /Token AI 3/);
+        assert.match(modalHtml, /Token AI dichiarati 3/);
         assert.match(modalHtml, /Senza contatori 1/);
+        assert.match(
+          tested.renderStudentHelpUsage({
+            provider: "codex-local",
+            usage: { input_tokens: 0, output_tokens: 0, total_tokens: 0 },
+          }),
+          /Contatori token non disponibili/,
+        );
         assert.match(modalHtml, /Legacy non verificati \\(1\\)/);
         assert.match(modalHtml, /non incidono su budget e metriche/);
         assert.match(modalHtml, /Dato modificabile\\./);
@@ -3741,16 +3751,18 @@ def test_summary_counts_include_student_help_requests() -> None:
     run_dashboard_js(
         """
         const counts = tested.summaryCounts([
-          { help: { total: 3, ai_total: 2, denied: 1, ai_usage: { total_tokens: 15 } }, grading: {}, status: "pending" },
-          { help: { total: 1, counts: { ai: 1 }, denied: 0, ai_usage: { total_tokens: 7 } }, grading: {}, status: "pending" },
+          { help: { total: 3, ai_total: 2, denied: 1, ai_usage: { total_tokens: 15, requests_without_usage: 1 } }, grading: {}, status: "pending" },
+          { help: { total: 1, counts: { ai: 1 }, denied: 0, ai_usage: { total_tokens: 7, requests_without_usage: 2 } }, grading: {}, status: "pending" },
         ]);
 
         assert.equal(counts.helpRequests, 4);
         assert.equal(counts.helpAiRequests, 3);
         assert.equal(counts.helpAiTokens, 22);
+        assert.equal(counts.helpAiMissingUsage, 3);
         assert.equal(counts.helpDenied, 1);
         assert.equal(tested.summaryTooltip("Aiuti AI"), "Numero di richieste di aiuto AI registrate dagli studenti per questa consegna.");
-        assert.equal(tested.summaryTooltip("Token AI"), "Token input e output dichiarati dai provider AI per il registro selezionato.");
+        assert.equal(tested.summaryTooltip("Token AI dichiarati"), "Token input e output dichiarati dai provider AI per il registro selezionato.");
+        assert.equal(tested.summaryTooltip("AI senza contatori"), "Risposte AI remote per cui il provider non ha dichiarato i contatori token.");
         """
     )
 
