@@ -159,19 +159,20 @@ def data_root_process_lock_dir() -> Path:
 class DataRootProcessLock:
     """Hold an operating-system lock for one server data root."""
 
-    def __init__(self, root: Path) -> None:
+    def __init__(self, root: Path, *, hold_legacy_lock: bool = True) -> None:
         self.root = root.resolve(strict=False)
         readable = create_activity.slugify(self.root.name)[:32] or "root"
         root_key = os.path.normcase(str(self.root))
         digest = hashlib.sha256(root_key.encode("utf-8")).hexdigest()
         self.path = data_root_process_lock_dir() / f"{readable}-{digest}.lock"
+        self.legacy_path = self.root / ".thebitlab-server.lock"
+        self.hold_legacy_lock = hold_legacy_lock
         self._handle = None
+        self._legacy_handle = None
 
-    def acquire(self) -> None:
-        self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-        if os.name != "nt":
-            self.path.parent.chmod(0o700)
-        handle = self.path.open("a+b")
+    @staticmethod
+    def _acquire_handle(path: Path):
+        handle = path.open("a+b")
         try:
             handle.seek(0, os.SEEK_END)
             if handle.tell() == 0:
@@ -186,28 +187,54 @@ class DataRootProcessLock:
                 import fcntl
 
                 fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except (OSError, BlockingIOError) as error:
+        except (OSError, BlockingIOError):
             handle.close()
+            raise
+        return handle
+
+    @staticmethod
+    def _release_handle(handle) -> None:
+        handle.seek(0)
+        if os.name == "nt":
+            import msvcrt
+
+            msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+        handle.close()
+
+    def acquire(self) -> None:
+        self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        if os.name != "nt":
+            self.path.parent.chmod(0o700)
+        self.legacy_path.parent.mkdir(parents=True, exist_ok=True)
+        private_handle = None
+        legacy_handle = None
+        try:
+            private_handle = self._acquire_handle(self.path)
+            legacy_handle = self._acquire_handle(self.legacy_path)
+        except (OSError, BlockingIOError) as error:
+            if legacy_handle is not None:
+                self._release_handle(legacy_handle)
+            if private_handle is not None:
+                self._release_handle(private_handle)
             raise RuntimeError(
                 f"Un altro server sta gia usando il root dati: {self.root}"
             ) from error
-        self._handle = handle
+        self._handle = private_handle
+        if self.hold_legacy_lock:
+            self._legacy_handle = legacy_handle
+        else:
+            self._release_handle(legacy_handle)
 
     def release(self) -> None:
-        if self._handle is None:
-            return
-        try:
-            self._handle.seek(0)
-            if os.name == "nt":
-                import msvcrt
-
-                msvcrt.locking(self._handle.fileno(), msvcrt.LK_UNLCK, 1)
-            else:
-                import fcntl
-
-                fcntl.flock(self._handle.fileno(), fcntl.LOCK_UN)
-        finally:
-            self._handle.close()
+        if self._legacy_handle is not None:
+            self._release_handle(self._legacy_handle)
+            self._legacy_handle = None
+        if self._handle is not None:
+            self._release_handle(self._handle)
             self._handle = None
 
 

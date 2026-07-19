@@ -186,6 +186,22 @@ def test_data_root_process_lock_rejects_a_second_server(tmp_path) -> None:
     second_lock.release()
 
 
+def test_data_root_process_lock_rejects_a_legacy_server(tmp_path) -> None:
+    root = tmp_path / "data"
+    root.mkdir()
+    legacy_path = root / ".thebitlab-server.lock"
+    legacy_handle = course_board_server.DataRootProcessLock._acquire_handle(legacy_path)
+    try:
+        current_lock = course_board_server.DataRootProcessLock(root)
+        with pytest.raises(RuntimeError, match="Un altro server"):
+            current_lock.acquire()
+    finally:
+        course_board_server.DataRootProcessLock._release_handle(legacy_handle)
+
+    current_lock.acquire()
+    current_lock.release()
+
+
 @pytest.mark.skipif(
     os.name == "nt" or (hasattr(os, "geteuid") and os.geteuid() == 0),
     reason="I permessi POSIX sul parent non sono verificabili in questo ambiente.",

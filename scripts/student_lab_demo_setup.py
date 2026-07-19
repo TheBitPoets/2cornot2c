@@ -25,7 +25,7 @@ DEFAULT_DEMO_ROOT = PROJECT_ROOT / "tmp" / "student-lab-demo"
 def ensure_demo_root_available(root: Path) -> course_board_server.DataRootProcessLock:
     """Acquire and return the lock that protects the complete demo reset."""
 
-    lock = course_board_server.DataRootProcessLock(root)
+    lock = course_board_server.DataRootProcessLock(root, hold_legacy_lock=False)
     try:
         lock.acquire()
     except RuntimeError as error:
