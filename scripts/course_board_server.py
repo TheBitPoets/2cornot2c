@@ -1161,7 +1161,7 @@ def preserve_assignment_ai_feedback(previous: dict, generated: dict) -> dict:
         return generated
     previous_assignment = str(previous.get("assignment_id", "")).strip()
     generated_assignment = str(generated.get("assignment_id", "")).strip()
-    if previous_assignment and generated_assignment and previous_assignment != generated_assignment:
+    if previous_assignment != generated_assignment:
         return generated
 
     previous_students = previous.get("students") if isinstance(previous.get("students"), list) else []

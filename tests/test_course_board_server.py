@@ -2313,6 +2313,43 @@ def test_regenerated_report_does_not_copy_feedback_from_another_assignment() -> 
     assert generated["students"][0]["ai_feedback"]["status"] == "not_generated"
 
 
+@pytest.mark.parametrize(
+    ("previous_assignment", "generated_assignment"),
+    [
+        ("assignment-a", None),
+        (None, "assignment-a"),
+    ],
+)
+def test_regenerated_report_does_not_copy_feedback_when_only_one_assignment_id_is_missing(
+    previous_assignment: str | None,
+    generated_assignment: str | None,
+) -> None:
+    previous = {
+        "activity_id": "activity",
+        "students": [{
+            "student": "rossi",
+            "student_id": "student-rossi",
+            "ai_feedback": {"status": "approved", "approved_by_teacher": True},
+        }],
+    }
+    generated = {
+        "activity_id": "activity",
+        "students": [{
+            "student": "rossi",
+            "student_id": "student-rossi",
+            "ai_feedback": {"status": "not_generated", "approved_by_teacher": False},
+        }],
+    }
+    if previous_assignment is not None:
+        previous["assignment_id"] = previous_assignment
+    if generated_assignment is not None:
+        generated["assignment_id"] = generated_assignment
+
+    course_board_server.preserve_assignment_ai_feedback(previous, generated)
+
+    assert generated["students"][0]["ai_feedback"]["status"] == "not_generated"
+
+
 def test_generate_report_preserves_review_completed_while_tracking(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
