@@ -3088,6 +3088,33 @@ def test_loading_report_enables_students_panel_and_reports_failures() -> None:
     )
 
 
+def test_selecting_empty_report_clears_the_active_report() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          tested.state.report = {
+            activity_id: "registro-precedente",
+            students: [{ student: "rossi-mario" }],
+          };
+          tested.state.reportName = "demo/registro-precedente.json";
+          tested.els.studentsOpenBtn.disabled = false;
+          tested.els.studentHelpDialog.open = true;
+          tested.els.reportSelect.value = "";
+
+          const loaded = await tested.loadSelectedReport();
+
+          assert.equal(loaded, false);
+          assert.equal(tested.state.report, null);
+          assert.equal(tested.state.reportName, "");
+          assert.equal(tested.els.reportSelect.value, "");
+          assert.equal(tested.els.studentsOpenBtn.disabled, true);
+          assert.equal(tested.els.studentHelpDialog.open, false);
+          assert.match(tested.els.reportSummary.innerHTML, /Carica un registro/);
+        })();
+        """
+    )
+
+
 def test_loading_report_ignores_stale_successes_and_failures() -> None:
     run_dashboard_js(
         """

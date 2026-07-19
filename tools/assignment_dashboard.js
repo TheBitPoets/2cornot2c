@@ -1126,10 +1126,21 @@ function invalidateReportLoads() {
   state.reportLoadRevision += 1;
 }
 
+function clearActiveReport() {
+  state.report = null;
+  state.reportName = "";
+  els.reportSelect.value = "";
+  els.studentsOpenBtn.disabled = true;
+  clearReview();
+  closeStudentHelpDialog();
+  renderDashboard();
+}
+
 async function loadSelectedReport() {
   const revision = ++state.reportLoadRevision;
   const name = els.reportSelect.value;
   if (!name) {
+    clearActiveReport();
     setStatus("Seleziona un registro consegne.");
     return false;
   }
@@ -1147,13 +1158,7 @@ async function loadSelectedReport() {
     if (revision !== state.reportLoadRevision || els.reportSelect.value !== name) {
       return false;
     }
-    state.report = null;
-    state.reportName = "";
-    els.reportSelect.value = "";
-    els.studentsOpenBtn.disabled = true;
-    clearReview();
-    closeStudentHelpDialog();
-    renderDashboard();
+    clearActiveReport();
     setStatus(`Registro non caricato: ${error.message}`);
     return false;
   }
