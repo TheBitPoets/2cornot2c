@@ -665,7 +665,12 @@ Ordine consigliato:
 10. Dashboard studente MVP per consegne, calendario, percorso, stato e feedback deterministico, collegata ai risultati prodotti dal backend lab.
 11. Consolidamento grading Docker per flusso reale di consegna.
 12. Collegamento automatico report/artifact al registro consegne.
-13. Revisione dashboard docente contro il flusso MVP reale.
+13. Revisione completa della dashboard docente contro il flusso MVP reale, usando `gpt-5.6-sol` con reasoning `high`:
+   - estendere la revisione gia fatta sulla pagina Percorso alle altre pagine docente;
+   - verificare coerenza di font, colori, spaziature, pannelli, modal, tooltip, legenda e stati di errore;
+   - verificare responsive, accessibilita e leggibilita dei contenuti lunghi nelle viste e nei modal;
+   - eseguire gli scenari manuali aggiornati e trasformare i problemi in issue/PR atomiche;
+   - aggiornare la guida utente e la checklist dopo ogni comportamento stabilizzato.
 14. Stabilizzazione test manuali e automazione GUI/TUI:
    - mantenere aggiornata la checklist `doc/SCENARI_TEST_MANUALI_GUI.md` per ogni pannello, modal, vista e comando TUI;
    - aggiungere `data-testid` o altri punti di aggancio stabili alle GUI prima di automatizzare;
