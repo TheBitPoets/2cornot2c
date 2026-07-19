@@ -41,6 +41,17 @@ def assert_demo_assignment(assignment: dict[str, Any]) -> None:
         raise RuntimeError("Budget AI demo non coerente.")
 
 
+def assert_demo_scenarios(summary: dict[str, Any]) -> None:
+    """Validate both the passing and failing automatic-grading scenarios."""
+
+    expected = {
+        "passing": {"student_id": student_lab_demo_smoke.STUDENT_ID, "status": "graded_passed"},
+        "failing": {"student_id": student_lab_demo_smoke.FAILING_STUDENT_ID, "status": "graded_failed"},
+    }
+    if summary.get("scenarios") != expected:
+        raise RuntimeError(f"Scenari demo non coerenti: {summary.get('scenarios')}")
+
+
 def guided_steps(root: Path, commands: dict[str, str], *, host: str, port: int) -> list[str]:
     """Return the manual steps printed after automatic checks pass."""
 
@@ -53,6 +64,7 @@ def guided_steps(root: Path, commands: dict[str, str], *, host: str, port: int) 
         f"Dashboard studente: {dashboard_url}",
         "In TUI: apri la consegna con il numero, verifica dettaglio, storico aiuti con h, runner con e e path report salvato.",
         "In dashboard: seleziona rossi-mario e verifica Demo somma in Python, report, test e richieste aiuto.",
+        "In dashboard: seleziona bianchi-luca e verifica test falliti, report presente e stato di grading negativo.",
     ]
 
 
@@ -60,6 +72,7 @@ def run_guided_check(root: Path, *, host: str = "127.0.0.1", port: int = 8765) -
     """Prepare the demo root and verify backend/dashboard data contracts."""
 
     setup = student_lab_demo_setup.prepare_demo(root)
+    assert_demo_scenarios(setup)
     data_root = Path(setup["root"])
     payload = student_lab_service.student_lab_payload(
         root=data_root,
@@ -85,6 +98,7 @@ def run_guided_check(root: Path, *, host: str = "127.0.0.1", port: int = 8765) -
         "activity_id": student_lab_demo_smoke.ACTIVITY_ID,
         "automatic_checks": {
             "setup": True,
+            "passing_and_failing_results": True,
             "student_lab_payload": True,
             "student_dashboard_api": True,
         },
@@ -108,7 +122,7 @@ def render_text_check(result: dict[str, Any]) -> str:
         "Controlli automatici",
         "--------------------",
     ]
-    for key in ("setup", "student_lab_payload", "student_dashboard_api"):
+    for key in ("setup", "passing_and_failing_results", "student_lab_payload", "student_dashboard_api"):
         status = "OK" if checks.get(key) else "NO"
         lines.append(f"- {status} {key}")
     lines.extend(["", "Passi manuali", "-------------"])

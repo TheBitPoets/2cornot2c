@@ -11,6 +11,10 @@ def test_student_lab_demo_smoke_builds_complete_flow(tmp_path) -> None:
     assert summary["ok"] is True
     assert summary["student_id"] == "rossi-mario"
     assert summary["activity_id"] == "python-demo-somma-001"
+    assert summary["scenarios"] == {
+        "passing": {"student_id": "rossi-mario", "status": "graded_passed"},
+        "failing": {"student_id": "bianchi-luca", "status": "graded_failed"},
+    }
     assert summary["workspace"].endswith("assignments/python-demo-somma-001")
     assert summary["report"].endswith("reports/python-demo-somma-001/latest.json")
     assert summary["teacher_register"].endswith("teacher-reports/demo/python-demo-somma-001.json")

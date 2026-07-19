@@ -27,6 +27,7 @@ from scripts.student_help_provider import DeterministicStudentHelpProvider
 
 
 STUDENT_ID = "rossi-mario"
+FAILING_STUDENT_ID = "bianchi-luca"
 ACTIVITY_ID = "python-demo-somma-001"
 ASSIGNED_AT = "2026-10-12T09:00:00+02:00"
 DUE_AT = "2026-10-19T23:59:00+02:00"
@@ -68,7 +69,7 @@ def write_demo_assignment(root: Path, activity_path: Path) -> dict[str, Any]:
     assignment = assignment_records.build_assignment_record(
         activity_id=ACTIVITY_ID,
         activity_path=relative(activity_path, root),
-        target_type="student",
+        target_type="class",
         class_id="3A-TPSI",
         class_label="3A TPSI",
         github_team="team-3a-tpsi",
@@ -80,21 +81,28 @@ def write_demo_assignment(root: Path, activity_path: Path) -> dict[str, Any]:
                 "display_name": "Rossi Mario",
                 "repo_ref": f"TheBitPoets/{STUDENT_ID}",
                 "path": f"examples/assignment_tracking/student_repos/{STUDENT_ID}",
-            }
+            },
+            {
+                "student_id": FAILING_STUDENT_ID,
+                "display_name": "Bianchi Luca",
+                "repo_ref": f"TheBitPoets/{FAILING_STUDENT_ID}",
+                "path": f"examples/assignment_tracking/student_repos/{FAILING_STUDENT_ID}",
+            },
         ],
     )
     return storage.write_assignment(assignment)
 
 
-def write_demo_workspace(root: Path) -> Path:
+def write_demo_workspace(root: Path, *, student_id: str = STUDENT_ID, passing: bool = True) -> Path:
     """Create the student workspace with source and pytest checks."""
 
-    workspace = root / "examples" / "assignment_tracking" / "student_repos" / STUDENT_ID / "assignments" / ACTIVITY_ID
+    workspace = root / "examples" / "assignment_tracking" / "student_repos" / student_id / "assignments" / ACTIVITY_ID
     tests_dir = workspace / "tests"
     tests_dir.mkdir(parents=True, exist_ok=True)
+    operation = "+" if passing else "-"
     (workspace / "main.py").write_text(
         "def somma(a, b):\n"
-        "    return a + b\n",
+        f"    return a {operation} b\n",
         encoding="utf-8",
     )
     (tests_dir / "test_main.py").write_text(
@@ -112,14 +120,21 @@ def write_teacher_register(root: Path, assignment_id: str) -> Path:
     """Generate the teacher register from the report produced by the runner."""
 
     output = root / "teacher-reports" / "demo" / f"{ACTIVITY_ID}.json"
-    target = track_assignments.TrackingTarget(
-        student=STUDENT_ID,
-        repo=f"TheBitPoets/{STUDENT_ID}",
-        path=root / "examples" / "assignment_tracking" / "student_repos" / STUDENT_ID,
-    )
+    targets = [
+        track_assignments.TrackingTarget(
+            student=STUDENT_ID,
+            repo=f"TheBitPoets/{STUDENT_ID}",
+            path=root / "examples" / "assignment_tracking" / "student_repos" / STUDENT_ID,
+        ),
+        track_assignments.TrackingTarget(
+            student=FAILING_STUDENT_ID,
+            repo=f"TheBitPoets/{FAILING_STUDENT_ID}",
+            path=root / "examples" / "assignment_tracking" / "student_repos" / FAILING_STUDENT_ID,
+        ),
+    ]
     index = track_assignments.track_assignments(
         activity_path=root / "activities" / f"{ACTIVITY_ID}.json",
-        targets=[target],
+        targets=targets,
         assigned_at=ASSIGNED_AT,
         due_at=DUE_AT,
         now=NOW,
@@ -139,6 +154,7 @@ def run_smoke(root: Path) -> dict[str, Any]:
     activity_path = write_demo_activity(root)
     assignment_record = write_demo_assignment(root, activity_path)
     workspace = write_demo_workspace(root)
+    failing_workspace = write_demo_workspace(root, student_id=FAILING_STUDENT_ID, passing=False)
     assignment = student_lab_runner.load_student_assignment(root=root, student_id=STUDENT_ID, activity_id=ACTIVITY_ID, now=NOW)
     help_event = student_help_service.record_help_request(
         activity_id=ACTIVITY_ID,
@@ -164,11 +180,31 @@ def run_smoke(root: Path) -> dict[str, Any]:
         raise RuntimeError("La dashboard lab non vede il report appena salvato.")
     if lab_assignment["help"]["total"] != 1 or lab_assignment["help"]["ai_budget"]["remaining"] != 4:
         raise RuntimeError("La dashboard lab non vede la richiesta di aiuto della demo.")
+
+    failing_assignment = student_lab_runner.load_student_assignment(
+        root=root,
+        student_id=FAILING_STUDENT_ID,
+        activity_id=ACTIVITY_ID,
+        now=NOW,
+    )
+    failing_report = student_lab_runner.run_assignment(failing_assignment, root=root, backend="local")
+    if failing_report.get("passed") is not False or failing_report.get("status") != "failed":
+        raise RuntimeError(f"Runner demo negativo non coerente: {failing_report.get('status')}")
+    failing_report_path = student_lab_runner.write_student_report(root, failing_assignment, failing_report)
+    failing_payload = student_lab_service.student_lab_payload(root=root, student_id=FAILING_STUDENT_ID, now=NOW)
+    failing_lab_assignment = failing_payload["assignments"][0]
+    if failing_lab_assignment["grading"]["status"] != "graded_failed":
+        raise RuntimeError("La dashboard lab non vede il report negativo della demo.")
+
     register_path = write_teacher_register(root, assignment_record["id"])
     register = json.loads(register_path.read_text(encoding="utf-8"))
-    student = register["students"][0]
+    students = {entry["student"]: entry for entry in register["students"]}
+    student = students[STUDENT_ID]
+    failing_student = students[FAILING_STUDENT_ID]
     if student["grading"]["status"] != "graded_passed":
-        raise RuntimeError(f"Registro docente non coerente: {student['grading']['status']}")
+        raise RuntimeError(f"Registro docente non coerente per Rossi: {student['grading']['status']}")
+    if failing_student["grading"]["status"] != "graded_failed":
+        raise RuntimeError(f"Registro docente non coerente per Bianchi: {failing_student['grading']['status']}")
     if student["help"]["total"] != 1 or student["help"]["ai_total"] != 1:
         raise RuntimeError("Registro docente non coerente con le richieste di aiuto.")
     return {
@@ -179,7 +215,14 @@ def run_smoke(root: Path) -> dict[str, Any]:
         "assignment_id": assignment_record["id"],
         "workspace": relative(workspace, root),
         "report": relative(report_path, root),
+        "failing_student_id": FAILING_STUDENT_ID,
+        "failing_workspace": relative(failing_workspace, root),
+        "failing_report": relative(failing_report_path, root),
         "teacher_register": relative(register_path, root),
+        "scenarios": {
+            "passing": {"student_id": STUDENT_ID, "status": student["grading"]["status"]},
+            "failing": {"student_id": FAILING_STUDENT_ID, "status": failing_student["grading"]["status"]},
+        },
         "tests": {
             "passed": student["grading"]["tests_passed"],
             "total": student["grading"]["tests_total"],
