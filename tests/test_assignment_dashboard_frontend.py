@@ -3124,6 +3124,43 @@ def test_render_students_keeps_open_help_dialog_and_refreshes_its_content() -> N
     )
 
 
+def test_render_students_closes_help_dialog_when_the_report_changes() -> None:
+    run_dashboard_js(
+        """
+        tested.state.reportName = "demo/somma.json";
+        tested.state.studentHelpRows = new Map([
+          ["student-help-rossi", {
+            student: "Rossi Mario",
+            activity: "Somma in Python",
+            help: { total: 1, events: [{ allowed: true, prompt: "Prompt somma" }] },
+          }],
+        ]);
+        tested.openStudentHelpDialog("student-help-rossi");
+        assert.equal(tested.state.studentHelpDialogReportName, "demo/somma.json");
+
+        tested.state.reportName = "demo/moltiplicazione.json";
+        tested.state.report = { activity_id: "moltiplicazione", title: "Moltiplicazione" };
+        tested.renderStudents([{
+          student: "rossi",
+          student_id: "rossi",
+          repo: "demo/rossi",
+          status: "pending",
+          grading: {},
+          submission: {},
+          help: {
+            total: 1,
+            activity_id: "moltiplicazione",
+            events: [{ allowed: true, prompt: "Prompt moltiplicazione" }],
+          },
+        }]);
+
+        assert.equal(tested.els.studentHelpDialog.open, false);
+        assert.equal(tested.state.studentHelpDialogKey, "");
+        assert.equal(tested.state.studentHelpDialogReportName, "");
+        """
+    )
+
+
 def test_loading_report_enables_students_panel_and_reports_failures() -> None:
     run_dashboard_js(
         """

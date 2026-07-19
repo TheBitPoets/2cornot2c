@@ -151,6 +151,7 @@ const state = {
   testDetailsRows: new Map(),
   studentHelpRows: new Map(),
   studentHelpDialogKey: "",
+  studentHelpDialogReportName: "",
   reviewStudent: null,
   reviewSource: "",
   reviewFilePath: "",
@@ -4219,6 +4220,7 @@ function openStudentHelpDialog(detailsKey) {
   const entry = state.studentHelpRows.get(detailsKey);
   if (!entry || !els.studentHelpDialog) return;
   state.studentHelpDialogKey = detailsKey;
+  state.studentHelpDialogReportName = state.reportName;
   els.studentHelpDialogStatus.textContent = `${entry.student || "Studente"} - ${entry.activity || "activity non indicata"}.`;
   els.studentHelpDialogBody.innerHTML = renderStudentHelpDialogContent(entry);
   if (!els.studentHelpDialog.open) {
@@ -4231,6 +4233,7 @@ function closeStudentHelpDialog() {
     els.studentHelpDialog.close();
   }
   state.studentHelpDialogKey = "";
+  state.studentHelpDialogReportName = "";
 }
 
 function clearStudentHelpRows() {
@@ -4402,6 +4405,7 @@ function renderStudents(students) {
   const keepStudentHelpDialogOpen = Boolean(
     els.studentHelpDialog?.open
     && activeStudentHelpKey
+    && state.studentHelpDialogReportName === state.reportName
     && visible.some((student) => studentHelpRowKey(student) === activeStudentHelpKey),
   );
   if (els.studentHelpDialog?.open && !keepStudentHelpDialogOpen) {
