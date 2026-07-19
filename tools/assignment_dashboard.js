@@ -1137,7 +1137,7 @@ function clearActiveReport() {
   els.reportSelect.value = "";
   els.studentsOpenBtn.disabled = true;
   clearReview();
-  closeStudentHelpDialog();
+  closeStudentHelpDialog({ restoreFocus: false });
   renderDashboard();
 }
 
@@ -4228,12 +4228,21 @@ function openStudentHelpDialog(detailsKey) {
   }
 }
 
-function closeStudentHelpDialog() {
+function studentHelpButtonForKey(detailsKey) {
+  return Array.from(document.querySelectorAll("[data-student-help-key]"))
+    .find((button) => button.dataset.studentHelpKey === detailsKey) || null;
+}
+
+function closeStudentHelpDialog({ restoreFocus = true } = {}) {
+  const detailsKey = state.studentHelpDialogKey;
   if (els.studentHelpDialog?.open) {
     els.studentHelpDialog.close();
   }
   state.studentHelpDialogKey = "";
   state.studentHelpDialogReportName = "";
+  if (restoreFocus && detailsKey) {
+    requestAnimationFrame(() => studentHelpButtonForKey(detailsKey)?.focus());
+  }
 }
 
 function clearStudentHelpRows() {
@@ -4409,7 +4418,7 @@ function renderStudents(students) {
     && visible.some((student) => studentHelpRowKey(student) === activeStudentHelpKey),
   );
   if (els.studentHelpDialog?.open && !keepStudentHelpDialogOpen) {
-    closeStudentHelpDialog();
+    closeStudentHelpDialog({ restoreFocus: false });
   }
   els.tableStatus.textContent = state.report
     ? `Mostrati ${visible.length}/${students.length} studenti.`

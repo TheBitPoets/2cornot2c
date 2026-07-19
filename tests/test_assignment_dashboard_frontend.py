@@ -3161,6 +3161,78 @@ def test_render_students_closes_help_dialog_when_the_report_changes() -> None:
     )
 
 
+def test_student_help_dialog_restores_focus_to_the_rebuilt_button() -> None:
+    run_dashboard_js(
+        """
+        tested.state.reportName = "demo/somma.json";
+        tested.state.studentHelpRows = new Map([
+          ["student-help-rossi", {
+            student: "Rossi Mario",
+            activity: "Somma in Python",
+            help: { total: 1, events: [{ allowed: true, prompt: "Prompt precedente" }] },
+          }],
+        ]);
+        tested.openStudentHelpDialog("student-help-rossi");
+        tested.state.report = { activity_id: "somma", title: "Somma aggiornata" };
+        tested.renderStudents([{
+          student: "rossi",
+          student_id: "rossi",
+          repo: "demo/rossi",
+          status: "pending",
+          grading: {},
+          submission: {},
+          help: {
+            total: 1,
+            activity_id: "somma",
+            events: [{ allowed: true, prompt: "Prompt aggiornato" }],
+          },
+        }]);
+        let focused = false;
+        const rebuiltButton = {
+          dataset: { studentHelpKey: "student-help-rossi" },
+          focus() { focused = true; },
+        };
+        context.document.querySelectorAll = (selector) => (
+          selector === "[data-student-help-key]" ? [rebuiltButton] : []
+        );
+
+        tested.els.studentHelpCloseBtn.dispatchEvent({ type: "click" });
+
+        assert.equal(tested.els.studentHelpDialog.open, false);
+        assert.equal(focused, true);
+        """
+    )
+
+
+def test_automatic_help_dialog_close_does_not_move_focus() -> None:
+    run_dashboard_js(
+        """
+        tested.state.reportName = "demo/somma.json";
+        tested.state.studentHelpRows = new Map([
+          ["student-help-rossi", {
+            student: "Rossi Mario",
+            activity: "Somma in Python",
+            help: { total: 1, events: [{ allowed: true, prompt: "Prompt" }] },
+          }],
+        ]);
+        tested.openStudentHelpDialog("student-help-rossi");
+        let focused = false;
+        const staleButton = {
+          dataset: { studentHelpKey: "student-help-rossi" },
+          focus() { focused = true; },
+        };
+        context.document.querySelectorAll = (selector) => (
+          selector === "[data-student-help-key]" ? [staleButton] : []
+        );
+
+        tested.renderStudents([]);
+
+        assert.equal(tested.els.studentHelpDialog.open, false);
+        assert.equal(focused, false);
+        """
+    )
+
+
 def test_loading_report_enables_students_panel_and_reports_failures() -> None:
     run_dashboard_js(
         """
