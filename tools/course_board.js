@@ -59,6 +59,7 @@ const els = {
   aiBusyTitle: document.querySelector("#aiBusyTitle"),
   aiBusyMessage: document.querySelector("#aiBusyMessage"),
   aiBusyPercent: document.querySelector("#aiBusyPercent"),
+  aiBusyBar: document.querySelector("#aiBusyBar"),
   aiBusyBarFill: document.querySelector("#aiBusyBarFill"),
   aiBusyControls: document.querySelector("#aiBusyControls"),
   aiBusyNextBtn: document.querySelector("#aiBusyNextBtn"),
@@ -208,6 +209,7 @@ function startAiProgress(title) {
   els.aiBusy.hidden = false;
   els.aiBusyControls.hidden = true;
   els.aiBusyTitle.textContent = title;
+  els.aiBusyMessage.textContent = "";
   updateAiProgress(percent, AI_PROGRESS_STAGES[stageIndex]);
   clearInterval(aiProgressTimer);
   aiProgressTimer = setInterval(() => {
@@ -218,8 +220,12 @@ function startAiProgress(title) {
 }
 
 function updateAiProgress(percent, message) {
-  els.aiBusyMessage.textContent = message;
+  if (els.aiBusyMessage.textContent !== message) {
+    els.aiBusyMessage.textContent = message;
+  }
   els.aiBusyPercent.textContent = `${percent}%`;
+  els.aiBusyBar.setAttribute("aria-valuenow", String(percent));
+  els.aiBusyBar.setAttribute("aria-valuetext", message);
   els.aiBusyBarFill.style.width = `${percent}%`;
 }
 

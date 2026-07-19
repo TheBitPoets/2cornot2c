@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 import subprocess
 import textwrap
 
@@ -19,6 +20,7 @@ def run_course_board_js(assertions: str) -> None:
         this.textContent = "";
         this.innerHTML = "";
         this.listeners = {{}};
+        this.style = {{}};
       }}
       addEventListener(type, handler) {{ this.listeners[type] = handler; }}
       setAttribute(name, value) {{ this[name] = value; }}
@@ -325,6 +327,23 @@ def test_async_action_exposes_errors_in_the_visible_status() -> None:
           assert.match(els.status.textContent, /Ricarica non riuscito/);
           assert.match(els.status.textContent, /server non disponibile/);
         });
+        """
+    )
+
+
+def test_ai_progress_uses_separate_live_status_and_progressbar() -> None:
+    html = Path("tools/course_board.html").read_text(encoding="utf-8")
+
+    assert '<div id="aiBusy" class="aiBusy" hidden>' in html
+    assert 'id="aiBusyMessage" role="status" aria-live="polite"' in html
+    assert 'id="aiBusyBar" class="aiBusyBar" role="progressbar"' in html
+    run_course_board_js(
+        """
+        updateAiProgress(42, "Analizzo il percorso");
+
+        assert.equal(els.aiBusyBar["aria-valuenow"], "42");
+        assert.equal(els.aiBusyBar["aria-valuetext"], "Analizzo il percorso");
+        assert.equal(els.aiBusyMessage.textContent, "Analizzo il percorso");
         """
     )
 

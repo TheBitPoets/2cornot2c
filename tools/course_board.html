@@ -69,14 +69,14 @@
     </section>
   </main>
 
-  <div id="aiBusy" class="aiBusy" role="status" aria-live="polite" aria-atomic="true" hidden>
+  <div id="aiBusy" class="aiBusy" hidden>
     <div class="aiBusyCard">
       <div>
         <strong id="aiBusyTitle">AI assisted in corso</strong>
-        <p id="aiBusyMessage">Preparo la richiesta...</p>
+        <p id="aiBusyMessage" role="status" aria-live="polite" aria-atomic="true">Preparo la richiesta...</p>
       </div>
       <div class="aiBusyPercent" id="aiBusyPercent">0%</div>
-      <div class="aiBusyBar" aria-hidden="true">
+      <div id="aiBusyBar" class="aiBusyBar" role="progressbar" aria-label="Avanzamento elaborazione AI" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
         <span id="aiBusyBarFill"></span>
       </div>
       <div id="aiBusyControls" class="aiBusyControls" hidden>
