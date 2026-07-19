@@ -235,6 +235,28 @@ def test_save_waits_for_delete_rollback_before_updating_design(tmp_path, monkeyp
     assert saving_storage.read_saved_design("victim.json") == {"title": "Aggiornato"}
 
 
+def test_calendar_save_waits_for_course_storage_operation(tmp_path) -> None:
+    locking_storage = JsonCourseStorage(tmp_path)
+    saving_storage = JsonCourseStorage(tmp_path)
+    save_started = threading.Event()
+    save_done = threading.Event()
+
+    def save_calendar() -> None:
+        save_started.set()
+        saving_storage.write_school_calendar("linked.json", {"course_design_name": "victim.json"})
+        save_done.set()
+
+    save_thread = threading.Thread(target=save_calendar)
+    with locking_storage.operation_lock:
+        save_thread.start()
+        assert save_started.wait(timeout=5)
+        assert save_done.wait(timeout=0.1) is False
+
+    save_thread.join(timeout=5)
+    assert save_done.is_set()
+    assert saving_storage.read_school_calendar("linked.json") == {"course_design_name": "victim.json"}
+
+
 def test_uncommitted_delete_transaction_is_restored_on_next_adapter(tmp_path) -> None:
     storage = JsonCourseStorage(tmp_path)
     storage.write_saved_design("victim.json", {"title": "Da ripristinare"})

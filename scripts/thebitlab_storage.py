@@ -245,7 +245,8 @@ class JsonCourseStorage:
         """Persist a named school calendar in the calendars folder."""
 
         path = self.school_calendar_path(name)
-        self.write_json(path, payload)
+        with self.operation_lock:
+            self.write_json(path, payload)
         return {"name": path.name, "path": self.relative_path(path)}
 
     def delete_saved_design(
