@@ -149,6 +149,7 @@ const state = {
   coverageCollapsedActivities: new Set(),
   testDetailsRows: new Map(),
   studentHelpRows: new Map(),
+  studentHelpDialogKey: "",
   reviewStudent: null,
   reviewSource: "",
   reviewFilePath: "",
@@ -4216,6 +4217,7 @@ function clearTestDetailsRows(prefix) {
 function openStudentHelpDialog(detailsKey) {
   const entry = state.studentHelpRows.get(detailsKey);
   if (!entry || !els.studentHelpDialog) return;
+  state.studentHelpDialogKey = detailsKey;
   els.studentHelpDialogStatus.textContent = `${entry.student || "Studente"} - ${entry.activity || "activity non indicata"}.`;
   els.studentHelpDialogBody.innerHTML = renderStudentHelpDialogContent(entry);
   if (!els.studentHelpDialog.open) {
@@ -4227,6 +4229,7 @@ function closeStudentHelpDialog() {
   if (els.studentHelpDialog?.open) {
     els.studentHelpDialog.close();
   }
+  state.studentHelpDialogKey = "";
 }
 
 function clearStudentHelpRows() {
@@ -4388,9 +4391,21 @@ function filteredStudents(students) {
   return students;
 }
 
+function studentHelpRowKey(student) {
+  return `student-help-${student.student_id || student.student || ""}`;
+}
+
 function renderStudents(students) {
-  closeStudentHelpDialog();
   const visible = filteredStudents(students);
+  const activeStudentHelpKey = state.studentHelpDialogKey;
+  const keepStudentHelpDialogOpen = Boolean(
+    els.studentHelpDialog?.open
+    && activeStudentHelpKey
+    && visible.some((student) => studentHelpRowKey(student) === activeStudentHelpKey),
+  );
+  if (els.studentHelpDialog?.open && !keepStudentHelpDialogOpen) {
+    closeStudentHelpDialog();
+  }
   els.tableStatus.textContent = state.report
     ? `Mostrati ${visible.length}/${students.length} studenti.`
     : "Nessun registro caricato.";
@@ -4422,7 +4437,7 @@ function renderStudents(students) {
     const help = student.help || {};
     const submission = student.submission || {};
     const testDetailsKey = `students-${student.student || student.student_id || ""}`;
-    const studentHelpKey = `student-help-${student.student_id || student.student || ""}`;
+    const studentHelpKey = studentHelpRowKey(student);
     const studentName = student.student || student.student_id || "Studente";
     const helpActivity = help.activity_id || state.report?.title || state.report?.activity_id || "Activity";
     state.testDetailsRows.set(testDetailsKey, {
@@ -4480,6 +4495,9 @@ function renderStudents(students) {
       </td>
     `;
     els.studentsBody.append(row);
+  }
+  if (keepStudentHelpDialogOpen) {
+    openStudentHelpDialog(activeStudentHelpKey);
   }
   setupResizableTable(els.studentsTable, "students");
 }
