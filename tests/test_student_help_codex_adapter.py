@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -56,6 +58,46 @@ def completed_codex_run(
         stdout="\n".join(json.dumps(event) for event in events),
         stderr="",
     )
+
+
+def fake_codex_executable(tmp_path: Path) -> Path:
+    script_path = tmp_path / "fake_codex.py"
+    script_path.write_text(
+        """import json
+import sys
+
+arguments = sys.argv[1:]
+response_path = arguments[arguments.index("--output-last-message") + 1]
+with open(response_path, "w", encoding="utf-8") as response_file:
+    json.dump(
+        {
+            "guidance": ["Controlla il primo caso limite."],
+            "check_question": "Quale risultato ti aspetti?",
+        },
+        response_file,
+    )
+print(json.dumps({
+    "type": "turn.completed",
+    "usage": {"input_tokens": 17, "output_tokens": 5},
+}))
+""",
+        encoding="utf-8",
+    )
+    if os.name == "nt":
+        launcher_path = tmp_path / "codex.cmd"
+        launcher_path.write_text(
+            f'@echo off\r\n"{sys.executable}" "{script_path}" %*\r\n',
+            encoding="utf-8",
+        )
+        return launcher_path
+
+    launcher_path = tmp_path / "codex"
+    launcher_path.write_text(
+        f'#!/bin/sh\nexec "{sys.executable}" "{script_path}" "$@"\n',
+        encoding="utf-8",
+    )
+    launcher_path.chmod(0o755)
+    return launcher_path
 
 
 def test_codex_provider_runs_in_empty_read_only_ephemeral_workspace(monkeypatch) -> None:
@@ -131,6 +173,19 @@ def test_codex_provider_runs_in_empty_read_only_ephemeral_workspace(monkeypatch)
     }
     assert "secret_solution" not in json.dumps(captured["input"])
     assert captured["schema"]["additionalProperties"] is False
+
+
+def test_codex_provider_reads_sidecar_and_jsonl_from_real_subprocess(monkeypatch, tmp_path) -> None:
+    codex_path = fake_codex_executable(tmp_path)
+    monkeypatch.setattr(student_help_codex_adapter.shutil, "which", lambda command: str(codex_path))
+
+    response = student_help_codex_adapter.CodexStudentHelpProvider().respond(sample_request())
+
+    assert response.provider == "codex-local"
+    assert response.message == (
+        "1. Controlla il primo caso limite. Domanda guida: Quale risultato ti aspetti?"
+    )
+    assert response.usage == {"input_tokens": 17, "output_tokens": 5, "total_tokens": 22}
 
 
 def test_codex_provider_rejects_missing_cli(monkeypatch) -> None:
