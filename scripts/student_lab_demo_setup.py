@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import shutil
 import sys
 import time
@@ -25,7 +24,7 @@ DEFAULT_DEMO_ROOT = PROJECT_ROOT / "tmp" / "student-lab-demo"
 def ensure_demo_root_available(root: Path) -> course_board_server.DataRootProcessLock:
     """Acquire and return the lock that protects the complete demo reset."""
 
-    lock = course_board_server.DataRootProcessLock(root, hold_legacy_lock=False)
+    lock = course_board_server.DataRootProcessLock(root)
     try:
         lock.acquire()
     except RuntimeError as error:
@@ -51,6 +50,24 @@ def remove_tree_with_retry(path: Path, *, attempts: int = 5) -> None:
             time.sleep(0.2 * (attempt + 1))
 
 
+def remove_path_with_retry(path: Path, *, attempts: int = 5) -> None:
+    """Remove one file, symlink or directory after transient Windows failures."""
+
+    for attempt in range(attempts):
+        if not path.exists() and not path.is_symlink():
+            return
+        try:
+            if path.is_dir() and not path.is_symlink():
+                shutil.rmtree(path)
+            else:
+                path.unlink()
+            return
+        except OSError:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(0.2 * (attempt + 1))
+
+
 def cleanup_stale_trash(root: Path) -> None:
     """Best-effort cleanup for old demo roots already moved aside."""
 
@@ -62,25 +79,18 @@ def cleanup_stale_trash(root: Path) -> None:
 
 
 def reset_root(root: Path) -> None:
-    """Remove an existing demo root after a minimal safety check."""
+    """Clear a demo root while preserving its actively held legacy lock file."""
 
     resolved = root.resolve(strict=False)
     if resolved == resolved.parent or len(resolved.parts) < 3:
         raise ValueError(f"Root demo non sicura da resettare: {resolved}")
     resolved.parent.mkdir(parents=True, exist_ok=True)
     cleanup_stale_trash(resolved)
-    if resolved.exists():
-        trash = resolved.with_name(f"{resolved.name}.delete-{os.getpid()}-{time.time_ns()}")
-        try:
-            resolved.rename(trash)
-        except OSError:
-            remove_tree_with_retry(resolved)
-        else:
-            try:
-                remove_tree_with_retry(trash)
-            except OSError:
-                pass
     resolved.mkdir(parents=True, exist_ok=True)
+    for candidate in resolved.iterdir():
+        if candidate.name == ".thebitlab-server.lock":
+            continue
+        remove_path_with_retry(candidate)
 
 
 def demo_commands(root: Path) -> dict[str, str]:

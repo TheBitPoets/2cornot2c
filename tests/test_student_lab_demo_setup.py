@@ -85,6 +85,10 @@ def test_student_lab_demo_setup_holds_lock_through_smoke(tmp_path, monkeypatch) 
         competing_lock = student_lab_demo_setup.course_board_server.DataRootProcessLock(current_root)
         with pytest.raises(RuntimeError, match="Un altro server"):
             competing_lock.acquire()
+        with pytest.raises((OSError, BlockingIOError)):
+            student_lab_demo_setup.course_board_server.DataRootProcessLock._acquire_handle(
+                current_root / ".thebitlab-server.lock"
+            )
         return original_run_smoke(current_root)
 
     monkeypatch.setattr(student_lab_demo_setup.student_lab_demo_smoke, "run_smoke", assert_locked)
