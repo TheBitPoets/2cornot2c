@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -30,6 +31,33 @@ def sample_request() -> StudentHelpRequest:
     )
 
 
+def completed_codex_run(
+    command: list[str],
+    payload: object,
+    *,
+    usage: dict[str, int] | None = None,
+    events: list[object] | None = None,
+) -> subprocess.CompletedProcess[str]:
+    response_path = Path(command[command.index("--output-last-message") + 1])
+    response_path.write_text(json.dumps(payload), encoding="utf-8")
+    if events is None:
+        events = [{
+            "type": "turn.completed",
+            "usage": usage or {
+                "input_tokens": 120,
+                "cached_input_tokens": 40,
+                "output_tokens": 30,
+                "reasoning_output_tokens": 10,
+            },
+        }]
+    return subprocess.CompletedProcess(
+        command,
+        0,
+        stdout="\n".join(json.dumps(event) for event in events),
+        stderr="",
+    )
+
+
 def test_codex_provider_runs_in_empty_read_only_ephemeral_workspace(monkeypatch) -> None:
     captured = {}
     monkeypatch.setenv("THEBITLAB_STUDENT_HELP_SECRET", "segreto-server")
@@ -50,16 +78,12 @@ def test_codex_provider_runs_in_empty_read_only_ephemeral_workspace(monkeypatch)
         captured["input"] = json.loads(kwargs["input"])
         schema_path = command[command.index("--output-schema") + 1]
         captured["schema"] = json.loads(open(schema_path, encoding="utf-8").read())
-        return subprocess.CompletedProcess(
+        return completed_codex_run(
             command,
-            0,
-            stdout=json.dumps(
-                {
-                    "guidance": ["Controlla il caso vuoto.", "Confronta atteso e ottenuto."],
-                    "check_question": "Quale ipotesi verifica il test?",
-                }
-            ),
-            stderr="",
+            {
+                "guidance": ["Controlla il caso vuoto.", "Confronta atteso e ottenuto."],
+                "check_question": "Quale ipotesi verifica il test?",
+            },
         )
 
     monkeypatch.setattr(student_help_codex_adapter.subprocess, "run", fake_run)
@@ -71,7 +95,7 @@ def test_codex_provider_runs_in_empty_read_only_ephemeral_workspace(monkeypatch)
         "1. Controlla il caso vuoto. 2. Confronta atteso e ottenuto. "
         "Domanda guida: Quale ipotesi verifica il test?"
     )
-    assert response.usage == {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+    assert response.usage == {"input_tokens": 120, "output_tokens": 30, "total_tokens": 150}
     assert "--ephemeral" in captured["command"]
     assert "--ignore-user-config" in captured["command"]
     disabled_features = {
@@ -82,6 +106,8 @@ def test_codex_provider_runs_in_empty_read_only_ephemeral_workspace(monkeypatch)
     assert disabled_features == set(student_help_codex_adapter.DISABLED_CODEX_FEATURES)
     assert {"shell_tool", "apps", "browser_use", "computer_use", "multi_agent", "plugins"} <= disabled_features
     assert "read-only" in captured["command"]
+    assert "--json" in captured["command"]
+    assert "--output-last-message" in captured["command"]
     assert 'web_search="disabled"' in captured["command"]
     assert captured["command"][captured["command"].index("--model") + 1] == "gpt-test"
     assert captured["cwd"].name.startswith("thebitlab-student-help-")
@@ -154,7 +180,7 @@ def test_codex_provider_rejects_invalid_structured_output(monkeypatch) -> None:
     monkeypatch.setattr(
         student_help_codex_adapter.subprocess,
         "run",
-        lambda *args, **kwargs: subprocess.CompletedProcess(args[0], 0, stdout="{}", stderr=""),
+        lambda *args, **kwargs: completed_codex_run(args[0], {}),
     )
 
     with pytest.raises(ValueError, match="guida valida"):
@@ -166,16 +192,12 @@ def test_codex_provider_rejects_terminal_escape_sequences(monkeypatch) -> None:
     monkeypatch.setattr(
         student_help_codex_adapter.subprocess,
         "run",
-        lambda *args, **kwargs: subprocess.CompletedProcess(
+        lambda *args, **kwargs: completed_codex_run(
             args[0],
-            0,
-            stdout=json.dumps(
-                {
-                    "guidance": ["Controlla l'input.\u001b]52;c;dGVzdA==\u0007"],
-                    "check_question": "Quale caso stai verificando?",
-                }
-            ),
-            stderr="",
+            {
+                "guidance": ["Controlla l'input.\u001b]52;c;dGVzdA==\u0007"],
+                "check_question": "Quale caso stai verificando?",
+            },
         ),
     )
 
@@ -188,21 +210,68 @@ def test_codex_provider_rejects_output_that_would_truncate_check_question(monkey
     monkeypatch.setattr(
         student_help_codex_adapter.subprocess,
         "run",
-        lambda *args, **kwargs: subprocess.CompletedProcess(
+        lambda *args, **kwargs: completed_codex_run(
             args[0],
-            0,
-            stdout=json.dumps(
-                {
-                    "guidance": ["x" * (student_help_codex_adapter.MAX_GUIDANCE_STEP_CHARS + 1)],
-                    "check_question": "La domanda deve restare visibile?",
-                }
-            ),
-            stderr="",
+            {
+                "guidance": ["x" * (student_help_codex_adapter.MAX_GUIDANCE_STEP_CHARS + 1)],
+                "check_question": "La domanda deve restare visibile?",
+            },
         ),
     )
 
     with pytest.raises(ValueError, match="guida valida"):
         student_help_codex_adapter.CodexStudentHelpProvider().respond(sample_request())
+
+
+def test_codex_provider_rejects_missing_token_usage(monkeypatch) -> None:
+    monkeypatch.setattr(student_help_codex_adapter.shutil, "which", lambda command: "/bin/codex")
+    monkeypatch.setattr(
+        student_help_codex_adapter.subprocess,
+        "run",
+        lambda *args, **kwargs: completed_codex_run(
+            args[0],
+            {
+                "guidance": ["Controlla l'input."],
+                "check_question": "Quale caso stai verificando?",
+            },
+            events=[{"type": "turn.completed"}],
+        ),
+    )
+
+    with pytest.raises(ValueError, match="utilizzo token"):
+        student_help_codex_adapter.CodexStudentHelpProvider().respond(sample_request())
+
+
+@pytest.mark.parametrize(
+    "events",
+    [
+        ["evento-non-valido"],
+        [{"type": "turn.completed", "usage": {"input_tokens": -1, "output_tokens": 2}}],
+        [{"type": "turn.completed", "usage": {"input_tokens": True, "output_tokens": 2}}],
+    ],
+)
+def test_codex_provider_rejects_invalid_token_usage(monkeypatch, events) -> None:
+    monkeypatch.setattr(student_help_codex_adapter.shutil, "which", lambda command: "/bin/codex")
+    monkeypatch.setattr(
+        student_help_codex_adapter.subprocess,
+        "run",
+        lambda *args, **kwargs: completed_codex_run(
+            args[0],
+            {
+                "guidance": ["Controlla l'input."],
+                "check_question": "Quale caso stai verificando?",
+            },
+            events=events,
+        ),
+    )
+
+    with pytest.raises(ValueError, match="eventi JSONL|contatori token|utilizzo token"):
+        student_help_codex_adapter.CodexStudentHelpProvider().respond(sample_request())
+
+
+def test_codex_usage_rejects_malformed_jsonl() -> None:
+    with pytest.raises(ValueError, match="eventi JSONL"):
+        student_help_codex_adapter.codex_usage_from_jsonl("not-json")
 
 
 def test_fallback_provider_uses_local_guide_when_codex_fails() -> None:

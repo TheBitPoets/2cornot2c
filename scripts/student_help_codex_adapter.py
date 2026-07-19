@@ -177,6 +177,37 @@ def codex_help_package(request: StudentHelpRequest) -> dict[str, Any]:
     return package
 
 
+def codex_usage_from_jsonl(value: str) -> dict[str, int]:
+    """Return token usage from the last completed Codex turn."""
+
+    completed_usage: dict[str, int] | None = None
+    for line in value.splitlines():
+        if not line.strip():
+            continue
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError as error:
+            raise ValueError("Codex non ha restituito eventi JSONL validi.") from error
+        if not isinstance(event, dict) or event.get("type") != "turn.completed":
+            continue
+        usage = event.get("usage")
+        if not isinstance(usage, dict):
+            raise ValueError("Codex non ha dichiarato l'utilizzo token.")
+        counters: dict[str, int] = {}
+        for key in ("input_tokens", "output_tokens"):
+            counter = usage.get(key)
+            if isinstance(counter, bool) or not isinstance(counter, int) or counter < 0:
+                raise ValueError("Codex ha restituito contatori token non validi.")
+            counters[key] = counter
+        completed_usage = {
+            **counters,
+            "total_tokens": counters["input_tokens"] + counters["output_tokens"],
+        }
+    if completed_usage is None:
+        raise ValueError("Codex non ha dichiarato l'utilizzo token.")
+    return completed_usage
+
+
 class CodexStudentHelpProvider:
     """Student-help adapter backed by local Codex CLI on the teacher server."""
 
@@ -208,6 +239,7 @@ class CodexStudentHelpProvider:
             with tempfile.TemporaryDirectory(prefix="thebitlab-student-help-") as temp_dir:
                 workdir = Path(temp_dir)
                 schema_path = workdir / "student_help_schema.json"
+                response_path = workdir / "student_help_response.json"
                 schema_path.write_text(json.dumps(CODEX_HELP_SCHEMA, ensure_ascii=False, indent=2), encoding="utf-8")
                 command = [
                     codex_path,
@@ -222,6 +254,9 @@ class CodexStudentHelpProvider:
                     "never",
                     "--output-schema",
                     str(schema_path),
+                    "--output-last-message",
+                    str(response_path),
+                    "--json",
                     "-c",
                     'approval_policy="never"',
                     "-c",
@@ -243,15 +278,20 @@ class CodexStudentHelpProvider:
                     timeout=self.timeout_seconds,
                     check=False,
                 )
+                try:
+                    response_text = response_path.read_text(encoding="utf-8")
+                except OSError:
+                    response_text = ""
         finally:
             _CODEX_CALL_SLOT.release()
         if completed.returncode:
             detail = (completed.stderr or completed.stdout or "Codex non ha restituito dettagli.").strip()
             raise RuntimeError(f"Codex exec non riuscito: {detail}")
         try:
-            payload = json.loads(completed.stdout)
+            payload = json.loads(response_text)
         except json.JSONDecodeError as error:
             raise ValueError("Codex non ha restituito una risposta JSON valida.") from error
+        usage = codex_usage_from_jsonl(completed.stdout)
         guidance = payload.get("guidance") if isinstance(payload, dict) else None
         check_question = payload.get("check_question") if isinstance(payload, dict) else None
         if not isinstance(guidance, list) or not 1 <= len(guidance) <= 4:
@@ -280,7 +320,7 @@ class CodexStudentHelpProvider:
             provider=self.provider,
             provider_label=self.provider_label,
             message=message,
-            usage={"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
+            usage=usage,
         )
 
 
