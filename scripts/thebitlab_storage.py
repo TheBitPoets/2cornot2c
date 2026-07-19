@@ -105,9 +105,23 @@ def sync_directory(path: Path) -> None:
 
     if os.name == "nt":
         return
-    descriptor = os.open(path, os.O_RDONLY)
+    unsupported_errnos = {
+        errno.EINVAL,
+        getattr(errno, "ENOTSUP", errno.EINVAL),
+        getattr(errno, "EOPNOTSUPP", errno.EINVAL),
+    }
     try:
-        os.fsync(descriptor)
+        descriptor = os.open(path, os.O_RDONLY)
+    except OSError as error:
+        if error.errno in unsupported_errnos:
+            return
+        raise
+    try:
+        try:
+            os.fsync(descriptor)
+        except OSError as error:
+            if error.errno not in unsupported_errnos:
+                raise
     finally:
         os.close(descriptor)
 

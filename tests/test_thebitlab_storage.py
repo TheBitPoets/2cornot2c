@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import errno
 import json
 import os
 import shutil
@@ -12,7 +13,12 @@ from pathlib import Path
 
 import pytest
 
-from scripts.thebitlab_storage import JsonAssignmentStorage, JsonClassRosterStorage, JsonCourseStorage
+from scripts.thebitlab_storage import (
+    JsonAssignmentStorage,
+    JsonClassRosterStorage,
+    JsonCourseStorage,
+    sync_directory,
+)
 
 
 def test_read_design_returns_minimal_default_when_missing(tmp_path) -> None:
@@ -56,6 +62,24 @@ def test_json_publication_syncs_destination_directory(tmp_path, monkeypatch) -> 
     storage.write_design({"title": "Versione durevole"})
 
     assert storage.design_path.parent in synced
+
+
+@pytest.mark.skipif(os.name == "nt", reason="Windows non espone directory fsync tramite questa API.")
+def test_directory_sync_ignores_only_unsupported_operation_errors(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(
+        "scripts.thebitlab_storage.os.fsync",
+        lambda _descriptor: (_ for _ in ()).throw(OSError(errno.EINVAL, "non supportato")),
+    )
+
+    sync_directory(tmp_path)
+
+    monkeypatch.setattr(
+        "scripts.thebitlab_storage.os.fsync",
+        lambda _descriptor: (_ for _ in ()).throw(OSError(errno.EIO, "errore I/O")),
+    )
+    with pytest.raises(OSError) as error:
+        sync_directory(tmp_path)
+    assert error.value.errno == errno.EIO
 
 
 @pytest.mark.skipif(os.name == "nt", reason="I modi POSIX non sono rappresentati integralmente su Windows.")
