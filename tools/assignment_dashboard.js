@@ -3959,6 +3959,9 @@ function studentHelpDetails(help, options = {}) {
   const legacy = data.legacy && typeof data.legacy === "object" ? data.legacy : {};
   const legacyTotal = Number(legacy.total || 0);
   const hasDetails = total > 0 || legacyTotal > 0 || Boolean(data.error);
+  const detailsLabel = options.student && options.activity
+    ? `Dettagli aiuti di ${options.student} per ${options.activity}`
+    : "Dettagli aiuti";
   return `
     <div class="studentHelpCell">
       ${badge(`Aiuti ${total}`, kind)}<br>
@@ -3968,6 +3971,7 @@ function studentHelpDetails(help, options = {}) {
         type="button"
         class="smallButton studentHelpButton"
         data-student-help-key="${escapeHtml(options.detailsKey || "")}"
+        aria-label="${escapeHtml(detailsLabel)}"
         title="${hasDetails ? "Apri prompt, risposte e dati delle richieste di aiuto." : "Nessuna richiesta di aiuto disponibile."}"
         ${hasDetails ? "" : "disabled"}
       >Dettagli aiuti</button>
@@ -4387,14 +4391,16 @@ function renderStudents(students) {
     const submission = student.submission || {};
     const testDetailsKey = `students-${student.student || student.student_id || ""}`;
     const studentHelpKey = `student-help-${student.student_id || student.student || ""}`;
+    const studentName = student.student || student.student_id || "Studente";
+    const helpActivity = help.activity_id || state.report?.title || state.report?.activity_id || "Activity";
     state.testDetailsRows.set(testDetailsKey, {
       title: state.report?.title || state.report?.activity_id || "Activity",
       subtitle: `${student.student || student.student_id || "Studente"} - ${classValue(state.report) || "classe non indicata"}`,
       grading,
     });
     state.studentHelpRows.set(studentHelpKey, {
-      student: student.student || student.student_id || "Studente",
-      activity: help.activity_id || state.report?.title || state.report?.activity_id || "Activity",
+      student: studentName,
+      activity: helpActivity,
       help,
     });
     const files = submissionFiles(student);
@@ -4427,7 +4433,11 @@ function renderStudents(students) {
       <td>
         <div data-ai-feedback-student="${escapeHtml(student.student_id || student.student)}">
           ${aiFeedbackDetails(ai)}
-          ${studentHelpDetails(help, { detailsKey: studentHelpKey })}
+          ${studentHelpDetails(help, {
+            detailsKey: studentHelpKey,
+            student: studentName,
+            activity: helpActivity,
+          })}
         </div>
       </td>
       <td>

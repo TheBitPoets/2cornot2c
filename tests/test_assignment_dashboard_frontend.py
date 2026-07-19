@@ -2981,7 +2981,11 @@ def test_student_help_details_render_compact_summary_and_modal_content() -> None
             events: [{ requested_at: "2026-09-01T08:00:00+02:00", prompt: "Dato modificabile." }],
           },
         };
-        const html = tested.studentHelpDetails(help, { detailsKey: "student-help-rossi" });
+        const html = tested.studentHelpDetails(help, {
+          detailsKey: "student-help-rossi",
+          student: 'Rossi "Mario"',
+          activity: "Somma & media",
+        });
 
         assert.match(html, /Aiuti 3/);
         assert.match(html, /Consegna: python-base-somma-001/);
@@ -2989,6 +2993,7 @@ def test_student_help_details_render_compact_summary_and_modal_content() -> None
         assert.match(html, /Bloccate: 1/);
         assert.match(html, /Dettagli aiuti/);
         assert.match(html, /data-student-help-key="student-help-rossi"/);
+        assert.match(html, /aria-label="Dettagli aiuti di Rossi &quot;Mario&quot; per Somma &amp; media"/);
         assert.doesNotMatch(html, /Prompt aiuti/);
         assert.doesNotMatch(html, /Puoi ricordarmi come funziona input\\(\\)\\?/);
 
