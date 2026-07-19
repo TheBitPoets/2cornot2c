@@ -668,11 +668,13 @@ function headingHasChildren(heading) {
 function isHiddenByCollapsedParent(heading) {
   const index = state.headings.findIndex((candidate) => candidate.id === heading.id);
   if (index < 0) return false;
+  let ancestorLevel = heading.level;
   for (let i = index - 1; i >= 0; i -= 1) {
     const candidate = state.headings[i];
     if (candidate.source !== heading.source) break;
-    if (candidate.level < heading.level && state.collapsedHeadingIds.has(candidate.id)) return true;
-    if (candidate.level < heading.level) continue;
+    if (candidate.level >= ancestorLevel) continue;
+    if (state.collapsedHeadingIds.has(candidate.id)) return true;
+    ancestorLevel = candidate.level;
   }
   return false;
 }
