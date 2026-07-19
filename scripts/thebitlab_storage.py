@@ -4,6 +4,7 @@ import json
 import os
 import re
 import shutil
+import threading
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -14,6 +15,16 @@ from scripts.thebitlab_contracts import normalize_activity, normalize_assignment
 
 
 DESIGN_NAME_RE = re.compile(r"^[a-zA-Z0-9_.-]+\.json$")
+_COURSE_LOCKS_GUARD = threading.Lock()
+_COURSE_LOCKS: dict[Path, threading.RLock] = {}
+
+
+def course_storage_lock(root: Path) -> threading.RLock:
+    """Return the process-local lock shared by every adapter for one root."""
+
+    key = root.resolve(strict=False)
+    with _COURSE_LOCKS_GUARD:
+        return _COURSE_LOCKS.setdefault(key, threading.RLock())
 
 
 class JsonCourseStorage:
@@ -21,6 +32,7 @@ class JsonCourseStorage:
 
     def __init__(self, root: Path, default_sources: list[str] | None = None) -> None:
         self.root = root
+        self.operation_lock = course_storage_lock(root)
         self.default_sources = default_sources or []
         self.design_path = root / "doc" / "course_design.json"
         self.course_designs_dir = root / "doc" / "course_designs"
@@ -101,13 +113,14 @@ class JsonCourseStorage:
         """Persist a named course design in the archive folder."""
 
         path = self.saved_design_path(name)
-        if overwrite:
-            self.write_json(path, payload)
-        else:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            serialized = json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
-            with path.open("x", encoding="utf-8") as destination:
-                destination.write(serialized)
+        with self.operation_lock:
+            if overwrite:
+                self.write_json(path, payload)
+            else:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                serialized = json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
+                with path.open("x", encoding="utf-8") as destination:
+                    destination.write(serialized)
         return {"name": path.name, "path": self.relative_path(path)}
 
     def list_school_calendars(self) -> list[dict[str, str]]:
@@ -149,45 +162,46 @@ class JsonCourseStorage:
     ) -> dict[str, Any]:
         """Delete an archived course design and, optionally, its linked calendars."""
 
-        safe_name = self.safe_design_name(name)
-        path = self.saved_design_path(safe_name)
-        if not path.is_file():
-            raise FileNotFoundError(f"Percorso salvato non trovato: {safe_name}")
-        deleted_calendars: list[str] = []
-        targets = [path]
-        if delete_calendars:
-            for calendar_name in calendars or []:
-                safe_calendar_name = self.safe_design_name(calendar_name)
-                calendar_path = self.school_calendar_path(safe_calendar_name)
-                if not calendar_path.is_file():
-                    continue
-                payload = self.read_json(calendar_path)
-                if payload.get("course_design_name", "") != safe_name:
-                    continue
-                targets.append(calendar_path)
-                deleted_calendars.append(safe_calendar_name)
+        with self.operation_lock:
+            safe_name = self.safe_design_name(name)
+            path = self.saved_design_path(safe_name)
+            if not path.is_file():
+                raise FileNotFoundError(f"Percorso salvato non trovato: {safe_name}")
+            deleted_calendars: list[str] = []
+            targets = [path]
+            if delete_calendars:
+                for calendar_name in calendars or []:
+                    safe_calendar_name = self.safe_design_name(calendar_name)
+                    calendar_path = self.school_calendar_path(safe_calendar_name)
+                    if not calendar_path.is_file():
+                        continue
+                    payload = self.read_json(calendar_path)
+                    if payload.get("course_design_name", "") != safe_name:
+                        continue
+                    targets.append(calendar_path)
+                    deleted_calendars.append(safe_calendar_name)
 
-        transaction_dir = self.root / "doc" / ".delete-staging" / uuid.uuid4().hex
-        transaction_dir.mkdir(parents=True, exist_ok=False)
-        staged: list[tuple[Path, Path]] = []
-        try:
-            for index, target in enumerate(targets):
-                staged_path = transaction_dir / f"{index}-{target.name}"
-                os.replace(target, staged_path)
-                staged.append((target, staged_path))
-        except Exception:
-            for original_path, staged_path in reversed(staged):
-                if staged_path.exists():
-                    os.replace(staged_path, original_path)
+            transaction_dir = self.root / "doc" / ".delete-staging" / uuid.uuid4().hex
+            transaction_dir.mkdir(parents=True, exist_ok=False)
+            staged: list[tuple[Path, Path]] = []
+            try:
+                for index, target in enumerate(targets):
+                    staged_path = transaction_dir / f"{index}-{target.name}"
+                    os.replace(target, staged_path)
+                    staged.append((target, staged_path))
+            except Exception:
+                for original_path, staged_path in reversed(staged):
+                    if staged_path.exists():
+                        os.replace(staged_path, original_path)
+                shutil.rmtree(transaction_dir, ignore_errors=True)
+                raise
             shutil.rmtree(transaction_dir, ignore_errors=True)
-            raise
-        shutil.rmtree(transaction_dir, ignore_errors=True)
-        return {
-            "name": safe_name,
-            "deleted_calendars": deleted_calendars,
-            "designs": self.list_saved_designs(),
-            "calendars": self.list_school_calendars(),
-        }
+            return {
+                "name": safe_name,
+                "deleted_calendars": deleted_calendars,
+                "designs": self.list_saved_designs(),
+                "calendars": self.list_school_calendars(),
+            }
 
 
 class JsonAssignmentStorage:
