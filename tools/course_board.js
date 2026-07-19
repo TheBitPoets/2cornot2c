@@ -500,9 +500,12 @@ async function saveArchiveDesignWithName(name, options = {}) {
     setStatus(`Salvataggio non riuscito. Dettaglio: ${error.message}`);
     return false;
   }
-  if (!isBoardContextCurrent(boardContext)) {
+  const contextStillValid = opensSavedDesign
+    ? isBoardContextUnchanged(boardContext)
+    : isBoardContextCurrent(boardContext);
+  if (!contextStillValid) {
     setStatus(`Progetto salvato in archivio: ${payload.saved?.name || name}. La vista aperta non e stata cambiata.`);
-    return true;
+    return !opensSavedDesign;
   }
   if (opensSavedDesign) state.design = designToSave;
   state.savedDesigns = payload.designs || [];
