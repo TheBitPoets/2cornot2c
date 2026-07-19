@@ -3252,6 +3252,69 @@ def test_report_mutation_invalidates_a_pending_load() -> None:
     )
 
 
+def test_pending_report_mutation_does_not_replace_a_newer_loaded_report() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          const response = (payload) => ({
+            ok: true,
+            status: 200,
+            statusText: "OK",
+            json: async () => payload,
+            text: async () => "",
+          });
+          let resolveReview;
+          context.fetch = (path, options = {}) => {
+            if (path === "/api/assignment-reports/ai-feedback/review") {
+              return new Promise((resolve) => { resolveReview = resolve; });
+            }
+            if (path === "/api/assignment-reports/load") {
+              const name = JSON.parse(options.body).name;
+              assert.equal(name, "demo/moltiplicazione.json");
+              return Promise.resolve(response({
+                report: {
+                  activity_id: "moltiplicazione",
+                  students: [{ student: "bianchi", student_id: "bianchi" }],
+                },
+              }));
+            }
+            throw new Error(`Endpoint inatteso: ${path}`);
+          };
+          tested.state.report = {
+            activity_id: "somma",
+            students: [{
+              student: "rossi",
+              student_id: "rossi",
+              ai_feedback: { status: "draft" },
+            }],
+          };
+          tested.state.reportName = "demo/somma.json";
+          tested.els.reportSelect.value = "demo/somma.json";
+
+          const reviewing = tested.reviewAiFeedback("rossi", "approve");
+          tested.els.reportSelect.value = "demo/moltiplicazione.json";
+          assert.equal(await tested.loadSelectedReport(), true);
+
+          resolveReview(response({
+            report: {
+              activity_id: "somma",
+              students: [{
+                student: "rossi",
+                student_id: "rossi",
+                ai_feedback: { status: "approved", approved_by_teacher: true },
+              }],
+            },
+          }));
+
+          assert.equal(await reviewing, false);
+          assert.equal(tested.state.report.activity_id, "moltiplicazione");
+          assert.equal(tested.state.reportName, "demo/moltiplicazione.json");
+          assert.equal(tested.els.reportSelect.value, "demo/moltiplicazione.json");
+        })();
+        """
+    )
+
+
 def test_student_help_dialog_opens_from_table_click_and_closes_from_button() -> None:
     run_dashboard_js(
         """

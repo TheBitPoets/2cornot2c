@@ -4483,6 +4483,9 @@ async function reviewAiFeedback(studentId, decision) {
     setStudentsDialogStatus(message);
     return;
   }
+  const reportName = state.reportName;
+  invalidateReportLoads();
+  const reportRevision = state.reportLoadRevision;
   const label = {
     approve: "approvazione",
     reject: "respinta",
@@ -4494,12 +4497,18 @@ async function reviewAiFeedback(studentId, decision) {
   const payload = await api("/api/assignment-reports/ai-feedback/review", {
     method: "POST",
     body: JSON.stringify({
-      name: state.reportName,
+      name: reportName,
       student_id: studentId,
       decision,
     }),
   });
-  invalidateReportLoads();
+  if (
+    reportRevision !== state.reportLoadRevision
+    || state.reportName !== reportName
+    || els.reportSelect.value !== reportName
+  ) {
+    return false;
+  }
   state.report = payload.report;
   renderDashboard();
   const outcome = {
@@ -4510,6 +4519,7 @@ async function reviewAiFeedback(studentId, decision) {
   const doneMessage = `Feedback AI ${outcome} per ${studentId}.`;
   setStatus(doneMessage);
   setStudentsDialogStatus(doneMessage);
+  return true;
 }
 
 function submissionFiles(student) {
