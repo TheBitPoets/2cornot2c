@@ -73,6 +73,59 @@ def test_teacher_dashboard_token_console_line_shows_generated_value() -> None:
     assert "temporaneo" in line
 
 
+def test_submission_file_uses_local_repo_path_separately_from_remote_repo(tmp_path, monkeypatch) -> None:
+    root = tmp_path / "data"
+    repo = root / "examples" / "student_repos" / "rossi-mario"
+    source = repo / "assignments" / "somma-001" / "main.py"
+    source.parent.mkdir(parents=True)
+    source.write_text("print(2 + 3)\n", encoding="utf-8")
+    monkeypatch.setattr(course_board_server, "ROOT", root)
+
+    resolved = course_board_server.resolve_submission_file_path(
+        {
+            "repo": "TheBitPoets/rossi-mario",
+            "repo_path": "examples/student_repos/rossi-mario",
+        },
+        "assignments/somma-001/main.py",
+    )
+
+    assert resolved == source
+
+
+def test_submission_file_accepts_legacy_project_relative_path_inside_absolute_repo(tmp_path, monkeypatch) -> None:
+    app_root = tmp_path / "app"
+    root = app_root / "tmp" / "student-lab-demo"
+    repo = root / "examples" / "student_repos" / "rossi-mario"
+    source = repo / "assignments" / "somma-001" / "main.py"
+    source.parent.mkdir(parents=True)
+    source.write_text("print(2 + 3)\n", encoding="utf-8")
+    monkeypatch.setattr(course_board_server, "APP_ROOT", app_root)
+    monkeypatch.setattr(course_board_server, "ROOT", root)
+
+    resolved = course_board_server.resolve_submission_file_path(
+        {"repo": str(repo)},
+        "tmp/student-lab-demo/examples/student_repos/rossi-mario/assignments/somma-001/main.py",
+    )
+
+    assert resolved == source
+
+
+def test_submission_file_rejects_path_outside_local_student_repo(tmp_path, monkeypatch) -> None:
+    root = tmp_path / "data"
+    repo = root / "examples" / "student_repos" / "rossi-mario"
+    repo.mkdir(parents=True)
+    outside = root / "teacher-reports" / "secret.txt"
+    outside.parent.mkdir(parents=True)
+    outside.write_text("riservato", encoding="utf-8")
+    monkeypatch.setattr(course_board_server, "ROOT", root)
+
+    with pytest.raises(FileNotFoundError, match="non trovato o non consentito"):
+        course_board_server.resolve_submission_file_path(
+            {"repo_path": "examples/student_repos/rossi-mario"},
+            "teacher-reports/secret.txt",
+        )
+
+
 def test_data_root_process_lock_rejects_a_second_server(tmp_path) -> None:
     first_lock = course_board_server.DataRootProcessLock(tmp_path)
     second_lock = course_board_server.DataRootProcessLock(tmp_path)

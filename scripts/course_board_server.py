@@ -1152,7 +1152,8 @@ def save_activity(payload: dict) -> dict:
 def resolve_submission_file_path(student: dict, file_path: str) -> Path:
     """Resolve a submitted file path while keeping reads inside the student repo."""
 
-    repo = Path(str(student.get("repo", "")).strip())
+    repo_value = str(student.get("repo_path", "") or student.get("repo", "")).strip()
+    repo = Path(repo_value)
     if not str(repo):
         raise ValueError("Repository studente mancante nel registro.")
     repo_path = repo if repo.is_absolute() else (ROOT / repo).resolve()
@@ -1164,6 +1165,7 @@ def resolve_submission_file_path(student: dict, file_path: str) -> Path:
         candidates.append(raw_path.resolve())
     else:
         candidates.append((ROOT / raw_path).resolve())
+        candidates.append((APP_ROOT / raw_path).resolve())
         candidates.append((repo_path / raw_path).resolve())
     for candidate in candidates:
         try:

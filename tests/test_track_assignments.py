@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -246,6 +247,7 @@ def test_track_assignments_marks_submitted_on_time(tmp_path) -> None:
     assert row["grading"]["status"] == "graded_passed"
     assert row["grading"]["tests_passed"] == 2
     assert row["ai_feedback"]["status"] == "not_generated"
+    assert Path(row["repo_path"]) == student.path.resolve()
     assert row["submission"]["files"][0]["path"].endswith("assignments/python-base-somma-001/main.py")
     assert row["submission"]["files"][0]["role"] == "solution"
 

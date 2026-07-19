@@ -80,6 +80,16 @@ Per l'automazione futura, la scelta piu naturale per le GUI web e Playwright, pe
 
 I test GUI automatici vanno introdotti quando i punti di aggancio della UI sono abbastanza stabili, usando attributi espliciti come `data-testid` invece di selettori fragili basati sulla posizione. I test piu pesanti, soprattutto quelli con browser, screenshot, responsive e dati demo end-to-end, sono candidati per una suite notturna o manuale da lanciare quando la macchina non serve per lavorare.
 
+## Collaudo completo con dati durevoli
+
+Quando il flusso activity, assegnazione, consegna, lab e registro sara completo, eseguire tutti gli scenari di questo documento partendo da una root ricreata da zero. Non riutilizzare registri copiati da root temporanee di test: i riferimenti ai workspace devono appartenere alla root demo corrente.
+
+1. Arresta il server che usa `tmp/student-lab-demo`.
+2. Esegui `python scripts/student_lab_demo_setup.py` per ricreare dati coerenti e ripetibili.
+3. Avvia nuovamente il server con `--root tmp/student-lab-demo`.
+4. Esegui nell'ordine gli scenari TUI, dashboard studente e dashboard docente.
+5. Verifica non soltanto la visibilita in GUI, ma anche che file, assegnazioni, report, aiuti e cancellazioni siano realmente persistiti o rimossi nella root dati.
+
 ## Scenario 1 - Dashboard studente con report riuscito
 
 Obiettivo: verificare che lo studente veda consegna, workspace, report, test e aiuti.
@@ -110,6 +120,8 @@ Obiettivo: verificare che il docente possa caricare il registro generato dalla d
 4. Controlla i riepiloghi del registro selezionato.
 5. Apri il pannello `Studenti`.
 6. Apri il modal degli studenti, se disponibile.
+7. Nella riga di `rossi-mario`, clicca `Apri consegna`.
+8. Seleziona `main.py` e poi `test_main.py` dalla lista dei file.
 
 Risultato atteso:
 
@@ -120,6 +132,8 @@ Risultato atteso:
 - I test risultano `2/2`.
 - Il backend report risulta locale.
 - Le richieste di aiuto risultano visibili nel riepilogo docente.
+- Il modal della consegna mostra il contenuto di `main.py` e `test_main.py` senza errori 404.
+- I file aperti appartengono alla root demo corrente, non a una precedente cartella temporanea.
 
 ## Scenario 3 - Quadro classe ed elenco consegne
 

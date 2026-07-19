@@ -104,6 +104,18 @@ def relative_to_root_or_repo(path: Path, repo: Path) -> str:
             return str(resolved)
 
 
+def local_repo_path(path: Path, server_root: Path | None) -> str:
+    """Return the local repository path without overloading the remote repo reference."""
+
+    resolved = path.resolve()
+    if server_root is not None:
+        try:
+            return str(resolved.relative_to(server_root.resolve())).replace("\\", "/")
+        except ValueError:
+            pass
+    return str(resolved)
+
+
 def git_stdout(args: list[str], cwd: Path) -> str:
     """Run a small git query and return stdout, or an empty string."""
     completed = subprocess.run(args, cwd=cwd, capture_output=True, text=True, check=False, timeout=5)
@@ -467,6 +479,7 @@ def track_assignments(
                 "student": target.student,
                 "student_id": stable_student_id,
                 "repo": target.repo,
+                "repo_path": local_repo_path(target.path, server_root),
                 "repo_github_url": repo_url,
                 "assigned": True,
                 "submitted": submitted,

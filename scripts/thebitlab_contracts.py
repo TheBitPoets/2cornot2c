@@ -198,6 +198,7 @@ def normalize_register_student(payload: dict[str, Any]) -> dict[str, Any]:
     normalized["student"] = first_text(payload, "student")
     normalized["student_id"] = first_text(payload, "student_id") or normalized["student"]
     normalized["repo"] = first_text(payload, "repo")
+    normalized["repo_path"] = first_text(payload, "repo_path")
     normalized["submitted"] = bool_value(payload.get("submitted", False))
     normalized["status"] = first_text(payload, "status")
     normalized["late"] = bool_value(payload.get("late", False))
