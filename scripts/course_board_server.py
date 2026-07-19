@@ -33,6 +33,7 @@ import threading
 import urllib.error
 import urllib.request
 import uuid
+from copy import deepcopy
 from contextlib import ExitStack, contextmanager, nullcontext
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -1141,13 +1142,67 @@ def read_assignment_report(name: str) -> dict:
     return enrich_assignment_report_help(assignment_service().read_assignment_report(name))
 
 
+def assignment_report_operation_id(
+    storage: thebitlab_storage.JsonAssignmentStorage,
+    name: str,
+) -> str:
+    """Return the canonical lock identity shared by mutations of one report."""
+
+    report_path = storage.safe_teacher_report_path(name)
+    return f"assignment-report::{os.path.normcase(str(report_path))}"
+
+
+def preserve_assignment_ai_feedback(previous: dict, generated: dict) -> dict:
+    """Keep meaningful AI feedback when regenerating the same assignment report."""
+
+    previous_activity = str(previous.get("activity_id", "")).strip()
+    generated_activity = str(generated.get("activity_id", "")).strip()
+    if not previous_activity or previous_activity != generated_activity:
+        return generated
+    previous_assignment = str(previous.get("assignment_id", "")).strip()
+    generated_assignment = str(generated.get("assignment_id", "")).strip()
+    if previous_assignment and generated_assignment and previous_assignment != generated_assignment:
+        return generated
+
+    previous_students = previous.get("students") if isinstance(previous.get("students"), list) else []
+    by_student_id = {}
+    by_student_name = {}
+    for student in previous_students:
+        if not isinstance(student, dict):
+            continue
+        student_id = str(student.get("student_id", "")).strip()
+        student_name = str(student.get("student", "")).strip()
+        if student_id:
+            by_student_id.setdefault(student_id, student)
+        if student_name:
+            by_student_name.setdefault(student_name, student)
+
+    generated_students = generated.get("students") if isinstance(generated.get("students"), list) else []
+    for student in generated_students:
+        if not isinstance(student, dict):
+            continue
+        student_id = str(student.get("student_id", "")).strip()
+        student_name = str(student.get("student", "")).strip()
+        previous_student = by_student_id.get(student_id) if student_id else None
+        if previous_student is None and student_name:
+            previous_student = by_student_name.get(student_name)
+        if previous_student is None:
+            continue
+        feedback = previous_student.get("ai_feedback")
+        if not isinstance(feedback, dict):
+            continue
+        status = str(feedback.get("status", "")).strip()
+        if not status or status == "not_generated":
+            continue
+        student["ai_feedback"] = deepcopy(feedback)
+    return generated
+
+
 def review_assignment_ai_feedback(name: str, student_id: str, decision: str) -> dict:
     """Apply a teacher review decision to draft AI feedback in a report."""
 
     storage = assignment_storage()
-    report_path = storage.safe_teacher_report_path(name)
-    operation_id = f"ai-feedback-review::{os.path.normcase(str(report_path))}"
-    with assignment_operation_lock(operation_id):
+    with assignment_operation_lock(assignment_report_operation_id(storage, name)):
         register = storage.read_assignment_report(name)
         updated = manual_ai_feedback.review_feedback_in_register(register, student_id, decision)
         saved = storage.write_assignment_report(name, updated)
@@ -1589,7 +1644,9 @@ def generate_assignment_report(payload: dict) -> dict:
     if not activity_path.is_file():
         raise FileNotFoundError(f"Activity non trovata: {activity_path}")
     targets = read_targets_from_text(str(payload.get("targets_text", "")))
-    output_path = safe_teacher_report_path(payload.get("output_name", ""))
+    output_name = str(payload.get("output_name", ""))
+    storage = assignment_storage()
+    output_path = storage.safe_teacher_report_path(output_name)
     assignment_id = str(payload.get("assignment_id", "")).strip()
     record_storage = assignment_record_storage()
     operation_lock = (
@@ -1613,7 +1670,11 @@ def generate_assignment_report(payload: dict) -> dict:
             assignment_id=canonical_assignment_id or None,
             server_root=ROOT if canonical_assignment_id else None,
         )
-        track_assignments.write_tracking_index(index, output_path)
+        with assignment_operation_lock(assignment_report_operation_id(storage, output_name)):
+            if output_path.is_file():
+                previous = storage.read_assignment_report(output_name)
+                preserve_assignment_ai_feedback(previous, index)
+            track_assignments.write_tracking_index(index, output_path)
     return {
         "ok": True,
         "report": index,

@@ -2226,6 +2226,167 @@ def test_generate_assignment_report_preserves_assignment_id(tmp_path, monkeypatc
     assert saved_payload["assignment_id"] == "assignment-python-base-somma-001-3a"
 
 
+def test_regenerated_report_preserves_reviewed_ai_feedback() -> None:
+    approved = {
+        "status": "approved",
+        "approved_by_teacher": True,
+        "suggested_grade": 8,
+        "summary": "Feedback approvato",
+        "teacher_notes": "Controllato dal docente",
+    }
+    rejected = {
+        "status": "rejected",
+        "approved_by_teacher": False,
+        "suggested_grade": 5,
+        "summary": "Feedback respinto",
+    }
+    previous = {
+        "activity_id": "activity",
+        "assignment_id": "assignment-001",
+        "students": [
+            {"student": "rossi", "student_id": "student-rossi", "ai_feedback": approved},
+            {"student": "bianchi", "student_id": "student-bianchi", "ai_feedback": rejected},
+        ],
+    }
+    generated = {
+        "activity_id": "activity",
+        "assignment_id": "assignment-001",
+        "students": [
+            {"student": "rossi", "student_id": "student-rossi", "ai_feedback": {"status": "not_generated"}},
+            {"student": "bianchi", "student_id": "student-bianchi", "ai_feedback": {"status": "not_generated"}},
+        ],
+    }
+
+    course_board_server.preserve_assignment_ai_feedback(previous, generated)
+
+    assert generated["students"][0]["ai_feedback"] == approved
+    assert generated["students"][1]["ai_feedback"] == rejected
+    assert generated["students"][0]["ai_feedback"] is not approved
+    assert generated["students"][1]["ai_feedback"] is not rejected
+
+
+def test_regenerated_report_does_not_copy_feedback_from_another_activity() -> None:
+    previous = {
+        "activity_id": "activity-a",
+        "students": [{
+            "student": "rossi",
+            "student_id": "student-rossi",
+            "ai_feedback": {"status": "approved", "approved_by_teacher": True},
+        }],
+    }
+    generated = {
+        "activity_id": "activity-b",
+        "students": [{
+            "student": "rossi",
+            "student_id": "student-rossi",
+            "ai_feedback": {"status": "not_generated", "approved_by_teacher": False},
+        }],
+    }
+
+    course_board_server.preserve_assignment_ai_feedback(previous, generated)
+
+    assert generated["students"][0]["ai_feedback"]["status"] == "not_generated"
+
+
+def test_regenerated_report_does_not_copy_feedback_from_another_assignment() -> None:
+    previous = {
+        "activity_id": "activity",
+        "assignment_id": "assignment-a",
+        "students": [{
+            "student": "rossi",
+            "student_id": "student-rossi",
+            "ai_feedback": {"status": "approved", "approved_by_teacher": True},
+        }],
+    }
+    generated = {
+        "activity_id": "activity",
+        "assignment_id": "assignment-b",
+        "students": [{
+            "student": "rossi",
+            "student_id": "student-rossi",
+            "ai_feedback": {"status": "not_generated", "approved_by_teacher": False},
+        }],
+    }
+
+    course_board_server.preserve_assignment_ai_feedback(previous, generated)
+
+    assert generated["students"][0]["ai_feedback"]["status"] == "not_generated"
+
+
+def test_generate_report_preserves_review_completed_while_tracking(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
+    activity_path = tmp_path / "activity.json"
+    activity_path.write_text("{}", encoding="utf-8")
+    storage = course_board_server.assignment_storage()
+    report_name = "demo/activity.json"
+    storage.write_assignment_report(
+        report_name,
+        {
+            "activity_id": "activity",
+            "students": [{
+                "student": "rossi",
+                "student_id": "rossi",
+                "ai_feedback": {
+                    "status": "draft",
+                    "summary": "Bozza da revisionare",
+                    "approved_by_teacher": False,
+                },
+            }],
+        },
+    )
+    generated = {
+        "activity_id": "activity",
+        "students": [{
+            "student": "rossi",
+            "student_id": "rossi",
+            "ai_feedback": {"status": "not_generated", "approved_by_teacher": False},
+        }],
+    }
+    tracking_started = threading.Event()
+    continue_tracking = threading.Event()
+    generation_errors = []
+
+    def track_report(**_kwargs) -> dict:
+        tracking_started.set()
+        assert continue_tracking.wait(timeout=2)
+        return json.loads(json.dumps(generated))
+
+    monkeypatch.setattr(course_board_server, "read_targets_from_text", lambda _value: [])
+    monkeypatch.setattr(course_board_server.track_assignments, "track_assignments", track_report)
+
+    def generate() -> None:
+        try:
+            course_board_server.generate_assignment_report({
+                "activity_path": str(activity_path),
+                "output_name": report_name,
+                "targets_text": "",
+            })
+        except Exception as error:  # noqa: BLE001
+            generation_errors.append(error)
+
+    thread = threading.Thread(target=generate)
+    thread.start()
+    assert tracking_started.wait(timeout=2)
+
+    try:
+        reviewed = course_board_server.review_assignment_ai_feedback(
+            report_name,
+            "rossi",
+            "approve",
+        )
+    finally:
+        continue_tracking.set()
+    thread.join(timeout=2)
+
+    saved = storage.read_assignment_report(report_name)
+    assert generation_errors == []
+    assert not thread.is_alive()
+    assert reviewed["students"][0]["ai_feedback"]["status"] == "approved"
+    assert saved["students"][0]["ai_feedback"]["status"] == "approved"
+    assert saved["students"][0]["ai_feedback"]["approved_by_teacher"] is True
+
+
 def test_read_assignment_report_refreshes_authoritative_help_without_rewriting_file(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
