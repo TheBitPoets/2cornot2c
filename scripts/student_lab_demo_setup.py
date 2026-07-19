@@ -16,10 +16,25 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts import student_lab_demo_smoke
+from scripts import course_board_server, student_lab_demo_smoke
 
 
 DEFAULT_DEMO_ROOT = PROJECT_ROOT / "tmp" / "student-lab-demo"
+
+
+def ensure_demo_root_available(root: Path) -> None:
+    """Fail before reset when a course-board server is using the demo root."""
+
+    lock = course_board_server.DataRootProcessLock(root)
+    try:
+        lock.acquire()
+    except RuntimeError as error:
+        raise RuntimeError(
+            f"Root demo in uso da un server attivo: {root.resolve(strict=False)}. "
+            "Ferma il server prima di rigenerare la demo."
+        ) from error
+    finally:
+        lock.release()
 
 
 def remove_tree_with_retry(path: Path, *, attempts: int = 5) -> None:
@@ -90,6 +105,7 @@ def prepare_demo(root: Path) -> dict[str, Any]:
     """Create a stable, inspectable demo root and return its summary."""
 
     root = root.resolve(strict=False)
+    ensure_demo_root_available(root)
     reset_root(root)
     summary = student_lab_demo_smoke.run_smoke(root)
     return {

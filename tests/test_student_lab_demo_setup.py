@@ -3,6 +3,8 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
+import pytest
+
 from scripts import student_lab_demo_setup
 
 
@@ -45,3 +47,25 @@ def test_student_lab_demo_setup_keeps_running_when_old_root_cleanup_is_delayed(t
     assert summary["ok"] is True
     assert not (root / "stale.txt").exists()
     assert (root / summary["report"]).is_file()
+
+
+def test_student_lab_demo_setup_does_not_reset_root_when_server_lock_is_busy(tmp_path, monkeypatch) -> None:
+    root = tmp_path / "student-lab-demo"
+    root.mkdir()
+    existing_report = root / "teacher-reports" / "demo" / "existing.json"
+    existing_report.parent.mkdir(parents=True)
+    existing_report.write_text('{"activity_id": "existing"}', encoding="utf-8")
+
+    def reject_lock(_self) -> None:
+        raise RuntimeError("root occupata")
+
+    monkeypatch.setattr(
+        student_lab_demo_setup.course_board_server.DataRootProcessLock,
+        "acquire",
+        reject_lock,
+    )
+
+    with pytest.raises(RuntimeError, match="Root demo in uso da un server attivo"):
+        student_lab_demo_setup.prepare_demo(root)
+
+    assert existing_report.read_text(encoding="utf-8") == '{"activity_id": "existing"}'
