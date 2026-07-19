@@ -390,6 +390,9 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         aiFeedbackReviewDetails,
         aiFeedbackTeacherAction,
         studentHelpDetails,
+        renderStudentHelpDialogContent,
+        openStudentHelpDialog,
+        clearStudentHelpRows,
         failedTestDetails,
         gradingDetails,
         renderTestDetailsDialogContent,
@@ -2921,10 +2924,10 @@ def test_test_details_rows_are_cleared_by_view_prefix() -> None:
     )
 
 
-def test_student_help_details_render_counts_and_prompts() -> None:
+def test_student_help_details_render_compact_summary_and_modal_content() -> None:
     run_dashboard_js(
         """
-        const html = tested.studentHelpDetails({
+        const help = {
           activity_id: "python-base-somma-001",
           total: 3,
           ai_total: 2,
@@ -2937,6 +2940,14 @@ def test_student_help_details_render_counts_and_prompts() -> None:
               allowed: true,
               reason: "Consentito dalla policy.",
               prompt: "Puoi ricordarmi come funziona input()?",
+              provider_status: "completed",
+              response: {
+                status: "ready",
+                provider: "deterministic-local",
+                provider_label: "Guida locale (nessuna AI esterna)",
+                message: "Parti dal primo test fallito.",
+                usage: { input_tokens: 1, output_tokens: 2, total_tokens: 3 },
+              },
             },
             {
               requested_at: "2026-10-20T08:15:00+02:00",
@@ -2968,26 +2979,126 @@ def test_student_help_details_render_counts_and_prompts() -> None:
             total: 1,
             events: [{ requested_at: "2026-09-01T08:00:00+02:00", prompt: "Dato modificabile." }],
           },
-        });
+        };
+        const html = tested.studentHelpDetails(help, { detailsKey: "student-help-rossi" });
 
         assert.match(html, /Aiuti 3/);
         assert.match(html, /Consegna: python-base-somma-001/);
         assert.match(html, /AI: 2/);
         assert.match(html, /Bloccate: 1/);
-        assert.match(html, /Prompt aiuti/);
-        assert.match(html, /Puoi ricordarmi come funziona input\\(\\)\\?/);
-        assert.match(html, /Scrivimi la soluzione completa\\./);
-        assert.match(html, /Bloccata/);
-        assert.match(html, /In elaborazione/);
-        assert.match(html, /Risposta non disponibile/);
-        assert.match(html, /Consentita/);
-        assert.match(html, /Legacy non verificati \\(1\\)/);
-        assert.match(html, /non incidono su budget e metriche/);
-        assert.match(html, /Dato modificabile\\./);
+        assert.match(html, /Dettagli aiuti/);
+        assert.match(html, /data-student-help-key="student-help-rossi"/);
+        assert.doesNotMatch(html, /Prompt aiuti/);
+        assert.doesNotMatch(html, /Puoi ricordarmi come funziona input\\(\\)\\?/);
+
+        const modalHtml = tested.renderStudentHelpDialogContent({ help });
+        assert.match(modalHtml, /Prompt dello studente/);
+        assert.match(modalHtml, /Puoi ricordarmi come funziona input\\(\\)\\?/);
+        assert.match(modalHtml, /Scrivimi la soluzione completa\\./);
+        assert.match(modalHtml, /Bloccata/);
+        assert.match(modalHtml, /In elaborazione/);
+        assert.match(modalHtml, /Risposta non disponibile/);
+        assert.match(modalHtml, /Consentita/);
+        assert.match(modalHtml, /Nessuna risposta generata: la richiesta e stata bloccata dalla policy\\./);
+        assert.match(modalHtml, /Risposta in elaborazione\\./);
+        assert.match(modalHtml, /Non invocato/);
+        assert.match(modalHtml, /Parti dal primo test fallito\\./);
+        assert.match(modalHtml, /Guida locale \\(nessuna AI esterna\\)/);
+        assert.match(modalHtml, /3 token \\(1 input, 2 output\\)/);
+        assert.match(modalHtml, /Legacy non verificati \\(1\\)/);
+        assert.match(modalHtml, /non incidono su budget e metriche/);
+        assert.match(modalHtml, /Dato modificabile\\./);
         assert.doesNotMatch(html, /Â|Ã/);
 
         const empty = tested.studentHelpDetails({ total: 0, events: [] });
-        assert.match(empty, /Nessuna richiesta registrata/);
+        assert.match(empty, /Dettagli aiuti/);
+        assert.match(empty, /disabled/);
+        """
+    )
+
+
+def test_student_help_dialog_opens_selected_student_and_clears_stale_rows() -> None:
+    run_dashboard_js(
+        """
+        tested.state.studentHelpRows = new Map([
+          ["student-help-rossi", {
+            student: "Rossi Mario",
+            activity: "Somma in Python",
+            help: { total: 1, events: [{ allowed: true, prompt: "Un suggerimento?" }] },
+          }],
+        ]);
+
+        tested.openStudentHelpDialog("student-help-rossi");
+        assert.equal(tested.els.studentHelpDialog.open, true);
+        assert.equal(tested.els.studentHelpDialogStatus.textContent, "Rossi Mario - Somma in Python.");
+        assert.match(tested.els.studentHelpDialogBody.innerHTML, /Un suggerimento\\?/);
+
+        tested.clearStudentHelpRows();
+        assert.equal(tested.state.studentHelpRows.size, 0);
+        """
+    )
+
+
+def test_student_help_dialog_opens_from_table_click_and_closes_from_button() -> None:
+    run_dashboard_js(
+        """
+        tested.state.studentHelpRows = new Map([
+          ["student-help-rossi", {
+            student: "Rossi Mario",
+            activity: "Somma in Python",
+            help: { total: 1, events: [{ allowed: true, prompt: "Aiutami" }] },
+          }],
+        ]);
+        const helpButton = {
+          disabled: false,
+          dataset: { studentHelpKey: "student-help-rossi" },
+        };
+        const event = {
+          prevented: false,
+          stopped: false,
+          target: {
+            closest(selector) {
+              return selector === "[data-student-help-key]" ? helpButton : null;
+            },
+          },
+          preventDefault() { this.prevented = true; },
+          stopPropagation() { this.stopped = true; },
+        };
+
+        tested.els.studentsBody.listeners.click[0](event);
+        assert.equal(event.prevented, true);
+        assert.equal(event.stopped, true);
+        assert.equal(tested.els.studentHelpDialog.open, true);
+
+        tested.els.studentHelpCloseBtn.dispatchEvent({ type: "click" });
+        assert.equal(tested.els.studentHelpDialog.open, false);
+        """
+    )
+
+
+def test_student_help_dialog_escapes_untrusted_prompt_and_response() -> None:
+    run_dashboard_js(
+        """
+        const html = tested.renderStudentHelpDialogContent({
+          help: {
+            total: 1,
+            events: [{
+              allowed: true,
+              prompt: '<img src=x onerror="boom">',
+              response: {
+                status: "ready",
+                provider_label: '<b>Provider</b>',
+                message: '</p><script>boom</script>',
+              },
+            }],
+          },
+        });
+
+        assert.doesNotMatch(html, /<img/);
+        assert.doesNotMatch(html, /<script/);
+        assert.doesNotMatch(html, /<b>Provider<\\/b>/);
+        assert.match(html, /&lt;img src=x onerror=&quot;boom&quot;&gt;/);
+        assert.match(html, /&lt;script&gt;boom&lt;\\/script&gt;/);
         """
     )
 
@@ -3016,7 +3127,22 @@ def test_ai_feedback_details_css_limits_expanded_content_height() -> None:
     assert "overflow-y: auto;" in css
     assert "text-align: justify;" in css
     assert ".aiFeedbackActions" in css
-    assert ".studentHelpDetails dl" in css
+    assert ".studentHelpDialogBody" in css
+    assert ".studentHelpDialogText" in css
+    assert ".studentHelpDialogProvider" in css
+    assert "text-align: start;" in css
+    assert "max-height: 94dvh;" in css
+
+
+def test_student_help_dialog_markup_has_accessible_title_and_close_action() -> None:
+    html = open("tools/assignment_dashboard.html", encoding="utf-8").read()
+
+    assert 'id="studentHelpDialog"' in html
+    assert 'aria-labelledby="studentHelpDialogTitle"' in html
+    assert 'aria-describedby="studentHelpDialogStatus"' in html
+    assert 'id="studentHelpDialogStatus"' in html
+    assert 'id="studentHelpDialogBody"' in html
+    assert 'id="studentHelpCloseBtn"' in html
 
 
 def test_report_loader_controls_live_in_selected_report_panel() -> None:

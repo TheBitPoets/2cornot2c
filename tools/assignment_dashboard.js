@@ -147,6 +147,7 @@ const state = {
   legendTopic: "overview",
   coverageCollapsedActivities: new Set(),
   testDetailsRows: new Map(),
+  studentHelpRows: new Map(),
   reviewStudent: null,
   reviewSource: "",
   reviewFilePath: "",
@@ -241,6 +242,10 @@ const els = {
   testDetailsCloseBtn: document.querySelector("#testDetailsCloseBtn"),
   testDetailsDialogStatus: document.querySelector("#testDetailsDialogStatus"),
   testDetailsDialogBody: document.querySelector("#testDetailsDialogBody"),
+  studentHelpDialog: document.querySelector("#studentHelpDialog"),
+  studentHelpCloseBtn: document.querySelector("#studentHelpCloseBtn"),
+  studentHelpDialogStatus: document.querySelector("#studentHelpDialogStatus"),
+  studentHelpDialogBody: document.querySelector("#studentHelpDialogBody"),
   legendDialog: document.querySelector("#legendDialog"),
   legendCloseBtn: document.querySelector("#legendCloseBtn"),
   legendStatus: document.querySelector("#legendDialogStatus"),
@@ -3914,7 +3919,19 @@ function aiFeedbackReviewDetails(ai) {
   `;
 }
 
-function studentHelpDetails(help) {
+function studentHelpStatusBadge(event) {
+  const response = event?.response && typeof event.response === "object" ? event.response : {};
+  if (!event?.allowed) return badge("Bloccata", "bad");
+  if (event.provider_status === "pending") return badge("In elaborazione", "warn");
+  if (
+    event.provider_status === "interrupted"
+    || response.status === "error"
+    || (event.provider_status === "completed" && !response.status)
+  ) return badge("Risposta non disponibile", "bad");
+  return badge("Consentita", "ok");
+}
+
+function studentHelpDetails(help, options = {}) {
   const data = help || {};
   const total = Number(data.total || 0);
   const aiTotal = Number(data.ai_total || data.counts?.ai || 0);
@@ -3923,52 +3940,103 @@ function studentHelpDetails(help) {
   const events = Array.isArray(data.events) ? data.events : [];
   const legacy = data.legacy && typeof data.legacy === "object" ? data.legacy : {};
   const legacyTotal = Number(legacy.total || 0);
-  const legacyEvents = Array.isArray(legacy.events) ? legacy.events : [];
-  const rows = events.length
-    ? events.map((event) => {
-      const response = event.response && typeof event.response === "object" ? event.response : {};
-      let responseBadge = badge("Consentita", "ok");
-      if (!event.allowed) responseBadge = badge("Bloccata", "bad");
-      else if (event.provider_status === "pending") responseBadge = badge("In elaborazione", "warn");
-      else if (
-        event.provider_status === "interrupted"
-        || response.status === "error"
-        || (event.provider_status === "completed" && !response.status)
-      ) responseBadge = badge("Risposta non disponibile", "bad");
-      return `
-        <div>
-          <dt>${escapeHtml(formatDate(event.requested_at))} - ${escapeHtml(event.label || event.help_type || "aiuto")}</dt>
-          <dd>
-            ${responseBadge}
-            ${event.prompt ? `<p>${escapeHtml(event.prompt)}</p>` : "<p>Prompt non disponibile.</p>"}
-            ${event.reason ? `<small>${escapeHtml(event.reason)}</small>` : ""}
-          </dd>
-        </div>
-      `;
-    }).join("")
-    : `<div><dt>Prompt</dt><dd>${escapeHtml(data.error || "Nessuna richiesta registrata.")}</dd></div>`;
-  const legacyRows = legacyEvents.map((event) => `
-    <div>
-      <dt>${escapeHtml(formatDate(event.requested_at))} - ${escapeHtml(event.label || event.help_type || "aiuto")}</dt>
-      <dd>${event.prompt ? `<p>${escapeHtml(event.prompt)}</p>` : "<p>Prompt non disponibile.</p>"}</dd>
-    </div>
-  `).join("");
+  const hasDetails = total > 0 || legacyTotal > 0 || Boolean(data.error);
   return `
     <div class="studentHelpCell">
       ${badge(`Aiuti ${total}`, kind)}<br>
       <small>Consegna: ${escapeHtml(data.activity_id || "-")}</small><br>
       <small>AI: ${escapeHtml(aiTotal)} - Bloccate: ${escapeHtml(denied)}</small>
-      <details class="studentHelpDetails">
-        <summary>Prompt aiuti</summary>
-        <dl>${rows}</dl>
-      </details>
-      ${legacyTotal ? `
-        <details class="studentHelpDetails studentHelpLegacy">
-          <summary>Legacy non verificati (${escapeHtml(legacyTotal)})</summary>
-          <p><strong>Attenzione:</strong> dati storici provenienti dal repository studente; non incidono su budget e metriche.</p>
-          ${legacyRows ? `<dl>${legacyRows}</dl>` : ""}
-        </details>
-      ` : ""}
+      <button
+        type="button"
+        class="smallButton studentHelpButton"
+        data-student-help-key="${escapeHtml(options.detailsKey || "")}"
+        title="${hasDetails ? "Apri prompt, risposte e dati delle richieste di aiuto." : "Nessuna richiesta di aiuto disponibile."}"
+        ${hasDetails ? "" : "disabled"}
+      >Dettagli aiuti</button>
+    </div>
+  `;
+}
+
+function renderStudentHelpUsage(response) {
+  const usage = response?.usage && typeof response.usage === "object" ? response.usage : null;
+  if (!usage) return "";
+  const input = Number(usage.input_tokens || 0);
+  const output = Number(usage.output_tokens || 0);
+  const total = Number(usage.total_tokens || 0);
+  return `<small>Utilizzo dichiarato: ${escapeHtml(total)} token (${escapeHtml(input)} input, ${escapeHtml(output)} output).</small>`;
+}
+
+function renderStudentHelpEvent(event, index) {
+  const response = event?.response && typeof event.response === "object" ? event.response : {};
+  const provider = !event?.allowed
+    ? "Non invocato"
+    : response.provider_label || response.provider || "Provider non indicato";
+  let responseText = response.message || response.detail || "Nessuna risposta disponibile.";
+  if (!event?.allowed) responseText = "Nessuna risposta generata: la richiesta e stata bloccata dalla policy.";
+  else if (event.provider_status === "pending") responseText = "Risposta in elaborazione.";
+  else if (event.provider_status === "interrupted") responseText = response.message || response.detail || "Elaborazione interrotta.";
+  return `
+    <article class="studentHelpDialogItem">
+      <div class="studentHelpDialogItemHead">
+        <h3>Richiesta ${escapeHtml(index + 1)} - ${escapeHtml(event.label || event.help_type || "Aiuto")}</h3>
+        ${studentHelpStatusBadge(event)}
+      </div>
+      <p class="studentHelpDialogMeta">${escapeHtml(formatDate(event.requested_at))}</p>
+      <div>
+        <strong>Prompt dello studente</strong>
+        <p class="studentHelpDialogText">${escapeHtml(event.prompt || "Prompt non disponibile.")}</p>
+      </div>
+      <div>
+        <strong>Risposta</strong>
+        <p class="studentHelpDialogText">${escapeHtml(responseText)}</p>
+      </div>
+      <div class="studentHelpDialogProvider">
+        <span><strong>Provider</strong>${escapeHtml(provider)}</span>
+        ${renderStudentHelpUsage(response)}
+      </div>
+      ${event.reason ? `<div><strong>Esito della policy</strong><p class="studentHelpDialogText">${escapeHtml(event.reason)}</p></div>` : ""}
+    </article>
+  `;
+}
+
+function renderStudentHelpLegacy(legacy) {
+  const events = Array.isArray(legacy?.events) ? legacy.events : [];
+  const total = Number(legacy?.total || 0);
+  if (!total) return "";
+  return `
+    <section class="studentHelpLegacyBlock">
+      <h3>Legacy non verificati (${escapeHtml(total)})</h3>
+      <p><strong>Attenzione:</strong> dati storici provenienti dal repository studente; non incidono su budget e metriche.</p>
+      ${events.map((event, index) => `
+        <article class="studentHelpDialogItem studentHelpLegacyItem">
+          <h3>Richiesta legacy ${escapeHtml(index + 1)} - ${escapeHtml(event.label || event.help_type || "Aiuto")}</h3>
+          <p class="studentHelpDialogMeta">${escapeHtml(formatDate(event.requested_at))}</p>
+          <div>
+            <strong>Prompt dello studente</strong>
+            <p class="studentHelpDialogText">${escapeHtml(event.prompt || "Prompt non disponibile.")}</p>
+          </div>
+        </article>
+      `).join("")}
+    </section>
+  `;
+}
+
+function renderStudentHelpDialogContent(entry) {
+  const data = entry?.help || {};
+  const events = Array.isArray(data.events) ? data.events : [];
+  const legacy = data.legacy && typeof data.legacy === "object" ? data.legacy : {};
+  if (!events.length && !Number(legacy.total || 0)) {
+    return `<p class="status">${escapeHtml(data.error || "Nessuna richiesta di aiuto disponibile.")}</p>`;
+  }
+  return `
+    <div class="studentHelpDialogSummary">
+      ${badge(`Aiuti ${Number(data.total || 0)}`, Number(data.denied || 0) ? "bad" : "ok")}
+      ${badge(`AI ${Number(data.ai_total || data.counts?.ai || 0)}`, "warn")}
+      ${badge(`Bloccate ${Number(data.denied || 0)}`, Number(data.denied || 0) ? "bad" : "muted")}
+    </div>
+    <div class="studentHelpDialogList">
+      ${events.map(renderStudentHelpEvent).join("")}
+      ${renderStudentHelpLegacy(legacy)}
     </div>
   `;
 }
@@ -4090,6 +4158,26 @@ function clearTestDetailsRows(prefix) {
       state.testDetailsRows.delete(key);
     }
   }
+}
+
+function openStudentHelpDialog(detailsKey) {
+  const entry = state.studentHelpRows.get(detailsKey);
+  if (!entry || !els.studentHelpDialog) return;
+  els.studentHelpDialogStatus.textContent = `${entry.student || "Studente"} - ${entry.activity || "activity non indicata"}.`;
+  els.studentHelpDialogBody.innerHTML = renderStudentHelpDialogContent(entry);
+  if (!els.studentHelpDialog.open) {
+    els.studentHelpDialog.showModal();
+  }
+}
+
+function closeStudentHelpDialog() {
+  if (els.studentHelpDialog?.open) {
+    els.studentHelpDialog.close();
+  }
+}
+
+function clearStudentHelpRows() {
+  state.studentHelpRows.clear();
 }
 
 function externalLink(url, label = "GitHub") {
@@ -4263,6 +4351,7 @@ function renderStudents(students) {
   }
   els.studentsBody.innerHTML = "";
   clearTestDetailsRows("students-");
+  clearStudentHelpRows();
   if (!state.report) {
     els.studentsBody.innerHTML = '<tr><td colspan="8">Carica un registro consegne.</td></tr>';
     setupResizableTable(els.studentsTable, "students");
@@ -4279,10 +4368,16 @@ function renderStudents(students) {
     const help = student.help || {};
     const submission = student.submission || {};
     const testDetailsKey = `students-${student.student || student.student_id || ""}`;
+    const studentHelpKey = `student-help-${student.student_id || student.student || ""}`;
     state.testDetailsRows.set(testDetailsKey, {
       title: state.report?.title || state.report?.activity_id || "Activity",
       subtitle: `${student.student || student.student_id || "Studente"} - ${classValue(state.report) || "classe non indicata"}`,
       grading,
+    });
+    state.studentHelpRows.set(studentHelpKey, {
+      student: student.student || student.student_id || "Studente",
+      activity: help.activity_id || state.report?.title || state.report?.activity_id || "Activity",
+      help,
     });
     const files = submissionFiles(student);
     const canReview = student.submitted && files.length > 0;
@@ -4314,7 +4409,7 @@ function renderStudents(students) {
       <td>
         <div data-ai-feedback-student="${escapeHtml(student.student_id || student.student)}">
           ${aiFeedbackDetails(ai)}
-          ${studentHelpDetails(help)}
+          ${studentHelpDetails(help, { detailsKey: studentHelpKey })}
         </div>
       </td>
       <td>
@@ -4735,6 +4830,7 @@ els.reviewPrevBtn.addEventListener("click", () => openAdjacentSubmission(-1));
 els.reviewNextBtn.addEventListener("click", () => openAdjacentSubmission(1));
 els.reviewCloseBtn.addEventListener("click", closeReviewDialog);
 els.testDetailsCloseBtn.addEventListener("click", closeTestDetailsDialog);
+els.studentHelpCloseBtn.addEventListener("click", closeStudentHelpDialog);
 els.activitySelect.addEventListener("change", () => {
   if (els.activitySelect.value) {
     clearSelectedAssignment();
@@ -4946,6 +5042,13 @@ els.studentsBody.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
     openTestDetailsDialog(detailButton.dataset.testDetailsKey);
+    return;
+  }
+  const helpButton = event.target.closest("[data-student-help-key]");
+  if (helpButton && !helpButton.disabled) {
+    event.preventDefault();
+    event.stopPropagation();
+    openStudentHelpDialog(helpButton.dataset.studentHelpKey);
     return;
   }
   const aiButton = event.target.closest("[data-ai-feedback-decision]");

@@ -147,13 +147,19 @@ Obiettivo: verificare che il docente veda quante volte lo studente ha chiesto ai
 2. Carica il registro `demo/python-demo-somma-001.json`.
 3. Apri il pannello o modal `Studenti`.
 4. Cerca `rossi-mario`.
-5. Controlla la sezione dedicata agli aiuti.
+5. Controlla il riepilogo dedicato agli aiuti.
+6. Clicca `Dettagli aiuti`.
+7. Leggi prompt, risposta, provider, stato e utilizzo dichiarato.
+8. Chiudi il modal e verifica di tornare alla stessa vista Studenti.
 
 Risultato atteso:
 
 - Il docente vede `Aiuti 1`.
 - Il docente vede `Aiuti AI 1`.
-- Il prompt demo e visibile: `Puoi darmi un suggerimento senza scrivere la soluzione?`.
+- La cella resta compatta e non mostra direttamente i prompt lunghi.
+- `Dettagli aiuti` apre un modal dedicato.
+- Il prompt demo e visibile nel modal: `Puoi darmi un suggerimento senza scrivere la soluzione?`.
+- La risposta e il provider sono leggibili senza scorrimento orizzontale.
 - Gli aiuti bloccati sono `0`.
 
 ## Scenario 5 - Dettaglio errori test in modal
