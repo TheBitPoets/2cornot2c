@@ -131,7 +131,7 @@ def test_submission_file_infers_legacy_local_repo_from_remote_reference(tmp_path
 def test_submission_file_does_not_infer_legacy_repo_outside_trusted_roots(tmp_path, monkeypatch) -> None:
     app_root = tmp_path / "app"
     root = app_root / "data"
-    outside = tmp_path / "outside" / "rossi-mario" / "assignments" / "somma-001" / "main.py"
+    outside = app_root / "archive" / "rossi-mario" / "assignments" / "somma-001" / "main.py"
     outside.parent.mkdir(parents=True)
     outside.write_text("riservato\n", encoding="utf-8")
     monkeypatch.setattr(course_board_server, "APP_ROOT", app_root)
@@ -140,7 +140,7 @@ def test_submission_file_does_not_infer_legacy_repo_outside_trusted_roots(tmp_pa
     with pytest.raises(FileNotFoundError, match="non trovato o non consentito"):
         course_board_server.resolve_submission_file_path(
             {"repo": "TheBitPoets/rossi-mario"},
-            str(outside),
+            "archive/rossi-mario/assignments/somma-001/main.py",
         )
 
 

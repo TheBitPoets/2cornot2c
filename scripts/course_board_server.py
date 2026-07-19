@@ -1154,8 +1154,8 @@ def save_activity(payload: dict) -> dict:
 def legacy_submission_repo_path(student: dict, candidate: Path) -> Path | None:
     """Infer an old local repo root from a confined assignment file path."""
 
-    trusted_roots = (ROOT.resolve(strict=False), APP_ROOT.resolve(strict=False))
-    if not any(candidate == root or candidate.is_relative_to(root) for root in trusted_roots):
+    trusted_root = ROOT.resolve(strict=False)
+    if candidate != trusted_root and not candidate.is_relative_to(trusted_root):
         return None
     repo_ref = str(student.get("repo", "")).strip().replace("\\", "/").rstrip("/")
     repo_name = repo_ref.rsplit("/", 1)[-1]
