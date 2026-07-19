@@ -545,6 +545,21 @@ async function saveCurrentProject() {
   setStatus("Progetto corrente salvato in doc/course_design.json.");
 }
 
+function reconcileDeletedArchive(name, payload) {
+  state.savedDesigns = payload.designs || [];
+  const detachedDraft = state.activeSavedDesign === name;
+  if (detachedDraft) {
+    state.activeSavedDesign = "";
+    state.isNewDesign = true;
+    localStorage.removeItem(ACTIVE_COURSE_DESIGN_KEY);
+    sessionStorage.removeItem(ACTIVE_COURSE_SESSION_KEY);
+    renderProjectTitle();
+  }
+  renderSavedDesigns();
+  renderCourseActions();
+  return detachedDraft;
+}
+
 async function deleteArchiveDesign() {
   if (!state.activeSavedDesign) {
     setStatus("Il progetto corrente non si cancella: puoi sovrascriverlo o salvare un altro progetto come corrente.");
@@ -590,12 +605,16 @@ async function deleteArchiveDesign() {
     }),
   });
   if (!isBoardContextUnchanged(boardContext)) {
-    setStatus(`Progetto archiviato eliminato: ${name}. La vista aperta non e stata cambiata.`);
+    const detachedDraft = reconcileDeletedArchive(name, payload);
+    const preserved = detachedDraft ? " La bozza modificata resta aperta senza nome archivio." : " La vista aperta non e stata cambiata.";
+    setStatus(`Progetto archiviato eliminato: ${name}.${preserved}`);
     return;
   }
   const currentDesign = await api("/api/course-design");
   if (!isBoardContextUnchanged(boardContext)) {
-    setStatus(`Progetto archiviato eliminato: ${name}. La vista aperta non e stata cambiata.`);
+    const detachedDraft = reconcileDeletedArchive(name, payload);
+    const preserved = detachedDraft ? " La bozza modificata resta aperta senza nome archivio." : " La vista aperta non e stata cambiata.";
+    setStatus(`Progetto archiviato eliminato: ${name}.${preserved}`);
     return;
   }
   state.savedDesigns = payload.designs || [];

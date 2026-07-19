@@ -372,6 +372,45 @@ def test_delete_response_does_not_replace_a_newly_opened_project() -> None:
     )
 
 
+def test_delete_response_detaches_edits_from_the_deleted_archive() -> None:
+    run_course_board_js(
+        """
+        let completeDelete;
+        api = async (path) => {
+          if (path === "/api/school-calendars") return { calendars: [] };
+          if (path === "/api/saved-designs/delete") {
+            return new Promise((resolve) => { completeDelete = resolve; });
+          }
+          throw new Error("Unexpected request: " + path);
+        };
+        renderSavedDesigns = () => {};
+        renderProjectTitle = () => {};
+        renderCourseActions = () => {};
+        state.design = { years: [{ id: "first" }] };
+        state.activeSavedDesign = "first.json";
+        state.savedDesigns = [{ name: "first.json" }];
+        localStorage.setItem(ACTIVE_COURSE_DESIGN_KEY, "first.json");
+        sessionStorage.setItem(ACTIVE_COURSE_SESSION_KEY, "true");
+        markDesignClean();
+
+        const deleting = deleteArchiveDesign();
+        Promise.resolve().then(() => {
+          state.design.years.push({ id: "edited-while-deleting" });
+          completeDelete({ designs: [], deleted_calendars: [] });
+          return deleting.then(() => {
+            assert.equal(state.design.years[1].id, "edited-while-deleting");
+            assert.equal(state.activeSavedDesign, "");
+            assert.equal(state.isNewDesign, true);
+            assert.deepEqual(state.savedDesigns, []);
+            assert.equal(localStorage.getItem(ACTIVE_COURSE_DESIGN_KEY), null);
+            assert.equal(hasUnsavedChanges(), true);
+            assert.match(els.status.textContent, /bozza modificata resta aperta/);
+          });
+        });
+        """
+    )
+
+
 def test_clean_snapshot_normalizes_legacy_frames_before_comparison() -> None:
     run_course_board_js(
         """
