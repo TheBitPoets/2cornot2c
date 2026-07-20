@@ -15,7 +15,7 @@ Il primo runner implementato e quello per C. Gli altri linguaggi vengono previst
 | Linguaggio | Stato iniziale |
 |---|---|
 | `c` | Implementato |
-| `python` | Previsto |
+| `python` | Implementato |
 | `javascript` | Previsto |
 | `nodejs` | Previsto |
 | `html` | Previsto |
@@ -134,7 +134,7 @@ Questa e una fondazione minimale.
 
 Limiti noti:
 
-- solo il runner C e implementato in questa fase;
+- i runner C e Python sono implementati in questa fase;
 - i runner pianificati ma non implementati restituiscono `unsupported-language`;
 - la sandbox Docker e iniziale e documentata in `ASSIGNMENT_SANDBOX.md`;
 - non vengono ancora applicati limiti su memoria o filesystem;

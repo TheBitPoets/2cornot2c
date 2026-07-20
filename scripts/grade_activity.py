@@ -6,6 +6,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -15,7 +16,7 @@ DEFAULT_DOCKER_TIMEOUT_GRACE_SECONDS = 10
 DEFAULT_DOCKER_IMAGE = "thebitlab-assignment-runner"
 SUPPORTED_LANGUAGES = {
     "c": "implemented",
-    "python": "planned",
+    "python": "implemented",
     "javascript": "planned",
     "nodejs": "planned",
     "html": "planned",
@@ -122,6 +123,58 @@ def run_test_case(binary: Path, test_case: dict[str, Any], *, timeout_seconds: i
     }
 
 
+def run_python_test_case(source: Path, test_case: dict[str, Any], *, timeout_seconds: int) -> dict[str, Any]:
+    """Run one Python source file against a deterministic stdin/stdout case."""
+
+    stdin = str(test_case.get("stdin", ""))
+    expected_stdout = str(test_case.get("expected_stdout", ""))
+    name = str(test_case.get("name", "test"))
+    command = [sys.executable, str(source)]
+    try:
+        result = subprocess.run(
+            command,
+            input=stdin,
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as error:
+        return {
+            "name": name,
+            "passed": False,
+            "status": "timeout",
+            "command": command,
+            "returncode": None,
+            "stdout": error.stdout or "",
+            "stderr": error.stderr or "",
+            "expected_stdout": expected_stdout,
+        }
+    except OSError as error:
+        return {
+            "name": name,
+            "passed": False,
+            "status": "execution-error",
+            "command": command,
+            "returncode": None,
+            "stdout": "",
+            "stderr": str(error),
+            "expected_stdout": expected_stdout,
+        }
+
+    passed = result.returncode == 0 and normalize_output(result.stdout) == normalize_output(expected_stdout)
+    return {
+        "name": name,
+        "passed": passed,
+        "status": "passed" if passed else "failed",
+        "command": command,
+        "returncode": result.returncode,
+        "stdout": result.stdout,
+        "stderr": result.stderr,
+        "expected_stdout": expected_stdout,
+    }
+
+
 def validate_test_cases(test_cases: Any) -> list[str]:
     """Validate minimal deterministic test case structure."""
     if not isinstance(test_cases, list) or not test_cases:
@@ -191,6 +244,9 @@ def grade_activity(
     if selected_language == "c":
         return grade_c_activity(activity, source, timeout_seconds=timeout_seconds)
 
+    if selected_language == "python":
+        return grade_python_activity(activity, source, timeout_seconds=timeout_seconds)
+
     return unsupported_language_report(activity, source, selected_language)
 
 
@@ -250,6 +306,49 @@ def grade_c_activity(activity: dict[str, Any], source: Path, *, timeout_seconds:
                 "total": len(tests),
             },
         }
+
+
+def grade_python_activity(activity: dict[str, Any], source: Path, *, timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS) -> dict[str, Any]:
+    """Execute and grade a Python source file using activity test cases."""
+
+    if not source.exists():
+        return {
+            "passed": False,
+            "status": "source-not-found",
+            "activity_id": activity.get("id"),
+            "language": "python",
+            "source": str(source),
+            "tests": [],
+            "error": f"Sorgente non trovato: {source}",
+        }
+
+    test_cases = activity.get("test_cases", [])
+    test_case_errors = validate_test_cases(test_cases)
+    if test_case_errors:
+        return {
+            "passed": False,
+            "status": "invalid-activity",
+            "activity_id": activity.get("id"),
+            "language": "python",
+            "source": str(source),
+            "tests": [],
+            "errors": test_case_errors,
+        }
+
+    tests = [run_python_test_case(source, test_case, timeout_seconds=timeout_seconds) for test_case in test_cases]
+    passed = all(test["passed"] for test in tests)
+    return {
+        "passed": passed,
+        "status": "passed" if passed else "failed",
+        "activity_id": activity.get("id"),
+        "language": "python",
+        "source": str(source),
+        "tests": tests,
+        "summary": {
+            "passed": sum(1 for test in tests if test["passed"]),
+            "total": len(tests),
+        },
+    }
 
 
 def write_report(report: dict[str, Any], path: Path) -> None:

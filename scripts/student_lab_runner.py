@@ -271,13 +271,13 @@ def run_python_pytest(
     }
 
 
-def wrap_c_report(assignment: dict[str, Any], source: Path, report: dict[str, Any]) -> dict[str, Any]:
-    """Wrap the existing C grader output in the student lab runner contract."""
+def wrap_runner_report(assignment: dict[str, Any], source: Path, report: dict[str, Any], language: str) -> dict[str, Any]:
+    """Wrap deterministic grader output in the student lab runner contract."""
 
     summary = report.get("summary") if isinstance(report.get("summary"), dict) else {"passed": 0, "total": 0}
     tests = normalize_c_tests(report.get("tests"))
     return {
-        **report_base(assignment, language="c", source=source),
+        **report_base(assignment, language=language, source=source),
         **report,
         "schema_version": "student_lab_run.v1",
         "backend": "local",
@@ -288,20 +288,21 @@ def wrap_c_report(assignment: dict[str, Any], source: Path, report: dict[str, An
     }
 
 
-def run_c_docker(
+def run_docker_runner(
     assignment: dict[str, Any],
     *,
     activity_path: Path,
     source: Path,
     timeout_seconds: int,
+    language: str = "c",
     docker_image: str = DEFAULT_DOCKER_IMAGE,
 ) -> dict[str, Any]:
-    """Run a C assignment through the existing Docker grading sandbox."""
+    """Run a supported assignment through the existing Docker grading sandbox."""
 
     if not source.is_file():
         return error_report(
             assignment,
-            language="c",
+            language=language,
             source=source,
             status="source-not-found",
             error=f"Sorgente non trovato: {source}",
@@ -315,7 +316,7 @@ def run_c_docker(
             command = grade_activity.docker_command(
                 activity=copied_activity,
                 source=copied_source,
-                language="c",
+                language=language,
                 timeout_seconds=timeout_seconds,
                 image=docker_image,
                 workspace=workspace,
@@ -323,7 +324,7 @@ def run_c_docker(
         except (OSError, ValueError) as error:
             return error_report(
                 assignment,
-                language="c",
+                language=language,
                 source=source,
                 status="docker-setup-error",
                 error=str(error),
@@ -334,7 +335,7 @@ def run_c_docker(
         except subprocess.TimeoutExpired:
             return error_report(
                 assignment,
-                language="c",
+                language=language,
                 source=source,
                 status="docker-timeout",
                 error=f"Timeout Docker dopo {docker_timeout} secondi.",
@@ -343,7 +344,7 @@ def run_c_docker(
         except FileNotFoundError:
             return error_report(
                 assignment,
-                language="c",
+                language=language,
                 source=source,
                 status="docker-not-found",
                 error="Docker non trovato. Installa Docker oppure usa --backend local.",
@@ -354,7 +355,7 @@ def run_c_docker(
     except json.JSONDecodeError:
         return error_report(
             assignment,
-            language="c",
+            language=language,
             source=source,
             status="docker-invalid-output",
             error=result.stderr or result.stdout or "Il container non ha prodotto JSON valido.",
@@ -363,7 +364,7 @@ def run_c_docker(
     if not grade_activity.has_minimal_report_shape(report):
         return error_report(
             assignment,
-            language="c",
+            language=language,
             source=source,
             status="docker-invalid-report",
             error=result.stderr or "Il container non ha prodotto un report di grading valido.",
@@ -372,13 +373,13 @@ def run_c_docker(
     if result.returncode != 0 and report.get("passed") is True:
         return error_report(
             assignment,
-            language="c",
+            language=language,
             source=source,
             status="docker-inconsistent-report",
             error=result.stderr or "Il container ha fallito ma ha prodotto un report di successo.",
             backend="docker",
         )
-    wrapped = wrap_c_report(assignment, source, report)
+    wrapped = wrap_runner_report(assignment, source, report, language)
     wrapped["backend"] = "docker"
     return wrapped
 
@@ -418,10 +419,11 @@ def run_local_assignment(
     if language == "python":
         return run_python_pytest(assignment, workspace=workspace_path, source=source, timeout_seconds=timeout_seconds)
     if language == "c":
-        return wrap_c_report(
+        return wrap_runner_report(
             assignment,
             source,
             grade_activity.grade_activity(activity, source, timeout_seconds=timeout_seconds, language="c"),
+            "c",
         )
     return error_report(
         assignment,
@@ -470,12 +472,13 @@ def run_docker_assignment(
             error=f"Workspace non trovato: {workspace_path_value}",
             backend="docker",
         )
-    if language == "c":
-        return run_c_docker(
+    if language in {"c", "python"}:
+        return run_docker_runner(
             assignment,
             activity_path=activity_path,
             source=source,
             timeout_seconds=timeout_seconds,
+            language=language,
             docker_image=docker_image,
         )
     return error_report(
