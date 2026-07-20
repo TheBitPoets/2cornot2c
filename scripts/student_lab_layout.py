@@ -35,6 +35,7 @@ DEFAULT_LAYOUT = {
     "focus": "assignment",
 }
 PANEL_NAMES = tuple(PANEL_TITLES)
+SELECTED_PANEL_BACKGROUND = "\033[48;5;253m"
 ANSI_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 KeyReader = Callable[[], str]
 
@@ -230,7 +231,7 @@ def render_layout(
     def render_row(value: str, panel: str, width: int) -> str:
         fitted = fit_line(value, width)
         if use_color and panel == normalized["focus"]:
-            return f"\033[48;5;253m\033[30m{fitted}\033[0m"
+            return f"{SELECTED_PANEL_BACKGROUND}\033[30m{fitted}\033[0m"
         return fitted
 
     width = terminal_width or shutil.get_terminal_size((120, 40)).columns

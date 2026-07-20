@@ -76,7 +76,7 @@ def test_selected_panel_uses_a_subtle_background_when_colors_are_enabled() -> No
         use_color=True,
     )
 
-    assert "\033[48;5;253m" in rendered
+    assert student_lab_layout.SELECTED_PANEL_BACKGROUND in rendered
     assert "Titolo: esempio" in rendered
 
 
