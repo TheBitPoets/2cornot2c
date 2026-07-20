@@ -471,7 +471,12 @@ def render_assignment_detail(
         "  q  Esci",
     ]
     if layout is not None:
-        return student_lab_layout.render_layout(lines, layout, use_color=use_color)
+        return student_lab_layout.render_layout(
+            lines,
+            layout,
+            use_color=use_color,
+            highlight_focus=True,
+        )
     return "\n".join(lines)
 
 
