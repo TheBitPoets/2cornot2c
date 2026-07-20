@@ -1,9 +1,8 @@
 FROM debian:bookworm-slim
 
-# Immagine iniziale orientata al runner C.
-# I runner futuri dovranno aggiungere dipendenze specifiche per linguaggio.
+# Immagine minimale per i runner C, Python, Node.js e SQLite.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends gcc libc6-dev python3 \
+    && apt-get install -y --no-install-recommends gcc libc6-dev python3 nodejs sqlite3 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN useradd --create-home --shell /usr/sbin/nologin runner

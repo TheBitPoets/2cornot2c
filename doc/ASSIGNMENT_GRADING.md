@@ -8,7 +8,7 @@ Questa PR non introduce ancora Docker, sandbox completa, GitHub automation o fee
 scheda attivita -> sorgente -> runner linguaggio -> test -> report JSON
 ```
 
-Il primo runner implementato e quello per C. Gli altri linguaggi vengono previsti nel modello per evitare di legare TheBitLab a un solo linguaggio.
+I runner iniziali sono C, Python, JavaScript/Node.js e SQL. Gli altri linguaggi vengono previsti nel modello per evitare di legare TheBitLab a un solo linguaggio.
 
 ## Linguaggi previsti
 
@@ -16,11 +16,11 @@ Il primo runner implementato e quello per C. Gli altri linguaggi vengono previst
 |---|---|
 | `c` | Implementato |
 | `python` | Implementato |
-| `javascript` | Previsto |
-| `nodejs` | Previsto |
+| `javascript` | Implementato |
+| `nodejs` | Implementato |
 | `html` | Previsto |
 | `java` | Previsto |
-| `sql` | Previsto |
+| `sql` | Implementato |
 | `golang` | Previsto |
 | `assembly` | Previsto |
 | `cpp` | Previsto |
@@ -134,7 +134,7 @@ Questa e una fondazione minimale.
 
 Limiti noti:
 
-- i runner C e Python sono implementati in questa fase;
+- i runner C, Python, JavaScript/Node.js e SQL sono implementati in questa fase;
 - i runner pianificati ma non implementati restituiscono `unsupported-language`;
 - la sandbox Docker e iniziale e documentata in `ASSIGNMENT_SANDBOX.md`;
 - non vengono ancora applicati limiti su memoria o filesystem;
