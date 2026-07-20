@@ -2487,6 +2487,25 @@ code {
   font: 500 .86rem/1.55 var(--mono);
 }
 
+.filePreview textarea {
+  width: 100%;
+  min-height: 0;
+  resize: none;
+  border: 0;
+  border-radius: 0;
+  padding: 1rem;
+  overflow: auto;
+  white-space: pre;
+  background: #171717;
+  color: #f6f6f6;
+  font: 500 .86rem/1.55 var(--mono);
+}
+
+.filePreview textarea:focus {
+  outline: 2px solid #8ecbff;
+  outline-offset: -2px;
+}
+
 .filePreview code {
   border-radius: 0;
   background: transparent;
