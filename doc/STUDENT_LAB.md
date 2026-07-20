@@ -161,6 +161,17 @@ Il comando `v` cerca un editor terminale nell'ordine `micro`, `nvim`, `vim`, `hx
 Per scegliere esplicitamente un editor, imposta `THEBITLAB_EDITOR`, per esempio `micro --clean` o `nvim`.
 L'editor viene eseguito nella cartella della consegna e apre il file sorgente indicato dall'activity.
 
+Il comando `l` apre il layout della vista consegna. La disposizione iniziale affianca a sinistra il dettaglio
+e a destra guida/comandi. In questa modalità:
+
+- `Alt+freccia sinistra/destra` restringe o allarga il pannello sinistro;
+- `Ctrl+freccia sinistra/destra` scambia i due pannelli;
+- `Ctrl+freccia su/giu` alterna disposizione affiancata e verticale;
+- `Enter` salva la disposizione, `Esc` annulla, `r` ripristina quella iniziale.
+
+La configurazione e' locale e non contiene dati didattici: viene salvata in `.student-lab-layout.json` nella root
+usata dalla TUI. Si puo' indicare un percorso diverso con `THEBITLAB_LAYOUT_PATH`.
+
 Il dettaglio mostra anche una guida rapida con i termini chiave:
 
 - consegna: lavoro assegnato dal docente;

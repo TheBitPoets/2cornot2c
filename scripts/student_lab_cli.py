@@ -22,7 +22,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts import student_help_service, student_lab_runner, student_lab_service
+from scripts import student_help_service, student_lab_layout, student_lab_runner, student_lab_service
 
 
 InputFn = Callable[[str], str]
@@ -458,6 +458,7 @@ def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False
         "  a  Chiedi aiuto",
         "  o  Apri workspace",
         "  v  Apri editor",
+        "  l  Modifica layout pannelli",
         "",
         "Altri comandi",
         "  h  Storico aiuti",
@@ -1135,6 +1136,15 @@ def run_tui(
                 )
                 print_fn(message)
                 input_fn("Premi invio per continuare...")
+                continue
+            if action in {"l", "layout"}:
+                student_lab_layout.run_layout_editor(
+                    render_assignment_detail(assignment, use_color=use_color).splitlines(),
+                    root=root,
+                    use_color=use_color,
+                    clear=clear,
+                    print_fn=print_fn,
+                )
                 continue
             if action == "a":
                 print_fn(f"Tipo aiuto: {help_choice_label()} | invio/b annulla")
