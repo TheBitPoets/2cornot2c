@@ -68,6 +68,18 @@ def test_fit_line_keeps_ellipsis_inside_panel_width() -> None:
     assert student_lab_layout.fit_line("testo", 3) == "..."
 
 
+def test_selected_panel_uses_a_subtle_background_when_colors_are_enabled() -> None:
+    rendered = student_lab_layout.render_layout(
+        ["Dettaglio consegna", "Titolo: esempio"],
+        student_lab_layout.DEFAULT_LAYOUT,
+        terminal_width=100,
+        use_color=True,
+    )
+
+    assert "\033[48;5;253m" in rendered
+    assert "Titolo: esempio" in rendered
+
+
 def test_layout_has_modifier_free_keyboard_fallbacks() -> None:
     resized, _ = student_lab_layout.apply_layout_key(student_lab_layout.DEFAULT_LAYOUT, "]")
     arrow_resized, _ = student_lab_layout.apply_layout_key(student_lab_layout.DEFAULT_LAYOUT, "right")

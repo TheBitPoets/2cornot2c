@@ -216,12 +216,23 @@ def render_layout(
     lines: list[str],
     layout: dict,
     terminal_width: int | None = None,
+    use_color: bool = False,
 ) -> str:
     """Render detail sections as stable, reorderable and collapsible panels."""
 
     normalized = normalize_layout(layout)
     sections = sectionize_lines(lines)
-    panels = {name: panel_lines(name, sections, normalized) for name in PANEL_NAMES}
+    panels = {
+        name: [(line, name) for line in panel_lines(name, sections, normalized)]
+        for name in PANEL_NAMES
+    }
+
+    def render_row(value: str, panel: str, width: int) -> str:
+        fitted = fit_line(value, width)
+        if use_color and panel == normalized["focus"]:
+            return f"\033[48;5;253m\033[30m{fitted}\033[0m"
+        return fitted
+
     width = terminal_width or shutil.get_terminal_size((120, 40)).columns
     if width < 90:
         normalized["orientation"] = "vertical"
@@ -230,7 +241,7 @@ def render_layout(
         for index, panel_name in enumerate(normalized["order"]):
             if index:
                 rendered.append("-" * min(120, width))
-            rendered.extend(panels[panel_name])
+            rendered.extend(render_row(line, panel_name, width) for line, _ in panels[panel_name])
         return "\n".join(rendered)
     left_width = min(normalized["left_width"], max(36, width - 39))
     right_width = max(30, width - left_width - 3)
@@ -239,14 +250,25 @@ def render_layout(
     split = max(1, (len(ordered) + 1) // 2)
     left_panels = ordered[:split]
     right_panels = ordered[split:]
-    left = [line for panel in left_panels for line in (*panel, "-" * min(left_width, 120))]
-    right = [line for panel in right_panels for line in (*panel, "-" * min(right_width, 120))]
+    left = [
+        (line, panel)
+        for panel_name, panel in zip(normalized["order"][:split], left_panels)
+        for line, panel in (*panel, ("-" * min(left_width, 120), panel_name))
+    ]
+    right = [
+        (line, panel)
+        for panel_name, panel in zip(normalized["order"][split:], right_panels)
+        for line, panel in (*panel, ("-" * min(right_width, 120), panel_name))
+    ]
     row_count = max(len(left), len(right))
     rendered = []
     for index in range(row_count):
-        left_line = left[index] if index < len(left) else ""
-        right_line = right[index] if index < len(right) else ""
-        rendered.append(f"{fit_line(left_line, columns[0])} | {fit_line(right_line, columns[1])}")
+        left_line, left_panel = left[index] if index < len(left) else ("", "")
+        right_line, right_panel = right[index] if index < len(right) else ("", "")
+        rendered.append(
+            f"{render_row(left_line, left_panel, columns[0])} | "
+            f"{render_row(right_line, right_panel, columns[1])}"
+        )
     return "\n".join(rendered)
 
 
@@ -354,7 +376,6 @@ def run_layout_editor(
 ) -> dict:
     """Edit and save the layout until Enter, Escape or q is pressed."""
 
-    del use_color  # Lines are already styled by the caller when needed.
     layout = load_layout(root)
     reader = key_reader or read_terminal_key
     context = nullcontext() if key_reader else raw_terminal()
@@ -362,7 +383,7 @@ def run_layout_editor(
         while True:
             if clear:
                 print_fn("\x1b[2J\x1b[H")
-            print_fn(render_layout(lines, layout, terminal_width))
+            print_fn(render_layout(lines, layout, terminal_width, use_color=use_color))
             print_fn(f"Pannello attivo: {PANEL_TITLES[layout['focus']]} (indicato da >)")
             print_fn("\nResize: frecce sinistra/destra o [ ] ridimensionano il pannello sinistro")
             print_fn("Tab seleziona | h/l sposta orizzontalmente | k/j sposta verticalmente")
