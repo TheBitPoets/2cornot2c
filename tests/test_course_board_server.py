@@ -3770,6 +3770,60 @@ def test_student_help_http_endpoint_records_request_on_server_root(tmp_path, mon
     assert any(event["prompt"] == "Dammi una domanda guida." for event in events)
 
 
+def test_teacher_post_rejects_invalid_and_oversized_json_bodies(tmp_path) -> None:
+    original_root = course_board_server.ROOT
+    student_lab_demo_setup.prepare_demo(tmp_path)
+    teacher_token = "teacher-dashboard-token-for-body-tests"
+    server = None
+    thread = None
+
+    try:
+        course_board_server.configure_data_root(tmp_path)
+        server = course_board_server.BoundedThreadingHTTPServer(
+            ("127.0.0.1", 0), course_board_server.CourseBoardHandler
+        )
+        server.teacher_token = teacher_token
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+
+        authorization = "Basic " + base64.b64encode(
+            f"teacher:{teacher_token}".encode("utf-8")
+        ).decode("ascii")
+
+        malformed = http.client.HTTPConnection("127.0.0.1", server.server_address[1], timeout=5)
+        malformed.putrequest("POST", "/api/course-design")
+        malformed.putheader("Authorization", authorization)
+        malformed.putheader("Content-Type", "application/json")
+        malformed.putheader("Content-Length", "non-numerico")
+        malformed.endheaders()
+        malformed_response = malformed.getresponse()
+        assert malformed_response.status == 400
+        assert json.loads(malformed_response.read().decode("utf-8"))["error"] == (
+            "Content-Length non valido."
+        )
+        malformed.close()
+
+        oversized = http.client.HTTPConnection("127.0.0.1", server.server_address[1], timeout=5)
+        oversized.putrequest("POST", "/api/course-design")
+        oversized.putheader("Authorization", authorization)
+        oversized.putheader("Content-Type", "application/json")
+        oversized.putheader("Content-Length", str(course_board_server.MAX_TEACHER_REQUEST_BYTES + 1))
+        oversized.endheaders()
+        oversized_response = oversized.getresponse()
+        assert oversized_response.status == 413
+        assert json.loads(oversized_response.read().decode("utf-8"))["error"] == (
+            "Richiesta docente troppo grande."
+        )
+        oversized.close()
+    finally:
+        if server is not None:
+            server.shutdown()
+            server.server_close()
+        if thread is not None:
+            thread.join(timeout=5)
+        course_board_server.configure_data_root(original_root)
+
+
 def test_student_dashboard_uses_configured_demo_data_root(tmp_path) -> None:
     original_root = course_board_server.ROOT
     student_lab_demo_setup.prepare_demo(tmp_path)
