@@ -534,19 +534,17 @@ function renderCalendarViewControls() {
   }
   const months = calendarMonths(start, end);
   const weeks = calendarWeeks(start, end);
-  if (!state.calendarView.month && months.length) {
-    state.calendarView.month = `${months[0].getFullYear()}-${String(months[0].getMonth() + 1).padStart(2, "0")}`;
-  }
-  if (!state.calendarView.week && weeks.length) {
-    state.calendarView.week = isoDate(weeks[0].start);
-  }
-  const monthOptions = months.map((month) => {
-    const value = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
+  const monthValues = months.map((month) => `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`);
+  const weekValues = weeks.map((week) => isoDate(week.start));
+  state.calendarView.month = firstAvailableCalendarViewValue(monthValues, state.calendarView.month);
+  state.calendarView.week = firstAvailableCalendarViewValue(weekValues, state.calendarView.week);
+  const monthOptions = months.map((month, index) => {
+    const value = monthValues[index];
     const label = month.toLocaleDateString("it-IT", { month: "long", year: "numeric" });
     return `<option value="${value}"${state.calendarView.month === value ? " selected" : ""}>${escapeHtml(label)}</option>`;
   });
   const weekOptions = weeks.map((week, index) => {
-    const value = isoDate(week.start);
+    const value = weekValues[index];
     const label = `Settimana ${index + 1}: ${week.start.toLocaleDateString("it-IT")} - ${week.end.toLocaleDateString("it-IT")}`;
     return `<option value="${value}"${state.calendarView.week === value ? " selected" : ""}>${escapeHtml(label)}</option>`;
   });
@@ -581,6 +579,10 @@ function renderCalendarViewControls() {
       renderCalendarView();
     });
   });
+}
+
+function firstAvailableCalendarViewValue(values, current) {
+  return values.includes(current) ? current : values[0] || "";
 }
 
 function updateCalendarNavButtons(container, months, weeks) {
