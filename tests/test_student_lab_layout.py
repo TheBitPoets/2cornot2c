@@ -16,6 +16,9 @@ def test_layout_commands_resize_swap_and_change_orientation() -> None:
     stacked, _ = student_lab_layout.apply_layout_key(swapped, "ctrl+down")
     assert stacked["orientation"] == "vertical"
 
+    fallback, _ = student_lab_layout.apply_layout_key(layout, "x")
+    assert fallback["order"] == ["guide", "detail"]
+
 
 def test_layout_persists_and_invalid_values_fall_back(tmp_path: Path) -> None:
     path = tmp_path / "layout.json"

@@ -49,13 +49,16 @@ def apply_layout_key(layout: dict, key: str) -> tuple[dict, str]:
     if clean_key == "alt+left":
         updated["left_width"] -= 4
         return normalize_layout(updated), "Pannello sinistro ristretto."
-    if clean_key == "alt+right":
+    if clean_key in {"alt+right", "right"}:
         updated["left_width"] += 4
         return normalize_layout(updated), "Pannello sinistro allargato."
-    if clean_key in {"ctrl+left", "ctrl+right"}:
+    if clean_key == "left":
+        updated["left_width"] -= 4
+        return normalize_layout(updated), "Pannello sinistro ristretto."
+    if clean_key in {"ctrl+left", "ctrl+right", "x", "swap"}:
         updated["order"].reverse()
         return updated, "Pannelli scambiati."
-    if clean_key in {"ctrl+up", "ctrl+down"}:
+    if clean_key in {"ctrl+up", "ctrl+down", "up", "down"}:
         updated["orientation"] = "vertical" if updated["orientation"] == "horizontal" else "horizontal"
         return updated, "Orientamento dei pannelli cambiato."
     if clean_key in {"r", "reset"}:
@@ -212,7 +215,7 @@ def read_terminal_key() -> str:
         character = sys.stdin.read(1)
     if character == "\x1b":
         sequence = _read_escape_sequence(character)
-        return {
+        known = {
             "\x1b[1;3D": "alt+left",
             "\x1b[1;3C": "alt+right",
             "\x1b[1;3A": "alt+up",
@@ -222,7 +225,18 @@ def read_terminal_key() -> str:
             "\x1b[1;5A": "ctrl+up",
             "\x1b[1;5B": "ctrl+down",
             "\x1b": "escape",
-        }.get(sequence, "")
+        }
+        if sequence in known:
+            return known[sequence]
+        if sequence.endswith("D"):
+            return "left"
+        if sequence.endswith("C"):
+            return "right"
+        if sequence.endswith("A"):
+            return "up"
+        if sequence.endswith("B"):
+            return "down"
+        return "escape" if sequence == "\x1b" else ""
     if character in {"\r", "\n"}:
         return "enter"
     if character == "q":
@@ -251,7 +265,7 @@ def run_layout_editor(
                 print_fn("\x1b[2J\x1b[H")
             print_fn(render_layout(lines, layout, terminal_width))
             print_fn("\nLayout: Alt+frecce resize | Ctrl+frecce sposta | Ctrl+su/giu cambia orientamento")
-            print_fn("Enter salva | Esc annulla | r ripristina")
+            print_fn("Fallback: frecce resize/orientamento | x scambia | Enter salva | Esc annulla | r ripristina")
             key = reader()
             if key == "enter":
                 save_layout(root, layout)

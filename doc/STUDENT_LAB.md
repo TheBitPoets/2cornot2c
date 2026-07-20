@@ -167,6 +167,7 @@ e a destra guida/comandi. In questa modalità:
 - `Alt+freccia sinistra/destra` restringe o allarga il pannello sinistro;
 - `Ctrl+freccia sinistra/destra` scambia i due pannelli;
 - `Ctrl+freccia su/giu` alterna disposizione affiancata e verticale;
+- se il terminale non trasmette i modificatori: frecce per resize/orientamento e `x` per scambiare i pannelli;
 - `Enter` salva la disposizione, `Esc` annulla, `r` ripristina quella iniziale.
 
 La configurazione e' locale e non contiene dati didattici: viene salvata in `.student-lab-layout.json` nella root
