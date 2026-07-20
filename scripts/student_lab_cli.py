@@ -57,6 +57,8 @@ GUIDE_TERM_COLORS = {
     "test": "\033[33m",
     "report": "\033[32m",
 }
+GUIDE_TERM_BOLD_COLOR = "\033[1;37m"
+GUIDE_DESCRIPTION_COLOR = "\033[3;90m"
 RESET_COLOR = "\033[0m"
 
 
@@ -171,6 +173,24 @@ def runner_status_label(value: Any, use_color: bool = False) -> str:
     if status == "passed":
         return colorize(status, HELP_RESPONSE_COLOR, use_color)
     return colorize(status, HELP_ERROR_COLOR, use_color)
+
+
+def grade_label(value: Any, use_color: bool = False) -> str:
+    """Return a grade with a quick visual indication of its range."""
+
+    if value is None or isinstance(value, bool):
+        return "-"
+    try:
+        grade = float(str(value).replace(",", "."))
+    except (TypeError, ValueError):
+        return clean_text(value, "-")
+    if 7 <= grade <= 10:
+        color = HELP_RESPONSE_COLOR
+    elif 5 <= grade < 7:
+        color = HELP_PROMPT_COLOR
+    else:
+        color = HELP_ERROR_COLOR
+    return colorize(str(value), color, use_color)
 
 
 def truncate(text: str, width: int) -> str:
@@ -288,6 +308,15 @@ def guide_label(text: str, use_color: bool = False) -> str:
     return colorize(f"{text:<9}", GUIDE_TERM_COLORS.get(text.lower(), ""), use_color)
 
 
+def guide_definition(term: str, description: str, use_color: bool = False) -> str:
+    """Render one compact glossary definition for the assignment detail view."""
+
+    styled_term = colorize(term, GUIDE_TERM_BOLD_COLOR, use_color)
+    styled_description = colorize(description, GUIDE_DESCRIPTION_COLOR, use_color)
+    padding = " " * max(1, 10 - len(term))
+    return f"  {styled_term}{padding}{styled_description}"
+
+
 def test_result_label(test: dict[str, Any], use_color: bool = False) -> str:
     """Return a compact label for one test result."""
 
@@ -395,17 +424,26 @@ def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False
         section_separator(),
         "Grading",
         detail_line("Stato:", grading_label(grading)),
-        detail_line("Voto:", grading.get("teacher_grade") if grading.get("teacher_grade") is not None else grading.get("score")),
+        detail_line(
+            "Voto:",
+            grade_label(
+                grading.get("teacher_grade")
+                if grading.get("teacher_grade") is not None
+                else grading.get("score"),
+                use_color,
+            ),
+            formatted=True,
+        ),
         section_separator(),
         "Runner",
         detail_line("Stato:", runner_status_label(runner.get("status"), use_color), formatted=True),
         detail_line("Backend:", runner.get("backend")),
         section_separator(),
         "Guida rapida",
-        f"  {guide_label('Consegna', use_color)} lavoro assegnato dal docente.",
-        f"  {guide_label('Workspace', use_color)} cartella locale dove modifichi i file.",
-        f"  {guide_label('Test', use_color)} controlli automatici sul tuo lavoro.",
-        f"  {guide_label('Report', use_color)} risultato salvato e letto da dashboard/registro.",
+        guide_definition("Consegna", "lavoro assegnato dal docente.", use_color),
+        guide_definition("Workspace", "cartella locale dove modifichi i file.", use_color),
+        guide_definition("Test", "controlli automatici sul tuo lavoro.", use_color),
+        guide_definition("Report", "risultato salvato e letto da dashboard/registro.", use_color),
         "",
         "Flusso consigliato",
         f"  1. Apri {guide_term('workspace', use_color)}",
@@ -441,8 +479,20 @@ def runner_result_message(report: dict[str, Any], report_path: Path, use_color: 
     return "\n".join(
         [
             "Esecuzione completata",
-            detail_line("Stato runner:", status),
-            detail_line("Esito:", outcome),
+            detail_line("Stato runner:", runner_status_label(status, use_color), formatted=True),
+            detail_line(
+                "Esito:",
+                colorize(
+                    outcome,
+                    HELP_RESPONSE_COLOR
+                    if report.get("passed") is True
+                    else HELP_ERROR_COLOR
+                    if report.get("passed") is False
+                    else HELP_PROMPT_COLOR,
+                    use_color,
+                ),
+                formatted=True,
+            ),
             detail_line("Test:", tests),
             detail_line("Report salvato:", report_path),
             "",

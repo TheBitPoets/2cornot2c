@@ -203,10 +203,11 @@ def test_render_assignment_detail_can_color_status() -> None:
     rendered = student_lab_cli.render_assignment_detail(sample_assignment(status="missing"), use_color=True)
 
     assert "\033[31mMancante\033[0m" in rendered
-    assert "\033[35mConsegna \033[0m" in rendered
-    assert "\033[36mWorkspace\033[0m" in rendered
-    assert "\033[33mTest     \033[0m" in rendered
-    assert "\033[32mReport   \033[0m" in rendered
+    assert "\033[1;37mConsegna\033[0m" in rendered
+    assert "\033[1;37mWorkspace\033[0m" in rendered
+    assert "\033[1;37mTest\033[0m" in rendered
+    assert "\033[1;37mReport\033[0m" in rendered
+    assert "\033[3;90mcartella locale dove modifichi i file.\033[0m" in rendered
 
 
 def test_render_assignment_detail_summarizes_grading_tests() -> None:
@@ -237,6 +238,13 @@ def test_render_assignment_detail_summarizes_grading_tests() -> None:
     assert "Output atteso: 10; output ottenuto: 8" in rendered
 
 
+def test_grade_label_uses_requested_ranges() -> None:
+    assert student_lab_cli.grade_label(8, use_color=True) == "\033[32m8\033[0m"
+    assert student_lab_cli.grade_label(6, use_color=True) == "\033[33m6\033[0m"
+    assert student_lab_cli.grade_label(4, use_color=True) == "\033[31m4\033[0m"
+    assert student_lab_cli.grade_label(None, use_color=True) == "-"
+
+
 def test_runner_result_message_shows_status_tests_and_report_path(tmp_path) -> None:
     message = student_lab_cli.runner_result_message(
         {
@@ -261,6 +269,25 @@ def test_runner_result_message_shows_status_tests_and_report_path(tmp_path) -> N
     assert "[ok] input_base" in message
     assert "[ko] caso_zero" in message
     assert "Output atteso: 10, ottenuto: 8" in message
+    failed_message = student_lab_cli.runner_result_message(
+        {
+            "status": "failed",
+            "passed": False,
+            "summary": {"passed": 2, "total": 3},
+            "tests": [],
+        },
+        tmp_path / "reports" / "latest.json",
+        use_color=True,
+    )
+    assert "\033[31mfailed\033[0m" in failed_message
+    assert "\033[31mconsegna da ricontrollare\033[0m" in failed_message
+    passed_message = student_lab_cli.runner_result_message(
+        {"status": "passed", "passed": True, "summary": {"passed": 2, "total": 2}, "tests": []},
+        tmp_path / "reports" / "latest.json",
+        use_color=True,
+    )
+    assert "\033[32mpassed\033[0m" in passed_message
+    assert "\033[32mconsegna superata\033[0m" in passed_message
     assert "Questo report è quello letto da dashboard e registro docente." in message
     assert "Questo report e quello" not in message
 
