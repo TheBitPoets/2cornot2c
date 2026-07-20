@@ -360,7 +360,11 @@ def render_test_details(report: dict[str, Any], use_color: bool = False) -> list
     return lines
 
 
-def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False) -> str:
+def render_assignment_detail(
+    assignment: dict[str, Any],
+    use_color: bool = False,
+    layout: dict[str, Any] | None = None,
+) -> str:
     """Render the detail page for one lab assignment."""
 
     workspace = assignment.get("workspace") if isinstance(assignment.get("workspace"), dict) else {}
@@ -466,6 +470,8 @@ def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False
         "  invio  Torna alla lista",
         "  q  Esci",
     ]
+    if layout is not None:
+        return student_lab_layout.render_layout(lines, layout)
     return "\n".join(lines)
 
 
@@ -1114,7 +1120,13 @@ def run_tui(
                 break
             if clear:
                 clear_screen()
-            print_fn(render_assignment_detail(assignment, use_color=use_color))
+            print_fn(
+                render_assignment_detail(
+                    assignment,
+                    use_color=use_color,
+                    layout=student_lab_layout.load_layout(root),
+                )
+            )
             action = input_fn("\nDettaglio: ").strip().lower()
             if action in {"", "b", "back", "indietro"}:
                 break

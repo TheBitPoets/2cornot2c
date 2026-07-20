@@ -161,12 +161,15 @@ Il comando `v` cerca un editor terminale nell'ordine `micro`, `nvim`, `vim`, `hx
 Per scegliere esplicitamente un editor, imposta `THEBITLAB_EDITOR`, per esempio `micro --clean` o `nvim`.
 L'editor viene eseguito nella cartella della consegna e apre il file sorgente indicato dall'activity.
 
-Il comando `l` apre il layout della vista consegna. La disposizione iniziale affianca a sinistra il dettaglio
-e a destra guida/comandi. In questa modalità:
+Il comando `l` apre il layout della vista consegna. Ogni sezione del dettaglio diventa un pannello separato;
+la disposizione iniziale li distribuisce in due colonne. In questa modalità:
 
 - `Alt+freccia sinistra/destra` restringe o allarga il pannello sinistro;
-- `Ctrl+freccia sinistra/destra` scambia i due pannelli;
-- `Ctrl+freccia su/giu` alterna disposizione affiancata e verticale;
+- `Tab` seleziona il pannello successivo; il pannello selezionato e' indicato da `>`;
+- `Ctrl+freccia sinistra/destra` sposta il pannello selezionato nell'ordine;
+- `Ctrl+freccia su/giu` sposta il pannello selezionato tra le righe;
+- `+` apre il pannello selezionato e `-` lo comprime lasciando visibile il titolo;
+- frecce su/giu alternano disposizione affiancata e verticale;
 - se il terminale non trasmette i modificatori: frecce per resize/orientamento e `x` per scambiare i pannelli;
 - `Enter` salva la disposizione, `Esc` annulla, `r` ripristina quella iniziale.
 

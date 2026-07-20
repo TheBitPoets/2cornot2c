@@ -14,12 +14,27 @@ from pathlib import Path
 from typing import Callable, Iterator
 
 
+PANEL_TITLES = {
+    "assignment": "Dettaglio consegna",
+    "workspace": "Workspace",
+    "activity": "Activity",
+    "support": "Aiuto consentito",
+    "help": "Richieste aiuto",
+    "report": "Report",
+    "tests": "Ultimo dettaglio test",
+    "grading": "Grading",
+    "runner": "Runner",
+    "guide": "Guida rapida",
+}
+DEFAULT_PANEL_ORDER = list(PANEL_TITLES)
 DEFAULT_LAYOUT = {
     "orientation": "horizontal",
-    "order": ["detail", "guide"],
+    "order": DEFAULT_PANEL_ORDER,
     "left_width": 62,
+    "collapsed": [],
+    "focus": "assignment",
 }
-PANEL_NAMES = ("detail", "guide")
+PANEL_NAMES = tuple(PANEL_TITLES)
 ANSI_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 KeyReader = Callable[[], str]
 
@@ -27,7 +42,13 @@ KeyReader = Callable[[], str]
 def normalize_layout(value: object) -> dict:
     """Return a valid, bounded layout configuration."""
 
-    layout = dict(DEFAULT_LAYOUT)
+    layout = {
+        "orientation": DEFAULT_LAYOUT["orientation"],
+        "order": list(DEFAULT_LAYOUT["order"]),
+        "left_width": DEFAULT_LAYOUT["left_width"],
+        "collapsed": list(DEFAULT_LAYOUT["collapsed"]),
+        "focus": DEFAULT_LAYOUT["focus"],
+    }
     if isinstance(value, dict):
         if value.get("orientation") in {"horizontal", "vertical"}:
             layout["orientation"] = value["orientation"]
@@ -38,6 +59,12 @@ def normalize_layout(value: object) -> dict:
             layout["left_width"] = max(36, min(120, int(value.get("left_width", layout["left_width"]))))
         except (TypeError, ValueError):
             pass
+        collapsed = value.get("collapsed")
+        if isinstance(collapsed, list):
+            layout["collapsed"] = [panel for panel in collapsed if panel in PANEL_NAMES]
+        focus = value.get("focus")
+        if focus in PANEL_NAMES:
+            layout["focus"] = focus
     return layout
 
 
@@ -46,6 +73,7 @@ def apply_layout_key(layout: dict, key: str) -> tuple[dict, str]:
 
     updated = normalize_layout(layout)
     clean_key = str(key or "").strip().lower()
+    focus_index = updated["order"].index(updated["focus"])
     if clean_key == "alt+left":
         updated["left_width"] -= 4
         return normalize_layout(updated), "Pannello sinistro ristretto."
@@ -56,13 +84,38 @@ def apply_layout_key(layout: dict, key: str) -> tuple[dict, str]:
         updated["left_width"] -= 4
         return normalize_layout(updated), "Pannello sinistro ristretto."
     if clean_key in {"ctrl+left", "ctrl+right", "x", "swap"}:
-        updated["order"].reverse()
-        return updated, "Pannelli scambiati."
+        offset = -1 if clean_key == "ctrl+left" else 1
+        if clean_key in {"x", "swap"}:
+            offset = 1
+        target_index = max(0, min(len(updated["order"]) - 1, focus_index + offset))
+        updated["order"][focus_index], updated["order"][target_index] = (
+            updated["order"][target_index],
+            updated["order"][focus_index],
+        )
+        return updated, "Pannello spostato."
     if clean_key in {"ctrl+up", "ctrl+down", "up", "down"}:
-        updated["orientation"] = "vertical" if updated["orientation"] == "horizontal" else "horizontal"
-        return updated, "Orientamento dei pannelli cambiato."
+        if clean_key in {"up", "down"}:
+            updated["orientation"] = "vertical" if updated["orientation"] == "horizontal" else "horizontal"
+            return updated, "Orientamento dei pannelli cambiato."
+        offset = -2 if clean_key == "ctrl+up" else 2
+        target_index = max(0, min(len(updated["order"]) - 1, focus_index + offset))
+        updated["order"][focus_index], updated["order"][target_index] = (
+            updated["order"][target_index],
+            updated["order"][focus_index],
+        )
+        return updated, "Pannello spostato."
+    if clean_key == "tab":
+        updated["focus"] = updated["order"][(focus_index + 1) % len(updated["order"])]
+        return updated, f"Pannello selezionato: {PANEL_TITLES[updated['focus']]}"
+    if clean_key in {"+", "="}:
+        updated["collapsed"] = [panel for panel in updated["collapsed"] if panel != updated["focus"]]
+        return updated, f"Pannello aperto: {PANEL_TITLES[updated['focus']]}"
+    if clean_key == "-":
+        if updated["focus"] not in updated["collapsed"]:
+            updated["collapsed"].append(updated["focus"])
+        return updated, f"Pannello chiuso: {PANEL_TITLES[updated['focus']]}"
     if clean_key in {"r", "reset"}:
-        return dict(DEFAULT_LAYOUT), "Layout ripristinato."
+        return normalize_layout(DEFAULT_LAYOUT), "Layout ripristinato."
     return updated, ""
 
 
@@ -80,7 +133,7 @@ def load_layout(root: Path) -> dict:
     try:
         return normalize_layout(json.loads(path.read_text(encoding="utf-8")))
     except (OSError, ValueError, TypeError):
-        return dict(DEFAULT_LAYOUT)
+        return normalize_layout(DEFAULT_LAYOUT)
 
 
 def save_layout(root: Path, layout: dict) -> Path:
@@ -120,16 +173,48 @@ def split_detail_lines(lines: list[str]) -> tuple[list[str], list[str]]:
     return lines[:index], lines[index:]
 
 
+def sectionize_lines(lines: list[str]) -> dict[str, list[str]]:
+    """Group detail output into the named panels shown by the layout editor."""
+
+    title_to_panel = {title: panel for panel, title in PANEL_TITLES.items()}
+    sections: dict[str, list[str]] = {}
+    current_panel: str | None = None
+    for line in lines:
+        panel = title_to_panel.get(visible_text(line).strip())
+        if panel is not None:
+            if current_panel is not None and current_panel not in sections:
+                sections[current_panel] = []
+            current_panel = panel
+            sections[current_panel] = [line]
+            continue
+        if line.startswith("-") and len(line) >= 12:
+            continue
+        if current_panel is not None:
+            sections[current_panel].append(line)
+    return sections
+
+
+def panel_lines(panel: str, sections: dict[str, list[str]], layout: dict) -> list[str]:
+    """Render one panel, including focus and collapsed state markers."""
+
+    title = PANEL_TITLES[panel]
+    focused = ">" if panel == layout["focus"] else " "
+    if panel in layout["collapsed"]:
+        return [f"{focused} [+] {title}"]
+    content = sections.get(panel) or [title, "  non disponibile"]
+    return [f"{focused} [-] {title}", *content[1:]]
+
+
 def render_layout(
     lines: list[str],
     layout: dict,
     terminal_width: int | None = None,
 ) -> str:
-    """Render detail and guide as stable terminal panels."""
+    """Render detail sections as stable, reorderable and collapsible panels."""
 
     normalized = normalize_layout(layout)
-    detail, guide = split_detail_lines(lines)
-    panels = {"detail": detail, "guide": guide}
+    sections = sectionize_lines(lines)
+    panels = {name: panel_lines(name, sections, normalized) for name in PANEL_NAMES}
     width = terminal_width or shutil.get_terminal_size((120, 40)).columns
     if width < 90:
         normalized["orientation"] = "vertical"
@@ -144,12 +229,17 @@ def render_layout(
     right_width = max(30, width - left_width - 3)
     columns = [left_width, right_width]
     ordered = [panels[name] for name in normalized["order"]]
-    row_count = max(len(ordered[0]), len(ordered[1]))
+    split = max(1, (len(ordered) + 1) // 2)
+    left_panels = ordered[:split]
+    right_panels = ordered[split:]
+    left = [line for panel in left_panels for line in (*panel, "-" * min(left_width, 120))]
+    right = [line for panel in right_panels for line in (*panel, "-" * min(right_width, 120))]
+    row_count = max(len(left), len(right))
     rendered = []
     for index in range(row_count):
-        left = ordered[0][index] if index < len(ordered[0]) else ""
-        right = ordered[1][index] if index < len(ordered[1]) else ""
-        rendered.append(f"{fit_line(left, columns[0])} | {fit_line(right, columns[1])}")
+        left_line = left[index] if index < len(left) else ""
+        right_line = right[index] if index < len(right) else ""
+        rendered.append(f"{fit_line(left_line, columns[0])} | {fit_line(right_line, columns[1])}")
     return "\n".join(rendered)
 
 
