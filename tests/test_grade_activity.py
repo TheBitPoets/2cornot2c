@@ -112,15 +112,40 @@ def test_write_report_writes_json(tmp_path) -> None:
     assert json.loads(report_path.read_text(encoding="utf-8")) == report
 
 
-def test_grade_activity_reports_unsupported_planned_language(tmp_path) -> None:
+def test_grade_activity_passes_valid_python_program(tmp_path) -> None:
     source = tmp_path / "main.py"
-    source.write_text("print(5)\n", encoding="utf-8")
+    source.write_text("value = input().strip()\nprint(int(value) + 1)\n", encoding="utf-8")
 
-    report = grade_activity.grade_activity({"id": "python-001", "linguaggio": "python", "test_cases": []}, source)
+    report = grade_activity.grade_activity(
+        {
+            "id": "python-001",
+            "linguaggio": "python",
+            "test_cases": [{"name": "incremento", "stdin": "4\n", "expected_stdout": "5\n"}],
+        },
+        source,
+    )
+
+    assert report["passed"] is True
+    assert report["status"] == "passed"
+    assert report["language"] == "python"
+
+
+def test_grade_activity_reports_python_wrong_output(tmp_path) -> None:
+    source = tmp_path / "main.py"
+    source.write_text("print('wrong')\n", encoding="utf-8")
+
+    report = grade_activity.grade_activity(
+        {
+            "id": "python-002",
+            "linguaggio": "python",
+            "test_cases": [{"name": "output", "expected_stdout": "right\n"}],
+        },
+        source,
+    )
 
     assert report["passed"] is False
-    assert report["status"] == "unsupported-language"
-    assert report["language"] == "python"
+    assert report["status"] == "failed"
+    assert report["summary"] == {"passed": 0, "total": 1}
 
 
 def test_grade_activity_reports_unknown_language(tmp_path) -> None:

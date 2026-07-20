@@ -76,6 +76,42 @@ jobs:
           assert report["status"] == "passed"
           PY
 
+      - name: Smoke test Python runner image
+        run: |
+          cat > "$RUNNER_TEMP/activity-python.json" <<'JSON'
+          {
+            "id": "docker-smoke-python",
+            "linguaggio": "python",
+            "test_cases": [
+              {
+                "name": "incremento",
+                "stdin": "4\n",
+                "expected_stdout": "5\n"
+              }
+            ]
+          }
+          JSON
+          cat > "$RUNNER_TEMP/main.py" <<'PY'
+          value = int(input())
+          print(value + 1)
+          PY
+          python scripts/grade_activity.py \
+            --activity "$RUNNER_TEMP/activity-python.json" \
+            --source "$RUNNER_TEMP/main.py" \
+            --language python \
+            --docker \
+            --report "$RUNNER_TEMP/report-python.json"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          report = json.loads((Path(os.environ["RUNNER_TEMP"]) / "report-python.json").read_text(encoding="utf-8"))
+          assert report["passed"] is True
+          assert report["status"] == "passed"
+          assert report["language"] == "python"
+          PY
+
       - name: Smoke test student lab Docker backend
         run: |
           mkdir -p "$RUNNER_TEMP/student-root"

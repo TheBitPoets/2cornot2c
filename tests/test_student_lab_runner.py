@@ -438,13 +438,25 @@ def test_run_docker_assignment_rejects_success_report_on_container_error(monkeyp
     assert report["passed"] is False
 
 
-def test_run_docker_assignment_reports_unsupported_language(tmp_path) -> None:
+def test_run_docker_assignment_supports_python(monkeypatch, tmp_path) -> None:
     activity_path = write_activity(tmp_path, language="python", source_name="main.py")
     write_assignment(tmp_path, activity_path)
     workspace = tmp_path / "examples" / "assignment_tracking" / "student_repos" / "rossi-mario" / "assignments" / "python-base-somma-001"
     workspace.mkdir(parents=True)
     (workspace / "main.py").write_text("print(1)\n", encoding="utf-8")
 
+    class Result:
+        returncode = 0
+        stdout = json.dumps({
+            "passed": True,
+            "status": "passed",
+            "language": "python",
+            "tests": [{"name": "output", "passed": True, "status": "passed"}],
+            "summary": {"passed": 1, "total": 1},
+        })
+        stderr = ""
+
+    monkeypatch.setattr(student_lab_runner.subprocess, "run", lambda *args, **kwargs: Result())
     report = student_lab_runner.run_student_assignment(
         root=tmp_path,
         student_id="rossi-mario",
@@ -453,7 +465,7 @@ def test_run_docker_assignment_reports_unsupported_language(tmp_path) -> None:
     )
 
     assert report["backend"] == "docker"
-    assert report["status"] == "unsupported-docker-language"
+    assert report["status"] == "passed"
     assert report["language"] == "python"
 
 
