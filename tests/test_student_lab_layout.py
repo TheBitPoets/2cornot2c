@@ -70,10 +70,12 @@ def test_fit_line_keeps_ellipsis_inside_panel_width() -> None:
 
 def test_layout_has_modifier_free_keyboard_fallbacks() -> None:
     resized, _ = student_lab_layout.apply_layout_key(student_lab_layout.DEFAULT_LAYOUT, "]")
+    arrow_resized, _ = student_lab_layout.apply_layout_key(student_lab_layout.DEFAULT_LAYOUT, "right")
     moved, _ = student_lab_layout.apply_layout_key(student_lab_layout.DEFAULT_LAYOUT, "l")
     focused, _ = student_lab_layout.apply_layout_key(student_lab_layout.DEFAULT_LAYOUT, "\t")
 
     assert resized["left_width"] == 66
+    assert arrow_resized["left_width"] == 66
     assert moved["order"][:2] == ["workspace", "assignment"]
     assert focused["focus"] == "workspace"
 

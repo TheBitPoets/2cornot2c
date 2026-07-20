@@ -78,7 +78,7 @@ def apply_layout_key(layout: dict, key: str) -> tuple[dict, str]:
     if clean_key in {"alt+left", "["}:
         updated["left_width"] -= 4
         return normalize_layout(updated), "Pannello sinistro ristretto."
-    if clean_key in {"alt+right", "]"}:
+    if clean_key in {"alt+right", "right", "]"}:
         updated["left_width"] += 4
         return normalize_layout(updated), "Pannello sinistro allargato."
     if clean_key == "left":
@@ -364,8 +364,8 @@ def run_layout_editor(
                 print_fn("\x1b[2J\x1b[H")
             print_fn(render_layout(lines, layout, terminal_width))
             print_fn(f"Pannello attivo: {PANEL_TITLES[layout['focus']]} (indicato da >)")
-            print_fn("\nLayout: Alt+frecce resize | Ctrl+frecce sposta | Ctrl+su/giu cambia orientamento")
-            print_fn("Fallback: frecce resize/orientamento | x scambia | Enter salva | Esc annulla | r ripristina")
+            print_fn("\nLayout: frecce sinistra/destra o [ ] ridimensionano il pannello sinistro")
+            print_fn("Enter salva | Esc annulla | r ripristina")
             key = reader()
             if key == "enter":
                 save_layout(root, layout)

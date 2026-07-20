@@ -162,17 +162,10 @@ Per scegliere esplicitamente un editor, imposta `THEBITLAB_EDITOR`, per esempio 
 L'editor viene eseguito nella cartella della consegna e apre il file sorgente indicato dall'activity.
 
 Il comando `l` apre il layout della vista consegna. Ogni sezione del dettaglio diventa un pannello separato;
-la disposizione iniziale li distribuisce in due colonne. In questa modalità:
+la disposizione iniziale li distribuisce in due colonne. Per ora il controllo principale e' il ridimensionamento:
 
-- `Alt+freccia sinistra/destra` restringe o allarga il pannello sinistro;
-- `Tab` seleziona il pannello successivo; il pannello selezionato e' indicato da `>` e dalla riga `Pannello attivo`;
-- `Ctrl+freccia sinistra/destra` sposta il pannello selezionato nell'ordine;
-- `Ctrl+freccia su/giu` sposta il pannello selezionato tra le righe;
-- `+` apre il pannello selezionato e `-` lo comprime lasciando visibile il titolo;
-- frecce su/giu alternano disposizione affiancata e verticale;
-- fallback senza modificatori: `[`/`]` ridimensionano, `h`/`l` spostano a sinistra/destra,
-  `k`/`j` spostano su/giu, `o` cambia orientamento;
-- `x` resta disponibile per spostare il pannello selezionato verso destra;
+- freccia sinistra/destra restringe o allarga il pannello sinistro;
+- `[`/`]` sono il fallback piu' affidabile quando il terminale intercetta `Alt`;
 - `Enter` salva la disposizione, `Esc` annulla, `r` ripristina quella iniziale.
 
 La configurazione e' locale e non contiene dati didattici: viene salvata in `.student-lab-layout.json` nella root
