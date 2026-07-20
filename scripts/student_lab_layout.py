@@ -218,6 +218,7 @@ def render_layout(
     layout: dict,
     terminal_width: int | None = None,
     use_color: bool = False,
+    highlight_focus: bool = False,
 ) -> str:
     """Render detail sections as stable, reorderable and collapsible panels."""
 
@@ -230,7 +231,7 @@ def render_layout(
 
     def render_row(value: str, panel: str, width: int) -> str:
         fitted = fit_line(value, width)
-        if use_color and panel == normalized["focus"]:
+        if use_color and highlight_focus and panel == normalized["focus"]:
             return f"{SELECTED_PANEL_BACKGROUND}\033[30m{fitted}\033[0m"
         return fitted
 
@@ -384,7 +385,15 @@ def run_layout_editor(
         while True:
             if clear:
                 print_fn("\x1b[2J\x1b[H")
-            print_fn(render_layout(lines, layout, terminal_width, use_color=use_color))
+            print_fn(
+                render_layout(
+                    lines,
+                    layout,
+                    terminal_width,
+                    use_color=use_color,
+                    highlight_focus=True,
+                )
+            )
             print_fn(f"Pannello attivo: {PANEL_TITLES[layout['focus']]} (indicato da >)")
             print_fn("\nResize: frecce sinistra/destra o [ ] ridimensionano il pannello sinistro")
             print_fn("Tab seleziona | h/l sposta orizzontalmente | k/j sposta verticalmente")

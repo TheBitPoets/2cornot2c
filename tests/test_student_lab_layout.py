@@ -74,10 +74,19 @@ def test_selected_panel_uses_a_subtle_background_when_colors_are_enabled() -> No
         student_lab_layout.DEFAULT_LAYOUT,
         terminal_width=100,
         use_color=True,
+        highlight_focus=True,
     )
 
     assert student_lab_layout.SELECTED_PANEL_BACKGROUND in rendered
     assert "Titolo: esempio" in rendered
+
+    plain = student_lab_layout.render_layout(
+        ["Dettaglio consegna", "Titolo: esempio"],
+        student_lab_layout.DEFAULT_LAYOUT,
+        terminal_width=100,
+        use_color=True,
+    )
+    assert student_lab_layout.SELECTED_PANEL_BACKGROUND not in plain
 
 
 def test_layout_has_modifier_free_keyboard_fallbacks() -> None:
