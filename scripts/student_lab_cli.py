@@ -4,6 +4,8 @@ import argparse
 import ipaddress
 import json
 import os
+import shlex
+import shutil
 import subprocess
 import sys
 import textwrap
@@ -20,7 +22,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts import student_help_service, student_lab_runner, student_lab_service
+from scripts import student_help_service, student_lab_layout, student_lab_runner, student_lab_service
 
 
 InputFn = Callable[[str], str]
@@ -57,6 +59,8 @@ GUIDE_TERM_COLORS = {
     "test": "\033[33m",
     "report": "\033[32m",
 }
+GUIDE_TERM_BOLD_COLOR = "\033[1;37m"
+GUIDE_DESCRIPTION_COLOR = "\033[3;90m"
 RESET_COLOR = "\033[0m"
 
 
@@ -131,7 +135,7 @@ def policy_list(values: Any) -> str:
     return ", ".join(clean_text(value) for value in values)
 
 
-def ai_budget_label(value: Any) -> str:
+def ai_budget_label(value: Any, use_color: bool = False) -> str:
     """Return a compact AI budget summary."""
 
     if not isinstance(value, dict):
@@ -140,9 +144,55 @@ def ai_budget_label(value: Any) -> str:
     used = value.get("used")
     remaining = value.get("remaining")
     if not limit:
-        return "non disponibile"
+        return colorize("non disponibile", HELP_ERROR_COLOR, use_color)
     label = f"{used or 0}/{limit} usate, {remaining or 0} rimanenti"
-    return f"{label} (esaurito)" if value.get("exhausted") else label
+    if value.get("exhausted") or not remaining:
+        color = HELP_ERROR_COLOR
+    elif remaining <= max(1, (limit + 1) // 2):
+        color = HELP_PROMPT_COLOR
+    else:
+        color = HELP_RESPONSE_COLOR
+    return colorize(f"{label} (esaurito)" if value.get("exhausted") else label, color, use_color)
+
+
+def help_decision_label(value: Any, use_color: bool = False) -> str:
+    """Return the latest help decision with an actionable status color."""
+
+    decision = clean_text(value, "")
+    if decision == "consentita":
+        return colorize(decision, HELP_RESPONSE_COLOR, use_color)
+    if decision == "bloccata":
+        return colorize(decision, HELP_ERROR_COLOR, use_color)
+    return colorize("nessuna richiesta", HELP_PROMPT_COLOR, use_color) if use_color else "nessuna richiesta"
+
+
+def runner_status_label(value: Any, use_color: bool = False) -> str:
+    """Return runner state with red pending/error and green completed status."""
+
+    status = clean_text(value, "not_run")
+    if status == "not_run":
+        return colorize(status, HELP_ERROR_COLOR, use_color)
+    if status == "passed":
+        return colorize(status, HELP_RESPONSE_COLOR, use_color)
+    return colorize(status, HELP_ERROR_COLOR, use_color)
+
+
+def grade_label(value: Any, use_color: bool = False) -> str:
+    """Return a grade with a quick visual indication of its range."""
+
+    if value is None or isinstance(value, bool):
+        return "-"
+    try:
+        grade = float(str(value).replace(",", "."))
+    except (TypeError, ValueError):
+        return clean_text(value, "-")
+    if 7 <= grade <= 10:
+        color = HELP_RESPONSE_COLOR
+    elif 5 <= grade < 7:
+        color = HELP_PROMPT_COLOR
+    else:
+        color = HELP_ERROR_COLOR
+    return colorize(str(value), color, use_color)
 
 
 def truncate(text: str, width: int) -> str:
@@ -260,15 +310,24 @@ def guide_label(text: str, use_color: bool = False) -> str:
     return colorize(f"{text:<9}", GUIDE_TERM_COLORS.get(text.lower(), ""), use_color)
 
 
-def test_result_label(test: dict[str, Any]) -> str:
+def guide_definition(term: str, description: str, use_color: bool = False) -> str:
+    """Render one compact glossary definition for the assignment detail view."""
+
+    styled_term = colorize(term, GUIDE_TERM_BOLD_COLOR, use_color)
+    styled_description = colorize(description, GUIDE_DESCRIPTION_COLOR, use_color)
+    padding = " " * max(1, 10 - len(term))
+    return f"  {styled_term}{padding}{styled_description}"
+
+
+def test_result_label(test: dict[str, Any], use_color: bool = False) -> str:
     """Return a compact label for one test result."""
 
     if test.get("passed") is True:
-        return "[ok]"
+        return colorize("[ok]", HELP_RESPONSE_COLOR, use_color)
     if test.get("passed") is False:
-        return "[ko]"
+        return colorize("[ko]", HELP_ERROR_COLOR, use_color)
     status = clean_text(test.get("status"), "")
-    return f"[{status}]" if status else "[?]"
+    return colorize(f"[{status}]" if status else "[?]", HELP_PROMPT_COLOR, use_color)
 
 
 def test_result_detail(test: dict[str, Any]) -> str:
@@ -281,7 +340,7 @@ def test_result_detail(test: dict[str, Any]) -> str:
     return ""
 
 
-def render_test_details(report: dict[str, Any]) -> list[str]:
+def render_test_details(report: dict[str, Any], use_color: bool = False) -> list[str]:
     """Render test details from a runner report."""
 
     tests = report.get("tests")
@@ -292,7 +351,7 @@ def render_test_details(report: dict[str, Any]) -> list[str]:
         if not isinstance(item, dict):
             continue
         name = clean_text(item.get("name"), f"test {index}")
-        lines.append(f"  {test_result_label(item)} {name}")
+        lines.append(f"  {test_result_label(item, use_color=use_color)} {name}")
         detail = test_result_detail(item)
         if detail and item.get("passed") is not True:
             lines.append(f"      {truncate(detail, 96)}")
@@ -301,7 +360,11 @@ def render_test_details(report: dict[str, Any]) -> list[str]:
     return lines
 
 
-def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False) -> str:
+def render_assignment_detail(
+    assignment: dict[str, Any],
+    use_color: bool = False,
+    layout: dict[str, Any] | None = None,
+) -> str:
     """Render the detail page for one lab assignment."""
 
     workspace = assignment.get("workspace") if isinstance(assignment.get("workspace"), dict) else {}
@@ -346,9 +409,9 @@ def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False
         detail_line("Eventi:", help_summary.get("total")),
         detail_line("Consentite:", help_summary.get("allowed")),
         detail_line("Bloccate:", help_summary.get("denied")),
-        detail_line("AI budget:", ai_budget_label(help_summary.get("ai_budget"))),
+        detail_line("AI budget:", ai_budget_label(help_summary.get("ai_budget"), use_color), formatted=True),
         detail_line("Ultima:", compact_datetime(help_summary.get("last_requested_at"))),
-        detail_line("Esito ultima:", help_summary.get("last_decision")),
+        detail_line("Esito ultima:", help_decision_label(help_summary.get("last_decision"), use_color), formatted=True),
         section_separator(),
         "Report",
         detail_line("Path:", report.get("path")),
@@ -359,7 +422,7 @@ def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False
             [
                 section_separator(),
                 "Ultimo dettaglio test",
-                *render_test_details({"tests": report.get("tests")})[1:],
+                *render_test_details({"tests": report.get("tests")}, use_color=use_color)[1:],
             ]
             if report.get("exists")
             else []
@@ -367,17 +430,26 @@ def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False
         section_separator(),
         "Grading",
         detail_line("Stato:", grading_label(grading)),
-        detail_line("Voto:", grading.get("teacher_grade") if grading.get("teacher_grade") is not None else grading.get("score")),
+        detail_line(
+            "Voto:",
+            grade_label(
+                grading.get("teacher_grade")
+                if grading.get("teacher_grade") is not None
+                else grading.get("score"),
+                use_color,
+            ),
+            formatted=True,
+        ),
         section_separator(),
         "Runner",
-        detail_line("Stato:", runner.get("status")),
+        detail_line("Stato:", runner_status_label(runner.get("status"), use_color), formatted=True),
         detail_line("Backend:", runner.get("backend")),
         section_separator(),
         "Guida rapida",
-        f"  {guide_label('Consegna', use_color)} lavoro assegnato dal docente.",
-        f"  {guide_label('Workspace', use_color)} cartella locale dove modifichi i file.",
-        f"  {guide_label('Test', use_color)} controlli automatici sul tuo lavoro.",
-        f"  {guide_label('Report', use_color)} risultato salvato e letto da dashboard/registro.",
+        guide_definition("Consegna", "lavoro assegnato dal docente.", use_color),
+        guide_definition("Workspace", "cartella locale dove modifichi i file.", use_color),
+        guide_definition("Test", "controlli automatici sul tuo lavoro.", use_color),
+        guide_definition("Report", "risultato salvato e letto da dashboard/registro.", use_color),
         "",
         "Flusso consigliato",
         f"  1. Apri {guide_term('workspace', use_color)}",
@@ -389,6 +461,8 @@ def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False
         "  e  Esegui test e salva report",
         "  a  Chiedi aiuto",
         "  o  Apri workspace",
+        "  v  Apri editor",
+        "  l  Modifica layout pannelli",
         "",
         "Altri comandi",
         "  h  Storico aiuti",
@@ -396,10 +470,12 @@ def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False
         "  invio  Torna alla lista",
         "  q  Esci",
     ]
+    if layout is not None:
+        return student_lab_layout.render_layout(lines, layout, use_color=use_color)
     return "\n".join(lines)
 
 
-def runner_result_message(report: dict[str, Any], report_path: Path) -> str:
+def runner_result_message(report: dict[str, Any], report_path: Path, use_color: bool = False) -> str:
     """Return a clear message after a runner execution."""
 
     status = clean_text(report.get("status"))
@@ -413,12 +489,24 @@ def runner_result_message(report: dict[str, Any], report_path: Path) -> str:
     return "\n".join(
         [
             "Esecuzione completata",
-            detail_line("Stato runner:", status),
-            detail_line("Esito:", outcome),
+            detail_line("Stato runner:", runner_status_label(status, use_color), formatted=True),
+            detail_line(
+                "Esito:",
+                colorize(
+                    outcome,
+                    HELP_RESPONSE_COLOR
+                    if report.get("passed") is True
+                    else HELP_ERROR_COLOR
+                    if report.get("passed") is False
+                    else HELP_PROMPT_COLOR,
+                    use_color,
+                ),
+                formatted=True,
+            ),
             detail_line("Test:", tests),
             detail_line("Report salvato:", report_path),
             "",
-            *render_test_details(report),
+            *render_test_details(report, use_color=use_color),
             "",
             "Questo report è quello letto da dashboard e registro docente.",
         ]
@@ -786,6 +874,55 @@ def open_workspace(path_value: str, root: Path = PROJECT_ROOT) -> bool:
     return True
 
 
+EDITOR_CANDIDATES = ("micro", "nvim", "vim", "hx", "nano")
+WINDOWS_EDITOR_CANDIDATES = EDITOR_CANDIDATES + ("notepad",)
+
+
+def editor_command(editor: str | None = None) -> list[str] | None:
+    """Resolve the configured editor without adding a Python dependency."""
+
+    configured = str(editor or os.environ.get("THEBITLAB_EDITOR", "")).strip()
+    if configured:
+        try:
+            command = shlex.split(configured, posix=os.name != "nt")
+        except ValueError:
+            return None
+        if not command or shutil.which(command[0]) is None:
+            return None
+        return command
+    candidates = WINDOWS_EDITOR_CANDIDATES if os.name == "nt" else EDITOR_CANDIDATES
+    for candidate in candidates:
+        if shutil.which(candidate):
+            return [candidate]
+    return None
+
+
+def open_editor(
+    workspace_path: str,
+    source_name: str = "",
+    root: Path = PROJECT_ROOT,
+    editor: str | None = None,
+) -> tuple[bool, str]:
+    """Open the activity source with a user-selected terminal editor."""
+
+    raw_workspace = Path(workspace_path)
+    workspace = raw_workspace if raw_workspace.is_absolute() else (root / raw_workspace).resolve(strict=False)
+    if not workspace.is_dir():
+        return False, "Workspace non disponibile."
+    command = editor_command(editor)
+    if command is None:
+        return False, "Nessun editor disponibile. Imposta THEBITLAB_EDITOR o installa micro."
+    source = clean_text(source_name, "")
+    target = workspace / source if source else workspace
+    if target != workspace and not target.is_file():
+        target = workspace
+    try:
+        subprocess.run([*command, str(target)], cwd=str(workspace), check=False)
+    except OSError as error:
+        return False, f"Editor non avviabile: {error}"
+    return True, f"Editor chiuso: {command[0]}"
+
+
 def load_payload(root: Path, student_id: str, now: str | None = None) -> dict[str, Any]:
     """Load the current student lab payload."""
 
@@ -983,7 +1120,13 @@ def run_tui(
                 break
             if clear:
                 clear_screen()
-            print_fn(render_assignment_detail(assignment, use_color=use_color))
+            print_fn(
+                render_assignment_detail(
+                    assignment,
+                    use_color=use_color,
+                    layout=student_lab_layout.load_layout(root),
+                )
+            )
             action = input_fn("\nDettaglio: ").strip().lower()
             if action in {"", "b", "back", "indietro"}:
                 break
@@ -994,6 +1137,26 @@ def run_tui(
                 if not open_workspace(clean_text(workspace.get("path"), ""), root=root):
                     print_fn("Workspace non disponibile.")
                 input_fn("Premi invio per continuare...")
+                continue
+            if action == "v":
+                workspace = assignment.get("workspace") if isinstance(assignment.get("workspace"), dict) else {}
+                activity = assignment.get("activity") if isinstance(assignment.get("activity"), dict) else {}
+                _, message = open_editor(
+                    clean_text(workspace.get("path"), ""),
+                    clean_text(activity.get("source_name"), ""),
+                    root=root,
+                )
+                print_fn(message)
+                input_fn("Premi invio per continuare...")
+                continue
+            if action in {"l", "layout"}:
+                student_lab_layout.run_layout_editor(
+                    render_assignment_detail(assignment, use_color=use_color).splitlines(),
+                    root=root,
+                    use_color=use_color,
+                    clear=clear,
+                    print_fn=print_fn,
+                )
                 continue
             if action == "a":
                 print_fn(f"Tipo aiuto: {help_choice_label()} | invio/b annulla")
@@ -1067,7 +1230,7 @@ def run_tui(
                 except ValueError as error:
                     print_fn(f"Runner non disponibile:\n{error}")
                 else:
-                    print_fn(runner_result_message(report, report_path))
+                    print_fn(runner_result_message(report, report_path, use_color=use_color))
                     try:
                         payload = load_current_payload(
                             root=root,

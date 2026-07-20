@@ -154,8 +154,25 @@ Comandi disponibili nella TUI minima:
 
 Nel dettaglio della consegna i comandi sono divisi in:
 
-- azioni principali: `e` esegue il runner e salva il report, `a` registra una richiesta di aiuto, `o` apre la cartella workspace;
+- azioni principali: `e` esegue il runner e salva il report, `a` registra una richiesta di aiuto, `o` apre la cartella workspace, `v` apre l'editor;
 - altri comandi: `h` mostra lo storico aiuti, `b` o invio torna alla lista, `q` esce.
+
+Il comando `v` cerca un editor terminale nell'ordine `micro`, `nvim`, `vim`, `hx`, `nano` (e `notepad` su Windows).
+Per scegliere esplicitamente un editor, imposta `THEBITLAB_EDITOR`, per esempio `micro --clean` o `nvim`.
+L'editor viene eseguito nella cartella della consegna e apre il file sorgente indicato dall'activity.
+
+Il comando `l` apre il layout della vista consegna. Ogni sezione del dettaglio diventa un pannello separato;
+la disposizione iniziale li distribuisce in due colonne. Per ora il controllo principale e' il ridimensionamento:
+
+- freccia sinistra/destra restringe o allarga il pannello sinistro;
+- `[`/`]` sono il fallback piu' affidabile quando il terminale intercetta `Alt`;
+- `Tab` seleziona il pannello successivo; il pannello selezionato e' indicato da `>` e dalla riga `Pannello attivo`;
+- `h`/`l` spostano il pannello selezionato a sinistra/destra, `k`/`j` lo spostano su/giu';
+- `+`/`-` aprono o comprimono il pannello selezionato, `o` cambia orientamento e `x` lo sposta a destra;
+- `Enter` salva la disposizione, `Esc` annulla, `r` ripristina quella iniziale.
+
+La configurazione e' locale e non contiene dati didattici: viene salvata in `.student-lab-layout.json` nella root
+usata dalla TUI. Si puo' indicare un percorso diverso con `THEBITLAB_LAYOUT_PATH`.
 
 Il dettaglio mostra anche una guida rapida con i termini chiave:
 

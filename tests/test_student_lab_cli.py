@@ -203,10 +203,11 @@ def test_render_assignment_detail_can_color_status() -> None:
     rendered = student_lab_cli.render_assignment_detail(sample_assignment(status="missing"), use_color=True)
 
     assert "\033[31mMancante\033[0m" in rendered
-    assert "\033[35mConsegna \033[0m" in rendered
-    assert "\033[36mWorkspace\033[0m" in rendered
-    assert "\033[33mTest     \033[0m" in rendered
-    assert "\033[32mReport   \033[0m" in rendered
+    assert "\033[1;37mConsegna\033[0m" in rendered
+    assert "\033[1;37mWorkspace\033[0m" in rendered
+    assert "\033[1;37mTest\033[0m" in rendered
+    assert "\033[1;37mReport\033[0m" in rendered
+    assert "\033[3;90mcartella locale dove modifichi i file.\033[0m" in rendered
 
 
 def test_render_assignment_detail_summarizes_grading_tests() -> None:
@@ -237,6 +238,13 @@ def test_render_assignment_detail_summarizes_grading_tests() -> None:
     assert "Output atteso: 10; output ottenuto: 8" in rendered
 
 
+def test_grade_label_uses_requested_ranges() -> None:
+    assert student_lab_cli.grade_label(8, use_color=True) == "\033[32m8\033[0m"
+    assert student_lab_cli.grade_label(6, use_color=True) == "\033[33m6\033[0m"
+    assert student_lab_cli.grade_label(4, use_color=True) == "\033[31m4\033[0m"
+    assert student_lab_cli.grade_label(None, use_color=True) == "-"
+
+
 def test_runner_result_message_shows_status_tests_and_report_path(tmp_path) -> None:
     message = student_lab_cli.runner_result_message(
         {
@@ -261,6 +269,25 @@ def test_runner_result_message_shows_status_tests_and_report_path(tmp_path) -> N
     assert "[ok] input_base" in message
     assert "[ko] caso_zero" in message
     assert "Output atteso: 10, ottenuto: 8" in message
+    failed_message = student_lab_cli.runner_result_message(
+        {
+            "status": "failed",
+            "passed": False,
+            "summary": {"passed": 2, "total": 3},
+            "tests": [],
+        },
+        tmp_path / "reports" / "latest.json",
+        use_color=True,
+    )
+    assert "\033[31mfailed\033[0m" in failed_message
+    assert "\033[31mconsegna da ricontrollare\033[0m" in failed_message
+    passed_message = student_lab_cli.runner_result_message(
+        {"status": "passed", "passed": True, "summary": {"passed": 2, "total": 2}, "tests": []},
+        tmp_path / "reports" / "latest.json",
+        use_color=True,
+    )
+    assert "\033[32mpassed\033[0m" in passed_message
+    assert "\033[32mconsegna superata\033[0m" in passed_message
     assert "Questo report è quello letto da dashboard e registro docente." in message
     assert "Questo report e quello" not in message
 
@@ -623,6 +650,27 @@ def test_help_history_block_wraps_long_urls_without_horizontal_overflow() -> Non
 def test_ai_budget_label_handles_missing_and_exhausted_budget() -> None:
     assert student_lab_cli.ai_budget_label({}) == "non disponibile"
     assert student_lab_cli.ai_budget_label({"limit": 2, "used": 2, "remaining": 0, "exhausted": True}) == "2/2 usate, 0 rimanenti (esaurito)"
+
+
+def test_detail_statuses_use_actionable_colors() -> None:
+    assert "\033[33m3/5 usate, 2 rimanenti\033[0m" in student_lab_cli.ai_budget_label(
+        {"limit": 5, "used": 3, "remaining": 2}, use_color=True
+    )
+    assert "\033[31mbloccata\033[0m" == student_lab_cli.help_decision_label("bloccata", use_color=True)
+    assert "\033[32mconsentita\033[0m" == student_lab_cli.help_decision_label("consentita", use_color=True)
+    assert "\033[31mnot_run\033[0m" == student_lab_cli.runner_status_label("not_run", use_color=True)
+    assert "\033[32mpassed\033[0m" == student_lab_cli.runner_status_label("passed", use_color=True)
+
+
+def test_test_details_use_green_and_red_result_colors() -> None:
+    rendered = "\n".join(
+        student_lab_cli.render_test_details(
+            {"tests": [{"name": "ok", "passed": True}, {"name": "ko", "passed": False}]},
+            use_color=True,
+        )
+    )
+    assert "\033[32m[ok]\033[0m ok" in rendered
+    assert "\033[31m[ko]\033[0m ko" in rendered
 
 
 def test_report_detail_removes_terminal_control_sequences() -> None:
@@ -1374,6 +1422,43 @@ def test_open_workspace_resolves_relative_path_from_root(monkeypatch, tmp_path) 
 
     assert student_lab_cli.open_workspace("student/assignments/python-base-somma-001", root=tmp_path) is True
     assert opened == [workspace.resolve()]
+
+
+def test_editor_command_prefers_configured_editor(monkeypatch) -> None:
+    monkeypatch.setenv("THEBITLAB_EDITOR", "micro --clean")
+    monkeypatch.setattr(student_lab_cli.shutil, "which", lambda name: f"/bin/{name}")
+
+    assert student_lab_cli.editor_command() == ["micro", "--clean"]
+
+
+def test_open_editor_runs_source_in_workspace(monkeypatch, tmp_path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    source = workspace / "main.py"
+    source.write_text("print(1)\n", encoding="utf-8")
+    calls = []
+    monkeypatch.setenv("THEBITLAB_EDITOR", "micro")
+    monkeypatch.setattr(student_lab_cli.shutil, "which", lambda name: f"/bin/{name}")
+    monkeypatch.setattr(student_lab_cli.subprocess, "run", lambda *args, **kwargs: calls.append((args, kwargs)))
+
+    opened, message = student_lab_cli.open_editor(str(workspace), "main.py", root=tmp_path)
+
+    assert opened is True
+    assert message == "Editor chiuso: micro"
+    assert calls[0][0][0] == ["micro", str(source)]
+    assert calls[0][1]["cwd"] == str(workspace)
+
+
+def test_open_editor_reports_missing_editor(monkeypatch, tmp_path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    monkeypatch.delenv("THEBITLAB_EDITOR", raising=False)
+    monkeypatch.setattr(student_lab_cli.shutil, "which", lambda name: None)
+
+    opened, message = student_lab_cli.open_editor(str(workspace), root=tmp_path)
+
+    assert opened is False
+    assert "Nessun editor disponibile" in message
 
 
 def test_truncate_keeps_short_text_and_clips_long_text() -> None:
