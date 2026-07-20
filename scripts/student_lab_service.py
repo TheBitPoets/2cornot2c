@@ -256,6 +256,8 @@ def build_lab_assignment(
             )
     help_log.pop("path", None)
     grading = track_assignments.grading_summary(report)
+    runner_status = clean_text(report.get("status")) if report and clean_text(report.get("status")) else "not_run"
+    runner_backend = clean_text(report.get("backend")) if report and clean_text(report.get("backend")) else "student_lab_service"
     return {
         "assignment_id": normalized["id"],
         "activity_id": activity_id,
@@ -302,8 +304,8 @@ def build_lab_assignment(
         "grading": grading,
         "help": help_log,
         "runner": {
-            "status": "not_run",
-            "backend": "student_lab_service",
+            "status": runner_status,
+            "backend": runner_backend,
         },
     }
 

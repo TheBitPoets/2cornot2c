@@ -714,6 +714,7 @@ def test_student_lab_uses_existing_report_and_grading_summary(tmp_path) -> None:
     assert assignment["report"]["path"] == "examples/assignment_tracking/student_repos/rossi-mario/reports/python-base-somma-001/latest.json"
     assert assignment["report"]["submitted_at"] == "2026-10-18T18:00:00+02:00"
     assert assignment["report"]["commit"] == "abc1234"
+    assert assignment["runner"] == {"status": "passed", "backend": "student_lab_service"}
     assert assignment["grading"]["status"] == "graded_passed"
     assert assignment["grading"]["tests_passed"] == 2
     assert assignment["grading"]["tests_total"] == 2
@@ -768,6 +769,7 @@ def test_student_lab_exposes_saved_failed_test_messages(tmp_path) -> None:
             "message": "Output atteso: 5; output ottenuto: 4",
         }
     ]
+    assert assignments[0]["runner"] == {"status": "failed", "backend": "student_lab_service"}
 
 
 def test_student_lab_exposes_help_summary(tmp_path) -> None:

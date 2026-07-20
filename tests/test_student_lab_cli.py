@@ -625,6 +625,27 @@ def test_ai_budget_label_handles_missing_and_exhausted_budget() -> None:
     assert student_lab_cli.ai_budget_label({"limit": 2, "used": 2, "remaining": 0, "exhausted": True}) == "2/2 usate, 0 rimanenti (esaurito)"
 
 
+def test_detail_statuses_use_actionable_colors() -> None:
+    assert "\033[33m3/5 usate, 2 rimanenti\033[0m" in student_lab_cli.ai_budget_label(
+        {"limit": 5, "used": 3, "remaining": 2}, use_color=True
+    )
+    assert "\033[31mbloccata\033[0m" == student_lab_cli.help_decision_label("bloccata", use_color=True)
+    assert "\033[32mconsentita\033[0m" == student_lab_cli.help_decision_label("consentita", use_color=True)
+    assert "\033[31mnot_run\033[0m" == student_lab_cli.runner_status_label("not_run", use_color=True)
+    assert "\033[32mpassed\033[0m" == student_lab_cli.runner_status_label("passed", use_color=True)
+
+
+def test_test_details_use_green_and_red_result_colors() -> None:
+    rendered = "\n".join(
+        student_lab_cli.render_test_details(
+            {"tests": [{"name": "ok", "passed": True}, {"name": "ko", "passed": False}]},
+            use_color=True,
+        )
+    )
+    assert "\033[32m[ok]\033[0m ok" in rendered
+    assert "\033[31m[ko]\033[0m ko" in rendered
+
+
 def test_report_detail_removes_terminal_control_sequences() -> None:
     detail = student_lab_cli.test_result_detail(
         {"stderr": "errore\u001b]52;c;dGVzdA==\u0007\nseconda riga"}
