@@ -2096,6 +2096,7 @@ async function saveActivityDraft() {
         path_id: els.activityAuthorPath?.value || "",
         uda_id: els.activityAuthorUda?.value || "",
         overwrite: Boolean(els.activityAuthorOverwrite?.checked),
+        files: assignmentAiDraftFiles(),
       }),
     });
     state.activities = payload.activities || [];
@@ -3090,9 +3091,26 @@ function renderAssignmentAiFilesReview() {
         </div>
         <span>${escapeHtml(languageFromPath(selectedPath))}</span>
       </div>
-      <pre><code>${highlightCode(selectedContent, selectedPath)}</code></pre>
+      <textarea data-ai-draft-file-content aria-label="Contenuto del file AI ${escapeHtml(selectedPath)}">${escapeHtml(selectedContent)}</textarea>
     </section>
   `;
+}
+
+function updateAssignmentAiDraftFileContent(textarea) {
+  const path = state.assignmentAiDraftFilePath;
+  if (!path || !textarea) return;
+  try {
+    const draft = parseAssignmentAiDraftText();
+    const file = Array.isArray(draft.files)
+      ? draft.files.find((candidate) => String(candidate?.path || "") === path)
+      : null;
+    if (!file) return;
+    file.content = textarea.value;
+    els.assignmentAiDraftText.value = JSON.stringify(draft, null, 2);
+    updateAssignmentAiApplyState();
+  } catch (error) {
+    setStatus(`File AI non aggiornato: ${error.message}`);
+  }
 }
 
 function openAssignmentAiFilesDialog(index = 0) {
@@ -3270,7 +3288,7 @@ function applyAssignmentAiDraftToActivityForm() {
     const fileCount = files.length;
     const assetCount = Array.isArray(patch.assets) ? patch.assets.length : 0;
     const suffix = fileCount || assetCount
-      ? ` File proposti: ${fileCount}; asset dichiarati: ${assetCount}. Gli asset non vengono ancora salvati automaticamente.`
+      ? ` File proposti: ${fileCount}; asset dichiarati: ${assetCount}. I file saranno salvati nell'activity dopo la revisione.`
       : "";
     setStatus("Bozza AI pronta nello step Revisione activity: il docente puo ancora modificare tutto.");
     markActivityReviewDirty();
@@ -4940,6 +4958,10 @@ els.assignmentAiFilesReview?.addEventListener("click", (event) => {
   if (!button) return;
   state.assignmentAiDraftFilePath = button.dataset.aiDraftPreviewFile || "";
   renderAssignmentAiFilesReview();
+});
+els.assignmentAiFilesReview?.addEventListener("input", (event) => {
+  const textarea = event.target.closest("[data-ai-draft-file-content]");
+  if (textarea) updateAssignmentAiDraftFileContent(textarea);
 });
 els.assignmentAiFilesCloseBtn?.addEventListener("click", closeAssignmentAiFilesDialog);
 els.openActivityEditorBtn?.addEventListener("click", () => openActivityEditor("panel"));

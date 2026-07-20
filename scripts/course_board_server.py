@@ -61,6 +61,7 @@ from scripts import (
     thebitlab_services,
     thebitlab_storage,
     track_assignments,
+    validate_activity,
 )
 from scripts.thebitlab_contracts import normalize_activity
 from scripts.student_help_provider import DeterministicStudentHelpProvider, StudentHelpProvider
@@ -1274,6 +1275,69 @@ def list_activities() -> list[dict]:
     return assignment_service().list_activities()
 
 
+def persist_activity_draft_files(
+    *,
+    activity_id: str,
+    files: Any,
+    drafts_dir: Path,
+) -> list[dict[str, str]]:
+    """Validate and persist AI-proposed files below one activity draft root."""
+
+    if files is None:
+        return []
+    if not isinstance(files, list):
+        raise ValueError("files deve essere una lista.")
+    role_types = {
+        "starter": "starter",
+        "example": "example",
+        "fixture": "fixture",
+        "test": "visible_test",
+        "visible_test": "visible_test",
+        "solution": "teacher_only",
+        "teacher": "teacher_only",
+    }
+    allowed_types = set(validate_activity.ALLOWED_ASSET_TYPES)
+    allowed_visibility = set(validate_activity.ALLOWED_ASSET_VISIBILITIES)
+    normalized: list[tuple[Path, Path, dict[str, str]]] = []
+    seen: set[str] = set()
+    for index, file in enumerate(files):
+        if not isinstance(file, dict):
+            raise ValueError(f"files[{index}] deve essere un oggetto.")
+        source_rel = create_submission_scaffold.validate_relative_path(file.get("path"), f"files[{index}].path")
+        source_key = source_rel.as_posix()
+        if source_key in seen:
+            raise ValueError(f"File AI duplicato: {source_key}.")
+        seen.add(source_key)
+        content = file.get("content", "")
+        if not isinstance(content, str):
+            raise ValueError(f"files[{index}].content deve essere una stringa.")
+        asset_type = str(file.get("type") or role_types.get(str(file.get("role", "")).strip().lower(), "teacher_only"))
+        if asset_type not in allowed_types:
+            raise ValueError(f"Tipo asset AI non supportato: {asset_type}.")
+        visibility = str(file.get("visibility") or ("student" if asset_type in create_submission_scaffold.STUDENT_ASSET_TYPES else "teacher"))
+        if visibility not in allowed_visibility:
+            raise ValueError(f"Visibilita asset AI non supportata: {visibility}.")
+        target_path = create_submission_scaffold.validate_relative_path(
+            file.get("target_path") or source_key,
+            f"files[{index}].target_path",
+        )
+        asset_rel = Path("assets") / create_activity.slugify(activity_id) / source_rel
+        metadata = {
+            "type": asset_type,
+            "path": asset_rel.as_posix(),
+            "target_path": target_path.as_posix(),
+            "visibility": visibility,
+            "description": str(file.get("description") or "File proposto dal docente o dall'assistente AI."),
+        }
+        normalized.append((source_rel, drafts_dir / asset_rel, metadata))
+
+    for _, destination, _ in normalized:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+    for file, (_, destination, _) in zip(files, normalized):
+        destination.write_text(str(file.get("content", "")), encoding="utf-8", newline="\n")
+    return [metadata for _, _, metadata in normalized]
+
+
 def save_activity(payload: dict) -> dict:
     """Create and persist a teacher-authored activity draft."""
 
@@ -1297,7 +1361,23 @@ def save_activity(payload: dict) -> dict:
             "uda": str(payload.get("uda_id", "")).strip(),
         },
     )
-    saved = assignment_service().save_activity(activity, bool(payload.get("overwrite", False)))
+    storage = assignment_service().storage
+    overwrite = bool(payload.get("overwrite", False))
+    proposed_files = payload.get("files")
+    if proposed_files:
+        activity["assets"] = persist_activity_draft_files(
+            activity_id=activity_id,
+            files=proposed_files,
+            drafts_dir=storage.activity_drafts_dir(),
+        )
+    elif overwrite:
+        try:
+            previous = storage.read_json(storage.safe_activity_draft_path(activity_id))
+        except FileNotFoundError:
+            previous = {}
+        if isinstance(previous.get("assets"), list):
+            activity["assets"] = previous["assets"]
+    saved = assignment_service().save_activity(activity, overwrite)
     return {"ok": True, "activity": saved, "activities": list_activities()}
 
 

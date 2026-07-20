@@ -3916,6 +3916,36 @@ def test_save_activity_builds_valid_draft_from_gui_payload(tmp_path, monkeypatch
     }
 
 
+def test_save_activity_persists_ai_proposed_assets(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "ACTIVITY_DIRS", [tmp_path / "activities"])
+    result = course_board_server.save_activity({
+        "title": "Asset AI",
+        "kind": "laboratorio",
+        "difficulty": "B",
+        "topics": "file",
+        "prompt": "Completa il file starter.",
+        "estimated_minutes": "20",
+        "language": "python",
+        "source_name": "main.py",
+        "files": [{
+            "path": "starter/main.py",
+            "role": "starter",
+            "content": "print('ok')\n",
+            "visibility": "student",
+            "description": "Starter per lo studente",
+        }],
+    })
+
+    activity_path = tmp_path / "activities" / "drafts" / "asset-ai.json"
+    saved = json.loads(activity_path.read_text(encoding="utf-8"))
+    asset = saved["assets"][0]
+    assert result["ok"] is True
+    assert asset["path"] == "assets/asset-ai/starter/main.py"
+    assert asset["target_path"] == "starter/main.py"
+    assert (tmp_path / "activities" / "drafts" / asset["path"]).read_text(encoding="utf-8") == "print('ok')\n"
+
+
 def test_ai_secret_status_reports_paths_and_configured_keys_without_values(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
     monkeypatch.setattr(course_board_server, "AI_SECRET_PATH", tmp_path / ".secrets" / "ai.secret")

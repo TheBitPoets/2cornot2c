@@ -458,6 +458,7 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         selectAssignmentAiPreviewView,
         assignmentAiDraftFiles,
         renderAssignmentAiFilesReview,
+        updateAssignmentAiDraftFileContent,
         openAssignmentAiFilesDialog,
         closeAssignmentAiFilesDialog,
         applyAssignmentAiDraftToActivityForm,
@@ -1926,13 +1927,29 @@ def test_apply_assignment_ai_draft_to_activity_form_keeps_teacher_in_control() -
         assert.equal(tested.els.activityAuthorLanguage.value, "python");
         assert.equal(tested.els.activityAuthorSourceName.value, "main.py");
         assert.match(tested.els.activityAuthorStatus.innerHTML, /Bozza AI applicata/);
-        assert.match(tested.els.activityAuthorStatus.innerHTML, /Gli asset non vengono ancora salvati automaticamente/);
+        assert.doesNotMatch(tested.els.activityAuthorStatus.innerHTML, /non vengono ancora salvati automaticamente/);
         assert.match(tested.els.status.textContent, /Revisione activity/);
         assert.equal(tested.els.activityEditorDialog.open, false);
         assert.equal(tested.els.activityEditorBody.parentElement, tested.els.activityWizardEditorMount);
         const reviewStep = tested.els.assignmentSteps.find((section) => section.dataset.assignmentStep === "review");
         assert.equal(reviewStep.hidden, false);
       """
+    )
+
+
+def test_assignment_ai_file_content_edit_updates_saved_draft() -> None:
+    run_dashboard_js(
+        """
+        tested.els.assignmentAiDraftText.value = JSON.stringify({
+          files: [{ path: "starter/main.py", role: "starter", content: "print(0)\\n" }],
+        });
+        tested.state.assignmentAiDraftFilePath = "starter/main.py";
+
+        tested.updateAssignmentAiDraftFileContent({ value: "print(1)\\n" });
+
+        const draft = JSON.parse(tested.els.assignmentAiDraftText.value);
+        assert.equal(draft.files[0].content, "print(1)\\n");
+        """
     )
 
 
