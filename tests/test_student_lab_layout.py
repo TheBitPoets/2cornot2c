@@ -88,6 +88,7 @@ def test_selected_panel_uses_a_subtle_background_when_colors_are_enabled() -> No
         use_color=True,
     )
     assert student_lab_layout.SELECTED_PANEL_BACKGROUND not in detail
+    assert student_lab_layout.PANEL_TITLE_STYLE in detail
 
 
 def test_layout_has_modifier_free_keyboard_fallbacks() -> None:

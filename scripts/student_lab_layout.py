@@ -237,7 +237,7 @@ def render_layout(
         if use_color and highlight_focus and panel == normalized["focus"]:
             foreground = PANEL_TITLE_STYLE if is_title else "\033[30m"
             return f"{SELECTED_PANEL_BACKGROUND}{foreground}{fitted}\033[0m"
-        if use_color and highlight_focus and is_title:
+        if use_color and is_title:
             return f"{PANEL_TITLE_STYLE}{fitted}\033[0m"
         return fitted
 
