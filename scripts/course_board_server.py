@@ -105,6 +105,7 @@ AI_COURSE_PLAN_TIMEOUT_SECONDS = 240
 COMPACT_TEXT_CHARS = 1200
 MAX_SUBMISSION_FILE_BYTES = 512 * 1024
 MAX_STUDENT_HELP_REQUEST_BYTES = 16 * 1024
+MAX_TEACHER_REQUEST_BYTES = 32 * 1024 * 1024
 MIN_TEACHER_TOKEN_CHARS = 32
 MAX_HELP_LOG_ROLLBACK_BYTES = 256 * 1024 * 1024
 HELP_DELETION_SCHEMA_VERSION = "student_help_deletion.v2"
@@ -3194,6 +3195,30 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             self.write_error_json(401, str(error))
             return None
 
+    def read_teacher_json(self) -> dict[str, Any] | None:
+        """Read one bounded JSON object from an authenticated teacher request."""
+
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except (TypeError, ValueError):
+            self.write_error_json(400, "Content-Length non valido.")
+            return None
+        if length < 1:
+            self.write_error_json(400, "Body JSON obbligatorio.")
+            return None
+        if length > MAX_TEACHER_REQUEST_BYTES:
+            self.write_error_json(413, "Richiesta docente troppo grande.")
+            return None
+        try:
+            payload = json.loads(self.rfile.read(length).decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            self.write_error_json(400, f"JSON non valido: {error}")
+            return None
+        if not isinstance(payload, dict):
+            self.write_error_json(400, "Il payload JSON deve essere un oggetto.")
+            return None
+        return payload
+
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
         if self.reject_unauthenticated_teacher_api("GET", parsed.path):
@@ -3304,8 +3329,9 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             except Exception:  # noqa: BLE001
                 self.write_error_json(500, STUDENT_HELP_SERVER_ERROR)
             return
-        length = int(self.headers.get("Content-Length", "0"))
-        payload = json.loads(self.rfile.read(length).decode("utf-8"))
+        payload = self.read_teacher_json()
+        if payload is None:
+            return
         if parsed.path == "/api/course-design":
             write_design(payload)
             self.write_json({"ok": True, "path": str(DESIGN_PATH.relative_to(ROOT))})
