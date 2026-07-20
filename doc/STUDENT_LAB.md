@@ -170,7 +170,9 @@ la disposizione iniziale li distribuisce in due colonne. In questa modalità:
 - `Ctrl+freccia su/giu` sposta il pannello selezionato tra le righe;
 - `+` apre il pannello selezionato e `-` lo comprime lasciando visibile il titolo;
 - frecce su/giu alternano disposizione affiancata e verticale;
-- se il terminale non trasmette i modificatori: frecce per resize/orientamento e `x` per scambiare i pannelli;
+- fallback senza modificatori: `[`/`]` ridimensionano, `h`/`l` spostano a sinistra/destra,
+  `k`/`j` spostano su/giu, `o` cambia orientamento;
+- `x` resta disponibile per spostare il pannello selezionato verso destra;
 - `Enter` salva la disposizione, `Esc` annulla, `r` ripristina quella iniziale.
 
 La configurazione e' locale e non contiene dati didattici: viene salvata in `.student-lab-layout.json` nella root

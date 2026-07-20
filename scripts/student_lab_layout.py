@@ -72,19 +72,20 @@ def apply_layout_key(layout: dict, key: str) -> tuple[dict, str]:
     """Apply one symbolic layout key and return the new state and feedback."""
 
     updated = normalize_layout(layout)
-    clean_key = str(key or "").strip().lower()
+    raw_key = str(key or "").lower()
+    clean_key = raw_key if raw_key == "\t" else raw_key.strip()
     focus_index = updated["order"].index(updated["focus"])
-    if clean_key == "alt+left":
+    if clean_key in {"alt+left", "["}:
         updated["left_width"] -= 4
         return normalize_layout(updated), "Pannello sinistro ristretto."
-    if clean_key in {"alt+right", "right"}:
+    if clean_key in {"alt+right", "]"}:
         updated["left_width"] += 4
         return normalize_layout(updated), "Pannello sinistro allargato."
     if clean_key == "left":
         updated["left_width"] -= 4
         return normalize_layout(updated), "Pannello sinistro ristretto."
-    if clean_key in {"ctrl+left", "ctrl+right", "x", "swap"}:
-        offset = -1 if clean_key == "ctrl+left" else 1
+    if clean_key in {"ctrl+left", "ctrl+right", "h", "l", "x", "swap"}:
+        offset = -1 if clean_key in {"ctrl+left", "h"} else 1
         if clean_key in {"x", "swap"}:
             offset = 1
         target_index = max(0, min(len(updated["order"]) - 1, focus_index + offset))
@@ -93,18 +94,21 @@ def apply_layout_key(layout: dict, key: str) -> tuple[dict, str]:
             updated["order"][focus_index],
         )
         return updated, "Pannello spostato."
-    if clean_key in {"ctrl+up", "ctrl+down", "up", "down"}:
+    if clean_key in {"ctrl+up", "ctrl+down", "j", "k", "up", "down", "o"}:
+        if clean_key == "o":
+            updated["orientation"] = "vertical" if updated["orientation"] == "horizontal" else "horizontal"
+            return updated, "Orientamento dei pannelli cambiato."
         if clean_key in {"up", "down"}:
             updated["orientation"] = "vertical" if updated["orientation"] == "horizontal" else "horizontal"
             return updated, "Orientamento dei pannelli cambiato."
-        offset = -2 if clean_key == "ctrl+up" else 2
+        offset = -2 if clean_key in {"ctrl+up", "k"} else 2
         target_index = max(0, min(len(updated["order"]) - 1, focus_index + offset))
         updated["order"][focus_index], updated["order"][target_index] = (
             updated["order"][target_index],
             updated["order"][focus_index],
         )
         return updated, "Pannello spostato."
-    if clean_key == "tab":
+    if clean_key in {"tab", "\t"}:
         updated["focus"] = updated["order"][(focus_index + 1) % len(updated["order"])]
         return updated, f"Pannello selezionato: {PANEL_TITLES[updated['focus']]}"
     if clean_key in {"+", "="}:
@@ -332,6 +336,8 @@ def read_terminal_key() -> str:
         return "escape" if sequence == "\x1b" else ""
     if character in {"\r", "\n"}:
         return "enter"
+    if character == "\t":
+        return "tab"
     if character == "q":
         return "q"
     return character
