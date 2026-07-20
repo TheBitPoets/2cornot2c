@@ -166,6 +166,9 @@ la disposizione iniziale li distribuisce in due colonne. Per ora il controllo pr
 
 - freccia sinistra/destra restringe o allarga il pannello sinistro;
 - `[`/`]` sono il fallback piu' affidabile quando il terminale intercetta `Alt`;
+- `Tab` seleziona il pannello successivo; il pannello selezionato e' indicato da `>` e dalla riga `Pannello attivo`;
+- `h`/`l` spostano il pannello selezionato a sinistra/destra, `k`/`j` lo spostano su/giu';
+- `+`/`-` aprono o comprimono il pannello selezionato, `o` cambia orientamento e `x` lo sposta a destra;
 - `Enter` salva la disposizione, `Esc` annulla, `r` ripristina quella iniziale.
 
 La configurazione e' locale e non contiene dati didattici: viene salvata in `.student-lab-layout.json` nella root

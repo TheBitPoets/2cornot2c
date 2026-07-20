@@ -364,7 +364,9 @@ def run_layout_editor(
                 print_fn("\x1b[2J\x1b[H")
             print_fn(render_layout(lines, layout, terminal_width))
             print_fn(f"Pannello attivo: {PANEL_TITLES[layout['focus']]} (indicato da >)")
-            print_fn("\nLayout: frecce sinistra/destra o [ ] ridimensionano il pannello sinistro")
+            print_fn("\nResize: frecce sinistra/destra o [ ] ridimensionano il pannello sinistro")
+            print_fn("Tab seleziona | h/l sposta orizzontalmente | k/j sposta verticalmente")
+            print_fn("+/- apre o comprime | o cambia orientamento | x sposta a destra")
             print_fn("Enter salva | Esc annulla | r ripristina")
             key = reader()
             if key == "enter":
