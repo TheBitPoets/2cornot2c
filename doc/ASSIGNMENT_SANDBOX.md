@@ -45,7 +45,7 @@ python scripts/grade_activity.py \
   --report reports/c_sum_report.json
 ```
 
-Il flag `--docker` chiede di eseguire lo stesso grading dentro il container. Sono supportati i runner C e Python con test basati su stdin/stdout.
+Il flag `--docker` chiede di eseguire lo stesso grading dentro il container. Sono supportati i runner C, Python e JavaScript con test stdin/stdout, oltre a SQL su SQLite temporaneo.
 
 ## Cosa isola
 

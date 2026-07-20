@@ -198,11 +198,11 @@ def test_run_local_assignment_reports_missing_source(tmp_path) -> None:
 
 
 def test_run_local_assignment_reports_unsupported_language(tmp_path) -> None:
-    activity_path = write_activity(tmp_path, language="sql", source_name="query.sql")
+    activity_path = write_activity(tmp_path, language="html", source_name="index.html")
     write_assignment(tmp_path, activity_path)
     workspace = tmp_path / "examples" / "assignment_tracking" / "student_repos" / "rossi-mario" / "assignments" / "python-base-somma-001"
     workspace.mkdir(parents=True)
-    (workspace / "query.sql").write_text("select 1;", encoding="utf-8")
+    (workspace / "index.html").write_text("<p>demo</p>", encoding="utf-8")
 
     report = student_lab_runner.run_student_assignment(
         root=tmp_path,
@@ -211,7 +211,7 @@ def test_run_local_assignment_reports_unsupported_language(tmp_path) -> None:
     )
 
     assert report["status"] == "unsupported-language"
-    assert report["language"] == "sql"
+    assert report["language"] == "html"
 
 
 def test_run_local_assignment_rejects_source_name_outside_workspace(tmp_path) -> None:

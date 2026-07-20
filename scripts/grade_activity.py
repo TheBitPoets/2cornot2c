@@ -17,11 +17,11 @@ DEFAULT_DOCKER_IMAGE = "thebitlab-assignment-runner"
 SUPPORTED_LANGUAGES = {
     "c": "implemented",
     "python": "implemented",
-    "javascript": "planned",
-    "nodejs": "planned",
+    "javascript": "implemented",
+    "nodejs": "implemented",
     "html": "planned",
     "java": "planned",
-    "sql": "planned",
+    "sql": "implemented",
     "golang": "planned",
     "assembly": "planned",
     "cpp": "planned",
@@ -123,13 +123,12 @@ def run_test_case(binary: Path, test_case: dict[str, Any], *, timeout_seconds: i
     }
 
 
-def run_python_test_case(source: Path, test_case: dict[str, Any], *, timeout_seconds: int) -> dict[str, Any]:
-    """Run one Python source file against a deterministic stdin/stdout case."""
+def run_command_test_case(command: list[str], test_case: dict[str, Any], *, timeout_seconds: int) -> dict[str, Any]:
+    """Run one command against a deterministic stdin/stdout case."""
 
     stdin = str(test_case.get("stdin", ""))
     expected_stdout = str(test_case.get("expected_stdout", ""))
     name = str(test_case.get("name", "test"))
-    command = [sys.executable, str(source)]
     try:
         result = subprocess.run(
             command,
@@ -173,6 +172,25 @@ def run_python_test_case(source: Path, test_case: dict[str, Any], *, timeout_sec
         "stderr": result.stderr,
         "expected_stdout": expected_stdout,
     }
+
+
+def run_python_test_case(source: Path, test_case: dict[str, Any], *, timeout_seconds: int) -> dict[str, Any]:
+    """Run one Python source file against a deterministic stdin/stdout case."""
+
+    return run_command_test_case([sys.executable, str(source)], test_case, timeout_seconds=timeout_seconds)
+
+
+def run_node_test_case(source: Path, test_case: dict[str, Any], *, timeout_seconds: int) -> dict[str, Any]:
+    """Run one JavaScript source file through Node.js."""
+
+    return run_command_test_case(["node", str(source)], test_case, timeout_seconds=timeout_seconds)
+
+
+def run_sql_test_case(source: Path, test_case: dict[str, Any], *, timeout_seconds: int) -> dict[str, Any]:
+    """Run one SQL script against an isolated in-memory SQLite database."""
+
+    sql = source.read_text(encoding="utf-8") + "\n" + str(test_case.get("stdin", ""))
+    return run_command_test_case(["sqlite3", ":memory:"], {**test_case, "stdin": sql}, timeout_seconds=timeout_seconds)
 
 
 def validate_test_cases(test_cases: Any) -> list[str]:
@@ -247,6 +265,12 @@ def grade_activity(
     if selected_language == "python":
         return grade_python_activity(activity, source, timeout_seconds=timeout_seconds)
 
+    if selected_language in {"javascript", "nodejs"}:
+        return grade_node_activity(activity, source, timeout_seconds=timeout_seconds)
+
+    if selected_language == "sql":
+        return grade_sql_activity(activity, source, timeout_seconds=timeout_seconds)
+
     return unsupported_language_report(activity, source, selected_language)
 
 
@@ -308,15 +332,22 @@ def grade_c_activity(activity: dict[str, Any], source: Path, *, timeout_seconds:
         }
 
 
-def grade_python_activity(activity: dict[str, Any], source: Path, *, timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS) -> dict[str, Any]:
-    """Execute and grade a Python source file using activity test cases."""
+def grade_script_activity(
+    activity: dict[str, Any],
+    source: Path,
+    *,
+    language: str,
+    test_runner: Any,
+    timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
+) -> dict[str, Any]:
+    """Execute and grade a script source file using activity test cases."""
 
     if not source.exists():
         return {
             "passed": False,
             "status": "source-not-found",
             "activity_id": activity.get("id"),
-            "language": "python",
+            "language": language,
             "source": str(source),
             "tests": [],
             "error": f"Sorgente non trovato: {source}",
@@ -329,19 +360,19 @@ def grade_python_activity(activity: dict[str, Any], source: Path, *, timeout_sec
             "passed": False,
             "status": "invalid-activity",
             "activity_id": activity.get("id"),
-            "language": "python",
+            "language": language,
             "source": str(source),
             "tests": [],
             "errors": test_case_errors,
         }
 
-    tests = [run_python_test_case(source, test_case, timeout_seconds=timeout_seconds) for test_case in test_cases]
+    tests = [test_runner(source, test_case, timeout_seconds=timeout_seconds) for test_case in test_cases]
     passed = all(test["passed"] for test in tests)
     return {
         "passed": passed,
         "status": "passed" if passed else "failed",
         "activity_id": activity.get("id"),
-        "language": "python",
+        "language": language,
         "source": str(source),
         "tests": tests,
         "summary": {
@@ -349,6 +380,42 @@ def grade_python_activity(activity: dict[str, Any], source: Path, *, timeout_sec
             "total": len(tests),
         },
     }
+
+
+def grade_python_activity(activity: dict[str, Any], source: Path, *, timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS) -> dict[str, Any]:
+    """Execute and grade a Python source file using activity test cases."""
+
+    return grade_script_activity(
+        activity,
+        source,
+        language="python",
+        test_runner=run_python_test_case,
+        timeout_seconds=timeout_seconds,
+    )
+
+
+def grade_node_activity(activity: dict[str, Any], source: Path, *, timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS) -> dict[str, Any]:
+    """Execute and grade a Node.js source file using activity test cases."""
+
+    return grade_script_activity(
+        activity,
+        source,
+        language="javascript",
+        test_runner=run_node_test_case,
+        timeout_seconds=timeout_seconds,
+    )
+
+
+def grade_sql_activity(activity: dict[str, Any], source: Path, *, timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS) -> dict[str, Any]:
+    """Execute and grade a SQL script in an isolated SQLite database."""
+
+    return grade_script_activity(
+        activity,
+        source,
+        language="sql",
+        test_runner=run_sql_test_case,
+        timeout_seconds=timeout_seconds,
+    )
 
 
 def write_report(report: dict[str, Any], path: Path) -> None:

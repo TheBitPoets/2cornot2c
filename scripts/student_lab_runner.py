@@ -418,12 +418,12 @@ def run_local_assignment(
         )
     if language == "python":
         return run_python_pytest(assignment, workspace=workspace_path, source=source, timeout_seconds=timeout_seconds)
-    if language == "c":
+    if language in {"c", "javascript", "nodejs", "sql"}:
         return wrap_runner_report(
             assignment,
             source,
-            grade_activity.grade_activity(activity, source, timeout_seconds=timeout_seconds, language="c"),
-            "c",
+            grade_activity.grade_activity(activity, source, timeout_seconds=timeout_seconds, language=language),
+            language,
         )
     return error_report(
         assignment,
@@ -472,7 +472,7 @@ def run_docker_assignment(
             error=f"Workspace non trovato: {workspace_path_value}",
             backend="docker",
         )
-    if language in {"c", "python"}:
+    if language in {"c", "python", "javascript", "nodejs", "sql"}:
         return run_docker_runner(
             assignment,
             activity_path=activity_path,

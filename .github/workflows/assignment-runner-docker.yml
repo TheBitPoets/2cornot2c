@@ -112,6 +112,40 @@ jobs:
           assert report["language"] == "python"
           PY
 
+      - name: Smoke test Node.js and SQLite runner image
+        run: |
+          cat > "$RUNNER_TEMP/activity-node.json" <<'JSON'
+          {"id":"docker-smoke-node","linguaggio":"javascript","test_cases":[{"name":"incremento","stdin":"4\n","expected_stdout":"5\n"}]}
+          JSON
+          cat > "$RUNNER_TEMP/main.js" <<'JS'
+          let value = "";
+          process.stdin.on("data", chunk => value += chunk).on("end", () => console.log(Number(value) + 1));
+          JS
+          python scripts/grade_activity.py --activity "$RUNNER_TEMP/activity-node.json" --source "$RUNNER_TEMP/main.js" --language javascript --docker --report "$RUNNER_TEMP/report-node.json"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          report = json.loads((Path(os.environ["RUNNER_TEMP"]) / "report-node.json").read_text(encoding="utf-8"))
+          assert report["passed"] is True
+          assert report["language"] == "javascript"
+          PY
+          cat > "$RUNNER_TEMP/activity-sql.json" <<'JSON'
+          {"id":"docker-smoke-sql","linguaggio":"sql","test_cases":[{"name":"somma","expected_stdout":"5\n"}]}
+          JSON
+          printf 'SELECT 2 + 3;\n' > "$RUNNER_TEMP/main.sql"
+          python scripts/grade_activity.py --activity "$RUNNER_TEMP/activity-sql.json" --source "$RUNNER_TEMP/main.sql" --language sql --docker --report "$RUNNER_TEMP/report-sql.json"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          report = json.loads((Path(os.environ["RUNNER_TEMP"]) / "report-sql.json").read_text(encoding="utf-8"))
+          assert report["passed"] is True
+          assert report["language"] == "sql"
+          PY
+
       - name: Smoke test student lab Docker backend
         run: |
           mkdir -p "$RUNNER_TEMP/student-root"

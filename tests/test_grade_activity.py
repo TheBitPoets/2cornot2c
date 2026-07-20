@@ -148,6 +148,34 @@ def test_grade_activity_reports_python_wrong_output(tmp_path) -> None:
     assert report["summary"] == {"passed": 0, "total": 1}
 
 
+@pytest.mark.skipif(shutil.which("node") is None, reason="node non disponibile nell'ambiente di test")
+def test_grade_activity_passes_valid_javascript_program(tmp_path) -> None:
+    source = tmp_path / "main.js"
+    source.write_text("let value = ''; process.stdin.on('data', chunk => value += chunk).on('end', () => console.log(Number(value) + 1));\n", encoding="utf-8")
+
+    report = grade_activity.grade_activity(
+        {"id": "js-001", "linguaggio": "javascript", "test_cases": [{"stdin": "4\n", "expected_stdout": "5\n"}]},
+        source,
+    )
+
+    assert report["passed"] is True
+    assert report["language"] == "javascript"
+
+
+@pytest.mark.skipif(shutil.which("sqlite3") is None, reason="sqlite3 non disponibile nell'ambiente di test")
+def test_grade_activity_passes_valid_sql_script(tmp_path) -> None:
+    source = tmp_path / "main.sql"
+    source.write_text("SELECT 2 + 3;\n", encoding="utf-8")
+
+    report = grade_activity.grade_activity(
+        {"id": "sql-001", "linguaggio": "sql", "test_cases": [{"expected_stdout": "5\n"}]},
+        source,
+    )
+
+    assert report["passed"] is True
+    assert report["language"] == "sql"
+
+
 def test_grade_activity_reports_unknown_language(tmp_path) -> None:
     source = tmp_path / "main.xyz"
     source.write_text("contenuto\n", encoding="utf-8")
