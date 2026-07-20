@@ -78,6 +78,7 @@ def test_selected_panel_uses_a_subtle_background_when_colors_are_enabled() -> No
     )
 
     assert student_lab_layout.SELECTED_PANEL_BACKGROUND in rendered
+    assert student_lab_layout.PANEL_TITLE_STYLE in rendered
     assert "Titolo: esempio" in rendered
 
     plain = student_lab_layout.render_layout(
