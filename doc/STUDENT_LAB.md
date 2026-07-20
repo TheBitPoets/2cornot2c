@@ -154,8 +154,12 @@ Comandi disponibili nella TUI minima:
 
 Nel dettaglio della consegna i comandi sono divisi in:
 
-- azioni principali: `e` esegue il runner e salva il report, `a` registra una richiesta di aiuto, `o` apre la cartella workspace;
+- azioni principali: `e` esegue il runner e salva il report, `a` registra una richiesta di aiuto, `o` apre la cartella workspace, `v` apre l'editor;
 - altri comandi: `h` mostra lo storico aiuti, `b` o invio torna alla lista, `q` esce.
+
+Il comando `v` cerca un editor terminale nell'ordine `micro`, `nvim`, `vim`, `hx`, `nano` (e `notepad` su Windows).
+Per scegliere esplicitamente un editor, imposta `THEBITLAB_EDITOR`, per esempio `micro --clean` o `nvim`.
+L'editor viene eseguito nella cartella della consegna e apre il file sorgente indicato dall'activity.
 
 Il dettaglio mostra anche una guida rapida con i termini chiave:
 

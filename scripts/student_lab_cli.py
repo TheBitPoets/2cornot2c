@@ -4,6 +4,8 @@ import argparse
 import ipaddress
 import json
 import os
+import shlex
+import shutil
 import subprocess
 import sys
 import textwrap
@@ -455,6 +457,7 @@ def render_assignment_detail(assignment: dict[str, Any], use_color: bool = False
         "  e  Esegui test e salva report",
         "  a  Chiedi aiuto",
         "  o  Apri workspace",
+        "  v  Apri editor",
         "",
         "Altri comandi",
         "  h  Storico aiuti",
@@ -864,6 +867,55 @@ def open_workspace(path_value: str, root: Path = PROJECT_ROOT) -> bool:
     return True
 
 
+EDITOR_CANDIDATES = ("micro", "nvim", "vim", "hx", "nano")
+WINDOWS_EDITOR_CANDIDATES = EDITOR_CANDIDATES + ("notepad",)
+
+
+def editor_command(editor: str | None = None) -> list[str] | None:
+    """Resolve the configured editor without adding a Python dependency."""
+
+    configured = str(editor or os.environ.get("THEBITLAB_EDITOR", "")).strip()
+    if configured:
+        try:
+            command = shlex.split(configured, posix=os.name != "nt")
+        except ValueError:
+            return None
+        if not command or shutil.which(command[0]) is None:
+            return None
+        return command
+    candidates = WINDOWS_EDITOR_CANDIDATES if os.name == "nt" else EDITOR_CANDIDATES
+    for candidate in candidates:
+        if shutil.which(candidate):
+            return [candidate]
+    return None
+
+
+def open_editor(
+    workspace_path: str,
+    source_name: str = "",
+    root: Path = PROJECT_ROOT,
+    editor: str | None = None,
+) -> tuple[bool, str]:
+    """Open the activity source with a user-selected terminal editor."""
+
+    raw_workspace = Path(workspace_path)
+    workspace = raw_workspace if raw_workspace.is_absolute() else (root / raw_workspace).resolve(strict=False)
+    if not workspace.is_dir():
+        return False, "Workspace non disponibile."
+    command = editor_command(editor)
+    if command is None:
+        return False, "Nessun editor disponibile. Imposta THEBITLAB_EDITOR o installa micro."
+    source = clean_text(source_name, "")
+    target = workspace / source if source else workspace
+    if target != workspace and not target.is_file():
+        target = workspace
+    try:
+        subprocess.run([*command, str(target)], cwd=str(workspace), check=False)
+    except OSError as error:
+        return False, f"Editor non avviabile: {error}"
+    return True, f"Editor chiuso: {command[0]}"
+
+
 def load_payload(root: Path, student_id: str, now: str | None = None) -> dict[str, Any]:
     """Load the current student lab payload."""
 
@@ -1071,6 +1123,17 @@ def run_tui(
                 workspace = assignment.get("workspace") if isinstance(assignment.get("workspace"), dict) else {}
                 if not open_workspace(clean_text(workspace.get("path"), ""), root=root):
                     print_fn("Workspace non disponibile.")
+                input_fn("Premi invio per continuare...")
+                continue
+            if action == "v":
+                workspace = assignment.get("workspace") if isinstance(assignment.get("workspace"), dict) else {}
+                activity = assignment.get("activity") if isinstance(assignment.get("activity"), dict) else {}
+                _, message = open_editor(
+                    clean_text(workspace.get("path"), ""),
+                    clean_text(activity.get("source_name"), ""),
+                    root=root,
+                )
+                print_fn(message)
                 input_fn("Premi invio per continuare...")
                 continue
             if action == "a":

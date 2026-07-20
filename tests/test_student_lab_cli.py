@@ -1424,6 +1424,43 @@ def test_open_workspace_resolves_relative_path_from_root(monkeypatch, tmp_path) 
     assert opened == [workspace.resolve()]
 
 
+def test_editor_command_prefers_configured_editor(monkeypatch) -> None:
+    monkeypatch.setenv("THEBITLAB_EDITOR", "micro --clean")
+    monkeypatch.setattr(student_lab_cli.shutil, "which", lambda name: f"/bin/{name}")
+
+    assert student_lab_cli.editor_command() == ["micro", "--clean"]
+
+
+def test_open_editor_runs_source_in_workspace(monkeypatch, tmp_path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    source = workspace / "main.py"
+    source.write_text("print(1)\n", encoding="utf-8")
+    calls = []
+    monkeypatch.setenv("THEBITLAB_EDITOR", "micro")
+    monkeypatch.setattr(student_lab_cli.shutil, "which", lambda name: f"/bin/{name}")
+    monkeypatch.setattr(student_lab_cli.subprocess, "run", lambda *args, **kwargs: calls.append((args, kwargs)))
+
+    opened, message = student_lab_cli.open_editor(str(workspace), "main.py", root=tmp_path)
+
+    assert opened is True
+    assert message == "Editor chiuso: micro"
+    assert calls[0][0][0] == ["micro", str(source)]
+    assert calls[0][1]["cwd"] == str(workspace)
+
+
+def test_open_editor_reports_missing_editor(monkeypatch, tmp_path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    monkeypatch.delenv("THEBITLAB_EDITOR", raising=False)
+    monkeypatch.setattr(student_lab_cli.shutil, "which", lambda name: None)
+
+    opened, message = student_lab_cli.open_editor(str(workspace), root=tmp_path)
+
+    assert opened is False
+    assert "Nessun editor disponibile" in message
+
+
 def test_truncate_keeps_short_text_and_clips_long_text() -> None:
     assert student_lab_cli.truncate("abc", 5) == "abc"
     assert student_lab_cli.truncate("abcdef", 5) == "ab..."
