@@ -62,6 +62,12 @@ def test_layout_can_collapse_the_focused_panel() -> None:
     assert "Titolo: esempio" not in rendered
 
 
+def test_fit_line_keeps_ellipsis_inside_panel_width() -> None:
+    assert len(student_lab_layout.fit_line("testo molto lungo", 10)) == 10
+    assert student_lab_layout.fit_line("testo molto lungo", 10).endswith("...")
+    assert student_lab_layout.fit_line("testo", 3) == "..."
+
+
 def test_run_layout_editor_saves_with_injected_keys(tmp_path: Path) -> None:
     keys = iter(["alt+right", "tab", "ctrl+left", "enter"])
     outputs = []
@@ -79,3 +85,4 @@ def test_run_layout_editor_saves_with_injected_keys(tmp_path: Path) -> None:
     assert layout["order"][:2] == ["workspace", "assignment"]
     assert student_lab_layout.load_layout(tmp_path) == layout
     assert any("Pannello spostato" in output for output in outputs)
+    assert any("Pannello attivo:" in output for output in outputs)

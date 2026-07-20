@@ -156,9 +156,12 @@ def visible_text(value: str) -> str:
 def fit_line(value: str, width: int) -> str:
     """Fit a panel line without allowing it to change the layout."""
 
+    width = max(1, width)
     plain = visible_text(value)
     if len(plain) > width:
-        return plain[: max(1, width - 1)] + "..."
+        if width <= 3:
+            return "." * width
+        return plain[: width - 3] + "..."
     return value + " " * (width - len(plain))
 
 
@@ -354,6 +357,7 @@ def run_layout_editor(
             if clear:
                 print_fn("\x1b[2J\x1b[H")
             print_fn(render_layout(lines, layout, terminal_width))
+            print_fn(f"Pannello attivo: {PANEL_TITLES[layout['focus']]} (indicato da >)")
             print_fn("\nLayout: Alt+frecce resize | Ctrl+frecce sposta | Ctrl+su/giu cambia orientamento")
             print_fn("Fallback: frecce resize/orientamento | x scambia | Enter salva | Esc annulla | r ripristina")
             key = reader()

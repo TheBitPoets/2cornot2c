@@ -165,7 +165,7 @@ Il comando `l` apre il layout della vista consegna. Ogni sezione del dettaglio d
 la disposizione iniziale li distribuisce in due colonne. In questa modalità:
 
 - `Alt+freccia sinistra/destra` restringe o allarga il pannello sinistro;
-- `Tab` seleziona il pannello successivo; il pannello selezionato e' indicato da `>`;
+- `Tab` seleziona il pannello successivo; il pannello selezionato e' indicato da `>` e dalla riga `Pannello attivo`;
 - `Ctrl+freccia sinistra/destra` sposta il pannello selezionato nell'ordine;
 - `Ctrl+freccia su/giu` sposta il pannello selezionato tra le righe;
 - `+` apre il pannello selezionato e `-` lo comprime lasciando visibile il titolo;
