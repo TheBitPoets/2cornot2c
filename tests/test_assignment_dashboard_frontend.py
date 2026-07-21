@@ -3209,6 +3209,17 @@ def test_assignment_dashboard_normalizes_legacy_github_submission_urls() -> None
         const expected = "https://github.com/TheBitPoets/rossi-mario/blob/main/assignments/python-demo-somma-001/main.py";
         assert.equal(tested.submissionGithubUrl(student), expected);
         assert.equal(tested.submissionFiles(student)[0].github_url, expected);
+
+        const studentWithManifest = {
+          repo_github_url: student.repo_github_url,
+          submission: {
+            files: [{
+              path: "assignments/python-demo-somma-001/main.py",
+              github_url: student.submission.source_github_url,
+            }],
+          },
+        };
+        assert.equal(tested.submissionFiles(studentWithManifest)[0].github_url, expected);
         """
     )
 
