@@ -114,17 +114,26 @@ La schermata annotata e stata catturata sulla dashboard reale usando la root `tm
 </td>
 <td valign="top">
 
-<strong style="color:#1464c0">Step 1 - Blu: selezione studente</strong><br>
-Controlla che il campo <code>Studente</code> mostri <code>Rossi Mario</code>. Poi clicca <code>Carica</code>.<br><br>
+<strong style="color:#1464c0">Step 1-5 - Blu: apertura e selezione</strong><br>
+<strong>1.</strong> Apri esattamente <code>http://localhost:8765/tools/student_dashboard.html</code>.<br>
+<strong>2.</strong> Individua i filtri <code>Classe</code> e <code>Studente</code>.<br>
+<strong>3.</strong> Seleziona la classe demo, se presente, quindi <code>rossi-mario</code>.<br>
+<strong>4.</strong> Clicca <code>Carica</code>: la sola selezione non aggiorna i dati.<br>
+<strong>5.</strong> Attendi il completamento del caricamento.<br><br>
 
-<strong style="color:#7b35b2">Step 2 - Viola: consegna</strong><br>
-Cerca il titolo esatto <strong>Demo somma in Python</strong> nel pannello <code>Consegne</code>.<br><br>
+<strong style="color:#7b35b2">Step 6-8 - Viola: consegna</strong><br>
+<strong>6.</strong> Nel pannello <code>Consegne</code> cerca <strong>Demo somma in Python</strong>.<br>
+<strong>7.</strong> Verifica stato completata/consegnata, non mancante.<br>
+<strong>8.</strong> Controlla scadenza e indicazione del grading.<br><br>
 
-<strong style="color:#168a45">Step 3 - Verde: esecuzione</strong><br>
-Verifica <code>Workspace pronto</code>, <code>Report salvato</code>, <code>Test superati</code> e il valore <code>2/2</code>.<br><br>
+<strong style="color:#168a45">Step 9-12 - Verde: dettaglio e test</strong><br>
+<strong>9.</strong> Apri <code>Dettaglio</code> o <code>Apri consegna</code>.<br>
+<strong>10.</strong> Verifica workspace e file, inclusi <code>main.py</code> e <code>tests/test_main.py</code> quando disponibili.<br>
+<strong>11.</strong> Chiudi il modal e apri il pannello <code>Lab</code>.<br>
+<strong>12.</strong> Controlla report, ultimo tentativo e risultato <code>2/2</code>.<br><br>
 
-<strong style="color:#c87800">Step 4 - Arancione: aiuti</strong><br>
-Controlla che la riga <code>Aiuti tracciati</code> riporti il numero atteso.
+<strong style="color:#c87800">Step 13 - Arancione: aiuti e feedback</strong><br>
+<strong>13.</strong> Verifica <code>Aiuti tracciati</code> e che il feedback AI non approvato non venga mostrato come definitivo.
 
 </td>
 </tr>
