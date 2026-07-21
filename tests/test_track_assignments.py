@@ -123,6 +123,22 @@ def test_github_file_path_uses_project_root_for_repo_relative_paths(tmp_path, mo
     assert path == "examples/assignment_tracking/student_repos/bianchi-luca/assignments/python-base-somma-001/main.py"
 
 
+def test_github_file_path_uses_student_repo_relative_path_for_local_demo(tmp_path) -> None:
+    repo = tmp_path / "student-repo"
+    source_path = repo / "assignments" / "python-base-somma-001" / "main.py"
+    source_path.parent.mkdir(parents=True)
+    source_path.write_text("print(3)\n", encoding="utf-8")
+    student = track_assignments.TrackingTarget(
+        student="rossi-mario",
+        repo="TheBitPoets/rossi-mario",
+        path=repo,
+    )
+
+    path = track_assignments.github_file_path(student, "assignments/python-base-somma-001/main.py")
+
+    assert path == "assignments/python-base-somma-001/main.py"
+
+
 class MissingPathProvider:
     provider_name = "missing-path"
 

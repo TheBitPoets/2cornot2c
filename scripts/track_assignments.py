@@ -181,7 +181,12 @@ def github_file_path(target: TrackingTarget, file_path: str | None) -> str | Non
         resolved = raw_path.resolve()
     else:
         target_candidate = (target.path / raw_path).resolve()
-        resolved = target_candidate if target_candidate.exists() else (PROJECT_ROOT / raw_path).resolve()
+        if target_candidate.exists():
+            try:
+                return str(target_candidate.relative_to(target.path.resolve())).replace("\\", "/")
+            except ValueError:
+                pass
+        resolved = (PROJECT_ROOT / raw_path).resolve()
     root = git_root(target.path) or target.path.resolve()
     try:
         return str(resolved.relative_to(root)).replace("\\", "/")
