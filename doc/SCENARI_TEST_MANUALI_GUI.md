@@ -608,9 +608,8 @@ Obiettivo: verificare che la vista studente mostri il percorso associato e il ca
 
 ### Schermata reale annotata
 
-La cattura evidenzia calendario e filtri, percorso e consegne come blocchi distinti. Nella fixture demo
-attuale il percorso non e associato: il messaggio visibile e un controllo negativo atteso, non una prova
-che l'associazione positiva funzioni.
+La cattura evidenzia calendario e filtri, percorso e consegne come blocchi distinti. La cattura documenta
+il controllo negativo della fixture demo; la procedura include anche una variante positiva riproducibile.
 
 <table>
 <tr><td valign="top" width="52%">
@@ -634,10 +633,22 @@ Confronta attività, scadenze, stato e distinzione tra consegna, UDA e interruzi
 5. Prova i filtri di visualizzazione.
 6. Prova la vista lista e la vista calendario.
 
+Per verificare anche l'associazione positiva, ripeti il test con una seconda preparazione della root demo:
+
+1. Ferma il server con `Ctrl+C`.
+2. Copia `doc/images/dashboard-guides/scenario-8-positive-course-design.json` in
+   `tmp/student-lab-demo/doc/course_design.json`, sostituendo il file presente.
+3. Riavvia il server sulla stessa root e ricarica la dashboard.
+4. Seleziona di nuovo `rossi-mario` e controlla il pannello del percorso.
+
+La fixture positiva associa `demo-percorso-3a` alla classe `3A-TPSI`. Per tornare al caso negativo,
+esegui di nuovo `python scripts/student_lab_demo_setup.py` e riavvia il server.
+
 Risultato atteso:
 
-- Nella fixture demo lo studente vede il messaggio `Percorso non associato`; questo controllo passa solo se il percorso non e stato assegnato.
-- In una fixture con associazione positiva lo studente deve vedere solo i percorsi associati al suo profilo o alla sua classe.
+- Nella fixture demo lo studente vede il messaggio `Percorso non associato`.
+- Nella fixture positiva lo studente vede `Percorso demo 3A` e la relativa UDA, perché la classe `3A-TPSI` e associata.
+- Un percorso associato a un'altra classe non deve essere mostrato allo studente.
 - I paragrafi del percorso sono cliccabili e puntano alla pagina GitHub con ancora del paragrafo.
 - Il calendario e in sola lettura.
 - Consegne, UDA reali, UDA programmate e interruzioni sono distinguibili.
