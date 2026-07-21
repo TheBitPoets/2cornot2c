@@ -88,7 +88,7 @@ Per lo Scenario 1 sono disponibili catture reali con nomi specifici:
 
 | File | Stato | Pagina | Cosa mostra |
 |---|---|---|---|
-| `scenario-1-studente-overview-annotato.png` | fatto | Dashboard studente | Studente `rossi-mario` e controlli obbligatori con cerchi colorati |
+| `scenario-1-studente-overview-colori.png` | fatto | Dashboard studente | Studente `rossi-mario` e controlli obbligatori con cerchi colorati |
 | `scenario-1-studente-consegna.png` | fatto | Dashboard studente | Consegna `Demo somma in Python` |
 | `scenario-1-studente-lab.png` | fatto | Dashboard studente | Workspace, report e test `2/2` |
 | `scenario-1-studente-dettaglio.png` | fatto | Dashboard studente | Modal dettaglio della consegna |

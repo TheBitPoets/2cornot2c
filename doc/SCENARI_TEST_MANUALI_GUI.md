@@ -109,7 +109,7 @@ La schermata annotata e stata catturata sulla dashboard reale usando la root `tm
 <tr>
 <td valign="top" width="52%">
 
-![Panoramica annotata con i dati da controllare](images/dashboard-guides/scenario-1-studente-overview-annotato.png)
+![Panoramica annotata a colori con i dati da controllare](images/dashboard-guides/scenario-1-studente-overview-colori.png)
 
 </td>
 <td valign="top">
