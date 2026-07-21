@@ -139,11 +139,23 @@ La schermata annotata e stata catturata sulla dashboard reale usando la root `tm
 </tr>
 </table>
 
+<details>
+<summary>Evidenza Step 6-8: pannello Consegne con Demo somma in Python</summary>
+
 ![Pannello Consegne con Demo somma in Python](images/dashboard-guides/scenario-1-studente-consegna.png)
+</details>
+
+<details>
+<summary>Evidenza Step 9-12: pannello Lab con workspace, report e test</summary>
 
 ![Pannello Lab con workspace, report e test](images/dashboard-guides/scenario-1-studente-lab.png)
+</details>
+
+<details>
+<summary>Evidenza Step 9-10: modal dettaglio della consegna e file</summary>
 
 ![Modal dettaglio della consegna](images/dashboard-guides/scenario-1-studente-dettaglio.png)
+</details>
 
 ### Precondizioni
 
@@ -255,7 +267,11 @@ La cattura usa la root `tmp/student-lab-demo`, il registro `demo/python-demo-som
 </tr>
 </table>
 
+<details>
+<summary>Evidenza Step 1-4: dashboard docente con registro caricato</summary>
+
 ![Registro docente caricato](images/dashboard-guides/scenario-2-docente-registro.png)
+</details>
 
 1. Apri `http://localhost:8765/tools/assignment_dashboard.html`.
 2. Nel pannello del registro seleziona `demo/python-demo-somma-001.json`.
@@ -313,7 +329,11 @@ La cattura mostra il modal <code>Quadro classe</code> aperto sul registro demo, 
 </tr>
 </table>
 
+<details>
+<summary>Evidenza Step 3-6: quadro classe, filtri, righe e azioni</summary>
+
 ![Quadro classe con filtri e righe](images/dashboard-guides/scenario-3-docente-quadro.png)
+</details>
 
 1. Apri `http://localhost:8765/tools/assignment_dashboard.html`.
 2. Carica il registro `demo/python-demo-somma-001.json`.
@@ -366,7 +386,11 @@ controllare testo, provider e contatori senza affidarsi soltanto al colore.
 </tr>
 </table>
 
+<details>
+<summary>Evidenza Step 6-8: dettaglio completo delle richieste di aiuto</summary>
+
 ![Dettaglio completo delle richieste di aiuto](images/dashboard-guides/scenario-4-docente-aiuti.png)
+</details>
 
 1. Apri `http://localhost:8765/tools/assignment_dashboard.html`.
 2. Carica il registro `demo/python-demo-somma-001.json`.
@@ -425,7 +449,11 @@ Chiudi il modal e verifica che la vista del registro resti invariata.
 </tr>
 </table>
 
+<details>
+<summary>Evidenza Step 5: modal con dettaglio errori Python/pytest</summary>
+
 ![Dettaglio errori completo](images/dashboard-guides/scenario-5-docente-errori.png)
+</details>
 
 Prepara un errore intenzionale dopo il setup comune:
 
@@ -481,7 +509,11 @@ workspace, test e aiuti devono provenire dai dati persistiti.
 <table>
 <tr><td valign="top" width="52%">
 
+<details>
+<summary>Evidenza Step 3-6: dati persistiti dalla TUI visibili nella dashboard</summary>
+
 ![Riscontro dashboard dopo TUI](images/dashboard-guides/scenario-6-studente-dopo-tui.png)
+</details>
 
 </td><td valign="top">
 <strong style="color:#1464c0">Step 1-2 - Blu: esecuzione</strong><br>
