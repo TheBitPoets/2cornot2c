@@ -608,7 +608,9 @@ Obiettivo: verificare che la vista studente mostri il percorso associato e il ca
 
 ### Schermata reale annotata
 
-La cattura evidenzia calendario e filtri, percorso associato e consegne come blocchi distinti.
+La cattura evidenzia calendario e filtri, percorso e consegne come blocchi distinti. Nella fixture demo
+attuale il percorso non e associato: il messaggio visibile e un controllo negativo atteso, non una prova
+che l'associazione positiva funzioni.
 
 <table>
 <tr><td valign="top" width="52%">
@@ -634,7 +636,8 @@ Confronta attività, scadenze, stato e distinzione tra consegna, UDA e interruzi
 
 Risultato atteso:
 
-- Lo studente vede solo percorsi associati al suo profilo o alla sua classe.
+- Nella fixture demo lo studente vede il messaggio `Percorso non associato`; questo controllo passa solo se il percorso non e stato assegnato.
+- In una fixture con associazione positiva lo studente deve vedere solo i percorsi associati al suo profilo o alla sua classe.
 - I paragrafi del percorso sono cliccabili e puntano alla pagina GitHub con ancora del paragrafo.
 - Il calendario e in sola lettura.
 - Consegne, UDA reali, UDA programmate e interruzioni sono distinguibili.
