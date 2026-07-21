@@ -215,6 +215,8 @@ def test_frame_verification_checks_non_empty_fields_in_order() -> None:
           assert.deepEqual(calls, ["Capire perché funziona"]);
           assert.equal(item.frame_quality.context, "ai");
           assert.equal(item.frame_quality.objectives, "none");
+          assert.equal(els.aiBusyNextBtn.disabled, false);
+          assert.equal(els.aiBusyAllBtn.disabled, false);
 
           verifyAllFrameFields().then(() => {
             assert.deepEqual(calls, ["Capire perché funziona", "Scrivere codice"]);

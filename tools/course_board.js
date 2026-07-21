@@ -1970,7 +1970,12 @@ async function verifyNextFrameField() {
     failAiProgress(`Errore provider/server: ${error.message}`);
     return false;
   } finally {
-    if (frameVerificationBatch) frameVerificationBatch.running = false;
+    if (frameVerificationBatch) {
+      frameVerificationBatch.running = false;
+      if (!frameVerificationBatch.cancelled && !frameVerificationBatch.closeRequested) {
+        showFrameVerificationProgress();
+      }
+    }
   }
 }
 
