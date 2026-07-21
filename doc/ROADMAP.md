@@ -647,16 +647,14 @@ Ordine consigliato:
 7. Pagina assegnazione activity a classe, gruppo o singolo studente e scaffold consegna.
    - separare esplicitamente i flussi GUI: `Assegna activity` distribuisce/aggancia asset e destinatari, `Crea/Aggiorna registro consegne` traccia lo stato delle consegne, `Valuta consegne` gestisce grading, voti e feedback;
    - evitare che il registro venga percepito come il comando che assegna l'activity o attribuisce voti definitivi.
-8. Backend lab studente MVP (blocco obbligatorio da completare integralmente):
+8. Backend lab studente MVP:
    - servizio applicativo indipendente dalla UI;
    - lista consegne dello studente;
    - risoluzione workspace e activity package;
    - runner locale;
    - runner Docker minimale;
    - salvataggio risultati JSON;
-   - contratto letto da dashboard studente e registro docente;
-   - flusso verificato end-to-end con assegnazione, workspace, test, report, grading e
-     persistenza.
+   - contratto letto da dashboard studente e registro docente.
 9. CLI/TUI studente sopra il backend lab:
    - elenco consegne;
    - dettaglio consegna;
@@ -709,73 +707,6 @@ Ordine consigliato:
    - modalita verifica controllata nella GUI con blocco/log copia-incolla, focus/tab e fullscreen;
    - informativa chiara allo studente e minimizzazione dei dati raccolti.
 26. Source provider API, indicizzazione frammenti e playground knowledge lab.
-
-## Priorita strategiche aggiornate
-
-Le seguenti priorita hanno precedenza sull'ordine numerico del backlog. L'obiettivo e costruire
-prima le fondamenta che permettono di trasformare contenuti reali in fonti verificabili e poi
-usarle per alimentare il flusso didattico e il lab studente. Il punto 8 resta un blocco
-obbligatorio: ogni sua voce deve essere implementata e verificata prima di considerare chiuso il
-backend lab MVP.
-
-### P0 — Ingestione generale delle fonti
-
-Realizzare un hub modulare per acquisire, normalizzare e indicizzare contenuti eterogenei scelti
-dal docente o dall'organizzazione, senza reinventare parser e OCR gia disponibili come Docling,
-OCR dedicati, estrattori EPUB/PDF e sistemi analoghi. Il primo perimetro deve includere:
-
-- PDF nativi e PDF scansionati con OCR;
-- libri ed EPUB;
-- articoli di ricerca con tabelle, figure e grafici;
-- pagine web e contenuti pubblici di piattaforme social, nel rispetto di accesso, licenze e
-  termini d'uso;
-- immagini e fotografie, inclusi scontrini, volantini e documenti;
-- codici a barre e QR quando presenti;
-- codice sorgente e documentazione tecnica.
-
-L'hub deve usare adapter/provider sostituibili e produrre un modello canonico con testo, struttura,
-asset, metadati, lingua, qualità, provenienza, licenza, timestamp e riferimenti alle coordinate
-originali. Ogni estrazione deve essere ispezionabile e deve dichiarare cosa è stato estratto,
-cosa è stato omesso e con quale livello di confidenza. L'AI può aiutare nella classificazione,
-correzione e sintesi, ma non sostituisce la conservazione della fonte originale né la revisione
-umana.
-
-Deliverable prioritari:
-
-1. contratto `Source`/`ExtractedDocument` e registro della provenienza;
-2. pipeline locale riproducibile con storage degli originali e degli artefatti derivati;
-3. adapter iniziali per Markdown/HTML, PDF nativo, PDF scansionato/OCR ed EPUB;
-4. adapter per immagini e codice a barre/QR, con fallback esplicito quando la qualità non basta;
-5. gestione di tabelle, immagini, figure, pagine e coordinate per mantenere il legame con
-   l'originale;
-6. ricerca e selezione di frammenti da usare in percorsi, activity e generazione AI;
-7. test con fixture reali e sintetiche, metriche di qualità e report degli errori di estrazione;
-8. policy per licenze, privacy, robots/accesso remoto e contenuti non autorizzati.
-
-### P0 — Completamento backend lab MVP (punto 8)
-
-Dopo o in parallelo alla fondazione dell'ingestione, completare senza lasciare voci simulate:
-
-1. API/service indipendente dalla UI e contratto dati versionato;
-2. lista consegne, destinatari e risoluzione activity package;
-3. workspace isolato e riproducibile;
-4. runner locale con timeout, output, errori e stato persistente;
-5. runner Docker minimale con immagine, limiti e comportamento documentati;
-6. risultati JSON, report e grading derivati dai test, senza confondere esecuzione, report e voto;
-7. lettura coerente da TUI, dashboard studente e registro docente;
-8. collaudo end-to-end su scenari puliti, inclusi errori, retry e riavvio del servizio.
-
-### P1 — Knowledge hub e generazione assistita
-
-Estendere il catalogo delle fonti, l'indicizzazione semantica, il playground knowledge lab e la
-generazione di lezioni, esercizi e materiali con citazioni verso i frammenti originali. Le fonti
-devono poter essere selezionate manualmente, suggerite dall'AI o scelte automaticamente solo se
-validate; ogni output deve conservare la provenienza.
-
-### P2 — Esperienza e interoperabilita
-
-Completare dashboard, calendario, GUI web del lab, federazione tra repository/istanze e adapter
-per provider aggiuntivi dopo che ingestione e backend hanno contratti stabili e testati.
 
 ## Criterio di priorita
 
