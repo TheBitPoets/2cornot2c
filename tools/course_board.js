@@ -881,7 +881,8 @@ function renderHeadings() {
       spacer.className = "treeToggleSpacer";
       title.append(spacer);
     }
-    const titleText = document.createElement("span");
+    const titleText = document.createElement("button");
+    titleText.type = "button";
     titleText.textContent = heading.title;
     titleText.className = "headingPreviewTrigger";
     titleText.title = "Mostra il testo del paragrafo.";
