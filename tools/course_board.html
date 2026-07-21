@@ -202,6 +202,21 @@
     </form>
   </dialog>
 
+  <dialog id="paragraphDialog" class="courseAiDialog paragraphDialog" aria-labelledby="paragraphDialogTitle">
+    <form method="dialog" class="courseAiPanel">
+      <header class="courseAiHead">
+        <div>
+          <p class="eyebrow">Contenuto della dispensa</p>
+          <h2 id="paragraphDialogTitle">Testo del paragrafo</h2>
+          <p id="paragraphDialogMeta" class="paragraphDialogMeta"></p>
+        </div>
+        <button id="paragraphCloseBtn" type="button" title="Chiude il testo del paragrafo.">Chiudi</button>
+      </header>
+      <pre id="paragraphContent" class="paragraphContent" tabindex="0">Seleziona un paragrafo per visualizzarne il contenuto.</pre>
+      <a id="paragraphSourceLink" class="paragraphSourceLink" href="#" target="_blank" rel="noreferrer" hidden>Apri sorgente su GitHub</a>
+    </form>
+  </dialog>
+
   <script src="course_board.js"></script>
 </body>
 </html>

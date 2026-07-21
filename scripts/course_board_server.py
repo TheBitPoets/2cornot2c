@@ -1945,6 +1945,7 @@ def extract_headings() -> list[dict]:
                     "title": TAG_RE.sub("", title).strip(),
                     "anchor": anchor,
                     "href": f"../{source}#{anchor}",
+                    "github_url": github_blob_url(source, anchor),
                     "line": lineno,
                 }
             )
@@ -3334,6 +3335,19 @@ class CourseBoardHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/headings":
             self.write_json({"headings": extract_headings()})
+            return
+        if parsed.path == "/api/heading-content":
+            heading_id = parse_qs(parsed.query).get("id", [""])[0]
+            heading = next((item for item in extract_headings() if item["id"] == heading_id), None)
+            if heading is None:
+                self.write_error_json(404, "Paragrafo non trovato.")
+                return
+            self.write_json({
+                "heading": {
+                    **heading,
+                    "content": section_text(heading["source"], heading["line"], heading["level"]),
+                }
+            })
             return
         if parsed.path == "/api/course-design":
             self.write_json(read_design())

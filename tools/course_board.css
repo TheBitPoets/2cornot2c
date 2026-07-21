@@ -396,6 +396,20 @@ input[aria-invalid="true"] {
   line-height: 1.18;
 }
 
+.headingPreviewTrigger,
+.itemPreviewTrigger {
+  cursor: pointer;
+}
+
+.headingPreviewTrigger:hover,
+.headingPreviewTrigger:focus-visible,
+.itemPreviewTrigger:hover,
+.itemPreviewTrigger:focus-visible {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: .16em;
+}
+
 .treeToggle,
 .treeToggleSpacer {
   flex: 0 0 1.15rem;
@@ -709,6 +723,37 @@ input[aria-invalid="true"] {
   display: grid;
   gap: 1rem;
   padding: 1.25rem;
+}
+
+.paragraphDialog {
+  width: min(64rem, calc(100vw - 2rem));
+}
+
+.paragraphDialogMeta {
+  margin: .35rem 0 0;
+  color: var(--muted);
+  font: .75rem/1.35 var(--mono);
+}
+
+.paragraphContent {
+  min-height: 16rem;
+  max-height: min(58vh, 40rem);
+  margin: 0;
+  overflow: auto;
+  border: 1px solid rgba(17, 17, 17, .12);
+  border-radius: 16px;
+  background: #fafafa;
+  color: var(--ink);
+  padding: 1rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: .86rem/1.6 var(--mono);
+}
+
+.paragraphSourceLink {
+  color: var(--ink);
+  font-size: .78rem;
+  font-weight: 700;
 }
 
 .courseAiHead,

@@ -49,6 +49,12 @@ const els = {
   yearWeeksInput: document.querySelector("#yearWeeksInput"),
   yearWeeklyHoursInput: document.querySelector("#yearWeeklyHoursInput"),
   yearDescriptionInput: document.querySelector("#yearDescriptionInput"),
+  paragraphDialog: document.querySelector("#paragraphDialog"),
+  paragraphCloseBtn: document.querySelector("#paragraphCloseBtn"),
+  paragraphDialogTitle: document.querySelector("#paragraphDialogTitle"),
+  paragraphDialogMeta: document.querySelector("#paragraphDialogMeta"),
+  paragraphContent: document.querySelector("#paragraphContent"),
+  paragraphSourceLink: document.querySelector("#paragraphSourceLink"),
   courseAiDialog: document.querySelector("#courseAiDialog"),
   courseAiTitle: document.querySelector("#courseAiTitle"),
   courseAiCloseBtn: document.querySelector("#courseAiCloseBtn"),
@@ -877,6 +883,12 @@ function renderHeadings() {
     }
     const titleText = document.createElement("span");
     titleText.textContent = heading.title;
+    titleText.className = "headingPreviewTrigger";
+    titleText.title = "Mostra il testo del paragrafo.";
+    titleText.addEventListener("click", (event) => {
+      event.stopPropagation();
+      openParagraphPreview(heading);
+    });
     title.append(titleText);
     const usedLabel = usedInYears.size ? ` · inserito in ${[...usedInYears].join(", ")}` : "";
     node.querySelector(".headingMeta").textContent = `${heading.source}:${heading.line} · H${heading.level}${usedLabel}`;
@@ -1231,6 +1243,7 @@ function renderItem(year, uda, siblings, item, index, depth) {
       </div>
       <div class="itemActions">
         <span class="contextBadge">${escapeHtml(contextLabel(index, siblings, item))}</span>
+        <button type="button" data-action="preview" title="Mostra il testo completo del paragrafo.">Testo</button>
         <button type="button" data-action="ai" title="Usa il provider AI configurato per aprire o generare la cornice didattica di questo argomento e dei suoi sottoparagrafi.">AI cornice</button>
         <button type="button" data-action="up" title="Sposta questo argomento verso l'alto nella UDA.">Su</button>
         <button type="button" data-action="down" title="Sposta questo argomento verso il basso nella UDA.">Giu</button>
@@ -1259,7 +1272,14 @@ function renderItem(year, uda, siblings, item, index, depth) {
   }
   const titleText = document.createElement("span");
   titleText.textContent = item.title;
+  titleText.className = "itemPreviewTrigger";
+  titleText.title = "Mostra il testo del paragrafo.";
+  titleText.addEventListener("click", (event) => {
+    event.stopPropagation();
+    openParagraphPreview(item);
+  });
   title.append(titleText);
+  node.querySelector('[data-action="preview"]').addEventListener("click", () => openParagraphPreview(item));
   node.querySelector('[data-action="ai"]').addEventListener("click", () => fillFrameWithAi(year, uda, item));
   node.querySelector('[data-action="up"]').addEventListener("click", () => moveItem(siblings, index, -1));
   node.querySelector('[data-action="down"]').addEventListener("click", () => moveItem(siblings, index, 1));
@@ -1276,6 +1296,27 @@ function renderItem(year, uda, siblings, item, index, depth) {
 
 function courseItemCollapseKey(year, uda, item) {
   return JSON.stringify([year.id, uda.id, item.id]);
+}
+
+async function openParagraphPreview(paragraph) {
+  els.paragraphDialogTitle.textContent = paragraph.title || "Testo del paragrafo";
+  els.paragraphDialogMeta.textContent = `${paragraph.source || "Sorgente n/d"} · riga ${paragraph.line || "?"} · H${paragraph.level || "?"}`;
+  els.paragraphContent.textContent = "Caricamento del contenuto...";
+  els.paragraphSourceLink.hidden = true;
+  els.paragraphDialog.showModal();
+  try {
+    const payload = await api(`/api/heading-content?id=${encodeURIComponent(paragraph.id)}`);
+    const heading = payload.heading || paragraph;
+    els.paragraphDialogTitle.textContent = heading.title || paragraph.title || "Testo del paragrafo";
+    els.paragraphDialogMeta.textContent = `${heading.source || "Sorgente n/d"} · riga ${heading.line || "?"} · H${heading.level || "?"}`;
+    els.paragraphContent.textContent = heading.content || "Questo paragrafo non contiene testo oltre al titolo.";
+    if (heading.github_url) {
+      els.paragraphSourceLink.href = heading.github_url;
+      els.paragraphSourceLink.hidden = false;
+    }
+  } catch (error) {
+    els.paragraphContent.textContent = `Contenuto non disponibile. Dettaglio: ${error.message}`;
+  }
 }
 
 function defaultCourseBrief(year) {
@@ -2198,6 +2239,7 @@ els.addYearBtn.addEventListener("click", openYearDialog);
 els.yearCloseBtn.addEventListener("click", () => els.yearDialog.close());
 els.yearCancelBtn.addEventListener("click", () => els.yearDialog.close());
 els.yearCreateBtn.addEventListener("click", createYearFromDialog);
+els.paragraphCloseBtn.addEventListener("click", () => els.paragraphDialog.close());
 els.yearIdInput.addEventListener("input", () => {
   els.yearIdInput.dataset.touched = "true";
 });

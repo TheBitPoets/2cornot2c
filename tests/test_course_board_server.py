@@ -8,6 +8,7 @@ import subprocess
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -79,6 +80,54 @@ def test_teacher_dashboard_token_console_line_shows_generated_value() -> None:
 
     assert generated in line
     assert "temporaneo" in line
+
+
+def test_extract_headings_and_section_text_include_paragraph_content(tmp_path, monkeypatch) -> None:
+    source = tmp_path / "lesson.md"
+    source.write_text(
+        "# Corso\n\nIntroduzione.\n\n## Array\n\nTesto del paragrafo.\n\n### Esempio\n\nCodice di esempio.\n\n## Dopo\n\nAltro testo.\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "read_design", lambda: {"source_files": ["lesson.md"]})
+
+    headings = course_board_server.extract_headings()
+    array = next(heading for heading in headings if heading["title"] == "Array")
+
+    assert array["github_url"].endswith("lesson.md#array")
+    assert course_board_server.section_text(array["source"], array["line"], array["level"]) == (
+        "Testo del paragrafo.\n\n### Esempio\n\nCodice di esempio."
+    )
+
+
+def test_heading_content_endpoint_returns_selected_section(tmp_path, monkeypatch) -> None:
+    source = tmp_path / "lesson.md"
+    source.write_text("# Corso\n\n## Array\n\nTesto leggibile.\n", encoding="utf-8")
+    monkeypatch.setattr(course_board_server, "ROOT", tmp_path)
+    monkeypatch.setattr(course_board_server, "read_design", lambda: {"source_files": ["lesson.md"]})
+    teacher_token = "teacher-dashboard-token-for-heading-content-tests"
+    server = course_board_server.BoundedThreadingHTTPServer(
+        ("127.0.0.1", 0), course_board_server.CourseBoardHandler
+    )
+    server.teacher_token = teacher_token
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        heading = next(item for item in course_board_server.extract_headings() if item["title"] == "Array")
+        authorization = "Basic " + base64.b64encode(f"teacher:{teacher_token}".encode("utf-8")).decode("ascii")
+        request = urllib.request.Request(
+            "http://127.0.0.1:%s/api/heading-content?id=%s"
+            % (server.server_address[1], urllib.parse.quote(heading["id"], safe="")),
+            headers={"Authorization": authorization},
+        )
+        with urllib.request.urlopen(request, timeout=5) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        assert payload["heading"]["title"] == "Array"
+        assert payload["heading"]["content"] == "Testo leggibile."
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
 
 
 def test_generate_course_plan_uses_temporary_design_without_promoting_it(tmp_path, monkeypatch) -> None:
