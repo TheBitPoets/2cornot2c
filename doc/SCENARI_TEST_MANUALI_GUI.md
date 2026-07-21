@@ -101,6 +101,18 @@ Obiettivo: verificare, come tester manuale, che lo studente veda la consegna cor
 
 ![Mappa visiva dello Scenario 1](images/dashboard-guides/scenario-1-studente-mappa.svg)
 
+### Schermate reali della prova
+
+Le immagini seguenti sono state catturate sulla dashboard reale usando la root `tmp/student-lab-demo`, lo studente `rossi-mario` e il viewport desktop `1440x1000`.
+
+![Panoramica dashboard studente con Rossi Mario](images/dashboard-guides/scenario-1-studente-overview.png)
+
+![Pannello Consegne con Demo somma in Python](images/dashboard-guides/scenario-1-studente-consegna.png)
+
+![Pannello Lab con workspace, report e test](images/dashboard-guides/scenario-1-studente-lab.png)
+
+![Modal dettaglio della consegna](images/dashboard-guides/scenario-1-studente-dettaglio.png)
+
 ### Precondizioni
 
 Esegui i comandi dalla root del repository. Se il server demo e gia attivo, non avviarne una seconda istanza.
@@ -129,15 +141,16 @@ Il secondo comando resta attivo nel terminale. Usa un browser separato per la pr
    Non aprire `assignment_dashboard.html`: quella e la dashboard docente e mostra registri diversi.
 2. Nella parte superiore individua i filtri `Classe` e `Studente`.
 3. Seleziona la classe demo, se presente, quindi seleziona `rossi-mario`.
-4. Attendi il completamento del caricamento. Non cambiare scheda durante il caricamento.
-5. Nel pannello `Consegne` cerca il titolo esatto **Demo somma in Python**.
-6. Verifica che la riga mostri uno stato di consegna completata o consegnata e che non sia indicata come mancante.
-7. Controlla nella stessa riga la scadenza e l'eventuale indicazione del grading.
-8. Apri `Dettaglio` o `Apri consegna` nella riga della demo.
-9. Nel dettaglio verifica che il workspace risulti presente e che siano elencati i file dell'attivita, inclusi `main.py` e `tests/test_main.py` quando disponibili.
-10. Torna alla vista della consegna e apri il pannello `Lab`.
-11. Controlla il report, l'ultimo tentativo e il risultato dei test.
-12. Verifica che gli aiuti tracciati siano valorizzati e che un eventuale feedback AI non approvato dal docente non venga mostrato come feedback definitivo.
+4. Clicca `Carica`: la selezione dello studente da sola non aggiorna i dati mostrati.
+5. Attendi il completamento del caricamento. Non cambiare scheda durante il caricamento.
+6. Nel pannello `Consegne` cerca il titolo esatto **Demo somma in Python**.
+7. Verifica che la riga mostri uno stato di consegna completata o consegnata e che non sia indicata come mancante.
+8. Controlla nella stessa riga la scadenza e l'eventuale indicazione del grading.
+9. Apri `Dettaglio` o `Apri consegna` nella riga della demo.
+10. Nel dettaglio verifica che il workspace risulti presente e che siano elencati i file dell'attivita, inclusi `main.py` e `tests/test_main.py` quando disponibili.
+11. Chiudi il modal, torna alla vista della consegna e apri il pannello `Lab`.
+12. Controlla il report, l'ultimo tentativo e il risultato dei test.
+13. Verifica che gli aiuti tracciati siano valorizzati e che un eventuale feedback AI non approvato dal docente non venga mostrato come feedback definitivo.
 
 ### Risultato atteso
 
@@ -171,7 +184,7 @@ Per una prova manuale annota:
 | Aiuti | numero visualizzato |
 | Esito | superato / problema con descrizione |
 
-Questi passaggi sono gia predisposti per una futura automazione Playwright: URL, studente, titolo activity e valori attesi possono diventare asserzioni; la tavola visiva puo diventare uno screenshot di riferimento o una guida per le evidenze.
+Questi passaggi sono gia predisposti per una futura automazione Playwright: URL, studente, titolo activity e valori attesi possono diventare asserzioni; le schermate possono diventare screenshot di riferimento o allegati alle evidenze.
 
 ## Scenario 2 - Dashboard docente con registro demo
 
