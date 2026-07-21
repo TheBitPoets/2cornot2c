@@ -4521,7 +4521,7 @@ function renderStudents(students) {
         <small>${submission.source_path ? escapeHtml(submission.source_path) : "sorgente non indicato"}</small>
         ${submission.report_path ? `<br><small>report ${escapeHtml(submission.report_path)}</small>` : ""}
         ${submission.report_backend ? `<br><small>backend ${escapeHtml(submission.report_backend)}</small>` : ""}
-        ${submission.source_github_url ? `<br>${externalLink(submission.source_github_url, "Apri su GitHub")}` : ""}
+        ${submissionGithubUrl(student) ? `<br>${externalLink(submissionGithubUrl(student), "Apri su GitHub")}` : ""}
       </td>
       <td>
         ${badge(grading.status, grading.status === "graded_passed" ? "ok" : grading.status === "graded_failed" ? "bad" : "muted")}<br>
@@ -4617,6 +4617,26 @@ async function reviewAiFeedback(studentId, decision) {
   }
 }
 
+function canonicalSubmissionGithubUrl(student, filePath, githubUrl = "") {
+  const normalizedUrl = String(githubUrl || "").trim();
+  if (normalizedUrl && !(/\/tmp\/.*\/student_repos\//.test(normalizedUrl))) return normalizedUrl;
+  const repoUrl = String(student.repo_github_url || "").trim();
+  const normalizedPath = String(filePath || "").replaceAll("\\", "/");
+  if (!repoUrl || !normalizedPath) return normalizedUrl;
+  const marker = normalizedPath.indexOf("/assignments/");
+  const path = normalizedPath.startsWith("assignments/")
+    ? normalizedPath
+    : marker >= 0
+      ? `assignments/${normalizedPath.slice(marker + "/assignments/".length)}`
+      : "";
+  return path ? `${repoUrl.replace(/\/$/, "")}/blob/main/${path}` : normalizedUrl;
+}
+
+function submissionGithubUrl(student) {
+  const submission = student.submission || {};
+  return canonicalSubmissionGithubUrl(student, submission.source_path, submission.source_github_url);
+}
+
 function submissionFiles(student) {
   const submission = student.submission || {};
   const files = Array.isArray(submission.files) ? submission.files : [];
@@ -4626,11 +4646,11 @@ function submissionFiles(student) {
       .map((file) => ({
         path: String(file.path).replaceAll("\\", "/"),
         role: file.role || "support",
-        github_url: file.github_url || "",
+        github_url: canonicalSubmissionGithubUrl(student, file.path, file.github_url),
       }));
   }
   return submission.source_path
-    ? [{ path: String(submission.source_path).replaceAll("\\", "/"), role: "solution", github_url: submission.source_github_url || "" }]
+    ? [{ path: String(submission.source_path).replaceAll("\\", "/"), role: "solution", github_url: submissionGithubUrl(student) }]
     : [];
 }
 

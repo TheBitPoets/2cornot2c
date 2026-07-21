@@ -395,6 +395,8 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         openStudentHelpDialog,
         clearStudentHelpRows,
         renderStudents,
+        submissionFiles,
+        submissionGithubUrl,
         failedTestDetails,
         gradingDetails,
         renderTestDetailsDialogContent,
@@ -3190,6 +3192,23 @@ def test_render_students_closes_help_dialog_when_the_report_changes() -> None:
         assert.equal(tested.els.studentHelpDialog.open, false);
         assert.equal(tested.state.studentHelpDialogKey, "");
         assert.equal(tested.state.studentHelpDialogReportName, "");
+        """
+    )
+
+
+def test_assignment_dashboard_normalizes_legacy_github_submission_urls() -> None:
+    run_dashboard_js(
+        """
+        const student = {
+          repo_github_url: "https://github.com/TheBitPoets/rossi-mario",
+          submission: {
+            source_path: "assignments/python-demo-somma-001/main.py",
+            source_github_url: "https://github.com/TheBitPoets/rossi-mario/blob/main/tmp/student-lab-demo/examples/assignment_tracking/student_repos/rossi-mario/assignments/python-demo-somma-001/main.py",
+          },
+        };
+        const expected = "https://github.com/TheBitPoets/rossi-mario/blob/main/assignments/python-demo-somma-001/main.py";
+        assert.equal(tested.submissionGithubUrl(student), expected);
+        assert.equal(tested.submissionFiles(student)[0].github_url, expected);
         """
     )
 
