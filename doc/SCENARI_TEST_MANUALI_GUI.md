@@ -515,7 +515,7 @@ workspace, test e aiuti devono provenire dai dati persistiti.
 La traccia mostra la selezione della consegna, l'esecuzione del comando <code>e</code>, il report salvato
 e il ritorno alla lista. E stata acquisita eseguendo la TUI sulla root demo corrente.
 
-<pre><code>images/dashboard-guides/scenario-6-tui-session.txt</code></pre>
+[Apri la traccia completa della sessione TUI](images/dashboard-guides/scenario-6-tui-session.txt)
 </details>
 
 </td><td valign="top">
