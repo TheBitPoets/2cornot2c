@@ -745,9 +745,59 @@ input[aria-invalid="true"] {
   background: #fafafa;
   color: var(--ink);
   padding: 1rem;
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
   font: .86rem/1.6 var(--mono);
+}
+
+.paragraphContent p,
+.paragraphContent h1,
+.paragraphContent h2,
+.paragraphContent h3,
+.paragraphContent h4,
+.paragraphContent h5,
+.paragraphContent h6 {
+  margin: 0 0 .8rem;
+}
+
+.paragraphContent h1,
+.paragraphContent h2,
+.paragraphContent h3,
+.paragraphContent h4,
+.paragraphContent h5,
+.paragraphContent h6 {
+  font-family: inherit;
+  line-height: 1.25;
+}
+
+.paragraphContent ul,
+.paragraphContent ol {
+  margin: 0 0 .8rem;
+  padding-left: 1.5rem;
+}
+
+.paragraphContent pre {
+  overflow: auto;
+  margin: 0 0 .8rem;
+  border-radius: 10px;
+  background: #eeeeee;
+  padding: .8rem;
+  white-space: pre;
+}
+
+.paragraphContent code {
+  border-radius: .25rem;
+  background: #eeeeee;
+  padding: .08rem .25rem;
+}
+
+.paragraphContent pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.paragraphContent a {
+  color: var(--ink);
+  font-weight: 700;
 }
 
 .paragraphSourceLink {

@@ -1298,6 +1298,93 @@ function courseItemCollapseKey(year, uda, item) {
   return JSON.stringify([year.id, uda.id, item.id]);
 }
 
+function normalizeParagraphSource(source) {
+  return String(source || "")
+    .replace(/<br\s*\/?\s*>/gi, "\n")
+    .replace(/<h([1-6])\b[^>]*>/gi, (_, level) => `\n${"#".repeat(Number(level))} `)
+    .replace(/<li\b[^>]*>/gi, "\n- ")
+    .replace(/<\/?(?:details|summary|p|div|section|article|table|thead|tbody|tr|ul|ol|li|pre|h[1-6])\b[^>]*>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/\r\n?/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function renderParagraphInline(value) {
+  let html = escapeHtml(value);
+  html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+  html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  html = html.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+  html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
+  return html;
+}
+
+function renderParagraphContent(source) {
+  const lines = normalizeParagraphSource(source).split("\n");
+  const blocks = [];
+  let paragraph = [];
+  let listType = "";
+  let listItems = [];
+  let codeLines = null;
+
+  const flushParagraph = () => {
+    if (!paragraph.length) return;
+    blocks.push(`<p>${paragraph.map(renderParagraphInline).join("<br>")}</p>`);
+    paragraph = [];
+  };
+  const flushList = () => {
+    if (!listItems.length) return;
+    const tag = listType === "ordered" ? "ol" : "ul";
+    blocks.push(`<${tag}>${listItems.map((item) => `<li>${renderParagraphInline(item)}</li>`).join("")}</${tag}>`);
+    listType = "";
+    listItems = [];
+  };
+  const flushCode = () => {
+    if (codeLines === null) return;
+    blocks.push(`<pre><code>${escapeHtml(codeLines.join("\n"))}</code></pre>`);
+    codeLines = null;
+  };
+
+  for (const line of lines) {
+    if (line.trim().startsWith("```")) {
+      flushParagraph();
+      flushList();
+      if (codeLines === null) codeLines = [];
+      else flushCode();
+      continue;
+    }
+    if (codeLines !== null) {
+      codeLines.push(line);
+      continue;
+    }
+    const heading = line.match(/^(#{1,6})\s+(.+)$/);
+    const unordered = line.match(/^\s*[-*]\s+(.+)$/);
+    const ordered = line.match(/^\s*\d+\.\s+(.+)$/);
+    if (!line.trim()) {
+      flushParagraph();
+      flushList();
+    } else if (heading) {
+      flushParagraph();
+      flushList();
+      const level = heading[1].length;
+      blocks.push(`<h${level}>${renderParagraphInline(heading[2])}</h${level}>`);
+    } else if (unordered || ordered) {
+      flushParagraph();
+      const nextType = unordered ? "unordered" : "ordered";
+      if (listType && listType !== nextType) flushList();
+      listType = nextType;
+      listItems.push((unordered || ordered)[1]);
+    } else {
+      flushList();
+      paragraph.push(line);
+    }
+  }
+  flushParagraph();
+  flushList();
+  flushCode();
+  return blocks.join("") || '<p class="empty">Questo paragrafo non contiene testo oltre al titolo.</p>';
+}
+
 async function openParagraphPreview(paragraph) {
   els.paragraphDialogTitle.textContent = paragraph.title || "Testo del paragrafo";
   els.paragraphDialogMeta.textContent = `${paragraph.source || "Sorgente n/d"} · riga ${paragraph.line || "?"} · H${paragraph.level || "?"}`;
@@ -1309,7 +1396,7 @@ async function openParagraphPreview(paragraph) {
     const heading = payload.heading || paragraph;
     els.paragraphDialogTitle.textContent = heading.title || paragraph.title || "Testo del paragrafo";
     els.paragraphDialogMeta.textContent = `${heading.source || "Sorgente n/d"} · riga ${heading.line || "?"} · H${heading.level || "?"}`;
-    els.paragraphContent.textContent = heading.content || "Questo paragrafo non contiene testo oltre al titolo.";
+    els.paragraphContent.innerHTML = renderParagraphContent(heading.content);
     if (heading.github_url) {
       els.paragraphSourceLink.href = heading.github_url;
       els.paragraphSourceLink.hidden = false;
