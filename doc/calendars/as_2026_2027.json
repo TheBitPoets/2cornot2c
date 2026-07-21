@@ -1,0 +1,127 @@
+{
+  "version": 1,
+  "school_year": "2026/2027",
+  "region": "Sicilia",
+  "school": "",
+  "course_design_name": "",
+  "start_date": "2026-09-03",
+  "end_date": "2027-06-04",
+  "tracks": [
+    {
+      "id": "terzo-anno",
+      "label": "Terzo anno",
+      "subject": "TPSI",
+      "course_year_id": "terzo-anno",
+      "weekly_hours": 3,
+      "weekly_slots": [
+        {
+          "day": "monday",
+          "hours": 2,
+          "type": "teoria"
+        },
+        {
+          "day": "friday",
+          "hours": 1,
+          "type": "laboratorio"
+        }
+      ]
+    },
+    {
+      "id": "quarto-anno",
+      "label": "Quarto anno",
+      "subject": "TPSI",
+      "course_year_id": "quarto-anno",
+      "weekly_hours": 3,
+      "weekly_slots": [
+        {
+          "day": "monday",
+          "hours": 2,
+          "type": "teoria"
+        },
+        {
+          "day": "friday",
+          "hours": 1,
+          "type": "laboratorio"
+        }
+      ]
+    },
+    {
+      "id": "quinto-anno",
+      "label": "Quinto anno",
+      "subject": "TPSI",
+      "course_year_id": "quinto-anno",
+      "weekly_hours": 4,
+      "weekly_slots": [
+        {
+          "day": "monday",
+          "hours": 2,
+          "type": "teoria"
+        },
+        {
+          "day": "friday",
+          "hours": 2,
+          "type": "laboratorio"
+        }
+      ]
+    }
+  ],
+  "closures": [
+    {
+      "type": "national_holiday",
+      "label": "Ognissanti",
+      "from": "2026-11-01",
+      "to": "2026-11-01",
+      "notes": "Festività nazionale italiana"
+    },
+    {
+      "type": "national_holiday",
+      "label": "Immacolata Concezione",
+      "from": "2026-12-08",
+      "to": "2026-12-08",
+      "notes": "Festività nazionale italiana"
+    },
+    {
+      "type": "national_holiday",
+      "label": "Natale",
+      "from": "2026-12-23",
+      "to": "2027-01-08",
+      "notes": "Festività nazionale italiana"
+    },
+    {
+      "type": "national_holiday",
+      "label": "Pasqua",
+      "from": "2027-03-25",
+      "to": "2027-03-30",
+      "notes": "Festività nazionale italiana"
+    },
+    {
+      "type": "national_holiday",
+      "label": "Lunedì dell'Angelo",
+      "from": "2027-03-29",
+      "to": "2027-03-29",
+      "notes": "Festività nazionale italiana"
+    },
+    {
+      "type": "national_holiday",
+      "label": "Festa della Liberazione",
+      "from": "2027-04-25",
+      "to": "2027-04-25",
+      "notes": "Festività nazionale italiana"
+    },
+    {
+      "type": "national_holiday",
+      "label": "Festa del Lavoro",
+      "from": "2027-05-01",
+      "to": "2027-05-01",
+      "notes": "Festività nazionale italiana"
+    },
+    {
+      "type": "national_holiday",
+      "label": "Festa della Repubblica",
+      "from": "2027-06-02",
+      "to": "2027-06-02",
+      "notes": "Festività nazionale italiana"
+    }
+  ],
+  "notes": []
+}
