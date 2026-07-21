@@ -646,6 +646,11 @@ input[aria-invalid="true"] {
   border-color: rgba(15, 138, 75, .72);
 }
 
+.frameToolbar [data-format="verify-frame"] {
+  border-color: rgba(15, 138, 75, .72);
+  background: rgba(15, 138, 75, .08);
+}
+
 .textQuality {
   margin: .45rem 0 0;
   border-radius: 12px;

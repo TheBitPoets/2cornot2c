@@ -113,6 +113,7 @@ const AI_PROGRESS_STAGES = [
 
 let aiProgressTimer = null;
 let frameBatch = null;
+let frameVerificationBatch = null;
 let cleanDesignSnapshot = "";
 let allowNextUnloadWithoutWarning = false;
 let saveOperationInProgress = false;
@@ -290,6 +291,27 @@ function showFrameBatchProgress() {
   els.aiBusyAllBtn.disabled = frameBatch.running || done >= total;
   els.aiBusyCloseBtn.disabled = false;
   els.aiBusyCancelBtn.disabled = false;
+}
+
+function showFrameVerificationProgress() {
+  if (!frameVerificationBatch) return;
+  clearInterval(aiProgressTimer);
+  aiProgressTimer = null;
+  els.aiBusy.hidden = false;
+  els.aiBusyControls.hidden = false;
+  els.aiBusyNextBtn.hidden = true;
+  els.aiBusyAllBtn.hidden = true;
+  els.aiBusyCloseBtn.disabled = true;
+  els.aiBusyCancelBtn.disabled = false;
+  const total = frameVerificationBatch.fields.length;
+  const done = frameVerificationBatch.index;
+  const current = frameVerificationBatch.fields[done];
+  const percent = total ? Math.round((done / total) * 100) : 100;
+  els.aiBusyTitle.textContent = `Verifica cornice: ${frameVerificationBatch.item.title}`;
+  updateAiProgress(
+    percent,
+    current ? `Verifico ${current.label} (${done + 1}/${total})...` : `Verificati ${done}/${total} campi.`
+  );
 }
 
 async function api(path, options = {}) {
@@ -1620,6 +1642,7 @@ function renderFrameEditor(item) {
       <button type="button" data-format="number" title="Trasforma il testo selezionato in elenco numerato.">1. lista</button>
       <button type="button" data-format="check" title="Propone correzioni locali sicure, come accenti mancanti, e le applica solo dopo conferma.">Controlla testo</button>
       <button type="button" data-format="ai-proofread" title="Usa il provider AI configurato per correggere grammatica e contesto, poi chiede conferma prima di applicare.">AI grammatica</button>
+      <button type="button" data-format="verify-frame" title="Controlla in ordine tutti i campi compilati: prima controllo locale, poi verifica grammaticale AI.">Verifica tutta la cornice</button>
     </div>
     <p class="textQuality textQualityNeutral" hidden></p>
     <div class="frameGrid">
@@ -1675,6 +1698,10 @@ function renderFrameEditor(item) {
         return;
       }
       const action = button.dataset.format;
+      if (action === "verify-frame") {
+        verifyEntireFrame(item);
+        return;
+      }
       const fieldKey = textarea.dataset.frameField;
       const label = textarea.closest("label");
       if (action === "check") {
@@ -1835,6 +1862,98 @@ async function proofreadTextWithAi(textarea, output, item, fieldKey, label) {
   } catch (error) {
     showToolbarMessage(output, `AI grammatica non riuscita: ${error.message}`, "warn");
   }
+}
+
+function frameFieldsWithContent(item) {
+  const frame = { ...defaultFrame(), ...(item.frame || {}) };
+  return FRAME_FIELDS.filter((field) => String(frame[field.key] || "").trim());
+}
+
+async function proofreadFrameFieldForBatch(item, field) {
+  const original = String(item.frame[field.key] || "");
+  const payload = await api("/api/ai-proofread", {
+    method: "POST",
+    body: JSON.stringify({ text: original }),
+  });
+  const corrected = String(payload.corrected_text || "").trim();
+  if (!corrected) throw new Error(`La AI non ha restituito testo per "${field.label}".`);
+  item.frame[field.key] = corrected === original.trim() ? original : corrected;
+  item.frame_quality[field.key] = "ai";
+  return payload;
+}
+
+async function verifyEntireFrame(item) {
+  if (frameBatch || frameVerificationBatch) {
+    setStatus("Una coda AI e gia in esecuzione: attendi il completamento prima di avviare una nuova verifica.");
+    return;
+  }
+  const fields = frameFieldsWithContent(item);
+  if (!fields.length) {
+    setStatus("Cornice vuota: inserisci almeno un campo prima di avviare la verifica completa.");
+    return;
+  }
+  frameVerificationBatch = {
+    item,
+    fields,
+    index: 0,
+    running: true,
+    cancelled: false,
+  };
+  showFrameVerificationProgress();
+  setStatus(`Verifico la cornice di "${item.title}" campo per campo...`);
+  try {
+    while (frameVerificationBatch && frameVerificationBatch.index < fields.length && !frameVerificationBatch.cancelled) {
+      const current = fields[frameVerificationBatch.index];
+      const local = applyLocalTextFixes(String(item.frame[current.key] || ""));
+      item.frame[current.key] = local.text;
+      item.frame_quality[current.key] = "local";
+      renderCourse();
+      showFrameVerificationProgress();
+      setStatus(`Controllo locale: ${current.label} (${frameVerificationBatch.index + 1}/${fields.length}).`);
+      await proofreadFrameFieldForBatch(item, current);
+      frameVerificationBatch.index += 1;
+      renderCourse();
+      showFrameVerificationProgress();
+    }
+    if (!frameVerificationBatch) return;
+    if (frameVerificationBatch.cancelled) {
+      frameVerificationBatch = null;
+      els.aiBusyControls.hidden = true;
+      els.aiBusyCloseBtn.disabled = false;
+      renderCourse();
+      setStatus("Verifica cornice annullata. I campi gia verificati sono stati mantenuti.");
+      stopAiProgress("Verifica annullata.");
+      return;
+    }
+    frameVerificationBatch = null;
+    els.aiBusyControls.hidden = true;
+    els.aiBusyCloseBtn.disabled = false;
+    renderCourse();
+    setStatus(`Cornice verificata: ${fields.length} campi controllati. Ricordati di salvare il JSON.`);
+    stopAiProgress("Cornice verificata.");
+  } catch (error) {
+    frameVerificationBatch = null;
+    els.aiBusyControls.hidden = true;
+    els.aiBusyCloseBtn.disabled = false;
+    renderCourse();
+    setStatus(`Verifica cornice interrotta. Dettaglio provider/server: ${error.message}`);
+    failAiProgress(`Errore provider/server: ${error.message}`);
+  }
+}
+
+function cancelFrameVerification() {
+  if (!frameVerificationBatch) return;
+  frameVerificationBatch.cancelled = true;
+  if (frameVerificationBatch.running) {
+    setStatus("Annullamento richiesto: termino il campo AI in corso e poi fermo la verifica.");
+    showFrameVerificationProgress();
+    return;
+  }
+  frameVerificationBatch = null;
+  els.aiBusy.hidden = true;
+  els.aiBusyControls.hidden = true;
+  renderCourse();
+  setStatus("Verifica cornice annullata.");
 }
 
 function showToolbarMessage(output, message, kind) {
@@ -2009,8 +2128,17 @@ els.generateCoursePlanMdBtn.addEventListener("click", generateCoursePlanMd);
 els.updateReadmeFramesBtn.addEventListener("click", updateReadmeFrames);
 els.aiBusyNextBtn.addEventListener("click", generateNextFrameInBatch);
 els.aiBusyAllBtn.addEventListener("click", generateAllFramesInBatch);
-els.aiBusyCloseBtn.addEventListener("click", closeFrameBatch);
-els.aiBusyCancelBtn.addEventListener("click", cancelFrameBatch);
+els.aiBusyCloseBtn.addEventListener("click", () => {
+  if (frameVerificationBatch) return;
+  closeFrameBatch();
+});
+els.aiBusyCancelBtn.addEventListener("click", () => {
+  if (frameVerificationBatch) {
+    cancelFrameVerification();
+    return;
+  }
+  cancelFrameBatch();
+});
 els.courseAiCloseBtn.addEventListener("click", () => els.courseAiDialog.close());
 els.courseAiGenerateBtn.addEventListener("click", generateCourseAiProposal);
 els.courseAiApplyBtn.addEventListener("click", applyCourseAiProposal);
