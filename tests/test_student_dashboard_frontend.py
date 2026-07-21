@@ -196,6 +196,7 @@ def test_student_dashboard_renders_summary_and_assignment_card() -> None:
         assert.match(tested.els.assignments.innerHTML, /Apri consegna/);
         assert.match(tested.els.assignments.innerHTML, /Dettaglio/);
         assert.match(tested.els.assignments.innerHTML, /data-detail-index="0"/);
+        assert.match(tested.els.assignments.innerHTML, /data-open-assignment-detail="0"/);
         assert.match(tested.els.assignments.innerHTML, /href="https:\\/\\/github.com\\/TheBitPoets\\/rossi-mario\\/blob\\/main\\/assignments\\/python-base-somma-001\\/main.py"/);
         assert.match(tested.els.studentLab.innerHTML, /Workspace pronto/);
         assert.match(tested.els.studentLab.innerHTML, /Report salvato/);
@@ -775,7 +776,8 @@ def test_student_dashboard_assignment_detail_modal_renders_selected_assignment()
         assert.match(tested.els.assignmentDetailBody.innerHTML, /submitted_late/);
         assert.match(tested.els.assignmentDetailBody.innerHTML, /somma con negativo/);
         assert.match(tested.els.assignmentDetailBody.innerHTML, /Controlla il secondo caso/);
-        assert.match(tested.els.assignmentDetailBody.innerHTML, /Apri consegna/);
+        assert.match(tested.els.assignmentDetailBody.innerHTML, /Repository/);
+        assert.match(tested.els.assignmentDetailBody.innerHTML, /assignments\/python-base-somma-001\/main.py/);
 
         tested.closeAssignmentDetail();
         assert.equal(tested.els.assignmentDetailModal.hidden, true);

@@ -1177,11 +1177,11 @@ function actionUnavailableLabel(assignment) {
     : "File consegna non disponibile";
 }
 
-function assignmentOpenAction(assignment) {
-  const actionHref = safeExternalHref(assignment.source_github_url);
-  return actionHref
-    ? `<a class="actionButton" href="${escapeHtml(actionHref)}" target="_blank" rel="noreferrer">Apri consegna</a>`
-    : `<button type="button" class="actionButton actionButtonDisabled" disabled>Apri consegna</button><span class="actionUnavailable">${escapeHtml(actionUnavailableLabel(assignment))}</span>`;
+function assignmentOpenAction(assignment, assignmentIndex = -1) {
+  if (!assignment.submitted) {
+    return `<button type="button" class="actionButton actionButtonDisabled" disabled>Apri consegna</button><span class="actionUnavailable">${escapeHtml(actionUnavailableLabel(assignment))}</span>`;
+  }
+  return `<button type="button" class="actionButton" data-open-assignment-detail="${escapeHtml(assignmentIndex)}">Apri consegna</button>`;
 }
 
 function renderAssignment(assignment, isNext = false, assignmentIndex = -1) {
@@ -1210,7 +1210,7 @@ function renderAssignment(assignment, isNext = false, assignmentIndex = -1) {
         </div>
       </div>
       <p class="assignmentActions">
-        ${assignmentOpenAction(assignment)}
+        ${assignmentOpenAction(assignment, assignmentIndex)}
         <button type="button" class="secondaryActionButton" data-detail-index="${escapeHtml(assignmentIndex)}">Dettaglio</button>
       </p>
       <p class="details">
@@ -1272,7 +1272,6 @@ function renderAssignmentDetail(assignment) {
         ${detailItem("Consegnato il", formatDate(assignment.submitted_at))}
         ${detailItem("Commit", assignment.commit || "-")}
       </div>
-      <p class="assignmentActions">${assignmentOpenAction(assignment)}</p>
       <p class="details">
         <span>Repository: ${repoLink}</span>
         <span>File: ${sourceLink}</span>
@@ -1476,6 +1475,11 @@ els.studentCalendar?.addEventListener("keydown", (event) => {
 });
 
 els.assignments?.addEventListener("click", (event) => {
+  const openButton = event.target.closest?.("[data-open-assignment-detail]");
+  if (openButton) {
+    openAssignmentDetail(openButton.dataset.openAssignmentDetail);
+    return;
+  }
   const detailButton = event.target.closest?.("[data-detail-index]");
   if (!detailButton) return;
   openAssignmentDetail(detailButton.dataset.detailIndex);

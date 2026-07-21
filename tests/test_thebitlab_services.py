@@ -327,6 +327,43 @@ def test_student_dashboard_prefers_file_manifest_url_when_source_url_is_broken_d
     assert dashboard["assignments"][0]["source_github_url"] == good_url
 
 
+def test_student_dashboard_rebuilds_legacy_demo_source_url_from_repo_and_source_path(tmp_path) -> None:
+    service = assignment_overview_service(tmp_path)
+    reports_dir = tmp_path / "teacher-reports"
+    reports_dir.mkdir(parents=True)
+    (reports_dir / "activity.json").write_text(
+        json.dumps(
+            {
+                "activity_id": "python-base-somma-001",
+                "students": [
+                    {
+                        "student": "rossi-mario",
+                        "student_id": "rossi-mario",
+                        "repo_github_url": "https://github.com/TheBitPoets/rossi-mario",
+                        "submitted": True,
+                        "submission": {
+                            "source_path": "assignments/python-base-somma-001/main.py",
+                            "source_github_url": (
+                                "https://github.com/TheBitPoets/rossi-mario/blob/main/"
+                                "tmp/student-lab-demo/examples/assignment_tracking/student_repos/"
+                                "rossi-mario/assignments/python-base-somma-001/main.py"
+                            ),
+                        },
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    dashboard = service.student_dashboard("rossi-mario")
+
+    assert dashboard["assignments"][0]["source_github_url"] == (
+        "https://github.com/TheBitPoets/rossi-mario/blob/main/"
+        "assignments/python-base-somma-001/main.py"
+    )
+
+
 def test_assignment_overview_service_accepts_protocol_compatible_storage(tmp_path) -> None:
     class FakeAssignmentStorage:
         def safe_teacher_report_path(self, name: str) -> Path:
