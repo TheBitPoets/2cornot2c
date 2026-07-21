@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="2422" viewBox="0 0 1800 2422">
+  <style>.page{fill:#f7f7f5}.title{font:700 34px Arial,sans-serif;fill:#111}.subtitle{font:16px Arial,sans-serif;fill:#555}.terminal{fill:#16181d;stroke:#343943;stroke-width:2}.terminal-text{font:14px 'Cascadia Mono','Consolas',monospace;fill:#e7e9ee;white-space:pre}.label{font:700 15px Arial,sans-serif;fill:#fff}.blue{fill:#1464c0}.green{fill:#168a45}.line-blue{stroke:#1464c0}.line-green{stroke:#168a45}</style>
+  <rect class="page" width="100%" height="100%"/>
+  <text x="40" y="48" class="title">Scenario 6 · Sessione TUI studente</text>
+  <text x="40" y="76" class="subtitle">Snapshot reale del terminale: selezione consegna, runner, report e ritorno alla lista</text>
+  <rect x="24" y="96" width="1752" height="2302" rx="8" class="terminal"/>
+  <rect x="42" y="108" width="154" height="26" rx="13" class="blue"/>
+  <text x="56" y="126" class="label">1 · esecuzione TUI</text>
+  <line x1="205" y1="121" x2="1750" y2="121" class="line-blue" stroke-width="2"/>
+  <rect x="42" y="1154" width="190" height="26" rx="13" class="green"/>
+  <text x="56" y="1172" class="label">2 · report e test</text>
+  <line x1="242" y1="1167" x2="1750" y2="1167" class="line-green" stroke-width="2"/>
+System.Object[]
+</svg>

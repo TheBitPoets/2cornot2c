@@ -107,6 +107,7 @@ completa della schermata, mentre quelle annotate servono per trovare rapidamente
 | `scenario-4-docente-aiuti.png` | fatto | Dashboard docente | Prompt, risposta, provider e contatori degli aiuti |
 | `scenario-5-docente-errori-colori.png` | fatto | Dashboard docente | Modal dettaglio errori evidenziato |
 | `scenario-5-docente-errori.png` | fatto | Dashboard docente | Test falliti e dettaglio Python/pytest |
+| `scenario-6-tui-session-colori.svg` | fatto | TUI studente | Snapshot terminale annotato con runner, report e test |
 | `scenario-6-tui-session.txt` | fatto | TUI studente | Sessione reale con runner e report salvato |
 | `scenario-8-studente-percorso-colori.png` | fatto | Dashboard studente | Calendario, percorso e consegne annotati |
 | `scenario-8-studente-percorso.png` | fatto | Dashboard studente | Vista completa del percorso/calendario studente |
