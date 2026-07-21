@@ -93,6 +93,15 @@ def test_collapsed_heading_only_hides_its_real_descendants() -> None:
     )
 
 
+def test_catalog_paragraph_preview_uses_keyboard_accessible_button() -> None:
+    source = Path("tools/course_board.js").read_text(encoding="utf-8")
+    css = Path("tools/course_board.css").read_text(encoding="utf-8")
+
+    assert 'const titleText = document.createElement("button");' in source
+    assert 'titleText.type = "button";' in source
+    assert ".headingPreviewTrigger" in css
+
+
 def test_quick_add_does_not_duplicate_a_heading_tree() -> None:
     run_course_board_js(
         """

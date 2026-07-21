@@ -401,6 +401,16 @@ input[aria-invalid="true"] {
   cursor: pointer;
 }
 
+.headingPreviewTrigger {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  text-align: left;
+  font: inherit;
+}
+
 .headingPreviewTrigger:hover,
 .headingPreviewTrigger:focus-visible,
 .itemPreviewTrigger:hover,
