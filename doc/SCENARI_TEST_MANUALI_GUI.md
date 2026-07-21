@@ -510,9 +510,12 @@ workspace, test e aiuti devono provenire dai dati persistiti.
 <tr><td valign="top" width="52%">
 
 <details>
-<summary>Evidenza Step 3-6: dati persistiti dalla TUI visibili nella dashboard</summary>
+<summary>Evidenza Step 1-3: sessione TUI registrata</summary>
 
-![Riscontro dashboard dopo TUI](images/dashboard-guides/scenario-6-studente-dopo-tui.png)
+La traccia mostra la selezione della consegna, l'esecuzione del comando <code>e</code>, il report salvato
+e il ritorno alla lista. E stata acquisita eseguendo la TUI sulla root demo corrente.
+
+<pre><code>images/dashboard-guides/scenario-6-tui-session.txt</code></pre>
 </details>
 
 </td><td valign="top">
