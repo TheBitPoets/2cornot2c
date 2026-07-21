@@ -418,6 +418,7 @@ function renderProjectTitle() {
 
 function renderCourseActions() {
   const isCurrent = !state.activeSavedDesign && !state.isNewDesign;
+  const hasChanges = hasUnsavedChanges();
   if (isCurrent) {
     els.saveArchiveBtn.title = "Salva le modifiche direttamente nel progetto corrente doc/course_design.json.";
   } else if (state.activeSavedDesign) {
@@ -426,6 +427,10 @@ function renderCourseActions() {
     els.saveArchiveBtn.title = "Salva il nuovo progetto nell'archivio dei progetti didattici.";
   }
   els.saveArchiveAsBtn.title = "Salva una copia del progetto con un nuovo nome nell'archivio; poi potrai impostarla come progetto corrente.";
+  els.saveArchiveBtn.disabled = saveOperationInProgress || !hasChanges;
+  if (!hasChanges) {
+    els.saveArchiveBtn.title = "Nessuna modifica da salvare nel progetto attualmente caricato.";
+  }
   els.deleteArchiveBtn.disabled = isCurrent;
   els.deleteArchiveBtn.title = isCurrent
     ? "Il progetto corrente doc/course_design.json non puo essere eliminato dalla board."
@@ -1109,6 +1114,7 @@ function renderCourse() {
   els.courseTree.innerHTML = "";
   if (!(state.design.years || []).length) {
     els.courseTree.innerHTML = '<p class="empty">Nessun percorso definito. Usa "Aggiungi percorso" per creare il primo contenitore UDA.</p>';
+    renderCourseActions();
     return;
   }
   for (const year of state.design.years || []) {
@@ -1134,6 +1140,7 @@ function renderCourse() {
     }
     els.courseTree.append(yearNode);
   }
+  renderCourseActions();
 }
 
 function removeYear(year) {
@@ -1699,6 +1706,7 @@ function renderFrameEditor(item) {
       setFrameLabelQuality(label, "none");
       updateFrameEditorQuality(details, item);
       quality.hidden = true;
+      renderCourseActions();
     });
     grid.append(label);
   }
