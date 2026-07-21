@@ -92,3 +92,11 @@ Quando uno screenshot viene salvato:
 2. verificare che il nome file corrisponda a quello citato nelle guide;
 3. controllare dimensione e leggibilita;
 4. valutare se inserirlo direttamente nella guida o lasciarlo come riferimento linkato.
+
+## Tavole di orientamento
+
+Le tavole SVG con numerazione e percorsi dei dati possono essere usate anche prima degli screenshot reali della UI. Non sostituiscono una verifica visiva del browser: servono a far trovare rapidamente URL, filtri, pannelli e dati attesi.
+
+| File | Scenario | Stato |
+|---|---|---|
+| `scenario-1-studente-mappa.svg` | Dashboard studente con report riuscito | fatto |

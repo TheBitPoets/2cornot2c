@@ -97,23 +97,81 @@ Quando il flusso activity, assegnazione, consegna, lab e registro sara completo,
 
 ## Scenario 1 - Dashboard studente con report riuscito
 
-Obiettivo: verificare che lo studente veda consegna, workspace, report, test e aiuti.
+Obiettivo: verificare, come tester manuale, che lo studente veda la consegna corretta e tutti i dati del lab collegati: workspace, report, test, ultimo tentativo e aiuti.
 
-1. Apri `http://localhost:8765/tools/student_dashboard.html`.
-2. Seleziona lo studente `rossi-mario`.
-3. Controlla che sia visibile la consegna `Demo somma in Python`.
-4. Apri il dettaglio della consegna, se presente il bottone di dettaglio.
-5. Controlla il pannello `Lab`.
+![Mappa visiva dello Scenario 1](images/dashboard-guides/scenario-1-studente-mappa.svg)
 
-Risultato atteso:
+### Precondizioni
 
-- La consegna `Demo somma in Python` e visibile.
+Esegui i comandi dalla root del repository. Se il server demo e gia attivo, non avviarne una seconda istanza.
+
+```powershell
+python scripts/student_lab_demo_setup.py
+python scripts/course_board_server.py --root tmp/student-lab-demo
+```
+
+Il secondo comando resta attivo nel terminale. Usa un browser separato per la prova. Se compare una richiesta di autenticazione, inserisci l'utente `teacher` e il token stampato dal server.
+
+### Da dove arrivano i dati
+
+| Dato da controllare | Percorso nella root demo | Perche serve |
+| --- | --- | --- |
+| Activity | `tmp/student-lab-demo/activities/python-demo-somma-001.json` | Contiene titolo e istruzioni dell'esercizio |
+| Assegnazione | `tmp/student-lab-demo/teacher-assignments/` | Collega activity, classe e studenti |
+| Registro/report docente | `tmp/student-lab-demo/teacher-reports/demo/python-demo-somma-001.json` | Riassume stato, grading e test per ogni studente |
+| Workspace | `tmp/student-lab-demo/examples/assignment_tracking/student_repos/rossi-mario/assignments/python-demo-somma-001/` | Contiene i file su cui lo studente lavora |
+| Report lab | `tmp/student-lab-demo/examples/assignment_tracking/student_repos/rossi-mario/reports/python-demo-somma-001/latest.json` | Contiene l'ultimo risultato del runner |
+| Aiuti | `tmp/student-lab-demo/teacher-help-events/` | Contiene gli eventi di richiesta aiuto |
+
+### Procedura dettagliata
+
+1. Apri esattamente `http://localhost:8765/tools/student_dashboard.html`.
+   Non aprire `assignment_dashboard.html`: quella e la dashboard docente e mostra registri diversi.
+2. Nella parte superiore individua i filtri `Classe` e `Studente`.
+3. Seleziona la classe demo, se presente, quindi seleziona `rossi-mario`.
+4. Attendi il completamento del caricamento. Non cambiare scheda durante il caricamento.
+5. Nel pannello `Consegne` cerca il titolo esatto **Demo somma in Python**.
+6. Verifica che la riga mostri uno stato di consegna completata o consegnata e che non sia indicata come mancante.
+7. Controlla nella stessa riga la scadenza e l'eventuale indicazione del grading.
+8. Apri `Dettaglio` o `Apri consegna` nella riga della demo.
+9. Nel dettaglio verifica che il workspace risulti presente e che siano elencati i file dell'attivita, inclusi `main.py` e `tests/test_main.py` quando disponibili.
+10. Torna alla vista della consegna e apri il pannello `Lab`.
+11. Controlla il report, l'ultimo tentativo e il risultato dei test.
+12. Verifica che gli aiuti tracciati siano valorizzati e che un eventuale feedback AI non approvato dal docente non venga mostrato come feedback definitivo.
+
+### Risultato atteso
+
+- La consegna visibile e **Demo somma in Python**, non `Somma in Python`.
 - Il workspace risulta presente.
 - Il report risulta presente.
 - I test risultano passati: `2/2`.
 - L'ultimo tentativo e valorizzato.
 - Gli aiuti tracciati sono valorizzati.
 - Il feedback AI non approvato dal docente non viene mostrato allo studente come feedback definitivo.
+
+### Se il risultato non coincide
+
+- Se vedi due consegne `Somma in Python`, controlla l'URL: probabilmente e aperta la dashboard docente.
+- Se vedi `Demo somma in Python` ma senza dati, verifica che il server sia stato avviato con `--root tmp/student-lab-demo`.
+- Se il server segnala che la root e gia in uso, non avviarne un altro: usa l'istanza gia attiva.
+- Se il browser mostra una risposta precedente, esegui un hard refresh con `Ctrl+F5` e riseleziona `rossi-mario`.
+
+### Evidenze da raccogliere
+
+Per una prova manuale annota:
+
+| Evidenza | Valore da riportare |
+| --- | --- |
+| URL usato | `student_dashboard.html` |
+| Studente | `rossi-mario` |
+| Activity visualizzata | `Demo somma in Python` |
+| Workspace | presente/assente |
+| Report | presente/assente |
+| Test | `2/2` oppure valore osservato |
+| Aiuti | numero visualizzato |
+| Esito | superato / problema con descrizione |
+
+Questi passaggi sono gia predisposti per una futura automazione Playwright: URL, studente, titolo activity e valori attesi possono diventare asserzioni; la tavola visiva puo diventare uno screenshot di riferimento o una guida per le evidenze.
 
 ## Scenario 2 - Dashboard docente con registro demo
 
